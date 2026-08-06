@@ -339,6 +339,7 @@ export function generateVoyageEvents(
     gemDelta: loot.gems,
     crewVariantLost: crewLost[0] ?? null,
     baitDrop,
+    jackpot: loot.jackpot,
   }
 
   return {

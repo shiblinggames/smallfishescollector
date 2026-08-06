@@ -142,4 +142,7 @@ export interface VoyageEvent {
   gemDelta: number
   crewVariantLost: number | null
   baitDrop: string | null
+  /** The 1-in-100 haul. Persisted on the event because the reveal reads the
+   *  stored voyage row, not the roll that produced it. */
+  jackpot?: boolean
 }

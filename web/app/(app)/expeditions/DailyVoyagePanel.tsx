@@ -3,7 +3,8 @@
 import { useState, useTransition, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import CloseButton from '@/components/CloseButton'
 import { voyageFortuneScale, voyagePowerScale, voyageDiscoveryChance, voyageEncounterWinChance } from '@/lib/voyageEvents'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { hapticTap } from '@/lib/haptics'
 import { createPortal } from 'react-dom'
 import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import { useRouter } from 'next/navigation'
@@ -198,6 +199,18 @@ export default function DailyVoyagePanel({
   const [activeVoyage, setActiveVoyage] = useState<DailyVoyage | null>(readyVoyage ?? todayVoyage)
   const [error, setError] = useState<string | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
+  // THE RETURN IS SEALED until the player opens it.
+  //
+  // The haul used to be printed above the Claim button, so by the time anyone
+  // pressed it they had already read the number. The button acknowledged a
+  // receipt rather than revealing anything, which is a poor trade for what is
+  // now the rarest moment in the game: a Shroud voyage runs up to nine hours,
+  // so most players see one or two of these a day.
+  //
+  //   sealed  -> the ship is home, the manifest is shut
+  //   outcome -> how it went, which is what the crew choice earned
+  //   haul    -> the numbers
+  const [reveal, setReveal] = useState<'sealed' | 'outcome' | 'haul'>('sealed')
   // The route sheet portals to document.body, which does not exist during the
   // server render. Gate on a mount flag rather than a bare `typeof document`
   // check so the first client render matches the server's and React does not
@@ -206,6 +219,9 @@ export default function DailyVoyagePanel({
   useEffect(() => { setMounted(true) }, [])
   // iOS treats overflow:hidden on body as a suggestion, so the sheet uses the
   // shared lock (see lib/bodyScrollLock) or the page scrolls behind it.
+  // A new voyage arrives sealed, even if the previous one was opened.
+  useEffect(() => { setReveal('sealed') }, [activeVoyage?.id])
+
   useEffect(() => {
     if (!selectedRoute) return
     return lockBodyScroll()
@@ -333,7 +349,11 @@ export default function DailyVoyagePanel({
     })
   }, [savedCrew, selectedRoute, router])
 
-  const handleClaim = useCallback(() => {
+  /** Banks the voyage. `advance` is false while the sealed-manifest reveal is
+   *  playing: the server work happens immediately so the numbers are real and
+   *  the balances update, but the panel stays put until the player has actually
+   *  seen the reveal and tapped through it. */
+  const handleClaim = useCallback((advance = true) => {
     if (!activeVoyage) return
     setError(null)
     startTransition(async () => {
@@ -353,7 +373,7 @@ export default function DailyVoyagePanel({
         setLevelUp({ from: res.oldExpeditionLevel, to: res.newExpeditionLevel })
         setLevelUpOverlay({ fromLevel: res.oldExpeditionLevel, toLevel: res.newExpeditionLevel })
       }
-      setPanelState('done')
+      if (advance) setPanelState('done')
       router.refresh()
       } catch (e) {
         console.error('[voyage] claim failed:', e)
@@ -890,7 +910,21 @@ export default function DailyVoyagePanel({
 
           {/* ── Summary ── */}
           {isComplete ? (
-            /* Loot-hero: crew returned, claim the reward. */
+            /* Sealed return. Open it, see how it went, THEN see the haul. */
+            (() => {
+              const ev = events[0] as (VoyageEvent & { jackpot?: boolean }) | undefined
+              const jackpot = !!ev?.jackpot
+              // The single event's outcome IS the voyage's outcome. It is what
+              // the crew's Power earned and it swung the haul between 0.6x and
+              // 1.35x, so it leads the reveal instead of hiding in the log.
+              const won  = ev?.outcome === 'success'
+              const lost = ev?.outcome === 'failure'
+              const tone = jackpot ? '#f0c040' : won ? '#7fd49a' : lost ? '#e0888a' : '#c8aa6a'
+              const verdict = jackpot ? 'The hold will not shut'
+                            : won     ? 'They pulled it off'
+                            : lost    ? 'It went badly'
+                            :           'They made it back'
+              return (
             <div style={{ textAlign: 'center' }}>
               <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#c8aa6a' }}>
                 Crew has returned
@@ -903,40 +937,103 @@ export default function DailyVoyagePanel({
 
               <div style={{ height: 1, margin: '0.9rem 0', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
 
-              {activeVoyage.total_doubloons > 0 || activeVoyage.total_gems > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                  {activeVoyage.total_doubloons > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 26px rgba(240,192,64,0.35)' }}>
-                      +{activeVoyage.total_doubloons.toLocaleString()} ⟡
-                    </p>
+              {/* Fixed-height stage so opening the manifest never resizes the
+                  panel under the player's thumb. */}
+              <div style={{ minHeight: 142, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <AnimatePresence mode="wait">
+                  {reveal === 'sealed' ? (
+                    <motion.div key="sealed"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                      <motion.img
+                        src="/crateclosed.png" alt="" width={78} height={78}
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ width: 78, height: 78, objectFit: 'contain' }}
+                      />
+                      <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a8868' }}>
+                        The manifest is still sealed.
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="opened"
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.26 }}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: tone, lineHeight: 1.15 }}>
+                        {verdict}
+                      </p>
+                      {ev?.narrative && (
+                        <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.45, maxWidth: 300 }}>
+                          {ev.narrative}
+                        </p>
+                      )}
+                      <AnimatePresence>
+                        {reveal === 'haul' && (
+                          <motion.div key="haul"
+                            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginTop: 4 }}>
+                            {jackpot && (
+                              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#f0c040' }}>
+                                Jackpot haul
+                              </p>
+                            )}
+                            {activeVoyage.total_doubloons > 0 && (
+                              <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 26px rgba(240,192,64,0.35)' }}>
+                                +{activeVoyage.total_doubloons.toLocaleString()} &#10209;
+                              </p>
+                            )}
+                            {activeVoyage.total_gems > 0 && (
+                              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#a78bfa', lineHeight: 1 }}>
+                                +{activeVoyage.total_gems} gem{activeVoyage.total_gems !== 1 ? 's' : ''}
+                              </p>
+                            )}
+                            {activeVoyage.total_doubloons <= 0 && activeVoyage.total_gems <= 0 && (
+                              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a8868' }}>Returned empty-handed</p>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
-                  {activeVoyage.total_gems > 0 && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#a78bfa', lineHeight: 1 }}>
-                      +{activeVoyage.total_gems} gem{activeVoyage.total_gems !== 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a8868' }}>Returned empty-handed</p>
-              )}
+                </AnimatePresence>
+              </div>
 
               <div style={{ height: 1, margin: '0.9rem 0', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
 
-              <button
-                onClick={handleClaim}
-                disabled={isPending}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 620, damping: 26 }}
+                onClick={() => {
+                  if (reveal === 'sealed') {
+                    // The press answers instantly and the verdict sits for a
+                    // beat before the number lands. The server call rides along
+                    // with it, so the reveal never waits on the network.
+                    hapticTap()
+                    setReveal('outcome')
+                    window.setTimeout(() => setReveal('haul'), 900)
+                    handleClaim(false)
+                    return
+                  }
+                  if (reveal === 'haul') setPanelState('done')
+                }}
+                disabled={reveal === 'outcome'}
                 className="font-karla font-700 uppercase tracking-[0.12em]"
                 style={{
                   width: '100%',
-                  background: isPending ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.16)',
+                  background: reveal === 'outcome' ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.16)',
                   border: '1px solid rgba(240,192,64,0.45)',
                   borderRadius: 10, padding: '0.8rem 1rem',
-                  color: '#f0c040', cursor: isPending ? 'default' : 'pointer',
-                  opacity: isPending ? 0.5 : 1, fontSize: '0.74rem',
+                  color: '#f0c040',
+                  cursor: reveal === 'outcome' ? 'default' : 'pointer',
+                  opacity: reveal === 'outcome' ? 0.5 : 1, fontSize: '0.74rem',
+                  touchAction: 'manipulation',
                 }}
               >
-                {isPending ? 'Claiming…' : 'Claim Loot →'}
-              </button>
+                {reveal === 'sealed' ? 'Open the manifest' : reveal === 'outcome' ? '\u2026' : 'Take the haul \u2192'}
+              </motion.button>
               {error && <p className="font-karla" style={{ fontSize: '0.62rem', color: '#f87171', marginTop: 6 }}>{error}</p>}
 
               {visibleEvents.length > 0 && (
@@ -951,6 +1048,8 @@ export default function DailyVoyagePanel({
                 </button>
               )}
             </div>
+              )
+            })()
           ) : (
             /* In-progress summary row. */
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>

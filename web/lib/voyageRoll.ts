@@ -162,7 +162,23 @@ export interface VoyageLoot {
   xp: number
   /** The raw luck multiplier, kept so the reveal can flavour a big haul. */
   luck: number
+  /** The 1-in-100 hit. Multiplies coin and gems by JACKPOT_MULT. */
+  jackpot: boolean
 }
+
+/** One voyage in a hundred comes back loaded.
+ *
+ *  The ODDS are flat across every route; the PRIZE is not, because ten times a
+ *  Shroud haul is worth twenty-two times ten times a Coastal one. That keeps
+ *  the deep routes the better place to chase it without needing a second
+ *  difficulty curve: expected jackpot value works out at about 27 doubloons an
+ *  hour on Coastal against 100 on Shroud.
+ *
+ *  Nav and crew XP are deliberately NOT multiplied. A jackpot should be a story
+ *  about treasure, not a shortcut through levelling, and 10x Nav XP would be
+ *  worth more than the coin to anyone still climbing. */
+export const JACKPOT_CHANCE = 0.01
+export const JACKPOT_MULT = 10
 
 /** THE loot roll. One call, at the end, off the crew you sent.
  *
@@ -183,9 +199,11 @@ export function rollVoyageLoot(
   // Triangular, so most hauls sit near the anchor and the edges are rare.
   const luck = 0.88 + ((rng() + rng()) / 2) * 0.24
 
-  const scale = om * fs * luck
+  const jackpot = rng() < JACKPOT_CHANCE
+  const scale = om * fs * luck * (jackpot ? JACKPOT_MULT : 1)
   return {
     outcome,
+    jackpot,
     doubloons: Math.max(1, Math.round(base.doubloons * scale)),
     // Every route pays at least one gem now. A voyage coming back with nothing
     // to show was the single worst outcome in the old system, and it happened
@@ -193,6 +211,7 @@ export function rollVoyageLoot(
     gems: Math.max(1, Math.round(base.gems * scale)),
     // XP tracks the outcome but not the luck roll: what you learn from a trip
     // is about how it went, not how full the hold was.
+    // NOT multiplied by the jackpot: see JACKPOT_MULT.
     xp: Math.max(1, Math.round(base.xp * om * (0.9 + 0.2 * (fortune / (FORTUNE_REF * 2))))),
     luck,
   }
