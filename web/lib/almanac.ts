@@ -1,9 +1,9 @@
-// Pure helpers for the Bestiary. Kept out of bestiaryActions.ts because a
+// Pure helpers for the Almanac. Kept out of bestiaryActions.ts because a
 // 'use server' file silently drops every non-async export, so a constant
 // declared there would just vanish at runtime.
 
 /** bite_rarity 1-5 as a word. The fishing screen already speaks in these
- *  terms on the catch banner, so the Bestiary uses the same ladder. */
+ *  terms on the catch banner, so the Almanac uses the same ladder. */
 export const RARITY_LABEL: Record<number, string> = {
   1: 'Common',
   2: 'Uncommon',

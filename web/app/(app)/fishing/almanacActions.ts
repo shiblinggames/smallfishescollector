@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// The Bestiary's data is loaded ON OPEN, not with the fishing page.
+// The Angler's Almanac's data is loaded ON OPEN, not with the fishing page.
 //
 // It needs five tables and a dozen profile columns, and almost nobody opens it
 // on any given visit to /fishing. Folding it into the page loader would put
@@ -14,7 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // this action. Note a 'use server' file silently drops non-async exports, so
 // anything but a type or an async function has to move to /lib.
 
-export type BestiaryEntry = {
+export type AlmanacEntry = {
   id: number
   name: string
   scientificName: string | null
@@ -41,7 +41,7 @@ export type BestiaryEntry = {
   pbAt: string | null
 }
 
-/** One golden, as its own object. Unlike everything else in the Bestiary these
+/** One golden, as its own object. Unlike everything else in the Almanac these
  *  are not merged per species: each row is a specific fish caught on a specific
  *  day at a specific size, which is the whole reason the Goldens room exists. */
 export type GoldenCatch = {
@@ -58,7 +58,7 @@ export type GoldenCatch = {
   soldFor: number | null
 }
 
-export type BestiaryStats = {
+export type AlmanacStats = {
   casts: number
   perfects: number
   bestPerfectStreak: number
@@ -69,18 +69,25 @@ export type BestiaryStats = {
   snags: number
   doubloonsFromFish: number
   fishingXP: number
+  /** Counted since the Almanac shipped, not for all time. The lifetime totals
+   *  beside them (cratesOpened, doubloonsFromFish) go all the way back, so the
+   *  Record labels these as recent rather than pretending otherwise. */
+  crateOpens: Record<string, number>
+  baitUsed: Record<string, number>
+  biggestSale: number
+  fishSoldCount: number
 }
 
-export type BestiaryData = {
-  entries: BestiaryEntry[]
+export type AlmanacData = {
+  entries: AlmanacEntry[]
   goldens: GoldenCatch[]
   unlockedPets: string[]
   ancientCatches: number[]
   prestige: Record<string, number>
-  stats: BestiaryStats
+  stats: AlmanacStats
 }
 
-export async function getBestiaryData(): Promise<BestiaryData | { error: string }> {
+export async function getAlmanacData(): Promise<AlmanacData | { error: string }> {
   const supabase = await createClient()
   // getSession is enough here: this only READS, and the RLS-safe id is all we
   // need to scope the queries.
@@ -105,7 +112,7 @@ export async function getBestiaryData(): Promise<BestiaryData | { error: string 
       .eq('user_id', uid)
       .order('caught_at', { ascending: false }),
     admin.from('profiles')
-      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, prestige_levels')
+      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, prestige_levels, crate_opens, bait_used, biggest_fish_sale, fish_sold_count')
       .eq('id', uid)
       .maybeSingle(),
   ])
@@ -115,7 +122,7 @@ export async function getBestiaryData(): Promise<BestiaryData | { error: string 
   const col = new Map((collection.data ?? []).map(r => [r.fish_id as number, r]))
   const pb = new Map((bests.data ?? []).map(r => [r.fish_id as number, r]))
 
-  const entries: BestiaryEntry[] = (species.data ?? []).map(s => {
+  const entries: AlmanacEntry[] = (species.data ?? []).map(s => {
     const c = col.get(s.id as number)
     const b = pb.get(s.id as number)
     return {
@@ -177,6 +184,10 @@ export async function getBestiaryData(): Promise<BestiaryData | { error: string 
       snags: p?.fishing_snags ?? 0,
       doubloonsFromFish: Number(p?.fish_sold_doubloons ?? 0),
       fishingXP: Number(p?.fishing_xp ?? 0),
+      crateOpens: (p?.crate_opens as Record<string, number> | null) ?? {},
+      baitUsed: (p?.bait_used as Record<string, number> | null) ?? {},
+      biggestSale: p?.biggest_fish_sale ?? 0,
+      fishSoldCount: p?.fish_sold_count ?? 0,
     },
   }
 }

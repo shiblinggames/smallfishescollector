@@ -11,31 +11,32 @@
 //   Giants      the six Ancient Deep mounts + your Trophy-size records
 //   Pets        the 19 across 6 species
 //
-// Data loads ON OPEN (see bestiaryActions.ts), so the fishing page pays
+// Data loads ON OPEN (see almanacActions.ts), so the fishing page pays
 // nothing for a room most visits never enter.
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getBestiaryData, type BestiaryData } from './bestiaryActions'
-import { compact } from '@/lib/bestiary'
-import BestiaryCollection from './BestiaryCollection'
-import BestiaryGoldens from './BestiaryGoldens'
-import BestiaryGiants from './BestiaryGiants'
-import BestiaryPets from './BestiaryPets'
+import { getAlmanacData, type AlmanacData } from './almanacActions'
+import { compact } from '@/lib/almanac'
+import AlmanacCollection from './AlmanacCollection'
+import AlmanacGoldens from './AlmanacGoldens'
+import AlmanacGiants from './AlmanacGiants'
+import AlmanacPets from './AlmanacPets'
+import AlmanacRecord from './AlmanacRecord'
 import { PETS } from '@/lib/pets'
 import { ZONE_LABEL, ZONE_ORDER } from './zoneData'
-import { isGiant } from '@/lib/bestiary'
+import { isGiant } from '@/lib/almanac'
 
 const ACCENT = '#a78bfa'
 
-type Room = 'collection' | 'goldens' | 'giants' | 'pets'
+type Room = 'collection' | 'goldens' | 'giants' | 'pets' | 'record'
 
-export default function Bestiary({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function Almanac({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  const [data, setData] = useState<BestiaryData | null>(null)
+  const [data, setData] = useState<AlmanacData | null>(null)
   const [error, setError] = useState('')
   const [room, setRoom] = useState<Room>('collection')
   const [careerOpen, setCareerOpen] = useState(false)
@@ -46,7 +47,7 @@ export default function Bestiary({ open, onClose }: { open: boolean; onClose: ()
   useEffect(() => {
     if (!open || data) return
     let alive = true
-    getBestiaryData().then(res => {
+    getAlmanacData().then(res => {
       if (!alive) return
       if ('error' in res) setError(res.error)
       else setData(res)
@@ -74,6 +75,7 @@ export default function Bestiary({ open, onClose }: { open: boolean; onClose: ()
     { key: 'goldens', label: 'Goldens', badge: data ? `${data.goldens.length}` : '' },
     { key: 'giants', label: 'Giants', badge: data ? `${giantsGot}/${giants.length}` : '' },
     { key: 'pets', label: 'Pets', badge: data ? `${data.unlockedPets.length}/${PETS.length}` : '' },
+    { key: 'record', label: 'Record', badge: '' },
   ]
 
   return createPortal(
@@ -102,7 +104,7 @@ export default function Bestiary({ open, onClose }: { open: boolean; onClose: ()
         }}>
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: `${ACCENT}b8`, marginBottom: 1 }}>Fishing</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#efe9ff' }}>The Bestiary</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#efe9ff' }}>The Angler's Almanac</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
             style={{ width: 34, height: 34, borderRadius: '50%', padding: 0, flexShrink: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -191,14 +193,14 @@ export default function Bestiary({ open, onClose }: { open: boolean; onClose: ()
                   <button key={t.key} type="button" onClick={() => setRoom(t.key)}
                     className="font-karla font-700"
                     style={{
-                      flex: 1, minWidth: 0, padding: '0.42rem 0.2rem 0.38rem', borderRadius: 9,
+                      flex: 1, minWidth: 0, padding: '0.42rem 0.12rem 0.38rem', borderRadius: 9,
                       // Translucent tint, never a solid fill.
                       background: on ? `${ACCENT}22` : 'transparent',
                       border: `1px solid ${on ? ACCENT + '66' : 'transparent'}`,
                       color: on ? '#efe9ff' : '#6b6486', cursor: 'pointer',
                       WebkitTapHighlightColor: 'transparent',
                     }}>
-                    <span style={{ display: 'block', fontSize: '0.66rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
+                    <span style={{ display: 'block', fontSize: '0.6rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
                     <span style={{ display: 'block', fontSize: '0.55rem', color: on ? ACCENT : '#514b68', fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>{t.badge}</span>
                   </button>
                 )
@@ -211,10 +213,11 @@ export default function Bestiary({ open, onClose }: { open: boolean; onClose: ()
                 <motion.div key={room}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}>
-                  {room === 'collection' && <BestiaryCollection data={data} />}
-                  {room === 'goldens' && <BestiaryGoldens data={data} />}
-                  {room === 'giants' && <BestiaryGiants data={data} giants={giants} />}
-                  {room === 'pets' && <BestiaryPets data={data} />}
+                  {room === 'collection' && <AlmanacCollection data={data} />}
+                  {room === 'goldens' && <AlmanacGoldens data={data} />}
+                  {room === 'giants' && <AlmanacGiants data={data} giants={giants} />}
+                  {room === 'pets' && <AlmanacPets data={data} />}
+                  {room === 'record' && <AlmanacRecord data={data} />}
                 </motion.div>
               </AnimatePresence>
             </div>

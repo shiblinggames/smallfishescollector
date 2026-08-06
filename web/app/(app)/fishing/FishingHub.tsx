@@ -8,7 +8,7 @@
 //                   Campaign tile opening the story map
 //   Market       -> /tavern/market
 //   Tackle Shop  -> /marketplace/tackle-shop
-//   Bestiary     -> parked
+//   Almanac     -> parked
 //
 // The tiles are the SAME component the Expeditions hub uses (components/HubTile),
 // so the two pages cannot drift into being lookalikes.
@@ -19,7 +19,7 @@ import HubTile, { HUB_GRID } from '@/components/HubTile'
 import FishingLevelBar from '@/components/FishingLevelBar'
 import { getFishHold } from '@/lib/fishHold'
 import FisherPose from '@/components/FisherPose'
-import Bestiary from './Bestiary'
+import Almanac from './Almanac'
 import { ZONE_MIN_LEVEL, ZONE_BG, ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import type { ZoneKey } from './ZoneLanding'
 import type { RenownAlloc } from '@/lib/renown'
@@ -52,7 +52,7 @@ export default function FishingHub({
   onOpenZones: () => void
 }) {
   const router = useRouter()
-  const [bestiaryOpen, setBestiaryOpen] = useState(false)
+  const [almanacOpen, setAlmanacOpen] = useState(false)
 
   const watersOpen = ZONE_ORDER.filter(z =>
     fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1) && (z !== 'ancient_deep' || ancientDeepUnlocked)).length
@@ -91,7 +91,7 @@ export default function FishingHub({
               <FishingLevelBar fishingXP={fishingXP} initialAlloc={initialFishingRenownAlloc} />
             </div>
 
-            {/* Market / Tackle Shop / Bestiary use purpose-painted 512x512
+            {/* Market / Tackle Shop / Almanac use purpose-painted 512x512
                 plates, the same shape and density as the Expeditions tiles.
                 They were pointed at the full-PAGE backdrops (820x1468 portrait,
                 one of them deliberately blurred) whose centre crop at tile size
@@ -140,10 +140,10 @@ export default function FishingHub({
               <HubTile
                 bgImage="/fish-bestiary.jpg"
                 accent="#a78bfa"
-                title="Bestiary"
+                title="Almanac"
                 status={`${speciesCaught} of ${speciesTotal} charted`}
                 sub="Goldens, giants and pets"
-                onClick={() => setBestiaryOpen(true)}
+                onClick={() => setAlmanacOpen(true)}
                 progress={speciesTotal > 0 ? speciesCaught / speciesTotal : 0}
               />
             </div>
@@ -153,7 +153,7 @@ export default function FishingHub({
         </main>
       </div>
 
-      <Bestiary open={bestiaryOpen} onClose={() => setBestiaryOpen(false)} />
+      <Almanac open={almanacOpen} onClose={() => setAlmanacOpen(false)} />
     </>
   )
 }

@@ -2,7 +2,7 @@
 
 // The Goldens room.
 //
-// Every other room in the Bestiary is per SPECIES. This one is per CATCH,
+// Every other room in the Almanac is per SPECIES. This one is per CATCH,
 // because shiny_catches keeps a row for each golden ever landed with its own
 // size and date, and it survives selling the fish. So a golden is a thing that
 // happened on a day, not a checkbox, and the room is a wall of them newest
@@ -11,14 +11,14 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { ZONE_LABEL, ZONE_COLOR } from './zoneData'
-import { fishArt, shortDate, compact } from '@/lib/bestiary'
+import { fishArt, shortDate, compact } from '@/lib/almanac'
 import { formatFishLength } from '@/lib/fishSize'
 import { SHINY_ODDS } from '@/lib/shiny'
-import type { BestiaryData } from './bestiaryActions'
+import type { AlmanacData } from './almanacActions'
 
 const GOLD = '#f0c040'
 
-export default function BestiaryGoldens({ data }: { data: BestiaryData }) {
+export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
   const { goldens } = data
 
   // status is 'hold' or 'sold'. A held golden is literally still sitting in

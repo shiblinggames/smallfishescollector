@@ -348,6 +348,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   if (isCrate) {
     if (!noBait && baitRow) {
       await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
+      void admin.rpc('bump_profile_json_counter', { uid: user.id, col: 'bait_used', key: baitType, n: 1 }).then(() => {}, () => {})
     }
     const crateWait = { shallows: 4000, open_waters: 7000, deep: 11000, abyss: 16000 }[habitat] ?? 6000
     const crateTier = rollCrateTier(habitat)
@@ -365,6 +366,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
       .update({ quantity: baitRow.quantity - 1 })
       .eq('user_id', user.id)
       .eq('bait_type', baitType)
+    void admin.rpc('bump_profile_json_counter', { uid: user.id, col: 'bait_used', key: baitType, n: 1 }).then(() => {}, () => {})
   }
 
   // Fish selection. In Ancient Deep the TROPHY (tier-5) roll is an EXPLICIT flat
@@ -1340,6 +1342,12 @@ export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', resu
   }
   await admin.from('profiles').update(streakUpdate).eq('id', user.id)
 
+  // Which tier, for the Almanac's crate tally. Fire-and-forget beside the
+  // lifetime fishing_crates_opened total that grantCrateLoot already bumps.
+  void admin.rpc('bump_profile_json_counter', {
+    uid: user.id, col: 'crate_opens', key: crateToken.crateTier, n: 1,
+  }).then(() => {}, () => {})
+
   // Token validated — hand off to the shared roller (grants + returns the loot).
   const loot = await grantCrateLoot(admin, user.id, crateToken.crateTier)
   return 'error' in loot ? loot : { ...loot, perfectStreak: streak }
@@ -1416,6 +1424,8 @@ export async function sellFish(
       user_id: user.id, amount: earned, reason: 'Sold fish (quick-sell)',
     }),
     admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: earned }),
+    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_count', n: quantity }),
+    admin.rpc('bump_profile_max', { uid: user.id, col: 'biggest_fish_sale', v: earned }),
     ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
   ])
 
@@ -1479,6 +1489,8 @@ export async function quickSellAllFish(): Promise<
       user_id: user.id, amount: totalEarned, reason: `Sold ${totalFishSold} fish (quick-sell)`,
     }),
     admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: totalEarned }),
+    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_count', n: totalFishSold }),
+    admin.rpc('bump_profile_max', { uid: user.id, col: 'biggest_fish_sale', v: totalEarned }),
     ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
   ])
 

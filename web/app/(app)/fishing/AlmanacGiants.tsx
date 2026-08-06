@@ -14,13 +14,13 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { ZONE_LABEL, ZONE_COLOR, ZONE_BG } from './zoneData'
-import { fishArt, shortDate, isGiant } from '@/lib/bestiary'
+import { fishArt, shortDate, isGiant } from '@/lib/almanac'
 import { tierForLength, TIER_COLOR, TIER_LABEL, formatFishLength } from '@/lib/fishSize'
-import type { BestiaryData, BestiaryEntry } from './bestiaryActions'
+import type { AlmanacData, AlmanacEntry } from './almanacActions'
 
 const ANCIENT = '#c084fc'
 
-export default function BestiaryGiants({ data, giants }: { data: BestiaryData; giants: BestiaryEntry[] }) {
+export default function AlmanacGiants({ data, giants }: { data: AlmanacData; giants: AlmanacEntry[] }) {
   // Every species whose PB hit the top tier, best proportion first. A 40in fish
   // that maxes at 42 is a better story than a 90in one that maxes at 200.
   const trophies = useMemo(() => data.entries

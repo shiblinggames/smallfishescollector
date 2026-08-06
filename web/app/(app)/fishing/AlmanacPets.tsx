@@ -9,9 +9,9 @@
 
 import { motion } from 'framer-motion'
 import { PETS, PET_SPECIES_ORDER, PET_SPECIES_LABEL } from '@/lib/pets'
-import type { BestiaryData } from './bestiaryActions'
+import type { AlmanacData } from './almanacActions'
 
-export default function BestiaryPets({ data }: { data: BestiaryData }) {
+export default function AlmanacPets({ data }: { data: AlmanacData }) {
   const owned = new Set(data.unlockedPets)
 
   return (

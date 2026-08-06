@@ -16,19 +16,19 @@ import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_BG, ZONE_TAGLINE } from './zoneData'
-import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/bestiary'
+import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/almanac'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
-import type { BestiaryData, BestiaryEntry } from './bestiaryActions'
+import type { AlmanacData, AlmanacEntry } from './almanacActions'
 
 const GOLD = '#f0c040'
 
-export default function BestiaryCollection({ data }: { data: BestiaryData }) {
-  const [detail, setDetail] = useState<BestiaryEntry | null>(null)
+export default function AlmanacCollection({ data }: { data: AlmanacData }) {
+  const [detail, setDetail] = useState<AlmanacEntry | null>(null)
 
   // The six Giants have their own room; listing them here too would make the
   // Ancient Deep read as 18 species when only 12 are fishable stock.
   const byZone = useMemo(() => {
-    const m = new Map<string, BestiaryEntry[]>()
+    const m = new Map<string, AlmanacEntry[]>()
     for (const e of data.entries) {
       if (isGiant(e.sellValue, e.habitat)) continue
       const arr = m.get(e.habitat) ?? []
@@ -83,7 +83,7 @@ export default function BestiaryCollection({ data }: { data: BestiaryData }) {
   )
 }
 
-function SpeciesCard({ entry, onOpen }: { entry: BestiaryEntry; onOpen: () => void }) {
+function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => void }) {
   const caught = entry.count > 0
   const rc = RARITY_COLOR[entry.rarity]
   const tier = caught && entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null
@@ -144,9 +144,9 @@ function SpeciesCard({ entry, onOpen }: { entry: BestiaryEntry; onOpen: () => vo
 
 /** The full record for one species: what it is, and what you have done to it. */
 function SpeciesSheet({ entry, onClose, goldens }: {
-  entry: BestiaryEntry | null
+  entry: AlmanacEntry | null
   onClose: () => void
-  goldens: BestiaryData['goldens']
+  goldens: AlmanacData['goldens']
 }) {
   const mine = useMemo(() => entry ? goldens.filter(g => g.fishId === entry.id) : [], [entry, goldens])
   if (!entry) return null
