@@ -8,8 +8,12 @@ import { motion } from 'framer-motion'
 //
 // It lived on the Tavern, which was the wrong hub for it. Prices are a FISHING
 // concern (they decide what a haul is worth and when to sell it), and the
-// Tavern is where you go to gamble and socialise. It now sits at the top of the
-// fishing hub, one tap from the Market tile it reports on.
+// Tavern is where you go to gamble and socialise. It now sits under the fishing
+// level hero, one tap from the Market tile it reports on.
+//
+// It wears the level hero's chrome, because it sits directly under it inside
+// the same block and is read as part of that header rather than as its own
+// panel. Only the rise/fall colours are its own, and those are semantic.
 //
 // Two kinds of quote ride the same strip. A fish quotes a PRICE in doubloons,
 // what one sells for right now. An Exchange index quotes a LEVEL, a bare
@@ -51,7 +55,7 @@ function Marquee({ items }: { items: TickerItem[] }) {
     const index = it.kind === 'index'
     return (
       <span key={`${keyPrefix}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginRight: 26 }}>
-        <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: index ? '#7fd6ef' : '#e6e1d6' }}>{it.name}</span>
+        <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: index ? '#7da0d8' : '#e6e1d6' }}>{it.name}</span>
         <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#fff', ...TNUM }}>
           {index ? it.price.toFixed(3) : `${it.price.toLocaleString()} ⟡`}
         </span>
@@ -88,22 +92,26 @@ export default function MarketTicker({ items }: { items: TickerItem[] }) {
       style={{
         display: 'flex', alignItems: 'center',
         position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(135deg, rgba(8,16,26,0.98) 0%, rgba(8,26,34,0.95) 100%)',
-        border: '1px solid rgba(56,189,248,0.38)',
-        borderTop: '1px solid rgba(56,189,248,0.65)',
-        borderRadius: 14,
+        // The level hero's exact chrome. The strip sits directly under it in
+        // the same block, so its own sky-blue panel read as a second system
+        // bolted on rather than the hero's sibling: same gradient, same neutral
+        // border with the lit top edge, same radius and lift.
+        background: 'linear-gradient(180deg, rgba(14,19,29,0.94) 0%, rgba(8,11,18,0.97) 100%)',
+        border: '1px solid rgba(255,255,255,0.10)',
+        borderTop: '1px solid rgba(255,255,255,0.17)',
+        borderRadius: 16,
         height: 44,
-        padding: '0 0.7rem 0 0.9rem',
+        padding: '0 0.7rem 0 0.95rem',
         cursor: 'pointer', userSelect: 'none', textDecoration: 'none', color: 'inherit',
-        boxShadow: '0 0 24px rgba(56,189,248,0.08)',
+        boxShadow: '0 6px 22px rgba(0,0,0,0.45)',
       }}
     >
       <span className="font-karla font-700 uppercase tracking-[0.12em]"
-        style={{ fontSize: '0.52rem', color: '#7fd6ef', flexShrink: 0, marginRight: 10 }}>
+        style={{ fontSize: '0.52rem', color: '#7da0d8', flexShrink: 0, marginRight: 10 }}>
         Market
       </span>
       <Marquee items={items} />
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(56,189,248,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, marginLeft: 8 }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(125,160,216,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, marginLeft: 8 }}>
         <path d="M9 6l6 6-6 6" />
       </svg>
     </Link>
