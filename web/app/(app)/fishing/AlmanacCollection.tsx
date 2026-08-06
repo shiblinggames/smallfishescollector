@@ -102,58 +102,49 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
   )
 }
 
-/** ONE mark per species, in one corner, saying the most that is true of it:
+/** ONE mark per species, in one corner:
  *
- *    trophy size + golden on the wall  ->  a GOLD trophy
- *    trophy size                       ->  a pewter trophy
- *    golden on the wall                ->  a gold dot
- *    neither                           ->  nothing
+ *    trophy size, golden on the wall  ->  a GOLD trophy
+ *    trophy size                      ->  a pewter trophy
+ *    neither                          ->  nothing
  *
- *  Two separate stamps in two corners was more furniture than a 150px tile can
- *  carry, and it made the grid busy exactly where the art is supposed to be
- *  doing the talking. One symbol that upgrades is the same information in a
- *  quarter of the ink, and the gold trophy becomes a thing to go and earn.
+ *  THERE IS NO GOLDEN-WITHOUT-TROPHY STATE, and that is not an oversight.
+ *  Every golden rolls at its species' maximum length: all 48 in the database
+ *  sit at exactly 100% of their range, and every one of the 31 currently
+ *  mounted has a personal best at least that long. So a golden IS a trophy,
+ *  always, and a separate "golden but not trophy" mark could never render.
  *
- *  Pewter for the plain trophy on purpose. If the base cup were already gold
- *  then "gold trophy" would say nothing, and silver-to-gold is the oldest
- *  legible upgrade there is.
+ *  Which makes the metal say something clean: a pewter cup is a trophy you
+ *  measured your way into, a gold one is a trophy the sea handed you. If the
+ *  base cup were gold too, "gold trophy" would say nothing.
  */
 function CollectionMark({ trophy, golden }: { trophy: boolean; golden: boolean }) {
-  if (!trophy && !golden) return null
-  const gold = golden
-  const c = trophy ? (gold ? GOLD : '#c8d2e0') : GOLD
+  if (!trophy) return null
+  const c = golden ? GOLD : '#c8d2e0'
 
   return (
     <motion.span aria-hidden
-      title={trophy ? (gold ? 'Trophy size, golden mounted' : 'Trophy size landed') : 'Golden mounted'}
+      title={golden ? 'Trophy size, golden mounted' : 'Trophy size landed'}
       initial={{ scale: 0 }} animate={{ scale: 1 }}
       transition={{ type: 'spring', stiffness: 460, damping: 14, delay: 0.14 }}
       style={{
-        position: 'absolute', right: 2, top: 0,
-        width: trophy ? 22 : 14, height: trophy ? 22 : 14, pointerEvents: 'none',
+        position: 'absolute', right: 2, top: 0, width: 22, height: 22, pointerEvents: 'none',
         // drop-shadow on the wrapper, not an feGaussianBlur inside each SVG:
         // up to 146 of these mount at once.
-        filter: gold
+        filter: golden
           ? `drop-shadow(0 0 4px ${GOLD}cc) drop-shadow(0 1px 3px rgba(0,0,0,0.85))`
           : 'drop-shadow(0 1px 3px rgba(0,0,0,0.85))',
       }}>
-      {trophy ? (
-        <svg viewBox="0 0 24 24" width="22" height="22">
-          <g stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
-            <path d="M8 4h8v4.2c0 2.6-1.8 4.3-4 4.3s-4-1.7-4-4.3z" fill={c} fillOpacity="0.9" />
-            <path d="M8 5.4H5.6c0 2.6 1 3.9 2.6 4.3" />
-            <path d="M16 5.4h2.4c0 2.6-1 3.9-2.6 4.3" />
-            <path d="M12 12.5v3.2" />
-            <path d="M8.6 19h6.8" />
-            <path d="M10 15.7h4l.7 3.3h-5.4z" fill={c} fillOpacity="0.9" />
-          </g>
-        </svg>
-      ) : (
-        <svg viewBox="0 0 24 24" width="14" height="14">
-          <circle cx="12" cy="12" r="4.6" fill={c} />
-          <circle cx="12" cy="12" r="7.2" fill="none" stroke={c} strokeWidth="1.2" opacity="0.45" />
-        </svg>
-      )}
+      <svg viewBox="0 0 24 24" width="22" height="22">
+        <g stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          <path d="M8 4h8v4.2c0 2.6-1.8 4.3-4 4.3s-4-1.7-4-4.3z" fill={c} fillOpacity="0.9" />
+          <path d="M8 5.4H5.6c0 2.6 1 3.9 2.6 4.3" />
+          <path d="M16 5.4h2.4c0 2.6-1 3.9-2.6 4.3" />
+          <path d="M12 12.5v3.2" />
+          <path d="M8.6 19h6.8" />
+          <path d="M10 15.7h4l.7 3.3h-5.4z" fill={c} fillOpacity="0.9" />
+        </g>
+      </svg>
     </motion.span>
   )
 }
