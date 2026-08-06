@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 
-type BgConfig = { src: string; overlay: string }
+type BgConfig = { src: string; overlay: string } | { surface: true }
 
 // Tavern pages share a lighter overlay than the rest of the app: their backdrops
 // are simple, warm, cozy "places" (the cards carry the detail), so we let the
@@ -33,7 +33,11 @@ const ROUTE_BG: [string, BgConfig][] = [
   ['/tavern/contests',         { src: '/page-contests.jpg',   overlay: TAV }],
   ['/tavern/daily-bonus',      { src: '/page-dailybonus.jpg', overlay: TAV }],
   ['/tavern/tide-run',         { src: '/page-tiderun.jpg',    overlay: TAV }],
-  ['/tavern/market',           { src: '/page-market.jpg',     overlay: TAV }],
+  // THE MARKET IS NOT A PLACE, it is a board. Every other tavern route is a
+  // painted room you walk into; this one is a trading screen, and a blurred
+  // stall behind it fought the price rows and washed out the header at the top
+  // where TAV's overlay is lightest. A flat instrument surface instead.
+  ['/tavern/market',           { surface: true }],
   ['/tavern/bounties',         { src: '/page-bounties.jpg',   overlay: TAV }],
   ['/tavern',                  { src: '/page-tavern.jpg',     overlay: TAV }],
   // Both marketplace pages deliberately have NO image background. They read as clean,
@@ -47,7 +51,33 @@ export default function ClientBackground() {
   const match = ROUTE_BG.find(([route]) => pathname.startsWith(route))
   if (!match) return null
 
-  const { src, overlay } = match[1]
+  const cfg = match[1]
+
+  // No photograph: a dark instrument surface with a faint ruled grid, the way
+  // a trading screen is a grid before it is anything else. Cheap (two CSS
+  // gradients, no image request) and it never competes with a number.
+  if ('surface' in cfg) {
+    return (
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: '#080a0f' }}>
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.5,
+          backgroundImage:
+            'linear-gradient(rgba(120,160,200,0.055) 1px, transparent 1px),'
+            + 'linear-gradient(90deg, rgba(120,160,200,0.055) 1px, transparent 1px)',
+          backgroundSize: '44px 44px',
+        }} />
+        {/* A cool glow up top so the header has something to sit against, and
+            the grid falls away into black by the bottom of a long list. */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(120% 55% at 50% -8%, rgba(56,189,248,0.10) 0%, transparent 62%),'
+            + ' linear-gradient(to bottom, rgba(8,10,15,0.2) 0%, rgba(8,10,15,0.75) 55%, #05070b 100%)',
+        }} />
+      </div>
+    )
+  }
+
+  const { src, overlay } = cfg
 
   return (
     <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
