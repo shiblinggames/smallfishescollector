@@ -89,8 +89,11 @@ export default function FishingHub({
           <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
 
             {/* Fishing level + Renown, the counterpart to Navigation on the
-                Expeditions hub. */}
-            <div style={{ marginBottom: '1rem' }}>
+                Expeditions hub. Same 1.1rem/1rem block the Ship Hero wraps its
+                Navigation header in, on top of the same 1rem of container pad,
+                so the two skill titles land on the same line when you flick
+                between the tabs. */}
+            <div style={{ padding: '1.1rem 0 1rem' }}>
               <FishingLevelBar fishingXP={fishingXP} initialAlloc={initialFishingRenownAlloc} />
             </div>
 
