@@ -117,6 +117,10 @@ export default async function FishingPage() {
   // Same rules as almanacActions.getAlmanacData: lifetime catches, the ancient
   // ledger, and a prestige, which only happens once a zone is fully collected
   // and so proves you caught every species in it.
+  // Built HERE from collectionRows rather than reusing the caughtSet further
+  // down the file: that one is declared after this block, so referencing it
+  // threw a temporal-dead-zone ReferenceError and took the whole page down.
+  const cycleCaught = new Set((collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id))
   const lifetimeCaught = new Set((lifetimeRows ?? [])
     .filter((r: { catches: number }) => (r.catches ?? 0) > 0)
     .map((r: { fish_id: number }) => r.fish_id))
@@ -127,7 +131,7 @@ export default async function FishingPage() {
   const speciesTotal = collectableSpecies.length
   const speciesCaught = collectableSpecies.filter(f =>
     lifetimeCaught.has(f.id)
-    || caughtSet.has(f.id)
+    || cycleCaught.has(f.id)
     || ancientSet.has(f.id)
     || (prestigeMap[f.habitat] ?? 0) > 0).length
 
@@ -193,7 +197,6 @@ export default async function FishingPage() {
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number; is_golden: boolean }) => r.fish_id)
-  const caughtSet = new Set(caughtFishIds)
   const mountedFishIds = (collectionRows ?? [])
     .filter((r: { fish_id: number; is_golden: boolean }) => r.is_golden)
     .map((r: { fish_id: number; is_golden: boolean }) => r.fish_id)
