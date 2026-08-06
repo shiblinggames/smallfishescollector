@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BADGES, BADGE_MAP, BADGE_REWARD, badgeReward, MAX_EQUIPPED_BADGES } from '@/lib/badges'
-import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields } from '@/lib/badgeConditions'
+import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields, exchangeStatsFrom, type ExchangePositionRow } from '@/lib/badgeConditions'
 
 /** Grant every badge whose condition is met but not yet recorded. Derives
  *  from existing data (no per-feature hook needed), so it self-heals any
@@ -18,7 +18,7 @@ export async function reconcileBadges(): Promise<string[]> {
   if (!user) return []
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }] = await Promise.all([
+  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }, { data: exchangeRows }] = await Promise.all([
     admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', user.id).single(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
     admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', user.id),
@@ -26,6 +26,7 @@ export async function reconcileBadges(): Promise<string[]> {
     admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
     admin.from('shiny_catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    admin.from('exchange_positions').select('status, stake, payout').eq('user_id', user.id),
   ])
   if (!profile) return []
 
@@ -41,6 +42,7 @@ export async function reconcileBadges(): Promise<string[]> {
     collectionCount: Math.max(collectionCount ?? 0, Number((profile as BadgeProfileFields).lifetime_species_count ?? 0)),
     rodTiers: ((rodRows ?? []) as { rod_tier: number }[]).map(r => r.rod_tier),
     goldenCount: goldenCount ?? 0,
+    exchange: exchangeStatsFrom((exchangeRows ?? []) as ExchangePositionRow[]),
   })
 
   const toGrant = derived.filter(id => !have.has(id))

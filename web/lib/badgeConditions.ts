@@ -142,6 +142,12 @@ export interface BadgeProfileFields {
   // prestige wipes (see prestigeZone). Powers the collection badges so
   // prestiging never sets back Half the Sea / A Hundred Fins.
   lifetime_species_count?: number | null
+  // ── Bounties ── the board is overwritten every morning, so its history only
+  // exists in these. Bumped in claimBounty alongside the gem grant.
+  bounties_claimed?: number | null
+  bounty_gems_earned?: number | null
+  bounty_boards_cleared?: number | null
+  bounty_elites_claimed?: number | null
 }
 
 export interface BadgeJoinData {
@@ -151,6 +157,47 @@ export interface BadgeJoinData {
   collectionCount: number   // lifetime distinct species (prestige-proof)
   rodTiers: number[]        // rod_inventory rod_tier values (owned rods)
   goldenCount: number       // shiny_catches rows (lifetime goldens caught)
+  /** Aggregated exchange_positions. A durable log, so the Exchange badges need
+   *  no counters of their own the way the bounty ones do. */
+  exchange: {
+    opened: number
+    settled: number       // reached a terminal status, either way
+    won: number           // paid back more than it cost
+    closedEarly: number
+    worthless: number     // expired paying nothing at all
+    bestPayout: number
+  }
+}
+
+/** One row of exchange_positions, as the badges need it. */
+export type ExchangePositionRow = { status: string; stake: number | null; payout: number | null }
+
+/** A captain who has never touched the Exchange. */
+export const NO_EXCHANGE: BadgeJoinData['exchange'] = {
+  opened: 0, settled: 0, won: 0, closedEarly: 0, worthless: 0, bestPayout: 0,
+}
+
+/** Fold a captain's contracts into the six numbers the badges ask about.
+ *
+ *  Shared because three separate paths build BadgeJoinData (the achievement
+ *  leaderboard, the cached per-user score, and the badges page), and six
+ *  definitions of "won" living in three files is how they drift. */
+export function exchangeStatsFrom(rows: ExchangePositionRow[]): BadgeJoinData['exchange'] {
+  const out = { ...NO_EXCHANGE }
+  for (const r of rows) {
+    out.opened++
+    if (r.status === 'open') continue
+    out.settled++
+    const payout = Number(r.payout ?? 0)
+    const stake = Number(r.stake ?? 0)
+    if (payout > stake) out.won++
+    if (r.status === 'closed_early') out.closedEarly++
+    // Worthless means it ran to expiry and paid NOTHING. A contract sold early
+    // for less than it cost was a decision, not a wipeout.
+    else if (payout <= 0) out.worthless++
+    if (payout > out.bestPayout) out.bestPayout = payout
+  }
+  return out
 }
 
 /** Map of badge id → whether its derivable condition is met. */
@@ -448,6 +495,25 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     ancient_tackle:       ownsEye || ownsMaw,
     something_old:        ownsEye || ownsMaw,
     both_in_hand:         ownsEye && ownsMaw,
+
+    // ── The Exchange ──
+    first_contract:       j.exchange.opened >= 1,
+    first_settle:         j.exchange.won >= 1,
+    cut_losses:           j.exchange.closedEarly >= 1,
+    // Deliberately earned by LOSING. A contract that ends at nothing is the
+    // thing the whole board is built around, and pretending otherwise would be
+    // the one dishonest badge in the set.
+    worthless:            j.exchange.worthless >= 1,
+    big_score:            j.exchange.bestPayout >= 250_000,
+    market_maker:         j.exchange.settled >= 100,
+
+    // ── Bounties ──
+    first_bounty:         Number(p.bounties_claimed ?? 0) >= 1,
+    full_board:           Number(p.bounty_boards_cleared ?? 0) >= 1,
+    elite_order:          Number(p.bounty_elites_claimed ?? 0) >= 1,
+    fifty_orders:         Number(p.bounties_claimed ?? 0) >= 50,
+    seven_boards:         Number(p.bounty_boards_cleared ?? 0) >= 7,
+    bounty_hoard:         Number(p.bounty_gems_earned ?? 0) >= 5_000,
     // Tier is charge XP against FINN_ITEM_THRESHOLDS, and only counts on a
     // spoil actually owned — an orphan xp value from a since-lost item is not a
     // tier. Either spoil qualifies; the badge asks for one taken far, not both.

@@ -296,9 +296,25 @@ export async function claimBounty(bountyId: string): Promise<ClaimResult> {
   if (won !== true) return { error: 'Already claimed' }
 
   const gems = bountyGems(b)
-  const { data: prof } = await admin.from('profiles').select('gems').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles')
+    .select('gems, bounties_claimed, bounty_gems_earned, bounty_boards_cleared, bounty_elites_claimed')
+    .eq('id', user.id).single()
   const total = Number(prof?.gems ?? 0) + gems
-  await admin.from('profiles').update({ gems: total }).eq('id', user.id)
+
+  // Was this the last one on the board? Counted HERE because the board is
+  // overwritten tomorrow morning and there is no later pass that could notice.
+  // The stored array is one slot behind (the RPC just flipped index i), so
+  // check every OTHER slot and treat this one as taken.
+  const after = ids.every((_, k) => k === i || claimed[k] === true)
+
+  const stats = {
+    gems: total,
+    bounties_claimed: Number(prof?.bounties_claimed ?? 0) + 1,
+    bounty_gems_earned: Number(prof?.bounty_gems_earned ?? 0) + gems,
+    bounty_boards_cleared: Number(prof?.bounty_boards_cleared ?? 0) + (after ? 1 : 0),
+    bounty_elites_claimed: Number(prof?.bounty_elites_claimed ?? 0) + (b.tier === 'elite' ? 1 : 0),
+  }
+  await admin.from('profiles').update(stats).eq('id', user.id)
 
   return { ok: true, gems, total }
 }

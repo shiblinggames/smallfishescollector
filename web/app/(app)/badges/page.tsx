@@ -18,7 +18,7 @@ import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS, RAID_ITEMS, baseItemId } from '@/lib/raidItems'
 import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from '@/lib/finnItems'
 import { raidItemSlotsForTier } from '@/lib/expeditions'
-import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL, SUNKEN_HAND_HULLS } from '@/lib/badgeConditions'
+import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS, CHALLENGE_RAID_IDS_ALL, SUNKEN_HAND_HULLS, exchangeStatsFrom, type ExchangePositionRow } from '@/lib/badgeConditions'
 import { BUYABLE_ROD_TIERS } from '@/lib/rods'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 
@@ -35,7 +35,7 @@ export default async function BadgesPage() {
   // Profile via the request-scoped cached loader (lib/userData.ts).
   // reconcileBadges runs first-class so any newly-met condition is granted on
   // visit (and its return is the authoritative unlocked list).
-  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes, rarityRes, goldenRes] = await Promise.all([
+  const [profile, collectionRes, speciesRes, voyageCountRes, unlocked, raidComplRes, crewRes, rodRes, rarityRes, goldenRes, exchangeRes] = await Promise.all([
     getCurrentProfile(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
@@ -48,6 +48,9 @@ export default async function BadgesPage() {
     admin.rpc('get_badge_rarity'),
     // Lifetime goldens caught (one row per golden) — powers the golden badges.
     admin.from('shiny_catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    // Every contract this captain has ever opened. The Exchange badges are all
+    // aggregates over this, which is why none of them needed a counter.
+    admin.from('exchange_positions').select('status, stake, payout').eq('user_id', user.id),
   ])
 
   // ── Derive everything from existing data — no new columns ────────────────
@@ -87,6 +90,13 @@ export default async function BadgesPage() {
     ...((collectionRes.data ?? []) as { fish_id: number }[]).map(r => r.fish_id),
   ])
   const collectionCount = Math.max((collectionRes.data ?? []).length, lifetimeSpeciesIds.size)
+
+  // ── The Exchange + Bounties ───────────────────────────────────────────────
+  const ex = exchangeStatsFrom((exchangeRes.data ?? []) as ExchangePositionRow[])
+  const bountiesClaimed = Number(profile?.bounties_claimed ?? 0)
+  const bountyBoards = Number(profile?.bounty_boards_cleared ?? 0)
+  const bountyElites = Number(profile?.bounty_elites_claimed ?? 0)
+  const bountyGems = Number(profile?.bounty_gems_earned ?? 0)
 
   const crewHallTier = Number(profile?.crew_hall_tier ?? 0)
   const recruits = Number(profile?.lifetime_recruits ?? 0)
@@ -395,6 +405,22 @@ export default async function BadgesPage() {
         badgeGoal('fully_attuned', 'Fully Attuned', 'Take a Primeval spoil to Tier VI', spoilTier, FINN_ITEM_MAX_LEVEL, '/expeditions'),
         badgeGoal('the_sixth_mount', 'The Sixth Mount', 'Sail with all six item slots filled', mountsFilled, 6, '/expeditions'),
         badgeGoal('colours_of_the_hand', 'Colours of the Hand', 'Own all three hulls off The Sunken Hand', handHullsOwned, SUNKEN_HAND_HULLS.length, '/expeditions'),
+
+        // ── The Exchange ──
+        badgeGoal('first_contract', 'Paper Captain', 'Open your first contract on the Exchange', ex.opened, 1, '/tavern/market'),
+        badgeGoal('first_settle', 'Read the Water', 'Have a contract settle in your favour', ex.won, 1, '/tavern/market'),
+        badgeGoal('cut_losses', 'Out Before the Bell', 'Sell a contract early rather than ride it out', ex.closedEarly, 1, '/tavern/market'),
+        badgeGoal('worthless', 'Not a Doubloon', 'Watch a contract expire worthless', ex.worthless, 1, '/tavern/market'),
+        badgeGoal('big_score', 'The Whole Berth', 'Take 250,000 doubloons from a single contract', ex.bestPayout, 250_000, '/tavern/market'),
+        badgeGoal('market_maker', 'Market Maker', 'Settle 100 contracts', ex.settled, 100, '/tavern/market'),
+
+        // ── Bounties ──
+        badgeGoal('first_bounty', 'Took the Job', 'Claim your first bounty', bountiesClaimed, 1, '/expeditions'),
+        badgeGoal('full_board', 'Board Cleared', 'Claim every order posted in one day', bountyBoards, 1, '/expeditions'),
+        badgeGoal('elite_order', 'The Hard Way', 'Claim an Elite bounty', bountyElites, 1, '/expeditions'),
+        badgeGoal('fifty_orders', 'Known at the Docks', 'Claim 50 bounties', bountiesClaimed, 50, '/expeditions'),
+        badgeGoal('seven_boards', 'Every Morning', 'Clear the whole board on 7 days', bountyBoards, 7, '/expeditions'),
+        badgeGoal('bounty_hoard', "Harbourmaster's Favourite", 'Earn 5,000 gems from bounties', bountyGems, 5_000, '/expeditions'),
       ],
     },
     {

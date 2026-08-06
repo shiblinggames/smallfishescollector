@@ -307,6 +307,25 @@ export const BADGES: Badge[] = [
   //    long road to charging it all the way.
   { id: 'something_old',   name: 'Something Old',      description: 'Carry your first Primeval spoil',                 imageUrl: '/badges/something_old.png',   difficulty: 'veteran'     },
   { id: 'both_in_hand',    name: 'Both in Hand',       description: 'Own both Primeval spoils',                        imageUrl: '/badges/both_in_hand.png',    difficulty: 'master'      },
+
+  // ── THE EXCHANGE ── contracts on the fish board. Every one of these is an
+  // aggregate over exchange_positions, which is a durable log, so none of it
+  // needed a counter.
+  { id: 'first_contract',  name: 'Paper Captain',      description: 'Open your first contract on the Exchange',        imageUrl: '/badges/first_contract.png',  difficulty: 'rookie'      },
+  { id: 'first_settle',    name: 'Read the Water',     description: 'Have a contract settle in your favour',           imageUrl: '/badges/first_settle.png',    difficulty: 'seasoned'    },
+  { id: 'cut_losses',      name: 'Out Before the Bell', description: 'Sell a contract early rather than ride it out',  imageUrl: '/badges/cut_losses.png',      difficulty: 'seasoned'    },
+  { id: 'worthless',       name: 'Not a Doubloon',     description: 'Watch a contract expire worthless',               imageUrl: '/badges/worthless.png',       difficulty: 'seasoned'    },
+  { id: 'big_score',       name: "The Whole Berth",    description: 'Take 250,000 doubloons from a single contract',   imageUrl: '/badges/big_score.png',       difficulty: 'veteran'     },
+  { id: 'market_maker',    name: 'Market Maker',       description: 'Settle 100 contracts',                            imageUrl: '/badges/market_maker.png',    difficulty: 'master'      },
+
+  // ── BOUNTIES ── the daily orders board. bounty_progress is overwritten every
+  // morning, so these read the lifetime counters bumped at claim time.
+  { id: 'first_bounty',    name: 'Took the Job',       description: 'Claim your first bounty',                         imageUrl: '/badges/first_bounty.png',    difficulty: 'rookie'      },
+  { id: 'full_board',      name: 'Board Cleared',      description: "Claim every order posted in one day",             imageUrl: '/badges/full_board.png',      difficulty: 'seasoned'    },
+  { id: 'elite_order',     name: 'The Hard Way',       description: 'Claim an Elite bounty',                           imageUrl: '/badges/elite_order.png',     difficulty: 'veteran'     },
+  { id: 'fifty_orders',    name: 'Known at the Docks', description: 'Claim 50 bounties',                               imageUrl: '/badges/fifty_orders.png',    difficulty: 'veteran'     },
+  { id: 'seven_boards',    name: 'Every Morning',      description: 'Clear the whole board on 7 days',                 imageUrl: '/badges/seven_boards.png',    difficulty: 'master'      },
+  { id: 'bounty_hoard',    name: "Harbourmaster's Favourite", description: 'Earn 5,000 gems from bounties',            imageUrl: '/badges/bounty_hoard.png',     difficulty: 'master'      },
   { id: 'waking_it',       name: 'Waking It',          description: 'Take a Primeval spoil to Tier III',               imageUrl: '/badges/waking_it.png',       difficulty: 'veteran'     },
   { id: 'fully_attuned',   name: 'Fully Attuned',      description: 'Take a Primeval spoil to Tier VI',                imageUrl: '/badges/fully_attuned.png',   difficulty: 'grandmaster' },
   { id: 'the_sixth_mount', name: 'The Sixth Mount',    description: 'Sail with all six item slots filled',             imageUrl: '/badges/the_sixth_mount.png', difficulty: 'veteran'     },

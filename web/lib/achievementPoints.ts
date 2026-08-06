@@ -20,7 +20,10 @@
 import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { badgePoints } from './badges'
-import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields } from './badgeConditions'
+import {
+  earnedBadgeIds, exchangeStatsFrom, BADGE_PROFILE_COLUMNS,
+  type BadgeProfileFields, type ExchangePositionRow,
+} from './badgeConditions'
 
 export interface AchievementPointsRow {
   user_id: string
@@ -38,7 +41,7 @@ export interface AchievementPointsBoard {
 const getCachedAchievementRows = unstable_cache(
   async (): Promise<AchievementPointsRow[]> => {
     const admin = createAdminClient()
-    const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }, { data: rodRows }, { data: goldenRows }] = await Promise.all([
+    const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }, { data: rodRows }, { data: goldenRows }, { data: exchangeRows }] = await Promise.all([
       admin.from('profiles').select(`id, username, unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('is_admin', false),
       admin.from('raid_completions').select('user_id, raid_id, elapsed_ms'),
       admin.from('user_crew').select('user_id, xp, died_at, effects, cards(slug)'),
@@ -46,6 +49,7 @@ const getCachedAchievementRows = unstable_cache(
       admin.from('fish_collection').select('user_id'),
       admin.from('rod_inventory').select('user_id, rod_tier'),
       admin.from('shiny_catches').select('user_id'),
+      admin.from('exchange_positions').select('user_id, status, stake, payout'),
     ])
 
     // Bucket the joined rows by user so each player's conditions compute in memory.
@@ -68,6 +72,14 @@ const getCachedAchievementRows = unstable_cache(
     for (const f of (collectionRows ?? []) as Array<{ user_id: string }>) collectionBy.set(f.user_id, (collectionBy.get(f.user_id) ?? 0) + 1)
     const goldenBy = new Map<string, number>()
     for (const g of (goldenRows ?? []) as Array<{ user_id: string }>) goldenBy.set(g.user_id, (goldenBy.get(g.user_id) ?? 0) + 1)
+    // Grouped, never per captain: this path scores EVERY profile, so a query
+    // each would be one round trip per player on the board.
+    const exchangeBy = new Map<string, ExchangePositionRow[]>()
+    for (const e of (exchangeRows ?? []) as Array<ExchangePositionRow & { user_id: string }>) {
+      const arr = exchangeBy.get(e.user_id) ?? []
+      arr.push({ status: e.status, stake: e.stake, payout: e.payout })
+      exchangeBy.set(e.user_id, arr)
+    }
     const rodsBy = new Map<string, number[]>()
     for (const r of (rodRows ?? []) as Array<{ user_id: string; rod_tier: number }>) {
       const arr = rodsBy.get(r.user_id) ?? []
@@ -85,6 +97,7 @@ const getCachedAchievementRows = unstable_cache(
         collectionCount: Math.max(collectionBy.get(p.id) ?? 0, Number(p.lifetime_species_count ?? 0)),
         rodTiers: rodsBy.get(p.id) ?? [],
         goldenCount: goldenBy.get(p.id) ?? 0,
+        exchange: exchangeStatsFrom(exchangeBy.get(p.id) ?? []),
       })
       const all = new Set<string>([...(p.unlocked_badges ?? []), ...derived])
       let score = 0
@@ -113,7 +126,7 @@ export async function getAchievementPointsBoard(userId: string): Promise<Achieve
 const getCachedUserPoints = unstable_cache(
   async (userId: string): Promise<number> => {
     const admin = createAdminClient()
-    const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }] = await Promise.all([
+    const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }, { data: exchangeRows }] = await Promise.all([
       admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', userId).single(),
       admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', userId),
       admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', userId),
@@ -121,6 +134,7 @@ const getCachedUserPoints = unstable_cache(
       admin.from('fish_collection').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       admin.from('rod_inventory').select('rod_tier').eq('user_id', userId),
       admin.from('shiny_catches').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      admin.from('exchange_positions').select('status, stake, payout').eq('user_id', userId),
     ])
     if (!profile) return 0
     const p = profile as unknown as BadgeProfileFields & { unlocked_badges: string[] | null }
@@ -133,6 +147,7 @@ const getCachedUserPoints = unstable_cache(
       collectionCount: Math.max(collectionCount ?? 0, Number(p.lifetime_species_count ?? 0)),
       rodTiers: (rodRows ?? []).map(r => r.rod_tier),
       goldenCount: goldenCount ?? 0,
+      exchange: exchangeStatsFrom((exchangeRows ?? []) as ExchangePositionRow[]),
     })
     const all = new Set<string>([...(p.unlocked_badges ?? []), ...derived])
     let score = 0
