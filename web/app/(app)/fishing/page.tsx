@@ -99,7 +99,7 @@ export default async function FishingPage() {
     // gets wiped; the hub card was reading it and so disagreed with the book it
     // links to the moment anyone prestiged.
     admin.from('fish_lifetime').select('fish_id, catches').eq('user_id', user.id),
-    admin.from('market_state').select('mood').eq('id', 1).maybeSingle(),
+    admin.from('market_state').select('mood, next_update_at').eq('id', 1).maybeSingle(),
   ])
 
   const marketMultipliers: Record<number, number> = {}
@@ -141,6 +141,10 @@ export default async function FishingPage() {
   const holdValue = ((fishInventory ?? []) as unknown as { fish_id: number; quantity: number; fish_species: { sell_value: number } }[])
     .reduce((n, r) => n + r.quantity * (r.fish_species?.sell_value ?? 0) * (marketMultipliers[r.fish_id] ?? 1), 0)
   const marketMood = (marketState?.mood as string | null) ?? 'calm'
+  // When the board turns over. The Market tile counts down to it rather than
+  // reporting the hold, which the hold's own screen already does better.
+  const marketNextUpdate = (marketState?.next_update_at as string | null)
+    ?? new Date(Date.now() + 3600_000).toISOString()
 
 
 
@@ -356,8 +360,8 @@ export default async function FishingPage() {
           initialStreakZone={(profile?.current_streak_zone as string | null) ?? null}
           hubSpeciesCaught={speciesCaught}
           hubSpeciesTotal={speciesTotal}
-          hubHoldValue={Math.round(holdValue)}
           hubMarketMood={marketMood}
+          hubMarketNextUpdate={marketNextUpdate}
           hubExchangeUnveil={exchangeUnveil}
           hubTicker={tickerItems}
           hasSeenFishingHubTour={profile?.has_seen_fishing_hub_tour ?? false}

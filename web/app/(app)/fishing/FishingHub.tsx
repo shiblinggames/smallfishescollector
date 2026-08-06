@@ -13,11 +13,10 @@
 // The tiles are the SAME component the Expeditions hub uses (components/HubTile),
 // so the two pages cannot drift into being lookalikes.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import HubTile, { HUB_GRID } from '@/components/HubTile'
 import FishingLevelBar from '@/components/FishingLevelBar'
-import { getFishHold } from '@/lib/fishHold'
 import FisherPose from '@/components/FisherPose'
 import Almanac from './Almanac'
 import FishingHubTour from './FishingHubTour'
@@ -30,7 +29,7 @@ import type { RenownAlloc } from '@/lib/renown'
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
-  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, holdValue, marketMood, exchangeUnveil, ticker, hasSeenHubTour,
+  currentZone, baitCount, speciesCaught, speciesTotal, marketMood, marketNextUpdate, exchangeUnveil, ticker, hasSeenHubTour,
   characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onOpenZones,
 }: {
@@ -40,14 +39,13 @@ export default function FishingHub({
   ancientDeepUnlocked: boolean
   /** The water they last fished, so the Fishing tile picks up where they left off. */
   currentZone: ZoneKey | null
-  holdCount: number
-  fishHoldTier: number
   baitCount: number
   speciesCaught: number
   speciesTotal: number
   /** The hold at today's prices, which is what the market's portfolio leads with. */
-  holdValue: number
   marketMood: string
+  /** ISO time the fish board next turns over. */
+  marketNextUpdate: string
   /** Fishing is capped and the Exchange has never been announced. The tile
    *  carries the news, since the market is where it actually opens. */
   exchangeUnveil: boolean
@@ -69,10 +67,26 @@ export default function FishingHub({
 
   const watersOpen = ZONE_ORDER.filter(z =>
     fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1) && (z !== 'ancient_deep' || ancientDeepUnlocked)).length
-  const holdCap = getFishHold(fishHoldTier).capacity
-  const holdFull = holdCount >= holdCap
-  const holdPct = holdCap > 0 ? Math.min(1, holdCount / holdCap) : 0
   const mood = MOOD_CONFIG[marketMood] ?? MOOD_CONFIG.calm
+
+  // Seconds until the board turns over, ticking. The tile used to report the
+  // hold, which is a FISHING fact the hold's own screen states better; what a
+  // captain wants from the door to the market is the market's own state and
+  // how long the current prices have left to run.
+  const [nextIn, setNextIn] = useState(() =>
+    Math.max(0, Math.floor((new Date(marketNextUpdate).getTime() - Date.now()) / 1000)))
+  useEffect(() => {
+    const tick = () => setNextIn(Math.max(0, Math.floor((new Date(marketNextUpdate).getTime() - Date.now()) / 1000)))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [marketNextUpdate])
+  const nextLabel = nextIn <= 0
+    ? 'New prices any moment'
+    : `New prices in ${Math.floor(nextIn / 60)}:${String(nextIn % 60).padStart(2, '0')}`
+  // The bar fills toward the turnover instead of showing how full the hold is,
+  // so the tile says the same thing twice in two ways.
+  const marketPct = Math.max(0, Math.min(1, 1 - nextIn / 3600))
 
   return (
     <>
@@ -151,19 +165,17 @@ export default function FishingHub({
                 // A count told you nothing about whether the trip was worth
                 // making; this is the number the market's own portfolio leads
                 // with, and it moves with the mood named underneath it.
-                // The Exchange opening is bigger news than any hold value, so
-                // it takes the line for as long as it is news.
-                status={exchangeUnveil
-                  ? 'The Exchange is open'
-                  : holdCount > 0 ? `${holdValue.toLocaleString()} ⟡ in the hold` : 'Hold is empty'}
-                statusColor={exchangeUnveil ? '#38bdf8' : holdCount > 0 ? '#f0c040' : undefined}
-                sub={exchangeUnveil
-                  ? 'Fishing 100 earned you the trading floor'
-                  : holdFull
-                    ? 'Hold is full, sell to keep fishing'
-                    : `${mood.label} · ${holdCount}/${holdCap} aboard`}
-                progress={exchangeUnveil ? undefined : holdPct}
-                dot={exchangeUnveil ? 'new' : holdCount > 0 ? 'returned' : null}
+                // The market's own state, not yours. What is in the hold and
+                // how full it is are fishing facts the Fishing tile and the
+                // market screen both say better; this is the door to the BOARD,
+                // so it reports the weather out there and how long these prices
+                // have left. The Exchange opening still takes the line while it
+                // is news.
+                status={exchangeUnveil ? 'The Exchange is open' : mood.label}
+                statusColor={exchangeUnveil ? '#38bdf8' : mood.color}
+                sub={exchangeUnveil ? 'Fishing 100 earned you the trading floor' : nextLabel}
+                progress={exchangeUnveil ? undefined : marketPct}
+                dot={exchangeUnveil ? 'new' : null}
                 onClick={() => router.push('/tavern/market')}
               />
 
