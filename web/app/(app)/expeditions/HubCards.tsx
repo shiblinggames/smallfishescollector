@@ -17,6 +17,7 @@ import type { CrewMember } from '@/app/(app)/crew/actions'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import BountiesPanel from './BountiesPanel'
 import BountyRungUnlock from './BountyRungUnlock'
+import { BOUNTY_RUNGS } from '@/lib/bounties'
 import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
@@ -225,13 +226,20 @@ export default function HubCards({
         {/* BOUNTIES took this slot from PvP, which was parked indefinitely and
             drawn locked for everyone. A tile that has said "Coming Later" for
             months is worse than no tile: it teaches players to stop reading
-            that corner of the hub. This one actually opens, and for the
-            captains who reach it there is nothing else left to unlock. */}
+            that corner of the hub.
+
+            The lock names the ONE boss that opens it, read off BOUNTY_RUNGS so
+            it cannot drift from the gate. It said "Clear the campaign", which
+            was true of the first design and became a lie the moment the board
+            started opening at the end of Chapter I: it told a captain four
+            chapters of work stood in front of a door they were one raid from. */}
         <HubTile
           bgImage="/exp-bounties.jpg" accent={bountyAccent} title="Bounties"
-          status={bountiesOpen ? 'Open ›' : 'Endgame'} statusColor={bountyAccent}
-          sub={bountiesOpen ? 'Daily orders, paid in gems' : 'Posted once the story is done'}
-          locked={!bountiesOpen} lockLabel="Clear the campaign"
+          status={bountiesOpen ? 'Open ›' : 'Locked'} statusColor={bountyAccent}
+          sub={bountiesOpen
+            ? 'Daily orders, paid in gems'
+            : `Sink ${BOUNTY_RUNGS[0].boss} and the board opens`}
+          locked={!bountiesOpen} lockLabel={`Beat ${BOUNTY_RUNGS[0].boss}`}
           onClick={bountiesOpen ? () => setModal('bounties') : undefined}
         />
         <HubTile
