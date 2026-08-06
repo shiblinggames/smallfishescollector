@@ -36,11 +36,11 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span aria-hidden style={{ width: 3, height: 15, borderRadius: 2, background: ANCIENT, flexShrink: 0 }} />
         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e8e3f5', flex: 1 }}>The Ancient Deep</p>
-        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: got === giants.length ? '#f0c040' : '#6b6486', fontVariantNumeric: 'tabular-nums' }}>
+        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: got === giants.length ? '#f0c040' : '#a49dc0', fontVariantNumeric: 'tabular-nums' }}>
           {got}/{giants.length}
         </span>
       </div>
-      <p className="font-karla font-400 italic" style={{ fontSize: '0.64rem', color: '#5b5478', lineHeight: 1.45, marginBottom: 10 }}>
+      <p className="font-karla font-400 italic" style={{ fontSize: '0.64rem', color: '#9a93b8', lineHeight: 1.45, marginBottom: 10 }}>
         Six things that should not still be down there. They fetch nothing at market because nobody would dare buy one.
       </p>
 
@@ -73,20 +73,20 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
               </div>
 
               <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '62%', padding: '0.7rem 0.85rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.42rem', color: caught ? ANCIENT : '#403a58', marginBottom: 2 }}>
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.64rem', color: caught ? ANCIENT : '#847dab', marginBottom: 2 }}>
                   {caught ? `Mount ${i + 1} of ${giants.length}` : 'Unraised'}
                 </p>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.08rem', lineHeight: 1.08, color: caught ? '#f2ecff' : '#4e4866', textShadow: caught ? `0 2px 8px rgba(0,0,0,0.9), 0 0 14px ${ANCIENT}44` : undefined }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.08rem', lineHeight: 1.08, color: caught ? '#f2ecff' : '#8a83ad', textShadow: caught ? `0 2px 8px rgba(0,0,0,0.9), 0 0 14px ${ANCIENT}44` : undefined }}>
                   {caught ? g.name : '???'}
                 </p>
                 {caught ? (
-                  <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#9a92b6', marginTop: 3, lineHeight: 1.35 }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#b8b1d0', marginTop: 3, lineHeight: 1.35 }}>
                     {shortDate(g.firstCaughtAt)}
                     {g.pbLength != null ? ` · ${formatFishLength(g.pbLength)}` : ''}
                     {g.count > 1 ? ` · raised ×${g.count}` : ''}
                   </p>
                 ) : (
-                  <p className="font-karla font-400 italic" style={{ fontSize: '0.56rem', color: '#403a58', marginTop: 3 }}>Still down there</p>
+                  <p className="font-karla font-400 italic" style={{ fontSize: '0.64rem', color: '#847dab', marginTop: 3 }}>Still down there</p>
                 )}
               </div>
             </motion.div>
@@ -98,11 +98,11 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span aria-hidden style={{ width: 3, height: 15, borderRadius: 2, background: TIER_COLOR.trophy, flexShrink: 0 }} />
         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e8e3f5', flex: 1 }}>Trophy Records</p>
-        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#6b6486', fontVariantNumeric: 'tabular-nums' }}>{trophies.length}</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#a49dc0', fontVariantNumeric: 'tabular-nums' }}>{trophies.length}</span>
       </div>
 
       {trophies.length === 0 ? (
-        <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#4e4866', lineHeight: 1.5, padding: '1rem 0' }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#8a83ad', lineHeight: 1.5, padding: '1rem 0' }}>
           No trophy-size catches yet. Every fish is rolled against its own length range, and the top of that range is a trophy.
         </p>
       ) : (
@@ -114,11 +114,11 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                 style={{ width: 34, height: 26, objectFit: 'contain', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e4dff2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: ZONE_COLOR[e.habitat] ?? '#6b6486' }}>{ZONE_LABEL[e.habitat] ?? e.habitat}</p>
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: ZONE_COLOR[e.habitat] ?? '#a49dc0' }}>{ZONE_LABEL[e.habitat] ?? e.habitat}</p>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: TIER_COLOR.trophy, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{formatFishLength(e.pbLength!)}</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#7a7264', marginTop: 2 }}>
+                <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#ab9f86', marginTop: 2 }}>
                   {Math.round(pct * 100)}% of max · {TIER_LABEL.trophy}
                 </p>
               </div>

@@ -63,7 +63,7 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
                     {done ? '✦ all charted' : `${got}/${list.length}`}
                   </span>
                 </div>
-                <p className="font-karla font-400 italic" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.62)', marginTop: 1, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{ZONE_TAGLINE[zone]}</p>
+                <p className="font-karla font-400 italic" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.62)', marginTop: 1, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{ZONE_TAGLINE[zone]}</p>
                 <div style={{ height: 3, borderRadius: 999, background: 'rgba(0,0,0,0.5)', marginTop: 6, maxWidth: 150, overflow: 'hidden' }}>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                     style={{ height: '100%', borderRadius: 999, background: done ? GOLD : color }} />
@@ -132,14 +132,14 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
           }} />
       </div>
 
-      <p className="font-cinzel font-700" style={{ width: '100%', fontSize: '0.62rem', lineHeight: 1.14, color: caught ? '#f0ebe1' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <p className="font-cinzel font-700" style={{ width: '100%', fontSize: '0.62rem', lineHeight: 1.14, color: caught ? '#f0ebe1' : '#8a83ad', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {caught ? entry.name : '???'}
       </p>
-      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.1em', color: caught ? c : rc + 'aa' }}>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.1em', color: caught ? c : rc + 'aa' }}>
         {RARITY_LABEL[entry.rarity]}
       </span>
       {caught && (
-        <span className="font-karla font-700" style={{ fontSize: '0.54rem', color: '#8b83a8', fontVariantNumeric: 'tabular-nums' }}>×{entry.count}</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#b3abcc', fontVariantNumeric: 'tabular-nums' }}>×{entry.count}</span>
       )}
     </motion.button>
   )
@@ -193,7 +193,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
             style={{ position: 'absolute', top: 9, right: 9, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'rgba(6,6,12,0.72)', border: '1px solid rgba(255,255,255,0.2)', color: '#cfcabf', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
-          <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ position: 'absolute', left: 12, top: 11, fontSize: '0.46rem', color, textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
+          <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ position: 'absolute', left: 12, top: 11, fontSize: '0.66rem', color, textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>
             {ZONE_LABEL[entry.habitat] ?? entry.habitat}
           </span>
         </div>
@@ -201,17 +201,17 @@ function SpeciesSheet({ entry, onClose, goldens }: {
         <div style={{ padding: '0.2rem 1rem 1.1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 2 }}>
             <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: '#f2eeff', lineHeight: 1.1 }}>{entry.name}</p>
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: rc, background: rc + '1c', border: `1px solid ${rc}55` }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.66rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: rc, background: rc + '1c', border: `1px solid ${rc}55` }}>
               {RARITY_LABEL[entry.rarity]}
             </span>
             {entry.everGolden && (
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: GOLD, background: 'rgba(240,192,64,0.12)', border: `1px solid ${GOLD}88` }}>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.66rem', padding: '0.12rem 0.4rem', borderRadius: 999, color: GOLD, background: 'rgba(240,192,64,0.12)', border: `1px solid ${GOLD}88` }}>
                 Golden taken
               </span>
             )}
           </div>
           {entry.scientificName && (
-            <p className="font-karla font-400 italic" style={{ fontSize: '0.68rem', color: '#6b6486', marginBottom: 10 }}>{entry.scientificName}</p>
+            <p className="font-karla font-400 italic" style={{ fontSize: '0.68rem', color: '#a49dc0', marginBottom: 10 }}>{entry.scientificName}</p>
           )}
 
           {/* Your record with this fish. */}
@@ -225,7 +225,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           {entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null && (
             <div style={{ marginBottom: 12, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 11, padding: '0.6rem 0.7rem' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 7 }}>
-                <span className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.46rem', color: '#5b5478' }}>Your best</span>
+                <span className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.66rem', color: '#9a93b8' }}>Your best</span>
                 <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: tier ? TIER_COLOR[tier] : '#ded8ee' }}>
                   {formatFishLength(entry.pbLength)}{tier ? ` · ${TIER_LABEL[tier]}` : ''}
                 </span>
@@ -238,8 +238,8 @@ function SpeciesSheet({ entry, onClose, goldens }: {
                 )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#4e4866' }}>{formatFishLength(entry.lengthMin)}</span>
-                <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#4e4866' }}>{formatFishLength(entry.lengthMax)}</span>
+                <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#8a83ad' }}>{formatFishLength(entry.lengthMin)}</span>
+                <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#8a83ad' }}>{formatFishLength(entry.lengthMax)}</span>
               </div>
             </div>
           )}
@@ -266,7 +266,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
 function Cell({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '0.42rem 0.5rem', textAlign: 'center' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.44rem', color: '#5b5478', marginBottom: 2 }}>{label}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.64rem', color: '#9a93b8', marginBottom: 2 }}>{label}</p>
       <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', lineHeight: 1, color: accent ?? '#ded8ee', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
     </div>
   )
@@ -275,7 +275,7 @@ function Cell({ label, value, accent }: { label: string; value: string; accent?:
 function Row({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-      <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#5b5478', whiteSpace: 'nowrap' }}>{label}</span>
+      <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9a93b8', whiteSpace: 'nowrap' }}>{label}</span>
       <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: accent ?? '#c8c2dc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
     </div>
   )

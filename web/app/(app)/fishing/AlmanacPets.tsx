@@ -16,7 +16,7 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
 
   return (
     <>
-      <p className="font-karla font-400 italic" style={{ fontSize: '0.64rem', color: '#5b5478', lineHeight: 1.45, marginBottom: '1rem' }}>
+      <p className="font-karla font-400 italic" style={{ fontSize: '0.64rem', color: '#9a93b8', lineHeight: 1.45, marginBottom: '1rem' }}>
         Every one of them came out of a crate. The rarer the crate, the better the odds one was in it.
       </p>
 
@@ -33,7 +33,7 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span aria-hidden style={{ width: 3, height: 15, borderRadius: 2, background: accent, flexShrink: 0 }} />
               <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e8e3f5', flex: 1, minWidth: 0 }}>{PET_SPECIES_LABEL[species]}</p>
-              <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: done ? '#f0c040' : '#6b6486', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+              <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: done ? '#f0c040' : '#a49dc0', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                 {done ? '✦ complete' : `${got}/${list.length}`}
               </span>
             </div>
@@ -57,7 +57,7 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
                       <img src={p.restImageUrl} alt="" aria-hidden loading="lazy" decoding="async"
                         style={{ maxWidth: 72, maxHeight: 66, objectFit: 'contain', filter: has ? `drop-shadow(0 3px 10px ${p.accentColor}80)` : 'brightness(0) opacity(0.4)' }} />
                     </div>
-                    <p className="font-karla font-700" style={{ fontSize: '0.54rem', lineHeight: 1.15, color: has ? '#ded8ee' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.62rem', lineHeight: 1.15, color: has ? '#ded8ee' : '#8a83ad', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {has ? p.name : '???'}
                     </p>
                   </motion.div>

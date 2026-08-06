@@ -103,7 +103,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
           borderBottom: `1px solid ${ACCENT}30`,
         }}>
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: `${ACCENT}b8`, marginBottom: 1 }}>Fishing</p>
+            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.6rem', color: `${ACCENT}b8`, marginBottom: 1 }}>Fishing</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#efe9ff' }}>The Angler's Almanac</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
@@ -114,7 +114,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
 
         {!data ? (
           <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'grid', placeItems: 'center' }}>
-            <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: error ? '#f87171' : '#6b6486' }}>
+            <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: error ? '#f87171' : '#a49dc0' }}>
               {error || 'Opening the logbook…'}
             </p>
           </div>
@@ -125,7 +125,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
                   <span className="font-cinzel font-800" style={{ fontSize: '1.9rem', lineHeight: 1, color: '#efe9ff', fontVariantNumeric: 'tabular-nums' }}>{caught}</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#6b6486' }}>of {total} charted</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#a49dc0' }}>of {total} charted</span>
                 </div>
                 <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: ACCENT, fontVariantNumeric: 'tabular-nums' }}>
                   {total > 0 ? Math.round((caught / total) * 100) : 0}%
@@ -148,9 +148,9 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
                   <Stat label="Perfects" value={compact(data.stats.perfects)} accent="#7dd3fc" />
                   <Stat label="Trophies" value={compact(data.stats.trophySizeCatches)} accent="#fbbf24" />
                 </div>
-                <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: '0.46rem', color: '#5b5478', marginTop: 6 }}>
+                <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: '0.66rem', color: '#9a93b8', marginTop: 6 }}>
                   {careerOpen ? 'Hide the record' : 'The whole record'}
-                  <span aria-hidden style={{ display: 'inline-block', transform: careerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.16s', fontSize: '0.5rem' }}>▼</span>
+                  <span aria-hidden style={{ display: 'inline-block', transform: careerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.16s', fontSize: '0.6rem' }}>▼</span>
                 </span>
               </button>
 
@@ -172,7 +172,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
                     </div>
                     {ZONE_ORDER.some(z => (data.prestige[z] ?? 0) > 0) && (
                       <div style={{ marginTop: 9, paddingTop: 9, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.44rem', color: '#5b5478', marginBottom: 4 }}>Prestige</p>
+                        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.64rem', color: '#9a93b8', marginBottom: 4 }}>Prestige</p>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', columnGap: 14, rowGap: 4 }}>
                           {ZONE_ORDER.filter(z => (data.prestige[z] ?? 0) > 0).map(z => (
                             <Line key={z} label={ZONE_LABEL[z]} value={`✦ ${data.prestige[z]}`} accent="#f0c040" />
@@ -197,11 +197,11 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
                       // Translucent tint, never a solid fill.
                       background: on ? `${ACCENT}22` : 'transparent',
                       border: `1px solid ${on ? ACCENT + '66' : 'transparent'}`,
-                      color: on ? '#efe9ff' : '#6b6486', cursor: 'pointer',
+                      color: on ? '#efe9ff' : '#a49dc0', cursor: 'pointer',
                       WebkitTapHighlightColor: 'transparent',
                     }}>
                     <span style={{ display: 'block', fontSize: '0.6rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
-                    <span style={{ display: 'block', fontSize: '0.55rem', color: on ? ACCENT : '#514b68', fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>{t.badge}</span>
+                    <span style={{ display: 'block', fontSize: '0.62rem', color: on ? ACCENT : '#9a93b8', fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>{t.badge}</span>
                   </button>
                 )
               })}
@@ -232,7 +232,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
 function Line({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-      <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#5b5478', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#9a93b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent ?? '#c8c2dc', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
     </div>
   )
@@ -241,7 +241,7 @@ function Line({ label, value, accent }: { label: string; value: string; accent?:
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, padding: '0.35rem 0.45rem' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.44rem', color: '#5b5478', marginBottom: 1 }}>{label}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.64rem', color: '#9a93b8', marginBottom: 1 }}>{label}</p>
       <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', lineHeight: 1, color: accent ?? '#d8d2ea', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
     </div>
   )
