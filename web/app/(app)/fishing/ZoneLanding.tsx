@@ -290,7 +290,7 @@ export default function ZoneLanding({
                     whileTap={accessible ? { scale: 0.975 } : undefined}
                     onClick={enter}
                     style={{
-                      position: 'relative', width: '100%', height: 170,
+                      position: 'relative', width: '100%', height: 205,
                       borderRadius: 16, overflow: 'hidden',
                       cursor: accessible ? 'pointer' : 'default',
                       border: `${isCurrent ? 2 : 1.5}px solid ${accessible ? (isCurrent ? color : `${color}8c`) : 'rgba(255,255,255,0.14)'}`,
@@ -303,7 +303,9 @@ export default function ZoneLanding({
                         how tall the card is. Anchored to the top, a 170px card
                         showed the top 18% of the plate, which is all sky with the
                         horizon buried behind the caption scrim: five cards of
-                        empty air. 8% down puts the horizon near the top edge and
+                        empty air. 8% DOWN, not 0, and because that offset is a
+                        share of the overflow it holds the same framing if the
+                        card height changes again. It puts the horizon near the top and
                         gives the rest to water, which is what tells the zones
                         apart. */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
