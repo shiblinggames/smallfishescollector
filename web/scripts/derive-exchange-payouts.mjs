@@ -67,13 +67,23 @@ function endMove(cycles, vols) {
   return (sum / lps.length - 1) * 100
 }
 
+/** BOTH DIRECTIONS, priced separately.
+ *
+ *  Prices move in log space, so in percentage terms an up-move is larger than
+ *  a down-move: something can rise 200% and can only ever fall 100%. Solving
+ *  one leverage on the rise payoff and using it for both sides made Fall pay as
+ *  little as 43% of a fair return on the Legendary Index. A direction should be
+ *  a read on the market, never a worse bet than its opposite. */
 function leverage(cycles, vols, N) {
-  let sum = 0
+  let up = 0, down = 0
   for (let i = 0; i < N; i++) {
     const m = endMove(cycles, vols)
-    if (m > 0) sum += m
+    if (m > 0) up += m; else down += -m
   }
-  return (1 - EDGE) / (sum / N)
+  return {
+    rise: (1 - EDGE) / (up / N),
+    fall: (1 - EDGE) / (down / N),
+  }
 }
 
 const mix = counts => {
@@ -98,18 +108,20 @@ const FUNDS = {
 const N_FUND = 30000
 const N_SINGLE = 150000
 
-console.log('export const SINGLE_LEVERAGE: Record<number, Record<Term, number>> = {')
+const fmt = L => `{ rise: ${L.rise.toFixed(4)}, fall: ${L.fall.toFixed(4)} }`
+
+console.log('export const SINGLE_LEVERAGE: Record<number, Record<Term, Sided>> = {')
 for (const r of [1, 2, 3, 4, 5]) {
-  const row = TERMS.map(c => leverage(c, [VOL[r]], N_SINGLE).toFixed(4))
-  console.log(`  ${r}: { 6: ${row[0]}, 24: ${row[1]}, 72: ${row[2]} },`.padEnd(52)
-    + `// break-even ${(1 / Number(row[1])).toFixed(2)}% at 24h`)
+  const row = TERMS.map(c => leverage(c, [VOL[r]], N_SINGLE))
+  console.log(`  // rarity ${r}: 24h break-even  rise ${(1 / row[1].rise).toFixed(2)}%  fall ${(1 / row[1].fall).toFixed(2)}%`)
+  console.log(`  ${r}: { 6: ${fmt(row[0])}, 24: ${fmt(row[1])}, 72: ${fmt(row[2])} },`)
 }
 console.log('}\n')
 
-console.log('export const FUND_LEVERAGE: Record<string, Record<Term, number>> = {')
+console.log('export const FUND_LEVERAGE: Record<string, Record<Term, Sided>> = {')
 for (const [id, vols] of Object.entries(FUNDS)) {
-  const row = TERMS.map(c => leverage(c, vols, N_FUND).toFixed(4))
-  console.log(`  ${id}: { 6: ${row[0]}, 24: ${row[1]}, 72: ${row[2]} },`.padEnd(58)
-    + `// ${vols.length} fish, break-even ${(1 / Number(row[1])).toFixed(2)}% at 24h`)
+  const row = TERMS.map(c => leverage(c, vols, N_FUND))
+  console.log(`  // ${id}: ${vols.length} fish, 24h break-even  rise ${(1 / row[1].rise).toFixed(2)}%  fall ${(1 / row[1].fall).toFixed(2)}%`)
+  console.log(`  ${id}: { 6: ${fmt(row[0])}, 24: ${fmt(row[1])}, 72: ${fmt(row[2])} },`)
 }
 console.log('}')

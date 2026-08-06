@@ -47,40 +47,57 @@ export const HOUSE_EDGE = 0.08
 // engine. Do not hand-edit: rerun it if the engine's volatility, theta or mood
 // weights ever change, or these silently stop being fair.
 
+/** A contract is priced PER DIRECTION.
+ *
+ *  Prices move in log space, so in percentage terms an up-move is bigger than a
+ *  down-move: an instrument can rise 200% and can only ever fall 100%. One
+ *  leverage solved on the rise payoff and used for both sides made Fall pay as
+ *  little as 43% of a fair return on the Legendary Index, which turns a
+ *  direction into a trap rather than a read on the market.
+ *
+ *  Both sides now return the same 0.92 per 1 staked, which is why Fall asks a
+ *  SMALLER move than Rise everywhere: a fall of that size is the rarer event,
+ *  so it is worth more per point. */
+export type Sided = { rise: number; fall: number }
+
 /** Single fish, keyed by bite_rarity. A legendary swings hardest, so it needs
- *  the least leverage to reach the same expected payout, and asks the largest
- *  move to break even. */
-export const SINGLE_LEVERAGE: Record<number, Record<Term, number>> = {
-  1: { 6: 0.4940, 24: 0.2735, 72: 0.2074 },   // break-even 3.66% at 24h
-  2: { 6: 0.3988, 24: 0.2194, 72: 0.1656 },   // break-even 4.56% at 24h
-  3: { 6: 0.3197, 24: 0.1742, 72: 0.1298 },   // break-even 5.74% at 24h
-  4: { 6: 0.2540, 24: 0.1367, 72: 0.1020 },   // break-even 7.32% at 24h
-  5: { 6: 0.2037, 24: 0.1080, 72: 0.0796 },   // break-even 9.26% at 24h
+ *  the least leverage and asks the biggest move to break even. */
+export const SINGLE_LEVERAGE: Record<number, Record<Term, Sided>> = {
+  // rarity 1: 24h break-even  rise 3.69%  fall 3.46%
+  1: { 6: { rise: 0.4919, fall: 0.5139 }, 24: { rise: 0.2709, fall: 0.2888 }, 72: { rise: 0.2084, fall: 0.2171 } },
+  // rarity 2: 24h break-even  rise 4.54%  fall 4.20%
+  2: { 6: { rise: 0.4002, fall: 0.4197 }, 24: { rise: 0.2201, fall: 0.2379 }, 72: { rise: 0.1648, fall: 0.1817 } },
+  // rarity 3: 24h break-even  rise 5.76%  fall 5.09%
+  3: { 6: { rise: 0.3192, fall: 0.3428 }, 24: { rise: 0.1736, fall: 0.1964 }, 72: { rise: 0.1298, fall: 0.1512 } },
+  // rarity 4: 24h break-even  rise 7.27%  fall 6.18%
+  4: { 6: { rise: 0.2558, fall: 0.2785 }, 24: { rise: 0.1375, fall: 0.1618 }, 72: { rise: 0.1025, fall: 0.1257 } },
+  // rarity 5: 24h break-even  rise 9.28%  fall 7.46%
+  5: { 6: { rise: 0.2041, fall: 0.2279 }, 24: { rise: 0.1078, fall: 0.1341 }, 72: { rise: 0.0799, fall: 0.1051 } },
 }
 
-/** Funds, keyed BY ID rather than by member count.
- *
- *  Count alone was wrong twice over. It gave the Legendary Index and the Common
- *  Index near-identical break-evens (1.67% and 1.66% at 24h) even though
- *  legendaries are twice as volatile, so the legendary book was strictly the
- *  better bet and there was a correct answer on the board. And the model behind
- *  the numbers averaged NOISE into one walk, where update_exchange_funds()
- *  averages PRICES across members: it understated the movement by about 23%,
- *  which handed every fund contract a +11% edge over the house instead of the
- *  intended -8%.
- *
- *  Each index now carries its own roster and its own rarity mix, so what it
- *  asks of you tracks how far it actually travels. */
-export const FUND_LEVERAGE: Record<string, Record<Term, number>> = {
-  sea:          { 6: 1.0345, 24: 0.5032, 72: 0.3641 },  // 146 fish, break-even 1.99% at 24h
-  common:       { 6: 1.1231, 24: 0.5640, 72: 0.4260 },  //  53 fish, break-even 1.77%
-  legendary:    { 6: 0.8088, 24: 0.3780, 72: 0.2650 },  //  47 fish, break-even 2.65%
-  rare:         { 6: 0.9887, 24: 0.4855, 72: 0.3561 },  //  46 fish, break-even 2.06%
-  abyss:        { 6: 0.8372, 24: 0.4142, 72: 0.2961 },  //  35 fish, break-even 2.41%
-  open_waters:  { 6: 0.9902, 24: 0.4877, 72: 0.3548 },  //  34 fish, break-even 2.05%
-  shallows:     { 6: 0.9557, 24: 0.4773, 72: 0.3520 },  //  33 fish, break-even 2.10%
-  deep:         { 6: 0.9382, 24: 0.4522, 72: 0.3318 },  //  32 fish, break-even 2.21%
-  ancient_deep: { 6: 0.7144, 24: 0.3659, 72: 0.2613 },  //  12 fish, break-even 2.73%
+/** Funds, keyed BY ID: each index carries its own roster and rarity mix, so
+ *  what it asks of you tracks how far it actually travels. Keying on member
+ *  count alone gave Legendary and Common near-identical break-evens despite
+ *  legendaries being twice as volatile. */
+export const FUND_LEVERAGE: Record<string, Record<Term, Sided>> = {
+  // sea: 146 fish, 24h break-even  rise 1.97%  fall 1.24%
+  sea: { 6: { rise: 1.0185, fall: 1.4152 }, 24: { rise: 0.5073, fall: 0.8040 }, 72: { rise: 0.3625, fall: 0.6420 } },
+  // common: 53 fish, 24h break-even  rise 1.75%  fall 1.46%
+  common: { 6: { rise: 1.1040, fall: 1.2474 }, 24: { rise: 0.5711, fall: 0.6859 }, 72: { rise: 0.4174, fall: 0.5300 } },
+  // legendary: 47 fish, 24h break-even  rise 2.64%  fall 1.25%
+  legendary: { 6: { rise: 0.8173, fall: 1.2478 }, 24: { rise: 0.3791, fall: 0.8000 }, 72: { rise: 0.2643, fall: 0.6633 } },
+  // rare: 46 fish, 24h break-even  rise 2.07%  fall 1.42%
+  rare: { 6: { rise: 0.9857, fall: 1.2246 }, 24: { rise: 0.4842, fall: 0.7059 }, 72: { rise: 0.3527, fall: 0.5629 } },
+  // abyss: 35 fish, 24h break-even  rise 2.37%  fall 1.41%
+  abyss: { 6: { rise: 0.8535, fall: 1.1959 }, 24: { rise: 0.4227, fall: 0.7095 }, 72: { rise: 0.2965, fall: 0.5854 } },
+  // open_waters: 34 fish, 24h break-even  rise 2.06%  fall 1.46%
+  open_waters: { 6: { rise: 0.9667, fall: 1.1928 }, 24: { rise: 0.4864, fall: 0.6840 }, 72: { rise: 0.3526, fall: 0.5309 } },
+  // shallows: 33 fish, 24h break-even  rise 2.06%  fall 1.48%
+  shallows: { 6: { rise: 0.9530, fall: 1.1842 }, 24: { rise: 0.4856, fall: 0.6749 }, 72: { rise: 0.3433, fall: 0.5348 } },
+  // deep: 32 fish, 24h break-even  rise 2.18%  fall 1.45%
+  deep: { 6: { rise: 0.9203, fall: 1.1790 }, 24: { rise: 0.4589, fall: 0.6902 }, 72: { rise: 0.3327, fall: 0.5351 } },
+  // ancient_deep: 12 fish, 24h break-even  rise 2.76%  fall 1.86%
+  ancient_deep: { 6: { rise: 0.7078, fall: 0.9249 }, 24: { rise: 0.3622, fall: 0.5380 }, 72: { rise: 0.2630, fall: 0.4168 } },
 }
 
 // ── Funds ───────────────────────────────────────────────────────────────────
@@ -182,13 +199,13 @@ export type Quote = {
   breakEvenPct: number
 }
 
-export function quoteFund(fundId: string, term: Term): Quote {
-  const leverage = (FUND_LEVERAGE[fundId] ?? FUND_LEVERAGE.sea)[term]
+export function quoteFund(fundId: string, term: Term, dir: Direction): Quote {
+  const leverage = (FUND_LEVERAGE[fundId] ?? FUND_LEVERAGE.sea)[term][dir]
   return { leverage, breakEvenPct: 1 / leverage }
 }
 
-export function quoteSingle(rarity: number, term: Term): Quote {
-  const leverage = (SINGLE_LEVERAGE[rarity] ?? SINGLE_LEVERAGE[3])[term]
+export function quoteSingle(rarity: number, term: Term, dir: Direction): Quote {
+  const leverage = (SINGLE_LEVERAGE[rarity] ?? SINGLE_LEVERAGE[3])[term][dir]
   return { leverage, breakEvenPct: 1 / leverage }
 }
 

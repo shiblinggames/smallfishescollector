@@ -70,14 +70,14 @@ export async function openContract(
       .select('price').eq('fund_id', instrument.fundId).single()
     if (!f) return { error: 'Fund not listed' }
     entry = Number(f.price)
-    leverage = quoteFund(instrument.fundId, term).leverage
+    leverage = quoteFund(instrument.fundId, term, direction).leverage
   } else {
     const { data: fx } = await admin.from('fish_exchange')
       .select('price, fish_species(bite_rarity)').eq('fish_id', instrument.fishId).single()
     if (!fx) return { error: 'Fish not listed' }
     entry = Number(fx.price)
     const rarity = Number((fx.fish_species as unknown as { bite_rarity: number } | null)?.bite_rarity ?? 3)
-    leverage = quoteSingle(rarity, term).leverage
+    leverage = quoteSingle(rarity, term, direction).leverage
   }
   if (!(entry > 0)) return { error: 'No price for that instrument' }
 
