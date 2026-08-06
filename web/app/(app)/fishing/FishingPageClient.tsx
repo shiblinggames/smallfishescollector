@@ -54,7 +54,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
-  hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
+  hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
@@ -85,6 +85,7 @@ export default function FishingPageClient({
   initialHighestPerfectStreak: number
   initialPerfectStreak: number
   initialStreakZone: string | null
+  hasSeenFishingHubTour: boolean
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
   hasSeenFirstCatchCelebration: boolean
@@ -276,6 +277,7 @@ export default function FishingPageClient({
         baitCount={initialBait.reduce((n, b) => n + b.quantity, 0)}
         speciesCaught={new Set([...caughtFishIds, ...ancientCatches]).size}
         speciesTotal={allFishSpecies.length}
+        hasSeenHubTour={hasSeenFishingHubTour}
         characterColor={characterColor}
         equippedHat={persistedEquippedHat}
         equippedBoat={persistedEquippedBoat}

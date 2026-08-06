@@ -20,6 +20,7 @@ import FishingLevelBar from '@/components/FishingLevelBar'
 import { getFishHold } from '@/lib/fishHold'
 import FisherPose from '@/components/FisherPose'
 import Almanac from './Almanac'
+import FishingHubTour from './FishingHubTour'
 import { ZONE_MIN_LEVEL, ZONE_BG, ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import type { ZoneKey } from './ZoneLanding'
 import type { RenownAlloc } from '@/lib/renown'
@@ -27,7 +28,7 @@ import type { RenownAlloc } from '@/lib/renown'
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
-  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal,
+  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, hasSeenHubTour,
   characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onOpenZones,
 }: {
@@ -42,6 +43,7 @@ export default function FishingHub({
   baitCount: number
   speciesCaught: number
   speciesTotal: number
+  hasSeenHubTour: boolean
   characterColor: string
   equippedHat: string | null
   equippedBoat: string | null
@@ -105,6 +107,7 @@ export default function FishingHub({
                 bgImage={ZONE_BG[currentZone ?? 'shallows']}
                 accent={currentZone ? ZONE_COLOR[currentZone] : '#5ec8e8'}
                 title="Fishing"
+                coachId="fishing"
                 status={currentZone ? `Last cast: ${ZONE_LABEL[currentZone]}` : 'Start in the Shallows'}
                 sub={`${watersOpen} of ${ZONE_ORDER.length} waters open`}
                 onClick={onOpenZones}
@@ -119,6 +122,7 @@ export default function FishingHub({
                 bgImage="/fish-market.jpg"
                 accent="#f0c040"
                 title="Market"
+                coachId="market"
                 status={holdCount > 0 ? `${holdCount} in the hold` : 'Hold is empty'}
                 statusColor={holdFull ? '#f87171' : holdCount > 0 ? '#f0c040' : undefined}
                 sub={holdFull ? 'Hold is full, sell to keep fishing' : `Room for ${(holdCap - holdCount).toLocaleString()} more`}
@@ -131,6 +135,7 @@ export default function FishingHub({
                 bgImage="/fish-tackle.jpg"
                 accent="#7dd3fc"
                 title="Tackle Shop"
+                coachId="tackle"
                 status={baitCount > 0 ? `${baitCount.toLocaleString()} bait aboard` : 'Out of bait'}
                 statusColor={baitCount > 0 ? undefined : '#f87171'}
                 sub="Rods, reels, line and bait"
@@ -141,6 +146,7 @@ export default function FishingHub({
                 bgImage="/fish-bestiary.jpg"
                 accent="#a78bfa"
                 title="Almanac"
+                coachId="almanac"
                 status={`${speciesCaught} of ${speciesTotal} charted`}
                 sub="Goldens, giants and pets"
                 onClick={() => setAlmanacOpen(true)}
@@ -154,6 +160,7 @@ export default function FishingHub({
       </div>
 
       <Almanac open={almanacOpen} onClose={() => setAlmanacOpen(false)} />
+      <FishingHubTour hasSeen={hasSeenHubTour} />
     </>
   )
 }

@@ -254,6 +254,7 @@ export default async function FishingPage() {
           initialHighestPerfectStreak={profile?.highest_perfect_streak ?? 0}
           initialPerfectStreak={profile?.catch_pending ? 0 : (profile?.current_perfect_streak ?? 0)}
           initialStreakZone={(profile?.current_streak_zone as string | null) ?? null}
+          hasSeenFishingHubTour={profile?.has_seen_fishing_hub_tour ?? false}
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
           hasSeenFirstCatchCelebration={profile?.has_seen_first_catch_celebration ?? false}
