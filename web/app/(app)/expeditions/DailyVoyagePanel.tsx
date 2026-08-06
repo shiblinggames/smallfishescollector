@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import CloseButton from '@/components/CloseButton'
-import { voyageFortuneScale, voyagePowerScale, voyageDiscoveryChance, voyageEncounterWinChance } from '@/lib/voyageEvents'
 import { motion, AnimatePresence } from 'framer-motion'
 import { hapticTap } from '@/lib/haptics'
 import { createPortal } from 'react-dom'
@@ -14,6 +13,7 @@ import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES, effectiveCrewLossChance, type VoyageRoute } from '@/lib/voyageRoutes'
+import { expectedVoyageLoot, outcomeChances, ROUTE_PAYOUTS } from '@/lib/voyageRoll'
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -119,27 +119,22 @@ function computeRouteEstimate(
   route: VoyageRoute,
   safeVoyages = false,
 ) {
-  const rc = ROUTE_CONFIGS[route]
-  // Straight from the resolver (lib/voyageEvents), not copied. pWin used to be
-  // min(1, power/30) here against the roll's min(0.80, power/55), so at 30 Power
-  // this panel promised a certain encounter win where the voyage rolled 54.5%,
-  // and every expected-doubloon figure below inherited the error.
-  const fortuneScale = voyageFortuneScale(stats.fortune)
-  const powerScale   = voyagePowerScale(stats.power)
-  const pDiscovery   = voyageDiscoveryChance(stats.fortune)
-  const pWin         = voyageEncounterWinChance(stats.power)
+  // Straight from lib/voyageRoll, the same module the server rolls with. This
+  // used to model the OLD six-event voyage by hand, counting notional
+  // encounters and discoveries per route, and it was never updated when a
+  // voyage became one event and one loot roll. Every number it produced had
+  // been wrong since that change.
+  const expected = expectedVoyageLoot(route, stats.power, stats.fortune)
+  const chances  = outcomeChances(stats.power, route)
 
-  const enc = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
-  const dng = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
-  const dis = route === 'shroud' ? 5 : route === 'triangle' ? 4 : 2
-
-  const expected =
-    dis * pDiscovery * 120 * fortuneScale * rc.payoutScale +
-    enc * pWin * 55 * powerScale * rc.payoutScale +
-    0.30 * 0.35 * 35 * rc.payoutScale
-
-  const lootMin = Math.round(rc.baseDoubloons + expected * 0.4)
-  const lootMax = Math.round(rc.baseDoubloons + expected * 1.9)
+  // The band is the two outcomes the crew can actually land on: a setback pays
+  // 0.6x the anchor, a triumph 1.35x. That is the honest range rather than an
+  // invented spread.
+  const perOutcome = expected.doubloons / EXPECTED_OUTCOME_MEAN(chances)
+  const lootMin = Math.round(perOutcome * 0.6)
+  const lootMax = Math.round(perOutcome * 1.35)
+  const xpMin = Math.round((expected.xp / EXPECTED_OUTCOME_MEAN(chances)) * 0.6)
+  const xpMax = Math.round((expected.xp / EXPECTED_OUTCOME_MEAN(chances)) * 1.35)
 
   // Flat per-voyage crew-loss chance, scaled down by total crew fortune —
   // fully zeroed once fortune matches the route's minLevel (see
@@ -151,16 +146,18 @@ function computeRouteEstimate(
       ? Math.round(effectiveCrewLossChance(route, stats.fortune) * 1000) / 10
       : 0
 
-  // XP estimate — same event counts, best/worst case outcomes. Base + crew +
-  // event values MUST track lib/expeditionLevel.voyageXP (single source), incl.
-  // the ×VOYAGE_XP_MULT payout lift, or this preview drifts from the real grant.
-  const xpBase      = ROUTE_BASE_XP[route] ?? 150
-  const xpCrewBonus = crewCount * 12
-  const xpMin = Math.round((xpBase + xpCrewBonus + enc * 5  + dng * 3  + dis * 4)  * VOYAGE_XP_MULT)
-  const xpMax = Math.round((xpBase + xpCrewBonus + enc * 18 + dng * 14 + dis * 12) * VOYAGE_XP_MULT)
-
-  return { lootMin, lootMax, crewRiskPct, drops: ROUTE_DROPS[route], xpMin, xpMax }
+  return {
+    lootMin, lootMax, crewRiskPct, drops: ROUTE_DROPS[route], xpMin, xpMax,
+    gems: expected.gems,
+    triumphPct: Math.round(chances.triumph * 100),
+    setbackPct: Math.round(chances.setback * 100),
+  }
 }
+
+/** Probability-weighted outcome multiplier, so the band and the average agree.
+ *  Mirrors OUTCOME_MULT in lib/voyageRoll. */
+const EXPECTED_OUTCOME_MEAN = (c: { triumph: number; setback: number }) =>
+  c.triumph * 1.35 + Math.max(0, 1 - c.triumph - c.setback) * 1 + c.setback * 0.6
 
 interface Props {
   roster: CrewMember[]
@@ -211,6 +208,9 @@ export default function DailyVoyagePanel({
   //   outcome -> how it went, which is what the crew choice earned
   //   haul    -> the numbers
   const [reveal, setReveal] = useState<'sealed' | 'outcome' | 'haul'>('sealed')
+  // The 1-in-100 haul takes over the screen. A caption on the card is not
+  // enough for something a player might see once a month.
+  const [jackpotOverlay, setJackpotOverlay] = useState(false)
   // The route sheet portals to document.body, which does not exist during the
   // server render. Gate on a mount flag rather than a bare `typeof document`
   // check so the first client render matches the server's and React does not
@@ -690,11 +690,11 @@ export default function DailyVoyagePanel({
                   {est && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <span className="font-karla font-700" style={{ fontSize: '1.05rem', color: '#c8aa6a' }}>
-                        ~{est.lootMin}–{est.lootMax} ⟡
+                        ~{est.lootMin.toLocaleString()}–{est.lootMax.toLocaleString()} ⟡
                       </span>
                       <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
                       <span className="font-karla" style={{ fontSize: '0.92rem', color: '#5a7aaa' }}>
-                        {est.xpMin}–{est.xpMax} XP
+                        {est.xpMin.toLocaleString()}–{est.xpMax.toLocaleString()} XP
                       </span>
                       <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>·</span>
                       <span className="font-karla" style={{ fontSize: '0.92rem', color: '#7a6848' }}>
@@ -705,6 +705,42 @@ export default function DailyVoyagePanel({
                           Swift Sails
                         </span>
                       )}
+                    </div>
+                  )}
+
+                  {/* WHAT THE CREW BUYS.
+                      Power decides the outcome and Fortune scales the haul, but
+                      neither was on this screen, so swapping a hand changed the
+                      voyage with no visible effect and there was no way to learn
+                      that Power did anything at all. These two move as the party
+                      changes, which is what turns picking a crew from filling in
+                      a form into a decision. */}
+                  {est && (
+                    <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+                      {([
+                        { k: 'Triumph', v: `${est.triumphPct}%`, sub: 'Power', tint: '#7fd49a',
+                          hint: 'Pays 1.35x. More Power, more often.' },
+                        { k: 'Setback', v: `${est.setbackPct}%`, sub: 'Power', tint: '#e0888a',
+                          hint: 'Pays 0.6x.' },
+                        { k: 'Haul', v: `×${(est.lootMax / Math.max(1, ROUTE_PAYOUTS[selectedRoute ?? 'open'].doubloons * 1.35)).toFixed(2)}`,
+                          sub: 'Fortune', tint: '#c8aa6a',
+                          hint: 'Fortune scales everything you bring home.' },
+                      ] as const).map(c => (
+                        <div key={c.k} title={c.hint} style={{
+                          flex: 1, minWidth: 0, textAlign: 'center',
+                          padding: '0.45rem 0.3rem', borderRadius: 9,
+                          background: 'rgba(255,255,255,0.035)',
+                          border: '1px solid rgba(255,255,255,0.07)',
+                        }}>
+                          <p className="font-cinzel font-700 tabular-nums" style={{ fontSize: '0.95rem', color: c.tint, lineHeight: 1 }}>{c.v}</p>
+                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.42)', marginTop: 3 }}>
+                            {c.k}
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.26)' }}>
+                            {c.sub}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
                   {/* A slotted crew that's away on a trawl can't sail —
@@ -1013,7 +1049,16 @@ export default function DailyVoyagePanel({
                     // with it, so the reveal never waits on the network.
                     hapticTap()
                     setReveal('outcome')
-                    window.setTimeout(() => setReveal('haul'), 900)
+                    window.setTimeout(() => {
+                      setReveal('haul')
+                      if (jackpot) {
+                        // Longer buzz for the rare one, and the overlay lands
+                        // WITH the number rather than before it, so the card
+                        // still does its job underneath.
+                        hapticTap()
+                        setJackpotOverlay(true)
+                      }
+                    }, 900)
                     handleClaim(false)
                     return
                   }
@@ -1194,6 +1239,75 @@ export default function DailyVoyagePanel({
 
     return (
       <>
+      {/* ── JACKPOT ────────────────────────────────────────────────────────
+          One voyage in a hundred. Portaled to body because this panel sits
+          inside transformed wrappers, and a transform ancestor makes position
+          fixed anchor to the ancestor instead of the viewport.
+          Transform and opacity only: the rays spin, they do not repaint. */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {jackpotOverlay && (
+            <motion.div
+              key="voyage-jackpot"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setJackpotOverlay(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 1300,
+                background: 'rgba(4,3,1,0.88)', backdropFilter: 'blur(4px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem',
+              }}
+            >
+              <motion.div aria-hidden
+                initial={{ opacity: 0, scale: 0.5, rotate: 0 }}
+                animate={{ opacity: 0.55, scale: 1, rotate: 360 }}
+                transition={{ opacity: { duration: 0.5 }, scale: { duration: 0.6 }, rotate: { duration: 22, repeat: Infinity, ease: 'linear' } }}
+                style={{
+                  position: 'absolute', width: 520, height: 520, borderRadius: '50%', pointerEvents: 'none',
+                  background: 'conic-gradient(from 0deg, #f0c04000, #f0c04044, #f0c04000, #f0c04044, #f0c04000, #f0c04044, #f0c04000)',
+                }}
+              />
+              <motion.div
+                initial={{ scale: 0.8, y: 14 }} animate={{ scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                onClick={e => e.stopPropagation()}
+                style={{ position: 'relative', width: '100%', maxWidth: 340, textAlign: 'center' }}
+              >
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.26em', color: '#f0c040', marginBottom: 12 }}>
+                  Jackpot haul
+                </p>
+                <motion.img
+                  src="/goldcrateopen.png" alt="" width={150} height={150}
+                  initial={{ scale: 0.4, opacity: 0, y: 18 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.1 }}
+                  style={{ width: 150, height: 150, objectFit: 'contain', margin: '0 auto 14px', display: 'block' }}
+                />
+                <p className="font-cinzel font-800" style={{ fontSize: '1.9rem', color: '#f0c040', lineHeight: 1.05, textShadow: '0 0 26px rgba(240,192,64,0.55)' }}>
+                  +{(activeVoyage?.total_doubloons ?? 0).toLocaleString()} \u27E1
+                </p>
+                {(activeVoyage?.total_gems ?? 0) > 0 && (
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4b5fd', marginTop: 4 }}>
+                    +{activeVoyage?.total_gems} gems
+                  </p>
+                )}
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a29a', marginTop: 10, lineHeight: 1.5 }}>
+                  Ten times the haul. One voyage in a hundred comes back like this.
+                </p>
+                <button onClick={() => setJackpotOverlay(false)} className="font-cinzel font-700 uppercase tracking-[0.1em]"
+                  style={{
+                    marginTop: 20, padding: '0.7rem 2rem', borderRadius: 12,
+                    background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.6)',
+                    color: '#f0c040', fontSize: '0.78rem', cursor: 'pointer', touchAction: 'manipulation',
+                  }}>
+                  Haul it aboard
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
+
       <NavLevelUpOverlay info={levelUpOverlay} onDismiss={() => setLevelUpOverlay(null)} />
       <div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
