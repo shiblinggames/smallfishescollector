@@ -265,7 +265,14 @@ export async function revealVoyageResults(voyageId: number): Promise<
   // event list. The old voyageXP() added up six events' worth; with one event
   // it would have quietly paid about a sixth. ROUTE_PAYOUTS carries the intended
   // per-voyage figure directly, and the single event's outcome scales it.
-  const voyageEvent = (voyage.events as { outcome?: string }[])?.[0]
+  const voyageEvent = (voyage.events as { outcome?: string; booty?: boolean; jackpot?: boolean }[])?.[0]
+
+  // Lifetime Massive Booty count, for the badge. Fire and forget: a failed
+  // counter must never cost the player the haul they just earned.
+  if (voyageEvent?.booty || voyageEvent?.jackpot) {
+    void admin.rpc('bump_profile_stat', { uid: user.id, col: 'voyage_booty_hauls', n: 1 })
+      .then(() => {}, () => {})
+  }
   const outcomeMult = voyageEvent?.outcome === 'success' ? 1.35
                     : voyageEvent?.outcome === 'failure' ? 0.6
                     : 1

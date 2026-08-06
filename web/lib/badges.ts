@@ -324,6 +324,11 @@ export const BADGES: Badge[] = [
   { id: 'three_for_three', name: 'Three for Three',    description: 'Clear all three daily challenges on 7 days',      imageUrl: '/badges/three_for_three.png', difficulty: 'seasoned'    },
   { id: 'standing_watch',  name: 'Standing Watch',     description: 'Clear all three daily challenges on 30 days',     imageUrl: '/badges/standing_watch.png',  difficulty: 'veteran'     },
   { id: 'old_reliable',    name: 'Old Reliable',       description: 'Clear all three daily challenges on 100 days',    imageUrl: '/badges/old_reliable.png',    difficulty: 'master'      },
+
+  // ── Sheet 27 continued — the two that finish the plate of six. Both mark
+  //    content that shipped 2026-08-05 and had no recognition at all.
+  { id: 'massive_booty',   name: 'Massive Booty',      description: 'Land a Massive Booty on a voyage',                imageUrl: '/badges/massive_booty.png',   difficulty: 'veteran'     },
+  { id: 'the_fourth_task', name: 'The Fourth Task',    description: 'Clear 25 Master daily challenges',                imageUrl: '/badges/the_fourth_task.png', difficulty: 'master'      },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -360,6 +365,8 @@ export const BADGE_DETAIL: Record<string, string> = {
   three_for_three:  'The tide sets three tasks at dawn. Seven times over, you have cleared the lot before it turned. Most captains take the easy two and call it a day.',
   standing_watch:   'Thirty full dockets. Not thirty days of fishing, thirty days of finishing, which is a harder thing and a rarer one.',
   old_reliable:     'A hundred days where every task the tide set got done. No streak to protect and nothing forcing your hand, just a captain who keeps turning up and clearing the board.',
+  massive_booty:    'One voyage in a hundred comes back so heavy the hold will not shut. Ten times the coin, ten times the gems, and nothing you did earned it beyond being at sea when the luck landed.',
+  the_fourth_task:  'Twenty-five Master challenges cleared. They only appear once you can reach the Ancient Deep, and they ask for a day of real work apiece. Nobody clears twenty-five by accident.',
   salvage_rights:   'A thousand supply crates, opened one at a time. Whatever the sea was keeping in them, it is yours now.',
   crate_digger:     'Crack open 50 supply crates. They wash up from voyages, raids, and the daily haul, and you have hauled in fifty of them.',
   half_the_sea:     'Catch 50 different fish species. A solid start on filling out the logbook.',

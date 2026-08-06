@@ -134,6 +134,8 @@ export interface BadgeProfileFields {
   anglers_patience_xp?: number | null
   borrowed_jaw_xp?: number | null
   daily_challenge_sweeps?: number | null
+  voyage_booty_hauls?: number | null
+  daily_master_cleared?: number | null
   // Don's Gauntlet (dormant until live).
   dons_gauntlet_deepest?: number | null
   // Lifetime distinct species ever caught — auto-maintained count, immune to
@@ -346,6 +348,9 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     three_for_three: Number(p.daily_challenge_sweeps ?? 0) >= 7,
     standing_watch:  Number(p.daily_challenge_sweeps ?? 0) >= 30,
     old_reliable:    Number(p.daily_challenge_sweeps ?? 0) >= 100,
+    // The 1-in-100 voyage haul, and the optional Lv-75 daily challenge.
+    massive_booty:   Number(p.voyage_booty_hauls ?? 0) >= 1,
+    the_fourth_task: Number(p.daily_master_cleared ?? 0) >= 25,
     salvage_rights: Number(p.fishing_crates_opened ?? 0) >= 1000,
     high_water_mark: PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 5),
     fish_baron:     Number(p.fish_sold_doubloons ?? 0) >= 1_000_000,
@@ -467,4 +472,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps, voyage_booty_hauls, daily_master_cleared'
