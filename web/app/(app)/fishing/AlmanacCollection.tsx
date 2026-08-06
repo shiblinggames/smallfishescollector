@@ -174,18 +174,29 @@ function SpeciesSheet({ entry, onClose, goldens }: {
   // sheet's own z-index goes. Escaping to the body is the fix; 120 then keeps
   // it clear of the Almanac shell's own 111.
   return createPortal(
-    <PopupShell open onClose={onClose} zIndex={120}>
+    <PopupShell
+      open onClose={onClose} zIndex={120}
+      // PopupShell's default top padding is 76px, reserved for the app's Nav
+      // header. This sheet is portalled ABOVE a full-screen overlay that
+      // already covers the Nav, so that reservation only pushed the card off
+      // centre. Symmetric gutters instead, and the card centres in the real
+      // viewport.
+      paddingTop="calc(env(safe-area-inset-top, 0px) + 1rem)"
+      paddingBottom="calc(env(safe-area-inset-bottom, 0px) + 1rem)"
+    >
       <motion.div
         initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         onClick={e => e.stopPropagation()}
         style={{
-          // PopupShell's wrapper is a flex row, so a child with no height
-          // stretches to fill it and the card grows a tail of empty panel
-          // under the content. Sit at the start and take the height the
-          // content asks for.
-          alignSelf: 'flex-start',
-          width: '100%', maxWidth: 460, margin: '0 auto', borderRadius: 18, overflow: 'hidden',
+          // margin: auto, NOT align-items/alignSelf center. Auto margins in a
+          // flex container absorb the free space when there is any and compute
+          // to 0 when there is not, so a card taller than the screen scrolls
+          // from its top edge instead of having it clipped off, which is what
+          // centring by alignment does. It also stops the card stretching to
+          // fill the flex row and growing a tail of empty panel.
+          margin: 'auto',
+          width: '100%', maxWidth: 460, borderRadius: 18, overflow: 'hidden',
           // Solid base: this sits over the overlay's art.
           background: 'linear-gradient(180deg, #12101c 0%, #0a0913 100%)',
           border: `1px solid ${entry.everGolden ? GOLD + '66' : color + '55'}`,
