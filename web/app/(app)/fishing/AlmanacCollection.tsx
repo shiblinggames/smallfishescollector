@@ -26,6 +26,13 @@ const GOLD = '#f0c040'
 export default function AlmanacCollection({ data }: { data: AlmanacData }) {
   const [detail, setDetail] = useState<AlmanacEntry | null>(null)
 
+  // Species you hold a MOUNTED golden of. Not entry.everGolden, which stays
+  // true after you sell the fish: the stamp says the golden is on your wall,
+  // and the Goldens room draws the same line.
+  const mountedGolden = useMemo(
+    () => new Set(data.goldens.filter(g => g.status !== 'sold').map(g => g.fishId)),
+    [data.goldens])
+
   // The six Giants have their own room; listing them here too would make the
   // Ancient Deep read as 18 species when only 12 are fishable stock.
   const byZone = useMemo(() => {
@@ -84,7 +91,7 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
                 equal and hands the overflow to the ellipsis already waiting
                 for it. */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem 0.2rem' }}>
-              {list.map(e => <SpeciesCard key={e.id} entry={e} onOpen={() => e.everCaught && setDetail(e)} />)}
+              {list.map(e => <SpeciesCard key={e.id} entry={e} goldMounted={mountedGolden.has(e.id)} onOpen={() => e.everCaught && setDetail(e)} />)}
             </div>
           </div>
         )
@@ -95,10 +102,56 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
   )
 }
 
-function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => void }) {
+/** A struck seal, 10 bumps, precomputed rather than trig'd per card: this
+ *  renders on up to 146 tiles at once and the shape never changes.
+ *  scallop(bumps: 10, outer: 11.4, inner: 9.3) on a 24 viewBox. */
+const SEAL_PATH = 'M21.30 12.00Q22.84 15.52 19.52 17.47Q18.70 21.22 14.87 20.84Q12.00 23.40 9.13 20.84Q5.30 21.22 4.48 17.47Q1.16 15.52 2.70 12.00Q1.16 8.48 4.48 6.53Q5.30 2.78 9.13 3.16Q12.00 0.60 14.87 3.16Q18.70 2.78 19.52 6.53Q22.84 8.48 21.30 12.00Z'
+
+/** Struck into the corner of a species you have landed at the top size tier.
+ *
+ *  The SILHOUETTE carries it, not the detail inside. At 24px a ring of tiny
+ *  teeth disappears and this read as the same object as the golden mark, so
+ *  the seal is scalloped and the golden is a clean disc: they are told apart
+ *  at a glance across a grid, before you have looked at either glyph. */
+function TrophyStamp() {
+  const C = TIER_COLOR.trophy
+  return (
+    <motion.span aria-hidden title="Trophy size landed"
+      initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: -12 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 13, delay: 0.12 }}
+      style={{ position: 'absolute', left: 1, top: -1, width: 24, height: 24, pointerEvents: 'none', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.85))' }}>
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <path d={SEAL_PATH} fill="rgba(18,12,3,0.9)" stroke={C} strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M12 6.9l1.62 3.28 3.62.53-2.62 2.55.62 3.6L12 15.16l-3.24 1.7.62-3.6-2.62-2.55 3.62-.53z" fill={C} />
+      </svg>
+    </motion.span>
+  )
+}
+
+/** A golden of this species is on your wall. Deliberately NOT the fish drawn
+ *  gold: that treatment belongs to the Goldens room, and painting it into this
+ *  grid made the Collection a worse copy of it. A mark, not a costume. */
+function GoldenMark() {
+  return (
+    <motion.span aria-hidden title="Golden mounted"
+      initial={{ scale: 0 }} animate={{ scale: 1 }}
+      transition={{ type: 'spring', stiffness: 460, damping: 14, delay: 0.18 }}
+      style={{ position: 'absolute', right: 1, top: -1, width: 22, height: 22, pointerEvents: 'none', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.85))' }}>
+      <svg viewBox="0 0 24 24" width="22" height="22">
+        <circle cx="12" cy="12" r="9.8" fill="rgba(24,17,3,0.9)" stroke={GOLD} strokeWidth="1.6" />
+        {/* The game's own four-point spark, drawn rather than typed. */}
+        <path d="M12 4.3c.72 4.3 1.7 5.28 6 6-4.3.72-5.28 1.7-6 6-.72-4.3-1.7-5.28-6-6 4.3-.72 5.28-1.7 6-6z" fill={GOLD} />
+      </svg>
+    </motion.span>
+  )
+}
+
+function SpeciesCard({ entry, goldMounted, onOpen }: { entry: AlmanacEntry; goldMounted: boolean; onOpen: () => void }) {
   // everCaught, not count > 0. A prestiged zone was fully collected to earn
   // the prestige, so those species are charted even though the log was wiped.
   const caught = entry.everCaught
+  const isTrophy = entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null
+    && tierForLength(entry.pbLength, entry.lengthMin, entry.lengthMax) === 'trophy'
   // NO GOLD HERE. Whether you have taken a golden of a species is the Goldens
   // room's whole job; painting it into this grid too made the Collection look
   // like a worse version of that tab. Here a fish is its rarity and nothing
@@ -143,6 +196,12 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
             background: 'radial-gradient(ellipse, rgba(0,0,0,0.45) 0%, transparent 72%)',
           }} />
         )}
+
+        {/* Two different achievements, so two different marks in two different
+            corners: a size record on the left, a golden on your wall on the
+            right. Either can appear without the other. */}
+        {caught && isTrophy && <TrophyStamp />}
+        {caught && goldMounted && <GoldenMark />}
       </div>
 
       {/* The name, one line, always. Fixed height so a two-word species and a

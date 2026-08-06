@@ -61,9 +61,14 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
 
   if (!open || !mounted) return null
 
-  const caught = data ? data.entries.filter(e => e.everCaught).length : 0
-  const total = data ? data.entries.length : 0
+  // The Collection tab does NOT list the six Ancient Deep trophies: they are
+  // mounts rather than stock and they have the Giants room to themselves. Its
+  // badge counted all 152 species anyway, so it promised six fish that tab
+  // could never show. A tab's number describes that tab; 146 + 6 is the book.
   const giants = data ? data.entries.filter(e => isGiant(e.sellValue, e.habitat)) : []
+  const collectable = data ? data.entries.filter(e => !isGiant(e.sellValue, e.habitat)) : []
+  const caught = collectable.filter(e => e.everCaught).length
+  const total = collectable.length
   const giantsGot = giants.filter(e => e.everCaught).length
 
   const TABS: { key: Room; label: string; badge: string }[] = [
