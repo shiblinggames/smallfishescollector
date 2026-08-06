@@ -37,6 +37,17 @@ export type BountyMeter =
    *  bounty_events at the time it happens. `atLeast` filters the value, so one
    *  event kind serves every depth target. */
   | { kind: 'event'; eventKind: string; atLeast: number }
+  /** DIFFERENT raids, not repeats of the easiest one. count(distinct raid_id). */
+  | { kind: 'raid_distinct' }
+  /** N clears whose summed time fits a budget. A different skill from one fast
+   *  kill: it asks for a consistent afternoon rather than a single hot run. */
+  | { kind: 'raid_budget'; raids: number; totalS: number }
+  /** One voyage that came home worth at least this much. */
+  | { kind: 'voyage_haul'; atLeast: number }
+  /** Everything every voyage brought back today, added up. */
+  | { kind: 'voyage_haul_total'; atLeast: number }
+  /** A voyage sailed on one named route. */
+  | { kind: 'voyage_route'; route: string }
 
 export interface Bounty {
   id: string
@@ -91,6 +102,15 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'voyage_two',       name: 'Send out two voyages',    desc: 'See both of them home again.',                     meter: { kind: 'voyages' },                                    target: 2, tier: 'standard' },
   { id: 'gauntlet_one',     name: 'Run the Gauntlet',        desc: 'One run, however deep you get.',                   meter: { kind: 'counter', column: 'gauntlet_runs_completed' }, target: 1, tier: 'standard' },
   { id: 'depth_five',       name: 'Reach depth 5',           desc: 'Davy Jones is only getting started down there.',   meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 5 },  target: 1, tier: 'standard' },
+  // Spread, not repetition. Clearing the softest boss three times is not the
+  // same day's work as clearing three different ones, and the old catalogue
+  // could not tell those apart.
+  { id: 'raids_two_kinds',  name: 'Clear two different raids', desc: 'Two names, not the same one twice.',              meter: { kind: 'raid_distinct' },                              target: 2, tier: 'standard' },
+  // Tuned off real hauls: the Shrouded Reach averages 2,300 and the best on
+  // record is 10,734, so 3,000 is a good run and the Coastal Run cannot get
+  // there at all. The bounty picks your route for you without naming it.
+  { id: 'haul_three_k',     name: 'A 3,000 ⟡ voyage',        desc: 'One voyage, that much in the hold when it lands.',  meter: { kind: 'voyage_haul', atLeast: 3000 },                 target: 1, tier: 'standard' },
+  { id: 'route_shroud',     name: 'Sail the Shrouded Reach', desc: 'Nine hours out. Set it before bed.',                meter: { kind: 'voyage_route', route: 'shroud' },              target: 1, tier: 'standard' },
 
   // ── Hard: a real sitting, or a specific bit of skill ───────────────────────
   { id: 'challenge_any',    name: 'Clear a challenge raid',  desc: 'Any of them, on the harder setting.',              meter: { kind: 'raid_challenge_any' },                         target: 1, tier: 'hard' },
@@ -99,6 +119,11 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'carto_fast',       name: 'Cartographer in under 6', desc: 'Six minutes, mist and all.',                       meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 360 },       target: 1, tier: 'hard' },
   { id: 'depth_ten',        name: 'Reach depth 10',          desc: 'Ten floors down and back out with it.',            meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 10 }, target: 1, tier: 'hard' },
   { id: 'raids_four',       name: 'Clear four raids',        desc: 'A full day of it.',                                meter: { kind: 'raid_any' },                                   target: 4, tier: 'hard' },
+  { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three names off the chart in one day.',        meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard' },
+  // Your three fastest clears have to fit inside the budget together, so one
+  // disastrous run does not sink the order the way a single timed raid does.
+  { id: 'budget_fifteen',   name: 'Three raids in 15 minutes', desc: 'Added together, not each. Pick your water.',      meter: { kind: 'raid_budget', raids: 3, totalS: 900 },         target: 1, tier: 'hard' },
+  { id: 'haul_six_k',       name: 'Bring home 6,000 ⟡',      desc: 'Across every voyage you land today.',               meter: { kind: 'voyage_haul_total', atLeast: 6000 },           target: 1, tier: 'hard' },
   { id: 'quarter_down',     name: 'Sink the Quartermaster',  desc: 'The Coffers can find another one.',                meter: { kind: 'raid_clear', raidId: 'the_quartermaster' },    target: 1, tier: 'hard' },
   { id: 'fleet_down',       name: 'Break the Coffers Fleet', desc: 'All of it, in one sitting.',                       meter: { kind: 'raid_clear', raidId: 'coffers_fleet' },        target: 1, tier: 'hard' },
 
@@ -109,6 +134,9 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'depth_fifteen',    name: 'Reach depth 15',          desc: 'Very few captains have seen fifteen.',             meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 15 }, target: 1, tier: 'elite' },
   { id: 'depth_twenty',     name: 'Reach depth 20',          desc: 'Nothing down there wants you to.',                 meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 20 }, target: 1, tier: 'elite' },
   { id: 'challenge_two',    name: 'Clear two challenge raids', desc: 'Back to back, on the harder setting.',           meter: { kind: 'raid_challenge_any' },                         target: 2, tier: 'elite' },
+  { id: 'raids_five_kinds', name: 'Clear five different raids', desc: 'Most of the chart, in one day.',                 meter: { kind: 'raid_distinct' },                              target: 5, tier: 'elite' },
+  { id: 'budget_twenty',    name: 'Five raids in 25 minutes', desc: 'Five clears, twenty five minutes of clock total.',  meter: { kind: 'raid_budget', raids: 5, totalS: 1500 },        target: 1, tier: 'elite' },
+  { id: 'haul_ten_k',       name: 'A 10,000 ⟡ voyage',       desc: 'The record haul is 10,734. Go and beat it.',        meter: { kind: 'voyage_haul', atLeast: 10000 },                target: 1, tier: 'elite' },
   { id: 'hc_depth_five',    name: 'Hardcore, depth 5',       desc: 'Permadeath. Five floors. One squad.',              meter: { kind: 'event', eventKind: 'gauntlet_hc_depth', atLeast: 5 }, target: 1, tier: 'elite' },
   { id: 'ghost_down',       name: "Sink the Quartermaster's Ghost", desc: 'He did not stay down the first time.',      meter: { kind: 'raid_clear', raidId: 'the_quartermasters_ghost' }, target: 1, tier: 'elite' },
 ]

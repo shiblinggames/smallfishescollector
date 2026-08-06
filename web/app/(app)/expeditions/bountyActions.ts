@@ -55,7 +55,9 @@ type Admin = ReturnType<typeof createAdminClient>
  *  per bounty. Four reads total however many bounties are on it. */
 type Signals = {
   raids: { raid_id: string; elapsed_ms: number | null }[]
-  voyages: number
+  /** Rows, not a count: the haul and route meters need what each one brought
+   *  back, and one read serves all four voyage meters. */
+  voyages: { total_doubloons: number | null; route: string | null }[]
   events: { kind: string; value: number }[]
   profile: Record<string, unknown>
 }
@@ -64,7 +66,7 @@ async function readSignals(admin: Admin, uid: string, since: string): Promise<Si
   const [raidsRes, voyRes, evRes, profRes] = await Promise.all([
     admin.from('raid_completions').select('raid_id, elapsed_ms')
       .eq('user_id', uid).gte('completed_at', since),
-    admin.from('daily_voyages').select('id', { count: 'exact', head: true })
+    admin.from('daily_voyages').select('total_doubloons, route')
       .eq('user_id', uid).eq('status', 'revealed').gte('created_at', since),
     admin.from('bounty_events').select('kind, value')
       .eq('user_id', uid).gte('created_at', since),
@@ -72,7 +74,7 @@ async function readSignals(admin: Admin, uid: string, since: string): Promise<Si
   ])
   return {
     raids: (raidsRes.data ?? []) as Signals['raids'],
-    voyages: voyRes.count ?? 0,
+    voyages: (voyRes.data ?? []) as Signals['voyages'],
     events: (evRes.data ?? []) as Signals['events'],
     profile: (profRes.data ?? {}) as Record<string, unknown>,
   }
@@ -91,7 +93,26 @@ function measure(meter: BountyMeter, s: Signals, baseline: number): number {
       return s.raids.filter(r =>
         r.raid_id === meter.raidId && (r.elapsed_ms ?? Infinity) <= meter.underS * 1000).length
     case 'voyages':
-      return s.voyages
+      return s.voyages.length
+    case 'raid_distinct':
+      return new Set(s.raids.map(r => r.raid_id)).size
+    case 'raid_budget': {
+      // The N FASTEST clears, not the first N. A bad run in the middle of the
+      // day should not sink an order the rest of the day could still fill.
+      const times = s.raids
+        .map(r => r.elapsed_ms ?? Infinity)
+        .filter(ms => Number.isFinite(ms))
+        .sort((a, b) => a - b)
+        .slice(0, meter.raids)
+      if (times.length < meter.raids) return 0
+      return times.reduce((n, ms) => n + ms, 0) <= meter.totalS * 1000 ? 1 : 0
+    }
+    case 'voyage_haul':
+      return s.voyages.filter(v => Number(v.total_doubloons ?? 0) >= meter.atLeast).length
+    case 'voyage_haul_total':
+      return s.voyages.reduce((n, v) => n + Number(v.total_doubloons ?? 0), 0) >= meter.atLeast ? 1 : 0
+    case 'voyage_route':
+      return s.voyages.filter(v => v.route === meter.route).length
     case 'counter':
       // The only meter that needs a baseline: the column counts a lifetime, so
       // today's progress is the distance travelled since the board was set.
