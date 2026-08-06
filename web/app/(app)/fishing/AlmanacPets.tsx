@@ -38,28 +38,37 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.35rem 0.2rem' }}>
               {list.map((p, i) => {
                 const has = owned.has(p.id)
                 return (
                   <motion.div key={p.id}
                     initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.26, delay: Math.min(i * 0.03, 0.3) }}
-                    style={{
-                      position: 'relative', borderRadius: 11, overflow: 'hidden',
-                      padding: '0.7rem 0.35rem 0.55rem', textAlign: 'center',
-                      background: has ? `linear-gradient(180deg, ${p.accentColor}22, rgba(0,0,0,0.30))` : 'rgba(255,255,255,0.02)',
-                      border: `1px solid ${has ? p.accentColor + '55' : 'rgba(255,255,255,0.06)'}`,
-                    }}>
-                    {has && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 34%, ${p.accentColor}1f, transparent 70%)`, pointerEvents: 'none' }} />}
-                    <div style={{ position: 'relative', height: 66, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: 3 }}>
+                    style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.35rem 0.15rem 0.5rem' }}>
+                    <div style={{ position: 'relative', width: '100%', height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {has && (
+                        <span aria-hidden style={{
+                          position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)',
+                          width: 88, height: 88, borderRadius: '50%', pointerEvents: 'none',
+                          background: `radial-gradient(circle, ${p.accentColor}38 0%, ${p.accentColor}12 42%, transparent 70%)`,
+                        }} />
+                      )}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={p.restImageUrl} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ maxWidth: 72, maxHeight: 66, objectFit: 'contain', filter: has ? `drop-shadow(0 3px 10px ${p.accentColor}80)` : 'brightness(0) opacity(0.4)' }} />
+                        style={{ position: 'relative', maxWidth: 84, maxHeight: 74, objectFit: 'contain', filter: has ? `drop-shadow(0 5px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 14px ${p.accentColor}66)` : 'brightness(0) opacity(0.26)' }} />
+                      {has && (
+                        <span aria-hidden style={{
+                          position: 'absolute', left: '50%', bottom: 2, transform: 'translateX(-50%)',
+                          width: 44, height: 6, borderRadius: '50%', pointerEvents: 'none',
+                          background: 'radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 72%)',
+                        }} />
+                      )}
                     </div>
-                    <p className="font-karla font-700" style={{ fontSize: '0.62rem', lineHeight: 1.15, color: has ? '#ded8ee' : '#8a83ad', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p className="font-cinzel font-700" style={{ width: '100%', marginTop: 5, fontSize: '0.64rem', lineHeight: 1.14, color: has ? '#efeaf8' : '#7b7499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {has ? p.name : '???'}
                     </p>
+                    <span aria-hidden style={{ marginTop: 4, width: has ? 22 : 12, height: 1.5, borderRadius: 2, background: has ? `linear-gradient(90deg, transparent, ${p.accentColor}, transparent)` : 'rgba(255,255,255,0.10)' }} />
                   </motion.div>
                 )
               })}

@@ -108,7 +108,7 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {trophies.map(({ e, pct }) => (
-            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 10, padding: '0.42rem 0.6rem' }}>
+            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.35rem 0.1rem', borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fishArt(e.name)} alt="" aria-hidden loading="lazy" decoding="async"
                 style={{ width: 34, height: 26, objectFit: 'contain', flexShrink: 0 }} />

@@ -80,7 +80,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, #6d5bb0, ${ACCENT})` }} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.6rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
         <Stat label="Catches" value={compact(totalCatches)} />
         <Stat label="Casts" value={compact(data.stats.casts)} />
         <Stat label="Perfects" value={compact(data.stats.perfects)} accent="#7dd3fc" />
@@ -135,7 +135,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           <Section title="Most Caught" note="The fish that keep taking your hook" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: '1.4rem' }}>
             {mostCaught.map((e, i) => (
-              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.035)', border: `1px solid ${ZONE_COLOR[e.habitat] ?? '#fff'}22`, borderRadius: 10, padding: '0.4rem 0.6rem' }}>
+              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.3rem 0.1rem', borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
                 <span className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#8a83ad', width: 12, flexShrink: 0 }}>{i + 1}</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(e.name)} alt="" aria-hidden loading="lazy" decoding="async"
@@ -161,7 +161,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           {crateRows.map(({ t, n }) => {
             const c = CRATE_TIERS[t]
             return (
-              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 9, borderRadius: 11, padding: '0.45rem 0.55rem', background: `linear-gradient(180deg, rgba(${c.rgb},0.10) 0%, rgba(255,255,255,0.02) 100%)`, border: `1px solid ${c.accent}44` }}>
+              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.35rem 0.1rem 0.35rem 0.6rem', borderLeft: `2px solid ${c.accent}` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/${c.art}closed.png`} alt="" aria-hidden loading="lazy" decoding="async"
                   style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
@@ -221,9 +221,9 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, padding: '0.4rem 0.45rem' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.56rem', color: '#9a93b8', marginBottom: 2 }}>{label}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', lineHeight: 1, color: accent ?? '#d8d2ea', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
+    <div style={{ padding: '0.55rem 0.3rem', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.07)' }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: accent ?? '#d8d2ea', fontVariantNumeric: 'tabular-nums', marginBottom: 3 }}>{value}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#9a93b8' }}>{label}</p>
     </div>
   )
 }
@@ -269,7 +269,7 @@ function Bar({ label, value, pct, color, trailing, delay }: {
 
 function Panel({ label, value, accent, note }: { label: string; value: string; accent?: string; note?: string }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 11, padding: '0.5rem 0.6rem' }}>
+    <div style={{ padding: '0.1rem 0 0.3rem 0.6rem', borderLeft: `2px solid ${accent ?? 'rgba(255,255,255,0.16)'}` }}>
       <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.64rem', color: '#9a93b8', marginBottom: 3 }}>{label}</p>
       <p className="font-cinzel font-700" style={{ fontSize: '1rem', lineHeight: 1, color: accent ?? '#ded8ee', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
       {note && <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#8a83ad', marginTop: 3, lineHeight: 1.3 }}>{note}</p>}
@@ -280,7 +280,7 @@ function Panel({ label, value, accent, note }: { label: string; value: string; a
 function Milestone({ label, entry }: { label: string; entry: AlmanacData['entries'][number] }) {
   const c = ZONE_COLOR[entry.habitat] ?? '#a78bfa'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 11, background: 'rgba(255,255,255,0.035)', border: `1px solid ${c}2e`, borderRadius: 11, padding: '0.5rem 0.65rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0.35rem 0.1rem 0.35rem 0.6rem', borderLeft: `2px solid ${c}` }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={fishArt(entry.name)} alt="" aria-hidden loading="lazy" decoding="async"
         style={{ width: 40, height: 34, objectFit: 'contain', flexShrink: 0 }} />

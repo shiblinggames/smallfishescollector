@@ -57,7 +57,7 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
       {/* The tally. Held vs sold matters here in a way it does not anywhere
           else: a sold golden still counts as caught, and the doubloons it
           fetched are part of the story. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: '1.1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
         <Tally label="Mounted" value={`${mounted.length}`} accent={GOLD} />
         <Tally label="Species" value={`${speciesCount}`} />
         <Tally label="Ever landed" value={`${goldens.length}`} />
@@ -65,7 +65,7 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
       </div>
 
       {biggest?.sizeIn != null && (
-        <div style={{ marginBottom: '1.1rem', borderRadius: 12, padding: '0.7rem 0.85rem', background: 'linear-gradient(180deg, rgba(240,192,64,0.10) 0%, rgba(240,192,64,0.03) 100%)', border: '1px solid rgba(240,192,64,0.34)' }}>
+        <div style={{ marginBottom: '1.3rem', padding: '0.1rem 0 0.2rem 0.75rem', borderLeft: `2px solid ${GOLD}` }}>
           <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.66rem', color: GOLD, marginBottom: 3 }}>Largest golden</p>
           <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f7ecd0' }}>
             {biggest.name} <span style={{ color: GOLD }}>{formatFishLength(biggest.sizeIn)}</span>
@@ -74,41 +74,42 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+      {/* No frames. A golden is the brightest thing in the book and it was
+          sitting in a brown box; it stands in its own light now, with the
+          date and the water as fine print under it. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem 0.3rem' }}>
         {mounted.map((g, i) => {
           const zc = ZONE_COLOR[g.habitat] ?? GOLD
           return (
             <motion.div key={g.id}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: Math.min(i * 0.02, 0.4) }}
-              style={{
-                position: 'relative', borderRadius: 12, overflow: 'hidden',
-                padding: '0.6rem 0.6rem 0.65rem',
-                background: 'linear-gradient(180deg, rgba(28,22,10,0.92) 0%, rgba(14,11,6,0.95) 100%)',
-                border: '1px solid rgba(240,192,64,0.55)',
-              }}>
-              <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 34%, rgba(240,192,64,0.22), transparent 66%)', pointerEvents: 'none' }} />
-              {/* A hairline of the water it came out of, along the top edge. */}
-              <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 2, background: `linear-gradient(90deg, transparent, ${zc}, transparent)` }} />
-              {/* Floated on its ground under a gold drop-shadow, the way the
-                  profile mounts a trophy. A pixel cap rather than 100%/100%
-                  keeps a wide fish and a tall one the same visual weight. */}
-              <div style={{ position: 'relative', height: 74, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: 5 }}>
+              style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.4rem 0.2rem 0.6rem' }}>
+
+              <div style={{ position: 'relative', width: '100%', height: 92, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span aria-hidden style={{
+                  position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)',
+                  width: 112, height: 112, borderRadius: '50%', pointerEvents: 'none',
+                  background: 'radial-gradient(circle, rgba(240,192,64,0.32) 0%, rgba(240,192,64,0.10) 40%, transparent 70%)',
+                }} />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(g.name)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ maxWidth: 92, maxHeight: 74, objectFit: 'contain', filter: 'saturate(1.25) drop-shadow(0 3px 11px rgba(240,192,64,0.6))' }} />
+                  style={{ position: 'relative', maxWidth: 116, maxHeight: 90, objectFit: 'contain', filter: 'saturate(1.3) drop-shadow(0 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(240,192,64,0.7))' }} />
+                <span aria-hidden style={{
+                  position: 'absolute', left: '50%', bottom: 2, transform: 'translateX(-50%)',
+                  width: 60, height: 7, borderRadius: '50%', pointerEvents: 'none',
+                  background: 'radial-gradient(ellipse, rgba(0,0,0,0.6) 0%, transparent 72%)',
+                }} />
               </div>
-              <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f7ecd0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 2 }}>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
-                  {g.sizeIn != null ? formatFishLength(g.sizeIn) : 'unmeasured'}
-                </span>
-                <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: zc, whiteSpace: 'nowrap' }}>{ZONE_LABEL[g.habitat] ?? g.habitat}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 3 }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#ab9f86' }}>{shortDate(g.caughtAt)}</span>
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: GOLD }}>Mounted</span>
-              </div>
+
+              <p className="font-cinzel font-700" style={{ width: '100%', marginTop: 5, fontSize: '0.7rem', color: '#f7e6b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
+              <span className="font-cinzel font-700" style={{ marginTop: 1, fontSize: '0.78rem', color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
+                {g.sizeIn != null ? formatFishLength(g.sizeIn) : 'unmeasured'}
+              </span>
+              <span aria-hidden style={{ marginTop: 5, width: 26, height: 1.5, borderRadius: 2, background: `linear-gradient(90deg, transparent, ${zc}, transparent)` }} />
+              <span className="font-karla font-600" style={{ marginTop: 4, fontSize: '0.6rem', color: '#b7ac95' }}>
+                {ZONE_LABEL[g.habitat] ?? g.habitat} · {shortDate(g.caughtAt)}
+              </span>
             </motion.div>
           )
         })}
@@ -117,11 +118,13 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
   )
 }
 
+/** No box. Two rules across the set and hairlines between, which is enough
+ *  structure for four numbers and none of the dated panel chrome. */
 function Tally({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.4rem 0.45rem', textAlign: 'center' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.64rem', color: '#9a93b8', marginBottom: 2 }}>{label}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1, color: accent ?? '#ded8ee', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
+    <div style={{ padding: '0.55rem 0.3rem', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.07)' }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: accent ?? '#ded8ee', fontVariantNumeric: 'tabular-nums', marginBottom: 3 }}>{value}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#9a93b8' }}>{label}</p>
     </div>
   )
 }
