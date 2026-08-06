@@ -487,9 +487,16 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
         initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         onClick={e => e.stopPropagation()}
-        style={{ margin: 'auto', width: '100%', maxWidth: 440, borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)', border: `1px solid ${p.accent}55` }}>
+        // Bounded, not free-growing. PopupShell scrolls the whole wrapper, so
+        // a tall sheet used to push its own buttons past the bottom of the
+        // screen and behind the tab bar. maxHeight 100% resolves against the
+        // shell's content box, which already excludes the header, the tab bar
+        // and both safe-area insets, so the card can never exceed what is
+        // actually visible. Everything inside then divides that fixed height:
+        // title and actions pinned, the middle scrolls.
+        style={{ margin: 'auto', width: '100%', maxWidth: 440, maxHeight: '100%', display: 'flex', flexDirection: 'column', borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)', border: `1px solid ${p.accent}55` }}>
 
-        <div style={{ padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ flexShrink: 0, padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1.24rem', color: '#f0f4fa', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label}</p>
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.6rem', padding: '0.16rem 0.48rem', borderRadius: 999, color: p.direction === 'rise' ? UP : DOWN, background: p.direction === 'rise' ? 'rgba(74,222,128,0.14)' : 'rgba(248,113,113,0.14)', border: `1px solid ${p.direction === 'rise' ? UP : DOWN}66` }}>
@@ -501,7 +508,10 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
           </p>
         </div>
 
-        <div style={{ padding: '0.9rem 1rem 1.1rem' }}>
+        {/* minHeight 0 is load-bearing: a flex child defaults to min-height
+            auto, which refuses to shrink below its content, so flex:1 alone
+            would grow the card instead of scrolling this. */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.9rem 1rem 1rem' }}>
           <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.64rem', color: '#7c8696' }}>
             {settled ? 'Paid out' : 'Worth now'}
           </p>
@@ -573,8 +583,25 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
             </div>
           )}
 
+        </div>
+
+        {/* Pinned. The body is a chart, six stats and a value breakdown, which
+            on a short phone ran long enough to push Sell and Close off the
+            bottom of the screen and behind the tab bar. Actions do not belong
+            in a scroll area: you should never have to go looking for the way
+            out of a sheet. */}
+        <div style={{
+          flexShrink: 0, padding: '0.7rem 1rem 0.75rem',
+          borderTop: '1px solid rgba(255,255,255,0.09)',
+          background: 'rgba(6,9,14,0.97)',
+        }}>
           {!settled ? (
             <>
+              <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#7c8696', marginBottom: 6, lineHeight: 1.4, textAlign: 'center' }}>
+                {armed
+                  ? 'Or leave it, and it settles itself on whatever the market does.'
+                  : 'Selling hands over exactly that. Leave it and it settles itself.'}
+              </p>
               <button type="button" disabled={busy}
                 onClick={() => {
                   if (!armed) { setArmed(true); return }
@@ -587,7 +614,7 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
                 }}
                 className="font-karla font-700"
                 style={{
-                  width: '100%', marginTop: 12, padding: '0.72rem', borderRadius: 11, fontSize: '0.86rem',
+                  width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.86rem',
                   background: armed ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
                   border: `1px solid ${armed ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.18)'}`,
                   color: armed ? '#f0d89a' : '#d4dce8', cursor: busy ? 'wait' : 'pointer',
@@ -595,28 +622,20 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
                 }}>
                 {busy ? 'Selling…' : armed ? `Sell for ${value.toLocaleString()} ⟡. Tap again` : `Sell now for ${value.toLocaleString()} ⟡`}
               </button>
-              <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#7c8696', marginTop: 7, lineHeight: 1.45, textAlign: 'center' }}>
-                {armed
-                  ? 'Or leave it, and it settles itself on whatever the market does.'
-                  : 'Selling hands over exactly that. Leave it and it settles itself.'}
-              </p>
-              {armed && (
-                <button type="button" onClick={() => setArmed(false)} className="font-karla font-600"
-                  style={{ width: '100%', marginTop: 5, padding: '0.4rem', background: 'none', border: 'none', color: '#8a94a4', fontSize: '0.74rem', cursor: 'pointer' }}>
-                  Keep it open
-                </button>
-              )}
             </>
           ) : (
-            <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#8a94a4', marginTop: 12, lineHeight: 1.45, textAlign: 'center' }}>
+            <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#8a94a4', marginBottom: 4, lineHeight: 1.45, textAlign: 'center' }}>
               {p.status === 'closed_early' ? 'You sold this one early.'
                 : (p.payout ?? 0) === 0 ? 'It expired worthless.' : 'It settled at expiry.'}
             </p>
           )}
 
-          <button type="button" onClick={onClose} className="font-karla font-600"
-            style={{ width: '100%', marginTop: 10, padding: '0.5rem', background: 'none', border: 'none', color: '#8a94a4', fontSize: '0.78rem', cursor: 'pointer' }}>
-            Close
+          {/* Arming the sell swaps this for the way OUT of the armed state,
+              which is the more urgent of the two while a confirm is pending.
+              The backdrop still closes the sheet either way. */}
+          <button type="button" onClick={() => (armed ? setArmed(false) : onClose())} className="font-karla font-600"
+            style={{ width: '100%', marginTop: 6, padding: '0.45rem', background: 'none', border: 'none', color: '#8a94a4', fontSize: '0.78rem', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+            {armed ? 'Keep it open' : 'Close'}
           </button>
         </div>
       </motion.div>
@@ -698,16 +717,20 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
         initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         onClick={e => e.stopPropagation()}
-        style={{ margin: 'auto', width: '100%', maxWidth: 440, borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)', border: `1px solid ${accent}55` }}>
+        // Same bounded column as the position sheet. This one matters more:
+        // the ticket is where doubloons actually leave, and its body is four
+        // pickers deep, so on a short phone the Stake button was the part that
+        // fell off the bottom.
+        style={{ margin: 'auto', width: '100%', maxWidth: 440, maxHeight: '100%', display: 'flex', flexDirection: 'column', borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)', border: `1px solid ${accent}55` }}>
 
-        <div style={{ padding: '0.95rem 1rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ flexShrink: 0, padding: '0.95rem 1rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0f4fa' }}>{name}</p>
           <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#7c8696', ...TNUM }}>
             {price.toFixed(3)} now{isFund ? ` · ${instrument.f.members} fish` : ''}
           </p>
         </div>
 
-        <div style={{ padding: '0.85rem 1rem 1.1rem' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.85rem 1rem 1rem' }}>
           <Label>Which way</Label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
             {(['rise', 'fall'] as const).map(d => (
@@ -768,17 +791,26 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
             </p>
           </div>
 
-          {err && <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: DOWN, marginTop: 8 }}>{err}</p>}
+        </div>
+
+        {/* Pinned, and the error with it: a validation message that scrolls
+            out of sight explains nothing. */}
+        <div style={{
+          flexShrink: 0, padding: '0.7rem 1rem 0.75rem',
+          borderTop: '1px solid rgba(255,255,255,0.09)',
+          background: 'rgba(6,9,14,0.97)',
+        }}>
+          {err && <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}
 
           <button type="button" onClick={submit} disabled={busy || capped > doubloons}
             className="font-karla font-800"
-            style={{ width: '100%', marginTop: 12, padding: '0.7rem', borderRadius: 11, fontSize: '0.82rem', cursor: busy ? 'wait' : 'pointer',
+            style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.82rem', cursor: busy ? 'wait' : 'pointer',
               background: 'rgba(56,189,248,0.16)', border: '1px solid rgba(56,189,248,0.6)', color: '#e6f4ff',
-              opacity: capped > doubloons ? 0.5 : 1 }}>
+              opacity: capped > doubloons ? 0.5 : 1, WebkitTapHighlightColor: 'transparent' }}>
             {busy ? 'Opening…' : `Stake ${capped.toLocaleString()} ⟡ on ${dir === 'rise' ? 'Rise' : 'Fall'}`}
           </button>
           <button type="button" onClick={onClose} className="font-karla font-600"
-            style={{ width: '100%', marginTop: 6, padding: '0.5rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.7rem', cursor: 'pointer' }}>
+            style={{ width: '100%', marginTop: 6, padding: '0.45rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.72rem', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
             Never mind
           </button>
         </div>
