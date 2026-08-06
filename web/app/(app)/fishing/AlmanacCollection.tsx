@@ -128,14 +128,14 @@ function CollectionMark({ trophy, golden }: { trophy: boolean; golden: boolean }
       initial={{ scale: 0 }} animate={{ scale: 1 }}
       transition={{ type: 'spring', stiffness: 460, damping: 14, delay: 0.14 }}
       style={{
-        position: 'absolute', right: 2, top: 0, width: 22, height: 22, pointerEvents: 'none',
+        position: 'absolute', right: 3, top: 1, width: 16, height: 16, pointerEvents: 'none',
         // drop-shadow on the wrapper, not an feGaussianBlur inside each SVG:
         // up to 146 of these mount at once.
         filter: golden
-          ? `drop-shadow(0 0 4px ${GOLD}cc) drop-shadow(0 1px 3px rgba(0,0,0,0.85))`
-          : 'drop-shadow(0 1px 3px rgba(0,0,0,0.85))',
+          ? `drop-shadow(0 0 3px ${GOLD}cc) drop-shadow(0 1px 2px rgba(0,0,0,0.85))`
+          : 'drop-shadow(0 1px 2px rgba(0,0,0,0.85))',
       }}>
-      <svg viewBox="0 0 24 24" width="22" height="22">
+      <svg viewBox="0 0 24 24" width="16" height="16">
         <g stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
           <path d="M8 4h8v4.2c0 2.6-1.8 4.3-4 4.3s-4-1.7-4-4.3z" fill={c} fillOpacity="0.9" />
           <path d="M8 5.4H5.6c0 2.6 1 3.9 2.6 4.3" />
