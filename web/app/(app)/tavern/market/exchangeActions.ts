@@ -6,8 +6,8 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getXPProgress as navProgress } from '@/lib/expeditionLevel'
 import {
   TERMS, type Term, type Direction,
-  quoteFund, quoteSingle, settlePayout, FUND_BY_ID,
-  earlyCloseValue, EXCHANGE_FISHING_LEVEL, EXCHANGE_NAV_LEVEL,
+  quoteFund, quoteSingle, FUND_BY_ID,
+  liveValue, EXCHANGE_FISHING_LEVEL, EXCHANGE_NAV_LEVEL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/fishExchange'
 
@@ -147,15 +147,17 @@ export async function closeContractEarly(positionId: number): Promise<CloseResul
     exit = Number(fx?.price ?? claimed.entry_price)
   }
 
-  const gross = settlePayout(
-    Number(claimed.stake), Number(claimed.entry_price), exit,
-    claimed.direction as Direction,
-    { leverage: Number(claimed.leverage), breakEvenPct: 1 / Number(claimed.leverage) },
-  )
-  // Time value: how much of the term is still to run.
+  // What it is WORTH, which is intrinsic plus the time still on it. A contract
+  // behind on the day but with three days to run is not worthless, and paying
+  // intrinsic only was telling players it was.
   const { data: st } = await admin.from('market_state').select('exchange_cycle').eq('id', 1).single()
   const remaining = Math.max(0, Number(claimed.expiry_cycle) - Number(st?.exchange_cycle ?? 0))
-  const payout = earlyCloseValue(gross, remaining, Number(claimed.term) as Term)
+  const entry = Number(claimed.entry_price)
+  const movePct = ((exit - entry) / entry) * 100
+  const yourWay = claimed.direction === 'rise' ? movePct : -movePct
+  const payout = liveValue(
+    Number(claimed.stake), Number(claimed.leverage), yourWay, remaining, Number(claimed.term) as Term,
+  )
 
   await admin.from('exchange_positions')
     .update({ exit_price: exit, payout })

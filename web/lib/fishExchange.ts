@@ -114,30 +114,63 @@ export const FUNDS: FundDef[] = [
 
 export const FUND_BY_ID = new Map(FUNDS.map(f => [f.id, f]))
 
-/** Closing early costs TIME VALUE, not a flat tax.
- *
- *  It was a flat 20% haircut, which punished the wrong player. Simulated: being
- *  able to close at any hour is worth 1.3x to 2.6x to somebody watching every
- *  tick, and 1.00x to somebody who checks a few times a day. A flat cut takes a
- *  fifth off the passive player, who gained nothing from the option, to guard
- *  against a watcher it barely slows down.
- *
- *  So the fee scales with how much of the term is LEFT, which is what an option
- *  actually gives up when you sell it early:
- *
- *    close with the whole term to run   keep 85%
- *    close halfway through              keep 92.5%
- *    close near expiry                  keep ~100%
- *
- *  Waiting it out costs nothing, taking a spike the hour after you opened costs
- *  something, and the stake cap is still the real backstop against anybody who
- *  wants to sit on the board refreshing. */
-export const EARLY_EXIT_MAX_FEE = 0.15
+// ── What a live contract is worth ───────────────────────────────────────────
+//
+// A contract that has not moved your way yet is NOT worthless. It has hours
+// left to come good, and that chance is worth money: it is the entire reason
+// an option out of the money still trades. The first version paid intrinsic
+// value only, so a contract opened one minute ago with three days to run
+// valued at nothing, which is nonsense.
+//
+// The payoff is linear in the move and the move is roughly normal, which is
+// the Bachelier case:
+//
+//   E[max(0, m + X)] = m*Phi(m/s) + s*phi(m/s)
+//
+// m is how far it has moved your way so far, s is the standard deviation of
+// the move still to come. Two properties make this the right answer rather
+// than an approximation of it:
+//
+//   at expiry (s -> 0) it converges exactly to the settlement formula
+//   at open (m = 0, full term) it equals stake x (1 - HOUSE_EDGE)
+//
+// So opening and immediately closing costs you the edge and nothing more, and
+// there is never a moment where selling is worth more than the contract is.
+// That also quietly kills the timing exploit the old flat fee was guarding
+// against: if the exit is always fair, there is nothing to extract by watching.
 
-/** What closing right now hands over. `remaining` is cycles left of `term`. */
-export function earlyCloseValue(fullValue: number, remaining: number, term: Term): number {
-  const left = Math.max(0, Math.min(1, remaining / term))
-  return Math.max(0, Math.round(fullValue * (1 - EARLY_EXIT_MAX_FEE * left)))
+const INV_SQRT_2PI = 0.3989422804014327
+
+function normPdf(z: number): number {
+  return INV_SQRT_2PI * Math.exp(-0.5 * z * z)
+}
+
+/** Abramowitz and Stegun 7.1.26. Plenty for pricing a game contract. */
+function normCdf(z: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z))
+  const d = normPdf(z)
+  const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
+  return z >= 0 ? 1 - p : p
+}
+
+/** The spread of the move over a FULL term, implied by the leverage we already
+ *  solved. L = (1 - edge) / E[max(0,move)] and E[max(0,move)] = 0.3989 * sigma,
+ *  so sigma falls straight out and needs no second table to drift from this one. */
+function sigmaForTerm(leverage: number): number {
+  return (1 - HOUSE_EDGE) / (INV_SQRT_2PI * leverage)
+}
+
+/** What the contract is worth RIGHT NOW: intrinsic plus whatever the remaining
+ *  time is worth. `remaining` is cycles left of `term`. */
+export function liveValue(
+  stake: number, leverage: number, movePctYourWay: number, remaining: number, term: Term,
+): number {
+  if (remaining <= 0) return Math.max(0, Math.round(stake * leverage * Math.max(0, movePctYourWay)))
+  const s = sigmaForTerm(leverage) * Math.sqrt(remaining / term)
+  if (!(s > 0)) return Math.max(0, Math.round(stake * leverage * Math.max(0, movePctYourWay)))
+  const z = movePctYourWay / s
+  const expected = movePctYourWay * normCdf(z) + s * normPdf(z)
+  return Math.max(0, Math.round(stake * leverage * expected))
 }
 
 // ── Quoting ─────────────────────────────────────────────────────────────────

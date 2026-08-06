@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import {
   TERMS, TERM_LABEL, TERM_BLURB, type Term, type Direction,
-  quoteFund, quoteSingle, earlyCloseValue, EARLY_EXIT_MAX_FEE, MIN_STAKE, MAX_STAKE,
+  quoteFund, quoteSingle, liveValue, MIN_STAKE, MAX_STAKE,
 } from '@/lib/fishExchange'
 import {
   getExchangeBoard, openContract, closeContractEarly, markResultsSeen,
@@ -225,10 +225,15 @@ function PositionRow({ p, cycle, onChanged }: { p: BoardPosition; cycle: number;
   const yourWay = p.direction === 'rise' ? live : -live
   const breakEven = 1 / p.leverage
   const settled = p.status !== 'open'
-  const value = settled ? (p.payout ?? 0) : Math.max(0, Math.round(p.stake * p.leverage * Math.max(0, yourWay)))
-  // What closing RIGHT NOW actually hands over, which is the only number that
-  // answers "should I?".
-  const earlyValue = earlyCloseValue(value, Math.max(0, p.expiryCycle - cycle), p.term)
+  const remaining = Math.max(0, p.expiryCycle - cycle)
+  // What it is WORTH now: intrinsic plus the time still on it. NOT
+  // stake x L x move, which is what it would pay if the price froze here, and
+  // which reads as zero on any contract that has not come good yet.
+  const value = settled ? (p.payout ?? 0) : liveValue(p.stake, p.leverage, yourWay, remaining, p.term)
+  // Selling pays exactly that. No exit fee: the house edge is already inside
+  // the leverage, so a contract opened and closed on the spot returns the
+  // stake less the edge, which is the correct answer.
+  const earlyValue = value
   const good = settled ? (p.payout ?? 0) > p.stake : yourWay > breakEven
   const left = p.expiryCycle - cycle
 
@@ -282,8 +287,8 @@ function PositionRow({ p, cycle, onChanged }: { p: BoardPosition; cycle: number;
               WebkitTapHighlightColor: 'transparent',
             }}>
             {busy ? 'Closing…'
-              : armed ? `Take ${earlyValue.toLocaleString()} ⟡ and close. Tap again`
-              : `Close early for ${earlyValue.toLocaleString()} ⟡`}
+              : armed ? `Sell for ${earlyValue.toLocaleString()} ⟡. Tap again`
+              : `Sell now for ${earlyValue.toLocaleString()} ⟡`}
           </button>
           {armed && !busy && (
             <button type="button" onClick={() => setArmed(false)} className="font-karla font-600"
@@ -293,9 +298,9 @@ function PositionRow({ p, cycle, onChanged }: { p: BoardPosition; cycle: number;
           )}
           {armed && (
             <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 3, lineHeight: 1.4, textAlign: 'center' }}>
-              {value > 0
-                ? `Worth ${value.toLocaleString()} ⟡ if it held here to expiry. Closing now keeps ${Math.round((earlyValue / value) * 100)}% of that, and the closer to expiry the more you keep.`
-                : 'Nothing in it yet. Closing now pays nothing.'}
+              {remaining > 0
+                ? `Its worth today, counting the ${remaining}h it still has to move. Let it run and it settles on whatever the market does by then.`
+                : 'Settling now.'}
             </p>
           )}
         </>
