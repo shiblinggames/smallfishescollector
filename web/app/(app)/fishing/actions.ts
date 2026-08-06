@@ -13,7 +13,7 @@ import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
-import { getSpecialItem } from '@/lib/specialItems'
+import { getSpecialItem, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
@@ -1808,6 +1808,24 @@ export async function equipSpecialItem(itemId: string | null): Promise<{ ok: tru
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+
+  // This wrote whatever it was handed. No ownership check, no slot check: the
+  // only thing standing between a crafted request and The Primeval Eye seated
+  // in slot one was that the button did not exist. Hiding the row fixes the
+  // spoiler; it does not fix the hole behind it.
+  if (itemId !== null) {
+    const def = getSpecialItem(itemId)
+    if (!def) return { error: 'No such item' }
+    // The Sunken Hand's spoils fit the SECOND slot and nothing else. Seating one
+    // here would hand a finale reward to anyone who never sailed the coda.
+    if (def.finaleSlotOnly) return { error: 'That one does not fit this slot' }
+    const { data: profile } = await admin
+      .from('profiles').select(SPECIAL_OWNED_COLUMN[def.id]).eq('id', user.id).single()
+    if ((profile as Record<string, unknown> | null)?.[SPECIAL_OWNED_COLUMN[def.id]] !== true) {
+      return { error: 'You do not own that' }
+    }
+  }
+
   await admin.from('profiles').update({ equipped_special: itemId }).eq('id', user.id)
   return { ok: true }
 }

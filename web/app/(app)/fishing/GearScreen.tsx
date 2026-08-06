@@ -2515,7 +2515,19 @@ export default function GearScreen({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#8b6fc0' }}>Special Items</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {SPECIAL_ITEMS.map(item => {
+                    {/* finaleSlotOnly items are NOT slot-one gear and must not
+                        appear in this list at all.
+                        
+                        The Primeval Eye was showing here greyed out, which was
+                        wrong twice over: it spoiled a Sunken Hand reward to
+                        every player who had never met Finn, and it implied you
+                        could eventually seat it here when the second slot is
+                        the only place it fits. It fell through the `owned`
+                        chain below, which has no case for it, to a bare false.
+                        
+                        Filtered rather than special-cased so the next finale
+                        spoil is excluded automatically. */}
+                    {SPECIAL_ITEMS.filter(item => !item.finaleSlotOnly).map(item => {
                       const owned = item.id === 'tide_turner' ? hasTideTurner
                         : item.id === 'phantom_hook' ? hasPhantomHook
                         : item.id === 'auto_caster' ? hasAutoCaster
