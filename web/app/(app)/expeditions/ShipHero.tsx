@@ -1396,165 +1396,135 @@ export default function ShipHero({
             )
           })()}
 
-          {/* ── Manage row ── deliberately NOT a hub card.
-              Campaign / Voyages / the Gauntlet are things you go and DO, and
-              they earn the cinematic treatment: full-bleed art, an accent glow,
-              a display-font title. These four only take you to a screen where
-              you arrange what you already own, so they read as settings rows:
-              a SOLID surface (the page sits on a painted backdrop, and a
-              translucent card disappeared into it), a neutral border with no
-              glow, and a chevron. Each is its own destination, which is why the
-              drawer drops its tab bar on direct entry. */}
+          {/* ── The quarterdeck ── one bar, four stations.
+              These were four separate translucent cards with their own
+              borders, blur and shadows, each holding a 42px thumbnail. On a
+              page that is now a hero panel over a painting with art-forward
+              tiles under it, that was the last of the old chrome, and five
+              bordered rectangles stacked down the screen with the tiles below
+              made the top of the page all frame and no picture.
+
+              One surface now, matching the level hero directly above it, split
+              by hairlines into four stations. The art is the biggest thing in
+              each and it is the same size in all four, which the old thumbnails
+              never were: the ship needed a 140% hack to look level with a crew
+              portrait, and still did not.
+
+              Each caption says something TRUE rather than filler. "Manage
+              upgrades" told you nothing; the hull's name is right there and is
+              what you actually want to know. */}
           <div style={{
-            // minmax(0, 1fr), NOT 1fr. A bare `1fr` track has an implicit
-            // `auto` MINIMUM, so it can never shrink below its content's
-            // min-content width — and `whiteSpace: nowrap` on the sub line
-            // makes that min-content the whole untruncated string. So the card
-            // with the longest sub quietly widened its own column and squeezed
-            // the one beside it, which is why Crew and Items sat wider than
-            // Ship and Forge and pushed them over. minmax(0, ...) lets the
-            // tracks actually be equal and hands the overflow back to the
-            // ellipsis that was already there waiting for it.
-            display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: 8, marginTop: '0.9rem',
+            display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+            marginTop: '0.9rem', borderRadius: 16, overflow: 'hidden',
+            background: 'linear-gradient(180deg, rgba(14,19,29,0.94) 0%, rgba(8,11,18,0.97) 100%)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderTop: '1px solid rgba(255,255,255,0.17)',
+            boxShadow: '0 6px 22px rgba(0,0,0,0.45)',
           }}>
             {([
               {
                 key: 'crew',
                 label: 'Crew',
-                sub: readyBunks > 0
-                  ? (readyBunks === 1 ? 'A hand is done training' : `${readyBunks} hands done training`)
-                  : crewLevelUpNudge ? 'A hand leveled up' : `${roster.length} aboard`,
+                sub: readyBunks > 0 ? `${readyBunks} trained` : crewLevelUpNudge ? 'Levelled up' : `${roster.length} aboard`,
                 nudge: crewLevelUpNudge || readyBunks > 0,
                 count: readyBunks,
                 art: crewCycleArt,
-                icon: (
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  </svg>
-                ),
+                fit: 'cover' as const,
                 locked: false,
               },
               {
                 key: 'ship',
                 label: 'Ship',
-                sub: 'Manage upgrades',
+                // The HULL CLASS, not the custom name. A station is ~108px
+                // wide and "The Salty Revenge" truncates to nothing useful,
+                // while the class is always short, always changes when you
+                // upgrade, and is the thing the Ship screen is about.
+                sub: shipStats.name,
                 nudge: false, count: 0,
                 art: shipImgSrc,
-                icon: null,
+                fit: 'contain' as const,
                 locked: false,
               },
               {
                 key: 'items',
                 label: 'Items',
-                sub: newRaidItems.size > 0 ? 'New gear to mount' : `${slotsFilled}/${slotsTotal} mounted`,
+                sub: newRaidItems.size > 0 ? 'New gear' : `${slotsFilled}/${slotsTotal} mounted`,
                 nudge: newRaidItems.size > 0, count: 0,
                 art: itemsCycleArt,
-                icon: (
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z" /><path d="M12 20v-9" /><path d="M20 6.5L12 11 4 6.5" />
-                  </svg>
-                ),
+                fit: 'contain' as const,
                 locked: false,
               },
               {
                 key: 'forge',
                 label: 'Forge',
-                sub: forgeUnlocked ? `${forgeStock} component${forgeStock === 1 ? '' : 's'} held` : 'Locked',
+                sub: forgeUnlocked ? `${forgeStock} held` : 'Locked',
                 nudge: false, count: 0,
                 art: abyssalUnlocked ? '/forge/abyssal_forge.png' : '/forge/forge.png',
-                icon: (
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={forgeUnlocked ? '#8b97a8' : '#5c6470'} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" />
-                  </svg>
-                ),
+                fit: 'contain' as const,
                 locked: !forgeUnlocked,
               },
-            ] as const).map(row => {
+            ] as const).map((row, idx) => {
               const inner = (
                 <>
-                  <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {/* One art box, one size, all four. objectFit differs because
+                      a crew PORTRAIT is a framed face and wants cropping, while
+                      a hull and an anvil are objects and want containing. */}
+                  <div style={{ position: 'relative', width: '100%', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
                     {row.art
                       // eslint-disable-next-line @next/next/no-img-element
-                      // The ship gets its own sizing because its art is not
-                      // shaped like the others'. The hull plates are 600x335
-                      // (1.79:1) with a LOT of transparent margin — the hull
-                      // itself is only 40-65% of the canvas width — so fitting
-                      // the canvas to this square box left a Brigantine
-                      // rendering ~24x19 next to a crew portrait filling 39x39.
-                      // 140% sizes the canvas so the big hulls land at ~38px
-                      // wide, level with the portrait. Going further starts
-                      // eating the Galleon and Man-o-War bowsprits, which
-                      // overhang further left than the rest.
-                      ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async" style={row.key === 'ship'
-                          ? { width: '140%', maxWidth: 'none', height: 'auto', objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
-                          : { maxWidth: '92%', maxHeight: '92%', objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }} />
-                      : row.icon}
+                      ? <img src={row.art} alt="" aria-hidden loading="lazy" decoding="async"
+                          style={row.fit === 'cover'
+                            ? { width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top center', border: '1px solid rgba(255,255,255,0.16)', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : undefined }
+                            : { maxWidth: 52, maxHeight: 44, objectFit: 'contain', filter: row.locked ? 'grayscale(0.9) brightness(0.7)' : 'drop-shadow(0 3px 6px rgba(0,0,0,0.55))' }} />
+                      : null}
                     {row.locked && (
-                      <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,18,0.62)' }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                      <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b97a8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                       </span>
                     )}
+                    {/* The nudge rides the ART, not the label: at this width a
+                        badge beside the title would push the title into an
+                        ellipsis. */}
+                    {row.count > 0 ? (
+                      <span aria-label={`${row.count} ready`} className="crew-levelup-dot font-karla font-800" style={{
+                        position: 'absolute', top: -1, right: '18%',
+                        minWidth: 15, height: 15, padding: '0 3px', borderRadius: 999,
+                        background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)',
+                        color: '#231a06', fontSize: '0.58rem', lineHeight: '14px', textAlign: 'center',
+                      }}>{row.count}</span>
+                    ) : row.nudge ? (
+                      <span aria-hidden className="crew-levelup-dot" style={{ position: 'absolute', top: 1, right: '20%', width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)' }} />
+                    ) : null}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', lineHeight: 1.15, color: row.locked ? '#79828f' : '#f0ede8', display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                      {row.label}
-                      {/* A count reads louder than a bare dot and says HOW
-                          MANY are waiting; the dot stays for nudges that have
-                          no number behind them. */}
-                      {row.count > 0 ? (
-                        <span aria-label={`${row.count} ready to collect`} className="crew-levelup-dot font-karla font-800" style={{
-                          minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999,
-                          background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)',
-                          color: '#231a06', fontSize: '0.6rem', lineHeight: '15px', textAlign: 'center', flexShrink: 0,
-                        }}>{row.count}</span>
-                      ) : row.nudge ? (
-                        <span aria-hidden className="crew-levelup-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd96a', border: '1px solid rgba(0,0,0,0.55)', flexShrink: 0 }} />
-                      ) : null}
-                    </p>
-                    <p className="font-karla font-600" style={{ fontSize: '0.68rem', lineHeight: 1.3, marginTop: 2, color: row.nudge ? '#ffd96a' : '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {row.sub}
-                    </p>
-                  </div>
-                  {!row.locked && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6d7684" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  )}
+
+                  <p className="font-cinzel font-700" style={{ width: '100%', fontSize: '0.8rem', lineHeight: 1.1, color: row.locked ? '#79828f' : '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {row.label}
+                  </p>
+                  <p className="font-karla font-600" style={{ width: '100%', marginTop: 1, fontSize: '0.62rem', lineHeight: 1.25, color: row.nudge ? '#ffd96a' : '#9aa3b1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {row.sub}
+                  </p>
                 </>
               )
-              // SOLID, not translucent: this sits on a painted page backdrop and
-              // a see-through card washed straight into it.
               const style = {
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '0.65rem 0.7rem', borderRadius: 13,
-                background: row.locked ? 'rgba(15,20,29,0.72)' : 'rgba(19,25,35,0.74)',
-                backdropFilter: 'blur(7px)',
-                WebkitBackdropFilter: 'blur(7px)',
-                border: `1px solid ${row.locked ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.13)'}`,
-                boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
-                textDecoration: 'none', cursor: row.locked ? 'default' : 'pointer', textAlign: 'left' as const,
-                opacity: row.locked ? 0.72 : 1,
+                display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
+                padding: '0.7rem 0.3rem 0.75rem', textAlign: 'center' as const,
+                // Hairlines BETWEEN, no border around each: the bar is one
+                // object, and four outlines inside one outline is the look
+                // this was trying to get away from.
+                borderLeft: idx === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                textDecoration: 'none', cursor: row.locked ? 'default' : 'pointer',
+                opacity: row.locked ? 0.66 : 1,
+                minWidth: 0, width: '100%', font: 'inherit', background: 'none',
                 WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' as const,
-                width: '100%', font: 'inherit',
               }
-              // All four go to a real route now. Crew already had one; Ship,
-              // Items and Forge got theirs so the row behaves the same wherever
-              // it points, back button included.
               const href = row.key === 'crew' ? '/crew?tab=assign' : `/expeditions/${row.key}`
               if (row.locked) {
-                return (
-                  <div key={row.key} aria-label="Forge. Locked until you unlock it in the Gauntlet." style={style}>{inner}</div>
-                )
+                return <div key={row.key} aria-label="Forge. Locked until you unlock it in the Gauntlet." style={style}>{inner}</div>
               }
               return (
-                <Link
-                  key={row.key}
-                  href={href}
-                  className="hub-manage-tap"
+                <Link key={row.key} href={href} className="hub-manage-tap"
                   data-coach={row.key === 'crew' ? 'crew' : row.key === 'ship' ? 'ship' : undefined}
-                  style={style}
-                >
+                  style={style}>
                   {inner}
                 </Link>
               )
