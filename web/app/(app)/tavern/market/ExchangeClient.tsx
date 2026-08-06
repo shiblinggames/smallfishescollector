@@ -220,11 +220,15 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
 
 function PositionRow({ p, cycle, onChanged }: { p: BoardPosition; cycle: number; onChanged: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [armed, setArmed] = useState(false)
   const live = pct(p.livePrice, p.entryPrice)
   const yourWay = p.direction === 'rise' ? live : -live
   const breakEven = 1 / p.leverage
   const settled = p.status !== 'open'
   const value = settled ? (p.payout ?? 0) : Math.max(0, Math.round(p.stake * p.leverage * Math.max(0, yourWay)))
+  // What closing RIGHT NOW actually hands over, which is the only number that
+  // answers "should I?".
+  const earlyValue = Math.max(0, Math.round(value * EARLY_CLOSE_RETURN))
   const good = settled ? (p.payout ?? 0) > p.stake : yourWay > breakEven
   const left = p.expiryCycle - cycle
 
@@ -246,24 +250,53 @@ function PositionRow({ p, cycle, onChanged }: { p: BoardPosition; cycle: number;
       </div>
 
       {!settled ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 7 }}>
-          <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696' }}>
-            Break-even {fmtPct(breakEven)} · settles in {left <= 0 ? 'moments' : `${left}h`}
-          </span>
+        <>
+          <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 7 }}>
+            Break-even {fmtPct(breakEven)} · settles on its own in {left <= 0 ? 'moments' : `${left}h`}
+          </p>
+
+          {/* A REAL BUTTON, saying the actual number. It was 10px of grey in
+              the corner reading "Close for 80%", which does not say 80% of
+              what, and read as no button at all.
+
+              Two taps, because one tap liquidating a position is a mistake
+              nobody can undo, and the haircut makes an accident cost real
+              money. Trading apps do not confirm; they also do not have a
+              thumb-sized tap target next to a scrolling list. */}
           <button type="button" disabled={busy}
             onClick={() => {
+              if (!armed) { setArmed(true); return }
               setBusy(true)
               closeContractEarly(p.id).then(res => {
-                setBusy(false)
+                setBusy(false); setArmed(false)
                 if ('ok' in res) purseChanged(res.doubloons)
                 onChanged()
               })
             }}
             className="font-karla font-700"
-            style={{ flexShrink: 0, padding: '0.28rem 0.55rem', borderRadius: 8, fontSize: '0.62rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#c8d2e0', cursor: busy ? 'wait' : 'pointer' }}>
-            {busy ? '…' : `Close for ${Math.round(EARLY_CLOSE_RETURN * 100)}%`}
+            style={{
+              width: '100%', marginTop: 8, padding: '0.5rem', borderRadius: 9, fontSize: '0.72rem',
+              background: armed ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${armed ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.18)'}`,
+              color: armed ? '#f0d89a' : '#d4dce8', cursor: busy ? 'wait' : 'pointer',
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+            {busy ? 'Closing…'
+              : armed ? `Take ${earlyValue.toLocaleString()} ⟡ and close. Tap again`
+              : `Close early for ${earlyValue.toLocaleString()} ⟡`}
           </button>
-        </div>
+          {armed && !busy && (
+            <button type="button" onClick={() => setArmed(false)} className="font-karla font-600"
+              style={{ width: '100%', marginTop: 4, padding: '0.3rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.64rem', cursor: 'pointer' }}>
+              Keep it open
+            </button>
+          )}
+          {armed && (
+            <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 3, lineHeight: 1.4, textAlign: 'center' }}>
+              Worth {value.toLocaleString()} ⟡ at expiry. Closing now keeps {Math.round(EARLY_CLOSE_RETURN * 100)}% of it.
+            </p>
+          )}
+        </>
       ) : (
         <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696', marginTop: 6 }}>
           {p.status === 'closed_early' ? 'Closed early' : 'Settled'} at {p.exitPrice?.toFixed(3)} · entry {p.entryPrice.toFixed(3)}
