@@ -262,6 +262,19 @@ export default function FishingPageClient({
     router.refresh()
   }
 
+  /** All the way out to the hub, not back one step to the zone selector.
+   *
+   *  Same teardown as goBack, and the same refresh for the same reason: the
+   *  hub reads the hold and the Almanac counts off server props, so returning
+   *  with a page-load snapshot would show a hold that is missing everything
+   *  caught this session. */
+  function goHome() {
+    localStorage.removeItem(LAST_ZONE_KEY)
+    setSelectedZone(null)
+    setZonesOpen(false)
+    router.refresh()
+  }
+
   // Swap the soundtrack to match the zone you ENTER (Open Waters has its own
   // track; others use the default). Returning to the selector (selectedZone
   // null) intentionally leaves the track alone, so the song from the zone you
@@ -355,6 +368,7 @@ export default function FishingPageClient({
       initialShowWaitTimer={initialShowWaitTimer}
       selectedZone={selectedZone}
       onBack={goBack}
+      onHome={goHome}
       zoneRewardsClaimed={zoneRewardsClaimed}
       initialDailyChallenge={persistedDailyChallenge}
       onDailyChallengeChange={handleDailyChallengeChange}

@@ -3128,7 +3128,7 @@ export default function FishingGame({
   initialPersonalBests, initialCatchCounts,
   initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
-  selectedZone: initialZone, onBack, zoneRewardsClaimed,
+  selectedZone: initialZone, onBack, onHome, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
   initialEquippedSpecial2,
@@ -3178,6 +3178,8 @@ export default function FishingGame({
   initialShowWaitTimer: boolean
   selectedZone: ZoneKey
   onBack: () => void
+  /** Straight out to the fishing hub, past the zone selector. */
+  onHome: () => void
   zoneRewardsClaimed: Record<string, boolean>
   initialDailyChallenge: DailyChallengeState | null
   /** Fired whenever local progress/claimed updates so the parent
@@ -6616,21 +6618,49 @@ export default function FishingGame({
         {/* UI content — fills full height as flex column */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem', paddingBottom: '1.25rem' }}>
 
-          {/* Header row — back button left, gear button right */}
+          {/* Header row — home + zone left, gear button right.
+              
+              The zone pill used to be the only way out, and it goes back ONE
+              step to the selector. That was the whole journey when the selector
+              was the fishing home; now there is a hub above it, and leaving it
+              meant selector, then close the selector, to reach a screen that is
+              two taps away from everything else in fishing.
+              
+              So: a house to leave, the zone name to change water. Same pill
+              language, same height, the icon narrow enough that the zone label
+              keeps the position your thumb already knows. */}
           <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={onBack}
-              className="font-karla font-600 uppercase tracking-[0.1em]"
-              style={{
-                display: 'inline-flex', alignItems: 'center',
-                height: 26, padding: '0 0.7rem', borderRadius: 20,
-                fontSize: '0.55rem', color: HABITAT_COLOR[selectedZone],
-                background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                cursor: 'pointer', touchAction: 'manipulation',
-              }}
-            >
-              ← {HABITAT_LABEL[selectedZone]}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <button
+                onClick={onHome}
+                aria-label="Back to fishing"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 26, height: 26, padding: 0, borderRadius: 20,
+                  color: HABITAT_COLOR[selectedZone],
+                  background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
+                  cursor: 'pointer', touchAction: 'manipulation',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M3 10.5L12 3l9 7.5" />
+                  <path d="M5.5 9.5V20h13V9.5" />
+                </svg>
+              </button>
+              <button
+                onClick={onBack}
+                className="font-karla font-600 uppercase tracking-[0.1em]"
+                style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  height: 26, padding: '0 0.7rem', borderRadius: 20,
+                  fontSize: '0.55rem', color: HABITAT_COLOR[selectedZone],
+                  background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
+                  cursor: 'pointer', touchAction: 'manipulation',
+                }}
+              >
+                ← {HABITAT_LABEL[selectedZone]}
+              </button>
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               {/* Leaderboard — subtle HUD-matching pill so it blends with
