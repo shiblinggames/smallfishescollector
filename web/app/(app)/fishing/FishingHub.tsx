@@ -13,32 +13,17 @@
 // The tiles are the SAME component the Expeditions hub uses (components/HubTile),
 // so the two pages cannot drift into being lookalikes.
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import HubTile, { HUB_GRID } from '@/components/HubTile'
 import FishingLevelBar from '@/components/FishingLevelBar'
 import { getFishHold } from '@/lib/fishHold'
 import FisherPose from '@/components/FisherPose'
-import { ZONE_MIN_LEVEL, ZONE_BG } from './zoneData'
+import Bestiary from './Bestiary'
+import { ZONE_MIN_LEVEL, ZONE_BG, ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import type { ZoneKey } from './ZoneLanding'
 import type { RenownAlloc } from '@/lib/renown'
 
-const ZONE_LABEL: Record<string, string> = {
-  shallows: 'Shallows',
-  open_waters: 'Open Waters',
-  deep: 'Deep',
-  abyss: 'Abyss',
-  ancient_deep: 'Ancient Deep',
-}
-// Matches the zone selector's habitat colours so the tile's edge is the
-// water's colour, not a fixed blue.
-const ZONE_COLOR: Record<string, string> = {
-  shallows: '#60a5fa',
-  open_waters: '#34d399',
-  deep: '#a78bfa',
-  abyss: '#f87171',
-  ancient_deep: '#c084fc',
-}
-const ZONE_ORDER: ZoneKey[] = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
@@ -67,6 +52,7 @@ export default function FishingHub({
   onOpenZones: () => void
 }) {
   const router = useRouter()
+  const [bestiaryOpen, setBestiaryOpen] = useState(false)
 
   const watersOpen = ZONE_ORDER.filter(z =>
     fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1) && (z !== 'ancient_deep' || ancientDeepUnlocked)).length
@@ -155,11 +141,10 @@ export default function FishingHub({
                 bgImage="/fish-bestiary.jpg"
                 accent="#a78bfa"
                 title="Bestiary"
-                status=""
-                sub={`${speciesCaught} of ${speciesTotal} logged`}
-                locked
-                lockLabel="Coming Soon"
-                muted
+                status={`${speciesCaught} of ${speciesTotal} charted`}
+                sub="Goldens, giants and pets"
+                onClick={() => setBestiaryOpen(true)}
+                progress={speciesTotal > 0 ? speciesCaught / speciesTotal : 0}
               />
             </div>
 
@@ -167,6 +152,8 @@ export default function FishingHub({
           </div>
         </main>
       </div>
+
+      <Bestiary open={bestiaryOpen} onClose={() => setBestiaryOpen(false)} />
     </>
   )
 }

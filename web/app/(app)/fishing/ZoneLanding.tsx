@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_BG, zoneCrateChance, zoneDiamondShare, zonePetPerCrate } from './zoneData'
+import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_BG, ZONE_LABEL as HABITAT_LABEL, ZONE_COLOR as HABITAT_COLOR, ZONE_TAGLINE as HABITAT_TAGLINE, zoneCrateChance, zoneDiamondShare, zonePetPerCrate } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
@@ -16,27 +16,6 @@ const XP_THRESHOLD = 100
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 export type ZoneKey = typeof ZONES[number]
 
-const HABITAT_COLOR: Record<string, string> = {
-  shallows:    '#60a5fa',
-  open_waters: '#34d399',
-  deep:        '#a78bfa',
-  abyss:       '#f87171',
-  ancient_deep: '#c084fc',
-}
-const HABITAT_LABEL: Record<string, string> = {
-  shallows:    'Shallows',
-  open_waters: 'Open Waters',
-  deep:        'Deep',
-  abyss:       'Abyss',
-  ancient_deep: 'Ancient Deep',
-}
-const HABITAT_TAGLINE: Record<string, string> = {
-  shallows:    'Bright water, gentle currents',
-  open_waters: 'Open blue, horizon to horizon',
-  deep:        'Dusk settles over deep water',
-  abyss:       'Cold and dark, far from any light',
-  ancient_deep: 'Before time. Beyond depth.',
-}
 
 
 const ZONE_DIFFICULTY: Record<string, number> = {

@@ -103,3 +103,33 @@ export const ZONE_BG: Record<string, string> = {
   abyss:       '/abyss.jpg',
   ancient_deep: '/ancient.jpg',
 }
+
+/** Display name for a zone. */
+export const ZONE_LABEL: Record<string, string> = {
+  shallows:    'Shallows',
+  open_waters: 'Open Waters',
+  deep:        'Deep',
+  abyss:       'Abyss',
+  ancient_deep: 'Ancient Deep',
+}
+
+/** The zone's accent. Card edges, habitat headers, rarity chrome. */
+export const ZONE_COLOR: Record<string, string> = {
+  shallows:    '#60a5fa',
+  open_waters: '#34d399',
+  deep:        '#a78bfa',
+  abyss:       '#f87171',
+  ancient_deep: '#c084fc',
+}
+
+/** One line of weather per zone. */
+export const ZONE_TAGLINE: Record<string, string> = {
+  shallows:    'Bright water, gentle currents',
+  open_waters: 'Open blue, horizon to horizon',
+  deep:        'Dusk settles over deep water',
+  abyss:       'Cold and dark, far from any light',
+  ancient_deep: 'Before time. Beyond depth.',
+}
+
+/** Surface to deepest. The order every zone list should walk in. */
+export const ZONE_ORDER = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
