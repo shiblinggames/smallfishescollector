@@ -1,7 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import FishingPageClient from './FishingPageClient'
-import { getActiveChallengeSession } from '@/app/(app)/social/challengeActions'
 import { getDailyChallenge } from './dailyChallengeActions'
 import { settlePendingCatchCredit } from './actions'
 import { isPremiumActive } from '@/lib/premium'
@@ -49,7 +48,6 @@ export default async function FishingPage() {
   // any other server component in this render that needs profile shares this
   // single fetch instead of issuing its own.
   const [
-    activeSession,
     dailyChallenge,
     profile,
     { data: baitInventory },
@@ -64,7 +62,6 @@ export default async function FishingPage() {
     { data: lifetimeRows },
     { data: marketState },
   ] = await Promise.all([
-    getActiveChallengeSession(),
     getDailyChallenge(),
     getCurrentProfile(),
     admin.from('bait_inventory')
@@ -368,7 +365,6 @@ export default async function FishingPage() {
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
           hasSeenFirstCatchCelebration={profile?.has_seen_first_catch_celebration ?? false}
           initialShowWaitTimer={(profile as { show_wait_timer?: boolean } | null)?.show_wait_timer ?? true}
-          activeSession={activeSession ?? undefined}
           initialDailyChallenge={dailyChallenge}
           username={profile?.username ?? ''}
           zoneRewardsClaimed={{

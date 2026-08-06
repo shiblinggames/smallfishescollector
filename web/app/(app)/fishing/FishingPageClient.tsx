@@ -10,7 +10,6 @@ import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import type { RenownAlloc } from '@/lib/renown'
 import { ZONE_MIN_LEVEL } from './zoneData'
-import type { ActiveSession } from '@/app/(app)/social/challengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import type { TickerItem } from '@/components/MarketTicker'
 
@@ -56,7 +55,7 @@ export default function FishingPageClient({
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
   hubSpeciesCaught, hubSpeciesTotal, hubHoldValue, hubMarketMood, hubExchangeUnveil, hubTicker,
-  hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
+  hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
@@ -98,7 +97,6 @@ export default function FishingPageClient({
   hasSeenFishingCatchTour: boolean
   hasSeenFirstCatchCelebration: boolean
   initialShowWaitTimer: boolean
-  activeSession?: ActiveSession
   username: string
   zoneRewardsClaimed: Record<string, boolean>
   initialDailyChallenge: DailyChallengeState | null
@@ -359,7 +357,6 @@ export default function FishingPageClient({
       initialShowWaitTimer={initialShowWaitTimer}
       selectedZone={selectedZone}
       onBack={goBack}
-      activeSession={activeSession}
       zoneRewardsClaimed={zoneRewardsClaimed}
       initialDailyChallenge={persistedDailyChallenge}
       onDailyChallengeChange={handleDailyChallengeChange}

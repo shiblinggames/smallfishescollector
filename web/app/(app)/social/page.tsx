@@ -3,24 +3,18 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import SocialClient from './SocialClient'
 import { getCrew, getNewFollowers, type CrewMember } from './actions'
-import { getChallenges, getWLRecord } from './challengeActions'
 
 export default async function SocialPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, crew, newFollowers, challenges, wlRecord, { data: baitRows }, { count: mySpecies }] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, username, fishing_xp, expedition_xp, highest_perfect_streak, character_color, equipped_hat, avatar_bg_color, avatar_border_color').eq('id', user.id).single(),
+  const [{ data: profile }, crew, newFollowers, { count: mySpecies }] = await Promise.all([
+    supabase.from('profiles').select('packs_available, gems, username, fishing_xp, expedition_xp, highest_perfect_streak, character_color, equipped_hat, avatar_bg_color, avatar_border_color').eq('id', user.id).single(),
     getCrew(),
     getNewFollowers(),
-    getChallenges(),
-    getWLRecord(),
-    supabase.from('bait_inventory').select('quantity').eq('user_id', user.id),
     supabase.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
-
-  const myBait = (baitRows ?? []).reduce((sum: number, row: { quantity: number }) => sum + (row.quantity ?? 0), 0)
 
   const me: CrewMember = {
     username:             profile?.username ?? '',
@@ -53,10 +47,6 @@ export default async function SocialPage() {
           me={me}
           username={profile?.username ?? ''}
           newFollowers={newFollowers}
-          initialChallenges={challenges}
-          wlRecord={wlRecord}
-          myDoubloons={profile?.doubloons ?? 0}
-          myBait={myBait}
         />
       </main>
     </>

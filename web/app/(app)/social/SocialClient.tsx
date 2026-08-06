@@ -1,15 +1,12 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { searchUsers } from '@/app/(app)/u/actions'
 import { addCrewMember, removeCrewMember, type CrewMember } from './actions'
 import { getLevelFromXP as getFishingLevel } from '@/lib/fishingLevel'
 import { getLevelFromXP as getNavLevel } from '@/lib/expeditionLevel'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import ChallengeSection, { ChallengeButton } from './ChallengeSection'
-import type { PendingChallenge } from './challengeActions'
 
 interface SearchResult {
   username: string
@@ -20,10 +17,6 @@ interface Props {
   me: CrewMember
   username: string
   newFollowers: CrewMember[]
-  initialChallenges: PendingChallenge[]
-  wlRecord: { wins: number; losses: number; ties: number }
-  myDoubloons: number
-  myBait: number
 }
 
 // Stats the crew leaderboard can rank by. All comparable head-to-head.
@@ -63,14 +56,8 @@ function LevelChips({ fishingXP, expeditionXP }: { fishingXP: number; expedition
   )
 }
 
-export default function SocialClient({ initialCrew, me, username, newFollowers: initialNewFollowers, initialChallenges, wlRecord, myDoubloons, myBait }: Props) {
-  const router = useRouter()
+export default function SocialClient({ initialCrew, me, username, newFollowers: initialNewFollowers }: Props) {
   const [lbStat, setLbStat] = useState<LbKey>('fishing')
-  const activeOpponents = new Set(
-    initialChallenges
-      .filter(c => ['pending', 'challenger_active', 'challenger_done', 'both_active', 'challenged_active'].includes(c.status))
-      .map(c => c.isIncoming ? c.challengerUsername : c.challengedUsername)
-  )
   const [crew, setCrew] = useState<CrewMember[]>(initialCrew)
   const [newFollowers, setNewFollowers] = useState(initialNewFollowers)
   const crewSet = new Set(crew.map(m => m.username.toLowerCase()))
@@ -130,7 +117,6 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
     })
   }
 
-  const totalChallenges = initialChallenges.length + wlRecord.wins + wlRecord.losses + wlRecord.ties
 
   return (
     <div className="px-6 max-w-xl mx-auto pb-14 flex flex-col gap-8">
@@ -370,7 +356,6 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
                       </div>
                       {!isMe && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                          <ChallengeButton username={m.username} myDoubloons={myDoubloons} onCreated={() => router.refresh()} hasActiveChallenge={activeOpponents.has(m.username)} />
                           <button
                             onClick={() => handleRemove(m.username)}
                             disabled={isLoading || pending}
@@ -394,14 +379,6 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
           )
         })()}
       </div>
-
-      {/* ── 4. Challenges (below friends) ── */}
-      {totalChallenges > 0 && (
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-3" style={{ fontSize: '0.58rem', color: '#7a7674' }}>Challenges</p>
-          <ChallengeSection challenges={initialChallenges} wlRecord={wlRecord} myDoubloons={myDoubloons} myBait={myBait} />
-        </div>
-      )}
 
     </div>
   )

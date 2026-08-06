@@ -9,7 +9,6 @@ import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { fishingColorsToGrant } from '@/lib/characters'
@@ -1009,8 +1008,6 @@ export async function reelIn(
   if (effectiveDoubleCatch)          await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
   if (effectiveJackpotMult > 1)      await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_jackpots', n: 1 })
 
-  // Record challenge score (fire and forget)
-  recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})
 
   // ── Size variance + personal-best tracking (non-ancient catches) ──
   // Roll a length within the species's [length_min_in, length_max_in] range
