@@ -24,67 +24,43 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getBountyBoard, claimBounty, rerollBounty, type BountyBoard, type BountyView } from './bountyActions'
 import { hapticReward } from '@/lib/haptics'
 
-// PAPER, not dark glass, and a painted sheet rather than a gradient: real tea
-// stains, foxing, fold creases and a woven grain, in the same gouache idiom as
-// the board it is pinned to. A bounty should read as something written by hand
-// and nailed up, not a row in an admin table.
+// Solid dark notices, light ink, the way every other panel in this game reads.
 //
-// ONE sheet serves every notice. Sized to 200% and offset to a different
-// QUADRANT per card, so four notices on the wall are four different pieces of
-// paper instead of the same stain repeated four times. The aspect distortion
-// 200% x 200% causes is invisible on a texture with no subject in it.
-const PAPER_QUADRANT = ['0% 0%', '100% 0%', '0% 100%', '100% 100%']
-
-// A TORN BOTTOM EDGE. Paper that has been ripped off a board does not end in a
-// straight line, and a straight line with rounded corners is what made these
-// read as sticky notes. Two variants, alternated, so no two neighbours tear the
-// same way. Shallow on purpose: deep enough to be irregular, not so deep that
-// it eats the row of buttons above it.
-const TORN = [
-  'polygon(0% 0%, 100% 0%, 100% 97.4%, 87% 99.3%, 73% 97.0%, 58% 99.4%, 44% 96.9%, 29% 99.2%, 14% 97.2%, 0% 99.0%)',
-  'polygon(0% 0%, 100% 0%, 100% 98.9%, 86% 97.0%, 71% 99.3%, 55% 97.1%, 40% 99.4%, 25% 97.0%, 11% 99.2%, 0% 97.3%)',
-]
-// Under the image while it loads, so a notice is never a translucent hole.
-const PAPER_BASE = '#ded1b5'
-// Ink weights for CREAM paper, not for a dark panel. The soft tone was too
-// pale against parchment and the small print sat at karla 400, which is a
-// hairline at this size. Everything below is a stop darker and a stop heavier.
-const INK = '#2b2118'                     // dark brown, the writing
-const INK_SOFT = '#54452f'                // the hand that wrote the small print
-
-// Tier colours re-cut for paper. The dark-panel set (#7f9bb5 and friends) went
-// invisible on parchment; these are the same hues at ink weight.
+// This went through parchment first: real painted paper, torn edges, the lot.
+// It was the wrong call twice over. A bright cream card in a dark app fights
+// the language of every screen around it, and a two-column grid gave each
+// notice about 190px to carry a tier, a prize, a title, a description, a
+// progress bar and two controls. No amount of ink weight fixes 190px.
+//
+// Full width instead, and short. Four notices in roughly the height three
+// squares used, every string at a size you can actually read, and the painted
+// board showing between them doing the work the paper was hired for.
 const TIER: Record<BountyView['tier'], { label: string; color: string }> = {
-  easy:   { label: 'Easy',   color: '#40607c' },
-  medium: { label: 'Medium', color: '#2f6b4a' },
-  hard:   { label: 'Hard',   color: '#8a5c14' },
-  elite:  { label: 'Elite',  color: '#5d3a8f' },
+  easy:   { label: 'Easy',   color: '#8fb0cc' },
+  medium: { label: 'Medium', color: '#77c79a' },
+  hard:   { label: 'Hard',   color: '#e0b45f' },
+  elite:  { label: 'Elite',  color: '#c9a0f5' },
 }
 
 const GEM = '◆'
-const GEM_COLOR = '#c084fc'      // on the dark board
-const GEM_INK = '#5d3a8f'        // on the paper
-const STAMP = '#a3372a'          // oxblood, the harbourmaster's rubber stamp
+const GEM_COLOR = '#c9a0f5'
 const TNUM = { fontVariantNumeric: 'tabular-nums' as const }
 
 function SwapIcon({ color }: { color: string }) {
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M3 8h13l-3.5-3.5M21 16H8l3.5 3.5" />
     </svg>
   )
 }
 
-/** One notice pinned to the board. */
-function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
+
+/** One notice. A solid slab with the tier as a spine down its left edge, the
+ *  prize on the right, and the two lines that matter in between. */
+function BountyCard({ b, rerollUsed, busy, onClaim, onSwap }: {
   b: BountyView
-  /** Position on the wall, used only to alternate the tilt. */
-  idx: number
   rerollUsed: boolean
   busy: boolean
-  /** The first rung posts a single order, and one card in a two-column grid
-   *  looks like a mistake, so it takes the full width instead. */
-  wide: boolean
   onClaim: () => void
   onSwap: () => void
 }) {
@@ -95,173 +71,108 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
   return (
     <motion.div
       layout
-      // A finished order breathes. Nothing else on the board moves, so it is
-      // the only thing your eye goes to. Transform only.
-      animate={done && !b.claimed ? { y: [0, -2, 0] } : { y: 0 }}
-      transition={done && !b.claimed ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
       style={{
         position: 'relative', overflow: 'hidden',
-        gridColumn: wide ? '1 / -1' : undefined,
-        // ONE bill nailed to the middle of an empty board, rather than a
-        // full-width banner, when the first rung posts a single order.
-        width: wide ? '62%' : undefined,
-        margin: wide ? '0 auto' : undefined,
-        display: 'flex', flexDirection: 'column',
-        // PORTRAIT. A posted bill is taller than it is wide; roughly square was
-        // the single thing making these look like sticky notes.
-        aspectRatio: '3 / 4',
-        minHeight: 250,
-        // Paper is cut and torn, never rounded.
-        padding: '0.95rem 0.65rem 0.7rem', borderRadius: 0,
-        clipPath: TORN[idx % TORN.length],
-        backgroundColor: PAPER_BASE,
-        backgroundImage: 'url(/bounty-paper.jpg)',
-        backgroundSize: '200% 200%',
-        backgroundPosition: PAPER_QUADRANT[idx % PAPER_QUADRANT.length],
-        // No border at all. A drawn outline on a torn edge is the giveaway that
-        // it is a div; a shadow under the paper is what lifts it off the wood.
-        // A finished order simply sits a little prouder.
-        boxShadow: done && !b.claimed
-          ? '0 7px 18px rgba(0,0,0,0.6)'
-          : '0 3px 10px rgba(0,0,0,0.5)',
-        // Every other notice hung a shade crooked, so the wall does not read as
-        // a grid of identical rectangles.
-        transform: idx % 2 === 0 ? 'rotate(-0.7deg)' : 'rotate(0.8deg)',
+        padding: '0.6rem 0.7rem 0.6rem 0.85rem', borderRadius: 11,
+        // OPAQUE. It sits on a painting, so it cannot be a wash.
+        background: b.claimed
+          ? 'linear-gradient(180deg, rgba(20,17,13,0.95) 0%, rgba(13,11,8,0.96) 100%)'
+          : 'linear-gradient(180deg, rgba(30,27,22,0.97) 0%, rgba(18,16,12,0.98) 100%)',
+        border: `1px solid ${done && !b.claimed ? t.color + '55' : 'rgba(255,255,255,0.08)'}`,
+        boxShadow: '0 3px 12px rgba(0,0,0,0.5)',
       }}
     >
-      {/* A settled notice is the SAME paper, greyed. Cheaper than a second
-          texture and more honest: it is the same sheet, just spent. Sits under
-          the content so the ink above it stays readable. */}
-      {b.claimed && (
-        <span aria-hidden style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'rgba(150,141,120,0.46)',
-        }} />
-      )}
-
-      {/* Pinned. A tack through the top of the notice, which is the one detail
-          that makes the whole thing read as a board rather than a list. */}
+      {/* The tier as a spine down the left edge. Colour where a label would
+          have cost a whole line of a short card. */}
       <span aria-hidden style={{
-        position: 'absolute', top: 5, left: '50%', marginLeft: -4,
-        width: 8, height: 8, borderRadius: '50%',
-        background: `radial-gradient(circle at 32% 30%, #d9c9a0 0%, ${t.color} 55%, rgba(0,0,0,0.65) 100%)`,
-        boxShadow: '0 1px 2px rgba(0,0,0,0.55)',
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+        background: b.claimed ? 'rgba(255,255,255,0.10)' : t.color,
+        opacity: b.claimed ? 1 : 0.9,
       }} />
 
-      {/* The prize, sealed in the corner. It is the reason to read the card, so
-          it is the biggest thing on it after the name. */}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <span className="font-karla font-700 uppercase tracking-[0.16em]"
-          style={{
-            fontSize: '0.58rem', paddingTop: 2,
-            color: b.claimed ? '#726852' : t.color,
-          }}>
+          style={{ fontSize: '0.6rem', color: b.claimed ? '#6d675d' : t.color }}>
           {t.label}
         </span>
         <span className="font-cinzel font-800" style={{
-          fontSize: '1.3rem', lineHeight: 1, whiteSpace: 'nowrap',
-          color: b.claimed ? '#726852' : GEM_INK, ...TNUM,
+          fontSize: '1.15rem', lineHeight: 1, whiteSpace: 'nowrap',
+          color: b.claimed ? '#6d675d' : GEM_COLOR, ...TNUM,
         }}>
           {b.gems} {GEM}
         </span>
       </div>
 
       <p className="font-cinzel font-700" style={{
-        position: 'relative',
-        fontSize: wide ? '1.2rem' : '1.06rem', lineHeight: 1.2, marginTop: 7,
-        color: b.claimed ? '#726852' : INK,
+        fontSize: '1.08rem', lineHeight: 1.2, marginTop: 3,
+        color: b.claimed ? '#8b8578' : '#f4efe4',
       }}>
         {b.name}
       </p>
       <p className="font-karla font-500" style={{
-        position: 'relative',
-        fontSize: '0.75rem', lineHeight: 1.38, marginTop: 5,
-        color: b.claimed ? '#7b7160' : INK_SOFT,
-        display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        fontSize: '0.78rem', lineHeight: 1.4, marginTop: 2,
+        color: b.claimed ? '#6d675d' : '#a49c8e',
       }}>
         {b.desc}
       </p>
 
-      {/* Pinned to the foot so the buttons line up across the row however long
-          the titles run. */}
-      <div style={{ position: 'relative', marginTop: 'auto', paddingTop: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 8 }}>
         {b.target > 1 && !b.claimed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-            <div style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(60,44,24,0.22)', overflow: 'hidden' }}>
+          <>
+            <div style={{ flex: 1, minWidth: 40, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.09)', overflow: 'hidden' }}>
               <motion.div
                 initial={{ width: 0 }} animate={{ width: `${pct * 100}%` }}
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 style={{ height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${t.color}88, ${t.color})` }}
               />
             </div>
-            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: INK_SOFT, ...TNUM }}>
+            <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.74rem', color: '#a49c8e', ...TNUM }}>
               {b.progress}/{b.target}
             </span>
-          </div>
+          </>
         )}
 
         {b.claimed ? (
-          <div style={{ height: 30 }} />
+          <span className="font-karla font-800 uppercase tracking-[0.18em]"
+            style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#7d7466' }}>
+            Paid
+          </span>
         ) : done ? (
           <button type="button" onClick={onClaim} disabled={busy} className="font-karla font-800 tap"
             style={{
-              width: '100%', padding: '0.5rem', borderRadius: 8, fontSize: '0.84rem',
-              background: `${t.color}1f`, border: `1px solid ${t.color}99`, color: t.color,
+              marginLeft: 'auto', flexShrink: 0, padding: '0.42rem 0.9rem', borderRadius: 9, fontSize: '0.82rem',
+              background: `${t.color}22`, border: `1px solid ${t.color}88`, color: '#f6f1e6',
               cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
             }}>
             {busy ? '…' : `Claim ${b.gems} ${GEM}`}
           </button>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="font-karla font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.72rem', color: INK_SOFT }}>
-              Not done yet
-            </span>
+          <>
+            {b.target <= 1 && (
+              <span className="font-karla font-600" style={{ flex: 1, fontSize: '0.74rem', color: '#7d7466' }}>
+                Not done yet
+              </span>
+            )}
             {!rerollUsed && (
               <button type="button" onClick={onSwap} disabled={busy} aria-label={`Swap ${b.name}`} className="tap"
                 style={{
-                  flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '0.34rem 0.5rem', borderRadius: 7,
-                  background: 'rgba(60,44,24,0.10)', border: '1px solid rgba(90,68,40,0.4)',
-                  color: INK_SOFT, cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
+                  marginLeft: b.target > 1 ? 'auto' : undefined,
+                  flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '0.34rem 0.6rem', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.14)',
+                  color: '#a49c8e', cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
                 }}>
-                <SwapIcon color={INK_SOFT} />
-                <span className="font-karla font-700" style={{ fontSize: '0.66rem' }}>Swap</span>
+                <SwapIcon color="#a49c8e" />
+                <span className="font-karla font-700" style={{ fontSize: '0.72rem' }}>Swap</span>
               </button>
             )}
-          </div>
+          </>
         )}
       </div>
-
-      {/* PAID, driven across the notice at an angle. The old claimed state was a
-          grey word in a grey row, which is no kind of ending for the hardest
-          thing on the board. */}
-      <AnimatePresence>
-        {b.claimed && (
-          <motion.div
-            key="paid"
-            initial={{ opacity: 0, scale: 1.9, rotate: -24 }}
-            animate={{ opacity: 1, scale: 1, rotate: -13 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 15 }}
-            aria-hidden
-            style={{
-              position: 'absolute', left: 0, right: 0, bottom: 26,
-              display: 'flex', justifyContent: 'center', pointerEvents: 'none',
-            }}
-          >
-            {/* An oxblood rubber stamp. On paper this is what a settled account
-                looks like; the old purple-on-black read as a UI state. */}
-            <span className="font-cinzel font-800" style={{
-              fontSize: '1.05rem', letterSpacing: '0.22em', paddingLeft: '0.22em',
-              color: `${STAMP}dd`, opacity: 0.85,
-              border: `2.5px solid ${STAMP}aa`, borderRadius: 4,
-              padding: '0.08rem 0.5rem 0.12rem',
-            }}>PAID</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   )
 }
+
 
 export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void }) {
   const [board, setBoard] = useState<BountyBoard | null>(null)
@@ -327,7 +238,6 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
     })
   }
 
-  const single = board.bounties.length === 1
   const allDone = board.bounties.length > 0 && board.bounties.every(b => b.claimed)
 
   return (
@@ -381,12 +291,14 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
         </AnimatePresence>
       </div>
 
-      {/* The wall. Two columns, because four orders down one column runs past
-          the fold and wastes half the width on short titles. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, padding: '2px 1px' }}>
-        {board.bounties.map((b, i) => (
-          <BountyCard key={b.id} b={b} idx={i} rerollUsed={board.rerollUsed} busy={busy === b.id}
-            wide={single} onClaim={() => handleClaim(b)} onSwap={() => handleSwap(b)} />
+      {/* Full width and short. Two columns gave each notice about 190px to
+          carry a tier, a prize, a title, a description, a bar and two controls,
+          and nothing legible fits in 190px. Four of these stack in roughly the
+          height three of the squares took, with the board showing between. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {board.bounties.map(b => (
+          <BountyCard key={b.id} b={b} rerollUsed={board.rerollUsed} busy={busy === b.id}
+            onClaim={() => handleClaim(b)} onSwap={() => handleSwap(b)} />
         ))}
       </div>
 
