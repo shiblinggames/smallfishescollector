@@ -47,15 +47,15 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
                     transition={{ duration: 0.26, delay: Math.min(i * 0.03, 0.3) }}
                     style={{
                       position: 'relative', borderRadius: 11, overflow: 'hidden',
-                      padding: '0.45rem 0.35rem 0.5rem', textAlign: 'center',
-                      background: has ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
+                      padding: '0.7rem 0.35rem 0.55rem', textAlign: 'center',
+                      background: has ? `linear-gradient(180deg, ${p.accentColor}22, rgba(0,0,0,0.30))` : 'rgba(255,255,255,0.02)',
                       border: `1px solid ${has ? p.accentColor + '55' : 'rgba(255,255,255,0.06)'}`,
                     }}>
                     {has && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 34%, ${p.accentColor}1f, transparent 70%)`, pointerEvents: 'none' }} />}
-                    <div style={{ position: 'relative', height: 68, display: 'grid', placeItems: 'center', marginBottom: 3 }}>
+                    <div style={{ position: 'relative', height: 66, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: 3 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={p.restImageUrl} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ maxWidth: '92%', maxHeight: '100%', objectFit: 'contain', filter: has ? `drop-shadow(0 3px 9px ${p.accentColor}55)` : 'brightness(0) opacity(0.4)' }} />
+                        style={{ maxWidth: 72, maxHeight: 66, objectFit: 'contain', filter: has ? `drop-shadow(0 3px 10px ${p.accentColor}80)` : 'brightness(0) opacity(0.4)' }} />
                     </div>
                     <p className="font-karla font-700" style={{ fontSize: '0.54rem', lineHeight: 1.15, color: has ? '#ded8ee' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {has ? p.name : '???'}

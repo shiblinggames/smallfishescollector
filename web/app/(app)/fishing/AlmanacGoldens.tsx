@@ -80,10 +80,13 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
               <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 34%, rgba(240,192,64,0.22), transparent 66%)', pointerEvents: 'none' }} />
               {/* A hairline of the water it came out of, along the top edge. */}
               <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 2, background: `linear-gradient(90deg, transparent, ${zc}, transparent)` }} />
-              <div style={{ position: 'relative', height: 72, display: 'grid', placeItems: 'center', marginBottom: 5 }}>
+              {/* Floated on its ground under a gold drop-shadow, the way the
+                  profile mounts a trophy. A pixel cap rather than 100%/100%
+                  keeps a wide fish and a tall one the same visual weight. */}
+              <div style={{ position: 'relative', height: 74, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: 5 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(g.name)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', filter: sold ? 'saturate(0.75) opacity(0.85)' : 'saturate(1.3) drop-shadow(0 3px 10px rgba(240,192,64,0.55))' }} />
+                  style={{ maxWidth: 92, maxHeight: 74, objectFit: 'contain', filter: sold ? 'saturate(0.75) opacity(0.85)' : 'saturate(1.25) drop-shadow(0 3px 11px rgba(240,192,64,0.6))' }} />
               </div>
               <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f7ecd0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 2 }}>

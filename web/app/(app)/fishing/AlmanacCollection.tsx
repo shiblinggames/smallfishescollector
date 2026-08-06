@@ -89,6 +89,8 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
   const tier = caught && entry.pbLength != null && entry.lengthMin != null && entry.lengthMax != null
     ? tierForLength(entry.pbLength, entry.lengthMin, entry.lengthMax) : null
   const big = tier === 'trophy' || tier === 'large'
+  // Golden species take the gold; everything else wears its rarity.
+  const c = caught ? (entry.everGolden ? GOLD : rc) : 'rgba(255,255,255,0.14)'
 
   return (
     <motion.button type="button" onClick={onOpen} disabled={!caught}
@@ -96,48 +98,49 @@ function SpeciesCard({ entry, onOpen }: { entry: AlmanacEntry; onOpen: () => voi
       whileHover={caught ? { y: -2 } : undefined}
       transition={{ type: 'spring', stiffness: 520, damping: 30 }}
       style={{
-        position: 'relative', padding: 0, borderRadius: 12, overflow: 'hidden',
-        // Caught cards are lit from the top by their RARITY, so a legendary
-        // reads as one across the grid without a badge on every tile.
+        // The profile's trophy plaque, which is the treatment that works: a
+        // centred column, the fish FLOATING on a tinted ground under its own
+        // coloured drop-shadow, and the name under it. The previous card boxed
+        // the art at 62px over a dark plinth, which made every fish look
+        // small and pinned rather than mounted.
+        position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+        padding: '0.75rem 0.4rem 0.6rem', borderRadius: 12, textAlign: 'center',
         background: caught
-          ? `linear-gradient(180deg, ${rc}1c 0%, rgba(255,255,255,0.03) 46%, rgba(255,255,255,0.02) 100%)`
-          : 'rgba(255,255,255,0.018)',
-        border: `1px solid ${caught ? (entry.everGolden ? GOLD + '77' : rc + '4a') : 'rgba(255,255,255,0.055)'}`,
-        cursor: caught ? 'pointer' : 'default', textAlign: 'center',
+          ? `linear-gradient(180deg, ${c}22, rgba(0,0,0,0.30))`
+          : 'rgba(255,255,255,0.02)',
+        border: `1px solid ${caught ? c + '4d' : 'rgba(255,255,255,0.055)'}`,
+        boxShadow: entry.everGolden ? `inset 0 1px 0 ${GOLD}33` : undefined,
+        cursor: caught ? 'pointer' : 'default',
         WebkitTapHighlightColor: 'transparent',
       }}>
 
-      {/* A species you have taken a golden of keeps a permanent warm wash. */}
-      {entry.everGolden && (
-        <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 30%, rgba(240,192,64,0.2), transparent 68%)', pointerEvents: 'none' }} />
+      {big && (
+        <span aria-hidden title={TIER_LABEL[tier!]}
+          style={{ position: 'absolute', top: 5, right: 5, width: 5, height: 5, borderRadius: 5, background: TIER_COLOR[tier!], boxShadow: `0 0 5px ${TIER_COLOR[tier!]}` }} />
       )}
 
-      <div style={{ position: 'relative', height: 62, display: 'grid', placeItems: 'center', padding: '0.3rem 0.25rem 0' }}>
+      {/* A plain flex box with NO padding of its own, so the fish sits on the
+          exact centre line. The old one had 0.3rem of top padding against 0
+          bottom and every fish rode low because of it. */}
+      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={fishArt(entry.name)} alt="" aria-hidden loading="lazy" decoding="async"
           style={{
-            width: '100%', height: '100%', objectFit: 'contain',
+            maxWidth: 72, maxHeight: 56, objectFit: 'contain',
             // Silhouette, not a lock: the shape of what is missing is the hook.
-            filter: caught
-              ? (entry.everGolden ? 'drop-shadow(0 2px 6px rgba(240,192,64,0.35))' : undefined)
-              : 'brightness(0) opacity(0.4)',
+            filter: caught ? `drop-shadow(0 3px 10px ${c}80)` : 'brightness(0) opacity(0.4)',
           }} />
-        {big && (
-          <span aria-hidden title={TIER_LABEL[tier!]}
-            style={{ position: 'absolute', top: 4, right: 4, width: 5, height: 5, borderRadius: 5, background: TIER_COLOR[tier!], boxShadow: `0 0 5px ${TIER_COLOR[tier!]}` }} />
-        )}
       </div>
 
-      {/* Caption plinth — a darker base so the name reads whatever the art
-          behind it is doing. */}
-      <div style={{ position: 'relative', padding: '0.28rem 0.3rem 0.34rem', background: 'rgba(6,6,12,0.5)' }}>
-        <p className="font-karla font-700" style={{ fontSize: '0.54rem', lineHeight: 1.15, color: caught ? '#e8e2f6' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {caught ? entry.name : '???'}
-        </p>
-        <p className="font-karla font-600" style={{ fontSize: '0.47rem', marginTop: 1, color: caught ? '#6b6486' : rc + 'aa', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-          {caught ? `×${entry.count}` : RARITY_LABEL[entry.rarity]}
-        </p>
-      </div>
+      <p className="font-cinzel font-700" style={{ width: '100%', fontSize: '0.62rem', lineHeight: 1.14, color: caught ? '#f0ebe1' : '#4e4866', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {caught ? entry.name : '???'}
+      </p>
+      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.1em', color: caught ? c : rc + 'aa' }}>
+        {RARITY_LABEL[entry.rarity]}
+      </span>
+      {caught && (
+        <span className="font-karla font-700" style={{ fontSize: '0.54rem', color: '#8b83a8', fontVariantNumeric: 'tabular-nums' }}>×{entry.count}</span>
+      )}
     </motion.button>
   )
 }

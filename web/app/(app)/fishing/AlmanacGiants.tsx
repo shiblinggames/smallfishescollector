@@ -66,10 +66,10 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
               {caught && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 76% 52%, ${ANCIENT}30, transparent 60%)` }} />}
 
               {/* The beast, given the right half of the slab. */}
-              <div style={{ position: 'absolute', right: -6, top: 0, bottom: 0, width: '54%', display: 'grid', placeItems: 'center', padding: '0.4rem' }}>
+              <div style={{ position: 'absolute', right: 4, top: 0, bottom: 0, width: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(g.name)} alt="" aria-hidden loading="lazy" decoding="async"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', filter: caught ? `drop-shadow(0 4px 14px ${ANCIENT}77)` : 'brightness(0) opacity(0.42)' }} />
+                  style={{ maxWidth: '100%', maxHeight: 104, objectFit: 'contain', filter: caught ? `drop-shadow(0 4px 15px ${ANCIENT}88)` : 'brightness(0) opacity(0.42)' }} />
               </div>
 
               <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '62%', padding: '0.7rem 0.85rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
