@@ -23,11 +23,48 @@ import type { AlmanacData, AlmanacEntry } from './almanacActions'
 
 const GOLD = '#f0c040'
 
+// ── Views ────────────────────────────────────────────────────────────────────
+// The Collection is 146 species and the only way through it was top to bottom
+// by water. These are the questions a collector actually asks of a list that
+// size, and each is one tap.
+//
+// BY WATER keeps the chapter headings and the per-zone progress rules. Every
+// other view is a FLAT grid, because the moment you sort across the whole book
+// the zone headings are lying about what is under them.
+//
+// A sorted view also prints the value it sorted BY under each name. That is
+// not the clutter the default grid was carrying: it is the answer to the
+// question you just asked, and without it "Most Caught" is a list in an order
+// you have to take on faith.
+
+type ViewKey = 'water' | 'missing' | 'trophies' | 'goldens' | 'most' | 'biggest' | 'valuable' | 'rarest' | 'newest'
+
+const VIEWS: { key: ViewKey; label: string }[] = [
+  { key: 'water',    label: 'By Water' },
+  { key: 'missing',  label: 'Still Missing' },
+  { key: 'trophies', label: 'Trophies' },
+  { key: 'goldens',  label: 'Goldens' },
+  { key: 'most',     label: 'Most Caught' },
+  { key: 'biggest',  label: 'Biggest' },
+  { key: 'valuable', label: 'Most Valuable' },
+  { key: 'rarest',   label: 'Rarest' },
+  { key: 'newest',   label: 'Newest' },
+]
+
+/** How far into its own species' range your best of that fish sits. The fair
+ *  way to rank "biggest" across a book holding a 6in seahorse and a 516in
+ *  whale shark: otherwise the list is just the big species, every time. */
+function sizePct(e: AlmanacEntry): number {
+  if (e.pbLength == null || e.lengthMin == null || e.lengthMax == null || e.lengthMax <= e.lengthMin) return -1
+  return (e.pbLength - e.lengthMin) / (e.lengthMax - e.lengthMin)
+}
+
 export default function AlmanacCollection({ data }: { data: AlmanacData }) {
   const [detail, setDetail] = useState<AlmanacEntry | null>(null)
+  const [view, setView] = useState<ViewKey>('water')
 
   // Species you hold a MOUNTED golden of. Not entry.everGolden, which stays
-  // true after you sell the fish: the stamp says the golden is on your wall,
+  // true after you sell the fish: the mark says the golden is on your wall,
   // and the Goldens room draws the same line.
   const mountedGolden = useMemo(
     () => new Set(data.goldens.filter(g => g.status !== 'sold').map(g => g.fishId)),
@@ -35,19 +72,100 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
 
   // The six Giants have their own room; listing them here too would make the
   // Ancient Deep read as 18 species when only 12 are fishable stock.
+  const collectable = useMemo(
+    () => data.entries.filter(e => !isGiant(e.sellValue, e.habitat)),
+    [data.entries])
+
   const byZone = useMemo(() => {
     const m = new Map<string, AlmanacEntry[]>()
-    for (const e of data.entries) {
-      if (isGiant(e.sellValue, e.habitat)) continue
+    for (const e of collectable) {
       const arr = m.get(e.habitat) ?? []
       arr.push(e); m.set(e.habitat, arr)
     }
     return m
-  }, [data.entries])
+  }, [collectable])
+
+  /** The flat list for every view except By Water, plus the caption each card
+   *  carries in that view. */
+  const flat = useMemo((): { list: AlmanacEntry[]; note: (e: AlmanacEntry) => string } => {
+    const caught = collectable.filter(e => e.everCaught)
+    switch (view) {
+      case 'missing':
+        return {
+          list: collectable.filter(e => !e.everCaught)
+            .sort((a, b) => a.rarity - b.rarity || a.name.localeCompare(b.name)),
+          note: e => RARITY_LABEL[e.rarity],
+        }
+      // TROPHIES ranks by share of the species' own range: how well you did
+      // against that fish. Ties (and there are many, since a maxed roll is
+      // exactly 100%) break on raw length so the bigger animal leads.
+      case 'trophies':
+        return {
+          list: caught.filter(e => sizePct(e) >= 0 && tierForLength(e.pbLength!, e.lengthMin!, e.lengthMax!) === 'trophy')
+            .sort((a, b) => sizePct(b) - sizePct(a) || (b.pbLength ?? 0) - (a.pbLength ?? 0)),
+          note: e => `${Math.round(sizePct(e) * 100)}% of max`,
+        }
+      case 'goldens':
+        return {
+          list: caught.filter(e => mountedGolden.has(e.id))
+            .sort((a, b) => b.rarity - a.rarity || a.name.localeCompare(b.name)),
+          note: e => e.pbLength != null ? formatFishLength(e.pbLength) : RARITY_LABEL[e.rarity],
+        }
+      case 'most':
+        return { list: [...caught].sort((a, b) => b.count - a.count), note: e => `×${e.count}` }
+      // BIGGEST is raw inches, deliberately a different question from
+      // Trophies. Ranked by share it would have been the same list: every
+      // maxed roll is exactly 100%, so the top of it WAS the trophy list in
+      // another order. Raw length asks "what are the largest animals I have
+      // ever landed", and the answer is whale sharks, not a perfect bluegill.
+      case 'biggest':
+        return {
+          list: caught.filter(e => e.pbLength != null).sort((a, b) => (b.pbLength ?? 0) - (a.pbLength ?? 0)),
+          note: e => formatFishLength(e.pbLength!),
+        }
+      case 'valuable':
+        return { list: [...collectable].sort((a, b) => b.sellValue - a.sellValue), note: e => `${e.sellValue.toLocaleString()} ⟡` }
+      case 'rarest':
+        return {
+          list: [...collectable].sort((a, b) => b.rarity - a.rarity || b.difficulty - a.difficulty || a.name.localeCompare(b.name)),
+          note: e => RARITY_LABEL[e.rarity],
+        }
+      case 'newest':
+        return {
+          list: caught.filter(e => e.firstCaughtAt)
+            .sort((a, b) => (a.firstCaughtAt! > b.firstCaughtAt! ? -1 : 1)),
+          note: e => shortDate(e.firstCaughtAt),
+        }
+      default:
+        return { list: [], note: () => '' }
+    }
+  }, [view, collectable, mountedGolden])
 
   return (
     <>
-      {ZONE_ORDER.map(zone => {
+      {/* One row, horizontally scrollable, one active at a time. A dropdown
+          would hide eight of the nine questions behind a tap. */}
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', overflowY: 'hidden', marginBottom: '1.1rem', paddingBottom: 2, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+        {VIEWS.map(v => {
+          const on = view === v.key
+          return (
+            <button key={v.key} type="button" onClick={() => setView(v.key)}
+              className="font-karla font-700"
+              style={{
+                flexShrink: 0, padding: '0.34rem 0.62rem', borderRadius: 999,
+                fontSize: '0.66rem', whiteSpace: 'nowrap', cursor: 'pointer',
+                background: on ? 'rgba(167,139,250,0.20)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${on ? 'rgba(167,139,250,0.62)' : 'rgba(255,255,255,0.10)'}`,
+                color: on ? '#efeaf8' : '#a49dc0',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              {v.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {view === 'water' ? ZONE_ORDER.map(zone => {
         const list = byZone.get(zone)
         if (!list?.length) return null
         const got = list.filter(e => e.everCaught).length
@@ -95,7 +213,28 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
             </div>
           </div>
         )
-      })}
+      }) : (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#a49dc0', marginBottom: 10 }}>
+            {flat.list.length} {flat.list.length === 1 ? 'species' : 'species'}
+          </p>
+          {flat.list.length === 0 ? (
+            <p className="font-karla font-400 italic" style={{ fontSize: '0.72rem', color: '#8a83ad', lineHeight: 1.5, padding: '1.5rem 0' }}>
+              {view === 'missing'
+                ? 'Nothing missing. Every fish in every water is in the book.'
+                : 'Nothing here yet. Go and land some.'}
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem 0.2rem' }}>
+              {flat.list.map(e => (
+                <SpeciesCard key={e.id} entry={e} goldMounted={mountedGolden.has(e.id)}
+                  note={flat.note(e)}
+                  onOpen={() => e.everCaught && setDetail(e)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <SpeciesSheet entry={detail} onClose={() => setDetail(null)} goldens={data.goldens} />
     </>
@@ -149,7 +288,7 @@ function CollectionMark({ trophy, golden }: { trophy: boolean; golden: boolean }
   )
 }
 
-function SpeciesCard({ entry, goldMounted, onOpen }: { entry: AlmanacEntry; goldMounted: boolean; onOpen: () => void }) {
+function SpeciesCard({ entry, goldMounted, note, onOpen }: { entry: AlmanacEntry; goldMounted: boolean; note?: string; onOpen: () => void }) {
   // everCaught, not count > 0. A prestiged zone was fully collected to earn
   // the prestige, so those species are charted even though the log was wiped.
   const caught = entry.everCaught
@@ -213,6 +352,17 @@ function SpeciesCard({ entry, goldMounted, onOpen }: { entry: AlmanacEntry; gold
       }}>
         {caught ? entry.name : '???'}
       </p>
+
+      {/* Only in a sorted view, and only ever the thing it was sorted by. */}
+      {note && (
+        <span className="font-karla font-700" style={{
+          width: '100%', minWidth: 0, marginTop: 1, height: '0.9rem',
+          fontSize: '0.62rem', lineHeight: '0.9rem', color: '#a49dc0',
+          fontVariantNumeric: 'tabular-nums',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          display: 'block',
+        }}>{note}</span>
+      )}
     </motion.button>
   )
 }
