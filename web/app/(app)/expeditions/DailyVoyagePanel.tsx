@@ -9,6 +9,7 @@ import { lockBodyScroll } from '@/lib/bodyScrollLock'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
+import { crewXPProgress, isStatTickLevel, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
@@ -1443,18 +1444,76 @@ export default function DailyVoyagePanel({
           {crewXP.length > 0 && (
             <div>
               <VoyageGroupLabel color="#c8aa6a">Crew</VoyageGroupLabel>
-              <div className="app-card" style={{ padding: '0.5rem 0.9rem' }}>
+              <div className="app-card" style={{ padding: '0.6rem 0.9rem', display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {crewXP.map(c => {
                   const leveled = c.newLevel > c.oldLevel
+                  const prog = crewXPProgress(c.newXP)
+                  const maxed = c.newLevel >= CREW_MAX_LEVEL
+                  // A stat tick is the level-up a player should actually care
+                  // about: it is the one that makes the hand measurably better
+                  // rather than just a bigger number.
+                  const tick = leveled && isStatTickLevel(c.newLevel)
+                  // How much of this level the voyage itself covered, so the bar
+                  // shows what THIS trip did rather than only where they landed.
+                  const gainedFrac = prog.xpForLevel > 0
+                    ? Math.min(prog.progress, (c.newXP - c.oldXP) / prog.xpForLevel)
+                    : 0
                   return (
-                    <VoyageSummaryRow
-                      key={c.id}
-                      label={c.name}
-                      value={`+${(c.newXP - c.oldXP).toLocaleString()} XP`}
-                      sub={leveled ? `Lv ${c.oldLevel} → ${c.newLevel}` : undefined}
-                      valueColor={leveled ? '#f0c040' : '#a78a5a'}
-                      strong={leveled}
-                    />
+                    <div key={c.id}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                        <span className="font-cinzel font-700" style={{
+                          fontSize: '0.8rem', color: '#e8e4de', minWidth: 0,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {c.name}
+                        </span>
+                        {leveled && (
+                          <span className="font-karla font-800 uppercase" style={{
+                            fontSize: '0.5rem', letterSpacing: '0.14em', flexShrink: 0,
+                            padding: '0.1rem 0.32rem', borderRadius: 4,
+                            background: tick ? 'rgba(240,192,64,0.18)' : 'rgba(127,212,154,0.15)',
+                            border: `1px solid ${tick ? 'rgba(240,192,64,0.55)' : 'rgba(127,212,154,0.45)'}`,
+                            color: tick ? '#f0c040' : '#7fd49a',
+                          }}>
+                            {tick ? `Lv ${c.newLevel} · stat up` : `Lv ${c.newLevel}`}
+                          </span>
+                        )}
+                        <span className="font-karla font-700 tabular-nums" style={{
+                          fontSize: '0.72rem', color: leveled ? '#f0c040' : '#a78a5a',
+                          marginLeft: 'auto', flexShrink: 0,
+                        }}>
+                          +{(c.newXP - c.oldXP).toLocaleString()} XP
+                        </span>
+                      </div>
+
+                      {/* WHERE THAT XP GOT THEM. A bare "+1,440 XP" means
+                          nothing on a curve where Lv 100 is a million: the bar
+                          is what turns it into progress you can see. The lighter
+                          segment is the part THIS voyage added. */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 4 }}>
+                        <div style={{
+                          position: 'relative', flex: 1, height: 5, borderRadius: 3,
+                          background: 'rgba(0,0,0,0.4)', overflow: 'hidden',
+                          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)',
+                        }}>
+                          <div style={{
+                            position: 'absolute', inset: 0, width: `${prog.progress * 100}%`,
+                            background: leveled ? 'rgba(240,192,64,0.5)' : 'rgba(167,138,90,0.5)',
+                          }} />
+                          <div style={{
+                            position: 'absolute', top: 0, bottom: 0,
+                            left: `${Math.max(0, prog.progress - gainedFrac) * 100}%`,
+                            width: `${gainedFrac * 100}%`,
+                            background: leveled ? '#f0c040' : '#c8aa6a',
+                          }} />
+                        </div>
+                        <span className="font-karla tabular-nums" style={{
+                          fontSize: '0.58rem', color: 'rgba(255,255,255,0.36)', flexShrink: 0, whiteSpace: 'nowrap',
+                        }}>
+                          {maxed ? 'Max level' : `${prog.xpToNextLevel.toLocaleString()} to Lv ${prog.level + 1}`}
+                        </span>
+                      </div>
+                    </div>
                   )
                 })}
               </div>
