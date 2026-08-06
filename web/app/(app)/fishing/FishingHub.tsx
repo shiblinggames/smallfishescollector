@@ -96,12 +96,6 @@ export default function FishingHub({
         <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
 
-            {/* The board, live, at the top of the hub it belongs to. Prices
-                decide what a haul is worth and when to sell it, so they read
-                here rather than on the Tavern where they used to live. Once the
-                Exchange is open its indexes lead the strip. */}
-            <MarketTicker items={ticker} />
-
             {/* Fishing level + Renown, the counterpart to Navigation on the
                 Expeditions hub. Same 1.1rem/1rem block the Ship Hero wraps its
                 Navigation header in, on top of the same 1rem of container pad,
@@ -109,6 +103,19 @@ export default function FishingHub({
                 between the tabs. */}
             <div style={{ padding: '1.1rem 0 1rem' }}>
               <FishingLevelBar fishingXP={fishingXP} initialAlloc={initialFishingRenownAlloc} />
+
+              {/* The board, live, in the slot the Expeditions hub gives its
+                  Crew/Ship/Items/Forge bar: inside the hero block, 0.9rem under
+                  the level. Under the hero rather than over it, so the Fishing
+                  title still lands on the same line as Navigation when you flick
+                  between the two tabs.
+
+                  Prices read here rather than on the Tavern where they used to
+                  live: they decide what a haul is worth and when to sell it.
+                  Once the Exchange is open its indexes lead the strip. */}
+              <div style={{ marginTop: '0.9rem' }}>
+                <MarketTicker items={ticker} />
+              </div>
             </div>
 
             {/* Market / Tackle Shop / Almanac use purpose-painted 512x512
