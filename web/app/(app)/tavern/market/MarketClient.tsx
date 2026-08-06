@@ -4,6 +4,8 @@ import { useState, useEffect, useTransition, useCallback, useId, useMemo, create
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import ShopHeader from '@/components/ShopHeader'
 import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
 import SwipeAction from '@/components/SwipeAction'
@@ -517,6 +519,7 @@ export default function MarketClient({
   // ── Browse: sort + filter ──
   const [sortKey, setSortKey] = useState<'value' | 'change' | 'name'>('value')
   const [habitatFilter, setHabitatFilter] = useState<string | null>(null)
+  const router = useRouter()
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
   const browseAll = useMemo(() => {
     let list = allMarket.filter(e => !ownedIds.has(e.fish_id))
@@ -542,6 +545,14 @@ export default function MarketClient({
     <MarketModeCtx.Provider value={colorMode}>
     <main className="min-h-screen pb-24 sm:pb-0">
       <div className="px-5 pt-5 max-w-lg mx-auto flex flex-col gap-4 pb-10">
+
+        {/* The market had no header and so no way out but the tab bar, which
+            got worse once the Fishing hub started sending players here. Same
+            ShopHeader the Tackle Shop uses, and back the same way: the market
+            is reached from the fishing hub, the tavern ticker AND mid-cast
+            from the fishing screen, so it returns you where you came from
+            rather than picking one of the three. */}
+        <ShopHeader title="Fish Market" backLabel="Back" onBack={() => router.back()} />
 
         {/* ── Market status ticker ── */}
         <div style={{
