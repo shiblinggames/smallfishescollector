@@ -11,7 +11,7 @@ import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
 import { ROUTE_PAYOUTS } from '@/lib/voyageRoll'
-import { getLevelFromXP, VOYAGE_CREW_XP_MULT } from '@/lib/expeditionLevel'
+import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew, slotMult} from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
@@ -337,15 +337,19 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .eq('status', 'revealed')
   if ((completedVoyages ?? 0) + 1 >= 100) await grantBadgeDirect(user.id, 'fleet_admiral')
 
-  // Crew XP is a flat 25% of the captain's Nav XP. A voyage tops a hand up; it
-  // does not train them. The Crew Hall is the building you pay for that, and
-  // keeping this a RATIO means it stays a quarter of the voyage whatever
-  // happens to Nav XP later, rather than being a second number someone has to
-  // remember to move in step.
+  // Crew XP is a per-route figure (ROUTE_PAYOUTS.crewXp), tuned so the RATE is
+  // flat at roughly 200 an hour whatever route was sailed. It cannot be a share
+  // of Nav XP: Nav per hour climbs sixfold from Coastal to Shroud, so any fixed
+  // percentage makes deep routes the best place to train hands, and the Crew
+  // Hall is meant to be that place.
   //
-  // Lost crew earn nothing (the soft-delete that follows skips them anyway,
-  // since grant_crew_xp_to_ids gates on died_at IS NULL, belt and braces).
-  const crewXpEarned = Math.round(xpEarned * VOYAGE_CREW_XP_MULT)
+  // Still scales with the outcome, as it always has: a voyage that went well
+  // teaches more than one that did not. Lost crew earn nothing (the soft-delete
+  // that follows skips them anyway, since grant_crew_xp_to_ids gates on
+  // died_at IS NULL, belt and braces).
+  const crewXpEarned = Math.round(
+    (ROUTE_PAYOUTS[voyage.route as VoyageRoute]?.crewXp ?? 450) * outcomeMult,
+  )
   const survivorIds = (voyage.crew_variant_ids as number[]).filter(id => !voyage.crew_lost.includes(id))
 
   const [, , , crewXP] = await Promise.all([

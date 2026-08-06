@@ -101,22 +101,6 @@ const EVENT_XP: Record<string, Record<string, number>> = {
 // One knob so it's easy to retune.
 export const VOYAGE_XP_MULT = 2.75
 
-/** Share of a voyage's Navigation XP that its surviving crew earn as CREW XP.
- *
- *  0.25. A voyage is a small top-up to a hand's training, not a way to train
- *  them: the Crew Hall is the building you pay for that, and it should be the
- *  obvious place to do it. Was 0.75, which made sailing a serious rival to the
- *  hall, and briefly a per-route constant while Nav XP was rebalanced (see
- *  ROUTE_PAYOUTS) before this went back to being a ratio.
- *
- *  A RATIO on purpose. It is meant to stay a quarter of the voyage whatever
- *  happens to Nav XP later, so this cannot silently drift the way it would if
- *  the two were separate numbers someone had to remember to update together.
- *
- *  For scale, at Drills VI a single bunk pays 4,100 crew XP an hour against a
- *  Shroud voyage's ~707 per surviving hand. The hall wins by roughly 6x, which
- *  is the point. */
-export const VOYAGE_CREW_XP_MULT = 0.25
 
 export function voyageXP(
   route: string,

@@ -94,14 +94,28 @@ export const ROUTE_PAYOUTS: Record<VoyageRoute, {
   gems: number
   /** NAVIGATION xp for the captain. */
   xp: number
+  /** CREW xp, per surviving hand.
+   *
+   *  Its own number, NOT a share of the Nav figure. It was 25% of Nav XP, which
+   *  meant it inherited Nav's whole shape: Nav per hour climbs sixfold from
+   *  Coastal to Shroud, so crew XP per hour did too, and picking a deep route
+   *  became a crew-training decision as well as a loot one.
+   *
+   *  These are tuned so the RATE is FLAT at ~200 an hour on every route. A
+   *  longer voyage still returns more crew XP in total, because it took longer;
+   *  it just does not pay a better rate for going deeper. Where you sail is a
+   *  loot and Nav decision. Where you TRAIN is the Crew Hall, which starts at
+   *  250 an hour per bunk at Drills I and reaches 4,100 at Drills VI, so the
+   *  hall out-trains a voyage at every tier including the first. */
+  crewXp: number
   /** Total crew Power for an even shot at `success`. Scales with the route. */
   difficulty: number
 }> = {
-  coastal:  { doubloons: 340,  gems: 2,  xp: 400,  difficulty: 8  },
-  open:     { doubloons: 1130,  gems: 5,  xp: 1470,  difficulty: 16 },
-  deep:     { doubloons: 2550, gems: 10, xp: 3910,  difficulty: 28 },
-  triangle: { doubloons: 4660, gems: 17, xp: 8100, difficulty: 42 },
-  shroud:   { doubloons: 7550, gems: 30, xp: 14620, difficulty: 60 },
+  coastal:  { doubloons: 340,  gems: 2,  xp: 400, crewXp: 230,  difficulty: 8  },
+  open:     { doubloons: 1130,  gems: 5,  xp: 1470, crewXp: 450,  difficulty: 16 },
+  deep:     { doubloons: 2550, gems: 10, xp: 3910, crewXp: 680,  difficulty: 28 },
+  triangle: { doubloons: 4660, gems: 17, xp: 8100, crewXp: 980, difficulty: 42 },
+  shroud:   { doubloons: 7550, gems: 30, xp: 14620, crewXp: 1360, difficulty: 60 },
 }
 
 /** Total crew Fortune the ROUTE_PAYOUTS numbers assume. Above this you earn
