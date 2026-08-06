@@ -45,7 +45,7 @@ import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFr
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
 import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
-import { LevelSectionHeader } from '@/components/LevelSectionHeader'
+import SkillLevelHero from '@/components/SkillLevelHero'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
 import RenownIntroOverlay from '@/components/RenownIntroOverlay'
@@ -1345,11 +1345,10 @@ export default function ShipHero({
             (a face) instead of a button floating on its own. */}
         <div style={{ position: 'relative', padding: '1.1rem 0 1rem' }}>
 
-          {/* Nav level header + XP bar — the WHOLE block is one tap target: the
-              Nav-level info modal (captain stats) below max, the Renown board at
-              max. The "Navigation" header shares LevelSectionHeader with the
-              fishing zone selector so the two tops read as a set. (Bar mirrors
-              the fishing screen's XPBarDisplay.) */}
+          {/* Nav level hero — the WHOLE panel is one tap target: the Nav-level
+              info modal (captain stats) below max, the Renown board at max.
+              SkillLevelHero is shared with the Fishing hub, so the two page
+              tops are the same object rather than two that look alike. */}
           {(() => {
             const atMax = xpProgress.level >= MAX_LEVEL
             const rn = atMax ? renownProgress('nav', expeditionXP) : null
@@ -1365,64 +1364,35 @@ export default function ShipHero({
             const toNextRenown = rn ? rn.span - rn.into : 0
             const renownXpLabel = toNextRenown >= 1000 ? `${Math.round(toNextRenown / 1000)}k` : `${toNextRenown}`
             return (
-              <motion.button
-                type="button"
+              <SkillLevelHero
+                label="Navigation"
+                level={xpProgress.level}
+                progress={fillPct / 100}
+                atMax={atMax}
+                pulse={pulse}
+                pulseColor={pc}
+                barKey={atMax ? `rn-${rn?.level ?? 0}` : xpProgress.level}
+                ariaLabel={atMax ? 'Open Navigation Renown' : 'Show navigation level info'}
                 onClick={() => { markSeen(); (atMax ? setRenownOpen(true) : setNavInfoOpen(true)) }}
-                aria-label={atMax ? 'Open Navigation Renown' : 'Show navigation level info'}
-                className="font-karla font-600"
-                animate={pulse ? { boxShadow: [`0 0 0px ${pc}00`, `0 0 16px ${pc}aa`, `0 0 0px ${pc}00`] } : { boxShadow: `0 0 0px ${pc}00` }}
-                transition={pulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-                style={{
-                  position: 'relative',
-                  display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%',
-                  padding: '0.25rem 0.35rem 0.35rem', borderRadius: 12,
-                  background: pulse ? `${pc}12` : 'transparent',
-                  border: `1px solid ${pulse ? pc + '66' : 'transparent'}`,
-                  color: 'inherit', cursor: 'pointer',
-                  transition: 'background 0.15s, border-color 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = pulse ? `${pc}1f` : 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = pulse ? pc + '99' : 'rgba(125,160,216,0.22)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = pulse ? `${pc}12` : 'transparent'; e.currentTarget.style.borderColor = pulse ? pc + '66' : 'transparent' }}
-              >
-                <LevelSectionHeader label="Navigation" />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-                <div className="shrink-0" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#7da0d8bb', letterSpacing: '0.08em' }}>LV</span>
-                  <span className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#7da0d8', lineHeight: 1 }}>{xpProgress.level}</span>
-                </div>
-                <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                  <motion.div
-                    key={atMax ? `rn-${rn?.level ?? 0}` : xpProgress.level}
-                    initial={{ width: '0%' }}
-                    animate={{ width: `${fillPct}%` }}
-                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                    style={{
-                      height: '100%', borderRadius: 999,
-                      background: atMax ? 'linear-gradient(90deg, #a07a2a 0%, #f0c040 100%)' : 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)',
-                      boxShadow: atMax ? '0 0 10px #f0c04070' : '0 0 10px #7da0d870',
-                    }}
-                  />
-                </div>
-                {atMax && rn ? (
-                  <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.62rem', color: '#f0c040', lineHeight: 1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                trailing={atMax && rn ? (
+                  <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.66rem', color: '#f0c040', lineHeight: 1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     ✦ R{rn.level}
                     {hasNavPoints ? (
                       <motion.span
                         animate={{ scale: [1, 1.12, 1] }}
                         transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ fontSize: '0.52rem', color: '#ffdb7a', background: 'rgba(240,200,80,0.18)', border: '1px solid rgba(240,200,80,0.5)', borderRadius: 999, padding: '2px 6px', fontWeight: 800 }}>{navRenownAvailable} spend</motion.span>
+                        style={{ fontSize: '0.56rem', color: '#ffdb7a', background: 'rgba(240,200,80,0.18)', border: '1px solid rgba(240,200,80,0.5)', borderRadius: 999, padding: '2px 6px', fontWeight: 800 }}>{navRenownAvailable} spend</motion.span>
                     ) : (
-                      <span style={{ fontWeight: 600, color: 'rgba(240,192,64,0.62)' }}>· {renownXpLabel} xp</span>
+                      <span style={{ fontWeight: 600, color: 'rgba(240,192,64,0.68)' }}>· {renownXpLabel} xp</span>
                     )}
                   </span>
                 ) : (
                   <span className="font-karla font-600 shrink-0"
-                    style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.72)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
                     {`${toGo.toLocaleString()} xp`}
                   </span>
                 )}
-                </div>
-              </motion.button>
+              />
             )
           })()}
 

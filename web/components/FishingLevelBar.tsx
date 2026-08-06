@@ -8,8 +8,7 @@
 // the hub own it without a second copy going stale.
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { LevelSectionHeader } from '@/components/LevelSectionHeader'
+import SkillLevelHero from '@/components/SkillLevelHero'
 import RenownPanel from '@/components/RenownPanel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
 import type { RenownState } from '@/app/(app)/actions/renown'
@@ -56,36 +55,22 @@ export default function FishingLevelBar({
 
   return (
     <>
-      <motion.button
-        type="button"
+      <SkillLevelHero
+        label="Fishing"
+        level={xp.level}
+        progress={atMax ? (rn ? rn.progress : 1) : xp.progress}
+        atMax={atMax}
+        pulse={pulse}
+        pulseColor={pc}
+        barKey={atMax ? `rn-${rn?.level ?? 0}` : xp.level}
+        ariaLabel="View Fishing Renown"
         onClick={() => { markSeen(); setRenownOpen(true) }}
-        aria-label="View Fishing Renown"
-        animate={pulse ? { boxShadow: [`0 0 0px ${pc}00`, `0 0 16px ${pc}aa`, `0 0 0px ${pc}00`] } : { boxShadow: `0 0 0px ${pc}00` }}
-        transition={pulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%', textAlign: 'left', background: pulse ? `${pc}12` : 'none', border: `1px solid ${pulse ? pc + '55' : 'transparent'}`, borderRadius: 12, cursor: 'pointer', padding: '0.25rem 0.35rem 0.35rem', WebkitTapHighlightColor: 'transparent' }}
-        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.12)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.3)' }}
-        onMouseLeave={e => { e.currentTarget.style.background = pulse ? `${pc}12` : 'none'; e.currentTarget.style.borderColor = pulse ? pc + '55' : 'transparent' }}
-      >
-        <LevelSectionHeader label="Fishing" />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '0.3rem 0' }}>
-          <div className="shrink-0" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-            <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#7da0d8bb', letterSpacing: '0.08em' }}>LV</span>
-            <span className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#7da0d8', lineHeight: 1 }}>{xp.level}</span>
-          </div>
-          <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-            <motion.div
-              key={atMax ? `rn-${rn?.level ?? 0}` : xp.level}
-              initial={{ width: '0%' }}
-              animate={{ width: `${atMax ? (rn ? rn.progress * 100 : 100) : xp.progress * 100}%` }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              style={{ height: '100%', borderRadius: 999, background: atMax ? 'linear-gradient(90deg, #a07a2a 0%, #f0c040 100%)' : 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', boxShadow: atMax ? '0 0 10px #f0c04070' : '0 0 10px #7da0d870' }}
-            />
-          </div>
-          <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.62rem', color: atMax ? '#f0c040' : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
+        trailing={
+          <span className="font-karla font-600 shrink-0" style={{ fontSize: '0.66rem', color: atMax ? '#f0c040' : 'rgba(255,255,255,0.72)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
             {atMax ? (rn ? `✦ R${rn.level} · ${renownXpLabel} xp` : 'MAX') : `${toNext.toLocaleString()} xp`}
           </span>
-        </div>
-      </motion.button>
+        }
+      />
 
       {/* Fishing Renown board — opened by tapping the level header. */}
       <RenownPanel
