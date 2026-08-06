@@ -27,6 +27,21 @@ const UP = '#4ade80'
 const DOWN = '#f87171'
 const TNUM = { fontVariantNumeric: 'tabular-nums' as const }
 
+/** Tell the rest of the app the purse changed.
+ *
+ *  The Nav bar keeps its own copy of your doubloons and only updates when it
+ *  hears this. Every other spend path in the game fires it; the Exchange did
+ *  not, so a stake left the balance in the database and the number at the top
+ *  of the screen carried on showing the old total until a reload.
+ *
+ *  Nav ignores a non-numeric detail on purpose (a null would crash its
+ *  toLocaleString), so always pass the new total. */
+function purseChanged(total: number) {
+  if (typeof total === 'number' && Number.isFinite(total)) {
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: total }))
+  }
+}
+
 const pct = (now: number, then: number) => (then > 0 ? ((now - then) / then) * 100 : 0)
 const fmtPct = (p: number) => `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`
 
@@ -54,7 +69,13 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   const load = useCallback(() => {
     getExchangeBoard().then(res => {
       if ('error' in res) setErr(res.error)
-      else { setBoard(res); onDoubloons?.(res.doubloons) }
+      else {
+        setBoard(res)
+        onDoubloons?.(res.doubloons)
+        // Contracts settle while you are away, so the purse can have moved
+        // since the page rendered.
+        purseChanged(res.doubloons)
+      }
     })
   }, [onDoubloons])
 
@@ -230,7 +251,14 @@ function PositionRow({ p, cycle, onChanged }: { p: BoardPosition; cycle: number;
             Break-even {fmtPct(breakEven)} · settles in {left <= 0 ? 'moments' : `${left}h`}
           </span>
           <button type="button" disabled={busy}
-            onClick={() => { setBusy(true); closeContractEarly(p.id).then(() => { setBusy(false); onChanged() }) }}
+            onClick={() => {
+              setBusy(true)
+              closeContractEarly(p.id).then(res => {
+                setBusy(false)
+                if ('ok' in res) purseChanged(res.doubloons)
+                onChanged()
+              })
+            }}
             className="font-karla font-700"
             style={{ flexShrink: 0, padding: '0.28rem 0.55rem', borderRadius: 8, fontSize: '0.62rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#c8d2e0', cursor: busy ? 'wait' : 'pointer' }}>
             {busy ? '…' : `Close for ${Math.round(EARLY_CLOSE_RETURN * 100)}%`}
@@ -286,7 +314,7 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
     ).then(res => {
       setBusy(false)
       if ('error' in res) setErr(res.error)
-      else onDone()
+      else { purseChanged(res.doubloons); onDone() }
     })
   }
 
