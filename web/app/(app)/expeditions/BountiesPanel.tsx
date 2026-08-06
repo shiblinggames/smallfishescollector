@@ -24,11 +24,18 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getBountyBoard, claimBounty, rerollBounty, type BountyBoard, type BountyView } from './bountyActions'
 import { hapticReward } from '@/lib/haptics'
 
-// PAPER, not dark glass. The same parchment the cutscenes use for a ledger or
-// a sealed letter, so a bounty reads as something written by hand and nailed up
-// rather than a row in an admin table. Everything below is ink on that paper.
-const PARCHMENT = 'linear-gradient(160deg, #e9ddc2 0%, #d9c9a6 55%, #ccb991 100%)'
-const PARCHMENT_SPENT = 'linear-gradient(160deg, #cbc0a8 0%, #b9ad92 55%, #a89d84 100%)'
+// PAPER, not dark glass, and a painted sheet rather than a gradient: real tea
+// stains, foxing, fold creases and a woven grain, in the same gouache idiom as
+// the board it is pinned to. A bounty should read as something written by hand
+// and nailed up, not a row in an admin table.
+//
+// ONE sheet serves every notice. Sized to 200% and offset to a different
+// QUADRANT per card, so four notices on the wall are four different pieces of
+// paper instead of the same stain repeated four times. The aspect distortion
+// 200% x 200% causes is invisible on a texture with no subject in it.
+const PAPER_QUADRANT = ['0% 0%', '100% 0%', '0% 100%', '100% 100%']
+// Under the image while it loads, so a notice is never a translucent hole.
+const PAPER_BASE = '#ded1b5'
 const INK = '#332a20'                     // dark brown, the writing
 const INK_SOFT = '#6b5b45'                // the hand that wrote the small print
 
@@ -85,7 +92,10 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
         display: 'flex', flexDirection: 'column',
         minHeight: wide ? 158 : 184,
         padding: '0.95rem 0.65rem 0.55rem', borderRadius: 3,
-        background: b.claimed ? PARCHMENT_SPENT : PARCHMENT,
+        backgroundColor: PAPER_BASE,
+        backgroundImage: 'url(/bounty-paper.jpg)',
+        backgroundSize: '200% 200%',
+        backgroundPosition: PAPER_QUADRANT[idx % PAPER_QUADRANT.length],
         // Paper has no glowing border. It has an edge and a shadow, and a
         // finished order simply sits a little prouder off the board.
         border: '1px solid rgba(90,68,40,0.45)',
@@ -97,6 +107,16 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
         transform: idx % 2 === 0 ? 'rotate(-0.5deg)' : 'rotate(0.55deg)',
       }}
     >
+      {/* A settled notice is the SAME paper, greyed. Cheaper than a second
+          texture and more honest: it is the same sheet, just spent. Sits under
+          the content so the ink above it stays readable. */}
+      {b.claimed && (
+        <span aria-hidden style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'rgba(150,141,120,0.46)',
+        }} />
+      )}
+
       {/* Pinned. A tack through the top of the notice, which is the one detail
           that makes the whole thing read as a board rather than a list. */}
       <span aria-hidden style={{
@@ -108,7 +128,7 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
 
       {/* The prize, sealed in the corner. It is the reason to read the card, so
           it is the biggest thing on it after the name. */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
         <span className="font-karla font-700 uppercase tracking-[0.16em]"
           style={{
             fontSize: '0.48rem', paddingTop: 3,
@@ -125,12 +145,14 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
       </div>
 
       <p className="font-cinzel font-700" style={{
+        position: 'relative',
         fontSize: wide ? '1.1rem' : '0.92rem', lineHeight: 1.18, marginTop: 5,
         color: b.claimed ? '#7d7360' : INK,
       }}>
         {b.name}
       </p>
       <p className="font-karla font-400" style={{
+        position: 'relative',
         fontSize: '0.62rem', lineHeight: 1.35, marginTop: 3,
         color: b.claimed ? '#8b8270' : INK_SOFT,
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -140,7 +162,7 @@ function BountyCard({ b, idx, rerollUsed, busy, wide, onClaim, onSwap }: {
 
       {/* Pinned to the foot so the buttons line up across the row however long
           the titles run. */}
-      <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+      <div style={{ position: 'relative', marginTop: 'auto', paddingTop: 8 }}>
         {b.target > 1 && !b.claimed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             <div style={{ flex: 1, height: 4, borderRadius: 3, background: 'rgba(60,44,24,0.22)', overflow: 'hidden' }}>
