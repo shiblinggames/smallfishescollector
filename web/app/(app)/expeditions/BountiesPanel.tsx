@@ -35,6 +35,11 @@ import { hapticReward } from '@/lib/haptics'
 // Full width instead, and short. Four notices in roughly the height three
 // squares used, every string at a size you can actually read, and the painted
 // board showing between them doing the work the paper was hired for.
+//
+// The tier is carried by the COLOUR OF ITS OWN WORD and nothing else. It had a
+// coloured rail down the left edge for a while, which is the accent-bar-on-a-
+// rounded-card that every generated layout reaches for, and it was saying the
+// same thing the label directly beside it already said.
 const TIER: Record<BountyView['tier'], { label: string; color: string }> = {
   easy:   { label: 'Easy',   color: '#8fb0cc' },
   medium: { label: 'Medium', color: '#77c79a' },
@@ -73,7 +78,7 @@ function BountyCard({ b, rerollUsed, busy, onClaim, onSwap }: {
       layout
       style={{
         position: 'relative', overflow: 'hidden',
-        padding: '0.6rem 0.7rem 0.6rem 0.85rem', borderRadius: 11,
+        padding: '0.6rem 0.75rem', borderRadius: 11,
         // OPAQUE. It sits on a painting, so it cannot be a wash.
         background: b.claimed
           ? 'linear-gradient(180deg, rgba(20,17,13,0.95) 0%, rgba(13,11,8,0.96) 100%)'
@@ -82,14 +87,6 @@ function BountyCard({ b, rerollUsed, busy, onClaim, onSwap }: {
         boxShadow: '0 3px 12px rgba(0,0,0,0.5)',
       }}
     >
-      {/* The tier as a spine down the left edge. Colour where a label would
-          have cost a whole line of a short card. */}
-      <span aria-hidden style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-        background: b.claimed ? 'rgba(255,255,255,0.10)' : t.color,
-        opacity: b.claimed ? 1 : 0.9,
-      }} />
-
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <span className="font-karla font-700 uppercase tracking-[0.16em]"
           style={{ fontSize: '0.6rem', color: b.claimed ? '#6d675d' : t.color }}>
@@ -250,14 +247,15 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
         background: 'linear-gradient(180deg, rgba(38,27,16,0.94) 0%, rgba(20,14,9,0.96) 100%)',
         border: '1px solid rgba(120,88,52,0.5)', borderTop: '1px solid rgba(190,146,92,0.5)',
       }}>
-        <div style={{ minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#b09a76' }}>
-            {allDone ? 'Board cleared' : 'Still on the board'}
-          </p>
-          <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.1, color: allDone ? '#8d7f66' : '#f0dcae', ...TNUM }}>
-            {board.remaining} <span style={{ color: GEM_COLOR }}>{GEM}</span>
-          </p>
-        </div>
+        {/* The number alone. It sits in a modal titled Bounties with a gem
+            glyph on it, so a line of label above it was telling you what you
+            were already looking at. */}
+        <p className="font-cinzel font-800" style={{
+          minWidth: 0, fontSize: '1.65rem', lineHeight: 1.05,
+          color: allDone ? '#8d7f66' : '#f0dcae', ...TNUM,
+        }}>
+          {board.remaining} <span style={{ color: allDone ? '#8d7f66' : GEM_COLOR }}>{GEM}</span>
+        </p>
         {board.rung && (
           <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 0 }}>
             <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#8d7f66' }}>
