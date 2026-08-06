@@ -81,9 +81,15 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                 </p>
                 {caught ? (
                   <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#b8b1d0', marginTop: 3, lineHeight: 1.35 }}>
-                    {shortDate(g.firstCaughtAt)}
-                    {g.pbLength != null ? ` · ${formatFishLength(g.pbLength)}` : ''}
-                    {g.count > 1 ? ` · raised ×${g.count}` : ''}
+                    {/* Built from the parts that EXIST. An ancient is logged on
+                        profiles.ancient_catches, which keeps no date and no
+                        count, so a fixed separator printed a leading dot on
+                        exactly the six that matter most in this room. */}
+                    {[
+                      shortDate(g.firstCaughtAt),
+                      g.pbLength != null ? formatFishLength(g.pbLength) : '',
+                      g.count > 1 ? `raised ×${g.count}` : '',
+                    ].filter(Boolean).join(' · ') || 'Raised'}
                   </p>
                 ) : (
                   <p className="font-karla font-400 italic" style={{ fontSize: '0.64rem', color: '#847dab', marginTop: 3 }}>Still down there</p>

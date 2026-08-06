@@ -128,6 +128,12 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
 
   if (species.error) return { error: 'Could not read the species list' }
 
+  // THE SIX ANCIENT DEEP TROPHIES ARE NOT IN fish_collection. They are
+  // recorded as ids on profiles.ancient_catches and nowhere else, which is why
+  // the fishing page unions the two lists before it counts anything. Reading
+  // only the catch log showed a player with all six every one of them missing.
+  const ancientIds = new Set(((profile.data?.ancient_catches as number[] | null) ?? []))
+
   const col = new Map((collection.data ?? []).map(r => [r.fish_id as number, r]))
   const life = new Map((lifetime.data ?? []).map(r => [r.fish_id as number, r]))
   const pb = new Map((bests.data ?? []).map(r => [r.fish_id as number, r]))
@@ -153,8 +159,15 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
       waterType: (s.water_type as string | null) ?? null,
       region: (s.region as string | null) ?? null,
       // Lifetime first, falling back to the cycle log for anyone whose catch
-      // landed between the backfill and this deploy.
-      count: (l?.catches as number | null) ?? (c?.catch_count as number | null) ?? 0,
+      // landed between the backfill and this deploy. Then floor it at 1 for
+      // anything on the ancient ledger, which records membership and no count.
+      //
+      // Math.max, not a ?? chain: ?? only falls through on null, so a row that
+      // exists with 0 catches would have swallowed the ancient check.
+      count: Math.max(
+        (l?.catches as number | null) ?? (c?.catch_count as number | null) ?? 0,
+        ancientIds.has(s.id as number) ? 1 : 0,
+      ),
       firstCaughtAt: (l?.first_caught_at as string | null) ?? (c?.first_caught_at as string | null) ?? null,
       lastCaughtAt: (l?.last_caught_at as string | null) ?? (c?.last_caught_at as string | null) ?? null,
       cycleCount: (c?.catch_count as number | null) ?? 0,
