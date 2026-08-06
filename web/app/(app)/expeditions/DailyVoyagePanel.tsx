@@ -14,7 +14,7 @@ import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES, effectiveCrewLossChance, type VoyageRoute } from '@/lib/voyageRoutes'
-import { expectedVoyageLoot, outcomeChances, fortuneScale } from '@/lib/voyageRoll'
+import { expectedVoyageLoot, outcomeChances, fortuneScale, meanOutcomeMult, OUTCOME_MULT } from '@/lib/voyageRoll'
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -128,14 +128,15 @@ function computeRouteEstimate(
   const expected = expectedVoyageLoot(route, stats.power, stats.fortune)
   const chances  = outcomeChances(stats.power, route)
 
-  // The band is the two outcomes the crew can actually land on: a setback pays
-  // 0.6x the anchor, a triumph 1.35x. That is the honest range rather than an
-  // invented spread.
-  const perOutcome = expected.doubloons / EXPECTED_OUTCOME_MEAN(chances)
-  const lootMin = Math.round(perOutcome * 0.6)
-  const lootMax = Math.round(perOutcome * 1.35)
-  const xpMin = Math.round((expected.xp / EXPECTED_OUTCOME_MEAN(chances)) * 0.6)
-  const xpMax = Math.round((expected.xp / EXPECTED_OUTCOME_MEAN(chances)) * 1.35)
+  // The band is the two outcomes the crew can actually land on, read straight
+  // off OUTCOME_MULT rather than retyped, so retuning the spread moves this
+  // with it.
+  const meanOm = meanOutcomeMult(stats.power, route)
+  const perOutcome = expected.doubloons / meanOm
+  const lootMin = Math.round(perOutcome * OUTCOME_MULT.setback)
+  const lootMax = Math.round(perOutcome * OUTCOME_MULT.triumph)
+  const xpMin = Math.round((expected.xp / meanOm) * OUTCOME_MULT.setback)
+  const xpMax = Math.round((expected.xp / meanOm) * OUTCOME_MULT.triumph)
 
   // Flat per-voyage crew-loss chance, scaled down by total crew fortune —
   // fully zeroed once fortune matches the route's minLevel (see
@@ -154,11 +155,6 @@ function computeRouteEstimate(
     setbackPct: Math.round(chances.setback * 100),
   }
 }
-
-/** Probability-weighted outcome multiplier, so the band and the average agree.
- *  Mirrors OUTCOME_MULT in lib/voyageRoll. */
-const EXPECTED_OUTCOME_MEAN = (c: { triumph: number; setback: number }) =>
-  c.triumph * 1.35 + Math.max(0, 1 - c.triumph - c.setback) * 1 + c.setback * 0.6
 
 interface Props {
   roster: CrewMember[]
@@ -750,7 +746,7 @@ export default function DailyVoyagePanel({
                           effect: `${est.triumphPct}% triumph`,
                           detail: `${est.setbackPct}% setback`,
                           detailTint: undefined,
-                          why: 'Decides how the voyage goes. A triumph pays 1.35x, a setback 0.6x.',
+                          why: `Decides how the voyage goes. A triumph pays ${OUTCOME_MULT.triumph}x, a setback ${OUTCOME_MULT.setback}x.`,
                         },
                         {
                           stat: 'Fortune', value: stats.fortune, tint: '#f0c040',
@@ -1002,8 +998,8 @@ export default function DailyVoyagePanel({
               // `jackpot` is the pre-rename field; rows written before it still pay off.
               const booty = !!(ev?.booty ?? ev?.jackpot)
               // The single event's outcome IS the voyage's outcome. It is what
-              // the crew's Power earned and it swung the haul between 0.6x and
-              // 1.35x, so it leads the reveal instead of hiding in the log.
+              // the crew's Power earned and it swings the haul, so it leads
+              // the reveal instead of hiding in the log.
               const won  = ev?.outcome === 'success'
               const lost = ev?.outcome === 'failure'
               const tone = booty ? '#f0c040' : won ? '#7fd49a' : lost ? '#e0888a' : '#c8aa6a'

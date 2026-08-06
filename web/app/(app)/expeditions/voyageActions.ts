@@ -10,7 +10,7 @@ import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
-import { ROUTE_PAYOUTS } from '@/lib/voyageRoll'
+import { ROUTE_PAYOUTS, OUTCOME_MULT } from '@/lib/voyageRoll'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew, slotMult} from '@/lib/crewResolve'
@@ -273,9 +273,9 @@ export async function revealVoyageResults(voyageId: number): Promise<
     void admin.rpc('bump_profile_stat', { uid: user.id, col: 'voyage_booty_hauls', n: 1 })
       .then(() => {}, () => {})
   }
-  const outcomeMult = voyageEvent?.outcome === 'success' ? 1.35
-                    : voyageEvent?.outcome === 'failure' ? 0.6
-                    : 1
+  const outcomeMult = voyageEvent?.outcome === 'success' ? OUTCOME_MULT.triumph
+                    : voyageEvent?.outcome === 'failure' ? OUTCOME_MULT.setback
+                    : OUTCOME_MULT.success
   const baseXp = Math.round(
     (ROUTE_PAYOUTS[voyage.route as VoyageRoute]?.xp ?? 650) * outcomeMult,
   )

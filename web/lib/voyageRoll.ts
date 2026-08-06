@@ -22,11 +22,29 @@ import { ROUTE_CONFIGS, type VoyageRoute } from './voyageRoutes'
 
 export type VoyageOutcome = 'triumph' | 'success' | 'setback'
 
-/** What the single event pays, relative to the route's base. */
-const OUTCOME_MULT: Record<VoyageOutcome, number> = {
-  triumph: 1.35,
+/** What the single event pays, relative to the route's base.
+ *
+ *  Tightened from 1.35/1.0/0.6 (2026-08-05). That was a 2.25x spread between
+ *  the best and worst outcome, and because a reference crew lands on triumph
+ *  42% of the time and setback 22%, roughly two thirds of voyages hit an
+ *  extreme. The result was a coefficient of variation of 28% against a trawl
+ *  haul's 8%, so the payout read as a lottery rather than as something the
+ *  crew earned.
+ *
+ *  It was a defensible trade when a voyage took forty-five minutes and you
+ *  could simply run another. It is not one now that Shroud takes seven hours:
+ *  variance you can grind out is texture, variance on a seven-hour commitment
+ *  is just punishment. Fewer, longer commitments should be MORE predictable,
+ *  not less.
+ *
+ *  1.25/1.0/0.75 is a 1.67x spread, close to the trawl band, and it barely
+ *  moves the mean (1.059 to 1.05 at the reference crew) so the per-route
+ *  anchors in ROUTE_PAYOUTS still hold. Power still visibly matters: it is the
+ *  only thing that shifts which outcome you land on. */
+export const OUTCOME_MULT: Record<VoyageOutcome, number> = {
+  triumph: 1.25,
   success: 1.0,
-  setback: 0.6,
+  setback: 0.75,
 }
 
 /** Per-route payout anchors, for a REFERENCE crew (see FORTUNE_REF).
@@ -37,6 +55,11 @@ const OUTCOME_MULT: Record<VoyageOutcome, number> = {
  *  full investment that puts Shroud at ~2,826 Nav XP/hr against the Abyss
  *  trawl's 2,826 Fishing XP/hr, with the shallower routes tracking their own
  *  zone equivalents.
+ *
+ *  CUT AGAIN by 25% on doubloons and Nav XP (2026-08-05, third pass). Even
+ *  after the spread was tightened the midpoint read too rich, so the anchors
+ *  came down rather than the variance alone. crewXp is deliberately untouched:
+ *  it is a flat ~200/hr figure with its own job.
  *
  *  RATES WERE CUT ACROSS THE BOARD (2026-08-05, second pass). Voyages were
  *  paying too well per hour on every route once they had been lengthened and
@@ -111,11 +134,11 @@ export const ROUTE_PAYOUTS: Record<VoyageRoute, {
   /** Total crew Power for an even shot at `success`. Scales with the route. */
   difficulty: number
 }> = {
-  coastal:  { doubloons: 340,  gems: 2,  xp: 400, crewXp: 230,  difficulty: 8  },
-  open:     { doubloons: 1130,  gems: 5,  xp: 1470, crewXp: 450,  difficulty: 16 },
-  deep:     { doubloons: 2550, gems: 10, xp: 3910, crewXp: 680,  difficulty: 28 },
-  triangle: { doubloons: 4660, gems: 17, xp: 8100, crewXp: 980, difficulty: 42 },
-  shroud:   { doubloons: 7550, gems: 30, xp: 14620, crewXp: 1360, difficulty: 60 },
+  coastal:  { doubloons: 260,  gems: 2,  xp: 300, crewXp: 230,  difficulty: 8  },
+  open:     { doubloons: 850,  gems: 5,  xp: 1100, crewXp: 450,  difficulty: 16 },
+  deep:     { doubloons: 1910, gems: 10, xp: 2930, crewXp: 680,  difficulty: 28 },
+  triangle: { doubloons: 3500, gems: 17, xp: 6080, crewXp: 980, difficulty: 42 },
+  shroud:   { doubloons: 5660, gems: 30, xp: 10960, crewXp: 1360, difficulty: 60 },
 }
 
 /** Total crew Fortune the ROUTE_PAYOUTS numbers assume. Above this you earn
@@ -145,6 +168,19 @@ export function outcomeChances(power: number, route: VoyageRoute): { triumph: nu
   const triumph = Math.max(0.05, Math.min(0.65, 0.1 + 0.32 * ratio))
   const setback = Math.max(0.08, Math.min(0.6, 0.5 - 0.28 * ratio))
   return { triumph, setback }
+}
+
+/** Probability-weighted mean outcome multiplier for a crew on a route.
+ *
+ *  Exported because the send-screen estimate, the claim-time XP grant and the
+ *  reveal all need it, and all three had hand-copied 1.35 / 0.6 literals. The
+ *  spread has now been retuned once; without this they would each have needed
+ *  finding and editing, and the one that was missed would have been silently
+ *  wrong. */
+export function meanOutcomeMult(power: number, route: VoyageRoute): number {
+  const c = outcomeChances(power, route)
+  const success = Math.max(0, 1 - c.triumph - c.setback)
+  return c.triumph * OUTCOME_MULT.triumph + success * OUTCOME_MULT.success + c.setback * OUTCOME_MULT.setback
 }
 
 export function rollOutcome(power: number, route: VoyageRoute, rng: () => number = Math.random): VoyageOutcome {
