@@ -244,8 +244,8 @@ export default async function BadgesPage() {
 
   const groups: JourneyGroup[] = [
     {
-      title: 'Fishing Mastery',
-      flavor: 'The dial, the streaks, and the long road to a hundred.',
+      title: 'Fishing',
+      flavor: 'The dial, the streaks, the crates and the long road to a hundred.',
       accent: '#4ade80',
       goals: [
         badgeGoal('prestige_i', 'Prestige I', 'Reach Prestige in any fishing zone', totalStars > 0 ? 1 : 0, 1, '/fishing', { binary: true }),
@@ -268,25 +268,14 @@ export default async function BadgesPage() {
         badgeGoal('completionist_rod', 'The Completionist', 'Claim the Completionist Rod', has('completionist_rod') ? 1 : 0, 1, '/marketplace/tackle-shop', { binary: true }),
         badgeGoal('fully_rigged', 'Fully Rigged', 'Forge all 3 effects into the Completionist Rod', rodEffectsCount, 3, '/fishing'),
         badgeGoal('reforged', 'Reforged', 'Pay to re-forge the rod into a fresh 3-effect loadout', has('reforged') ? 1 : 0, 1, '/fishing', { binary: true }),
-      ],
-    },
-    {
-      title: 'Fishing Feats',
-      flavor: 'The strange and stubborn things that happen out on the water.',
-      accent: '#34d399',
-      goals: [
-        // Goldens — the rarest catch (one row per golden in shiny_catches).
         badgeGoal('struck_gold', 'Struck Gold', 'Catch your first golden fish', goldenCount, 1, '/fishing', { binary: true }),
         badgeGoal('hoard_of_gold', 'Hoard of Gold', 'Catch 10 golden fish', goldenCount, 10, '/fishing'),
         badgeGoal('el_dorado', 'El Dorado', 'Catch 25 golden fish', goldenCount, 25, '/fishing'),
-        // Finn — the roaming rival's perfect/speed challenges out on the water.
         badgeGoal('one_upped', 'One-Upped', 'Win a challenge against Finn', finnWins, 1, '/fishing', { binary: true }),
         badgeGoal('finns_rival', "Finn's Rival", 'Win 10 challenges against Finn', finnWins, 10, '/fishing'),
         badgeGoal('the_better_angler', 'The Better Angler', 'Win 25 challenges against Finn', finnWins, 25, '/fishing'),
-        // Fish sold — lifetime doubloons hauled in at market.
         badgeGoal('fishmonger', 'Fishmonger', 'Sell 250,000 doubloons of fish', fishSold, 250_000, '/fishing'),
         badgeGoal('fish_baron', 'Fish Baron', 'Sell 1,000,000 doubloons of fish', fishSold, 1_000_000, '/fishing'),
-        // Doubles + snags + pets + crates.
         badgeGoal('got_away', 'The One That Got Away', 'Lose 50 fish to snapped lines', snags, 50, '/fishing'),
         badgeGoal('two_for_the_pot', 'Two for the Pot', 'Reel in a double catch', doubleCatches, 1, '/fishing', { binary: true }),
         badgeGoal('two_fisted', 'Two-Fisted', 'Land 100 double catches', doubleCatches, 100, '/fishing'),
@@ -302,11 +291,14 @@ export default async function BadgesPage() {
         badgeGoal('standing_watch', 'Standing Watch', 'Clear all three daily challenges, 30 times', dailySweeps, 30, '/fishing'),
         badgeGoal('old_reliable', 'Old Reliable', 'Clear all three daily challenges, 100 times', dailySweeps, 100, '/fishing'),
         badgeGoal('the_fourth_task', 'The Fourth Task', 'Clear 25 Master daily challenges', masterCleared, 25, '/fishing'),
-        badgeGoal('massive_booty', 'Massive Booty', 'Land a Massive Booty on a voyage', bootyHauls, 1, '/expeditions', { binary: true }),
         badgeGoal('reel_lucky', 'Reel Lucky', 'Hit a fishing jackpot', jackpots, 1, '/fishing', { binary: true }),
         badgeGoal('friend_at_sea', 'A Friend at Sea', 'Earn your first fishing pet', petsOwned, 1, '/fishing', { binary: true }),
         badgeGoal('full_stringer', 'Full Stringer', 'Keep 3 fishing pets at once', petsOwned, 3, '/fishing'),
         badgeGoal('menagerie', 'The Menagerie', 'Keep 5 fishing pets at once', petsOwned, 5, '/fishing'),
+        badgeGoal('first_haul', 'First Haul', 'Collect your first trawl', trawlsCollected, 1, '/fishing', { binary: true }),
+        badgeGoal('steady_nets', 'Steady Nets', 'Collect 25 trawls', trawlsCollected, 25, '/fishing'),
+        badgeGoal('deep_trawler', 'Deep Trawler', 'Collect 100 trawls', trawlsCollected, 100, '/fishing'),
+        badgeGoal('net_positive', 'Net Positive', 'Collect 500 trawls', trawlsCollected, 500, '/fishing'),
       ],
     },
     {
@@ -324,19 +316,14 @@ export default async function BadgesPage() {
     },
     {
       title: 'Crew',
-      flavor: 'The souls who sail with you, and the colors they fly.',
-      accent: '#5ec8e8',
+      flavor: 'Who you sail with, how far you take them, and what it costs.',
+      accent: '#f0a0c0',
       goals: [
         badgeGoal('growing_crew', 'Growing Crew', 'Recruit 25 crew', recruits, 25, '/crew'),
         badgeGoal('theres_a_grave', "There's a Grave?", 'Lose a crew member for the first time', hasLostCrew ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('legendary_recruit', 'Legendary Recruit', 'Recruit a legendary crew', hasLegendaryCrew ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('three_legends', 'The Three Legends', 'Own 3 legendary crew at once', legendsOwnedAll, 3, '/crew'),
         badgeGoal('six_legends', 'The Avengers', 'Own all 5 base legendary crew', baseLegendsOwned, BASE_LEGENDARY_SLUGS.size, '/crew'),
-        // Target 5, not CREW_HALL_MAX_TIER. The condition has always been
-        // tier 5 (the Hall of Legends, which the description names); when the
-        // ladder grew a sixth tier for the bunks the BAR started targeting 6,
-        // so everyone holding this badge saw it sitting at 5/6, earned but
-        // apparently unfinished. Leviathan Hall below is the tier-6 badge.
         badgeGoal('crewmaster', 'Crewmaster', 'Reach the Hall of Legends', Math.min(crewHallTier, 5), 5, '/crew'),
         badgeGoal('leviathan_hall', 'Leviathan Hall', 'Build the hall to its final tier', crewHallTier, CREW_HALL_MAX_TIER, '/crew'),
         badgeGoal('fully_outfitted', 'Fully Outfitted', `Buy Drills ${tierNumeral(DRILL_MAX_LEVEL)} and Stores ${tierNumeral(STORES_MAX_LEVEL)}`, ladderSteps, DRILL_MAX_LEVEL + STORES_MAX_LEVEL, '/crew'),
@@ -354,43 +341,27 @@ export default async function BadgesPage() {
       ],
     },
     {
-      title: 'Expeditions & Combat',
-      flavor: 'Voyages logged, broadsides answered.',
-      accent: '#c8704a',
+      title: 'Voyages',
+      flavor: 'Sending a crew out and seeing what the sea sends back.',
+      accent: '#5ec8e8',
       goals: [
-        badgeGoal('navigator', 'Wayfinder', 'Reach Navigation Level 50', navLevel, 50, '/expeditions'),
+        badgeGoal('massive_booty', 'Massive Booty', 'Land a Massive Booty on a voyage', bootyHauls, 1, '/expeditions', { binary: true }),
         badgeGoal('maiden_voyage', 'Maiden Voyage', 'Complete your first voyage', voyagesDone, 1, '/expeditions', { binary: true }),
         badgeGoal('old_sea_dog', 'Old Sea Dog', 'Complete 50 voyages', voyagesDone, 50, '/expeditions'),
         badgeGoal('fleet_admiral', 'Fleet Admiral', 'Complete 100 voyages', voyagesDone, 100, '/expeditions'),
+      ],
+    },
+    {
+      title: 'Raids',
+      flavor: 'Gunnery, speed and the harder ways to win a fight.',
+      accent: '#e0555a',
+      goals: [
         badgeGoal('opening_salvo', 'Opening Salvo', 'Land a single raid hit for 50+', highestRaidDmg, 50, '/raids'),
         badgeGoal('hard_hitter', 'Hard Hitter', 'Land a single raid hit for 100+', highestRaidDmg, 100, '/raids'),
         badgeGoal('heavy_broadside', 'Heavy Broadside', 'Land a single raid hit for 250+', highestRaidDmg, 250, '/raids'),
         badgeGoal('overkill', 'Overkill', 'Land a single raid hit for 500+', highestRaidDmg, 500, '/raids'),
         badgeGoal('swift_reckoning', 'Swift Reckoning', "Clear Corsair's Reckoning in under 1:30", fastestCorsairs <= 90_000 ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('corsairs_bane', "Corsair's Bane", 'Defeat Barnacle Pete in challenge mode', raidIds.has('corsairs_reckoning_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('ghost_ship', "Krust's Crutch", 'Defeat Captain Krust in challenge mode', raidIds.has('captain_krust_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('cartographers_fall', "The Cartographer's Fall", 'Defeat the Cartographer in challenge mode', raidIds.has('cartographer_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('toll_paid', 'Toll Paid', 'Defeat Tollmaster Spet in challenge mode', raidIds.has('tollmasters_cut_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('master_navigator', 'Master Navigator', 'Reach Navigation Level 100', navLevel, 100, '/expeditions'),
-        badgeGoal('finndicates_bane', "Finndicate's Bane", 'Clear all 4 raids in challenge mode', challengeCleared, 4, '/raids'),
-        badgeGoal('ruse_undone', 'Ruse Undone', 'Defeat Admiral Ruse in challenge mode', raidIds.has('coffers_fleet_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('account_settled', 'Account Settled', 'Defeat the Quartermaster in challenge mode', raidIds.has('the_quartermaster_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('blockade_broken', 'Blockade Broken', 'Defeat Sal Brackwater in challenge mode', raidIds.has('the_blockade_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('don_drowned', 'The Don Is Drowned', 'Defeat Don Finleone in challenge mode', raidIds.has('the_throne_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('the_sunken_hand', 'The Sunken Hand', 'Clear all 8 raids in challenge mode', challengeClearedAll, 8, '/raids'),
         badgeGoal('quick_draw', 'Quick Draw', 'Clear any raid in under 1:00', fastestAnyRaid <= 60_000 ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('mark_of_mastery', 'Mark of Mastery', 'Reach a Mark III ship class', hasMarkIII ? 1 : 0, 1, '/raids', { binary: true }),
-        badgeGoal('ship_of_the_line', 'Ship of the Line', 'Own the Man-o-War', shipTier, 6, '/shipyard', { binary: true }),
-        badgeGoal('fresh_coat', 'Fresh Coat', 'Own a boat skin', boatSkinsOwned, 1, '/expeditions'),
-        badgeGoal('full_drydock', 'Full Drydock', `Own every boat skin (${boatSkinsOwned}/${SHIP_SKINS.length})`, ownsAllBoatSkins ? SHIP_SKINS.length : boatSkinsOwned, SHIP_SKINS.length, '/expeditions'),
-        badgeGoal('six_aboard', 'Six Aboard', 'Add the Sixth Berth to your ship', hasSixthBerth ? 1 : 0, 1, '/expeditions', { binary: true }),
-        badgeGoal('expanded_armory', 'Expanded Armory', 'Bolt on the Expanded Armory mount', hasArmoryExpansion ? 1 : 0, 1, '/expeditions', { binary: true }),
-        badgeGoal('weapon_of_legend', 'Weapon of Legend', 'Build your Man-o-War ultimate', hasUltimate ? 1 : 0, 1, '/expeditions', { binary: true }),
-        badgeGoal('first_fusion', 'First Fusion', 'Forge your first item', hasForgedItem ? 1 : 0, 1, '/expeditions', { binary: true }),
-        badgeGoal('grand_forgemaster', 'Grand Forgemaster', 'Learn every forge recipe', forgeRecipesLearned, FORGE_RECIPES.length, '/expeditions'),
-        badgeGoal('complete_captain', 'The Complete Captain', 'Reach Navigation 100 and Fishing 100', (fishLevel >= 100 && navLevel >= 100) ? 1 : 0, 1, '/expeditions', { binary: true }),
-        // Challenge-run feats — hook-granted at the moment they happen.
-        badgeGoal('all_hands_legends', 'All Hands, All Legends', 'Raid in the Man-o-War with 5 Level 100 legendary crew', has('all_hands_legends') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('not_a_shot_fired', 'Not a Shot Fired', 'Sink a boss without a shot or crew ability', has('not_a_shot_fired') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('iron_ruse', 'Iron Ruse', 'Beat the Admiral Ruse raid taking no damage', has('iron_ruse') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('tight_quarters', 'Tight Quarters', 'Beat the Quartermaster raid using no crew abilities', has('tight_quarters') ? 1 : 0, 1, '/raids', { binary: true }),
@@ -398,26 +369,26 @@ export default async function BadgesPage() {
       ],
     },
     {
-      // SPOILER RULE: nothing in this group may name the captain behind the
-      // Hand or suggest the Hand is a person. The Captain's Log is read long
-      // before the raid is.
-      title: 'The Sunken Hand',
-      flavor: 'The last name on the board, and the wreck it left behind.',
-      accent: '#e0455a',
+      title: 'The Campaign',
+      flavor: 'The Sunken Hand, boss by boss, and the spoils it gives up.',
+      accent: '#f0c040',
       goals: [
+        badgeGoal('corsairs_bane', "Corsair's Bane", 'Defeat Barnacle Pete in challenge mode', raidIds.has('corsairs_reckoning_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('ghost_ship', "Krust's Crutch", 'Defeat Captain Krust in challenge mode', raidIds.has('captain_krust_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('cartographers_fall', "The Cartographer's Fall", 'Defeat the Cartographer in challenge mode', raidIds.has('cartographer_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('toll_paid', 'Toll Paid', 'Defeat Tollmaster Spet in challenge mode', raidIds.has('tollmasters_cut_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('finndicates_bane', "Finndicate's Bane", 'Clear all 4 raids in challenge mode', challengeCleared, 4, '/raids'),
+        badgeGoal('ruse_undone', 'Ruse Undone', 'Defeat Admiral Ruse in challenge mode', raidIds.has('coffers_fleet_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('account_settled', 'Account Settled', 'Defeat the Quartermaster in challenge mode', raidIds.has('the_quartermaster_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('blockade_broken', 'Blockade Broken', 'Defeat Sal Brackwater in challenge mode', raidIds.has('the_blockade_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('don_drowned', 'The Don Is Drowned', 'Defeat Don Finleone in challenge mode', raidIds.has('the_throne_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('the_sunken_hand', 'The Sunken Hand', 'Clear all 8 raids in challenge mode', challengeClearedAll, 8, '/raids'),
         badgeGoal('one_last_ride', 'One Last Ride', 'Clear The Sunken Hand', raidIds.has('the_sunken_hand') ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('cut_off_at_the_wrist', 'Cut Off at the Wrist', 'Clear The Sunken Hand on Challenge', raidIds.has('the_sunken_hand_challenge') ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('the_long_quiet', 'The Long Quiet', 'See the Sunken Hand through to its end', clearedNodes.includes('the_long_quiet') ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('ancient_tackle', 'Ancient Tackle', 'Earn your first Ancient-rarity item', spoilsOwned >= 1 ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('salvors_claim', "Salvor's Claim", 'Open a berth from the wreck', berthsOpen, 1, '/expeditions'),
         badgeGoal('both_hands', 'Both Hands', 'Open both berths from the wreck', berthsOpen, 2, '/expeditions'),
-      ],
-    },
-    {
-      title: 'The Primeval Spoils',
-      flavor: 'What the wreck gave up, and the long road to waking it.',
-      accent: '#e0455a',
-      goals: [
         badgeGoal('something_old', 'Something Old', 'Carry your first Primeval spoil', spoilsOwned, 1, '/expeditions'),
         badgeGoal('both_in_hand', 'Both in Hand', 'Own both Primeval spoils', spoilsOwned, 2, '/expeditions'),
         badgeGoal('waking_it', 'Waking It', 'Take a Primeval spoil to Tier III', spoilTier, 3, '/expeditions'),
@@ -427,9 +398,27 @@ export default async function BadgesPage() {
       ],
     },
     {
+      title: 'Ship & Forge',
+      flavor: 'The hull under you, the refits bolted to it, and the anvil.',
+      accent: '#b8c4d0',
+      goals: [
+        badgeGoal('navigator', 'Wayfinder', 'Reach Navigation Level 50', navLevel, 50, '/expeditions'),
+        badgeGoal('master_navigator', 'Master Navigator', 'Reach Navigation Level 100', navLevel, 100, '/expeditions'),
+        badgeGoal('mark_of_mastery', 'Mark of Mastery', 'Reach a Mark III ship class', hasMarkIII ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('ship_of_the_line', 'Ship of the Line', 'Own the Man-o-War', shipTier, 6, '/shipyard', { binary: true }),
+        badgeGoal('fresh_coat', 'Fresh Coat', 'Own a boat skin', boatSkinsOwned, 1, '/expeditions'),
+        badgeGoal('full_drydock', 'Full Drydock', `Own every boat skin (${boatSkinsOwned}/${SHIP_SKINS.length})`, ownsAllBoatSkins ? SHIP_SKINS.length : boatSkinsOwned, SHIP_SKINS.length, '/expeditions'),
+        badgeGoal('six_aboard', 'Six Aboard', 'Add the Sixth Berth to your ship', hasSixthBerth ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('expanded_armory', 'Expanded Armory', 'Bolt on the Expanded Armory mount', hasArmoryExpansion ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('weapon_of_legend', 'Weapon of Legend', 'Build your Man-o-War ultimate', hasUltimate ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('first_fusion', 'First Fusion', 'Forge your first item', hasForgedItem ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('grand_forgemaster', 'Grand Forgemaster', 'Learn every forge recipe', forgeRecipesLearned, FORGE_RECIPES.length, '/expeditions'),
+      ],
+    },
+    {
       title: 'The Gauntlet',
-      flavor: 'How deep you dared, and what you carried back up.',
-      accent: '#a06ff2',
+      flavor: 'Davy\'s, Don\'s, and the hardcore runs that keep nothing back.',
+      accent: '#a78bfa',
       goals: [
         badgeGoal('first_descent', 'First Descent', 'Cash out a Gauntlet run', gauntletDeepest >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('into_the_deep', 'Into the Deep', 'Descend to depth 5 in the Gauntlet', gauntletDeepest, 5, '/raids/gauntlet'),
@@ -449,13 +438,6 @@ export default async function BadgesPage() {
         badgeGoal('greeds_price', "Greed's Price", 'Die deeper than your best cash-out', gauntletDeepestDied > gauntletDeepest ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('storm_reader', 'Storm Reader', 'Discover your first confluence', confluencesSeen, 1, '/raids/gauntlet'),
         badgeGoal('deep_cartographer', 'Deep Cartographer', 'Discover every confluence', confluencesSeen, CONFLUENCE_COUNT, '/raids/gauntlet'),
-      ],
-    },
-    {
-      title: 'Hardcore Gauntlet',
-      flavor: 'The Drowned Ledger keeps its own accounts. In ink you cannot buy back.',
-      accent: '#e0555a',
-      goals: [
         badgeGoal('drowned_ledger', 'The Drowned Ledger', 'Cash out a Hardcore Gauntlet run', gauntletHcDeepest >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('the_unsinkable', 'The Unsinkable', 'Reach depth 15 in the Hardcore Gauntlet', gauntletHcDeepest, 15, '/raids/gauntlet'),
         badgeGoal('locker_bound', 'Locker-Bound', 'Reach depth 25 in the Hardcore Gauntlet', gauntletHcDeepest, 25, '/raids/gauntlet'),
@@ -471,26 +453,12 @@ export default async function BadgesPage() {
         badgeGoal('blood_rich', 'Blood-Rich', 'Earn 500 Blood Gems all-time', bloodGemsEarned, 500, '/raids/gauntlet'),
         badgeGoal('bloodhoard', 'Bloodhoard', 'Earn 2,000 Blood Gems all-time', bloodGemsEarned, 2000, '/raids/gauntlet'),
         badgeGoal('crimson_fortune', 'Crimson Fortune', 'Win a crew skin from the blood gamble', has('crimson_fortune') ? 1 : 0, 1, '/crew?tab=wardrobe', { binary: true }),
-      ],
-    },
-    {
-      title: "Don's Gauntlet",
-      flavor: 'The green takes it, past the last sounding on any chart.',
-      accent: '#3fbf82',
-      goals: [
         badgeGoal('dons_descent', 'The Green Beckons', "Cash out a Don's Gauntlet run", donsGauntletDeepest >= 1 ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('dons_doorstep', "The Don's Doorstep", "Descend to depth 50 in Don's Gauntlet", donsGauntletDeepest, 50, '/raids'),
         badgeGoal('dons_reckoning', "The Don's Reckoning", "Descend to depth 75 in Don's Gauntlet", donsGauntletDeepest, 75, '/raids'),
         badgeGoal('dons_ghost_hull_won', 'Ghost of the Court', "Earn the Don's Ghost Hull from Don's Gauntlet", shipSkinsOwned.includes('dons_ghost_hull') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('first_convergence', 'The Convergence', "Forge a convergence in Don's Gauntlet", has('first_convergence') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('one_true_shot', 'One True Shot', 'Land a single Gauntlet hit for 4,000+', gauntletMaxHit, 4000, '/raids/gauntlet', { record: true }),
-      ],
-    },
-    {
-      title: 'The Abyssal Forge',
-      flavor: 'The deepest forge, and the feats that flatter the ghost fleet.',
-      accent: '#9d7bff',
-      goals: [
         badgeGoal('abyssal_smith', 'The Abyssal Forge', 'Forge your first tier-3 Abyssal item', has('abyssal_smith') || abyssalOwned >= 1 ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('abyssal_master', 'Abyssal Master', 'Forge every Abyssal item', abyssalOwned, abyssalTotal, '/expeditions'),
         badgeGoal('ghost_armory', 'The Ghost Armory', "Own all three Don's Gauntlet items", ownsAllDonsItems ? 1 : 0, 1, '/expeditions', { binary: true }),
@@ -499,21 +467,10 @@ export default async function BadgesPage() {
         badgeGoal('untouched', 'Untouched', "Bank a Don's Gauntlet run from depth 5 without taking a hit", has('untouched') ? 1 : 0, 1, '/raids', { binary: true }),
       ],
     },
-    // Broadsides (PvP) section PARKED 2026-07-23 — restore with the feature.
-    // {
-    //   title: 'Broadsides',
-    //   flavor: 'Captain against captain, gun against gun.',
-    //   accent: '#f87171',
-    //   goals: [
-    //     badgeGoal('first_blood', 'First Blood', 'Win a ship duel', pvpWins, 1, '/expeditions'),
-    //     badgeGoal('brawler', 'Broadside Brawler', 'Win 10 ship duels', pvpWins, 10, '/expeditions'),
-    //     badgeGoal('duelist', 'Duelist', 'Win 25 ship duels', pvpWins, 25, '/expeditions'),
-    //   ],
-    // },
     {
-      title: 'The Chart Room',
-      flavor: 'For the thinkers among the deckhands.',
-      accent: '#c4a96a',
+      title: 'Tavern & Games',
+      flavor: 'The Chart Room, the Parlor, the Den and the boards.',
+      accent: '#c4a0ff',
       goals: [
         badgeGoal('landfall', 'Landfall', 'Chart your first World Chart landmark', chartedLandmarks >= 1 ? 1 : 0, 1, '/charting/world-chart', { binary: true }),
         badgeGoal('quartermaster', 'Quartermaster', 'Bank 40 charting points', puzzlePoints, 40, '/tavern/chart-room'),
@@ -523,13 +480,6 @@ export default async function BadgesPage() {
         badgeGoal('the_long_watch', 'The Long Watch', 'Bank 500 charting points', puzzlePoints, 500, '/tavern/chart-room'),
         badgeGoal('clean_manifest', 'Clean Manifest', 'Stow all four holds in a single week', has('clean_manifest') ? 1 : 0, 1, '/tavern/chart-room/hold', { binary: true }),
         badgeGoal('master_cartographer', 'Master Cartographer', 'Chart the entire World Chart (all 13 landmarks)', chartedLandmarks, 13, '/charting/world-chart'),
-      ],
-    },
-    {
-      title: 'The Parlor',
-      flavor: 'Wit, wagers, and a ladder to the Pirate King.',
-      accent: '#d98ae0',
-      goals: [
         badgeGoal('throne_in_sight', 'Throne in Sight', 'Reach rung 7 of the Pirate King ladder', has('throne_in_sight') ? 1 : 0, 1, '/tavern/trivia/king', { binary: true }),
         badgeGoal('crowned', 'Crowned', 'Make it all the way up the Pirate King ladder', has('crowned') ? 1 : 0, 1, '/tavern/trivia/king', { binary: true }),
         badgeGoal('clean_sweep', 'Clean Sweep', "Clear a Captain's Board, every answer correct", has('clean_sweep') ? 1 : 0, 1, '/tavern/trivia/board', { binary: true }),
@@ -539,24 +489,6 @@ export default async function BadgesPage() {
         badgeGoal('parlor_cardsharp', 'Cardsharp', 'Reach the Cardsharp rank (85 pts)', parlorPoints, 85, '/tavern/trivia'),
         badgeGoal('parlor_kingpin', 'Kingpin', 'Reach the Kingpin rank (520 pts)', parlorPoints, 520, '/tavern/trivia'),
         badgeGoal('parlor_legend', 'Parlor Legend', 'Reach the top Parlor rank (1,000 pts)', parlorPoints, 1000, '/tavern/trivia'),
-      ],
-    },
-    {
-      title: 'Trawling',
-      flavor: 'Nets down, patience up.',
-      accent: '#4fb8a0',
-      goals: [
-        badgeGoal('first_haul', 'First Haul', 'Collect your first trawl', trawlsCollected, 1, '/fishing', { binary: true }),
-        badgeGoal('steady_nets', 'Steady Nets', 'Collect 25 trawls', trawlsCollected, 25, '/fishing'),
-        badgeGoal('deep_trawler', 'Deep Trawler', 'Collect 100 trawls', trawlsCollected, 100, '/fishing'),
-        badgeGoal('net_positive', 'Net Positive', 'Collect 500 trawls', trawlsCollected, 500, '/fishing'),
-      ],
-    },
-    {
-      title: 'The Den & Records',
-      flavor: 'Luck, chips, and the tide at your back.',
-      accent: '#f0c040',
-      goals: [
         badgeGoal('catfish_jackpot', 'Catfish Jackpot', 'Win the slots Catfish Jackpot', has('catfish_jackpot') ? 1 : 0, 1, '/tavern', { binary: true }),
         badgeGoal('unstoppable', 'Unstoppable', 'Win 5 blackjack hands in a row', has('unstoppable') ? 1 : 0, 1, '/tavern/blackjack', { binary: true }),
         badgeGoal('stacked_deck', 'Stacked Deck', 'Dealer pulls blackjack two hands running', has('stacked_deck') ? 1 : 0, 1, '/tavern/blackjack', { binary: true }),
@@ -570,20 +502,15 @@ export default async function BadgesPage() {
       ],
     },
     {
-      title: 'Wealth',
-      flavor: 'A hold heavy enough to make the ship sit low.',
-      accent: '#a78bfa',
+      title: 'Captain',
+      flavor: 'What you are worth, and the marks only a full career earns.',
+      accent: '#f5d98a',
       goals: [
+        badgeGoal('complete_captain', 'The Complete Captain', 'Reach Navigation 100 and Fishing 100', (fishLevel >= 100 && navLevel >= 100) ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('all_hands_legends', 'All Hands, All Legends', 'Raid in the Man-o-War with 5 Level 100 legendary crew', has('all_hands_legends') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('baby_steps', 'Baby Steps', 'Hold 100,000 doubloons at once', doubloons, 100_000, '/fishing'),
         badgeGoal('deep_pockets', 'Deep Pockets', 'Hold 1,000,000 doubloons at once', doubloons, 1_000_000, '/fishing'),
         badgeGoal('bilge_baron', 'Bilge Baron', 'Hold 2,500,000 doubloons at once', doubloons, 2_500_000, '/fishing'),
-      ],
-    },
-    {
-      title: 'Captain',
-      flavor: 'For those who keep this whole ship afloat.',
-      accent: '#e6b94a',
-      goals: [
         badgeGoal('captains_colors', "Captain's Colors", 'Become a Captain', isPremium ? 1 : 0, 1, '/profile', { binary: true }),
       ],
     },
