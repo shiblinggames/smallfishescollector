@@ -15,8 +15,7 @@ import HubTile, { HUB_GRID } from '@/components/HubTile'
 import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import DailyVoyagePanel from './DailyVoyagePanel'
-import ShipDuels from './ShipDuels'
-import type { ShipBattleSummary } from '@/app/(app)/social/shipBattleActions'
+import BountiesPanel from './BountiesPanel'
 import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
@@ -80,7 +79,6 @@ interface Props {
   // Whether the PvP "coming soon" entry point is open to this viewer (admins +
   // duel testers). Everyone else sees it locked. PvP data is only fetched +
   // passed when this is true (null otherwise).
-  canPvp: boolean
   /** Whether the Gauntlet door is open to this player (admin, or live + cleared
    *  Chapter 2). Drives the Gauntlets card lock independently of PvP. */
   gauntletOpen: boolean
@@ -97,7 +95,8 @@ interface Props {
   /** Claimed Gauntlet Locker Upgrade ids — drives the voyage panel's truthful
    *  Safe Passage / Swift Sails surfacing. */
   gauntletUpgrades: string[]
-  pvp: { battles: ShipBattleSummary[]; wins: number; losses: number; friends: SocialCrewMember[] } | null
+  /** Campaign cleared, so the bounty board is posting. */
+  bountiesOpen: boolean
 }
 
 const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }> = {
@@ -118,12 +117,12 @@ export default function HubCards({
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  canPvp, gauntletOpen, donsGauntletOpen, gauntletResumable, davyResumable, donsResumable, gauntletUpgrades, pvp,
+  bountiesOpen, gauntletOpen, donsGauntletOpen, gauntletResumable, davyResumable, donsResumable, gauntletUpgrades,
   raidsCleared, captainsOrdersDone,
   gems, freeRecruitAvailable, canAffordNewSkin, challengeName,
 }: Props) {
   const router = useRouter()
-  const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
+  const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'bounties' | 'gauntlets'>(null)
 
   // Esc closes the open prep modal. (Used to also handle a nested items
   // editor modal; that was removed when the prep modals became read-only
@@ -140,7 +139,7 @@ export default function HubCards({
 
   const campaignAccent = '#c4a96a'
   const vAcc = VOYAGE_ACCENT[voyages.status]
-  const pvpAccent = '#d0716a'
+  const bountyAccent = '#c084fc'
   const gauntletAccent = '#7a8fc9'
   // Each gauntlet wears its own identity inside the chooser: Davy's teal,
   // Don's kraken-green (matches the gauntlet screens + switcher).
@@ -220,16 +219,17 @@ export default function HubCards({
           progress={voyages.status === 'sailing' ? voyages.progress : null}
           onClick={() => setModal('voyages')}
         />
-        {/* PvP opens for admins + duel testers (canPvp); Gauntlets for
-            gauntletOpen. Everyone else sees a locked tile. */}
+        {/* BOUNTIES took this slot from PvP, which was parked indefinitely and
+            drawn locked for everyone. A tile that has said "Coming Later" for
+            months is worse than no tile: it teaches players to stop reading
+            that corner of the hub. This one actually opens, and for the
+            captains who reach it there is nothing else left to unlock. */}
         <HubTile
-          bgImage="/exp-pvp.jpg" accent={pvpAccent} title="PvP"
-          status="Open ›" statusColor={pvpAccent}
-          // Parked rather than pending: ship PvP is not on the near roadmap, so
-          // the tile says "later" and recedes instead of sitting at the same
-          // volume as the doors that are actually open.
-          locked={!canPvp} muted={!canPvp} lockLabel="Coming Later"
-          onClick={canPvp ? () => setModal('pvp') : undefined}
+          bgImage="/exp-pvp.jpg" accent={bountyAccent} title="Bounties"
+          status={bountiesOpen ? 'Open ›' : 'Endgame'} statusColor={bountyAccent}
+          sub={bountiesOpen ? 'Daily orders, paid in gems' : 'Posted once the story is done'}
+          locked={!bountiesOpen} lockLabel="Clear the campaign"
+          onClick={bountiesOpen ? () => setModal('bounties') : undefined}
         />
         <HubTile
           bgImage="/exp-gauntlets.jpg" accent={gauntletAccent} title="Gauntlets"
@@ -332,29 +332,28 @@ export default function HubCards({
         </div>
       </PopupShell>
 
-      {/* ── PvP modal — the old "Broadsides" section, now opened from the
-          PvP hub card. Admin-only; pvp data is only passed when admin. ──── */}
-      <PopupShell open={modal === 'pvp'} onClose={() => setModal(null)}>
-        <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+      {/* ── Bounties ── the daily orders board. Endgame only. ──────────── */}
+      <PopupShell open={modal === 'bounties'} onClose={() => setModal(null)}>
+        <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 6 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           style={{
             margin: 'auto', width: '100%', maxWidth: 440,
-            background: 'linear-gradient(180deg, #1a0e0c 0%, #0a0807 100%)',
-            border: `1px solid ${pvpAccent}55`,
-            borderRadius: 20, padding: '0.4rem 0.4rem 0.5rem',
+            background: 'linear-gradient(180deg, #16101f 0%, #0a0808 100%)',
+            border: `1px solid ${bountyAccent}55`,
+            borderRadius: 20, padding: '0.4rem 0.4rem 0.6rem',
             boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.7rem 0.3rem' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>PvP</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.7rem 0.5rem' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Bounties</p>
             <button type="button" onClick={() => setModal(null)} aria-label="Close"
               style={{ width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
           </div>
-          {pvp && (
-            <ShipDuels battles={pvp.battles} wins={pvp.wins} losses={pvp.losses} friends={pvp.friends} />
-          )}
-        </div>
+          {modal === 'bounties' && <BountiesPanel />}
+        </motion.div>
       </PopupShell>
 
       {/* ── Gauntlets modal — entry hub for the push-your-luck gauntlets.

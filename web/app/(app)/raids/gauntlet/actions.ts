@@ -12,6 +12,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logBountyEvent } from '@/app/(app)/expeditions/bountyActions'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
@@ -779,6 +780,13 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // skip DOES count toward depth). Equal for everyone without Veteran's Start.
   const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
   const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
+  // BOUNTIES. How deep a single run got is a moment, not a total:
+  // profiles.gauntlet_deepest is a lifetime high-water mark, so a captain who
+  // has already seen 15 could never complete "reach depth 10 today" from it.
+  // One row per finished run is the only honest way to answer that, and this is
+  // the only place in the game bounties needed a hook at all.
+  // Fire and forget: a lost tick costs a bounty, never a run.
+  void logBountyEvent(user.id, hc ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
   if (rd <= 0) {
     // Nothing cleared — just close the run.
     await admin.from('profiles').update({ gauntlet_run_open: false }).eq('id', user.id)
@@ -1153,6 +1161,9 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
 
   const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
   const hardcore = profile.gauntlet_run_hardcore === true
+  // A run that ended in the water still reached its depth, and a bounty that
+  // only paid on a clean cash-out would quietly punish pushing for one more.
+  void logBountyEvent(user.id, hardcore ? 'gauntlet_hc_depth' : 'gauntlet_depth', cd)
   const squad = hardcore ? ((profile.gauntlet_hc_squad as number[] | null) ?? []) : []
 
   // ── Hardcore permadeath — the squad you sent in is lost to the Locker ─────

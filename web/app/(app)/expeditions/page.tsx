@@ -13,7 +13,7 @@ import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import ShipHeroSection from './ShipHeroSection'
-import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared } from './hubData'
+import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared, cachedFinaleCleared } from './hubData'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
 import { pickShowcaseBoss } from '@/lib/raidMap'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
@@ -26,7 +26,6 @@ import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { parseAbyssalConversion } from '@/lib/abyssalAccelerator'
 import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
-import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
 import { getCrew } from '@/app/(app)/social/actions'
 
 // Streaming pattern: the page paints its shell + Nav as soon as the profile
@@ -151,17 +150,9 @@ async function ExpeditionHub() {
     cachedVoyageHistory(),
   ])
 
-  // Broadsides (PvP) is PARKED — "Coming Soon" to EVERYONE now (2026-07-23),
-  // admins + duel testers included. Flip back to `isAdmin || isPvpTester(...)`
-  // when the feature returns. The mutating duel actions are blocked server-side
-  // too (shipBattleActions.PVP_ENABLED), so this is a UI + API lock, not just a hide.
-  const canPvp = false
-  const pvp = canPvp
-    ? await (async () => {
-        const [{ battles, wins, losses }, friends] = await Promise.all([getShipBattles(), getCrew()])
-        return { battles, wins, losses, friends }
-      })()
-    : null
+  // Bounties replaced PvP in that hub slot. They post once the campaign is
+  // done, off the same cached clears query the ship reveals already use.
+  const bountiesOpen = await cachedFinaleCleared()
 
   const shipTier = profile?.ship_tier ?? 0
   // Fold the Ch4 augments into the displayed hull caps: Expanded Quarters
@@ -272,7 +263,7 @@ async function ExpeditionHub() {
       freeRecruitAvailable={freeRecruitAvailable}
       canAffordNewSkin={canAffordNewSkin}
       challengeName={challengeName}
-      canPvp={canPvp}
+      bountiesOpen={bountiesOpen}
       gauntletOpen={gauntletOpen}
       donsGauntletOpen={donsGauntletOpen}
       gauntletResumable={gauntletResumable}
@@ -282,7 +273,6 @@ async function ExpeditionHub() {
         ...((profile?.gauntlet_upgrades as string[] | null) ?? []),
         ...((profile?.dons_gauntlet_upgrades as string[] | null) ?? []),
       ]}
-      pvp={pvp}
     />
   )
 }

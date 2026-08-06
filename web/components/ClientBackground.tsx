@@ -38,7 +38,6 @@ const ROUTE_BG: [string, BgConfig][] = [
   // stall behind it fought the price rows and washed out the header at the top
   // where TAV's overlay is lightest. A flat instrument surface instead.
   ['/tavern/market',           { surface: true }],
-  ['/tavern/bounties',         { src: '/page-bounties.jpg',   overlay: TAV }],
   ['/tavern',                  { src: '/page-tavern.jpg',     overlay: TAV }],
   // Both marketplace pages deliberately have NO image background. They read as clean,
   // dark catalogues (a solid page set on the <main>), so their translucent cards lift
