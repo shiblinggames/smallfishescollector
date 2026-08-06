@@ -96,8 +96,11 @@ function measure(meter: BountyMeter, s: Signals, baseline: number): number {
       return s.raids.filter(r => r.raid_id === meter.raidId).length
     case 'raid_any':
       return s.raids.length
-    case 'raid_challenge_any':
-      return s.raids.filter(r => r.raid_id.endsWith('_challenge')).length
+    case 'raid_any_of':
+      // Named ids, not a suffix match. "Any challenge raid" made a hard bounty
+      // only as hard as Pete on Challenge, which a capped captain clears
+      // without noticing.
+      return s.raids.filter(r => meter.raidIds.includes(r.raid_id)).length
     case 'raid_fast':
       return s.raids.filter(r =>
         r.raid_id === meter.raidId && (r.elapsed_ms ?? Infinity) <= meter.underS * 1000).length

@@ -25,8 +25,13 @@ export type BountyMeter =
   | { kind: 'raid_clear'; raidId: string }
   /** Clears of any raid at all. */
   | { kind: 'raid_any' }
-  /** Clears of any raid whose id ends in _challenge. */
-  | { kind: 'raid_challenge_any' }
+  /** Clears of any raid drawn from a named set.
+   *
+   *  "Any challenge raid" was the mistake this replaces: a bounty whose target
+   *  is a whole category is only ever as hard as the EASIEST thing in it, and a
+   *  capped captain clears Chapter I on Challenge without noticing. Naming the
+   *  set is what lets a hard bounty actually be hard. */
+  | { kind: 'raid_any_of'; raidIds: string[] }
   /** One specific raid, cleared inside a time. raid_completions.elapsed_ms. */
   | { kind: 'raid_fast'; raidId: string; underS: number }
   /** Voyages resolved since the board was handed out. */
@@ -67,7 +72,18 @@ export interface Bounty {
    *  and the only way out would be the one daily swap. A raid bounty is offered
    *  only once you have cleared that raid at least once, which proves you can
    *  get to it. */
-  requires?: { raid?: string; gauntlet?: boolean }
+  /** Bounties that the same act of play completes together.
+   *
+   *  One board must never carry two of a family. "Reach depth 5" beside "Reach
+   *  depth 15" is a free order: the deep run pays both, so the smaller one is
+   *  15 gems for nothing. Same for two haul targets, or two raid counts. */
+  family?: string
+  requires?: {
+    raid?: string
+    /** Offerable once ANY of these has been cleared once. */
+    anyRaid?: string[]
+    gauntlet?: boolean
+  }
 }
 
 // ── The gem budget ───────────────────────────────────────────────────────────
@@ -152,53 +168,61 @@ export const BOUNTY_UNLOCK_RAID = BOUNTY_RUNGS[0].raid
 // push for most captains and routine for a sharp one. Every timed bounty below
 // sits between the median and the record for that raid.
 
+// Challenge raids grouped by the chapter they belong to. "Clear a challenge
+// raid" was a hard-tier bounty and a capped captain answers it with Pete in
+// four minutes, so the tier now depends on WHICH challenge.
+const CH12_CHALLENGE = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
+const CH3_CHALLENGE  = ['coffers_fleet_challenge', 'the_quartermaster_challenge']
+const CH4_CHALLENGE  = ['the_blockade_challenge', 'the_throne_challenge']
+
+// EVERY DESCRIPTION NAMES THE THING. The line under a bounty is the only place
+// it can say WHERE the work is, so it says that and stops. Flavour that did not
+// explain the task has gone: "Davy Jones is only getting started down there"
+// told a player nothing about where to go or what counts, and one description
+// ("Take the Tollmaster off the water", under Sink Captain Krust) named the
+// wrong boss entirely.
 export const ALL_BOUNTIES: Bounty[] = [
-  // ── Standard: one sitting, no special preparation ──────────────────────────
-  { id: 'pete_down',        name: 'Sink Barnacle Pete',      desc: "Corsair's Reckoning, start to finish.",            meter: { kind: 'raid_clear', raidId: 'corsairs_reckoning' },   target: 1, tier: 'easy', requires: { raid: 'corsairs_reckoning' } },
-  { id: 'krust_down',       name: 'Sink Captain Krust',      desc: 'Take the Tollmaster off the water.',               meter: { kind: 'raid_clear', raidId: 'captain_krust' },        target: 1, tier: 'easy', requires: { raid: 'captain_krust' } },
-  { id: 'toll_down',        name: "Run the Tollmaster's Cut", desc: 'Nobody is paying the toll today.',                meter: { kind: 'raid_clear', raidId: 'tollmasters_cut' },      target: 1, tier: 'easy', requires: { raid: 'tollmasters_cut' } },
-  { id: 'carto_down',       name: 'Sink the Cartographer',   desc: 'Take his survey and his ship with it.',            meter: { kind: 'raid_clear', raidId: 'cartographer' },         target: 1, tier: 'easy', requires: { raid: 'cartographer' } },
-  { id: 'raids_two',        name: 'Clear two raids',         desc: 'Any two. Pick the ones you like.',                 meter: { kind: 'raid_any' },                                   target: 2, tier: 'easy' },
-  { id: 'voyage_two',       name: 'Send out two voyages',    desc: 'See both of them home again.',                     meter: { kind: 'voyages' },                                    target: 2, tier: 'easy' },
-  { id: 'gauntlet_one',     name: 'Run the Gauntlet',        desc: 'One run, however deep you get.',                   meter: { kind: 'counter', column: 'gauntlet_runs_completed' }, target: 1, tier: 'easy', requires: { gauntlet: true } },
-  { id: 'depth_five',       name: 'Reach depth 5',           desc: 'Davy Jones is only getting started down there.',   meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 5 },  target: 1, tier: 'medium', requires: { gauntlet: true } },
-  // Spread, not repetition. Clearing the softest boss three times is not the
-  // same day's work as clearing three different ones, and the old catalogue
-  // could not tell those apart.
-  { id: 'raids_two_kinds',  name: 'Clear two different raids', desc: 'Two names, not the same one twice.',              meter: { kind: 'raid_distinct' },                              target: 2, tier: 'medium' },
-  // Tuned off real hauls: the Shrouded Reach averages 2,300 and the best on
-  // record is 10,734, so 3,000 is a good run and the Coastal Run cannot get
-  // there at all. The bounty picks your route for you without naming it.
-  { id: 'haul_three_k',     name: 'A 3,000 ⟡ voyage',        desc: 'One voyage, that much in the hold when it lands.',  meter: { kind: 'voyage_haul', atLeast: 3000 },                 target: 1, tier: 'medium' },
-  { id: 'route_shroud',     name: 'Sail the Shrouded Reach', desc: 'Nine hours out. Set it before bed.',                meter: { kind: 'voyage_route', route: 'shroud' },              target: 1, tier: 'easy' },
+  // ── EASY ── one sitting, no preparation, Chapter I and II water ────────────
+  { id: 'pete_down',        name: 'Sink Barnacle Pete',        desc: "Clear The Corsair's Reckoning.",                                     meter: { kind: 'raid_clear', raidId: 'corsairs_reckoning' },   target: 1, tier: 'easy',   requires: { raid: 'corsairs_reckoning' } },
+  { id: 'krust_down',       name: 'Sink Captain Krust',        desc: "Clear Krust's Consignment.",                                          meter: { kind: 'raid_clear', raidId: 'captain_krust' },        target: 1, tier: 'easy',   requires: { raid: 'captain_krust' } },
+  { id: 'carto_down',       name: 'Sink the Cartographer',     desc: "Clear The Cartographer's Survey.",                                    meter: { kind: 'raid_clear', raidId: 'cartographer' },         target: 1, tier: 'easy',   requires: { raid: 'cartographer' } },
+  { id: 'toll_down',        name: 'Sink Tollmaster Spet',      desc: "Clear The Tollmaster's Cut.",                                         meter: { kind: 'raid_clear', raidId: 'tollmasters_cut' },      target: 1, tier: 'easy',   requires: { raid: 'tollmasters_cut' } },
+  { id: 'raids_two',        name: 'Clear two raids',           desc: 'Any two raids. Clearing the same one twice counts.',                  meter: { kind: 'raid_any' },                                   target: 2, tier: 'easy', family: 'raidcount'   },
+  { id: 'voyage_two',       name: 'Land two voyages',          desc: 'Send two voyages out and collect both when they come back.',          meter: { kind: 'voyages' },                                    target: 2, tier: 'easy'   },
+  { id: 'gauntlet_one',     name: 'Run the Gauntlet',          desc: "Finish one run of Davy Jones' Gauntlet. Dying ends a run and counts.", meter: { kind: 'counter', column: 'gauntlet_runs_completed' }, target: 1, tier: 'easy',   requires: { gauntlet: true } },
+  { id: 'route_shroud',     name: 'Sail the Shrouded Reach',   desc: 'Send a voyage on the Shrouded Reach route. It takes nine hours.',     meter: { kind: 'voyage_route', route: 'shroud' },              target: 1, tier: 'easy'   },
 
-  // ── Hard: a real sitting, or a specific bit of skill ───────────────────────
-  { id: 'challenge_any',    name: 'Clear a challenge raid',  desc: 'Any of them, on the harder setting.',              meter: { kind: 'raid_challenge_any' },                         target: 1, tier: 'hard' },
-  { id: 'pete_fast',        name: 'Pete in under 4 minutes', desc: 'The record stands at 42 seconds. No pressure.',    meter: { kind: 'raid_fast', raidId: 'corsairs_reckoning', underS: 240 }, target: 1, tier: 'hard', requires: { raid: 'corsairs_reckoning' } },
-  { id: 'krust_fast',       name: 'Krust in under 8 minutes', desc: 'Most captains take twelve. Beat them.',           meter: { kind: 'raid_fast', raidId: 'captain_krust', underS: 480 },      target: 1, tier: 'hard', requires: { raid: 'captain_krust' } },
-  { id: 'carto_fast',       name: 'Cartographer in under 6', desc: 'Six minutes, mist and all.',                       meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 360 },       target: 1, tier: 'hard', requires: { raid: 'cartographer' } },
-  { id: 'depth_ten',        name: 'Reach depth 10',          desc: 'Ten floors down and back out with it.',            meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 10 }, target: 1, tier: 'hard', requires: { gauntlet: true } },
-  { id: 'raids_four',       name: 'Clear four raids',        desc: 'A full day of it.',                                meter: { kind: 'raid_any' },                                   target: 4, tier: 'medium' },
-  { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three names off the chart in one day.',        meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard' },
-  // Your three fastest clears have to fit inside the budget together, so one
-  // disastrous run does not sink the order the way a single timed raid does.
-  { id: 'budget_fifteen',   name: 'Three raids in 15 minutes', desc: 'Added together, not each. Pick your water.',      meter: { kind: 'raid_budget', raids: 3, totalS: 900 },         target: 1, tier: 'hard' },
-  { id: 'haul_six_k',       name: 'Bring home 6,000 ⟡',      desc: 'Across every voyage you land today.',               meter: { kind: 'voyage_haul_total', atLeast: 6000 },           target: 1, tier: 'hard' },
-  { id: 'quarter_down',     name: 'Sink the Quartermaster',  desc: 'The Coffers can find another one.',                meter: { kind: 'raid_clear', raidId: 'the_quartermaster' },    target: 1, tier: 'medium', requires: { raid: 'the_quartermaster' } },
-  { id: 'fleet_down',       name: 'Break the Coffers Fleet', desc: 'All of it, in one sitting.',                       meter: { kind: 'raid_clear', raidId: 'coffers_fleet' },        target: 1, tier: 'medium', requires: { raid: 'coffers_fleet' } },
+  // ── MEDIUM ── a real sitting, or Chapter III water ─────────────────────────
+  { id: 'challenge_early',  name: 'Beat an early Challenge',   desc: 'Clear any Chapter I or II raid on Challenge.',                        meter: { kind: 'raid_any_of', raidIds: CH12_CHALLENGE },       target: 1, tier: 'medium', requires: { anyRaid: CH12_CHALLENGE } },
+  { id: 'fleet_down',       name: 'Break the Harbor Fleet',    desc: 'Clear The Harbor Fleet.',                                             meter: { kind: 'raid_clear', raidId: 'coffers_fleet' },        target: 1, tier: 'medium', requires: { raid: 'coffers_fleet' } },
+  { id: 'quarter_down',     name: 'Sink the Quartermaster',    desc: 'Clear The Quartermaster.',                                            meter: { kind: 'raid_clear', raidId: 'the_quartermaster' },    target: 1, tier: 'medium', requires: { raid: 'the_quartermaster' } },
+  { id: 'raids_two_kinds',  name: 'Clear two different raids', desc: 'Two different raids. The same one twice does not count.',             meter: { kind: 'raid_distinct' },                              target: 2, tier: 'medium', family: 'distinct' },
+  { id: 'raids_four',       name: 'Clear four raids',          desc: 'Any four raids. Repeats count.',                                      meter: { kind: 'raid_any' },                                   target: 4, tier: 'medium', family: 'raidcount' },
+  { id: 'depth_five',       name: 'Reach depth 5',             desc: "Get to floor 5 of Davy Jones' Gauntlet. Dying there still counts.",   meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 5 },  target: 1, tier: 'medium', family: 'depth', requires: { gauntlet: true } },
+  { id: 'haul_three_k',     name: 'Land a 3,000 ⟡ voyage',     desc: 'Collect one voyage worth 3,000 doubloons or more.',                   meter: { kind: 'voyage_haul', atLeast: 3000 },                 target: 1, tier: 'medium', family: 'haul' },
 
-  // ── Elite: the endgame proper ──────────────────────────────────────────────
-  { id: 'blockade_down',    name: 'Break the Blockade',      desc: 'The hardest water on the chart.',                  meter: { kind: 'raid_clear', raidId: 'the_blockade' },         target: 1, tier: 'elite', requires: { raid: 'the_blockade' } },
-  { id: 'throne_down',      name: 'Take the Throne',         desc: 'Sit in it a while. You earned that.',              meter: { kind: 'raid_clear', raidId: 'the_throne' },           target: 1, tier: 'elite', requires: { raid: 'the_throne' } },
-  { id: 'finn_challenge',   name: 'Beat Finn on challenge',  desc: 'One last ride, the hard way.',                     meter: { kind: 'raid_clear', raidId: 'the_sunken_hand_challenge' }, target: 1, tier: 'elite', requires: { raid: 'the_sunken_hand_challenge' } },
-  { id: 'depth_fifteen',    name: 'Reach depth 15',          desc: 'Very few captains have seen fifteen.',             meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 15 }, target: 1, tier: 'elite', requires: { gauntlet: true } },
-  { id: 'depth_twenty',     name: 'Reach depth 20',          desc: 'Nothing down there wants you to.',                 meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 20 }, target: 1, tier: 'elite', requires: { gauntlet: true } },
-  { id: 'challenge_two',    name: 'Clear two challenge raids', desc: 'Back to back, on the harder setting.',           meter: { kind: 'raid_challenge_any' },                         target: 2, tier: 'elite' },
-  { id: 'raids_five_kinds', name: 'Clear five different raids', desc: 'Most of the chart, in one day.',                 meter: { kind: 'raid_distinct' },                              target: 5, tier: 'elite' },
-  { id: 'budget_twenty',    name: 'Five raids in 25 minutes', desc: 'Five clears, twenty five minutes of clock total.',  meter: { kind: 'raid_budget', raids: 5, totalS: 1500 },        target: 1, tier: 'elite' },
-  { id: 'haul_ten_k',       name: 'A 10,000 ⟡ voyage',       desc: 'The record haul is 10,734. Go and beat it.',        meter: { kind: 'voyage_haul', atLeast: 10000 },                target: 1, tier: 'elite' },
-  { id: 'hc_depth_five',    name: 'Hardcore, depth 5',       desc: 'Permadeath. Five floors. One squad.',              meter: { kind: 'event', eventKind: 'gauntlet_hc_depth', atLeast: 5 }, target: 1, tier: 'elite', requires: { gauntlet: true } },
-  { id: 'ghost_down',       name: "Sink the Quartermaster's Ghost", desc: 'He did not stay down the first time.',      meter: { kind: 'raid_clear', raidId: 'the_quartermasters_ghost' }, target: 1, tier: 'elite', requires: { raid: 'the_quartermasters_ghost' } },
+  // ── HARD ── Chapter IV water, Chapter III on Challenge, or the clock ───────
+  { id: 'challenge_ch3',    name: 'Beat a Chapter III Challenge', desc: 'Clear The Harbor Fleet or The Quartermaster on Challenge.',        meter: { kind: 'raid_any_of', raidIds: CH3_CHALLENGE },        target: 1, tier: 'hard',   requires: { anyRaid: CH3_CHALLENGE } },
+  { id: 'blockade_down',    name: 'Break the Blockade',        desc: 'Clear The Blockade.',                                                 meter: { kind: 'raid_clear', raidId: 'the_blockade' },         target: 1, tier: 'hard',   requires: { raid: 'the_blockade' } },
+  { id: 'throne_down',      name: 'Sink Don Finleone',         desc: 'Clear Don Finleone, the last raid of Chapter IV.',                    meter: { kind: 'raid_clear', raidId: 'the_throne' },           target: 1, tier: 'hard',   requires: { raid: 'the_throne' } },
+  { id: 'pete_fast',        name: 'Pete in under 4 minutes',   desc: "Clear The Corsair's Reckoning in under four minutes.",                meter: { kind: 'raid_fast', raidId: 'corsairs_reckoning', underS: 240 }, target: 1, tier: 'hard', requires: { raid: 'corsairs_reckoning' } },
+  { id: 'krust_fast',       name: 'Krust in under 8 minutes',  desc: "Clear Krust's Consignment in under eight minutes.",                    meter: { kind: 'raid_fast', raidId: 'captain_krust', underS: 480 },      target: 1, tier: 'hard', requires: { raid: 'captain_krust' } },
+  { id: 'carto_fast',       name: 'Cartographer in under 6',   desc: "Clear The Cartographer's Survey in under six minutes.",                meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 360 },       target: 1, tier: 'hard', requires: { raid: 'cartographer' } },
+  { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three different raids in one day.',                                meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard', family: 'distinct'   },
+  { id: 'budget_fifteen',   name: 'Three raids in 15 minutes', desc: 'Your three fastest clears today must add up to under 15 minutes.',    meter: { kind: 'raid_budget', raids: 3, totalS: 900 },         target: 1, tier: 'hard', family: 'budget'   },
+  { id: 'haul_six_k',       name: 'Bring home 6,000 ⟡',        desc: 'Collect 6,000 doubloons across every voyage you land today.',         meter: { kind: 'voyage_haul_total', atLeast: 6000 },           target: 1, tier: 'hard', family: 'haul'   },
+  { id: 'depth_ten',        name: 'Reach depth 10',            desc: "Get to floor 10 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 10 }, target: 1, tier: 'hard', family: 'depth',  requires: { gauntlet: true } },
+
+  // ── ELITE ── Chapter IV on Challenge, the coda, or the deep floors ─────────
+  { id: 'challenge_ch4',    name: 'Beat a Chapter IV Challenge', desc: 'Clear The Blockade or The Throne on Challenge.',                    meter: { kind: 'raid_any_of', raidIds: CH4_CHALLENGE },        target: 1, tier: 'elite',  requires: { anyRaid: CH4_CHALLENGE } },
+  { id: 'finn_challenge',   name: 'Beat Finn on Challenge',    desc: 'Clear One Last Ride on Challenge.',                                   meter: { kind: 'raid_clear', raidId: 'the_sunken_hand_challenge' }, target: 1, tier: 'elite', requires: { raid: 'the_sunken_hand_challenge' } },
+  { id: 'ghost_down',       name: "Sink the Quartermaster's Ghost", desc: "Clear The Quartermaster's Ghost.",                               meter: { kind: 'raid_clear', raidId: 'the_quartermasters_ghost' }, target: 1, tier: 'elite', requires: { raid: 'the_quartermasters_ghost' } },
+  { id: 'depth_fifteen',    name: 'Reach depth 15',            desc: "Get to floor 15 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 15 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
+  { id: 'depth_twenty',     name: 'Reach depth 20',            desc: "Get to floor 20 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 20 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
+  { id: 'hc_depth_five',    name: 'Hardcore, depth 5',         desc: 'Get to floor 5 of the Hardcore Gauntlet. Your squad dies for good.',  meter: { kind: 'event', eventKind: 'gauntlet_hc_depth', atLeast: 5 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
+  { id: 'raids_five_kinds', name: 'Clear five different raids', desc: 'Five different raids in one day.',                                   meter: { kind: 'raid_distinct' },                              target: 5, tier: 'elite', family: 'distinct'  },
+  { id: 'budget_twenty',    name: 'Five raids in 25 minutes',  desc: 'Your five fastest clears today must add up to under 25 minutes.',     meter: { kind: 'raid_budget', raids: 5, totalS: 1500 },        target: 1, tier: 'elite', family: 'budget'  },
+  { id: 'haul_ten_k',       name: 'Land a 10,000 ⟡ voyage',    desc: 'Collect one voyage worth 10,000 doubloons or more.',                  meter: { kind: 'voyage_haul', atLeast: 10000 },                target: 1, tier: 'elite', family: 'haul'  },
 ]
 
 export const BOUNTY_BY_ID = new Map(ALL_BOUNTIES.map(b => [b.id, b]))
@@ -228,6 +252,7 @@ function seeded(seed: string): () => number {
 /** Can this captain actually be asked to do this? */
 export function canOffer(b: Bounty, clearedRaids: Set<string>, hasRunGauntlet: boolean): boolean {
   if (b.requires?.raid && !clearedRaids.has(b.requires.raid)) return false
+  if (b.requires?.anyRaid && !b.requires.anyRaid.some(r => clearedRaids.has(r))) return false
   if (b.requires?.gauntlet && !hasRunGauntlet) return false
   return true
 }
@@ -251,6 +276,9 @@ export function rollBounties(
       b.tier === tier
       && !banned.has(b.id)
       && !out.some(o => o.id === b.id)
+      // Never two of a family on one board: the harder one would pay the
+      // easier one for free.
+      && !(b.family && out.some(o => o.family === b.family))
       && canOffer(b, clearedRaids, hasRunGauntlet))
     if (pool.length === 0) continue
     out.push(pool[Math.floor(rand() * pool.length)])
