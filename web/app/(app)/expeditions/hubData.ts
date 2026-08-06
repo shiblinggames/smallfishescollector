@@ -77,13 +77,16 @@ export const cachedShipRevealClears = cache(async (): Promise<Set<string>> => {
   const admin = createAdminClient()
   const { data } = await admin.from('raid_completions')
     .select('raid_id').eq('user_id', user.id)
-    .in('raid_id', ['the_quartermaster', 'the_blockade', 'the_throne', 'the_sunken_hand'])
+    .in('raid_id', ['the_quartermaster', 'the_blockade', 'the_throne', 'the_sunken_hand', 'captain_krust'])
   return new Set(((data ?? []) as { raid_id: string }[]).map(r => r.raid_id))
 })
 
 export const cachedChapter3Cleared = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_quartermaster'))
 export const cachedBlockadeCleared = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_blockade'))
 export const cachedThroneCleared   = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_throne'))
-/** The finale. Clearing it is what posts the bounty board, so this rides the
- *  same single query the three ship-reveal clears already do. */
 export const cachedFinaleCleared   = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('the_sunken_hand'))
+/** The bounty board opens at the END OF CHAPTER I, not the end of the campaign.
+ *  Gating it on the finale meant two captains in the game could see it at all;
+ *  Krust puts it in front of eight, and the rungs above are what the rest of
+ *  the campaign is worth. */
+export const cachedBountiesOpen    = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('captain_krust'))

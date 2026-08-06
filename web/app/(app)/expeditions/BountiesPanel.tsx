@@ -148,9 +148,9 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
           The board is empty
         </p>
         <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#8a8577', lineHeight: 1.55, maxWidth: 300, margin: '0 auto' }}>
-          Bounties are posted for captains who have finished the story. Sail the
-          campaign to its end and the harbourmaster will have work for you every
-          morning after that.
+          The harbourmaster posts work for captains who have made a name. Put
+          Captain Krust on the bottom of the sea and there will be orders here
+          every morning after that.
         </p>
       </div>
     )
@@ -194,6 +194,28 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
           {board.remaining} {GEM}
         </span>
       </div>
+
+      {/* WHICH RUNG, and what the next one is worth. The board grows with the
+          campaign, so a captain three chapters in should be able to see that
+          the short board is a stage rather than the whole feature, and see
+          exactly whose head buys the next slot. */}
+      {board.rung && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          padding: '0.42rem 0.75rem', borderRadius: 10, marginBottom: 9,
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+        }}>
+          <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a8577' }}>
+            Chapter {board.rung.chapter} rung
+            <span style={{ color: '#6f6a63' }}> · {board.bounties.length} orders, {board.rungMax} {GEM} a day</span>
+          </span>
+          {board.next && (
+            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#b9aec9', textAlign: 'right', flexShrink: 0 }}>
+              Beat {board.next.boss} → {board.next.gems} {GEM}
+            </span>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         {board.bounties.map(b => (

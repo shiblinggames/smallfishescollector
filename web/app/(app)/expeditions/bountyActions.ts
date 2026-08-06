@@ -3,9 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  ALL_BOUNTIES, BOUNTY_BY_ID, BOUNTY_SLOTS, BOUNTY_DAILY_MAX,
-  BOUNTY_UNLOCK_RAID, bountyGems, rollBounties, bountyToday,
-  type Bounty, type BountyMeter,
+  ALL_BOUNTIES, BOUNTY_BY_ID, BOUNTY_DAILY_MAX,
+  bountyGems, rollBounties, bountyToday, canOffer,
+  rungFor, nextRung, rungGems,
+  type Bounty, type BountyMeter, type BountyRung,
 } from '@/lib/bounties'
 
 // The measuring layer for BOUNTIES.
@@ -41,12 +42,20 @@ export type BountyBoard = {
   rerollUsed: boolean
   /** Gems still on the table today. */
   remaining: number
+  /** The most this board can pay at the captain's current rung. */
+  rungMax: number
+  /** The most it could ever pay, once every rung is earned. */
   dailyMax: number
+  /** Which chapter's rung is in force. */
+  rung: { chapter: number; title: string; boss: string } | null
+  /** What the next rung adds, and who is standing in the way of it. */
+  next: { chapter: number; title: string; boss: string; gems: number } | null
 }
 
-const DONE: BountyBoard = {
-  unlocked: false, lockReason: 'Clear the campaign to open the bounty board',
-  bounties: [], gems: 0, rerollUsed: false, remaining: 0, dailyMax: BOUNTY_DAILY_MAX,
+const SHUT: BountyBoard = {
+  unlocked: false, lockReason: 'Clear Chapter I to open the bounty board',
+  bounties: [], gems: 0, rerollUsed: false, remaining: 0,
+  rungMax: 0, dailyMax: BOUNTY_DAILY_MAX, rung: null, next: null,
 }
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -132,21 +141,34 @@ function baselinesFor(bounties: Bounty[], profile: Record<string, unknown>): Rec
   return out
 }
 
-async function isUnlocked(admin: Admin, uid: string): Promise<boolean> {
-  const { count } = await admin.from('raid_completions')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', uid).eq('raid_id', BOUNTY_UNLOCK_RAID)
-  return (count ?? 0) > 0
+/** Every raid this captain has ever cleared. Decides BOTH which rung of the
+ *  board they are on and which orders can be offered at all, off one read. */
+async function clearedRaids(admin: Admin, uid: string): Promise<Set<string>> {
+  const { data } = await admin.from('raid_completions')
+    .select('raid_id').eq('user_id', uid)
+  return new Set(((data ?? []) as { raid_id: string }[]).map(r => r.raid_id))
+}
+
+function rungFacts(rung: BountyRung) {
+  const nx = nextRung(rung)
+  return {
+    rung: { chapter: rung.chapter, title: rung.title, boss: rung.boss },
+    next: nx ? { chapter: nx.chapter, title: nx.title, boss: nx.boss, gems: rungGems(nx.slots) } : null,
+    rungMax: rungGems(rung.slots),
+  }
 }
 
 export async function getBountyBoard(): Promise<BountyBoard> {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
   const uid = session?.user?.id
-  if (!uid) return DONE
+  if (!uid) return SHUT
 
   const admin = createAdminClient()
-  if (!(await isUnlocked(admin, uid))) return DONE
+  const cleared = await clearedRaids(admin, uid)
+  const rung = rungFor(cleared)
+  if (!rung) return SHUT
+  const facts = rungFacts(rung)
 
   const today = bountyToday()
   const { data: row } = await admin.from('bounty_progress').select('*').eq('user_id', uid).single()
@@ -154,7 +176,8 @@ export async function getBountyBoard(): Promise<BountyBoard> {
   // A new day, or a captain who has never had a board.
   if (!row || row.date !== today) {
     const { data: profile } = await admin.from('profiles').select('*').eq('id', uid).single()
-    const rolled = rollBounties(uid, today)
+    const ranGauntlet = Number((profile as Record<string, unknown> | null)?.gauntlet_runs_completed ?? 0) > 0
+    const rolled = rollBounties(uid, today, rung.slots, cleared, ranGauntlet)
     const assignedAt = new Date().toISOString()
     await admin.from('bounty_progress').upsert({
       user_id: uid,
@@ -174,8 +197,9 @@ export async function getBountyBoard(): Promise<BountyBoard> {
       })),
       gems: Number((profile as { gems?: number } | null)?.gems ?? 0),
       rerollUsed: false,
-      remaining: BOUNTY_DAILY_MAX,
+      remaining: rolled.reduce((n, b) => n + bountyGems(b), 0),
       dailyMax: BOUNTY_DAILY_MAX,
+      ...facts,
     }
   }
 
@@ -202,6 +226,7 @@ export async function getBountyBoard(): Promise<BountyBoard> {
     rerollUsed: row.reroll_used === true,
     remaining: bounties.filter(b => !b.claimed).reduce((n, b) => n + b.gems, 0),
     dailyMax: BOUNTY_DAILY_MAX,
+    ...facts,
   }
 }
 
@@ -275,16 +300,21 @@ export async function rerollBounty(bountyId: string): Promise<RerollResult> {
   const old = BOUNTY_BY_ID.get(bountyId)
   if (!old) return { error: 'Unknown bounty' }
 
-  // Same tier, and never one already on the board.
+  // Same tier, never one already on the board, and never one this captain
+  // cannot reach. A swap that hands over an impossible order is worse than the
+  // order it replaced, since the swap is spent.
+  const { data: profile } = await admin.from('profiles').select('*').eq('id', user.id).single()
+  const cleared = await clearedRaids(admin, user.id)
+  const ranGauntlet = Number((profile as Record<string, unknown> | null)?.gauntlet_runs_completed ?? 0) > 0
   const pool = ALL_BOUNTIES.filter(b =>
-    b.tier === old.tier && b.id !== bountyId && !ids.includes(b.id))
+    b.tier === old.tier && b.id !== bountyId && !ids.includes(b.id)
+    && canOffer(b, cleared, ranGauntlet))
   if (pool.length === 0) return { error: 'Nothing else to offer' }
   const replacement = pool[Math.floor(Math.random() * pool.length)]
   ids[i] = replacement.id
 
   // A counter bounty needs its own baseline taken NOW, or the swap would hand
   // over a bounty already part-finished by this morning's play.
-  const { data: profile } = await admin.from('profiles').select('*').eq('id', user.id).single()
   const baselines = { ...((row.baselines as Record<string, number>) ?? {}) }
   delete baselines[bountyId]
   if (replacement.meter.kind === 'counter') {

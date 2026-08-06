@@ -13,7 +13,7 @@ import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import ShipHeroSection from './ShipHeroSection'
-import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared, cachedFinaleCleared } from './hubData'
+import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared, cachedFinaleCleared, cachedBountiesOpen } from './hubData'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
 import { pickShowcaseBoss } from '@/lib/raidMap'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
@@ -150,9 +150,9 @@ async function ExpeditionHub() {
     cachedVoyageHistory(),
   ])
 
-  // Bounties replaced PvP in that hub slot. They post once the campaign is
-  // done, off the same cached clears query the ship reveals already use.
-  const bountiesOpen = await cachedFinaleCleared()
+  // Bounties replaced PvP in that hub slot. The board opens at the end of
+  // Chapter I and grows a rung with every chapter after it.
+  const bountiesOpen = await cachedBountiesOpen()
 
   const shipTier = profile?.ship_tier ?? 0
   // Fold the Ch4 augments into the displayed hull caps: Expanded Quarters
