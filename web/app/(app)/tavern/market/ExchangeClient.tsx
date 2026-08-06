@@ -59,6 +59,101 @@ function Spark({ points, color, w = 62, h = 20 }: { points: number[]; color: str
   )
 }
 
+/** What the book was worth each of the last 24 hours.
+ *
+ *  Nothing stores this. Every position already carries its instrument's price
+ *  history, and a contract's value is a pure function of (price, hours left),
+ *  so the line can be rebuilt from what is already on screen: walk back hour by
+ *  hour, price each contract as it stood then, and add them up.
+ *
+ *  A position only counts from the hour it was opened, so the line steps up
+ *  when you back something rather than pretending the money was always at
+ *  risk. */
+function portfolioSeries(open: BoardPosition[], cycle: number): number[] {
+  if (open.length === 0) return []
+  const depth = Math.min(24, Math.max(...open.map(p => p.history.length)) + 1)
+  const out: number[] = []
+  for (let k = depth - 1; k >= 0; k--) {
+    const cycleThen = cycle - k
+    let total = 0
+    for (const p of open) {
+      if (cycleThen < p.openCycle) continue
+      // history holds the prices BEFORE the current one, oldest first, so k
+      // hours back is that many from the end. k === 0 is the live price.
+      const priceThen = k === 0
+        ? p.livePrice
+        : p.history[p.history.length - k] ?? p.entryPrice
+      const move = ((priceThen - p.entryPrice) / p.entryPrice) * 100
+      const yourWay = p.direction === 'rise' ? move : -move
+      total += liveValue(p.stake, p.leverage, yourWay, Math.max(0, p.expiryCycle - cycleThen), p.term)
+    }
+    out.push(total)
+  }
+  // Drop the hours before the first contract was opened. They are honestly
+  // zero, but a line that starts at nothing and jumps is a chart of when you
+  // pressed the button, not of how the book has done since.
+  const first = out.findIndex(v => v > 0)
+  return first <= 0 ? out : out.slice(first)
+}
+
+/** The Exchange's answer to the Hold's market ticker: what you are holding,
+ *  what it is worth, and which way it has been going. */
+function PortfolioHero({ open, cycle }: { open: BoardPosition[]; cycle: number }) {
+  const staked = open.reduce((n, p) => n + p.stake, 0)
+  const series = portfolioSeries(open, cycle)
+  const value = series.length ? series[series.length - 1] : 0
+  const pl = value - staked
+  const plPct = staked > 0 ? (pl / staked) * 100 : 0
+  const soonest = open.length ? Math.min(...open.map(p => Math.max(0, p.expiryCycle - cycle))) : 0
+
+  if (open.length === 0) {
+    return (
+      <div style={{ padding: '0.9rem 1rem', borderRadius: 13, background: 'rgba(13,17,24,0.92)', border: '1px solid rgba(255,255,255,0.09)', marginBottom: '1rem' }}>
+        <p className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#c8d2e0' }}>Nothing open</p>
+        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#7c8696', marginTop: 2, lineHeight: 1.45 }}>
+          Back a fund or a fish one way or the other, and it settles itself whether you are here or not.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: '0.9rem 1rem 0.8rem', borderRadius: 13, background: 'linear-gradient(180deg, rgba(14,19,29,0.96) 0%, rgba(9,12,18,0.97) 100%)', border: `1px solid ${pl >= 0 ? 'rgba(74,222,128,0.28)' : 'rgba(248,113,113,0.26)'}`, marginBottom: '1rem' }}>
+      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#7c8696' }}>Book value</p>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
+        <span className="font-cinzel font-800" style={{ fontSize: '1.95rem', lineHeight: 1.1, color: '#f0f4fa', ...TNUM }}>{value.toLocaleString()} ⟡</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.88rem', color: pl >= 0 ? UP : DOWN, ...TNUM }}>
+          {pl >= 0 ? '+' : ''}{pl.toLocaleString()} ({fmtPct(plPct)})
+        </span>
+      </div>
+
+      {series.length > 1 && (
+        <div style={{ marginTop: 8 }}>
+          <BigSpark points={series} entry={staked} color={pl >= 0 ? UP : DOWN} />
+          <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 3 }}>
+            dashed line is what you staked
+          </p>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 7, paddingTop: 7, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <HeroBit label="Staked" value={`${staked.toLocaleString()} ⟡`} />
+        <HeroBit label="Contracts" value={`${open.length}`} />
+        <HeroBit label="Next settles" value={soonest <= 0 ? 'moments' : `${soonest}h`} />
+      </div>
+    </div>
+  )
+}
+
+function HeroBit({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.58rem', color: '#6a7482' }}>{label}</p>
+      <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#dbe3ee', ...TNUM }}>{value}</p>
+    </div>
+  )
+}
+
 export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: number) => void }) {
   const [board, setBoard] = useState<ExchangeBoard | null>(null)
   const [err, setErr] = useState('')
@@ -109,6 +204,10 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
 
   return (
     <>
+      {/* The Hold side opens with the market's mood; this side opens with
+          yours. Same job: say where things stand before asking what to do. */}
+      <PortfolioHero open={openPos} cycle={board.cycle} />
+
       {/* ── Sub-tabs ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
         {([
@@ -422,8 +521,9 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
   )
 }
 
-/** The instrument's line with your entry ruled across it, so where you got in
- *  is a place on the chart rather than a number to hold in your head. */
+/** A line with a reference ruled across it: your entry price on a position
+ *  sheet, or what you staked on the portfolio hero. Either way the dashed line
+ *  is break-even, so being above it is the whole story at a glance. */
 function BigSpark({ points, entry, color }: { points: number[]; entry: number; color: string }) {
   const W = 100, H = 58
   const all = [...points, entry]
