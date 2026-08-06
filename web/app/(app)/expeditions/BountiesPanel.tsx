@@ -51,6 +51,65 @@ const GEM = '◆'
 const GEM_COLOR = '#c9a0f5'
 const TNUM = { fontVariantNumeric: 'tabular-nums' as const }
 
+/** The title row, and the only header there is.
+ *
+ *  The gem total had a bar of its own under this, which spent a whole strip of
+ *  a small modal on two numbers and a line naming the rung. It reads as a chip
+ *  beside the title now: what you have taken out of what is posted. */
+function BoardHeader({ title, claimed, total, burst, onClose }: {
+  title: string
+  claimed?: number
+  total?: number
+  burst: number
+  onClose: () => void
+}) {
+  const showChip = typeof claimed === 'number' && typeof total === 'number' && total > 0
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 0.35rem 0.6rem 0.55rem' }}>
+      <p className="font-pirata" style={{ fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f0dcae', flexShrink: 0 }}>
+        {title}
+      </p>
+      {showChip && (
+        <span style={{
+          position: 'relative', overflow: 'hidden',
+          display: 'inline-flex', alignItems: 'baseline', gap: 4,
+          padding: '0.2rem 0.5rem', borderRadius: 999,
+          background: 'rgba(201,160,245,0.12)', border: '1px solid rgba(201,160,245,0.3)',
+        }}>
+          <span className="font-karla font-800" style={{ fontSize: '0.8rem', color: '#f0e6fb', ...TNUM }}>
+            {claimed}<span style={{ color: '#9d8fb0' }}>/{total}</span>
+          </span>
+          <span className="font-karla font-800" style={{ fontSize: '0.72rem', color: GEM_COLOR }}>{GEM}</span>
+          {/* The flare rides the chip now that the bar it used to cross is gone. */}
+          <AnimatePresence>
+            {burst > 0 && (
+              <motion.span
+                key={burst}
+                initial={{ x: '-140%', opacity: 0.9 }} animate={{ x: '170%', opacity: 0 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+                aria-hidden
+                style={{
+                  position: 'absolute', top: 0, bottom: 0, left: 0, width: '60%',
+                  background: `linear-gradient(90deg, transparent, ${GEM_COLOR}55, transparent)`,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+          </AnimatePresence>
+        </span>
+      )}
+      <button type="button" onClick={onClose} aria-label="Close"
+        style={{
+          marginLeft: 'auto', flexShrink: 0, width: 30, height: 30, borderRadius: '50%', padding: 0,
+          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+          color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+      </button>
+    </div>
+  )
+}
+
 function SwapIcon({ color }: { color: string }) {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -171,7 +230,11 @@ function BountyCard({ b, rerollUsed, busy, onClaim, onSwap }: {
 }
 
 
-export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void }) {
+export default function BountiesPanel({ onGems, onClose }: {
+  onGems?: (n: number) => void
+  /** The panel owns the title row now, so it owns the close button with it. */
+  onClose: () => void
+}) {
   const [board, setBoard] = useState<BountyBoard | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
@@ -188,16 +251,21 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
 
   if (!board) {
     return (
-      <p className="font-karla font-600 uppercase tracking-[0.16em]"
-        style={{ fontSize: '0.66rem', color: '#8d7f66', padding: '2.5rem 0', textAlign: 'center' }}>
-        Reading the board…
-      </p>
+      <>
+        <BoardHeader title="Bounties" burst={0} onClose={onClose} />
+        <p className="font-karla font-600 uppercase tracking-[0.16em]"
+          style={{ fontSize: '0.66rem', color: '#8d7f66', padding: '2.5rem 0', textAlign: 'center' }}>
+          Reading the board…
+        </p>
+      </>
     )
   }
 
   if (!board.unlocked) {
     return (
-      <div style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
+      <>
+      <BoardHeader title="Bounties" burst={0} onClose={onClose} />
+      <div style={{ textAlign: 'center', padding: '1.5rem 1.5rem 2.5rem' }}>
         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c9b68a', marginBottom: 8 }}>
           The board is empty
         </p>
@@ -207,6 +275,7 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
           every morning after that.
         </p>
       </div>
+      </>
     )
   }
 
@@ -235,59 +304,16 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
     })
   }
 
-  const allDone = board.bounties.length > 0 && board.bounties.every(b => b.claimed)
 
   return (
     <div style={{ padding: '0 0.15rem 0.3rem' }}>
-      {/* WHAT IS STILL ON THE TABLE, and which rung posted it. */}
-      <div style={{
-        position: 'relative', overflow: 'hidden',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-        padding: '0.7rem 0.85rem', borderRadius: 13, marginBottom: 8,
-        background: 'linear-gradient(180deg, rgba(38,27,16,0.94) 0%, rgba(20,14,9,0.96) 100%)',
-        border: '1px solid rgba(120,88,52,0.5)', borderTop: '1px solid rgba(190,146,92,0.5)',
-      }}>
-        {/* The number alone. It sits in a modal titled Bounties with a gem
-            glyph on it, so a line of label above it was telling you what you
-            were already looking at. */}
-        <p className="font-cinzel font-800" style={{
-          minWidth: 0, fontSize: '1.65rem', lineHeight: 1.05,
-          color: allDone ? '#8d7f66' : '#f0dcae', ...TNUM,
-        }}>
-          {board.remaining} <span style={{ color: allDone ? '#8d7f66' : GEM_COLOR }}>{GEM}</span>
-        </p>
-        {board.rung && (
-          <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 0 }}>
-            <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#8d7f66' }}>
-              Chapter {board.rung.chapter} rung
-            </p>
-            {board.next && (
-              <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#c4ab80', marginTop: 1 }}>
-                Beat {board.next.boss} → {board.next.gems} {GEM}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* A flare across the header when an order pays out, keyed on the claim
-            count so it replays every time. Transform and opacity only. */}
-        <AnimatePresence>
-          {burst > 0 && (
-            <motion.span
-              key={burst}
-              initial={{ x: '-140%', opacity: 0.9 }}
-              animate={{ x: '160%', opacity: 0 }}
-              transition={{ duration: 0.75, ease: 'easeOut' }}
-              aria-hidden
-              style={{
-                position: 'absolute', top: 0, bottom: 0, left: 0, width: '55%',
-                background: `linear-gradient(90deg, transparent, ${GEM_COLOR}33, transparent)`,
-                pointerEvents: 'none',
-              }}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+      <BoardHeader
+        title="Bounties"
+        claimed={board.rungMax - board.remaining}
+        total={board.rungMax}
+        burst={burst}
+        onClose={onClose}
+      />
 
       {/* Full width and short. Two columns gave each notice about 190px to
           carry a tier, a prize, a title, a description, a bar and two controls,
@@ -300,10 +326,18 @@ export default function BountiesPanel({ onGems }: { onGems?: (n: number) => void
         ))}
       </div>
 
-      <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#8d7f66', marginTop: 10, textAlign: 'center', lineHeight: 1.45 }}>
+      <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#8d7f66', marginTop: 10, textAlign: 'center', lineHeight: 1.5 }}>
         {board.rerollUsed
           ? 'New orders posted every morning.'
           : 'One swap a day, for an order you cannot take. New orders every morning.'}
+        {board.next && (
+          <>
+            <br />
+            <span style={{ color: '#c4ab80' }}>
+              Beat {board.next.boss} to post another, worth {board.next.gems} {GEM} a day.
+            </span>
+          </>
+        )}
       </p>
 
       <AnimatePresence>

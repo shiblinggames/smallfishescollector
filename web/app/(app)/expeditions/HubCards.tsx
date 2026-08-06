@@ -379,14 +379,9 @@ export default function HubCards({
             boxShadow: '0 20px 60px rgba(0,0,0,0.75)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.7rem 0.5rem' }}>
-            <p className="font-pirata" style={{ fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f0dcae' }}>Bounties</p>
-            <button type="button" onClick={() => setModal(null)} aria-label="Close"
-              style={{ width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-            </button>
-          </div>
-          {modal === 'bounties' && <BountiesPanel />}
+          {/* BountiesPanel owns its own title row, so the gem count can sit
+              beside the title instead of taking a bar of its own. */}
+          {modal === 'bounties' && <BountiesPanel onClose={() => setModal(null)} />}
         </motion.div>
       </PopupShell>
 
