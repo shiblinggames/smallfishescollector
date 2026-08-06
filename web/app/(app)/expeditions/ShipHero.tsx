@@ -1776,14 +1776,16 @@ export default function ShipHero({
               {(loadoutTab === 'ship' || loadoutMode !== null) && (() => {
                 return (
                   <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                    {/* Was 78% / 230px against art that only filled 40-65% of
-                        its own canvas, so a rowboat drew about 92px wide on a
-                        phone. The art is trimmed now, and the box is the size
-                        the ship deserves on the screen that is about the ship. */}
+                    {/* The old 78% / 230px was measured against art that only
+                        filled 40-65% of its own canvas, so a rowboat drew about
+                        92px wide. Trimming the art meant the same numbers would
+                        have drawn far bigger, and 96% / 360px on top of that
+                        overshot into near full-bleed. These are set against the
+                        TRIMMED art: what you see is what the number says. */}
                     <div style={{
                       position: 'relative', display: 'inline-block',
-                      width: `${96 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1)}%`,
-                      maxWidth: 360 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1),
+                      width: `${80 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1)}%`,
+                      maxWidth: 258 * (HERO_TIER_SCALE[shipTierForSlots] ?? 1),
                     }}>
                       {/* A LIGHT BEHIND THE HULL. The backdrop is a lamplit berth
                           and the ship models are dark timber, so the ship was a

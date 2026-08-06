@@ -47,21 +47,21 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
                     initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.26, delay: Math.min(i * 0.03, 0.3) }}
                     style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.35rem 0.15rem 0.5rem', minWidth: 0, maxWidth: '100%' }}>
-                    <div style={{ position: 'relative', width: '100%', height: 126, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ position: 'relative', width: '100%', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {has && (
                         <span aria-hidden style={{
                           position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)',
-                          width: 140, height: 140, borderRadius: '50%', pointerEvents: 'none',
+                          width: 122, height: 122, borderRadius: '50%', pointerEvents: 'none',
                           background: `radial-gradient(circle, ${p.accentColor}1c 0%, transparent 66%)`,
                         }} />
                       )}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={petArt(p.restImageUrl)} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ position: 'relative', maxWidth: 132, maxHeight: 124, objectFit: 'contain', filter: has ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.55))' : 'brightness(0) opacity(0.26)' }} />
+                        style={{ position: 'relative', maxWidth: 112, maxHeight: 106, objectFit: 'contain', filter: has ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.55))' : 'brightness(0) opacity(0.26)' }} />
                       {has && (
                         <span aria-hidden style={{
                           position: 'absolute', left: '50%', bottom: 2, transform: 'translateX(-50%)',
-                          width: 66, height: 8, borderRadius: '50%', pointerEvents: 'none',
+                          width: 58, height: 7, borderRadius: '50%', pointerEvents: 'none',
                           background: 'radial-gradient(ellipse, rgba(0,0,0,0.45) 0%, transparent 72%)',
                         }} />
                       )}
