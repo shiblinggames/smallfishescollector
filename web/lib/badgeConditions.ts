@@ -513,13 +513,13 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     worthless:            j.exchange.worthless >= 1,
     // PROFIT, not payout. 250,000 back on a 250,000 stake is your own money.
     big_score:            j.exchange.bestProfit >= 200_000,
-    // Volume alone is buyable: the smallest contract is 500, so a captain
-    // sitting on millions could settle 100 of them for pocket change and call
-    // it a master badge. The house edge is what makes this one honest instead.
-    // Every contract is priced to return 0.92 per 1 staked, so grinding volume
-    // drags you DOWN: being up after a hundred of them means the reads were
-    // real, and no amount of money can buy that.
-    market_maker:         j.exchange.settled >= 100 && j.exchange.returned > j.exchange.staked,
+    // WINS, not contracts. Counting settlements made this a rich badge rather
+    // than a hard one: the smallest contract is 500, so a captain sitting on
+    // millions could settle a hundred for pocket change. A win has to clear the
+    // break-even move, which lands on roughly a third of contracts, so a
+    // hundred of them is nearer three hundred opened and every one of those had
+    // real doubloons on it.
+    market_maker:         j.exchange.won >= 100,
 
     // ── Bounties ──
     first_bounty:         Number(p.bounties_claimed ?? 0) >= 1,

@@ -412,9 +412,7 @@ export default async function BadgesPage() {
         badgeGoal('cut_losses', 'Out Before the Bell', 'Sell a contract early rather than ride it out', ex.closedEarly, 1, '/tavern/market'),
         badgeGoal('worthless', 'Not a Doubloon', 'Watch a contract expire worthless', ex.worthless, 1, '/tavern/market'),
         badgeGoal('big_score', 'The Whole Berth', 'Clear 200,000 doubloons profit on a single contract', ex.bestProfit, 200_000, '/tavern/market'),
-        // The bar tracks the count, since "are you up" is a yes or no rather
-        // than a distance. The description carries the other half.
-        badgeGoal('market_maker', 'Market Maker', 'Settle 100 contracts and still be up on the Exchange', ex.settled, 100, '/tavern/market'),
+        badgeGoal('market_maker', 'Market Maker', 'Turn a profit on 100 contracts', ex.won, 100, '/tavern/market'),
 
         // ── Bounties ──
         badgeGoal('first_bounty', 'Took the Job', 'Claim your first bounty', bountiesClaimed, 1, '/expeditions'),
