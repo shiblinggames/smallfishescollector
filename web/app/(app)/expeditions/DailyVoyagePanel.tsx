@@ -13,13 +13,13 @@ import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES, effectiveCrewLossChance, type VoyageRoute } from '@/lib/voyageRoutes'
-import { expectedVoyageLoot, outcomeChances, ROUTE_PAYOUTS } from '@/lib/voyageRoll'
+import { expectedVoyageLoot, outcomeChances, fortuneScale } from '@/lib/voyageRoll'
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, getTrawlingCrewIds, type DailyVoyage } from './voyageActions'
 import { getLevelFromXP, ROUTE_BASE_XP, VOYAGE_XP_MULT } from '@/lib/expeditionLevel'
-import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
+import { BASE_VOYAGE_MS, ROUTE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import { IconMap, IconSwords, IconBolt, IconWave, IconGull, IconHourglass, IconCrate, IconSkull, IconLock, IconWarning, IconCheck } from '@/components/GameIcons'
@@ -683,6 +683,7 @@ export default function DailyVoyagePanel({
               const rawDodge = resolvedDeployed?.totals.dodge ?? 0
               const estMs = Math.round(computeVoyageDurationMs(expLevel, rawDodge, selectedRoute ?? undefined) * voyageSpeedMult)
               const riskPct = est?.crewRiskPct ?? 0
+              const crewRiskPct = riskPct
               const riskColor = riskPct >= 15 ? '#f87171' : riskPct >= 8 ? '#f0c040' : '#6a8a6a'
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem', marginBottom: '0.85rem' }}>
@@ -708,41 +709,72 @@ export default function DailyVoyagePanel({
                     </div>
                   )}
 
-                  {/* WHAT THE CREW BUYS.
-                      Power decides the outcome and Fortune scales the haul, but
-                      neither was on this screen, so swapping a hand changed the
-                      voyage with no visible effect and there was no way to learn
-                      that Power did anything at all. These two move as the party
-                      changes, which is what turns picking a crew from filling in
-                      a form into a decision. */}
-                  {est && (
-                    <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+                  {/* WHAT EACH STAT ACTUALLY DOES.
+                      Three cause-and-effect lines rather than three bare
+                      numbers. A player can read "Power 60 -> 63% triumph" and
+                      learn the rule; they cannot learn anything from a lone
+                      "63%" sitting under the word Triumph, and they certainly
+                      cannot learn it from a haul multiplier that never names
+                      the stat driving it.
+
+                      Every figure here is live, so swapping a hand moves the
+                      right line and the connection teaches itself. */}
+                  {est && stats && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {([
-                        { k: 'Triumph', v: `${est.triumphPct}%`, sub: 'Power', tint: '#7fd49a',
-                          hint: 'Pays 1.35x. More Power, more often.' },
-                        { k: 'Setback', v: `${est.setbackPct}%`, sub: 'Power', tint: '#e0888a',
-                          hint: 'Pays 0.6x.' },
-                        { k: 'Haul', v: `×${(est.lootMax / Math.max(1, ROUTE_PAYOUTS[selectedRoute ?? 'open'].doubloons * 1.35)).toFixed(2)}`,
-                          sub: 'Fortune', tint: '#c8aa6a',
-                          hint: 'Fortune scales everything you bring home.' },
-                      ] as const).map(c => (
-                        <div key={c.k} title={c.hint} style={{
-                          flex: 1, minWidth: 0, textAlign: 'center',
-                          padding: '0.45rem 0.3rem', borderRadius: 9,
-                          background: 'rgba(255,255,255,0.035)',
-                          border: '1px solid rgba(255,255,255,0.07)',
+                        {
+                          stat: 'Power', value: stats.power, tint: '#e8a0a0',
+                          effect: `${est.triumphPct}% triumph`,
+                          detail: `${est.setbackPct}% setback`,
+                          why: 'Decides how the voyage goes. A triumph pays 1.35x, a setback 0.6x.',
+                        },
+                        {
+                          stat: 'Fortune', value: stats.fortune, tint: '#f0c040',
+                          effect: `haul ×${fortuneScale(stats.fortune).toFixed(2)}`,
+                          detail: crewRiskPct > 0 ? `${crewRiskPct}% crew risk` : 'no crew risk',
+                          why: 'Scales everything you bring home, and buys down the chance of losing a hand.',
+                        },
+                        {
+                          stat: 'Nav', value: rawDodge, tint: '#7dd3fc',
+                          effect: formatDuration(estMs),
+                          detail: `from ${formatDuration(ROUTE_VOYAGE_MS[selectedRoute ?? 'open'])}`,
+                          why: 'Shortens the voyage. Caps at 10% off, and your Nav level takes another 10%.',
+                        },
+                      ] as const).map(row => (
+                        <div key={row.stat} title={row.why} style={{
+                          display: 'flex', alignItems: 'baseline', gap: 8,
+                          padding: '0.32rem 0.5rem', borderRadius: 8,
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.06)',
                         }}>
-                          <p className="font-cinzel font-700 tabular-nums" style={{ fontSize: '0.95rem', color: c.tint, lineHeight: 1 }}>{c.v}</p>
-                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.42)', marginTop: 3 }}>
-                            {c.k}
-                          </p>
-                          <p className="font-karla" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.26)' }}>
-                            {c.sub}
-                          </p>
+                          <span className="font-karla font-800 uppercase" style={{
+                            fontSize: '0.52rem', letterSpacing: '0.14em',
+                            color: 'rgba(255,255,255,0.4)', width: 46, flexShrink: 0,
+                          }}>
+                            {row.stat}
+                          </span>
+                          <span className="font-cinzel font-700 tabular-nums" style={{
+                            fontSize: '0.85rem', color: row.tint, width: 34, flexShrink: 0,
+                          }}>
+                            {row.value}
+                          </span>
+                          <span aria-hidden style={{ color: 'rgba(255,255,255,0.22)', fontSize: '0.7rem', flexShrink: 0 }}>→</span>
+                          <span className="font-karla font-700" style={{
+                            fontSize: '0.76rem', color: '#e8e4de', whiteSpace: 'nowrap',
+                          }}>
+                            {row.effect}
+                          </span>
+                          <span className="font-karla" style={{
+                            fontSize: '0.62rem', color: 'rgba(255,255,255,0.34)',
+                            marginLeft: 'auto', whiteSpace: 'nowrap',
+                          }}>
+                            {row.detail}
+                          </span>
                         </div>
                       ))}
                     </div>
                   )}
+
                   {/* A slotted crew that's away on a trawl can't sail —
                       say so explicitly so Set Sail never feels broken. */}
                   {trawlingAssigned.length > 0 && (
