@@ -210,6 +210,19 @@ export type BoardPosition = {
   /** Fish only, for the sheet's subtitle. */
   habitat: string | null
 }
+/** What a captain has ever put in and ever taken out, across every contract
+ *  that has finished. The one question a single shared purse cannot answer:
+ *  doubloons pour in from fishing, raids and gauntlets all day, so "am I any
+ *  good at this?" is unanswerable from the balance alone. */
+export type ExchangeLifetime = {
+  staked: number
+  returned: number
+  contracts: number
+  /** Came back worth MORE than it cost. Returning something but less than the
+   *  stake is still a loss, and counting it as a win would flatter the record. */
+  paid: number
+}
+
 export type ExchangeBoard = {
   open: boolean
   gateReason: string | null
@@ -225,6 +238,7 @@ export type ExchangeBoard = {
   fish: BoardFish[]
   positions: BoardPosition[]
   unseen: number
+  lifetime: ExchangeLifetime
 }
 
 export async function getExchangeBoard(): Promise<ExchangeBoard | { error: string }> {
@@ -234,7 +248,7 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
   if (!uid) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const [profileRes, stateRes, fundsRes, fishRes, posRes] = await Promise.all([
+  const [profileRes, stateRes, fundsRes, fishRes, posRes, lifeRes] = await Promise.all([
     admin.from('profiles').select('doubloons, fishing_xp, has_seen_exchange_intro').eq('id', uid).single(),
     admin.from('market_state').select('exchange_cycle').eq('id', 1).single(),
     admin.from('exchange_funds').select('fund_id, price, prev_price, members, history'),
@@ -245,10 +259,15 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
       .eq('user_id', uid)
       .order('id', { ascending: false })
       .limit(60),
+    // Aggregated in the database, NOT summed from the 60 rows above, which
+    // would silently start under-reporting at the 61st contract.
+    admin.rpc('exchange_lifetime', { uid }),
   ])
 
   const gate = checkGate(profileRes.data)
   const cycle = Number(stateRes.data?.exchange_cycle ?? 0)
+  // A "returns table" RPC hands back an array of one row.
+  const life = (lifeRes.data as ExchangeLifetime[] | null)?.[0]
 
   const funds: BoardFund[] = (fundsRes.data ?? []).map(f => {
     const def = FUND_BY_ID.get(f.fund_id as string)
@@ -311,6 +330,12 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
     doubloons: Number(profileRes.data?.doubloons ?? 0),
     funds, fish, positions,
     unseen: positions.filter(p => p.status !== 'open' && !p.seen).length,
+    lifetime: {
+      staked: Number(life?.staked ?? 0),
+      returned: Number(life?.returned ?? 0),
+      contracts: Number(life?.contracts ?? 0),
+      paid: Number(life?.paid ?? 0),
+    },
   }
 }
 

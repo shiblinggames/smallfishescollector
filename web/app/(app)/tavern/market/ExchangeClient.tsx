@@ -24,7 +24,7 @@ import {
   markExchangeIntroSeen,
 } from './exchangeActions'
 import ExchangeIntro from './ExchangeIntro'
-import type { ExchangeBoard, BoardFund, BoardFish, BoardPosition } from './exchangeActions'
+import type { ExchangeBoard, BoardFund, BoardFish, BoardPosition, ExchangeLifetime } from './exchangeActions'
 
 const UP = '#4ade80'
 const DOWN = '#f87171'
@@ -101,7 +101,48 @@ function portfolioSeries(open: BoardPosition[], cycle: number): number[] {
 
 /** The Exchange's answer to the Hold's market ticker: what you are holding,
  *  what it is worth, and which way it has been going. */
-function PortfolioHero({ open, cycle }: { open: BoardPosition[]; cycle: number }) {
+/** The lifetime ledger.
+ *
+ *  The Exchange stakes straight from the main purse rather than from a
+ *  brokerage balance you top up, because contracts settle on a cron hours after
+ *  you close the app: a second purse would mean every settlement lands
+ *  somewhere you have to remember to go and collect. The cost of one purse is
+ *  that the balance can no longer tell you how you are DOING, since doubloons
+ *  arrive from fishing, raids and gauntlets all day. This is that answer, kept
+ *  without the wallet.
+ *
+ *  It will read negative for most captains over time, because every contract is
+ *  priced at a house edge. That is the honest number and it is the one worth
+ *  showing. */
+function LifetimeLedger({ life }: { life: ExchangeLifetime }) {
+  if (life.contracts === 0) return null
+  const net = life.returned - life.staked
+  const pct = life.staked > 0 ? (net / life.staked) * 100 : 0
+  const good = net >= 0
+
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+        <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a7482' }}>All time</p>
+        <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#6a7482', ...TNUM }}>
+          {life.paid} of {life.contracts} paid
+        </p>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+        <HeroBit label="Staked" value={`${life.staked.toLocaleString()} ⟡`} />
+        <HeroBit label="Returned" value={`${life.returned.toLocaleString()} ⟡`} />
+        <div style={{ minWidth: 0, textAlign: 'right' }}>
+          <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.58rem', color: '#6a7482' }}>Net</p>
+          <p className="font-karla font-800" style={{ fontSize: '0.8rem', color: good ? UP : DOWN, ...TNUM }}>
+            {good ? '+' : ''}{net.toLocaleString()} ({fmtPct(pct)})
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PortfolioHero({ open, cycle, life }: { open: BoardPosition[]; cycle: number; life: ExchangeLifetime }) {
   const staked = open.reduce((n, p) => n + p.stake, 0)
   const series = portfolioSeries(open, cycle)
   const value = series.length ? series[series.length - 1] : 0
@@ -109,6 +150,8 @@ function PortfolioHero({ open, cycle }: { open: BoardPosition[]; cycle: number }
   const plPct = staked > 0 ? (pl / staked) * 100 : 0
   const soonest = open.length ? Math.min(...open.map(p => Math.max(0, p.expiryCycle - cycle))) : 0
 
+  // Nothing open is not the same as nothing to show: a captain between
+  // contracts still has a record, and it is the reason to open another.
   if (open.length === 0) {
     return (
       <div style={{ padding: '0.9rem 1rem', borderRadius: 13, background: 'rgba(13,17,24,0.92)', border: '1px solid rgba(255,255,255,0.09)', marginBottom: '1rem' }}>
@@ -116,6 +159,7 @@ function PortfolioHero({ open, cycle }: { open: BoardPosition[]; cycle: number }
         <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#7c8696', marginTop: 2, lineHeight: 1.45 }}>
           Back a fund or a fish one way or the other, and it settles itself whether you are here or not.
         </p>
+        <LifetimeLedger life={life} />
       </div>
     )
   }
@@ -144,6 +188,8 @@ function PortfolioHero({ open, cycle }: { open: BoardPosition[]; cycle: number }
         <HeroBit label="Contracts" value={`${open.length}`} />
         <HeroBit label="Next settles" value={soonest <= 0 ? 'moments' : `${soonest}h`} />
       </div>
+
+      <LifetimeLedger life={life} />
     </div>
   )
 }
@@ -236,7 +282,7 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
 
       {/* The Hold side opens with the market's mood; this side opens with
           yours. Same job: say where things stand before asking what to do. */}
-      <PortfolioHero open={openPos} cycle={board.cycle} />
+      <PortfolioHero open={openPos} cycle={board.cycle} life={board.lifetime} />
 
       {/* ── Sub-tabs ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
