@@ -356,18 +356,23 @@ export default function HubCards({
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           style={{
             margin: 'auto', width: '100%', maxWidth: 440,
-            // A TIMBER BOARD, lit from above. Three gradients: a lantern at the
-            // top, plank seams down it, and dark oiled wood under both. No
-            // image, nothing animated, and it composites once.
+            // THE ACTUAL BOARD. A painted plate in the same gouache idiom as
+            // the voyage routes: salt-stained oak, an empty frame lit by one
+            // lantern, old nails and the torn corners of notices long gone.
+            // The middle is deliberately bare, because that is where ours go.
             //
-            // The panel was a flat dark rectangle with purple trim, which is
-            // the same rectangle every dashboard ships. The notices pinned to
-            // it are paper now, and paper needs something to be pinned TO.
-            background: `
-              radial-gradient(120% 62% at 50% -6%, rgba(255,208,140,0.13) 0%, transparent 62%),
-              repeating-linear-gradient(90deg, rgba(0,0,0,0.26) 0px, rgba(0,0,0,0.26) 2px, transparent 2px, transparent 92px),
-              linear-gradient(180deg, #291d13 0%, #150e09 100%)
-            `,
+            // A scrim over it, weighted to the FOOT. The lamp is at the top of
+            // the plate and the wood falls to near-black at the bottom, so the
+            // header reads against the lit half and the footnote against the
+            // dark, without flattening the painting in between.
+            //
+            // Solid colour under it so the panel is never translucent while the
+            // plate loads.
+            backgroundColor: '#150e09',
+            backgroundImage: 'linear-gradient(180deg, rgba(12,8,5,0.30) 0%, rgba(12,8,5,0.16) 34%, rgba(10,7,4,0.62) 100%), url(/bounty-board.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
+            backgroundRepeat: 'no-repeat',
             border: '1px solid rgba(120,88,52,0.55)',
             borderTop: '1px solid rgba(190,146,92,0.55)',
             borderRadius: 20, padding: '0.4rem 0.4rem 0.6rem',
