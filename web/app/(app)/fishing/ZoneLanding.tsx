@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_BG, ZONE_LABEL as HABITAT_LABEL, ZONE_COLOR as HABITAT_COLOR, ZONE_TAGLINE as HABITAT_TAGLINE, zoneCrateChance, zoneDiamondShare, zonePetPerCrate } from './zoneData'
+import { ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_BG, ZONE_LABEL as HABITAT_LABEL, ZONE_COLOR as HABITAT_COLOR, ZONE_TAGLINE as HABITAT_TAGLINE } from './zoneData'
 import { updateUsername } from '@/app/(app)/u/actions'
 import FisherPose from '@/components/FisherPose'
 import { PRESTIGE_MAX, goldenBoostPct, goldenBoostMult } from '@/lib/zoneRewards'
@@ -75,12 +75,30 @@ function PrestigeMark({ level }: { level: number }) {
   )
 }
 
-/* One label/value row in the expanded Details panel. */
-function DetailStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
+/* One number in the zone's info card, big enough to read at a glance.
+ *
+ *  This panel used to be nine label/value rows in a 6.4px-label grid: bite
+ *  wait, golden odds, doubloons an hour, XP an hour, average catch, top catch,
+ *  crate per cast, diamond share, pet per crate. That is a spreadsheet, and the
+ *  captain most likely to open it is the one who has fished least.
+ *
+ *  Four things now, each answering a question a new player actually has: is it
+ *  worth my time, does it level me, will I be waiting, and what is the rare
+ *  thing. Average catch and top catch were the same question as doubloons an
+ *  hour asked twice; the three crate percentages were three decimals about a
+ *  system most of the audience has not met yet. */
+function BigStat({ value, label, accent }: { value: string; label: string; accent?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-      <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.58)', whiteSpace: 'nowrap' }}>{label}</span>
-      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: accent ?? 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    <div style={{
+      padding: '0.6rem 0.7rem', borderRadius: 12, minWidth: 0,
+      background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.09)',
+    }}>
+      <p className="font-cinzel font-800" style={{
+        fontSize: '1.18rem', lineHeight: 1.05, color: accent ?? '#f4efe4',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        fontVariantNumeric: 'tabular-nums',
+      }}>{value}</p>
+      <p className="font-karla font-600" style={{ fontSize: '0.63rem', color: 'rgba(255,255,255,0.58)', marginTop: 2, lineHeight: 1.25 }}>{label}</p>
     </div>
   )
 }
@@ -247,8 +265,6 @@ export default function ZoneLanding({
               // Ancient Deep needs Fishing 75 AND Chapter 3 cleared (or grandfathered).
               const accessible = fishingLevel >= minLevel && (zone !== 'ancient_deep' || ancientDeepUnlocked)
               const color = HABITAT_COLOR[zone]
-              const col = zoneCollection[zone] ?? { caught: 0, total: 0 }
-              const colDone = col.total > 0 && col.caught >= col.total
               const prestige = prestigeLevels[zone] ?? 0
               const isCurrent = accessible && zone === currentZone
               const enter = () => { if (accessible) onSelect(zone) }
@@ -312,27 +328,24 @@ export default function ZoneLanding({
                       </div>
                     )}
 
-                    {/* Name, tagline and standing, bottom-left. The (i) moved
-                        to the top-left corner: reserving a column of the
-                        caption for it cost more than it was worth once the card
-                        got this narrow. */}
+                    {/* THE NAME AND THE LEVEL. Nothing else.
+                        
+                        This carried a collection count, a prestige mark, a
+                        golden-boost percentage and a tagline stacked under the
+                        name, on a card the width of half a phone. Four things
+                        competing meant the one you actually pick a zone by, its
+                        name, was the smallest text on it.
+                        
+                        All of that already lives behind the (i) in the corner,
+                        which is the whole reason that button exists. */}
                     <div style={{ position: 'absolute', left: 10, right: 10, bottom: 9, zIndex: 2, pointerEvents: 'none' }}>
-                      {accessible && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                          <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: colDone ? '#f0c040' : 'rgba(255,255,255,0.86)', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                            {colDone ? '✦ all charted' : `${col.caught}/${col.total} logged`}
-                          </span>
-                          {prestige > 0 && <PrestigeMark level={prestige} />}
-                          {(goldenBoosts[zone] ?? 0) > 0 && (
-                            <span className="font-karla font-800" style={{ fontSize: '0.52rem', color: '#f0c040', letterSpacing: '0.03em', textShadow: '0 0 6px rgba(240,192,64,0.5)' }}>
-                              ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}%
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <p className="font-cinzel font-800" style={{ fontSize: '1.02rem', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.55)', lineHeight: 1.05, textShadow: `0 2px 6px rgba(0,0,0,0.95), 0 0 14px ${color}66`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{HABITAT_LABEL[zone]}</p>
-                      <p className="font-karla font-400 italic" style={{ fontSize: '0.56rem', color: accessible ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.55)', marginTop: 2, textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1.3, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
-                        {accessible ? HABITAT_TAGLINE[zone] : (zone === 'ancient_deep' && fishingLevel >= minLevel ? 'Clear Chapter 3 to enter' : `Unlocks at Level ${minLevel}`)}
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.32rem', color: accessible ? '#fdf7e8' : 'rgba(253,247,232,0.55)', lineHeight: 1.05, textShadow: `0 2px 6px rgba(0,0,0,0.95), 0 0 14px ${color}66`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{HABITAT_LABEL[zone]}</p>
+                      <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: accessible ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.62)', marginTop: 3, textShadow: '0 1px 4px rgba(0,0,0,0.9)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {accessible
+                          ? `Level ${minLevel}+`
+                          : zone === 'ancient_deep' && fishingLevel >= minLevel
+                            ? 'Clear Chapter 3'
+                            : `Unlocks at Level ${minLevel}`}
                       </p>
                     </div>
 
@@ -387,9 +400,10 @@ export default function ZoneLanding({
             const perHr = 3600 / cycleSec
             const doubPerHr = Math.round((perHr * dStats.avgValue) / 100) * 100
             const xpPerHr = Math.round((perHr * dStats.avgXp) / 10) * 10
-            const ancientOnly = zone === 'ancient_deep'   // one chest type, and it is the best one
             const goldenOdds = Math.round(SHINY_ODDS / goldenBoostMult(goldenBoosts[zone] ?? 0))
-            const round1 = (v: number) => (v * 100).toFixed(1)
+            const dColl = zoneCollection[zone] ?? { caught: 0, total: 0 }
+            const dCollDone = dColl.total > 0 && dColl.caught >= dColl.total
+            const dPrestige = prestigeLevels[zone] ?? 0
             return (
               <>
                 <motion.div
@@ -409,7 +423,7 @@ export default function ZoneLanding({
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 13 }}>
                     <div>
-                      <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#fdf7e8', lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
+                      <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#fdf7e8', lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                         <WaveMarks n={dDifficulty} color={dColor} />
                         <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>{dDiffLabel}</span>
@@ -419,30 +433,46 @@ export default function ZoneLanding({
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                     </button>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 18, rowGap: 9 }}>
-                    <DetailStat label="Bite wait" value={`${Math.round(zMin / 1000)}–${Math.round(zMax / 1000)}s`} />
-                    <DetailStat label="Golden" value={`1 in ${goldenOdds.toLocaleString()}`} accent="#f0c040" />
-                    <DetailStat label="Doubloons / hr" value={`~${doubPerHr.toLocaleString()} ⟡`} accent="#f0c040" />
-                    <DetailStat label="XP / hr" value={`~${xpPerHr.toLocaleString()}`} accent="#7dd3fc" />
-                    <DetailStat label="Avg catch" value={`${dStats.avgValue.toLocaleString()} ⟡`} />
-                    <DetailStat label="Top catch" value={`${dStats.topValue.toLocaleString()} ⟡`} accent="#f59e0b" />
-                    <DetailStat label="Crate / cast" value={`~${(zoneCrateChance(zone) * 100).toFixed(0)}%`} />
-                    {/* The Ancient Deep has no diamond crates because it has
-                        no crates at all, only Ancient Chests. Naming the chest
-                        says more than a 0% would. */}
-                    <DetailStat
-                      label={ancientOnly ? 'Chest type' : 'Diamond crate'}
-                      value={ancientOnly ? 'Ancient' : `${Math.round(zoneDiamondShare(zone) * 100)}%`}
-                      accent={ancientOnly ? '#d8cfbb' : undefined}
-                    />
-                    <DetailStat
-                      label="Pet / crate"
-                      value={`${round1(zonePetPerCrate(zone))}%`}
-                      accent={ancientOnly ? '#d8cfbb' : undefined}
-                    />
+                  {/* What the water is like, in the zone's own voice. It used
+                      to sit on the card, where it competed with the name. */}
+                  <p className="font-karla font-400 italic" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.68)', lineHeight: 1.45, marginBottom: 13 }}>
+                    {HABITAT_TAGLINE[zone]}
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <BigStat value={`~${doubPerHr.toLocaleString()} ⟡`} label="an hour, fishing here" accent="#f0c040" />
+                    <BigStat value={`~${xpPerHr.toLocaleString()}`} label="fishing XP an hour" accent="#7dd3fc" />
+                    <BigStat value={`${Math.round((zMin + zMax) / 2000)}s`} label="between bites" />
+                    <BigStat value={`1 in ${goldenOdds.toLocaleString()}`} label="is a golden" accent="#f0c040" />
                   </div>
-                  <p className="font-karla" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.42)', fontStyle: 'italic', marginTop: 12, lineHeight: 1.4 }}>
-                    Rates estimated at base gear. Faster bites and better crates come with your rod, bait, and level.
+
+                  {/* YOUR standing here, which used to be crammed onto the card
+                      above the name. A bar reads faster than a fraction. */}
+                  <div style={{ marginTop: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 5 }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: dCollDone ? '#f0c040' : 'rgba(255,255,255,0.85)' }}>
+                        {dCollDone ? 'Every fish here logged' : `${dColl.caught} of ${dColl.total} fish logged`}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                        {dPrestige > 0 && <PrestigeMark level={dPrestige} />}
+                        {(goldenBoosts[zone] ?? 0) > 0 && (
+                          <span className="font-karla font-800" style={{ fontSize: '0.62rem', color: '#f0c040' }}>
+                            ✦ +{goldenBoostPct(goldenBoosts[zone] ?? 0)}% goldens
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.09)', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', borderRadius: 3,
+                        width: `${dColl.total > 0 ? Math.min(100, (dColl.caught / dColl.total) * 100) : 0}%`,
+                        background: dCollDone ? 'linear-gradient(90deg,#a07a2a,#f0c040)' : `linear-gradient(90deg,${dColor}88,${dColor})`,
+                      }} />
+                    </div>
+                  </div>
+
+                  <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', marginTop: 13, lineHeight: 1.45 }}>
+                    Rough numbers at starting gear. A better rod, better bait and a higher level all beat them.
                   </p>
                 </motion.div>
               </>
