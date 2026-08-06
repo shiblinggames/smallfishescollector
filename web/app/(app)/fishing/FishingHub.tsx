@@ -29,7 +29,7 @@ import type { RenownAlloc } from '@/lib/renown'
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
-  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, holdValue, marketMood, hasSeenHubTour,
+  currentZone, holdCount, fishHoldTier, baitCount, speciesCaught, speciesTotal, holdValue, marketMood, exchangeUnveil, hasSeenHubTour,
   characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onOpenZones,
 }: {
@@ -47,6 +47,9 @@ export default function FishingHub({
   /** The hold at today's prices, which is what the market's portfolio leads with. */
   holdValue: number
   marketMood: string
+  /** Fishing is capped and the Exchange has never been announced. The tile
+   *  carries the news, since the market is where it actually opens. */
+  exchangeUnveil: boolean
   hasSeenHubTour: boolean
   characterColor: string
   equippedHat: string | null
@@ -132,13 +135,19 @@ export default function FishingHub({
                 // A count told you nothing about whether the trip was worth
                 // making; this is the number the market's own portfolio leads
                 // with, and it moves with the mood named underneath it.
-                status={holdCount > 0 ? `${holdValue.toLocaleString()} ⟡ in the hold` : 'Hold is empty'}
-                statusColor={holdCount > 0 ? '#f0c040' : undefined}
-                sub={holdFull
-                  ? 'Hold is full, sell to keep fishing'
-                  : `${mood.label} · ${holdCount}/${holdCap} aboard`}
-                progress={holdPct}
-                dot={holdCount > 0 ? 'returned' : null}
+                // The Exchange opening is bigger news than any hold value, so
+                // it takes the line for as long as it is news.
+                status={exchangeUnveil
+                  ? 'The Exchange is open'
+                  : holdCount > 0 ? `${holdValue.toLocaleString()} ⟡ in the hold` : 'Hold is empty'}
+                statusColor={exchangeUnveil ? '#38bdf8' : holdCount > 0 ? '#f0c040' : undefined}
+                sub={exchangeUnveil
+                  ? 'Fishing 100 earned you the trading floor'
+                  : holdFull
+                    ? 'Hold is full, sell to keep fishing'
+                    : `${mood.label} · ${holdCount}/${holdCap} aboard`}
+                progress={exchangeUnveil ? undefined : holdPct}
+                dot={exchangeUnveil ? 'new' : holdCount > 0 ? 'returned' : null}
                 onClick={() => router.push('/tavern/market')}
               />
 

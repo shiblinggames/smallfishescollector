@@ -17,10 +17,13 @@ import PopupShell from '@/components/PopupShell'
 import {
   TERMS, TERM_LABEL, TERM_BLURB, type Term, type Direction,
   quoteFund, quoteSingle, liveValue, MIN_STAKE, MAX_STAKE,
+  EXCHANGE_FISHING_LEVEL,
 } from '@/lib/fishExchange'
 import {
   getExchangeBoard, openContract, closeContractEarly, markResultsSeen,
+  markExchangeIntroSeen,
 } from './exchangeActions'
+import ExchangeIntro from './ExchangeIntro'
 import type { ExchangeBoard, BoardFund, BoardFish, BoardPosition } from './exchangeActions'
 
 const UP = '#4ade80'
@@ -160,6 +163,9 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   const [tab, setTab] = useState<'funds' | 'fish' | 'positions'>('funds')
   const [ticket, setTicket] = useState<{ kind: 'fund'; f: BoardFund } | { kind: 'fish'; f: BoardFish } | null>(null)
   const [detail, setDetail] = useState<BoardPosition | null>(null)
+  // null = closed. Opens by itself the first time the board is ever open to
+  // them, and by request from the board's own "How it works" link after that.
+  const [intro, setIntro] = useState<{ celebrate: boolean } | null>(null)
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
@@ -167,6 +173,7 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
       if ('error' in res) setErr(res.error)
       else {
         setBoard(res)
+        if (res.firstTime) setIntro({ celebrate: true })
         onDoubloons?.(res.doubloons)
         // Contracts settle while you are away, so the purse can have moved
         // since the page rendered.
@@ -176,6 +183,14 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   }, [onDoubloons])
 
   useEffect(() => { load() }, [load])
+
+  // Fire and forget, and clear the flag locally too: a reload before the write
+  // lands would otherwise re-announce an Exchange the captain has already seen.
+  const closeIntro = useCallback(() => {
+    setIntro(null)
+    setBoard(b => (b?.firstTime ? { ...b, firstTime: false } : b))
+    startTransition(() => { void markExchangeIntroSeen() })
+  }, [])
 
   // Looking at the Results list is what clears the markers. Fire and forget:
   // a failed clear just means the badge is still there next time.
@@ -189,12 +204,25 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   if (!board) return <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.66rem', color: '#5a6472', padding: '2rem 0', textAlign: 'center' }}>Opening the board…</p>
 
   if (!board.open) {
+    // Fishing 100 is the cap, so this is not a gate you clear on the way to
+    // somewhere else. Show the climb rather than only naming the number: "you
+    // are 84 of 100" is a distance, "Fishing 100 required" is a wall.
+    const climb = Math.min(1, board.fishingLevel / EXCHANGE_FISHING_LEVEL)
     return (
-      <div style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+      <div style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
         <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c8d2e0', marginBottom: 8 }}>The Exchange is closed to you</p>
-        <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#8a94a4', lineHeight: 1.55 }}>
-          {board.gateReason}. Contracts are for captains who have worked both halves of the sea.
+        <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#8a94a4', lineHeight: 1.55, maxWidth: 320, margin: '0 auto' }}>
+          It opens at Fishing {EXCHANGE_FISHING_LEVEL}, the last rung on the ladder. Take
+          every fish the sea has to teach and the board will let you trade it.
         </p>
+        <div style={{ maxWidth: 240, margin: '1.25rem auto 0' }}>
+          <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${climb * 100}%`, borderRadius: 3, background: 'linear-gradient(90deg, #0ea5e9, #38bdf8)' }} />
+          </div>
+          <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#7c8696', marginTop: 7, ...TNUM }}>
+            Fishing {board.fishingLevel} of {EXCHANGE_FISHING_LEVEL}
+          </p>
+        </div>
       </div>
     )
   }
@@ -204,6 +232,8 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
 
   return (
     <>
+      {intro && <ExchangeIntro celebrate={intro.celebrate} onDone={closeIntro} />}
+
       {/* The Hold side opens with the market's mood; this side opens with
           yours. Same job: say where things stand before asking what to do. */}
       <PortfolioHero open={openPos} cycle={board.cycle} />
@@ -236,6 +266,20 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
           )
         })}
       </div>
+
+      {/* The guide is shown once and then never again, which is the wrong
+          number of times for rules you only need when you are about to stake
+          something. One line, always here, no badge. */}
+      <button type="button" onClick={() => setIntro({ celebrate: false })}
+        className="font-karla font-600"
+        style={{
+          alignSelf: 'flex-start', marginTop: -4, marginBottom: 10, padding: 0,
+          background: 'none', border: 'none', fontSize: '0.68rem', color: '#7c8696',
+          textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer',
+          WebkitTapHighlightColor: 'transparent',
+        }}>
+        How the Exchange works
+      </button>
 
       {tab === 'funds' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

@@ -3,11 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/fishingLevel'
-import { getXPProgress as navProgress } from '@/lib/expeditionLevel'
 import {
   TERMS, type Term, type Direction,
   quoteFund, quoteSingle, FUND_BY_ID,
-  liveValue, EXCHANGE_FISHING_LEVEL, EXCHANGE_NAV_LEVEL,
+  liveValue, EXCHANGE_FISHING_LEVEL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/fishExchange'
 
@@ -26,13 +25,15 @@ export type Instrument =
 
 export type OpenResult = { ok: true; positionId: number; doubloons: number } | { error: string }
 
-type Gate = { open: true } | { open: false; reason: string }
+type Gate = { open: true } | { open: false; reason: string; level: number }
 
-async function checkGate(profile: { fishing_xp?: number | null; expedition_xp?: number | null } | null): Promise<Gate> {
-  const fishing = getLevelFromXP(Number(profile?.fishing_xp ?? 0))
-  const nav = navProgress(Number(profile?.expedition_xp ?? 0)).level
-  if (fishing < EXCHANGE_FISHING_LEVEL) return { open: false, reason: `Fishing ${EXCHANGE_FISHING_LEVEL} opens the Exchange` }
-  if (nav < EXCHANGE_NAV_LEVEL) return { open: false, reason: `Navigation ${EXCHANGE_NAV_LEVEL} opens the Exchange` }
+// Synchronous: it reads one number off a profile row the caller already has.
+// It was async only because it once needed a second lookup.
+function checkGate(profile: { fishing_xp?: number | null } | null): Gate {
+  const level = getLevelFromXP(Number(profile?.fishing_xp ?? 0))
+  if (level < EXCHANGE_FISHING_LEVEL) {
+    return { open: false, level, reason: `Fishing ${EXCHANGE_FISHING_LEVEL} opens the Exchange` }
+  }
   return { open: true }
 }
 
@@ -51,10 +52,10 @@ export async function openContract(
 
   const admin = createAdminClient()
   const { data: profile } = await admin
-    .from('profiles').select('doubloons, fishing_xp, expedition_xp').eq('id', user.id).single()
+    .from('profiles').select('doubloons, fishing_xp').eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
 
-  const gate = await checkGate(profile)
+  const gate = checkGate(profile)
   if (!gate.open) return { error: gate.reason }
 
   // Price and quote, read together so the contract is written against the
@@ -212,6 +213,12 @@ export type BoardPosition = {
 export type ExchangeBoard = {
   open: boolean
   gateReason: string | null
+  /** Where the player actually is, so a locked board can show the climb
+   *  instead of only naming the number they have not reached. */
+  fishingLevel: number
+  /** First time the board has ever been open to them. Drives the unlock
+   *  announcement and the guide behind it. */
+  firstTime: boolean
   cycle: number
   doubloons: number
   funds: BoardFund[]
@@ -228,7 +235,7 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
 
   const admin = createAdminClient()
   const [profileRes, stateRes, fundsRes, fishRes, posRes] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_xp, expedition_xp').eq('id', uid).single(),
+    admin.from('profiles').select('doubloons, fishing_xp, has_seen_exchange_intro').eq('id', uid).single(),
     admin.from('market_state').select('exchange_cycle').eq('id', 1).single(),
     admin.from('exchange_funds').select('fund_id, price, prev_price, members, history'),
     admin.from('fish_exchange')
@@ -240,7 +247,7 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
       .limit(60),
   ])
 
-  const gate = await checkGate(profileRes.data)
+  const gate = checkGate(profileRes.data)
   const cycle = Number(stateRes.data?.exchange_cycle ?? 0)
 
   const funds: BoardFund[] = (fundsRes.data ?? []).map(f => {
@@ -298,6 +305,8 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
   return {
     open: gate.open,
     gateReason: gate.open ? null : gate.reason,
+    fishingLevel: gate.open ? EXCHANGE_FISHING_LEVEL : gate.level,
+    firstTime: gate.open && profileRes.data?.has_seen_exchange_intro !== true,
     cycle,
     doubloons: Number(profileRes.data?.doubloons ?? 0),
     funds, fish, positions,
@@ -316,4 +325,15 @@ export async function markResultsSeen(): Promise<void> {
     .eq('user_id', user.id)
     .neq('status', 'open')
     .eq('seen', false)
+}
+
+/** The unlock announcement and the guide behind it are shown exactly once.
+ *  Fire-and-forget from the client: a failed write only means the captain gets
+ *  welcomed twice, which is a far better failure than never being told at all. */
+export async function markExchangeIntroSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient()
+    .from('profiles').update({ has_seen_exchange_intro: true }).eq('id', user.id)
 }

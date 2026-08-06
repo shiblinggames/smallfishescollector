@@ -54,7 +54,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
-  hubSpeciesCaught, hubSpeciesTotal, hubHoldValue, hubMarketMood,
+  hubSpeciesCaught, hubSpeciesTotal, hubHoldValue, hubMarketMood, hubExchangeUnveil,
   hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
@@ -90,6 +90,7 @@ export default function FishingPageClient({
   hubSpeciesTotal: number
   hubHoldValue: number
   hubMarketMood: string
+  hubExchangeUnveil: boolean
   hasSeenFishingHubTour: boolean
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
@@ -284,6 +285,7 @@ export default function FishingPageClient({
         speciesTotal={hubSpeciesTotal}
         holdValue={hubHoldValue}
         marketMood={hubMarketMood}
+        exchangeUnveil={hubExchangeUnveil}
         hasSeenHubTour={hasSeenFishingHubTour}
         characterColor={characterColor}
         equippedHat={persistedEquippedHat}

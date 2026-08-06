@@ -5,6 +5,8 @@ import MarketClient from './MarketClient'
 import MarketIntroModal from './MarketIntroModal'
 import { isPremiumActive } from '@/lib/premium'
 import { getCachedFishMarketFull } from '@/lib/fishMarket'
+import { getLevelFromXP } from '@/lib/fishingLevel'
+import { EXCHANGE_FISHING_LEVEL } from '@/lib/fishExchange'
 
 export type MarketFishEntry = {
   fish_id: number
@@ -44,7 +46,7 @@ export default async function MarketPage() {
   }
 
   const [{ data: profile }, market, inventoryRes, stateRes, collectionRes] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro, fishing_xp, has_seen_exchange_intro').eq('id', user.id).single(),
     // Shared market snapshot from the cross-request cache (lib/fishMarket).
     getCachedFishMarketFull(),
     admin.from('fish_inventory')
@@ -85,6 +87,13 @@ export default async function MarketPage() {
     next_update_at: stateRes.data?.next_update_at ?? new Date(Date.now() + 3600000).toISOString(),
   }
 
+  // The Exchange announcement is worth nothing if it waits behind a tab the
+  // captain has no reason to press. Decided here so the page can OPEN on the
+  // Exchange the one time there is news, then never again.
+  const exchangeUnveil =
+    getLevelFromXP(Number(profile?.fishing_xp ?? 0)) >= EXCHANGE_FISHING_LEVEL &&
+    profile?.has_seen_exchange_intro !== true
+
   return (
     <>
       {!profile?.has_seen_market_intro && <MarketIntroModal />}
@@ -94,6 +103,7 @@ export default async function MarketPage() {
         marketState={state}
         doubloons={profile?.doubloons ?? 0}
         isPremium={isPremiumActive(profile)}
+        exchangeUnveil={exchangeUnveil}
       />
     </>
   )

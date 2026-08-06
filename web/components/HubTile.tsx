@@ -36,7 +36,9 @@ export default function HubTile({
   tag?: string
   onClick?: () => void
   progress?: number | null
-  dot?: 'returned' | 'sailing' | null
+  /** 'new' takes the tile's own accent, which is how a one-off unlock reads
+   *  as different from the green "your crew is back" marker. */
+  dot?: 'returned' | 'sailing' | 'new' | null
   glow?: boolean
   /** Onboarding coach target id (data-coach) so the tour can flash this tile. */
   coachId?: string

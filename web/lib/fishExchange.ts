@@ -235,7 +235,15 @@ export function settlePayout(stake: number, entry: number, exit: number, dir: Di
 export const MIN_STAKE = 500
 export const MAX_STAKE = 250_000
 
-/** Gate. Both skills at 75, so the Exchange opens to someone who has actually
- *  worked both halves of the game rather than rushed one. */
-export const EXCHANGE_FISHING_LEVEL = 75
-export const EXCHANGE_NAV_LEVEL = 75
+/** Gate: Fishing at the cap, and nothing else.
+ *
+ *  Navigation used to be half the requirement, on the reasoning that the
+ *  Exchange should ask for both halves of the game. But the Exchange is a
+ *  market in FISH, priced off the same board the Hold sells into, and every
+ *  read that makes you money here is a read about fish. Asking a captain to
+ *  grind voyages for it taxed the wrong skill.
+ *
+ *  100 is MAX_LEVEL, so this is the last thing fishing gives you: the board
+ *  stops being a price list and starts being something you can take a position
+ *  on. */
+export const EXCHANGE_FISHING_LEVEL = 100

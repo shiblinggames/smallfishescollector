@@ -8,6 +8,7 @@ import { isPremiumActive } from '@/lib/premium'
 import { getCharacterSprites, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
+import { EXCHANGE_FISHING_LEVEL } from '@/lib/fishExchange'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getBoat, earnedAchievementBoats } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
@@ -151,6 +152,14 @@ export default async function FishingPage() {
   const ancientDeepUnlocked =
     profile?.has_ancient_deep_access === true
     || (fishLevelFromXP(profile?.fishing_xp ?? 0) >= 75 && !!ch3Row)
+
+  // Fishing 100 opens the Exchange, and it opens INSIDE the market, two taps
+  // from here. Without a word on the hub tile a captain can cap the skill and
+  // never find out anything changed. Cleared the moment they read the
+  // announcement, so it says something new or says nothing.
+  const exchangeUnveil =
+    fishLevelFromXP(profile?.fishing_xp ?? 0) >= EXCHANGE_FISHING_LEVEL &&
+    profile?.has_seen_exchange_intro !== true
 
   // Union earned-but-ungranted level colors into the GearScreen picker (e.g.
   // crossed Nav 50 via raids without the voyage grant firing). Equipping one
@@ -301,6 +310,7 @@ export default async function FishingPage() {
           hubSpeciesTotal={speciesTotal}
           hubHoldValue={Math.round(holdValue)}
           hubMarketMood={marketMood}
+          hubExchangeUnveil={exchangeUnveil}
           hasSeenFishingHubTour={profile?.has_seen_fishing_hub_tour ?? false}
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}

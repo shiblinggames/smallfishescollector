@@ -392,12 +392,16 @@ export default function MarketClient({
   marketState,
   doubloons: initialDoubloons,
   isPremium,
+  exchangeUnveil = false,
 }: {
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
   marketState: MarketState
   doubloons: number
   isPremium: boolean
+  /** Fishing 100 is done and the Exchange has never been announced. Opens the
+   *  page on that side once so the news is not left behind a tab. */
+  exchangeUnveil?: boolean
 }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -516,7 +520,7 @@ export default function MarketClient({
   // The Hold is your own fish; the Exchange is contracts on the board. They
   // share a mood and nothing else, so they are two screens rather than one
   // long one.
-  const [side, setSide] = useState<'hold' | 'exchange'>('hold')
+  const [side, setSide] = useState<'hold' | 'exchange'>(exchangeUnveil ? 'exchange' : 'hold')
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
   const browseAll = useMemo(() => {
     let list = allMarket.filter(e => !ownedIds.has(e.fish_id))
@@ -555,15 +559,22 @@ export default function MarketClient({
         <div style={{ display: 'flex', gap: 6 }}>
           {([['hold', 'The Hold'], ['exchange', 'Exchange']] as const).map(([k, label]) => {
             const on = side === k
+            const isNews = k === 'exchange' && exchangeUnveil
             return (
               <button key={k} type="button" onClick={() => setSide(k)} className="font-karla font-700"
                 style={{
-                  flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.76rem',
+                  position: 'relative', flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.76rem',
                   background: on ? 'rgba(56,189,248,0.14)' : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${on ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.09)'}`,
                   color: on ? '#e6f4ff' : '#8a94a4', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
                 }}>
                 {label}
+                {isNews && (
+                  <span aria-label="newly opened" style={{
+                    position: 'absolute', top: 6, right: 8, width: 6, height: 6, borderRadius: 999,
+                    background: '#38bdf8', boxShadow: '0 0 7px rgba(56,189,248,0.85)',
+                  }} />
+                )}
               </button>
             )
           })}
