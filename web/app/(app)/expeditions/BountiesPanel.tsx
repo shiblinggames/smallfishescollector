@@ -13,10 +13,13 @@ import { useState, useEffect, useTransition, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getBountyBoard, claimBounty, rerollBounty, type BountyBoard, type BountyView } from './bountyActions'
 
+// Four tiers, and the colour climbs with the price. Elite shares the board's
+// own purple because it IS the board at full stretch.
 const TIER: Record<BountyView['tier'], { label: string; color: string }> = {
-  standard: { label: 'Standing order', color: '#8fa6c4' },
-  hard:     { label: 'Hard',           color: '#d0a24a' },
-  elite:    { label: 'Elite',          color: '#c084fc' },
+  easy:   { label: 'Easy',   color: '#7f9bb5' },
+  medium: { label: 'Medium', color: '#6fb58a' },
+  hard:   { label: 'Hard',   color: '#d0a24a' },
+  elite:  { label: 'Elite',  color: '#c084fc' },
 }
 
 const GEM = '◆'

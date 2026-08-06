@@ -77,7 +77,7 @@ export const cachedShipRevealClears = cache(async (): Promise<Set<string>> => {
   const admin = createAdminClient()
   const { data } = await admin.from('raid_completions')
     .select('raid_id').eq('user_id', user.id)
-    .in('raid_id', ['the_quartermaster', 'the_blockade', 'the_throne', 'the_sunken_hand', 'captain_krust'])
+    .in('raid_id', ['the_quartermaster', 'the_blockade', 'the_throne', 'the_sunken_hand', 'captain_krust', 'tollmasters_cut'])
   return new Set(((data ?? []) as { raid_id: string }[]).map(r => r.raid_id))
 })
 
@@ -90,3 +90,5 @@ export const cachedFinaleCleared   = cache(async (): Promise<boolean> => (await 
  *  Krust puts it in front of eight, and the rungs above are what the rest of
  *  the campaign is worth. */
 export const cachedBountiesOpen    = cache(async (): Promise<boolean> => (await cachedShipRevealClears()).has('captain_krust'))
+/** The clears the bounty rung is derived from. Same single query again. */
+export const cachedBountyClears    = cache(async (): Promise<Set<string>> => cachedShipRevealClears())

@@ -16,6 +16,7 @@ import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import BountiesPanel from './BountiesPanel'
+import BountyRungUnlock from './BountyRungUnlock'
 import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
@@ -97,6 +98,8 @@ interface Props {
   gauntletUpgrades: string[]
   /** Campaign cleared, so the bounty board is posting. */
   bountiesOpen: boolean
+  /** A rung earned but never announced, or null when there is nothing to say. */
+  bountyNews: { chapter: number; title: string; boss: string; orders: number; gems: number; first: boolean } | null
 }
 
 const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }> = {
@@ -117,7 +120,7 @@ export default function HubCards({
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  bountiesOpen, gauntletOpen, donsGauntletOpen, gauntletResumable, davyResumable, donsResumable, gauntletUpgrades,
+  bountiesOpen, bountyNews, gauntletOpen, donsGauntletOpen, gauntletResumable, davyResumable, donsResumable, gauntletUpgrades,
   raidsCleared, captainsOrdersDone,
   gems, freeRecruitAvailable, canAffordNewSkin, challengeName,
 }: Props) {
@@ -332,7 +335,21 @@ export default function HubCards({
         </div>
       </PopupShell>
 
-      {/* ── Bounties ── the daily orders board. Endgame only. ──────────── */}
+      {/* Every rung announces itself once. Dismissing straight into the board
+          is the point: the news and the thing it is about are one tap apart. */}
+      {bountyNews && (
+        <BountyRungUnlock
+          chapter={bountyNews.chapter}
+          title={bountyNews.title}
+          boss={bountyNews.boss}
+          orders={bountyNews.orders}
+          gems={bountyNews.gems}
+          first={bountyNews.first}
+          onOpen={() => setModal('bounties')}
+        />
+      )}
+
+      {/* ── Bounties ── the daily orders board. ─────────────────────────── */}
       <PopupShell open={modal === 'bounties'} onClose={() => setModal(null)}>
         <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 6 }}

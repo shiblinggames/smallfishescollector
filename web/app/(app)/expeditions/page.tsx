@@ -13,10 +13,11 @@ import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import ShipHeroSection from './ShipHeroSection'
-import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared, cachedFinaleCleared, cachedBountiesOpen } from './hubData'
+import { cachedCrewRoster, cachedTrawlingCrewIds, cachedChapter3Cleared, cachedBlockadeCleared, cachedThroneCleared, cachedFinaleCleared, cachedBountiesOpen, cachedBountyClears } from './hubData'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
 import { pickShowcaseBoss } from '@/lib/raidMap'
 import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
+import { rungFor, rungGems } from '@/lib/bounties'
 import { CREW_SKINS } from '@/lib/crewSkins'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
@@ -152,7 +153,22 @@ async function ExpeditionHub() {
 
   // Bounties replaced PvP in that hub slot. The board opens at the end of
   // Chapter I and grows a rung with every chapter after it.
-  const bountiesOpen = await cachedBountiesOpen()
+  const bountyRung = rungFor(await cachedBountyClears())
+  const bountiesOpen = bountyRung !== null
+  // News to deliver? The rung is derived from raid clears; bounty_rung_seen is
+  // the last one we told them about. Any gap is an announcement owed, and a
+  // captain who cleared two chapters between visits gets told about the one
+  // they actually landed on rather than the one they passed through.
+  const bountyNews = bountyRung && bountyRung.chapter > Number(profile?.bounty_rung_seen ?? 0)
+    ? {
+        chapter: bountyRung.chapter,
+        title: bountyRung.title,
+        boss: bountyRung.boss,
+        orders: bountyRung.slots.length,
+        gems: rungGems(bountyRung.slots),
+        first: bountyRung.chapter === 1,
+      }
+    : null
 
   const shipTier = profile?.ship_tier ?? 0
   // Fold the Ch4 augments into the displayed hull caps: Expanded Quarters
@@ -264,6 +280,7 @@ async function ExpeditionHub() {
       canAffordNewSkin={canAffordNewSkin}
       challengeName={challengeName}
       bountiesOpen={bountiesOpen}
+      bountyNews={bountyNews}
       gauntletOpen={gauntletOpen}
       donsGauntletOpen={donsGauntletOpen}
       gauntletResumable={gauntletResumable}

@@ -339,3 +339,19 @@ export async function logBountyEvent(userId: string, kind: string, value: number
     await createAdminClient().from('bounty_events').insert({ user_id: userId, kind, value })
   } catch { /* a bounty tick is never worth failing a run over */ }
 }
+
+/** Remember that this captain has been told about a rung.
+ *
+ *  Guarded to only ever RAISE the number. Two hub loads racing each other, or
+ *  an old page left open in another tab, must never walk it backwards and
+ *  re-announce a rung that has already been delivered. */
+export async function markBountyRungSeen(chapter: number): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.from('profiles')
+    .update({ bounty_rung_seen: chapter })
+    .eq('id', user.id)
+    .lt('bounty_rung_seen', chapter)
+}
