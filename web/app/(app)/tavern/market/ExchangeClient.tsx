@@ -331,7 +331,9 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
             use. Styled down to a HUD pill so it sits with the line beside it
             instead of shouting over the portfolio hero above. */}
         <LeaderboardModal
-          boards={['exchangeNet']}
+          // Week first: it is the board most captains can actually get onto,
+          // and the all-time one is a step behind it rather than the front door.
+          boards={['exchangeWeek', 'exchangeNet']}
           title="Top Traders"
           label="Ranks"
           triggerStyle={{

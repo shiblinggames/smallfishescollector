@@ -22,6 +22,7 @@ const VIEW_BY_KEY: Partial<Record<BoardKey, string>> = {
   expedition:   'leaderboard_expedition',
   gauntletBigHit: 'leaderboard_gauntlet_hit',
   exchangeNet:  'leaderboard_exchange',
+  exchangeWeek: 'leaderboard_exchange_week',
 }
 
 async function resolveMyRank(admin: Admin, view: string, userId: string, myScore: number, top: LeaderboardEntry[]) {

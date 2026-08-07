@@ -31,7 +31,7 @@ export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'chartingPoints'
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
   | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'gauntletDonsDepth' | 'achievementPoints'
-  | 'parlorPoints' | 'exchangeNet'
+  | 'parlorPoints' | 'exchangeNet' | 'exchangeWeek'
 
 export type AvatarMap = Record<string, {
   characterColor: string | null
@@ -91,6 +91,16 @@ export const BOARD_META: Record<BoardKey, {
   // Reads like the Den boards because it IS that shape: lifetime net, signed,
   // winners green and losers red. A single lucky payout is not a trader; being
   // ahead across a run of contracts priced at a house edge is.
+  // Same score, scoped to the week. Its own board rather than a filter on the
+  // other one, because a captain who has been down for a month can still win a
+  // Monday, and that is the board most people can actually get onto.
+  exchangeWeek:  {
+    label: 'Traders This Week',
+    accent: '#38bdf8',
+    unit:    n => `${n > 0 ? '+' : ''}${n.toLocaleString()} ⟡`,
+    subUnit: n => n > 0 ? 'net this week' : n < 0 ? 'down this week' : 'break-even',
+    valueColor: n => n > 0 ? '#7fd49a' : n < 0 ? '#e07070' : '#a09988',
+  },
   exchangeNet:   {
     label: 'Top Traders',
     accent: '#38bdf8',
@@ -111,7 +121,7 @@ export const LEADERBOARD_SECTIONS: { label: string; boards: BoardKey[] }[] = [
   { label: 'The Parlor',   boards: ['parlorPoints'] },
   { label: 'Tavern',       boards: ['tideRun'] },
   { label: 'The Den',      boards: ['blackjack', 'fishSlots', 'roulette'] },
-  { label: 'The Exchange', boards: ['exchangeNet'] },
+  { label: 'The Exchange', boards: ['exchangeWeek', 'exchangeNet'] },
 ]
 
 /** Group a subset of boards into their sections (order preserved, empty
