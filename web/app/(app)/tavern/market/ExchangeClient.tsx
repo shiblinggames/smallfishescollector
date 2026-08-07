@@ -1136,18 +1136,37 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
             )
           })()}
 
+          {/* A DIRECTION CAN BE SHUT. The board pulls every price toward 1.000,
+              and far enough from par that pull beats what the contract could
+              pay: you would have to reverse the tide and then clear the bar.
+              Shut rather than merely expensive, because a contract returning a
+              fifth of its stake is not a hard bet, it is a donation somebody
+              takes by accident. */}
           <Label>Which way</Label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-            {(['rise', 'fall'] as const).map(d => (
-              <button key={d} type="button" onClick={() => setDir(d)} className="font-karla font-700"
-                style={{ padding: '0.5rem', borderRadius: 10, fontSize: '0.78rem', cursor: 'pointer',
-                  background: dir === d ? (d === 'rise' ? 'rgba(74,222,128,0.16)' : 'rgba(248,113,113,0.16)') : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${dir === d ? (d === 'rise' ? UP : DOWN) : 'rgba(255,255,255,0.10)'}`,
-                  color: dir === d ? (d === 'rise' ? UP : DOWN) : '#8a94a4' }}>
-                {d === 'rise' ? 'Rise' : 'Fall'}
-              </button>
-            ))}
+            {(['rise', 'fall'] as const).map(d => {
+              const shut = (isFund
+                ? quoteFund(instrument.f.id, term, d, price)
+                : quoteSingle(instrument.f.rarity, term, d, price)).blocked
+              return (
+                <button key={d} type="button" onClick={() => { if (!shut) setDir(d) }} disabled={shut}
+                  aria-label={shut ? `${d === 'rise' ? 'Rise' : 'Fall'}, not offered` : undefined}
+                  className="font-karla font-700"
+                  style={{ padding: '0.5rem', borderRadius: 10, fontSize: '0.78rem',
+                    cursor: shut ? 'not-allowed' : 'pointer', opacity: shut ? 0.42 : 1,
+                    background: shut ? 'rgba(255,255,255,0.03)' : dir === d ? (d === 'rise' ? 'rgba(74,222,128,0.16)' : 'rgba(248,113,113,0.16)') : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${shut ? 'rgba(255,255,255,0.08)' : dir === d ? (d === 'rise' ? UP : DOWN) : 'rgba(255,255,255,0.10)'}`,
+                    color: shut ? '#5a6472' : dir === d ? (d === 'rise' ? UP : DOWN) : '#8a94a4' }}>
+                  {d === 'rise' ? 'Rise' : 'Fall'}{shut ? ' · shut' : ''}
+                </button>
+              )
+            })}
           </div>
+          {q.blocked && (
+            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#e6c07a', marginTop: -6, marginBottom: 11, lineHeight: 1.45 }}>
+              Not offered at this price. The board is pulling toward 1.000 harder than this contract could pay, so it would take a reversal just to reach break-even.
+            </p>
+          )}
 
           <Label>How long</Label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
@@ -1227,12 +1246,12 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
         }}>
           {err && <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}
 
-          <button type="button" onClick={submit} disabled={busy || capped > doubloons}
+          <button type="button" onClick={submit} disabled={busy || capped > doubloons || q.blocked}
             className="font-karla font-800"
             style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.82rem', cursor: busy ? 'wait' : 'pointer',
               background: 'rgba(56,189,248,0.16)', border: '1px solid rgba(56,189,248,0.6)', color: '#e6f4ff',
-              opacity: capped > doubloons ? 0.5 : 1, WebkitTapHighlightColor: 'transparent' }}>
-            {busy ? 'Opening…' : `Stake ${capped.toLocaleString()} ⟡ on ${dir === 'rise' ? 'Rise' : 'Fall'}`}
+              opacity: capped > doubloons || q.blocked ? 0.5 : 1, WebkitTapHighlightColor: 'transparent' }}>
+            {busy ? 'Opening…' : q.blocked ? 'Not offered' : `Stake ${capped.toLocaleString()} ⟡ on ${dir === 'rise' ? 'Rise' : 'Fall'}`}
           </button>
           <button type="button" onClick={onClose} className="font-karla font-600"
             style={{ width: '100%', marginTop: 6, padding: '0.45rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.72rem', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>

@@ -201,6 +201,9 @@ export type Quote = {
    *  signed the player's way. Zero at par, positive when the drift is helping
    *  them, negative when it is against. Surfaced so the ticket can say so. */
   driftPct: number
+  /** The board is expected to move against this contract by MORE than the
+   *  contract needs to break even, so it is not a bet. Not listed. */
+  blocked: boolean
 }
 
 /** The engine's pull back toward par, in log space, per cycle. Must match
@@ -270,20 +273,53 @@ function driftAdjusted(parLeverage: number, drift: number): number {
   return Math.min(parLeverage, parLeverage * (s * INV_SQRT_2PI) / expected)
 }
 
+/** SOME CONTRACTS SHOULD NOT BE WRITTEN AT ALL.
+ *
+ *  Re-levering the side the drift works against does not have an answer. The
+ *  multiplier it wants runs from 17 to 5,061 inside a single band of
+ *  drift-over-sigma, because it is a ratio against a denominator heading for
+ *  zero: the expected favourable move all but vanishes, and no leverage makes
+ *  that fair, only enormous. Simulated at par leverage, buying Fall on a
+ *  rarity-1 fish sitting at 0.654 over 72 hours returns 43 doubloons on a
+ *  10,000 stake. Disclosure does not fix a number like that. Somebody takes it
+ *  by accident.
+ *
+ *  So it is refused instead, on a rule that explains itself: if the board is
+ *  expected to move against you by more than the contract needs to break even,
+ *  you would have to reverse the tide AND clear the bar. A book would not list
+ *  that, and neither does this one.
+ *
+ *  TWICE the break-even, not once. At once, today's board would refuse the Fall
+ *  leg on 75 of its 146 fish, because the whole board is currently sitting under
+ *  par (median 0.848, p90 0.990). Refusing half the board is not protecting
+ *  anyone from a trap, it is removing the market.
+ *
+ *  At twice it refuses 16 fish, which is the tail that actually pays derisory
+ *  money: a contract at that distance returns roughly a fifth of its stake,
+ *  against about half at the 1x line. The rest stays listed, quoted at par, with
+ *  the drift printed on the ticket. */
+const BLOCK_AT = 2
+
+function isBlocked(drift: number, breakEvenPct: number): boolean {
+  return drift < 0 && Math.abs(drift) > breakEvenPct * BLOCK_AT
+}
+
 /** `price` is the instrument's price right now. Omit it and you get the par
  *  quote, which is only correct for something sitting at 1.00. */
 export function quoteFund(fundId: string, term: Term, dir: Direction, price?: number): Quote {
   const par = (FUND_LEVERAGE[fundId] ?? FUND_LEVERAGE.sea)[term][dir]
   const drift = price == null ? 0 : driftPct(price, term, dir)
   const leverage = driftAdjusted(par, drift)
-  return { leverage, breakEvenPct: 1 / leverage, driftPct: drift }
+  const breakEvenPct = 1 / leverage
+  return { leverage, breakEvenPct, driftPct: drift, blocked: isBlocked(drift, breakEvenPct) }
 }
 
 export function quoteSingle(rarity: number, term: Term, dir: Direction, price?: number): Quote {
   const par = (SINGLE_LEVERAGE[rarity] ?? SINGLE_LEVERAGE[3])[term][dir]
   const drift = price == null ? 0 : driftPct(price, term, dir)
   const leverage = driftAdjusted(par, drift)
-  return { leverage, breakEvenPct: 1 / leverage, driftPct: drift }
+  const breakEvenPct = 1 / leverage
+  return { leverage, breakEvenPct, driftPct: drift, blocked: isBlocked(drift, breakEvenPct) }
 }
 
 /** What a contract pays, given how far the instrument actually moved.
