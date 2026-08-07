@@ -127,8 +127,8 @@ export const BADGES: Badge[] = [
   // ── The Den & records ────────────────────────────────────────────────────
   { id: 'catfish_jackpot', name: 'Catfish Jackpot',   description: 'Win the slots Catfish Jackpot',                   imageUrl: '/badges/catfish_jackpot.png', difficulty: 'seasoned' },
   { id: 'tide_runner',    name: 'Tide Runner',        description: 'Reach 300m in a single Tide Run',                 imageUrl: '/badges/tide_runner.png',    difficulty: 'rookie'   },
-  { id: 'tide_champion',  name: 'Tide Champion',      description: 'Reach 500m in a single Tide Run',                 imageUrl: '/badges/tide_champion.png',  difficulty: 'veteran'  },
-  { id: 'tide_master',    name: 'Tide Master',        description: 'Reach 750m in a single Tide Run',                 imageUrl: '/badges/tide_master.png',    difficulty: 'master'   },
+  { id: 'tide_champion',  name: 'Tide Champion',      description: 'Reach 450m in a single Tide Run',                 imageUrl: '/badges/tide_champion.png',  difficulty: 'veteran'  },
+  { id: 'tide_master',    name: 'Tide Master',        description: 'Reach 600m in a single Tide Run',                 imageUrl: '/badges/tide_master.png',    difficulty: 'master'   },
 
   // ── Wealth ───────────────────────────────────────────────────────────────
   { id: 'baby_steps',     name: 'Baby Steps',         description: 'Hold 100,000 doubloons at once',                  imageUrl: '/badges/baby_steps.png',     difficulty: 'rookie'   },
@@ -435,8 +435,8 @@ export const BADGE_DETAIL: Record<string, string> = {
   master_cartographer: 'Chart the entire World Chart, all thirteen landmarks. The whole sea is yours, Master Cartographer.',
   catfish_jackpot:  'Hit the global Catfish Jackpot on the slots. Three catfish on one spin, and the whole pot is yours.',
   tide_runner:      'Reach 300m in a single Tide Run.',
-  tide_champion:    'Reach 500m in a single Tide Run. Contest-winning distance.',
-  tide_master:      'Reach 750m in a single Tide Run, out past anyone’s record.',
+  tide_champion:    'Reach 450m in a single Tide Run. Contest-winning distance.',
+  tide_master:      'Reach 600m in a single Tide Run, out past anyone’s record.',
   baby_steps:       'Hold 100,000 doubloons at once. Your first real nest egg.',
   deep_pockets:     'Hold 1,000,000 doubloons at once.',
   bilge_baron:      'Hold 2,500,000 doubloons at once. The hold is fit to burst.',
