@@ -73,18 +73,27 @@ function BoardHeader({ title, claimed, total, points, pointsReady, burst, onPoin
   const showChip = typeof claimed === 'number' && typeof total === 'number' && total > 0
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 0.35rem 0.6rem 0.55rem' }}>
-      <p className="font-pirata" style={{ fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f0dcae', flexShrink: 0 }}>
+      <p className="font-pirata" style={{
+        fontSize: '1.5rem', letterSpacing: '0.03em', color: '#f5e3b8', flexShrink: 0,
+        // The lantern in the plate is directly behind this row, so it is the
+        // brightest wood on the board and the worst place for thin type.
+        textShadow: '0 1px 3px rgba(0,0,0,0.85), 0 0 12px rgba(0,0,0,0.5)',
+      }}>
         {title}
       </p>
       {showChip && (
         <span style={{
           position: 'relative', overflow: 'hidden',
           display: 'inline-flex', alignItems: 'baseline', gap: 4,
-          padding: '0.2rem 0.5rem', borderRadius: 999,
-          background: 'rgba(201,160,245,0.12)', border: '1px solid rgba(201,160,245,0.3)',
+          padding: '0.22rem 0.55rem', borderRadius: 999,
+          // OPAQUE. Both pills sit on a painted, lantern-lit board, and a 12%
+          // wash over timber is a smear rather than a chip. Solid base, the
+          // accent kept in the border and the type.
+          background: 'rgba(14,11,18,0.92)', border: `1px solid ${GEM_COLOR}77`,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
         }}>
-          <span className="font-karla font-800" style={{ fontSize: '0.8rem', color: '#f0e6fb', ...TNUM }}>
-            {claimed}<span style={{ color: '#9d8fb0' }}>/{total}</span>
+          <span className="font-karla font-800" style={{ fontSize: '0.8rem', color: '#f4ecff', ...TNUM }}>
+            {claimed}<span style={{ color: '#a89aba' }}>/{total}</span>
           </span>
           <span className="font-karla font-800" style={{ fontSize: '0.72rem', color: GEM_COLOR }}>{GEM}</span>
           {/* The flare rides the chip now that the bar it used to cross is gone. */}
@@ -114,13 +123,14 @@ function BoardHeader({ title, claimed, total, points, pointsReady, burst, onPoin
           style={{
             position: 'relative', marginLeft: 'auto', flexShrink: 0,
             display: 'inline-flex', alignItems: 'baseline', gap: 4,
-            padding: '0.2rem 0.55rem', borderRadius: 999,
-            background: pointsReady ? 'rgba(143,166,196,0.2)' : 'rgba(255,255,255,0.055)',
-            border: `1px solid ${pointsReady ? 'rgba(201,160,245,0.7)' : 'rgba(255,255,255,0.14)'}`,
-            color: '#cfd8e6', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+            padding: '0.22rem 0.58rem', borderRadius: 999,
+            background: 'rgba(12,14,19,0.92)',
+            border: `1px solid ${pointsReady ? 'rgba(201,160,245,0.75)' : 'rgba(180,196,216,0.45)'}`,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+            color: '#dfe6f0', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
           }}>
           <span className="font-karla font-800" style={{ fontSize: '0.8rem', ...TNUM }}>{points.toLocaleString()}</span>
-          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#9aa3b2' }}>pts</span>
+          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#a7b2c2' }}>pts</span>
           {pointsReady && (
             <span aria-label="milestone ready" style={{
               position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: 999,
