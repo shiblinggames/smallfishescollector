@@ -791,6 +791,43 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.85rem 1rem 1rem' }}>
+          {/* WHERE IT HAS BEEN, before you pick a side.
+              The ticket asked you to call a direction while showing a single
+              number, "1.124 now", which tells you nothing about whether that is
+              high or low for this fish. The board row behind it has a 62px
+              sparkline with no scale and no axis, so the only real chart in the
+              Exchange was one you could not see until after you had already
+              spent the doubloons.
+              Same component as the position sheet, so a contract you are
+              considering and one you hold read the same way. */}
+          {(() => {
+            const hist = instrument.f.history ?? []
+            // history holds the prices BEFORE the current one, so the live price
+            // completes the line.
+            const pts = hist.length ? [...hist, price] : []
+            if (pts.length < 2) return null
+            const lo = Math.min(...pts), hi = Math.max(...pts)
+            const windowMove = pts[0] > 0 ? ((price - pts[0]) / pts[0]) * 100 : 0
+            const up = windowMove >= 0
+            return (
+              <div style={{ marginBottom: 13, padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
+                  <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a7482' }}>
+                    Price {'·'} last {pts.length - 1}h
+                  </p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: up ? UP : DOWN, ...TNUM }}>{fmtPct(windowMove)}</p>
+                </div>
+                <BigSpark points={pts} entry={price} color={up ? UP : DOWN} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696', ...TNUM }}>
+                    low {lo.toFixed(3)} {'·'} high {hi.toFixed(3)}
+                  </span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696' }}>dashed line is where you come in</span>
+                </div>
+              </div>
+            )
+          })()}
+
           <Label>Which way</Label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
             {(['rise', 'fall'] as const).map(d => (
