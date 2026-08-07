@@ -17,6 +17,7 @@
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
+import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
@@ -122,6 +123,23 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
             </button>
           )
         })}
+      </div>
+
+      {/* Who is beating you at it. Week first: it is the board most captains can
+          actually get onto, and the all-time one is a step behind rather than
+          the front door. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4, marginBottom: 9 }}>
+        <LeaderboardModal
+          boards={['exchangeWeek', 'exchangeNet']}
+          title="Top Traders"
+          label="Ranks"
+          triggerStyle={{
+            background: 'rgba(56,189,248,0.10)',
+            border: '1px solid rgba(56,189,248,0.42)',
+            color: '#7dd3fc', boxShadow: 'none',
+            fontSize: '0.56rem', height: 24, padding: '0 0.62rem', borderRadius: 20,
+          }}
+        />
       </div>
 
       {tab === 'board' ? (
