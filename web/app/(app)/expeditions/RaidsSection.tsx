@@ -2866,9 +2866,17 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                       {/* 84 -> 60. Two stacked rows cost the sheet a whole extra
                           band of height, and the art was sized for a single rail
                           where vertical space was free. */}
+                      {/* LEFT, not centre. Items sit in 80px cells and skins in
+                          116px cells (hull art is 16:9 and needs the width), so
+                          centring inside the cell put the two rows' art on two
+                          different left edges: an item started ~10px in, a hull
+                          ~4px in, and the rows read as misaligned even though
+                          the grids themselves both start at 0.
+                          Anchoring art and text to the cell's left edge gives
+                          every row one shared margin, whatever its cell width. */}
                       <div style={{
                         position: 'relative', width: '100%', height: 60,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
                       }}>
                         {d.swatch
                           ? <div style={{ width: '100%', height: '100%', borderRadius: 10, background: d.swatch, filter: d.swatchFilter }} />
@@ -2891,7 +2899,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                             : <span style={{ color: rc, display: 'flex' }}><IconCrate size={30} /></span>}
                         {owned && (
                           <span style={{
-                            position: 'absolute', top: 5, right: 5,
+                            position: 'absolute', top: 5, left: 5,
                             width: 17, height: 17, borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: 'rgba(10,20,14,0.86)', border: '1px solid rgba(74,222,128,0.65)',
@@ -2901,7 +2909,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                         )}
                       </div>
                       <span className="font-karla font-800 uppercase tracking-[0.08em]" style={{
-                        fontSize: '0.6rem', textAlign: 'center',
+                        fontSize: '0.6rem', textAlign: 'left',
                         color: owned ? '#7fd49a' : rc,
                         fontVariantNumeric: 'tabular-nums',
                       }}>
@@ -2912,7 +2920,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                           It clips, and the full name is in the detail modal. */}
                       <span className="font-karla font-600" style={{
                         display: 'block', width: '100%',
-                        fontSize: '0.62rem', lineHeight: 1.25, textAlign: 'center',
+                        fontSize: '0.62rem', lineHeight: 1.25, textAlign: 'left',
                         color: '#b9b3a8',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}>
