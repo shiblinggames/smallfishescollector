@@ -30,6 +30,23 @@ export default function CampaignMapOverlay({ children }: { children: React.React
     return () => window.removeEventListener('expedition:open-campaign-map', onOpen)
   }, [])
 
+  // ARRIVING WITH A BOSS IN HAND. The forge's build planner links a component to
+  // the fight that drops it with /expeditions?boss=<nodeId>, and RaidsSection
+  // reads that param on ITS mount to open the card.
+  //
+  // That worked when the map lived permanently at the bottom of the page. Now
+  // the map mounts only while this overlay is open, so a deep link landed on the
+  // hub, RaidsSection never mounted, the effect never ran, and the param died
+  // unread. The link looked like it did nothing.
+  //
+  // So the overlay answers the param too: if the URL names a boss, open on
+  // arrival. The param is left ALONE here — RaidsSection is the one that
+  // consumes and strips it, and stripping it first would just move the bug.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (new URLSearchParams(window.location.search).get('boss')) setOpen(true)
+  }, [])
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
