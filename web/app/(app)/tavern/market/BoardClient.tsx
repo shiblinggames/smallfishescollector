@@ -23,7 +23,7 @@ import {
   offeredBets, driftOver, stakeCapFor, unitPresets, costOf, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
-import { getBoard, openBet, markBetsSeen } from './boardActions'
+import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
 import type { Board, BoardIndex, BoardBet } from './boardActions'
 
 const UP = '#4ade80'
@@ -57,6 +57,7 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
   const [board, setBoard] = useState<Board | null>(null)
   const [ticket, setTicket] = useState<BoardIndex | null>(null)
   const [tab, setTab] = useState<'board' | 'bets'>('board')
+  const [openSlip, setOpenSlip] = useState<BoardBet | null>(null)
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
@@ -141,8 +142,19 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
             list={species} onPick={setTicket} />
         </>
       ) : (
-        <BetList bets={board.bets} />
+        <BetList bets={board.bets} onOpen={setOpenSlip} />
       )}
+
+      <AnimatePresence>
+        {openSlip && (
+          <BetSheet
+            bet={openSlip}
+            index={board.indexes.find(i => i.id === openSlip.indexId) ?? null}
+            onClose={() => setOpenSlip(null)}
+            onSold={() => { setOpenSlip(null); load() }}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {ticket && (
@@ -237,7 +249,7 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
   )
 }
 
-function BetList({ bets }: { bets: BoardBet[] }) {
+function BetList({ bets, onOpen }: { bets: BoardBet[]; onOpen: (b: BoardBet) => void }) {
   if (!bets.length) {
     return (
       <p className="font-karla font-400 italic" style={{ fontSize: '0.78rem', color: '#7c8696', padding: '2rem 0', textAlign: 'center', lineHeight: 1.5 }}>
@@ -252,16 +264,20 @@ function BetList({ bets }: { bets: BoardBet[] }) {
         const done = b.status !== 'open'
         const won = b.status === 'won'
         return (
-          <div key={b.id} style={{
+          <button key={b.id} type="button" onClick={() => onOpen(b)} style={{
+            width: '100%', textAlign: 'left', cursor: 'pointer',
             padding: '0.6rem 0.7rem', borderRadius: 11,
             background: 'rgba(13,17,24,0.9)',
             border: `1px solid ${done ? (won ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.1)'}`,
-            opacity: done && !won ? 0.72 : 1,
+            opacity: done && !won ? 0.72 : 1, WebkitTapHighlightColor: 'transparent',
           }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
               <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#e8eef6' }}>{b.indexName}</span>
               <span className="font-karla font-800" style={{ fontSize: '0.72rem', color: done ? (won ? UP : '#7d7466') : '#8a94a4' }}>
-                {done ? (won ? `won ${(b.payout ?? 0).toLocaleString()} ⟡` : 'lost') : ahead ? 'ahead' : 'behind'}
+                {b.status === 'won' ? `won ${(b.payout ?? 0).toLocaleString()} ⟡`
+                  : b.status === 'sold' ? `sold for ${(b.payout ?? 0).toLocaleString()} ⟡`
+                  : b.status === 'lost' ? 'lost'
+                  : ahead ? 'ahead' : 'behind'}
               </span>
             </div>
             {/* The bet, as one sentence. */}
@@ -270,8 +286,9 @@ function BetList({ bets }: { bets: BoardBet[] }) {
             </p>
             <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: ahead ? UP : '#7c8696', marginTop: 3, ...TNUM }}>
               {done ? 'ended' : 'now'} {fmtPct(b.movedPct)} {b.direction === 'up' ? 'up' : 'down'} {done ? '' : `· needs ${b.distancePct}%`}
+              {!done && b.worth != null && `  ·  worth ${b.worth.toLocaleString()} ⟡`}
             </p>
-          </div>
+          </button>
         )
       })}
     </div>
@@ -527,6 +544,121 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
         </div>
       </motion.div>
     </PopupShell>
+  )
+}
+
+/** A RUNNING BET, opened up: where its index has been, what the bet is, what it
+ *  is worth this second, and the way out.
+ *
+ *  Worth is the honest price rather than a courtesy: the payout times the chance
+ *  it still gets there from where it stands. Sold the moment it is placed it
+ *  returns the stake, so leaving early costs nothing but the chance itself. */
+function BetSheet({ bet, index, onClose, onSold }: {
+  bet: BoardBet; index: BoardIndex | null; onClose: () => void; onSold: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const live = bet.status === 'open'
+  const ahead = bet.movedPct >= bet.distancePct
+  const worth = bet.worth ?? 0
+  const line = index && index.history.length > 1 ? index.history : [bet.entryPrice, bet.livePrice]
+
+  function sell() {
+    setErr(''); setBusy(true)
+    sellBet(bet.id).then(res => {
+      setBusy(false)
+      if ('error' in res) { setErr(res.error); return }
+      vibrate([0, 14, 30, 22])
+      purseChanged(res.doubloons)
+      onSold()
+    })
+  }
+
+  return (
+    <PopupShell open onClose={onClose} zIndex={120}>
+      <motion.div
+        initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          margin: 'auto', width: '100%', maxWidth: 440, maxHeight: '100%',
+          display: 'flex', flexDirection: 'column', borderRadius: 18, overflow: 'hidden',
+          background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)',
+          border: `1px solid ${bet.accent}55`,
+        }}>
+        <div style={{ flexShrink: 0, padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0f4fa' }}>{bet.indexName}</p>
+          <p className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#8a94a4', marginTop: 2, lineHeight: 1.45 }}>
+            {bet.units.toLocaleString()} units, {bet.stake.toLocaleString()} ⟡, on {bet.direction} at least {bet.distancePct}% within {TERM_NAME[bet.term].toLowerCase()}
+          </p>
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.9rem 1rem 1rem' }}>
+          {/* WHAT IT IS WORTH, first, because it is the only reason to open this. */}
+          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#7c8696' }}>
+            {live ? 'Worth now' : bet.status === 'won' ? 'Paid' : bet.status === 'sold' ? 'Sold for' : 'Ended at'}
+          </p>
+          <p className="font-cinzel font-800" style={{ fontSize: '1.9rem', lineHeight: 1.1, color: '#f0f4fa', ...TNUM }}>
+            {(live ? worth : (bet.payout ?? 0)).toLocaleString()} ⟡
+          </p>
+          {live && (
+            <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: worth >= bet.stake ? UP : DOWN, marginBottom: 10, ...TNUM }}>
+              {worth >= bet.stake ? '+' : ''}{(worth - bet.stake).toLocaleString()} against the {bet.stake.toLocaleString()} ⟡ you put in
+            </p>
+          )}
+
+          <div style={{ margin: '4px 0 10px', padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <Line points={line} color={bet.movedPct >= 0 ? UP : DOWN} w={380} h={54} />
+            <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
+              in at {fmtPrice(bet.entryPrice)} · now {fmtPrice(bet.livePrice)}
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 4 }}>
+            <Fact label="Moved" value={fmtPct(bet.movedPct)} color={ahead ? UP : '#e8eef6'} />
+            <Fact label="Needs" value={`${bet.distancePct}%`} />
+            <Fact label="Pays if it lands" value={`${payoutFor(bet.stake, bet.multiplier).toLocaleString()} ⟡`} />
+            <Fact label={live ? 'Time left' : 'Result'}
+              value={live
+                ? (bet.hoursLeft >= 1 ? `${Math.round(bet.hoursLeft)}h` : 'under an hour')
+                : bet.status === 'won' ? 'landed' : bet.status === 'sold' ? 'sold early' : 'missed'} />
+          </div>
+        </div>
+
+        <div style={{ flexShrink: 0, padding: '0.7rem 1rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.09)', background: 'rgba(6,9,14,0.97)' }}>
+          {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}
+          {live && (
+            <>
+              <button type="button" onClick={sell} disabled={busy} className="font-karla font-800"
+                style={{
+                  width: '100%', padding: '0.68rem', borderRadius: 11, fontSize: '0.82rem',
+                  cursor: busy ? 'wait' : 'pointer',
+                  background: 'rgba(240,220,174,0.14)', border: '1px solid rgba(240,220,174,0.5)', color: '#f4ecd8',
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                {busy ? 'Selling…' : `Sell now for ${worth.toLocaleString()} ⟡`}
+              </button>
+              <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#6a7482', marginTop: 6, textAlign: 'center', lineHeight: 1.45 }}>
+                Take what it is worth and walk away. Leave it and it pays everything or nothing.
+              </p>
+            </>
+          )}
+          <button type="button" onClick={onClose} className="font-karla font-600"
+            style={{ width: '100%', marginTop: live ? 4 : 0, padding: '0.45rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.74rem', cursor: 'pointer' }}>
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </PopupShell>
+  )
+}
+
+function Fact({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ padding: '0.45rem 0.55rem', borderRadius: 9, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)', minWidth: 0 }}>
+      <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: '#7c8696', marginBottom: 2 }}>{label}</p>
+      <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: color ?? '#eef3f9', ...TNUM }}>{value}</p>
+    </div>
   )
 }
 

@@ -152,6 +152,41 @@ export function priceBet(
   return { distancePct, chance: Math.min(chance, 0.99), multiplier: 1 / Math.min(chance, 0.99) }
 }
 
+/** WHAT A RUNNING BET IS WORTH RIGHT NOW.
+ *
+ *  A bet pays stake x multiplier if it gets there and nothing if it does not, so
+ *  what it is worth mid-flight is simply that payout times the chance it still
+ *  makes it FROM HERE. It has already used some of its time and covered some of
+ *  its distance, so both of those go into the sum.
+ *
+ *  Two properties make this the honest price rather than an approximation of
+ *  one, and both matter for a Sell button:
+ *
+ *    at the moment it is placed, the chance is the chance it was sold at, so it
+ *    is worth exactly what was paid. Buying and selling straight back costs
+ *    nothing, because there is no edge anywhere on this board.
+ *
+ *    at expiry it is worth the payout or it is worth nothing, which is what
+ *    settlement pays, so the number never jumps at the end.
+ *
+ *  A bet already past its distance is NOT home: settlement reads where the price
+ *  ENDS, so it can still fall back. That is why this asks the chance of finishing
+ *  there rather than the chance of having touched it. */
+export function worthNow(
+  stake: number, multiplier: number, distancePct: number, movedPct: number,
+  hoursLeft: number, dailyMovePct: number, driftPct = 0,
+): number {
+  const payout = stake * multiplier
+  if (!(hoursLeft > 0)) return movedPct >= distancePct ? Math.round(payout) : 0
+  const s = dailyMovePct * Math.sqrt(hoursLeft / 24)
+  if (!(s > 0)) return movedPct >= distancePct ? Math.round(payout) : 0
+  // How much further it still has to travel, which can be negative if it is
+  // already there and only has to stay.
+  const remaining = distancePct - movedPct
+  const chance = Math.max(0, Math.min(1, 1 - normCdf((remaining - driftPct) / s)))
+  return Math.round(payout * chance)
+}
+
 /** Below this a rung is not offered at all. A one-in-fifty-thousand bet is not a
  *  long shot, it is a way to lose money you will never notice going. */
 export const MIN_CHANCE = 0.005

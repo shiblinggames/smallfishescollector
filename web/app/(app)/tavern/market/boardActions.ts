@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, worthNow, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -67,9 +67,13 @@ export type BoardBet = {
   /** How far it has come, signed the player's way. */
   movedPct: number
   expiresAt: string
-  status: 'open' | 'won' | 'lost'
+  status: 'open' | 'won' | 'lost' | 'sold'
   payout: number | null
   seen: boolean
+  units: number
+  /** What it would fetch if sold this second. Null once it has finished. */
+  worth: number | null
+  hoursLeft: number
 }
 
 export type Board = {
@@ -134,6 +138,7 @@ export async function getBoard(): Promise<Board> {
     const live = idx?.price ?? Number(b.entry_price)
     const entry = Number(b.entry_price)
     const raw = entry > 0 ? ((live - entry) / entry) * 100 : 0
+    const hoursLeft = Math.max(0, (new Date(b.expires_at as string).getTime() - Date.now()) / 3600_000)
     return {
       id: b.id as number,
       indexId: b.index_id as string,
@@ -148,9 +153,18 @@ export async function getBoard(): Promise<Board> {
       livePrice: live,
       movedPct: b.direction === 'up' ? raw : -raw,
       expiresAt: b.expires_at as string,
-      status: b.status as 'open' | 'won' | 'lost',
+      status: b.status as 'open' | 'won' | 'lost' | 'sold',
       payout: b.payout == null ? null : Number(b.payout),
       seen: b.seen === true,
+      units: Number(b.units ?? 0),
+      worth: hoursLeft <= 0 || b.status !== 'open' ? null
+        : worthNow(Number(b.stake), Number(b.multiplier), Number(b.distance_pct),
+            b.direction === 'up' ? raw : -raw, hoursLeft,
+            idx ? idx.dailyMovePct : 0,
+            idx ? driftOver(idx.vol, idx.beta, idx.trend, idx.trendTicks,
+                    Number(moodRes.data?.mood_bias ?? 0), Number(b.term) as Term,
+                    b.direction as Direction) : 0),
+      hoursLeft,
     }
   })
 
@@ -262,4 +276,59 @@ export async function markBetsSeen(): Promise<void> {
   if (!user) return
   await createAdminClient().from('exchange_bets')
     .update({ seen: true }).eq('user_id', user.id).eq('seen', false)
+}
+
+export type SellResult = { ok: true; got: number; doubloons: number } | { error: string }
+
+/** Take a running bet's worth now instead of waiting for it to land.
+ *
+ *  Priced exactly as the board prices anything: payout times the chance it still
+ *  gets there from where it stands, with the time it has left and the drift it is
+ *  riding. Sold the moment it is placed it returns the stake, because there is no
+ *  edge here and there is no penalty for changing your mind.
+ *
+ *  Claimed before it is paid, guarded on owner AND status, so a second tap or the
+ *  settler landing at the same moment finds nothing to sell. */
+export async function sellBet(betId: number): Promise<SellResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  if (EXCHANGE_UNDER_CONSTRUCTION) return { error: 'The Exchange is closed' }
+
+  const admin = createAdminClient()
+  const { data: bet } = await admin.from('exchange_bets')
+    .update({ status: 'sold', settled_at: new Date().toISOString() })
+    .eq('id', betId).eq('user_id', user.id).eq('status', 'open')
+    .select('*').maybeSingle()
+  if (!bet) return { error: 'That one is already settled' }
+
+  const { data: idx } = await admin.from('exchange_indexes')
+    .select('vol, beta, trend, trend_ticks, price').eq('id', bet.index_id as string).single()
+  const { data: mood } = await admin.from('market_state').select('mood_bias').eq('id', 1).single()
+
+  const entry = Number(bet.entry_price)
+  const live = Number(idx?.price ?? entry)
+  const raw = entry > 0 ? ((live - entry) / entry) * 100 : 0
+  const moved = bet.direction === 'up' ? raw : -raw
+  const hoursLeft = Math.max(0, (new Date(bet.expires_at as string).getTime() - Date.now()) / 3600_000)
+  const daily = idx ? dailyMovePct(Number(idx.vol)) : 0
+  const drift = idx ? driftOver(
+    Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
+    Number(mood?.mood_bias ?? 0), Number(bet.term) as Term, bet.direction as Direction,
+  ) : 0
+
+  const got = worthNow(Number(bet.stake), Number(bet.multiplier),
+    Number(bet.distance_pct), moved, hoursLeft, daily, drift)
+
+  await admin.from('exchange_bets')
+    .update({ exit_price: live, payout: got, seen: true }).eq('id', betId)
+
+  if (got > 0) {
+    await admin.rpc('bump_profile_stat', { uid: user.id, col: 'doubloons', n: got })
+    await admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: got, reason: 'Exchange bet sold early',
+    })
+  }
+  const { data: p } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+  return { ok: true, got, doubloons: Number(p?.doubloons ?? 0) }
 }
