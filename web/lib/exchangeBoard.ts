@@ -55,27 +55,36 @@ export const TERM_PITCH: Record<Term, string> = {
 
 // ── How far ─────────────────────────────────────────────────────────────────
 //
-// Five distances per index, set against how far THAT index travels in a normal
-// day. A quiet zone offers 1% to 12%; a wild species offers 5% to 54%. The
-// numbers are always sized to the thing you are betting on, so no index ever
-// shows a rung nobody could reach on any term.
+// Nine distances per index, set against how far THAT index travels in a normal
+// day, so they are always sized to the thing you are betting on.
 //
 // The distances do NOT change with the term. That is the whole point: the same
 // +7% is a near-miracle in an hour and a coin flip over a week.
-const RUNG_STEPS = [0.25, 0.6, 1.2, 2.0, 3.0] as const
+//
+// NINE, NOT FIVE, and the reason is the short end. Spaced for a day, five rungs
+// left a cliff: on the wildest index a one-hour bet could reach +3% and then
+// nothing until +7%, so the board offered exactly one option at 9x and the
+// entire 20x-to-140x band simply did not exist. That band IS the one-hour bet.
+// Denser at the bottom, so every term gets a ladder instead of a single rung:
+//
+//   wildest index, one hour   +3% 1 in 9 -> 9x   +5% 1 in 50 -> 49x
+//   wildest index, one week   nine rungs from a coin flip out to 1 in 30
+const RUNG_STEPS = [0.25, 0.4, 0.6, 0.85, 1.2, 1.6, 2.0, 2.5, 3.0] as const
 
-/** Plain-language names, so a row reads "A stretch, +14%" rather than "tier 3". */
-export const RUNG_NAME = ['A nudge', 'A move', 'A stretch', 'A leap', 'A miracle'] as const
-
-/** The five distances this index offers, in percent, biggest last. Rounded to
- *  something a person would say out loud: no 13.847%. */
+/** The distances this index offers, in percent, smallest first. Rounded to
+ *  something a person would say out loud: no 13.847%.
+ *
+ *  De-duplicated after rounding, because on a very calm index two steps can land
+ *  on the same number and a board showing "+0.3%" twice at different odds is a
+ *  bug that looks like a lie. */
 export function rungsFor(dailyMovePct: number): number[] {
-  return RUNG_STEPS.map(k => {
+  const out = RUNG_STEPS.map(k => {
     const raw = dailyMovePct * k
     if (raw < 1) return Math.round(raw * 10) / 10   // 0.4, 0.8
     if (raw < 10) return Math.round(raw)            // 3, 7
     return Math.round(raw / 5) * 5                  // 15, 25, 40
   })
+  return [...new Set(out)].filter(n => n > 0)
 }
 
 // ── The maths, kept in one place and never shown ────────────────────────────
@@ -88,6 +97,18 @@ function normCdf(z: number): number {
   const d = normPdf(z)
   const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
   return z >= 0 ? 1 - p : p
+}
+
+/** THE NUMBER TO SHOW, which is not the number to price with.
+ *
+ *  Everything here works in sigma, the spread of the move. But sigma is not what
+ *  "a normal day" means: a third of days fall outside it. The typical day is the
+ *  MEDIAN absolute move, 0.6745 of sigma, and quoting sigma instead overstates
+ *  an ordinary day by half.
+ *
+ *  Price with spreadOver. Print this. */
+export function typicalDayMove(dailySigmaPct: number): number {
+  return dailySigmaPct * 0.6745
 }
 
 /** How far this index typically wanders over a given number of hours, given how

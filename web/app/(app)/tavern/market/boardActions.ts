@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -33,9 +33,12 @@ export type BoardIndex = {
   accent: string
   price: number
   prevPrice: number
-  /** How far it moves on a normal day, in percent. The one number that
-   *  describes an index in a way a player can use. */
+  /** The SPREAD of a day's move. Prices every bet; never shown, because a third
+   *  of days fall outside it and calling that "a normal day" is a lie. */
   dailyMovePct: number
+  /** What an ordinary day actually looks like, which is the median move rather
+   *  than the spread. This is the one that goes on screen. */
+  typicalDayPct: number
   /** Oldest first. */
   history: number[]
   /** The five distances this index offers, whatever the term. */
@@ -105,6 +108,7 @@ export async function getBoard(): Promise<Board> {
       price: Number(r.price),
       prevPrice: Number(r.prev_price),
       dailyMovePct: daily,
+      typicalDayPct: typicalDayMove(daily),
       history: ((r.history as number[] | null) ?? []).map(Number),
       rungs: rungsFor(daily),
     }

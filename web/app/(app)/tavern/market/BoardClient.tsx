@@ -7,8 +7,8 @@
 // Written for captains, not traders. Every number on screen answers a question
 // somebody would actually ask out loud, and none of them needs a glossary:
 //
-//   "Reef Dwellers. 0.86, down 2% today. Moves about 13% on a normal day."
-//   "Up at least 8%, within a day. About 1 in 4. Pays 3.8x."
+//   "Reef Dwellers. 0.86, down 2% today. Moves about 4% on a normal day."
+//   "Up at least 6%, within a day. About 1 in 5. Pays 5.1x."
 //
 // The three picks are laid out in the order you would think them: which way,
 // how far, how long. Stake last, because it is the only one you cannot get
@@ -214,7 +214,7 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
         </span>
         {/* The one fact that tells you what kind of thing you are looking at. */}
         <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.6rem', color: '#6a7482' }}>
-          moves about {i.dailyMovePct < 10 ? i.dailyMovePct.toFixed(1) : Math.round(i.dailyMovePct)}% on a normal day
+          moves about {i.typicalDayPct < 10 ? i.typicalDayPct.toFixed(1) : Math.round(i.typicalDayPct)}% on a normal day
         </span>
       </span>
       <Line points={i.history.length > 1 ? i.history : [i.prevPrice, i.price]} color={day >= 0 ? UP : DOWN} />
@@ -326,7 +326,7 @@ function Ticket({ index, doubloons, onClose, onDone }: {
           </p>
           <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
             {index.price < 1 ? index.price.toFixed(3) : index.price.toFixed(2)} now
-            {' · '}moves about {index.dailyMovePct < 10 ? index.dailyMovePct.toFixed(1) : Math.round(index.dailyMovePct)}% on a normal day
+            {' · '}moves about {index.typicalDayPct < 10 ? index.typicalDayPct.toFixed(1) : Math.round(index.typicalDayPct)}% on a normal day
           </p>
         </div>
 
