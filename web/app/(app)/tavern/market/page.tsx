@@ -97,7 +97,7 @@ export default async function MarketPage() {
   // that can say "2 running" is worth pressing; one that just says its name is
   // furniture. Head-only count, and only for captains who can trade at all.
   const { count: openContracts } = exchangeOpen
-    ? await admin.from('exchange_positions')
+    ? await admin.from('exchange_bets')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).eq('status', 'open')
     : { count: 0 }

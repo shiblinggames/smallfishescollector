@@ -50,7 +50,7 @@ export default async function BadgesPage() {
     admin.from('shiny_catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     // Every contract this captain has ever opened. The Exchange badges are all
     // aggregates over this, which is why none of them needed a counter.
-    admin.from('exchange_positions').select('status, stake, payout').eq('user_id', user.id),
+    admin.from('exchange_bets').select('status, stake, payout').eq('user_id', user.id),
   ])
 
   // ── Derive everything from existing data — no new columns ────────────────

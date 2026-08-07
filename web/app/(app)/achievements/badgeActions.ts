@@ -26,7 +26,7 @@ export async function reconcileBadges(): Promise<string[]> {
     admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
     admin.from('shiny_catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-    admin.from('exchange_positions').select('status, stake, payout').eq('user_id', user.id),
+    admin.from('exchange_bets').select('status, stake, payout').eq('user_id', user.id),
   ])
   if (!profile) return []
 

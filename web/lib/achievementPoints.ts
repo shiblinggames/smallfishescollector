@@ -49,7 +49,7 @@ const getCachedAchievementRows = unstable_cache(
       admin.from('fish_collection').select('user_id'),
       admin.from('rod_inventory').select('user_id, rod_tier'),
       admin.from('shiny_catches').select('user_id'),
-      admin.from('exchange_positions').select('user_id, status, stake, payout'),
+      admin.from('exchange_bets').select('user_id, status, stake, payout'),
     ])
 
     // Bucket the joined rows by user so each player's conditions compute in memory.
@@ -134,7 +134,7 @@ const getCachedUserPoints = unstable_cache(
       admin.from('fish_collection').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       admin.from('rod_inventory').select('rod_tier').eq('user_id', userId),
       admin.from('shiny_catches').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-      admin.from('exchange_positions').select('status, stake, payout').eq('user_id', userId),
+      admin.from('exchange_bets').select('status, stake, payout').eq('user_id', userId),
     ])
     if (!profile) return 0
     const p = profile as unknown as BadgeProfileFields & { unlocked_badges: string[] | null }

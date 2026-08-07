@@ -157,7 +157,7 @@ export interface BadgeJoinData {
   collectionCount: number   // lifetime distinct species (prestige-proof)
   rodTiers: number[]        // rod_inventory rod_tier values (owned rods)
   goldenCount: number       // shiny_catches rows (lifetime goldens caught)
-  /** Aggregated exchange_positions. A durable log, so the Exchange badges need
+  /** Aggregated exchange_bets. A durable log, so the Exchange badges need
    *  no counters of their own the way the bounty ones do. */
   exchange: {
     opened: number
@@ -173,7 +173,7 @@ export interface BadgeJoinData {
   }
 }
 
-/** One row of exchange_positions, as the badges need it. */
+/** One row of exchange_bets, as the badges need it. */
 export type ExchangePositionRow = { status: string; stake: number | null; payout: number | null }
 
 /** A captain who has never touched the Exchange. */

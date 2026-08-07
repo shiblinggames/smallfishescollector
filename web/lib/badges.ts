@@ -309,7 +309,7 @@ export const BADGES: Badge[] = [
   { id: 'both_in_hand',    name: 'Both in Hand',       description: 'Own both Primeval spoils',                        imageUrl: '/badges/both_in_hand.png',    difficulty: 'master'      },
 
   // ── THE EXCHANGE ── contracts on the fish board. Every one of these is an
-  // aggregate over exchange_positions, which is a durable log, so none of it
+  // aggregate over exchange_bets, which is a durable log, so none of it
   // needed a counter.
   { id: 'first_contract',  name: 'Paper Captain',      description: 'Open your first contract on the Exchange',        imageUrl: '/badges/first_contract.png',  difficulty: 'rookie'      },
   { id: 'first_settle',    name: 'Read the Water',     description: 'Have a contract settle in your favour',           imageUrl: '/badges/first_settle.png',    difficulty: 'seasoned'    },
