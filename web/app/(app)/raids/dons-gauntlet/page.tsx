@@ -36,7 +36,11 @@ export default async function DonsGauntletPage() {
 
   return (
     <main className="min-h-screen pt-6">
-      <div className="px-3 pb-12 max-w-xl mx-auto">
+      {/* No pb here. GauntletGame pads its OWN bottom on every screen it
+          renders: pb-10 on the three lobby views, and an explicit safe-area
+          plus tab-bar clearance on the in-run ones. The shell's pb-12 stacked
+          48px on top of that and left a dead strip under the home page. */}
+      <div className="px-3 max-w-xl mx-auto">
         <GauntletGame
           variant="don"
           otherGauntletUnlocked={davyUnlocked}
