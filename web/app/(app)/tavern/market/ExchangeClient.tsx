@@ -177,9 +177,16 @@ function PortfolioHero({ open, cycle, life }: { open: BoardPosition[]; cycle: nu
 
       {series.length > 1 && (
         <div style={{ marginTop: 8 }}>
+          {/* SAY THE WINDOW. This is the last 24 hours, or however long ago the
+              oldest contract still open was bought, whichever is shorter. With
+              no label it read as all-time to some and as one tick to others,
+              and the two answers are worth very different amounts. */}
+          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a7482', marginBottom: 3 }}>
+            Book value {'·'} last {series.length}h
+          </p>
           <BigSpark points={series} entry={staked} color={pl >= 0 ? UP : DOWN} />
           <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 3 }}>
-            dashed line is what you staked
+            What your open contracts have been worth, hour by hour. The dashed line is the {staked.toLocaleString()} ⟡ you staked.
           </p>
         </div>
       )}
@@ -503,6 +510,32 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
   // implementation detail and it was leaking onto the screen.
   const sign = p.direction === 'rise' ? 1 : -1
 
+  // THE LINE IS YOUR HOLDING PERIOD, not the instrument's whole history.
+  //
+  // It used to plot p.history, which is the fish's or fund's last 24 hours and
+  // has nothing to do with when you bought. Back something an hour ago and 23
+  // of those 24 hours were before you were in it, with a dashed "your entry"
+  // ruled across the lot: the chart looked like you had ridden a move you never
+  // owned. It also ended at LAST hour's price while the number above it read
+  // the live one, so the line and the headline disagreed.
+  //
+  // Now it starts ON your entry and ends on the price right now, so the whole
+  // line is the part you are paid for and every point above the dash is money.
+  const heldHours = Math.max(0, Math.min(cycle, p.expiryCycle) - p.openCycle)
+  const exitPrice = settled ? (p.exitPrice ?? p.livePrice) : p.livePrice
+  // history is oldest-first and holds the prices BEFORE the current one, so the
+  // last `heldHours` of it are the hours you have been in. Its first entry is
+  // the hour you opened, which is the entry price again, so it is dropped.
+  //
+  // The heldHours > 0 guard is not defensive noise: slice(-0) is slice(0), so a
+  // contract opened this hour would quietly hand back the whole 24 again and
+  // land straight back in the bug this is fixing.
+  const pricePoints = [
+    p.entryPrice,
+    ...(heldHours > 0 ? p.history.slice(-heldHours).slice(1) : []),
+    exitPrice,
+  ]
+
   return (
     <PopupShell open onClose={onClose} zIndex={120}>
       <motion.div
@@ -544,13 +577,18 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
             </span>
           </div>
 
-          {p.history.length > 1 && (
+          {pricePoints.length > 1 && (
             <div style={{ marginBottom: 12, padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <BigSpark points={p.history} entry={p.entryPrice} color={yourWay >= 0 ? UP : DOWN} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696' }}>last {p.history.length}h</span>
-                <span className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696' }}>dashed line is your entry</span>
-              </div>
+              {/* Name the units. This sheet has two charts' worth of numbers on
+                  it, one in price and one in doubloons, and an unlabelled line
+                  could be either. */}
+              <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a7482', marginBottom: 3 }}>
+                Price {'·'} {heldHours < 1 ? 'since you opened' : `your last ${heldHours}h`}
+              </p>
+              <BigSpark points={pricePoints} entry={p.entryPrice} color={yourWay >= 0 ? UP : DOWN} />
+              <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 4 }}>
+                Starts at your entry, {p.entryPrice.toFixed(3)}, which is the dashed line. {settled ? 'Ends where it settled.' : 'Ends at the price right now.'}
+              </p>
             </div>
           )}
 
