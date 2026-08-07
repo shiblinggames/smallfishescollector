@@ -39,6 +39,10 @@ function checkGate(profile: { fishing_xp?: number | null } | null): Gate {
 
 export async function openContract(
   instrument: Instrument, direction: Direction, term: Term, stake: number,
+  /** Optional armed levels, as a price move YOUR WAY in percent. Set at the
+   *  ticket so a captain who knows what they want out of a 72h contract never
+   *  has to come back to arm it. Both editable afterwards on the position. */
+  takeProfitPct: number | null = null, stopLossPct: number | null = null,
 ): Promise<OpenResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -99,6 +103,8 @@ export async function openContract(
     entry_price: entry,
     open_cycle: cycle,
     expiry_cycle: cycle + term,
+    take_profit_pct: takeProfitPct != null && takeProfitPct > 0 && takeProfitPct <= 500 ? Math.round(takeProfitPct * 10) / 10 : null,
+    stop_loss_pct:   stopLossPct   != null && stopLossPct   > 0 && stopLossPct   <= 100 ? Math.round(stopLossPct   * 10) / 10 : null,
   }).select('id').single()
 
   if (error || !pos) {
@@ -131,7 +137,7 @@ export async function closeContractEarly(positionId: number): Promise<CloseResul
   // tap, or the settler landing at the same moment, finds nothing to close.
   const { data: claimed } = await admin
     .from('exchange_positions')
-    .update({ status: 'closed_early', settled_at: new Date().toISOString() })
+    .update({ status: 'closed_early', closed_by: 'player', settled_at: new Date().toISOString() })
     .eq('id', positionId)
     .eq('user_id', user.id)
     .eq('status', 'open')
@@ -204,6 +210,16 @@ export type BoardPosition = {
   payout: number | null
   exitPrice: number | null
   seen: boolean
+  /** Armed levels, as a PRICE MOVE YOUR WAY in percent. take-profit closes the
+   *  contract once it is up that much, stop-loss once it is down that much.
+   *  Null means the level is not set; both null is the old behaviour, which is
+   *  to run to expiry. Checked hourly by settle_exchange_contracts, right after
+   *  the price tick, because prices only move on the tick. */
+  takeProfitPct: number | null
+  stopLossPct: number | null
+  /** 'player' when they tapped Close, 'take_profit' / 'stop_loss' when a level
+   *  they armed did it for them, null on anything that ran to expiry. */
+  closedBy: 'player' | 'take_profit' | 'stop_loss' | null
   /** The instrument's own recent prices, so the detail sheet can draw where
    *  this contract sits on the line rather than describing it in numbers. */
   history: number[]
@@ -239,6 +255,10 @@ export type ExchangeBoard = {
   positions: BoardPosition[]
   unseen: number
   lifetime: ExchangeLifetime
+  /** Instruments the captain has starred, as 'fish:<id>' / 'fund:<id>' keys.
+   *  On the profile rather than in localStorage: 146 fish is too many to
+   *  re-find, and re-finding them once per device is the same problem twice. */
+  watchlist: string[]
 }
 
 export async function getExchangeBoard(): Promise<ExchangeBoard | { error: string }> {
@@ -249,13 +269,13 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
 
   const admin = createAdminClient()
   const [profileRes, stateRes, fundsRes, fishRes, posRes, lifeRes] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_xp, has_seen_exchange_intro').eq('id', uid).single(),
+    admin.from('profiles').select('doubloons, fishing_xp, has_seen_exchange_intro, exchange_watchlist').eq('id', uid).single(),
     admin.from('market_state').select('exchange_cycle').eq('id', 1).single(),
     admin.from('exchange_funds').select('fund_id, price, prev_price, members, history'),
     admin.from('fish_exchange')
       .select('fish_id, price, prev_price, history, fish_species(name, habitat, bite_rarity)'),
     admin.from('exchange_positions')
-      .select('id, fund_id, fish_id, direction, term, stake, leverage, entry_price, open_cycle, expiry_cycle, status, payout, exit_price, seen')
+      .select('id, fund_id, fish_id, direction, term, stake, leverage, entry_price, open_cycle, expiry_cycle, status, payout, exit_price, seen, take_profit_pct, stop_loss_pct, closed_by')
       .eq('user_id', uid)
       .order('id', { ascending: false })
       .limit(60),
@@ -316,6 +336,9 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
       payout: p.payout == null ? null : Number(p.payout),
       exitPrice: p.exit_price == null ? null : Number(p.exit_price),
       seen: p.seen === true,
+      takeProfitPct: p.take_profit_pct == null ? null : Number(p.take_profit_pct),
+      stopLossPct: p.stop_loss_pct == null ? null : Number(p.stop_loss_pct),
+      closedBy: (p.closed_by as 'player' | 'take_profit' | 'stop_loss' | null) ?? null,
       history: inst?.history ?? [],
       habitat: fi?.habitat ?? null,
     }
@@ -330,6 +353,7 @@ export async function getExchangeBoard(): Promise<ExchangeBoard | { error: strin
     doubloons: Number(profileRes.data?.doubloons ?? 0),
     funds, fish, positions,
     unseen: positions.filter(p => p.status !== 'open' && !p.seen).length,
+    watchlist: ((profileRes.data?.exchange_watchlist as string[] | null) ?? []),
     lifetime: {
       staked: Number(life?.staked ?? 0),
       returned: Number(life?.returned ?? 0),
@@ -361,4 +385,79 @@ export async function markExchangeIntroSeen(): Promise<void> {
   if (!user) return
   await createAdminClient()
     .from('profiles').update({ has_seen_exchange_intro: true }).eq('id', user.id)
+}
+
+// ── The watchlist ───────────────────────────────────────────────────────────
+
+/** Star or unstar an instrument. Keys are 'fish:<id>' and 'fund:<id>'.
+ *
+ *  On the profile, not in localStorage. The board is 146 fish deep and reorders
+ *  itself every hour on last tick's move, so without this you re-hunt the same
+ *  fish every visit; doing that separately on a phone and a desktop is the same
+ *  chore twice. Returns the new list so the caller never has to guess. */
+export async function toggleExchangeWatch(key: string): Promise<{ watchlist: string[] } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  // Shape-checked because it is written straight into an array column: only the
+  // two prefixes, and only digits or a known fund id after them.
+  if (!/^fish:\d+$/.test(key) && !/^fund:[a-z_]{1,32}$/.test(key)) return { error: 'Unknown instrument' }
+
+  const admin = createAdminClient()
+  const { data: prof } = await admin.from('profiles').select('exchange_watchlist').eq('id', user.id).single()
+  const now = ((prof?.exchange_watchlist as string[] | null) ?? [])
+  const next = now.includes(key) ? now.filter(k => k !== key) : [...now, key]
+  // A cap, because this is an unbounded list a client controls. 60 is more than
+  // a third of the board and far past the point a watchlist is still useful.
+  if (next.length > 60) return { error: 'That is as many as you can watch at once' }
+
+  await admin.from('profiles').update({ exchange_watchlist: next }).eq('id', user.id)
+  return { watchlist: next }
+}
+
+// ── Armed orders ────────────────────────────────────────────────────────────
+
+/** Set, change or clear a contract's take-profit and stop-loss levels.
+ *
+ *  Both are a PRICE MOVE YOUR WAY in percent, so they read the same for a Rise
+ *  and a Fall: 20 means "up 20% my way", never "the price hits 1.2". Pass null
+ *  to clear one. The hourly settler does the closing, at the same value a
+ *  manual close pays, so arming a level is never worse than watching by hand.
+ *
+ *  Levels only, never a partial close: half a contract is a second contract at
+ *  a different entry, and this game does not need two of those. */
+export async function setContractOrders(
+  positionId: number, takeProfitPct: number | null, stopLossPct: number | null,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const clean = (v: number | null, max: number): number | null | 'bad' => {
+    if (v == null) return null
+    if (!Number.isFinite(v)) return 'bad'
+    const n = Math.round(v * 10) / 10
+    if (n <= 0 || n > max) return 'bad'
+    return n
+  }
+  // A stop-loss past 100% cannot fire: you cannot lose more than the stake, and
+  // a price cannot fall further than to nothing. A take-profit is uncapped in
+  // principle but 500% is past anything the engine's bands allow.
+  const tp = clean(takeProfitPct, 500)
+  const sl = clean(stopLossPct, 100)
+  if (tp === 'bad' || sl === 'bad') return { error: 'Pick a level between 0 and 500' }
+
+  const admin = createAdminClient()
+  // Guarded on owner AND status: arming a contract that already settled would
+  // write a level onto a closed row that nothing will ever read.
+  const { data: hit } = await admin
+    .from('exchange_positions')
+    .update({ take_profit_pct: tp, stop_loss_pct: sl })
+    .eq('id', positionId)
+    .eq('user_id', user.id)
+    .eq('status', 'open')
+    .select('id')
+    .maybeSingle()
+  if (!hit) return { error: 'That contract is no longer open' }
+  return { ok: true }
 }

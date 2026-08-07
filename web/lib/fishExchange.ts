@@ -247,3 +247,50 @@ export const MAX_STAKE = 250_000
  *  stops being a price list and starts being something you can take a position
  *  on. */
 export const EXCHANGE_FISHING_LEVEL = 100
+
+// ── How jumpy is it ─────────────────────────────────────────────────────────
+
+/** The spread of a full-term move, as a percentage, for a quoted instrument.
+ *
+ *  This is the number the board was hiding. A rarity-1 fish moves 0.030 per
+ *  tick and a rarity-5 moves 0.075, two and a half times as far, and nothing on
+ *  screen said so: two fish at 1.05 looked like the same bet. Leverage encodes
+ *  it, but as an output nobody can read backwards.
+ *
+ *  Derived from sigmaForTerm rather than a second volatility table, so it
+ *  cannot disagree with the payouts. Averaged across the two directions because
+ *  it describes the instrument, not a side of it, and a player asking "how far
+ *  does this thing move" is not asking about their contract yet. */
+export function typicalSwingPct(q: { rise: number; fall: number }): number {
+  return (sigmaForTerm(q.rise) + sigmaForTerm(q.fall)) / 2
+}
+
+export function singleSwingPct(rarity: number, term: Term = 24): number {
+  return typicalSwingPct((SINGLE_LEVERAGE[rarity] ?? SINGLE_LEVERAGE[3])[term])
+}
+
+export function fundSwingPct(fundId: string, term: Term = 24): number {
+  return typicalSwingPct((FUND_LEVERAGE[fundId] ?? FUND_LEVERAGE.sea)[term])
+}
+
+/** Plain words for that number, so the board reads without doing arithmetic.
+ *  Cut on the day swing: the Sea Index sits near 4.5% and a legendary fish near
+ *  21%, and the bands are placed so each says something different about what
+ *  you are about to take a position on. */
+export function swingLabel(swingPct: number): string {
+  if (swingPct < 5) return 'Calm'
+  if (swingPct < 9) return 'Steady'
+  if (swingPct < 13) return 'Choppy'
+  if (swingPct < 18) return 'Rough'
+  return 'Wild'
+}
+
+/** The PRICE the instrument has to reach for a contract to break even.
+ *
+ *  Break-even was only ever stated as a percentage while the chart beside it
+ *  was drawn in price, leaving the player to convert in their head before
+ *  committing doubloons. A Fall contract needs the price DOWN, so its target
+ *  sits below the entry. */
+export function targetPrice(entry: number, dir: Direction, breakEvenPct: number): number {
+  return dir === 'rise' ? entry * (1 + breakEvenPct / 100) : entry * (1 - breakEvenPct / 100)
+}

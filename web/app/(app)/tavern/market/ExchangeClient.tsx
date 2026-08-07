@@ -18,11 +18,11 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import {
   TERMS, TERM_LABEL, TERM_BLURB, type Term, type Direction,
   quoteFund, quoteSingle, liveValue, MIN_STAKE, MAX_STAKE,
-  EXCHANGE_FISHING_LEVEL,
+  EXCHANGE_FISHING_LEVEL, singleSwingPct, fundSwingPct, swingLabel, targetPrice,
 } from '@/lib/fishExchange'
 import {
   getExchangeBoard, openContract, closeContractEarly, markResultsSeen,
-  markExchangeIntroSeen,
+  markExchangeIntroSeen, toggleExchangeWatch, setContractOrders,
 } from './exchangeActions'
 import ExchangeIntro from './ExchangeIntro'
 import type { ExchangeBoard, BoardFund, BoardFish, BoardPosition, ExchangeLifetime } from './exchangeActions'
@@ -48,6 +48,56 @@ function purseChanged(total: number) {
 
 const pct = (now: number, then: number) => (then > 0 ? ((now - then) / then) * 100 : 0)
 const fmtPct = (p: number) => `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`
+
+/** Move over the whole history window, not just the last tick.
+ *
+ *  The board sorts on the last hour, which is noise: the biggest one-hour mover
+ *  is usually a fish that did nothing all day. This is the number a captain
+ *  actually means by "what is moving". */
+function dayMove(f: { price: number; history: number[] }): number {
+  const first = f.history.length ? f.history[0] : f.price
+  return first > 0 ? ((f.price - first) / first) * 100 : 0
+}
+
+/** One filter chip. */
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={on} className="font-karla font-700"
+      style={{
+        flexShrink: 0, padding: '0.24rem 0.55rem', borderRadius: 999, fontSize: '0.62rem',
+        cursor: 'pointer', WebkitTapHighlightColor: 'transparent', textTransform: 'capitalize',
+        background: on ? 'rgba(56,189,248,0.16)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${on ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.09)'}`,
+        color: on ? '#bfe6ff' : '#8a94a4', whiteSpace: 'nowrap',
+      }}>
+      {children}
+    </button>
+  )
+}
+
+/** The star. Not a heart, not a bookmark: a star is what every board uses and
+ *  nobody has to learn. */
+function WatchStar({ on, busy, onToggle }: { on: boolean; busy: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={on ? 'Stop watching' : 'Watch this'}
+      aria-pressed={on}
+      disabled={busy}
+      onClick={e => { e.stopPropagation(); onToggle() }}
+      style={{
+        flexShrink: 0, width: 26, height: 26, padding: 0, borderRadius: 7,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'none', border: 'none', cursor: busy ? 'wait' : 'pointer',
+        WebkitTapHighlightColor: 'transparent', opacity: busy ? 0.5 : 1,
+      }}>
+      <svg width="14" height="14" viewBox="0 0 24 24"
+        fill={on ? '#ffd96a' : 'none'} stroke={on ? '#ffd96a' : '#5a6472'} strokeWidth="2" strokeLinejoin="round">
+        <path d="M12 2.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 17.45 6.2 20.5l1.1-6.45L2.6 9.45l6.5-.95z" />
+      </svg>
+    </button>
+  )
+}
 
 /** 24 points of history as a line. No library: it is a polyline. */
 function Spark({ points, color, w = 62, h = 20 }: { points: number[]; color: string; w?: number; h?: number }) {
@@ -150,6 +200,14 @@ function PortfolioHero({ open, cycle, life }: { open: BoardPosition[]; cycle: nu
   const pl = value - staked
   const plPct = staked > 0 ? (pl / staked) * 100 : 0
   const soonest = open.length ? Math.min(...open.map(p => Math.max(0, p.expiryCycle - cycle))) : 0
+  // Biggest single instrument as a share of everything staked. Grouped by
+  // label, because two contracts on the same fish in opposite directions are
+  // still the same fish deciding your day.
+  const byLabel = new Map<string, number>()
+  for (const p of open) byLabel.set(p.label, (byLabel.get(p.label) ?? 0) + p.stake)
+  const biggest = staked > 0 && byLabel.size
+    ? [...byLabel.entries()].map(([label, n]) => ({ label, share: n / staked })).sort((a, b) => b.share - a.share)[0]
+    : null
 
   // Nothing open is not the same as nothing to show: a captain between
   // contracts still has a record, and it is the reason to open another.
@@ -197,6 +255,16 @@ function PortfolioHero({ open, cycle, life }: { open: BoardPosition[]; cycle: nu
         <HeroBit label="Next settles" value={soonest <= 0 ? 'moments' : `${soonest}h`} />
       </div>
 
+      {/* WHERE THE RISK ACTUALLY IS. Staked, contracts and the next settlement
+          all describe the book as if it were spread. Four contracts on the same
+          fish is one bet with four receipts, and on a bad day that single line
+          is the whole explanation. Only shown when it is worth saying. */}
+      {biggest && biggest.share >= 0.5 && open.length > 1 && (
+        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: biggest.share >= 0.8 ? '#e6c07a' : '#7c8696', marginTop: 6, lineHeight: 1.45 }}>
+          {Math.round(biggest.share * 100)}% of your stake is riding on {biggest.label}.
+        </p>
+      )}
+
       <LifetimeLedger life={life} />
     </div>
   )
@@ -220,6 +288,14 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   // null = closed. Opens by itself the first time the board is ever open to
   // them, and by request from the board's own "How it works" link after that.
   const [intro, setIntro] = useState<{ celebrate: boolean } | null>(null)
+  const [watchBusy, setWatchBusy] = useState<string | null>(null)
+  // Board filters. Client-side and unpersisted on purpose: they are how you
+  // look right now, not a setting, and a remembered filter that hides most of
+  // the board on your next visit is a bug report waiting to happen.
+  const [query, setQuery] = useState('')
+  const [habitat, setHabitat] = useState<string>('all')
+  const [rarity, setRarity] = useState<number>(0)
+  const [watchOnly, setWatchOnly] = useState(false)
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
@@ -284,6 +360,33 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
   const openPos = board.positions.filter(p => p.status === 'open')
   const donePos = board.positions.filter(p => p.status !== 'open')
 
+  const watched = new Set(board.watchlist)
+  const isWatched = (key: string) => watched.has(key)
+  // Optimistic: the star flips at once and the server catches up. A failed
+  // write leaves the list as the server has it on the next load, which is the
+  // right way round for something this small.
+  const toggleWatch = (key: string) => {
+    setWatchBusy(key)
+    setBoard(b => b ? {
+      ...b,
+      watchlist: b.watchlist.includes(key) ? b.watchlist.filter(k => k !== key) : [...b.watchlist, key],
+    } : b)
+    toggleExchangeWatch(key).then(res => {
+      setWatchBusy(null)
+      if ('watchlist' in res) setBoard(b => b ? { ...b, watchlist: res.watchlist } : b)
+    })
+  }
+
+  // The fish board, filtered. 146 rows is past the point a flat list is a list.
+  const q = query.trim().toLowerCase()
+  const fishList = board.fish
+    .filter(f => (!watchOnly || isWatched(`fish:${f.fishId}`)))
+    .filter(f => (habitat === 'all' || f.habitat === habitat))
+    .filter(f => (rarity === 0 || f.rarity === rarity))
+    .filter(f => (!q || f.name.toLowerCase().includes(q)))
+    .sort((a, b) => Math.abs(pct(b.price, b.prevPrice)) - Math.abs(pct(a.price, a.prevPrice)))
+  const habitats = [...new Set(board.fish.map(f => f.habitat))].sort()
+
   return (
     <>
       {intro && <ExchangeIntro celebrate={intro.celebrate} onDone={closeIntro} />}
@@ -291,6 +394,44 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
       {/* The Hold side opens with the market's mood; this side opens with
           yours. Same job: say where things stand before asking what to do. */}
       <PortfolioHero open={openPos} cycle={board.cycle} life={board.lifetime} />
+
+      {/* MOVERS. With 146 instruments and a board sorted on the last hour,
+          there was no way to notice that something had run 20% on the day. It
+          reads the whole history window instead of the last tick, so it says
+          what moved rather than what twitched. Tapping one opens its ticket,
+          which is the only reason a strip like this earns its space. */}
+      {(() => {
+        const all = [
+          ...board.funds.map(f => ({ key: `fund:${f.id}`, name: f.name, move: dayMove(f), open: () => setTicket({ kind: 'fund' as const, f }) })),
+          ...board.fish.map(f => ({ key: `fish:${f.fishId}`, name: f.name, move: dayMove(f), open: () => setTicket({ kind: 'fish' as const, f }) })),
+        ].filter(m => Math.abs(m.move) >= 1)
+        if (all.length < 2) return null
+        const up = [...all].sort((a, b) => b.move - a.move).slice(0, 3)
+        const down = [...all].sort((a, b) => a.move - b.move).slice(0, 3).filter(m => m.move < 0)
+        const strip = [...up, ...down]
+        if (!strip.length) return null
+        return (
+          <div style={{ marginBottom: '0.85rem' }}>
+            <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#6a7482', marginBottom: 5 }}>
+              On the move {'·'} last 24h
+            </p>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+              {strip.map(m => (
+                <button key={m.key} type="button" onClick={m.open}
+                  style={{
+                    flexShrink: 0, textAlign: 'left', padding: '0.4rem 0.55rem', borderRadius: 9, cursor: 'pointer',
+                    background: 'rgba(13,17,24,0.92)',
+                    border: `1px solid ${m.move >= 0 ? 'rgba(74,222,128,0.32)' : 'rgba(248,113,113,0.3)'}`,
+                    WebkitTapHighlightColor: 'transparent', maxWidth: 150,
+                  }}>
+                  <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#dbe3ee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</p>
+                  <p className="font-karla font-800" style={{ fontSize: '0.7rem', color: m.move >= 0 ? UP : DOWN, ...TNUM }}>{fmtPct(m.move)}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Sub-tabs ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
@@ -363,20 +504,27 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
           </p>
           {board.funds.map(f => {
             const p = pct(f.price, f.prevPrice)
+            const key = `fund:${f.id}`
             return (
-              <button key={f.id} type="button" onClick={() => setTicket({ kind: 'fund', f })}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '0.6rem 0.7rem', borderRadius: 11, background: 'rgba(13,17,24,0.92)', border: '1px solid rgba(255,255,255,0.09)', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+              <div key={f.id} onClick={() => setTicket({ kind: 'fund', f })} role="button" tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setTicket({ kind: 'fund', f }) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '0.6rem 0.55rem 0.6rem 0.7rem', borderRadius: 11, background: 'rgba(13,17,24,0.92)', border: '1px solid rgba(255,255,255,0.09)', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
                 <span aria-hidden style={{ width: 3, height: 30, borderRadius: 2, background: f.accent, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</p>
-                  <p className="font-karla font-500" style={{ fontSize: '0.62rem', color: '#7c8696' }}>{f.members} fish</p>
+                  {/* How far it travels in a day, beside how many fish it is.
+                      Same sentence: what am I taking a position on. */}
+                  <p className="font-karla font-500" style={{ fontSize: '0.62rem', color: '#7c8696' }}>
+                    {f.members} fish {'·'} {swingLabel(fundSwingPct(f.id))}, ±{fundSwingPct(f.id).toFixed(1)}% a day
+                  </p>
                 </div>
                 <Spark points={f.history.length > 1 ? f.history : [f.prevPrice, f.price]} color={p >= 0 ? UP : DOWN} />
                 <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 62 }}>
                   <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#f0f4fa', ...TNUM }}>{f.price.toFixed(3)}</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: p >= 0 ? UP : DOWN, ...TNUM }}>{fmtPct(p)}</p>
                 </div>
-              </button>
+                <WatchStar on={isWatched(key)} busy={watchBusy === key} onToggle={() => toggleWatch(key)} />
+              </div>
             )
           })}
         </div>
@@ -387,20 +535,83 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
           <p className="font-karla font-400 italic" style={{ fontSize: '0.68rem', color: '#7c8696', marginBottom: 2, lineHeight: 1.45 }}>
             One species, on its own. They swing far harder than any fund, and a legendary hardest of all.
           </p>
-          {[...board.fish].sort((a, b) => Math.abs(pct(b.price, b.prevPrice)) - Math.abs(pct(a.price, a.prevPrice))).map(f => {
+
+          {/* 146 FISH. A flat list sorted on the last hour meant the order was
+              different every time you looked and there was no way to come back
+              to one you had your eye on. Search, two filters and a star fix
+              that; none of it is persisted except the stars, because how you
+              are looking right now is not a setting. */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search the board"
+              aria-label="Search fish"
+              className="font-karla font-600"
+              style={{
+                flex: 1, minWidth: 0, padding: '0.42rem 0.6rem', borderRadius: 9, fontSize: '0.72rem',
+                background: 'rgba(8,11,17,0.9)', border: '1px solid rgba(255,255,255,0.12)',
+                color: '#e8eef6', outline: 'none',
+              }} />
+            <button type="button" onClick={() => setWatchOnly(v => !v)}
+              aria-pressed={watchOnly}
+              className="font-karla font-700"
+              style={{
+                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, padding: '0 0.6rem', borderRadius: 9,
+                fontSize: '0.68rem', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                background: watchOnly ? 'rgba(255,217,106,0.16)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${watchOnly ? 'rgba(255,217,106,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                color: watchOnly ? '#ffd96a' : '#8a94a4',
+              }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill={watchOnly ? '#ffd96a' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" aria-hidden>
+                <path d="M12 2.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 17.45 6.2 20.5l1.1-6.45L2.6 9.45l6.5-.95z" />
+              </svg>
+              {board.watchlist.length || 'Watched'}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 4, marginBottom: 2, scrollbarWidth: 'none' }}>
+            {([['all', 'All waters'], ...habitats.map(h => [h, h.replace(/_/g, ' ')] as [string, string])] as [string, string][]).map(([h, label]) => (
+              <Chip key={h} on={habitat === h} onClick={() => setHabitat(h)}>{label}</Chip>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 4, marginBottom: 4, scrollbarWidth: 'none' }}>
+            {([[0, 'Any rarity'], [1, 'Calm'], [2, 'Steady'], [3, 'Choppy'], [4, 'Rough'], [5, 'Wild']] as [number, string][]).map(([r, label]) => (
+              <Chip key={r} on={rarity === r} onClick={() => setRarity(r)}>
+                {r === 0 ? label : `${swingLabel(singleSwingPct(r))} ±${singleSwingPct(r).toFixed(0)}%`}
+              </Chip>
+            ))}
+          </div>
+
+          {fishList.length === 0 && (
+            <p className="font-karla font-400 italic" style={{ fontSize: '0.74rem', color: '#7c8696', padding: '1.6rem 0', textAlign: 'center' }}>
+              {watchOnly && !board.watchlist.length
+                ? 'Nothing starred yet. Tap a star to keep a fish where you can find it.'
+                : 'No fish on the board match that.'}
+            </p>
+          )}
+
+          {fishList.map(f => {
             const p = pct(f.price, f.prevPrice)
+            const key = `fish:${f.fishId}`
+            const swing = singleSwingPct(f.rarity)
             return (
-              <button key={f.fishId} type="button" onClick={() => setTicket({ kind: 'fish', f })}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '0.45rem 0.6rem', borderRadius: 9, background: 'rgba(13,17,24,0.78)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+              <div key={f.fishId} onClick={() => setTicket({ kind: 'fish', f })} role="button" tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setTicket({ kind: 'fish', f }) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '0.45rem 0.4rem 0.45rem 0.6rem', borderRadius: 9, background: 'rgba(13,17,24,0.78)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</p>
+                  <p className="font-karla font-500" style={{ fontSize: '0.58rem', color: '#6a7482', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {swingLabel(swing)} {'·'} ±{swing.toFixed(0)}% a day
+                  </p>
                 </div>
                 <Spark points={f.history.length > 1 ? f.history : [f.prevPrice, f.price]} color={p >= 0 ? UP : DOWN} w={46} h={16} />
                 <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 58 }}>
                   <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0f4fa', ...TNUM }}>{f.price.toFixed(3)}</p>
                   <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: p >= 0 ? UP : DOWN, ...TNUM }}>{fmtPct(p)}</p>
                 </div>
-              </button>
+                <WatchStar on={isWatched(key)} busy={watchBusy === key} onToggle={() => toggleWatch(key)} />
+              </div>
             )
           })}
         </div>
@@ -492,6 +703,11 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
 }) {
   const [busy, setBusy] = useState(false)
   const [armed, setArmed] = useState(false)
+  // Local copies so the pickers respond at once; the write is fire-and-forget
+  // and the next board load is the source of truth.
+  const [takeProfit, setTakeProfit] = useState<number | null>(p.takeProfitPct)
+  const [stopLoss, setStopLoss] = useState<number | null>(p.stopLossPct)
+  const [savedLevels, setSavedLevels] = useState(false)
 
   const live = pct(p.livePrice, p.entryPrice)
   const yourWay = p.direction === 'rise' ? live : -live
@@ -509,6 +725,24 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
   // "your way" terms, where both directions are positive; that is an
   // implementation detail and it was leaking onto the screen.
   const sign = p.direction === 'rise' ? 1 : -1
+  // How far this contract's instrument typically travels OVER THIS CONTRACT'S
+  // TERM, recovered from the leverage it was written at. The position row
+  // carries no rarity, and it does not need one: sigma = (1 - edge) / (phi0 * L)
+  // is the same identity the pricing uses.
+  //
+  // Deliberately the term's own spread rather than a daily figure rescaled by
+  // root-time. The tables are not pure root-time (mean reversion flattens the
+  // long end), so rescaling a 72h leverage to a day lands 24% light. It is also
+  // the more useful number: a take-profit on a three day contract should be
+  // sized against three days.
+  const swing = 2.3064 / p.leverage
+
+  function saveLevels(tp: number | null, sl: number | null) {
+    setSavedLevels(false)
+    setContractOrders(p.id, tp, sl).then(res => {
+      if ('ok' in res) { setSavedLevels(true); onChanged() }
+    })
+  }
 
   // THE LINE IS YOUR HOLDING PERIOD, not the instrument's whole history.
   //
@@ -585,7 +819,9 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
               <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a7482', marginBottom: 3 }}>
                 Price {'·'} {heldHours < 1 ? 'since you opened' : `your last ${heldHours}h`}
               </p>
-              <BigSpark points={pricePoints} entry={p.entryPrice} color={yourWay >= 0 ? UP : DOWN} />
+              <BigSpark points={pricePoints} entry={p.entryPrice} color={yourWay >= 0 ? UP : DOWN}
+                target={targetPrice(p.entryPrice, p.direction, breakEven)}
+                targetColor={p.direction === 'rise' ? UP : DOWN} />
               <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 4 }}>
                 Starts at your entry, {p.entryPrice.toFixed(3)}, which is the dashed line. {settled ? 'Ends where it settled.' : 'Ends at the price right now.'}
               </p>
@@ -599,7 +835,12 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 7, marginBottom: 10 }}>
             <Stat label="Staked" value={`${p.stake.toLocaleString()} ⟡`} />
             <Stat label={settled ? 'Settled' : 'Settles in'}
-              value={settled ? (p.status === 'closed_early' ? 'sold early' : 'at expiry') : remaining <= 0 ? 'moments' : `${remaining}h`} />
+              value={settled
+                ? p.closedBy === 'take_profit' ? 'take profit'
+                  : p.closedBy === 'stop_loss' ? 'stop loss'
+                  : p.status === 'closed_early' ? 'sold early'
+                  : 'at expiry'
+                : remaining <= 0 ? 'moments' : `${remaining}h`} />
 
             {/* Entry and now in ONE block. They are the same fact twice
                 otherwise, and the arrow says more than two labels would. */}
@@ -614,6 +855,34 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
                   value={fmtPct(sign * Math.abs(toBreakEven))}
                   color={toBreakEven > 0 ? '#c8d2e0' : UP} />}
           </div>
+
+          {/* ARM IT, or change what is already armed. Only while it is open:
+              a level on a settled contract is a number nothing will ever read. */}
+          {!settled && (
+            <div style={{ marginBottom: 11, padding: '0.6rem 0.65rem 0.5rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#8a94a4' }}>Close it early at</p>
+                {savedLevels && <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: UP }}>Armed</p>}
+              </div>
+              <LevelPicker
+                label="Take profit"
+                hint={takeProfit == null ? 'runs to expiry' : `at ${targetPrice(p.entryPrice, p.direction, takeProfit).toFixed(3)}`}
+                value={takeProfit}
+                presets={levelPresets(swing, [0.5, 1, 1.5])}
+                tone={UP}
+                onPick={v => { setTakeProfit(v); saveLevels(v, stopLoss) }} />
+              <LevelPicker
+                label="Stop loss"
+                hint={stopLoss == null ? 'rides it out' : `at ${targetPrice(p.entryPrice, p.direction === 'rise' ? 'fall' : 'rise', stopLoss).toFixed(3)}`}
+                value={stopLoss}
+                presets={levelPresets(swing, [0.5, 1])}
+                tone={DOWN}
+                onPick={v => { setStopLoss(v); saveLevels(takeProfit, v) }} />
+              <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a7482', lineHeight: 1.45, marginTop: 2 }}>
+                Checked every hour when the price moves, and paid what the contract is worth right then. The same figure closing it yourself would pay.
+              </p>
+            </div>
+          )}
 
           {/* NOT a comparison. Showing "if it settled this second" beside a
               larger "sell now" read as a contradiction, and worse, the smaller
@@ -706,9 +975,17 @@ function PositionSheet({ p, cycle, onClose, onChanged }: {
 /** A line with a reference ruled across it: your entry price on a position
  *  sheet, or what you staked on the portfolio hero. Either way the dashed line
  *  is break-even, so being above it is the whole story at a glance. */
-function BigSpark({ points, entry, color }: { points: number[]; entry: number; color: string }) {
+function BigSpark({ points, entry, color, target, targetColor }: {
+  points: number[]; entry: number; color: string
+  /** THE PRICE IT HAS TO REACH, ruled solid across the same axis.
+   *  Break-even was only ever given as a percentage while the chart beside it
+   *  was drawn in price, so the player had to convert before committing. Drawn
+   *  in the scale too, so the gap between the two lines IS the bet. */
+  target?: number
+  targetColor?: string
+}) {
   const W = 100, H = 58
-  const all = [...points, entry]
+  const all = [...points, entry, ...(target != null ? [target] : [])]
   const lo = Math.min(...all), hi = Math.max(...all)
   const span = hi - lo || 1
   const y = (v: number) => H - ((v - lo) / span) * H
@@ -716,6 +993,9 @@ function BigSpark({ points, entry, color }: { points: number[]; entry: number; c
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" aria-hidden style={{ display: 'block' }}>
       <line x1="0" y1={y(entry)} x2={W} y2={y(entry)} stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+      {target != null && (
+        <line x1="0" y1={y(target)} x2={W} y2={y(target)} stroke={targetColor ?? UP} strokeWidth="1.2" strokeDasharray="1 2" opacity="0.85" vectorEffect="non-scaling-stroke" />
+      )}
       <polyline points={d} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
     </svg>
   )
@@ -742,11 +1022,21 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
   const [stake, setStake] = useState(5000)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [takeProfit, setTakeProfit] = useState<number | null>(null)
+  const [stopLoss, setStopLoss] = useState<number | null>(null)
 
   const isFund = instrument.kind === 'fund'
   const name = isFund ? instrument.f.name : instrument.f.name
   const accent = isFund ? instrument.f.accent : '#7dd3fc'
   const price = instrument.f.price
+  // TWO different spreads, doing two different jobs.
+  //
+  // The header quotes a DAY, because that describes the instrument and has to
+  // read the same whichever term is selected. The armed-level presets use the
+  // SELECTED TERM, because a take-profit on a three day contract should be
+  // sized against three days, not against one.
+  const daySwing  = isFund ? fundSwingPct(instrument.f.id) : singleSwingPct(instrument.f.rarity)
+  const termSwing = isFund ? fundSwingPct(instrument.f.id, term) : singleSwingPct(instrument.f.rarity, term)
   // Quoted for the direction you picked: Rise and Fall are different prices on
   // the same instrument, because a fall of a given size is the rarer event.
   const q = isFund
@@ -763,7 +1053,7 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
     setErr(''); setBusy(true)
     openContract(
       isFund ? { kind: 'fund', fundId: instrument.f.id } : { kind: 'fish', fishId: instrument.f.fishId },
-      dir, term, capped,
+      dir, term, capped, takeProfit, stopLoss,
     ).then(res => {
       setBusy(false)
       if ('error' in res) setErr(res.error)
@@ -786,7 +1076,7 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
         <div style={{ flexShrink: 0, padding: '0.95rem 1rem 0.7rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0f4fa' }}>{name}</p>
           <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#7c8696', ...TNUM }}>
-            {price.toFixed(3)} now{isFund ? ` · ${instrument.f.members} fish` : ''}
+            {price.toFixed(3)} now {'·'} {swingLabel(daySwing)}, ±{daySwing.toFixed(1)}% a day{isFund ? ` · ${instrument.f.members} fish` : ''}
           </p>
         </div>
 
@@ -817,13 +1107,21 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
                   </p>
                   <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: up ? UP : DOWN, ...TNUM }}>{fmtPct(windowMove)}</p>
                 </div>
-                <BigSpark points={pts} entry={price} color={up ? UP : DOWN} />
+                <BigSpark points={pts} entry={price} color={up ? UP : DOWN}
+                  target={targetPrice(price, dir, q.breakEvenPct)} targetColor={dir === 'rise' ? UP : DOWN} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
                   <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696', ...TNUM }}>
                     low {lo.toFixed(3)} {'·'} high {hi.toFixed(3)}
                   </span>
-                  <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696' }}>dashed line is where you come in</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696' }}>you come in here</span>
                 </div>
+                {/* THE TARGET, as a price. Break-even was only ever a
+                    percentage, on a screen whose chart is drawn in price, which
+                    left the player doing the conversion in their head before
+                    spending anything. */}
+                <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: dir === 'rise' ? UP : DOWN, marginTop: 3, ...TNUM }}>
+                  {dir === 'rise' ? 'Above' : 'Below'} {targetPrice(price, dir, q.breakEvenPct).toFixed(3)} and you are in profit
+                </p>
               </div>
             )
           })()}
@@ -867,6 +1165,26 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
               </button>
             ))}
           </div>
+
+          {/* CLOSE IT WITHOUT ME. A 72 hour contract cannot be watched, and the
+              board says nobody tried: every contract closed so far was closed
+              by hand before expiry. Arming a level once is that decision made
+              in advance, paid at the same value a manual close pays. */}
+          <Label>Close it early at</Label>
+          <LevelPicker
+            label="Take profit"
+            hint={takeProfit == null ? 'runs to expiry' : `at ${targetPrice(price, dir, takeProfit).toFixed(3)}`}
+            value={takeProfit}
+            presets={levelPresets(termSwing, [0.5, 1, 1.5])}
+            tone={UP}
+            onPick={setTakeProfit} />
+          <LevelPicker
+            label="Stop loss"
+            hint={stopLoss == null ? 'rides it out' : `at ${targetPrice(price, dir === 'rise' ? 'fall' : 'rise', stopLoss).toFixed(3)}`}
+            value={stopLoss}
+            presets={levelPresets(termSwing, [0.5, 1])}
+            tone={DOWN}
+            onPick={setStopLoss} />
 
           {/* THE DEAL, in one line. Everything above is a choice; this is what
               those choices bought. */}
@@ -913,6 +1231,53 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
         </div>
       </motion.div>
     </PopupShell>
+  )
+}
+
+/** ARMED LEVELS, as a price move your way.
+ *
+ *  Expressed as a move and not as a price, so one control reads the same for a
+ *  Rise and a Fall: 20 always means "twenty percent my way". The presets scale
+ *  off how far that instrument actually travels, because +10% is an ambitious
+ *  week on the Sea Index and half a quiet afternoon on a legendary fish, and a
+ *  fixed ladder would be wrong for one of them whichever numbers it used. */
+function levelPresets(swingPct: number, mults: number[]): number[] {
+  return [...new Set(mults.map(m => Math.max(1, Math.round(swingPct * m))))]
+}
+
+function LevelPicker({ label, hint, value, presets, tone, onPick }: {
+  label: string
+  hint: string
+  value: number | null
+  presets: number[]
+  tone: string
+  onPick: (v: number | null) => void
+}) {
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+        <span className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.58rem', color: '#7c8696' }}>{label}</span>
+        <span className="font-karla font-500" style={{ fontSize: '0.58rem', color: '#6a7482', ...TNUM }}>{hint}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 5 }}>
+        <button type="button" onClick={() => onPick(null)} className="font-karla font-700"
+          style={{
+            flex: 1, padding: '0.34rem 0.2rem', borderRadius: 8, fontSize: '0.64rem', cursor: 'pointer',
+            background: value == null ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${value == null ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.09)'}`,
+            color: value == null ? '#dbe3ee' : '#6a7482', WebkitTapHighlightColor: 'transparent',
+          }}>Off</button>
+        {presets.map(v => (
+          <button key={v} type="button" onClick={() => onPick(v)} className="font-karla font-700"
+            style={{
+              flex: 1, padding: '0.34rem 0.2rem', borderRadius: 8, fontSize: '0.64rem', cursor: 'pointer',
+              background: value === v ? `${tone}22` : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${value === v ? tone : 'rgba(255,255,255,0.09)'}`,
+              color: value === v ? tone : '#8a94a4', WebkitTapHighlightColor: 'transparent', ...TNUM,
+            }}>{v}%</button>
+        ))}
+      </div>
+    </div>
   )
 }
 
