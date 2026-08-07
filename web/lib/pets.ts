@@ -205,3 +205,23 @@ export function rollPet(): PetDef {
   }
   return pool[0]
 }
+
+/** A pet's share of ALL pet finds, as a fraction.
+ *
+ *  Two rolls decide which pet you get: the species split, then the variant
+ *  weight inside that species. Multiplying them is the only honest way to
+ *  compare a Gold Crab against a Sand Parrot, because a variant weight on its
+ *  own says nothing about how often its species comes up at all.
+ *
+ *  Derived from the same two tables rollPet() rolls against, so a tuning change
+ *  moves the printed odds with it and the Almanac cannot quietly go stale.
+ *  Deliberately NOT the per-crate chance: that depends on the crate tier
+ *  (CRATE_PET_CHANCE runs 1 in 200 up to 1 in 10), so there is no single number
+ *  to print on a pet. */
+export function petDropShare(pet: PetDef): number {
+  const speciesTotal = Object.values(PET_SPECIES_WEIGHTS).reduce((s, w) => s + w, 0)
+  const pool = PETS.filter(p => p.species === pet.species)
+  const poolTotal = pool.reduce((s, p) => s + p.weight, 0)
+  if (!speciesTotal || !poolTotal) return 0
+  return (PET_SPECIES_WEIGHTS[pet.species] / speciesTotal) * (pet.weight / poolTotal)
+}

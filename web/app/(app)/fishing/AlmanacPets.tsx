@@ -8,7 +8,7 @@
 // same lesson the gear modal's hardcoded [parrot, monkey, seal] taught.
 
 import { motion } from 'framer-motion'
-import { PETS, PET_SPECIES_ORDER, PET_SPECIES_LABEL } from '@/lib/pets'
+import { PETS, PET_SPECIES_ORDER, PET_SPECIES_LABEL, petDropShare } from '@/lib/pets'
 import { petArt } from '@/lib/almanac'
 import type { AlmanacData } from './almanacActions'
 
@@ -17,8 +17,13 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
 
   return (
     <>
+      {/* The odds are the SHARE OF PET FINDS, not a chance per crate. A pet
+          costs two rolls: whether the crate hides one at all, which depends
+          entirely on the crate tier, and then which pet it is, which does not.
+          Only the second is a property of the pet, so only the second can be
+          printed under it. The first belongs in this line. */}
       <p className="font-karla font-400 italic" style={{ fontSize: '0.64rem', color: '#9a93b8', lineHeight: 1.45, marginBottom: '1rem' }}>
-        Every one of them came out of a crate. The rarer the crate, the better the odds one was in it.
+        Every one of them came out of a crate, from about 1 in 200 wooden ones up to 1 in 10 Ancient Chests. When one does turn up, this is how often it is each of them.
       </p>
 
       {PET_SPECIES_ORDER.map(species => {
@@ -69,7 +74,14 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
                     <p className="font-cinzel font-700" style={{ width: '100%', minWidth: 0, marginTop: 7, fontSize: '0.86rem', height: '1.1rem', lineHeight: '1.1rem', color: has ? '#efeaf8' : '#7b7499', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {has ? p.name : '???'}
                     </p>
-                    <span aria-hidden style={{ marginTop: 5, width: has ? 28 : 14, height: 1.5, borderRadius: 2, background: has ? `linear-gradient(90deg, transparent, ${p.accentColor}, transparent)` : 'rgba(255,255,255,0.10)' }} />
+                    {/* Shown on the ones you have NOT found too. A masked name
+                        keeps the surprise; the odds are what tells you the
+                        silhouette in the corner is worth chasing. Fixed height
+                        so a row of cards cannot end up ragged. */}
+                    <p className="font-karla font-600" style={{ fontSize: '0.6rem', height: '0.85rem', lineHeight: '0.85rem', color: has ? '#a49dc0' : '#6f6890', fontVariantNumeric: 'tabular-nums' }}>
+                      {(petDropShare(p) * 100).toFixed(1)}% of finds
+                    </p>
+                    <span aria-hidden style={{ marginTop: 4, width: has ? 28 : 14, height: 1.5, borderRadius: 2, background: has ? `linear-gradient(90deg, transparent, ${p.accentColor}, transparent)` : 'rgba(255,255,255,0.10)' }} />
                   </motion.div>
                 )
               })}
