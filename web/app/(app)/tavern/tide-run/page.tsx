@@ -32,7 +32,12 @@ export default async function TideRunPage() {
 
   return (
     <>
-      <main className="max-w-md mx-auto px-3 pt-3 pb-6 relative" style={{ zIndex: 1 }}>
+      {/* NO column and no padding. Tide Run is a full-bleed canvas: the sea it
+          draws IS the page background, so a max-w-md gutter on either side and
+          12px of breathing room above turned the whole game into a widget
+          sitting on a screenshot of a tavern. The game owns its own clearance
+          for the nav and the tab bar (see the height calc in TideRunGame). */}
+      <main className="relative" style={{ zIndex: 1 }}>
         <TideRunGame
           initialBestDistance={initialBestDistance}
           hasSeenTour={hasSeenTour}

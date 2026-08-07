@@ -1718,16 +1718,24 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         onPointerCancel={onRelease}
         onPointerLeave={onRelease}
         onContextMenu={(e) => e.preventDefault()}
-        className="relative w-full overflow-hidden rounded-xl"
+        className="relative w-full overflow-hidden"
         style={{
-          // Fill available viewport above the mobile tab bar. The page header
-          // (back button + title + ?) was removed and the ? moved into the
-          // canvas, so the game extends further up. Subtraction: top nav
-          // (~56) + main pt-3 (12) + clearance above tab bar (~64). Min/max
-          // keep it sane on very short or very tall displays.
-          height: 'min(900px, max(480px, calc(100dvh - 132px)))',
+          // FULL BLEED. The canvas paints its own sea and sky, so a border and
+          // a rounded corner around it framed the game as a card sitting on the
+          // page rather than as the page. Both are gone and the column with
+          // them; what is left is the drawn scene, edge to edge.
+          //
+          // Fill available viewport above the mobile tab bar. Subtraction: top
+          // nav (~56) + clearance above tab bar (~64). The old 132 included
+          // 12px of page padding that no longer exists. Min/max keep it sane on
+          // very short or very tall displays.
+          height: 'min(900px, max(480px, calc(100dvh - 120px)))',
+          // Capped and centred so a desktop window does not stretch the sea to
+          // 1400px, where the obstacle widths (set as a % of canvas) would
+          // scale into a different game.
+          maxWidth: 720,
+          margin: '0 auto',
           background: '#062840',
-          border: '1px solid rgba(255,255,255,0.10)',
           touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
