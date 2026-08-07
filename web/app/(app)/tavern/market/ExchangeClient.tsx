@@ -1040,8 +1040,8 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
   // Quoted for the direction you picked: Rise and Fall are different prices on
   // the same instrument, because a fall of a given size is the rarer event.
   const q = isFund
-    ? quoteFund(instrument.f.id, term, dir)
-    : quoteSingle(instrument.f.rarity, term, dir)
+    ? quoteFund(instrument.f.id, term, dir, price)
+    : quoteSingle(instrument.f.rarity, term, dir, price)
 
   const capped = Math.max(MIN_STAKE, Math.min(MAX_STAKE, Math.min(stake, doubloons)))
   const example = (movePct: number) => Math.round(capped * q.leverage * movePct)
@@ -1122,6 +1122,16 @@ function Ticket({ instrument, doubloons, onClose, onDone }: {
                 <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: dir === 'rise' ? UP : DOWN, marginTop: 3, ...TNUM }}>
                   {dir === 'rise' ? 'Above' : 'Below'} {targetPrice(price, dir, q.breakEvenPct).toFixed(3)} and you are in profit
                 </p>
+                {/* THE DRIFT, said out loud. The board pulls every price back
+                    toward 1.000, so an instrument down here is expected to climb
+                    on its own and one up there to fall. That is priced into the
+                    target above, and saying so is the difference between a hard
+                    bet and an ambush. */}
+                {Math.abs(q.driftPct) >= 0.5 && (
+                  <p className="font-karla font-500" style={{ fontSize: '0.62rem', color: '#7c8696', marginTop: 2, lineHeight: 1.4, ...TNUM }}>
+                    The board pulls toward 1.000, so this is expected to move {fmtPct(q.driftPct)} your way on its own over {term}h. Your target already counts it.
+                  </p>
+                )}
               </div>
             )
           })()}

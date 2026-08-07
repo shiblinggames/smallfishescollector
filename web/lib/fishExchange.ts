@@ -197,16 +197,93 @@ export type Quote = {
   leverage: number
   /** The move, in percent, at which the contract returns exactly the stake. */
   breakEvenPct: number
+  /** The move the instrument is EXPECTED to make on its own over the term,
+   *  signed the player's way. Zero at par, positive when the drift is helping
+   *  them, negative when it is against. Surfaced so the ticket can say so. */
+  driftPct: number
 }
 
-export function quoteFund(fundId: string, term: Term, dir: Direction): Quote {
-  const leverage = (FUND_LEVERAGE[fundId] ?? FUND_LEVERAGE.sea)[term][dir]
-  return { leverage, breakEvenPct: 1 / leverage }
+/** The engine's pull back toward par, in log space, per cycle. Must match
+ *  update_fish_exchange's THETA exactly. */
+export const THETA = 0.015
+
+/** THE PRICE IS NOT THE FORECAST.
+ *
+ *  The engine mean-reverts: lp = lp - THETA*lp + noise. So an instrument sitting
+ *  below par is EXPECTED to climb, and one above par to fall, with no skill or
+ *  luck involved. Over `term` cycles the expected log-price decays toward zero
+ *  by (1-THETA)^term, so the expected move is known in closed form the moment
+ *  the price is.
+ *
+ *  The leverage tables do not know this: derive-exchange-payouts.mjs starts
+ *  every simulated instrument at 1.00, where the drift is exactly zero. Priced
+ *  off those tables, a contract opened away from par was not a bet at all.
+ *  Simulated against the shipped engine at 10,000 staked on a rarity-3 24h:
+ *
+ *    start 0.654   Rise paid 26,843   (+168% to the player)
+ *    start 0.750   Rise paid 20,069   (+101%)
+ *    start 1.000        paid  9,161   (-8%, as intended)
+ *    start 1.300   Fall paid 18,000   (+80%)
+ *
+ *  Today's board runs 0.654 to 1.300, so that was live money. */
+export function driftPct(price: number, term: Term, dir: Direction): number {
+  if (!(price > 0)) return 0
+  const decay = Math.pow(1 - THETA, term)
+  const move = (Math.exp(Math.log(price) * (decay - 1)) - 1) * 100
+  return dir === 'rise' ? move : -move
 }
 
-export function quoteSingle(rarity: number, term: Term, dir: Direction): Quote {
-  const leverage = (SINGLE_LEVERAGE[rarity] ?? SINGLE_LEVERAGE[3])[term][dir]
-  return { leverage, breakEvenPct: 1 / leverage }
+/** Re-solve the leverage so the contract is worth stake x (1 - edge) again once
+ *  the drift is counted.
+ *
+ *  Payout is stake x L x max(0, move), and with the move now centred on `m`
+ *  rather than zero its expectation is the Bachelier form liveValue already
+ *  uses: E[max(0, m + X)] = m*Phi(m/s) + s*phi(m/s).
+ *
+ *  Applied as a RATIO against the table's own par value rather than solved from
+ *  scratch, so at par it returns the simulated number unchanged and the analytic
+ *  approximation's small error cancels instead of accumulating.
+ *
+ *  IT ONLY EVER CUTS. The same adjustment run on the side the drift works
+ *  AGAINST wants to raise leverage instead, and there the normal approximation
+ *  falls apart: it is being asked about the far tail, where the reflecting band
+ *  and the 2x mood multiplier bend the real distribution away from anything
+ *  closed-form. Simulated, that raise paid 58,171 on a 10,000 stake at the
+ *  extreme, which is a worse hole than the one it was closing. This file's own
+ *  header says the tables are simulated for exactly that reason.
+ *
+ *  So the against-drift side keeps its par leverage, unchanged from today. It is
+ *  a poor bet, and it always was: buying Fall on something at 0.654 returned 19%
+ *  of stake before this change and still does. The difference is that the ticket
+ *  now SAYS the instrument is expected to climb 13.8% on its own, so it is a
+ *  choice rather than an ambush.
+ *
+ *  Pricing that side honestly needs a simulated multiplier table, the same way
+ *  the par tables were built. Worth doing; not worth guessing at. */
+function driftAdjusted(parLeverage: number, drift: number): number {
+  if (drift <= 0) return parLeverage
+  const s = sigmaForTerm(parLeverage)
+  if (!(s > 0)) return parLeverage
+  const z = drift / s
+  const expected = drift * normCdf(z) + s * normPdf(z)
+  if (!(expected > 0)) return parLeverage
+  return Math.min(parLeverage, parLeverage * (s * INV_SQRT_2PI) / expected)
+}
+
+/** `price` is the instrument's price right now. Omit it and you get the par
+ *  quote, which is only correct for something sitting at 1.00. */
+export function quoteFund(fundId: string, term: Term, dir: Direction, price?: number): Quote {
+  const par = (FUND_LEVERAGE[fundId] ?? FUND_LEVERAGE.sea)[term][dir]
+  const drift = price == null ? 0 : driftPct(price, term, dir)
+  const leverage = driftAdjusted(par, drift)
+  return { leverage, breakEvenPct: 1 / leverage, driftPct: drift }
+}
+
+export function quoteSingle(rarity: number, term: Term, dir: Direction, price?: number): Quote {
+  const par = (SINGLE_LEVERAGE[rarity] ?? SINGLE_LEVERAGE[3])[term][dir]
+  const drift = price == null ? 0 : driftPct(price, term, dir)
+  const leverage = driftAdjusted(par, drift)
+  return { leverage, breakEvenPct: 1 / leverage, driftPct: drift }
 }
 
 /** What a contract pays, given how far the instrument actually moved.
