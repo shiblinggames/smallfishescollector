@@ -221,6 +221,19 @@ export function payoutFor(stake: number, multiplier: number): number {
   return Math.max(0, Math.round(stake * multiplier))
 }
 
+/** A price, at whatever size it happens to be.
+ *
+ *  The board runs from a Smack at 0.09 to a Pod at 1,688, so one format cannot
+ *  serve it. Two decimals on a penny stock hides a one percent move entirely;
+ *  four on a four figure one is noise nobody reads. Decimals where they carry
+ *  information, separators where the number is long enough to need them. */
+export function fmtPrice(p: number): string {
+  if (!Number.isFinite(p)) return '-'
+  if (p < 1) return p.toFixed(4)
+  if (p < 1000) return p.toFixed(2)
+  return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 export const MIN_STAKE = 500
 export const MAX_STAKE = 250_000
 

@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, driftOver, stakeCapFor, chanceInWords, payoutInWords, payoutFor,
+  offeredBets, driftOver, stakeCapFor, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, markBetsSeen } from './boardActions'
@@ -227,7 +227,7 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
       <Line points={i.history.length > 1 ? i.history : [i.prevPrice, i.price]} color={day >= 0 ? UP : DOWN} />
       <span style={{ textAlign: 'right', flexShrink: 0, minWidth: 56 }}>
         <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.8rem', color: '#f0f4fa', ...TNUM }}>
-          {i.price < 1 ? i.price.toFixed(3) : i.price.toFixed(2)}
+          {fmtPrice(i.price)}
         </span>
         <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.62rem', color: day >= 0 ? UP : DOWN, ...TNUM }}>
           {fmtPct(day)}
@@ -339,7 +339,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             {index.blurb}
           </p>
           <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
-            {index.price < 1 ? index.price.toFixed(3) : index.price.toFixed(2)} now
+            {fmtPrice(index.price)} now
             {' · '}moves about {index.typicalDayPct < 10 ? index.typicalDayPct.toFixed(1) : Math.round(index.typicalDayPct)}% on a normal day
           </p>
         </div>
