@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, driftOver, stakeCapFor, chanceInWords, payoutInWords, payoutFor, fmtPrice,
+  offeredBets, driftOver, stakeCapFor, minStakeFor, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, markBetsSeen } from './boardActions'
@@ -305,7 +305,9 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // The longer the odds, the less you may put on: a bet is capped by what it
   // pays out, not by its price.
   const betCap = chosen ? stakeCapFor(chosen.multiplier) : MAX_STAKE
-  const capped = Math.max(MIN_STAKE, Math.min(betCap, Math.min(stake, doubloons)))
+  // The costly end of the board asks for one unit at least.
+  const betFloor = minStakeFor(index.price)
+  const capped = Math.max(betFloor, Math.min(betCap, Math.min(stake, doubloons)))
   const returns = chosen ? payoutFor(capped, chosen.multiplier) : 0
 
   function submit() {
@@ -478,7 +480,8 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               </p>
               <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#7c8696', marginTop: 5, lineHeight: 1.45 }}>
                 If it does not get there, the stake is gone. Nothing in between.
-                {betCap < MAX_STAKE && ` The most this one takes is ${betCap.toLocaleString()} ⟡.`}
+                {betFloor > MIN_STAKE && ` One unit of ${index.name} is ${betFloor.toLocaleString()} ⟡, so that is the smallest bet it takes.`}
+                {betCap < MAX_STAKE && ` The most it takes is ${betCap.toLocaleString()} ⟡.`}
               </p>
             </div>
           )}

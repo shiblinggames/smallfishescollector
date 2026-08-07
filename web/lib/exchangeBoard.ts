@@ -253,6 +253,27 @@ export const MAX_STAKE = 250_000
  *  simply says how much this particular one will take. */
 export const MAX_PAYOUT = 5_000_000
 
+/** THE SMALLEST BET AN INDEX WILL TAKE: one unit of it.
+ *
+ *  Real options do cost more on an expensive underlying, but not because the bet
+ *  is better. A contract is a hundred SHARES, so a Berkshire call buys more
+ *  exposure than a penny call at the same odds. There are no shares here, you
+ *  stake doubloons on a percentage move, so the honest translation is not a
+ *  higher price but a bigger minimum ticket: you cannot own a fraction of a
+ *  1,420 index any more than you can own a fraction of a Berkshire share.
+ *
+ *  It leaves the odds and the payouts alone. It only means the costly end of the
+ *  board is somewhere you arrive with money, which is what makes a price worth
+ *  printing at all.
+ *
+ *  Capped, because prices are free to wander: an index that has gone up fifty
+ *  times should not lock every captain out of it. */
+export const MAX_MIN_STAKE = 25_000
+export function minStakeFor(price: number): number {
+  if (!Number.isFinite(price) || price <= 0) return MIN_STAKE
+  return Math.min(MAX_MIN_STAKE, Math.max(MIN_STAKE, Math.ceil(price)))
+}
+
 /** The largest stake this bet will accept, given what it pays. */
 export function stakeCapFor(multiplier: number): number {
   if (!(multiplier > 0)) return MAX_STAKE

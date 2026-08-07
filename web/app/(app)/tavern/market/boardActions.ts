@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, minStakeFor, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -217,6 +217,10 @@ export async function openBet(
   // is 49 million out of one hour, against a richest balance of three.
   const cap = stakeCapFor(priced.multiplier)
   if (stake > cap) return { error: `Most you can put on this one is ${cap.toLocaleString()} ⟡` }
+
+  // One unit, minimum. You cannot own a fraction of a 1,420 index.
+  const floorStake = minStakeFor(entry)
+  if (stake < floorStake) return { error: `This one takes ${floorStake.toLocaleString()} ⟡ at least` }
 
   // Debit first, atomically and balance-guarded, the same order every purchase
   // in the game uses. A bet written before the stake was taken is a bet
