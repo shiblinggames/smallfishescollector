@@ -16,7 +16,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
-import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER, ZONE_TAGLINE } from './zoneData'
+import { ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import { RARITY_LABEL, RARITY_COLOR, fishArt, isGiant, shortDate } from '@/lib/almanac'
 import { tierForLength, TIER_LABEL, TIER_COLOR, formatFishLength } from '@/lib/fishSize'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
@@ -190,7 +190,6 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
                   {done ? "✦ all charted" : `${got} / ${list.length}`}
                 </span>
               </div>
-              <p className="font-karla font-400 italic" style={{ fontSize: '0.68rem', color: '#a49dc0', marginTop: 2 }}>{ZONE_TAGLINE[zone]}</p>
               {/* The rule doubles as the progress bar: it fills in the zone's
                   colour as far as you have charted and stays a hairline for the
                   rest, so one line does two jobs. */}
