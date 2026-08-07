@@ -6,6 +6,7 @@ import {
   ALL_BOUNTIES, BOUNTY_BY_ID, BOUNTY_DAILY_MAX,
   bountyGems, rollBounties, bountyToday, canOffer,
   rungFor, nextRung, rungGems,
+  bountyPoints, BOUNTY_POINTS, BOUNTY_SWEEP_POINTS, BOUNTY_MILESTONES, nextMilestone, milestonesEarned,
   type Bounty, type BountyMeter, type BountyRung,
 } from '@/lib/bounties'
 
@@ -50,12 +51,23 @@ export type BountyBoard = {
   rung: { chapter: number; title: string; boss: string } | null
   /** What the next rung adds, and who is standing in the way of it. */
   next: { chapter: number; title: string; boss: string; gems: number } | null
+  /** The slow ladder under the daily gems. */
+  points: number
+  /** Milestones collected so far. */
+  milestonesClaimed: number
+  /** Rungs earned but not yet collected. */
+  milestonesReady: number
+  /** The next rung of the ladder, or null once the capstone is taken. */
+  nextMilestone: { points: number; label: string } | null
+  /** Points on the board today, if every remaining order is cleared. */
+  pointsToday: number
 }
 
 const SHUT: BountyBoard = {
   unlocked: false, lockReason: 'Clear Chapter I to open the bounty board',
   bounties: [], gems: 0, rerollUsed: false, remaining: 0,
   rungMax: 0, dailyMax: BOUNTY_DAILY_MAX, rung: null, next: null,
+  points: 0, milestonesClaimed: 0, milestonesReady: 0, nextMilestone: null, pointsToday: 0,
 }
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -161,6 +173,26 @@ function rungFacts(rung: BountyRung) {
   }
 }
 
+
+/** The points half of the board, off the same profile row. */
+function ladderFacts(profile: Record<string, unknown> | null, bounties: BountyView[]) {
+  const points = Number(profile?.bounty_points ?? 0)
+  const claimed = Number(profile?.bounty_milestones_claimed ?? 0)
+  const nxt = nextMilestone(claimed)
+  // What is still winnable today: the unclaimed orders, plus the sweep bonus
+  // if none of them have been missed yet.
+  const left = bounties.filter(b => !b.claimed)
+  const sweepStillOn = bounties.length > 0
+  return {
+    points,
+    milestonesClaimed: claimed,
+    milestonesReady: Math.max(0, milestonesEarned(points) - claimed),
+    nextMilestone: nxt ? { points: nxt.points, label: nxt.label } : null,
+    pointsToday: left.reduce((n, b) => n + (BOUNTY_POINTS[b.tier] ?? 0), 0)
+      + (sweepStillOn && left.length === bounties.length ? BOUNTY_SWEEP_POINTS : 0),
+  }
+}
+
 export async function getBountyBoard(): Promise<BountyBoard> {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
@@ -229,6 +261,10 @@ export async function getBountyBoard(): Promise<BountyBoard> {
       remaining: rolled.reduce((n, b) => n + bountyGems(b), 0),
       dailyMax: BOUNTY_DAILY_MAX,
       ...facts,
+      ...ladderFacts(profile as Record<string, unknown> | null, rolled.map(b => ({
+        id: b.id, name: b.name, desc: b.desc, tier: b.tier,
+        gems: bountyGems(b), target: b.target, progress: 0, claimed: false,
+      }))),
     }
   }
 
@@ -256,10 +292,11 @@ export async function getBountyBoard(): Promise<BountyBoard> {
     remaining: bounties.filter(b => !b.claimed).reduce((n, b) => n + b.gems, 0),
     dailyMax: BOUNTY_DAILY_MAX,
     ...facts,
+    ...ladderFacts(signals.profile, bounties),
   }
 }
 
-export type ClaimResult = { ok: true; gems: number; total: number } | { error: string }
+export type ClaimResult = { ok: true; gems: number; total: number; points: number; sweep: boolean } | { error: string }
 
 export async function claimBounty(bountyId: string): Promise<ClaimResult> {
   const supabase = await createClient()
@@ -300,7 +337,7 @@ export async function claimBounty(bountyId: string): Promise<ClaimResult> {
 
   const gems = bountyGems(b)
   const { data: prof } = await admin.from('profiles')
-    .select('gems, bounties_claimed, bounty_gems_earned, bounty_boards_cleared, bounty_elites_claimed')
+    .select('gems, bounties_claimed, bounty_gems_earned, bounty_boards_cleared, bounty_elites_claimed, bounty_points')
     .eq('id', user.id).single()
   const total = Number(prof?.gems ?? 0) + gems
 
@@ -310,16 +347,77 @@ export async function claimBounty(bountyId: string): Promise<ClaimResult> {
   // check every OTHER slot and treat this one as taken.
   const after = ids.every((_, k) => k === i || claimed[k] === true)
 
+  // Points ride with the gems: the order's own by tier, plus the sweep bonus
+  // when this claim is the one that finishes the board.
+  const earnedPoints = bountyPoints(b) + (after ? BOUNTY_SWEEP_POINTS : 0)
+
   const stats = {
     gems: total,
     bounties_claimed: Number(prof?.bounties_claimed ?? 0) + 1,
     bounty_gems_earned: Number(prof?.bounty_gems_earned ?? 0) + gems,
     bounty_boards_cleared: Number(prof?.bounty_boards_cleared ?? 0) + (after ? 1 : 0),
     bounty_elites_claimed: Number(prof?.bounty_elites_claimed ?? 0) + (b.tier === 'elite' ? 1 : 0),
+    bounty_points: Number(prof?.bounty_points ?? 0) + earnedPoints,
   }
   await admin.from('profiles').update(stats).eq('id', user.id)
 
-  return { ok: true, gems, total }
+  return { ok: true, gems, total, points: earnedPoints, sweep: after }
+}
+
+export type MilestoneResult =
+  | { ok: true; label: string; doubloons: number; gems: number; colorId: string | null }
+  | { error: string }
+
+/** Collect the next rung of the points ladder.
+ *
+ *  One rung at a time and strictly in order, which is what lets the claimed
+ *  count be a single integer: "collected the first five" is the whole truth and
+ *  cannot arrive out of sequence. */
+export async function claimBountyMilestone(): Promise<MilestoneResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: p } = await admin.from('profiles')
+    .select('doubloons, gems, bounty_points, bounty_milestones_claimed, unlocked_character_colors')
+    .eq('id', user.id).single()
+  if (!p) return { error: 'Profile not found' }
+
+  const claimed = Number(p.bounty_milestones_claimed ?? 0)
+  const points = Number(p.bounty_points ?? 0)
+  const m = BOUNTY_MILESTONES[claimed]
+  if (!m) return { error: 'Every milestone is already collected' }
+  if (points < m.points) return { error: `${m.points - points} more points needed` }
+
+  const colors = ((p.unlocked_character_colors as string[] | null) ?? [])
+  const grantColor = m.colorId && !colors.includes(m.colorId)
+
+  // Guarded on the count we read, so two taps cannot collect the same rung
+  // twice: the second finds the number already moved and matches nothing.
+  const { data: won } = await admin.from('profiles')
+    .update({
+      bounty_milestones_claimed: claimed + 1,
+      doubloons: Number(p.doubloons ?? 0) + (m.doubloons ?? 0),
+      gems: Number(p.gems ?? 0) + (m.gems ?? 0),
+      ...(grantColor ? { unlocked_character_colors: [...colors, m.colorId as string] } : {}),
+    })
+    .eq('id', user.id)
+    .eq('bounty_milestones_claimed', claimed)
+    .select('id')
+    .maybeSingle()
+  if (!won) return { error: 'Already collected' }
+
+  if (m.doubloons) {
+    await admin.from('doubloon_transactions')
+      .insert({ user_id: user.id, amount: m.doubloons, reason: 'Bounty milestone' })
+  }
+
+  return {
+    ok: true, label: m.label,
+    doubloons: m.doubloons ?? 0, gems: m.gems ?? 0,
+    colorId: grantColor ? (m.colorId as string) : null,
+  }
 }
 
 export type RerollResult = { ok: true } | { error: string }

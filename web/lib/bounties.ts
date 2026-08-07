@@ -157,6 +157,66 @@ export function nextRung(current: BountyRung | null): BountyRung | null {
 /** The board at full stretch. */
 export const BOUNTY_DAILY_MAX = rungGems(BOUNTY_RUNGS[BOUNTY_RUNGS.length - 1].slots)
 
+// ── Points ───────────────────────────────────────────────────────────────────
+//
+// The gems are why you open the board today. The points are why you open it in
+// three months: a slow ladder that never resets and cannot go backwards.
+//
+// Paid by tier, plus a bonus for clearing the whole board, so the daily ceiling
+// climbs with the rung exactly the way the gems do:
+//
+//   Ch I    easy                        1 + 3  =  4
+//   Ch II   easy + medium               3 + 3  =  6
+//   Ch III  + hard                      6 + 3  =  9
+//   Ch IV   + elite                    11 + 3  = 14
+export const BOUNTY_POINTS: Record<BountyTier, number> = {
+  easy: 1, medium: 2, hard: 3, elite: 5,
+}
+
+/** For clearing every order posted that day, whatever the rung. */
+export const BOUNTY_SWEEP_POINTS = 3
+
+export function bountyPoints(b: Bounty): number {
+  return BOUNTY_POINTS[b.tier]
+}
+
+export type BountyMilestone = {
+  points: number
+  doubloons?: number
+  gems?: number
+  /** A character colour granted at the top of the ladder. */
+  colorId?: string
+  label: string
+}
+
+// A FINITE ladder with an ending worth reaching. At the Chapter IV ceiling of
+// 14 a day the capstone is about three months out; at Chapter III it is nearer
+// five, which is part of what the rungs are for.
+//
+// Doubloons and gems alternate on the way up so neither economy carries the
+// whole ladder, and so a reward never feels like the one before it.
+export const BOUNTY_MILESTONES: BountyMilestone[] = [
+  { points:   25, doubloons:   5_000, label: '5,000 ⟡' },
+  { points:   60, gems:          100, label: '100 ◆' },
+  { points:  120, doubloons:  15_000, label: '15,000 ⟡' },
+  { points:  200, gems:          250, label: '250 ◆' },
+  { points:  320, doubloons:  40_000, label: '40,000 ⟡' },
+  { points:  450, gems:          400, label: '400 ◆' },
+  { points:  650, doubloons: 100_000, label: '100,000 ⟡' },
+  { points:  900, gems:          750, label: '750 ◆' },
+  { points: 1200, gems:        1_500, colorId: 'corsair', label: '1,500 ◆ and the Corsair colour' },
+]
+
+/** The next rung of the ladder, or null once every one is collected. */
+export function nextMilestone(claimed: number): BountyMilestone | null {
+  return BOUNTY_MILESTONES[claimed] ?? null
+}
+
+/** How many milestones this many points has earned, claimed or not. */
+export function milestonesEarned(points: number): number {
+  return BOUNTY_MILESTONES.filter(m => points >= m.points).length
+}
+
 /** Clearing Chapter I opens the board at all. */
 export const BOUNTY_UNLOCK_RAID = BOUNTY_RUNGS[0].raid
 

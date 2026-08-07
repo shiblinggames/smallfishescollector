@@ -21,7 +21,8 @@
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getBountyBoard, claimBounty, rerollBounty, type BountyBoard, type BountyView } from './bountyActions'
+import { getBountyBoard, claimBounty, rerollBounty, claimBountyMilestone, type BountyBoard, type BountyView } from './bountyActions'
+import { BOUNTY_POINTS } from '@/lib/bounties'
 import { hapticReward } from '@/lib/haptics'
 
 // Solid dark notices, light ink, the way every other panel in this game reads.
@@ -151,11 +152,19 @@ function BountyCard({ b, rerollUsed, busy, onClaim, onSwap }: {
           style={{ fontSize: '0.6rem', color: b.claimed ? '#6d675d' : t.color }}>
           {t.label}
         </span>
-        <span className="font-cinzel font-800" style={{
-          fontSize: '1.15rem', lineHeight: 1, whiteSpace: 'nowrap',
-          color: b.claimed ? '#6d675d' : GEM_COLOR, ...TNUM,
-        }}>
-          {b.gems} {GEM}
+        <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 7, whiteSpace: 'nowrap' }}>
+          {/* Points sit beside the prize because they are paid by the same act.
+              Small: the gems are why you do it today, the points are why you
+              come back, and only one of those needs to shout. */}
+          <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: b.claimed ? '#6d675d' : '#8fa6c4', ...TNUM }}>
+            +{BOUNTY_POINTS[b.tier]} pt{BOUNTY_POINTS[b.tier] === 1 ? '' : 's'}
+          </span>
+          <span className="font-cinzel font-800" style={{
+            fontSize: '1.15rem', lineHeight: 1,
+            color: b.claimed ? '#6d675d' : GEM_COLOR, ...TNUM,
+          }}>
+            {b.gems} {GEM}
+          </span>
         </span>
       </div>
 
@@ -285,10 +294,24 @@ export default function BountiesPanel({ onGems, onClose }: {
       setBusy(null)
       if ('error' in res) { setToast(res.error); return }
       hapticReward()
-      setToast(`+${res.gems} ${GEM}`)
+      setToast(res.sweep ? `+${res.gems} ${GEM} and ${res.points} points, board cleared` : `+${res.gems} ${GEM} · +${res.points} pt${res.points === 1 ? '' : 's'}`)
       setBurst(n => n + 1)
       onGems?.(res.total)
       window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.total }))
+      load()
+    })
+  }
+
+  function handleMilestone() {
+    setBusy('__ms')
+    claimBountyMilestone().then(res => {
+      setBusy(null)
+      if ('error' in res) { setToast(res.error); return }
+      hapticReward()
+      setToast(res.colorId ? `${res.label}. Corsair unlocked.` : `+${res.label}`)
+      setBurst(n => n + 1)
+      if (res.gems) window.dispatchEvent(new CustomEvent('gems-changed'))
+      if (res.doubloons) window.dispatchEvent(new CustomEvent('doubloons-changed'))
       load()
     })
   }
@@ -324,6 +347,57 @@ export default function BountiesPanel({ onGems, onClose }: {
           <BountyCard key={b.id} b={b} rerollUsed={board.rerollUsed} busy={busy === b.id}
             onClaim={() => handleClaim(b)} onSwap={() => handleSwap(b)} />
         ))}
+      </div>
+
+      {/* THE LADDER. Under the board rather than above it: the orders are
+          today's business and this is the long game. */}
+      <div style={{
+        marginTop: 10, padding: '0.6rem 0.75rem', borderRadius: 11,
+        background: 'linear-gradient(180deg, rgba(30,27,22,0.96) 0%, rgba(18,16,12,0.97) 100%)',
+        border: `1px solid ${board.milestonesReady > 0 ? 'rgba(201,160,245,0.45)' : 'rgba(255,255,255,0.08)'}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+          <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.54rem', color: '#8fa6c4' }}>
+            Bounty points
+          </span>
+          <span className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: '#f2ede2', ...TNUM }}>
+            {board.points.toLocaleString()}
+          </span>
+        </div>
+
+        {board.nextMilestone && (
+          <>
+            <div style={{ height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.09)', overflow: 'hidden', marginTop: 6 }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                width: `${Math.min(100, (board.points / board.nextMilestone.points) * 100)}%`,
+                background: 'linear-gradient(90deg, #8fa6c4, #c9a0f5)',
+              }} />
+            </div>
+            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a49c8e', marginTop: 5 }}>
+              {board.nextMilestone.points - board.points > 0
+                ? `${(board.nextMilestone.points - board.points).toLocaleString()} more for ${board.nextMilestone.label}`
+                : `${board.nextMilestone.label} is waiting`}
+              {board.pointsToday > 0 && ` · ${board.pointsToday} still on today's board`}
+            </p>
+          </>
+        )}
+
+        {board.milestonesReady > 0 && (
+          <button type="button" onClick={handleMilestone} disabled={busy === '__ms'} className="font-karla font-800 tap"
+            style={{
+              width: '100%', marginTop: 7, padding: '0.46rem', borderRadius: 9, fontSize: '0.78rem',
+              background: 'rgba(201,160,245,0.18)', border: '1px solid rgba(201,160,245,0.6)', color: '#f0e6fb',
+              cursor: busy === '__ms' ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
+            }}>
+            {busy === '__ms' ? '…' : `Collect ${board.nextMilestone?.label ?? 'your milestone'}`}
+          </button>
+        )}
+        {!board.nextMilestone && (
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a49c8e', marginTop: 5 }}>
+            Every milestone collected. The Corsair colours are yours.
+          </p>
+        )}
       </div>
 
       <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#8d7f66', marginTop: 10, textAlign: 'center', lineHeight: 1.5 }}>
