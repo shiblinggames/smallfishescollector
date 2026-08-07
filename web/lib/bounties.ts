@@ -235,10 +235,20 @@ export const BOUNTY_UNLOCK_RAID = BOUNTY_RUNGS[0].raid
 // ── The catalogue ────────────────────────────────────────────────────────────
 //
 // Time targets are set against REAL clear times off raid_completions rather
-// than guessed: the median clear of Corsair's Reckoning is a little over five
-// minutes and the fastest on record is 42 seconds, so "under four minutes" is a
-// push for most captains and routine for a sharp one. Every timed bounty below
-// sits between the median and the record for that raid.
+// than guessed.
+//
+// "Between the median and the record" was the first rule, and it was too loose:
+// it left the three timed orders paying the same 40 gems for wildly different
+// asks. Measured against every non-admin clear, four minutes on Pete qualified
+// 42% of clears, eight on Krust 33%, and six on the Cartographer 18%. Same
+// price, less than half the work.
+//
+// The rule now is the SHARE OF CLEARS THAT QUALIFY, held near a fifth across all
+// three, which is what a 40-gem order should feel like:
+//
+//   Pete           under 2:00   23% of 74 clears   (record 0:42)
+//   Krust          under 6:30   22% of 9 clears    (record 2:31)
+//   Cartographer   under 5:00   18% of 11 clears   (record 2:52)
 
 // Challenge raids grouped by the chapter they belong to.
 //
@@ -303,9 +313,9 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'challenge_ch3',    name: 'Beat a Chapter III Challenge', desc: 'Clear The Harbor Fleet or The Quartermaster on Challenge.',        meter: { kind: 'raid_any_of', raidIds: CH3_CHALLENGE },        target: 1, tier: 'hard',   requires: { anyRaid: CH3_CHALLENGE } },
   { id: 'blockade_down',    name: 'Break the Blockade',        desc: 'Clear The Blockade.',                                                 meter: { kind: 'raid_clear', raidId: 'the_blockade' },         target: 1, tier: 'hard',   requires: { raid: 'the_blockade' } },
   { id: 'throne_down',      name: 'Sink Don Finleone',         desc: 'Clear Don Finleone, the last raid of Chapter IV.',                    meter: { kind: 'raid_clear', raidId: 'the_throne' },           target: 1, tier: 'hard',   requires: { raid: 'the_throne' } },
-  { id: 'pete_fast',        name: 'Pete in under 4 minutes',   desc: "Clear The Corsair's Reckoning in under four minutes.",                meter: { kind: 'raid_fast', raidId: 'corsairs_reckoning', underS: 240 }, target: 1, tier: 'hard', requires: { raid: 'corsairs_reckoning' } },
-  { id: 'krust_fast',       name: 'Krust in under 8 minutes',  desc: "Clear Krust's Consignment in under eight minutes.",                    meter: { kind: 'raid_fast', raidId: 'captain_krust', underS: 480 },      target: 1, tier: 'hard', requires: { raid: 'captain_krust' } },
-  { id: 'carto_fast',       name: 'Cartographer in under 6',   desc: "Clear The Cartographer's Survey in under six minutes.",                meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 360 },       target: 1, tier: 'hard', requires: { raid: 'cartographer' } },
+  { id: 'pete_fast',        name: 'Pete in under 2 minutes',   desc: "Clear The Corsair's Reckoning in under two minutes.",                 meter: { kind: 'raid_fast', raidId: 'corsairs_reckoning', underS: 120 }, target: 1, tier: 'hard', requires: { raid: 'corsairs_reckoning' } },
+  { id: 'krust_fast',       name: 'Krust in under 6:30',       desc: "Clear Krust's Consignment in under six and a half minutes.",           meter: { kind: 'raid_fast', raidId: 'captain_krust', underS: 390 },      target: 1, tier: 'hard', requires: { raid: 'captain_krust' } },
+  { id: 'carto_fast',       name: 'Cartographer in under 5 minutes', desc: "Clear The Cartographer's Survey in under five minutes.",          meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 300 },       target: 1, tier: 'hard', requires: { raid: 'cartographer' } },
   { id: 'raid_hit_300',     name: 'Land a 300 hit in a raid',  desc: 'Land a single hit of 300 damage or more in any raid.',                meter: { kind: 'event', eventKind: 'raid_hit', atLeast: 300 },      target: 1, tier: 'hard', family: 'damage_raid' },
   { id: 'gaunt_hit_1500',   name: 'Land a 1,500 hit below',    desc: "Land a single hit of 1,500 damage or more in Davy Jones' Gauntlet.",  meter: { kind: 'event', eventKind: 'gauntlet_hit', atLeast: 1500 },  target: 1, tier: 'hard', family: 'damage_gauntlet', requires: { gauntlet: true } },
   { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three different raids in one day.',                                meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard', family: 'raidcount'   },
