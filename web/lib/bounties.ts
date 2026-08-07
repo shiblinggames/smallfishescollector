@@ -252,6 +252,18 @@ export const BOUNTY_UNLOCK_RAID = BOUNTY_RUNGS[0].raid
 //   Tollmaster ch  under 5:15   28% of 25 clears   (record 3:58)
 //   the Ghost      under 5:30   29% of 14 clears   (record 4:05)
 //
+// AND ONE THAT NOBODY HAS DONE. Pete on Challenge is the easiest challenge in
+// the game, which is exactly why the clock can be set past the record on it: the
+// raid is not the elite part, the TIME is. The target sits under the fastest
+// clear ever recorded, so the order is not "be quick", it is "be quicker than
+// anyone has been".
+//
+// Safe to ask because the record is the top of a cluster rather than a freak:
+// the five fastest clears run 65.9, 69.9, 71.7, 72.2 and 74.6 across two
+// captains, and the same fight without the Challenge modifier has been cleared
+// in 42.9. There is room under it. If that ever stops being true, this is the
+// one order in the file that needs its number moved.
+//
 // WHY THE CLOCK STOPS AT THE GHOST. There is no timed order on a Chapter III or
 // IV challenge raid, and it is not an oversight: nobody has the clears to set
 // one against. The Quartermaster's Challenge has 5 in the whole game, the
@@ -337,6 +349,7 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'challenge_ch4',    name: 'Beat a Chapter IV Challenge', desc: 'Clear The Blockade or The Throne on Challenge.',                    meter: { kind: 'raid_any_of', raidIds: CH4_CHALLENGE },        target: 1, tier: 'elite',  requires: { anyRaid: CH4_CHALLENGE } },
   { id: 'finn_challenge',   name: 'Beat Finn on Challenge',    desc: 'Clear One Last Ride on Challenge.',                                   meter: { kind: 'raid_clear', raidId: 'the_sunken_hand_challenge' }, target: 1, tier: 'elite', requires: { raid: 'the_sunken_hand_challenge' } },
   { id: 'ghost_down',       name: "Sink the Quartermaster's Ghost", desc: "Clear The Quartermaster's Ghost.",                               meter: { kind: 'raid_clear', raidId: 'the_quartermasters_ghost' }, target: 1, tier: 'elite', family: 'ghost', requires: { raid: 'the_quartermasters_ghost' } },
+  { id: 'pete_ch_record',   name: 'Pete on Challenge in under 1:05', desc: "Clear The Corsair's Reckoning on Challenge in under one minute five.", meter: { kind: 'raid_fast', raidId: 'corsairs_reckoning_challenge', underS: 65 }, target: 1, tier: 'elite', family: 'pete_ch', requires: { raid: 'corsairs_reckoning_challenge' } },
   { id: 'ghost_fast',       name: 'The Ghost in under 5:30',   desc: "Clear The Quartermaster's Ghost in under five and a half minutes.",   meter: { kind: 'raid_fast', raidId: 'the_quartermasters_ghost', underS: 330 }, target: 1, tier: 'elite', family: 'ghost', requires: { raid: 'the_quartermasters_ghost' } },
   { id: 'depth_fifteen',    name: 'Reach depth 15',            desc: "Get to floor 15 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 15 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
   { id: 'depth_twenty',     name: 'Reach depth 20',            desc: "Get to floor 20 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 20 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
