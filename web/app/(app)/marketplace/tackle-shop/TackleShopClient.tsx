@@ -383,7 +383,9 @@ export default function TackleShopClient({
                     background: 'linear-gradient(180deg, rgba(240,192,64,0.15), rgba(240,192,64,0.05))',
                     border: '1px solid rgba(240,192,64,0.55)', boxShadow: '0 0 20px rgba(240,192,64,0.16)',
                   }}>
-                  <span style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', border: `1px solid ${s.color}55` }}>
+                  {/* No plate behind it either: the art carries itself here
+                      the same way it does on the tiles below. */}
+                  <span style={{ position: 'relative', flexShrink: 0, width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {s.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={s.imageUrl} alt="" loading="lazy" decoding="async" style={{ maxWidth: 34, maxHeight: 34, objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }} />
@@ -423,7 +425,7 @@ export default function TackleShopClient({
                 style={{
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  padding: '1rem 0.5rem 0.75rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
+                  padding: '0.9rem 0.5rem 0.75rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
                   overflow: 'hidden',
                   // OPAQUE, and no art of its own.
                   //
@@ -434,19 +436,24 @@ export default function TackleShopClient({
                   // not be read. The item art on the tile already says which
                   // category it is; a backdrop underneath was only ever going
                   // to compete with it.
-                  background: ready
-                    ? 'linear-gradient(180deg, rgba(46,36,14,0.97) 0%, rgba(20,16,9,0.98) 100%)'
-                    : 'linear-gradient(180deg, rgba(22,25,32,0.97) 0%, rgba(12,14,19,0.98) 100%)',
+                  // Ready is said by the edge and the dot, not by tinting the
+                  // whole card amber.
+                  background: 'linear-gradient(180deg, rgba(22,25,32,0.97) 0%, rgba(12,14,19,0.98) 100%)',
                   border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.12)'}`,
                   borderTop: `1px solid ${ready ? 'rgba(240,192,64,0.85)' : 'rgba(255,255,255,0.18)'}`,
-                  boxShadow: ready ? '0 4px 18px rgba(0,0,0,0.5), 0 0 18px rgba(240,192,64,0.12)' : '0 3px 12px rgba(0,0,0,0.45)',
+                  boxShadow: '0 3px 14px rgba(0,0,0,0.5)',
                 }}>
                 {/* Art sits DIRECTLY on the tile, like the Forge. The old nested black
                     disc-in-a-faint-square was the muddy double layer. */}
-                <div style={{ position: 'relative', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {/* The tackle IS the tile. It was 52px of art in a card twice
+                    that tall, with the rest given to a label the picture was
+                    already saying. No coloured pool behind it: that was the
+                    glow this page had too much of. */}
+                <div style={{ position: 'relative', height: 84, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {s.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.imageUrl} alt={s.label} loading="lazy" decoding="async" style={{ maxWidth: 52, maxHeight: 56, objectFit: 'contain', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.6))' }} />
+                    <img src={s.imageUrl} alt={s.label} loading="lazy" decoding="async"
+                      style={{ position: 'relative', maxWidth: 82, maxHeight: 84, objectFit: 'contain', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.7))' }} />
                   )}
                 </div>
                 {ready && (
@@ -657,7 +664,7 @@ export default function TackleShopClient({
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   style={{
                     ...tileSurface(c, { owned, active: isActive, ready: isNext && hookReady, locked }),
-                    ...(isPreviewing && !owned ? { boxShadow: `0 0 14px ${c}1a`, borderTop: `1.5px solid ${c}aa` } : null),
+                    ...(isPreviewing && !owned ? { borderTop: `1.5px solid ${c}aa` } : null),
                     padding: '0.85rem 0.9rem',
                     opacity: isPending && isNext ? 0.6 : 1,
                     cursor: 'pointer',
@@ -762,7 +769,7 @@ export default function TackleShopClient({
                     </button>
                   </div>
                   {(compRod.slug || compRod.imageUrl) && (
-                    <div style={{ background: `${c}0a`, border: `1px solid ${c}25`, borderRadius: 12, padding: '1rem', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={compRod.slug ? `/${compRod.slug}_thumb.png` : compRod.imageUrl} alt={compRod.name} loading="lazy" decoding="async" style={{ height: 140, objectFit: 'contain' }} />
                     </div>
@@ -905,7 +912,7 @@ export default function TackleShopClient({
                     {/* Right: name + effects + action */}
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: c, flexShrink: 0, boxShadow: `0 0 6px ${c}88` }} />
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: c, flexShrink: 0, }} />
                         <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.95rem', color: owned ? '#f4ecd8' : '#cfcabf', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rod.name}</p>
                         {isActive ? <ShopStatusPill kind="equipped" /> : owned ? <ShopStatusPill kind="owned" /> : null}
                       </div>
@@ -990,7 +997,7 @@ export default function TackleShopClient({
             <div className="mb-4" style={{
               ...tileSurface(c, { owned: compOwned, active: eligible, locked: !compOwned && !eligible }),
               padding: '1.1rem',
-              boxShadow: compOwned ? `0 0 32px ${c}26, inset 0 1px 0 rgba(255,255,255,0.06)` : eligible ? `0 0 22px ${c}1f` : '0 2px 10px rgba(0,0,0,0.35)',
+              boxShadow: '0 3px 14px rgba(0,0,0,0.5)',
             }}>
               {compOwned ? (
                 <>
@@ -1019,7 +1026,7 @@ export default function TackleShopClient({
                 <>
                   <div className="flex items-center gap-2 mb-1">
                     {eligible ? (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill={c} stroke="none" aria-hidden style={{ flexShrink: 0, filter: `drop-shadow(0 0 6px ${c}88)` }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill={c} stroke="none" aria-hidden style={{ flexShrink: 0 }}>
                         <path d="M12 2l2.4 6.9L21.5 9l-5.7 4.3 2.2 7-6-4.4-6 4.4 2.2-7L2.5 9l7.1-.1z" />
                       </svg>
                     ) : (
@@ -1348,14 +1355,53 @@ function tileSurface(c: string, s: TileState): React.CSSProperties {
     borderTop: `1.5px solid ${active ? c : owned ? c + 'cc' : ready ? c + 'aa' : locked ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.18)'}`,
     borderRadius: 15,
     boxShadow: active
-      ? `0 0 22px ${c}26, inset 0 1px 0 rgba(255,255,255,0.06)`
-      : owned ? `0 2px 12px ${c}16`
-      : ready ? `0 0 16px ${c}16`
+      ? '0 3px 14px rgba(0,0,0,0.5)'
+      : owned ? '0 2px 12px rgba(0,0,0,0.45)'
+      : ready ? '0 3px 12px rgba(0,0,0,0.45)'
       : '0 2px 10px rgba(0,0,0,0.35)',
     overflow: 'hidden',
   }
 }
 // Glossy top sheen — drop inside any tileSurface card as the first child.
+// NO COLOURED GLOW ANYWHERE ON THIS PAGE.
+//
+// Tinted surfaces with a matching halo behind them is the single most
+// generated-looking thing a card can do, and this shop had eleven of them: a
+// coloured wash under every owned item, a coloured drop-shadow on every piece
+// of art, a coloured box-shadow on every active one, and a radial pool behind
+// the category tiles. Five categories each with their own hue turned the page
+// into a light show, and every one of those glows was the UI colouring itself
+// rather than anything in the picture.
+//
+// The photography is the only colour now. Surfaces are neutral, shadows are
+// black, and state is said with a border and with brightness, which is what
+// tackle in a dark shop would actually do.
+//
+// ART FORWARD. Every item icon used to be a 28px image inside a bordered,
+// tinted 38px box: a picture of a reel, wearing a picture frame, on a card.
+// Three surfaces to say one thing, and the smallest of them was the only one
+// carrying any information.
+//
+// The category tiles on the shop's front page already worked this out — their
+// own comment says "Art sits DIRECTLY on the tile, like the Forge. The old
+// nested black disc-in-a-faint-square was the muddy double layer." The item
+// rows never got the same treatment.
+//
+// So: no box, no border, no tint. The art is the object, drawn twice the size
+// it was, lit by its own colour when owned and dimmed to iron when it is not.
+const ART_BOX = 'w-[54px] h-[54px] sm:w-16 sm:h-16 shrink-0 flex items-center justify-center'
+
+/** How a piece of tackle reads when you do not own it yet: still legible, but
+ *  clearly cold metal rather than a thing with your hands on it. */
+function artFilter(owned: boolean, isActive: boolean): string {
+  if (!owned) return 'grayscale(0.92) brightness(0.5)'
+  // Black, not the item's colour. A shadow tells you the thing is sitting on
+  // something; a coloured halo tells you a designer picked a hex.
+  return isActive
+    ? 'drop-shadow(0 3px 8px rgba(0,0,0,0.75)) brightness(1.08)'
+    : 'drop-shadow(0 2px 6px rgba(0,0,0,0.65))'
+}
+
 function Sheen() {
   return <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 20%)', pointerEvents: 'none' }} />
 }
@@ -1363,11 +1409,6 @@ function Sheen() {
 function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier: number; color: string; owned: boolean; isActive: boolean; imageUrl?: string; glowClass?: string }) {
   const stroke = owned ? color : '#4a4845'
   const fill   = owned ? color : '#4a4845'
-  const bg     = owned
-    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
-    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
-  const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
-
   const icons: Record<number, React.ReactNode> = {
     0: (
       <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -1431,15 +1472,7 @@ function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier:
   }
 
   return (
-    <div
-      className="w-[38px] h-[38px] sm:w-12 sm:h-12 shrink-0 flex items-center justify-center p-2 sm:p-2.5"
-      style={{
-        borderRadius: 10,
-        background: bg,
-        border: `1px solid ${border}`,
-        boxShadow: isActive ? `0 0 10px ${color}25` : 'none',
-      }}
-    >
+    <div className={ART_BOX}>
       {imageUrl ? (
         <img
           src={imageUrl} alt=""
@@ -1451,7 +1484,7 @@ function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier:
             opacity: owned ? 1 : 0.28,
             ...(owned && glowClass
               ? {}
-              : { filter: owned ? `drop-shadow(0 0 5px ${color}70)` : 'grayscale(80%)' }),
+              : { filter: owned ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.65))' : 'grayscale(0.92) brightness(0.5)' }),
           } as React.CSSProperties}
         />
       ) : (
@@ -1462,20 +1495,12 @@ function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier:
 }
 
 function LineIcon({ color, owned, isActive, imageUrl }: { color: string; owned: boolean; isActive: boolean; imageUrl?: string }) {
-  const bg = owned
-    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
-    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
-  const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
-  const op = owned ? 1 : 0.45
   return (
-    <div
-      className="w-[38px] h-[38px] sm:w-12 sm:h-12 shrink-0 flex items-center justify-center"
-      style={{ borderRadius: 10, background: bg, border: `1px solid ${border}`, boxShadow: isActive ? `0 0 10px ${color}25` : 'none' }}
-    >
+    <div className={ART_BOX}>
       {imageUrl
-        ? <img src={imageUrl} alt="" loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain', opacity: op, filter: `drop-shadow(0 1px 4px ${color}55)` }} />
+        ? <img src={imageUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: artFilter(owned, isActive) }} />
         : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={owned ? color : '#4a4845'} strokeWidth="1.6" strokeLinecap="round">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={owned ? color : '#4a4845'} strokeWidth="1.6" strokeLinecap="round">
             <path d="M3 7 Q7 4 12 7 Q17 10 21 7" />
             <path d="M3 12 Q7 9 12 12 Q17 15 21 12" />
             <path d="M3 17 Q7 14 12 17 Q17 20 21 17" />
@@ -1488,20 +1513,14 @@ function LineIcon({ color, owned, isActive, imageUrl }: { color: string; owned: 
 
 function ReelIcon({ color, owned, isActive, imageUrl }: { color: string; owned: boolean; isActive: boolean; imageUrl?: string }) {
   const sc = owned ? color : '#4a4845'
-  const bg = owned
-    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
-    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
-  const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
+  // Only the drawn fallback needs this; the photo is dimmed by artFilter.
   const op = owned ? 1 : 0.45
   return (
-    <div
-      className="w-[38px] h-[38px] sm:w-12 sm:h-12 shrink-0 flex items-center justify-center"
-      style={{ borderRadius: 10, background: bg, border: `1px solid ${border}`, boxShadow: isActive ? `0 0 10px ${color}25` : 'none' }}
-    >
+    <div className={ART_BOX}>
       {imageUrl
-        ? <img src={imageUrl} alt="" loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain', opacity: op, filter: `drop-shadow(0 1px 4px ${color}55)` }} />
+        ? <img src={imageUrl} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: artFilter(owned, isActive) }} />
         : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
             <circle cx="10" cy="12" r="7.5" stroke={sc} strokeWidth="1.3" opacity={op * 0.9} />
             <circle cx="10" cy="12" r="4.5" stroke={sc} strokeWidth="1" fill={sc} fillOpacity={owned ? 0.1 : 0.04} opacity={op * 0.8} />
             <circle cx="10" cy="12" r="1.8" fill={sc} opacity={op * 0.85} />
@@ -1516,8 +1535,8 @@ function ReelIcon({ color, owned, isActive, imageUrl }: { color: string; owned: 
 
 function GearIcon({ color, owned, isActive, label }: { color: string; owned: boolean; isActive: boolean; label: string }) {
   const bg     = owned
-    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
-    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
+    ? 'linear-gradient(180deg, rgba(28,31,39,0.97) 0%, rgba(15,17,23,0.98) 100%)'
+    : 'linear-gradient(180deg, rgba(19,21,27,0.96) 0%, rgba(11,13,18,0.97) 100%)'
   const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
 
   return (
@@ -1527,7 +1546,7 @@ function GearIcon({ color, owned, isActive, label }: { color: string; owned: boo
         borderRadius: 10,
         background: bg,
         border: `1px solid ${border}`,
-        boxShadow: isActive ? `0 0 10px ${color}25` : 'none',
+        boxShadow: 'none',
       }}
     >
       <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: owned ? color : '#4a4845' }}>
