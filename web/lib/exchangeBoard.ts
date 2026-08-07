@@ -163,19 +163,34 @@ export function offeredBets(dailyMovePct: number, hours: Term, driftPct = 0): Be
 }
 
 /** How far the engine will carry this index on its own over `hours`, before any
- *  noise. Mirrors update_exchange_indexes exactly: trend and weather are both a
- *  fraction of the index's OWN volatility, so they mean the same thing on a
- *  sleepy zone and a wild species.
+ *  noise. Mirrors update_exchange_indexes; keep the constants in lockstep or the
+ *  board starts selling bets it has already won.
  *
- *  Keep in lockstep with that function. If the constants drift apart, the board
- *  starts selling bets it has already won. */
-const DRIFT_K = 0.25, MAX_BIAS = 0.0125, TREND_MAX = 0.0018
+ *  TWO HORIZONS, not one. Drift grows with time while noise only grows with its
+ *  square root, so any drift wins eventually and a long bet becomes a formality.
+ *  Priced with a single per-hour figure times the term, a one-week Shallows bet
+ *  came out at THIRTEEN sigma: every rung 99% at 1.0x, and nothing at all on the
+ *  other side. That is not a market, it is a receipt.
+ *
+ *  So each source is carried only as far as it actually persists:
+ *    the MOOD re-rolls every 2 to 5 hours, so it is worth about 3.5 hours and
+ *    nothing beyond, whatever the term
+ *    the TREND runs out its own countdown, so it is worth the hours it has left
+ *  and DRIFT_K is set so a full trend is roughly one sigma over a WEEK rather
+ *  than thirteen. */
+const DRIFT_K = 0.05, MAX_BIAS = 0.0125, TREND_MAX = 0.0018
+/** Average life of a mood, in hours. update_fish_market rolls 2 + floor(rand*4). */
+const MOOD_LIFE = 3.5
+
 export function driftOver(
-  vol: number, beta: number, trend: number, moodBias: number, hours: Term, dir: Direction,
+  vol: number, beta: number, trend: number, trendTicks: number,
+  moodBias: number, hours: Term, dir: Direction,
 ): number {
   const halved = moodBias * 0.5
-  const perHour = vol * DRIFT_K * (beta * (halved / MAX_BIAS) + trend / TREND_MAX)
-  const pct = perHour * hours * 100
+  const moodPerHour = vol * DRIFT_K * beta * (halved / MAX_BIAS)
+  const trendPerHour = vol * DRIFT_K * (trend / TREND_MAX)
+  const pct = (moodPerHour * Math.min(hours, MOOD_LIFE)
+             + trendPerHour * Math.min(hours, Math.max(0, trendTicks))) * 100
   return dir === 'up' ? pct : -pct
 }
 
@@ -208,3 +223,21 @@ export function payoutFor(stake: number, multiplier: number): number {
 
 export const MIN_STAKE = 500
 export const MAX_STAKE = 250_000
+
+/** MOST A SINGLE BET CAN EVER RETURN.
+ *
+ *  A stake cap alone caps nothing. The longest odds the board offers are about
+ *  199x, and 250,000 at 199x is 49.6 MILLION out of one lucky hour, against a
+ *  richest-captain balance of about 3 million. One bet should not be able to end
+ *  the economy.
+ *
+ *  Capped on the PAYOUT rather than the odds, which is what a real book does:
+ *  the long shots stay on the board at their honest price, and the stake box
+ *  simply says how much this particular one will take. */
+export const MAX_PAYOUT = 5_000_000
+
+/** The largest stake this bet will accept, given what it pays. */
+export function stakeCapFor(multiplier: number): number {
+  if (!(multiplier > 0)) return MAX_STAKE
+  return Math.max(MIN_STAKE, Math.min(MAX_STAKE, Math.floor(MAX_PAYOUT / multiplier)))
+}

@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, driftOver, chanceInWords, payoutInWords, payoutFor,
+  offeredBets, driftOver, stakeCapFor, chanceInWords, payoutInWords, payoutFor,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, markBetsSeen } from './boardActions'
@@ -285,7 +285,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // Priced with the drift the engine is already applying, exactly as the server
   // will price it. Quote it any other way and the ticket promises odds the
   // settlement will not honour.
-  const drift = driftOver(index.vol, index.beta, index.trend, moodBias, term, dir)
+  const drift = driftOver(index.vol, index.beta, index.trend, index.trendTicks, moodBias, term, dir)
   const bets = offeredBets(index.dailyMovePct, term, drift)
   // Keep a valid distance selected as the term changes: the rungs on offer
   // shrink hard on the short terms, and a stale pick would silently price a bet
@@ -296,7 +296,10 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term])
 
-  const capped = Math.max(MIN_STAKE, Math.min(MAX_STAKE, Math.min(stake, doubloons)))
+  // The longer the odds, the less you may put on: a bet is capped by what it
+  // pays out, not by its price.
+  const betCap = chosen ? stakeCapFor(chosen.multiplier) : MAX_STAKE
+  const capped = Math.max(MIN_STAKE, Math.min(betCap, Math.min(stake, doubloons)))
   const returns = chosen ? payoutFor(capped, chosen.multiplier) : 0
 
   function submit() {
@@ -469,6 +472,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               </p>
               <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#7c8696', marginTop: 5, lineHeight: 1.45 }}>
                 If it does not get there, the stake is gone. Nothing in between.
+                {betCap < MAX_STAKE && ` The most this one takes is ${betCap.toLocaleString()} ⟡.`}
               </p>
             </div>
           )}

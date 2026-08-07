@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -45,6 +45,7 @@ export type BoardIndex = {
   vol: number
   beta: number
   trend: number
+  trendTicks: number
   /** Oldest first. */
   history: number[]
   /** The five distances this index offers, whatever the term. */
@@ -121,6 +122,7 @@ export async function getBoard(): Promise<Board> {
       vol: Number(r.vol),
       beta: Number(r.beta),
       trend: Number(r.trend),
+      trendTicks: Number(r.trend_ticks ?? 0),
       history: ((r.history as number[] | null) ?? []).map(Number),
       rungs: rungsFor(daily),
     }
@@ -186,7 +188,7 @@ export async function openBet(
   }
 
   const { data: idx } = await admin.from('exchange_indexes')
-    .select('id, vol, beta, trend, price').eq('id', indexId).single()
+    .select('id, vol, beta, trend, trend_ticks, price').eq('id', indexId).single()
   if (!idx) return { error: 'No such index' }
   const entry = Number(idx.price)
   if (!(entry > 0)) return { error: 'That index has no price right now' }
@@ -200,7 +202,7 @@ export async function openBet(
   // was already going to win was being sold at long-shot odds.
   const { data: mood } = await admin.from('market_state').select('mood_bias').eq('id', 1).single()
   const drift = driftOver(
-    Number(idx.vol), Number(idx.beta), Number(idx.trend),
+    Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
     Number(mood?.mood_bias ?? 0), term, direction,
   )
   const allowed = offeredBets(daily, term, drift)
@@ -210,6 +212,11 @@ export async function openBet(
   // Priced from the index, never from the caller.
   const priced = priceBet(daily, term, bet.distancePct, drift)
   if (!(priced.multiplier > 0)) return { error: 'Could not price that bet' }
+
+  // Long shots are capped by what they PAY, not by their odds. 250,000 at 199x
+  // is 49 million out of one hour, against a richest balance of three.
+  const cap = stakeCapFor(priced.multiplier)
+  if (stake > cap) return { error: `Most you can put on this one is ${cap.toLocaleString()} ⟡` }
 
   // Debit first, atomically and balance-guarded, the same order every purchase
   // in the game uses. A bet written before the stake was taken is a bet
