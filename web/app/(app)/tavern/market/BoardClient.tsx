@@ -21,7 +21,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, chanceInWords, payoutInWords, payoutFor, fmtPrice,
+  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, worthNow, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
@@ -99,7 +99,7 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
 
   return (
     <>
-      {open.length > 0 && <RunningStrip bets={open} />}
+      {open.length > 0 && <RunningStrip bets={open} indexes={board.indexes} />}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: '0.9rem' }}>
         {([['board', 'The board'], ['bets', `Your bets${open.length ? ` (${open.length})` : ''}`]] as const).map(([k, label]) => {
@@ -189,12 +189,55 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
   )
 }
 
+/** WHAT THE BOOK HAS BEEN WORTH, hour by hour.
+ *
+ *  Nothing stores this. Every bet already knows its index, and an index carries
+ *  its last 48 hours, so the line can be rebuilt from what is already on screen:
+ *  walk back hour by hour, reprice each bet as it stood then, and add them up.
+ *
+ *  A bet only counts from the hour it was placed, so the line steps up when you
+ *  back something rather than pretending the money was always at risk. It is
+ *  livelier than the old board's was, because a bet that pays everything or
+ *  nothing swings hard as its deadline closes.
+ *
+ *  APPROXIMATE IN ONE PLACE, and worth knowing: the drift an index was riding an
+ *  hour ago is not recorded, so the repricing leaves it out. The line is
+ *  therefore a touch flatter than the truth on a strongly trending index. The
+ *  live figure above it is exact; this is the shape of how it got there. */
+function bookSeries(bets: BoardBet[], indexes: BoardIndex[]): number[] {
+  if (!bets.length) return []
+  const byId = new Map(indexes.map(i => [i.id, i]))
+  const out: number[] = []
+  for (let k = 23; k >= 0; k--) {
+    let total = 0
+    for (const b of bets) {
+      // Placed yet? term minus what is left is how long it has been running.
+      if (k > b.term - b.hoursLeft) continue
+      const idx = byId.get(b.indexId)
+      if (!idx) continue
+      const h = idx.history
+      const priceThen = k === 0 ? idx.price : (h[h.length - k] ?? b.entryPrice)
+      const raw = b.entryPrice > 0 ? ((priceThen - b.entryPrice) / b.entryPrice) * 100 : 0
+      total += worthNow(
+        b.stake, b.multiplier, b.distancePct,
+        b.direction === 'up' ? raw : -raw,
+        b.hoursLeft + k, idx.dailyMovePct,
+      )
+    }
+    out.push(total)
+  }
+  const first = out.findIndex(v => v > 0)
+  return first <= 0 ? out : out.slice(first)
+}
+
 /** What you have riding right now, above everything else, because it is the
  *  first thing you came to look at. */
-function RunningStrip({ bets }: { bets: BoardBet[] }) {
+function RunningStrip({ bets, indexes }: { bets: BoardBet[]; indexes: BoardIndex[] }) {
   const staked = bets.reduce((n, b) => n + b.stake, 0)
   const couldWin = bets.reduce((n, b) => n + payoutFor(b.stake, b.multiplier), 0)
   const winning = bets.filter(b => b.movedPct >= b.distancePct).length
+  const worth = bets.reduce((n, b) => n + (b.worth ?? 0), 0)
+  const series = bookSeries(bets, indexes)
   return (
     <div style={{
       padding: '0.7rem 0.85rem', borderRadius: 12, marginBottom: '0.9rem',
@@ -209,11 +252,26 @@ function RunningStrip({ bets }: { bets: BoardBet[] }) {
           {winning} of {bets.length} ahead
         </span>
       </div>
-      <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.15, color: '#f0f4fa', marginTop: 2, ...TNUM }}>
-        {staked.toLocaleString()} ⟡
-      </p>
-      <p className="font-karla font-500" style={{ fontSize: '0.7rem', color: '#8a94a4', ...TNUM }}>
-        {couldWin.toLocaleString()} ⟡ if every one of them lands
+      {/* WORTH leads, not staked. What the book could fetch this second is the
+          number you came to look at; what you put in is the thing it is measured
+          against. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap', marginTop: 2 }}>
+        <span className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.15, color: '#f0f4fa', ...TNUM }}>
+          {worth.toLocaleString()} ⟡
+        </span>
+        <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: worth >= staked ? UP : DOWN, ...TNUM }}>
+          {worth >= staked ? '+' : ''}{(worth - staked).toLocaleString()}
+        </span>
+      </div>
+
+      {series.length > 1 && (
+        <div style={{ marginTop: 6 }}>
+          <Line points={series} color={worth >= staked ? UP : DOWN} w={380} h={38} />
+        </div>
+      )}
+
+      <p className="font-karla font-500" style={{ fontSize: '0.7rem', color: '#8a94a4', marginTop: 4, ...TNUM }}>
+        {staked.toLocaleString()} ⟡ in · {couldWin.toLocaleString()} ⟡ if every one of them lands
       </p>
     </div>
   )
