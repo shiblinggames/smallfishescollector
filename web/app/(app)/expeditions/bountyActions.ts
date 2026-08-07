@@ -9,6 +9,7 @@ import {
   bountyPoints, BOUNTY_POINTS, BOUNTY_SWEEP_POINTS, BOUNTY_MILESTONES, nextMilestone, milestonesEarned,
   type Bounty, type BountyMeter, type BountyRung,
 } from '@/lib/bounties'
+import { hardcoreUnlocked } from '@/lib/gauntlet'
 
 // The measuring layer for BOUNTIES.
 //
@@ -238,7 +239,33 @@ export async function getBountyBoard(): Promise<BountyBoard> {
   if (!row || row.date !== today || staleShape) {
     const { data: profile } = await admin.from('profiles').select('*').eq('id', uid).single()
     const ranGauntlet = Number((profile as Record<string, unknown> | null)?.gauntlet_runs_completed ?? 0) > 0
-    const rolled = rollBounties(uid, today, rung.slots, cleared, ranGauntlet)
+    // The hardcore door is NOT the gauntlet door: hardcoreUnlocked also wants
+    // depth in the normal descent. Asked here rather than re-derived, so an
+    // order can never be offered through a door the game keeps shut.
+    // clearedNodes is raid_node_progress.cleared, the same source /crew and the
+    // Gauntlet's own page read. NOT the raid-id set above: the gate is a map
+    // NODE ('chapter_2_class'), which no raid id will ever match.
+    const hcOpen = hardcoreUnlocked({
+      isAdmin: (profile as { is_admin?: boolean } | null)?.is_admin ?? false,
+      clearedNodes: ((profile as { raid_node_progress?: { cleared?: string[] } } | null)?.raid_node_progress?.cleared) ?? [],
+      deepest: Number((profile as Record<string, unknown> | null)?.gauntlet_deepest ?? 0),
+    })
+    // ARCHIVE THE OUTGOING BOARD before it is overwritten. bounty_progress keeps
+    // one row per captain, so without this every board that has ever been handed
+    // out is lost the next morning and the catalogue can only ever be tuned by
+    // inference. Fire and forget: losing a history row must never cost a captain
+    // their board.
+    if (row?.bounty_ids) {
+      void admin.from('bounty_board_history').upsert({
+        user_id: uid,
+        date: row.date,
+        bounty_ids: row.bounty_ids,
+        claimed: row.claimed ?? [],
+        slots: ((row.bounty_ids as string[]) ?? []).length,
+        reroll_used: row.reroll_used === true,
+      }, { onConflict: 'user_id,date' })
+    }
+    const rolled = rollBounties(uid, today, rung.slots, cleared, ranGauntlet, hcOpen)
     const assignedAt = new Date().toISOString()
     await admin.from('bounty_progress').upsert({
       user_id: uid,
@@ -449,9 +476,20 @@ export async function rerollBounty(bountyId: string): Promise<RerollResult> {
   const { data: profile } = await admin.from('profiles').select('*').eq('id', user.id).single()
   const cleared = await clearedRaids(admin, user.id)
   const ranGauntlet = Number((profile as Record<string, unknown> | null)?.gauntlet_runs_completed ?? 0) > 0
+  const hcOpen = hardcoreUnlocked({
+    isAdmin: (profile as { is_admin?: boolean } | null)?.is_admin ?? false,
+    clearedNodes: ((profile as { raid_node_progress?: { cleared?: string[] } } | null)?.raid_node_progress?.cleared) ?? [],
+    deepest: Number((profile as Record<string, unknown> | null)?.gauntlet_deepest ?? 0),
+  })
+  // The FAMILY rule applies to a swap too. It did not, so the one swap a day
+  // could hand over "Clear two different raids" to sit beside "Clear two
+  // raids", which is the exact free order the rule exists to stop, bought with
+  // the swap the captain only gets once.
+  const onBoard = ids.map(id => BOUNTY_BY_ID.get(id)).filter((b): b is NonNullable<typeof b> => b != null && b.id !== bountyId)
   const pool = ALL_BOUNTIES.filter(b =>
     b.tier === old.tier && b.id !== bountyId && !ids.includes(b.id)
-    && canOffer(b, cleared, ranGauntlet))
+    && !(b.family && onBoard.some(o => o.family === b.family))
+    && canOffer(b, cleared, ranGauntlet, hcOpen))
   if (pool.length === 0) return { error: 'Nothing else to offer' }
   const replacement = pool[Math.floor(Math.random() * pool.length)]
   ids[i] = replacement.id

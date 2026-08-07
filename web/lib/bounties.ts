@@ -76,13 +76,24 @@ export interface Bounty {
    *
    *  One board must never carry two of a family. "Reach depth 5" beside "Reach
    *  depth 15" is a free order: the deep run pays both, so the smaller one is
-   *  15 gems for nothing. Same for two haul targets, or two raid counts. */
+   *  15 gems for nothing. Same for two haul targets, or two raid counts.
+   *
+   *  COUNTING AND DISTINCT-COUNTING ARE ONE FAMILY, not two. They were split,
+   *  which let "Clear two raids" and "Clear two DIFFERENT raids" sit on the same
+   *  board: two different raids is two raids, so the easy one paid itself. Any
+   *  distinct-N order implies the plain count at N or below. */
   family?: string
   requires?: {
     raid?: string
     /** Offerable once ANY of these has been cleared once. */
     anyRaid?: string[]
     gauntlet?: boolean
+    /** The HARDCORE door specifically, which is not the same door as the
+     *  Gauntlet's. `gauntlet` only means "has finished one run"; hardcoreUnlocked
+     *  additionally wants HC_UNLOCK_DEPTH in the normal descent. A captain who
+     *  ran once and died on floor 2 satisfied the first and not the second, and
+     *  was being handed an elite order behind a locked door. */
+    hardcore?: boolean
   }
 }
 
@@ -257,7 +268,7 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'challenge_early',  name: 'Beat an early Challenge',   desc: 'Clear any Chapter I or II raid on Challenge.',                        meter: { kind: 'raid_any_of', raidIds: CH12_CHALLENGE },       target: 1, tier: 'medium', requires: { anyRaid: CH12_CHALLENGE } },
   { id: 'fleet_down',       name: 'Break the Harbor Fleet',    desc: 'Clear The Harbor Fleet.',                                             meter: { kind: 'raid_clear', raidId: 'coffers_fleet' },        target: 1, tier: 'medium', requires: { raid: 'coffers_fleet' } },
   { id: 'quarter_down',     name: 'Sink the Quartermaster',    desc: 'Clear The Quartermaster.',                                            meter: { kind: 'raid_clear', raidId: 'the_quartermaster' },    target: 1, tier: 'medium', requires: { raid: 'the_quartermaster' } },
-  { id: 'raids_two_kinds',  name: 'Clear two different raids', desc: 'Two different raids. The same one twice does not count.',             meter: { kind: 'raid_distinct' },                              target: 2, tier: 'medium', family: 'distinct' },
+  { id: 'raids_two_kinds',  name: 'Clear two different raids', desc: 'Two different raids. The same one twice does not count.',             meter: { kind: 'raid_distinct' },                              target: 2, tier: 'medium', family: 'raidcount' },
   { id: 'raids_four',       name: 'Clear four raids',          desc: 'Any four raids. Repeats count.',                                      meter: { kind: 'raid_any' },                                   target: 4, tier: 'medium', family: 'raidcount' },
   { id: 'depth_five',       name: 'Reach depth 5',             desc: "Get to floor 5 of Davy Jones' Gauntlet. Dying there still counts.",   meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 5 },  target: 1, tier: 'medium', family: 'depth', requires: { gauntlet: true } },
   { id: 'haul_three_k',     name: 'Land a 3,000 ⟡ voyage',     desc: 'Collect one voyage worth 3,000 doubloons or more.',                   meter: { kind: 'voyage_haul', atLeast: 3000 },                 target: 1, tier: 'medium', family: 'haul' },
@@ -269,7 +280,7 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'pete_fast',        name: 'Pete in under 4 minutes',   desc: "Clear The Corsair's Reckoning in under four minutes.",                meter: { kind: 'raid_fast', raidId: 'corsairs_reckoning', underS: 240 }, target: 1, tier: 'hard', requires: { raid: 'corsairs_reckoning' } },
   { id: 'krust_fast',       name: 'Krust in under 8 minutes',  desc: "Clear Krust's Consignment in under eight minutes.",                    meter: { kind: 'raid_fast', raidId: 'captain_krust', underS: 480 },      target: 1, tier: 'hard', requires: { raid: 'captain_krust' } },
   { id: 'carto_fast',       name: 'Cartographer in under 6',   desc: "Clear The Cartographer's Survey in under six minutes.",                meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 360 },       target: 1, tier: 'hard', requires: { raid: 'cartographer' } },
-  { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three different raids in one day.',                                meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard', family: 'distinct'   },
+  { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three different raids in one day.',                                meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard', family: 'raidcount'   },
   { id: 'budget_fifteen',   name: 'Three raids in 15 minutes', desc: 'Your three fastest clears today must add up to under 15 minutes.',    meter: { kind: 'raid_budget', raids: 3, totalS: 900 },         target: 1, tier: 'hard', family: 'budget'   },
   { id: 'haul_six_k',       name: 'Bring home 6,000 ⟡',        desc: 'Collect 6,000 doubloons across every voyage you land today.',         meter: { kind: 'voyage_haul_total', atLeast: 6000 },           target: 1, tier: 'hard', family: 'haul'   },
   { id: 'depth_ten',        name: 'Reach depth 10',            desc: "Get to floor 10 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 10 }, target: 1, tier: 'hard', family: 'depth',  requires: { gauntlet: true } },
@@ -280,10 +291,18 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'ghost_down',       name: "Sink the Quartermaster's Ghost", desc: "Clear The Quartermaster's Ghost.",                               meter: { kind: 'raid_clear', raidId: 'the_quartermasters_ghost' }, target: 1, tier: 'elite', requires: { raid: 'the_quartermasters_ghost' } },
   { id: 'depth_fifteen',    name: 'Reach depth 15',            desc: "Get to floor 15 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 15 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
   { id: 'depth_twenty',     name: 'Reach depth 20',            desc: "Get to floor 20 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 20 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
-  { id: 'hc_depth_five',    name: 'Hardcore, depth 5',         desc: 'Get to floor 5 of the Hardcore Gauntlet. Your squad dies for good.',  meter: { kind: 'event', eventKind: 'gauntlet_hc_depth', atLeast: 5 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
-  { id: 'raids_five_kinds', name: 'Clear five different raids', desc: 'Five different raids in one day.',                                   meter: { kind: 'raid_distinct' },                              target: 5, tier: 'elite', family: 'distinct'  },
+  { id: 'hc_depth_five',    name: 'Hardcore, depth 5',         desc: 'Get to floor 5 of the Hardcore Gauntlet. Your squad dies for good.',  meter: { kind: 'event', eventKind: 'gauntlet_hc_depth', atLeast: 5 }, target: 1, tier: 'elite', family: 'depth', requires: { hardcore: true } },
+  { id: 'raids_five_kinds', name: 'Clear five different raids', desc: 'Five different raids in one day.',                                   meter: { kind: 'raid_distinct' },                              target: 5, tier: 'elite', family: 'raidcount'  },
   { id: 'budget_twenty',    name: 'Five raids in 25 minutes',  desc: 'Your five fastest clears today must add up to under 25 minutes.',     meter: { kind: 'raid_budget', raids: 5, totalS: 1500 },        target: 1, tier: 'elite', family: 'budget'  },
-  { id: 'haul_ten_k',       name: 'Land a 10,000 ⟡ voyage',    desc: 'Collect one voyage worth 10,000 doubloons or more.',                  meter: { kind: 'voyage_haul', atLeast: 10000 },                target: 1, tier: 'elite', family: 'haul'  },
+  // WAS "land a 10,000 doubloon voyage", which one voyage in 1,223 has ever
+  // done. Single-voyage hauls fall off a cliff past 3,000 (10.6% of voyages hit
+  // 3k, 0.8% hit 5k), so any single-voyage elite is a lottery ticket, and losing
+  // it costs the sweep bonus as well as the 75 gems.
+  //
+  // A DAY TOTAL instead: 12,000 lands on 9.6% of player-days, which is rare but
+  // answerable by sailing more rather than by getting lucky once. Same family as
+  // the 6,000 total, so the two can never share a board.
+  { id: 'haul_ten_k',       name: 'Bring home 12,000 ⟡',       desc: 'Collect 12,000 doubloons across every voyage you land today.',        meter: { kind: 'voyage_haul_total', atLeast: 12000 },          target: 1, tier: 'elite', family: 'haul'  },
 ]
 
 export const BOUNTY_BY_ID = new Map(ALL_BOUNTIES.map(b => [b.id, b]))
@@ -310,11 +329,18 @@ function seeded(seed: string): () => number {
   }
 }
 
-/** Can this captain actually be asked to do this? */
-export function canOffer(b: Bounty, clearedRaids: Set<string>, hasRunGauntlet: boolean): boolean {
+/** Can this captain actually be asked to do this?
+ *
+ *  `hardcoreOpen` is the answer from lib/gauntlet's own hardcoreUnlocked, passed
+ *  in rather than recomputed, so the board and the door can never disagree about
+ *  who is allowed through. */
+export function canOffer(
+  b: Bounty, clearedRaids: Set<string>, hasRunGauntlet: boolean, hardcoreOpen: boolean,
+): boolean {
   if (b.requires?.raid && !clearedRaids.has(b.requires.raid)) return false
   if (b.requires?.anyRaid && !b.requires.anyRaid.some(r => clearedRaids.has(r))) return false
   if (b.requires?.gauntlet && !hasRunGauntlet) return false
+  if (b.requires?.hardcore && !hardcoreOpen) return false
   return true
 }
 
@@ -327,6 +353,7 @@ export function rollBounties(
   slots: BountyTier[],
   clearedRaids: Set<string>,
   hasRunGauntlet: boolean,
+  hardcoreOpen: boolean,
   skip: string[] = [],
 ): Bounty[] {
   const rand = seeded(`${userId}:${date}:${skip.join(',')}`)
@@ -340,7 +367,7 @@ export function rollBounties(
       // Never two of a family on one board: the harder one would pay the
       // easier one for free.
       && !(b.family && out.some(o => o.family === b.family))
-      && canOffer(b, clearedRaids, hasRunGauntlet))
+      && canOffer(b, clearedRaids, hasRunGauntlet, hardcoreOpen))
     if (pool.length === 0) continue
     out.push(pool[Math.floor(rand() * pool.length)])
   }
