@@ -278,16 +278,22 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'toll_challenge',   name: 'Beat the Tollmaster on Challenge',   desc: "Clear The Tollmaster's Cut on Challenge.",            meter: { kind: 'raid_clear', raidId: 'tollmasters_cut_challenge' }, target: 1, tier: 'medium', requires: { raid: 'tollmasters_cut_challenge' } },
   { id: 'fleet_down',       name: 'Break the Harbor Fleet',    desc: 'Clear The Harbor Fleet.',                                             meter: { kind: 'raid_clear', raidId: 'coffers_fleet' },        target: 1, tier: 'medium', requires: { raid: 'coffers_fleet' } },
   { id: 'quarter_down',     name: 'Sink the Quartermaster',    desc: 'Clear The Quartermaster.',                                            meter: { kind: 'raid_clear', raidId: 'the_quartermaster' },    target: 1, tier: 'medium', requires: { raid: 'the_quartermaster' } },
-  // ONE BIG HIT, anywhere. Raids and the Gauntlet both count, and they have to:
-  // raid damage tops out far lower than Gauntlet damage, where a deep run stacks
-  // upgrades all the way up. The best raid hit ever landed is 760; the best
-  // Gauntlet hit is 6,297. A raid-only damage order would have been a wall.
+  // ONE BIG HIT. Two ladders, because raid damage and Gauntlet damage are not
+  // the same scale and a single "anywhere" number cannot be fair to both: the
+  // best raid hit ever landed is 760, the best Gauntlet hit is 6,297, since a
+  // deep descent stacks upgrades all the way up. One shared ladder is either a
+  // wall in raids or a formality in the Gauntlet.
   //
-  // Measured as an EVENT, never off highest_raid_damage. That column is a
-  // high-water mark, so a captain whose record already stands at 700 could hit
-  // 300 every fight for a week and the number would never move: the exact trap
-  // gauntlet_deepest set for the depth orders.
-  { id: 'hit_three_hundred', name: 'Land a 300 hit',           desc: 'Land a single hit of 300 damage or more, in a raid or the Gauntlet.', meter: { kind: 'event', eventKind: 'big_hit', atLeast: 300 },  target: 1, tier: 'medium', family: 'damage' },
+  // Two FAMILIES too, so a board can carry one of each (they are genuinely
+  // different work) but never two rungs of the same one, which would pay for
+  // itself.
+  //
+  // Measured as EVENTS, never off highest_raid_damage or gauntlet_max_hit. Both
+  // are high-water marks, so a captain whose record already stands at 700 could
+  // land 300 every fight for a week and neither number would move: the exact
+  // trap gauntlet_deepest set for the depth orders.
+  { id: 'raid_hit_150',     name: 'Land a 150 hit in a raid',  desc: 'Land a single hit of 150 damage or more in any raid.',                meter: { kind: 'event', eventKind: 'raid_hit', atLeast: 150 },      target: 1, tier: 'medium', family: 'damage_raid' },
+  { id: 'gaunt_hit_500',    name: 'Land a 500 hit below',      desc: "Land a single hit of 500 damage or more in Davy Jones' Gauntlet.",    meter: { kind: 'event', eventKind: 'gauntlet_hit', atLeast: 500 },   target: 1, tier: 'medium', family: 'damage_gauntlet', requires: { gauntlet: true } },
   { id: 'raids_two_kinds',  name: 'Clear two different raids', desc: 'Two different raids. The same one twice does not count.',             meter: { kind: 'raid_distinct' },                              target: 2, tier: 'medium', family: 'raidcount' },
   { id: 'raids_four',       name: 'Clear four raids',          desc: 'Any four raids. Repeats count.',                                      meter: { kind: 'raid_any' },                                   target: 4, tier: 'medium', family: 'raidcount' },
   { id: 'depth_five',       name: 'Reach depth 5',             desc: "Get to floor 5 of Davy Jones' Gauntlet. Dying there still counts.",   meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 5 },  target: 1, tier: 'medium', family: 'depth', requires: { gauntlet: true } },
@@ -300,7 +306,8 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'pete_fast',        name: 'Pete in under 4 minutes',   desc: "Clear The Corsair's Reckoning in under four minutes.",                meter: { kind: 'raid_fast', raidId: 'corsairs_reckoning', underS: 240 }, target: 1, tier: 'hard', requires: { raid: 'corsairs_reckoning' } },
   { id: 'krust_fast',       name: 'Krust in under 8 minutes',  desc: "Clear Krust's Consignment in under eight minutes.",                    meter: { kind: 'raid_fast', raidId: 'captain_krust', underS: 480 },      target: 1, tier: 'hard', requires: { raid: 'captain_krust' } },
   { id: 'carto_fast',       name: 'Cartographer in under 6',   desc: "Clear The Cartographer's Survey in under six minutes.",                meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 360 },       target: 1, tier: 'hard', requires: { raid: 'cartographer' } },
-  { id: 'hit_thousand',     name: 'Land a 1,000 hit',          desc: 'Land a single hit of 1,000 damage or more, in a raid or the Gauntlet.', meter: { kind: 'event', eventKind: 'big_hit', atLeast: 1000 }, target: 1, tier: 'hard', family: 'damage' },
+  { id: 'raid_hit_300',     name: 'Land a 300 hit in a raid',  desc: 'Land a single hit of 300 damage or more in any raid.',                meter: { kind: 'event', eventKind: 'raid_hit', atLeast: 300 },      target: 1, tier: 'hard', family: 'damage_raid' },
+  { id: 'gaunt_hit_1500',   name: 'Land a 1,500 hit below',    desc: "Land a single hit of 1,500 damage or more in Davy Jones' Gauntlet.",  meter: { kind: 'event', eventKind: 'gauntlet_hit', atLeast: 1500 },  target: 1, tier: 'hard', family: 'damage_gauntlet', requires: { gauntlet: true } },
   { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three different raids in one day.',                                meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard', family: 'raidcount'   },
   { id: 'budget_fifteen',   name: 'Three raids in 15 minutes', desc: 'Your three fastest clears today must add up to under 15 minutes.',    meter: { kind: 'raid_budget', raids: 3, totalS: 900 },         target: 1, tier: 'hard', family: 'budget'   },
   { id: 'haul_six_k',       name: 'Bring home 6,000 ⟡',        desc: 'Collect 6,000 doubloons across every voyage you land today.',         meter: { kind: 'voyage_haul_total', atLeast: 6000 },           target: 1, tier: 'hard', family: 'haul'   },
@@ -313,7 +320,8 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'depth_fifteen',    name: 'Reach depth 15',            desc: "Get to floor 15 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 15 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
   { id: 'depth_twenty',     name: 'Reach depth 20',            desc: "Get to floor 20 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 20 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
   { id: 'hc_depth_five',    name: 'Hardcore, depth 5',         desc: 'Get to floor 5 of the Hardcore Gauntlet. Your squad dies for good.',  meter: { kind: 'event', eventKind: 'gauntlet_hc_depth', atLeast: 5 }, target: 1, tier: 'elite', family: 'depth', requires: { hardcore: true } },
-  { id: 'hit_twentyfive_hundred', name: 'Land a 2,500 hit',    desc: 'Land a single hit of 2,500 damage or more. Deep Gauntlet work.',       meter: { kind: 'event', eventKind: 'big_hit', atLeast: 2500 }, target: 1, tier: 'elite', family: 'damage' },
+  { id: 'raid_hit_500',     name: 'Land a 500 hit in a raid',  desc: 'Land a single hit of 500 damage or more in any raid.',                meter: { kind: 'event', eventKind: 'raid_hit', atLeast: 500 },      target: 1, tier: 'elite', family: 'damage_raid' },
+  { id: 'gaunt_hit_2500',   name: 'Land a 2,500 hit below',    desc: "Land a single hit of 2,500 damage or more in Davy Jones' Gauntlet.",  meter: { kind: 'event', eventKind: 'gauntlet_hit', atLeast: 2500 },  target: 1, tier: 'elite', family: 'damage_gauntlet', requires: { gauntlet: true } },
   { id: 'raids_five_kinds', name: 'Clear five different raids', desc: 'Five different raids in one day.',                                   meter: { kind: 'raid_distinct' },                              target: 5, tier: 'elite', family: 'raidcount'  },
   { id: 'budget_twenty',    name: 'Five raids in 25 minutes',  desc: 'Your five fastest clears today must add up to under 25 minutes.',     meter: { kind: 'raid_budget', raids: 5, totalS: 1500 },        target: 1, tier: 'elite', family: 'budget'  },
   // WAS "land a 10,000 doubloon voyage", which one voyage in 1,223 has ever
@@ -329,17 +337,21 @@ export const ALL_BOUNTIES: Bounty[] = [
 
 export const BOUNTY_BY_ID = new Map(ALL_BOUNTIES.map(b => [b.id, b]))
 
-/** The smallest blow any damage bounty asks for.
+/** The smallest blow each damage ladder asks for.
  *
- *  The hit recorders check this before doing any work, so a routine 40-damage
+ *  The hit recorders check these before doing any work, so a routine 40-damage
  *  shot never costs a database write. Derived from the catalogue rather than
- *  typed twice, so adding a lower rung can never leave the recorders logging
- *  above it. */
-export const DAMAGE_BOUNTY_MIN = Math.min(
-  ...ALL_BOUNTIES
-    .filter(b => b.meter.kind === 'event' && b.meter.eventKind === 'big_hit')
-    .map(b => (b.meter as { atLeast: number }).atLeast),
-)
+ *  typed twice, so adding a lower rung can never leave a recorder logging above
+ *  it. */
+function smallestHit(eventKind: string): number {
+  return Math.min(
+    ...ALL_BOUNTIES
+      .filter(b => b.meter.kind === 'event' && b.meter.eventKind === eventKind)
+      .map(b => (b.meter as { atLeast: number }).atLeast),
+  )
+}
+export const RAID_DAMAGE_MIN = smallestHit('raid_hit')
+export const GAUNTLET_DAMAGE_MIN = smallestHit('gauntlet_hit')
 
 export function bountyGems(b: Bounty): number {
   return BOUNTY_GEMS[b.tier]

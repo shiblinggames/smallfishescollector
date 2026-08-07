@@ -21,7 +21,7 @@ import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { flagAnomaly } from '@/lib/anomaly'
 import { issueRunToken } from '@/lib/runToken'
 import { logBountyEvent } from '@/app/(app)/expeditions/bountyActions'
-import { DAMAGE_BOUNTY_MIN } from '@/lib/bounties'
+import { RAID_DAMAGE_MIN } from '@/lib/bounties'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -409,12 +409,12 @@ export async function recordRaidHit(dmg: number): Promise<void> {
   // Logged from the same clamp the record uses, so a forged number cannot buy
   // gems. Below the smallest damage bounty this costs nothing at all, which is
   // every ordinary shot in the game (the median raid best is 36).
-  if (hit >= DAMAGE_BOUNTY_MIN) {
+  if (hit >= RAID_DAMAGE_MIN) {
     const s = await getRaidPlayerStats(user.id)
     const { critMax } = raidDamageProfile(s.totalPower, s.shipMinDamage, s.raidMods?.damagePct ?? 0)
     let ceil = critMax * (s.classDamageMult || 1)
     if (s.manowarAugment) ceil *= s.manowarAugment.megaMult
-    void logBountyEvent(user.id, 'big_hit', Math.min(hit, Math.max(500, Math.ceil(ceil)) * 7))
+    void logBountyEvent(user.id, 'raid_hit', Math.min(hit, Math.max(500, Math.ceil(ceil)) * 7))
   }
 
   // Cheap backstop first: only a NEW personal best does any work (bump_raid_damage
