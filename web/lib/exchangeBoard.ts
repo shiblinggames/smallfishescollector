@@ -223,13 +223,17 @@ export function payoutFor(stake: number, multiplier: number): number {
 
 /** A price, at whatever size it happens to be.
  *
- *  The board runs from a Smack at 0.09 to a Pod at 1,688, so one format cannot
- *  serve it. Two decimals on a penny stock hides a one percent move entirely;
- *  four on a four figure one is noise nobody reads. Decimals where they carry
- *  information, separators where the number is long enough to need them. */
+ *  Prices are free to wander now, so this has to survive a Smack that has fallen
+ *  99% as well as a Pod that has gone up tenfold. Fixed decimal places do not:
+ *  at four decimals a 0.0024 stock moving 3% still reads 0.0024, and the chart
+ *  moves while the number sits there insisting nothing happened.
+ *
+ *  So below 1 it keeps four SIGNIFICANT figures rather than four decimal places,
+ *  and every price shows its movement however far it has fallen. Above 1, plain
+ *  decimals, because that is what people expect of money. */
 export function fmtPrice(p: number): string {
-  if (!Number.isFinite(p)) return '-'
-  if (p < 1) return p.toFixed(4)
+  if (!Number.isFinite(p) || p <= 0) return '-'
+  if (p < 1) return Number(p.toPrecision(4)).toString()
   if (p < 1000) return p.toFixed(2)
   return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
