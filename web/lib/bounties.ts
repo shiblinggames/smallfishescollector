@@ -249,6 +249,15 @@ export const BOUNTY_UNLOCK_RAID = BOUNTY_RUNGS[0].raid
 //   Pete           under 2:00   23% of 74 clears   (record 0:42)
 //   Krust          under 6:30   22% of 9 clears    (record 2:31)
 //   Cartographer   under 5:00   18% of 11 clears   (record 2:52)
+//   Tollmaster ch  under 5:15   28% of 25 clears   (record 3:58)
+//   the Ghost      under 5:30   29% of 14 clears   (record 4:05)
+//
+// WHY THE CLOCK STOPS AT THE GHOST. There is no timed order on a Chapter III or
+// IV challenge raid, and it is not an oversight: nobody has the clears to set
+// one against. The Quartermaster's Challenge has 5 in the whole game, the
+// Harbor Fleet's 2, the Blockade's 1, and the Throne's none at all. A target
+// picked off one clear is a guess wearing a number, which is the exact thing
+// this file refuses to do. They get orders when they get clears.
 
 // Challenge raids grouped by the chapter they belong to.
 //
@@ -285,7 +294,7 @@ export const ALL_BOUNTIES: Bounty[] = [
   // ── MEDIUM ── a real sitting, or Chapter III water ─────────────────────────
   { id: 'krust_challenge',  name: 'Beat Krust on Challenge',            desc: "Clear Krust's Consignment on Challenge.",             meter: { kind: 'raid_clear', raidId: 'captain_krust_challenge' },   target: 1, tier: 'medium', requires: { raid: 'captain_krust_challenge' } },
   { id: 'carto_challenge',  name: 'Beat the Cartographer on Challenge', desc: "Clear The Cartographer's Survey on Challenge.",       meter: { kind: 'raid_clear', raidId: 'cartographer_challenge' },    target: 1, tier: 'medium', requires: { raid: 'cartographer_challenge' } },
-  { id: 'toll_challenge',   name: 'Beat the Tollmaster on Challenge',   desc: "Clear The Tollmaster's Cut on Challenge.",            meter: { kind: 'raid_clear', raidId: 'tollmasters_cut_challenge' }, target: 1, tier: 'medium', requires: { raid: 'tollmasters_cut_challenge' } },
+  { id: 'toll_challenge',   name: 'Beat the Tollmaster on Challenge',   desc: "Clear The Tollmaster's Cut on Challenge.",            meter: { kind: 'raid_clear', raidId: 'tollmasters_cut_challenge' }, target: 1, tier: 'medium', family: 'toll_ch', requires: { raid: 'tollmasters_cut_challenge' } },
   { id: 'fleet_down',       name: 'Break the Harbor Fleet',    desc: 'Clear The Harbor Fleet.',                                             meter: { kind: 'raid_clear', raidId: 'coffers_fleet' },        target: 1, tier: 'medium', requires: { raid: 'coffers_fleet' } },
   { id: 'quarter_down',     name: 'Sink the Quartermaster',    desc: 'Clear The Quartermaster.',                                            meter: { kind: 'raid_clear', raidId: 'the_quartermaster' },    target: 1, tier: 'medium', requires: { raid: 'the_quartermaster' } },
   // ONE BIG HIT. Two ladders, because raid damage and Gauntlet damage are not
@@ -318,6 +327,7 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'carto_fast',       name: 'Cartographer in under 5 minutes', desc: "Clear The Cartographer's Survey in under five minutes.",          meter: { kind: 'raid_fast', raidId: 'cartographer', underS: 300 },       target: 1, tier: 'hard', requires: { raid: 'cartographer' } },
   { id: 'raid_hit_300',     name: 'Land a 300 hit in a raid',  desc: 'Land a single hit of 300 damage or more in any raid.',                meter: { kind: 'event', eventKind: 'raid_hit', atLeast: 300 },      target: 1, tier: 'hard', family: 'damage_raid' },
   { id: 'gaunt_hit_1500',   name: 'Land a 1,500 hit below',    desc: "Land a single hit of 1,500 damage or more in Davy Jones' Gauntlet.",  meter: { kind: 'event', eventKind: 'gauntlet_hit', atLeast: 1500 },  target: 1, tier: 'hard', family: 'damage_gauntlet', requires: { gauntlet: true } },
+  { id: 'toll_challenge_fast', name: 'Tollmaster Challenge in under 5:15', desc: "Clear The Tollmaster's Cut on Challenge in under five and a quarter minutes.", meter: { kind: 'raid_fast', raidId: 'tollmasters_cut_challenge', underS: 315 }, target: 1, tier: 'hard', family: 'toll_ch', requires: { raid: 'tollmasters_cut_challenge' } },
   { id: 'raids_three_kinds', name: 'Clear three different raids', desc: 'Three different raids in one day.',                                meter: { kind: 'raid_distinct' },                              target: 3, tier: 'hard', family: 'raidcount'   },
   { id: 'budget_fifteen',   name: 'Three raids in 15 minutes', desc: 'Your three fastest clears today must add up to under 15 minutes.',    meter: { kind: 'raid_budget', raids: 3, totalS: 900 },         target: 1, tier: 'hard', family: 'budget'   },
   { id: 'haul_six_k',       name: 'Bring home 6,000 ⟡',        desc: 'Collect 6,000 doubloons across every voyage you land today.',         meter: { kind: 'voyage_haul_total', atLeast: 6000 },           target: 1, tier: 'hard', family: 'haul'   },
@@ -326,7 +336,8 @@ export const ALL_BOUNTIES: Bounty[] = [
   // ── ELITE ── Chapter IV on Challenge, the coda, or the deep floors ─────────
   { id: 'challenge_ch4',    name: 'Beat a Chapter IV Challenge', desc: 'Clear The Blockade or The Throne on Challenge.',                    meter: { kind: 'raid_any_of', raidIds: CH4_CHALLENGE },        target: 1, tier: 'elite',  requires: { anyRaid: CH4_CHALLENGE } },
   { id: 'finn_challenge',   name: 'Beat Finn on Challenge',    desc: 'Clear One Last Ride on Challenge.',                                   meter: { kind: 'raid_clear', raidId: 'the_sunken_hand_challenge' }, target: 1, tier: 'elite', requires: { raid: 'the_sunken_hand_challenge' } },
-  { id: 'ghost_down',       name: "Sink the Quartermaster's Ghost", desc: "Clear The Quartermaster's Ghost.",                               meter: { kind: 'raid_clear', raidId: 'the_quartermasters_ghost' }, target: 1, tier: 'elite', requires: { raid: 'the_quartermasters_ghost' } },
+  { id: 'ghost_down',       name: "Sink the Quartermaster's Ghost", desc: "Clear The Quartermaster's Ghost.",                               meter: { kind: 'raid_clear', raidId: 'the_quartermasters_ghost' }, target: 1, tier: 'elite', family: 'ghost', requires: { raid: 'the_quartermasters_ghost' } },
+  { id: 'ghost_fast',       name: 'The Ghost in under 5:30',   desc: "Clear The Quartermaster's Ghost in under five and a half minutes.",   meter: { kind: 'raid_fast', raidId: 'the_quartermasters_ghost', underS: 330 }, target: 1, tier: 'elite', family: 'ghost', requires: { raid: 'the_quartermasters_ghost' } },
   { id: 'depth_fifteen',    name: 'Reach depth 15',            desc: "Get to floor 15 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 15 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
   { id: 'depth_twenty',     name: 'Reach depth 20',            desc: "Get to floor 20 of Davy Jones' Gauntlet. Dying there still counts.",  meter: { kind: 'event', eventKind: 'gauntlet_depth', atLeast: 20 }, target: 1, tier: 'elite', family: 'depth', requires: { gauntlet: true } },
   { id: 'hc_depth_five',    name: 'Hardcore, depth 5',         desc: 'Get to floor 5 of the Hardcore Gauntlet. Your squad dies for good.',  meter: { kind: 'event', eventKind: 'gauntlet_hc_depth', atLeast: 5 }, target: 1, tier: 'elite', family: 'depth', requires: { hardcore: true } },
