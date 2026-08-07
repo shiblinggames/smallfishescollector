@@ -254,3 +254,32 @@ export function getShipSkin(id: string): ShipSkinDef | undefined {
 export function canEquipShipSkin(skin: ShipSkinDef, shipTier: number): boolean {
   return skin.requiresShipTier == null || shipTier >= skin.requiresShipTier
 }
+
+/** Sprites that have a TRIMMED copy under /hull-drop (see trim-hull-drops.mjs).
+ *
+ *  The skin previews are combat art: a ship drawn small and off-centre on a wide
+ *  transparent canvas. That is right for a 230px boss portrait and wrong for a
+ *  60px drop tile, because object-fit: contain fits the CANVAS and not the ship
+ *  inside it. Measured across the six that drop from bosses, the hull fills only
+ *  52-66% of the canvas width and sits up to 5.8% left of its middle, so the
+ *  tile centred an empty rectangle and the ship came out small and off to one
+ *  side of its own name.
+ *
+ *  The originals are untouched: they are still the enemy ships in raid combat
+ *  and the previews on the skin shelf, and both of those want the canvas. */
+const HULL_DROP_TRIMMED = new Set([
+  '/enemy_finnship.png',
+  '/enemychapter1brigantine_v2.png',
+  '/enemychapter2brigantine_v2.png',
+  '/enemychapter3brigantine.png',
+  '/enemychapter4brigantine.png',
+  '/tundrahull.png',
+  '/volcanichull.png',
+])
+
+/** The tight version of a skin sprite, for anywhere the ART is the subject
+ *  rather than the scene. Falls back to the original, so a skin whose sprite has
+ *  no trimmed copy yet renders exactly as it does today instead of 404ing. */
+export function hullDropImage(src: string): string {
+  return HULL_DROP_TRIMMED.has(src) ? `/hull-drop${src}` : src
+}

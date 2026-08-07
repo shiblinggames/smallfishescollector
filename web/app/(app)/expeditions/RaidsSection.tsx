@@ -1613,9 +1613,7 @@ function NodeDetailSheet({
                                   ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 4, background: d.swatch, filter: d.swatchFilter }} />
                                   : d.image
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    // A hull in a small SQUARE tile is mostly dead air, so it fills by cover
-                                    // (the midsection is what shows the skin's colour anyway).
-                                    ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: d.shipSkinId ? 'cover' : 'contain', filter: d.imageFilter }} />
+                                    ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
                                     : <span style={{ color: rc, display: 'flex' }}><IconCrate size={17} /></span>}
                               </span>
                               <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: '#e8e2d8' }}>{d.label}</span>
@@ -1658,9 +1656,7 @@ function NodeDetailSheet({
                           ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
                           : d.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            // A hull in a small SQUARE tile is mostly dead air, so it fills by cover
-                                    // (the midsection is what shows the skin's colour anyway).
-                                    ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: d.shipSkinId ? 'cover' : 'contain', filter: d.imageFilter }} />
+                            ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
                             : d.emoji === GEM_GLYPH
                               ? <span className="font-cinzel" style={{ color: GEM_COLOR }}>{d.emoji}</span>
                               : <span style={{ color: rc, display: 'flex' }}><IconCrate size={14} /></span>}
@@ -1860,11 +1856,12 @@ function DropDetailModal({ drop, owned, chance, onClose }: {
 
         {/* Header: big icon + name + type + rarity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, paddingRight: 24 }}>
-          {/* Hull sprites are ~16:9. In a square box they render barely half its
-              height with dead air above and below, so a hull gets a WIDE box and
-              fills it; everything else keeps the square. */}
+          {/* One box for every kind of drop. A hull used to need a wider one
+              because its sprite was a 16:9 canvas; trimmed to the ship it is
+              only a little wider than tall, and it fills a square box like
+              everything else. */}
           <div style={{
-            width: shipSkin ? 112 : 64, height: 64, flexShrink: 0,
+            width: 64, height: 64, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: `${rarityColor}14`, border: `1px solid ${rarityColor}45`,
             borderRadius: 12, overflow: 'hidden',
@@ -1873,7 +1870,7 @@ function DropDetailModal({ drop, owned, chance, onClose }: {
               ? <span style={{ display: 'block', width: '100%', height: '100%', background: drop.swatch, filter: drop.swatchFilter }} />
               : drop.image
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={drop.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: shipSkin ? 'auto' : '100%', maxHeight: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: shipSkin ? 2 : 4 }} />
+                ? <img src={drop.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: 4 }} />
                 : <span style={{ fontSize: '2rem', color: rarityColor, display: 'flex' }}><IconCrate size={32} /></span>}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -2835,18 +2832,14 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                   right edge where you had to know to swipe for it. These sheets
                   scroll vertically anyway, so the grid just uses that: the
                   Ghost's eight items land as two rows of four, all visible.
-                  Skins get wider cells because hull art is 16:9 and a square
-                  cell strands it in dead space. */}
+                  Skins share the items' cell width: hullDropImage trims their
+                  sprites to the ship, so there is no 16:9 canvas to make room
+                  for any more. */}
               {(() => {
                 const tile = (d: RaidNodeDrop) => {
                   const rc = (d.rarity && RARITY_COLOR[d.rarity]) || '#c4a96a'
                   const owned = dropOwned(d)
                   const chance = owned ? undefined : (liveChance(d) ?? d.chance)
-                  // Hull skins are ~16:9 sprites; item art is square. One 3:2 box
-                  // splits the difference, and each kind gets the fit that stops
-                  // it swimming in dead space: ships stretch to the full width,
-                  // square art fills the height.
-                  const isHull = !!d.shipSkinId
                   return (
                     <button
                       key={d.id ?? d.label}
@@ -2866,14 +2859,10 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                       {/* 84 -> 60. Two stacked rows cost the sheet a whole extra
                           band of height, and the art was sized for a single rail
                           where vertical space was free. */}
-                      {/* LEFT, not centre. Items sit in 80px cells and skins in
-                          116px cells (hull art is 16:9 and needs the width), so
-                          centring inside the cell put the two rows' art on two
-                          different left edges: an item started ~10px in, a hull
-                          ~4px in, and the rows read as misaligned even though
-                          the grids themselves both start at 0.
-                          Anchoring art and text to the cell's left edge gives
-                          every row one shared margin, whatever its cell width. */}
+                      {/* LEFT, not centre, so art and name sit over each other.
+                          Art of different widths centred in a cell puts every
+                          piece on its own left edge; anchoring both to the cell
+                          gives the whole grid one margin. */}
                       <div style={{
                         position: 'relative', width: '100%', height: 60,
                         display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
@@ -2888,8 +2877,12 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                                 loading="lazy"
                                 decoding="async"
                                 style={{
-                                  width: isHull ? '100%' : 'auto',
-                                  height: isHull ? 'auto' : '100%',
+                                  // Every drop draws to the same height and starts
+                                  // at the same left edge. The hull used to stretch
+                                  // to the cell's full WIDTH, which only made sense
+                                  // while its sprite was a wide canvas with a small
+                                  // ship adrift in it.
+                                  width: 'auto', height: '100%',
                                   maxWidth: '100%', maxHeight: '100%',
                                   objectFit: 'contain',
                                   filter: [d.imageFilter, `drop-shadow(0 3px 10px ${rc}66)`].filter(Boolean).join(' '),
@@ -2944,7 +2937,9 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                         no longer started from the same edge. Fixed widths keep
                         every cell the size its art wants and let both rows pack
                         from the left, wrapping when they run out of room.
-                        Skins get the wider cell because hull art is 16:9. */}
+                        Both rows are 80px now: the hull sprites are trimmed to
+                        the ship, so a skin is about as wide as an item instead
+                        of a 16:9 canvas. */}
                     {dropItems.length > 0 && (
                       <div style={{ marginBottom: dropSkins.length > 0 ? 12 : 0 }}>
                         {split && sub('Items')}
@@ -2956,7 +2951,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
                     {dropSkins.length > 0 && (
                       <div>
                         {split && sub('Ship Skins')}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 116px)', justifyContent: 'start', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 80px)', justifyContent: 'start', gap: 8 }}>
                           {dropSkins.map(tile)}
                         </div>
                       </div>
