@@ -9,7 +9,7 @@ import ShopHeader from '@/components/ShopHeader'
 import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
 import { MOOD_CONFIG } from '@/lib/fishMarket'
-import ExchangeClient from './ExchangeClient'
+import BoardClient from './BoardClient'
 import SwipeAction from '@/components/SwipeAction'
 import { hapticReward } from '@/lib/haptics'
 
@@ -703,7 +703,7 @@ export default function MarketClient({
           )}
         </div>
 
-        {side === 'exchange' && <ExchangeClient onDoubloons={setDoubloons} />}
+        {side === 'exchange' && <BoardClient onDoubloons={setDoubloons} />}
 
         {side === 'hold' && <>
         {/* ── Market status ticker ── */}

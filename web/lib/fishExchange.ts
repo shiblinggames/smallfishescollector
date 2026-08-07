@@ -369,7 +369,7 @@ export const MAX_STAKE = 250_000
  *
  *  Every open contract was already refunded at full stake, so nothing is
  *  stranded behind this. Flip to false when the new board ships. */
-export const EXCHANGE_UNDER_CONSTRUCTION = true
+export const EXCHANGE_UNDER_CONSTRUCTION = false
 
 export const EXCHANGE_FISHING_LEVEL = 100
 

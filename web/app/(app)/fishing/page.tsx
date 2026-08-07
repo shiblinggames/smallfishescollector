@@ -7,7 +7,7 @@ import { isPremiumActive } from '@/lib/premium'
 import { getCharacterSprites, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
-import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION, FUND_BY_ID } from '@/lib/fishExchange'
+import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import type { TickerItem } from '@/components/MarketTicker'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getBoat, earnedAchievementBoats } from '@/lib/boats'
@@ -200,19 +200,21 @@ export default async function FishingPage() {
   // captain below the Fishing cap.
   let openContracts = 0
   if (exchangeOpen) {
-    const [{ data: fundRows }, { count: running }] = await Promise.all([
-      admin.from('exchange_funds').select('fund_id, price, prev_price'),
-      admin.from('exchange_positions').select('id', { count: 'exact', head: true })
+    // The REBUILT board: exchange_indexes and exchange_bets, not the retired
+    // funds and positions. Only the WATERS ride the strip: the whole board is 28
+    // instruments and a ticker is a glance, not a list.
+    const [{ data: idxRows }, { count: running }] = await Promise.all([
+      admin.from('exchange_indexes').select('name, price, prev_price').eq('family', 'zone'),
+      admin.from('exchange_bets').select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).eq('status', 'open'),
     ])
     openContracts = running ?? 0
-    indexTicks = (fundRows ?? [])
+    indexTicks = (idxRows ?? [])
       .map(f => {
-        const def = FUND_BY_ID.get(f.fund_id as string)
         const price = Number(f.price)
         const prev = Number(f.prev_price)
         return {
-          name: def?.name ?? (f.fund_id as string),
+          name: f.name as string,
           price,
           pct: prev > 0 ? ((price - prev) / prev) * 100 : 0,
           kind: 'index' as const,
