@@ -29,7 +29,7 @@ import type { RenownAlloc } from '@/lib/renown'
 
 export default function FishingHub({
   fishingLevel, fishingXP, initialFishingRenownAlloc, ancientDeepUnlocked,
-  currentZone, baitCount, speciesCaught, speciesTotal, marketMood, marketNextUpdate, exchangeUnveil, ticker, hasSeenHubTour,
+  currentZone, baitCount, speciesCaught, speciesTotal, marketMood, marketNextUpdate, openContracts, exchangeUnveil, ticker, hasSeenHubTour,
   characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onOpenZones,
 }: {
@@ -46,6 +46,8 @@ export default function FishingHub({
   marketMood: string
   /** ISO time the fish board next turns over. */
   marketNextUpdate: string
+  /** Exchange contracts still running. Zero below the Fishing cap. */
+  openContracts: number
   /** Fishing is capped and the Exchange has never been announced. The tile
    *  carries the news, since the market is where it actually opens. */
   exchangeUnveil: boolean
@@ -81,6 +83,9 @@ export default function FishingHub({
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [marketNextUpdate])
+  const countdownShort = nextIn <= 0
+    ? 'moments'
+    : `${Math.floor(nextIn / 60)}:${String(nextIn % 60).padStart(2, '0')}`
   const nextLabel = nextIn <= 0
     ? 'New prices any moment'
     : `New prices in ${Math.floor(nextIn / 60)}:${String(nextIn % 60).padStart(2, '0')}`
@@ -173,7 +178,14 @@ export default function FishingHub({
                 // is news.
                 status={exchangeUnveil ? 'The Exchange is open' : mood.label}
                 statusColor={exchangeUnveil ? '#38bdf8' : mood.color}
-                sub={exchangeUnveil ? 'Fishing 100 earned you the trading floor' : nextLabel}
+                // What you have RIDING comes first when there is any: the
+                // countdown is the market's business, a running contract is
+                // yours. Both fit on the one line the tile gives.
+                sub={exchangeUnveil
+                  ? 'Fishing 100 earned you the trading floor'
+                  : openContracts > 0
+                    ? `${openContracts} running · new prices in ${countdownShort}`
+                    : nextLabel}
                 progress={exchangeUnveil ? undefined : marketPct}
                 dot={exchangeUnveil ? 'new' : null}
                 onClick={() => router.push('/tavern/market')}

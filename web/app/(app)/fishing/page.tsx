@@ -191,9 +191,17 @@ export default async function FishingPage() {
   // The Exchange's indexes ride the same strip once the board is open to you.
   // One extra read, and only for captains at the Fishing cap.
   let indexTicks: TickerItem[] = []
+  // Contracts still running, for the Market tile. Rides the SAME gated trip as
+  // the index ticks rather than adding a second one, and stays zero for every
+  // captain below the Fishing cap.
+  let openContracts = 0
   if (exchangeOpen) {
-    const { data: fundRows } = await admin
-      .from('exchange_funds').select('fund_id, price, prev_price')
+    const [{ data: fundRows }, { count: running }] = await Promise.all([
+      admin.from('exchange_funds').select('fund_id, price, prev_price'),
+      admin.from('exchange_positions').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('status', 'open'),
+    ])
+    openContracts = running ?? 0
     indexTicks = (fundRows ?? [])
       .map(f => {
         const def = FUND_BY_ID.get(f.fund_id as string)
@@ -362,6 +370,7 @@ export default async function FishingPage() {
           hubSpeciesTotal={speciesTotal}
           hubMarketMood={marketMood}
           hubMarketNextUpdate={marketNextUpdate}
+          hubOpenContracts={openContracts}
           hubExchangeUnveil={exchangeUnveil}
           hubTicker={tickerItems}
           hasSeenFishingHubTour={profile?.has_seen_fishing_hub_tour ?? false}
