@@ -309,7 +309,6 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
         </span>
         {/* The one fact that tells you what kind of thing you are looking at. */}
         <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.6rem', color: '#6a7482' }}>
-          moves about {i.typicalDayPct < 10 ? i.typicalDayPct.toFixed(1) : Math.round(i.typicalDayPct)}% on a normal day
         </span>
       </span>
       <Line points={i.history.length > 1 ? i.history : [i.prevPrice, i.price]} color={day >= 0 ? UP : DOWN} />
@@ -410,6 +409,12 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   }
   const chosenUnits = units ?? [...presets].reverse().find(fits) ?? presets[0]
   const betCap = capNow
+  // THE PRICE IT HAS TO REACH. A percentage is a thing you have to do arithmetic
+  // on before it means anything; a price is the same number you are already
+  // watching on the chart.
+  const targetPrice = chosen
+    ? index.price * (1 + (dir === 'up' ? 1 : -1) * chosen.distancePct / 100)
+    : index.price
   const capped = costOf(chosenUnits, index.price)
   const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
   const returns = chosen ? payoutFor(capped, chosen.multiplier) : 0
@@ -446,7 +451,6 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           </p>
           <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
             {fmtPrice(index.price)} now
-            {' · '}moves about {index.typicalDayPct < 10 ? index.typicalDayPct.toFixed(1) : Math.round(index.typicalDayPct)}% on a normal day
           </p>
         </div>
 
@@ -486,7 +490,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             {TERM_PITCH[term]}
           </p>
 
-          <Step n={3} label="How far does it have to go?" />
+          <Step n={3} label="What does it have to reach?" />
           {/* A SLIDER, not nine rows. Nine stacked options is a wall, and it hides
               the one thing that matters: that this is a single trade-off with two
               ends. Dragging right is further, harder and worth more, and your
@@ -497,8 +501,13 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                 display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
                 gap: 10, marginBottom: 4,
               }}>
-                <span className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1, color: dir === 'up' ? UP : DOWN, ...TNUM }}>
-                  {dir === 'up' ? '+' : '-'}{chosen.distancePct}%
+                <span style={{ minWidth: 0 }}>
+                  <span className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1, color: dir === 'up' ? UP : DOWN, ...TNUM }}>
+                    {fmtPrice(targetPrice)}
+                  </span>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.66rem', color: '#7c8696', marginTop: 3, ...TNUM }}>
+                    from {fmtPrice(index.price)} · {dir === 'up' ? '+' : '-'}{chosen.distancePct}%
+                  </span>
                 </span>
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
                   <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4' }}>
@@ -522,7 +531,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                   if (b) { setDistance(b.distancePct); vibrate([0, 6]) }
                 }}
                 aria-label="How far it has to move"
-                aria-valuetext={`${chosen.distancePct} percent, ${chanceInWords(chosen.chance)}, pays ${payoutInWords(chosen.multiplier)}`}
+                aria-valuetext={`reaches ${fmtPrice(targetPrice)} from ${fmtPrice(index.price)}, ${chanceInWords(chosen.chance)}, pays ${payoutInWords(chosen.multiplier)}`}
                 style={{
                   // The track fills up to the thumb, so how far along the ladder
                   // you are is readable without looking at the numbers. Both the
@@ -593,9 +602,9 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           {chosen && (
             <div style={{ padding: '0.75rem 0.85rem', borderRadius: 12, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
               <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#dbe3ee', lineHeight: 1.55 }}>
-                {chosenUnits.toLocaleString()} units, {capped.toLocaleString()} ⟡, that <strong style={{ color: '#f0f4fa' }}>{index.name}</strong> is
-                {' '}{dir === 'up' ? 'up' : 'down'} at least <strong style={{ color: '#f0f4fa' }}>{chosen.distancePct}%</strong>
-                {' '}in <strong style={{ color: '#f0f4fa' }}>{TERM_NAME[term].toLowerCase()}</strong>.
+                {chosenUnits.toLocaleString()} units, {capped.toLocaleString()} ⟡, that <strong style={{ color: '#f0f4fa' }}>{index.name}</strong>
+                {' '}{dir === 'up' ? 'reaches' : 'falls to'} <strong style={{ color: '#f0f4fa' }}>{fmtPrice(targetPrice)}</strong>
+                {' '}from {fmtPrice(index.price)} in <strong style={{ color: '#f0f4fa' }}>{TERM_NAME[term].toLowerCase()}</strong>.
               </p>
               <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#ffd96a', marginTop: 6, ...TNUM }}>
                 {chanceInWords(chosen.chance)}. Comes back as {returns.toLocaleString()} ⟡.
