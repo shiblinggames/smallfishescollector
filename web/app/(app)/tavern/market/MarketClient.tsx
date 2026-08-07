@@ -889,25 +889,44 @@ export default function MarketClient({
           <div>
             <p className="font-cinzel font-700 mb-2" style={{ fontSize: '1rem', letterSpacing: '0.02em', color: '#f0e6d2' }}>Market Prices</p>
 
-            {/* sort + filter controls */}
-            <div className="flex items-center gap-2 mb-2" style={{ flexWrap: 'wrap' }}>
-              <div className="flex" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)' }}>
+            {/* ONE ROW, TWO CONTROLS. This was a segmented sort sitting alone
+                in a wrapping flex row, then a second row of up to six habitat
+                chips under it: nine controls in two visual languages, above a
+                list of ten. The zone is a menu now, which is what a
+                one-of-many choice wants to be and which cannot wrap to a
+                second line however many zones open up. */}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex" style={{ flex: 1, minWidth: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)' }}>
                 {([['value', 'Value'], ['change', 'Change'], ['name', 'A–Z']] as const).map(([k, lbl], i) => (
                   <button key={k} onClick={() => setSortKey(k)} className="font-karla font-700 uppercase tracking-[0.06em]"
-                    style={{ fontSize: '0.58rem', padding: '0.4rem 0.7rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.18)', background: sortKey === k ? 'rgba(240,192,64,0.22)' : 'rgba(28,32,40,0.95)', color: sortKey === k ? GOLD : '#c4bfb6', cursor: 'pointer' }}>
+                    style={{ flex: 1, fontSize: '0.58rem', padding: '0.4rem 0.3rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.18)', background: sortKey === k ? 'rgba(240,192,64,0.22)' : 'rgba(28,32,40,0.95)', color: sortKey === k ? GOLD : '#c4bfb6', cursor: 'pointer' }}>
                     {lbl}
                   </button>
                 ))}
               </div>
+              {habitatsPresent.length > 1 && (
+                <select
+                  value={habitatFilter ?? ''}
+                  onChange={e => setHabitatFilter(e.target.value || null)}
+                  aria-label="Filter by zone"
+                  className="font-karla font-700 uppercase tracking-[0.06em]"
+                  style={{
+                    flexShrink: 0, maxWidth: '46%',
+                    fontSize: '0.58rem', padding: '0.4rem 1.5rem 0.4rem 0.6rem',
+                    borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)',
+                    background: `rgba(28,32,40,0.95) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c4bfb6' stroke-width='3' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 0.45rem center/9px 9px`,
+                    color: habitatFilter ? (HABITAT_COLOR[habitatFilter] ?? '#c4bfb6') : '#c4bfb6',
+                    appearance: 'none', WebkitAppearance: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">All zones</option>
+                  {habitatsPresent.map(h => (
+                    <option key={h} value={h}>{HABITAT_LABEL[h] ?? h}</option>
+                  ))}
+                </select>
+              )}
             </div>
-            {habitatsPresent.length > 1 && (
-              <div className="flex gap-1.5 mb-2" style={{ flexWrap: 'wrap' }}>
-                <FilterChip label="All" active={habitatFilter === null} color="#9a9488" onClick={() => setHabitatFilter(null)} />
-                {habitatsPresent.map(h => (
-                  <FilterChip key={h} label={HABITAT_LABEL[h] ?? h} active={habitatFilter === h} color={HABITAT_COLOR[h] ?? '#9a9488'} onClick={() => setHabitatFilter(habitatFilter === h ? null : h)} />
-                ))}
-              </div>
-            )}
 
             <div style={{ background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.75rem' }}>
               {browseList.length === 0
@@ -961,14 +980,6 @@ export default function MarketClient({
   )
 }
 
-function FilterChip({ label, active, color, onClick }: { label: string; active: boolean; color: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="font-karla font-700 uppercase tracking-[0.06em]"
-      style={{ fontSize: '0.56rem', padding: '0.34rem 0.65rem', borderRadius: 999, background: active ? `${color}33` : 'rgba(28,32,40,0.95)', border: `1px solid ${active ? `${color}88` : 'rgba(255,255,255,0.18)'}`, color: active ? '#fff' : '#c4bfb6', cursor: 'pointer' }}>
-      {label}
-    </button>
-  )
-}
 
 function MoodIcon({ mood, color }: { mood: string; color: string }) {
   if (mood === 'kraken') {
