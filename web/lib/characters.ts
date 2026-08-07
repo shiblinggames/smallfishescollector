@@ -32,10 +32,6 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'frozen',   name: 'Frozen',   free: false, unlockHint: '500 ◆', gemPrice: 500 },
   { id: 'spectral', name: 'Spectral', free: false, unlockHint: '750 ◆', gemPrice: 750 },
   { id: 'abyssal',  name: 'Abyssal',  free: false, unlockHint: '750 ◆', gemPrice: 750 },
-  // ART PENDING. The capstone of the bounty-point ladder (1,200 points, about
-  // three months of clearing the board at the Chapter IV rung). Buyable
-  // nowhere, which is the whole point of it.
-  { id: 'corsair',  name: 'Corsair',  free: false, unlockHint: 'Reach 1,200 bounty points' },
 ]
 
 /** Character colors earned by hitting an Achievement Points threshold. Kept

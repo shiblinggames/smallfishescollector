@@ -374,7 +374,7 @@ export default function BountiesPanel({ onGems, onClose }: {
       setBusy(null)
       if ('error' in res) { setToast(res.error); return }
       hapticReward()
-      setToast(res.colorId ? `${res.label}. Corsair unlocked.` : `+${res.label}`)
+      setToast(res.shipSkinId ? `${res.label}. Fly it on the Man-o-War.` : `+${res.label}`)
       setBurst(n => n + 1)
       if (res.gems) window.dispatchEvent(new CustomEvent('gems-changed'))
       if (res.doubloons) window.dispatchEvent(new CustomEvent('doubloons-changed'))

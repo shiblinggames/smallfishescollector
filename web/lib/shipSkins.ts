@@ -221,6 +221,24 @@ export const SHIP_SKINS: ShipSkinDef[] = [
     },
   },
 
+  // The capstone of the bounty-point ladder: 1,200 points, roughly three
+  // months of clearing a full Chapter IV board. Bought nowhere, dropped by
+  // nothing, and Man-o-War only like the other prestige hulls.
+  //
+  // FILTER FOR NOW, ART PENDING. A tint means it works the day someone earns
+  // it rather than 404-ing on a sprite that does not exist yet; when the
+  // bespoke hull lands it drops into imageByTier: { 6: '/corsairhull.png' }
+  // beside this and the filter can go to 'none'.
+  {
+    id: 'corsair_hull',
+    name: 'Corsair Hull',
+    description: 'Paid for one order at a time, over a season of them. The harbourmaster knows your colours now, and so does everyone who reads his board.',
+    filter: 'hue-rotate(-24deg) saturate(1.32) brightness(0.94)',
+    color: '#b4463a',
+    source: 'Bounty milestone · 1,200 points',
+    requiresShipTier: MANOWAR_SHIP_TIER,
+  },
+
   // ── Drowned Fleet — Hardcore Gauntlet ── REMOVED 2026-07-08: the hull skins
   // aren't ready (placeholder tints, no bespoke art), so they're pulled from the
   // game for now. HARDCORE_UNLOCKS in lib/gauntlet is emptied to match. Re-add

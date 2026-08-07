@@ -365,7 +365,7 @@ export async function claimBounty(bountyId: string): Promise<ClaimResult> {
 }
 
 export type MilestoneResult =
-  | { ok: true; label: string; doubloons: number; gems: number; colorId: string | null }
+  | { ok: true; label: string; doubloons: number; gems: number; shipSkinId: string | null }
   | { error: string }
 
 /** Collect the next rung of the points ladder.
@@ -380,7 +380,7 @@ export async function claimBountyMilestone(): Promise<MilestoneResult> {
 
   const admin = createAdminClient()
   const { data: p } = await admin.from('profiles')
-    .select('doubloons, gems, bounty_points, bounty_milestones_claimed, unlocked_character_colors')
+    .select('doubloons, gems, bounty_points, bounty_milestones_claimed, ship_skins')
     .eq('id', user.id).single()
   if (!p) return { error: 'Profile not found' }
 
@@ -390,8 +390,8 @@ export async function claimBountyMilestone(): Promise<MilestoneResult> {
   if (!m) return { error: 'Every milestone is already collected' }
   if (points < m.points) return { error: `${m.points - points} more points needed` }
 
-  const colors = ((p.unlocked_character_colors as string[] | null) ?? [])
-  const grantColor = m.colorId && !colors.includes(m.colorId)
+  const skins = ((p.ship_skins as string[] | null) ?? [])
+  const grantSkin = m.shipSkinId && !skins.includes(m.shipSkinId)
 
   // Guarded on the count we read, so two taps cannot collect the same rung
   // twice: the second finds the number already moved and matches nothing.
@@ -400,7 +400,7 @@ export async function claimBountyMilestone(): Promise<MilestoneResult> {
       bounty_milestones_claimed: claimed + 1,
       doubloons: Number(p.doubloons ?? 0) + (m.doubloons ?? 0),
       gems: Number(p.gems ?? 0) + (m.gems ?? 0),
-      ...(grantColor ? { unlocked_character_colors: [...colors, m.colorId as string] } : {}),
+      ...(grantSkin ? { ship_skins: [...skins, m.shipSkinId as string] } : {}),
     })
     .eq('id', user.id)
     .eq('bounty_milestones_claimed', claimed)
@@ -416,7 +416,7 @@ export async function claimBountyMilestone(): Promise<MilestoneResult> {
   return {
     ok: true, label: m.label,
     doubloons: m.doubloons ?? 0, gems: m.gems ?? 0,
-    colorId: grantColor ? (m.colorId as string) : null,
+    shipSkinId: grantSkin ? (m.shipSkinId as string) : null,
   }
 }
 

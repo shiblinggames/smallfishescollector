@@ -184,8 +184,9 @@ export type BountyMilestone = {
   points: number
   doubloons?: number
   gems?: number
-  /** A character colour granted at the top of the ladder. */
-  colorId?: string
+  /** A ship skin granted at the top of the ladder. Expeditions content earns
+   *  an expeditions cosmetic. */
+  shipSkinId?: string
   label: string
 }
 
@@ -204,7 +205,7 @@ export const BOUNTY_MILESTONES: BountyMilestone[] = [
   { points:  450, gems:          400, label: '400 ◆' },
   { points:  650, doubloons: 100_000, label: '100,000 ⟡' },
   { points:  900, gems:          750, label: '750 ◆' },
-  { points: 1200, gems:        1_500, colorId: 'corsair', label: '1,500 ◆ and the Corsair colour' },
+  { points: 1200, gems:        1_500, shipSkinId: 'corsair_hull', label: '1,500 ◆ and the Corsair Hull' },
 ]
 
 /** The next rung of the ladder, or null once every one is collected. */
