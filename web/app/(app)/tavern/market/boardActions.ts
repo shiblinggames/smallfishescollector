@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -39,6 +39,12 @@ export type BoardIndex = {
   /** What an ordinary day actually looks like, which is the median move rather
    *  than the spread. This is the one that goes on screen. */
   typicalDayPct: number
+  /** What the engine will carry it by on its own, per the current weather and
+   *  its own trend. The client needs these to price a bet the same way the
+   *  server will. */
+  vol: number
+  beta: number
+  trend: number
   /** Oldest first. */
   history: number[]
   /** The five distances this index offers, whatever the term. */
@@ -66,6 +72,8 @@ export type BoardBet = {
 }
 
 export type Board = {
+  /** The shared weather right now. Half of it reaches an index, times its beta. */
+  moodBias: number
   open: boolean
   closedReason: string | null
   doubloons: number
@@ -75,7 +83,7 @@ export type Board = {
 }
 
 const SHUT = (reason: string): Board => ({
-  open: false, closedReason: reason, doubloons: 0, indexes: [], bets: [], unseen: 0,
+  moodBias: 0, open: false, closedReason: reason, doubloons: 0, indexes: [], bets: [], unseen: 0,
 })
 
 export async function getBoard(): Promise<Board> {
@@ -86,10 +94,11 @@ export async function getBoard(): Promise<Board> {
   if (EXCHANGE_UNDER_CONSTRUCTION) return SHUT('The Exchange is closed while the board is rebuilt')
 
   const admin = createAdminClient()
-  const [profileRes, idxRes, betRes] = await Promise.all([
+  const [profileRes, idxRes, betRes, moodRes] = await Promise.all([
     admin.from('profiles').select('doubloons, fishing_xp').eq('id', uid).single(),
     admin.from('exchange_indexes').select('*').order('sort'),
     admin.from('exchange_bets').select('*').eq('user_id', uid).order('id', { ascending: false }).limit(40),
+    admin.from('market_state').select('mood_bias').eq('id', 1).single(),
   ])
 
   const level = getLevelFromXP(Number(profileRes.data?.fishing_xp ?? 0))
@@ -109,6 +118,9 @@ export async function getBoard(): Promise<Board> {
       prevPrice: Number(r.prev_price),
       dailyMovePct: daily,
       typicalDayPct: typicalDayMove(daily),
+      vol: Number(r.vol),
+      beta: Number(r.beta),
+      trend: Number(r.trend),
       history: ((r.history as number[] | null) ?? []).map(Number),
       rungs: rungsFor(daily),
     }
@@ -141,6 +153,7 @@ export async function getBoard(): Promise<Board> {
   })
 
   return {
+    moodBias: Number(moodRes.data?.mood_bias ?? 0),
     open: true,
     closedReason: null,
     doubloons: Number(profileRes.data?.doubloons ?? 0),
@@ -173,7 +186,7 @@ export async function openBet(
   }
 
   const { data: idx } = await admin.from('exchange_indexes')
-    .select('id, vol, price').eq('id', indexId).single()
+    .select('id, vol, beta, trend, price').eq('id', indexId).single()
   if (!idx) return { error: 'No such index' }
   const entry = Number(idx.price)
   if (!(entry > 0)) return { error: 'That index has no price right now' }
@@ -183,12 +196,19 @@ export async function openBet(
   // one-in-a-million on a one hour bet is not on the board, and asking for it
   // directly should not put it there.
   const daily = dailyMovePct(Number(idx.vol))
-  const allowed = offeredBets(daily, term)
+  // The SAME drift the engine will apply. Priced without it, a bet the weather
+  // was already going to win was being sold at long-shot odds.
+  const { data: mood } = await admin.from('market_state').select('mood_bias').eq('id', 1).single()
+  const drift = driftOver(
+    Number(idx.vol), Number(idx.beta), Number(idx.trend),
+    Number(mood?.mood_bias ?? 0), term, direction,
+  )
+  const allowed = offeredBets(daily, term, drift)
   const bet = allowed.find(b => Math.abs(b.distancePct - distancePct) < 0.0001)
   if (!bet || bet.chance < MIN_CHANCE) return { error: 'That bet is not offered on this one' }
 
   // Priced from the index, never from the caller.
-  const priced = priceBet(daily, term, bet.distancePct)
+  const priced = priceBet(daily, term, bet.distancePct, drift)
   if (!(priced.multiplier > 0)) return { error: 'Could not price that bet' }
 
   // Debit first, atomically and balance-guarded, the same order every purchase

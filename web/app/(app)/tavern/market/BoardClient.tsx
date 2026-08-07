@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, chanceInWords, payoutInWords, payoutFor,
+  offeredBets, driftOver, chanceInWords, payoutInWords, payoutFor,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, markBetsSeen } from './boardActions'
@@ -142,6 +142,7 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
         {ticket && (
           <Ticket
             index={ticket}
+            moodBias={board.moodBias}
             doubloons={board.doubloons}
             onClose={() => setTicket(null)}
             onDone={() => { setTicket(null); setTab('bets'); load() }}
@@ -271,8 +272,8 @@ function BetList({ bets }: { bets: BoardBet[] }) {
   )
 }
 
-function Ticket({ index, doubloons, onClose, onDone }: {
-  index: BoardIndex; doubloons: number; onClose: () => void; onDone: () => void
+function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
+  index: BoardIndex; moodBias: number; doubloons: number; onClose: () => void; onDone: () => void
 }) {
   const [dir, setDir] = useState<Direction>('up')
   const [term, setTerm] = useState<Term>(24)
@@ -281,7 +282,11 @@ function Ticket({ index, doubloons, onClose, onDone }: {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  const bets = offeredBets(index.dailyMovePct, term)
+  // Priced with the drift the engine is already applying, exactly as the server
+  // will price it. Quote it any other way and the ticket promises odds the
+  // settlement will not honour.
+  const drift = driftOver(index.vol, index.beta, index.trend, moodBias, term, dir)
+  const bets = offeredBets(index.dailyMovePct, term, drift)
   // Keep a valid distance selected as the term changes: the rungs on offer
   // shrink hard on the short terms, and a stale pick would silently price a bet
   // nobody chose.

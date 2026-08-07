@@ -135,35 +135,62 @@ export type Bet = {
  *  The multiplier is solved so the bet is FAIR: chance x multiplier = 1. No
  *  house edge. A market that quietly takes 8% off every bet is a thing you have
  *  to explain, and this screen is trying to explain as little as possible. */
-export function priceBet(dailyMovePct: number, hours: Term, distancePct: number): Bet {
+export function priceBet(
+  dailyMovePct: number, hours: Term, distancePct: number,
+  /** Where the index is already heading, over this whole term, signed the
+   *  player's way. Trend and weather are PERSISTENT and drawn on the chart, so
+   *  pricing pure noise sells a near-certainty at long-shot odds: a +0.3% hour
+   *  on the Shallows was 3.3% flat and 100% during a bull run, both at 30x. */
+  driftPct = 0,
+): Bet {
   const s = spreadOver(dailyMovePct, hours)
   if (!(s > 0) || !(distancePct > 0)) return { distancePct, chance: 0, multiplier: 0 }
-  const chance = 1 - normCdf(distancePct / s)
+  const chance = 1 - normCdf((distancePct - driftPct) / s)
   if (chance <= 0.00005) return { distancePct, chance: 0, multiplier: 0 }
-  return { distancePct, chance, multiplier: 1 / chance }
+  // Never pay out on something that cannot lose. Drift can carry a near
+  // certainty, and 1.01x is an honest price for one.
+  return { distancePct, chance: Math.min(chance, 0.99), multiplier: 1 / Math.min(chance, 0.99) }
 }
 
 /** Below this a rung is not offered at all. A one-in-fifty-thousand bet is not a
  *  long shot, it is a way to lose money you will never notice going. */
 export const MIN_CHANCE = 0.005
 
-export function offeredBets(dailyMovePct: number, hours: Term): Bet[] {
+export function offeredBets(dailyMovePct: number, hours: Term, driftPct = 0): Bet[] {
   return rungsFor(dailyMovePct)
-    .map(d => priceBet(dailyMovePct, hours, d))
+    .map(d => priceBet(dailyMovePct, hours, d, driftPct))
     .filter(b => b.chance >= MIN_CHANCE)
+}
+
+/** How far the engine will carry this index on its own over `hours`, before any
+ *  noise. Mirrors update_exchange_indexes exactly: trend and weather are both a
+ *  fraction of the index's OWN volatility, so they mean the same thing on a
+ *  sleepy zone and a wild species.
+ *
+ *  Keep in lockstep with that function. If the constants drift apart, the board
+ *  starts selling bets it has already won. */
+const DRIFT_K = 0.25, MAX_BIAS = 0.0125, TREND_MAX = 0.0018
+export function driftOver(
+  vol: number, beta: number, trend: number, moodBias: number, hours: Term, dir: Direction,
+): number {
+  const halved = moodBias * 0.5
+  const perHour = vol * DRIFT_K * (beta * (halved / MAX_BIAS) + trend / TREND_MAX)
+  const pct = perHour * hours * 100
+  return dir === 'up' ? pct : -pct
 }
 
 // ── Saying it out loud ──────────────────────────────────────────────────────
 
-/** "about 1 in 3". Never a percentage: people read 12% as "unlikely" and 1 in 8
- *  as "I have a shot", and the second one is the honest feeling. */
+/** "12% chance". A percentage, because next to a payout multiplier it is the
+ *  number you can actually work with: 12% beside 8x is a comparison anyone can
+ *  make, where "1 in 8" beside 8x makes you convert before you can think. */
 export function chanceInWords(chance: number): string {
   if (chance <= 0) return 'no chance'
-  if (chance >= 0.95) return 'near certain'
-  const n = Math.round(1 / chance)
-  if (n <= 1) return 'better than even'
-  if (n === 2) return 'about a coin flip'
-  return `about 1 in ${n >= 20 ? Math.round(n / 5) * 5 : n}`
+  if (chance >= 0.995) return 'near certain'
+  if (chance >= 0.10) return `${Math.round(chance * 100)}% chance`
+  // Below 10% a whole number throws away most of what is left: 3% and 3.4% are
+  // a 13% difference in the payout.
+  return `${(chance * 100).toFixed(1)}% chance`
 }
 
 /** "3.2x" for the small ones, "40x" once the decimal stops meaning anything. */
