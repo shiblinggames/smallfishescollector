@@ -20,6 +20,8 @@ import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugmen
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { flagAnomaly } from '@/lib/anomaly'
 import { issueRunToken } from '@/lib/runToken'
+import { logBountyEvent } from '@/app/(app)/expeditions/bountyActions'
+import { DAMAGE_BOUNTY_MIN } from '@/lib/bounties'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -399,6 +401,21 @@ export async function recordRaidHit(dmg: number): Promise<void> {
   if (!user) return
   const admin = createAdminClient()
   const hit = Math.floor(dmg)
+
+  // A DAMAGE BOUNTY is a "did you do it today" question, and highest_raid_damage
+  // cannot answer it: it is a high-water mark, so a captain whose record already
+  // stands at 700 would never register a 300 again. It gets its own event row.
+  //
+  // Logged from the same clamp the record uses, so a forged number cannot buy
+  // gems. Below the smallest damage bounty this costs nothing at all, which is
+  // every ordinary shot in the game (the median raid best is 36).
+  if (hit >= DAMAGE_BOUNTY_MIN) {
+    const s = await getRaidPlayerStats(user.id)
+    const { critMax } = raidDamageProfile(s.totalPower, s.shipMinDamage, s.raidMods?.damagePct ?? 0)
+    let ceil = critMax * (s.classDamageMult || 1)
+    if (s.manowarAugment) ceil *= s.manowarAugment.megaMult
+    void logBountyEvent(user.id, 'big_hit', Math.min(hit, Math.max(500, Math.ceil(ceil)) * 7))
+  }
 
   // Cheap backstop first: only a NEW personal best does any work (bump_raid_damage
   // is a greatest() no-op otherwise), so legit hits never pay for the stats read.

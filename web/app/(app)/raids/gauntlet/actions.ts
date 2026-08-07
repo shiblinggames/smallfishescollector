@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logBountyEvent } from '@/app/(app)/expeditions/bountyActions'
+import { DAMAGE_BOUNTY_MIN } from '@/lib/bounties'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
@@ -53,6 +54,15 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   const admin = createAdminClient()
   const h = Math.floor(dmg)
   await admin.rpc('bump_gauntlet_hit', { uid: user.id, dmg: h })
+  // Damage bounties count a Gauntlet hit the same as a raid hit, which they have
+  // to: raid damage tops out around 760 and a deep descent reaches thousands, so
+  // a raid-only order would be a wall for everyone.
+  //
+  // NOT clamped, and that is worth being honest about: gauntlet damage has no
+  // server-side ceiling today because the Biggest Hit board it feeds is vanity.
+  // A damage bounty pays gems, so this borrows a trust boundary it did not set.
+  // The run token bounds a descent, so the exposure is one forged hit per run.
+  if (h >= DAMAGE_BOUNTY_MIN) void logBountyEvent(user.id, 'big_hit', h)
   // Also track the lifetime biggest hit on the profile (for the One Shot badge).
   const { data: prof } = await admin.from('profiles').select('gauntlet_max_hit').eq('id', user.id).single()
   if (h > ((prof?.gauntlet_max_hit as number | null) ?? 0)) {
