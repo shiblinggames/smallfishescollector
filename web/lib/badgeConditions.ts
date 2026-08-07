@@ -196,7 +196,11 @@ export function exchangeStatsFrom(rows: ExchangePositionRow[]): BadgeJoinData['e
     const payout = Number(r.payout ?? 0)
     const stake = Number(r.stake ?? 0)
     if (payout > stake) out.won++
-    if (r.status === 'closed_early') out.closedEarly++
+    // BOTH WORDS, and it matters. The old board called an early exit
+    // 'closed_early'; the rebuilt one calls it 'sold'. Reading only the old one
+    // would have quietly retired "Out Before the Bell" the day the new board
+    // shipped -- a badge nobody could earn and nobody would report.
+    if (r.status === 'closed_early' || r.status === 'sold') out.closedEarly++
     // Worthless means it ran to expiry and paid NOTHING. A contract sold early
     // for less than it cost was a decision, not a wipeout.
     else if (payout <= 0) out.worthless++
