@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
@@ -20,7 +19,6 @@ import ShopStatusPill from '@/components/ShopStatusPill'
 import { vibrate, hapticTap, hapticCommit } from '@/lib/haptics'
 import { playChestSfx } from '@/lib/fishingMusic'
 
-const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
 
 type BaitInventoryItem = { bait_type: string; quantity: number }
@@ -119,7 +117,6 @@ export default function TackleShopClient({
   const [buyingRod, setBuyingRod] = useState<number | null>(null)
   const [equippingRod, setEquippingRod] = useState<number | null>(null)
   const [isClaiming, setIsClaiming] = useState(false)
-  const [previewTier, setPreviewTier] = useState(initialHookTier)
   const [showCompModal, setShowCompModal] = useState(false)
   const [showClaimReveal, setShowClaimReveal] = useState(false)
   // Rod list filters (ownership + a single mechanic).
@@ -509,15 +506,12 @@ export default function TackleShopClient({
 
                 {/* Icon + name */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', position: 'relative' }}>
-                  <div style={{
-                    width: 42, height: 42, borderRadius: 11, flexShrink: 0,
-                    background: `radial-gradient(circle at 38% 30%, ${bait.color}30 0%, ${bait.color}10 70%)`,
-                    border: `1px solid ${bait.color}45`,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08)`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
+                  {/* 28px of bait inside a 42px bordered pool of its own colour:
+                      the picture-in-a-picture-frame every other row on this page
+                      already lost. Bait is never locked, so it is never dimmed. */}
+                  <div style={{ width: 48, height: 48, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {bait.imageUrl
-                      ? <img src={bait.imageUrl} alt={bait.name} loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain', filter: `drop-shadow(0 2px 5px ${bait.color}55)` }} />
+                      ? <img src={bait.imageUrl} alt={bait.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.65))' }} />
                       : <div style={{ width: 12, height: 12, borderRadius: 4, background: bait.color }} />
                     }
                   </div>
@@ -526,7 +520,7 @@ export default function TackleShopClient({
                       {bait.name}
                     </p>
                     {owned > 0 && (
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'inline-block', marginTop: 3, fontSize: '0.5rem', color: bait.color, background: `${bait.color}1c`, border: `1px solid ${bait.color}45`, borderRadius: 999, padding: '0.1rem 0.4rem' }}>×{owned} in hold</span>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'inline-block', marginTop: 3, fontSize: '0.5rem', color: '#bdb5a6', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.1rem 0.4rem' }}>×{owned} in hold</span>
                     )}
                   </div>
                 </div>
@@ -535,15 +529,15 @@ export default function TackleShopClient({
                 <div style={{ display: 'flex', gap: '0.28rem', flexWrap: 'wrap', position: 'relative' }}>
                   {hasFasterBite && (
                     <span className="font-karla font-600" style={{
-                      fontSize: '0.6rem', color: '#e8e4de',
-                      background: `${bait.color}20`, border: `1px solid ${bait.color}45`,
+                      fontSize: '0.6rem', color: '#d6d0c4',
+                      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
                       borderRadius: 20, padding: '0.15rem 0.45rem',
                     }}>{Math.round((1 - bait.waitMult) * 100)}% faster</span>
                   )}
                   {hasCatchBonus && (
                     <span className="font-karla font-600" style={{
-                      fontSize: '0.6rem', color: '#e8e4de',
-                      background: `${bait.color}20`, border: `1px solid ${bait.color}45`,
+                      fontSize: '0.6rem', color: '#d6d0c4',
+                      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
                       borderRadius: 20, padding: '0.15rem 0.45rem',
                     }}>+{bait.catchZoneBonus}° zone</span>
                   )}
@@ -588,9 +582,12 @@ export default function TackleShopClient({
                             flex: 1,
                             borderRadius: 9, padding: '0.45rem 0.25rem',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                            background: canAfford ? `linear-gradient(180deg, ${bait.color}26 0%, ${bait.color}12 100%)` : 'rgba(16,18,24,0.9)',
-                            border: `1px solid ${canAfford ? bait.color + '55' : 'rgba(255,255,255,0.08)'}`,
-                            color: canAfford ? bait.color : '#4a4845',
+                            // "You can buy this" should look the same on every
+                            // card. Painted in each bait's own hue, it was eight
+                            // different colours all saying the one thing.
+                            background: canAfford ? 'linear-gradient(180deg, rgba(240,220,174,0.16) 0%, rgba(240,220,174,0.06) 100%)' : 'rgba(12,14,19,0.92)',
+                            border: `1px solid ${canAfford ? 'rgba(240,220,174,0.42)' : 'rgba(255,255,255,0.08)'}`,
+                            color: canAfford ? '#f4ecd8' : '#4a4845',
                             cursor: canAfford && !isPending ? 'pointer' : 'default',
                             opacity: isBuying ? 0.5 : 1,
                             boxShadow: canAfford ? `inset 0 1px 0 rgba(255,255,255,0.08)` : 'none',
@@ -599,7 +596,7 @@ export default function TackleShopClient({
                           <span className="font-karla font-700" style={{ fontSize: '0.76rem', lineHeight: 1 }}>
                             {isBuying ? '…' : `×${buyQty}`}
                           </span>
-                          <span className="font-karla font-600" style={{ fontSize: '0.54rem', color: canAfford ? 'rgba(255,255,255,0.6)' : '#f0c040', lineHeight: 1 }}>
+                          <span className="font-karla font-600" style={{ fontSize: '0.54rem', color: canAfford ? 'rgba(244,236,216,0.6)' : '#f0c040', lineHeight: 1 }}>
                             {cost.toLocaleString()} ⟡
                           </span>
                         </motion.button>
@@ -607,8 +604,8 @@ export default function TackleShopClient({
                     })}
                   </div>
                 ) : (
-                  <Link href="/expeditions" style={{ textDecoration: 'none', display: 'block', marginTop: 'auto', padding: '0.45rem 0.5rem', borderRadius: 9, background: `${bait.color}12`, border: `1px solid ${bait.color}32`, textAlign: 'center', position: 'relative' }}>
-                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: bait.color }}>
+                  <Link href="/expeditions" style={{ textDecoration: 'none', display: 'block', marginTop: 'auto', padding: '0.45rem 0.5rem', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.13)', textAlign: 'center', position: 'relative' }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#c3bcae' }}>
                       {bait.acquisition.includes('fathoms') ? 'Voyages, or buy with Fathoms in the Locker →' : 'Earned from voyages →'}
                     </span>
                   </Link>
@@ -622,26 +619,12 @@ export default function TackleShopClient({
       {/* ── Hooks ── */}
       {section === 'hook' && (
         <>
-          <div className="mb-5" style={{
-            ...tileSurface(HOOKS[previewTier]?.color ?? '#f0c040', { active: true }),
-            padding: '1rem 1rem 0.85rem',
-          }}>
-            <Sheen />
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl ? HOOKS[previewTier]!.imageUrl!.replace(/\.png$/, '_thumb.png') : undefined} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} glowClass={HOOKS[previewTier] ? hookGlowClass(HOOKS[previewTier]) : undefined} />
-            </div>
-            <div className="flex items-center justify-center gap-2 mt-2" style={{ position: 'relative' }}>
-              <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.95rem', color: HOOKS[previewTier]?.color, textShadow: `0 0 14px ${HOOKS[previewTier]?.color ?? '#f0c040'}40` }}>
-                {HOOKS[previewTier]?.name}
-              </p>
-              {previewTier !== hookTier && (
-                <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#9a948a', background: 'rgba(18,20,27,0.92)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.12rem 0.4rem' }}>
-                  preview
-                </span>
-              )}
-            </div>
-          </div>
-
+          {/* The 220px hook portrait that used to sit here is gone.
+              Hooks were the only category with one, it showed whichever row you
+              had last tapped, and every row already draws that same art at 64px
+              from the same file. So it was a duplicate, upscaled from a _thumb
+              (blurred), wrapped in a glowing tinted panel, taking the top of the
+              page before you could see a single price. */}
           <div className="flex flex-col gap-2.5 mb-4">
             {HOOKS.map(hook => {
               const owned = hook.tier <= hookTier
@@ -654,17 +637,15 @@ export default function TackleShopClient({
               const canAffordHook = isNext && doubloons >= hook.cost
               const hookReady = canAffordHook && hookLevelMet
               const clickable = isNext && hookReady && !isPending
-              const isPreviewing = previewTier === hook.tier && hook.tier !== hookTier
 
               return (
                 <motion.div
                   key={hook.tier}
-                  onClick={() => { setPreviewTier(hook.tier); if (clickable) handleBuyHook() }}
+                  onClick={() => { if (clickable) handleBuyHook() }}
                   whileTap={{ scale: 0.985 }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   style={{
                     ...tileSurface(c, { owned, active: isActive, ready: isNext && hookReady, locked }),
-                    ...(isPreviewing && !owned ? { borderTop: `1.5px solid ${c}aa` } : null),
                     padding: '0.85rem 0.9rem',
                     opacity: isPending && isNext ? 0.6 : 1,
                     cursor: 'pointer',
@@ -1345,20 +1326,25 @@ export default function TackleShopClient({
 type TileState = { owned?: boolean; active?: boolean; ready?: boolean; locked?: boolean }
 function tileSurface(c: string, s: TileState): React.CSSProperties {
   const { owned, active, ready, locked } = s
-  const bodyAlpha = owned || active ? '20' : ready ? '15' : '0d'
   return {
     position: 'relative',
+    // NEUTRAL BODY. This was `linear-gradient(160deg, ${c}20, ...)` - the item's
+    // own hue washed diagonally across the entire card. A rod list is five
+    // tinted cards; the bait grid is EIGHT different hues two abreast, which is
+    // a swatch book, not a shop. A tinted card under tinted chips under a
+    // tinted button is the whole stack that reads as generated.
+    //
+    // The colour survives where it does work: the top edge, which is how a row
+    // says equipped / owned / ready without repainting itself.
     background: locked
-      ? 'rgba(7,10,15,0.72)'
-      : `linear-gradient(160deg, ${c}${bodyAlpha} 0%, rgba(7,11,17,0.95) 64%)`,
-    border: `1px solid ${active ? c + '7a' : owned ? c + '4a' : ready ? c + '4a' : locked ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.1)'}`,
-    borderTop: `1.5px solid ${active ? c : owned ? c + 'cc' : ready ? c + 'aa' : locked ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.18)'}`,
+      ? 'linear-gradient(180deg, rgba(13,15,20,0.94) 0%, rgba(7,9,13,0.96) 100%)'
+      : owned || active
+        ? 'linear-gradient(180deg, rgba(28,31,39,0.97) 0%, rgba(14,16,22,0.98) 100%)'
+        : 'linear-gradient(180deg, rgba(19,21,27,0.96) 0%, rgba(11,13,18,0.97) 100%)',
+    border: `1px solid ${active ? c + '55' : owned ? c + '2e' : ready ? c + '38' : 'rgba(255,255,255,0.09)'}`,
+    borderTop: `1.5px solid ${active ? c : owned ? c + 'aa' : ready ? c + '99' : locked ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)'}`,
     borderRadius: 15,
-    boxShadow: active
-      ? '0 3px 14px rgba(0,0,0,0.5)'
-      : owned ? '0 2px 12px rgba(0,0,0,0.45)'
-      : ready ? '0 3px 12px rgba(0,0,0,0.45)'
-      : '0 2px 10px rgba(0,0,0,0.35)',
+    boxShadow: '0 3px 14px rgba(0,0,0,0.5)',
     overflow: 'hidden',
   }
 }
