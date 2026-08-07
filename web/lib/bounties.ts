@@ -240,10 +240,18 @@ export const BOUNTY_UNLOCK_RAID = BOUNTY_RUNGS[0].raid
 // push for most captains and routine for a sharp one. Every timed bounty below
 // sits between the median and the record for that raid.
 
-// Challenge raids grouped by the chapter they belong to. "Clear a challenge
-// raid" was a hard-tier bounty and a capped captain answers it with Pete in
-// four minutes, so the tier now depends on WHICH challenge.
-const CH12_CHALLENGE = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
+// Challenge raids grouped by the chapter they belong to.
+//
+// The Chapter I-II group is GONE, and the lesson is worth keeping. "Clear a
+// challenge raid" was a hard-tier bounty answered with Pete in four minutes.
+// Naming the chapter fixed the worst of it but not the SHAPE of the mistake: an
+// any-of order is only ever as hard as the easiest thing in the set, and the
+// Ch I-II set ran from a median of 2:05 (Pete) to 5:57 (the Tollmaster), so a
+// 20-gem order still resolved to "clear Pete on Challenge" every single time.
+//
+// Chapter I and II are three NAMED orders now. Pete is not one of them: he is
+// the easiest challenge in the game and the reason the category was soft.
+// Chapter III and IV stay grouped, where the spread inside each set is narrow.
 const CH3_CHALLENGE  = ['coffers_fleet_challenge', 'the_quartermaster_challenge']
 const CH4_CHALLENGE  = ['the_blockade_challenge', 'the_throne_challenge']
 
@@ -265,7 +273,9 @@ export const ALL_BOUNTIES: Bounty[] = [
   { id: 'route_shroud',     name: 'Sail the Shrouded Reach',   desc: 'Send a voyage on the Shrouded Reach route. It takes nine hours.',     meter: { kind: 'voyage_route', route: 'shroud' },              target: 1, tier: 'easy'   },
 
   // ── MEDIUM ── a real sitting, or Chapter III water ─────────────────────────
-  { id: 'challenge_early',  name: 'Beat an early Challenge',   desc: 'Clear any Chapter I or II raid on Challenge.',                        meter: { kind: 'raid_any_of', raidIds: CH12_CHALLENGE },       target: 1, tier: 'medium', requires: { anyRaid: CH12_CHALLENGE } },
+  { id: 'krust_challenge',  name: 'Beat Krust on Challenge',            desc: "Clear Krust's Consignment on Challenge.",             meter: { kind: 'raid_clear', raidId: 'captain_krust_challenge' },   target: 1, tier: 'medium', requires: { raid: 'captain_krust_challenge' } },
+  { id: 'carto_challenge',  name: 'Beat the Cartographer on Challenge', desc: "Clear The Cartographer's Survey on Challenge.",       meter: { kind: 'raid_clear', raidId: 'cartographer_challenge' },    target: 1, tier: 'medium', requires: { raid: 'cartographer_challenge' } },
+  { id: 'toll_challenge',   name: 'Beat the Tollmaster on Challenge',   desc: "Clear The Tollmaster's Cut on Challenge.",            meter: { kind: 'raid_clear', raidId: 'tollmasters_cut_challenge' }, target: 1, tier: 'medium', requires: { raid: 'tollmasters_cut_challenge' } },
   { id: 'fleet_down',       name: 'Break the Harbor Fleet',    desc: 'Clear The Harbor Fleet.',                                             meter: { kind: 'raid_clear', raidId: 'coffers_fleet' },        target: 1, tier: 'medium', requires: { raid: 'coffers_fleet' } },
   { id: 'quarter_down',     name: 'Sink the Quartermaster',    desc: 'Clear The Quartermaster.',                                            meter: { kind: 'raid_clear', raidId: 'the_quartermaster' },    target: 1, tier: 'medium', requires: { raid: 'the_quartermaster' } },
   { id: 'raids_two_kinds',  name: 'Clear two different raids', desc: 'Two different raids. The same one twice does not count.',             meter: { kind: 'raid_distinct' },                              target: 2, tier: 'medium', family: 'raidcount' },
