@@ -2248,3 +2248,48 @@ body.hardcore-gauntlet::after {
 @media (prefers-reduced-motion: reduce) {
   .landing-rise { animation: none; opacity: 1; }
 }
+
+/* ── Exchange: the "how far" slider ──────────────────────────────────────── */
+/* A native range input, because it is keyboard and screen-reader accessible
+   for free and a hand-rolled drag handle is neither. Only the furniture is
+   restyled; the behaviour is the browser's. */
+.rung-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.rung-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rung-track, rgba(255, 255, 255, 0.1));
+}
+.rung-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rung-track, rgba(255, 255, 255, 0.1));
+}
+.rung-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #f4efe4;
+  border: 2px solid #0b1017;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.6);
+}
+.rung-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f4efe4;
+  border: 2px solid #0b1017;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.6);
+}
+.rung-slider:focus-visible::-webkit-slider-thumb { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+.rung-slider:focus-visible::-moz-range-thumb     { outline: 2px solid #7dd3fc; outline-offset: 2px; }

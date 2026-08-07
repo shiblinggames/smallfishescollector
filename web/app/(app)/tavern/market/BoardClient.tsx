@@ -367,38 +367,72 @@ function Ticket({ index, doubloons, onClose, onDone }: {
           </p>
 
           <Step n={3} label="How far does it have to go?" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 13 }}>
-            {bets.map(b => {
-              const on = chosen?.distancePct === b.distancePct
-              return (
-                <button key={b.distancePct} type="button" onClick={() => setDistance(b.distancePct)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                    padding: '0.5rem 0.65rem', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-                    background: on ? 'rgba(56,189,248,0.14)' : 'rgba(255,255,255,0.035)',
-                    border: `1px solid ${on ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                    WebkitTapHighlightColor: 'transparent',
-                  }}>
-                  <span className="font-karla font-800" style={{ fontSize: '0.86rem', color: on ? '#e6f4ff' : '#dbe3ee', ...TNUM }}>
-                    {dir === 'up' ? '+' : '-'}{b.distancePct}%
+          {/* A SLIDER, not nine rows. Nine stacked options is a wall, and it hides
+              the one thing that matters: that this is a single trade-off with two
+              ends. Dragging right is further, harder and worth more, and your
+              thumb feels that in a way a list never says. */}
+          {bets.length > 0 && chosen ? (
+            <div style={{ marginBottom: 13 }}>
+              <div style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                gap: 10, marginBottom: 4,
+              }}>
+                <span className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1, color: dir === 'up' ? UP : DOWN, ...TNUM }}>
+                  {dir === 'up' ? '+' : '-'}{chosen.distancePct}%
+                </span>
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4' }}>
+                    {chanceInWords(chosen.chance)}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexShrink: 0 }}>
-                    <span className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#8a94a4' }}>
-                      {chanceInWords(b.chance)}
-                    </span>
-                    <span className="font-karla font-800" style={{ fontSize: '0.82rem', color: '#ffd96a', ...TNUM }}>
-                      {payoutInWords(b.multiplier)}
-                    </span>
+                  <span className="font-karla font-800" style={{ fontSize: '1.05rem', color: '#ffd96a', ...TNUM }}>
+                    {payoutInWords(chosen.multiplier)}
                   </span>
-                </button>
-              )
-            })}
-            {!bets.length && (
-              <p className="font-karla font-400 italic" style={{ fontSize: '0.72rem', color: '#7c8696', lineHeight: 1.5 }}>
-                Nothing on offer this quickly. Give it longer.
-              </p>
-            )}
-          </div>
+                </span>
+              </div>
+
+              <input
+                type="range"
+                className="rung-slider"
+                min={0}
+                max={bets.length - 1}
+                step={1}
+                value={Math.max(0, bets.findIndex(b => b.distancePct === chosen.distancePct))}
+                onChange={e => {
+                  const b = bets[Number(e.target.value)]
+                  if (b) { setDistance(b.distancePct); vibrate([0, 6]) }
+                }}
+                aria-label="How far it has to move"
+                aria-valuetext={`${chosen.distancePct} percent, ${chanceInWords(chosen.chance)}, pays ${payoutInWords(chosen.multiplier)}`}
+                style={{
+                  // The track fills up to the thumb, so how far along the ladder
+                  // you are is readable without looking at the numbers. Both the
+                  // fill's end and the grey's start sit at the SAME percentage,
+                  // or the grey covers the whole track and the fill never shows.
+                  ['--rung-track' as string]: (() => {
+                    const at = bets.length > 1
+                      ? (bets.findIndex(b => b.distancePct === chosen.distancePct) / (bets.length - 1)) * 100
+                      : 100
+                    return `linear-gradient(90deg, ${dir === 'up' ? UP : DOWN} 0%, #ffd96a ${at}%, rgba(255,255,255,0.1) ${at}%)`
+                  })(),
+                }}
+              />
+
+              {/* The two ends, named, so the direction of the trade-off is stated
+                  and not merely implied by a handle. */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: -2 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696' }}>
+                  Likely, pays little
+                </span>
+                <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a7c4a' }}>
+                  Long shot, pays big
+                </span>
+              </div>
+            </div>
+          ) : (
+            <p className="font-karla font-400 italic" style={{ fontSize: '0.72rem', color: '#7c8696', lineHeight: 1.5, marginBottom: 13 }}>
+              Nothing on offer this quickly. Give it longer.
+            </p>
+          )}
 
           <Step n={4} label="How much are you putting on it?" />
           <div style={{ display: 'flex', gap: 6, marginBottom: 11 }}>
