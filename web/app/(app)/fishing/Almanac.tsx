@@ -28,7 +28,12 @@ import { isGiant } from '@/lib/almanac'
 
 const ACCENT = '#a78bfa'
 
-type Room = 'collection' | 'goldens' | 'giants' | 'pets' | 'record'
+// 'stats', not 'record'. Every other room is named for the THING inside it —
+// Collection, Goldens, Giants, Pets — and "Record" named the book rather than
+// the contents, so it was the one tab you could not guess from the label. Stats
+// is also what the Crew, Gear and Raid screens already call this exact kind of
+// page, so it is the game's own word rather than a new one.
+type Room = 'collection' | 'goldens' | 'giants' | 'pets' | 'stats'
 
 export default function Almanac({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mounted, setMounted] = useState(false)
@@ -76,7 +81,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
     { key: 'goldens', label: 'Goldens', badge: data ? `${data.goldens.length}` : '' },
     { key: 'giants', label: 'Giants', badge: data ? `${giantsGot}/${giants.length}` : '' },
     { key: 'pets', label: 'Pets', badge: data ? `${data.unlockedPets.length}/${PETS.length}` : '' },
-    { key: 'record', label: 'Record', badge: '' },
+    { key: 'stats', label: 'Stats', badge: '' },
   ]
 
   return createPortal(
@@ -159,7 +164,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
                   {room === 'goldens' && <AlmanacGoldens data={data} />}
                   {room === 'giants' && <AlmanacGiants data={data} giants={giants} />}
                   {room === 'pets' && <AlmanacPets data={data} />}
-                  {room === 'record' && <AlmanacRecord data={data} />}
+                  {room === 'stats' && <AlmanacRecord data={data} />}
                 </motion.div>
               </AnimatePresence>
             </div>

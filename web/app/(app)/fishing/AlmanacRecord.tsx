@@ -141,13 +141,13 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: '1.4rem' }}>
             {mostCaught.map((e, i) => (
               <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.3rem 0.1rem', borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#8a83ad', width: 12, flexShrink: 0 }}>{i + 1}</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#8a83ad', width: 12, flexShrink: 0 }}>{i + 1}</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fishArt(e.name)} alt="" aria-hidden loading="lazy" decoding="async"
                   style={{ width: 34, height: 28, objectFit: 'contain', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e4dff2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: ZONE_COLOR[e.habitat] ?? '#a49dc0' }}>{ZONE_LABEL[e.habitat] ?? e.habitat}</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e4dff2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: ZONE_COLOR[e.habitat] ?? '#a49dc0' }}>{ZONE_LABEL[e.habitat] ?? e.habitat}</p>
                 </div>
                 <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#ded8ee', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>×{e.count}</span>
               </div>
@@ -171,7 +171,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
                 <img src={`/${c.art}closed.png`} alt="" aria-hidden loading="lazy" decoding="async"
                   style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: c.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: c.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</p>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ded8ee', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{n.toLocaleString()}</p>
                 </div>
               </div>
@@ -179,7 +179,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           })}
         </div>
       ) : (
-        <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#8a83ad', lineHeight: 1.5, marginBottom: '1.4rem' }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#8a83ad', lineHeight: 1.5, marginBottom: '1.4rem' }}>
           Nothing counted yet. The next crate you crack starts the tally.
         </p>
       )}
@@ -191,8 +191,8 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: '1.4rem' }}>
             {baitRows.map(({ b, n }) => (
               <div key={b.type} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0.2rem 0.1rem' }}>
-                <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: b.color }}>{b.name}</span>
-                <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#c8c2dc', fontVariantNumeric: 'tabular-nums' }}>{n.toLocaleString()}</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: b.color }}>{b.name}</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#c8c2dc', fontVariantNumeric: 'tabular-nums' }}>{n.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -228,7 +228,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   return (
     <div style={{ padding: '0.55rem 0.3rem', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.07)' }}>
       <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', lineHeight: 1, color: accent ?? '#d8d2ea', fontVariantNumeric: 'tabular-nums', marginBottom: 3 }}>{value}</p>
-      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#9a93b8' }}>{label}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.64rem', color: '#9a93b8' }}>{label}</p>
     </div>
   )
 }
@@ -236,8 +236,8 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 function Line({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-      <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#9a93b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-      <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: accent ?? '#c8c2dc', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9a93b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: accent ?? '#c8c2dc', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
     </div>
   )
 }
@@ -246,7 +246,7 @@ function Section({ title, note }: { title: string; note?: string }) {
   return (
     <div style={{ marginBottom: 8 }}>
       <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e8e3f5' }}>{title}</p>
-      {note && <p className="font-karla font-400 italic" style={{ fontSize: '0.66rem', color: '#9a93b8', marginTop: 1, lineHeight: 1.4 }}>{note}</p>}
+      {note && <p className="font-karla font-400 italic" style={{ fontSize: '0.76rem', color: '#9a93b8', marginTop: 1, lineHeight: 1.4 }}>{note}</p>}
     </div>
   )
 }
@@ -257,9 +257,9 @@ function Bar({ label, value, pct, color, trailing, delay }: {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#d4cfe4', whiteSpace: 'nowrap' }}>{label}</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#d4cfe4', whiteSpace: 'nowrap' }}>{label}</span>
         <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0 }}>
-          {trailing && <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#9a93b8', whiteSpace: 'nowrap' }}>{trailing}</span>}
+          {trailing && <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a93b8', whiteSpace: 'nowrap' }}>{trailing}</span>}
           <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color, fontVariantNumeric: 'tabular-nums' }}>{value.toLocaleString()}</span>
         </span>
       </div>
@@ -275,9 +275,9 @@ function Bar({ label, value, pct, color, trailing, delay }: {
 function Panel({ label, value, accent, note }: { label: string; value: string; accent?: string; note?: string }) {
   return (
     <div style={{ padding: '0.1rem 0 0.3rem 0.6rem', borderLeft: `2px solid ${accent ?? 'rgba(255,255,255,0.16)'}` }}>
-      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.64rem', color: '#9a93b8', marginBottom: 3 }}>{label}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.74rem', color: '#9a93b8', marginBottom: 3 }}>{label}</p>
       <p className="font-cinzel font-700" style={{ fontSize: '1rem', lineHeight: 1, color: accent ?? '#ded8ee', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
-      {note && <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#8a83ad', marginTop: 3, lineHeight: 1.3 }}>{note}</p>}
+      {note && <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#8a83ad', marginTop: 3, lineHeight: 1.3 }}>{note}</p>}
     </div>
   )
 }
@@ -290,9 +290,9 @@ function Milestone({ label, entry }: { label: string; entry: AlmanacData['entrie
       <img src={fishArt(entry.name)} alt="" aria-hidden loading="lazy" decoding="async"
         style={{ width: 40, height: 34, objectFit: 'contain', flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.64rem', color: '#9a93b8' }}>{label}</p>
+        <p className="font-karla font-600 uppercase tracking-[0.09em]" style={{ fontSize: '0.74rem', color: '#9a93b8' }}>{label}</p>
         <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#e8e3f5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.name}</p>
-        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: c }}>{shortDate(entry.firstCaughtAt)}</p>
+        <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: c }}>{shortDate(entry.firstCaughtAt)}</p>
       </div>
     </div>
   )
