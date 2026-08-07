@@ -58,8 +58,10 @@ async function fetchViewBoard(admin: Admin, view: string, userId: string) {
   return { top: topRows, myScore, myRank }
 }
 
+// Truncate, matching the boss card and the victory screen. A run time that
+// rounds up reads as a second slower than the clock the player finished on.
 function fmtRunTime(ms: number): string {
-  const s = Math.max(0, Math.round(ms / 1000))
+  const s = Math.max(0, Math.floor(ms / 1000))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 

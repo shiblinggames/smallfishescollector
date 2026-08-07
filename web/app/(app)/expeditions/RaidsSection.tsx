@@ -56,10 +56,18 @@ const TYPE_IMAGE: Record<string, string | undefined> = {
   reclaim: '/raidshop.png',
 }
 
-/** elapsed_ms → "M:SS" for the Boss Records block. */
+/** elapsed_ms → "M:SS" for the Boss Records block.
+ *
+ *  TRUNCATE, never round. This rounded, and the victory screen (fmtTime in
+ *  RaidLootStage) floors, so a 65,891 ms clear finished as 1:05 and then showed
+ *  up on the boss card as 1:06. The record was stored fine; it just read as a
+ *  second slower than the run the player watched, which looks exactly like
+ *  somebody else holding it.
+ *
+ *  A stopwatch does not round up. 65.891s is 1:05 until the second ticks over. */
 function formatRaidMs(ms: number): string {
   if (!ms || ms < 0) return '—'
-  const total = Math.round(ms / 1000)
+  const total = Math.floor(ms / 1000)
   const m = Math.floor(total / 60)
   const s = total % 60
   return `${m}:${s.toString().padStart(2, '0')}`

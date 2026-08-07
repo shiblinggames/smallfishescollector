@@ -75,7 +75,7 @@ export default async function DevStatsPage() {
   for (const r of gRows) for (const id of (r.gauntlet_upgrades ?? [])) upgradeTally[id] = (upgradeTally[id] ?? 0) + 1
   const topUpgrade = Object.entries(upgradeTally).sort((a, b) => b[1] - a[1])[0] ?? null
   const upgradeName = (id: string) => GAUNTLET_UPGRADES.find(u => u.id === id)?.name ?? id
-  const fmtMs = (ms: number) => { const sec = Math.round(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` }
+  const fmtMs = (ms: number) => { const sec = Math.floor(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` }
 
   // Trawls — crew passive fishing. Active trawls are a live snapshot (the
   // `trawls` table, cleared on collect); the rest is collection history from
