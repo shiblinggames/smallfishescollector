@@ -125,13 +125,19 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
 
       {tab === 'board' ? (
         <>
+          {/* WHOLE and SINGLE, because that pairing is the whole difference and
+              "Waters" beside "Creatures" only named the flavour. One is every
+              creature in a stretch of sea averaged together, which is an index
+              fund without using the words; the other is one kind on its own,
+              which is a stock. The adjectives carry it and the lines underneath
+              say what that means for the price. */}
           <Group
-            title="Waters"
-            note="Whole stretches of sea. They move slowly, and they move together."
+            title="Whole Waters"
+            note="Every creature in a stretch of sea, averaged together. They drift slowly and mostly move as one."
             list={zones} onPick={setTicket} />
           <Group
-            title="Creatures"
-            note="One kind of thing. Far jumpier, and some of them ignore the weather entirely."
+            title="Single Species"
+            note="One kind of creature on its own. Far jumpier, and some of them ignore the weather entirely."
             list={species} onPick={setTicket} />
         </>
       ) : (
