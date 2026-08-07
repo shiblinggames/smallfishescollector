@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, driftOver, stakeCapFor, minStakeFor, chanceInWords, payoutInWords, payoutFor, fmtPrice,
+  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, markBetsSeen } from './boardActions'
@@ -284,7 +284,9 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   const [dir, setDir] = useState<Direction>('up')
   const [term, setTerm] = useState<Term>(24)
   const [distance, setDistance] = useState<number | null>(null)
-  const [stake, setStake] = useState(5000)
+  // UNITS, not doubloons. Cost is units times the price, which is what makes a
+  // 1,420 index cost more to hold than a 0.09 one, exactly as a real ticket does.
+  const [units, setUnits] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -304,16 +306,17 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
 
   // The longer the odds, the less you may put on: a bet is capped by what it
   // pays out, not by its price.
-  const betCap = chosen ? stakeCapFor(chosen.multiplier) : MAX_STAKE
-  // The costly end of the board asks for one unit at least.
-  const betFloor = minStakeFor(index.price)
-  const capped = Math.max(betFloor, Math.min(betCap, Math.min(stake, doubloons)))
+  const presets = unitPresets(index.price)
+  const chosenUnits = units ?? presets[1]
+  const betCap = Math.min(MAX_STAKE, chosen ? stakeCapFor(chosen.multiplier) : MAX_STAKE)
+  const capped = costOf(chosenUnits, index.price)
+  const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
   const returns = chosen ? payoutFor(capped, chosen.multiplier) : 0
 
   function submit() {
     if (!chosen) return
     setErr(''); setBusy(true)
-    openBet(index.id, dir, term, chosen.distancePct, capped).then(res => {
+    openBet(index.id, dir, term, chosen.distancePct, chosenUnits).then(res => {
       setBusy(false)
       if ('error' in res) { setErr(res.error); return }
       vibrate([0, 14, 30, 22])
@@ -450,28 +453,42 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             </p>
           )}
 
-          <Step n={4} label="How much are you putting on it?" />
-          <div style={{ display: 'flex', gap: 6, marginBottom: 11 }}>
-            {[1000, 5000, 25000, 100000].map(v => (
-              <button key={v} type="button" onClick={() => setStake(v)} className="font-karla font-700"
-                style={{
-                  flex: 1, padding: '0.42rem 0.2rem', borderRadius: 9, fontSize: '0.68rem', cursor: 'pointer',
-                  background: capped === Math.min(v, doubloons) ? 'rgba(240,220,174,0.16)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${capped === Math.min(v, doubloons) ? 'rgba(240,220,174,0.5)' : 'rgba(255,255,255,0.10)'}`,
-                  color: v > doubloons ? '#5a6472' : '#e0d8c4', ...TNUM,
-                  WebkitTapHighlightColor: 'transparent',
-                }}>
-                {v >= 1000 ? `${v / 1000}k` : v}
-              </button>
-            ))}
+          <Step n={4} label="How many are you buying?" />
+          {/* QUANTITIES, sized per index so the four buttons always land on costs
+              a captain recognises, roughly 1k / 5k / 25k / 100k, whether a unit
+              costs 0.09 or 1,420. Nobody has to multiply anything to find a
+              sensible ticket. */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
+            {presets.map(v => {
+              const cost = costOf(v, index.price)
+              const tooDear = cost > doubloons || cost > betCap
+              return (
+                <button key={v} type="button" onClick={() => setUnits(v)} className="font-karla font-700"
+                  style={{
+                    flex: 1, padding: '0.4rem 0.2rem', borderRadius: 9, fontSize: '0.66rem', cursor: 'pointer',
+                    background: chosenUnits === v ? 'rgba(240,220,174,0.16)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${chosenUnits === v ? 'rgba(240,220,174,0.5)' : 'rgba(255,255,255,0.10)'}`,
+                    color: tooDear ? '#5a6472' : '#e0d8c4', ...TNUM,
+                    WebkitTapHighlightColor: 'transparent',
+                  }}>
+                  {v.toLocaleString()}
+                </button>
+              )
+            })}
           </div>
+          {/* The sum written out. A quantity times a price is the one piece of
+              arithmetic this screen cannot avoid asking for, so it does it. */}
+          <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8a94a4', marginBottom: 11, ...TNUM }}>
+            {chosenUnits.toLocaleString()} × {fmtPrice(index.price)} ={' '}
+            <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span>
+          </p>
 
           {/* THE WHOLE BET, in one sentence, so nobody has to assemble it from
               four controls in their head before spending anything. */}
           {chosen && (
             <div style={{ padding: '0.75rem 0.85rem', borderRadius: 12, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
               <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#dbe3ee', lineHeight: 1.55 }}>
-                {capped.toLocaleString()} ⟡ that <strong style={{ color: '#f0f4fa' }}>{index.name}</strong> is
+                {chosenUnits.toLocaleString()} units, {capped.toLocaleString()} ⟡, that <strong style={{ color: '#f0f4fa' }}>{index.name}</strong> is
                 {' '}{dir === 'up' ? 'up' : 'down'} at least <strong style={{ color: '#f0f4fa' }}>{chosen.distancePct}%</strong>
                 {' '}in <strong style={{ color: '#f0f4fa' }}>{TERM_NAME[term].toLowerCase()}</strong>.
               </p>
@@ -480,8 +497,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               </p>
               <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#7c8696', marginTop: 5, lineHeight: 1.45 }}>
                 If it does not get there, the stake is gone. Nothing in between.
-                {betFloor > MIN_STAKE && ` One unit of ${index.name} is ${betFloor.toLocaleString()} ⟡, so that is the smallest bet it takes.`}
-                {betCap < MAX_STAKE && ` The most it takes is ${betCap.toLocaleString()} ⟡.`}
+                {betCap < MAX_STAKE && ` The most this one takes is ${betCap.toLocaleString()} ⟡.`}
               </p>
             </div>
           )}
@@ -489,15 +505,20 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
 
         <div style={{ flexShrink: 0, padding: '0.7rem 1rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.09)', background: 'rgba(6,9,14,0.97)' }}>
           {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}
-          <button type="button" onClick={submit} disabled={busy || !chosen || capped > doubloons}
+          <button type="button" onClick={submit} disabled={busy || !chosen || !affordable}
             className="font-karla font-800"
             style={{
               width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.84rem',
               cursor: busy ? 'wait' : 'pointer',
               background: 'rgba(56,189,248,0.16)', border: '1px solid rgba(56,189,248,0.6)', color: '#e6f4ff',
-              opacity: !chosen || capped > doubloons ? 0.5 : 1, WebkitTapHighlightColor: 'transparent',
+              opacity: !chosen || !affordable ? 0.5 : 1, WebkitTapHighlightColor: 'transparent',
             }}>
-            {busy ? 'Placing…' : !chosen ? 'Nothing on offer' : `Put ${capped.toLocaleString()} ⟡ on it`}
+            {busy ? 'Placing…'
+              : !chosen ? 'Nothing on offer'
+              : capped > doubloons ? 'Not enough doubloons'
+              : capped < MIN_STAKE ? `Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth`
+              : capped > betCap ? `Too many for this one, ${betCap.toLocaleString()} ⟡ max`
+              : `Buy ${chosenUnits.toLocaleString()} for ${capped.toLocaleString()} ⟡`}
           </button>
           <button type="button" onClick={onClose} className="font-karla font-600"
             style={{ width: '100%', marginTop: 6, padding: '0.45rem', background: 'none', border: 'none', color: '#6a7482', fontSize: '0.74rem', cursor: 'pointer' }}>

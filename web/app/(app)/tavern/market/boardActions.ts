@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, minStakeFor, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -168,7 +168,11 @@ export async function getBoard(): Promise<Board> {
 export type OpenResult = { ok: true; doubloons: number } | { error: string }
 
 export async function openBet(
-  indexId: string, direction: Direction, term: Term, distancePct: number, stake: number,
+  indexId: string, direction: Direction, term: Term, distancePct: number,
+  /** UNITS, not doubloons. What it costs is units times the price the server
+   *  reads, so the cost is derived here and never sent. A client that could name
+   *  its own stake could buy a 1,420 index for 500. */
+  units: number,
 ): Promise<OpenResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -177,9 +181,8 @@ export async function openBet(
 
   if (direction !== 'up' && direction !== 'down') return { error: 'Pick a direction' }
   if (!TERMS.includes(term)) return { error: 'Pick how long' }
-  stake = Math.floor(stake)
-  if (!Number.isFinite(stake) || stake < MIN_STAKE) return { error: `Smallest bet is ${MIN_STAKE.toLocaleString()} ⟡` }
-  if (stake > MAX_STAKE) return { error: `Largest bet is ${MAX_STAKE.toLocaleString()} ⟡` }
+  units = Math.floor(units)
+  if (!Number.isFinite(units) || units < 1) return { error: 'Buy at least one unit' }
 
   const admin = createAdminClient()
   const { data: prof } = await admin.from('profiles').select('fishing_xp').eq('id', user.id).single()
@@ -192,6 +195,10 @@ export async function openBet(
   if (!idx) return { error: 'No such index' }
   const entry = Number(idx.price)
   if (!(entry > 0)) return { error: 'That index has no price right now' }
+
+  const stake = costOf(units, entry)
+  if (stake < MIN_STAKE) return { error: `That is only ${stake.toLocaleString()} ⟡. Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth.` }
+  if (stake > MAX_STAKE) return { error: `Largest bet is ${MAX_STAKE.toLocaleString()} ⟡` }
 
   // The distance has to be one this index actually offers, and the bet has to
   // be one it offers AT THIS TERM. Both are recomputed here: a rung that is a
@@ -218,9 +225,6 @@ export async function openBet(
   const cap = stakeCapFor(priced.multiplier)
   if (stake > cap) return { error: `Most you can put on this one is ${cap.toLocaleString()} ⟡` }
 
-  // One unit, minimum. You cannot own a fraction of a 1,420 index.
-  const floorStake = minStakeFor(entry)
-  if (stake < floorStake) return { error: `This one takes ${floorStake.toLocaleString()} ⟡ at least` }
 
   // Debit first, atomically and balance-guarded, the same order every purchase
   // in the game uses. A bet written before the stake was taken is a bet
@@ -234,6 +238,7 @@ export async function openBet(
     direction, term,
     distance_pct: bet.distancePct,
     multiplier: priced.multiplier,
+    units,
     stake,
     entry_price: entry,
     expires_at: new Date(Date.now() + term * 3600_000).toISOString(),

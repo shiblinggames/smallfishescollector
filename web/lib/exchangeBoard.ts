@@ -253,25 +253,31 @@ export const MAX_STAKE = 250_000
  *  simply says how much this particular one will take. */
 export const MAX_PAYOUT = 5_000_000
 
-/** THE SMALLEST BET AN INDEX WILL TAKE: one unit of it.
+/** ROUND NUMBERS OF UNITS, sized so the cost lands somewhere sensible.
  *
- *  Real options do cost more on an expensive underlying, but not because the bet
- *  is better. A contract is a hundred SHARES, so a Berkshire call buys more
- *  exposure than a penny call at the same odds. There are no shares here, you
- *  stake doubloons on a percentage move, so the honest translation is not a
- *  higher price but a bigger minimum ticket: you cannot own a fraction of a
- *  1,420 index any more than you can own a fraction of a Berkshire share.
+ *  You buy UNITS of an index and the cost is units x price, which is how a real
+ *  ticket works and is the reason an expensive underlying costs more. But a
+ *  board running from 0.09 to 1,420 cannot share one set of quantities: 25 units
+ *  is 2 doubloons of Smack and 35,500 of Pod.
  *
- *  It leaves the odds and the payouts alone. It only means the costly end of the
- *  board is somewhere you arrive with money, which is what makes a price worth
- *  printing at all.
- *
- *  Capped, because prices are free to wander: an index that has gone up fifty
- *  times should not lock every captain out of it. */
-export const MAX_MIN_STAKE = 25_000
-export function minStakeFor(price: number): number {
-  if (!Number.isFinite(price) || price <= 0) return MIN_STAKE
-  return Math.min(MAX_MIN_STAKE, Math.max(MIN_STAKE, Math.ceil(price)))
+ *  So the quantities are chosen per price to stay round AND land the cost in the
+ *  range a captain actually bets. Nobody has to multiply anything to find a
+ *  reasonable ticket; the four buttons already are ones. */
+export function unitPresets(price: number): number[] {
+  if (!Number.isFinite(price) || price <= 0) return [1000, 5000, 25000, 100000]
+  // A parcel worth about 1,000 doubloons, rounded to a number a person would
+  // say. The four buttons are then 1x, 5x, 25x and 100x that, which lands the
+  // costs on roughly 1k / 5k / 25k / 100k whatever the index is priced at.
+  const NICE = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10_000, 25_000,
+                50_000, 100_000, 250_000, 500_000, 1_000_000]
+  const want = 1000 / price
+  const base = NICE.find(n => n >= want) ?? NICE[NICE.length - 1]
+  return [base, base * 5, base * 25, base * 100]
+}
+
+/** What a parcel of units costs, in doubloons. */
+export function costOf(units: number, price: number): number {
+  return Math.max(0, Math.round(units * price))
 }
 
 /** The largest stake this bet will accept, given what it pays. */
