@@ -46,7 +46,7 @@ export const TERM_NAME: Record<Term, string> = {
 
 /** The one-line pitch for each length, in plain words. */
 export const TERM_PITCH: Record<Term, string> = {
-  1: 'Settles at the next price. Rarely pays, pays big.',
+  1: 'Settles at the next price. Small moves, small prizes.',
   6: 'An afternoon. Still a long shot.',
   24: 'A day to get there. The everyday bet.',
   72: 'Three days of room to move.',
@@ -69,7 +69,28 @@ export const TERM_PITCH: Record<Term, string> = {
 //
 //   wildest index, one hour   +3% 1 in 9 -> 9x   +5% 1 in 50 -> 49x
 //   wildest index, one week   nine rungs from a coin flip out to 1 in 30
-const RUNG_STEPS = [0.25, 0.4, 0.6, 0.85, 1.2, 1.6, 2.0, 2.5, 3.0] as const
+//
+// THREE MORE AT THE BOTTOM, and they are what make the one-hour bet a bet
+// instead of a lottery. The old ladder started at a quarter of a day's travel,
+// which over a single hour is 1.2 sigma on every index -- so the SHORTEST term
+// only ever offered long shots, and the shortest term is the one you can re-
+// enter every hour forever. Fair odds plus unlimited re-entry plus a 9x top
+// prize is an honest slot machine, which is still a slot machine. The fine
+// steps give the hour a near-money rung to actually play.
+const RUNG_STEPS = [0.05, 0.09, 0.14, 0.25, 0.4, 0.6, 0.85, 1.2, 1.6, 2.0, 2.5, 3.0] as const
+
+/** MOST A TERM WILL PAY.
+ *
+ *  Only the one-hour bet is held down, and not because its odds were wrong: a 3%
+ *  Pod hour prices at 10.7% and truly runs at 11.7%, which is as close to fair as
+ *  this model gets. The problem is the shape of the thing. An hour resolves fast
+ *  enough to run all day, so a 9x top prize turns the board into a machine you
+ *  pull rather than a market you read.
+ *
+ *  Held to 5x, the hour keeps its near-money rungs and loses its jackpot. Every
+ *  longer term is left alone -- that is where the long shots belong, because a
+ *  week costs you a week. */
+const MAX_MULT_BY_TERM: Partial<Record<Term, number>> = { 1: 5 }
 
 /** The distances this index offers, in percent, smallest first. Rounded to
  *  something a person would say out loud: no 13.847%.
@@ -80,6 +101,9 @@ const RUNG_STEPS = [0.25, 0.4, 0.6, 0.85, 1.2, 1.6, 2.0, 2.5, 3.0] as const
 export function rungsFor(dailyMovePct: number): number[] {
   const out = RUNG_STEPS.map(k => {
     const raw = dailyMovePct * k
+    // Two decimals under a half, or the fine steps on a calm index all round to
+    // zero and get dropped -- the calmest index would lose its whole short end.
+    if (raw < 0.5) return Math.round(raw * 100) / 100  // 0.04, 0.11
     if (raw < 1) return Math.round(raw * 10) / 10   // 0.4, 0.8
     if (raw < 10) return Math.round(raw)            // 3, 7
     return Math.round(raw / 5) * 5                  // 15, 25, 40
@@ -192,9 +216,10 @@ export function worthNow(
 export const MIN_CHANCE = 0.005
 
 export function offeredBets(dailyMovePct: number, hours: Term, driftPct = 0): Bet[] {
+  const ceiling = MAX_MULT_BY_TERM[hours] ?? Infinity
   return rungsFor(dailyMovePct)
     .map(d => priceBet(dailyMovePct, hours, d, driftPct))
-    .filter(b => b.chance >= MIN_CHANCE)
+    .filter(b => b.chance >= MIN_CHANCE && b.multiplier <= ceiling)
 }
 
 /** How far the engine will carry this index on its own over `hours`, before any
@@ -298,16 +323,33 @@ export const MAX_PAYOUT = 5_000_000
  *  So the quantities are chosen per price to stay round AND land the cost in the
  *  range a captain actually bets. Nobody has to multiply anything to find a
  *  reasonable ticket; the four buttons already are ones. */
+const UNIT_LADDER = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10_000,
+                     25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000] as const
+
 export function unitPresets(price: number): number[] {
-  if (!Number.isFinite(price) || price <= 0) return [1000, 5000, 25000, 100000]
-  // A parcel worth about 1,000 doubloons, rounded to a number a person would
-  // say. The four buttons are then 1x, 5x, 25x and 100x that, which lands the
-  // costs on roughly 1k / 5k / 25k / 100k whatever the index is priced at.
-  const NICE = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10_000, 25_000,
-                50_000, 100_000, 250_000, 500_000, 1_000_000]
-  const want = 1000 / price
-  const base = NICE.find(n => n >= want) ?? NICE[NICE.length - 1]
-  return [base, base * 5, base * 25, base * 100]
+  if (!Number.isFinite(price) || price <= 0) return [10, 50, 250, 1000]
+  // Every index draws from the SAME ladder, so 100 units means 100 units
+  // wherever you are standing. What changes is the bill.
+  const afford = UNIT_LADDER.filter(n => {
+    const c = costOf(n, price)
+    return c >= MIN_STAKE && c <= MAX_STAKE
+  })
+  if (!afford.length) return [Math.max(1, Math.round(MIN_STAKE / price))]
+  if (afford.length <= 4) return [...afford]
+
+  // Roughly x1 / x5 / x25 / x100 apart, but always landing ON the shared ladder
+  // rather than on a number invented for this index.
+  const out: number[] = [afford[0]]
+  for (const step of [5, 25, 100]) {
+    const hit = afford.find(n => n >= afford[0] * step)
+    if (hit != null && !out.includes(hit)) out.push(hit)
+  }
+  // If those steps ran off the top, fill from the expensive end instead of
+  // handing back a short row of buttons.
+  for (let i = afford.length - 1; out.length < 4 && i >= 0; i--) {
+    if (!out.includes(afford[i])) out.push(afford[i])
+  }
+  return out.sort((a, b) => a - b)
 }
 
 /** What a parcel of units costs, in doubloons. */
