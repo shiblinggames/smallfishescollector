@@ -298,8 +298,23 @@ export function fmtPrice(p: number): string {
   return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export const MIN_STAKE = 500
-export const MAX_STAKE = 250_000
+/** THE STAKE BAND, widened to let one quantity ladder serve every index.
+ *
+ *  Both ends used to be picked as round numbers a captain would recognise. They
+ *  cannot be, now that the four quantities are fixed and the prices are not: the
+ *  floor has to admit a single unit of the cheapest index, and the ceiling has to
+ *  admit a thousand of the dearest, or the shared rungs stop being shared.
+ *
+ *  The floor is ONE doubloon, because a unit of a fallen index genuinely costs
+ *  about that, and rounding it up to 500 would be inventing a price.
+ *
+ *  The ceiling is the real change: 250,000 to 2,000,000. It is not a licence to
+ *  bet the economy -- MAX_PAYOUT still caps what any bet returns, so the long
+ *  shots take far less than this and only the near-money bets reach it. But a
+ *  captain CAN now put a million on a coin flip, and at fair odds that is a
+ *  genuine coin flip. That is the trade for one honest quantity ladder. */
+export const MIN_STAKE = 1
+export const MAX_STAKE = 2_000_000
 
 /** MOST A SINGLE BET CAN EVER RETURN.
  *
@@ -323,33 +338,22 @@ export const MAX_PAYOUT = 5_000_000
  *  So the quantities are chosen per price to stay round AND land the cost in the
  *  range a captain actually bets. Nobody has to multiply anything to find a
  *  reasonable ticket; the four buttons already are ones. */
-const UNIT_LADDER = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10_000,
-                     25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000] as const
+/** THE SAME FOUR, ON EVERY INDEX.
+ *
+ *  A hundred units is a hundred units wherever you are standing. Only the bill
+ *  changes, which is the whole point of letting the indexes carry real prices.
+ *
+ *  This costs something and it is worth naming. The board runs from about 0.09
+ *  to 1,500, so the same four quantities span roughly seventeen THOUSAND times
+ *  in cost. A thousand units of the dearest index is over a million doubloons;
+ *  a thousand of the cheapest is ninety. There is no set of four numbers that is
+ *  meaty on both ends, because that is multiplication, not design. So the rungs
+ *  stay fixed and the ones you cannot afford grey out -- rather than the board
+ *  quietly showing different quantities per index and pretending they match. */
+export const UNIT_PRESETS = [1, 10, 100, 1000] as const
 
-export function unitPresets(price: number): number[] {
-  if (!Number.isFinite(price) || price <= 0) return [10, 50, 250, 1000]
-  // Every index draws from the SAME ladder, so 100 units means 100 units
-  // wherever you are standing. What changes is the bill.
-  const afford = UNIT_LADDER.filter(n => {
-    const c = costOf(n, price)
-    return c >= MIN_STAKE && c <= MAX_STAKE
-  })
-  if (!afford.length) return [Math.max(1, Math.round(MIN_STAKE / price))]
-  if (afford.length <= 4) return [...afford]
-
-  // Roughly x1 / x5 / x25 / x100 apart, but always landing ON the shared ladder
-  // rather than on a number invented for this index.
-  const out: number[] = [afford[0]]
-  for (const step of [5, 25, 100]) {
-    const hit = afford.find(n => n >= afford[0] * step)
-    if (hit != null && !out.includes(hit)) out.push(hit)
-  }
-  // If those steps ran off the top, fill from the expensive end instead of
-  // handing back a short row of buttons.
-  for (let i = afford.length - 1; out.length < 4 && i >= 0; i--) {
-    if (!out.includes(afford[i])) out.push(afford[i])
-  }
-  return out.sort((a, b) => a - b)
+export function unitPresets(_price?: number): number[] {
+  return [...UNIT_PRESETS]
 }
 
 /** What a parcel of units costs, in doubloons. */

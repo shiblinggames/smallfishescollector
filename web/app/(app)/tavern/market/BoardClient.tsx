@@ -400,8 +400,16 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // The longer the odds, the less you may put on: a bet is capped by what it
   // pays out, not by its price.
   const presets = unitPresets(index.price)
-  const chosenUnits = units ?? presets[1]
-  const betCap = Math.min(MAX_STAKE, chosen ? stakeCapFor(chosen.multiplier) : MAX_STAKE)
+  const capNow = Math.min(MAX_STAKE, chosen ? stakeCapFor(chosen.multiplier) : MAX_STAKE)
+  // The same four everywhere means the sensible DEFAULT is not the same
+  // everywhere: ten units is a fair ticket on most of the board and more than a
+  // captain owns on the dearest index. Open on the biggest one they can afford.
+  const fits = (n: number) => {
+    const c = costOf(n, index.price)
+    return c >= MIN_STAKE && c <= doubloons && c <= capNow
+  }
+  const chosenUnits = units ?? [...presets].reverse().find(fits) ?? presets[0]
+  const betCap = capNow
   const capped = costOf(chosenUnits, index.price)
   const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
   const returns = chosen ? payoutFor(capped, chosen.multiplier) : 0
@@ -554,14 +562,18 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
             {presets.map(v => {
               const cost = costOf(v, index.price)
-              const tooDear = cost > doubloons || cost > betCap
+              // Too dear at the top, and on a fallen index too CHEAP at the
+              // bottom: one unit of something trading at 0.09 rounds to nothing,
+              // and a bet that costs nothing cannot pay anything.
+              const tooDear = cost > doubloons || cost > betCap || cost < MIN_STAKE
               return (
-                <button key={v} type="button" onClick={() => setUnits(v)} className="font-karla font-700"
+                <button key={v} type="button" onClick={() => setUnits(v)} disabled={tooDear} className="font-karla font-700"
                   style={{
-                    flex: 1, padding: '0.4rem 0.2rem', borderRadius: 9, fontSize: '0.66rem', cursor: 'pointer',
+                    flex: 1, padding: '0.4rem 0.2rem', borderRadius: 9, fontSize: '0.66rem',
+                    cursor: tooDear ? 'not-allowed' : 'pointer',
                     background: chosenUnits === v ? 'rgba(240,220,174,0.16)' : 'rgba(255,255,255,0.04)',
                     border: `1px solid ${chosenUnits === v ? 'rgba(240,220,174,0.5)' : 'rgba(255,255,255,0.10)'}`,
-                    color: tooDear ? '#5a6472' : '#e0d8c4', ...TNUM,
+                    color: tooDear ? '#5a6472' : '#e0d8c4', opacity: tooDear ? 0.55 : 1, ...TNUM,
                     WebkitTapHighlightColor: 'transparent',
                   }}>
                   {v.toLocaleString()}
