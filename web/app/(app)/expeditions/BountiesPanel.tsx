@@ -20,9 +20,10 @@
 // today rather than what you have already banked.
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getBountyBoard, claimBounty, rerollBounty, claimBountyMilestone, type BountyBoard, type BountyView } from './bountyActions'
-import { BOUNTY_POINTS } from '@/lib/bounties'
+import { BOUNTY_POINTS, BOUNTY_MILESTONES } from '@/lib/bounties'
 import { hapticReward } from '@/lib/haptics'
 
 // Solid dark notices, light ink, the way every other panel in this game reads.
@@ -57,11 +58,16 @@ const TNUM = { fontVariantNumeric: 'tabular-nums' as const }
  *  The gem total had a bar of its own under this, which spent a whole strip of
  *  a small modal on two numbers and a line naming the rung. It reads as a chip
  *  beside the title now: what you have taken out of what is posted. */
-function BoardHeader({ title, claimed, total, burst, onClose }: {
+function BoardHeader({ title, claimed, total, points, pointsReady, burst, onPoints, onClose }: {
   title: string
   claimed?: number
   total?: number
+  /** Lifetime bounty points. Undefined on the locked and loading states. */
+  points?: number
+  /** A milestone is sitting there uncollected. */
+  pointsReady?: boolean
   burst: number
+  onPoints?: () => void
   onClose: () => void
 }) {
   const showChip = typeof claimed === 'number' && typeof total === 'number' && total > 0
@@ -99,9 +105,34 @@ function BoardHeader({ title, claimed, total, burst, onClose }: {
           </AnimatePresence>
         </span>
       )}
+      {/* THE LADDER, as a pill. It was a strip under the notices, which put
+          the long game below the fold on a board of four. Up here it is a
+          number you can see without scrolling and a door you can open when you
+          care; the detail lives behind it rather than in the way. */}
+      {typeof points === 'number' && onPoints && (
+        <button type="button" onClick={onPoints} className="tap"
+          style={{
+            position: 'relative', marginLeft: 'auto', flexShrink: 0,
+            display: 'inline-flex', alignItems: 'baseline', gap: 4,
+            padding: '0.2rem 0.55rem', borderRadius: 999,
+            background: pointsReady ? 'rgba(143,166,196,0.2)' : 'rgba(255,255,255,0.055)',
+            border: `1px solid ${pointsReady ? 'rgba(201,160,245,0.7)' : 'rgba(255,255,255,0.14)'}`,
+            color: '#cfd8e6', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+          }}>
+          <span className="font-karla font-800" style={{ fontSize: '0.8rem', ...TNUM }}>{points.toLocaleString()}</span>
+          <span className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#9aa3b2' }}>pts</span>
+          {pointsReady && (
+            <span aria-label="milestone ready" style={{
+              position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: 999,
+              background: GEM_COLOR, boxShadow: `0 0 7px ${GEM_COLOR}`,
+            }} />
+          )}
+        </button>
+      )}
+
       <button type="button" onClick={onClose} aria-label="Close"
         style={{
-          marginLeft: 'auto', flexShrink: 0, width: 30, height: 30, borderRadius: '50%', padding: 0,
+          flexShrink: 0, width: 30, height: 30, borderRadius: '50%', padding: 0, marginLeft: 8,
           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
           color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
@@ -119,6 +150,37 @@ function SwapIcon({ color }: { color: string }) {
   )
 }
 
+
+/** A sheet over the board. Portaled to body: the panel already lives inside
+ *  PopupShell, and a nested overlay positioned inside it would be trapped by
+ *  that stacking context. */
+function Sheet({ label, onClose, children }: { label: string; onClose: () => void; children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted) return null
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={label} onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 140,
+        background: 'rgba(4,6,10,0.86)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)',
+        display: 'flex', padding: '1.1rem', overflowY: 'auto',
+      }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          margin: 'auto', width: '100%', maxWidth: 380,
+          background: 'linear-gradient(180deg, rgba(26,23,18,0.99) 0%, rgba(12,11,8,0.99) 100%)',
+          border: '1px solid rgba(190,146,92,0.45)', borderRadius: 16,
+          padding: '1rem 1.05rem 1.05rem',
+        }}>
+        {children}
+      </motion.div>
+    </div>,
+    document.body,
+  )
+}
 
 /** One notice. A solid slab with the tier as a spine down its left edge, the
  *  prize on the right, and the two lines that matter in between. */
@@ -248,6 +310,10 @@ export default function BountiesPanel({ onGems, onClose }: {
   const [busy, setBusy] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [burst, setBurst] = useState(0)
+  const [ladderOpen, setLadderOpen] = useState(false)
+  /** The order awaiting a swap confirmation. A swap is one a day and cannot be
+   *  undone, which is exactly the shape of thing that should ask first. */
+  const [swapping, setSwapping] = useState<BountyView | null>(null)
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
@@ -317,6 +383,7 @@ export default function BountiesPanel({ onGems, onClose }: {
   }
 
   function handleSwap(b: BountyView) {
+    setSwapping(null)
     setBusy(b.id)
     startTransition(() => {
       rerollBounty(b.id).then(res => {
@@ -334,7 +401,10 @@ export default function BountiesPanel({ onGems, onClose }: {
         title="Bounties"
         claimed={board.rungMax - board.remaining}
         total={board.rungMax}
+        points={board.points}
+        pointsReady={board.milestonesReady > 0}
         burst={burst}
+        onPoints={() => setLadderOpen(true)}
         onClose={onClose}
       />
 
@@ -345,65 +415,12 @@ export default function BountiesPanel({ onGems, onClose }: {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         {board.bounties.map(b => (
           <BountyCard key={b.id} b={b} rerollUsed={board.rerollUsed} busy={busy === b.id}
-            onClaim={() => handleClaim(b)} onSwap={() => handleSwap(b)} />
+            onClaim={() => handleClaim(b)} onSwap={() => setSwapping(b)} />
         ))}
       </div>
 
-      {/* THE LADDER. Under the board rather than above it: the orders are
-          today's business and this is the long game. */}
-      <div style={{
-        marginTop: 10, padding: '0.6rem 0.75rem', borderRadius: 11,
-        background: 'linear-gradient(180deg, rgba(30,27,22,0.96) 0%, rgba(18,16,12,0.97) 100%)',
-        border: `1px solid ${board.milestonesReady > 0 ? 'rgba(201,160,245,0.45)' : 'rgba(255,255,255,0.08)'}`,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-          <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.54rem', color: '#8fa6c4' }}>
-            Bounty points
-          </span>
-          <span className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: '#f2ede2', ...TNUM }}>
-            {board.points.toLocaleString()}
-          </span>
-        </div>
-
-        {board.nextMilestone && (
-          <>
-            <div style={{ height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.09)', overflow: 'hidden', marginTop: 6 }}>
-              <div style={{
-                height: '100%', borderRadius: 3,
-                width: `${Math.min(100, (board.points / board.nextMilestone.points) * 100)}%`,
-                background: 'linear-gradient(90deg, #8fa6c4, #c9a0f5)',
-              }} />
-            </div>
-            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a49c8e', marginTop: 5 }}>
-              {board.nextMilestone.points - board.points > 0
-                ? `${(board.nextMilestone.points - board.points).toLocaleString()} more for ${board.nextMilestone.label}`
-                : `${board.nextMilestone.label} is waiting`}
-              {board.pointsToday > 0 && ` · ${board.pointsToday} still on today's board`}
-            </p>
-          </>
-        )}
-
-        {board.milestonesReady > 0 && (
-          <button type="button" onClick={handleMilestone} disabled={busy === '__ms'} className="font-karla font-800 tap"
-            style={{
-              width: '100%', marginTop: 7, padding: '0.46rem', borderRadius: 9, fontSize: '0.78rem',
-              background: 'rgba(201,160,245,0.18)', border: '1px solid rgba(201,160,245,0.6)', color: '#f0e6fb',
-              cursor: busy === '__ms' ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
-            }}>
-            {busy === '__ms' ? '…' : `Collect ${board.nextMilestone?.label ?? 'your milestone'}`}
-          </button>
-        )}
-        {!board.nextMilestone && (
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a49c8e', marginTop: 5 }}>
-            Every milestone collected. The Corsair colours are yours.
-          </p>
-        )}
-      </div>
-
       <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#8d7f66', marginTop: 10, textAlign: 'center', lineHeight: 1.5 }}>
-        {board.rerollUsed
-          ? 'New orders posted every morning.'
-          : 'One swap a day, for an order you cannot take. New orders every morning.'}
+        New orders posted every morning.
         {board.next && (
           <>
             <br />
@@ -413,6 +430,91 @@ export default function BountiesPanel({ onGems, onClose }: {
           </>
         )}
       </p>
+
+      {/* THE LADDER, in full. Every rung, what it pays, and which are behind
+          you: the pill up top is the number, this is the map. */}
+      {ladderOpen && (
+        <Sheet label="Bounty points" onClose={() => setLadderOpen(false)}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 3 }}>
+            <p className="font-pirata" style={{ fontSize: '1.35rem', letterSpacing: '0.03em', color: '#f0dcae' }}>Bounty Points</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#f2ede2', ...TNUM }}>{board.points.toLocaleString()}</p>
+          </div>
+          <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#8d7f66', lineHeight: 1.45, marginBottom: 11 }}>
+            Every order pays points by tier, and clearing the whole board pays 3 more.
+            {board.pointsToday > 0 && ` ${board.pointsToday} are still on today's board.`}
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: '46vh', overflowY: 'auto' }}>
+            {BOUNTY_MILESTONES.map((m, i) => {
+              const done = i < board.milestonesClaimed
+              const ready = i === board.milestonesClaimed && board.points >= m.points
+              const pct = Math.min(1, board.points / m.points)
+              return (
+                <div key={m.points} style={{
+                  padding: '0.5rem 0.6rem', borderRadius: 10,
+                  background: ready ? 'rgba(201,160,245,0.14)' : 'rgba(255,255,255,0.035)',
+                  border: `1px solid ${ready ? 'rgba(201,160,245,0.55)' : 'rgba(255,255,255,0.08)'}`,
+                  opacity: done ? 0.5 : 1,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: done ? '#7d7466' : '#e8e0d2' }}>
+                      {m.label}
+                    </span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: done ? '#7d7466' : '#9aa3b2', ...TNUM }}>
+                      {done ? 'collected' : `${m.points.toLocaleString()} pts`}
+                    </span>
+                  </div>
+                  {!done && !ready && (
+                    <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 5 }}>
+                      <div style={{ height: '100%', borderRadius: 2, width: `${pct * 100}%`, background: 'linear-gradient(90deg,#8fa6c4,#c9a0f5)' }} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {board.milestonesReady > 0 ? (
+            <button type="button" onClick={handleMilestone} disabled={busy === '__ms'} className="font-karla font-800 tap"
+              style={{
+                width: '100%', marginTop: 11, padding: '0.6rem', borderRadius: 10, fontSize: '0.82rem',
+                background: 'rgba(201,160,245,0.2)', border: '1px solid rgba(201,160,245,0.65)', color: '#f0e6fb',
+                cursor: busy === '__ms' ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
+              }}>
+              {busy === '__ms' ? '…' : `Collect ${board.nextMilestone?.label ?? 'your milestone'}`}
+            </button>
+          ) : (
+            <button type="button" onClick={() => setLadderOpen(false)} className="font-karla font-600"
+              style={{ width: '100%', marginTop: 11, padding: '0.5rem', background: 'none', border: 'none', color: '#8d7f66', fontSize: '0.78rem', cursor: 'pointer' }}>
+              Close
+            </button>
+          )}
+        </Sheet>
+      )}
+
+      {/* A swap is one a day and cannot be taken back, so it asks. */}
+      {swapping && (
+        <Sheet label="Swap this order" onClose={() => setSwapping(null)}>
+          <p className="font-pirata" style={{ fontSize: '1.3rem', letterSpacing: '0.03em', color: '#f0dcae', marginBottom: 4 }}>Swap this order?</p>
+          <p className="font-karla font-400" style={{ fontSize: '0.78rem', color: '#a49c8e', lineHeight: 1.5 }}>
+            <span style={{ color: '#e8e0d2' }}>{swapping.name}</span> goes back on the
+            board and the harbourmaster posts another of the same tier. You get
+            one swap a day and this is yours.
+          </p>
+          <button type="button" onClick={() => handleSwap(swapping)} className="font-karla font-800 tap"
+            style={{
+              width: '100%', marginTop: 13, padding: '0.6rem', borderRadius: 10, fontSize: '0.82rem',
+              background: 'rgba(240,220,174,0.14)', border: '1px solid rgba(240,220,174,0.5)', color: '#f4ecd8',
+              cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+            }}>
+            Swap it
+          </button>
+          <button type="button" onClick={() => setSwapping(null)} className="font-karla font-600"
+            style={{ width: '100%', marginTop: 6, padding: '0.45rem', background: 'none', border: 'none', color: '#8d7f66', fontSize: '0.78rem', cursor: 'pointer' }}>
+            Keep it
+          </button>
+        </Sheet>
+      )}
 
       <AnimatePresence>
         {toast && (
