@@ -6,7 +6,7 @@
 // equip, all without leaving the modal. Nested PopupShells handle the
 // item / crew detail editors.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { vibrate } from '@/lib/haptics'
@@ -16,6 +16,7 @@ import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import BountiesPanel from './BountiesPanel'
+import { getBountyBoard } from './bountyActions'
 import BountyRungUnlock from './BountyRungUnlock'
 import { BOUNTY_RUNGS } from '@/lib/bounties'
 import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
@@ -128,6 +129,32 @@ export default function HubCards({
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'bounties' | 'gauntlets'>(null)
 
+  // ORDERS FINISHED BUT NOT PAID. A bounty you have already done sits on the
+  // board waiting to be collected, and the hub had no way of saying so: the
+  // tile read "Daily orders, paid in gems" whether you had four waiting or
+  // none, so the only way to find out was to open it and look.
+  //
+  // Client-side and after mount, not in the page's server render, because
+  // getBountyBoard WRITES: it rolls the day's board when the date has turned
+  // over. That belongs in an effect, not in rendering a page.
+  //
+  // It is also the whole board's worth of measurement, so it deliberately does
+  // not block the hub painting. The tile shows its ordinary self until the
+  // answer arrives and then grows the marker.
+  const [bountyReady, setBountyReady] = useState(0)
+  const checkBounties = useCallback(() => {
+    if (!bountiesOpen) return
+    getBountyBoard().then(b => {
+      if (!b.unlocked) return
+      // Milestones count too: the points ladder pays in gems the same way an
+      // order does, and it is behind one more tap than the orders are.
+      setBountyReady(
+        b.bounties.filter(x => !x.claimed && x.progress >= x.target).length + b.milestonesReady,
+      )
+    }).catch(() => {})
+  }, [bountiesOpen])
+  useEffect(() => { checkBounties() }, [checkBounties])
+
   // Esc closes the open prep modal. (Used to also handle a nested items
   // editor modal; that was removed when the prep modals became read-only
   // confirmation surfaces, so there's only one layer to close now.)
@@ -235,11 +262,16 @@ export default function HubCards({
             chapters of work stood in front of a door they were one raid from. */}
         <HubTile
           bgImage="/exp-bounties.jpg" accent={bountyAccent} title="Bounties"
-          status={bountiesOpen ? 'Open ›' : 'Locked'} statusColor={bountyAccent}
+          status={bountiesOpen ? (bountyReady > 0 ? `${bountyReady} to collect ›` : 'Open ›') : 'Locked'}
+          statusColor={bountyReady > 0 ? '#ffd96a' : bountyAccent}
           sub={bountiesOpen
-            ? 'Daily orders, paid in gems'
+            ? (bountyReady > 0 ? 'Paid the moment you claim it' : 'Daily orders, paid in gems')
             : `Sink ${BOUNTY_RUNGS[0].boss} and the board opens`}
           locked={!bountiesOpen} lockLabel={`Beat ${BOUNTY_RUNGS[0].boss}`}
+          // A pill rather than a dot: the Gauntlets tile beside it already uses
+          // one for "Resume", and a bare dot says something changed without
+          // saying it is money.
+          tag={bountyReady > 0 ? 'Claim' : undefined}
           onClick={bountiesOpen ? () => setModal('bounties') : undefined}
         />
         <HubTile
@@ -358,7 +390,9 @@ export default function HubCards({
       )}
 
       {/* ── Bounties ── the daily orders board. ─────────────────────────── */}
-      <PopupShell open={modal === 'bounties'} onClose={() => setModal(null)}>
+      {/* Closing the board re-asks, so claiming everything inside clears the
+          marker on the way out rather than leaving it lit until a reload. */}
+      <PopupShell open={modal === 'bounties'} onClose={() => { setModal(null); checkBounties() }}>
         <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 6 }}
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
@@ -389,7 +423,7 @@ export default function HubCards({
         >
           {/* BountiesPanel owns its own title row, so the gem count can sit
               beside the title instead of taking a bar of its own. */}
-          {modal === 'bounties' && <BountiesPanel onClose={() => setModal(null)} />}
+          {modal === 'bounties' && <BountiesPanel onClose={() => { setModal(null); checkBounties() }} />}
         </motion.div>
       </PopupShell>
 
