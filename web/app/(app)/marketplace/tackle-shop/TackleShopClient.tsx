@@ -360,7 +360,7 @@ export default function TackleShopClient({
             {doubloons.toLocaleString()} ⟡
           </span>
         </div>
-        <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '1.2rem' }}>
+        <div style={{ height: 6, borderRadius: 999, background: 'rgba(18,20,27,0.92)', overflow: 'hidden', marginBottom: '1.2rem' }}>
           <motion.div initial={false} animate={{ width: `${Math.round((gearOwned / Math.max(1, gearTotal)) * 100)}%` }}
             transition={{ type: 'spring', stiffness: 200, damping: 30 }}
             style={{ height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #d8a24a, #f0c877)' }} />
@@ -425,12 +425,21 @@ export default function TackleShopClient({
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   padding: '1rem 0.5rem 0.75rem', borderRadius: 14, cursor: 'pointer', minWidth: 0,
                   overflow: 'hidden',
-                  // Each category now has its own painterly backdrop; a dark scrim
-                  // (warmer when the item is ready-to-buy) keeps the item art +
-                  // label + status readable over it.
-                  background: `linear-gradient(180deg, ${ready ? 'rgba(240,192,64,0.16)' : 'rgba(6,10,18,0.26)'} 0%, rgba(6,10,18,0.44) 44%, rgba(6,10,18,0.92) 100%), url(/tackle-${s.key}-bg.jpg) center / cover`,
-                  border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.14)'}`,
-                  boxShadow: ready ? '0 0 18px rgba(240,192,64,0.12)' : 'none',
+                  // OPAQUE, and no art of its own.
+                  //
+                  // This asked for /tackle-rod-bg.jpg, /tackle-reel-bg.jpg and
+                  // three more that were NEVER ADDED to public. All five 404'd,
+                  // so every tile fell back to the scrim alone: a gradient
+                  // opening at 26% over a painted shop. That is why they could
+                  // not be read. The item art on the tile already says which
+                  // category it is; a backdrop underneath was only ever going
+                  // to compete with it.
+                  background: ready
+                    ? 'linear-gradient(180deg, rgba(46,36,14,0.97) 0%, rgba(20,16,9,0.98) 100%)'
+                    : 'linear-gradient(180deg, rgba(22,25,32,0.97) 0%, rgba(12,14,19,0.98) 100%)',
+                  border: `1px solid ${ready ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.12)'}`,
+                  borderTop: `1px solid ${ready ? 'rgba(240,192,64,0.85)' : 'rgba(255,255,255,0.18)'}`,
+                  boxShadow: ready ? '0 4px 18px rgba(0,0,0,0.5), 0 0 18px rgba(240,192,64,0.12)' : '0 3px 12px rgba(0,0,0,0.45)',
                 }}>
                 {/* Art sits DIRECTLY on the tile, like the Forge. The old nested black
                     disc-in-a-faint-square was the muddy double layer. */}
@@ -534,7 +543,7 @@ export default function TackleShopClient({
                   {noDrawbacks && (
                     <span className="font-karla font-600" style={{
                       fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)',
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(16,18,24,0.9)', border: '1px solid rgba(255,255,255,0.1)',
                       borderRadius: 20, padding: '0.15rem 0.45rem',
                     }}>no penalty</span>
                   )}
@@ -572,7 +581,7 @@ export default function TackleShopClient({
                             flex: 1,
                             borderRadius: 9, padding: '0.45rem 0.25rem',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                            background: canAfford ? `linear-gradient(180deg, ${bait.color}26 0%, ${bait.color}12 100%)` : 'rgba(255,255,255,0.04)',
+                            background: canAfford ? `linear-gradient(180deg, ${bait.color}26 0%, ${bait.color}12 100%)` : 'rgba(16,18,24,0.9)',
                             border: `1px solid ${canAfford ? bait.color + '55' : 'rgba(255,255,255,0.08)'}`,
                             color: canAfford ? bait.color : '#4a4845',
                             cursor: canAfford && !isPending ? 'pointer' : 'default',
@@ -619,7 +628,7 @@ export default function TackleShopClient({
                 {HOOKS[previewTier]?.name}
               </p>
               {previewTier !== hookTier && (
-                <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#9a948a', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.12rem 0.4rem' }}>
+                <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#9a948a', background: 'rgba(18,20,27,0.92)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.12rem 0.4rem' }}>
                   preview
                 </span>
               )}
@@ -674,7 +683,7 @@ export default function TackleShopClient({
                             style={{
                               fontSize: '0.62rem',
                               color: owned ? `${c}cc` : '#5a564e',
-                              background: owned ? `${c}16` : 'rgba(255,255,255,0.04)',
+                              background: owned ? `${c}16` : 'rgba(16,18,24,0.9)',
                               border: `1px solid ${owned ? `${c}38` : 'rgba(255,255,255,0.1)'}`,
                               padding: '0.12rem 0.5rem', borderRadius: '2rem',
                             }}>
@@ -800,7 +809,7 @@ export default function TackleShopClient({
                         flex: 1, padding: '0.42rem 0.4rem', borderRadius: 9, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, lineHeight: 1,
                         fontSize: '0.66rem', letterSpacing: '0.03em',
-                        background: on ? 'rgba(184,149,106,0.22)' : 'rgba(255,255,255,0.04)',
+                        background: on ? 'rgba(184,149,106,0.22)' : 'rgba(16,18,24,0.9)',
                         border: `1px solid ${on ? 'rgba(184,149,106,0.6)' : 'rgba(255,255,255,0.1)'}`,
                         color: on ? '#e6cfa6' : '#8a857c',
                       }}>
@@ -819,7 +828,7 @@ export default function TackleShopClient({
                       style={{
                         flexShrink: 0, padding: '0.34rem 0.7rem', borderRadius: 999, cursor: 'pointer',
                         fontSize: '0.64rem', whiteSpace: 'nowrap',
-                        background: on ? 'rgba(184,149,106,0.2)' : 'rgba(255,255,255,0.05)',
+                        background: on ? 'rgba(184,149,106,0.2)' : 'rgba(16,18,24,0.9)',
                         border: `1px solid ${on ? 'rgba(184,149,106,0.55)' : 'rgba(255,255,255,0.11)'}`,
                         color: on ? '#e8cfa8' : '#a49f95',
                       }}>
@@ -890,7 +899,7 @@ export default function TackleShopClient({
                               : { filter: `drop-shadow(0 3px 12px ${owned ? `${c}55` : 'rgba(0,0,0,0.55)'})` }
                             ),
                           } as React.CSSProperties} />
-                      ) : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />}
+                      ) : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(18,20,27,0.92)' }} />}
                     </div>
 
                     {/* Right: name + effects + action */}
@@ -905,7 +914,7 @@ export default function TackleShopClient({
                         {effects.map(label => (
                           <span key={label} className="font-karla font-600" style={{
                             fontSize: '0.66rem', color: '#cdc8be',
-                            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)',
+                            background: 'rgba(18,20,27,0.92)', border: '1px solid rgba(255,255,255,0.13)',
                             padding: '0.16rem 0.5rem', borderRadius: 7, whiteSpace: 'nowrap',
                           }}>{label}</span>
                         ))}
@@ -936,7 +945,7 @@ export default function TackleShopClient({
                             className="font-karla font-700 uppercase tracking-[0.08em]"
                             style={{
                               padding: '0.5rem 0.95rem', borderRadius: 9,
-                              background: rodBuyable ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.13) 100%)' : 'rgba(255,255,255,0.05)',
+                              background: rodBuyable ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.13) 100%)' : 'rgba(16,18,24,0.9)',
                               border: `1px solid ${rodBuyable ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.12)'}`,
                               color: rodBuyable ? '#f0c040' : '#9a8f6a', fontSize: '0.66rem',
                               cursor: rodBuyable && !isPending ? 'pointer' : 'default', opacity: isBuying ? 0.5 : 1,
@@ -1022,7 +1031,7 @@ export default function TackleShopClient({
                     <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: eligible ? '#f0ede8' : '#6a6764', letterSpacing: '0.08em' }}>
                       {eligible ? 'Ready to Claim' : 'Completionist Rod'}
                     </p>
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: eligible ? c : '#4a4845', background: eligible ? `${c}18` : 'rgba(255,255,255,0.05)', border: `1px solid ${eligible ? `${c}35` : 'rgba(255,255,255,0.1)'}`, padding: '0.1rem 0.5rem', borderRadius: '2rem' }}>Mastery</span>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: eligible ? c : '#4a4845', background: eligible ? `${c}18` : 'rgba(16,18,24,0.9)', border: `1px solid ${eligible ? `${c}35` : 'rgba(255,255,255,0.1)'}`, padding: '0.1rem 0.5rem', borderRadius: '2rem' }}>Mastery</span>
                   </div>
                   <p className="font-karla font-300 mb-4" style={{ fontSize: '0.75rem', color: eligible ? '#a0a09a' : '#4a4845', lineHeight: 1.5 }}>
                     {eligible
@@ -1105,7 +1114,7 @@ export default function TackleShopClient({
                         style={{
                           fontSize: '0.62rem',
                           color: owned ? (slowerPct > 0 ? `${c}cc` : '#9a958c') : '#5a564e',
-                          background: owned && slowerPct > 0 ? `${c}16` : 'rgba(255,255,255,0.04)',
+                          background: owned && slowerPct > 0 ? `${c}16` : 'rgba(16,18,24,0.9)',
                           border: `1px solid ${owned && slowerPct > 0 ? `${c}38` : 'rgba(255,255,255,0.1)'}`,
                           padding: '0.12rem 0.5rem', borderRadius: '2rem',
                         }}>
@@ -1192,7 +1201,7 @@ export default function TackleShopClient({
                         style={{
                           fontSize: '0.62rem',
                           color: owned ? (smallerPct > 0 ? `${c}cc` : '#9a958c') : '#5a564e',
-                          background: owned && smallerPct > 0 ? `${c}16` : 'rgba(255,255,255,0.04)',
+                          background: owned && smallerPct > 0 ? `${c}16` : 'rgba(16,18,24,0.9)',
                           border: `1px solid ${owned && smallerPct > 0 ? `${c}38` : 'rgba(255,255,255,0.1)'}`,
                           padding: '0.12rem 0.5rem', borderRadius: '2rem',
                         }}>
@@ -1354,7 +1363,9 @@ function Sheen() {
 function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier: number; color: string; owned: boolean; isActive: boolean; imageUrl?: string; glowClass?: string }) {
   const stroke = owned ? color : '#4a4845'
   const fill   = owned ? color : '#4a4845'
-  const bg     = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const bg     = owned
+    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
+    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
   const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
 
   const icons: Record<number, React.ReactNode> = {
@@ -1451,7 +1462,9 @@ function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier:
 }
 
 function LineIcon({ color, owned, isActive, imageUrl }: { color: string; owned: boolean; isActive: boolean; imageUrl?: string }) {
-  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const bg = owned
+    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
+    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
   const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
   const op = owned ? 1 : 0.45
   return (
@@ -1475,7 +1488,9 @@ function LineIcon({ color, owned, isActive, imageUrl }: { color: string; owned: 
 
 function ReelIcon({ color, owned, isActive, imageUrl }: { color: string; owned: boolean; isActive: boolean; imageUrl?: string }) {
   const sc = owned ? color : '#4a4845'
-  const bg = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const bg = owned
+    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
+    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
   const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
   const op = owned ? 1 : 0.45
   return (
@@ -1500,7 +1515,9 @@ function ReelIcon({ color, owned, isActive, imageUrl }: { color: string; owned: 
 }
 
 function GearIcon({ color, owned, isActive, label }: { color: string; owned: boolean; isActive: boolean; label: string }) {
-  const bg     = owned ? `${color}12` : 'rgba(255,255,255,0.06)'
+  const bg     = owned
+    ? `linear-gradient(180deg, ${color}22 0%, rgba(13,15,20,0.97) 100%)`
+    : 'linear-gradient(180deg, rgba(22,25,32,0.96) 0%, rgba(12,14,19,0.97) 100%)'
   const border = owned ? `${color}35` : 'rgba(255,255,255,0.11)'
 
   return (
