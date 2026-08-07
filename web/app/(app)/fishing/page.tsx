@@ -7,7 +7,7 @@ import { isPremiumActive } from '@/lib/premium'
 import { getCharacterSprites, earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
-import { EXCHANGE_FISHING_LEVEL, FUND_BY_ID } from '@/lib/fishExchange'
+import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION, FUND_BY_ID } from '@/lib/fishExchange'
 import type { TickerItem } from '@/components/MarketTicker'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getBoat, earnedAchievementBoats } from '@/lib/boats'
@@ -159,7 +159,11 @@ export default async function FishingPage() {
   // from here. Without a word on the hub tile a captain can cap the skill and
   // never find out anything changed. Cleared the moment they read the
   // announcement, so it says something new or says nothing.
-  const exchangeOpen = fishLevelFromXP(profile?.fishing_xp ?? 0) >= EXCHANGE_FISHING_LEVEL
+  // Shut while the board is rebuilt, so the hub stops advertising it: no index
+  // ticks on the strip, no contract count on the Market tile, and no unveil
+  // announcement for a room nobody can walk into.
+  const exchangeOpen = !EXCHANGE_UNDER_CONSTRUCTION
+    && fishLevelFromXP(profile?.fishing_xp ?? 0) >= EXCHANGE_FISHING_LEVEL
   const exchangeUnveil = exchangeOpen && profile?.has_seen_exchange_intro !== true
 
   // ── The market ticker ─────────────────────────────────────────────────────

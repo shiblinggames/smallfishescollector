@@ -359,6 +359,18 @@ export const MAX_STAKE = 250_000
  *  100 is MAX_LEVEL, so this is the last thing fishing gives you: the board
  *  stops being a price list and starts being something you can take a position
  *  on. */
+/** THE BOARD IS SHUT WHILE IT IS REBUILT.
+ *
+ *  The Exchange is being rebuilt on its own free-floating indexes instead of
+ *  prices borrowed from the sell market. Until that lands, nothing new can be
+ *  opened: every contract written against the old series would have to be
+ *  refunded again on the day of the swap, and refunding somebody twice is how a
+ *  market loses the only thing it has, which is trust.
+ *
+ *  Every open contract was already refunded at full stake, so nothing is
+ *  stranded behind this. Flip to false when the new board ships. */
+export const EXCHANGE_UNDER_CONSTRUCTION = true
+
 export const EXCHANGE_FISHING_LEVEL = 100
 
 // ── How jumpy is it ─────────────────────────────────────────────────────────

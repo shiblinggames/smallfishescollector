@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import {
   TERMS, type Term, type Direction,
   quoteFund, quoteSingle, FUND_BY_ID,
-  liveValue, EXCHANGE_FISHING_LEVEL,
+  liveValue, EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/fishExchange'
 
@@ -31,6 +31,12 @@ type Gate = { open: true } | { open: false; reason: string; level: number }
 // It was async only because it once needed a second lookup.
 function checkGate(profile: { fishing_xp?: number | null } | null): Gate {
   const level = getLevelFromXP(Number(profile?.fishing_xp ?? 0))
+  // Shut for everyone while the board is rebuilt, checked BEFORE the level so a
+  // captain at Fishing 100 is told the truth instead of being shown a climb
+  // they already finished.
+  if (EXCHANGE_UNDER_CONSTRUCTION) {
+    return { open: false, level, reason: 'The Exchange is closed while the board is rebuilt' }
+  }
   if (level < EXCHANGE_FISHING_LEVEL) {
     return { open: false, level, reason: `Fishing ${EXCHANGE_FISHING_LEVEL} opens the Exchange` }
   }
@@ -48,6 +54,10 @@ export async function openContract(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
+  // Checked again here, not only in the board read: a server action is an HTTP
+  // endpoint, and a page left open in another tab still has a working Stake
+  // button on it.
+  if (EXCHANGE_UNDER_CONSTRUCTION) return { error: 'The Exchange is closed while the board is rebuilt' }
   if (!TERMS.includes(term)) return { error: 'Unknown term' }
   if (direction !== 'rise' && direction !== 'fall') return { error: 'Pick a direction' }
   stake = Math.floor(stake)

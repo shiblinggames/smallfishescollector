@@ -18,7 +18,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import {
   TERMS, TERM_LABEL, TERM_BLURB, type Term, type Direction,
   quoteFund, quoteSingle, liveValue, MIN_STAKE, MAX_STAKE,
-  EXCHANGE_FISHING_LEVEL, singleSwingPct, fundSwingPct, swingLabel, targetPrice,
+  EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION, singleSwingPct, fundSwingPct, swingLabel, targetPrice,
 } from '@/lib/fishExchange'
 import {
   getExchangeBoard, openContract, closeContractEarly, markResultsSeen,
@@ -332,6 +332,34 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
 
   if (err) return <p className="font-karla" style={{ fontSize: '0.78rem', color: DOWN, padding: '2rem 0' }}>{err}</p>
   if (!board) return <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.66rem', color: '#5a6472', padding: '2rem 0', textAlign: 'center' }}>Opening the board…</p>
+
+  // SHUT, and saying why. The level gate below shows a climb, which is exactly
+  // the wrong thing to show a captain who has already made Fishing 100 and is
+  // being turned away for a reason that has nothing to do with them.
+  if (EXCHANGE_UNDER_CONSTRUCTION) {
+    return (
+      <div style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.6rem', color: '#8a6f3a', marginBottom: 9 }}>
+          Closed for works
+        </p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#e6d49a', marginBottom: 10 }}>
+          The Exchange is being rebuilt
+        </p>
+        <p className="font-karla font-400" style={{ fontSize: '0.8rem', color: '#9aa3b2', lineHeight: 1.6, maxWidth: 340, margin: '0 auto' }}>
+          The board is getting its own markets, free to run their own way instead
+          of tracking the fish you sell. New indexes, new charts, and bets that
+          run from steady to reckless.
+        </p>
+        <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#7c8696', lineHeight: 1.6, maxWidth: 340, margin: '0.9rem auto 0' }}>
+          Every contract that was open has been paid back in full. Nothing of
+          yours is tied up in here.
+        </p>
+        <p className="font-karla font-400 italic" style={{ fontSize: '0.72rem', color: '#6a7482', marginTop: 14 }}>
+          Back shortly. The Hold is still trading.
+        </p>
+      </div>
+    )
+  }
 
   if (!board.open) {
     // Fishing 100 is the cap, so this is not a gate you clear on the way to
