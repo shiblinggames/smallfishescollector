@@ -31,7 +31,7 @@ export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'chartingPoints'
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
   | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'gauntletDonsDepth' | 'achievementPoints'
-  | 'parlorPoints'
+  | 'parlorPoints' | 'exchangeNet'
 
 export type AvatarMap = Record<string, {
   characterColor: string | null
@@ -88,6 +88,16 @@ export const BOARD_META: Record<BoardKey, {
   gauntletDonsDepth: { label: "Don's Gauntlet", accent: '#3fbf82', unit: n => `Depth ${n}`,               subUnit: () => 'cashed out' },
   achievementPoints: { label: 'Achievement Points', accent: '#e6b94a', unit: n => `${n.toLocaleString()}`, subUnit: n => `point${n === 1 ? '' : 's'}` },
   parlorPoints:  { label: 'Parlor Points',  accent: '#b46fd4', unit: n => `${n.toLocaleString()}`,       subUnit: n => `parlor point${n === 1 ? '' : 's'}` },
+  // Reads like the Den boards because it IS that shape: lifetime net, signed,
+  // winners green and losers red. A single lucky payout is not a trader; being
+  // ahead across a run of contracts priced at a house edge is.
+  exchangeNet:   {
+    label: 'Top Traders',
+    accent: '#38bdf8',
+    unit:    n => `${n > 0 ? '+' : ''}${n.toLocaleString()} ⟡`,
+    subUnit: n => n > 0 ? 'net on the board' : n < 0 ? 'net loss' : 'break-even',
+    valueColor: n => n > 0 ? '#7fd49a' : n < 0 ? '#e07070' : '#a09988',
+  },
 }
 
 /** Canonical grouping of every board into a category — the single source of
@@ -101,6 +111,7 @@ export const LEADERBOARD_SECTIONS: { label: string; boards: BoardKey[] }[] = [
   { label: 'The Parlor',   boards: ['parlorPoints'] },
   { label: 'Tavern',       boards: ['tideRun'] },
   { label: 'The Den',      boards: ['blackjack', 'fishSlots', 'roulette'] },
+  { label: 'The Exchange', boards: ['exchangeNet'] },
 ]
 
 /** Group a subset of boards into their sections (order preserved, empty

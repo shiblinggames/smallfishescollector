@@ -14,6 +14,7 @@
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
+import LeaderboardModal from '@/components/LeaderboardModal'
 import {
   TERMS, TERM_LABEL, TERM_BLURB, type Term, type Direction,
   quoteFund, quoteSingle, liveValue, MIN_STAKE, MAX_STAKE,
@@ -313,19 +314,38 @@ export default function ExchangeClient({ onDoubloons }: { onDoubloons?: (n: numb
         })}
       </div>
 
-      {/* The guide is shown once and then never again, which is the wrong
-          number of times for rules you only need when you are about to stake
-          something. One line, always here, no badge. */}
-      <button type="button" onClick={() => setIntro({ celebrate: false })}
-        className="font-karla font-600"
-        style={{
-          alignSelf: 'flex-start', marginTop: -4, marginBottom: 10, padding: 0,
-          background: 'none', border: 'none', fontSize: '0.68rem', color: '#7c8696',
-          textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer',
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-        How the Exchange works
-      </button>
+      {/* The two things that sit above the board itself: the rules, and who is
+          beating you at them. Both are one line, sharing a row rather than
+          taking one each. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: -4, marginBottom: 10 }}>
+        <button type="button" onClick={() => setIntro({ celebrate: false })}
+          className="font-karla font-600"
+          style={{
+            padding: 0, background: 'none', border: 'none', fontSize: '0.68rem', color: '#7c8696',
+            textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+          How the Exchange works
+        </button>
+        {/* Lifetime net across settled contracts, the same shape the Den boards
+            use. Styled down to a HUD pill so it sits with the line beside it
+            instead of shouting over the portfolio hero above. */}
+        <LeaderboardModal
+          boards={['exchangeNet']}
+          title="Top Traders"
+          label="Ranks"
+          triggerStyle={{
+            background: 'rgba(56,189,248,0.10)',
+            border: '1px solid rgba(56,189,248,0.42)',
+            color: '#7dd3fc',
+            boxShadow: 'none',
+            fontSize: '0.56rem',
+            height: 24,
+            padding: '0 0.62rem',
+            borderRadius: 20,
+          }}
+        />
+      </div>
 
       {tab === 'funds' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
