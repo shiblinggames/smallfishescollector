@@ -1197,6 +1197,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       try { localStorage.setItem('crewSeenLevels', JSON.stringify(next)) } catch {}
     }
   }, [seenLevelsLoaded, state.roster, seenLevels])
+  /** Every living crew whose level has outrun what the ledger last saw. */
+  const levelledUp = state.roster.filter(c => {
+    const seen = seenLevels[c.id]
+    return seen !== undefined && seen < crewLevelFromXP(c.xp)
+  })
+
+  /** Clear the lot in one go.
+   *
+   *  markCrewSeen only fires when a crew's detail modal is opened, so the only
+   *  way to put the dots down was to open every card one at a time. After a
+   *  raid that levels eight hands, that is eight modals to dismiss a
+   *  decoration. The dot is a courtesy, and a courtesy you cannot decline is
+   *  just a chore. */
+  function markAllCrewSeen() {
+    setSeenLevels(prev => {
+      const next = { ...prev }
+      for (const c of state.roster) next[c.id] = crewLevelFromXP(c.xp)
+      try { localStorage.setItem('crewSeenLevels', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
   function markCrewSeen(crewId: number, currentLevel: number) {
     setSeenLevels(prev => {
       if ((prev[crewId] ?? 0) >= currentLevel) return prev
@@ -2688,6 +2710,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   (Raid party / Voyage party / Out trawling / Available) so a
                   casual player reads "who's where" at a glance with no
                   filtering. Replaced the All/Raid/Voyage/Bench filter chips. */}
+              {/* Only here when there is something to put down, and it says
+                  how many so the button is worth the row it costs. */}
+              {levelledUp.length > 0 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  padding: '0.5rem 0.7rem', borderRadius: 10, marginBottom: 9,
+                  background: 'rgba(240,192,64,0.10)', border: '1px solid rgba(240,192,64,0.32)',
+                }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
+                    {levelledUp.length} {levelledUp.length === 1 ? 'hand has' : 'hands have'} levelled up
+                  </span>
+                  <button type="button" onClick={markAllCrewSeen} className="font-karla font-700 tap"
+                    style={{
+                      flexShrink: 0, padding: '0.32rem 0.7rem', borderRadius: 8, fontSize: '0.68rem',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                      color: '#e0d9cc', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                    }}>
+                    Mark all seen
+                  </button>
+                </div>
+              )}
+
               {state.roster.length === 0 ? (
                 <div style={{ padding: '1.2rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                   <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
