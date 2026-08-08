@@ -130,7 +130,7 @@ export function typicalDayMove(dailySigmaPct: number): number {
 
 /** How far this index typically wanders over a given number of hours, given how
  *  far it wanders in a day. Root-time, the same way every market works. */
-export function spreadOver(dailyMovePct: number, hours: Term): number {
+export function spreadOver(dailyMovePct: number, hours: number): number {
   return dailyMovePct * Math.sqrt(hours / 24)
 }
 
@@ -262,6 +262,88 @@ export function priceBet(
   // Never pay out on something that cannot lose. Drift can carry a near
   // certainty, and 1.01x is an honest price for one.
   return { distancePct, chance: Math.min(chance, 0.99), multiplier: 1 / Math.min(chance, 0.99) }
+}
+
+// ── What a contract is worth ────────────────────────────────────────────────
+//
+// A VANILLA PAYOFF, not all or nothing. One contract is one unit of the index:
+// at expiry a call pays max(price - strike, 0) doubloons and a put pays
+// max(strike - price, 0). Prices are already in doubloons, so the price IS the
+// payoff scale and there is no contract multiplier to invent.
+//
+// The premium is the EXPECTED payoff, which keeps the same zero-edge promise
+// the binary board made: what you pay is what the contract is worth on average.
+
+/** Mean log move of ONE gap, which is NOT zero. A jump is symmetric in price,
+ *  plus or minus the same percentage, but ln(1-j) is further from zero than
+ *  ln(1+j), so in log space the pair leans down. Price-space expectation is
+ *  preserved either way; this is only the log drift the maths needs. */
+const JUMP_MEAN = JUMP_POINTS.reduce((a, j) => a + (j.up + j.down) / 2, 0) / JUMP_POINTS.length
+
+/** Black-Scholes with no interest, in log space, given the mean and spread of
+ *  the log move. Puts are computed on their own terms rather than by flipping a
+ *  sign: the two are not mirrors once the distribution is lognormal. */
+function payoffValue(price: number, strike: number, m: number, s: number, dir: Direction): number {
+  const fwd = price * Math.exp(m + (s * s) / 2)
+  if (!(s > 0)) {
+    const settled = price * Math.exp(m)
+    return Math.max(0, dir === 'up' ? settled - strike : strike - settled)
+  }
+  const d2 = (Math.log(price / strike) + m) / s
+  const d1 = d2 + s
+  return dir === 'up'
+    ? fwd * normCdf(d1) - strike * normCdf(d2)
+    : strike * normCdf(-d2) - fwd * normCdf(-d1)
+}
+
+/** WHAT ONE CONTRACT IS WORTH, in doubloons.
+ *
+ *  Same Poisson mixture the binary board priced with, carrying a VALUE instead
+ *  of a probability: almost always no gap, sometimes one, rarely more. The
+ *  single-gap term is quadrature because one jump is bimodal and a normal
+ *  smears it across the middle where it never lands. */
+export function contractValue(
+  price: number, strike: number, dir: Direction,
+  hours: number, dailyMovePct: number,
+  /** The index's OWN drift over these hours, in percent, positive meaning up.
+   *  Not signed to the player's side: a put and a call on the same index face
+   *  the same weather. */
+  driftPct = 0,
+  scheduled = 0,
+): number {
+  if (!(price > 0) || !(strike > 0) || !(hours > 0)) return 0
+  const s = spreadOver(dailyMovePct, hours) / 100
+  const m = driftPct / 100
+  const lam = JUMP_P * hours
+  const p0 = Math.exp(-lam)
+  const p1 = lam * Math.exp(-lam)
+  const p2 = Math.max(0, 1 - p0 - p1)
+
+  const withJumps = (n: number): number => {
+    if (n <= 0) return payoffValue(price, strike, m, s, dir)
+    if (n === 1) {
+      let v = 0
+      for (const j of JUMP_POINTS) {
+        v += payoffValue(price, strike, m + j.up / 100, s, dir)
+          + payoffValue(price, strike, m + j.down / 100, s, dir)
+      }
+      return v / (JUMP_POINTS.length * 2)
+    }
+    // Two or more: normal enough to say so, mean and variance both carried.
+    const varJ = (JUMP_VAR - JUMP_MEAN * JUMP_MEAN) / 10_000
+    return payoffValue(price, strike, m + (n * JUMP_MEAN) / 100,
+      Math.sqrt(s * s + n * Math.max(0, varJ)), dir)
+  }
+
+  return Math.max(0, p0 * withJumps(scheduled) + p1 * withJumps(scheduled + 1) + p2 * withJumps(scheduled + 2))
+}
+
+/** The price that has to be reached before the contract has paid for itself.
+ *  Unlike the binary's, this one is fixed the moment you buy: the payoff grows
+ *  a doubloon per doubloon past the strike, so the premium is recovered exactly
+ *  one premium beyond it. */
+export function breakEvenFor(strike: number, premiumEach: number, dir: Direction): number {
+  return dir === 'up' ? strike + premiumEach : strike - premiumEach
 }
 
 /** REPORTS LANDING INSIDE A TERM, from the next one's timestamp.

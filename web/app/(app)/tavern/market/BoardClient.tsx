@@ -768,11 +768,12 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               )
             })}
           </div>
-          {/* The sum written out. A quantity times a price is the one piece of
-              arithmetic this screen cannot avoid asking for, so it does it. */}
+          {/* THE PREMIUM, named. It was written as a bare multiplication with
+              no word for what the middle number was, so the one figure the whole
+              purchase turns on went by unlabelled. */}
           <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8a94a4', marginBottom: 11, ...TNUM }}>
-            {chosenUnits.toLocaleString()} × {fmtPrice(prem)} a contract ={' '}
-            <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span>
+            Premium <strong style={{ color: '#e0d8c4' }}>{fmtPrice(prem)}</strong> a contract ·{' '}
+            <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span> for {chosenUnits.toLocaleString()}
           </p>
 
         </div>
@@ -789,7 +790,8 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                 Pays <strong style={{ color: '#ffd96a' }}>{returns.toLocaleString()} ⟡</strong> if it gets there
               </p>
               <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#6a7482', textAlign: 'center', marginBottom: 7, lineHeight: 1.4 }}>
-                Or sell it back any time for whatever it is worth by then
+                Touching {fmtPrice(targetPrice)} pays the same as flying past it.
+                Or sell it back any time for what it is worth by then.
               </p>
             </>
           )}
