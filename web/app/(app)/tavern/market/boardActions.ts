@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, worthNow, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, worthNow, scheduledIn, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -46,6 +46,14 @@ export type BoardIndex = {
   beta: number
   trend: number
   trendTicks: number
+  /** When this index next reports, and what the report is called. Contracts
+   *  that span it cost more, because they carry its variance. */
+  nextEventAt: string | null
+  nextEventLabel: string | null
+  /** The last gap it took, so the chart's cliffs have an explanation. */
+  lastEvent: string | null
+  lastEventPct: number | null
+  lastEventAt: string | null
   /** Oldest first. */
   history: number[]
   /** The five distances this index offers, whatever the term. */
@@ -123,6 +131,11 @@ export async function getBoard(): Promise<Board> {
       prevPrice: Number(r.prev_price),
       dailyMovePct: daily,
       typicalDayPct: typicalDayMove(daily),
+      nextEventAt: (r.next_event_at as string | null) ?? null,
+      nextEventLabel: (r.next_event_label as string | null) ?? null,
+      lastEvent: (r.last_event as string | null) ?? null,
+      lastEventPct: r.last_event_pct == null ? null : Number(r.last_event_pct),
+      lastEventAt: (r.last_event_at as string | null) ?? null,
       vol: Number(r.vol),
       beta: Number(r.beta),
       trend: Number(r.trend),
@@ -205,7 +218,7 @@ export async function openBet(
   }
 
   const { data: idx } = await admin.from('exchange_indexes')
-    .select('id, vol, beta, trend, trend_ticks, price').eq('id', indexId).single()
+    .select('id, vol, beta, trend, trend_ticks, price, next_event_at').eq('id', indexId).single()
   if (!idx) return { error: 'No such index' }
   const entry = Number(idx.price)
   if (!(entry > 0)) return { error: 'That index has no price right now' }
@@ -222,12 +235,15 @@ export async function openBet(
     Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
     Number(mood?.mood_bias ?? 0), term, direction,
   )
-  const allowed = offeredBets(daily, term, drift)
+  // A report inside the window is certain variance, and the premium has to
+  // carry it or the board hands that variance away.
+  const sched = scheduledIn((idx.next_event_at as string | null) ?? null, term, Date.now())
+  const allowed = offeredBets(daily, term, drift, sched)
   const bet = allowed.find(b => Math.abs(b.distancePct - distancePct) < 0.0001)
   if (!bet || bet.chance < MIN_CHANCE) return { error: 'That bet is not offered on this one' }
 
   // Priced from the index, never from the caller.
-  const priced = priceBet(daily, term, bet.distancePct, drift)
+  const priced = priceBet(daily, term, bet.distancePct, drift, sched)
   if (!(priced.multiplier > 0)) return { error: 'Could not price that bet' }
 
   // THE PREMIUM, and it has to be priced from the same chance the multiplier

@@ -176,7 +176,11 @@ export type Bet = {
 // The same clock governs the vols. Our 24-tick day is about 3.7 real trading
 // days, so an index should move sqrt(3.7) = 1.9x a real stock's daily figure:
 // 3-7% for the species rather than a real company's 1.7-4%.
-export const JUMP_P = 0.005          // per index, per MARKET hour
+export const JUMP_P = 0.002          // SURPRISES only, per market hour
+/** Scheduled reports run every 3 to 9 days per index. Keep in lockstep with
+ *  EVENT_MIN_DAYS / EVENT_MAX_DAYS in update_exchange_indexes. */
+export const EVENT_MIN_DAYS = 3
+export const EVENT_MAX_DAYS = 9
 export const JUMP_MIN_PCT = 10
 export const JUMP_MAX_PCT = 35
 
@@ -209,7 +213,14 @@ const JUMP_VAR = JUMP_POINTS.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2,
  *
  *  A Poisson mixture over how many times it gaps: almost always none, sometimes
  *  one, rarely more. Jumps are symmetric, so they add no drift, only tail. */
-function reachChance(distancePct: number, driftPct: number, s: number, hours: number): number {
+function reachChance(
+  distancePct: number, driftPct: number, s: number, hours: number,
+  /** Scheduled reports certain to land inside this term, normally 0 or 1. A
+   *  report is not a maybe once its hour is known, so it is counted rather than
+   *  sampled -- and counting it is the entire reason a contract that spans one
+   *  costs more than a contract that stops the hour before. */
+  scheduled = 0,
+): number {
   const lam = JUMP_P * hours
   const p0 = Math.exp(-lam)
   const p1 = lam * Math.exp(-lam)
@@ -217,13 +228,21 @@ function reachChance(distancePct: number, driftPct: number, s: number, hours: nu
   const need = logPct(distancePct) - driftPct
   const tail = (d: number, sd: number) => 1 - normCdf(d / sd)
 
-  let c1 = 0
-  for (const j of JUMP_POINTS) c1 += tail(need - j.up, s) + tail(need - j.down, s)
-  c1 /= JUMP_POINTS.length * 2
+  // Chance of clearing the distance given exactly n gaps of either kind.
+  const withJumps = (n: number): number => {
+    if (n <= 0) return tail(need, s)
+    if (n === 1) {
+      let c = 0
+      for (const j of JUMP_POINTS) c += tail(need - j.up, s) + tail(need - j.down, s)
+      return c / (JUMP_POINTS.length * 2)
+    }
+    // Two or more and the sum is close enough to normal to say so.
+    return tail(need, Math.sqrt(s * s + n * JUMP_VAR))
+  }
 
-  return p0 * tail(need, s)
-       + p1 * c1
-       + p2 * tail(need, Math.sqrt(s * s + 2 * JUMP_VAR))
+  return p0 * withJumps(scheduled)
+       + p1 * withJumps(scheduled + 1)
+       + p2 * withJumps(scheduled + 2)
 }
 
 export function priceBet(
@@ -233,14 +252,29 @@ export function priceBet(
    *  pricing pure noise sells a near-certainty at long-shot odds: a +0.3% hour
    *  on the Shallows was 3.3% flat and 100% during a bull run, both at 30x. */
   driftPct = 0,
+  /** Scheduled reports landing inside this term. */
+  scheduled = 0,
 ): Bet {
   const s = spreadOver(dailyMovePct, hours)
   if (!(s > 0) || !(distancePct > 0)) return { distancePct, chance: 0, multiplier: 0 }
-  const chance = reachChance(distancePct, driftPct, s, hours)
+  const chance = reachChance(distancePct, driftPct, s, hours, scheduled)
   if (chance <= 0.00005) return { distancePct, chance: 0, multiplier: 0 }
   // Never pay out on something that cannot lose. Drift can carry a near
   // certainty, and 1.01x is an honest price for one.
   return { distancePct, chance: Math.min(chance, 0.99), multiplier: 1 / Math.min(chance, 0.99) }
+}
+
+/** REPORTS LANDING INSIDE A TERM, from the next one's timestamp.
+ *
+ *  Normally 0 or 1: reports are 3 to 9 days apart and the longest term is a
+ *  week, so two is possible but rare. Counted rather than assumed. */
+export function scheduledIn(nextEventAt: string | null, hours: number, now: number): number {
+  if (!nextEventAt) return 0
+  const first = (new Date(nextEventAt).getTime() - now) / 3_600_000
+  if (!Number.isFinite(first) || first > hours) return 0
+  // Anything already due lands on the next tick, so it still counts.
+  const gapHours = ((EVENT_MIN_DAYS + EVENT_MAX_DAYS) / 2) * 24
+  return 1 + Math.max(0, Math.floor((hours - Math.max(0, first)) / gapHours))
 }
 
 /** WHAT A RUNNING BET IS WORTH RIGHT NOW.
@@ -282,9 +316,9 @@ export function worthNow(
  *  long shot, it is a way to lose money you will never notice going. */
 export const MIN_CHANCE = 0.005
 
-export function offeredBets(dailyMovePct: number, hours: Term, driftPct = 0): Bet[] {
+export function offeredBets(dailyMovePct: number, hours: Term, driftPct = 0, scheduled = 0): Bet[] {
   return rungsFor(dailyMovePct)
-    .map(d => priceBet(dailyMovePct, hours, d, driftPct))
+    .map(d => priceBet(dailyMovePct, hours, d, driftPct, scheduled))
     .filter(b => b.chance >= MIN_CHANCE)
 }
 

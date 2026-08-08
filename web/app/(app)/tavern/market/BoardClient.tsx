@@ -21,7 +21,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, premiumOf, worthNow, chanceInWords, payoutInWords, payoutFor, fmtPrice,
+  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, premiumOf, worthNow, scheduledIn, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
@@ -292,8 +292,28 @@ function Group({ title, note, list, onPick }: {
   )
 }
 
+/** "in 3 days", "due now", or null when it is too far off to matter yet. */
+function reportIn(at: string | null): string | null {
+  if (!at) return null
+  const h = (new Date(at).getTime() - Date.now()) / 3_600_000
+  if (!Number.isFinite(h) || h > 96) return null
+  if (h <= 1) return 'due now'
+  if (h < 24) return `in ${Math.round(h)}h`
+  return `in ${Math.round(h / 24)}d`
+}
+
+/** The gap it just took, while that is still the reason the chart looks so odd. */
+function freshEvent(i: BoardIndex): string | null {
+  if (!i.lastEvent || !i.lastEventAt || i.lastEventPct == null) return null
+  const h = (Date.now() - new Date(i.lastEventAt).getTime()) / 3_600_000
+  if (!(h >= 0) || h > 36) return null
+  return `${i.lastEvent}, ${i.lastEventPct > 0 ? '+' : ''}${i.lastEventPct}%`
+}
+
 function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) {
   const day = pct(i.price, i.prevPrice)
+  const news = freshEvent(i)
+  const due = reportIn(i.nextEventAt)
   return (
     <button type="button" onClick={() => { vibrate([0, 12]); onPick(i) }}
       style={{
@@ -307,8 +327,12 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
         <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.8rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {i.name}
         </span>
-        {/* The one fact that tells you what kind of thing you are looking at. */}
-        <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.6rem', color: '#6a7482' }}>
+        {/* WHY IT MOVED, or what is coming. A 30% cliff with no caption reads as
+            a bug; the same cliff captioned "the beds came up empty" reads as
+            news, which is the whole difference between a market and a jitter. */}
+        <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.6rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          color: news ? ((i.lastEventPct ?? 0) > 0 ? UP : DOWN) : '#6a7482' }}>
+          {news ?? (due ? `${i.nextEventLabel ?? 'Report'} ${due}` : '')}
         </span>
       </span>
       <Line points={i.history.length > 1 ? i.history : [i.prevPrice, i.price]} color={day >= 0 ? UP : DOWN} />
@@ -386,7 +410,9 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // will price it. Quote it any other way and the ticket promises odds the
   // settlement will not honour.
   const drift = driftOver(index.vol, index.beta, index.trend, index.trendTicks, moodBias, term, dir)
-  const bets = offeredBets(index.dailyMovePct, term, drift)
+  // Priced with the report too, exactly as the server will price it.
+  const sched = scheduledIn(index.nextEventAt, term, Date.now())
+  const bets = offeredBets(index.dailyMovePct, term, drift, sched)
   // Keep a valid distance selected as the term changes: the rungs on offer
   // shrink hard on the short terms, and a stale pick would silently price a bet
   // nobody chose.
@@ -456,6 +482,17 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
             {fmtPrice(index.price)} now
           </p>
+          {(() => {
+            const news = freshEvent(index)
+            const due = reportIn(index.nextEventAt)
+            if (!news && !due) return null
+            return (
+              <p className="font-karla font-600" style={{ fontSize: '0.66rem', marginTop: 3,
+                color: news ? ((index.lastEventPct ?? 0) > 0 ? UP : DOWN) : '#bfe6ff' }}>
+                {news ?? `${index.nextEventLabel ?? 'Report'} ${due}`}
+              </p>
+            )
+          })()}
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.85rem 1rem 1rem' }}>
