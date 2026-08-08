@@ -119,7 +119,7 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
 
   return (
     <>
-      {open.length > 0 && <RunningStrip bets={open} indexes={board.indexes} />}
+      {open.length > 0 && <RunningStrip bets={open} indexes={board.indexes} allBets={board.bets} />}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: '0.9rem' }}>
         {([['board', 'The board'], ['bets', `Your bets${open.length ? ` (${open.length})` : ''}`]] as const).map(([k, label]) => {
@@ -252,12 +252,46 @@ function bookSeries(bets: BoardBet[], indexes: BoardIndex[]): number[] {
 
 /** What you have riding right now, above everything else, because it is the
  *  first thing you came to look at. */
-function RunningStrip({ bets, indexes }: { bets: BoardBet[]; indexes: BoardIndex[] }) {
+type BookRange = 'day' | 'week' | 'all'
+
+/** PROFIT BANKED OVER TIME, for the views the index history cannot reach.
+ *
+ *  An index keeps 48 hours, so the hour-by-hour worth of a book can be rebuilt
+ *  for a day and no further. A week and all time therefore plot a DIFFERENT
+ *  quantity: the running total of what closed contracts actually paid, which
+ *  comes from the bets themselves and needs no price history at all.
+ *
+ *  Two quantities under one toggle is a thing to state, not to hide, so the
+ *  caption changes with the range. The alternative is a line that silently
+ *  switches meaning halfway along the toggle. */
+function bankedSeries(all: BoardBet[], sinceMs: number | null, openWorth: number, openStake: number): number[] {
+  const done = all
+    .filter(b => b.status !== 'open' && b.settledAt)
+    .filter(b => sinceMs == null || new Date(b.settledAt!).getTime() >= sinceMs)
+    .sort((a, b) => new Date(a.settledAt!).getTime() - new Date(b.settledAt!).getTime())
+  const out = [0]
+  let run = 0
+  for (const b of done) { run += (b.payout ?? 0) - b.stake; out.push(run) }
+  // Where it stands right now, open positions included, so the line ends on the
+  // same figure printed above it.
+  out.push(run + (openWorth - openStake))
+  return out
+}
+
+function RunningStrip({ bets, indexes, allBets }: { bets: BoardBet[]; indexes: BoardIndex[]; allBets: BoardBet[] }) {
+  const [range, setRange] = useState<BookRange>('day')
   const staked = bets.reduce((n, b) => n + b.stake, 0)
   const couldWin = bets.reduce((n, b) => n + payoutFor(b.stake, b.multiplier), 0)
   const winning = bets.filter(b => b.movedPct >= b.distancePct).length
   const worth = bets.reduce((n, b) => n + (b.worth ?? 0), 0)
-  const series = bookSeries(bets, indexes)
+  const daySeries = bookSeries(bets, indexes)
+  const weekAgo = Date.now() - 7 * 24 * 3_600_000
+  const series = range === 'day'
+    ? daySeries
+    : bankedSeries(allBets, range === 'week' ? weekAgo : null, worth, staked)
+  const rising = range === 'day'
+    ? worth >= staked
+    : series[series.length - 1] >= series[0]
   return (
     <div style={{
       padding: '0.7rem 0.85rem', borderRadius: 12, marginBottom: '0.9rem',
@@ -284,11 +318,31 @@ function RunningStrip({ bets, indexes }: { bets: BoardBet[]; indexes: BoardIndex
         </span>
       </div>
 
+      {/* Day first, because the day is the question a captain actually has. */}
+      <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
+        {([['day', 'Day'], ['week', '7 days'], ['all', 'All time']] as [BookRange, string][]).map(([k, label]) => (
+          <button key={k} type="button" onClick={() => setRange(k)} className="font-karla font-700"
+            style={{
+              padding: '0.2rem 0.5rem', borderRadius: 999, fontSize: '0.6rem', cursor: 'pointer',
+              background: range === k ? 'rgba(56,189,248,0.16)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${range === k ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.09)'}`,
+              color: range === k ? '#bfe6ff' : '#7c8696', WebkitTapHighlightColor: 'transparent',
+            }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       {series.length > 1 && (
         <div style={{ marginTop: 6 }}>
-          <Line fluid points={series} color={worth >= staked ? UP : DOWN} w={380} h={38} />
+          <Line fluid points={series} color={rising ? UP : DOWN} w={380} h={38} />
         </div>
       )}
+      <p className="font-karla font-500" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 3 }}>
+        {range === 'day'
+          ? 'What your open contracts have been worth, hour by hour'
+          : `Profit banked from closed contracts${range === 'week' ? ' this week' : ''}, ending where you stand now`}
+      </p>
 
       <p className="font-karla font-500" style={{ fontSize: '0.7rem', color: '#8a94a4', marginTop: 4, ...TNUM }}>
         {staked.toLocaleString()} ⟡ in · {couldWin.toLocaleString()} ⟡ if every one of them lands

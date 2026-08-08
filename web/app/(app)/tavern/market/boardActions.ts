@@ -77,6 +77,8 @@ export type BoardBet = {
   expiresAt: string
   status: 'open' | 'won' | 'lost' | 'sold'
   payout: number | null
+  /** When it finished, for the longer views of the book. */
+  settledAt: string | null
   seen: boolean
   units: number
   /** What it would fetch if sold this second. Null once it has finished. */
@@ -177,6 +179,7 @@ export async function getBoard(): Promise<Board> {
       expiresAt: b.expires_at as string,
       status: b.status as 'open' | 'won' | 'lost' | 'sold',
       payout: b.payout == null ? null : Number(b.payout),
+      settledAt: (b.settled_at as string | null) ?? null,
       seen: b.seen === true,
       units: Number(b.units ?? 0),
       worth: hoursLeft <= 0 || b.status !== 'open' ? null
