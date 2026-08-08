@@ -84,25 +84,19 @@ function Pill({ label, color, muted }: { label: string; color?: string; muted?: 
 // Used in the buy-confirm modal where the player is making a real
 // decision and the extra chrome is worth the vertical space. The
 // equipped-rod recap uses the more compact StatBullet below.
-// A one-line primer on what KIND of tackle this is, because the tiles cannot
-// say it: reels, hooks and lines climb a single ladder where the newest is
-// always strictly best and buying it just puts it on, while rods are a
-// collection you keep side by side and choose between. New captains kept asking
-// which reel to "equip" and whether a new one might be worse, so both modals now
-// say it up front.
-function TackleNote({ kind, noun, color }: { kind: 'ladder' | 'choice'; noun: string; color: string }) {
+// A one-line primer that leads with what the tackle DOES, then how you get the
+// next one, because the tiles cannot say it and the three kinds don't work the
+// same way: reels and hooks are bought and auto-equipped, lines climb on their
+// own as you discover species, and rods are a collection you choose between.
+function TackleNote({ text, icon, color }: { text: React.ReactNode; icon: 'up' | 'fish' | 'cards'; color: string }) {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.55rem 0.65rem', borderRadius: 11, background: `${color}0e`, border: `1px solid ${color}30` }}>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1, opacity: 0.85 }} aria-hidden>
-        {kind === 'ladder'
-          ? <><path d="M12 19V5" /><path d="M6 11l6-6 6 6" /></>   /* up arrow: it only climbs */
-          : <><rect x="3" y="4" width="7" height="16" rx="1.5" /><rect x="14" y="4" width="7" height="16" rx="1.5" /></> /* two cards: a choice */}
+        {icon === 'up' && <><path d="M12 19V5" /><path d="M6 11l6-6 6 6" /></>}
+        {icon === 'fish' && <><path d="M2 12c3-4 8-6 13-6 4 0 7 3 7 6s-3 6-7 6c-5 0-10-2-13-6z" /><path d="M22 12l-3-3M22 12l-3 3" /></>}
+        {icon === 'cards' && <><rect x="3" y="4" width="7" height="16" rx="1.5" /><rect x="14" y="4" width="7" height="16" rx="1.5" /></>}
       </svg>
-      <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#b8b0a6', lineHeight: 1.5 }}>
-        {kind === 'ladder'
-          ? <>{noun}s only go up. Each one is strictly better than the last, and buying it puts it straight on. Nothing to choose, nothing to swap, and you can never end up with a worse {noun.toLowerCase()}.</>
-          : <>Rods are a collection, not a ladder. You keep every one you buy and pick which to fish with, because each has its own tricks rather than simply being better.</>}
-      </p>
+      <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#b8b0a6', lineHeight: 1.5 }}>{text}</p>
     </div>
   )
 }
@@ -1536,7 +1530,8 @@ export default function GearScreen({
                       )}
                     </AnimatePresence>
 
-                    <TackleNote kind="choice" noun="Rod" color={rod.color} />
+                    <TackleNote icon="cards" color={rod.color}
+                      text="Rods each have their own mix of effects, and stronger ones unlock as your Fishing level climbs. Buy any you’ve unlocked with doubloons and switch between them whenever you like." />
 
                     {/* ── Completionist Forge ──
                         Only for the player who's earned the Completionist Rod.
@@ -2248,7 +2243,8 @@ export default function GearScreen({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <TackleNote kind="ladder" noun="Reel" color={reel.color} />
+                    <TackleNote icon="up" color={reel.color}
+                      text="Reels slow the needle down, giving you more time to tap. They’re auto-equipped, and you can upgrade to a better tier any time you can afford one." />
                     {/* Equipped reel detail header */}
                     <div style={{
                       background: `linear-gradient(180deg, ${reel.color}10 0%, rgba(4,10,18,0.85) 100%)`,
@@ -2384,7 +2380,8 @@ export default function GearScreen({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <TackleNote kind="ladder" noun="Hook" color={hook.color} />
+                    <TackleNote icon="up" color={hook.color}
+                      text="Hooks widen your catch zone. They’re auto-equipped, and you can upgrade to a better tier any time you can afford one." />
                     {/* Equipped hook detail header */}
                     <div style={{
                       background: `linear-gradient(180deg, ${hook.color}10 0%, rgba(4,10,18,0.85) 100%)`,
@@ -2500,7 +2497,8 @@ export default function GearScreen({
               {/* ── Line ── */}
               {openSlot === 'line' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <TackleNote kind="ladder" noun="Line" color={line.color} />
+                  <TackleNote icon="fish" color={line.color}
+                    text="Lines cut down on snags. They upgrade on their own as you discover new species of fish." />
                   <div style={{
                     background: `linear-gradient(180deg, ${line.color}10 0%, rgba(4,10,18,0.85) 100%)`,
                     border: `1px solid ${line.color}55`,
