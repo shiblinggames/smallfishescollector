@@ -1347,10 +1347,11 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     ctx.fillStyle = sky
     ctx.fillRect(0, 0, cw, ch)
 
-    // ── Parallax: distant clouds (40% scroll speed) ──
+    // ── Parallax bands, far to near. Slower = more distant. ──
     drawClouds(ctx, cw, ch, g.scrollX * 0.40, pal.cloud)
-    // ── Parallax: distant islands at the horizon (15% scroll speed) ──
-    drawDistantIslands(ctx, cw, ch, g.scrollX * 0.15, pal.island)
+    drawFarRidge(ctx, cw, ch, g.scrollX * 0.08, pal.island)       // mountains, slowest
+    drawDistantIslands(ctx, cw, ch, g.scrollX * 0.15, pal.island) // isles + lighthouse
+    drawSeaStacks(ctx, cw, ch, g.scrollX * 0.28, pal.island)      // rocks near the bow
 
     // ── Dynamic sea surface ──
     ctx.beginPath()
@@ -2399,6 +2400,67 @@ function drawCurrent(
 }
 
 // Distant islands silhouetted at the horizon, parallax-scrolled slow.
+// PARALLAX DEPTH. Three silhouette bands at different scroll speeds turn a flat
+// horizon into a place: a far mountain ridge, the island cluster with a landmark
+// lighthouse, and near sea-stacks breaking the waterline. All procedural
+// placeholders (real art can replace the shapes without touching the layering),
+// all painted in the palette's island colour so they read at every time of day.
+//
+// Cheap by construction: a few dozen line segments per band per frame, no
+// shadowBlur and no filters (both murder mobile framerates), and the profiles
+// are FIXED arrays -- never Math.random per frame, which would make the ridge
+// crawl and shimmer. First value equals last so each period tiles seamlessly.
+const FAR_RIDGE = [0.30, 0.62, 0.42, 0.78, 0.50, 0.88, 0.55, 0.70, 0.38, 0.58, 0.34, 0.48, 0.30]
+const SEA_STACKS = [{ f: 0.18, h: 0.60, w: 0.028 }, { f: 0.52, h: 0.95, w: 0.044 }, { f: 0.71, h: 0.45, w: 0.022 }]
+
+// Far mountains on the skyline — slowest layer, faintest, sits behind the isles.
+function drawFarRidge(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number, color: string) {
+  ctx.fillStyle = color
+  ctx.globalAlpha = 0.20
+  const horizon = ch * 0.47
+  const amp = ch * 0.11
+  const period = cw * 2.2
+  const offset = ((scrollOffset % period) + period) % period
+  const n = FAR_RIDGE.length - 1
+  for (let i = -1; i <= 2; i++) {
+    const bx = i * period - offset
+    ctx.beginPath()
+    ctx.moveTo(bx, horizon + amp)
+    for (let s = 0; s <= n; s++) ctx.lineTo(bx + (s / n) * period, horizon - FAR_RIDGE[s] * amp)
+    ctx.lineTo(bx + period, horizon + amp)
+    ctx.closePath()
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
+}
+
+// Rock stacks just off the bow — nearest silhouette, faster and more solid, its
+// foot hidden by the sea gradient so it reads as standing IN the water.
+function drawSeaStacks(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number, color: string) {
+  ctx.fillStyle = color
+  ctx.globalAlpha = 0.5
+  const base = ch * 0.575
+  const amp = ch * 0.10
+  const period = cw * 1.7
+  const offset = ((scrollOffset % period) + period) % period
+  for (let i = -1; i <= 2; i++) {
+    const bx = i * period - offset
+    for (const s of SEA_STACKS) {
+      const x = bx + s.f * period
+      const w = s.w * cw
+      const top = base - s.h * amp
+      ctx.beginPath()
+      ctx.moveTo(x - w, base)
+      ctx.lineTo(x - w * 0.3, top)
+      ctx.lineTo(x + w * 0.45, top + amp * 0.10)
+      ctx.lineTo(x + w, base)
+      ctx.closePath()
+      ctx.fill()
+    }
+  }
+  ctx.globalAlpha = 1
+}
+
 function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: number, scrollOffset: number, color: string) {
   // Apply a constant alpha overlay regardless of base palette color
   ctx.fillStyle = color
@@ -2418,6 +2480,20 @@ function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: numbe
     ctx.bezierCurveTo(ix + period * 0.6, horizon - 10, ix + period * 0.85, horizon - 14, ix + period, horizon + 4)
     ctx.closePath()
     ctx.fill()
+    // A LANDMARK, once per island cluster: a lighthouse on the first crest, so
+    // the horizon has something you recognise instead of anonymous hills.
+    const lx = ix + period * 0.30
+    const ly = horizon - 20
+    const th = ch * 0.05
+    const tw = ch * 0.011
+    ctx.beginPath()
+    ctx.moveTo(lx - tw, ly)
+    ctx.lineTo(lx - tw * 0.55, ly - th)
+    ctx.lineTo(lx + tw * 0.55, ly - th)
+    ctx.lineTo(lx + tw, ly)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillRect(lx - tw * 0.85, ly - th - tw * 1.3, tw * 1.7, tw * 1.3)  // lamp housing
   }
   ctx.globalAlpha = 1
 }
