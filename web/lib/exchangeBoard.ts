@@ -173,8 +173,23 @@ export const JUMP_P = 0.002          // SURPRISES only, per market hour
  *  EVENT_MIN_DAYS / EVENT_MAX_DAYS in update_exchange_indexes. */
 export const EVENT_MIN_DAYS = 3
 export const EVENT_MAX_DAYS = 9
-export const JUMP_MIN_PCT = 10
-export const JUMP_MAX_PCT = 35
+/** HOW HARD THIS ONE GAPS, sized to what it is.
+ *
+ *  Every index used to gap 10 to 35% whatever it was, and that broke the calm
+ *  end of the board. The Coral Reef travels 1.29% on a normal day and its whole
+ *  strike ladder stops at +4%, so one gap cleared every rung at once and the
+ *  chain came out flat: a 3-sigma strike costing 44% of the at-the-money one.
+ *  It is wrong the same way in life. A broad index gaps 3 to 7% on real news; a
+ *  single company gaps 10 to 35%.
+ *
+ *  So a gap is a multiple of the index's OWN day, floored so a very calm water
+ *  can still make news and capped so the wildest creature does not vanish in an
+ *  hour. Keep in lockstep with update_exchange_indexes. */
+export function jumpRange(dailyMovePct: number): { min: number; max: number } {
+  const min = Math.max(3, Math.min(15, 2 * dailyMovePct))
+  const max = Math.max(8, Math.min(40, 5 * dailyMovePct))
+  return { min, max: Math.max(max, min + 1) }
+}
 
 /** PERCENTAGES INTO THE ENGINE'S OWN UNITS.
  *
@@ -193,12 +208,21 @@ const logPct = (pct: number) => 100 * Math.log(1 + pct / 100)
  *  as the pair of log moves it actually causes. A single jump is BIMODAL, up or
  *  down and nothing near zero, so approximating it with one normal prices the
  *  near rungs badly. Quadrature is cheap and honest. */
-const JUMP_POINTS = [0, 1, 2, 3].map(i => {
-  const m = JUMP_MIN_PCT + (JUMP_MAX_PCT - JUMP_MIN_PCT) * ((i + 0.5) / 4)
-  return { up: logPct(m), down: logPct(-m) }
-})
-/** E[J^2] in log space, for the two-or-more case where a normal is fine. */
-const JUMP_VAR = JUMP_POINTS.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2, 0) / JUMP_POINTS.length
+function jumpPoints(dailyMovePct: number): { up: number; down: number }[] {
+  const { min, max } = jumpRange(dailyMovePct)
+  return [0, 1, 2, 3].map(i => {
+    const m = min + (max - min) * ((i + 0.5) / 4)
+    return { up: logPct(m), down: logPct(-m) }
+  })
+}
+/** Mean and variance of ONE gap in log space, for the two-or-more case where a
+ *  normal is fine. The mean is NOT zero: a gap is symmetric in price, but
+ *  ln(1-j) is further from zero than ln(1+j), so the pair leans down. */
+function jumpMoments(points: { up: number; down: number }[]) {
+  const mean = points.reduce((a, j) => a + (j.up + j.down) / 2, 0) / points.length
+  const sq = points.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2, 0) / points.length
+  return { mean, variance: Math.max(0, sq - mean * mean) }
+}
 
 
 
@@ -211,12 +235,6 @@ const JUMP_VAR = JUMP_POINTS.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2,
 //
 // The premium is the EXPECTED payoff, which keeps the same zero-edge promise
 // the binary board made: what you pay is what the contract is worth on average.
-
-/** Mean log move of ONE gap, which is NOT zero. A jump is symmetric in price,
- *  plus or minus the same percentage, but ln(1-j) is further from zero than
- *  ln(1+j), so in log space the pair leans down. Price-space expectation is
- *  preserved either way; this is only the log drift the maths needs. */
-const JUMP_MEAN = JUMP_POINTS.reduce((a, j) => a + (j.up + j.down) / 2, 0) / JUMP_POINTS.length
 
 /** Black-Scholes with no interest, in log space, given the mean and spread of
  *  the log move. Puts are computed on their own terms rather than by flipping a
@@ -257,20 +275,21 @@ export function contractValue(
   const p1 = lam * Math.exp(-lam)
   const p2 = Math.max(0, 1 - p0 - p1)
 
+  const points = jumpPoints(dailyMovePct)
+  const mom = jumpMoments(points)
   const withJumps = (n: number): number => {
     if (n <= 0) return payoffValue(price, strike, m, s, dir)
     if (n === 1) {
       let v = 0
-      for (const j of JUMP_POINTS) {
+      for (const j of points) {
         v += payoffValue(price, strike, m + j.up / 100, s, dir)
           + payoffValue(price, strike, m + j.down / 100, s, dir)
       }
-      return v / (JUMP_POINTS.length * 2)
+      return v / (points.length * 2)
     }
     // Two or more: normal enough to say so, mean and variance both carried.
-    const varJ = (JUMP_VAR - JUMP_MEAN * JUMP_MEAN) / 10_000
-    return payoffValue(price, strike, m + (n * JUMP_MEAN) / 100,
-      Math.sqrt(s * s + n * Math.max(0, varJ)), dir)
+    return payoffValue(price, strike, m + (n * mom.mean) / 100,
+      Math.sqrt(s * s + (n * mom.variance) / 10_000), dir)
   }
 
   return Math.max(0, p0 * withJumps(scheduled) + p1 * withJumps(scheduled + 1) + p2 * withJumps(scheduled + 2))
@@ -395,8 +414,14 @@ export const MAX_NOTIONAL = 5_000_000
  *  it keeps going: far enough out the premium rounds to nothing and the rung
  *  becomes a free lottery ticket that also PRINTS as 0.00, which reads as a
  *  broken row rather than a long shot. Strikes below this are simply not
- *  offered, the way a real chain stops quoting once the bid is dust. */
-export const MIN_PREMIUM_FRACTION = 0.0015
+ *  offered, the way a real chain stops quoting once the bid is dust.
+ *
+ *  SET LOW ON PURPOSE. It was ten times this while every index gapped 10 to 35%,
+ *  and once gaps were sized per index it started eating the far strikes it was
+ *  meant to protect: the Reef lost +2%, +3% and +4%, which is precisely the
+ *  cheap end that makes a chain worth reading. A far strike being cheap is the
+ *  feature. This only stops one being free. */
+export const MIN_PREMIUM_FRACTION = 0.0002
 
 /** Every strike this index offers at this term, priced. Sorted near to far, and
  *  cut where the premium stops being worth quoting. */
