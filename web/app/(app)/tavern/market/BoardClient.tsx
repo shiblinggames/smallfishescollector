@@ -467,7 +467,11 @@ function BetRow({ b, onOpen }: { b: BoardBet; onOpen: (b: BoardBet) => void }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
         <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#e8eef6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {b.indexName} <span style={{ color: b.direction === 'up' ? UP : DOWN }}>{b.direction === 'up' ? '▲' : '▼'}</span>
+          {/* NEUTRAL ON PURPOSE. The caret says which way you BET, and colouring
+              it green for up put a green mark on losing contracts and a red one
+              on winning shorts. Green and red on this row mean one thing only,
+              and it is the figure to the right. */}
+          {b.indexName} <span style={{ color: '#6a7482' }}>{b.direction === 'up' ? '▲' : '▼'}</span>
         </span>
         <span className="font-karla font-800" style={{ fontSize: '0.74rem', flexShrink: 0, ...TNUM,
           color: done ? (won ? UP : '#7d7466') : pnl == null ? '#8a94a4' : pnl >= 0 ? UP : DOWN }}>
