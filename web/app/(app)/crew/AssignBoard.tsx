@@ -106,18 +106,25 @@ export default function AssignBoard({
   // `base` is the flat colour under the jpg (it shows for the moment before the
   // image lands, and through the wash). `hdr` is the scrim over it: top value
   // where the title sits, bottom where the stat tiles do.
+  // ONE RECIPE FOR BOTH HEADERS. The two plates used to carry their own fade
+  // colour, their own scrim strength and their own stat-tile tint — raid sat at
+  // 0.44/0.56 over 15,23,29, voyage at 0.34/0.5 over 12,21,31 — so the panels
+  // read as two different designs stacked rather than two of the same thing.
+  // The photographs still differ, which is the point; everything laid over them
+  // is now identical, so only the SUBJECT and the accent tell them apart.
+  const FADE = '12,19,27'
+  const HDR: [number, number] = [0.42, 0.56]
+  const STAT_TINT = 'rgba(6,12,18,0.54)'
   const RAMP = {
     raid: {
       // Open sea below the cloudbank of the expeditions plate: misty horizon,
       // a distant fleet, smooth swells, no landmarks. Sharp and full-res - an
       // earlier pass fixed "too busy" by blurring, which just made it mushy.
       // Simple has to come from the COMPOSITION, not from softening a busy one.
-      base: '#0f171d', art: '/crew-raid-panel.jpg', fade: '15,23,29', hdr: [0.44, 0.56], pos: 'center 20%',
-      stat: 'rgba(6,12,17,0.54)',
+      base: '#0e1620', art: '/crew-raid-panel.jpg', pos: 'center 20%',
     },
     voyage: {
-      base: '#0c151f', art: '/voyages-modal-bg.jpg', fade: '12,21,31', hdr: [0.34, 0.5], pos: 'center',
-      stat: 'rgba(4,10,18,0.52)',
+      base: '#0e1620', art: '/voyages-modal-bg.jpg', pos: 'center',
     },
   }
 
@@ -173,7 +180,7 @@ export default function AssignBoard({
               position: 'relative', zIndex: 1, padding: '0.8rem 0.85rem 0.7rem',
               borderBottom: `1px solid ${t.accent}2a`,
               background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), `
-                + `linear-gradient(180deg, rgba(${t.ramp.fade},${t.ramp.hdr[0]}) 0%, rgba(${t.ramp.fade},${t.ramp.hdr[1]}) 100%), `
+                + `linear-gradient(180deg, rgba(${FADE},${HDR[0]}) 0%, rgba(${FADE},${HDR[1]}) 100%), `
                 + `url(${t.ramp.art}) ${t.ramp.pos} / cover no-repeat ${t.ramp.base}`,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
@@ -189,7 +196,7 @@ export default function AssignBoard({
                   <div key={k} style={{
                     display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 5,
                     padding: '0.35rem 0.3rem', borderRadius: 9,
-                    background: t.ramp.stat, border: '1px solid rgba(255,255,255,0.10)',
+                    background: STAT_TINT, border: '1px solid rgba(255,255,255,0.10)',
                   }}>
                     <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', lineHeight: 1, color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>{totals[k]}</span>
                     <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: '#9aa3b1' }}>{label}</span>
@@ -261,14 +268,20 @@ export default function AssignBoard({
                       // Rarity, not the track accent. The header art already
                       // says which party this is; the seat is the only place
                       // that can say WHO is sitting in it at a glance.
+                      // Rarity lives in the BORDER and the portrait's glow, not
+                      // in a tinted plate. Six seats each washing themselves a
+                      // different colour put up to six palettes inside one card
+                      // and fought the header for attention; the roster reads
+                      // calm because its cards share one plate, and this is the
+                      // same kind of object.
                       border: `1.5px solid ${rc}99`,
-                      background: `linear-gradient(180deg, ${rc}22 0%, rgba(0,0,0,0.28) 100%), rgba(255,255,255,0.035)`,
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(0,0,0,0.26) 100%)',
                       touchAction: 'manipulation',
                     }}>
                     {/* The art is the tile. */}
                     <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={artSrc(crew.filename)} alt="" aria-hidden loading="lazy" decoding="async"
+                      <img src={artSrc(crew.filename)} alt="" aria-hidden decoding="async"
                         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${rc}66)` }} />
                     </div>
                     <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
