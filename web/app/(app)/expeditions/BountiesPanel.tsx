@@ -24,6 +24,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getBountyBoard, claimBounty, rerollBounty, claimBountyMilestone, type BountyBoard, type BountyView } from './bountyActions'
 import { BOUNTY_POINTS, BOUNTY_MILESTONES } from '@/lib/bounties'
+import { rankForPoints, nextRank, rankGained, type BountyRank } from '@/lib/bountyRanks'
 import { hapticReward } from '@/lib/haptics'
 
 // Solid dark notices, light ink, the way every other panel in this game reads.
@@ -203,6 +204,94 @@ function rewardLook(m: (typeof BOUNTY_MILESTONES)[number]) {
   return { color: DOUB_COLOR, glyph: '⟡', amount: (m.doubloons ?? 0).toLocaleString(), sub: 'doubloons' }
 }
 
+// THE RANK-UP MOMENT — the new medallion, full-screen, the thing the whole
+// ladder was climbing toward. Rays sweep out, sparks fly, the crest lands with a
+// spring, then it fades on its own or on a tap.
+function RankUpOverlay({ rank, onClose }: { rank: BountyRank | null; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    if (!rank) return
+    hapticReward()
+    const t = setTimeout(onClose, 3400)
+    return () => clearTimeout(t)
+  }, [rank, onClose])
+  if (!mounted) return null
+  return createPortal(
+    <AnimatePresence>
+      {rank && (
+        <motion.div
+          role="dialog" aria-modal="true" aria-label={`New rank ${rank.title}`}
+          onClick={onClose}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'radial-gradient(circle at 50% 42%, rgba(20,16,10,0.82), rgba(4,5,8,0.95))',
+            backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '2rem', textAlign: 'center',
+          }}>
+          <motion.p className="font-karla font-800 uppercase tracking-[0.3em]"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            style={{ fontSize: '0.72rem', color: rank.accent, marginBottom: 18 }}>
+            New Rank
+          </motion.p>
+
+          <div style={{ position: 'relative', width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Sweeping rays behind the crest. */}
+            <motion.div aria-hidden
+              initial={{ opacity: 0, rotate: 0 }} animate={{ opacity: 0.5, rotate: 40 }}
+              transition={{ duration: 3.2, ease: 'easeOut' }}
+              style={{
+                position: 'absolute', width: 340, height: 340, borderRadius: '50%', pointerEvents: 'none',
+                background: `conic-gradient(from 0deg, transparent 0deg, ${rank.accent}44 12deg, transparent 24deg, transparent 45deg, ${rank.accent}44 57deg, transparent 69deg, transparent 90deg, ${rank.accent}44 102deg, transparent 114deg, transparent 135deg, ${rank.accent}44 147deg, transparent 159deg, transparent 180deg, ${rank.accent}44 192deg, transparent 204deg, transparent 225deg, ${rank.accent}44 237deg, transparent 249deg, transparent 270deg, ${rank.accent}44 282deg, transparent 294deg, transparent 315deg, ${rank.accent}44 327deg, transparent 339deg)`,
+                maskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+                WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+              }} />
+            <div aria-hidden style={{
+              position: 'absolute', width: 190, height: 190, borderRadius: '50%',
+              background: `radial-gradient(circle, ${rank.accent}3a 0%, transparent 66%)`, pointerEvents: 'none',
+            }} />
+            {/* Sparks. */}
+            {Array.from({ length: 20 }).map((_, i) => {
+              const a = (i / 20) * Math.PI * 2
+              return (
+                <motion.span key={i} aria-hidden
+                  initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                  animate={{ x: Math.cos(a) * 130, y: Math.sin(a) * 130, opacity: 0, scale: 0.3 }}
+                  transition={{ duration: 1.1, ease: 'easeOut', delay: 0.1 }}
+                  style={{ position: 'absolute', width: 7, height: 7, borderRadius: '50%', background: rank.accent, boxShadow: `0 0 8px ${rank.accent}` }} />
+              )
+            })}
+            <motion.img src={rank.emblem} width={150} height={150} alt=""
+              initial={{ scale: 0.4, opacity: 0, rotate: -18 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 16, delay: 0.05 }}
+              style={{ position: 'relative', filter: `drop-shadow(0 6px 20px ${rank.accent}66)` }} />
+          </div>
+
+          <motion.p className="font-pirata"
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+            style={{ fontSize: '2rem', letterSpacing: '0.02em', color: '#f6efe1', marginTop: 20 }}>
+            {rank.title}
+          </motion.p>
+          <motion.p className="font-karla font-400 italic"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            style={{ fontSize: '0.82rem', color: '#b7ad9c', marginTop: 4, maxWidth: 280, lineHeight: 1.5 }}>
+            {rank.blurb}
+          </motion.p>
+          <motion.p className="font-karla font-600"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}
+            style={{ fontSize: '0.68rem', color: '#6d675d', marginTop: 20 }}>
+            Tap to continue
+          </motion.p>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
+  )
+}
+
 function PointsLadder({ board, busy, claimFx, onClaim, onClose }: {
   board: BountyBoard
   busy: boolean
@@ -221,11 +310,38 @@ function PointsLadder({ board, busy, claimFx, onClaim, onClose }: {
   const into = Math.min(1, Math.max(0, (board.points - prev) / span))
   const toGo = Math.max(0, m.points - board.points)
 
+  const rank = rankForPoints(board.points)
+  const upNext = nextRank(board.points)
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 2 }}>
-        <p className="font-pirata" style={{ fontSize: '1.2rem', letterSpacing: '0.03em', color: '#f0dcae' }}>Bounty Points</p>
-        <p className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: '#f2ede2', ...TNUM }}>{board.points.toLocaleString()}</p>
+      {/* THE RANK — your standing and its medallion, the identity the whole
+          ladder is climbing toward. Below the first rung it is a locked crest
+          with the first title as the goal. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 11, marginBottom: 12,
+        padding: '0.55rem 0.65rem', borderRadius: 13,
+        background: rank ? `${rank.accent}16` : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${rank ? `${rank.accent}4d` : 'rgba(255,255,255,0.09)'}`,
+      }}>
+        <img src={rank ? rank.emblem : '/bounty/ranks/freebooter.png'} width={52} height={52} alt=""
+          style={{ flexShrink: 0, filter: rank ? `drop-shadow(0 0 7px ${rank.accent}66)` : 'grayscale(1) opacity(0.45)' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.54rem', color: '#8d7f66' }}>
+            {rank ? 'Your rank' : 'Unranked'}
+          </p>
+          <p className="font-pirata" style={{ fontSize: '1.15rem', letterSpacing: '0.02em', color: rank ? '#f2ede2' : '#b7ad9c', lineHeight: 1.15 }}>
+            {rank ? rank.title : 'No standing yet'}
+          </p>
+          <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: '#8d7f66', marginTop: 1, ...TNUM }}>
+            {upNext
+              ? `${(upNext.points - board.points).toLocaleString()} pts to ${upNext.title}`
+              : 'Highest rank held'}
+          </p>
+        </div>
+        <p className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: '#f2ede2', flexShrink: 0, ...TNUM }}>
+          {board.points.toLocaleString()}
+        </p>
       </div>
 
       {/* THE HERO — one reward, filling the space a list used to waste. Bright
@@ -577,6 +693,8 @@ export default function BountiesPanel({ onGems, onClose }: {
   // The reward just collected, held for the length of its celebration so the
   // hero can burst before the board reloads to the next rung.
   const [claimFx, setClaimFx] = useState<{ kind: 'gems' | 'doubloons' | 'skin'; amount: number; label: string } | null>(null)
+  // A rank just earned, shown as a full-screen medallion moment before it fades.
+  const [rankUp, setRankUp] = useState<BountyRank | null>(null)
   /** The order awaiting a swap confirmation. A swap is one a day and cannot be
    *  undone, which is exactly the shape of thing that should ask first. */
   const [swapping, setSwapping] = useState<BountyView | null>(null)
@@ -636,6 +754,10 @@ export default function BountiesPanel({ onGems, onClose }: {
       setBurst(n => n + 1)
       onGems?.(res.total)
       window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.total }))
+      // A rank is standing, not a reward — earned the instant the points cross,
+      // whether or not a milestone came with them. Its medallion gets the stage.
+      const climbed = rankGained(board?.points ?? 0, (board?.points ?? 0) + (res.points ?? 0))
+      if (climbed) setTimeout(() => setRankUp(climbed), 700)
       load()
     })
   }
@@ -757,6 +879,8 @@ export default function BountiesPanel({ onGems, onClose }: {
           </button>
         </Sheet>
       )}
+
+      <RankUpOverlay rank={rankUp} onClose={() => setRankUp(null)} />
 
       <AnimatePresence>
         {toast && (
