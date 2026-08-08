@@ -24,6 +24,10 @@ interface MyScores {
   expedition: number | null
   raidProgress: number | null
   achievementPoints: number | null
+  species: number | null
+  fishSold: number | null
+  trophies: number | null
+  bountyPoints: number | null
 }
 
 interface MyRanks {
@@ -38,6 +42,10 @@ interface MyRanks {
   expedition: number | null
   raidProgress: number | null
   achievementPoints: number | null
+  species: number | null
+  fishSold: number | null
+  trophies: number | null
+  bountyPoints: number | null
 }
 
 interface Props {
@@ -52,6 +60,10 @@ interface Props {
   expedition: LeaderboardEntry[]
   raidProgress: LeaderboardEntry[]
   achievementPoints: LeaderboardEntry[]
+  species: LeaderboardEntry[]
+  fishSold: LeaderboardEntry[]
+  trophies: LeaderboardEntry[]
+  bountyPoints: LeaderboardEntry[]
   myScores: MyScores
   myRanks: MyRanks
   currentUserId: string
@@ -64,9 +76,10 @@ interface Props {
 const AVAILABLE_BOARDS: BoardKey[] = [
   'achievementPoints', 'perfectStreak', 'fishingLevel', 'raidProgress',
   'expedition', 'chartingPoints', 'parlorPoints', 'tideRun', 'blackjack', 'fishSlots', 'roulette',
+  'species', 'trophies', 'fishSold', 'bountyPoints',
 ]
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, chartingPoints, parlorPoints, fishSlots, blackjack, roulette, expedition, raidProgress, achievementPoints, myScores, myRanks, currentUserId, avatars }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, chartingPoints, parlorPoints, fishSlots, blackjack, roulette, expedition, raidProgress, achievementPoints, species, fishSold, trophies, bountyPoints, myScores, myRanks, currentUserId, avatars }: Props) {
   const [activeTab, setActiveTab] = useState<BoardKey>('achievementPoints')
 
   // BoardKey → its data array + the player's score/rank for that board.
@@ -81,6 +94,10 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
     : k === 'roulette' ? roulette
     : k === 'expedition' ? expedition
     : k === 'achievementPoints' ? achievementPoints
+    : k === 'species' ? species
+    : k === 'fishSold' ? fishSold
+    : k === 'trophies' ? trophies
+    : k === 'bountyPoints' ? bountyPoints
     : raidProgress
   const scoreOf = (k: BoardKey): number | null =>
     k === 'fishingLevel' ? myScores.fishing
@@ -93,6 +110,10 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
     : k === 'roulette' ? myScores.roulette
     : k === 'expedition' ? myScores.expedition
     : k === 'achievementPoints' ? myScores.achievementPoints
+    : k === 'species' ? myScores.species
+    : k === 'fishSold' ? myScores.fishSold
+    : k === 'trophies' ? myScores.trophies
+    : k === 'bountyPoints' ? myScores.bountyPoints
     : myScores.raidProgress
   const rankOf = (k: BoardKey): number | null =>
     k === 'fishingLevel' ? myRanks.fishing
@@ -105,6 +126,10 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
     : k === 'roulette' ? myRanks.roulette
     : k === 'expedition' ? myRanks.expedition
     : k === 'achievementPoints' ? myRanks.achievementPoints
+    : k === 'species' ? myRanks.species
+    : k === 'fishSold' ? myRanks.fishSold
+    : k === 'trophies' ? myRanks.trophies
+    : k === 'bountyPoints' ? myRanks.bountyPoints
     : myRanks.raidProgress
 
   const meta = BOARD_META[activeTab]

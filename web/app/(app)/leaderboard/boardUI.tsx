@@ -32,6 +32,7 @@ export type BoardKey =
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
   | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'gauntletDonsDepth' | 'achievementPoints'
   | 'parlorPoints' | 'exchangeNet' | 'exchangeWeek'
+  | 'species' | 'fishSold' | 'trophies' | 'bountyPoints'
 
 export type AvatarMap = Record<string, {
   characterColor: string | null
@@ -87,6 +88,10 @@ export const BOARD_META: Record<BoardKey, {
   gauntletBigHit:{ label: 'Biggest Hit',     accent: '#f87171', unit: n => `${n.toLocaleString()}`,       subUnit: () => 'in one blow' },
   gauntletDonsDepth: { label: "Don's Gauntlet", accent: '#3fbf82', unit: n => `Depth ${n}`,               subUnit: () => 'cashed out' },
   achievementPoints: { label: 'Achievement Points', accent: '#e6b94a', unit: n => `${n.toLocaleString()}`, subUnit: n => `point${n === 1 ? '' : 's'}` },
+  species:       { label: 'Fish Collection', accent: '#4ec9a8', unit: n => `${n.toLocaleString()}`, subUnit: n => `species${n === 1 ? '' : ''} caught` },
+  fishSold:      { label: 'Biggest Earner',  accent: '#f0c040', unit: n => `${n.toLocaleString()} ⟡`, subUnit: () => 'earned selling fish' },
+  trophies:      { label: 'Trophy Catches',  accent: '#e78a68', unit: n => `${n.toLocaleString()}`, subUnit: n => `trophy catch${n === 1 ? '' : 'es'}` },
+  bountyPoints:  { label: 'Bounty Points',   accent: '#c9a0f5', unit: n => `${n.toLocaleString()}`, subUnit: n => `bounty point${n === 1 ? '' : 's'}` },
   parlorPoints:  { label: 'Parlor Points',  accent: '#b46fd4', unit: n => `${n.toLocaleString()}`,       subUnit: n => `parlor point${n === 1 ? '' : 's'}` },
   // Reads like the Den boards because it IS that shape: lifetime net, signed,
   // winners green and losers red. A single lucky payout is not a trader; being
@@ -115,8 +120,8 @@ export const BOARD_META: Record<BoardKey, {
  *  slots into the dropdown everywhere. */
 export const LEADERBOARD_SECTIONS: { label: string; boards: BoardKey[] }[] = [
   { label: 'Achievements', boards: ['achievementPoints'] },
-  { label: 'Fishing',      boards: ['perfectStreak', 'fishingLevel'] },
-  { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'gauntletDepth', 'gauntletHardcore', 'gauntletDonsDepth', 'gauntletBigHit'] },
+  { label: 'Fishing',      boards: ['perfectStreak', 'fishingLevel', 'species', 'trophies', 'fishSold'] },
+  { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'bountyPoints', 'gauntletDepth', 'gauntletHardcore', 'gauntletDonsDepth', 'gauntletBigHit'] },
   { label: 'Charting',     boards: ['chartingPoints'] },
   { label: 'The Parlor',   boards: ['parlorPoints'] },
   { label: 'Tavern',       boards: ['tideRun'] },

@@ -129,7 +129,7 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, chartingPointsData, parlorPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData, achievementPointsData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, chartingPointsData, parlorPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData, achievementPointsData, speciesData, fishSoldData, trophiesData, bountyPointsData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
@@ -142,6 +142,10 @@ export default async function LeaderboardPage() {
     fetchBoard(admin, 'leaderboard_expedition', user.id),
     fetchRaidProgressBoard(admin, user.id),
     getAchievementPointsBoard(user.id),
+    fetchBoard(admin, 'leaderboard_species', user.id),
+    fetchBoard(admin, 'leaderboard_fish_sold', user.id),
+    fetchBoard(admin, 'leaderboard_trophies', user.id),
+    fetchBoard(admin, 'leaderboard_bounty_points', user.id),
   ])
 
   // Fetch avatar data (character_color + equipped_hat) for every user that
@@ -160,6 +164,10 @@ export default async function LeaderboardPage() {
     ...expeditionData.top.map(e => e.user_id),
     ...raidProgressData.top.map(e => e.user_id),
     ...achievementPointsData.top.map(e => e.user_id),
+    ...speciesData.top.map(e => e.user_id),
+    ...fishSoldData.top.map(e => e.user_id),
+    ...trophiesData.top.map(e => e.user_id),
+    ...bountyPointsData.top.map(e => e.user_id),
   ])
   const avatarsMap: Record<string, {
     characterColor: string | null
@@ -207,6 +215,10 @@ export default async function LeaderboardPage() {
             expedition={expeditionData.top}
             raidProgress={raidProgressData.top}
             achievementPoints={achievementPointsData.top}
+            species={speciesData.top}
+            fishSold={fishSoldData.top}
+            trophies={trophiesData.top}
+            bountyPoints={bountyPointsData.top}
             myScores={{
               fishing: fishingData.myScore,
               perfectStreak: perfectStreakData.myScore,
@@ -219,6 +231,10 @@ export default async function LeaderboardPage() {
               expedition: expeditionData.myScore,
               raidProgress: raidProgressData.myScore,
               achievementPoints: achievementPointsData.myScore,
+              species: speciesData.myScore,
+              fishSold: fishSoldData.myScore,
+              trophies: trophiesData.myScore,
+              bountyPoints: bountyPointsData.myScore,
             }}
             myRanks={{
               fishing: fishingData.myRank,
@@ -232,6 +248,10 @@ export default async function LeaderboardPage() {
               expedition: expeditionData.myRank,
               raidProgress: raidProgressData.myRank,
               achievementPoints: achievementPointsData.myRank,
+              species: speciesData.myRank,
+              fishSold: fishSoldData.myRank,
+              trophies: trophiesData.myRank,
+              bountyPoints: bountyPointsData.myRank,
             }}
             currentUserId={user.id}
             avatars={avatarsMap}
