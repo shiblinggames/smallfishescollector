@@ -335,9 +335,9 @@ function Group({ title, note, list, onPick }: {
   if (!list.length) return null
   return (
     <div style={{ marginBottom: '1.1rem' }}>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e8eef6' }}>{title}</p>
-      <p className="font-karla font-400 italic" style={{ fontSize: '0.68rem', color: '#7c8696', lineHeight: 1.45, marginBottom: 7 }}>{note}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#e8eef6' }}>{title}</p>
+      <p className="font-karla font-400 italic" style={{ fontSize: '0.76rem', color: '#7c8696', lineHeight: 1.45, marginBottom: 8 }}>{note}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         {list.map(i => <Row key={i.id} i={i} onPick={onPick} />)}
       </div>
     </div>
@@ -370,29 +370,29 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
     <button type="button" onClick={() => { vibrate([0, 12]); onPick(i) }}
       style={{
         display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
-        padding: '0.5rem 0.6rem', borderRadius: 10, cursor: 'pointer',
+        padding: '0.72rem 0.8rem', borderRadius: 11, cursor: 'pointer',
         background: 'rgba(13,17,24,0.9)', border: '1px solid rgba(255,255,255,0.08)',
         WebkitTapHighlightColor: 'transparent',
       }}>
-      <span aria-hidden style={{ width: 3, height: 26, borderRadius: 2, background: i.accent, flexShrink: 0 }} />
+      <span aria-hidden style={{ width: 3, height: 34, borderRadius: 2, background: i.accent, flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.8rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.95rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {i.name}
         </span>
         {/* WHY IT MOVED, or what is coming. A 30% cliff with no caption reads as
             a bug; the same cliff captioned "the beds came up empty" reads as
             news, which is the whole difference between a market and a jitter. */}
-        <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.6rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.72rem', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           color: news ? ((i.lastEventPct ?? 0) > 0 ? UP : DOWN) : '#6a7482' }}>
           {news ?? (due ? `${i.nextEventLabel ?? 'Report'} ${due}` : '')}
         </span>
       </span>
-      <Line points={i.history.length > 1 ? i.history : [i.prevPrice, i.price]} color={day >= 0 ? UP : DOWN} />
-      <span style={{ textAlign: 'right', flexShrink: 0, minWidth: 56 }}>
-        <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.8rem', color: '#f0f4fa', ...TNUM }}>
+      <Line points={i.history.length > 1 ? i.history : [i.prevPrice, i.price]} color={day >= 0 ? UP : DOWN} w={76} h={30} />
+      <span style={{ textAlign: 'right', flexShrink: 0, minWidth: 66 }}>
+        <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.95rem', color: '#f0f4fa', ...TNUM }}>
           {fmtPrice(i.price)}
         </span>
-        <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.62rem', color: day >= 0 ? UP : DOWN, ...TNUM }}>
+        <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.74rem', color: day >= 0 ? UP : DOWN, ...TNUM }}>
           {fmtPct(day)}
         </span>
       </span>
@@ -438,7 +438,7 @@ function BetList({ bets, onOpen }: { bets: BoardBet[]; onOpen: (b: BoardBet) => 
 function BetHeading({ children }: { children: React.ReactNode }) {
   return (
     <p className="font-karla font-700 uppercase tracking-[0.1em]"
-      style={{ fontSize: '0.58rem', color: '#7c8696', marginBottom: 6 }}>
+      style={{ fontSize: '0.68rem', color: '#7c8696', marginBottom: 7 }}>
       {children}
     </p>
   )
@@ -457,20 +457,20 @@ function BetRow({ b, onOpen }: { b: BoardBet; onOpen: (b: BoardBet) => void }) {
   return (
     <button type="button" onClick={() => onOpen(b)} style={{
       width: '100%', textAlign: 'left', cursor: 'pointer',
-      padding: '0.55rem 0.7rem', borderRadius: 11,
+      padding: '0.72rem 0.8rem', borderRadius: 11,
       background: 'rgba(13,17,24,0.9)',
       border: `1px solid ${done ? (won ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.1)'}`,
       opacity: done && !won ? 0.72 : 1, WebkitTapHighlightColor: 'transparent',
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#e8eef6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#e8eef6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {/* NEUTRAL ON PURPOSE. The caret says which way you BET, and colouring
               it green for up put a green mark on losing contracts and a red one
               on winning shorts. Green and red on this row mean one thing only,
               and it is the figure to the right. */}
           {b.indexName} <span style={{ color: '#6a7482' }}>{b.direction === 'up' ? '▲' : '▼'}</span>
         </span>
-        <span className="font-karla font-800" style={{ fontSize: '0.74rem', flexShrink: 0, ...TNUM,
+        <span className="font-karla font-800" style={{ fontSize: '0.9rem', flexShrink: 0, ...TNUM,
           color: done ? (won ? UP : '#7d7466') : pnl == null ? '#8a94a4' : pnl >= 0 ? UP : DOWN }}>
           {b.status === 'won' ? `+${((b.payout ?? 0) - b.stake).toLocaleString()} ⟡`
             : b.status === 'sold' ? `${(b.payout ?? 0) - b.stake >= 0 ? '+' : ''}${((b.payout ?? 0) - b.stake).toLocaleString()} ⟡`
@@ -479,7 +479,7 @@ function BetRow({ b, onOpen }: { b: BoardBet; onOpen: (b: BoardBet) => void }) {
             : `${pnl >= 0 ? '+' : ''}${pnl.toLocaleString()} ⟡`}
         </span>
       </div>
-      <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#7c8696', marginTop: 3, ...TNUM }}>
+      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#7c8696', marginTop: 3, ...TNUM }}>
         {done
           ? `${b.stake.toLocaleString()} ⟡ in · ${TERM_NAME[b.term].toLowerCase()}`
           : `${fmtPrice(b.livePrice)} → ${fmtPrice(target)} · ${b.hoursLeft >= 1 ? `${Math.round(b.hoursLeft)}h left` : 'under an hour'}`}
@@ -655,7 +655,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             {(['up', 'down'] as const).map(d => (
               <button key={d} type="button" onClick={() => setDir(d)} className="font-karla font-700"
                 style={{
-                  padding: '0.55rem', borderRadius: 10, fontSize: '0.82rem', cursor: 'pointer',
+                  padding: '0.66rem', borderRadius: 10, fontSize: '0.95rem', cursor: 'pointer',
                   background: dir === d ? (d === 'up' ? 'rgba(74,222,128,0.16)' : 'rgba(248,113,113,0.16)') : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${dir === d ? (d === 'up' ? UP : DOWN) : 'rgba(255,255,255,0.10)'}`,
                   color: dir === d ? (d === 'up' ? UP : DOWN) : '#8a94a4',
@@ -671,7 +671,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             {TERMS.map(t => (
               <button key={t} type="button" onClick={() => setTerm(t)} className="font-karla font-700"
                 style={{
-                  flexShrink: 0, padding: '0.34rem 0.7rem', borderRadius: 999, fontSize: '0.7rem', cursor: 'pointer',
+                  flexShrink: 0, padding: '0.44rem 0.85rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer',
                   background: term === t ? 'rgba(56,189,248,0.16)' : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${term === t ? 'rgba(56,189,248,0.55)' : 'rgba(255,255,255,0.09)'}`,
                   color: term === t ? '#bfe6ff' : '#8a94a4', whiteSpace: 'nowrap',
@@ -694,10 +694,10 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                 gap: 10, marginBottom: 4,
               }}>
                 <span style={{ minWidth: 0 }}>
-                  <span className="font-cinzel font-800" style={{ fontSize: '1.55rem', lineHeight: 1, color: dir === 'up' ? UP : DOWN, ...TNUM }}>
+                  <span className="font-cinzel font-800" style={{ fontSize: '1.75rem', lineHeight: 1, color: dir === 'up' ? UP : DOWN, ...TNUM }}>
                     {fmtPrice(targetPrice)}
                   </span>
-                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.66rem', color: '#7c8696', marginTop: 3, ...TNUM }}>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.76rem', color: '#7c8696', marginTop: 3, ...TNUM }}>
                     from {fmtPrice(index.price)} · {dir === 'up' ? '+' : '-'}{chosen.distancePct}%
                   </span>
                 </span>
@@ -705,10 +705,10 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                     any more, and the honest replacement is what one contract
                     costs beside where it starts paying. */}
                 <span style={{ textAlign: 'right' }}>
-                  <span className="font-karla font-800" style={{ display: 'block', fontSize: '1.05rem', color: '#ffd96a', ...TNUM }}>
+                  <span className="font-karla font-800" style={{ display: 'block', fontSize: '1.2rem', color: '#ffd96a', ...TNUM }}>
                     {fmtPrice(chosen.each)}
                   </span>
-                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.62rem', color: '#7c8696', marginTop: 2 }}>
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.72rem', color: '#7c8696', marginTop: 2 }}>
                     a contract
                   </span>
                 </span>
@@ -763,7 +763,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               return (
                 <button key={v} type="button" onClick={() => setUnits(v)} disabled={tooDear} className="font-karla font-700"
                   style={{
-                    flex: 1, padding: '0.4rem 0.2rem', borderRadius: 9, fontSize: '0.66rem',
+                    flex: 1, padding: '0.5rem 0.2rem', borderRadius: 9, fontSize: '0.78rem',
                     cursor: tooDear ? 'not-allowed' : 'pointer',
                     background: chosenUnits === v ? 'rgba(240,220,174,0.16)' : 'rgba(255,255,255,0.04)',
                     border: `1px solid ${chosenUnits === v ? 'rgba(240,220,174,0.5)' : 'rgba(255,255,255,0.10)'}`,
@@ -778,7 +778,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           {/* THE PREMIUM, named. It was written as a bare multiplication with
               no word for what the middle number was, so the one figure the whole
               purchase turns on went by unlabelled. */}
-          <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8a94a4', marginBottom: 11, ...TNUM }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#8a94a4', marginBottom: 12, ...TNUM }}>
             Premium <strong style={{ color: '#e0d8c4' }}>{fmtPrice(prem)}</strong> a contract ·{' '}
             <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span> for {chosenUnits.toLocaleString()}
           </p>
@@ -796,10 +796,10 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               {/* BREAKEVEN, not a payout, because there is no single payout any
                   more. Past this price the position is ahead, and it keeps going
                   the further the index runs. */}
-              <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4', textAlign: 'center', marginBottom: 2, ...TNUM }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#8a94a4', textAlign: 'center', marginBottom: 3, ...TNUM }}>
                 Ahead past <strong style={{ color: '#ffd96a' }}>{fmtPrice(breakEven)}</strong>, and more the further it goes
               </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#6a7482', textAlign: 'center', marginBottom: 7, lineHeight: 1.4 }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a7482', textAlign: 'center', marginBottom: 8, lineHeight: 1.45 }}>
                 {chosenUnits.toLocaleString()} contracts pay {chosenUnits.toLocaleString()} ⟡ for every 1 ⟡ past {fmtPrice(chosen.strike)}.
                 Sell back any time.
               </p>
@@ -809,7 +809,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           <button type="button" onClick={submit} disabled={busy || !chosen || !affordable}
             className="font-karla font-800"
             style={{
-              width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.84rem',
+              width: '100%', padding: '0.85rem', borderRadius: 11, fontSize: '0.96rem',
               cursor: busy ? 'wait' : 'pointer',
               background: 'rgba(56,189,248,0.16)', border: '1px solid rgba(56,189,248,0.6)', color: '#e6f4ff',
               opacity: !chosen || !affordable ? 0.5 : 1, WebkitTapHighlightColor: 'transparent',
@@ -994,7 +994,7 @@ function Fact({ label, value, color }: { label: string; value: string; color?: s
 function Step({ label }: { label: string }) {
   return (
     <p className="font-karla font-700 uppercase tracking-[0.09em]"
-      style={{ fontSize: '0.58rem', color: '#7c8696', marginBottom: 6 }}>
+      style={{ fontSize: '0.68rem', color: '#7c8696', marginBottom: 7 }}>
       {label}
     </p>
   )
