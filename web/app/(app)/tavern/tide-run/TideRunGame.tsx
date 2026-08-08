@@ -11,14 +11,25 @@ import { prefetchTideRunAudio, unlockTideRunAudio, teardownTideRunAudio, playBea
 import { vibrate } from '@/lib/haptics'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
+// A FIXED VIRTUAL WORLD. The whole simulation runs in these units, and the
+// canvas scales to whatever physical size a device gives it. So the visible
+// window is ALWAYS 400 units wide, whether that is a 390px phone or a 1400px
+// monitor, and every player sees exactly the same distance of sea ahead of the
+// bow. Before this, the world was in raw canvas px: the ship sits 13% from the
+// left and hazards spawn at the right edge, so a wider screen showed more world
+// and bought more reaction time. Capping the width helped but a 390 phone and a
+// 430 phone still differed. This removes the difference entirely -- the leader-
+// board is shared, so the game has to be too. Only the pixel zoom changes;
+// vertical extent still follows the device's aspect, which is cosmetic (the sea
+// surface sits at 60%, jumps are time-based, the ship is clamped below).
+// 400 sits at the median phone width, so the typical player's difficulty is
+// unchanged; small and large phones converge onto it rather than one easing.
+const VIRTUAL_W = 400
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
-const SHIP_HEIGHT_PCT = 0.095  // small Canabalt-style sprite (~9.5% of canvas height)
-// The world (scroll speed, hazard spacing, shoals, jump physics) is in
-// absolute px, but the canvas is up to ~900px tall on desktop vs ~560-700
-// on mobile. Sizing the ship off raw canvas height made it ~50% bigger on
-// desktop and the game felt "zoomed in". Clamp the height used for ship
-// sizing to a mobile-representative reference so the ship stays its tuned
-// pixel size on tall screens (mobile unchanged). Tuned 2026-05-19.
+const SHIP_HEIGHT_PCT = 0.095  // small Canabalt-style sprite (~9.5% of world height)
+// The ship is sized off world height, but a tall aspect ratio makes the virtual
+// height large. Clamp it to a representative reference so the ship stays its
+// tuned size rather than inflating on tall screens. In VIRTUAL_W units now.
 const SHIP_SIZING_REF_H = 620
 const SHIP_ASPECT     = 805 / 595    // trimmed boatrun.png (redesigned 2026-06-06)
 
@@ -557,22 +568,28 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     canvas.height = Math.floor(rect.height * dpr)
     canvas.style.width = `${rect.width}px`
     canvas.style.height = `${rect.height}px`
+    // WORLD-UNITS PER PHYSICAL PIXEL. Fold the virtual scale into the transform
+    // alongside dpr, so everything drawn in world units lands at the right pixel
+    // and the visible width is exactly VIRTUAL_W on every device.
+    const k = rect.width / VIRTUAL_W
     const ctx = canvas.getContext('2d')
     if (ctx) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.setTransform(dpr * k, 0, 0, dpr * k, 0, 0)
       // High-quality image scaling for the boat sprite on sub-pixel positions
       ctx.imageSmoothingEnabled = true
       ctx.imageSmoothingQuality = 'high'
     }
     const g = gRef.current
-    g.cw = rect.width
-    g.ch = rect.height
-    g.shipH = Math.min(rect.height, SHIP_SIZING_REF_H) * SHIP_HEIGHT_PCT
+    // Width is pinned; height follows the device aspect, in the same world units
+    // (so a taller phone sees more sky/sea below, never more world AHEAD).
+    g.cw = VIRTUAL_W
+    g.ch = rect.height / k
+    g.shipH = Math.min(g.ch, SHIP_SIZING_REF_H) * SHIP_HEIGHT_PCT
     g.shipW = g.shipH * SHIP_ASPECT
     if (g.state === 'ready') {
       // Park the ship sitting on the sea surface at its screen x
-      const cx = rect.width * SHIP_X_RATIO + g.shipW / 2
-      const wy = seaSurfaceY(cx + g.scrollX, rect.height, 0)
+      const cx = g.cw * SHIP_X_RATIO + g.shipW / 2
+      const wy = seaSurfaceY(cx + g.scrollX, g.ch, 0)
       g.shipY = wy - g.shipH * (1 - HITBOX_INSET.bottom)
       g.airborne = false
     }
