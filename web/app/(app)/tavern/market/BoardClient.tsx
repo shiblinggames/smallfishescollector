@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import {
-  TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
+  TERMS, TERM_NAME, type Term, type Direction,
   offeredBets, driftOver, stakeCapFor, unitPresets, costOf, premiumOf, worthNow, scheduledIn, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
@@ -496,7 +496,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.85rem 1rem 1rem' }}>
-          <Step n={1} label="Which way is it going?" />
+          <Step label="Which way" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 13 }}>
             {(['up', 'down'] as const).map(d => (
               <button key={d} type="button" onClick={() => setDir(d)} className="font-karla font-700"
@@ -512,8 +512,8 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             ))}
           </div>
 
-          <Step n={2} label="How long has it got?" />
-          <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 4, marginBottom: 4, scrollbarWidth: 'none' }}>
+          <Step label="How long" />
+          <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 4, marginBottom: 13, scrollbarWidth: 'none' }}>
             {TERMS.map(t => (
               <button key={t} type="button" onClick={() => setTerm(t)} className="font-karla font-700"
                 style={{
@@ -527,11 +527,8 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               </button>
             ))}
           </div>
-          <p className="font-karla font-400 italic" style={{ fontSize: '0.66rem', color: '#6a7482', marginBottom: 13, lineHeight: 1.45 }}>
-            {TERM_PITCH[term]}
-          </p>
 
-          <Step n={3} label="What does it have to reach?" />
+          <Step label="Target price" />
           {/* A SLIDER, not nine rows. Nine stacked options is a wall, and it hides
               the one thing that matters: that this is a single trade-off with two
               ends. Dragging right is further, harder and worth more, and your
@@ -587,16 +584,6 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                 }}
               />
 
-              {/* The two ends, named, so the direction of the trade-off is stated
-                  and not merely implied by a handle. */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: -2 }}>
-                <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7c8696' }}>
-                  Likely, pays little
-                </span>
-                <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a7c4a' }}>
-                  Long shot, pays big
-                </span>
-              </div>
             </div>
           ) : (
             <p className="font-karla font-400 italic" style={{ fontSize: '0.72rem', color: '#7c8696', lineHeight: 1.5, marginBottom: 13 }}>
@@ -604,7 +591,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             </p>
           )}
 
-          <Step n={4} label="How many contracts?" />
+          <Step label="Contracts" />
           {/* QUANTITIES, sized per index so the four buttons always land on costs
               a captain recognises, roughly 1k / 5k / 25k / 100k, whether a unit
               costs 0.09 or 1,420. Nobody has to multiply anything to find a
@@ -638,27 +625,16 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span>
           </p>
 
-          {/* THE WHOLE BET, in one sentence, so nobody has to assemble it from
-              four controls in their head before spending anything. */}
-          {chosen && (
-            <div style={{ padding: '0.75rem 0.85rem', borderRadius: 12, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
-              <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#dbe3ee', lineHeight: 1.55 }}>
-                {chosenUnits.toLocaleString()} units, {capped.toLocaleString()} ⟡, that <strong style={{ color: '#f0f4fa' }}>{index.name}</strong>
-                {' '}{dir === 'up' ? 'reaches' : 'falls to'} <strong style={{ color: '#f0f4fa' }}>{fmtPrice(targetPrice)}</strong>
-                {' '}from {fmtPrice(index.price)} in <strong style={{ color: '#f0f4fa' }}>{TERM_NAME[term].toLowerCase()}</strong>.
-              </p>
-              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#ffd96a', marginTop: 6, ...TNUM }}>
-                {chanceInWords(chosen.chance)}. Comes back as {returns.toLocaleString()} ⟡.
-              </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#7c8696', marginTop: 5, lineHeight: 1.45 }}>
-                If it does not get there, the stake is gone. Nothing in between.
-                {betCap < MAX_STAKE && ` The most this one takes is ${betCap.toLocaleString()} ⟡.`}
-              </p>
-            </div>
-          )}
         </div>
 
         <div style={{ flexShrink: 0, padding: '0.7rem 1rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.09)', background: 'rgba(6,9,14,0.97)' }}>
+          {/* The only thing the four controls do not already say, said once and
+              next to the button rather than in a paragraph restating them. */}
+          {chosen && !err && (
+            <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4', textAlign: 'center', marginBottom: 7, ...TNUM }}>
+              Pays <strong style={{ color: '#ffd96a' }}>{returns.toLocaleString()} ⟡</strong> if it lands, nothing if it does not
+            </p>
+          )}
           {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}
           <button type="button" onClick={submit} disabled={busy || !chosen || !affordable}
             className="font-karla font-800"
@@ -802,15 +778,13 @@ function Fact({ label, value, color }: { label: string; value: string; color?: s
 
 /** Numbered, because four controls in a row is a form and a form needs an
  *  order. */
-function Step({ n, label }: { n: number; label: string }) {
+/** A quiet label, not a numbered step. The numbers implied an order that was
+ *  never real -- every control can be changed in any sequence, and four blue
+ *  badges shouting 1 2 3 4 made a four-field form look like a procedure. */
+function Step({ label }: { label: string }) {
   return (
-    <p className="font-karla font-700" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.74rem', color: '#c8d2e0', marginBottom: 6 }}>
-      <span aria-hidden style={{
-        width: 17, height: 17, borderRadius: 999, flexShrink: 0,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(56,189,248,0.16)', border: '1px solid rgba(56,189,248,0.4)',
-        fontSize: '0.58rem', color: '#bfe6ff',
-      }}>{n}</span>
+    <p className="font-karla font-700 uppercase tracking-[0.09em]"
+      style={{ fontSize: '0.58rem', color: '#7c8696', marginBottom: 6 }}>
       {label}
     </p>
   )
