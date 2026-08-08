@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, worthNow, breakEvenMovePct, scheduledIn, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, typicalDayMove, driftOver, contractValue, breakEvenFor, scheduledIn, MIN_STAKE, MAX_STAKE, MAX_NOTIONAL,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -71,7 +71,10 @@ export type BoardBet = {
   direction: Direction
   term: Term
   distancePct: number
-  multiplier: number
+  /** The price it has to beat. */
+  strike: number
+  /** What one contract cost. Breakeven is exactly this far past the strike. */
+  premiumEach: number
   stake: number
   entryPrice: number
   livePrice: number
@@ -171,7 +174,7 @@ export async function getBoard(): Promise<Board> {
     // shrinks with the clock; drift has to shrink with it or the two disagree.
     const betDrift = idx
       ? driftOver(idx.vol, idx.beta, idx.trend, idx.trendTicks,
-          Number(moodRes.data?.mood_bias ?? 0), hoursLeft, b.direction as Direction)
+          Number(moodRes.data?.mood_bias ?? 0), hoursLeft, 'up')
       : 0
     const betSched = idx ? scheduledIn(idx.nextEventAt, hoursLeft, tickAt) : 0
     return {
@@ -193,19 +196,18 @@ export async function getBoard(): Promise<Board> {
       settledAt: (b.settled_at as string | null) ?? null,
       seen: b.seen === true,
       units: Number(b.units ?? 0),
-      worth: hoursLeft <= 0 || b.status !== 'open' ? null
-        : worthNow(Number(b.stake), Number(b.multiplier), Number(b.distance_pct),
-            b.direction === 'up' ? raw : -raw, hoursLeft,
-            idx ? idx.dailyMovePct : 0, betDrift, betSched),
-      /** The move that gets the premium back if sold right now, as a price.
-       *  Climbs toward the target as the clock runs down: that climb IS theta. */
-      breakEvenPrice: hoursLeft <= 0 || b.status !== 'open' || !idx ? null
-        : (() => {
-            const m = breakEvenMovePct(Number(b.multiplier), Number(b.distance_pct),
-              hoursLeft, idx.dailyMovePct, betDrift, betSched)
-            return m == null ? null
-              : entry * (1 + (b.direction === 'up' ? 1 : -1) * m / 100)
-          })(),
+      strike: Number(b.strike ?? 0),
+      premiumEach: Number(b.premium_each ?? 0),
+      worth: hoursLeft <= 0 || b.status !== 'open' || !idx ? null
+        : Math.round(Number(b.units ?? 0) * contractValue(
+            live, Number(b.strike), b.direction as Direction,
+            hoursLeft, idx.dailyMovePct, betDrift, betSched)),
+      /** FIXED THE MOMENT YOU BUY, unlike the binary's, which crept toward the
+       *  strike all term. Past the strike the payoff grows a doubloon per
+       *  doubloon, so the premium is recovered exactly one premium beyond it. */
+      breakEvenPrice: Number(b.strike ?? 0) > 0
+        ? breakEvenFor(Number(b.strike), Number(b.premium_each ?? 0), b.direction as Direction)
+        : null,
       hoursLeft,
     }
   })
@@ -267,25 +269,35 @@ export async function openBet(
   // A report inside the window is certain variance, and the premium has to
   // carry it or the board hands that variance away.
   const sched = scheduledIn((idx.next_event_at as string | null) ?? null, term, Date.now())
-  const allowed = offeredBets(daily, term, drift, sched)
-  const bet = allowed.find(b => Math.abs(b.distancePct - distancePct) < 0.0001)
-  if (!bet || bet.chance < MIN_CHANCE) return { error: 'That bet is not offered on this one' }
+  // The strike has to be one this index actually offers at this term.
+  const rungs = rungsFor(daily)
+  if (!rungs.some(d => Math.abs(d - distancePct) < 0.0001)) {
+    return { error: 'That strike is not offered on this one' }
+  }
+  const strike = entry * (1 + (direction === 'up' ? 1 : -1) * distancePct / 100)
+  if (!(strike > 0)) return { error: 'Could not price that contract' }
 
-  // Priced from the index, never from the caller.
-  const priced = priceBet(daily, term, bet.distancePct, drift, sched)
-  if (!(priced.multiplier > 0)) return { error: 'Could not price that bet' }
+  // THE PREMIUM: the expected payoff, priced from the index and never from the
+  // caller. Drift is the index's OWN, not signed to the buyer's side, because a
+  // put and a call on the same water face the same weather.
+  const driftRaw = driftOver(
+    Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
+    Number(mood?.mood_bias ?? 0), term, 'up',
+  )
+  const each = contractValue(entry, strike, direction, term, daily, driftRaw, sched)
+  const stake = Math.round(units * each)
+  if (!(each > 0) || stake < MIN_STAKE) {
+    return { error: `That is only ${stake.toLocaleString()} ⟡. Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth.` }
+  }
+  if (stake > MAX_STAKE) return { error: `Largest premium is ${MAX_STAKE.toLocaleString()} ⟡` }
 
-  // THE PREMIUM, and it has to be priced from the same chance the multiplier
-  // came from or stake x multiplier stops landing on units x price. Computed
-  // here rather than from anything the caller sent.
-  const stake = costOf(units, entry, priced.chance)
-  if (stake < MIN_STAKE) return { error: `That is only ${stake.toLocaleString()} ⟡. Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth.` }
-  if (stake > MAX_STAKE) return { error: `Largest bet is ${MAX_STAKE.toLocaleString()} ⟡` }
-
-  // Long shots are capped by what they PAY, not by their odds. 250,000 at 199x
-  // is 49 million out of one hour, against a richest balance of three.
-  const cap = stakeCapFor(priced.multiplier)
-  if (stake > cap) return { error: `Most you can put on this one is ${cap.toLocaleString()} ⟡` }
+  // NOTIONAL, not payout. A vanilla payoff has no ceiling to cap, and capping
+  // it would break the fair price, so what is bounded is the size of the
+  // position instead, the way a real position limit works.
+  const notional = units * entry
+  if (notional > MAX_NOTIONAL) {
+    return { error: `Most you can hold of this one is ${Math.floor(MAX_NOTIONAL / entry).toLocaleString()} contracts` }
+  }
 
 
   // Debit first, atomically and balance-guarded, the same order every purchase
@@ -298,8 +310,9 @@ export async function openBet(
     user_id: user.id,
     index_id: indexId,
     direction, term,
-    distance_pct: bet.distancePct,
-    multiplier: priced.multiplier,
+    distance_pct: distancePct,
+    strike,
+    premium_each: each,
     units,
     stake,
     entry_price: entry,
@@ -365,14 +378,14 @@ export async function sellBet(betId: number): Promise<SellResult> {
   const daily = idx ? dailyMovePct(Number(idx.vol)) : 0
   const drift = idx ? driftOver(
     Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
-    Number(mood?.mood_bias ?? 0), hoursLeft, bet.direction as Direction,
+    Number(mood?.mood_bias ?? 0), hoursLeft, 'up',
   ) : 0
 
   // Same reports the sheet quoted against, or the sell button pays a different
   // number than the screen promised one second earlier.
   const sched = scheduledIn((idx?.next_event_at as string | null) ?? null, hoursLeft, tickAt)
-  const got = worthNow(Number(bet.stake), Number(bet.multiplier),
-    Number(bet.distance_pct), moved, hoursLeft, daily, drift, sched)
+  const got = Math.round(Number(bet.units) * contractValue(
+    live, Number(bet.strike), bet.direction as Direction, hoursLeft, daily, drift, sched))
 
   await admin.from('exchange_bets')
     .update({ exit_price: live, payout: got, seen: true }).eq('id', betId)

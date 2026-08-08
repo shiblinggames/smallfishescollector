@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, type Term, type Direction,
-  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, premiumOf, worthNow, scheduledIn, chanceInWords, payoutInWords, payoutFor, fmtPrice,
+  rungsFor, driftOver, unitPresets, contractValue, breakEvenFor, scheduledIn, fmtPrice, MAX_NOTIONAL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
@@ -220,11 +220,8 @@ function bookSeries(bets: BoardBet[], indexes: BoardIndex[]): number[] {
       const h = idx.history
       const priceThen = k === 0 ? idx.price : (h[h.length - k] ?? b.entryPrice)
       const raw = b.entryPrice > 0 ? ((priceThen - b.entryPrice) / b.entryPrice) * 100 : 0
-      total += worthNow(
-        b.stake, b.multiplier, b.distancePct,
-        b.direction === 'up' ? raw : -raw,
-        b.hoursLeft + k, idx.dailyMovePct,
-      )
+      total += Math.round(b.units * contractValue(
+        priceThen, b.strike, b.direction, b.hoursLeft + k, idx.dailyMovePct))
     }
     out.push(total)
   }
@@ -509,7 +506,14 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   const drift = driftOver(index.vol, index.beta, index.trend, index.trendTicks, moodBias, term, dir)
   // Priced with the report too, exactly as the server will price it.
   const sched = scheduledIn(index.nextEventAt, term, Date.now())
-  const bets = offeredBets(index.dailyMovePct, term, drift, sched)
+  // THE CHAIN. Every strike this index offers at this term, each with what one
+  // contract of it costs. No multiplier and no chance: the premium IS the
+  // quote, and it falls as the strike gets further out, which is the shape a
+  // real chain has and the binary's fixed payout could never show.
+  const bets = rungsFor(index.dailyMovePct).map(d => {
+    const strike = index.price * (1 + (dir === 'up' ? 1 : -1) * d / 100)
+    return { distancePct: d, strike, each: contractValue(index.price, strike, dir, term, index.dailyMovePct, drift, sched) }
+  }).filter(b => b.each > 0)
   // Keep a valid distance selected as the term changes: the rungs on offer
   // shrink hard on the short terms, and a stale pick would silently price a bet
   // nobody chose.
@@ -522,16 +526,17 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // The longer the odds, the less you may put on: a bet is capped by what it
   // pays out, not by its price.
   const presets = unitPresets(index.price)
-  const capNow = Math.min(MAX_STAKE, chosen ? stakeCapFor(chosen.multiplier) : MAX_STAKE)
+  // Bounded by the SIZE of the position now, not by what it might pay.
+  const capNow = MAX_STAKE
   // The same four everywhere means the sensible DEFAULT is not the same
   // everywhere: ten units is a fair ticket on most of the board and more than a
   // captain owns on the dearest index. Open on the biggest one they can afford.
   // Every contract costs the premium, which depends on the rung you picked, so
   // affordability moves as you drag the slider. That is the point: the long
   // shots are the cheap ones.
-  const prem = chosen ? premiumOf(index.price, chosen.chance) : index.price
+  const prem = chosen ? chosen.each : 0
   const fits = (n: number) => {
-    const c = costOf(n, index.price, chosen?.chance ?? 1)
+    const c = Math.round(n * prem)
     return c >= MIN_STAKE && c <= doubloons && c <= capNow
   }
   const chosenUnits = units ?? [...presets].reverse().find(fits) ?? presets[0]
@@ -542,9 +547,11 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   const targetPrice = chosen
     ? index.price * (1 + (dir === 'up' ? 1 : -1) * chosen.distancePct / 100)
     : index.price
-  const capped = costOf(chosenUnits, index.price, chosen?.chance ?? 1)
+  const capped = Math.round(chosenUnits * prem)
+  const overSize = chosenUnits * index.price > MAX_NOTIONAL
   const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
-  const returns = chosen ? payoutFor(capped, chosen.multiplier) : 0
+  // Where the contract has paid for itself: one premium past the strike.
+  const breakEven = chosen ? breakEvenFor(chosen.strike, prem, dir) : 0
 
   function submit() {
     if (!chosen) return
@@ -697,12 +704,15 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                     from {fmtPrice(index.price)} · {dir === 'up' ? '+' : '-'}{chosen.distancePct}%
                   </span>
                 </span>
-                <span style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
-                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4' }}>
-                    {chanceInWords(chosen.chance)}
+                {/* THE PREMIUM IS THE QUOTE. There is no multiplier to headline
+                    any more, and the honest replacement is what one contract
+                    costs beside where it starts paying. */}
+                <span style={{ textAlign: 'right' }}>
+                  <span className="font-karla font-800" style={{ display: 'block', fontSize: '1.05rem', color: '#ffd96a', ...TNUM }}>
+                    {fmtPrice(chosen.each)}
                   </span>
-                  <span className="font-karla font-800" style={{ fontSize: '1.05rem', color: '#ffd96a', ...TNUM }}>
-                    {payoutInWords(chosen.multiplier)}
+                  <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.62rem', color: '#7c8696', marginTop: 2 }}>
+                    a contract
                   </span>
                 </span>
               </div>
@@ -719,7 +729,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                   if (b) { setDistance(b.distancePct); vibrate([0, 6]) }
                 }}
                 aria-label="How far it has to move"
-                aria-valuetext={`reaches ${fmtPrice(targetPrice)} from ${fmtPrice(index.price)}, ${chanceInWords(chosen.chance)}, pays ${payoutInWords(chosen.multiplier)}`}
+                aria-valuetext={`strike ${fmtPrice(targetPrice)} from ${fmtPrice(index.price)}, ${fmtPrice(chosen.each)} a contract, breaks even at ${fmtPrice(breakEven)}`}
                 style={{
                   // The track fills up to the thumb, so how far along the ladder
                   // you are is readable without looking at the numbers. Both the
@@ -748,7 +758,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               sensible ticket. */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
             {presets.map(v => {
-              const cost = costOf(v, index.price, chosen?.chance ?? 1)
+              const cost = Math.round(v * prem)
               // Too dear at the top, and on a fallen index too CHEAP at the
               // bottom: one unit of something trading at 0.09 rounds to nothing,
               // and a bet that costs nothing cannot pay anything.
@@ -786,12 +796,15 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               moves your way and falls as the clock runs down. */}
           {chosen && !err && (
             <>
+              {/* BREAKEVEN, not a payout, because there is no single payout any
+                  more. Past this price the position is ahead, and it keeps going
+                  the further the index runs. */}
               <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4', textAlign: 'center', marginBottom: 2, ...TNUM }}>
-                Pays <strong style={{ color: '#ffd96a' }}>{returns.toLocaleString()} ⟡</strong> if it gets there
+                Ahead past <strong style={{ color: '#ffd96a' }}>{fmtPrice(breakEven)}</strong>, and more the further it goes
               </p>
               <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#6a7482', textAlign: 'center', marginBottom: 7, lineHeight: 1.4 }}>
-                Touching {fmtPrice(targetPrice)} pays the same as flying past it.
-                Or sell it back any time for what it is worth by then.
+                {chosenUnits.toLocaleString()} contracts pay {chosenUnits.toLocaleString()} ⟡ for every 1 ⟡ past {fmtPrice(chosen.strike)}.
+                Sell back any time.
               </p>
             </>
           )}

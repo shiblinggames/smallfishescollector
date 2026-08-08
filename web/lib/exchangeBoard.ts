@@ -555,6 +555,15 @@ export const MAX_STAKE = 2_000_000
  *  simply says how much this particular one will take. */
 export const MAX_PAYOUT = 5_000_000
 
+/** MOST OF ONE INDEX A CAPTAIN CAN HOLD, as contracts times price.
+ *
+ *  A vanilla payoff has no ceiling to cap, and capping it would break the fair
+ *  premium, since a price is only fair for the payoff it actually buys. So the
+ *  bound moves to the SIZE of the position, which is how a real position limit
+ *  works: what it can pay is then whatever the market does, and fair pricing
+ *  means the house does not lose on average however far that goes. */
+export const MAX_NOTIONAL = 5_000_000
+
 /** ROUND NUMBERS OF UNITS, sized so the cost lands somewhere sensible.
  *
  *  You buy UNITS of an index and the cost is units x price, which is how a real
