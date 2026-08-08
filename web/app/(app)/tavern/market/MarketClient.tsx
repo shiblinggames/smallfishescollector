@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ShopHeader from '@/components/ShopHeader'
+import LeaderboardModal from '@/components/LeaderboardModal'
 import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
 import { MOOD_CONFIG } from '@/lib/fishMarket'
@@ -667,7 +668,24 @@ export default function MarketClient({
             is reached from the fishing hub, the tavern ticker AND mid-cast
             from the fishing screen, so it returns you where you came from
             rather than picking one of the three. */}
-        <ShopHeader title="Fish Market" backLabel="Back" onBack={() => router.back()} />
+        <ShopHeader title="Fish Market" backLabel="Back" onBack={() => router.back()}
+          /* RANKS OPPOSITE BACK, in the slot the header already keeps for it.
+             It sat above the board before, taking a row of its own and pushing
+             the market down. Only on the Exchange side: the Hold sells fish and
+             has no ladder to be on. */
+          badge={side === 'exchange' ? (
+            <LeaderboardModal
+              boards={['exchangeWeek', 'exchangeNet']}
+              title="Top Traders"
+              label="Ranks"
+              triggerStyle={{
+                background: 'rgba(56,189,248,0.10)',
+                border: '1px solid rgba(56,189,248,0.42)',
+                color: '#7dd3fc', boxShadow: 'none',
+                fontSize: '0.56rem', height: 24, padding: '0 0.62rem', borderRadius: 20,
+              }}
+            />
+          ) : undefined} />
 
         {/* ── The two doors ── */}
         <div style={{ display: 'flex', gap: 7, position: 'relative' }}>
