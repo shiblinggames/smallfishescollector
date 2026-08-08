@@ -101,6 +101,8 @@ export type Board = {
   /** The shared weather right now. Half of it reaches an index, times its beta. */
   moodBias: number
   open: boolean
+  /** False until the guide has been read once, which opens it on arrival. */
+  introSeen: boolean
   closedReason: string | null
   doubloons: number
   indexes: BoardIndex[]
@@ -109,7 +111,7 @@ export type Board = {
 }
 
 const SHUT = (reason: string): Board => ({
-  moodBias: 0, open: false, closedReason: reason, doubloons: 0, indexes: [], bets: [], unseen: 0,
+  moodBias: 0, introSeen: true, open: false, closedReason: reason, doubloons: 0, indexes: [], bets: [], unseen: 0,
 })
 
 export async function getBoard(): Promise<Board> {
@@ -121,7 +123,7 @@ export async function getBoard(): Promise<Board> {
 
   const admin = createAdminClient()
   const [profileRes, idxRes, betRes, moodRes] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_xp').eq('id', uid).single(),
+    admin.from('profiles').select('doubloons, fishing_xp, has_seen_exchange_intro').eq('id', uid).single(),
     admin.from('exchange_indexes').select('*').order('sort'),
     admin.from('exchange_bets').select('*').eq('user_id', uid).order('id', { ascending: false }).limit(40),
     admin.from('market_state').select('mood_bias').eq('id', 1).single(),
@@ -217,6 +219,7 @@ export async function getBoard(): Promise<Board> {
 
   return {
     moodBias: Number(moodRes.data?.mood_bias ?? 0),
+    introSeen: profileRes.data?.has_seen_exchange_intro === true,
     open: true,
     closedReason: null,
     doubloons: Number(profileRes.data?.doubloons ?? 0),
@@ -411,4 +414,14 @@ export async function sellBet(betId: number): Promise<SellResult> {
   }
   const { data: p } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
   return { ok: true, got, doubloons: Number(p?.doubloons ?? 0) }
+}
+
+/** The guide has been read. Written once, on first dismissal, so it opens on
+ *  arrival and never again unless a captain asks for it. */
+export async function markIntroSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles')
+    .update({ has_seen_exchange_intro: true }).eq('id', user.id)
 }

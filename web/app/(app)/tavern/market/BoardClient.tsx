@@ -23,7 +23,8 @@ import {
   chainFor, driftOver, unitPresets, contractValue, breakEvenFor, profitChance, lotSize, scheduledIn, fmtPrice, MAX_NOTIONAL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
-import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
+import { getBoard, openBet, sellBet, markBetsSeen, markIntroSeen } from './boardActions'
+import ExchangeIntro from './ExchangeIntro'
 import type { Board, BoardIndex, BoardBet } from './boardActions'
 
 const UP = '#4ade80'
@@ -81,6 +82,8 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
   const [ticket, setTicket] = useState<BoardIndex | null>(null)
   const [tab, setTab] = useState<'board' | 'bets'>('board')
   const [openSlip, setOpenSlip] = useState<BoardBet | null>(null)
+  // 'new' opens with the announcement, 'again' goes straight to the guide.
+  const [guide, setGuide] = useState<'new' | 'again' | null>(null)
   const [, startTransition] = useTransition()
 
   const load = useCallback(() => {
@@ -90,6 +93,11 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
     })
   }, [onDoubloons])
   useEffect(() => { load() }, [load])
+
+  // The board explains itself once, on arrival, and then only when asked.
+  useEffect(() => {
+    if (board?.open && !board.introSeen) setGuide('new')
+  }, [board?.open, board?.introSeen])
 
   // Looking at your results is what clears the markers.
   useEffect(() => {
@@ -123,7 +131,17 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
     <>
       {open.length > 0 && <RunningStrip bets={open} indexes={board.indexes} allBets={board.bets} />}
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: '0.9rem' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: '0.9rem', alignItems: 'stretch' }}>
+        {/* A way back to the guide. This screen has more rules than any other in
+            the game and they are not guessable from the board; the one reading
+            is on the day it unlocks, which is exactly when none of it means
+            anything yet. */}
+        <button type="button" onClick={() => setGuide('again')} aria-label="How the Exchange works"
+          className="font-karla font-800" style={{
+            flexShrink: 0, width: 34, borderRadius: 9, fontSize: '0.86rem', cursor: 'pointer',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+            color: '#8a94a4', WebkitTapHighlightColor: 'transparent',
+          }}>?</button>
         {([['board', 'The board'], ['bets', `Your bets${open.length ? ` (${open.length})` : ''}`]] as const).map(([k, label]) => {
           const on = tab === k
           return (
@@ -146,6 +164,20 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
           )
         })}
       </div>
+
+      {guide && (
+        <ExchangeIntro
+          celebrate={guide === 'new'}
+          onDone={() => {
+            const first = guide === 'new'
+            setGuide(null)
+            if (first) {
+              void markIntroSeen()
+              setBoard(b => b ? { ...b, introSeen: true } : b)
+            }
+          }}
+        />
+      )}
 
       {tab === 'board' ? (
         <>

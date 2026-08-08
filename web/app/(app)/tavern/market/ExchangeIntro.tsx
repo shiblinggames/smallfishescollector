@@ -24,43 +24,95 @@ import { EXCHANGE_FISHING_LEVEL } from '@/lib/fishExchange'
 
 const SKY = '#38bdf8'
 
-type Page = { tag: string; title: string; body: string; accent: string }
+type Page = { tag: string; title: string; body: string; accent: string; art?: 'payoff' | 'families' | 'report' }
 
-// Five things, and only things that are NOT visible from the board itself.
-// Which fish is up today is on screen; that a contract can end at nothing is
-// not, and neither is the fact that the clock is worth money.
+// Six things, and only things the board does not already show you. Which index
+// is up today is on screen; what a premium buys is not, and neither is the
+// difference between a whole water and a single creature.
 const PAGES: Page[] = [
   {
     tag: 'What you are buying',
     title: 'Contracts, not fish',
-    body: 'Nothing here lands in your hold. You stake doubloons on where a price is headed, and the fish stays in the sea. The Hold is still where you sell what you actually caught.',
+    body: 'Nothing here lands in your hold. You buy a contract on where a price is going, and the fish stays in the sea. The Hold is still where you sell what you actually caught.',
     accent: SKY,
   },
   {
-    tag: 'The two choices',
-    title: 'A direction and a clock',
-    body: 'Back a Rise or a Fall, then pick 6, 24 or 72 hours. Every contract settles itself at the hour it expires, whether you are aboard or asleep.',
+    tag: 'Three choices',
+    title: 'A way, a deadline, a price',
+    body: 'Up or down. One day, three days or a week. Then the price it has to reach, which is the only one that decides anything. The board settles it for you at the hour it expires.',
     accent: '#a78bfa',
   },
   {
-    tag: 'The number that matters',
-    title: 'Clear the break-even',
-    body: 'Every contract names the move it needs before it pays a thing. Short of that it expires worthless and the stake is gone. Past it, every further point pays, and the further it runs the more you take.',
+    tag: 'What it costs',
+    title: 'The premium, and breakeven',
+    body: 'You pay a premium up front, and that is the most you can ever lose. Past your target the contract pays more the further the price runs, so you turn a profit once it has covered the premium. That point is your breakeven.',
     accent: '#fbbf24',
+    art: 'payoff',
+  },
+  {
+    tag: 'The two families',
+    title: 'Whole Waters, Single Species',
+    body: 'A Whole Water is a whole fishing ground averaged together, so it drifts where a species lurches: steadier, cheaper to be right about, smaller swings. A Single Species moves several times as far in a day and gaps far harder on news. Waters to be patient with, species to take a swing at.',
+    accent: '#4ade80',
+    art: 'families',
+  },
+  {
+    tag: 'News you can see coming',
+    title: 'Catch reports and grounds surveys',
+    body: 'Every index reports on a schedule, every few days. A species files a Catch Report, a water gets a Grounds Survey, and either one moves the price hard the hour it lands. The board counts down to it and turns gold when it is close. A contract running through a report costs more, because it carries that swing.',
+    accent: '#f0c040',
+    art: 'report',
   },
   {
     tag: 'The way out',
-    title: 'You can sell early',
-    body: 'A contract is worth something the whole time it is running, because the hours it still has to move are worth money. Take the profit when you see it instead of praying the last hour holds.',
-    accent: '#4ade80',
-  },
-  {
-    tag: 'Where to start',
-    title: 'Funds are the gentler water',
-    body: 'An index is the average of every fish in it, so it moves a fraction as far as any single one and asks a much smaller move of you. Single fish swing hardest and pay hardest.',
+    title: 'Sell whenever you like',
+    body: 'You are never stuck. A contract is worth something the whole time it runs, rising as the price moves your way and falling as the clock runs down. Take what it is worth and walk, or hold it to the end.',
     accent: '#f87171',
   },
 ]
+
+/** Small diagrams. Three ideas here are shapes, not sentences: a payoff that
+ *  hinges, two lines of different temperament, and a countdown that changes
+ *  colour as it nears. */
+function Art({ kind, accent }: { kind: NonNullable<Page['art']>; accent: string }) {
+  if (kind === 'payoff') {
+    return (
+      <svg viewBox="0 0 240 84" width="100%" height="84" aria-hidden style={{ display: 'block' }}>
+        <line x1="10" y1="60" x2="230" y2="60" stroke="rgba(255,255,255,0.16)" strokeWidth="1" />
+        {/* flat while it is under the strike, then it climbs and keeps climbing */}
+        <path d="M10 60 L120 60 L225 14" fill="none" stroke={accent} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        <line x1="120" y1="8" x2="120" y2="70" stroke="rgba(255,255,255,0.28)" strokeWidth="1" strokeDasharray="3 3" />
+        <line x1="163" y1="8" x2="163" y2="70" stroke="#ffd96a" strokeWidth="1" strokeDasharray="3 3" />
+        <text x="120" y="80" fill="#8a94a4" fontSize="9" textAnchor="middle" fontFamily="system-ui">target</text>
+        <text x="176" y="80" fill="#ffd96a" fontSize="9" textAnchor="middle" fontFamily="system-ui">breakeven</text>
+        <text x="228" y="12" fill={accent} fontSize="9" textAnchor="end" fontFamily="system-ui">profit</text>
+      </svg>
+    )
+  }
+  if (kind === 'families') {
+    return (
+      <svg viewBox="0 0 240 84" width="100%" height="84" aria-hidden style={{ display: 'block' }}>
+        <path d="M8 26 L28 24 L48 27 L68 23 L88 26 L108 22 L128 25 L148 21 L168 24 L188 20 L212 23"
+          fill="none" stroke="#7dd3fc" strokeWidth="2" strokeLinejoin="round" />
+        <text x="232" y="26" fill="#7dd3fc" fontSize="9" textAnchor="end" fontFamily="system-ui">water</text>
+        <path d="M8 66 L28 52 L48 72 L68 46 L88 70 L108 40 L128 74 L148 44 L168 68 L188 38 L212 60"
+          fill="none" stroke="#f0a35e" strokeWidth="2" strokeLinejoin="round" />
+        <text x="232" y="70" fill="#f0a35e" fontSize="9" textAnchor="end" fontFamily="system-ui">species</text>
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 240 84" width="100%" height="84" aria-hidden style={{ display: 'block' }}>
+      <rect x="8" y="30" width="86" height="24" rx="12" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.10)" />
+      <text x="51" y="46" fill="#8d96a5" fontSize="10" textAnchor="middle" fontFamily="system-ui">in 6d 4h</text>
+      <rect x="102" y="30" width="76" height="24" rx="12" fill="rgba(56,189,248,0.13)" stroke="rgba(56,189,248,0.42)" />
+      <text x="140" y="46" fill="#9fdcff" fontSize="10" textAnchor="middle" fontFamily="system-ui">in 1d 8h</text>
+      <rect x="186" y="30" width="46" height="24" rx="12" fill="rgba(240,192,64,0.16)" stroke="rgba(240,192,64,0.55)" />
+      <circle cx="198" cy="42" r="2.5" fill="#ffcf6a" />
+      <text x="212" y="46" fill="#ffcf6a" fontSize="10" textAnchor="middle" fontFamily="system-ui">in 5h</text>
+    </svg>
+  )
+}
 
 export default function ExchangeIntro({
   celebrate,
@@ -240,6 +292,11 @@ export default function ExchangeIntro({
                   <p className="font-karla font-400" style={{ fontSize: '0.83rem', color: '#aeb9c9', lineHeight: 1.62 }}>
                     {p.body}
                   </p>
+                  {p.art && (
+                    <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.4rem', borderRadius: 12, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <Art kind={p.art} accent={p.accent} />
+                    </div>
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
