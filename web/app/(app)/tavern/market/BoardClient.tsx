@@ -354,12 +354,24 @@ function reportIn(at: string | null): string | null {
   return `in ${Math.round(h / 24)}d`
 }
 
-/** The gap it just took, while that is still the reason the chart looks so odd. */
+/** The gap it took, and WHEN, which is the whole difference between a caption
+ *  and a contradiction.
+ *
+ *  The row prints the move from the last tick. A gap from six hours ago sitting
+ *  beside it, unlabelled, reads as the card disagreeing with itself: "the beds
+ *  came up empty, -14.3%" next to +0.1%. Both were true and neither was of the
+ *  same moment. So a gap that happened on THIS tick is the explanation of the
+ *  number beside it and says nothing more; an older one carries its age. */
 function freshEvent(i: BoardIndex): string | null {
   if (!i.lastEvent || !i.lastEventAt || i.lastEventPct == null) return null
-  const h = (Date.now() - new Date(i.lastEventAt).getTime()) / 3_600_000
-  if (!(h >= 0) || h > 36) return null
-  return `${i.lastEvent}, ${i.lastEventPct > 0 ? '+' : ''}${i.lastEventPct}%`
+  const at = new Date(i.lastEventAt).getTime()
+  const h = (Date.now() - at) / 3_600_000
+  if (!(h >= 0) || h > 24) return null
+  const move = `${i.lastEvent}, ${i.lastEventPct > 0 ? '+' : ''}${i.lastEventPct}%`
+  // Same tick as the price it is standing next to?
+  const tick = i.updatedAt ? new Date(i.updatedAt).getTime() : null
+  if (tick != null && Math.abs(at - tick) < 60_000) return move
+  return `${move} · ${h < 1 ? 'just now' : `${Math.round(h)}h ago`}`
 }
 
 function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) {
