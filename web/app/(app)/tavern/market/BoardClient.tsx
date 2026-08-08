@@ -572,12 +572,22 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
         }}>
 
         <div style={{ flexShrink: 0, padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0f4fa' }}>{index.name}</p>
-          <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#8a94a4', lineHeight: 1.45, marginTop: 1 }}>
+          {/* THE PRICE, set as large as the target below it, because the whole
+              question this screen asks is how far apart those two numbers are.
+              It used to be a 0.7rem footnote under the name while the target it
+              is measured against was more than twice its size. */}
+          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#c8d2e0' }}>{index.name}</p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginTop: 1 }}>
+            <span className="font-cinzel font-800" style={{ fontSize: '1.75rem', lineHeight: 1.1, color: '#f0f4fa', ...TNUM }}>
+              {fmtPrice(index.price)}
+            </span>
+            <span className="font-karla font-700" style={{ fontSize: '0.74rem', ...TNUM,
+              color: pct(index.price, index.prevPrice) >= 0 ? UP : DOWN }}>
+              {fmtPct(pct(index.price, index.prevPrice))} this hour
+            </span>
+          </div>
+          <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#8a94a4', lineHeight: 1.45, marginTop: 3 }}>
             {index.blurb}
-          </p>
-          <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
-            {fmtPrice(index.price)} now
           </p>
           {(() => {
             const news = freshEvent(index)
@@ -597,16 +607,44 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               is the target, so dragging the slider moves a line across the same
               chart you just read, and how far you are asking it to travel stops
               being a percentage and becomes a distance you can see. */}
-          {index.history.length > 1 && (
-            <div style={{ marginBottom: 13, padding: '0.5rem 0.55rem 0.4rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <Line fluid points={index.history} w={380} h={64}
-                color={pct(index.price, index.history[0]) >= 0 ? UP : DOWN}
-                mark={chosen ? targetPrice : undefined} />
-              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 4, ...TNUM }}>
-                Last 48 hours{chosen ? ' · dashed line is your target' : ''}
-              </p>
-            </div>
-          )}
+          {index.history.length > 1 && (() => {
+            // THE SCALE, because a line with no numbers on it is a picture, not a
+            // chart. The same span the chart is drawn from, so the labels cannot
+            // disagree with the shape, and the target is named ON its own rule
+            // rather than in a caption underneath saying a dashed line exists.
+            const vals = chosen ? [...index.history, targetPrice] : index.history
+            const lo = Math.min(...vals), hi = Math.max(...vals)
+            const span = hi - lo || 1
+            const yPct = (v: number) => (1 - (v - lo) / span) * 100
+            const H = 64
+            return (
+              <div style={{ marginBottom: 13, padding: '0.5rem 0.55rem 0.4rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ position: 'relative', height: H }}>
+                  <Line fluid points={index.history} w={380} h={H}
+                    color={pct(index.price, index.history[0]) >= 0 ? UP : DOWN}
+                    mark={chosen ? targetPrice : undefined} />
+                  <span className="font-karla font-600" style={{ position: 'absolute', top: -2, right: 0, fontSize: '0.56rem', color: '#6a7482', ...TNUM }}>
+                    {fmtPrice(hi)}
+                  </span>
+                  <span className="font-karla font-600" style={{ position: 'absolute', bottom: -2, right: 0, fontSize: '0.56rem', color: '#6a7482', ...TNUM }}>
+                    {fmtPrice(lo)}
+                  </span>
+                  {chosen && (
+                    <span className="font-karla font-700" style={{
+                      position: 'absolute', left: 0, top: `${yPct(targetPrice)}%`,
+                      transform: 'translateY(-50%)', fontSize: '0.58rem', color: '#ffd96a',
+                      background: 'rgba(10,14,20,0.82)', padding: '0 3px', borderRadius: 3, ...TNUM,
+                    }}>
+                      {fmtPrice(targetPrice)}
+                    </span>
+                  )}
+                </div>
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 4, ...TNUM }}>
+                  Last 48 hours
+                </p>
+              </div>
+            )
+          })()}
 
           <Step label="Which way" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 13 }}>
@@ -845,13 +883,36 @@ function BetSheet({ bet, index, onClose, onSold }: {
             </p>
           )}
 
-          <div style={{ margin: '4px 0 10px', padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <Line fluid points={line} color={bet.movedPct >= 0 ? UP : DOWN} w={380} h={54}
-              mark={bet.entryPrice * (1 + (bet.direction === 'up' ? 1 : -1) * bet.distancePct / 100)} />
-            <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
-              in at {fmtPrice(bet.entryPrice)} · dashed line is your target
-            </p>
-          </div>
+          {(() => {
+            const target = bet.entryPrice * (1 + (bet.direction === 'up' ? 1 : -1) * bet.distancePct / 100)
+            const vals = [...line, target]
+            const lo = Math.min(...vals), hi = Math.max(...vals)
+            const span = hi - lo || 1
+            const H = 54
+            return (
+              <div style={{ margin: '4px 0 10px', padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ position: 'relative', height: H }}>
+                  <Line fluid points={line} color={bet.movedPct >= 0 ? UP : DOWN} w={380} h={H} mark={target} />
+                  <span className="font-karla font-600" style={{ position: 'absolute', top: -2, right: 0, fontSize: '0.56rem', color: '#6a7482', ...TNUM }}>
+                    {fmtPrice(hi)}
+                  </span>
+                  <span className="font-karla font-600" style={{ position: 'absolute', bottom: -2, right: 0, fontSize: '0.56rem', color: '#6a7482', ...TNUM }}>
+                    {fmtPrice(lo)}
+                  </span>
+                  <span className="font-karla font-700" style={{
+                    position: 'absolute', left: 0, top: `${(1 - (target - lo) / span) * 100}%`,
+                    transform: 'translateY(-50%)', fontSize: '0.58rem', color: '#ffd96a',
+                    background: 'rgba(10,14,20,0.82)', padding: '0 3px', borderRadius: 3, ...TNUM,
+                  }}>
+                    {fmtPrice(target)}
+                  </span>
+                </div>
+                <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
+                  in at {fmtPrice(bet.entryPrice)}
+                </p>
+              </div>
+            )
+          })()}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 4 }}>
             <Fact label="Moved" value={fmtPct(bet.movedPct)} color={ahead ? UP : '#e8eef6'} />
