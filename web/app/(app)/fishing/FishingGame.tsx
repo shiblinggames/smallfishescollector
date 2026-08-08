@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
 import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence, useDragControls, type MotionStyle } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -72,7 +73,24 @@ import { vibrate, hapticTap } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait, type BaitDef } from '@/lib/bait'
-import GearScreen from './GearScreen'
+// LAZY. GearScreen is 216KB of source and already renders only behind
+// {gearOpen && ...}, but a static import still parsed and evaluated all of it
+// as part of the fishing bundle whether or not the drawer was ever opened. It
+// loads on tap now, under the drawer's own slide-up, so the fetch hides inside
+// an animation that was always there. ssr:false because it is drawer-only UI
+// that never renders on the server.
+const GearScreen = dynamic(() => import('./GearScreen'), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#6a6764', fontFamily: 'var(--font-karla), system-ui, sans-serif',
+      fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase',
+    }}>
+      Opening the locker…
+    </div>
+  ),
+})
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
