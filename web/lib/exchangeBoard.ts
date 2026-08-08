@@ -208,12 +208,47 @@ const logPct = (pct: number) => 100 * Math.log(1 + pct / 100)
  *  as the pair of log moves it actually causes. A single jump is BIMODAL, up or
  *  down and nothing near zero, so approximating it with one normal prices the
  *  near rungs badly. Quadrature is cheap and honest. */
-function jumpPoints(dailyMovePct: number): { up: number; down: number }[] {
-  const { min, max } = jumpRange(dailyMovePct)
-  return [0, 1, 2, 3].map(i => {
+/** ONE GAP IN TWENTY GOES FAR PAST THE BAND.
+ *
+ *  A uniform band has a hard ceiling, which is the same flaw the diffusion had
+ *  before jumps existed, moved up a level: the very worst a report could do was
+ *  exactly jmax and beyond it nothing had any probability at all. Markets do not
+ *  work like that. Companies are bought, beds are fished out, frauds come to
+ *  light, and a price falls off a cliff or doubles overnight.
+ *
+ *  So one gap in twenty is multiplied two to five times over, capped at 85%
+ *  because a price cannot fall further than all of itself. Rare enough that most
+ *  reports are ordinary; real enough that a captain who holds through enough of
+ *  them will one day see something extraordinary. */
+const EXTREME_P = 0.05
+const EXTREME_MIN = 2
+const EXTREME_MAX = 5
+const EXTREME_CAP = 85
+
+/** A gap's magnitudes, as the pair of log moves each causes, WEIGHTED. Four
+ *  points across the ordinary band, two out in the tail. */
+function bandPoints(min: number, max: number): { up: number; down: number; w: number }[] {
+  const pts = [0, 1, 2, 3].map(i => {
     const m = min + (max - min) * ((i + 0.5) / 4)
-    return { up: logPct(m), down: logPct(-m) }
+    return { up: logPct(m), down: logPct(-m), w: (1 - EXTREME_P) / 4 }
   })
+  // MULTIPLIED OFF THE MAGNITUDE ACTUALLY DRAWN, not off the ceiling. The
+  // engine rolls a gap and then multiplies THAT, so a report, which can roll
+  // anywhere from nothing up to the ceiling, has a tail built on its average
+  // draw rather than its largest. Pricing it off the ceiling charged for a tail
+  // twice the size of the one delivered: 41% over on a Reef report.
+  const mid = (min + max) / 2
+  for (let i = 0; i < 2; i++) {
+    const mult = EXTREME_MIN + (EXTREME_MAX - EXTREME_MIN) * ((i + 0.5) / 2)
+    const m = Math.min(EXTREME_CAP, mid * mult)
+    pts.push({ up: logPct(m), down: logPct(-m), w: EXTREME_P / 2 })
+  }
+  return pts
+}
+
+function jumpPoints(dailyMovePct: number) {
+  const { min, max } = jumpRange(dailyMovePct)
+  return bandPoints(min, max)
 }
 
 /** A SCHEDULED REPORT IS NOT THE SAME EVENT as a surprise, and it took a
@@ -227,12 +262,8 @@ function jumpPoints(dailyMovePct: number): { up: number; down: number }[] {
  *  Same ceiling, no floor: a report is uniform from nothing up to the index's
  *  full gap, so most are ordinary, some are heavy, and one in a while the beds
  *  are exactly as full as everyone expected. */
-function reportPoints(dailyMovePct: number): { up: number; down: number }[] {
-  const { max } = jumpRange(dailyMovePct)
-  return [0, 1, 2, 3].map(i => {
-    const m = max * ((i + 0.5) / 4)
-    return { up: logPct(m), down: logPct(-m) }
-  })
+function reportPoints(dailyMovePct: number) {
+  return bandPoints(0, jumpRange(dailyMovePct).max)
 }
 
 /** Average `base` over every way this many gaps could land.
@@ -241,19 +272,26 @@ function reportPoints(dailyMovePct: number): { up: number; down: number }[] {
  *  a middle it never occupies. Beyond two, the sum is close enough to normal to
  *  say so, and rare enough that the difference is noise. */
 function overJumps(
-  sets: { up: number; down: number }[][],
+  sets: { up: number; down: number; w: number }[][],
   base: (shiftPct: number, extraVarPct2: number) => number,
 ): number {
   if (sets.length === 0) return base(0, 0)
   if (sets.length <= 2) {
-    const shifts = sets.reduce<number[]>(
-      (acc, pts) => acc.flatMap(a => pts.flatMap(j => [a + j.up, a + j.down])), [0])
-    return shifts.reduce((t, sh) => t + base(sh, 0), 0) / shifts.length
+    // Weighted, because the tail points are rare and must not be averaged in as
+    // though they were as likely as the ordinary ones.
+    let out = [{ shift: 0, w: 1 }]
+    for (const pts of sets) {
+      out = out.flatMap(a => pts.flatMap(j => [
+        { shift: a.shift + j.up, w: a.w * j.w / 2 },
+        { shift: a.shift + j.down, w: a.w * j.w / 2 },
+      ]))
+    }
+    return out.reduce((t, o) => t + o.w * base(o.shift, 0), 0)
   }
   let mean = 0, variance = 0
   for (const pts of sets) {
-    const m = pts.reduce((a, j) => a + (j.up + j.down) / 2, 0) / pts.length
-    const sq = pts.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2, 0) / pts.length
+    const m = pts.reduce((a, j) => a + j.w * (j.up + j.down) / 2, 0)
+    const sq = pts.reduce((a, j) => a + j.w * (j.up ** 2 + j.down ** 2) / 2, 0)
     mean += m; variance += Math.max(0, sq - m * m)
   }
   return base(mean, variance)

@@ -59,9 +59,15 @@ const PAGES: Page[] = [
   {
     tag: 'News you can see coming',
     title: 'Catch reports and grounds surveys',
-    body: 'Every index reports on a schedule, every few days. A species files a Catch Report, a water gets a Grounds Survey, and either one moves the price hard the hour it lands. The board counts down to it and turns gold when it is close. A contract running through a report costs more, because it carries that swing.',
+    body: 'Every index reports on a schedule, every few days. A species files a Catch Report, a water gets a Grounds Survey, and it can go either way, hard or barely at all: plenty come in exactly as expected. The board counts down and turns gold when one is close. A contract running through a report costs more, because it carries that swing.',
     accent: '#f0c040',
     art: 'report',
+  },
+  {
+    tag: 'Rare, and worth knowing',
+    title: 'Sometimes the bottom goes',
+    body: 'About one gap in twenty is no ordinary one. A ground gets fished out, a buyer takes the whole fleet, and a price halves or doubles in a single hour. It is rare enough that most weeks you will never see it and real enough that it will happen to you eventually, on either side.',
+    accent: '#c084fc',
   },
   {
     tag: 'The way out',
