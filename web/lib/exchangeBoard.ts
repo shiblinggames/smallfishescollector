@@ -33,10 +33,19 @@ export type Direction = 'up' | 'down'
 // distances below are fixed in PERCENT rather than scaled to each term. Scale
 // them per term and every term has identical odds, which is the trap the first
 // version of this walked into.
-export const TERMS = [1, 6, 24, 72, 168] as const
+// A DAY IS THE SHORTEST BET. The hour and the six-hour went, and not because
+// they were mispriced: they were fair to the decimal. They were the wrong GAME.
+// A term that resolves inside an hour is a thing you pull rather than a position
+// you hold, and it can be re-entered all day, which is a slot machine wearing a
+// chart. Selling early already covers the impatient case, and covers it better,
+// because the price moves every hour whether or not your bet is about to end.
+export const TERMS = [24, 72, 168] as const
 export type Term = typeof TERMS[number]
 
-export const TERM_NAME: Record<Term, string> = {
+/** Keyed loosely, because SETTLED bets keep whatever term they were sold at.
+ *  The hour is gone from the board but not from anyone's history, and a row
+ *  that renders a blank where its length should be reads as a bug. */
+export const TERM_NAME: Record<number, string> = {
   1: 'One hour',
   6: 'Six hours',
   24: 'One day',
@@ -46,8 +55,6 @@ export const TERM_NAME: Record<Term, string> = {
 
 /** The one-line pitch for each length, in plain words. */
 export const TERM_PITCH: Record<Term, string> = {
-  1: 'Settles at the next price. Small moves, small prizes.',
-  6: 'An afternoon. Still a long shot.',
   24: 'A day to get there. The everyday bet.',
   72: 'Three days of room to move.',
   168: 'A whole week. The patient bet.',
@@ -70,27 +77,13 @@ export const TERM_PITCH: Record<Term, string> = {
 //   wildest index, one hour   +3% 1 in 9 -> 9x   +5% 1 in 50 -> 49x
 //   wildest index, one week   nine rungs from a coin flip out to 1 in 30
 //
-// THREE MORE AT THE BOTTOM, and they are what make the one-hour bet a bet
-// instead of a lottery. The old ladder started at a quarter of a day's travel,
-// which over a single hour is 1.2 sigma on every index -- so the SHORTEST term
-// only ever offered long shots, and the shortest term is the one you can re-
-// enter every hour forever. Fair odds plus unlimited re-entry plus a 9x top
-// prize is an honest slot machine, which is still a slot machine. The fine
-// steps give the hour a near-money rung to actually play.
+// THREE MORE AT THE BOTTOM. They were added to give the one-hour bet a
+// near-money rung instead of nothing but long shots; the hour is gone now, but
+// they earn their place on the day: a quarter of a day's travel is the SMALLEST
+// thing the old ladder could ask for, which left no safe end at all. These are
+// the low-risk bets, the ones that pay 2x for something likely.
 const RUNG_STEPS = [0.05, 0.09, 0.14, 0.25, 0.4, 0.6, 0.85, 1.2, 1.6, 2.0, 2.5, 3.0] as const
 
-/** MOST A TERM WILL PAY.
- *
- *  Only the one-hour bet is held down, and not because its odds were wrong: a 3%
- *  Pod hour prices at 10.7% and truly runs at 11.7%, which is as close to fair as
- *  this model gets. The problem is the shape of the thing. An hour resolves fast
- *  enough to run all day, so a 9x top prize turns the board into a machine you
- *  pull rather than a market you read.
- *
- *  Held to 5x, the hour keeps its near-money rungs and loses its jackpot. Every
- *  longer term is left alone -- that is where the long shots belong, because a
- *  week costs you a week. */
-const MAX_MULT_BY_TERM: Partial<Record<Term, number>> = { 1: 5 }
 
 /** The distances this index offers, in percent, smallest first. Rounded to
  *  something a person would say out loud: no 13.847%.
@@ -290,10 +283,9 @@ export function worthNow(
 export const MIN_CHANCE = 0.005
 
 export function offeredBets(dailyMovePct: number, hours: Term, driftPct = 0): Bet[] {
-  const ceiling = MAX_MULT_BY_TERM[hours] ?? Infinity
   return rungsFor(dailyMovePct)
     .map(d => priceBet(dailyMovePct, hours, d, driftPct))
-    .filter(b => b.chance >= MIN_CHANCE && b.multiplier <= ceiling)
+    .filter(b => b.chance >= MIN_CHANCE)
 }
 
 /** How far the engine will carry this index on its own over `hours`, before any
