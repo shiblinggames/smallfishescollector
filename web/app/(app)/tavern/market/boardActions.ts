@@ -249,7 +249,7 @@ export async function openBet(
   }
 
   const { data: idx } = await admin.from('exchange_indexes')
-    .select('id, vol, beta, trend, trend_ticks, price, next_event_at').eq('id', indexId).single()
+    .select('id, vol, beta, trend, trend_ticks, price, next_event_at, updated_at').eq('id', indexId).single()
   if (!idx) return { error: 'No such index' }
   const entry = Number(idx.price)
   if (!(entry > 0)) return { error: 'That index has no price right now' }
@@ -268,7 +268,10 @@ export async function openBet(
   )
   // A report inside the window is certain variance, and the premium has to
   // carry it or the board hands that variance away.
-  const sched = scheduledIn((idx.next_event_at as string | null) ?? null, term, Date.now())
+  // ANCHORED TO THE TICK, everywhere. Prices only move on the hour, so a
+  // contract lives for `term` TICKS, not `term` hours of wall clock.
+  const tickAt = idx.updated_at ? new Date(idx.updated_at as string).getTime() : Date.now()
+  const sched = scheduledIn((idx.next_event_at as string | null) ?? null, term, tickAt)
 
   // THE PREMIUM: the expected payoff, priced from the index and never from the
   // caller. Drift is the index's OWN, not signed to the buyer's side, because a
@@ -315,7 +318,11 @@ export async function openBet(
     units,
     stake,
     entry_price: entry,
-    expires_at: new Date(Date.now() + term * 3600_000).toISOString(),
+    // FROM THE TICK, not from now. Set from the wall clock, a contract bought
+    // 25 minutes into the hour expired 25 minutes late, while the board valued
+    // it from the last tick and so credited it with 25 minutes of time value it
+    // had not paid for. Every position was in profit the instant it was opened.
+    expires_at: new Date(tickAt + term * 3600_000).toISOString(),
   })
   if (error) {
     // Give it back rather than leaving them short for a bet that does not exist.
