@@ -3520,6 +3520,14 @@ export default function FishingGame({
   const anyShopAffordable = rodHasAffordable || reelHasAffordable || hookHasAffordable
   const [holdOpen, setHoldOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
+  // MOUNT THE LOCKER AFTER THE DRAWER LANDS. GearScreen builds a large tree —
+  // every rod, hook, reel, line, boat, hat, pet and badge, ~106 catalog entries
+  // and 19 images — and it used to mount on the same frame the drawer started
+  // sliding. The slide is a compositor transform, but a mount that heavy blocks
+  // the main thread anyway, so the open stuttered. The drawer now slides empty
+  // (220ms, matching its own transition) and the contents mount on the frame
+  // after it settles, when nothing is animating.
+  const [gearMounted, setGearMounted]   = useState(false)
   // Deep-link to the Appearance picker (mail CTA: /fishing?gear=appearance).
   // GearScreen consumes the flag on open and calls back to clear it.
   const [gearAutoAppearance, setGearAutoAppearance] = useState(false)
@@ -5022,6 +5030,12 @@ export default function FishingGame({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [levelUpNotif, finnChallenge?.speedEndsAt])
+
+  useEffect(() => {
+    if (!gearOpen) return
+    const t = setTimeout(() => setGearMounted(true), 240)
+    return () => clearTimeout(t)
+  }, [gearOpen])
 
   // Phase 1 — cast (from idle)
   async function handleCast() {
@@ -9241,7 +9255,7 @@ export default function FishingGame({
       </PopupShell>
 
       {/* ── Gear drawer ── */}
-      <AnimatePresence>
+      <AnimatePresence onExitComplete={() => setGearMounted(false)}>
         {gearOpen && (
           <motion.div key="gear-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -9266,6 +9280,12 @@ export default function FishingGame({
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Gear &amp; Shop</p>
               <DrawerClose onClick={() => setGearOpen(false)} />
             </div>
+            {!gearMounted ? (
+              <div className="font-karla font-700 uppercase tracking-[0.14em]"
+                style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6a6764', fontSize: '0.7rem' }}>
+                Opening the locker…
+              </div>
+            ) : (
             <GearScreen
               autoOpenAppearance={gearAutoAppearance}
               onAppearanceAutoOpened={() => setGearAutoAppearance(false)}
@@ -9480,6 +9500,7 @@ export default function FishingGame({
               onToggleShowWaitTimer={updateShowWaitTimer}
               onClose={() => setGearOpen(false)}
             />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
