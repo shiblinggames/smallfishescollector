@@ -1058,6 +1058,31 @@ function BetSheet({ bet, index, onClose, onSold }: {
                 ? (bet.hoursLeft >= 1 ? `${Math.round(bet.hoursLeft)}h` : 'under an hour')
                 : bet.status === 'won' ? 'landed' : bet.status === 'sold' ? 'sold early' : 'missed'} />
           </div>
+
+          {/* HOW IT MOVES, in plain doubloons. Delta and theta, named by what
+              they do to your purse rather than by their Greek letters: what a
+              1% move your way adds this second, and what a day of waiting takes
+              if the price sits still. */}
+          {live && bet.moveValue != null && bet.dayDecay != null && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 9 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                <span className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#8a94a4' }}>
+                  A 1% move your way adds
+                </span>
+                <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: UP, ...TNUM }}>
+                  +{bet.moveValue.toLocaleString()} ⟡
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                <span className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#8a94a4' }}>
+                  Waiting a day with no move
+                </span>
+                <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: DOWN, ...TNUM }}>
+                  {bet.dayDecay.toLocaleString()} ⟡
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ flexShrink: 0, padding: '0.7rem 1rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.09)', background: 'rgba(6,9,14,0.97)' }}>

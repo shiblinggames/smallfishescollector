@@ -94,6 +94,10 @@ export type BoardBet = {
   /** The price at which selling now returns exactly the premium paid. Climbs
    *  toward the target as the clock runs down, which is theta made visible. */
   breakEvenPrice: number | null
+  /** What a 1% move your way is worth right now (delta). Null once finished. */
+  moveValue: number | null
+  /** What a day's wait costs if the price holds (theta) — a negative. */
+  dayDecay: number | null
   hoursLeft: number
 }
 
@@ -181,6 +185,28 @@ export async function getBoard(): Promise<Board> {
           Number(moodRes.data?.mood_bias ?? 0), hoursLeft, 'up')
       : 0
     const betSched = idx ? scheduledIn(idx.nextEventAt, hoursLeft, tickAt) : 0
+
+    // TWO NUMBERS A HOLDER WANTS, priced by the same engine as everything else
+    // so they cannot disagree with it. Both are just the position revalued a
+    // small step away and differenced -- the options "greeks", without the word.
+    //   moveValue: what a 1% move YOUR way is worth right now. A percent, not a
+    //     unit, because a percent is how the chart is read.
+    //   dayDecay:  what a day's wait costs if the price does not move -- always
+    //     a loss on a contract, because the time you are paying for runs out.
+    const live0 = idx ? live : entry
+    const posValue = (px: number, hrs: number): number =>
+      !idx || hrs <= 0 ? Math.max(0, Number(b.units ?? 0) * Number(b.lot ?? 1)
+          * (b.direction === 'up' ? px - Number(b.strike) : Number(b.strike) - px))
+        : Number(b.units ?? 0) * Number(b.lot ?? 1) * contractValue(
+            px, Number(b.strike), b.direction as Direction, hrs, idx.dailyMovePct, betDrift, betSched)
+    const liveWorth = idx && hoursLeft > 0 ? posValue(live0, hoursLeft) : 0
+    const openBet_ = hoursLeft > 0 && b.status === 'open' && idx
+    const moveValue = openBet_
+      ? Math.round(posValue(live0 * (b.direction === 'up' ? 1.01 : 0.99), hoursLeft) - liveWorth)
+      : null
+    const dayDecay = openBet_
+      ? Math.round(posValue(live0, Math.max(0, hoursLeft - 24)) - liveWorth)
+      : null
     return {
       id: b.id as number,
       indexId: b.index_id as string,
@@ -213,6 +239,8 @@ export async function getBoard(): Promise<Board> {
       breakEvenPrice: Number(b.strike ?? 0) > 0
         ? breakEvenFor(Number(b.strike), Number(b.premium_each ?? 0), Number(b.lot ?? 1), b.direction as Direction)
         : null,
+      moveValue,
+      dayDecay,
       hoursLeft,
     }
   })
