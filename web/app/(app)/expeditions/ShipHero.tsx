@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSSProperties } from 'react'
+import dynamic from 'next/dynamic'
 import ModalSheet from '@/components/ModalSheet'
 import CloseButton from '@/components/CloseButton'
 import FinnChargePanel from '@/components/FinnChargePanel'
@@ -38,7 +39,18 @@ import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/l
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, forgeComponentIds, conflictingRaidItems, isForgedRaidItem, isAbyssalForgedItem, isConvertibleEpic, legendaryForEpic } from '@/lib/raidItems'
 import { PRISMATIC_TEXT, prismaticBorder, forgedBorderSoft, forgedTextSoft, ABYSSAL_EMBER_TEXT, abyssalEmberBorder, primevalBorder, PRIMEVAL_TEXT } from '@/lib/prismatic'
-import ForgeBoard, { type ForgeTab } from './ForgeBoard'
+import { type ForgeTab } from './ForgeBoard'
+// LAZY. The forge board is a heavy panel behind a tab branch, so it never
+// needs to parse until a captain actually opens the forge.
+const ForgeBoard = dynamic(() => import('./ForgeBoard'), {
+  ssr: false,
+  loading: () => (
+    <div className="font-karla font-700 uppercase tracking-[0.14em]"
+      style={{ minHeight: '30vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6a6764', fontSize: '0.7rem' }}>
+      Lighting the forge…
+    </div>
+  ),
+})
 import LoadoutSummary from './LoadoutSummary'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'

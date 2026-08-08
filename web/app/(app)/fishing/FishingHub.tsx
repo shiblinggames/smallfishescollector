@@ -14,11 +14,20 @@
 // so the two pages cannot drift into being lookalikes.
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import HubTile, { HUB_GRID } from '@/components/HubTile'
 import FishingLevelBar from '@/components/FishingLevelBar'
 import FisherPose from '@/components/FisherPose'
-import Almanac from './Almanac'
+const Almanac = dynamic(() => import('./Almanac'), {
+  ssr: false,
+  loading: () => (
+    <div className="font-karla font-700 uppercase tracking-[0.14em]"
+      style={{ minHeight: '30vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6a6764', fontSize: '0.7rem' }}>
+      Opening the almanac…
+    </div>
+  ),
+})
 import FishingHubTour from './FishingHubTour'
 import { ZONE_MIN_LEVEL, ZONE_BG, ZONE_LABEL, ZONE_COLOR, ZONE_ORDER } from './zoneData'
 import { MOOD_CONFIG } from '@/lib/fishMarket'
