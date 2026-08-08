@@ -21,7 +21,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, TERM_PITCH, type Term, type Direction,
-  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, worthNow, chanceInWords, payoutInWords, payoutFor, fmtPrice,
+  offeredBets, driftOver, stakeCapFor, unitPresets, costOf, premiumOf, worthNow, chanceInWords, payoutInWords, payoutFor, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
@@ -403,8 +403,12 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // The same four everywhere means the sensible DEFAULT is not the same
   // everywhere: ten units is a fair ticket on most of the board and more than a
   // captain owns on the dearest index. Open on the biggest one they can afford.
+  // Every contract costs the premium, which depends on the rung you picked, so
+  // affordability moves as you drag the slider. That is the point: the long
+  // shots are the cheap ones.
+  const prem = chosen ? premiumOf(index.price, chosen.chance) : index.price
   const fits = (n: number) => {
-    const c = costOf(n, index.price)
+    const c = costOf(n, index.price, chosen?.chance ?? 1)
     return c >= MIN_STAKE && c <= doubloons && c <= capNow
   }
   const chosenUnits = units ?? [...presets].reverse().find(fits) ?? presets[0]
@@ -415,7 +419,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   const targetPrice = chosen
     ? index.price * (1 + (dir === 'up' ? 1 : -1) * chosen.distancePct / 100)
     : index.price
-  const capped = costOf(chosenUnits, index.price)
+  const capped = costOf(chosenUnits, index.price, chosen?.chance ?? 1)
   const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
   const returns = chosen ? payoutFor(capped, chosen.multiplier) : 0
 
@@ -563,14 +567,14 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
             </p>
           )}
 
-          <Step n={4} label="How many are you buying?" />
+          <Step n={4} label="How many contracts?" />
           {/* QUANTITIES, sized per index so the four buttons always land on costs
               a captain recognises, roughly 1k / 5k / 25k / 100k, whether a unit
               costs 0.09 or 1,420. Nobody has to multiply anything to find a
               sensible ticket. */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
             {presets.map(v => {
-              const cost = costOf(v, index.price)
+              const cost = costOf(v, index.price, chosen?.chance ?? 1)
               // Too dear at the top, and on a fallen index too CHEAP at the
               // bottom: one unit of something trading at 0.09 rounds to nothing,
               // and a bet that costs nothing cannot pay anything.
@@ -593,7 +597,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           {/* The sum written out. A quantity times a price is the one piece of
               arithmetic this screen cannot avoid asking for, so it does it. */}
           <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8a94a4', marginBottom: 11, ...TNUM }}>
-            {chosenUnits.toLocaleString()} × {fmtPrice(index.price)} ={' '}
+            {chosenUnits.toLocaleString()} × {fmtPrice(prem)} a contract ={' '}
             <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span>
           </p>
 

@@ -210,10 +210,6 @@ export async function openBet(
   const entry = Number(idx.price)
   if (!(entry > 0)) return { error: 'That index has no price right now' }
 
-  const stake = costOf(units, entry)
-  if (stake < MIN_STAKE) return { error: `That is only ${stake.toLocaleString()} ⟡. Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth.` }
-  if (stake > MAX_STAKE) return { error: `Largest bet is ${MAX_STAKE.toLocaleString()} ⟡` }
-
   // The distance has to be one this index actually offers, and the bet has to
   // be one it offers AT THIS TERM. Both are recomputed here: a rung that is a
   // one-in-a-million on a one hour bet is not on the board, and asking for it
@@ -233,6 +229,13 @@ export async function openBet(
   // Priced from the index, never from the caller.
   const priced = priceBet(daily, term, bet.distancePct, drift)
   if (!(priced.multiplier > 0)) return { error: 'Could not price that bet' }
+
+  // THE PREMIUM, and it has to be priced from the same chance the multiplier
+  // came from or stake x multiplier stops landing on units x price. Computed
+  // here rather than from anything the caller sent.
+  const stake = costOf(units, entry, priced.chance)
+  if (stake < MIN_STAKE) return { error: `That is only ${stake.toLocaleString()} ⟡. Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth.` }
+  if (stake > MAX_STAKE) return { error: `Largest bet is ${MAX_STAKE.toLocaleString()} ⟡` }
 
   // Long shots are capped by what they PAY, not by their odds. 250,000 at 199x
   // is 49 million out of one hour, against a richest balance of three.

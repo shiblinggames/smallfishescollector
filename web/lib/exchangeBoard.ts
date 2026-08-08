@@ -422,9 +422,30 @@ export function unitPresets(_price?: number): number[] {
   return [...UNIT_PRESETS]
 }
 
-/** What a parcel of units costs, in doubloons. */
-export function costOf(units: number, price: number): number {
-  return Math.max(0, Math.round(units * price))
+/** WHAT A CONTRACT COSTS: the PREMIUM, not the share.
+ *
+ *  This board used to charge the full index price per unit, which is buying the
+ *  fish rather than betting on it. A contract is not the thing, it is the right
+ *  to be paid if the thing moves, and it costs a fraction accordingly.
+ *
+ *  One contract pays the index price if it lands and nothing if it does not, so
+ *  the fair premium is that price times the chance of landing. Payout over
+ *  premium comes back to 1/chance, the same multiplier the board already quotes,
+ *  so nothing about the odds changes -- only the size of the cheque, which falls
+ *  by roughly the multiplier.
+ *
+ *  It also buys the shape a real chain has, which charging the share price
+ *  destroyed: the far strikes are CHEAP. A near-money contract costs half the
+ *  index, a long shot costs a fiftieth, and the ladder finally reads like a
+ *  ladder instead of every rung costing the same. */
+export function premiumOf(price: number, chance: number): number {
+  if (!(price > 0) || !(chance > 0)) return 0
+  return price * Math.min(chance, 0.99)
+}
+
+/** What a parcel of contracts costs, in doubloons. */
+export function costOf(units: number, price: number, chance: number): number {
+  return Math.max(0, Math.round(units * premiumOf(price, chance)))
 }
 
 /** The largest stake this bet will accept, given what it pays. */
