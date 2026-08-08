@@ -159,6 +159,65 @@ export type Bet = {
  *  The multiplier is solved so the bet is FAIR: chance x multiplier = 1. No
  *  house edge. A market that quietly takes 8% off every bet is a thing you have
  *  to explain, and this screen is trying to explain as little as possible. */
+// ── News ────────────────────────────────────────────────────────────────────
+//
+// KEEP IN LOCKSTEP WITH update_exchange_indexes, the same way driftOver is.
+//
+// The diffusion alone is Bates(3), whose support is HARD BOUNDED at 1.5 vol a
+// tick. Pod's largest possible hour was 7.3%, Coral Reef's 0.79%, so a 20% gap
+// on news was not a long shot, it was arithmetically impossible while the far
+// rungs were still quoted at long-shot prices off a normal curve that assumed
+// tails the engine could not produce. Real markets gap. This is that.
+export const JUMP_P = 0.005          // per index, per hour
+export const JUMP_MIN_PCT = 8
+export const JUMP_MAX_PCT = 25
+
+/** PERCENTAGES INTO THE ENGINE'S OWN UNITS.
+ *
+ *  The engine accumulates in LOG space and the ladder is written in percent. The
+ *  two agree near zero and part company where the money is: reaching +35% only
+ *  costs ln(1.35) = 30 log-percent, so pricing the rung at a flat 35 asks the
+ *  index for more room than it actually needs. Left uncorrected that underpriced
+ *  Pod's far rungs by half, which at 159x is a 96% edge to whoever noticed.
+ *
+ *  Down is not the mirror of up, either: ln(0.75) is -28.8 against ln(1.25)'s
+ *  +22.3, so a fall is the LONGER trip in log space. Both directions are
+ *  converted on their own terms rather than by flipping a sign. */
+const logPct = (pct: number) => 100 * Math.log(1 + pct / 100)
+
+/** Four equal-weight magnitudes standing in for the uniform band, each carried
+ *  as the pair of log moves it actually causes. A single jump is BIMODAL, up or
+ *  down and nothing near zero, so approximating it with one normal prices the
+ *  near rungs badly. Quadrature is cheap and honest. */
+const JUMP_POINTS = [0, 1, 2, 3].map(i => {
+  const m = JUMP_MIN_PCT + (JUMP_MAX_PCT - JUMP_MIN_PCT) * ((i + 0.5) / 4)
+  return { up: logPct(m), down: logPct(-m) }
+})
+/** E[J^2] in log space, for the two-or-more case where a normal is fine. */
+const JUMP_VAR = JUMP_POINTS.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2, 0) / JUMP_POINTS.length
+
+/** Chance of clearing `distancePct`, counting both the ordinary drift of the
+ *  water and the chance the news breaks while your bet is running.
+ *
+ *  A Poisson mixture over how many times it gaps: almost always none, sometimes
+ *  one, rarely more. Jumps are symmetric, so they add no drift, only tail. */
+function reachChance(distancePct: number, driftPct: number, s: number, hours: number): number {
+  const lam = JUMP_P * hours
+  const p0 = Math.exp(-lam)
+  const p1 = lam * Math.exp(-lam)
+  const p2 = Math.max(0, 1 - p0 - p1)
+  const need = logPct(distancePct) - driftPct
+  const tail = (d: number, sd: number) => 1 - normCdf(d / sd)
+
+  let c1 = 0
+  for (const j of JUMP_POINTS) c1 += tail(need - j.up, s) + tail(need - j.down, s)
+  c1 /= JUMP_POINTS.length * 2
+
+  return p0 * tail(need, s)
+       + p1 * c1
+       + p2 * tail(need, Math.sqrt(s * s + 2 * JUMP_VAR))
+}
+
 export function priceBet(
   dailyMovePct: number, hours: Term, distancePct: number,
   /** Where the index is already heading, over this whole term, signed the
@@ -169,7 +228,7 @@ export function priceBet(
 ): Bet {
   const s = spreadOver(dailyMovePct, hours)
   if (!(s > 0) || !(distancePct > 0)) return { distancePct, chance: 0, multiplier: 0 }
-  const chance = 1 - normCdf((distancePct - driftPct) / s)
+  const chance = reachChance(distancePct, driftPct, s, hours)
   if (chance <= 0.00005) return { distancePct, chance: 0, multiplier: 0 }
   // Never pay out on something that cannot lose. Drift can carry a near
   // certainty, and 1.01x is an honest price for one.
