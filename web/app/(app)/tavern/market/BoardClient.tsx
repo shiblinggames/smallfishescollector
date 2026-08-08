@@ -394,7 +394,6 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
         background: 'rgba(13,17,24,0.9)', border: '1px solid rgba(255,255,255,0.08)',
         WebkitTapHighlightColor: 'transparent',
       }}>
-      <span aria-hidden style={{ width: 3, height: 34, borderRadius: 2, background: i.accent, flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.95rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {i.name}

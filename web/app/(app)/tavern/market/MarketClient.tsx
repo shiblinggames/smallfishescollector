@@ -108,8 +108,13 @@ function MarketDoor({ active, accent, title, sub, subAccent, mark, onClick }: {
         background: active
           ? 'linear-gradient(180deg, rgba(22,26,34,0.97) 0%, rgba(11,14,19,0.98) 100%)'
           : 'linear-gradient(180deg, rgba(13,16,21,0.92) 0%, rgba(9,11,15,0.94) 100%)',
-        border: `1px solid ${active ? accent + '66' : 'rgba(255,255,255,0.07)'}`,
-        borderTop: `1px solid ${active ? accent + '99' : 'rgba(255,255,255,0.10)'}`,
+        // THE SHUT DOOR IS STILL A DOOR. Grey borders and grey type are how
+        // this game says "you cannot have this", so the closed side read as
+        // barred rather than as somewhere to go. It keeps its own colour, just
+        // turned down: the open one wins on glow, weight and shadow instead of
+        // by being the only one with any colour at all.
+        border: `1px solid ${active ? accent + '66' : accent + '33'}`,
+        borderTop: `1px solid ${active ? accent + '99' : accent + '4d'}`,
         boxShadow: active ? '0 4px 16px rgba(0,0,0,0.45)' : 'none',
         cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
         transition: 'border-color 0.18s, background 0.18s',
@@ -125,20 +130,20 @@ function MarketDoor({ active, accent, title, sub, subAccent, mark, onClick }: {
       <span style={{
         position: 'relative', flexShrink: 0, width: 34, height: 34, borderRadius: 9,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: active ? `${accent}1c` : 'rgba(255,255,255,0.035)',
-        border: `1px solid ${active ? accent + '4d' : 'rgba(255,255,255,0.07)'}`,
+        background: active ? `${accent}1c` : `${accent}12`,
+        border: `1px solid ${active ? accent + '4d' : accent + '2b'}`,
       }}>
-        {mark(active ? accent : '#6c7280')}
+        {mark(active ? accent : `${accent}b3`)}
       </span>
       <span style={{ position: 'relative', minWidth: 0, flex: 1 }}>
         <span className="font-cinzel font-700" style={{
           display: 'block', fontSize: '0.88rem', lineHeight: 1.15,
-          color: active ? '#f2ede2' : '#7e8592',
+          color: active ? '#f2ede2' : '#c6cedb',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{title}</span>
         <span className="font-karla font-600" style={{
           display: 'block', fontSize: '0.6rem', marginTop: 1,
-          color: active ? (subAccent ? accent : '#8e8577') : '#5d636e',
+          color: active ? (subAccent ? accent : '#8e8577') : '#8b93a1',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{sub}</span>
       </span>
