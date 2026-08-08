@@ -1964,7 +1964,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             // empty seat and replaces an occupied one.
             label={(() => {
               const track = assignSeat.track
-              const party = track === 'raid' ? 'Raid Party' : 'Voyage Party'
+              const party = track === 'raid' ? 'Campaign Party' : 'Voyage Party'
               const holder = state.roster.find(c => (track === 'raid' ? c.raidSlot : c.voyageSlot) === assignSeat.slot)
               return holder ? `Replace ${holder.name}` : party
             })()}
@@ -3472,7 +3472,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   const track: 'raid' | 'voyage' | null =
                     m.raidSlot !== null ? 'raid' : m.voyageSlot !== null ? 'voyage' : null
                   const seat = track === 'raid' ? m.raidSlot : m.voyageSlot
-                  const party = track === 'raid' ? 'Raid Party' : 'Voyage Party'
+                  const party = track === 'raid' ? 'Campaign Party' : 'Voyage Party'
                   const accent = track === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
                   // At sea, trawling, or mid-stint in a bunk: assertCanReassign
                   // refuses every one of these, so offer none of them. The bunk
