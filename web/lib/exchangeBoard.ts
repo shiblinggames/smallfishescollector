@@ -134,14 +134,6 @@ export function spreadOver(dailyMovePct: number, hours: number): number {
   return dailyMovePct * Math.sqrt(hours / 24)
 }
 
-export type Bet = {
-  /** The move it has to make, in percent. */
-  distancePct: number
-  /** Chance of getting there, 0 to 1. */
-  chance: number
-  /** What one staked doubloon comes back as if it does. */
-  multiplier: number
-}
 
 /** Price one rung on one index over one term.
  *
@@ -208,61 +200,7 @@ const JUMP_POINTS = [0, 1, 2, 3].map(i => {
 /** E[J^2] in log space, for the two-or-more case where a normal is fine. */
 const JUMP_VAR = JUMP_POINTS.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2, 0) / JUMP_POINTS.length
 
-/** Chance of clearing `distancePct`, counting both the ordinary drift of the
- *  water and the chance the news breaks while your bet is running.
- *
- *  A Poisson mixture over how many times it gaps: almost always none, sometimes
- *  one, rarely more. Jumps are symmetric, so they add no drift, only tail. */
-function reachChance(
-  distancePct: number, driftPct: number, s: number, hours: number,
-  /** Scheduled reports certain to land inside this term, normally 0 or 1. A
-   *  report is not a maybe once its hour is known, so it is counted rather than
-   *  sampled -- and counting it is the entire reason a contract that spans one
-   *  costs more than a contract that stops the hour before. */
-  scheduled = 0,
-): number {
-  const lam = JUMP_P * hours
-  const p0 = Math.exp(-lam)
-  const p1 = lam * Math.exp(-lam)
-  const p2 = Math.max(0, 1 - p0 - p1)
-  const need = logPct(distancePct) - driftPct
-  const tail = (d: number, sd: number) => 1 - normCdf(d / sd)
 
-  // Chance of clearing the distance given exactly n gaps of either kind.
-  const withJumps = (n: number): number => {
-    if (n <= 0) return tail(need, s)
-    if (n === 1) {
-      let c = 0
-      for (const j of JUMP_POINTS) c += tail(need - j.up, s) + tail(need - j.down, s)
-      return c / (JUMP_POINTS.length * 2)
-    }
-    // Two or more and the sum is close enough to normal to say so.
-    return tail(need, Math.sqrt(s * s + n * JUMP_VAR))
-  }
-
-  return p0 * withJumps(scheduled)
-       + p1 * withJumps(scheduled + 1)
-       + p2 * withJumps(scheduled + 2)
-}
-
-export function priceBet(
-  dailyMovePct: number, hours: Term, distancePct: number,
-  /** Where the index is already heading, over this whole term, signed the
-   *  player's way. Trend and weather are PERSISTENT and drawn on the chart, so
-   *  pricing pure noise sells a near-certainty at long-shot odds: a +0.3% hour
-   *  on the Shallows was 3.3% flat and 100% during a bull run, both at 30x. */
-  driftPct = 0,
-  /** Scheduled reports landing inside this term. */
-  scheduled = 0,
-): Bet {
-  const s = spreadOver(dailyMovePct, hours)
-  if (!(s > 0) || !(distancePct > 0)) return { distancePct, chance: 0, multiplier: 0 }
-  const chance = reachChance(distancePct, driftPct, s, hours, scheduled)
-  if (chance <= 0.00005) return { distancePct, chance: 0, multiplier: 0 }
-  // Never pay out on something that cannot lose. Drift can carry a near
-  // certainty, and 1.01x is an honest price for one.
-  return { distancePct, chance: Math.min(chance, 0.99), multiplier: 1 / Math.min(chance, 0.99) }
-}
 
 // ── What a contract is worth ────────────────────────────────────────────────
 //
@@ -359,89 +297,9 @@ export function scheduledIn(nextEventAt: string | null, hours: number, now: numb
   return 1 + Math.max(0, Math.floor((hours - Math.max(0, first)) / gapHours))
 }
 
-/** WHAT A RUNNING BET IS WORTH RIGHT NOW.
- *
- *  A bet pays stake x multiplier if it gets there and nothing if it does not, so
- *  what it is worth mid-flight is simply that payout times the chance it still
- *  makes it FROM HERE. It has already used some of its time and covered some of
- *  its distance, so both of those go into the sum.
- *
- *  Two properties make this the honest price rather than an approximation of
- *  one, and both matter for a Sell button:
- *
- *    at the moment it is placed, the chance is the chance it was sold at, so it
- *    is worth exactly what was paid. Buying and selling straight back costs
- *    nothing, because there is no edge anywhere on this board.
- *
- *    at expiry it is worth the payout or it is worth nothing, which is what
- *    settlement pays, so the number never jumps at the end.
- *
- *  A bet already past its distance is NOT home: settlement reads where the price
- *  ENDS, so it can still fall back. That is why this asks the chance of finishing
- *  there rather than the chance of having touched it. */
-export function worthNow(
-  stake: number, multiplier: number, distancePct: number, movedPct: number,
-  hoursLeft: number, dailyMovePct: number, driftPct = 0,
-  /** Reports still to land before this one expires. */
-  scheduled = 0,
-): number {
-  const payout = stake * multiplier
-  if (!(hoursLeft > 0)) return movedPct >= distancePct ? Math.round(payout) : 0
-  const s = dailyMovePct * Math.sqrt(hoursLeft / 24)
-  if (!(s > 0)) return movedPct >= distancePct ? Math.round(payout) : 0
-  // How much further it still has to travel, which can be negative if it is
-  // already there and only has to stay.
-  //
-  // PRICED THE SAME WAY IT WAS SOLD. This used a bare normal while the ticket
-  // had long since moved to a jump mixture, so the tail a far contract is
-  // entirely made of was missing from its resale value: the board bought back
-  // long shots for less than they were worth, quietly, on every early sell.
-  const remaining = distancePct - movedPct
-  const chance = Math.max(0, Math.min(1, reachChance(remaining, driftPct, s, hoursLeft, scheduled)))
-  return Math.round(payout * chance)
-}
 
-/** THE MOVE THAT GETS YOUR MONEY BACK, as a percentage from where you bought.
- *
- *  A binary has no breakeven at expiry: it pays all or nothing, so the strike is
- *  the only number that matters there. But it can be SOLD at any hour, and the
- *  resale price is the payout times the chance from here, so there is a live
- *  price at which selling returns exactly what you paid.
- *
- *  It falls out prettily: resale equals stake exactly when the chance from here
- *  equals the chance you bought at. So breakeven is wherever the odds are back
- *  to what you paid for, and it CLIMBS as the clock runs down, because less time
- *  means less room, which means the index has to be further along to be worth
- *  the same. That climb is theta, in the only unit that matters to a player. */
-export function breakEvenMovePct(
-  multiplier: number, distancePct: number, hoursLeft: number,
-  dailyMovePct: number, driftPct = 0, scheduled = 0,
-): number | null {
-  if (!(multiplier > 0) || !(hoursLeft > 0) || !(dailyMovePct > 0)) return null
-  const s = dailyMovePct * Math.sqrt(hoursLeft / 24)
-  if (!(s > 0)) return null
-  const want = 1 / multiplier
-  const chanceAt = (m: number) => reachChance(distancePct - m, driftPct, s, hoursLeft, scheduled)
-  let lo = -95, hi = distancePct + 200
-  if (chanceAt(hi) < want) return null
-  // Chance rises with the move, so bisect. Sixty passes is far past the
-  // precision any price is printed at.
-  for (let i = 0; i < 60; i++) {
-    const mid = (lo + hi) / 2
-    if (chanceAt(mid) >= want) hi = mid; else lo = mid
-  }
-  return hi
-}
 
-/** Below this a rung is not offered at all. A one-in-fifty-thousand bet is not a
- *  long shot, it is a way to lose money you will never notice going. */
-export const MIN_CHANCE = 0.005
 
-export function offeredBets(dailyMovePct: number, hours: Term, driftPct = 0, scheduled = 0): Bet[] {
-  return rungsFor(dailyMovePct)
-    .map(d => priceBet(dailyMovePct, hours, d, driftPct, scheduled))
-    .filter(b => b.chance >= MIN_CHANCE)
-}
 
 /** How far the engine will carry this index on its own over `hours`, before any
  *  noise. Mirrors update_exchange_indexes; keep the constants in lockstep or the
@@ -483,30 +341,8 @@ export function driftOver(
 
 // ── Saying it out loud ──────────────────────────────────────────────────────
 
-/** "12% chance". A percentage, because next to a payout multiplier it is the
- *  number you can actually work with: 12% beside 8x is a comparison anyone can
- *  make, where "1 in 8" beside 8x makes you convert before you can think. */
-export function chanceInWords(chance: number): string {
-  if (chance <= 0) return 'no chance'
-  if (chance >= 0.995) return 'near certain'
-  if (chance >= 0.10) return `${Math.round(chance * 100)}% chance`
-  // Below 10% a whole number throws away most of what is left: 3% and 3.4% are
-  // a 13% difference in the payout.
-  return `${(chance * 100).toFixed(1)}% chance`
-}
 
-/** "3.2x" for the small ones, "40x" once the decimal stops meaning anything. */
-export function payoutInWords(multiplier: number): string {
-  if (multiplier <= 0) return '-'
-  if (multiplier < 10) return `${(Math.round(multiplier * 10) / 10).toFixed(1)}x`
-  return `${Math.round(multiplier)}x`
-}
 
-/** What a stake actually comes back as, which is the number people care about
- *  more than any multiplier. */
-export function payoutFor(stake: number, multiplier: number): number {
-  return Math.max(0, Math.round(stake * multiplier))
-}
 
 /** A price, at whatever size it happens to be.
  *
@@ -543,17 +379,6 @@ export function fmtPrice(p: number): string {
 export const MIN_STAKE = 1
 export const MAX_STAKE = 2_000_000
 
-/** MOST A SINGLE BET CAN EVER RETURN.
- *
- *  A stake cap alone caps nothing. The longest odds the board offers are about
- *  199x, and 250,000 at 199x is 49.6 MILLION out of one lucky hour, against a
- *  richest-captain balance of about 3 million. One bet should not be able to end
- *  the economy.
- *
- *  Capped on the PAYOUT rather than the odds, which is what a real book does:
- *  the long shots stay on the board at their honest price, and the stake box
- *  simply says how much this particular one will take. */
-export const MAX_PAYOUT = 5_000_000
 
 /** MOST OF ONE INDEX A CAPTAIN CAN HOLD, as contracts times price.
  *
@@ -563,6 +388,30 @@ export const MAX_PAYOUT = 5_000_000
  *  works: what it can pay is then whatever the market does, and fair pricing
  *  means the house does not lose on average however far that goes. */
 export const MAX_NOTIONAL = 5_000_000
+
+/** THE THINNEST CONTRACT WORTH LISTING, as a fraction of the index price.
+ *
+ *  A scaling payoff makes deep strikes genuinely cheap, which is the point, but
+ *  it keeps going: far enough out the premium rounds to nothing and the rung
+ *  becomes a free lottery ticket that also PRINTS as 0.00, which reads as a
+ *  broken row rather than a long shot. Strikes below this are simply not
+ *  offered, the way a real chain stops quoting once the bid is dust. */
+export const MIN_PREMIUM_FRACTION = 0.0015
+
+/** Every strike this index offers at this term, priced. Sorted near to far, and
+ *  cut where the premium stops being worth quoting. */
+export function chainFor(
+  price: number, dir: Direction, hours: number, dailyMovePct: number,
+  driftPct = 0, scheduled = 0,
+): { distancePct: number; strike: number; each: number }[] {
+  const floor = price * MIN_PREMIUM_FRACTION
+  return rungsFor(dailyMovePct)
+    .map(d => {
+      const strike = price * (1 + (dir === 'up' ? 1 : -1) * d / 100)
+      return { distancePct: d, strike, each: contractValue(price, strike, dir, hours, dailyMovePct, driftPct, scheduled) }
+    })
+    .filter(b => b.strike > 0 && b.each >= floor)
+}
 
 /** ROUND NUMBERS OF UNITS, sized so the cost lands somewhere sensible.
  *
@@ -599,34 +448,5 @@ export function unitPresets(_price?: number): number[] {
   return [...UNIT_PRESETS]
 }
 
-/** WHAT A CONTRACT COSTS: the PREMIUM, not the share.
- *
- *  This board used to charge the full index price per unit, which is buying the
- *  fish rather than betting on it. A contract is not the thing, it is the right
- *  to be paid if the thing moves, and it costs a fraction accordingly.
- *
- *  One contract pays the index price if it lands and nothing if it does not, so
- *  the fair premium is that price times the chance of landing. Payout over
- *  premium comes back to 1/chance, the same multiplier the board already quotes,
- *  so nothing about the odds changes -- only the size of the cheque, which falls
- *  by roughly the multiplier.
- *
- *  It also buys the shape a real chain has, which charging the share price
- *  destroyed: the far strikes are CHEAP. A near-money contract costs half the
- *  index, a long shot costs a fiftieth, and the ladder finally reads like a
- *  ladder instead of every rung costing the same. */
-export function premiumOf(price: number, chance: number): number {
-  if (!(price > 0) || !(chance > 0)) return 0
-  return price * Math.min(chance, 0.99)
-}
 
-/** What a parcel of contracts costs, in doubloons. */
-export function costOf(units: number, price: number, chance: number): number {
-  return Math.max(0, Math.round(units * premiumOf(price, chance)))
-}
 
-/** The largest stake this bet will accept, given what it pays. */
-export function stakeCapFor(multiplier: number): number {
-  if (!(multiplier > 0)) return MAX_STAKE
-  return Math.max(MIN_STAKE, Math.min(MAX_STAKE, Math.floor(MAX_PAYOUT / multiplier)))
-}

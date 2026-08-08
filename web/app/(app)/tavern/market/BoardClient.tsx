@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, type Term, type Direction,
-  rungsFor, driftOver, unitPresets, contractValue, breakEvenFor, scheduledIn, fmtPrice, MAX_NOTIONAL,
+  chainFor, driftOver, unitPresets, contractValue, breakEvenFor, scheduledIn, fmtPrice, MAX_NOTIONAL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
@@ -510,10 +510,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // contract of it costs. No multiplier and no chance: the premium IS the
   // quote, and it falls as the strike gets further out, which is the shape a
   // real chain has and the binary's fixed payout could never show.
-  const bets = rungsFor(index.dailyMovePct).map(d => {
-    const strike = index.price * (1 + (dir === 'up' ? 1 : -1) * d / 100)
-    return { distancePct: d, strike, each: contractValue(index.price, strike, dir, term, index.dailyMovePct, drift, sched) }
-  }).filter(b => b.each > 0)
+  const bets = chainFor(index.price, dir, term, index.dailyMovePct, drift, sched)
   // Keep a valid distance selected as the term changes: the rungs on offer
   // shrink hard on the short terms, and a stale pick would silently price a bet
   // nobody chose.

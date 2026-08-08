@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, typicalDayMove, driftOver, contractValue, breakEvenFor, scheduledIn, MIN_STAKE, MAX_STAKE, MAX_NOTIONAL,
+  rungsFor, typicalDayMove, driftOver, chainFor, contractValue, breakEvenFor, scheduledIn, MIN_STAKE, MAX_STAKE, MAX_NOTIONAL,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -269,13 +269,6 @@ export async function openBet(
   // A report inside the window is certain variance, and the premium has to
   // carry it or the board hands that variance away.
   const sched = scheduledIn((idx.next_event_at as string | null) ?? null, term, Date.now())
-  // The strike has to be one this index actually offers at this term.
-  const rungs = rungsFor(daily)
-  if (!rungs.some(d => Math.abs(d - distancePct) < 0.0001)) {
-    return { error: 'That strike is not offered on this one' }
-  }
-  const strike = entry * (1 + (direction === 'up' ? 1 : -1) * distancePct / 100)
-  if (!(strike > 0)) return { error: 'Could not price that contract' }
 
   // THE PREMIUM: the expected payoff, priced from the index and never from the
   // caller. Drift is the index's OWN, not signed to the buyer's side, because a
@@ -284,7 +277,13 @@ export async function openBet(
     Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
     Number(mood?.mood_bias ?? 0), term, 'up',
   )
-  const each = contractValue(entry, strike, direction, term, daily, driftRaw, sched)
+  // THE SAME CHAIN THE TICKET QUOTED, floor and all. Asking for a strike the
+  // board declined to list should not conjure it.
+  const offered = chainFor(entry, direction, term, daily, driftRaw, sched)
+  const pick = offered.find(b => Math.abs(b.distancePct - distancePct) < 0.0001)
+  if (!pick) return { error: 'That strike is not offered on this one' }
+  const strike = pick.strike
+  const each = pick.each
   const stake = Math.round(units * each)
   if (!(each > 0) || stake < MIN_STAKE) {
     return { error: `That is only ${stake.toLocaleString()} ⟡. Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth.` }
