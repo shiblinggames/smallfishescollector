@@ -495,7 +495,14 @@ export const MAX_PAYOUT = 5_000_000
  *  meaty on both ends, because that is multiplication, not design. So the rungs
  *  stay fixed and the ones you cannot afford grey out -- rather than the board
  *  quietly showing different quantities per index and pretending they match. */
-export const UNIT_PRESETS = [1, 10, 100, 1000] as const
+//  RESCALED WHEN PREMIUMS ARRIVED. Charging the premium instead of the share
+//  price made every ticket cheaper by roughly its multiplier, and this ladder
+//  did not move with it: a thousand of a cheap index went from 85,000 doubloons
+//  to 16,540, so the top rung lost most of its reach and captains sat pinned
+//  against it on every position. Ten to ten thousand puts that back. The bottom
+//  is still affordable precisely because premiums are fractions: ten contracts
+//  of the dearest index is about 8,000, where one SHARE of it was 1,500.
+export const UNIT_PRESETS = [10, 100, 1000, 10_000] as const
 
 export function unitPresets(_price?: number): number[] {
   return [...UNIT_PRESETS]
