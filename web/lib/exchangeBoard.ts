@@ -407,8 +407,16 @@ export function profitChance(
  *  Unlike the binary's, this one is fixed the moment you buy: the payoff grows
  *  a doubloon per doubloon past the strike, so the premium is recovered exactly
  *  one premium beyond it. */
-export function breakEvenFor(strike: number, premiumEach: number, dir: Direction): number {
-  return dir === 'up' ? strike + premiumEach : strike - premiumEach
+// PREMIUM PER CONTRACT, AND THE LOT, because those two together are the only
+// honest way to place the line. A contract covers `lot` units and pays
+// lot x (price - strike), so it has recovered its premium when the price has
+// moved premium/lot past the strike -- NOT the whole premium. Fed the per-
+// contract premium without the lot, breakeven landed `lot` times too far out
+// (a 34-doubloon contract on a 13.52 strike read 47.55 instead of 15.22), which
+// also drove the chance-of-profit to near zero on every contract on the board.
+export function breakEvenFor(strike: number, premiumPerContract: number, lot: number, dir: Direction): number {
+  const perUnit = lot > 0 ? premiumPerContract / lot : premiumPerContract
+  return dir === 'up' ? strike + perUnit : strike - perUnit
 }
 
 /** REPORTS LANDING INSIDE A TERM, from the next one's timestamp.

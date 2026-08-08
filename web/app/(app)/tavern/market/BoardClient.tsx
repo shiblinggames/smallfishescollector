@@ -642,8 +642,9 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   const capped = Math.round(chosenUnits * prem)
   const overSize = chosenUnits * lot * index.price > MAX_NOTIONAL
   const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
-  // Where the contract has paid for itself: one premium past the strike.
-  const breakEven = chosen ? breakEvenFor(chosen.strike, prem, dir) : 0
+  // Where the contract has paid for itself: one per-UNIT premium past the
+  // strike. `prem` is per contract and the lot scales the payoff, so both go in.
+  const breakEven = chosen ? breakEvenFor(chosen.strike, prem, lot, dir) : 0
 
   function submit() {
     if (!chosen) return

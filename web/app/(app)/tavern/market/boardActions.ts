@@ -211,7 +211,7 @@ export async function getBoard(): Promise<Board> {
        *  strike all term. Past the strike the payoff grows a doubloon per
        *  doubloon, so the premium is recovered exactly one premium beyond it. */
       breakEvenPrice: Number(b.strike ?? 0) > 0
-        ? breakEvenFor(Number(b.strike), Number(b.premium_each ?? 0), b.direction as Direction)
+        ? breakEvenFor(Number(b.strike), Number(b.premium_each ?? 0), Number(b.lot ?? 1), b.direction as Direction)
         : null,
       hoursLeft,
     }
