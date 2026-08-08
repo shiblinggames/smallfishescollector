@@ -775,7 +775,13 @@ function BetSheet({ bet, index, onClose, onSold }: {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 4 }}>
             <Fact label="Moved" value={fmtPct(bet.movedPct)} color={ahead ? UP : '#e8eef6'} />
-            <Fact label="Needs" value={`${bet.distancePct}%`} />
+            {/* BREAKEVEN, not the strike, because the strike is only the number
+                that matters if you hold to the end. Sell above this and you are
+                up. It creeps toward the target every hour the clock runs, which
+                is time decay in the only unit a captain can act on. */}
+            <Fact label="Breaks even at"
+              value={bet.breakEvenPrice != null ? fmtPrice(bet.breakEvenPrice) : `${bet.distancePct}%`}
+              color={bet.breakEvenPrice != null && bet.livePrice >= bet.breakEvenPrice === (bet.direction === 'up') ? UP : '#e8eef6'} />
             <Fact label="Pays if it lands" value={`${payoutFor(bet.stake, bet.multiplier).toLocaleString()} ⟡`} />
             <Fact label={live ? 'Time left' : 'Result'}
               value={live

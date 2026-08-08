@@ -300,6 +300,8 @@ export function scheduledIn(nextEventAt: string | null, hours: number, now: numb
 export function worthNow(
   stake: number, multiplier: number, distancePct: number, movedPct: number,
   hoursLeft: number, dailyMovePct: number, driftPct = 0,
+  /** Reports still to land before this one expires. */
+  scheduled = 0,
 ): number {
   const payout = stake * multiplier
   if (!(hoursLeft > 0)) return movedPct >= distancePct ? Math.round(payout) : 0
@@ -307,9 +309,46 @@ export function worthNow(
   if (!(s > 0)) return movedPct >= distancePct ? Math.round(payout) : 0
   // How much further it still has to travel, which can be negative if it is
   // already there and only has to stay.
+  //
+  // PRICED THE SAME WAY IT WAS SOLD. This used a bare normal while the ticket
+  // had long since moved to a jump mixture, so the tail a far contract is
+  // entirely made of was missing from its resale value: the board bought back
+  // long shots for less than they were worth, quietly, on every early sell.
   const remaining = distancePct - movedPct
-  const chance = Math.max(0, Math.min(1, 1 - normCdf((remaining - driftPct) / s)))
+  const chance = Math.max(0, Math.min(1, reachChance(remaining, driftPct, s, hoursLeft, scheduled)))
   return Math.round(payout * chance)
+}
+
+/** THE MOVE THAT GETS YOUR MONEY BACK, as a percentage from where you bought.
+ *
+ *  A binary has no breakeven at expiry: it pays all or nothing, so the strike is
+ *  the only number that matters there. But it can be SOLD at any hour, and the
+ *  resale price is the payout times the chance from here, so there is a live
+ *  price at which selling returns exactly what you paid.
+ *
+ *  It falls out prettily: resale equals stake exactly when the chance from here
+ *  equals the chance you bought at. So breakeven is wherever the odds are back
+ *  to what you paid for, and it CLIMBS as the clock runs down, because less time
+ *  means less room, which means the index has to be further along to be worth
+ *  the same. That climb is theta, in the only unit that matters to a player. */
+export function breakEvenMovePct(
+  multiplier: number, distancePct: number, hoursLeft: number,
+  dailyMovePct: number, driftPct = 0, scheduled = 0,
+): number | null {
+  if (!(multiplier > 0) || !(hoursLeft > 0) || !(dailyMovePct > 0)) return null
+  const s = dailyMovePct * Math.sqrt(hoursLeft / 24)
+  if (!(s > 0)) return null
+  const want = 1 / multiplier
+  const chanceAt = (m: number) => reachChance(distancePct - m, driftPct, s, hoursLeft, scheduled)
+  let lo = -95, hi = distancePct + 200
+  if (chanceAt(hi) < want) return null
+  // Chance rises with the move, so bisect. Sixty passes is far past the
+  // precision any price is printed at.
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    if (chanceAt(mid) >= want) hi = mid; else lo = mid
+  }
+  return hi
 }
 
 /** Below this a rung is not offered at all. A one-in-fifty-thousand bet is not a

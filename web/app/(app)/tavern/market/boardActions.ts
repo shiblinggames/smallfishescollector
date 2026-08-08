@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, worthNow, scheduledIn, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
+  rungsFor, priceBet, offeredBets, typicalDayMove, driftOver, stakeCapFor, costOf, worthNow, breakEvenMovePct, scheduledIn, MIN_CHANCE, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -81,6 +81,9 @@ export type BoardBet = {
   units: number
   /** What it would fetch if sold this second. Null once it has finished. */
   worth: number | null
+  /** The price at which selling now returns exactly the premium paid. Climbs
+   *  toward the target as the clock runs down, which is theta made visible. */
+  breakEvenPrice: number | null
   hoursLeft: number
 }
 
@@ -152,6 +155,12 @@ export async function getBoard(): Promise<Board> {
     const entry = Number(b.entry_price)
     const raw = entry > 0 ? ((live - entry) / entry) * 100 : 0
     const hoursLeft = Math.max(0, (new Date(b.expires_at as string).getTime() - Date.now()) / 3600_000)
+    // Valued the same way it was sold: same drift, same reports still to come.
+    const betDrift = idx
+      ? driftOver(idx.vol, idx.beta, idx.trend, idx.trendTicks,
+          Number(moodRes.data?.mood_bias ?? 0), Number(b.term) as Term, b.direction as Direction)
+      : 0
+    const betSched = idx ? scheduledIn(idx.nextEventAt, hoursLeft, Date.now()) : 0
     return {
       id: b.id as number,
       indexId: b.index_id as string,
@@ -173,10 +182,16 @@ export async function getBoard(): Promise<Board> {
       worth: hoursLeft <= 0 || b.status !== 'open' ? null
         : worthNow(Number(b.stake), Number(b.multiplier), Number(b.distance_pct),
             b.direction === 'up' ? raw : -raw, hoursLeft,
-            idx ? idx.dailyMovePct : 0,
-            idx ? driftOver(idx.vol, idx.beta, idx.trend, idx.trendTicks,
-                    Number(moodRes.data?.mood_bias ?? 0), Number(b.term) as Term,
-                    b.direction as Direction) : 0),
+            idx ? idx.dailyMovePct : 0, betDrift, betSched),
+      /** The move that gets the premium back if sold right now, as a price.
+       *  Climbs toward the target as the clock runs down: that climb IS theta. */
+      breakEvenPrice: hoursLeft <= 0 || b.status !== 'open' || !idx ? null
+        : (() => {
+            const m = breakEvenMovePct(Number(b.multiplier), Number(b.distance_pct),
+              hoursLeft, idx.dailyMovePct, betDrift, betSched)
+            return m == null ? null
+              : entry * (1 + (b.direction === 'up' ? 1 : -1) * m / 100)
+          })(),
       hoursLeft,
     }
   })
@@ -322,7 +337,7 @@ export async function sellBet(betId: number): Promise<SellResult> {
   if (!bet) return { error: 'That one is already settled' }
 
   const { data: idx } = await admin.from('exchange_indexes')
-    .select('vol, beta, trend, trend_ticks, price').eq('id', bet.index_id as string).single()
+    .select('vol, beta, trend, trend_ticks, price, next_event_at').eq('id', bet.index_id as string).single()
   const { data: mood } = await admin.from('market_state').select('mood_bias').eq('id', 1).single()
 
   const entry = Number(bet.entry_price)
@@ -336,8 +351,11 @@ export async function sellBet(betId: number): Promise<SellResult> {
     Number(mood?.mood_bias ?? 0), Number(bet.term) as Term, bet.direction as Direction,
   ) : 0
 
+  // Same reports the sheet quoted against, or the sell button pays a different
+  // number than the screen promised one second earlier.
+  const sched = scheduledIn((idx?.next_event_at as string | null) ?? null, hoursLeft, Date.now())
   const got = worthNow(Number(bet.stake), Number(bet.multiplier),
-    Number(bet.distance_pct), moved, hoursLeft, daily, drift)
+    Number(bet.distance_pct), moved, hoursLeft, daily, drift, sched)
 
   await admin.from('exchange_bets')
     .update({ exit_price: live, payout: got, seen: true }).eq('id', betId)
