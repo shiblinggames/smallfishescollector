@@ -365,30 +365,60 @@ function reportIn(at: string | null): string | null {
   return rem > 0 ? `in ${d}d ${rem}h` : `in ${d}d`
 }
 
-/** The gap it took, and WHEN, which is the whole difference between a caption
- *  and a contradiction.
+/** THE RESULT, for exactly the tick it landed on.
  *
- *  The row prints the move from the last tick. A gap from six hours ago sitting
- *  beside it, unlabelled, reads as the card disagreeing with itself: "the beds
- *  came up empty, -14.3%" next to +0.1%. Both were true and neither was of the
- *  same moment. So a gap that happened on THIS tick is the explanation of the
- *  number beside it and says nothing more; an older one carries its age. */
+ *  The row prints the move from the last tick, so a result from any earlier tick
+ *  is a caption for a number that is no longer on screen: "the beds came up
+ *  empty, -14.3%" beside +0.1%. Once its hour is gone the row goes back to
+ *  counting down to the next report, which is the thing you can still act on. */
 function freshEvent(i: BoardIndex): string | null {
-  if (!i.lastEvent || !i.lastEventAt || i.lastEventPct == null) return null
+  if (!i.lastEvent || !i.lastEventAt || i.lastEventPct == null || !i.updatedAt) return null
   const at = new Date(i.lastEventAt).getTime()
-  const h = (Date.now() - at) / 3_600_000
-  if (!(h >= 0) || h > 24) return null
-  const move = `${i.lastEvent}, ${i.lastEventPct > 0 ? '+' : ''}${i.lastEventPct}%`
-  // Same tick as the price it is standing next to?
-  const tick = i.updatedAt ? new Date(i.updatedAt).getTime() : null
-  if (tick != null && Math.abs(at - tick) < 60_000) return move
-  return `${move} · ${h < 1 ? 'just now' : `${Math.round(h)}h ago`}`
+  const tick = new Date(i.updatedAt).getTime()
+  if (!(Math.abs(at - tick) < 60_000)) return null
+  return `${i.lastEvent}, ${i.lastEventPct > 0 ? '+' : ''}${i.lastEventPct}%`
+}
+
+/** HOW LOUDLY TO SAY IT. A report is the one thing on this board you can plan
+ *  around, so it gets brighter as it approaches rather than sitting at the same
+ *  weight whether it is nine days off or one hour. */
+function reportTone(at: string | null): 'soon' | 'near' | 'far' | null {
+  if (!at) return null
+  const h = (new Date(at).getTime() - Date.now()) / 3_600_000
+  if (!Number.isFinite(h)) return null
+  return h <= 12 ? 'soon' : h <= 48 ? 'near' : 'far'
+}
+
+const TONE: Record<'soon' | 'near' | 'far', { fg: string; bg: string; bd: string }> = {
+  soon: { fg: '#ffcf6a', bg: 'rgba(240,192,64,0.16)', bd: 'rgba(240,192,64,0.55)' },
+  near: { fg: '#9fdcff', bg: 'rgba(56,189,248,0.13)', bd: 'rgba(56,189,248,0.42)' },
+  far:  { fg: '#8d96a5', bg: 'rgba(255,255,255,0.05)', bd: 'rgba(255,255,255,0.10)' },
+}
+
+/** The report, as a chip. A label and a countdown set in plain grey text read as
+ *  a footnote; this is the schedule the whole board turns on. */
+function ReportChip({ i }: { i: BoardIndex }) {
+  const tone = reportTone(i.nextEventAt)
+  const due = reportIn(i.nextEventAt)
+  if (!tone || !due) return null
+  const c = TONE[tone]
+  return (
+    <span className="font-karla font-700" style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '0.16rem 0.44rem', borderRadius: 999, fontSize: '0.68rem',
+      background: c.bg, border: `1px solid ${c.bd}`, color: c.fg, whiteSpace: 'nowrap',
+    }}>
+      {tone === 'soon' && (
+        <span aria-hidden style={{ width: 5, height: 5, borderRadius: 999, background: c.fg, flexShrink: 0 }} />
+      )}
+      {i.nextEventLabel ?? 'Report'} {due}
+    </span>
+  )
 }
 
 function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) {
   const day = pct(i.price, i.prevPrice)
   const news = freshEvent(i)
-  const due = reportIn(i.nextEventAt)
   return (
     <button type="button" onClick={() => { vibrate([0, 12]); onPick(i) }}
       style={{
@@ -401,12 +431,14 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
         <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.95rem', color: '#e8eef6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {i.name}
         </span>
-        {/* WHY IT MOVED, or what is coming. A 30% cliff with no caption reads as
-            a bug; the same cliff captioned "the beds came up empty" reads as
-            news, which is the whole difference between a market and a jitter. */}
-        <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.72rem', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          color: news ? ((i.lastEventPct ?? 0) > 0 ? UP : DOWN) : '#6a7482' }}>
-          {news ?? (due ? `${i.nextEventLabel ?? 'Report'} ${due}` : '')}
+        {/* WHY IT MOVED, or what is coming. A gap with no caption reads as a
+            bug; captioned, it reads as news, which is the whole difference
+            between a market and a jitter. And once the hour is past, the row
+            goes back to the countdown, which is the part you can still act on. */}
+        <span style={{ display: 'block', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {news
+            ? <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: (i.lastEventPct ?? 0) > 0 ? UP : DOWN }}>{news}</span>
+            : <ReportChip i={i} />}
         </span>
       </span>
       <Line points={i.history.length > 1 ? i.history : [i.prevPrice, i.price]} color={day >= 0 ? UP : DOWN} w={76} h={30} />
@@ -617,12 +649,11 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           </p>
           {(() => {
             const news = freshEvent(index)
-            const due = reportIn(index.nextEventAt)
-            if (!news && !due) return null
             return (
-              <p className="font-karla font-600" style={{ fontSize: '0.66rem', marginTop: 3,
-                color: news ? ((index.lastEventPct ?? 0) > 0 ? UP : DOWN) : '#bfe6ff' }}>
-                {news ?? `${index.nextEventLabel ?? 'Report'} ${due}`}
+              <p style={{ marginTop: 5 }}>
+                {news
+                  ? <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: (index.lastEventPct ?? 0) > 0 ? UP : DOWN }}>{news}</span>
+                  : <ReportChip i={index} />}
               </p>
             )
           })()}
