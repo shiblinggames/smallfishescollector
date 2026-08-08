@@ -168,9 +168,16 @@ export type Bet = {
 // on news was not a long shot, it was arithmetically impossible while the far
 // rungs were still quoted at long-shot prices off a normal curve that assumed
 // tails the engine could not produce. Real markets gap. This is that.
-export const JUMP_P = 0.005          // per index, per hour
-export const JUMP_MIN_PCT = 8
-export const JUMP_MAX_PCT = 25
+//
+// CALIBRATED AGAINST REAL MARKETS. A real stock gaps on news four to eight times
+// a year, not forty. At 0.00125 an index gaps about eleven times a year, which
+// is earnings-and-occasional-headlines, and the size was widened to match: news
+// should be the drama, not the baseline. The species vols came down at the same
+// time, from 3-12% a day to 2-5%, because a real company does not move 12% a
+// day and a permanently violent baseline leaves the news nothing to do.
+export const JUMP_P = 0.00125        // per index, per hour (~11 a year)
+export const JUMP_MIN_PCT = 10
+export const JUMP_MAX_PCT = 35
 
 /** PERCENTAGES INTO THE ENGINE'S OWN UNITS.
  *
