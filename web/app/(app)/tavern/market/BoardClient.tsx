@@ -429,41 +429,79 @@ function BetList({ bets, onOpen }: { bets: BoardBet[]; onOpen: (b: BoardBet) => 
       </p>
     )
   }
+  // SPLIT, because they answer different questions. A running contract is a
+  // decision you can still make; a finished one is a record. Mixed into one
+  // list, the live ones get lost among results as soon as you have any.
+  const running = bets.filter(b => b.status === 'open')
+  const finished = bets.filter(b => b.status !== 'open')
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {bets.map(b => {
-        const ahead = b.movedPct >= b.distancePct
-        const done = b.status !== 'open'
-        const won = b.status === 'won'
-        return (
-          <button key={b.id} type="button" onClick={() => onOpen(b)} style={{
-            width: '100%', textAlign: 'left', cursor: 'pointer',
-            padding: '0.6rem 0.7rem', borderRadius: 11,
-            background: 'rgba(13,17,24,0.9)',
-            border: `1px solid ${done ? (won ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.1)'}`,
-            opacity: done && !won ? 0.72 : 1, WebkitTapHighlightColor: 'transparent',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-              <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#e8eef6' }}>{b.indexName}</span>
-              <span className="font-karla font-800" style={{ fontSize: '0.72rem', color: done ? (won ? UP : '#7d7466') : '#8a94a4' }}>
-                {b.status === 'won' ? `won ${(b.payout ?? 0).toLocaleString()} ⟡`
-                  : b.status === 'sold' ? `sold for ${(b.payout ?? 0).toLocaleString()} ⟡`
-                  : b.status === 'lost' ? 'lost'
-                  : ahead ? 'ahead' : 'behind'}
-              </span>
-            </div>
-            {/* The bet, as one sentence. */}
-            <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#8a94a4', marginTop: 2, lineHeight: 1.45 }}>
-              {b.stake.toLocaleString()} ⟡ on {b.direction === 'up' ? 'up' : 'down'} at least {b.distancePct}% within {TERM_NAME[b.term].toLowerCase()}
-            </p>
-            <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: ahead ? UP : '#7c8696', marginTop: 3, ...TNUM }}>
-              {done ? 'ended' : 'now'} {fmtPct(b.movedPct)} {b.direction === 'up' ? 'up' : 'down'} {done ? '' : `· needs ${b.distancePct}%`}
-              {!done && b.worth != null && `  ·  worth ${b.worth.toLocaleString()} ⟡`}
-            </p>
-          </button>
-        )
-      })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {running.length > 0 && (
+        <div>
+          <BetHeading>Running</BetHeading>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {running.map(b => <BetRow key={b.id} b={b} onOpen={onOpen} />)}
+          </div>
+        </div>
+      )}
+      {finished.length > 0 && (
+        <div>
+          <BetHeading>Finished</BetHeading>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {finished.map(b => <BetRow key={b.id} b={b} onOpen={onOpen} />)}
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function BetHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-karla font-700 uppercase tracking-[0.1em]"
+      style={{ fontSize: '0.58rem', color: '#7c8696', marginBottom: 6 }}>
+      {children}
+    </p>
+  )
+}
+
+/** TWO LINES, no sentence. The card used to spell the whole contract out in
+ *  prose and then restate half of it underneath, which is three lines of
+ *  reading for what is really a name, a direction and where it stands. Anyone
+ *  who wants the terms can open it. */
+function BetRow({ b, onOpen }: { b: BoardBet; onOpen: (b: BoardBet) => void }) {
+  const ahead = b.movedPct >= b.distancePct
+  const done = b.status !== 'open'
+  const won = b.status === 'won'
+  const target = b.entryPrice * (1 + (b.direction === 'up' ? 1 : -1) * b.distancePct / 100)
+  const pnl = b.worth == null ? null : b.worth - b.stake
+  return (
+    <button type="button" onClick={() => onOpen(b)} style={{
+      width: '100%', textAlign: 'left', cursor: 'pointer',
+      padding: '0.55rem 0.7rem', borderRadius: 11,
+      background: 'rgba(13,17,24,0.9)',
+      border: `1px solid ${done ? (won ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.1)'}`,
+      opacity: done && !won ? 0.72 : 1, WebkitTapHighlightColor: 'transparent',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#e8eef6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {b.indexName} <span style={{ color: b.direction === 'up' ? UP : DOWN }}>{b.direction === 'up' ? '▲' : '▼'}</span>
+        </span>
+        <span className="font-karla font-800" style={{ fontSize: '0.74rem', flexShrink: 0, ...TNUM,
+          color: done ? (won ? UP : '#7d7466') : pnl == null ? '#8a94a4' : pnl >= 0 ? UP : DOWN }}>
+          {b.status === 'won' ? `+${((b.payout ?? 0) - b.stake).toLocaleString()} ⟡`
+            : b.status === 'sold' ? `${(b.payout ?? 0) - b.stake >= 0 ? '+' : ''}${((b.payout ?? 0) - b.stake).toLocaleString()} ⟡`
+            : b.status === 'lost' ? `-${b.stake.toLocaleString()} ⟡`
+            : pnl == null ? (ahead ? 'ahead' : 'behind')
+            : `${pnl >= 0 ? '+' : ''}${pnl.toLocaleString()} ⟡`}
+        </span>
+      </div>
+      <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#7c8696', marginTop: 3, ...TNUM }}>
+        {done
+          ? `${b.stake.toLocaleString()} ⟡ in · ${TERM_NAME[b.term].toLowerCase()}`
+          : `${fmtPrice(b.livePrice)} → ${fmtPrice(target)} · ${b.hoursLeft >= 1 ? `${Math.round(b.hoursLeft)}h left` : 'under an hour'}`}
+      </p>
+    </button>
   )
 }
 
