@@ -20,6 +20,8 @@ import { applyLevelBonuses } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
 import { RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { CREW_PANEL_BG } from '@/lib/crewPanel'
+import { getCrewSkinByFilename, skinArtGlow } from '@/lib/crewSkins'
+import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import type { CrewMember } from './actions'
 
 /** Mirrors lib/crewResolve: the captain's seat pulls full weight, the rest 80%. */
@@ -248,6 +250,15 @@ export default function AssignBoard({
                 }
 
                 const rc = RARITY_COLORS[crew.rarity as CrewRarity] ?? '#8a857c'
+                // THE SKIN'S OWN COLOUR, not the rarity's. A crew wearing a
+                // chase skin has bought an animated aura in ITS palette, and the
+                // seat was painting a flat rarity glow over all of it — so the
+                // one screen where you look at your whole party showed the least
+                // of what you are actually wearing. Falls back to rarity when no
+                // skin is equipped, which is what the base art wants anyway.
+                const skin = getCrewSkinByFilename(crew.filename)
+                const chase = skin?.chase === true
+                const artColor = skin?.color ?? rc
                 return (
                   <button key={i} type="button" onClick={() => onTapCrew(crew)}
                     aria-label={`${crew.name}, seat ${i + 1}. Tap to view, swap or remove them.`}
@@ -290,12 +301,21 @@ export default function AssignBoard({
                       <span aria-hidden style={{
                         position: 'absolute', bottom: 1, left: '50%', transform: 'translateX(-50%)',
                         width: '62%', height: 9, borderRadius: '50%',
-                        background: `radial-gradient(closest-side, rgba(0,0,0,0.62) 0%, ${rc}22 60%, rgba(0,0,0,0) 100%)`,
+                        background: `radial-gradient(closest-side, rgba(0,0,0,0.62) 0%, ${artColor}22 60%, rgba(0,0,0,0) 100%)`,
                         pointerEvents: 'none',
                       }} />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artSrc(crew.filename)} alt="" aria-hidden decoding="async"
-                        style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 7px ${rc}77)` }} />
+                        className={chase ? 'chase-skin-glow' : undefined}
+                        style={{
+                          position: 'relative', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
+                          ...(chase
+                            ? { ['--chase-c']: artColor }
+                            : { filter: skin
+                                ? skinArtGlow(artColor, crew.rarity)
+                                : `drop-shadow(0 3px 7px ${rc}77)` }),
+                        } as React.CSSProperties} />
+                      {chase && <ChaseSkinFx skinId={skin?.id} color={artColor} />}
                     </div>
                     {/* Pirata, like every other place a crew is named — the
                         detail modal and the roster card both use it, and the

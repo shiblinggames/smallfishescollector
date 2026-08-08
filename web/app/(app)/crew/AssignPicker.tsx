@@ -21,6 +21,7 @@
 import { useState } from 'react'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { effectiveStats } from './AssignBoard'
+import { getCrewSkinByFilename, skinArtGlow } from '@/lib/crewSkins'
 import type { CrewMember } from './actions'
 
 const RARITY_DIM = 'rgba(255,255,255,0.14)'
@@ -148,6 +149,12 @@ export default function AssignPicker({
               {rows.map(({ crew: m, locked, dupe, elsewhere, eff, level }) => {
                 const busy = busyId === m.id
                 const rc = rarityColor(m.rarity) || RARITY_DIM
+                // Same rule as the seat they are about to sit in: the skin's own
+                // colour when one is worn. Chase animation stays off HERE — this
+                // is a dense scrolling list of the whole roster and a screenful
+                // of competing auras would be noise, not reward.
+                const pSkin = getCrewSkinByFilename(m.filename)
+                const pColor = pSkin?.color ?? rc
                 const disabled = !!locked || pending
                 // The note under the name, in the order that matters: a hard
                 // block first, then the thing that costs you a seat, then a
@@ -175,7 +182,7 @@ export default function AssignPicker({
                     <div style={{ width: '100%', height: 56, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artSrc(m.filename)} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: locked ? 'grayscale(0.85) brightness(0.75)' : `drop-shadow(0 3px 8px ${rc}55)` }} />
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: locked ? 'grayscale(0.85) brightness(0.75)' : pSkin ? skinArtGlow(pColor, m.rarity) : `drop-shadow(0 3px 8px ${rc}55)` }} />
                       {locked && (
                         <span aria-hidden style={{ position: 'absolute', top: 6, right: 6, display: 'flex' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c3cad6" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
