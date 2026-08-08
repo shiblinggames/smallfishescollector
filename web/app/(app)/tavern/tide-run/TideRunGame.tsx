@@ -1718,22 +1718,29 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         onPointerCancel={onRelease}
         onPointerLeave={onRelease}
         onContextMenu={(e) => e.preventDefault()}
-        className="relative w-full overflow-hidden"
+        className="relative w-full overflow-hidden h-[min(900px,max(480px,calc(100dvh-44px)))] sm:h-[min(900px,max(480px,calc(100dvh-64px)))]"
         style={{
           // FULL BLEED. The canvas paints its own sea and sky, so a border and
           // a rounded corner around it framed the game as a card sitting on the
           // page rather than as the page. Both are gone and the column with
           // them; what is left is the drawn scene, edge to edge.
           //
-          // Fill available viewport above the mobile tab bar. Subtraction: top
-          // nav (~56) + clearance above tab bar (~64). The old 132 included
-          // 12px of page padding that no longer exists. Min/max keep it sane on
-          // very short or very tall displays.
-          height: 'min(900px, max(480px, calc(100dvh - 120px)))',
-          // Capped and centred so a desktop window does not stretch the sea to
-          // 1400px, where the obstacle widths (set as a % of canvas) would
-          // scale into a different game.
-          maxWidth: 720,
+          // HEIGHT FILLS TO THE VIEWPORT FLOOR, subtracting only the top nav
+          // (44 on mobile, 64 on desktop — the responsive classes above). On
+          // mobile the sea runs down BEHIND the tab bar, which is opaque and
+          // fixed on top, so it hides the overlapping strip. The old fixed -120
+          // guessed a tab-bar height that has no safe-area padding and varies by
+          // device, and the guess came up short: a band of page background
+          // showed below the sea. Running the sea past the bar removes the guess
+          // and the gap with it, and only cosmetic deep water is ever covered.
+          //
+          // WIDTH IS CAPPED TO A PHONE, not 720. Scroll speed is absolute px/s,
+          // so a wider canvas shows more of the world ahead and buys more
+          // reaction time -- the game got measurably easier full-screened on
+          // desktop, on a leaderboard shared with phones. A phone is ~390-430
+          // wide; 440 leaves those untouched (width:100% still applies below it)
+          // and brings desktop DOWN to the same window rather than a wider one.
+          maxWidth: 440,
           margin: '0 auto',
           background: '#062840',
           touchAction: 'none',
@@ -1787,8 +1794,11 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
             setAudioMutedState(next)
           }}
           aria-label={audioMuted ? 'Unmute sounds' : 'Mute sounds'}
+          // Lifted clear of the mobile tab bar, which the sea now runs behind.
+          // Desktop has no bar, so it drops back to the corner.
+          className="bottom-[calc(env(safe-area-inset-bottom,0px)+76px)] sm:bottom-[10px]"
           style={{
-            position: 'absolute', bottom: 10, left: 10, zIndex: 5,
+            position: 'absolute', left: 10, zIndex: 5,
             width: 34, height: 34,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(8,18,28,0.6)',
