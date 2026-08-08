@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, type Term, type Direction,
-  chainFor, driftOver, unitPresets, contractValue, breakEvenFor, scheduledIn, fmtPrice, MAX_NOTIONAL,
+  chainFor, driftOver, unitPresets, contractValue, breakEvenFor, profitChance, scheduledIn, fmtPrice, MAX_NOTIONAL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
@@ -344,14 +344,22 @@ function Group({ title, note, list, onPick }: {
   )
 }
 
-/** "in 3 days", "due now", or null when it is too far off to matter yet. */
+/** WHEN THE NEXT REPORT LANDS, to the hour.
+ *
+ *  Days alone were no use for planning. Contracts run one, three or seven days,
+ *  so "in 2d" leaves you guessing whether a three-day contract bought now
+ *  carries the report or stops the morning before it. It also went quiet
+ *  entirely past four days, which hid most of the three-to-nine-day cycle
+ *  exactly when a week-long contract needed to know. */
 function reportIn(at: string | null): string | null {
   if (!at) return null
   const h = (new Date(at).getTime() - Date.now()) / 3_600_000
-  if (!Number.isFinite(h) || h > 96) return null
+  if (!Number.isFinite(h)) return null
   if (h <= 1) return 'due now'
   if (h < 24) return `in ${Math.round(h)}h`
-  return `in ${Math.round(h / 24)}d`
+  const d = Math.floor(h / 24)
+  const rem = Math.round(h - d * 24)
+  return rem > 0 ? `in ${d}d ${rem}h` : `in ${d}d`
 }
 
 /** The gap it took, and WHEN, which is the whole difference between a caption
@@ -805,16 +813,25 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               moves your way and falls as the clock runs down. */}
           {chosen && !err && (
             <>
-              {/* BREAKEVEN, not a payout, because there is no single payout any
-                  more. Past this price the position is ahead, and it keeps going
-                  the further the index runs. */}
-              <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#8a94a4', textAlign: 'center', marginBottom: 3, ...TNUM }}>
-                Ahead past <strong style={{ color: '#ffd96a' }}>{fmtPrice(breakEven)}</strong>, and more the further it goes
-              </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a7482', textAlign: 'center', marginBottom: 8, lineHeight: 1.45 }}>
-                {chosenUnits.toLocaleString()} contracts pay {chosenUnits.toLocaleString()} ⟡ for every 1 ⟡ past {fmtPrice(chosen.strike)}.
-                Sell back any time.
-              </p>
+              {/* TWO NUMBERS, NAMED. Prose was doing a label's job. The chance
+                  is measured against BREAKEVEN and not the strike, because a
+                  contract can finish past its strike and still be down, the
+                  whole way up to one premium beyond it. */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 8 }}>
+                <div style={{ padding: '0.5rem 0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#7c8696', marginBottom: 2 }}>Breakeven</p>
+                  <p className="font-karla font-800" style={{ fontSize: '0.98rem', color: '#ffd96a', ...TNUM }}>{fmtPrice(breakEven)}</p>
+                </div>
+                <div style={{ padding: '0.5rem 0.6rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#7c8696', marginBottom: 2 }}>Chance of profit</p>
+                  <p className="font-karla font-800" style={{ fontSize: '0.98rem', color: '#e8eef6', ...TNUM }}>
+                    {(() => {
+                      const c = profitChance(index.price, breakEven, dir, term, index.dailyMovePct, drift, sched) * 100
+                      return c >= 10 ? `${Math.round(c)}%` : `${c.toFixed(1)}%`
+                    })()}
+                  </p>
+                </div>
+              </div>
             </>
           )}
           {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}

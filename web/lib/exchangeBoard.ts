@@ -295,6 +295,45 @@ export function contractValue(
   return Math.max(0, p0 * withJumps(scheduled) + p1 * withJumps(scheduled + 1) + p2 * withJumps(scheduled + 2))
 }
 
+/** CHANCE THE POSITION ENDS IN PROFIT, which is not the chance it ends in the
+ *  money. A vanilla contract can finish past its strike and still be down, all
+ *  the way up to one premium beyond it, so the honest number to quote is the
+ *  chance of clearing BREAKEVEN rather than the strike.
+ *
+ *  Same Poisson mixture as the premium, carrying a probability again. */
+export function profitChance(
+  price: number, breakEven: number, dir: Direction,
+  hours: number, dailyMovePct: number, driftPct = 0, scheduled = 0,
+): number {
+  if (!(price > 0) || !(breakEven > 0) || !(hours > 0)) return 0
+  const s = spreadOver(dailyMovePct, hours) / 100
+  const m = driftPct / 100
+  const need = Math.log(breakEven / price)
+  const points = jumpPoints(dailyMovePct)
+  const mom = jumpMoments(points)
+  const lam = JUMP_P * hours
+  const p0 = Math.exp(-lam)
+  const p1 = lam * Math.exp(-lam)
+  const p2 = Math.max(0, 1 - p0 - p1)
+
+  const tail = (mu: number, sd: number): number => {
+    if (!(sd > 0)) return (dir === 'up' ? mu >= need : mu <= need) ? 1 : 0
+    const z = (need - mu) / sd
+    return dir === 'up' ? 1 - normCdf(z) : normCdf(z)
+  }
+  const withJumps = (n: number): number => {
+    if (n <= 0) return tail(m, s)
+    if (n === 1) {
+      let v = 0
+      for (const j of points) v += tail(m + j.up / 100, s) + tail(m + j.down / 100, s)
+      return v / (points.length * 2)
+    }
+    return tail(m + (n * mom.mean) / 100, Math.sqrt(s * s + (n * mom.variance) / 10_000))
+  }
+  const p = p0 * withJumps(scheduled) + p1 * withJumps(scheduled + 1) + p2 * withJumps(scheduled + 2)
+  return Math.max(0, Math.min(1, p))
+}
+
 /** The price that has to be reached before the contract has paid for itself.
  *  Unlike the binary's, this one is fixed the moment you buy: the payoff grows
  *  a doubloon per doubloon past the strike, so the premium is recovered exactly
