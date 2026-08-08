@@ -281,7 +281,6 @@ function bankedSeries(all: BoardBet[], sinceMs: number | null, openWorth: number
 function RunningStrip({ bets, indexes, allBets }: { bets: BoardBet[]; indexes: BoardIndex[]; allBets: BoardBet[] }) {
   const [range, setRange] = useState<BookRange>('day')
   const staked = bets.reduce((n, b) => n + b.stake, 0)
-  const couldWin = bets.reduce((n, b) => n + payoutFor(b.stake, b.multiplier), 0)
   const winning = bets.filter(b => b.movedPct >= b.distancePct).length
   const worth = bets.reduce((n, b) => n + (b.worth ?? 0), 0)
   const daySeries = bookSeries(bets, indexes)
@@ -345,7 +344,7 @@ function RunningStrip({ bets, indexes, allBets }: { bets: BoardBet[]; indexes: B
       </p>
 
       <p className="font-karla font-500" style={{ fontSize: '0.7rem', color: '#8a94a4', marginTop: 4, ...TNUM }}>
-        {staked.toLocaleString()} ⟡ in · {couldWin.toLocaleString()} ⟡ if every one of them lands
+        {staked.toLocaleString()} ⟡ in
       </p>
     </div>
   )
