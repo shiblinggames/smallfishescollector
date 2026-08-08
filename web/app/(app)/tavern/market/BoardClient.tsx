@@ -834,8 +834,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               no word for what the middle number was, so the one figure the whole
               purchase turns on went by unlabelled. */}
           <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#8a94a4', marginBottom: 12, ...TNUM }}>
-            Premium <strong style={{ color: '#e0d8c4' }}>{fmtPrice(prem)}</strong> a contract
-            {lot > 1 && <span style={{ color: '#6a7482' }}> (covers {lot.toLocaleString()})</span>} ·{' '}
+            Premium <strong style={{ color: '#e0d8c4' }}>{fmtPrice(prem)}</strong> a contract ·{' '}
             <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span> for {chosenUnits.toLocaleString()}
           </p>
 
@@ -868,6 +867,13 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                   </p>
                 </div>
               </div>
+              {/* WHAT A CONTRACT DOES, never what it contains. "Covers 500" is
+                  a bundle size, which is implementation showing through and a
+                  thing nobody should have to hold in their head. This is the
+                  same fact as the number that actually decides the winnings. */}
+              <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#6a7482', textAlign: 'center', marginBottom: 8, lineHeight: 1.45, ...TNUM }}>
+                Each contract pays <strong style={{ color: '#8a94a4' }}>{lot.toLocaleString()} ⟡</strong> for every 1 ⟡ it finishes past {fmtPrice(chosen.strike)}
+              </p>
             </>
           )}
           {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}
@@ -938,7 +944,7 @@ function BetSheet({ bet, index, onClose, onSold }: {
         <div style={{ flexShrink: 0, padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0f4fa' }}>{bet.indexName}</p>
           <p className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#8a94a4', marginTop: 2, lineHeight: 1.45 }}>
-            {bet.units.toLocaleString()} contracts{bet.lot > 1 ? ` of ${bet.lot.toLocaleString()}` : ''}, {bet.stake.toLocaleString()} ⟡, {bet.direction === 'up' ? 'above' : 'below'} {fmtPrice(bet.strike)} within {TERM_NAME[bet.term].toLowerCase()}
+            {bet.units.toLocaleString()} contracts, {bet.stake.toLocaleString()} ⟡, {bet.direction === 'up' ? 'above' : 'below'} {fmtPrice(bet.strike)} within {TERM_NAME[bet.term].toLowerCase()}
           </p>
         </div>
 

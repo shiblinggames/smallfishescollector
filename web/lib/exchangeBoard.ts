@@ -453,21 +453,19 @@ export const MAX_NOTIONAL = 5_000_000
  *  what stops a contract on a two-dollar stock costing two cents. This board had
  *  exactly that problem. One contract covered one unit, so the largest position
  *  the ladder allowed on the Flatfish was 436 doubloons, which is not a trade to
- *  anyone who reached Fishing 100 to get in here. Cheap indexes were dead
- *  content, not cheap thrills.
+ *  anyone who reached Fishing 100 to get in here.
  *
- *  So a contract covers a standard NOTIONAL of the index rather than a standard
- *  count of it: about 1,000 doubloons' worth. Dear indexes get one unit a
- *  contract, cheap ones get hundreds, and the same 10 / 100 / 1,000 / 10,000
- *  ladder finally means something comparable wherever you are standing.
- *
- *  Rounded to numbers a captain would say, because "covers 487" reads like a
- *  bug and "covers 500" reads like a contract. */
-export const CONTRACT_NOTIONAL = 1000
-const LOT_STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10_000]
+ *  SQUARE ROOT, NOT FLAT. Sizing every contract to the same notional fixed the
+ *  penny problem and broke something else: it made a Pod contract cost the same
+ *  as a Flatfish one, and a board where the grandest water and the cheapest cost
+ *  alike has thrown away the reason to have different prices at all. Damping by
+ *  the root keeps the order intact while pulling the extremes in. Pod stays far
+ *  and away the dearest thing on the board, the Flatfish stops being loose
+ *  change, and the ladder between them still climbs. */
+const LOT_STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000]
 export function lotSize(price: number): number {
   if (!(price > 0)) return 1
-  const want = CONTRACT_NOTIONAL / price
+  const want = 60 / Math.sqrt(price)
   if (want <= 1) return 1
   let best = LOT_STEPS[0]
   for (const n of LOT_STEPS) if (Math.abs(n - want) < Math.abs(best - want)) best = n
