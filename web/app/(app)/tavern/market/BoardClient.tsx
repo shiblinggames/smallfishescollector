@@ -41,11 +41,14 @@ function purseChanged(total: number) {
 
 /** A price line. No axes, no grid: it is here to show a shape, and a shape is
  *  all anybody reads off something this size. */
-function Line({ points, color, w = 64, h = 22, mark, fluid }: {
+function Line({ points, color, w = 64, h = 22, mark, markColor = '#ffd96a', fluid }: {
   points: number[]; color: string; w?: number; h?: number
   /** A price to rule across the chart, dashed. Folded into the scale so it is
    *  always on screen: a target you cannot see is worse than no target. */
   mark?: number
+  /** Colour of that rule. Gold shouts, which is right for a strike you are
+   *  choosing and wrong for a baseline you are only measuring against. */
+  markColor?: string
   /** Stretch to the container instead of sitting at a fixed pixel width. The
    *  stroke is told not to scale with it, or a wide box thins the line. */
   fluid?: boolean
@@ -64,7 +67,7 @@ function Line({ points, color, w = 64, h = 22, mark, fluid }: {
         : { width: w, height: h })}
       aria-hidden style={{ display: 'block', flexShrink: 0 }}>
       {marked && (
-        <line x1="0" x2={w} y1={y(mark)} y2={y(mark)} stroke="#ffd96a" strokeWidth="1"
+        <line x1="0" x2={w} y1={y(mark)} y2={y(mark)} stroke={markColor} strokeWidth="1"
           strokeDasharray="3 3" opacity="0.8" vectorEffect="non-scaling-stroke" />
       )}
       <polyline points={d} fill="none" stroke={color} strokeWidth="1.6"
@@ -162,7 +165,7 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
             list={species} onPick={setTicket} />
         </>
       ) : (
-        <BetList bets={board.bets} onOpen={setOpenSlip} />
+        <BetList bets={board.bets} indexes={board.indexes} onOpen={setOpenSlip} />
       )}
 
       <AnimatePresence>
@@ -419,7 +422,7 @@ function Row({ i, onPick }: { i: BoardIndex; onPick: (i: BoardIndex) => void }) 
   )
 }
 
-function BetList({ bets, onOpen }: { bets: BoardBet[]; onOpen: (b: BoardBet) => void }) {
+function BetList({ bets, indexes, onOpen }: { bets: BoardBet[]; indexes: BoardIndex[]; onOpen: (b: BoardBet) => void }) {
   if (!bets.length) {
     return (
       <p className="font-karla font-400 italic" style={{ fontSize: '0.78rem', color: '#7c8696', padding: '2rem 0', textAlign: 'center', lineHeight: 1.5 }}>
@@ -437,16 +440,16 @@ function BetList({ bets, onOpen }: { bets: BoardBet[]; onOpen: (b: BoardBet) => 
       {running.length > 0 && (
         <div>
           <BetHeading>Running</BetHeading>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {running.map(b => <BetRow key={b.id} b={b} onOpen={onOpen} />)}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {running.map(b => <BetRow key={b.id} b={b} indexes={indexes} onOpen={onOpen} />)}
           </div>
         </div>
       )}
       {finished.length > 0 && (
         <div>
           <BetHeading>Finished</BetHeading>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {finished.map(b => <BetRow key={b.id} b={b} onOpen={onOpen} />)}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {finished.map(b => <BetRow key={b.id} b={b} indexes={indexes} onOpen={onOpen} />)}
           </div>
         </div>
       )}
@@ -463,46 +466,46 @@ function BetHeading({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** TWO LINES, no sentence. The card used to spell the whole contract out in
- *  prose and then restate half of it underneath, which is three lines of
- *  reading for what is really a name, a direction and where it stands. Anyone
- *  who wants the terms can open it. */
-function BetRow({ b, onOpen }: { b: BoardBet; onOpen: (b: BoardBet) => void }) {
-  const ahead = b.movedPct >= b.distancePct
+/** A HOLDING, read the way a brokerage lists one: what you own on the left, how
+ *  it has moved in the middle, and what it is doing to you on the right.
+ *
+ *  Hairlines rather than cards. Fifteen bordered boxes stacked up is a lot of
+ *  furniture for a list whose whole job is to be scanned down. */
+function BetRow({ b, indexes, onOpen }: { b: BoardBet; indexes: BoardIndex[]; onOpen: (b: BoardBet) => void }) {
   const done = b.status !== 'open'
-  const won = b.status === 'won'
-  const target = b.entryPrice * (1 + (b.direction === 'up' ? 1 : -1) * b.distancePct / 100)
-  const pnl = b.worth == null ? null : b.worth - b.stake
+  const pnl = done ? (b.payout ?? 0) - b.stake : (b.worth == null ? null : b.worth - b.stake)
+  const up = (pnl ?? 0) >= 0
+  const idx = indexes.find(i => i.id === b.indexId)
+  const hist = idx && idx.history.length > 1 ? idx.history : [b.entryPrice, b.livePrice]
   return (
     <button type="button" onClick={() => onOpen(b)} style={{
-      width: '100%', textAlign: 'left', cursor: 'pointer',
-      padding: '0.72rem 0.8rem', borderRadius: 11,
-      background: 'rgba(13,17,24,0.9)',
-      border: `1px solid ${done ? (won ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.1)'}`,
-      opacity: done && !won ? 0.72 : 1, WebkitTapHighlightColor: 'transparent',
+      width: '100%', textAlign: 'left', cursor: 'pointer', background: 'none',
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '0.8rem 0.1rem', border: 'none',
+      borderBottom: '1px solid rgba(255,255,255,0.07)',
+      opacity: done ? 0.72 : 1, WebkitTapHighlightColor: 'transparent',
     }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#e8eef6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {/* NEUTRAL ON PURPOSE. The caret says which way you BET, and colouring
-              it green for up put a green mark on losing contracts and a red one
-              on winning shorts. Green and red on this row mean one thing only,
-              and it is the figure to the right. */}
-          {b.indexName} <span style={{ color: '#6a7482' }}>{b.direction === 'up' ? '▲' : '▼'}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span className="font-karla font-700" style={{ display: 'block', fontSize: '1.02rem', color: '#f0f4fa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {b.indexName} <span style={{ color: '#6a7482', fontSize: '0.8rem' }}>{b.direction === 'up' ? '▲' : '▼'}</span>
         </span>
-        <span className="font-karla font-800" style={{ fontSize: '0.9rem', flexShrink: 0, ...TNUM,
-          color: done ? (won ? UP : '#7d7466') : pnl == null ? '#8a94a4' : pnl >= 0 ? UP : DOWN }}>
-          {b.status === 'won' ? `+${((b.payout ?? 0) - b.stake).toLocaleString()} ⟡`
-            : b.status === 'sold' ? `${(b.payout ?? 0) - b.stake >= 0 ? '+' : ''}${((b.payout ?? 0) - b.stake).toLocaleString()} ⟡`
-            : b.status === 'lost' ? `-${b.stake.toLocaleString()} ⟡`
-            : pnl == null ? (ahead ? 'ahead' : 'behind')
-            : `${pnl >= 0 ? '+' : ''}${pnl.toLocaleString()} ⟡`}
+        <span className="font-karla font-500" style={{ display: 'block', fontSize: '0.8rem', color: '#7c8696', marginTop: 2, ...TNUM }}>
+          {b.units.toLocaleString()} contracts
         </span>
-      </div>
-      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#7c8696', marginTop: 3, ...TNUM }}>
-        {done
-          ? `${b.stake.toLocaleString()} ⟡ in · ${TERM_NAME[b.term].toLowerCase()}`
-          : `${fmtPrice(b.livePrice)} → ${fmtPrice(target)} · ${b.hoursLeft >= 1 ? `${Math.round(b.hoursLeft)}h left` : 'under an hour'}`}
-      </p>
+      </span>
+
+      {/* The dotted rule is where you got in, so the line above or below it is
+          the whole story at a glance. */}
+      <Line points={hist} color={up ? UP : DOWN} w={92} h={34}
+        mark={b.entryPrice} markColor="rgba(255,255,255,0.22)" />
+
+      <span className="font-karla font-700" style={{
+        flexShrink: 0, minWidth: 86, textAlign: 'center',
+        padding: '0.44rem 0.6rem', borderRadius: 10, fontSize: '0.92rem',
+        border: `1px solid ${up ? UP : DOWN}`, color: up ? UP : DOWN, ...TNUM,
+      }}>
+        {pnl == null ? '—' : `${up ? '+' : ''}${pnl.toLocaleString()}`}
+      </span>
     </button>
   )
 }
