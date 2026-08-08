@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, typicalDayMove, driftOver, chainFor, contractValue, breakEvenFor, scheduledIn, MIN_STAKE, MAX_STAKE, MAX_NOTIONAL,
+  rungsFor, typicalDayMove, driftOver, chainFor, contractValue, breakEvenFor, lotSize, scheduledIn, MIN_STAKE, MAX_STAKE, MAX_NOTIONAL,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -73,8 +73,10 @@ export type BoardBet = {
   distancePct: number
   /** The price it has to beat. */
   strike: number
-  /** What one contract cost. Breakeven is exactly this far past the strike. */
+  /** What one contract cost. */
   premiumEach: number
+  /** Index units one contract covers. */
+  lot: number
   stake: number
   entryPrice: number
   livePrice: number
@@ -198,8 +200,9 @@ export async function getBoard(): Promise<Board> {
       units: Number(b.units ?? 0),
       strike: Number(b.strike ?? 0),
       premiumEach: Number(b.premium_each ?? 0),
+      lot: Number(b.lot ?? 1),
       worth: hoursLeft <= 0 || b.status !== 'open' || !idx ? null
-        : Math.round(Number(b.units ?? 0) * contractValue(
+        : Math.round(Number(b.units ?? 0) * Number(b.lot ?? 1) * contractValue(
             live, Number(b.strike), b.direction as Direction,
             hoursLeft, idx.dailyMovePct, betDrift, betSched)),
       /** FIXED THE MOMENT YOU BUY, unlike the binary's, which crept toward the
@@ -286,7 +289,10 @@ export async function openBet(
   const pick = offered.find(b => Math.abs(b.distancePct - distancePct) < 0.0001)
   if (!pick) return { error: 'That strike is not offered on this one' }
   const strike = pick.strike
-  const each = pick.each
+  // ONE CONTRACT COVERS A LOT, so the premium and everything downstream is per
+  // contract, not per index unit.
+  const lot = lotSize(entry)
+  const each = pick.each * lot
   const stake = Math.round(units * each)
   if (!(each > 0) || stake < MIN_STAKE) {
     return { error: `That is only ${stake.toLocaleString()} ⟡. Buy at least ${MIN_STAKE.toLocaleString()} ⟡ worth.` }
@@ -296,9 +302,9 @@ export async function openBet(
   // NOTIONAL, not payout. A vanilla payoff has no ceiling to cap, and capping
   // it would break the fair price, so what is bounded is the size of the
   // position instead, the way a real position limit works.
-  const notional = units * entry
+  const notional = units * lot * entry
   if (notional > MAX_NOTIONAL) {
-    return { error: `Most you can hold of this one is ${Math.floor(MAX_NOTIONAL / entry).toLocaleString()} contracts` }
+    return { error: `Most you can hold of this one is ${Math.floor(MAX_NOTIONAL / (lot * entry)).toLocaleString()} contracts` }
   }
 
 
@@ -315,6 +321,7 @@ export async function openBet(
     distance_pct: distancePct,
     strike,
     premium_each: each,
+    lot,
     units,
     stake,
     entry_price: entry,
@@ -390,7 +397,7 @@ export async function sellBet(betId: number): Promise<SellResult> {
   // Same reports the sheet quoted against, or the sell button pays a different
   // number than the screen promised one second earlier.
   const sched = scheduledIn((idx?.next_event_at as string | null) ?? null, hoursLeft, tickAt)
-  const got = Math.round(Number(bet.units) * contractValue(
+  const got = Math.round(Number(bet.units) * Number(bet.lot ?? 1) * contractValue(
     live, Number(bet.strike), bet.direction as Direction, hoursLeft, daily, drift, sched))
 
   await admin.from('exchange_bets')

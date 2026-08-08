@@ -447,6 +447,33 @@ export const MAX_STAKE = 2_000_000
  *  means the house does not lose on average however far that goes. */
 export const MAX_NOTIONAL = 5_000_000
 
+/** WHAT ONE CONTRACT COVERS, in index units.
+ *
+ *  A real option is written on a hundred shares, and not out of tradition: it is
+ *  what stops a contract on a two-dollar stock costing two cents. This board had
+ *  exactly that problem. One contract covered one unit, so the largest position
+ *  the ladder allowed on the Flatfish was 436 doubloons, which is not a trade to
+ *  anyone who reached Fishing 100 to get in here. Cheap indexes were dead
+ *  content, not cheap thrills.
+ *
+ *  So a contract covers a standard NOTIONAL of the index rather than a standard
+ *  count of it: about 1,000 doubloons' worth. Dear indexes get one unit a
+ *  contract, cheap ones get hundreds, and the same 10 / 100 / 1,000 / 10,000
+ *  ladder finally means something comparable wherever you are standing.
+ *
+ *  Rounded to numbers a captain would say, because "covers 487" reads like a
+ *  bug and "covers 500" reads like a contract. */
+export const CONTRACT_NOTIONAL = 1000
+const LOT_STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10_000]
+export function lotSize(price: number): number {
+  if (!(price > 0)) return 1
+  const want = CONTRACT_NOTIONAL / price
+  if (want <= 1) return 1
+  let best = LOT_STEPS[0]
+  for (const n of LOT_STEPS) if (Math.abs(n - want) < Math.abs(best - want)) best = n
+  return best
+}
+
 /** THE THINNEST CONTRACT WORTH LISTING, as a fraction of the index price.
  *
  *  A scaling payoff makes deep strikes genuinely cheap, which is the point, but

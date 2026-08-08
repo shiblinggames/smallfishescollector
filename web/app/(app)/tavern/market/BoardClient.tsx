@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, type Term, type Direction,
-  chainFor, driftOver, unitPresets, contractValue, breakEvenFor, profitChance, scheduledIn, fmtPrice, MAX_NOTIONAL,
+  chainFor, driftOver, unitPresets, contractValue, breakEvenFor, profitChance, lotSize, scheduledIn, fmtPrice, MAX_NOTIONAL,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen } from './boardActions'
@@ -223,7 +223,7 @@ function bookSeries(bets: BoardBet[], indexes: BoardIndex[]): number[] {
       const h = idx.history
       const priceThen = k === 0 ? idx.price : (h[h.length - k] ?? b.entryPrice)
       const raw = b.entryPrice > 0 ? ((priceThen - b.entryPrice) / b.entryPrice) * 100 : 0
-      total += Math.round(b.units * contractValue(
+      total += Math.round(b.units * b.lot * contractValue(
         priceThen, b.strike, b.direction, b.hoursLeft + k, idx.dailyMovePct))
     }
     out.push(total)
@@ -585,7 +585,9 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
   // Every contract costs the premium, which depends on the rung you picked, so
   // affordability moves as you drag the slider. That is the point: the long
   // shots are the cheap ones.
-  const prem = chosen ? chosen.each : 0
+  // One contract covers `lot` units of the index, so the quote is per contract.
+  const lot = lotSize(index.price)
+  const prem = chosen ? chosen.each * lot : 0
   const fits = (n: number) => {
     const c = Math.round(n * prem)
     return c >= MIN_STAKE && c <= doubloons && c <= capNow
@@ -599,7 +601,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
     ? index.price * (1 + (dir === 'up' ? 1 : -1) * chosen.distancePct / 100)
     : index.price
   const capped = Math.round(chosenUnits * prem)
-  const overSize = chosenUnits * index.price > MAX_NOTIONAL
+  const overSize = chosenUnits * lot * index.price > MAX_NOTIONAL
   const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
   // Where the contract has paid for itself: one premium past the strike.
   const breakEven = chosen ? breakEvenFor(chosen.strike, prem, dir) : 0
@@ -759,7 +761,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
                     costs beside where it starts paying. */}
                 <span style={{ textAlign: 'right' }}>
                   <span className="font-karla font-800" style={{ display: 'block', fontSize: '1.2rem', color: '#ffd96a', ...TNUM }}>
-                    {fmtPrice(chosen.each)}
+                    {fmtPrice(prem)}
                   </span>
                   <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.72rem', color: '#7c8696', marginTop: 2 }}>
                     a contract
@@ -832,7 +834,8 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
               no word for what the middle number was, so the one figure the whole
               purchase turns on went by unlabelled. */}
           <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#8a94a4', marginBottom: 12, ...TNUM }}>
-            Premium <strong style={{ color: '#e0d8c4' }}>{fmtPrice(prem)}</strong> a contract ·{' '}
+            Premium <strong style={{ color: '#e0d8c4' }}>{fmtPrice(prem)}</strong> a contract
+            {lot > 1 && <span style={{ color: '#6a7482' }}> (covers {lot.toLocaleString()})</span>} ·{' '}
             <span style={{ color: capped > doubloons ? DOWN : '#e0d8c4' }}>{capped.toLocaleString()} ⟡</span> for {chosenUnits.toLocaleString()}
           </p>
 
@@ -935,7 +938,7 @@ function BetSheet({ bet, index, onClose, onSold }: {
         <div style={{ flexShrink: 0, padding: '0.95rem 1rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0f4fa' }}>{bet.indexName}</p>
           <p className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#8a94a4', marginTop: 2, lineHeight: 1.45 }}>
-            {bet.units.toLocaleString()} units, {bet.stake.toLocaleString()} ⟡, on {bet.direction} at least {bet.distancePct}% within {TERM_NAME[bet.term].toLowerCase()}
+            {bet.units.toLocaleString()} contracts{bet.lot > 1 ? ` of ${bet.lot.toLocaleString()}` : ''}, {bet.stake.toLocaleString()} ⟡, {bet.direction === 'up' ? 'above' : 'below'} {fmtPrice(bet.strike)} within {TERM_NAME[bet.term].toLowerCase()}
           </p>
         </div>
 
