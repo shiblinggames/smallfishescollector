@@ -49,6 +49,9 @@ export type BoardIndex = {
   /** When this index next reports, and what the report is called. Contracts
    *  that span it cost more, because they carry its variance. */
   nextEventAt: string | null
+  /** When this index last ticked. Positions are valued as of THIS, not as of
+   *  the wall clock, so the whole board moves once an hour together. */
+  updatedAt: string | null
   nextEventLabel: string | null
   /** The last gap it took, so the chart's cliffs have an explanation. */
   lastEvent: string | null
@@ -137,6 +140,7 @@ export async function getBoard(): Promise<Board> {
       dailyMovePct: daily,
       typicalDayPct: typicalDayMove(daily),
       nextEventAt: (r.next_event_at as string | null) ?? null,
+      updatedAt: (r.updated_at as string | null) ?? null,
       nextEventLabel: (r.next_event_label as string | null) ?? null,
       lastEvent: (r.last_event as string | null) ?? null,
       lastEventPct: r.last_event_pct == null ? null : Number(r.last_event_pct),
@@ -156,7 +160,12 @@ export async function getBoard(): Promise<Board> {
     const live = idx?.price ?? Number(b.entry_price)
     const entry = Number(b.entry_price)
     const raw = entry > 0 ? ((live - entry) / entry) * 100 : 0
-    const hoursLeft = Math.max(0, (new Date(b.expires_at as string).getTime() - Date.now()) / 3600_000)
+    // AS OF THE LAST TICK, not as of now. Time decay is continuous in the
+    // maths, so valuing against the wall clock made a position creep on every
+    // refresh while the price it depends on had not moved since the hour. The
+    // board ticks hourly; so, now, does what your contracts are worth.
+    const tickAt = idx?.updatedAt ? new Date(idx.updatedAt).getTime() : Date.now()
+    const hoursLeft = Math.max(0, (new Date(b.expires_at as string).getTime() - tickAt) / 3600_000)
     // Valued the same way it was sold: same drift, same reports still to come.
     // Over what is LEFT, not over the term it was sold for. Spread already
     // shrinks with the clock; drift has to shrink with it or the two disagree.
@@ -164,7 +173,7 @@ export async function getBoard(): Promise<Board> {
       ? driftOver(idx.vol, idx.beta, idx.trend, idx.trendTicks,
           Number(moodRes.data?.mood_bias ?? 0), hoursLeft, b.direction as Direction)
       : 0
-    const betSched = idx ? scheduledIn(idx.nextEventAt, hoursLeft, Date.now()) : 0
+    const betSched = idx ? scheduledIn(idx.nextEventAt, hoursLeft, tickAt) : 0
     return {
       id: b.id as number,
       indexId: b.index_id as string,
@@ -342,14 +351,17 @@ export async function sellBet(betId: number): Promise<SellResult> {
   if (!bet) return { error: 'That one is already settled' }
 
   const { data: idx } = await admin.from('exchange_indexes')
-    .select('vol, beta, trend, trend_ticks, price, next_event_at').eq('id', bet.index_id as string).single()
+    .select('vol, beta, trend, trend_ticks, price, next_event_at, updated_at').eq('id', bet.index_id as string).single()
   const { data: mood } = await admin.from('market_state').select('mood_bias').eq('id', 1).single()
 
   const entry = Number(bet.entry_price)
   const live = Number(idx?.price ?? entry)
   const raw = entry > 0 ? ((live - entry) / entry) * 100 : 0
   const moved = bet.direction === 'up' ? raw : -raw
-  const hoursLeft = Math.max(0, (new Date(bet.expires_at as string).getTime() - Date.now()) / 3600_000)
+  // The same tick the sheet quoted against, or the button pays a different
+  // number than the screen showed.
+  const tickAt = idx?.updated_at ? new Date(idx.updated_at as string).getTime() : Date.now()
+  const hoursLeft = Math.max(0, (new Date(bet.expires_at as string).getTime() - tickAt) / 3600_000)
   const daily = idx ? dailyMovePct(Number(idx.vol)) : 0
   const drift = idx ? driftOver(
     Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
@@ -358,7 +370,7 @@ export async function sellBet(betId: number): Promise<SellResult> {
 
   // Same reports the sheet quoted against, or the sell button pays a different
   // number than the screen promised one second earlier.
-  const sched = scheduledIn((idx?.next_event_at as string | null) ?? null, hoursLeft, Date.now())
+  const sched = scheduledIn((idx?.next_event_at as string | null) ?? null, hoursLeft, tickAt)
   const got = worthNow(Number(bet.stake), Number(bet.multiplier),
     Number(bet.distance_pct), moved, hoursLeft, daily, drift, sched)
 
