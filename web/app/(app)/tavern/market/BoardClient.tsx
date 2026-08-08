@@ -663,12 +663,20 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
         </div>
 
         <div style={{ flexShrink: 0, padding: '0.7rem 1rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.09)', background: 'rgba(6,9,14,0.97)' }}>
-          {/* The only thing the four controls do not already say, said once and
-              next to the button rather than in a paragraph restating them. */}
+          {/* WHAT IT PAYS, AND THAT YOU ARE NOT STUCK WITH IT. "Nothing if it
+              does not" was true only of the ending, and read as though the money
+              were locked away until then. It is not: a contract can be sold back
+              at any hour for what it is worth by then, which rises as the index
+              moves your way and falls as the clock runs down. */}
           {chosen && !err && (
-            <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4', textAlign: 'center', marginBottom: 7, ...TNUM }}>
-              Pays <strong style={{ color: '#ffd96a' }}>{returns.toLocaleString()} ⟡</strong> if it lands, nothing if it does not
-            </p>
+            <>
+              <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a94a4', textAlign: 'center', marginBottom: 2, ...TNUM }}>
+                Pays <strong style={{ color: '#ffd96a' }}>{returns.toLocaleString()} ⟡</strong> if it gets there
+              </p>
+              <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#6a7482', textAlign: 'center', marginBottom: 7, lineHeight: 1.4 }}>
+                Or sell it back any time for whatever it is worth by then
+              </p>
+            </>
           )}
           {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: DOWN, marginBottom: 7, textAlign: 'center' }}>{err}</p>}
           <button type="button" onClick={submit} disabled={busy || !chosen || !affordable}
@@ -790,7 +798,7 @@ function BetSheet({ bet, index, onClose, onSold }: {
                 {busy ? 'Selling…' : `Sell now for ${worth.toLocaleString()} ⟡`}
               </button>
               <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#6a7482', marginTop: 6, textAlign: 'center', lineHeight: 1.45 }}>
-                Take what it is worth and walk away. Leave it and it pays everything or nothing.
+                Worth more as it moves your way, less as the clock runs down. Hold it to the end and it is all or nothing.
               </p>
             </>
           )}
