@@ -383,7 +383,13 @@ const MOOD_LIFE = 3.5
 
 export function driftOver(
   vol: number, beta: number, trend: number, trendTicks: number,
-  moodBias: number, hours: Term, dir: Direction,
+  moodBias: number,
+  /** HOURS STILL TO RUN, which is the term when pricing a new contract and the
+   *  time LEFT when valuing a running one. Passing the full term to a contract
+   *  with an hour to go charged it a whole term of drift against an hour of
+   *  spread, so a bet on a trending index climbed toward certain on the clock
+   *  alone, with the price never moving. */
+  hours: number, dir: Direction,
 ): number {
   const halved = moodBias * 0.5
   const moodPerHour = vol * DRIFT_K * beta * (halved / MAX_BIAS)

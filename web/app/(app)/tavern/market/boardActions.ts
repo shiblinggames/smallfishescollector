@@ -158,9 +158,11 @@ export async function getBoard(): Promise<Board> {
     const raw = entry > 0 ? ((live - entry) / entry) * 100 : 0
     const hoursLeft = Math.max(0, (new Date(b.expires_at as string).getTime() - Date.now()) / 3600_000)
     // Valued the same way it was sold: same drift, same reports still to come.
+    // Over what is LEFT, not over the term it was sold for. Spread already
+    // shrinks with the clock; drift has to shrink with it or the two disagree.
     const betDrift = idx
       ? driftOver(idx.vol, idx.beta, idx.trend, idx.trendTicks,
-          Number(moodRes.data?.mood_bias ?? 0), Number(b.term) as Term, b.direction as Direction)
+          Number(moodRes.data?.mood_bias ?? 0), hoursLeft, b.direction as Direction)
       : 0
     const betSched = idx ? scheduledIn(idx.nextEventAt, hoursLeft, Date.now()) : 0
     return {
@@ -351,7 +353,7 @@ export async function sellBet(betId: number): Promise<SellResult> {
   const daily = idx ? dailyMovePct(Number(idx.vol)) : 0
   const drift = idx ? driftOver(
     Number(idx.vol), Number(idx.beta), Number(idx.trend), Number(idx.trend_ticks ?? 0),
-    Number(mood?.mood_bias ?? 0), Number(bet.term) as Term, bet.direction as Direction,
+    Number(mood?.mood_bias ?? 0), hoursLeft, bet.direction as Direction,
   ) : 0
 
   // Same reports the sheet quoted against, or the sell button pays a different
