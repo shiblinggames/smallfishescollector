@@ -167,12 +167,6 @@ export default function AssignBoard({
               borderBottom: `1px solid ${t.accent}33`,
               background: `linear-gradient(180deg, ${t.accent}26 0%, ${t.accent}0d 100%)`,
             }}>
-              {/* A full-height rail in the party's colour. The first thing the
-                  eye lands on, and it never leaves the edge of the panel. */}
-              <span aria-hidden style={{
-                position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
-                background: t.accent,
-              }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
                 <span style={{
                   flexShrink: 0, width: 34, height: 34, borderRadius: 10,
@@ -235,8 +229,9 @@ export default function AssignBoard({
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
                         minHeight: 104, borderRadius: 12, cursor: 'pointer', font: 'inherit',
-                        border: `1.5px dashed ${OPEN_SEAT}66`,
-                        background: `linear-gradient(180deg, ${OPEN_SEAT}12 0%, ${OPEN_SEAT}05 100%), rgba(255,255,255,0.03)`,
+                        border: `1px dashed ${OPEN_SEAT}4d`,
+                        background: `radial-gradient(120% 80% at 50% 100%, ${OPEN_SEAT}16 0%, rgba(255,255,255,0) 70%)`,
+                        boxShadow: `inset 0 -1px 0 ${OPEN_SEAT}30, inset 0 8px 14px -10px rgba(0,0,0,0.75)`,
                         touchAction: 'manipulation',
                       }}>
                       <span style={{
@@ -252,7 +247,6 @@ export default function AssignBoard({
                   )
                 }
 
-                const e = effectiveStats(crew)
                 const rc = RARITY_COLORS[crew.rarity as CrewRarity] ?? '#8a857c'
                 return (
                   <button key={i} type="button" onClick={() => onTapCrew(crew)}
@@ -270,21 +264,41 @@ export default function AssignBoard({
                       // and fought the header for attention; the roster reads
                       // calm because its cards share one plate, and this is the
                       // same kind of object.
-                      border: `1.5px solid ${rc}99`,
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(0,0,0,0.26) 100%)',
+                      // A SEAT, NOT A CARD. The boxed rarity border drew a hard
+                      // square around every hand and turned a row of seats into a
+                      // row of trading cards. The well below reads as somewhere a
+                      // crew is STANDING; rarity survives as the glow under the
+                      // portrait, which sits on the crew rather than around them.
+                      border: '1px solid transparent',
+                      // The seat is a shallow well with a FLOOR: light pooling up
+                      // from the base, a hairline where that floor sits, and an
+                      // inset lip so the whole thing is scooped into the panel
+                      // rather than laid on it.
+                      background: 'radial-gradient(120% 80% at 50% 100%, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0) 70%)',
+                      boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.09), inset 0 8px 14px -10px rgba(0,0,0,0.85)',
                       touchAction: 'manipulation',
                     }}>
-                    {/* The art is the tile. */}
-                    <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    {/* The art IS the seat. Bigger now the stat line and the
+                        border are gone: the numbers are one tap away on the
+                        crew's own card, and six of them tiled here made a
+                        spreadsheet out of what should be a row of portraits. */}
+                    <div style={{ position: 'relative', width: '100%', height: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                      {/* CONTACT SHADOW. The one cue that says a crew is STANDING
+                          on something rather than floating in a box: a soft
+                          ellipse pooled under the feet, tinted by their rarity so
+                          it still belongs to them. */}
+                      <span aria-hidden style={{
+                        position: 'absolute', bottom: 1, left: '50%', transform: 'translateX(-50%)',
+                        width: '62%', height: 9, borderRadius: '50%',
+                        background: `radial-gradient(closest-side, rgba(0,0,0,0.62) 0%, ${rc}22 60%, rgba(0,0,0,0) 100%)`,
+                        pointerEvents: 'none',
+                      }} />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artSrc(crew.filename)} alt="" aria-hidden decoding="async"
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 8px ${rc}66)` }} />
+                        style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 7px ${rc}77)` }} />
                     </div>
                     <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {crew.name}
-                    </span>
-                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#a9a29a', fontVariantNumeric: 'tabular-nums' }}>
-                      {e.power} · {e.dodge} · {e.fortune}
                     </span>
                     {captain && (
                       <span aria-label="Captain" title="Captain" style={{ position: 'absolute', top: 3, left: 4, display: 'flex', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.85))' }}>
