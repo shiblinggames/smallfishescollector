@@ -240,6 +240,20 @@ const PLAN = [
   [34, 1, 0, 'old_reliable'],
   [34, 1, 1, 'massive_booty'],
   [34, 1, 2, 'the_fourth_task'],
+  // ── batch 35 — The Exchange ──
+  [35, 0, 0, 'first_contract'],
+  [35, 0, 1, 'first_settle'],
+  [35, 0, 2, 'cut_losses'],
+  [35, 1, 0, 'worthless'],
+  [35, 1, 1, 'big_score'],
+  [35, 1, 2, 'market_maker'],
+  // ── batch 36 — Bounties ──
+  [36, 0, 0, 'first_bounty'],
+  [36, 0, 1, 'full_board'],
+  [36, 0, 2, 'elite_order'],
+  [36, 1, 0, 'fifty_orders'],
+  [36, 1, 1, 'seven_boards'],
+  [36, 1, 2, 'bounty_hoard'],
 ]
 
 // Optional: `ONLY=30 node slice-badges.mjs` slices just that sheet (so re-running
