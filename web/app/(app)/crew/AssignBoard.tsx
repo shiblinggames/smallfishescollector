@@ -106,53 +106,39 @@ export default function AssignBoard({
   // `base` is the flat colour under the jpg (it shows for the moment before the
   // image lands, and through the wash). `hdr` is the scrim over it: top value
   // where the title sits, bottom where the stat tiles do.
-  // ONE RECIPE FOR BOTH HEADERS. The two plates used to carry their own fade
-  // colour, their own scrim strength and their own stat-tile tint — raid sat at
-  // 0.44/0.56 over 15,23,29, voyage at 0.34/0.5 over 12,21,31 — so the panels
-  // read as two different designs stacked rather than two of the same thing.
-  // The photographs still differ, which is the point; everything laid over them
-  // is now identical, so only the SUBJECT and the accent tell them apart.
-  const FADE = '12,19,27'
-  const HDR: [number, number] = [0.42, 0.56]
-  const STAT_TINT = 'rgba(6,12,18,0.54)'
-  const RAMP = {
-    raid: {
-      // Open sea below the cloudbank of the expeditions plate: misty horizon,
-      // a distant fleet, smooth swells, no landmarks. Sharp and full-res - an
-      // earlier pass fixed "too busy" by blurring, which just made it mushy.
-      // Simple has to come from the COMPOSITION, not from softening a busy one.
-      base: '#0e1620', art: '/crew-raid-panel.jpg', pos: 'center 20%',
-    },
-    voyage: {
-      base: '#0e1620', art: '/voyages-modal-bg.jpg', pos: 'center',
-    },
-  }
-
+  // NO PHOTOGRAPHY IN THE HEADERS. Two different plates behind two panels that
+  // do the same job read as two designs, and once they were normalised to one
+  // treatment the art stopped saying anything the label did not already say —
+  // it was just texture behind text, and texture the seats had to compete with.
+  //
+  // The identity is carried by the things that CANNOT be mistaken instead: a
+  // red panel with crossed swords is the fighting party, a blue one with a helm
+  // is the sailing party, and the accent runs through the border, the rail, the
+  // icon and the count. Colour and symbol, not scenery.
+  const STAT_TINT = 'rgba(0,0,0,0.30)'
   const tracks = [
     {
       key: 'raid' as const,
-      ramp: RAMP.raid,
       label: 'Raid Party',
       sub: 'who fights',
       accent: raidAccent,
       party: roster.filter(c => c.raidSlot != null).sort((a, b) => a.raidSlot! - b.raidSlot!),
       slotOf: (c: CrewMember) => c.raidSlot ?? 0,
       icon: (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="M19 21 3 5" />
         </svg>
       ),
     },
     {
       key: 'voyage' as const,
-      ramp: RAMP.voyage,
       label: 'Voyage Party',
       sub: 'who sails',
       accent: voyageAccent,
       party: roster.filter(c => c.voyageSlot != null).sort((a, b) => a.voyageSlot! - b.voyageSlot!),
       slotOf: (c: CrewMember) => c.voyageSlot ?? 0,
       icon: (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <circle cx="12" cy="5" r="2" /><path d="M12 22V7" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" /><path d="M8 7h8" />
         </svg>
       ),
@@ -178,16 +164,26 @@ export default function AssignBoard({
                 base under it. */}
             <div style={{
               position: 'relative', zIndex: 1, padding: '0.8rem 0.85rem 0.7rem',
-              borderBottom: `1px solid ${t.accent}2a`,
-              background: `linear-gradient(180deg, ${t.accent}1c 0%, ${t.accent}0a 100%), `
-                + `linear-gradient(180deg, rgba(${FADE},${HDR[0]}) 0%, rgba(${FADE},${HDR[1]}) 100%), `
-                + `url(${t.ramp.art}) ${t.ramp.pos} / cover no-repeat ${t.ramp.base}`,
+              borderBottom: `1px solid ${t.accent}33`,
+              background: `linear-gradient(180deg, ${t.accent}26 0%, ${t.accent}0d 100%)`,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                <span style={{ color: t.accent, display: 'flex' }}>{t.icon}</span>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>{t.label}</p>
-                <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9aa3b1' }}>{t.sub}</span>
-                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ marginLeft: 'auto', fontSize: '0.66rem', color: t.accent }}>
+              {/* A full-height rail in the party's colour. The first thing the
+                  eye lands on, and it never leaves the edge of the panel. */}
+              <span aria-hidden style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
+                background: t.accent,
+              }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
+                <span style={{
+                  flexShrink: 0, width: 34, height: 34, borderRadius: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: `${t.accent}1f`, border: `1px solid ${t.accent}66`, color: t.accent,
+                }}>{t.icon}</span>
+                <span style={{ minWidth: 0 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4efe6', lineHeight: 1.1 }}>{t.label}</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: `${t.accent}cc`, marginTop: 1 }}>{t.sub}</p>
+                </span>
+                <span className="font-karla font-800" style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '0.8rem', color: t.accent, fontVariantNumeric: 'tabular-nums' }}>
                   {t.party.length}/{shipCrewSlots}
                 </span>
               </div>
@@ -196,7 +192,7 @@ export default function AssignBoard({
                   <div key={k} style={{
                     display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 5,
                     padding: '0.35rem 0.3rem', borderRadius: 9,
-                    background: STAT_TINT, border: '1px solid rgba(255,255,255,0.10)',
+                    background: STAT_TINT, border: `1px solid ${t.accent}26`,
                   }}>
                     <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', lineHeight: 1, color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>{totals[k]}</span>
                     <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: '#9aa3b1' }}>{label}</span>
