@@ -297,7 +297,13 @@ export default function AssignBoard({
                       <img src={artSrc(crew.filename)} alt="" aria-hidden decoding="async"
                         style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 7px ${rc}77)` }} />
                     </div>
-                    <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {/* Pirata, like every other place a crew is named — the
+                        detail modal and the roster card both use it, and the
+                        seats were the one screen calling them something else.
+                        lineHeight 1.12 rather than 1: the ellipsis clip makes
+                        the box exactly cap height at 1, which shaves the
+                        descenders off Jelly, Doby and Gar. */}
+                    <span className="font-pirata" style={{ display: 'block', width: '100%', fontSize: '0.86rem', lineHeight: 1.12, letterSpacing: '0.02em', color: '#ecdcbd', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {crew.name}
                     </span>
                     {captain && (

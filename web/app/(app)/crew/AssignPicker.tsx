@@ -182,7 +182,7 @@ export default function AssignPicker({
                         </span>
                       )}
                     </div>
-                    <span className="font-karla font-700" style={{ display: 'block', width: '100%', fontSize: '0.7rem', lineHeight: 1.15, color: '#eee8de', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className="font-pirata" style={{ display: 'block', width: '100%', fontSize: '0.86rem', lineHeight: 1.12, letterSpacing: '0.02em', color: '#ecdcbd', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {busy ? '…' : m.name}
                     </span>
                     <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#a9a29a', fontVariantNumeric: 'tabular-nums' }}>
