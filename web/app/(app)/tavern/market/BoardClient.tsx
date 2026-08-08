@@ -131,17 +131,24 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
     <>
       {open.length > 0 && <RunningStrip bets={open} indexes={board.indexes} allBets={board.bets} />}
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: '0.9rem', alignItems: 'stretch' }}>
-        {/* A way back to the guide. This screen has more rules than any other in
-            the game and they are not guessable from the board; the one reading
-            is on the day it unlocks, which is exactly when none of it means
-            anything yet. */}
-        <button type="button" onClick={() => setGuide('again')} aria-label="How the Exchange works"
-          className="font-karla font-800" style={{
-            flexShrink: 0, width: 34, borderRadius: 9, fontSize: '0.86rem', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
-            color: '#8a94a4', WebkitTapHighlightColor: 'transparent',
-          }}>?</button>
+      {/* A way back to the guide, in words. This screen has more rules than any
+          other in the game and none of them are guessable from the board, while
+          the one reading lands on the day it unlocks, which is exactly when none
+          of it means anything yet. A question mark among the tabs looked like a
+          fifth control; said plainly it looks like what it is. */}
+      <div style={{ marginTop: open.length > 0 ? -2 : 0, marginBottom: '0.75rem' }}>
+        <button type="button" onClick={() => setGuide('again')} className="font-karla font-600"
+          style={{
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+            fontSize: '0.76rem', color: '#7dd3fc',
+            textDecoration: 'underline', textUnderlineOffset: 3,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+          How it works
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, marginBottom: '0.9rem' }}>
         {([['board', 'The board'], ['bets', `Your bets${open.length ? ` (${open.length})` : ''}`]] as const).map(([k, label]) => {
           const on = tab === k
           return (
