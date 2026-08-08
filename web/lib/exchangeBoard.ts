@@ -215,6 +215,57 @@ function jumpPoints(dailyMovePct: number): { up: number; down: number }[] {
     return { up: logPct(m), down: logPct(-m) }
   })
 }
+
+/** A SCHEDULED REPORT IS NOT THE SAME EVENT as a surprise, and it took a
+ *  player asking to see it.
+ *
+ *  A surprise only exists because something happened, so it is large by
+ *  construction: news that moves nothing is not news and nobody files it. A
+ *  report lands on the calendar whether or not there is anything to say, so it
+ *  has to be free to be a damp squib. Real earnings do this constantly.
+ *
+ *  Same ceiling, no floor: a report is uniform from nothing up to the index's
+ *  full gap, so most are ordinary, some are heavy, and one in a while the beds
+ *  are exactly as full as everyone expected. */
+function reportPoints(dailyMovePct: number): { up: number; down: number }[] {
+  const { max } = jumpRange(dailyMovePct)
+  return [0, 1, 2, 3].map(i => {
+    const m = max * ((i + 0.5) / 4)
+    return { up: logPct(m), down: logPct(-m) }
+  })
+}
+
+/** Average `base` over every way this many gaps could land.
+ *
+ *  Up to two gaps it enumerates: each is BIMODAL, so a normal smears it across
+ *  a middle it never occupies. Beyond two, the sum is close enough to normal to
+ *  say so, and rare enough that the difference is noise. */
+function overJumps(
+  sets: { up: number; down: number }[][],
+  base: (shiftPct: number, extraVarPct2: number) => number,
+): number {
+  if (sets.length === 0) return base(0, 0)
+  if (sets.length <= 2) {
+    const shifts = sets.reduce<number[]>(
+      (acc, pts) => acc.flatMap(a => pts.flatMap(j => [a + j.up, a + j.down])), [0])
+    return shifts.reduce((t, sh) => t + base(sh, 0), 0) / shifts.length
+  }
+  let mean = 0, variance = 0
+  for (const pts of sets) {
+    const m = pts.reduce((a, j) => a + (j.up + j.down) / 2, 0) / pts.length
+    const sq = pts.reduce((a, j) => a + (j.up ** 2 + j.down ** 2) / 2, 0) / pts.length
+    mean += m; variance += Math.max(0, sq - m * m)
+  }
+  return base(mean, variance)
+}
+
+/** The gap sets in play over a term: one per scheduled report, plus `k`
+ *  surprises. They are different distributions and must not be pooled. */
+function jumpSets(dailyMovePct: number, scheduled: number, surprises: number) {
+  const rp = reportPoints(dailyMovePct)
+  const sp = jumpPoints(dailyMovePct)
+  return [...Array(Math.max(0, scheduled)).fill(rp), ...Array(Math.max(0, surprises)).fill(sp)]
+}
 /** Mean and variance of ONE gap in log space, for the two-or-more case where a
  *  normal is fine. The mean is NOT zero: a gap is symmetric in price, but
  *  ln(1-j) is further from zero than ln(1+j), so the pair leans down. */
@@ -275,24 +326,12 @@ export function contractValue(
   const p1 = lam * Math.exp(-lam)
   const p2 = Math.max(0, 1 - p0 - p1)
 
-  const points = jumpPoints(dailyMovePct)
-  const mom = jumpMoments(points)
-  const withJumps = (n: number): number => {
-    if (n <= 0) return payoffValue(price, strike, m, s, dir)
-    if (n === 1) {
-      let v = 0
-      for (const j of points) {
-        v += payoffValue(price, strike, m + j.up / 100, s, dir)
-          + payoffValue(price, strike, m + j.down / 100, s, dir)
-      }
-      return v / (points.length * 2)
-    }
-    // Two or more: normal enough to say so, mean and variance both carried.
-    return payoffValue(price, strike, m + (n * mom.mean) / 100,
-      Math.sqrt(s * s + (n * mom.variance) / 10_000), dir)
-  }
+  const withSurprises = (k: number): number =>
+    overJumps(jumpSets(dailyMovePct, scheduled, k),
+      (shift, extraVar) => payoffValue(price, strike, m + shift / 100,
+        Math.sqrt(s * s + extraVar / 10_000), dir))
 
-  return Math.max(0, p0 * withJumps(scheduled) + p1 * withJumps(scheduled + 1) + p2 * withJumps(scheduled + 2))
+  return Math.max(0, p0 * withSurprises(0) + p1 * withSurprises(1) + p2 * withSurprises(2))
 }
 
 /** CHANCE THE POSITION ENDS IN PROFIT, which is not the chance it ends in the
@@ -309,8 +348,6 @@ export function profitChance(
   const s = spreadOver(dailyMovePct, hours) / 100
   const m = driftPct / 100
   const need = Math.log(breakEven / price)
-  const points = jumpPoints(dailyMovePct)
-  const mom = jumpMoments(points)
   const lam = JUMP_P * hours
   const p0 = Math.exp(-lam)
   const p1 = lam * Math.exp(-lam)
@@ -321,16 +358,10 @@ export function profitChance(
     const z = (need - mu) / sd
     return dir === 'up' ? 1 - normCdf(z) : normCdf(z)
   }
-  const withJumps = (n: number): number => {
-    if (n <= 0) return tail(m, s)
-    if (n === 1) {
-      let v = 0
-      for (const j of points) v += tail(m + j.up / 100, s) + tail(m + j.down / 100, s)
-      return v / (points.length * 2)
-    }
-    return tail(m + (n * mom.mean) / 100, Math.sqrt(s * s + (n * mom.variance) / 10_000))
-  }
-  const p = p0 * withJumps(scheduled) + p1 * withJumps(scheduled + 1) + p2 * withJumps(scheduled + 2)
+  const withSurprises = (k: number): number =>
+    overJumps(jumpSets(dailyMovePct, scheduled, k),
+      (shift, extraVar) => tail(m + shift / 100, Math.sqrt(s * s + extraVar / 10_000)))
+  const p = p0 * withSurprises(0) + p1 * withSurprises(1) + p2 * withSurprises(2)
   return Math.max(0, Math.min(1, p))
 }
 
