@@ -804,16 +804,20 @@ function BetSheet({ bet, index, onClose, onSold }: {
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.9rem 1rem 1rem' }}>
-          {/* WHAT IT IS WORTH, first, because it is the only reason to open this. */}
+          {/* THE PRICE, big, because it is the number the other two are measured
+              against. Breakeven and the strike sit in the grid below in the same
+              units, so how far off you are is a comparison rather than a sum.
+              A settled contract has no live price worth staring at, so it goes
+              back to showing what it actually paid. */}
           <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#7c8696' }}>
-            {live ? 'Worth now' : bet.status === 'won' ? 'Paid' : bet.status === 'sold' ? 'Sold for' : 'Ended at'}
+            {live ? 'Price now' : bet.status === 'won' ? 'Paid' : bet.status === 'sold' ? 'Sold for' : 'Ended at'}
           </p>
           <p className="font-cinzel font-800" style={{ fontSize: '1.9rem', lineHeight: 1.1, color: '#f0f4fa', ...TNUM }}>
-            {(live ? worth : (bet.payout ?? 0)).toLocaleString()} ⟡
+            {live ? fmtPrice(bet.livePrice) : `${(bet.payout ?? 0).toLocaleString()} ⟡`}
           </p>
           {live && (
             <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: worth >= bet.stake ? UP : DOWN, marginBottom: 10, ...TNUM }}>
-              {worth >= bet.stake ? '+' : ''}{(worth - bet.stake).toLocaleString()} against the {bet.stake.toLocaleString()} ⟡ you put in
+              {worth >= bet.stake ? '+' : ''}{(worth - bet.stake).toLocaleString()} ⟡ if you sold this second
             </p>
           )}
 
@@ -821,8 +825,7 @@ function BetSheet({ bet, index, onClose, onSold }: {
             <Line fluid points={line} color={bet.movedPct >= 0 ? UP : DOWN} w={380} h={54}
               mark={bet.entryPrice * (1 + (bet.direction === 'up' ? 1 : -1) * bet.distancePct / 100)} />
             <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
-              in at {fmtPrice(bet.entryPrice)} · now {fmtPrice(bet.livePrice)} · needs{' '}
-              {fmtPrice(bet.entryPrice * (1 + (bet.direction === 'up' ? 1 : -1) * bet.distancePct / 100))}
+              in at {fmtPrice(bet.entryPrice)} · dashed line is your target
             </p>
           </div>
 
@@ -835,7 +838,13 @@ function BetSheet({ bet, index, onClose, onSold }: {
             <Fact label="Breaks even at"
               value={bet.breakEvenPrice != null ? fmtPrice(bet.breakEvenPrice) : `${bet.distancePct}%`}
               color={bet.breakEvenPrice != null && bet.livePrice >= bet.breakEvenPrice === (bet.direction === 'up') ? UP : '#e8eef6'} />
-            <Fact label="Pays if it lands" value={`${payoutFor(bet.stake, bet.multiplier).toLocaleString()} ⟡`} />
+            {/* THE STRIKE, as a price, so it can be read straight off against
+                the big number above and the breakeven beside it. What it pays if
+                it lands was a number for the moment you BOUGHT it; the question
+                once you hold it is where the price stands against these two. */}
+            <Fact label="Target"
+              value={fmtPrice(bet.entryPrice * (1 + (bet.direction === 'up' ? 1 : -1) * bet.distancePct / 100))}
+              color={ahead ? UP : '#e8eef6'} />
             <Fact label={live ? 'Time left' : 'Result'}
               value={live
                 ? (bet.hoursLeft >= 1 ? `${Math.round(bet.hoursLeft)}h` : 'under an hour')
