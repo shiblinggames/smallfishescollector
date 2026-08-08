@@ -192,6 +192,162 @@ function Sheet({ label, onClose, children }: { label: string; onClose: () => voi
   )
 }
 
+// The reward ladder as ONE prize at a time, hero-sized, not a spreadsheet of
+// rungs. What you can claim right now fills the modal; the whole climb is a slim
+// rail of dots beneath it. Each collect bursts before the next rung slides in.
+const DOUB_COLOR = '#f0c040'
+const SKIN_COLOR = '#5fd0c8'
+function rewardLook(m: (typeof BOUNTY_MILESTONES)[number]) {
+  if (m.shipSkinId) return { color: SKIN_COLOR, glyph: '⚓', amount: '', sub: m.label }
+  if (m.gems) return { color: GEM_COLOR, glyph: GEM, amount: m.gems.toLocaleString(), sub: 'gems' }
+  return { color: DOUB_COLOR, glyph: '⟡', amount: (m.doubloons ?? 0).toLocaleString(), sub: 'doubloons' }
+}
+
+function PointsLadder({ board, busy, claimFx, onClaim, onClose }: {
+  board: BountyBoard
+  busy: boolean
+  claimFx: { kind: 'gems' | 'doubloons' | 'skin'; amount: number; label: string } | null
+  onClaim: () => void
+  onClose: () => void
+}) {
+  const total = BOUNTY_MILESTONES.length
+  const idx = Math.min(board.milestonesClaimed, total - 1)
+  const allDone = board.milestonesClaimed >= total
+  const m = BOUNTY_MILESTONES[idx]
+  const ready = board.milestonesReady > 0
+  const look = allDone ? { color: DOUB_COLOR, glyph: '★', amount: '', sub: 'every reward collected' } : rewardLook(m)
+  const prev = idx > 0 ? BOUNTY_MILESTONES[idx - 1].points : 0
+  const span = Math.max(1, m.points - prev)
+  const into = Math.min(1, Math.max(0, (board.points - prev) / span))
+  const toGo = Math.max(0, m.points - board.points)
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 2 }}>
+        <p className="font-pirata" style={{ fontSize: '1.2rem', letterSpacing: '0.03em', color: '#f0dcae' }}>Bounty Points</p>
+        <p className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: '#f2ede2', ...TNUM }}>{board.points.toLocaleString()}</p>
+      </div>
+
+      {/* THE HERO — one reward, filling the space a list used to waste. Bright
+          and claimable when earned, a dimmed goal with a ring when not. */}
+      <div style={{
+        position: 'relative', marginTop: 12, marginBottom: 14, paddingTop: 8,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+      }}>
+        {/* Ambient rays behind the emblem — faint, still; the burst does the motion. */}
+        <div aria-hidden style={{
+          position: 'absolute', top: -6, width: 190, height: 190, borderRadius: '50%',
+          background: `radial-gradient(circle, ${look.color}${ready ? '2e' : '14'} 0%, transparent 66%)`,
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative', width: 118, height: 118, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* The claim burst: an expanding ring + sparks, only while celebrating. */}
+          <AnimatePresence>
+            {claimFx && (
+              <>
+                <motion.div key="ring"
+                  initial={{ scale: 0.5, opacity: 0.75 }} animate={{ scale: 2.5, opacity: 0 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.85, ease: 'easeOut' }}
+                  style={{ position: 'absolute', width: 96, height: 96, borderRadius: '50%', border: `2px solid ${look.color}`, pointerEvents: 'none' }} />
+                {Array.from({ length: 16 }).map((_, i) => {
+                  const a = (i / 16) * Math.PI * 2
+                  return (
+                    <motion.span key={i} aria-hidden
+                      initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                      animate={{ x: Math.cos(a) * 78, y: Math.sin(a) * 78, opacity: 0, scale: 0.4 }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      style={{ position: 'absolute', width: 6, height: 6, borderRadius: '50%', background: look.color, boxShadow: `0 0 6px ${look.color}` }} />
+                  )
+                })}
+              </>
+            )}
+          </AnimatePresence>
+
+          <motion.div
+            key={`${idx}-${ready}`}
+            initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 20 }}
+            style={{
+              width: 96, height: 96, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: `radial-gradient(circle at 50% 38%, ${look.color}${ready ? '3a' : '1c'} 0%, rgba(12,11,8,0.9) 72%)`,
+              border: `2px solid ${look.color}${ready ? 'cc' : '55'}`,
+              boxShadow: ready ? `0 0 26px ${look.color}44, inset 0 0 18px ${look.color}22` : 'none',
+              opacity: ready || allDone ? 1 : 0.82,
+            }}>
+            <span className="font-cinzel font-800" style={{ fontSize: '2.6rem', lineHeight: 1, color: look.color, filter: ready ? `drop-shadow(0 0 8px ${look.color}88)` : 'none' }}>
+              {look.glyph}
+            </span>
+          </motion.div>
+        </div>
+
+        {look.amount && (
+          <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', lineHeight: 1.1, color: '#f4efe4', marginTop: 10, ...TNUM }}>
+            {look.amount} <span style={{ color: look.color, fontSize: '1.2rem' }}>{look.glyph}</span>
+          </p>
+        )}
+        <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: look.amount ? '#b9b1a2' : '#e8e0d2', marginTop: look.amount ? 1 : 10 }}>
+          {look.sub}
+        </p>
+        {!allDone && (
+          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: ready ? look.color : '#8d7f66', marginTop: 6 }}>
+            {ready ? 'Reward ready' : `Milestone ${idx + 1} of ${total}`}
+          </p>
+        )}
+
+        {/* When it is still a goal, show the climb to it right under the emblem. */}
+        {!ready && !allDone && (
+          <div style={{ width: '78%', marginTop: 9 }}>
+            <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.09)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 3, width: `${into * 100}%`, background: `linear-gradient(90deg, #8fa6c4, ${look.color})` }} />
+            </div>
+            <p className="font-karla font-500" style={{ fontSize: '0.68rem', color: '#8d7f66', marginTop: 5, ...TNUM }}>
+              {toGo.toLocaleString()} more {toGo === 1 ? 'point' : 'points'} to go
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* THE WHOLE CLIMB, as a rail of dots — the list, compressed to a glance. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', marginBottom: 13 }}>
+        {BOUNTY_MILESTONES.map((mm, i) => {
+          const claimed = i < board.milestonesClaimed
+          const isNext = i === idx && !allDone
+          const c = rewardLook(mm).color
+          return (
+            <div key={mm.points} title={mm.label} style={{
+              width: isNext ? 11 : 8, height: isNext ? 11 : 8, borderRadius: '50%', flexShrink: 0,
+              background: claimed ? c : isNext && ready ? c : 'rgba(255,255,255,0.10)',
+              border: isNext ? `2px solid ${c}` : '1px solid rgba(255,255,255,0.14)',
+              boxShadow: isNext && ready ? `0 0 8px ${c}` : 'none',
+              opacity: claimed ? 0.85 : 1,
+            }} />
+          )
+        })}
+      </div>
+
+      {ready && !allDone ? (
+        <button type="button" onClick={onClaim} disabled={busy} className="font-karla font-800 tap"
+          style={{
+            width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.9rem',
+            background: `linear-gradient(180deg, ${look.color}33, ${look.color}1c)`,
+            border: `1px solid ${look.color}aa`, color: '#f6f1e8',
+            boxShadow: `0 0 18px ${look.color}33`,
+            cursor: busy ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
+          }}>
+          {busy ? 'Collecting…' : 'Claim reward'}
+        </button>
+      ) : (
+        <button type="button" onClick={onClose} className="font-karla font-600"
+          style={{ width: '100%', padding: '0.5rem', background: 'none', border: 'none', color: '#8d7f66', fontSize: '0.78rem', cursor: 'pointer' }}>
+          Close
+        </button>
+      )}
+    </div>
+  )
+}
+
 /** One notice. A solid slab with the tier as a spine down its left edge, the
  *  prize on the right, and the two lines that matter in between. */
 /** Text with a line through it, drawn rather than declared.
@@ -418,6 +574,9 @@ export default function BountiesPanel({ onGems, onClose }: {
   const [toast, setToast] = useState<string | null>(null)
   const [burst, setBurst] = useState(0)
   const [ladderOpen, setLadderOpen] = useState(false)
+  // The reward just collected, held for the length of its celebration so the
+  // hero can burst before the board reloads to the next rung.
+  const [claimFx, setClaimFx] = useState<{ kind: 'gems' | 'doubloons' | 'skin'; amount: number; label: string } | null>(null)
   /** The order awaiting a swap confirmation. A swap is one a day and cannot be
    *  undone, which is exactly the shape of thing that should ask first. */
   const [swapping, setSwapping] = useState<BountyView | null>(null)
@@ -487,11 +646,19 @@ export default function BountiesPanel({ onGems, onClose }: {
       setBusy(null)
       if ('error' in res) { setToast(res.error); return }
       hapticReward()
-      setToast(res.shipSkinId ? `${res.label}. Fly it on the Man-o-War.` : `+${res.label}`)
+      // The celebration lives IN the sheet now, not in a toast that slid past
+      // under it. Hold the reward for the burst, then let the reloaded board
+      // reveal the next rung (or the goal state if that was the last ready one).
+      setClaimFx({
+        kind: res.shipSkinId ? 'skin' : res.gems ? 'gems' : 'doubloons',
+        amount: res.gems || res.doubloons || 0,
+        label: res.label,
+      })
       setBurst(n => n + 1)
       if (res.gems) window.dispatchEvent(new CustomEvent('gems-changed'))
       if (res.doubloons) window.dispatchEvent(new CustomEvent('doubloons-changed'))
       load()
+      setTimeout(() => setClaimFx(null), 1250)
     })
   }
 
@@ -557,60 +724,13 @@ export default function BountiesPanel({ onGems, onClose }: {
           you: the pill up top is the number, this is the map. */}
       {ladderOpen && (
         <Sheet label="Bounty points" onClose={() => setLadderOpen(false)}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 3 }}>
-            <p className="font-pirata" style={{ fontSize: '1.35rem', letterSpacing: '0.03em', color: '#f0dcae' }}>Bounty Points</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#f2ede2', ...TNUM }}>{board.points.toLocaleString()}</p>
-          </div>
-          <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#8d7f66', lineHeight: 1.45, marginBottom: 11 }}>
-            Every order pays points by tier, and clearing the whole board pays 3 more.
-            {board.pointsToday > 0 && ` ${board.pointsToday} are still on today's board.`}
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: '46vh', overflowY: 'auto' }}>
-            {BOUNTY_MILESTONES.map((m, i) => {
-              const done = i < board.milestonesClaimed
-              const ready = i === board.milestonesClaimed && board.points >= m.points
-              const pct = Math.min(1, board.points / m.points)
-              return (
-                <div key={m.points} style={{
-                  padding: '0.5rem 0.6rem', borderRadius: 10,
-                  background: ready ? 'rgba(201,160,245,0.14)' : 'rgba(255,255,255,0.035)',
-                  border: `1px solid ${ready ? 'rgba(201,160,245,0.55)' : 'rgba(255,255,255,0.08)'}`,
-                  opacity: done ? 0.5 : 1,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                    <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: done ? '#7d7466' : '#e8e0d2' }}>
-                      {m.label}
-                    </span>
-                    <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: done ? '#7d7466' : '#9aa3b2', ...TNUM }}>
-                      {done ? 'collected' : `${m.points.toLocaleString()} pts`}
-                    </span>
-                  </div>
-                  {!done && !ready && (
-                    <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 5 }}>
-                      <div style={{ height: '100%', borderRadius: 2, width: `${pct * 100}%`, background: 'linear-gradient(90deg,#8fa6c4,#c9a0f5)' }} />
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {board.milestonesReady > 0 ? (
-            <button type="button" onClick={handleMilestone} disabled={busy === '__ms'} className="font-karla font-800 tap"
-              style={{
-                width: '100%', marginTop: 11, padding: '0.6rem', borderRadius: 10, fontSize: '0.82rem',
-                background: 'rgba(201,160,245,0.2)', border: '1px solid rgba(201,160,245,0.65)', color: '#f0e6fb',
-                cursor: busy === '__ms' ? 'wait' : 'pointer', WebkitTapHighlightColor: 'transparent',
-              }}>
-              {busy === '__ms' ? '…' : `Collect ${board.nextMilestone?.label ?? 'your milestone'}`}
-            </button>
-          ) : (
-            <button type="button" onClick={() => setLadderOpen(false)} className="font-karla font-600"
-              style={{ width: '100%', marginTop: 11, padding: '0.5rem', background: 'none', border: 'none', color: '#8d7f66', fontSize: '0.78rem', cursor: 'pointer' }}>
-              Close
-            </button>
-          )}
+          <PointsLadder
+            board={board}
+            busy={busy === '__ms'}
+            claimFx={claimFx}
+            onClaim={handleMilestone}
+            onClose={() => setLadderOpen(false)}
+          />
         </Sheet>
       )}
 
