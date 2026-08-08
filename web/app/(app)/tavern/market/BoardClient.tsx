@@ -42,14 +42,34 @@ function purseChanged(total: number) {
 
 /** A price line. No axes, no grid: it is here to show a shape, and a shape is
  *  all anybody reads off something this size. */
-function Line({ points, color, w = 64, h = 22 }: { points: number[]; color: string; w?: number; h?: number }) {
-  if (points.length < 2) return <div style={{ width: w, height: h, flexShrink: 0 }} />
-  const lo = Math.min(...points), hi = Math.max(...points)
+function Line({ points, color, w = 64, h = 22, mark, fluid }: {
+  points: number[]; color: string; w?: number; h?: number
+  /** A price to rule across the chart, dashed. Folded into the scale so it is
+   *  always on screen: a target you cannot see is worse than no target. */
+  mark?: number
+  /** Stretch to the container instead of sitting at a fixed pixel width. The
+   *  stroke is told not to scale with it, or a wide box thins the line. */
+  fluid?: boolean
+}) {
+  if (points.length < 2) return <div style={{ width: fluid ? '100%' : w, height: h, flexShrink: 0 }} />
+  const marked = mark != null && Number.isFinite(mark)
+  const all = marked ? [...points, mark] : points
+  const lo = Math.min(...all), hi = Math.max(...all)
   const span = hi - lo || 1
-  const d = points.map((v, i) => `${(i / (points.length - 1)) * w},${h - ((v - lo) / span) * h}`).join(' ')
+  const y = (v: number) => h - ((v - lo) / span) * h
+  const d = points.map((v, i) => `${(i / (points.length - 1)) * w},${y(v)}`).join(' ')
   return (
-    <svg width={w} height={h} aria-hidden style={{ display: 'block', flexShrink: 0 }}>
-      <polyline points={d} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+    <svg
+      {...(fluid
+        ? { width: '100%', height: h, viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: 'none' as const }
+        : { width: w, height: h })}
+      aria-hidden style={{ display: 'block', flexShrink: 0 }}>
+      {marked && (
+        <line x1="0" x2={w} y1={y(mark)} y2={y(mark)} stroke="#ffd96a" strokeWidth="1"
+          strokeDasharray="3 3" opacity="0.8" vectorEffect="non-scaling-stroke" />
+      )}
+      <polyline points={d} fill="none" stroke={color} strokeWidth="1.6"
+        strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
     </svg>
   )
 }
@@ -266,7 +286,7 @@ function RunningStrip({ bets, indexes }: { bets: BoardBet[]; indexes: BoardIndex
 
       {series.length > 1 && (
         <div style={{ marginTop: 6 }}>
-          <Line points={series} color={worth >= staked ? UP : DOWN} w={380} h={38} />
+          <Line fluid points={series} color={worth >= staked ? UP : DOWN} w={380} h={38} />
         </div>
       )}
 
@@ -496,6 +516,21 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.85rem 1rem 1rem' }}>
+          {/* WHERE IT HAS BEEN, before anything is asked of you. The dashed rule
+              is the target, so dragging the slider moves a line across the same
+              chart you just read, and how far you are asking it to travel stops
+              being a percentage and becomes a distance you can see. */}
+          {index.history.length > 1 && (
+            <div style={{ marginBottom: 13, padding: '0.5rem 0.55rem 0.4rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <Line fluid points={index.history} w={380} h={64}
+                color={pct(index.price, index.history[0]) >= 0 ? UP : DOWN}
+                mark={chosen ? targetPrice : undefined} />
+              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a7482', marginTop: 4, ...TNUM }}>
+                Last 48 hours{chosen ? ' · dashed line is your target' : ''}
+              </p>
+            </div>
+          )}
+
           <Step label="Which way" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 13 }}>
             {(['up', 'down'] as const).map(d => (
@@ -722,9 +757,11 @@ function BetSheet({ bet, index, onClose, onSold }: {
           )}
 
           <div style={{ margin: '4px 0 10px', padding: '0.55rem 0.6rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <Line points={line} color={bet.movedPct >= 0 ? UP : DOWN} w={380} h={54} />
+            <Line fluid points={line} color={bet.movedPct >= 0 ? UP : DOWN} w={380} h={54}
+              mark={bet.entryPrice * (1 + (bet.direction === 'up' ? 1 : -1) * bet.distancePct / 100)} />
             <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#7c8696', marginTop: 4, ...TNUM }}>
-              in at {fmtPrice(bet.entryPrice)} · now {fmtPrice(bet.livePrice)}
+              in at {fmtPrice(bet.entryPrice)} · now {fmtPrice(bet.livePrice)} · needs{' '}
+              {fmtPrice(bet.entryPrice * (1 + (bet.direction === 'up' ? 1 : -1) * bet.distancePct / 100))}
             </p>
           </div>
 
