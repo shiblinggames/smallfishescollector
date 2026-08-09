@@ -290,10 +290,19 @@ export function traitLabel(s: TraitStats): string {
     // the game shared a name with a near-miss and the only way to tell them
     // apart was to read the numbers. A trophy needs its own word.
     //
-    // Every band below is UNCHANGED, deliberately: nets 9 to 11 were
-    // impossible before the deep roll existed, so not one crew already out
-    // there gets silently relabelled by this.
+    // EXALTED and ASCENDANT split the run-up for the same reason. A normal
+    // stat tops out at 3, so nets 10 and 11 are not "a bit more Demigod" —
+    // they are exactly ONE deep 4 and exactly TWO of them, the only visible
+    // proof of how far along the Leviathan chase a hand is. Left merged, the
+    // longest grind in the game showed no progress at all: a crew sat on
+    // "Demigod" from its first 3/3/3 until the moment it turned Divine.
+    //
+    // Every band below is UNCHANGED, deliberately, and these two carve out
+    // nets that were impossible before the deep roll existed — so not one
+    // crew already out there gets silently relabelled by any of this.
     if (net === 12) return 'Divine'
+    if (net === 11) return 'Ascendant'
+    if (net === 10) return 'Exalted'
     if (net >= 8) return 'Demigod'
     if (net >= 5) return 'Champion'
     return 'Versatile'
