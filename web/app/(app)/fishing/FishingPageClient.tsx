@@ -18,6 +18,21 @@ import type { TickerItem } from '@/components/MarketTicker'
 // /fishing visit when they're still on ZoneLanding. ssr:false because the
 // component owns RAF loops and localStorage state that don't render on
 // the server anyway.
+// WARM IT THE MOMENT THIS SHELL MOUNTS, whichever view is showing.
+//
+// selectedZone restores from localStorage, so a player who has fished before and
+// opens /fishing directly lands STRAIGHT in the game — and the chunk only starts
+// downloading at that point, behind "Casting line…". Arriving through the zone
+// selector felt instant purely because the selector gave the fetch a head start
+// it never had on a direct load.
+//
+// Kicking the same import off on mount closes that gap: it runs during the
+// server-rendered shell, in parallel with the hub painting, instead of after the
+// game tries to render. On the selector path it is a no-op — the module cache
+// already has it. Fire-and-forget; if it fails, dynamic() still loads it the
+// normal way.
+function warmFishingGame() { import('./FishingGame').catch(() => {}) }
+
 const FishingGame = dynamic(() => import('./FishingGame'), {
   ssr: false,
   loading: () => (
@@ -142,6 +157,12 @@ export default function FishingPageClient({
 }) {
   const router = useRouter()
   const fishingLevel = getLevelFromXP(initialFishingXP)
+
+  // Start the game chunk downloading immediately, before anything decides which
+  // view to show. See warmFishingGame above: a direct load restores into a zone
+  // from localStorage and would otherwise not begin the fetch until the game
+  // tried to render.
+  useEffect(() => { warmFishingGame() }, [])
 
   // Soundtrack lifecycle lives here (NOT in FishingGame) so the music keeps
   // playing across the ZoneLanding ↔ FishingGame views — it only fades when
