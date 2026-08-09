@@ -15,7 +15,7 @@ giving Finn new lines anywhere (including fishing-side encounters:
   just an almanac flex.
 - The finale ("One Last Ride") ships as gate + cutscene + boss; a dial-based combat
   variant for it was designed but NOT built.
-- Chapter 4 / endgame exists admin-gated; opening it publicly needs art + de-gating.
+- Chapter 4 / endgame is LIVE (de-gated 2026-07-04; the raidMap comments record it).
 
 ## Delivery machinery
 

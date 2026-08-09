@@ -35,7 +35,8 @@ Design constraints learned the hard way (each was a live exploit or mispricing):
   across every offered bet, worst-EV tracked. The gate scripts from past sessions are the
   pattern to copy.
 
-Status: the free-floating-index rebuild sits behind a flag with UI still to build.
+The rebuilt free-floating-index board is live: `web/app/(app)/tavern/market/`
+(`BoardClient.tsx`, `boardActions.ts`).
 
 ## Connects to
 
