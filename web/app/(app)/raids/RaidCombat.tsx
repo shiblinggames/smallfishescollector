@@ -9607,15 +9607,36 @@ function CarapaceDeflect() {
 // the typed player layers it existed for: both bars now carry a single pool,
 // the player's in cyan and the enemy's barrier in purple.
 function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4', hidden = false }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string; hidden?: boolean }) {
-  const pct = hidden ? 0 : (max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0)
+  // OVERHEAL, split off the top. Field Repairs and Engorge let heals fill past
+  // max, and the bar used to clamp the fill at 100% while the text printed the
+  // raw pair — so a 223 hull healed to 256 read "256/223", which looks like a
+  // bug, over a bar that had not moved since full. The buffer was invisible
+  // until it silently ate a hit.
+  //
+  // It is a temporary pool sitting above your health that soaks damage and is
+  // shed at fight end, which is exactly what the shield segments already model,
+  // so it rides as one of them rather than as a new idea.
+  const over = Math.max(0, current - max)
+  const base = Math.min(current, max)
+  // MEASURE AGAINST THE EXTENDED TOTAL when overhealed. Overheal only exists
+  // while health is FULL, so against `max` the health fill takes the whole bar,
+  // leaving zero room and scaling the overheal segment to nothing — invisible,
+  // which is the very bug this is fixing. Widening the denominator lets health
+  // and the buffer share the bar proportionally.
+  const denom = Math.max(1, max + over)
+  const pct = hidden ? 0 : Math.max(0, Math.min(100, (base / denom) * 100))
   // Shield can be a single pool (enemy barrier) OR typed segments (the player's
   // amber boon layer + cyan crew-ability layer), so each source reads distinctly.
-  const segs = (shield > 0 ? [{ hp: shield, color: shieldColor, gradTo: shieldGradTo }] : [])
+  // Overheal leads the strip: it sits directly on top of the health it exceeds.
+  const segs = [
+    ...(over > 0 && !hidden ? [{ hp: over, color: '#8ee6a8', gradTo: '#4ade80' }] : []),
+    ...(shield > 0 ? [{ hp: shield, color: shieldColor, gradTo: shieldGradTo }] : []),
+  ]
   const totalShield = segs.reduce((s, x) => s + x.hp, 0)
   // Cap the whole shield strip to the empty hull space (scaling the segments
   // together) so the bar never overflows; the chips still show the true amounts.
   const availPct = Math.max(0, 100 - pct)
-  const rawPct = max > 0 ? (totalShield / max) * 100 : 0
+  const rawPct = (totalShield / denom) * 100
   const segScale = rawPct > availPct && rawPct > 0 ? availPct / rawPct : 1
   const h = compact ? 8 : 10
   let off = pct
@@ -9624,7 +9645,10 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
       {!compact && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a8aa0' }}>HP</p>
-          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: hidden ? '#8a95aa' : accent }}>{hidden ? '???' : `${current}/${max}`}</p>
+          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: hidden ? '#8a95aa' : accent }}>
+            {hidden ? '???' : `${base}/${max}`}
+            {!hidden && over > 0 && <span style={{ color: '#8ee6a8' }}> +{over}</span>}
+          </p>
         </div>
       )}
       <div style={{ position: 'relative', height: h, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
@@ -9635,7 +9659,7 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
           <>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
             {segs.map((s, i) => {
-              const w = max > 0 ? (s.hp / max) * 100 * segScale : 0
+              const w = (s.hp / denom) * 100 * segScale
               const left = off; off += w
               return <div key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${left}%`, width: `${w}%`, background: `linear-gradient(90deg, ${s.color}, ${s.gradTo})`, boxShadow: `0 0 6px ${s.color}aa`, transition: 'width 0.35s ease, left 0.4s ease' }} />
             })}
