@@ -893,6 +893,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // exactly what it is about to do before it does it.
   const [confirmAct, setConfirmAct] = useState<'swap' | 'promote' | 'remove' | 'dismiss' | null>(null)
   const [clearingTrack, setClearingTrack] = useState<'raid' | 'voyage' | null>(null)
+  /** Which party the captain has ASKED to empty, pending the confirm. */
+  const [clearAsk, setClearAsk] = useState<'raid' | 'voyage' | null>(null)
   // expandedTrait state used to exist for the old per-trait description
   // expander; the simplified one-row Trait section doesn't need it.
 
@@ -1361,6 +1363,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       if ('error' in res) setErr(res.error)
       else setState(res.state)
       setClearingTrack(null)
+      // Closed HERE, not on the tap, so the sheet holds its busy state until
+      // the seats are actually empty and a refusal lands on a screen the
+      // captain is still looking at.
+      setClearAsk(null)
     })
   }
 
@@ -1603,7 +1609,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             artSrc={artSrc}
             onPickSeat={(track, slot) => setAssignSeat({ track, slot })}
             onTapCrew={m => setDetail({ kind: 'roster', item: m })}
-            onClearParty={handleClearParty}
+            onClearParty={track => setClearAsk(track)}
             clearing={clearingTrack}
             raidAccent={ASSIGN_RAID}
             voyageAccent={ASSIGN_VOYAGE}
@@ -2486,6 +2492,86 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     }}
                   >
                     {hallBusy ? 'Upgrading…' : `Upgrade · ${next.cost.toLocaleString()} ⟡`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Unassign-all confirm. Emptying six seats at once is the one action on
+            this screen that undoes a lot of deliberate work in a single tap, so
+            it gets a sheet rather than an inline arm — and the sheet says how
+            many are leaving and that nobody is lost, because "unassign all"
+            beside a roster full of crew can read like a dismissal. */}
+        {clearAsk && (() => {
+          const isRaid = clearAsk === 'raid'
+          const accent = isRaid ? ASSIGN_RAID : ASSIGN_VOYAGE
+          const partyName = isRaid ? 'Campaign Party' : 'Voyage Party'
+          const count = state.roster.filter(c => (isRaid ? c.raidSlot : c.voyageSlot) != null).length
+          const busy = clearingTrack === clearAsk
+          return (
+            <div
+              onClick={() => { if (!busy) setClearAsk(null) }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 80,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0,0,0,0.62)', padding: '1.2rem',
+              }}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 380,
+                  background: 'linear-gradient(180deg, #1c1610 0%, #120d08 100%)',
+                  border: `1px solid ${accent}55`,
+                  borderRadius: 14, padding: '1.2rem 1.1rem 1.05rem',
+                  boxShadow: `0 10px 40px rgba(0,0,0,0.6), 0 0 30px ${accent}22`,
+                  textAlign: 'center',
+                }}
+              >
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+                  Unassign all
+                </p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: accent, marginBottom: 10 }}>
+                  {partyName}
+                </p>
+                <p className="font-karla font-600" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', marginBottom: 14, lineHeight: 1.45 }}>
+                  {count === 1
+                    ? <>The <span style={{ color: accent }}>1 crew</span> in this party leaves their seat.</>
+                    : <>All <span style={{ color: accent }}>{count} crew</span> in this party leave their seats.</>}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', marginBottom: 14, lineHeight: 1.5 }}>
+                  They stay in your roster, keep everything they have earned, and can be assigned again whenever you like.
+                </p>
+                <div className="flex" style={{ gap: 8 }}>
+                  <button
+                    onClick={() => setClearAsk(null)}
+                    disabled={busy}
+                    className="font-karla font-700"
+                    style={{
+                      flex: 1, padding: '0.7rem', borderRadius: 9, fontSize: '0.88rem',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
+                      color: 'rgba(255,255,255,0.7)', cursor: busy ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleClearParty(clearAsk)}
+                    disabled={busy}
+                    className="font-karla font-700 active:scale-95"
+                    style={{
+                      flex: 1.4, padding: '0.7rem', borderRadius: 9, fontSize: '0.88rem',
+                      background: 'rgba(224,124,124,0.16)',
+                      border: '1px solid rgba(224,124,124,0.5)',
+                      color: '#f4cfcf',
+                      opacity: busy ? 0.45 : 1,
+                      cursor: busy ? 'not-allowed' : 'pointer',
+                      transition: 'transform 0.08s',
+                    }}
+                  >
+                    {busy ? 'Standing them down…' : 'Unassign all'}
                   </button>
                 </div>
               </div>

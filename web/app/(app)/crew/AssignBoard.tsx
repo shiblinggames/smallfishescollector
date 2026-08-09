@@ -142,10 +142,6 @@ export default function AssignBoard({
   voyageAccent: string
 }) {
   const [openBreakdown, setOpenBreakdown] = useState<'raid' | 'voyage' | null>(null)
-  /** Which party's clear button is armed. Two taps, because one stray tap
-   *  should not empty six seats — and disarmed whenever the panel closes, so
-   *  it can never sit armed behind a collapsed accordion. */
-  const [armed, setArmed] = useState<'raid' | 'voyage' | null>(null)
   const atSea = new Set(lockedCrewIds)
   const trawling = new Set(trawlingCrewIds)
   const training = new Set(bunkedCrewIds)
@@ -169,10 +165,11 @@ export default function AssignBoard({
   // treatment the art stopped saying anything the label did not already say —
   // it was just texture behind text, and texture the seats had to compete with.
   //
-  // The identity is carried by the things that CANNOT be mistaken instead: a
-  // red panel with crossed swords is the fighting party, a blue one with a helm
-  // is the sailing party, and the accent runs through the border, the rail, the
-  // icon and the count. Colour and symbol, not scenery.
+  // NO ICON MEDALLIONS EITHER. A crossed-sword and a helm sat next to labels
+  // that already read "Campaign Party" and "Voyage Party", so they restated the
+  // title in a weaker language and cost the header a 34px column. The identity
+  // is carried by the accent alone now — it runs through the border, the rail,
+  // the title colour and the count. Colour and words, not scenery or symbols.
   const STAT_TINT = 'rgba(0,0,0,0.30)'
   const tracks = [
     {
@@ -182,11 +179,6 @@ export default function AssignBoard({
       accent: raidAccent,
       party: roster.filter(c => c.raidSlot != null).sort((a, b) => a.raidSlot! - b.raidSlot!),
       slotOf: (c: CrewMember) => c.raidSlot ?? 0,
-      icon: (
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="M19 21 3 5" />
-        </svg>
-      ),
     },
     {
       key: 'voyage' as const,
@@ -195,11 +187,6 @@ export default function AssignBoard({
       accent: voyageAccent,
       party: roster.filter(c => c.voyageSlot != null).sort((a, b) => a.voyageSlot! - b.voyageSlot!),
       slotOf: (c: CrewMember) => c.voyageSlot ?? 0,
-      icon: (
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <circle cx="12" cy="5" r="2" /><path d="M12 22V7" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" /><path d="M8 7h8" />
-        </svg>
-      ),
     },
   ]
 
@@ -220,23 +207,22 @@ export default function AssignBoard({
                 HERE and nowhere else. Front to back: the track's accent tint, a
                 wash so the title and totals hold up, the plate, then the flat
                 base under it. */}
+            <div style={{
+              position: 'relative', zIndex: 1,
+              borderBottom: `1px solid ${t.accent}33`,
+              background: `linear-gradient(180deg, ${t.accent}26 0%, ${t.accent}0d 100%)`,
+            }}>
             <button type="button"
-              onClick={() => { setArmed(null); setOpenBreakdown(o => (o === t.key ? null : t.key)) }}
+              onClick={() => setOpenBreakdown(o => (o === t.key ? null : t.key))}
               aria-expanded={openBreakdown === t.key}
               aria-label={`${t.label} totals. Tap for the breakdown.`}
               style={{
-              position: 'relative', zIndex: 1, width: '100%', display: 'block', textAlign: 'left',
+              width: '100%', display: 'block', textAlign: 'left',
               padding: '0.8rem 0.85rem 0.7rem', font: 'inherit', cursor: 'pointer',
-              border: 'none', borderBottom: `1px solid ${t.accent}33`,
-              background: `linear-gradient(180deg, ${t.accent}26 0%, ${t.accent}0d 100%)`,
+              border: 'none', background: 'transparent',
               touchAction: 'manipulation',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
-                <span style={{
-                  flexShrink: 0, width: 34, height: 34, borderRadius: 10,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: `${t.accent}1f`, border: `1px solid ${t.accent}66`, color: t.accent,
-                }}>{t.icon}</span>
                 <span style={{ minWidth: 0 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4efe6', lineHeight: 1.1 }}>{t.label}</p>
                   <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: `${t.accent}cc`, marginTop: 1 }}>{t.sub}</p>
@@ -267,6 +253,32 @@ export default function AssignBoard({
                 ))}
               </div>
             </button>
+
+            {/* Emptying a party was six taps through a confirm each, which is
+                the kind of chore that leaves a bad party sitting there. It sits
+                in the header, not down in the breakdown, because a captain
+                rebuilding a party should not have to open the arithmetic to
+                find it. It is a SIBLING of the header button rather than a
+                child: the header is itself a button, and nesting one is
+                invalid. Only shown when there is somebody to stand down. */}
+            {t.party.length > 0 && (
+              <div style={{ padding: '0 0.85rem 0.7rem' }}>
+                <button type="button" onClick={() => onClearParty(t.key)} disabled={clearing === t.key}
+                  className="font-karla font-700 uppercase"
+                  style={{
+                    width: '100%', padding: '0.42rem', borderRadius: 8,
+                    fontSize: '0.63rem', letterSpacing: '0.09em',
+                    border: '1px solid rgba(224,124,124,0.38)',
+                    background: 'rgba(224,124,124,0.09)',
+                    color: clearing === t.key ? '#8a8480' : '#dd9c9c',
+                    cursor: clearing === t.key ? 'default' : 'pointer',
+                    touchAction: 'manipulation',
+                  }}>
+                  {clearing === t.key ? 'Standing them down…' : 'Unassign all'}
+                </button>
+              </div>
+            )}
+            </div>
 
             {/* THE ARITHMETIC, on tap. The totals above are the only numbers on
                 this screen a captain cannot check, because the seat multiplier
@@ -309,31 +321,6 @@ export default function AssignBoard({
                         The first seat is your captain and counts fully. Everyone else counts for 80%, so the total is a little less than adding them up.
                       </p>
                     </div>
-
-                    {/* Emptying a party was six taps through a confirm each. It
-                        lives at the foot of the breakdown rather than in the
-                        header because the header is itself a button (a nested
-                        one is invalid), and because reading who is seated is
-                        the right thing to do immediately before clearing them. */}
-                    <button type="button" disabled={clearing === t.key}
-                      onClick={() => {
-                        if (armed === t.key) { setArmed(null); onClearParty(t.key) }
-                        else setArmed(t.key)
-                      }}
-                      className="font-karla font-700"
-                      style={{
-                        display: 'inline-block', marginTop: 11, padding: '0.4rem 0.7rem',
-                        borderRadius: 8, fontSize: '0.68rem', letterSpacing: '0.02em',
-                        border: `1px solid rgba(224,124,124,${armed === t.key ? 0.75 : 0.4})`,
-                        background: `rgba(224,124,124,${armed === t.key ? 0.2 : 0.1})`,
-                        color: clearing === t.key ? '#8a8480' : '#e0a0a0',
-                        cursor: clearing === t.key ? 'default' : 'pointer',
-                        touchAction: 'manipulation', transition: 'background 0.15s ease, border-color 0.15s ease',
-                      }}>
-                      {clearing === t.key ? 'Standing them down…'
-                        : armed === t.key ? 'Tap again to confirm'
-                        : `Remove all ${t.party.length}`}
-                    </button>
                   </>
                 )}
               </div>
