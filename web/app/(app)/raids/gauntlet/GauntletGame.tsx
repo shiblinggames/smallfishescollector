@@ -2448,15 +2448,15 @@ export default function GauntletGame(props: GauntletGameProps) {
               <ActionTile
                 color={GOLD}
                 onClick={() => setShopSection('shore')}
-                label="Ship & Shore"
-                line="Permanent power"
+                label="Permanent Upgrades"
+                line="Voyages, raids, fishing"
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></svg>}
               />
             </div>
 
             {/* Active run perks — gauntlet-scoped upgrades in effect this dive.
-                Global Ship & Shore unlocks live out in the world, so they'd
-                only confuse here. */}
+                Permanent Upgrades apply out in the world, so they'd only
+                confuse here. */}
             {(() => {
               // Tiered chains (Deep Lungs I/II/III): show only the TOP owned tier
               // — a perk is superseded if an owned upgrade `requires` it.
@@ -2528,7 +2528,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </button>
           <button onClick={() => setShopSection('shore')} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
             style={{ flex: 1, padding: '0.8rem', borderRadius: 13, fontSize: '0.74rem', color: GOLD, background: `${GOLD}14`, border: `1px solid ${GOLD}55`, cursor: 'pointer' }}>
-            Ship & Shore
+            Permanent Upgrades
           </button>
         </div>
         <BackLink router={router} label="Back to the map" primary={!ready} />
@@ -6346,7 +6346,7 @@ function GauntletIntroModal({ variant, onClose, firstTime }: { variant?: Gauntle
     { color: '#b98bff', title: 'Synergies', text: 'Hold the right pair of boons and a synergy surfaces as a card in a draft — take it instead of a boon. It lasts the whole dive and levels up as you deepen its two boons.', icon: CubeIcon },
     { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: PotIcon },
     { color: '#f87171', title: 'Cash out or sink', text: 'Bank the pot whenever you like. Go under first and it all sinks with you.', icon: SkullIcon },
-    { color: TEAL, title: 'Fathoms to spend', text: 'Each dive also pays Fathoms, win or lose — spend them in the Run Upgrades and Ship & Shore shops.', icon: WaveIcon },
+    { color: TEAL, title: 'Fathoms to spend', text: 'Each dive also pays Fathoms, win or lose. Spend them on Run Upgrades for the next dive, or on Permanent Upgrades that carry into voyages, raids and fishing.', icon: WaveIcon },
   ]
   // Don's list: the core loop still applies, reskinned to his abyss, with new
   // layers named but left mysterious (no numbers, no mechanics — you find out
@@ -6446,7 +6446,7 @@ type ShopEntry = {
   comingSoon?: boolean
 }
 
-// Ship & Shore sections, ordered, each with a small glyph for the header.
+// Permanent Upgrades sections, ordered, each with a small glyph for the header.
 const SHORE_CATEGORIES: { id: 'voyages' | 'raids' | 'fishing'; label: string; icon: React.ReactNode }[] = [
   { id: 'voyages', label: 'Voyages', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v9" /><path d="M12 5l6 6-6 1" /><path d="M4 14h16l-1.6 4.2a2 2 0 0 1-1.9 1.3H7.5a2 2 0 0 1-1.9-1.3z" /></svg> },
   { id: 'raids', label: 'Raids', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="M9.5 6.5 21 6V3h-3L6.5 14.5" /><path d="m5 13 6 6" /><path d="m8 18-5 3" /></svg> },
@@ -6601,7 +6601,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${AC}cc` }}>The Locker</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>{section === 'run' ? 'Run Upgrades' : 'Ship & Shore'}</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>{section === 'run' ? 'Run Upgrades' : 'Permanent Upgrades'}</p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -6632,7 +6632,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
               }
             })
             // Auto Catcher is a Davy's-Locker fishing perk (bought with Fathoms
-            // via buySpecialItem) — Don's Ship & Shore doesn't re-list it.
+            // via buySpecialItem) — Don's Permanent Upgrades doesn't re-list it.
             const ac = variant === 'davy' ? getSpecialItem('auto_catcher') : null
             const autoCatcher: ShopEntry | null = ac ? {
               id: 'auto_catcher', name: ac.name, description: ac.description,
@@ -6763,7 +6763,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
             ) : section === 'run' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{forSale.map(e => <Card key={e.id} e={e} />)}</div>
             ) : (
-              // Ship & Shore — grouped by what each upgrade affects.
+              // Permanent Upgrades — grouped by what each upgrade affects.
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {SHORE_CATEGORIES.map(cat => {
                   const group = forSale.filter(e => e.category === cat.id)

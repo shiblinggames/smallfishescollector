@@ -19,7 +19,7 @@ export type UpgradeScope =
   | 'world'    // applies out in the wider game (voyages, fishing…)
   | 'gauntlet' // applies only to Gauntlet runs
 
-/** Which part of the wider game a Ship & Shore upgrade touches — groups the
+/** Which part of the wider game a Permanent Upgrades upgrade touches — groups the
  *  shop into sections. Run Upgrades (scope 'gauntlet') don't carry one. */
 export type UpgradeCategory = 'voyages' | 'raids' | 'fishing'
 
@@ -39,7 +39,7 @@ export interface GauntletUpgrade {
   /** One-time cost in Fathoms. */
   cost: number
   scope: UpgradeScope
-  /** Ship & Shore section this lands in. */
+  /** Permanent Upgrades section this lands in. */
   category?: UpgradeCategory
   /** Which Gauntlet's Locker this belongs to (omitted = Davy's). */
   gauntlet?: UpgradeGauntlet
@@ -163,7 +163,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     cost: 100,
     scope: 'gauntlet',
   },
-  // ── Ship & Shore (scope 'account'/'world') — PERMANENT power for the wider
+  // ── Permanent Upgrades (scope 'account'/'world') — PERMANENT power for the wider
   //    game (raids, voyages, fishing forever). Cost ≈ gate × 10 — the depth
   //    requirement is the real limiter, so Fathoms are a modest top-up, not a
   //    second grind wall. Tireless Catcher is the exception (110, under its
@@ -265,7 +265,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_loan_shark',   name: 'Loan Shark',       description: 'Sign the Don’s terms: deal 25% MORE damage for the whole dive, but take 18% more from every hit. The debt always comes due. Stacks with your other damage and plate.', depthRequired: 0, cost: 240, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_blood_oath',   name: 'Blood Oath',       description: 'Swear in before you dive: start every run already holding one random boon, a favor from the deep to build on from the first fight.', depthRequired: 4, cost: 280, scope: 'gauntlet', gauntlet: 'don' },
   { id: 'dg_consigliere',  name: 'Consigliere',      description: 'The Don whispers in your ear. Synergy offers (confluences and convergences) surface on far more of your power drafts, so you actually build toward them.', depthRequired: 6, cost: 300, scope: 'gauntlet', gauntlet: 'don' },
-  // ── Ship & Shore (scope 'account'/'world') — permanent topside power. ────────
+  // ── Permanent Upgrades (scope 'account'/'world') — permanent topside power. ────────
   { id: 'dg_deep_plating',   name: 'Deep-Sea Plating',   description: 'The Don’s shipwrights re-hull you in pressure-forged plate: 10% more ship max HP in EVERY raid and gauntlet dive, forever.', depthRequired: 10, cost: 320, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_daily_tribute',  name: 'The Don’s Tribute',  description: 'The family looks after its own. Claim 10 Fathoms free from the Locker, once every day. A standing tribute from the deep.', depthRequired: 20, cost: 220, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_kingpin_cut',    name: 'Kingpin’s Cut',      description: 'The Don marks the finest hauls for you: legendary boss-drop items drop twice as often from every raid crate, forever.', depthRequired: 12, cost: 420, scope: 'account', category: 'raids', gauntlet: 'don' },
@@ -335,7 +335,7 @@ export function getGauntletUpgrade(id: string): GauntletUpgrade | null {
 
 /** Run Upgrades (scope 'gauntlet') are the only upgrades a player can switch
  *  off — they shape a dive, so opting out is a real playstyle choice (e.g.
- *  starting from depth 1 instead of Veteran's Start). Ship & Shore permanents
+ *  starting from depth 1 instead of Veteran's Start). Permanent Upgrades permanents
  *  are always on. One source of truth for the toggle UI + the server guard. */
 export function isToggleableUpgrade(id: string): boolean {
   return getGauntletUpgrade(id)?.scope === 'gauntlet'
@@ -345,7 +345,7 @@ export function isToggleableUpgrade(id: string): boolean {
  *  the Run Upgrades the player has switched off. Effect helpers below all read
  *  this list, so a disabled upgrade contributes nothing (start depth, combat
  *  mods, cash-out multipliers) while staying purchased. Non-gauntlet ids can't
- *  be in `off`, so Ship & Shore power is never filtered out. */
+ *  be in `off`, so Permanent Upgrades power is never filtered out. */
 export function activeGauntletUpgrades(
   owned: string[] | null | undefined,
   off: string[] | null | undefined,
@@ -382,7 +382,7 @@ export function hasForge(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('forge')
 }
 
-/** The Abyssal Forge (Don's Ship & Shore): gates TIER-3 forging (fusing two
+/** The Abyssal Forge (Don's Permanent Upgrades): gates TIER-3 forging (fusing two
  *  already-forged items). Account-scope, so read against the UNION of both
  *  Lockers' upgrades — same as the other Don's account perks. Tier-2 forging
  *  stays on hasForge. */
@@ -390,7 +390,7 @@ export function hasAbyssalForge(unlocked: string[] | null | undefined): boolean 
   return (unlocked ?? []).includes('dg_abyssal_forge')
 }
 
-/** The Abyssal Accelerator (Don's Ship & Shore, requires the Abyssal Forge):
+/** The Abyssal Accelerator (Don's Permanent Upgrades, requires the Abyssal Forge):
  *  unlocks the epic→legendary transmutation bench. Account-scope → read the
  *  UNION of both Lockers, same as every other Don's account perk. */
 export function hasAbyssalAccelerator(unlocked: string[] | null | undefined): boolean {

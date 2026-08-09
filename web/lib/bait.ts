@@ -10,7 +10,7 @@ export interface BaitDef {
   shopCost: number        // 0 = not for sale. Per-unit shop price; a bundle of
                           // bundleSize costs shopCost * bundleSize.
   bundleSize: number      // units per shop purchase
-  /** Buyable with Fathoms in the Gauntlet's Ship & Shore shop. 0/undefined =
+  /** Buyable with Fathoms in the Gauntlet's Permanent Upgrades shop. 0/undefined =
    *  not Fathoms-buyable. fathomCost is the price for one fathomBundle of units. */
   fathomCost?: number
   fathomBundle?: number

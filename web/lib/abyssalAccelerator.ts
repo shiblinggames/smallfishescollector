@@ -1,4 +1,4 @@
-// The Abyssal Accelerator — a Don's-Gauntlet Ship & Shore unlock that adds a
+// The Abyssal Accelerator — a Don's-Gauntlet Permanent Upgrades unlock that adds a
 // transmutation bench to the Abyssal Forge: charge it with gems, feed it an
 // owned EPIC boss-drop item, and 24h later claim that item's LEGENDARY "chase"
 // counterpart. One conversion in flight at a time (a single jsonb slot on the

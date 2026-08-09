@@ -509,7 +509,7 @@ export default function ForgeBoard({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ── THE ABYSSAL ACCELERATOR ──────────────────────────────────────────────────
-// Epic→legendary transmutation bench (a Don's Ship & Shore unlock). Lives on the
+// Epic→legendary transmutation bench (a Don's Permanent Upgrades unlock). Lives on the
 // Abyssal tab. Three states: idle picker, charging (24h countdown), ready-to-claim.
 const GEM_GLYPH = '◆'
 
@@ -611,7 +611,7 @@ function AbyssalAcceleratorPanel({ unlocked, ownedRaidItems, conversion, gemsNow
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, opacity: 0.74 }}>
           <AccelCore size={42} intensity="idle" />
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cbb6a2', lineHeight: 1.45 }}>
-            Transmute an epic boss drop into its legendary chase version. Unlock <span style={{ color: '#ffcdb8', fontWeight: 700 }}>The Abyssal Accelerator</span> in Don’s Gauntlet (Ship &amp; Shore).
+            Transmute an epic boss drop into its legendary chase version. Unlock <span style={{ color: '#ffcdb8', fontWeight: 700 }}>The Abyssal Accelerator</span> in Don’s Gauntlet (Permanent Upgrades).
           </p>
         </div>
       </>

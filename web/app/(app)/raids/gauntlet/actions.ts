@@ -161,7 +161,7 @@ export async function claimDailyTribute(): Promise<{ ok: true; fathoms: number }
 }
 
 /** Switch an owned Run Upgrade on or off. Only gauntlet-scope upgrades toggle
- *  (Ship & Shore permanents are always on); an id you don't own is rejected.
+ *  (Permanent Upgrades permanents are always on); an id you don't own is rejected.
  *  The off-set is server-authoritative so a disabled upgrade truly contributes
  *  nothing — run behavior AND cash-out multipliers both read it. Returns the
  *  fresh off-set. */
