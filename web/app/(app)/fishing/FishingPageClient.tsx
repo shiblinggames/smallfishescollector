@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
+import FishingGame from './FishingGame'
 import FishingHub from './FishingHub'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -13,41 +13,26 @@ import { ZONE_MIN_LEVEL } from './zoneData'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import type { TickerItem } from '@/components/MarketTicker'
 
-// FishingGame is a ~5,300-line client component. Dynamic-import it so the
-// JS only ships once the player actually picks a zone — not on the first
-// /fishing visit when they're still on ZoneLanding. ssr:false because the
-// component owns RAF loops and localStorage state that don't render on
-// the server anyway.
-// WARM IT THE MOMENT THIS SHELL MOUNTS, whichever view is showing.
+// STATICALLY IMPORTED, deliberately, after three attempts to fix this by moving
+// WHEN the fetch starts.
 //
-// selectedZone restores from localStorage, so a player who has fished before and
-// opens /fishing directly lands STRAIGHT in the game — and the chunk only starts
-// downloading at that point, behind "Casting line…". Arriving through the zone
-// selector felt instant purely because the selector gave the fetch a head start
-// it never had on a direct load.
+// It was dynamic with ssr:false to avoid shipping the game to players sitting on
+// ZoneLanding. But selectedZone restores from localStorage, so a returning
+// player lands STRAIGHT in the game — the split was optimising the rare path and
+// taxing the common one. And every warm-up runs in client code, so the earliest
+// any of them could fire was after hydration: HTML, hydrate, then fetch 312KB,
+// then parse 5,300 lines. No amount of starting it sooner from JS removes a step
+// that waits on JS.
 //
-// Kicking the same import off on mount closes that gap: it runs during the
-// server-rendered shell, in parallel with the hub painting, instead of after the
-// game tries to render. On the selector path it is a no-op — the module cache
-// already has it. Fire-and-forget; if it fails, dynamic() still loads it the
-// normal way.
-function warmFishingGame() { import('./FishingGame').catch(() => {}) }
-
-const FishingGame = dynamic(() => import('./FishingGame'), {
-  ssr: false,
-  loading: () => (
-    <div style={{
-      position: 'fixed', inset: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#04080e',
-      color: '#7a8aa0',
-      fontFamily: 'var(--font-karla), system-ui, sans-serif',
-      fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase',
-    }}>
-      Casting line…
-    </div>
-  ),
-})
+// Imported normally, Next emits it in the page bundle and the HTML preloads it
+// with the rest of the page's script — the download starts WITH the document.
+// The waterfall is gone rather than shortened.
+//
+// SSR-SAFE, verified rather than assumed: dropping ssr:false means this now
+// server-renders. Every useState lazy initialiser was audited for render-time
+// window/document/localStorage access and each one either avoids it or guards
+// with `typeof window === 'undefined'` (see the audioMuted seed). Its RAF loops
+// and listeners all live in effects, which never run on the server.
 
 const LAST_ZONE_KEY = 'fishing_last_zone'
 // The zone you last fished — kept even after you return to the selector, so the
@@ -157,12 +142,6 @@ export default function FishingPageClient({
 }) {
   const router = useRouter()
   const fishingLevel = getLevelFromXP(initialFishingXP)
-
-  // Start the game chunk downloading immediately, before anything decides which
-  // view to show. See warmFishingGame above: a direct load restores into a zone
-  // from localStorage and would otherwise not begin the fetch until the game
-  // tried to render.
-  useEffect(() => { warmFishingGame() }, [])
 
   // Soundtrack lifecycle lives here (NOT in FishingGame) so the music keeps
   // playing across the ZoneLanding ↔ FishingGame views — it only fades when

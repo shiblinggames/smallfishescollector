@@ -36,29 +36,6 @@ const LINKS = [
   },
 ]
 
-// WARM THE FISHING GAME ON INTENT.
-//
-// /fishing is the only route whose main content is client-only and code-split
-// (FishingGame is dynamic with ssr:false, because it owns RAF loops and
-// localStorage that cannot render on the server). That means its 312KB chunk
-// cannot even START downloading until the page has shipped its HTML and React
-// has hydrated — a waterfall no other route pays.
-//
-// Touching the tab is the earliest honest signal that the player is going, so
-// the import begins here, overlapping the navigation and the server render
-// instead of queueing behind them. It is only a fetch: the module is cached by
-// the loader, so the page's own dynamic() finds it already resolved and renders
-// exactly as before. Nothing about the render path changes.
-//
-// Fire-and-forget by design. Once guards against re-fetching, and a failure is
-// swallowed because this is pure optimisation — the page still loads the chunk
-// itself the normal way if this never lands.
-let fishingWarmed = false
-function warmFishing() {
-  if (fishingWarmed) return
-  fishingWarmed = true
-  import('@/app/(app)/fishing/FishingGame').catch(() => { fishingWarmed = false })
-}
 
 export default function MobileTabBar() {
   const pathname = usePathname()
@@ -218,7 +195,7 @@ export default function MobileTabBar() {
             href={href}
             // Tap tick on the pointer landing — nav should feel tactile, and the
             // tick masks the route-transition beat.
-            onPointerDown={() => { hapticTap(); if (href === '/fishing') warmFishing() }}
+            onPointerDown={() => hapticTap()}
             className="flex-1 flex flex-col items-center justify-center gap-1 py-3 relative select-none"
             style={{ color: active ? '#f0ede8' : '#a0a09a', transition: 'color 0.2s' }}
           >

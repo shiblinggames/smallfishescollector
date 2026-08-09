@@ -80,18 +80,6 @@ function writeNavCache(key: string, value: string | null) {
 
 // packsAvailable is accepted (callers still pass it) but no longer shown —
 // packs were replaced by the Crew Hall.
-// See MobileTabBar for the full reasoning: /fishing is the only route whose main
-// content is client-only and code-split, so its 312KB chunk cannot start
-// downloading until the page has hydrated. Touching or hovering the link is the
-// earliest honest signal the player is going, so the fetch starts there and
-// overlaps the navigation instead of queueing behind it. Pure warm-up — the
-// module cache means the page's own dynamic() just finds it already resolved.
-let fishingWarmed = false
-function warmFishing() {
-  if (fishingWarmed) return
-  fishingWarmed = true
-  import('@/app/(app)/fishing/FishingGame').catch(() => { fishingWarmed = false })
-}
 
 export default function Nav({ doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
   const router = useRouter()
@@ -450,9 +438,6 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
         <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
           {[...links, ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
             <Link key={href} href={href}
-              // Desktop has a hover, which is an even earlier signal than a tap.
-              onPointerEnter={() => { if (href === '/fishing') warmFishing() }}
-              onPointerDown={() => { if (href === '/fishing') warmFishing() }}
               className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
               {label}
               {typeof badge === 'number' && badge > 0 && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
