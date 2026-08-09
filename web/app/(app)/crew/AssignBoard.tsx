@@ -15,7 +15,7 @@
  *  out about after they launch.
  */
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { applyLevelBonuses } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
 import { RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
@@ -57,6 +57,23 @@ function partyTotals(party: CrewMember[], slotOf: (c: CrewMember) => number) {
 
 const STAT_COLOR = { power: '#e08a7a', dodge: '#7fc4a8', fortune: '#e0c47a' }
 
+/** WHAT THE NUMBER ACTUALLY DOES, per track. Taken from the resolvers that read
+ *  it — computeCombatRating for the campaign, outcomeChances /
+ *  computeVoyageDurationMs / fortuneScale for voyages — so the board explains
+ *  the same thing the game does rather than a plausible-sounding guess. */
+const STAT_MEANING: Record<'raid' | 'voyage', Record<'power' | 'dodge' | 'fortune', string>> = {
+  raid: {
+    power:   'How hard your broadsides land.',
+    dodge:   'How often you slip an incoming shot.',
+    fortune: 'How well the loot rolls after a kill.',
+  },
+  voyage: {
+    power:   'Odds it comes back a triumph instead of a setback.',
+    dodge:   'How quickly they sail. More savvy, shorter voyage.',
+    fortune: 'How big the haul is when they land it.',
+  },
+}
+
 /** Every party is drawn to SIX seats. Anything past the hull's capacity shows
  *  locked rather than vanishing, so the ship upgrade has something to unlock
  *  into and the ceiling is legible before you pay for it. */
@@ -67,6 +84,29 @@ const MAX_SEATS = 6
  *  so an empty seat glowing red or blue was the last thing making the seat row
  *  look track-coloured. Translucent tints only, never a solid fill. */
 const OPEN_SEAT = '#c3b291'
+
+/** One crew's line in the breakdown: what they bring, what the seat pays it at,
+ *  and what that comes to. The seat multiplier is the part nobody can see from
+ *  the grid, and it is the whole reason the totals are not a plain sum. */
+function ContribRow({ crew, slot, accent }: { crew: CrewMember; slot: number; accent: string }) {
+  const e = effectiveStats(crew)
+  const m = slotMult(slot)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.3rem 0' }}>
+      <span className="font-pirata" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', lineHeight: 1.12, letterSpacing: '0.02em', color: '#e4dccd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {crew.name}
+      </span>
+      <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.54rem', color: slot === 0 ? accent : '#7d8894', letterSpacing: '0.06em' }}>
+        {slot === 0 ? 'CAPTAIN ×1' : '×0.8'}
+      </span>
+      {(['power', 'dodge', 'fortune'] as const).map(k => (
+        <span key={k} className="font-karla font-700" style={{ flexShrink: 0, width: 30, textAlign: 'right', fontSize: '0.72rem', color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>
+          {Math.round(e[k] * m)}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 export default function AssignBoard({
   roster, shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds = [], artSrc,
@@ -90,6 +130,7 @@ export default function AssignBoard({
   raidAccent: string
   voyageAccent: string
 }) {
+  const [openBreakdown, setOpenBreakdown] = useState<'raid' | 'voyage' | null>(null)
   const atSea = new Set(lockedCrewIds)
   const trawling = new Set(trawlingCrewIds)
   const training = new Set(bunkedCrewIds)
@@ -164,10 +205,16 @@ export default function AssignBoard({
                 HERE and nowhere else. Front to back: the track's accent tint, a
                 wash so the title and totals hold up, the plate, then the flat
                 base under it. */}
-            <div style={{
-              position: 'relative', zIndex: 1, padding: '0.8rem 0.85rem 0.7rem',
-              borderBottom: `1px solid ${t.accent}33`,
+            <button type="button"
+              onClick={() => setOpenBreakdown(o => (o === t.key ? null : t.key))}
+              aria-expanded={openBreakdown === t.key}
+              aria-label={`${t.label} totals. Tap for the breakdown.`}
+              style={{
+              position: 'relative', zIndex: 1, width: '100%', display: 'block', textAlign: 'left',
+              padding: '0.8rem 0.85rem 0.7rem', font: 'inherit', cursor: 'pointer',
+              border: 'none', borderBottom: `1px solid ${t.accent}33`,
               background: `linear-gradient(180deg, ${t.accent}26 0%, ${t.accent}0d 100%)`,
+              touchAction: 'manipulation',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
                 <span style={{
@@ -182,6 +229,15 @@ export default function AssignBoard({
                 <span className="font-karla font-800" style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '0.8rem', color: t.accent, fontVariantNumeric: 'tabular-nums' }}>
                   {t.party.length}/{shipCrewSlots}
                 </span>
+                {/* The affordance. A totals row that does something has to look
+                    like it does something. */}
+                <span aria-hidden style={{
+                  flexShrink: 0, display: 'flex', color: `${t.accent}cc`,
+                  transform: openBreakdown === t.key ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.18s ease',
+                }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                </span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
                 {([['power', 'PWR'], ['dodge', 'SAV'], ['fortune', 'FTN']] as const).map(([k, label]) => (
@@ -195,7 +251,53 @@ export default function AssignBoard({
                   </div>
                 ))}
               </div>
-            </div>
+            </button>
+
+            {/* THE ARITHMETIC, on tap. The totals above are the only numbers on
+                this screen a captain cannot check, because the seat multiplier
+                is invisible: a party of six does NOT add up to the sum of six
+                crews. Rather than explain that in prose, show the sum. */}
+            {openBreakdown === t.key && (
+              <div style={{ position: 'relative', zIndex: 1, padding: '0.6rem 0.85rem 0.75rem', borderBottom: `1px solid ${t.accent}22`, background: 'rgba(0,0,0,0.22)' }}>
+                {t.party.length === 0 ? (
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.5 }}>
+                    Nobody seated yet. Every hand you sit here adds their power, savvy and fortune to the totals above.
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span style={{ flex: 1 }} />
+                      {(['PWR', 'SAV', 'FTN'] as const).map(l => (
+                        <span key={l} className="font-karla font-800 uppercase" style={{ flexShrink: 0, width: 30, textAlign: 'right', fontSize: '0.54rem', letterSpacing: '0.1em', color: '#7d8894' }}>{l}</span>
+                      ))}
+                    </div>
+                    {t.party.map(c => (
+                      <ContribRow key={c.id} crew={c} slot={t.slotOf(c)} accent={t.accent} />
+                    ))}
+                    {/* The line that proves the header. */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 5, marginTop: 2, borderTop: `1px solid ${t.accent}44` }}>
+                      <span className="font-karla font-800 uppercase" style={{ flex: 1, fontSize: '0.58rem', letterSpacing: '0.1em', color: t.accent }}>Total</span>
+                      {(['power', 'dodge', 'fortune'] as const).map(k => (
+                        <span key={k} className="font-karla font-800" style={{ flexShrink: 0, width: 30, textAlign: 'right', fontSize: '0.8rem', color: STAT_COLOR[k], fontVariantNumeric: 'tabular-nums' }}>{totals[k]}</span>
+                      ))}
+                    </div>
+
+                    {/* And what those three numbers BUY, in this track. */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 9 }}>
+                      {([['power', 'Power'], ['dodge', 'Savvy'], ['fortune', 'Fortune']] as const).map(([k, label]) => (
+                        <p key={k} className="font-karla" style={{ fontSize: '0.68rem', color: '#948d85', lineHeight: 1.45 }}>
+                          <span className="font-700" style={{ color: STAT_COLOR[k] }}>{label}</span>
+                          {' — '}{STAT_MEANING[t.key][k]}
+                        </p>
+                      ))}
+                      <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7d7770', lineHeight: 1.45, marginTop: 2 }}>
+                        Your captain in the first seat counts full. Every other hand counts at 80%, which is why the total is less than the sum.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Seats. Always six: filled, open, or locked behind the hull. */}
             <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7, padding: '0.75rem 0.85rem 0.9rem' }}>
