@@ -57,20 +57,26 @@ function partyTotals(party: CrewMember[], slotOf: (c: CrewMember) => number) {
 
 const STAT_COLOR = { power: '#e08a7a', dodge: '#7fc4a8', fortune: '#e0c47a' }
 
-/** WHAT THE NUMBER ACTUALLY DOES, per track. Taken from the resolvers that read
- *  it — computeCombatRating for the campaign, outcomeChances /
- *  computeVoyageDurationMs / fortuneScale for voyages — so the board explains
- *  the same thing the game does rather than a plausible-sounding guess. */
+/** WHAT THE NUMBER ACTUALLY DOES, per track, in the plainest words that are
+ *  still true. Taken from the code that reads each stat — raidDamageProfile and
+ *  the dodge contest for the campaign, raidLoot's fortuneMult and
+ *  fortuneDoubloonMult for its drops, outcomeChances /
+ *  computeVoyageDurationMs / fortuneScale for voyages — so nothing here is a
+ *  plausible-sounding guess.
+ *
+ *  No metaphors. "How hard your broadsides land" sounds like flavour text and
+ *  leaves a player still wondering what the number does; "how much damage you
+ *  deal" is the same fact and needs no decoding. */
 const STAT_MEANING: Record<'raid' | 'voyage', Record<'power' | 'dodge' | 'fortune', string>> = {
   raid: {
-    power:   'How hard your broadsides land.',
-    dodge:   'How often you slip an incoming shot.',
-    fortune: 'How well the loot rolls after a kill.',
+    power:   'How much damage you deal.',
+    dodge:   'How often you dodge enemy attacks.',
+    fortune: 'Your chance at better loot and more doubloons.',
   },
   voyage: {
-    power:   'Odds it comes back a triumph instead of a setback.',
-    dodge:   'How quickly they sail. More savvy, shorter voyage.',
-    fortune: 'How big the haul is when they land it.',
+    power:   'Your chance of a successful voyage.',
+    dodge:   'How fast the voyage finishes.',
+    fortune: 'How many doubloons you bring home.',
   },
 }
 
@@ -261,7 +267,7 @@ export default function AssignBoard({
               <div style={{ position: 'relative', zIndex: 1, padding: '0.6rem 0.85rem 0.75rem', borderBottom: `1px solid ${t.accent}22`, background: 'rgba(0,0,0,0.22)' }}>
                 {t.party.length === 0 ? (
                   <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.5 }}>
-                    Nobody seated yet. Every hand you sit here adds their power, savvy and fortune to the totals above.
+                    No one seated yet. Everyone you add here raises the three numbers above.
                   </p>
                 ) : (
                   <>
@@ -291,7 +297,7 @@ export default function AssignBoard({
                         </p>
                       ))}
                       <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7d7770', lineHeight: 1.45, marginTop: 2 }}>
-                        Your captain in the first seat counts full. Every other hand counts at 80%, which is why the total is less than the sum.
+                        The first seat is your captain and counts fully. Everyone else counts for 80%, so the total is a little less than adding them up.
                       </p>
                     </div>
                   </>
