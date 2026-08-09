@@ -9646,8 +9646,18 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a8aa0' }}>HP</p>
           <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: hidden ? '#8a95aa' : accent }}>
-            {hidden ? '???' : `${base}/${max}`}
-            {!hidden && over > 0 && <span style={{ color: '#8ee6a8' }}> +{over}</span>}
+            {/* OVERHEAL MARKS THE NUMBER, it does not add one. A trailing
+                "+33" was a third element that appeared and vanished mid-fight,
+                so the row changed width every time the buffer came and went.
+                The pair keeps its shape and the current figure goes green and
+                lit instead — same characters, same layout, and the colour
+                matches its band on the bar so the two read as one thing. */}
+            {hidden ? '???' : (
+              <>
+                <span style={over > 0 ? { color: '#8ee6a8', textShadow: '0 0 7px rgba(74,222,128,0.75)' } : undefined}>{current}</span>
+                <span>/{max}</span>
+              </>
+            )}
           </p>
         </div>
       )}
