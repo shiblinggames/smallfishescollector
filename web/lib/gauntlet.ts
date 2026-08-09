@@ -1952,8 +1952,8 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Sink enemies below 8% HP', detail: 'The instant any hit drops an enemy to 8% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.08 } },
   ] },
   { id: 'leviathans_hunger', image: '/gauntlet/boons/leviathans_hunger.png', name: "Leviathan's Hunger", flavor: 'Every wound you open, the deep drinks — and feeds it back to your hull.', rarity: 'legendary', tiers: [
-    { desc: 'Heal 10% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 10% of that damage — the harder you hit, the more you heal. (A single hit can heal at most 20% of your max HP.)', effect: { kind: 'lifestealPct', pct: 0.10 } },
-    { desc: 'Heal 15% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 15% of that damage. (A single hit can heal at most 20% of your max HP.)', effect: { kind: 'lifestealPct', pct: 0.15 } },
+    { desc: 'Heal 10% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 10% of that damage — the harder you hit, the more you heal. A hit far bigger than your own hull heals a reduced share of itself, so a huge blow still heals more than a small one, just not the full 10%.', effect: { kind: 'lifestealPct', pct: 0.10 } },
+    { desc: 'Heal 15% of the damage you deal', detail: 'Whenever you damage an enemy, your ship heals for 15% of that damage. A hit far bigger than your own hull heals a reduced share of itself, so a huge blow still heals more than a small one, just not the full 15%.', effect: { kind: 'lifestealPct', pct: 0.15 } },
   ] },
   { id: 'powder_hoard', image: '/gauntlet/boons/powder_hoard.png', name: 'Powder Hoard', flavor: "Whatever your crew doesn't spend, they keep racked for the next hull.", rarity: 'legendary', tiers: [
     { desc: 'Carry up to 2 cannonballs to the next fight', detail: 'Cannonballs you leave unfired when a fight ends carry into the next one, up to 2 of them.', effect: { kind: 'chargeCarryover', cap: 2 } },

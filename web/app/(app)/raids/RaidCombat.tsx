@@ -132,6 +132,33 @@ const LIFESTEAL_CAP = 0.35
 // sustain into a full-heal-every-volley immortality switch. Big hits still cap
 // out here; full-healing from the brink now takes several hits, not one volley.
 const LIFESTEAL_HEAL_MAXHP_CAP = 0.20
+// ...but a ceiling priced in MAX HP stops being a percentage once your damage
+// outgrows your hull, and deep Gauntlet damage outgrows it by miles. A real
+// depth-96 run dealt 87,901 and healed 2,903 — 3.3% realised against a boon
+// that advertises 15%, because its 563-average hits and 3,490 crits all got
+// shaved to the same flat number. A 900 hit and a 3,490 hit healing identically
+// is the bug: it turns lifesteal into a flat per-hit heal and reads as
+// "Leviathan's Hunger does nothing" to exactly the damage builds it should
+// reward.
+//
+// So above the crossover the ceiling becomes a share of the DAMAGE instead of a
+// share of the hull. The effect degrades to a lower rate rather than falling to
+// a constant, so a huge hit still heals more than a small one. FLOOR is what
+// the rate decays toward, deliberately well under the boon's own 15% so this
+// widens the cap without reopening the ~57% sustain stack the cap was added to
+// stop. HARD is the backstop: no single instance may refill more than half the
+// bar, whatever the damage.
+const LIFESTEAL_HEAL_DMG_FLOOR = 0.06
+const LIFESTEAL_HEAL_HARD_CAP  = 0.50
+
+/** The most one damage instance may heal. Below the crossover this is exactly
+ *  the old flat cap, so nothing about mid-game sustain moves. */
+function lifestealHealCap(maxHp: number, dmg: number): number {
+  return Math.min(
+    Math.max(maxHp * LIFESTEAL_HEAL_MAXHP_CAP, dmg * LIFESTEAL_HEAL_DMG_FLOOR),
+    maxHp * LIFESTEAL_HEAL_HARD_CAP,
+  )
+}
 const PLAYER_COLOR = '#4ade80'
 const ENEMY_COLOR  = '#ef4444'
 
@@ -4006,7 +4033,7 @@ export default function RaidCombat({
       // same way, so a Wildfire+Leviathan's build can't over-sustain via DoT.
       let feedHeal = 0
       if (tide.burnTickHealPct > 0 && pHp > 0) {
-        feedHeal = Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), healCap - pHp, Math.round(total * tide.burnTickHealPct))
+        feedHeal = Math.min(Math.round(lifestealHealCap(playerHpMax, total)), healCap - pHp, Math.round(total * tide.burnTickHealPct))
         if (feedHeal > 0) { pHp += feedHeal; onStat?.({ dmgHealed: feedHeal }) }
       }
       pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
@@ -4948,9 +4975,10 @@ export default function RaidCombat({
           const itemLifesteal = getActiveEffects(liveItems).filter(e => e.type === 'lifesteal_pct').reduce((a, e) => a + e.value, 0)
           const totalLifesteal = Math.min(LIFESTEAL_CAP, tide.lifestealPct + itemLifesteal)
           if (dmg > 0 && totalLifesteal > 0 && pHp > 0) {
-            // Per-hit heal capped to a fraction of MAX HP — a huge volley can't
-            // refill the whole bar, no matter how hard the damage stack hits.
-            const healed = Math.round(Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), Math.max(1, Math.round(dmg * totalLifesteal))) * tide.healMult)
+            // Per-hit heal capped by lifestealHealCap: the flat hull share at
+            // normal damage, a share of the damage itself once your hits dwarf
+            // your hull. A huge hit still can't refill the whole bar.
+            const healed = Math.round(Math.min(Math.round(lifestealHealCap(playerHpMax, dmg)), Math.max(1, Math.round(dmg * totalLifesteal))) * tide.healMult)
             const before = pHp
             pHp = Math.min(healCap, pHp + healed)
             lifestealHealedOut = pHp - before
@@ -4974,7 +5002,7 @@ export default function RaidCombat({
           // massive Mega overkill can't refill the whole bar in one shot.
           if (overkillDmg > 0 && tide.overkillHealPct > 0 && pHp > 0) {
             const raw = Math.max(1, Math.round(overkillDmg * tide.overkillHealPct))
-            const healed = Math.round(Math.min(Math.round(playerHpMax * LIFESTEAL_HEAL_MAXHP_CAP), raw) * tide.healMult)
+            const healed = Math.round(Math.min(Math.round(lifestealHealCap(playerHpMax, overkillDmg)), raw) * tide.healMult)
             const before = pHp
             pHp = Math.min(healCap, pHp + healed)
             overkillHealedOut = pHp - before
