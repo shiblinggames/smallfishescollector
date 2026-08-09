@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
-  assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
+  assignToVoyage, assignToRaid, benchCrew, clearParty, promoteToCaptain, renameCrew,
   upgradeCrewHall, buyCrewSkin, equipCrewSkin, gambleBloodSkin, markCrewGuideSeen,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
@@ -892,6 +892,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // Which footer action is awaiting confirmation. Every one of them states
   // exactly what it is about to do before it does it.
   const [confirmAct, setConfirmAct] = useState<'swap' | 'promote' | 'remove' | 'dismiss' | null>(null)
+  const [clearingTrack, setClearingTrack] = useState<'raid' | 'voyage' | null>(null)
   // expandedTrait state used to exist for the old per-trait description
   // expander; the simplified one-row Trait section doesn't need it.
 
@@ -1350,6 +1351,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     })
   }
 
+  // Empty a whole party. Not routed through run() because that keys its busy
+  // flag by crew id and this touches up to six at once; and because the result
+  // carries a `skipped` count that has to be reported when it is non-zero —
+  // silently leaving two hands seated would read as the clear having failed.
+  function handleClearParty(track: 'raid' | 'voyage') {
+    setErr(null)
+    setClearingTrack(track)
+    startTransition(async () => {
+      const res = await clearParty(track)
+      if ('error' in res) setErr(res.error)
+      else {
+        setState(res.state)
+        if (res.skipped) {
+          setErr(res.skipped === 1
+            ? 'One hand kept their seat. They are out on a trawl or still training.'
+            : `${res.skipped} hands kept their seats. They are out on a trawl or still training.`)
+        }
+      }
+      setClearingTrack(null)
+    })
+  }
+
   // Optimistic dismiss for the swipe gesture — pull the card the instant the
   // player taps (the swipe already confirmed), then reconcile with the server in
   // the background instead of waiting on the guard queries + state reload. Locked
@@ -1589,6 +1612,8 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             artSrc={artSrc}
             onPickSeat={(track, slot) => setAssignSeat({ track, slot })}
             onTapCrew={m => setDetail({ kind: 'roster', item: m })}
+            onClearParty={handleClearParty}
+            clearing={clearingTrack}
             raidAccent={ASSIGN_RAID}
             voyageAccent={ASSIGN_VOYAGE}
           />

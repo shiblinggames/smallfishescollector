@@ -736,6 +736,82 @@ export async function assignToRaid(crewId: number, slot: number | null): Promise
   return applyAssignment(user.id, crewId, slot === null ? null : 'raid', slot)
 }
 
+/** CLEAR A WHOLE PARTY IN ONE GO.
+ *
+ *  Emptying a six-seat party was six taps through a confirm each, which is the
+ *  kind of chore that makes people leave a bad party sitting there.
+ *
+ *  Two refusals, and only two, because the rest of applyAssignment's guards do
+ *  not apply to a party that is already seated:
+ *    - a VOYAGE party cannot be broken up while it is at sea, or the voyage
+ *      resolves against a crew that is no longer on it
+ *    - a CAMPAIGN party cannot be broken up during an open OR paused gauntlet
+ *      run, for the same reason (raids cannot be paused, so they need no check)
+ *
+ *  Hands out on a trawl or still mid-stint in a bunk are SKIPPED rather than
+ *  refused. Both commitments are per-crew and unrelated to the party, so one
+ *  trawling hand should not block emptying the other five; the count comes
+ *  back so the UI can say what stayed behind and why.
+ *
+ *  One UPDATE for the whole party rather than N round-trips — this is a bulk
+ *  clear, not a loop over the single-crew path. */
+export async function clearParty(track: AssignTrack): Promise<CrewActionResult & { skipped?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+  const slotCol = track === 'voyage' ? 'voyage_slot' : 'raid_slot'
+
+  if (track === 'voyage') {
+    const { data: pending } = await admin.from('daily_voyages')
+      .select('id').eq('user_id', user.id).eq('status', 'pending').maybeSingle()
+    if (pending) return { error: 'Your crew is at sea. Wait for the voyage to return.' }
+  } else {
+    // `gauntlet_run_open` alone covers active AND paused: pausing flips
+    // gauntlet_run_paused and deliberately leaves the run open, so a paused
+    // run is still an open one holding this exact party.
+    const { data: prof } = await admin.from('profiles')
+      .select('gauntlet_run_open').eq('id', user.id).single()
+    if ((prof as { gauntlet_run_open?: boolean } | null)?.gauntlet_run_open) {
+      return { error: 'A gauntlet run is still going. Finish or cash out first.' }
+    }
+  }
+
+  // Who is seated, minus the hands with their own commitments.
+  const { data: seated } = await admin.from('user_crew')
+    .select('id').eq('user_id', user.id).not(slotCol, 'is', null).is('died_at', null)
+  const ids = ((seated ?? []) as { id: number }[]).map(r => r.id)
+
+  let skipped = 0
+  if (ids.length > 0) {
+    const [{ data: trawling }, { data: bunked }, { data: prof2 }] = await Promise.all([
+      admin.from('trawls').select('crew_id').eq('user_id', user.id).in('crew_id', ids),
+      admin.from('crew_hall_bunks').select('crew_id, since, cap_hours').eq('user_id', user.id).in('crew_id', ids),
+      admin.from('profiles').select('crew_stores_level').eq('id', user.id).single(),
+    ])
+    // A bunk only holds a hand MID-stint, exactly as assertCanReassign has it —
+    // a finished stint is reassignable, so it must not be skipped here either,
+    // or "remove all" would refuse crew that removing one at a time allows.
+    const fallbackCap = storesCapHours((prof2 as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)
+    const now = Date.now()
+    const locked = new Set<number>([
+      ...((trawling ?? []) as { crew_id: number }[]).map(r => r.crew_id),
+      ...((bunked ?? []) as { crew_id: number; since: string; cap_hours: number | null }[])
+        .filter(r => !stintDone(r.since, now, r.cap_hours ?? fallbackCap))
+        .map(r => r.crew_id),
+    ])
+    const freeable = ids.filter(id => !locked.has(id))
+    skipped = ids.length - freeable.length
+    if (freeable.length > 0) {
+      await admin.from('user_crew').update({ [slotCol]: null })
+        .eq('user_id', user.id).in('id', freeable)
+    }
+  }
+
+  const state = await getCrewState()
+  return state ? { state, skipped } : { error: 'Failed to load crew' }
+}
+
 /** Bench a crew (clear both voyage_slot and raid_slot). */
 export async function benchCrew(crewId: number): Promise<CrewActionResult> {
   const supabase = await createClient()

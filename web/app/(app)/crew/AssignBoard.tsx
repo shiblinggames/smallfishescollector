@@ -116,7 +116,7 @@ function ContribRow({ crew, slot, accent }: { crew: CrewMember; slot: number; ac
 
 export default function AssignBoard({
   roster, shipCrewSlots, lockedCrewIds, trawlingCrewIds, bunkedCrewIds = [], artSrc,
-  onPickSeat, onTapCrew, raidAccent, voyageAccent,
+  onPickSeat, onTapCrew, onClearParty, clearing, raidAccent, voyageAccent,
 }: {
   roster: CrewMember[]
   shipCrewSlots: number
@@ -133,10 +133,18 @@ export default function AssignBoard({
   onPickSeat: (track: 'raid' | 'voyage', slot: number) => void
   /** Tapping a seated crew - opens their detail, which owns swap + remove. */
   onTapCrew: (crew: CrewMember) => void
+  /** Empty a whole party. The parent owns the confirm and the refusals. */
+  onClearParty: (track: 'raid' | 'voyage') => void
+  /** Which track is mid-clear, so its button can say so. */
+  clearing: 'raid' | 'voyage' | null
   raidAccent: string
   voyageAccent: string
 }) {
   const [openBreakdown, setOpenBreakdown] = useState<'raid' | 'voyage' | null>(null)
+  /** Which party's clear button is armed. Two taps, because one stray tap
+   *  should not empty six seats — and disarmed whenever the panel closes, so
+   *  it can never sit armed behind a collapsed accordion. */
+  const [armed, setArmed] = useState<'raid' | 'voyage' | null>(null)
   const atSea = new Set(lockedCrewIds)
   const trawling = new Set(trawlingCrewIds)
   const training = new Set(bunkedCrewIds)
@@ -212,7 +220,7 @@ export default function AssignBoard({
                 wash so the title and totals hold up, the plate, then the flat
                 base under it. */}
             <button type="button"
-              onClick={() => setOpenBreakdown(o => (o === t.key ? null : t.key))}
+              onClick={() => { setArmed(null); setOpenBreakdown(o => (o === t.key ? null : t.key)) }}
               aria-expanded={openBreakdown === t.key}
               aria-label={`${t.label} totals. Tap for the breakdown.`}
               style={{
@@ -300,6 +308,31 @@ export default function AssignBoard({
                         The first seat is your captain and counts fully. Everyone else counts for 80%, so the total is a little less than adding them up.
                       </p>
                     </div>
+
+                    {/* Emptying a party was six taps through a confirm each. It
+                        lives at the foot of the breakdown rather than in the
+                        header because the header is itself a button (a nested
+                        one is invalid), and because reading who is seated is
+                        the right thing to do immediately before clearing them. */}
+                    <button type="button" disabled={clearing === t.key}
+                      onClick={() => {
+                        if (armed === t.key) { setArmed(null); onClearParty(t.key) }
+                        else setArmed(t.key)
+                      }}
+                      className="font-karla font-700"
+                      style={{
+                        display: 'inline-block', marginTop: 11, padding: '0.4rem 0.7rem',
+                        borderRadius: 8, fontSize: '0.68rem', letterSpacing: '0.02em',
+                        border: `1px solid rgba(224,124,124,${armed === t.key ? 0.75 : 0.4})`,
+                        background: `rgba(224,124,124,${armed === t.key ? 0.2 : 0.1})`,
+                        color: clearing === t.key ? '#8a8480' : '#e0a0a0',
+                        cursor: clearing === t.key ? 'default' : 'pointer',
+                        touchAction: 'manipulation', transition: 'background 0.15s ease, border-color 0.15s ease',
+                      }}>
+                      {clearing === t.key ? 'Standing them down…'
+                        : armed === t.key ? 'Tap again to confirm'
+                        : `Remove all ${t.party.length}`}
+                    </button>
                   </>
                 )}
               </div>
