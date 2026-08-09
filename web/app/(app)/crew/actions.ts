@@ -652,6 +652,12 @@ async function assertCanReassign(
   // USED to auto-evict them and bank the XP, which made bunking free; the
   // commitment is the price of the training, so it is a refusal now. Covers
   // dismissal too, since dismissCrew runs the same guard.
+  //
+  // A hand holds their bunk until the XP is CLAIMED, not merely until the
+  // stint timer runs out. Letting a finished-but-unclaimed hand walk was the
+  // one way a crew could be seated and bunked at the same time, which put a
+  // "Training" badge on a party seat and made the hall look like it had lost
+  // them. Claiming deletes the row, so the block clears the moment you collect.
   const { data: onBunk } = await admin
     .from('crew_hall_bunks').select('since, cap_hours').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
   if (onBunk) {
@@ -663,9 +669,9 @@ async function assertCanReassign(
       const { data: prof } = await admin.from('profiles').select('crew_stores_level').eq('id', userId).single()
       cap = storesCapHours((prof as any)?.crew_stores_level ?? 1)
     }
-    if (!stintDone((onBunk as any).since, Date.now(), cap)) {
-      return { error: 'This crew is training in the hall. Their stint has to finish first.' }
-    }
+    return stintDone((onBunk as any).since, Date.now(), cap)
+      ? { error: 'This crew finished their training. Collect it in the hall to free them up.' }
+      : { error: 'This crew is training in the hall. Their stint has to finish first.' }
   }
 
   return { ok: true, crew: crew as any }
@@ -748,14 +754,12 @@ export async function assignToRaid(crewId: number, slot: number | null): Promise
  *    - a CAMPAIGN party cannot be broken up during an open OR paused gauntlet
  *      run, for the same reason (raids cannot be paused, so they need no check)
  *
- *  Hands out on a trawl or still mid-stint in a bunk are SKIPPED rather than
- *  refused. Both commitments are per-crew and unrelated to the party, so one
- *  trawling hand should not block emptying the other five; the count comes
- *  back so the UI can say what stayed behind and why.
+ *  Nothing else can hold a seat: a trawling or bunked hand is never in a party
+ *  to begin with, so there is no per-crew lock to check here.
  *
  *  One UPDATE for the whole party rather than N round-trips — this is a bulk
  *  clear, not a loop over the single-crew path. */
-export async function clearParty(track: AssignTrack): Promise<CrewActionResult & { skipped?: number }> {
+export async function clearParty(track: AssignTrack): Promise<CrewActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
@@ -777,39 +781,16 @@ export async function clearParty(track: AssignTrack): Promise<CrewActionResult &
     }
   }
 
-  // Who is seated, minus the hands with their own commitments.
-  const { data: seated } = await admin.from('user_crew')
-    .select('id').eq('user_id', user.id).not(slotCol, 'is', null).is('died_at', null)
-  const ids = ((seated ?? []) as { id: number }[]).map(r => r.id)
-
-  let skipped = 0
-  if (ids.length > 0) {
-    const [{ data: trawling }, { data: bunked }, { data: prof2 }] = await Promise.all([
-      admin.from('trawls').select('crew_id').eq('user_id', user.id).in('crew_id', ids),
-      admin.from('crew_hall_bunks').select('crew_id, since, cap_hours').eq('user_id', user.id).in('crew_id', ids),
-      admin.from('profiles').select('crew_stores_level').eq('id', user.id).single(),
-    ])
-    // A bunk only holds a hand MID-stint, exactly as assertCanReassign has it —
-    // a finished stint is reassignable, so it must not be skipped here either,
-    // or "remove all" would refuse crew that removing one at a time allows.
-    const fallbackCap = storesCapHours((prof2 as { crew_stores_level?: number } | null)?.crew_stores_level ?? 1)
-    const now = Date.now()
-    const locked = new Set<number>([
-      ...((trawling ?? []) as { crew_id: number }[]).map(r => r.crew_id),
-      ...((bunked ?? []) as { crew_id: number; since: string; cap_hours: number | null }[])
-        .filter(r => !stintDone(r.since, now, r.cap_hours ?? fallbackCap))
-        .map(r => r.crew_id),
-    ])
-    const freeable = ids.filter(id => !locked.has(id))
-    skipped = ids.length - freeable.length
-    if (freeable.length > 0) {
-      await admin.from('user_crew').update({ [slotCol]: null })
-        .eq('user_id', user.id).in('id', freeable)
-    }
-  }
+  // Everyone in the party leaves. There is no per-crew skip list because a
+  // seated hand cannot also be trawling or bunked: starting a trawl benches
+  // them outright, bunking refuses a seated crew, and a bunk is now held until
+  // the XP is claimed — so the three states are mutually exclusive by
+  // construction rather than by a filter that would drift out of step.
+  await admin.from('user_crew').update({ [slotCol]: null })
+    .eq('user_id', user.id).not(slotCol, 'is', null)
 
   const state = await getCrewState()
-  return state ? { state, skipped } : { error: 'Failed to load crew' }
+  return state ? { state } : { error: 'Failed to load crew' }
 }
 
 /** Bench a crew (clear both voyage_slot and raid_slot). */

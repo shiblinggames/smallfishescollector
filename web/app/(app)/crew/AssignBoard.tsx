@@ -122,9 +122,10 @@ export default function AssignBoard({
   shipCrewSlots: number
   lockedCrewIds: number[]
   trawlingCrewIds: number[]
-  /** Holding a Crew Hall bunk. A seat and a bunk CAN overlap: a finished stint
-   *  no longer blocks reassignment, so a hand can be seated while still owed
-   *  their training. The seat has to say so or the hall looks like it lost them. */
+  /** Holding a Crew Hall bunk. A seat and a bunk no longer overlap — a hand
+   *  holds their bunk until the XP is CLAIMED, so they cannot be seated while
+   *  still owed training. Kept as a safety net: if a row ever does overlap, the
+   *  seat says where they are rather than quietly showing them as available. */
   bunkedCrewIds?: number[]
   artSrc: (filename: string) => string
   /** Open the picker for ONE specific seat. Used by empty seats and by the

@@ -1352,23 +1352,14 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   }
 
   // Empty a whole party. Not routed through run() because that keys its busy
-  // flag by crew id and this touches up to six at once; and because the result
-  // carries a `skipped` count that has to be reported when it is non-zero —
-  // silently leaving two hands seated would read as the clear having failed.
+  // flag by crew id, and this touches up to six seats at once.
   function handleClearParty(track: 'raid' | 'voyage') {
     setErr(null)
     setClearingTrack(track)
     startTransition(async () => {
       const res = await clearParty(track)
       if ('error' in res) setErr(res.error)
-      else {
-        setState(res.state)
-        if (res.skipped) {
-          setErr(res.skipped === 1
-            ? 'One hand kept their seat. They are out on a trawl or still training.'
-            : `${res.skipped} hands kept their seats. They are out on a trawl or still training.`)
-        }
-      }
+      else setState(res.state)
       setClearingTrack(null)
     })
   }
