@@ -2563,9 +2563,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     className="font-karla font-700 active:scale-95"
                     style={{
                       flex: 1.4, padding: '0.7rem', borderRadius: 9, fontSize: '0.88rem',
-                      background: 'rgba(224,124,124,0.16)',
-                      border: '1px solid rgba(224,124,124,0.5)',
-                      color: '#f4cfcf',
+                      background: `${accent}26`,
+                      border: `1px solid ${accent}88`,
+                      color: accent,
                       opacity: busy ? 0.45 : 1,
                       cursor: busy ? 'not-allowed' : 'pointer',
                       transition: 'transform 0.08s',

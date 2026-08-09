@@ -222,7 +222,10 @@ export default function AssignBoard({
               border: 'none', background: 'transparent',
               touchAction: 'manipulation',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
+              {/* Right padding clears the absolutely-placed Unassign pill, which
+                  cannot be a child of this button (nesting one is invalid) but
+                  belongs on this line rather than in a row of its own. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9, paddingRight: t.party.length > 0 ? 112 : 0 }}>
                 <span style={{ minWidth: 0 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4efe6', lineHeight: 1.1 }}>{t.label}</p>
                   <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: `${t.accent}cc`, marginTop: 1 }}>{t.sub}</p>
@@ -256,27 +259,29 @@ export default function AssignBoard({
 
             {/* Emptying a party was six taps through a confirm each, which is
                 the kind of chore that leaves a bad party sitting there. It sits
-                in the header, not down in the breakdown, because a captain
-                rebuilding a party should not have to open the arithmetic to
-                find it. It is a SIBLING of the header button rather than a
-                child: the header is itself a button, and nesting one is
-                invalid. Only shown when there is somebody to stand down. */}
+                on the title line, absolutely placed: a secondary action does not
+                earn a row of its own, and it cannot be a CHILD of the header
+                (the header is a button, and nesting one is invalid). Wears the
+                track's accent rather than a warning red — the panel is already
+                red or blue, and a third colour on it read as an error state
+                rather than as this party's control. The confirm sheet carries
+                the weight instead. Only shown when there is someone to stand
+                down. */}
             {t.party.length > 0 && (
-              <div style={{ padding: '0 0.85rem 0.7rem' }}>
-                <button type="button" onClick={() => onClearParty(t.key)} disabled={clearing === t.key}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    width: '100%', padding: '0.42rem', borderRadius: 8,
-                    fontSize: '0.63rem', letterSpacing: '0.09em',
-                    border: '1px solid rgba(224,124,124,0.38)',
-                    background: 'rgba(224,124,124,0.09)',
-                    color: clearing === t.key ? '#8a8480' : '#dd9c9c',
-                    cursor: clearing === t.key ? 'default' : 'pointer',
-                    touchAction: 'manipulation',
-                  }}>
-                  {clearing === t.key ? 'Standing them down…' : 'Unassign all'}
-                </button>
-              </div>
+              <button type="button" onClick={() => onClearParty(t.key)} disabled={clearing === t.key}
+                className="font-karla font-700 uppercase"
+                style={{
+                  position: 'absolute', top: '0.72rem', right: '0.85rem', zIndex: 2,
+                  padding: '0.36rem 0.5rem', borderRadius: 7,
+                  fontSize: '0.6rem', letterSpacing: '0.07em', whiteSpace: 'nowrap',
+                  border: `1px solid ${t.accent}66`,
+                  background: `${t.accent}1c`,
+                  color: clearing === t.key ? '#8a8480' : t.accent,
+                  cursor: clearing === t.key ? 'default' : 'pointer',
+                  touchAction: 'manipulation',
+                }}>
+                {clearing === t.key ? 'Standing down…' : 'Unassign all'}
+              </button>
             )}
             </div>
 
