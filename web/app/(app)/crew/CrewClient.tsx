@@ -2444,6 +2444,13 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       at a time</span>, so a good number is never thrown back with a bad one. It is the only place a stat
                       can reach 4, and the only road to a Divine hand.
                     </p>
+                    {/* Said before the six figures, not discovered forty stints
+                        in. The re-cut table is rarity-weighted, so who you send
+                        down matters as much as owning the bunk. */}
+                    <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, marginTop: 8 }}>
+                      How often a 4 lands depends on the hand: a Legendary rolls one far more often than
+                      an Epic, and an Epic more often than a Rare.
+                    </p>
                   </div>
                 )}
                 <div className="flex items-center justify-between" style={{

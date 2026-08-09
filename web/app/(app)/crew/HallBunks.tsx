@@ -665,6 +665,21 @@ function BunkPicker({
           trawl or be dismissed until the stint ends.
         </p>
 
+        {/* THE THING THAT DECIDES THE CHASE, said at the moment you choose who
+            goes down. The re-cut rolls on a rarity-weighted table, so the same
+            bunk is several times faster for a Legendary than for an Epic — and
+            with nothing on screen saying so, a slow Epic reads as bad luck or a
+            broken bunk rather than as the hand you picked. Stated as an
+            ORDERING, not as percentages: the weights get retuned, and a number
+            baked into copy would quietly start lying. */}
+        {leviathan && (
+          <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.5 }}>
+            Rarity decides the odds down here. A <span style={{ color: accent }}>Legendary</span> rolls a
+            4 far more often than an Epic, and an Epic more often than a Rare. The rarer the hand, the
+            fewer stints it takes to finish them.
+          </p>
+        )}
+
         {/* TRAIN AGAIN. The same hand back into the same bunk is the common
             case by a distance, and finding them again in a roster of thirty was
             the whole cost of a cycle. Only shown while they are actually free
