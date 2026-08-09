@@ -43,6 +43,17 @@ export interface GauntletUpgrade {
   category?: UpgradeCategory
   /** Which Gauntlet's Locker this belongs to (omitted = Davy's). */
   gauntlet?: UpgradeGauntlet
+  /** Painted art for the MILESTONE unlocks, and the flag that marks them.
+   *
+   *  Most upgrades are a number getting bigger and read fine as a line of text.
+   *  The Forge chain is not: each step opens a whole system with its own board,
+   *  and buried in a list of stat nudges it read as one more nudge. Carrying
+   *  art is what separates "this changes a number" from "this opens a place",
+   *  so the shop treats any upgrade WITH art as featured: bigger card, its
+   *  picture, and sorted to the top of its section. Reuse the art the system
+   *  already ships rather than drawing shop-only icons, so the card and the
+   *  place it unlocks are visibly the same thing. */
+  art?: string
   /** Another upgrade id that must be owned first (checked across BOTH Lockers
    *  for account/world perks, so a Don's upgrade can build on a Davy's one). */
   requires?: string
@@ -198,6 +209,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     cost: 200,
     scope: 'account',
     category: 'raids',
+    art: '/forge/forge.png',
   },
   {
     id: 'swift_sails',
@@ -271,8 +283,8 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   { id: 'dg_kingpin_cut',    name: 'Kingpin’s Cut',      description: 'The Don marks the finest hauls for you: legendary boss-drop items drop twice as often from every raid crate, forever.', depthRequired: 12, cost: 420, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_crimson_tithe',  name: 'Crimson Tithe',      description: 'The Don takes his cut in blood, and hands you a bigger one: earn 15% more Blood Gems from every Hardcore dive you survive.', depthRequired: 16, cost: 360, scope: 'account', category: 'raids', gauntlet: 'don' },
   { id: 'dg_master_catcher', name: 'Relentless Catcher', description: 'Upgrades your Tireless Catcher: the Auto Catcher now reels in epic fish on its own too, on top of rares. Legendaries and the Ancient Deep still want your hand.', depthRequired: 18, cost: 330, scope: 'world', category: 'fishing', gauntlet: 'don', requires: 'tireless_catcher' },
-  { id: 'dg_abyssal_forge', name: 'The Abyssal Forge', description: 'Fuse two forged raid items into one tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.', depthRequired: 8, cost: 700, scope: 'account', category: 'raids', gauntlet: 'don', requires: 'forge' },
-  { id: 'dg_abyssal_accel', name: 'The Abyssal Accelerator', description: 'Bolts a transmutation bench onto the Abyssal Forge: charge it with gems, feed it an owned EPIC boss drop, and 24 hours later claim that item’s LEGENDARY chase counterpart. Stop grinding the same fight for the rare roll.', depthRequired: 14, cost: 500, scope: 'account', category: 'raids', gauntlet: 'don', requires: 'dg_abyssal_forge' },
+  { id: 'dg_abyssal_forge', name: 'The Abyssal Forge', description: 'Fuse two forged raid items into one tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.', depthRequired: 8, cost: 700, scope: 'account', category: 'raids', gauntlet: 'don', requires: 'forge', art: '/forge/abyssal_forge.png' },
+  { id: 'dg_abyssal_accel', name: 'The Abyssal Accelerator', description: 'Bolts a transmutation bench onto the Abyssal Forge: charge it with gems, feed it an owned EPIC boss drop, and 24 hours later claim that item’s LEGENDARY chase counterpart. Stop grinding the same fight for the rare roll.', depthRequired: 14, cost: 500, scope: 'account', category: 'raids', gauntlet: 'don', requires: 'dg_abyssal_forge', art: '/forge/accelerator.png' },
 ]
 
 /** Kingpin's Cut (Don's account perk): legendary-rarity boss-drop items drop

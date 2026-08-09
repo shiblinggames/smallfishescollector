@@ -6444,6 +6444,8 @@ type ShopEntry = {
   tierLabel?: string
   /** Built but not live yet — shown with a Coming Soon lock, can't be bought. */
   comingSoon?: boolean
+  /** Milestone art. Present = featured: big card, picture, top of its section. */
+  art?: string
 }
 
 // Permanent Upgrades sections, ordered, each with a small glyph for the header.
@@ -6541,6 +6543,8 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
     const busy = claiming === e.id
     const prereqLocked = !!e.lockNote
     const claimable = depthMet && canAfford && !prereqLocked && !busy && !comingSoon
+    // Carrying art IS the milestone flag — see the `art` note on GauntletUpgrade.
+    const featured = !!e.art
     const accent = comingSoon ? `${AC}66` : claimable ? GOLD : (!depthMet || prereqLocked) ? '#caa05a' : '#6a6764'
     // Compact buy control on the right: a small tinted price-button when you can
     // take it, a dim status chip when you can't. Fathoms read teal, matching the
@@ -6549,11 +6553,27 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
     const bigLabel = comingSoon ? 'Soon' : busy ? '…' : !depthMet ? `Lv ${e.depthRequired}` : fmt(e.cost)
     const showFathoms = !comingSoon && !busy && depthMet
     return (
-      <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.75rem 0.85rem 0.75rem 1rem', background: 'rgba(255,255,255,0.035)', border: `1px solid ${claimable ? `${GOLD}3a` : 'rgba(255,255,255,0.1)'}`, boxShadow: claimable ? `0 0 18px ${GOLD}12` : 'none' }}>
-        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
+      <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.75rem 0.85rem 0.75rem 1rem', background: featured ? `linear-gradient(180deg, ${GOLD}14, rgba(255,255,255,0.03))` : 'rgba(255,255,255,0.035)', border: `1px solid ${featured ? `${GOLD}55` : claimable ? `${GOLD}3a` : 'rgba(255,255,255,0.1)'}`, boxShadow: featured ? `0 0 22px ${GOLD}1c` : claimable ? `0 0 18px ${GOLD}12` : 'none' }}>
+        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: featured ? 5 : 4, background: accent }} />
+        {/* The art the system itself uses, so the card and the board it opens
+            are recognisably the same thing. Dimmed until it is actually
+            reachable, so a locked milestone still reads as locked. */}
+        {featured && (
+          <span aria-hidden style={{ flexShrink: 0, width: 58, height: 58, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${GOLD}0f`, border: `1px solid ${GOLD}3a`, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={e.art} alt="" decoding="async" loading="lazy"
+              style={{ width: '100%', height: '100%', objectFit: 'contain', filter: claimable ? `drop-shadow(0 2px 8px ${GOLD}66)` : 'grayscale(0.5) brightness(0.72)' }}
+              onError={ev => { (ev.target as HTMLImageElement).style.display = 'none' }} />
+          </span>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
+          {featured && (
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.16em', color: GOLD, marginBottom: 2 }}>
+              Opens a new system
+            </p>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: comingSoon ? '#cfcabf' : '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
+            <p className="font-cinzel font-700" style={{ fontSize: featured ? '1.04rem' : '0.96rem', color: comingSoon ? '#cfcabf' : '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
             {e.tierLabel && !comingSoon && (
               <span title="This upgrade has higher tiers — buy this to unlock the next." className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Tier {e.tierLabel}</span>
             )}
@@ -6629,6 +6649,7 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                 demo: u.id === 'cannonball_rack', special: false, category: u.category,
                 comingSoon: COMING_SOON_UPGRADES.has(u.id),
                 tierLabel: ti ? `${romanTier(ti.tier)} of ${romanTier(ti.total)}` : undefined,
+                art: u.art,
               }
             })
             // Auto Catcher is a Davy's-Locker fishing perk (bought with Fathoms
@@ -6739,7 +6760,16 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
                   {owned.map(e => (
                     <div key={e.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: `${AC}0d`, border: `1px solid ${AC}33` }}>
                       <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: AC }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {/* A milestone keeps its picture once bought. Dropping
+                            it here would make the thing you were sold and the
+                            thing you own look like two different unlocks. */}
+                        {e.art && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={e.art} alt="" aria-hidden decoding="async" loading="lazy"
+                            style={{ flexShrink: 0, width: 26, height: 26, objectFit: 'contain' }}
+                            onError={ev => { (ev.target as HTMLImageElement).style.display = 'none' }} />
+                        )}
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#eafffb', lineHeight: 1.15 }}>{e.name}</p>
                       </div>
@@ -6766,7 +6796,12 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
               // Permanent Upgrades — grouped by what each upgrade affects.
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {SHORE_CATEGORIES.map(cat => {
+                  // Milestone unlocks lead their section. They open whole boards
+                  // rather than nudging a number, so burying them under stat
+                  // perks sold the wrong thing first. Order within each half is
+                  // catalog order, which already runs cheap to dear.
                   const group = forSale.filter(e => e.category === cat.id)
+                    .sort((a, b) => Number(!!b.art) - Number(!!a.art))
                   if (group.length === 0) return null
                   return (
                     <div key={cat.id}>
