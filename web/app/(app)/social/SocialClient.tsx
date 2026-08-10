@@ -7,6 +7,7 @@ import { addCrewMember, removeCrewMember, type CrewMember } from './actions'
 import { getLevelFromXP as getFishingLevel } from '@/lib/fishingLevel'
 import { getLevelFromXP as getNavLevel } from '@/lib/expeditionLevel'
 import CharacterAvatar from '@/components/CharacterAvatar'
+import CrewSummarySheet from './CrewSummarySheet'
 
 interface SearchResult {
   username: string
@@ -68,6 +69,9 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
   const [searching, setSearching] = useState(false)
   const [pending, startTransition] = useTransition()
   const [loadingUsername, setLoadingUsername] = useState<string | null>(null)
+  /** Whose summary sheet is open. Held as a USERNAME rather than the row object
+   *  so the sheet keeps showing live data after a refresh reorders the board. */
+  const [openMember, setOpenMember] = useState<string | null>(null)
   const [addedSet, setAddedSet] = useState<Set<string>>(new Set())
 
   // Debounced search as you type
@@ -114,6 +118,9 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
       await removeCrewMember(u)
       setCrew(prev => prev.filter(m => m.username.toLowerCase() !== u.toLowerCase()))
       setLoadingUsername(null)
+      // Close the sheet the removal was fired from — leaving it open on someone
+      // who is no longer in the crew is the one state it must never sit in.
+      setOpenMember(null)
     })
   }
 
@@ -317,7 +324,6 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
                   const rankColor = rank === 1 ? '#f0c040' : rank === 2 ? '#c6ccd4' : rank === 3 ? '#cd7f32' : '#6a6764'
                   const val = lb.value(m)
                   const delta = val - myVal
-                  const isLoading = loadingUsername === m.username
                   return (
                     <div key={m.username || 'me'} style={{
                       display: 'flex', flexDirection: 'column', gap: 8,
@@ -327,20 +333,24 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
                       borderTop: `1px solid ${isMe ? 'rgba(240,192,64,0.42)' : 'rgba(255,255,255,0.16)'}`,
                       borderRadius: 14,
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {/* The WHOLE row opens their sheet. It used to be three
+                          separate targets — avatar, name, and an X that removed
+                          them — competing inside 44px of height, so the tap that
+                          meant "who is this" could just as easily drop them. One
+                          row, one action; the sheet owns everything else. */}
+                      <div
+                        onClick={isMe ? undefined : () => setOpenMember(m.username)}
+                        role={isMe ? undefined : 'button'}
+                        tabIndex={isMe ? undefined : 0}
+                        onKeyDown={isMe ? undefined : e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenMember(m.username) } }}
+                        aria-label={isMe ? undefined : `${m.username}, tap for their summary`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: isMe ? 'default' : 'pointer', touchAction: 'manipulation' }}
+                      >
                         <span className="font-cinzel font-700" style={{ width: 18, textAlign: 'center', fontSize: '0.82rem', color: rankColor, flexShrink: 0 }}>{rank}</span>
-                        {isMe ? (
-                          <div style={{ flexShrink: 0, lineHeight: 0 }}><CrewAvatar member={m} size={44} /></div>
-                        ) : (
-                          <Link href={`/u/${m.username}`} style={{ flexShrink: 0, lineHeight: 0 }}><CrewAvatar member={m} size={44} /></Link>
-                        )}
+                        <div style={{ flexShrink: 0, lineHeight: 0 }}><CrewAvatar member={m} size={44} /></div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="flex items-center gap-1.5">
-                            {isMe ? (
-                              <span className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{m.username || 'You'}</span>
-                            ) : (
-                              <Link href={`/u/${m.username}`} className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f0ede8', textDecoration: 'none' }}>{m.username}</Link>
-                            )}
+                            <span className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{m.username || 'You'}</span>
                             {isMe && <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#f0c040', flexShrink: 0 }}>You</span>}
                           </div>
                           <LevelChips fishingXP={m.fishingXP} expeditionXP={m.expeditionXP} />
@@ -354,23 +364,6 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
                           )}
                         </div>
                       </div>
-                      {!isMe && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                          <button
-                            onClick={() => handleRemove(m.username)}
-                            disabled={isLoading || pending}
-                            aria-label={`Remove ${m.username}`}
-                            style={{
-                              width: 28, height: 28, borderRadius: 7, padding: 0,
-                              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                              color: '#6a6764', cursor: 'pointer', opacity: isLoading ? 0.5 : 1,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )
                 })}
@@ -380,6 +373,31 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
         })()}
       </div>
 
+      {/* The sheet, resolved from the LIVE crew each render so it can never show
+          a stale copy of somebody, and dropped the moment they leave the crew. */}
+      {(() => {
+        if (!openMember) return null
+        const idx = crew.findIndex(c => c.username.toLowerCase() === openMember.toLowerCase())
+        if (idx === -1) return null
+        const member = crew[idx]
+        // Rank on the stat currently being compared, counting me, so the sheet
+        // agrees with the row the captain just tapped.
+        const lb = LB_STATS.find(s => s.key === lbStat)!
+        const ordered = [me, ...crew].sort((a, b) => lb.value(b) - lb.value(a))
+        const rank = ordered.findIndex(c => c.username === member.username) + 1
+        return (
+          <CrewSummarySheet
+            member={member}
+            me={me}
+            rank={rank}
+            crewSize={crew.length + 1}
+            stats={LB_STATS}
+            busy={loadingUsername === member.username || pending}
+            onRemove={() => handleRemove(member.username)}
+            onClose={() => setOpenMember(null)}
+          />
+        )
+      })()}
     </div>
   )
 }
