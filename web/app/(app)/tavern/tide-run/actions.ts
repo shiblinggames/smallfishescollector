@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { TIDE_CHAMPION_CONTEST_ID, TIDE_CHAMPION_GOAL_M, TIDE_CHAMPION_PRIZE_CODE } from '@/lib/contests'
 import { flagAnomaly } from '@/lib/anomaly'
 import { issueRunToken, consumeRunToken } from '@/lib/runToken'
+import { tideRunBoat, isBoatUnlocked } from '@/lib/tideRunBoats'
 
 // Beacon counts are CLIENT-AUTHORED, so these two lines are the only thing
 // standing between a forged call and minted currency. Flagging alone was not
@@ -348,5 +349,39 @@ export async function getPlayerTideRunRank(): Promise<PlayerTideRunRank | null> 
     }
   } catch {
     return null
+  }
+}
+
+/**
+ * Equip a boat. The unlock is re-checked HERE against the player's own best
+ * distance rather than trusted from the client, because the locker is the one
+ * screen where a forged call would hand out a cosmetic nobody earned — and
+ * ownership is derived, not stored, so this check IS the grant.
+ */
+export async function setTideRunBoat(boatId: string): Promise<{ ok: true; boatId: string } | { error: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const boat = tideRunBoat(boatId)
+    // tideRunBoat falls back to the starter for anything unknown, so compare
+    // ids: a bogus id must be refused, not silently swapped for the default.
+    if (boat.id !== boatId) return { error: 'No such boat' }
+
+    const admin = createAdminClient()
+    const { data: profile } = await admin
+      .from('profiles').select('tide_run_best_distance').eq('id', user.id).single()
+    const best = Number(profile?.tide_run_best_distance ?? 0)
+    if (!isBoatUnlocked(boat.id, best)) {
+      return { error: `Sail ${boat.unlockAt}m to earn the ${boat.name}.` }
+    }
+
+    const { error } = await admin.from('profiles')
+      .update({ tide_run_boat: boat.id }).eq('id', user.id)
+    if (error) return { error: 'Could not equip that boat' }
+    return { ok: true, boatId: boat.id }
+  } catch {
+    return { error: 'Server error' }
   }
 }

@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, startTideRun, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
+import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, startTideRun, setTideRunBoat, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
+import { tideRunBoat, boatsUnlockedBetween, nextBoat, type TideRunBoat } from '@/lib/tideRunBoats'
+import BoatLocker from './BoatLocker'
+import BoatUnlockedOverlay from './BoatUnlockedOverlay'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { prefetchTideRunAudio, unlockTideRunAudio, teardownTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
-import { vibrate } from '@/lib/haptics'
+import { vibrate, hapticTap } from '@/lib/haptics'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 // A FIXED VIRTUAL WORLD. The whole simulation runs in these units, and the
@@ -298,6 +301,8 @@ function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): numb
 // ── Game ─────────────────────────────────────────────────────────────────────
 interface TideRunGameProps {
   initialBestDistance?: number
+  /** Equipped boat id, from the profile. */
+  initialBoatId?: string
   hasSeenTour?: boolean
   /** Current #1 leaderboard holder. Shown on the wreck screen as the
    *  global target to chase. Null on a cold leaderboard (no one has
@@ -309,7 +314,13 @@ interface TideRunGameProps {
   initialRank?: PlayerTideRunRank | null
 }
 
-export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
+export default function TideRunGame({ initialBestDistance = 0, initialBoatId = 'original', hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
+  // ── Boats ────────────────────────────────────────────────────────────────
+  const [boatId, setBoatId] = useState(initialBoatId)
+  const [lockerOpen, setLockerOpen] = useState(false)
+  // Boats this run just earned. Held until the player taps them away, never on
+  // a timer — the moment exists to be looked at.
+  const [justUnlocked, setJustUnlocked] = useState<TideRunBoat[]>([])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
@@ -568,9 +579,11 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   // We no longer backfill from localStorage on mount (it would undo admin resets).
   useEffect(() => {
     const img = new Image()
-    img.src = '/boatrun.png'
+    // The equipped boat. Every boat shares the original's proportions, so the
+    // sprite swaps without touching SHIP_ASPECT or the hitbox it feeds.
+    img.src = tideRunBoat(boatId).image ?? '/boatrun.png'
     img.onload = () => { shipImgRef.current = img }
-  }, [])
+  }, [boatId])   // reload when the captain equips a different boat
 
   // ── Canvas sizing ──────────────────────────────────────────────────────────
   const resize = useCallback(() => {
@@ -965,6 +978,13 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         setScore(finalMeters)
         recordTideRunRun(Math.floor(g.distance), g.beaconsSmashed).catch(() => {})
         if (finalMeters > highScore) {
+          // BOATS EARNED BY THIS RUN, worked out from the distance the PB
+          // crossed rather than from a server round trip — the wreck screen
+          // should be showing the prize before the network has finished
+          // agreeing. A single run can cross several thresholds, so this is a
+          // list. Equipping is what the overlay does on dismiss.
+          const earned = boatsUnlockedBetween(highScore, finalMeters)
+          if (earned.length) setJustUnlocked(earned)
           setHighScore(finalMeters)
           // Chain the rank refresh off the PB submission so the wreck
           // modal lands on the updated position, not the stale one.
@@ -2125,6 +2145,36 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                 </p>
               )}
 
+              {/* THE NEXT BOAT, on the screen where you decide whether to run
+                  again. A distance you are chasing is a far better reason to
+                  tap than "you died", and the locker is one tap from here
+                  rather than somewhere you have to go looking for. */}
+              {(() => {
+                const next = nextBoat(highScore)
+                if (!next) return null
+                const away = Math.max(1, Math.ceil(next.unlockAt - highScore))
+                return (
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); hapticTap(); setLockerOpen(true) }}
+                    onPointerDown={e => e.stopPropagation()}
+                    className="pointer-events-auto tap font-karla font-700"
+                    style={{
+                      width: '100%', marginTop: 14, padding: '0.6rem 0.7rem', borderRadius: 11,
+                      fontSize: '0.76rem', color: '#dff1f8',
+                      background: 'rgba(127,208,232,0.1)', border: '1px solid rgba(127,208,232,0.36)',
+                      cursor: 'pointer', touchAction: 'manipulation',
+                    }}
+                  >
+                    <span style={{ color: '#7fd0e8' }}>{away}m</span> further unlocks the{' '}
+                    <span style={{ color: '#7fd0e8' }}>{next.name}</span>
+                    <span style={{ display: 'block', fontSize: '0.6rem', color: '#8fa6b8', marginTop: 2 }}>
+                      Tap to open your boats
+                    </span>
+                  </button>
+                )
+              })()}
+
               <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.82rem', color: '#bda05a' }}>
                 Tap to try again
               </p>
@@ -2170,6 +2220,30 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
           </div>
         )}
       </div>
+
+      {/* THE PRIZE, before the numbers. A new boat is the best thing that
+          happened in a run and should not queue behind a score. Dismiss equips
+          it, because a reward you have to go and apply is an errand. */}
+      {justUnlocked.length > 0 && (
+        <BoatUnlockedOverlay
+          boats={justUnlocked}
+          onDismiss={() => {
+            const last = justUnlocked[justUnlocked.length - 1]
+            setJustUnlocked([])
+            setBoatId(last.id)
+            void setTideRunBoat(last.id).catch(() => {})
+          }}
+        />
+      )}
+
+      {lockerOpen && (
+        <BoatLocker
+          bestDistance={highScore}
+          equippedId={boatId}
+          onEquip={setBoatId}
+          onClose={() => setLockerOpen(false)}
+        />
+      )}
     </div>
   )
 }
