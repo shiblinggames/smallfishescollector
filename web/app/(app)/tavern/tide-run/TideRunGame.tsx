@@ -2010,7 +2010,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
         )}
 
         {uiState === 'ready' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none pb-[calc(env(safe-area-inset-bottom,0px)+32px)] sm:pb-0">
             <div style={{
               padding: '22px 26px',
               borderRadius: 16,
@@ -2093,15 +2093,21 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
           </div>
         )}
 
+        {/* Centred on the VISIBLE area, not the canvas box. The wrapper is
+            100dvh-44px while the tab bar is taller than that, so its bottom
+            strip sits behind the bar — centring on inset-0 alone put the modal
+            about 16px low, which reads as "not quite centred" without being
+            obviously broken. The pad is that hidden strip. */}
         {uiState === 'dead' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 pointer-events-none">
-            {/* Wider modal (was 320 → now 420) with more padding so the
-                blocks have room to breathe. Bigger fonts across every
-                line so the recap is genuinely readable, not cramped. */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 pointer-events-none pb-[calc(env(safe-area-inset-bottom,0px)+32px)] sm:pb-0">
+            {/* Trimmed from 420 to 360 with tighter padding and a smaller
+                headline. The recap is read in a second between runs, so it
+                needs to be legible rather than large — at 420 it dominated a
+                screen whose actual job is to get you back into a run. */}
             <div style={{
               width: '100%',
-              maxWidth: 420,
-              padding: '24px 28px 22px',
+              maxWidth: 360,
+              padding: '18px 20px 16px',
               borderRadius: 18,
               background: 'rgba(6, 18, 34, 0.88)',
               border: '1px solid rgba(189,160,90,0.5)',
@@ -2111,15 +2117,15 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
                 const isNewBest = score > 0 && score === highScore
                 return (
                   <>
-                    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.78rem', color: '#bda05a', marginBottom: 8 }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.68rem', color: '#bda05a', marginBottom: 6 }}>
                       Wrecked
                     </p>
                     <p className="font-cinzel font-700" style={{
-                      fontSize: '3.2rem', lineHeight: 1,
+                      fontSize: '2.6rem', lineHeight: 1,
                       color: isNewBest ? '#ffd56b' : '#ffffff',
                       textShadow: isNewBest ? '0 0 22px rgba(255,213,107,0.6)' : 'none',
                     }}>
-                      {fmtDistance(deadCount)}<span style={{ fontSize: '1.3rem', marginLeft: 6, opacity: 0.75 }}>m</span>
+                      {fmtDistance(deadCount)}<span style={{ fontSize: '1.05rem', marginLeft: 5, opacity: 0.75 }}>m</span>
                     </p>
                     {isNewBest ? (
                       <p className="tr-newbest font-cinzel font-700 mt-3" style={{
