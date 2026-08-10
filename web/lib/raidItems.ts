@@ -1645,7 +1645,10 @@ export function effectLines(def: RaidItemDef): ItemEffectLine[] {
   const avenge = val('avenge_elite_mult')
   if (avenge != null) add(`Cheat a killing blow and you deal ${asDelta(avenge)} to elite hulls for the rest of that fight`, 'avenge_elite_mult')
   const steal = val('lifesteal_pct')
-  if (steal != null) add(`Heals you for ${asPct(steal)} of the damage you deal`, 'lifesteal_pct')
+  // The cap is always twice your total lifesteal, as a share of max HP, so this
+  // raises the ceiling as well as the rate — stated because a player weighing
+  // the Blood Cannon against a flat-damage mount cannot see the second half.
+  if (steal != null) add(`Heals you for ${asPct(steal)} of the damage you deal, and lifts your per-hit heal cap by ${asPct(steal * 2)} of your hull`, 'lifesteal_pct')
 
   // -- Staying afloat --
   const hp = val('max_hp_mult')
