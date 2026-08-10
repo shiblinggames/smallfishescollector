@@ -2017,11 +2017,8 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
               WebkitBackdropFilter: 'blur(6px)',
               maxWidth: 340,
             }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 12 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 20 }}>
                 Tide Run
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.95rem', color: 'rgba(240,237,232,0.92)', lineHeight: 1.5, marginBottom: 20 }}>
-                Hold to jump — the longer you hold, the higher you go. Time it for the rock ahead.
               </p>
               <div className="font-karla font-700 uppercase tracking-[0.18em]" style={{
                 display: 'inline-block',
@@ -2079,7 +2076,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="font-700" style={{ display: 'block', fontSize: '0.76rem', color: '#eaf6fb' }}>
-                    Boats &amp; Waters
+                    Unlocks
                   </span>
                   <span style={{ display: 'block', fontSize: '0.62rem', color: '#8fa6b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {tideRunBoat(boatId).name} · {tideRunSea(seaId).name}
@@ -2272,7 +2269,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
                       <span style={{ color: '#7fd0e8' }}>{next.name}</span>
                     </span>
                     <span style={{ display: 'block', fontSize: '0.6rem', color: '#8fa6b8', marginTop: 2 }}>
-                      Tap to open your boats
+                      Tap to see your unlocks
                     </span>
                     </span>
                     <span aria-hidden style={{ flexShrink: 0, color: '#7fd0e8', display: 'flex' }}>
