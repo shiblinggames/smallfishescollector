@@ -2503,9 +2503,21 @@ function drawDistantIslands(ctx: CanvasRenderingContext2D, cw: number, ch: numbe
     // A LANDMARK, once per island cluster: a lighthouse on the first crest, so
     // the horizon has something you recognise instead of anonymous hills.
     const lx = ix + period * 0.30
-    const ly = horizon - 20
-    const th = ch * 0.05
-    const tw = ch * 0.011
+    // STAND IT ON THE HILL, don't guess. The base used to be pinned at
+    // horizon-20 as if the hill reached its control points, but a cubic bezier
+    // never touches P1/P2 — the crest under the lighthouse is only 13.6px up,
+    // so it hung 6.4px clear of the ground and read as floating in the sky.
+    // Evaluating the same curve keeps it planted if the hills are ever
+    // reshaped, and the +1 buries the foot rather than balancing it on the line.
+    const t = 0.6                       // x = 0.30 of a period, over a hill spanning 0 -> 0.5
+    const u = 1 - t
+    const hillY = horizon + (u * u * u * 4) + (3 * u * u * t * -18) + (3 * u * t * t * -22) + (t * t * t * 4)
+    const ly = hillY + 1
+    // A LANDMARK, not a rival to the skyline. At ch*0.05 it stood 52% as tall as
+    // the far mountains while sitting on a nearer, smaller layer, which flattened
+    // the depth the three bands exist to create.
+    const th = ch * 0.024
+    const tw = ch * 0.006
     ctx.beginPath()
     ctx.moveTo(lx - tw, ly)
     ctx.lineTo(lx - tw * 0.55, ly - th)
