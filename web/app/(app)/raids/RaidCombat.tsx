@@ -143,19 +143,28 @@ const LIFESTEAL_HEAL_MAXHP_CAP = 0.20
 //
 // So above the crossover the ceiling becomes a share of the DAMAGE instead of a
 // share of the hull. The effect degrades to a lower rate rather than falling to
-// a constant, so a huge hit still heals more than a small one. FLOOR is what
-// the rate decays toward, deliberately well under the boon's own 15% so this
-// widens the cap without reopening the ~57% sustain stack the cap was added to
-// stop. HARD is the backstop: no single instance may refill more than half the
-// bar, whatever the damage.
-const LIFESTEAL_HEAL_DMG_FLOOR = 0.06
+// a constant, so a huge hit still heals more than a small one.
+//
+// That share is a RETENTION FRACTION OF YOUR OWN RATE, not a flat number, and
+// that distinction is the whole point. A flat damage floor rebuilds the exact
+// bug one storey up: every rate above it collapses to the same heal, so
+// Feeding Frenzy's +24%, the tier-2 upgrade and the Blood Cannon all buy
+// literally nothing on a big hit. Priced off the rate, a bigger stack keeps
+// earning — you retain this fraction of whatever you built.
+//
+// RETENTION x the boon's own 15% lands on 6% of damage, so the base card is
+// tuned exactly where it was. HARD is the backstop that keeps the full sustain
+// stack honest: no single instance may refill more than half the bar, whatever
+// the damage or the rate, which is what stops the ~57% stack the cap exists for.
+const LIFESTEAL_HEAL_RETENTION = 0.40
 const LIFESTEAL_HEAL_HARD_CAP  = 0.50
 
-/** The most one damage instance may heal. Below the crossover this is exactly
- *  the old flat cap, so nothing about mid-game sustain moves. */
-function lifestealHealCap(maxHp: number, dmg: number): number {
+/** The most one damage instance may heal, given the rate that produced it.
+ *  Below the crossover this is exactly the old flat cap, so nothing about
+ *  mid-game sustain moves. */
+function lifestealHealCap(maxHp: number, dmg: number, rate: number): number {
   return Math.min(
-    Math.max(maxHp * LIFESTEAL_HEAL_MAXHP_CAP, dmg * LIFESTEAL_HEAL_DMG_FLOOR),
+    Math.max(maxHp * LIFESTEAL_HEAL_MAXHP_CAP, dmg * rate * LIFESTEAL_HEAL_RETENTION),
     maxHp * LIFESTEAL_HEAL_HARD_CAP,
   )
 }
@@ -4033,7 +4042,7 @@ export default function RaidCombat({
       // same way, so a Wildfire+Leviathan's build can't over-sustain via DoT.
       let feedHeal = 0
       if (tide.burnTickHealPct > 0 && pHp > 0) {
-        feedHeal = Math.min(Math.round(lifestealHealCap(playerHpMax, total)), healCap - pHp, Math.round(total * tide.burnTickHealPct))
+        feedHeal = Math.min(Math.round(lifestealHealCap(playerHpMax, total, tide.burnTickHealPct)), healCap - pHp, Math.round(total * tide.burnTickHealPct))
         if (feedHeal > 0) { pHp += feedHeal; onStat?.({ dmgHealed: feedHeal }) }
       }
       pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
@@ -4978,7 +4987,7 @@ export default function RaidCombat({
             // Per-hit heal capped by lifestealHealCap: the flat hull share at
             // normal damage, a share of the damage itself once your hits dwarf
             // your hull. A huge hit still can't refill the whole bar.
-            const healed = Math.round(Math.min(Math.round(lifestealHealCap(playerHpMax, dmg)), Math.max(1, Math.round(dmg * totalLifesteal))) * tide.healMult)
+            const healed = Math.round(Math.min(Math.round(lifestealHealCap(playerHpMax, dmg, totalLifesteal)), Math.max(1, Math.round(dmg * totalLifesteal))) * tide.healMult)
             const before = pHp
             pHp = Math.min(healCap, pHp + healed)
             lifestealHealedOut = pHp - before
@@ -5002,7 +5011,7 @@ export default function RaidCombat({
           // massive Mega overkill can't refill the whole bar in one shot.
           if (overkillDmg > 0 && tide.overkillHealPct > 0 && pHp > 0) {
             const raw = Math.max(1, Math.round(overkillDmg * tide.overkillHealPct))
-            const healed = Math.round(Math.min(Math.round(lifestealHealCap(playerHpMax, overkillDmg)), raw) * tide.healMult)
+            const healed = Math.round(Math.min(Math.round(lifestealHealCap(playerHpMax, overkillDmg, tide.overkillHealPct)), raw) * tide.healMult)
             const before = pHp
             pHp = Math.min(healCap, pHp + healed)
             overkillHealedOut = pHp - before
