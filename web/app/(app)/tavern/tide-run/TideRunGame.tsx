@@ -1340,10 +1340,18 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     const pal = currentPalette(g.distance)
 
     // ── Sky (full canvas — sea path will overpaint below the surface) ──
+    // The sky used to hold skyBot flat all the way to the bottom of the canvas.
+    // Only the part BELOW the wave line is overpainted by the sea, so the strip
+    // between the horizon and the waves stayed pale sky blue against a dark
+    // seaTop — which read as a second, lighter ocean sitting behind the real
+    // one. The sky now lands on skyBot at the horizon and then runs into seaTop
+    // by the wave line, so the water the boat sails on is the only water there
+    // is. Below the wave line this gradient is invisible anyway.
     const sky = ctx.createLinearGradient(0, 0, 0, ch)
     sky.addColorStop(0, pal.skyTop)
-    sky.addColorStop(0.7, pal.skyBot)
-    sky.addColorStop(1, pal.skyBot)
+    sky.addColorStop(0.47, pal.skyBot)
+    sky.addColorStop(SEA_BASE_Y_PCT, pal.seaTop)
+    sky.addColorStop(1, pal.seaTop)
     ctx.fillStyle = sky
     ctx.fillRect(0, 0, cw, ch)
 
