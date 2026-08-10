@@ -270,10 +270,16 @@ export type TideEffect =
   /** Kraken's Grip: a landed hit has `chance` to STUN the enemy `turns` turns
    *  (reuses the freeze skip-turn machinery). */
   | { kind: 'stunOnHit'; chance: number; turns: number }
-  /** Kraken's Grip: the DETERMINISTIC version. Every landed hit adds a stack;
-   *  stacks never decay, and the `hits`-th one drags the hull under — held for
-   *  `turns` turns, taking `crushPct` of ITS OWN max HP each held turn, then
-   *  the stacks reset.
+  /** Kraken's Grip. Every landed hit adds a coil, and each coil raises the
+   *  chance the deep closes: the odds ramp as (stack/hits)^2, so the `hits`-th
+   *  coil is a CERTAINTY and everything before it is a live possibility. When
+   *  it closes, the hull is held `turns` turns and crushed for `crushPerStack`
+   *  of ITS OWN max HP per coil consumed, then the coils reset.
+   *
+   *  Crush scales with the coils spent, which is what makes the roll fair: the
+   *  trigger chance and the payout key off the same counter, so expected crush
+   *  per hit is exactly `crushPerStack` however the dice fall. Luck changes the
+   *  RHYTHM, never the damage — an early close trades size for speed.
    *
    *  Deliberately not a chance roll. Permafrost is already the coin-flip freeze,
    *  so a second "chance on hit to skip a turn" was a dial position rather than
@@ -282,7 +288,7 @@ export type TideEffect =
    *  the ENEMY's max HP rather than your damage for the same reason Permafrost
    *  is not: that scales with the depth curve on its own, and it keeps the two
    *  cards answering different questions (amplify me vs. hurt them). */
-  | { kind: 'gripStacks'; hits: number; turns: number; crushPct: number }
+  | { kind: 'gripStacks'; hits: number; turns: number; crushPerStack: number }
   /** Loaded for Bear: every `n`-th landed shot is a guaranteed crit. */
   | { kind: 'guaranteedCritEvery'; n: number }
   /** Press-Gang: a landed hit has `chance` to steal a loaded cannonball off the
@@ -1110,7 +1116,7 @@ export function describeEffect(e: TideEffect): string {
     case 'playerStartStatus':     return `Start each fight ${e.status}`
     case 'shieldPierce':          return `Your shots ignore ${Math.round(e.pct * 100)}% of enemy barriers`
     case 'stunOnHit':             return `${Math.round(e.chance * 100)}% on a hit to stun the enemy ${e.turns > 1 ? `${e.turns} turns` : 'a turn'}`
-    case 'gripStacks':            return `Every ${e.hits} hits drags the enemy under for ${e.turns > 1 ? `${e.turns} turns` : 'a turn'}, crushing it for ${Math.round(e.crushPct * 100)}% of its max HP each turn`
+    case 'gripStacks':            return `Each hit coils tighter and the ${e.hits}th always closes: held ${e.turns > 1 ? `${e.turns} turns` : 'a turn'}, crushed for ${Math.round(e.crushPerStack * 100)}% of its max HP per coil`
     case 'guaranteedCritEvery':   return `Every ${e.n}${e.n === 1 ? 'st' : e.n === 2 ? 'nd' : e.n === 3 ? 'rd' : 'th'} landed shot is a guaranteed crit`
     case 'stealCharge':           return `${Math.round(e.chance * 100)}% on a hit to steal an enemy cannonball`
     case 'parryChance':           return `${Math.round(e.chance * 100)}% to parry a hit${e.reflectPct > 0 ? ` and reflect ${Math.round(e.reflectPct * 100)}%` : ''}`

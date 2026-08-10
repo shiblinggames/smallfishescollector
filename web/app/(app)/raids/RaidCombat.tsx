@@ -792,7 +792,7 @@ export default function RaidCombat({
     let stunOnHitChance = 0, stunOnHitTurns = 1   // legacy chance-stun (Deep Terror)
     // Kraken's Grip — deterministic. Strongest source wins on each axis rather
     // than summing, so two sources can't trivialise the counter.
-    let gripHits = 0, gripTurns = 1, gripCrushPct = 0
+    let gripHits = 0, gripTurns = 1, gripCrushPerStack = 0
     let guaranteedCritEvery = 0     // Loaded for Bear: 0 = off; else every Nth shot crits
     let stealChargeChance = 0       // Press-Gang
     let parryChance = 0, parryReflectPct = 0      // Cutlass Guard
@@ -915,7 +915,7 @@ export default function RaidCombat({
         case 'stunOnHit':             if (e.chance > stunOnHitChance) { stunOnHitChance = e.chance; stunOnHitTurns = e.turns } break
         case 'gripStacks':            if (gripHits === 0 || e.hits < gripHits) gripHits = e.hits
                                       gripTurns = Math.max(gripTurns, e.turns)
-                                      gripCrushPct = Math.max(gripCrushPct, e.crushPct); break
+                                      gripCrushPerStack = Math.max(gripCrushPerStack, e.crushPerStack); break
         case 'guaranteedCritEvery':   if (e.n > 0 && (guaranteedCritEvery === 0 || e.n < guaranteedCritEvery)) guaranteedCritEvery = e.n; break
         case 'stealCharge':           stealChargeChance = Math.max(stealChargeChance, e.chance); break
         case 'parryChance':           if (e.chance > parryChance) { parryChance = e.chance; parryReflectPct = e.reflectPct } break
@@ -955,7 +955,7 @@ export default function RaidCombat({
       critStreakPerStack, critStreakMaxStacks, counterFireChance,
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
       statusOnHitList, playerStartStatusList,
-      shieldPierceFrac, stunOnHitChance, stunOnHitTurns, gripHits, gripTurns, gripCrushPct, guaranteedCritEvery, stealChargeChance,
+      shieldPierceFrac, stunOnHitChance, stunOnHitTurns, gripHits, gripTurns, gripCrushPerStack, guaranteedCritEvery, stealChargeChance,
       parryChance, parryReflectPct, aimClarity, randomFightBuff, abilityRefundChance,
       enemyUltDmgMult, enemyUltChargeChance, enemyChargeSteal, enemyParryChance, enemyLifesteal, randomFightDebuff,
       flareFuseMult, flareDmgMult, barrierRegrow,
@@ -5111,19 +5111,28 @@ export default function RaidCombat({
             // instead of going stale the way a flat number would, and it is the
             // one damage source on the board that ignores your own guns.
             if (tide.gripHits > 0 && eHp > 0) {
-              gripStacksRef.current += 1
-              if (gripStacksRef.current >= tide.gripHits) {
+              const coils = (gripStacksRef.current += 1)
+              // Odds ramp as (coils/hits)^2 — squared rather than linear so an
+              // early close stays a rare thrill instead of a coin flip that
+              // makes the build-up decorative. At the last coil this is exactly
+              // 1, so the deep ALWAYS closes by then and the boon can never
+              // whiff a fight the way a flat chance could.
+              const closes = coils >= tide.gripHits || Math.random() < Math.pow(coils / tide.gripHits, 2)
+              if (closes) {
                 gripStacksRef.current = 0
                 enemyFreezePendingRef.current = Math.max(enemyFreezePendingRef.current, tide.gripTurns)
-                const crush = Math.max(1, Math.round(enemyHpMaxRef.current * tide.gripCrushPct * tide.gripTurns))
+                // Paid per COIL SPENT, so a late close hits harder than an early
+                // one and expected crush per hit is the per-coil value however
+                // the rolls land. The roll moves the rhythm, not the damage.
+                const crush = Math.max(1, Math.round(enemyHpMaxRef.current * tide.gripCrushPerStack * coils))
                 eHp = Math.max(0, eHp - crush)
                 stepLines.push(tide.gripTurns > 1
-                  ? `Kraken's Grip! The deep drags the ${enemy.name} under for its next two turns, crushing it for ${crush}.`
-                  : `Kraken's Grip! The deep drags the ${enemy.name} under, crushing it for ${crush}.`)
+                  ? `Kraken's Grip! ${coils} coils close on the ${enemy.name} — held for its next two turns and crushed for ${crush}.`
+                  : `Kraken's Grip! ${coils} coils close on the ${enemy.name} — it loses its next turn and takes ${crush}.`)
                 onStat?.({ dmgDealt: crush })
                 procStatus = 'stun'
               } else {
-                stepLines.push(`The deep coils tighter around the ${enemy.name}. (${gripStacksRef.current}/${tide.gripHits})`)
+                stepLines.push(`The deep coils tighter around the ${enemy.name}. (${coils}/${tide.gripHits})`)
               }
             }
             // THE RACK — a landed hit fires a SPREAD. One roll, and every round the
