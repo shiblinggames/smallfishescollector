@@ -226,10 +226,23 @@ export function msUntilDone(since: string | Date, nowMs: number, capHours: numbe
 }
 
 /**
- * A crew at the level ceiling has nothing to gain, so the picker hides them and
- * an already-bunked crew that hits 100 stops earning rather than burning XP
- * into a counter nobody reads.
+ * Can this hand take THIS bunk?
+ *
+ * An ordinary bunk pays XP, so a hand at the level ceiling has nothing to gain
+ * and is turned away — and one already bunked who hits 100 stops earning rather
+ * than burning XP into a counter nobody reads.
+ *
+ * THE LEVIATHAN BUNK IS DIFFERENT and the rule has to know it. It pays a trait
+ * RE-CUT, and a maxed hand is exactly who wants one: they are finished
+ * levelling, so the trait is the only thing about them still worth improving.
+ * Gating the deepest bunk on "can still learn" locked the chase away from the
+ * only players in a position to run it — 11 maxed crew across 2 captains, shut
+ * out of the one bunk built for them.
+ *
+ * `slot` is optional so existing level-only callers (the settle path, which is
+ * asking about XP, not admission) keep their meaning.
  */
-export function canBunk(xp: number): boolean {
+export function canBunk(xp: number, slot?: number | null): boolean {
+  if (isLeviathanSlot(slot)) return true
   return crewLevelFromXP(xp) < CREW_MAX_LEVEL
 }

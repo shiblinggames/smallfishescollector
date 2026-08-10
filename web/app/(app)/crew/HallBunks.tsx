@@ -201,12 +201,15 @@ export default function HallBunks({
         : trawling.has(c.id) ? 'On a trawl'
         : c.raidSlot !== null ? 'Raid party'
         : c.voyageSlot !== null ? 'Voyage party'
-        : !canBunk(c.xp) ? 'Fully trained'
+        // Slot-aware, because the Leviathan bunk pays a trait re-cut rather
+        // than XP and a maxed hand is exactly who wants one. Blocking them
+        // everywhere shut the deepest bunk to the only crew built for it.
+        : !canBunk(c.xp, picking) ? 'Fully trained'
         : null
       if (why) out[c.id] = why
     }
     return out
-  }, [state.roster, state.bunkedCrewIds, state.trawlingCrewIds, state.lockedCrewIds])
+  }, [state.roster, state.bunkedCrewIds, state.trawlingCrewIds, state.lockedCrewIds, picking])
 
   const eligible = useMemo(
     () => state.roster.filter(c => !blockers[c.id]),

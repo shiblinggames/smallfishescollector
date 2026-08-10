@@ -46,8 +46,12 @@ export async function bunkCrew(crewId: number, slot: number): Promise<CrewAction
   if ((crew as any).voyage_slot !== null || (crew as any).raid_slot !== null) {
     return { error: 'Take them out of their party first.' }
   }
-  if (!canBunk((crew as any).xp ?? 0)) {
-    return { error: 'They are fully trained. Bunk a hand who can still learn.' }
+  // Slot-aware: an ordinary bunk pays XP and a maxed hand has nothing to gain,
+  // but the Leviathan bunk pays a trait RE-CUT and a maxed hand is exactly who
+  // wants one. bunkCrew already knows which bunk is being filled, so the check
+  // just has to be told.
+  if (!canBunk((crew as any).xp ?? 0, slot)) {
+    return { error: 'They are fully trained. Send them to the Leviathan bunk, or bunk a hand who can still learn.' }
   }
 
   // A trawling crew is away from the hall entirely.
