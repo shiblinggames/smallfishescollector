@@ -81,7 +81,18 @@ export default function BoatLocker({
     <PopupShell open onClose={onClose} zIndex={200} backdropColor="rgba(3,10,18,0.88)">
       <div
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth: 520, margin: '0 auto', padding: '0 1rem' }}
+        style={{
+          maxWidth: 520, margin: '0 auto', padding: '1.1rem 1rem 1.3rem',
+          // A SOLID BASE. The shell only dims the game behind it, and a locker
+          // read against a moving sea with boats sliding past is genuinely hard
+          // to look at. Panels over live art need their own opaque ground —
+          // near-black rather than pure, so it still reads as part of the sea
+          // rather than as a browser dialog dropped on top.
+          background: 'linear-gradient(180deg, #0a1622 0%, #060e18 100%)',
+          border: '1px solid rgba(127,208,232,0.22)',
+          borderRadius: 18,
+          boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+        }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 4 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -180,12 +191,19 @@ export default function BoatLocker({
                     without launching a run to look at it. Locked ones are
                     desaturated rather than blanked — you can still tell the
                     Ash Reach from the Frozen Reach, which is the point. */}
-                <span style={{
-                  display: 'block', height: 74, borderRadius: 9, overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  background: `linear-gradient(180deg, ${sea.swatch[0]} 0%, ${sea.swatch[0]} 45%, ${sea.swatch[1]} 45%, ${sea.swatch[1]} 100%)`,
-                  filter: unlocked ? 'none' : 'saturate(0.25) brightness(0.55)',
-                }} />
+                {/* Same 74px box as a boat card, and the same visual inset.
+                    A boat is drawn with objectFit:'contain' so its own
+                    transparent margin holds it off the card edge; a full-bleed
+                    swatch ran wider than the boats beside it and the two tabs
+                    stopped lining up. The 6% inset matches by eye. */}
+                <span style={{ display: 'block', height: 74, padding: '0 6%' }}>
+                  <span style={{
+                    display: 'block', height: '100%', borderRadius: 9, overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: `linear-gradient(180deg, ${sea.swatch[0]} 0%, ${sea.swatch[0]} 45%, ${sea.swatch[1]} 45%, ${sea.swatch[1]} 100%)`,
+                    filter: unlocked ? 'none' : 'saturate(0.25) brightness(0.55)',
+                  }} />
+                </span>
 
                 <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: unlocked ? '#f2f7fb' : '#6e808f', marginTop: 6, lineHeight: 1.15 }}>
                   {unlocked ? sea.name : '???'}
