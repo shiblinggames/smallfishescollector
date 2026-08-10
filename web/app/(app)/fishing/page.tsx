@@ -329,11 +329,20 @@ export default async function FishingPage() {
 
   return (
     <>
-      {/* Image preload hints — React 19 hoists these into <head>. Loading
-          and decoding starts as the page HTML streams in, so by the time
-          the player picks a zone the character + cosmetics are ready. */}
+      {/* Image preload hints — React 19 hoists these into <head>. Loading and
+          decoding starts as the page HTML streams in, so by the time the player
+          picks a zone the character + cosmetics are ready.
+
+          LOW PRIORITY, and that is the whole point. These are up to ten PNGs and
+          the character sprites alone run 240-320KB each, so at default priority
+          they were close to a megabyte of images racing the page's own scripts
+          on a cold load — the fishing hub sat black for about five seconds while
+          expeditions, which preloads nothing and ships MORE JavaScript, painted
+          in one. Nothing here is needed to render the hub; it is all warming for
+          a zone the player has not picked yet, so it must never outrank the
+          things that paint. fetchPriority keeps the warming and drops the race. */}
       {preloads.map(href => (
-        <link key={href} rel="preload" as="image" href={href} />
+        <link key={href} rel="preload" as="image" href={href} fetchPriority="low" />
       ))}
       <main>
         <FishingPageClient
