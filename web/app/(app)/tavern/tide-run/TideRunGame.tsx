@@ -2042,21 +2042,44 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
                   stopPropagation on both pointerdown and click: the whole screen
                   is the "tap to start" target, so without it opening the locker
                   also launches a run underneath it. */}
+              {/* Shaped like a row you TAP, not a panel you read: your boat on
+                  the left, the label and what you are sailing in the middle, a
+                  chevron on the right. The thumbnail does most of the work — an
+                  image beside text reads as a control, where centred text in a
+                  box reads as a notice. active:scale gives it the press. */}
               <button
                 type="button"
                 onPointerDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); hapticTap(); setLockerOpen(true) }}
-                className="pointer-events-auto tap font-karla font-700"
+                className="pointer-events-auto tap font-karla active:scale-[0.97]"
                 style={{
-                  width: '100%', marginTop: 14, padding: '0.6rem 0.7rem', borderRadius: 11,
-                  fontSize: '0.74rem', color: '#dff1f8',
-                  background: 'rgba(127,208,232,0.1)', border: '1px solid rgba(127,208,232,0.36)',
-                  cursor: 'pointer', touchAction: 'manipulation',
+                  width: '100%', marginTop: 14, padding: '0.5rem 0.6rem', borderRadius: 12,
+                  display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                  background: 'linear-gradient(180deg, rgba(127,208,232,0.16), rgba(127,208,232,0.07))',
+                  border: '1px solid rgba(127,208,232,0.45)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.09)',
+                  cursor: 'pointer', touchAction: 'manipulation', transition: 'transform 0.08s',
                 }}
               >
-                Boats &amp; Waters
-                <span style={{ display: 'block', fontSize: '0.62rem', color: '#8fa6b8', marginTop: 2 }}>
-                  {tideRunBoat(boatId).name} · {tideRunSea(seaId).name}
+                <span style={{
+                  flexShrink: 0, width: 46, height: 34, borderRadius: 8,
+                  background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={tideRunBoat(boatId).image ?? '/boatrun.png'} alt="" decoding="async"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="font-700" style={{ display: 'block', fontSize: '0.76rem', color: '#eaf6fb' }}>
+                    Boats &amp; Waters
+                  </span>
+                  <span style={{ display: 'block', fontSize: '0.62rem', color: '#8fa6b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {tideRunBoat(boatId).name} · {tideRunSea(seaId).name}
+                  </span>
+                </span>
+                <span aria-hidden style={{ flexShrink: 0, color: '#7fd0e8', display: 'flex' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                 </span>
               </button>
             </div>
@@ -2213,18 +2236,40 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
                     type="button"
                     onClick={e => { e.stopPropagation(); hapticTap(); setLockerOpen(true) }}
                     onPointerDown={e => e.stopPropagation()}
-                    className="pointer-events-auto tap font-karla font-700"
+                    className="pointer-events-auto tap font-karla active:scale-[0.97]"
                     style={{
-                      width: '100%', marginTop: 14, padding: '0.6rem 0.7rem', borderRadius: 11,
+                      width: '100%', marginTop: 14, padding: '0.5rem 0.6rem', borderRadius: 12,
+                      display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                       fontSize: '0.76rem', color: '#dff1f8',
-                      background: 'rgba(127,208,232,0.1)', border: '1px solid rgba(127,208,232,0.36)',
-                      cursor: 'pointer', touchAction: 'manipulation',
+                      background: 'linear-gradient(180deg, rgba(127,208,232,0.16), rgba(127,208,232,0.07))',
+                      border: '1px solid rgba(127,208,232,0.45)',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.09)',
+                      cursor: 'pointer', touchAction: 'manipulation', transition: 'transform 0.08s',
                     }}
                   >
-                    <span style={{ color: '#7fd0e8' }}>{away}m</span> further unlocks the{' '}
-                    <span style={{ color: '#7fd0e8' }}>{next.name}</span>
+                    {/* The prize itself, silhouetted because it is not yours
+                        yet. Seeing the shape of the thing you are 51m from is
+                        worth more than the sentence describing it. */}
+                    <span style={{
+                      flexShrink: 0, width: 46, height: 34, borderRadius: 8,
+                      background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                    }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={next.image ?? '/boatrun.png'} alt="" decoding="async"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) opacity(0.45)' }} />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                    <span className="font-700" style={{ display: 'block' }}>
+                      <span style={{ color: '#7fd0e8' }}>{away}m</span> further unlocks the{' '}
+                      <span style={{ color: '#7fd0e8' }}>{next.name}</span>
+                    </span>
                     <span style={{ display: 'block', fontSize: '0.6rem', color: '#8fa6b8', marginTop: 2 }}>
                       Tap to open your boats
+                    </span>
+                    </span>
+                    <span aria-hidden style={{ flexShrink: 0, color: '#7fd0e8', display: 'flex' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                     </span>
                   </button>
                 )
