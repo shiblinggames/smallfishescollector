@@ -20,7 +20,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import {
   TERMS, TERM_NAME, type Term, type Direction,
-  chainFor, driftOver, unitPresets, contractValue, breakEvenFor, profitChance, lotSize, scheduledIn, fmtPrice, MAX_NOTIONAL,
+  chainFor, driftOver, unitPresets, contractValue, breakEvenFor, profitChance, lotSize, scheduledIn, fmtPrice,
   MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 import { getBoard, openBet, sellBet, markBetsSeen, markIntroSeen } from './boardActions'
@@ -640,7 +640,6 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
     ? index.price * (1 + (dir === 'up' ? 1 : -1) * chosen.distancePct / 100)
     : index.price
   const capped = Math.round(chosenUnits * prem)
-  const overSize = chosenUnits * lot * index.price > MAX_NOTIONAL
   const affordable = capped <= doubloons && capped >= MIN_STAKE && capped <= betCap
   // Where the contract has paid for itself: one per-UNIT premium past the
   // strike. `prem` is per contract and the lot scales the payoff, so both go in.

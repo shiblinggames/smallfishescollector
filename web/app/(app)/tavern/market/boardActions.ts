@@ -6,7 +6,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { EXCHANGE_FISHING_LEVEL, EXCHANGE_UNDER_CONSTRUCTION } from '@/lib/fishExchange'
 import {
   TERMS, type Term, type Direction,
-  rungsFor, typicalDayMove, driftOver, chainFor, contractValue, breakEvenFor, lotSize, scheduledIn, MIN_STAKE, MAX_STAKE, MAX_NOTIONAL,
+  rungsFor, typicalDayMove, driftOver, chainFor, contractValue, breakEvenFor, lotSize, scheduledIn, MIN_STAKE, MAX_STAKE,
 } from '@/lib/exchangeBoard'
 
 // The write side of the rebuilt Exchange.
@@ -330,13 +330,19 @@ export async function openBet(
   }
   if (stake > MAX_STAKE) return { error: `Largest premium is ${MAX_STAKE.toLocaleString()} ⟡` }
 
-  // NOTIONAL, not payout. A vanilla payoff has no ceiling to cap, and capping
-  // it would break the fair price, so what is bounded is the size of the
-  // position instead, the way a real position limit works.
-  const notional = units * lot * entry
-  if (notional > MAX_NOTIONAL) {
-    return { error: `Most you can hold of this one is ${Math.floor(MAX_NOTIONAL / (lot * entry)).toLocaleString()} contracts` }
-  }
+  // POSITION CAP REMOVED 2026-08-10, deliberately, to observe. Notional was a
+  // bad proxy for risk: it ignores volatility and term, so it measured a calm
+  // one-day index and a wild one-week one identically. On Shallows the 5M cap
+  // bound at 8,252 contracts costing 14,358 — a captain stopped at 7% of their
+  // balance over a number that is what the position pays if the index DOUBLES
+  // IN A DAY, roughly 40x its realistic ceiling.
+  //
+  // What the cap was really insuring against is a PRICING error, since fair
+  // value is a claim about a model and this board's model has been wrong
+  // before. That risk is now carried by monitoring instead: /admin shows
+  // realised edge, open exposure and the largest positions. Watch the realised
+  // edge — if premiums collected stop covering payouts as volume grows, the
+  // model is wrong and this comes back. MAX_STAKE still bounds a single ticket.
 
 
   // Debit first, atomically and balance-guarded, the same order every purchase

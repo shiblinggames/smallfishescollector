@@ -33,6 +33,49 @@ export default async function DevStatsPage() {
       .order('created_at', { ascending: false })
       .limit(300),
   ])
+
+  // ── EXCHANGE WATCH. The position cap came off 2026-08-10 to observe, so this
+  // is the instrument that replaced it. The number that matters is REALISED
+  // EDGE: premiums taken minus payouts, over premiums taken. Fair pricing is a
+  // claim about a model, and an uncapped board turns a wrong model into an
+  // unbounded faucet — so if this goes and stays negative as volume grows, the
+  // pricing is wrong and the cap goes back. Everything else here is context for
+  // that one figure.
+  const { data: betRows } = await admin
+    .from('exchange_bets')
+    .select('user_id, index_id, status, stake, payout, units, lot, entry_price, opened_at')
+  type Bet = { user_id: string; index_id: string; status: string; stake: number; payout: number | null
+               units: number | null; lot: number | null; entry_price: number | null; opened_at: string }
+  const bets = (betRows ?? []) as Bet[]
+  const settled = bets.filter(b => b.status !== 'open')
+  const open = bets.filter(b => b.status === 'open')
+  const takenAll = settled.reduce((a, b) => a + (b.stake ?? 0), 0)
+  const paidAll = settled.reduce((a, b) => a + (b.payout ?? 0), 0)
+  const edgePct = takenAll > 0 ? ((takenAll - paidAll) / takenAll) * 100 : null
+  const notionalOf = (b: Bet) => Number(b.units ?? 0) * Number(b.lot ?? 1) * Number(b.entry_price ?? 0)
+  const openNotional = open.reduce((a, b) => a + notionalOf(b), 0)
+  const openPremium = open.reduce((a, b) => a + (b.stake ?? 0), 0)
+  // Biggest live position, which is what an uncapped board makes worth watching.
+  const biggest = open.slice().sort((a, b) => notionalOf(b) - notionalOf(a))[0] ?? null
+  // Per-player net, worst (for the house) first.
+  const netByUser = new Map<string, { net: number; n: number }>()
+  for (const b of settled) {
+    const e = netByUser.get(b.user_id) ?? { net: 0, n: 0 }
+    e.net += (b.payout ?? 0) - (b.stake ?? 0); e.n += 1
+    netByUser.set(b.user_id, e)
+  }
+  const exUserIds = [...new Set([...netByUser.keys(), ...(biggest ? [biggest.user_id] : [])])]
+  const { data: exUsers } = exUserIds.length
+    ? await admin.from('profiles').select('id, username').in('id', exUserIds)
+    : { data: [] as { id: string; username: string | null }[] }
+  const exNameById = new Map((exUsers ?? []).map((u: any) => [u.id as string, u.username as string | null]))
+  const topWinners = [...netByUser.entries()]
+    .map(([uid, e]) => ({ name: exNameById.get(uid) ?? uid.slice(0, 8), ...e }))
+    .sort((a, b) => b.net - a.net).slice(0, 5)
+  // Enough settled volume for the edge to mean anything? Below this it is noise.
+  const EDGE_MIN_SAMPLE = 25
+  const edgeTrusted = settled.length >= EDGE_MIN_SAMPLE
+  const edgeBad = edgeTrusted && edgePct !== null && edgePct < 0
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const s = (data ?? {}) as any
   const t = (trawlData ?? {}) as any
@@ -417,6 +460,63 @@ export default async function DevStatsPage() {
                   <span style={{ textAlign: 'right', flexShrink: 0 }}>
                     <span className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f87171' }}>{u.count}</span>
                     <span className="font-karla" style={{ display: 'block', fontSize: '0.7rem', color: '#928d84', marginTop: 2 }}>sev {u.maxSev}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* EXCHANGE WATCH — the instrument that replaced the position cap.
+            Coloured off realised edge, not off volume: green while premiums
+            cover payouts, red the moment they stop, grey until there is enough
+            settled volume for the number to mean anything. */}
+        <div style={{
+          background: edgeBad ? 'rgba(60,12,12,0.5)' : edgeTrusted ? 'rgba(8,20,14,0.45)' : 'rgba(10,16,26,0.5)',
+          border: `1px solid ${edgeBad ? 'rgba(248,113,113,0.4)' : edgeTrusted ? 'rgba(52,211,153,0.28)' : 'rgba(255,255,255,0.12)'}`,
+          borderRadius: 16, padding: '1.2rem 1.3rem', marginBottom: 22,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+            <span aria-hidden style={{ width: 4, height: 18, borderRadius: 2, background: edgeBad ? '#f87171' : edgeTrusted ? '#34d399' : '#8aa0b8', flexShrink: 0 }} />
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.82rem', color: '#e4e0d9' }}>
+              Exchange Watch · no position cap
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 14, marginBottom: 14 }}>
+            {[
+              { k: 'Realised edge', v: edgePct === null ? '—' : `${edgePct >= 0 ? '+' : ''}${edgePct.toFixed(1)}%`,
+                sub: edgeTrusted ? `${fmt(settled.length)} settled` : `${fmt(settled.length)} settled · need ${EDGE_MIN_SAMPLE}`,
+                c: edgeBad ? '#f87171' : edgeTrusted ? '#34d399' : '#8aa0b8' },
+              { k: 'Premiums taken', v: fmt(takenAll), sub: 'settled only', c: '#e4e0d9' },
+              { k: 'Payouts made', v: fmt(paidAll), sub: paidAll > takenAll ? 'exceeds premiums' : 'covered', c: paidAll > takenAll ? '#f87171' : '#e4e0d9' },
+              { k: 'Open exposure', v: fmt(Math.round(openNotional)), sub: `${fmt(open.length)} open · ${fmt(openPremium)} at risk`, c: '#e8c87a' },
+            ].map(m => (
+              <div key={m.k}>
+                <span className="font-karla" style={{ display: 'block', fontSize: '0.78rem', color: '#c6c0b7' }}>{m.k}</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: m.c }}>{m.v}</span>
+                <span className="font-karla" style={{ display: 'block', fontSize: '0.68rem', color: '#928d84', marginTop: 1 }}>{m.sub}</span>
+              </div>
+            ))}
+          </div>
+
+          {biggest && (
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#b2aca3', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10 }}>
+              Largest live position: <span style={{ color: '#e8c87a' }}>{fmt(Math.round(notionalOf(biggest)))}</span> on{' '}
+              <span style={{ color: '#e4e0d9' }}>{biggest.index_id}</span> by{' '}
+              <span style={{ color: '#e4e0d9' }}>{exNameById.get(biggest.user_id) ?? biggest.user_id.slice(0, 8)}</span>{' '}
+              for {fmt(biggest.stake)} premium
+            </p>
+          )}
+
+          {topWinners.length > 0 && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10, marginTop: 10 }}>
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#928d84', marginBottom: 6 }}>Net by player, settled</p>
+              {topWinners.map(w => (
+                <div key={w.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, paddingBottom: 4 }}>
+                  <span className="font-karla" style={{ fontSize: '0.86rem', color: '#c6c0b7' }}>{w.name} <span style={{ color: '#7a756d' }}>· {w.n}</span></span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.86rem', color: w.net > 0 ? '#f0b880' : '#7fd0a0' }}>
+                    {w.net > 0 ? '+' : ''}{fmt(w.net)}
                   </span>
                 </div>
               ))}
