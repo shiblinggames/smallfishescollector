@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
+import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, startTideRun, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
@@ -496,6 +496,19 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   //      animation. If it errors, the player has already seen the
   //      number — the audit row + the credit didn't land, but they'll
   //      get more on the next run.
+  // THE RUN'S TOKEN. Minted server-side when a run opens and spent by its
+  // payout, so one run pays once — replaying the reward call finds it consumed.
+  // A ref, not state: nothing renders from it and a re-render mid-run must not
+  // disturb it. Cleared on spend so a stale token can never ride a second run.
+  const runTokenRef = useRef<string | null>(null)
+  const openRunToken = useCallback(() => {
+    runTokenRef.current = null
+    // Fire and forget — the run starts on the tap, never waiting on the network.
+    // If it never arrives the payout falls back to the capped path rather than
+    // costing the player their run.
+    void startTideRun().then(r => { runTokenRef.current = r.token }).catch(() => {})
+  }, [])
+
   const beaconsThisRun = gRef.current.beaconsSmashed
   useEffect(() => {
     if (uiState !== 'dead') return
@@ -506,7 +519,9 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     let cancelled = false
     void (async () => {
       try {
-        const result = await awardTideRunBeacons(beaconsThisRun)
+        const spentToken = runTokenRef.current
+        runTokenRef.current = null
+        const result = await awardTideRunBeacons(beaconsThisRun, spentToken)
         if ('ok' in result) {
           // Stash + dispatch happen unconditionally even if `cancelled`
           // is true. The cleanup that sets cancelled=true fires as soon
@@ -660,6 +675,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
       g.state = 'playing'
       setUiState('playing')
       setScore(0)
+      openRunToken()
       return
     }
     if (g.state === 'dead') {
@@ -668,6 +684,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
       g.state = 'playing'
       setUiState('playing')
       setScore(0)
+      openRunToken()
       return
     }
     if (g.state === 'playing' && !g.airborne) {

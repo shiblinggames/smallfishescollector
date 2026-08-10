@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TIDE_CHAMPION_CONTEST_ID, TIDE_CHAMPION_GOAL_M, TIDE_CHAMPION_PRIZE_CODE } from '@/lib/contests'
 import { flagAnomaly } from '@/lib/anomaly'
+import { issueRunToken, consumeRunToken } from '@/lib/runToken'
 
 // Beacon counts are CLIENT-AUTHORED, so these two lines are the only thing
 // standing between a forged call and minted currency. Flagging alone was not
@@ -138,6 +139,35 @@ export async function recordTideRunRun(distance: number, beacons: number): Promi
  *  toward leaderboard PBs (they always did). */
 const DOUBLOONS_PER_BEACON = 2
 
+/**
+ * Open a run and mint the token its reward will be paid against.
+ *
+ * The beacon count is authored by the client and always will be — the game is a
+ * canvas loop in the browser and the server never simulates it, so something has
+ * to be reported. What the server CAN own is how many times that report is
+ * honoured, and this is that: one token per run, consumed by the payout.
+ *
+ * The clamp added earlier bounds a single forged call. It does not stop the same
+ * call being sent again, which is exactly what happened: one account replayed a
+ * reward every fifteen seconds for twenty-five days. A spent token rejects the
+ * second send outright, which is the difference between narrowing a faucet and
+ * closing it.
+ *
+ * Fails SOFT. If the token cannot be minted the run still plays; the reward path
+ * falls back to the capped-but-unverified route rather than eating the run.
+ */
+export async function startTideRun(): Promise<{ token: string | null }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { token: null }
+    const admin = createAdminClient()
+    return { token: await issueRunToken(admin, user.id, 'tide_run') }
+  } catch {
+    return { token: null }
+  }
+}
+
 export type AwardTideRunResult =
   | { ok: true; doubloons: number; newDoubloonTotal: number }
   | { error: string }
@@ -148,7 +178,7 @@ export type AwardTideRunResult =
  *  client is trusted enough that the leaderboard is just distance,
  *  but a hard ceiling keeps a manipulated payload from minting
  *  arbitrary doubloons. */
-export async function awardTideRunBeacons(beacons: number): Promise<AwardTideRunResult> {
+export async function awardTideRunBeacons(beacons: number, token?: string | null): Promise<AwardTideRunResult> {
   try {
     if (typeof beacons !== 'number' || !isFinite(beacons) || beacons < 0) {
       return { error: 'Invalid beacon count' }
@@ -173,6 +203,21 @@ export async function awardTideRunBeacons(beacons: number): Promise<AwardTideRun
     // 5.66M over 25 days with every call recorded and paid.
     if (smashed > TIDE_RUN_PLAUSIBLE_BEACONS) {
       await flagAnomaly(admin, user.id, 'implausible:tideRunBeacons', smashed > 5000 ? 3 : 2, { beacons: smashed })
+    }
+
+    // ONE PAYOUT PER RUN. The token was minted when the run opened and is
+    // consumed atomically here, so a replayed call finds it already spent and
+    // gets nothing. This is what the clamp above could not do: the clamp bounds
+    // what a single forged call is worth, and this bounds how many times any
+    // call — forged or genuine — can be honoured.
+    //
+    // Rejects rather than falling back when a token is supplied and refused: a
+    // present-but-spent token is a replay, and the only correct answer to a
+    // replay is no.
+    const spent = await consumeRunToken(admin, user.id, 'tide_run', token)
+    if (token && !spent) {
+      await flagAnomaly(admin, user.id, 'replay:tideRunReward', 3, { beacons: smashed })
+      return { error: 'That run has already been paid out.' }
     }
 
     // The clamp is what actually costs a cheat anything. It is deliberately
