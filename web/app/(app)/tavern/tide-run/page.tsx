@@ -13,7 +13,7 @@ export default async function TideRunPage() {
   const [{ data: profile }, topHolder, initialRank] = await Promise.all([
     admin
       .from('profiles')
-      .select('tide_run_best_distance, has_seen_tide_run_tour, tide_run_boat')
+      .select('tide_run_best_distance, has_seen_tide_run_tour, tide_run_boat, tide_run_sea')
       .eq('id', user.id)
       .single(),
     // Top hiscore holder — surfaced on the wreck screen so the
@@ -40,6 +40,7 @@ export default async function TideRunPage() {
       <main className="relative" style={{ zIndex: 1 }}>
         <TideRunGame
       initialBoatId={(profile?.tide_run_boat as string | null) ?? 'original'}
+      initialSeaId={(profile?.tide_run_sea as string | null) ?? 'home'}
           initialBestDistance={initialBestDistance}
           hasSeenTour={hasSeenTour}
           topHolder={topHolder}

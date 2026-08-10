@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { TIDE_RUN_BOATS, tideRunBoat, nextBoat, type TideRunBoat } from '@/lib/tideRunBoats'
-import { setTideRunBoat } from './actions'
+import { TIDE_RUN_SEAS, nextSea, type TideRunSea } from '@/lib/tideRunSeas'
+import { setTideRunBoat, setTideRunSea } from './actions'
 import { hapticTap, hapticReward } from '@/lib/haptics'
+import PopupShell from '@/components/PopupShell'
 
 /**
  * THE BOAT LOCKER.
@@ -19,20 +21,38 @@ import { hapticTap, hapticReward } from '@/lib/haptics'
  * better reason to tap Play again than "you died".
  */
 export default function BoatLocker({
-  bestDistance, equippedId, onEquip, onClose,
+  bestDistance, equippedId, equippedSeaId, onEquip, onEquipSea, onClose,
 }: {
   bestDistance: number
   equippedId: string
+  equippedSeaId: string
   onEquip: (id: string) => void
+  onEquipSea: (id: string) => void
   onClose: () => void
 }) {
+  const [tab, setTab] = useState<'boats' | 'seas'>('boats')
+  const [equippedSea, setEquippedSea] = useState(equippedSeaId)
   const [equipped, setEquipped] = useState(equippedId)
   const [busy, setBusy] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
-  const next = nextBoat(bestDistance)
-  const owned = TIDE_RUN_BOATS.filter(b => bestDistance >= b.unlockAt).length
+  const next = tab === 'boats' ? nextBoat(bestDistance) : nextSea(bestDistance)
+  const owned = (tab === 'boats' ? TIDE_RUN_BOATS : TIDE_RUN_SEAS).filter(x => bestDistance >= x.unlockAt).length
+  const total = (tab === 'boats' ? TIDE_RUN_BOATS : TIDE_RUN_SEAS).length
+
+  function equipSea(sea: TideRunSea) {
+    if (bestDistance < sea.unlockAt || sea.id === equippedSea) return
+    hapticTap(); setErr(null); setBusy(sea.id)
+    const previous = equippedSea
+    setEquippedSea(sea.id)
+    startTransition(async () => {
+      const res = await setTideRunSea(sea.id)
+      if ('error' in res) { setEquippedSea(previous); setErr(res.error) }
+      else { onEquipSea(sea.id); hapticReward() }
+      setBusy(null)
+    })
+  }
 
   function equip(b: TideRunBoat) {
     if (bestDistance < b.unlockAt || b.id === equipped) return
@@ -53,19 +73,15 @@ export default function BoatLocker({
   }
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200, overflowY: 'auto',
-        background: 'rgba(3,10,18,0.88)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)',
-      }}
-    >
+    // PopupShell, not a hand-rolled fixed overlay. The first version padded
+    // 1.4rem top and bottom and the nav bar (76px) and mobile tab bar (80px)
+    // ate the header and the last row of cards. The shell exists because those
+    // two heights are the same on every full-screen sheet in the game, and
+    // getting them from one place is the only way they stay right.
+    <PopupShell open onClose={onClose} zIndex={200} backdropColor="rgba(3,10,18,0.88)">
       <div
         onClick={e => e.stopPropagation()}
-        style={{
-          maxWidth: 520, margin: '0 auto',
-          padding: 'calc(env(safe-area-inset-top, 0px) + 1.4rem) 1rem calc(env(safe-area-inset-bottom, 0px) + 2rem)',
-        }}
+        style={{ maxWidth: 520, margin: '0 auto', padding: '0 1rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 4 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -73,7 +89,7 @@ export default function BoatLocker({
               The Boathouse
             </p>
             <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f2f7fb', lineHeight: 1.1, marginTop: 3 }}>
-              Your Boats
+              {tab === 'boats' ? 'Your Boats' : 'Your Waters'}
             </p>
           </div>
           <button
@@ -89,10 +105,36 @@ export default function BoatLocker({
           </button>
         </div>
 
+        {/* Two ladders, one screen. Tabs rather than a long scroll, because a
+            captain arrives here wanting one of two things and should not have
+            to hunt past eleven boats to change the water. */}
+        <div style={{ display: 'flex', gap: 7, margin: '12px 0 10px' }}>
+          {([['boats', 'Boats'], ['seas', 'Waters']] as const).map(([id, label]) => {
+            const on = tab === id
+            return (
+              <button
+                key={id}
+                onClick={() => { hapticTap(); setTab(id); setErr(null) }}
+                className="font-karla font-700 uppercase tap"
+                style={{
+                  padding: '0.4rem 0.85rem', borderRadius: 999,
+                  fontSize: '0.6rem', letterSpacing: '0.12em',
+                  background: on ? 'rgba(127,208,232,0.16)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${on ? 'rgba(127,208,232,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                  color: on ? '#dff1f8' : '#8fa6b8',
+                  cursor: 'pointer', touchAction: 'manipulation',
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Progress, then the single nearest target. The count says how far you
             have come; the target says what the next run is FOR. */}
         <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8fa6b8' }}>
-          {owned} of {TIDE_RUN_BOATS.length} earned
+          {owned} of {total} earned
         </p>
         {next && (
           <div style={{
@@ -111,7 +153,66 @@ export default function BoatLocker({
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginTop: 14 }}>
-          {TIDE_RUN_BOATS.map(b => {
+          {tab === 'seas' && TIDE_RUN_SEAS.map(sea => {
+            const unlocked = bestDistance >= sea.unlockAt
+            const isOn = equippedSea === sea.id
+            return (
+              <button
+                key={sea.id}
+                onClick={() => equipSea(sea)}
+                disabled={!unlocked || busy !== null}
+                aria-label={unlocked ? `${sea.name}${isOn ? ', sailing' : ', tap to sail'}` : `${sea.name}, locked until ${sea.unlockAt} metres`}
+                className="tap"
+                style={{
+                  position: 'relative', textAlign: 'left', padding: '0.7rem 0.7rem 0.75rem',
+                  borderRadius: 14, overflow: 'hidden',
+                  background: isOn ? 'rgba(127,208,232,0.13)' : 'rgba(255,255,255,0.035)',
+                  border: `1px solid ${isOn ? 'rgba(127,208,232,0.65)' : 'rgba(255,255,255,0.1)'}`,
+                  boxShadow: isOn ? '0 0 20px rgba(127,208,232,0.16)' : 'none',
+                  cursor: unlocked ? 'pointer' : 'default',
+                  opacity: busy && busy !== sea.id ? 0.55 : 1,
+                  transition: 'background 0.16s ease, border-color 0.16s ease',
+                  touchAction: 'manipulation',
+                }}
+              >
+                {/* The swatch IS the preview. Sky over sea, the two colours a
+                    player actually reads the world by, so a sea is recognisable
+                    without launching a run to look at it. Locked ones are
+                    desaturated rather than blanked — you can still tell the
+                    Ash Reach from the Frozen Reach, which is the point. */}
+                <span style={{
+                  display: 'block', height: 74, borderRadius: 9, overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: `linear-gradient(180deg, ${sea.swatch[0]} 0%, ${sea.swatch[0]} 45%, ${sea.swatch[1]} 45%, ${sea.swatch[1]} 100%)`,
+                  filter: unlocked ? 'none' : 'saturate(0.25) brightness(0.55)',
+                }} />
+
+                <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: unlocked ? '#f2f7fb' : '#6e808f', marginTop: 6, lineHeight: 1.15 }}>
+                  {unlocked ? sea.name : '???'}
+                </p>
+                {unlocked ? (
+                  <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8fa6b8', lineHeight: 1.35, marginTop: 2 }}>
+                    {sea.blurb}
+                  </p>
+                ) : (
+                  <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#7fd0e8', marginTop: 2 }}>
+                    {sea.unlockAt}m
+                  </p>
+                )}
+                {isOn && (
+                  <span className="font-karla font-800 uppercase" style={{
+                    position: 'absolute', top: 8, right: 8,
+                    fontSize: '0.46rem', letterSpacing: '0.14em', color: '#04202b',
+                    background: '#7fd0e8', borderRadius: 999, padding: '0.2rem 0.45rem',
+                  }}>
+                    Sailing
+                  </span>
+                )}
+              </button>
+            )
+          })}
+
+          {tab === 'boats' && TIDE_RUN_BOATS.map(b => {
             const unlocked = bestDistance >= b.unlockAt
             const isOn = equipped === b.id
             const src = b.image ?? '/boatrun.png'
@@ -178,6 +279,6 @@ export default function BoatLocker({
           })}
         </div>
       </div>
-    </div>
+    </PopupShell>
   )
 }

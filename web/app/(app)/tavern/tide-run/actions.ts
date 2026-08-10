@@ -6,6 +6,7 @@ import { TIDE_CHAMPION_CONTEST_ID, TIDE_CHAMPION_GOAL_M, TIDE_CHAMPION_PRIZE_COD
 import { flagAnomaly } from '@/lib/anomaly'
 import { issueRunToken, consumeRunToken } from '@/lib/runToken'
 import { tideRunBoat, isBoatUnlocked } from '@/lib/tideRunBoats'
+import { tideRunSea, isSeaUnlocked } from '@/lib/tideRunSeas'
 
 // Beacon counts are CLIENT-AUTHORED, so these two lines are the only thing
 // standing between a forged call and minted currency. Flagging alone was not
@@ -381,6 +382,36 @@ export async function setTideRunBoat(boatId: string): Promise<{ ok: true; boatId
       .update({ tide_run_boat: boat.id }).eq('id', user.id)
     if (error) return { error: 'Could not equip that boat' }
     return { ok: true, boatId: boat.id }
+  } catch {
+    return { error: 'Server error' }
+  }
+}
+
+/** Equip a sea. Same contract as the boat: ownership is derived from best
+ *  distance, so this server-side check IS the grant. */
+export async function setTideRunSea(seaId: string): Promise<{ ok: true; seaId: string } | { error: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const sea = tideRunSea(seaId)
+    // tideRunSea falls back to Home Waters for anything unknown, so compare ids:
+    // a bogus id is refused rather than silently swapped for the default.
+    if (sea.id !== seaId) return { error: 'No such sea' }
+
+    const admin = createAdminClient()
+    const { data: profile } = await admin
+      .from('profiles').select('tide_run_best_distance').eq('id', user.id).single()
+    const best = Number(profile?.tide_run_best_distance ?? 0)
+    if (!isSeaUnlocked(sea.id, best)) {
+      return { error: `Sail ${sea.unlockAt}m to reach ${sea.name}.` }
+    }
+
+    const { error } = await admin.from('profiles')
+      .update({ tide_run_sea: sea.id }).eq('id', user.id)
+    if (error) return { error: 'Could not change waters' }
+    return { ok: true, seaId: sea.id }
   } catch {
     return { error: 'Server error' }
   }

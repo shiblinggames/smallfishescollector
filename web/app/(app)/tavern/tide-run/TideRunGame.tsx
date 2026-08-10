@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, startTideRun, setTideRunBoat, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
+import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, startTideRun, setTideRunBoat, setTideRunSea, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
 import { tideRunBoat, boatsUnlockedBetween, nextBoat, type TideRunBoat } from '@/lib/tideRunBoats'
+import { tideRunSea, seasUnlockedBetween, type TideRunSea } from '@/lib/tideRunSeas'
 import BoatLocker from './BoatLocker'
 import BoatUnlockedOverlay from './BoatUnlockedOverlay'
+import SeaUnlockedOverlay from './SeaUnlockedOverlay'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
@@ -222,20 +224,15 @@ interface SparkleParticle {
 // ── Day/night palette stops ──────────────────────────────────────────────────
 // Each stop covers a quarter of the cycle. Lerps interpolate between adjacent
 // stops based on the local fraction. Order: midday → dusk → night → dawn → loop.
-const PALETTE_STOPS = [
-  // midday
-  { skyTop: '#5da7d4', skyBot: '#a8d4ec', seaTop: '#1f5b80', seaMid: '#0e3a5c', seaBot: '#03182a',
-    island: '#46648c', cloud: 'rgba(255,255,255,0.42)', foam: 'rgba(220,240,255,0.70)' },
-  // dusk
-  { skyTop: '#c66a4a', skyBot: '#f0b388', seaTop: '#3b3a5c', seaMid: '#1e2240', seaBot: '#0a0e1f',
-    island: '#3c3a5a', cloud: 'rgba(255,210,180,0.45)', foam: 'rgba(255,230,200,0.65)' },
-  // night
-  { skyTop: '#1a2548', skyBot: '#3a4d7a', seaTop: '#0c1830', seaMid: '#060d20', seaBot: '#020510',
-    island: '#1a2540', cloud: 'rgba(180,200,230,0.28)', foam: 'rgba(180,200,230,0.55)' },
-  // dawn
-  { skyTop: '#7a5a82', skyBot: '#f3b298', seaTop: '#2a3854', seaMid: '#13203a', seaBot: '#070d1c',
-    island: '#3a3852', cloud: 'rgba(255,220,200,0.40)', foam: 'rgba(255,225,205,0.62)' },
-] as const
+// The palette stops now live per-SEA in lib/tideRunSeas.ts, so a whole new
+// world is eight colours times four stops and no assets at all. This module
+// keeps a mutable reference to the equipped sea's stops rather than threading
+// them through every draw helper: currentPalette() is called once a frame from
+// inside the render loop, and passing a palette down through a dozen drawing
+// functions would have touched every one of them for no gain.
+let PALETTE_STOPS: readonly SeaStopLike[] = tideRunSea('home').stops
+type SeaStopLike = TideRunSea['stops'][number]
+function useSeaStops(seaId: string) { PALETTE_STOPS = tideRunSea(seaId).stops }
 
 // Hex (or rgb string) → number triple
 function rgbOf(c: string): [number, number, number] {
@@ -303,6 +300,8 @@ interface TideRunGameProps {
   initialBestDistance?: number
   /** Equipped boat id, from the profile. */
   initialBoatId?: string
+  /** Equipped sea id, from the profile. */
+  initialSeaId?: string
   hasSeenTour?: boolean
   /** Current #1 leaderboard holder. Shown on the wreck screen as the
    *  global target to chase. Null on a cold leaderboard (no one has
@@ -314,13 +313,18 @@ interface TideRunGameProps {
   initialRank?: PlayerTideRunRank | null
 }
 
-export default function TideRunGame({ initialBestDistance = 0, initialBoatId = 'original', hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
+export default function TideRunGame({ initialBestDistance = 0, initialBoatId = 'original', initialSeaId = 'home', hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
   // ── Boats ────────────────────────────────────────────────────────────────
   const [boatId, setBoatId] = useState(initialBoatId)
+  const [seaId, setSeaId] = useState(initialSeaId)
+  // Point the renderer at the equipped sea's stops. Runs before paint so the
+  // very first frame is already the right water, never a flash of Home Waters.
+  useSeaStops(seaId)
   const [lockerOpen, setLockerOpen] = useState(false)
   // Boats this run just earned. Held until the player taps them away, never on
   // a timer — the moment exists to be looked at.
   const [justUnlocked, setJustUnlocked] = useState<TideRunBoat[]>([])
+  const [justUnlockedSeas, setJustUnlockedSeas] = useState<TideRunSea[]>([])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
@@ -985,6 +989,8 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
           // list. Equipping is what the overlay does on dismiss.
           const earned = boatsUnlockedBetween(highScore, finalMeters)
           if (earned.length) setJustUnlocked(earned)
+          const earnedSeas = seasUnlockedBetween(highScore, finalMeters)
+          if (earnedSeas.length) setJustUnlockedSeas(earnedSeas)
           setHighScore(finalMeters)
           // Chain the rank refresh off the PB submission so the wreck
           // modal lands on the updated position, not the stale one.
@@ -2236,11 +2242,28 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
         />
       )}
 
+      {/* Seas queue BEHIND boats rather than fighting them for the screen: a
+          run that earns both shows the boat, then the water. Two overlays in a
+          row reads as two rewards; two at once reads as a mess. */}
+      {justUnlocked.length === 0 && justUnlockedSeas.length > 0 && (
+        <SeaUnlockedOverlay
+          seas={justUnlockedSeas}
+          onDismiss={() => {
+            const last = justUnlockedSeas[justUnlockedSeas.length - 1]
+            setJustUnlockedSeas([])
+            setSeaId(last.id)
+            void setTideRunSea(last.id).catch(() => {})
+          }}
+        />
+      )}
+
       {lockerOpen && (
         <BoatLocker
           bestDistance={highScore}
           equippedId={boatId}
+          equippedSeaId={seaId}
           onEquip={setBoatId}
+          onEquipSea={setSeaId}
           onClose={() => setLockerOpen(false)}
         />
       )}
