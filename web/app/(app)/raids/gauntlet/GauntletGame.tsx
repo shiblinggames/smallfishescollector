@@ -486,7 +486,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [boonFromShrine, setBoonFromShrine] = useState(false)
   // Tapped boon/curse/confluence on the breather screen → details popup.
   const [detailEffect, setDetailEffect] = useState<
-    { kind: 'boon' | 'curse' | 'confluence'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number; image?: string | null } | null
+    { kind: 'boon' | 'curse' | 'confluence'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number; image?: string | null
+      /** The whole ladder, so the popup can show what you hold AND what the next
+       *  rung buys. Built from the boon's own tiers / the confluence's levels,
+       *  so a retune can never leave stale copy here. */
+      rungs?: { label: string; desc: string; held: boolean; current: boolean }[] } | null
   >(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
@@ -1975,11 +1979,40 @@ export default function GauntletGame(props: GauntletGameProps) {
               <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f5f2ec', lineHeight: 1.12, marginTop: 6 }}>
                 {detailEffect.name}
               </p>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 11, padding: '0.36rem 0.9rem', borderRadius: 999, background: `${accent}20`, border: `1px solid ${accent}5e` }}>
-                <span aria-hidden style={{ fontSize: '0.78rem', color: accent }}>{isConf ? '◆' : isBoon ? '▲' : '▼'}</span>
-                <span className="font-karla font-800" style={{ fontSize: '0.86rem', color: fg }}>{detailEffect.desc}</span>
+              {/* WHAT IT DOES RIGHT NOW, in its own block at the top — the same
+                  move ItemEffectLines makes for an Abyssal's signature. A boon
+                  you hold at tier 2 does exactly one thing, and burying that one
+                  line in a paragraph about the whole family meant the answer to
+                  "what am I actually getting" was never the first thing read. */}
+              <div style={{ marginTop: 12, padding: '0.6rem 0.75rem', borderRadius: 12, background: `${accent}16`, border: `1px solid ${accent}4d`, textAlign: 'left' }}>
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: `${accent}cc`, marginBottom: 4 }}>
+                  {isConf ? 'What the synergy adds' : isBoon ? 'What you have now' : 'What it does to you'}
+                </p>
+                <p className="font-karla font-700" style={{ fontSize: '0.88rem', lineHeight: 1.4, color: fg }}>
+                  {detailEffect.desc}
+                </p>
               </div>
-              <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.85)', marginTop: 13 }}>
+
+              {/* THE LADDER as lines, not prose. Every rung is one effect, so a
+                  reader can see what they hold and what the next one buys
+                  without parsing a paragraph for the numbers. */}
+              {detailEffect.rungs && detailEffect.rungs.length > 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 11, textAlign: 'left' }}>
+                  {detailEffect.rungs.map(r => (
+                    <div key={r.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, opacity: r.held ? 1 : 0.5 }}>
+                      <span aria-hidden style={{ flexShrink: 0, marginTop: 1, width: 15, textAlign: 'center', fontSize: '0.62rem', color: r.current ? accent : r.held ? `${accent}99` : 'rgba(255,255,255,0.3)' }}>
+                        {r.current ? (isConf ? '◆' : '▲') : r.held ? '✓' : '·'}
+                      </span>
+                      <span className="font-karla font-700 uppercase" style={{ flexShrink: 0, width: 30, fontSize: '0.5rem', letterSpacing: '0.1em', marginTop: 3, color: r.current ? accent : 'rgba(255,255,255,0.35)' }}>{r.label}</span>
+                      <span className="font-karla" style={{ flex: 1, minWidth: 0, fontSize: '0.76rem', lineHeight: 1.4, color: r.current ? '#f5f2ec' : 'rgba(245,242,236,0.6)' }}>{r.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* The mechanic, underneath and quieter. It explains HOW the thing
+                  works; the block above already answered WHAT it does. */}
+              <p className="font-karla" style={{ fontSize: '0.8rem', lineHeight: 1.5, color: 'rgba(245,242,236,0.68)', marginTop: 13, textAlign: 'left' }}>
                 {detailEffect.detail}
               </p>
               {isBoon && (() => {
@@ -3397,7 +3430,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                             const rc = BOON_RARITY_META[boonRarity(fam)].color
                             return (
                               <button key={fam.id} className="font-karla font-700 tap"
-                                onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length, image: fam.image })}
+                                onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length, image: fam.image,
+                                  rungs: fam.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= tier, current: i + 1 === tier })) })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
                                 {fam.name} {boonTierLabel(tier)}
                               </button>
@@ -3414,7 +3448,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                             const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
                             return (
                               <button key={c.id} className="font-karla font-700 tap"
-                                onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `${c.detail} Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0, image: c.image })}
+                                onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `${c.detail} Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0, image: c.image,
+                                  rungs: c.levels.map((lv, i) => ({ label: boonTierLabel(i + 1), desc: lv.desc, held: i + 1 <= lvl, current: i + 1 === lvl })) })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: fresh ? `${GOLD}30` : `${GOLD}18`, border: `1px solid ${GOLD}${fresh ? 'aa' : '66'}`, color: '#fbe7c4', boxShadow: fresh ? `0 0 12px ${GOLD}66` : 'none' }}>
                                 {c.name} {lvlLabel}{fresh ? ' · NEW' : ''}
                               </button>
@@ -3429,7 +3464,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                             const label = curseTierLabel(tier)
                             return (
                               <button key={c.id} className="font-karla font-700 tap"
-                                onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length, image: c.image })}
+                                onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length, image: c.image,
+                                  rungs: c.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= tier, current: i + 1 === tier })) })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
                                 {c.name}{label ? ` ${label}` : ''}
                               </button>
@@ -3950,7 +3986,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                         </span>
                         <span
                           role="button" tabIndex={0} aria-label={`What ${b.name} does`}
-                          onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg }) }}
+                          onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg,
+                            rungs: fam?.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= b.tier, current: i + 1 === b.tier })) }) }}
                           className="font-cinzel font-700 tap"
                           style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1 }}>
                           i
