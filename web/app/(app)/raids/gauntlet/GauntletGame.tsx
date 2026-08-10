@@ -490,7 +490,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       /** The whole ladder, so the popup can show what you hold AND what the next
        *  rung buys. Built from the boon's own tiers / the confluence's levels,
        *  so a retune can never leave stale copy here. */
-      rungs?: { label: string; desc: string; held: boolean; current: boolean }[] } | null
+      rungs?: { label: string; desc: string; held: boolean; current: boolean }[]
+      /** Rarity, which the draft card no longer spends space restating. */
+      rarityLabel?: string; rarityColor?: string } | null
   >(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
@@ -1979,6 +1981,13 @@ export default function GauntletGame(props: GauntletGameProps) {
               <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f5f2ec', lineHeight: 1.12, marginTop: 6 }}>
                 {detailEffect.name}
               </p>
+              {/* Rarity in WORDS, the one thing the card can no longer say now
+                  that it carries rarity in colour alone. */}
+              {detailEffect.rarityLabel && (
+                <span className="font-karla font-800 uppercase" style={{ display: 'inline-block', marginTop: 8, fontSize: '0.52rem', letterSpacing: '0.13em', color: detailEffect.rarityColor, background: `${detailEffect.rarityColor}22`, border: `1px solid ${detailEffect.rarityColor}`, borderRadius: 999, padding: '0.2rem 0.6rem' }}>
+                  {detailEffect.rarityLabel}
+                </span>
+              )}
               {/* WHAT IT DOES RIGHT NOW, in its own block at the top — the same
                   move ItemEffectLines makes for an Abyssal's signature. A boon
                   you hold at tier 2 does exactly one thing, and burying that one
@@ -3431,7 +3440,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                             return (
                               <button key={fam.id} className="font-karla font-700 tap"
                                 onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length, image: fam.image,
-                                  rungs: fam.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= tier, current: i + 1 === tier })) })}
+                                  rungs: fam.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= tier, current: i + 1 === tier })),
+                                  rarityLabel: BOON_RARITY_META[boonRarity(fam)].label, rarityColor: rc })}
                                 style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
                                 {fam.name} {boonTierLabel(tier)}
                               </button>
@@ -3981,13 +3991,19 @@ export default function GauntletGame(props: GauntletGameProps) {
                         <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.04rem', color: '#f4fbf9', lineHeight: 1.14 }}>
                           {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
                         </p>
-                        <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.2rem 0.55rem', boxShadow: legendary ? `0 0 12px ${rm.color}88` : 'none' }}>
-                          {rm.label}
-                        </span>
+                        {/* The rarity PILL is gone from the card. It restated
+                            what the card already says four other ways — the
+                            medallion's tint, the border weight, the tier label
+                            beside the name, and the ring that only rare and
+                            legendary pulse — and it was doing that while
+                            occupying the one piece of space worth giving to a
+                            touch target on a card that drafts irreversibly.
+                            The WORD now lives in the popup, one tap away. */}
                         <span
                           role="button" tabIndex={0} aria-label={`What ${b.name} does`}
                           onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg,
-                            rungs: fam?.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= b.tier, current: i + 1 === b.tier })) }) }}
+                            rungs: fam?.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= b.tier, current: i + 1 === b.tier })),
+                            rarityLabel: rm.label, rarityColor: rm.color }) }}
                           className="tap"
                           // The card itself DRAFTS on tap, and a draft cannot be
                           // taken back — so the read-only affordance sitting on
@@ -4003,9 +4019,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                           // without this the tap that opens the popup still
                           // buzzed as though something had been chosen.
                           onPointerDown={e => e.stopPropagation()}
-                          style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, margin: -10, cursor: 'pointer', touchAction: 'manipulation' }}>
+                          style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, margin: -8, cursor: 'pointer', touchAction: 'manipulation' }}>
                           <span aria-hidden className="font-cinzel font-700"
-                            style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.38)', color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1 }}>
+                            style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.92)', fontSize: '1.05rem', fontStyle: 'italic', lineHeight: 1 }}>
                             i
                           </span>
                         </span>
