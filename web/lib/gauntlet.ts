@@ -2018,9 +2018,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '35% chance a crew ability isn’t spent when used', detail: 'When you fire a crew ability, there’s a 35% chance it isn’t spent and stays ready for next turn.', effect: { kind: 'abilityRefundChance', chance: 0.35 } },
   ] },
   { id: 'blood_in_the_water', image: '/gauntlet/boons/blood_in_the_water.png', name: 'Blood in the Water', gauntlet: 'don', flavor: 'The deep hates a wasted kill. Strike harder than the hull can take, and it hands you back the difference.', rarity: 'rare', tiers: [
-    { desc: 'Heal 20% of overkill damage on a kill', detail: 'When a shot sinks a hull, any damage that lands PAST its remaining HP is overkill (normally wasted). You heal 20% of that overkill back to your ship. A clean shot that drops it exactly to zero heals nothing — the reward is for hitting hard enough to spill over. Each hit’s heal is capped so a huge Mega can’t refill your whole bar at once.', effect: { kind: 'overkillHealPct', pct: 0.20 } },
-    { desc: 'Heal 35% of overkill damage on a kill', detail: 'A kill spills over harder: you heal 35% of any overkill damage (the amount a killing blow lands past the hull’s remaining HP) back to your ship. Per-hit capped.', effect: { kind: 'overkillHealPct', pct: 0.35 } },
-    { desc: 'Heal 50% of overkill damage on a kill', detail: 'Half of every killing blow’s overkill comes back as hull. Land a massive shot on a wounded enemy and you top yourself off on the way through. Per-hit capped so one shot can’t full-heal you.', effect: { kind: 'overkillHealPct', pct: 0.50 } },
+    { desc: 'Heal 20% of overkill damage on a kill, up to 40% of your hull', detail: 'When a shot sinks a hull, any damage that lands PAST its remaining HP is overkill (normally wasted). You heal 20% of that overkill back to your ship. A clean shot that drops it exactly to zero heals nothing — the reward is for hitting hard enough to spill over. One kill can return at most 40% of your maximum HP, which is always twice your overkill share, so a huge Mega cannot refill the whole bar at once.', effect: { kind: 'overkillHealPct', pct: 0.20 } },
+    { desc: 'Heal 35% of overkill damage on a kill, up to 70% of your hull', detail: 'A kill spills over harder: you heal 35% of any overkill damage (the amount a killing blow lands past the hull’s remaining HP) back to your ship. One kill can return at most 70% of your maximum HP.', effect: { kind: 'overkillHealPct', pct: 0.35 } },
+    { desc: 'Heal 50% of overkill damage on a kill, up to 70% of your hull', detail: 'Half of every killing blow’s overkill comes back as hull. Land a massive shot on a wounded enemy and you top yourself off on the way through. One kill can return at most 70% of your maximum HP, so one shot can never full-heal you.', effect: { kind: 'overkillHealPct', pct: 0.50 } },
   ] },
   { id: 'manowars_wrath', image: '/gauntlet/boons/manowars_wrath.png', name: "Man-o-War's Wrath", gauntlet: 'don', flavor: 'The big gun was already the last word. Now it argues.', rarity: 'legendary', tiers: [
     { desc: '+22% Mega damage', detail: 'Your Mega — the Man-o-War ultimate that spends a full 4-charge magazine — hits 22% harder. Affects the Mega ONLY: your Fire and Volley are unchanged. This does nothing unless your ship carries a Mega augment (the Man-o-War ultimate weapon), so only take it if you can fire one.', effect: { kind: 'megaDmgMult', mult: 1.22 } },
@@ -2312,9 +2312,9 @@ export const CONFLUENCES: Confluence[] = [
     flavor: 'The swell of the slain makes the deep drink deeper — every hull in your wake feeds the next wound.',
     detail: 'Every enemy you sink this run makes Leviathan’s Hunger drink deeper — the share of your damage that comes back as healing grows with each kill, up to the cap. It never resets during the run.',
     levels: [
-      { desc: 'Healing from damage grows +1.5% per hull sunk (max +18%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.015, max: 0.18 }] },
-      { desc: 'Healing from damage grows +2% per hull sunk (max +24%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.02, max: 0.24 }] },
-      { desc: 'Healing from damage grows +2.5% per hull sunk (max +30%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.025, max: 0.30 }] },
+      { desc: 'Healing from damage grows +1.5% per hull sunk (max +18%), raising your heal cap with it', effects: [{ kind: 'lifestealKillScale', perKill: 0.015, max: 0.18 }] },
+      { desc: 'Healing from damage grows +2% per hull sunk (max +24%), raising your heal cap with it', effects: [{ kind: 'lifestealKillScale', perKill: 0.02, max: 0.24 }] },
+      { desc: 'Healing from damage grows +2.5% per hull sunk (max +30%), raising your heal cap with it', effects: [{ kind: 'lifestealKillScale', perKill: 0.025, max: 0.30 }] },
     ],
   },
   {
