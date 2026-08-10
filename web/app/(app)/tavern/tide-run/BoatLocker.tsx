@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { TIDE_RUN_BOATS, tideRunBoat, nextBoat, type TideRunBoat } from '@/lib/tideRunBoats'
 import { TIDE_RUN_SEAS, nextSea, type TideRunSea } from '@/lib/tideRunSeas'
-import { setTideRunBoat, setTideRunSea } from './actions'
+import type { TideRunAdapter } from './adapter'
 import { hapticTap, hapticReward } from '@/lib/haptics'
 import PopupShell from '@/components/PopupShell'
 
@@ -21,11 +21,14 @@ import PopupShell from '@/components/PopupShell'
  * better reason to tap Play again than "you died".
  */
 export default function BoatLocker({
-  bestDistance, equippedId, equippedSeaId, onEquip, onEquipSea, onClose,
+  bestDistance, equippedId, equippedSeaId, adapter, onEquip, onEquipSea, onClose,
 }: {
   bestDistance: number
   equippedId: string
   equippedSeaId: string
+  /** Where an equip is written. The standalone build passes localAdapter and
+   *  the locker never learns there was a server. */
+  adapter: TideRunAdapter
   onEquip: (id: string) => void
   onEquipSea: (id: string) => void
   onClose: () => void
@@ -47,8 +50,8 @@ export default function BoatLocker({
     const previous = equippedSea
     setEquippedSea(sea.id)
     startTransition(async () => {
-      const res = await setTideRunSea(sea.id)
-      if ('error' in res) { setEquippedSea(previous); setErr(res.error) }
+      const ok = await adapter.setSea(sea.id)
+      if (!ok) { setEquippedSea(previous); setErr('Could not change waters') }
       else { onEquipSea(sea.id); hapticReward() }
       setBusy(null)
     })
@@ -65,8 +68,8 @@ export default function BoatLocker({
     const previous = equipped
     setEquipped(b.id)
     startTransition(async () => {
-      const res = await setTideRunBoat(b.id)
-      if ('error' in res) { setEquipped(previous); setErr(res.error) }
+      const ok = await adapter.setBoat(b.id)
+      if (!ok) { setEquipped(previous); setErr('Could not equip that boat') }
       else { onEquip(b.id); hapticReward() }
       setBusy(null)
     })

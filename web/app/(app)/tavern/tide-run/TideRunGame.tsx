@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, startTideRun, setTideRunBoat, setTideRunSea, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
+import { getPlayerTideRunRank, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
 import { tideRunBoat, boatsUnlockedBetween, nextBoat, type TideRunBoat } from '@/lib/tideRunBoats'
 import { tideRunSea, seasUnlockedBetween, type TideRunSea } from '@/lib/tideRunSeas'
+import { serverAdapter } from './serverAdapter'
+import type { TideRunAdapter } from './adapter'
 import BoatLocker from './BoatLocker'
 import BoatUnlockedOverlay from './BoatUnlockedOverlay'
 import SeaUnlockedOverlay from './SeaUnlockedOverlay'
 import TideRunTour from './TideRunTour'
-import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { prefetchTideRunAudio, unlockTideRunAudio, teardownTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
@@ -302,6 +303,9 @@ interface TideRunGameProps {
   initialBoatId?: string
   /** Equipped sea id, from the profile. */
   initialSeaId?: string
+  /** Where the game reads and writes. Defaults to the Small Fishes host; a
+   *  standalone build passes localAdapter and needs no server at all. */
+  adapter?: TideRunAdapter
   hasSeenTour?: boolean
   /** Current #1 leaderboard holder. Shown on the wreck screen as the
    *  global target to chase. Null on a cold leaderboard (no one has
@@ -313,7 +317,7 @@ interface TideRunGameProps {
   initialRank?: PlayerTideRunRank | null
 }
 
-export default function TideRunGame({ initialBestDistance = 0, initialBoatId = 'original', initialSeaId = 'home', hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
+export default function TideRunGame({ initialBestDistance = 0, initialBoatId = 'original', initialSeaId = 'home', adapter = serverAdapter, hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
   // ── Boats ────────────────────────────────────────────────────────────────
   const [boatId, setBoatId] = useState(initialBoatId)
   const [seaId, setSeaId] = useState(initialSeaId)
@@ -456,7 +460,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
 
   function closeTour() {
     setShowTour(false)
-    startTransition(() => { void markTideRunTourSeen() })
+    startTransition(() => { void adapter.markTourSeen() })
   }
 
   // "New Best" pulse — show for 1.2s after the player crosses their PB,
@@ -521,23 +525,35 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
     // Fire and forget — the run starts on the tap, never waiting on the network.
     // If it never arrives the payout falls back to the capped path rather than
     // costing the player their run.
-    void startTideRun().then(r => { runTokenRef.current = r.token }).catch(() => {})
-  }, [])
+    void adapter.startRun().then(t => { runTokenRef.current = t }).catch(() => {})
+  }, [adapter])
 
   const beaconsThisRun = gRef.current.beaconsSmashed
   useEffect(() => {
     if (uiState !== 'dead') return
     if (beaconReward !== null) return
-    const optimistic = beaconsThisRun * 2
+    const optimistic = adapter.hasEconomy ? beaconsThisRun * 2 : 0
     setBeaconReward({ doubloons: optimistic })
-    if (beaconsThisRun <= 0) return
+    // NO EARLY RETURN ON ZERO BEACONS any more. This used to be the beacon
+    // payout and could skip a beaconless run; it is the whole run's SETTLE now
+    // and carries the distance, so skipping it would drop the personal best of
+    // every run that never met a beacon.
     let cancelled = false
     void (async () => {
       try {
         const spentToken = runTokenRef.current
         runTokenRef.current = null
-        const result = await awardTideRunBeacons(beaconsThisRun, spentToken)
-        if ('ok' in result) {
+        // ONE call: stats, beacon payout and personal best, validated together
+        // against one token. Three separate calls could not guard the distance,
+        // because a run mints one token and only one caller can spend it.
+        const result = await adapter.settleRun({
+          distance: Math.round(gRef.current.distance * 10) / 10,
+          beacons: beaconsThisRun,
+          token: spentToken,
+        })
+        if (result) {
+          if (result.wonTideChampion) setPodiumNotif({ category: 'Tide Champion', position: 1 })
+          void getPlayerTideRunRank().then(r => { if (r) setRank(r) }).catch(() => {})
           // Stash + dispatch happen unconditionally even if `cancelled`
           // is true. The cleanup that sets cancelled=true fires as soon
           // as beaconReward changes (which the effect itself triggers
@@ -548,9 +564,11 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
           // are safe outside the React tree (ref + window event), so
           // dropping the guard fixes the "Nav doesn't update" bug
           // without risking a state-update-on-unmount warning.
-          pendingNavTotalRef.current = result.newDoubloonTotal
-          if (typeof window !== 'undefined') {
-            try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
+          if (result.doubloons > 0) {
+            pendingNavTotalRef.current = result.newDoubloonTotal
+            if (typeof window !== 'undefined') {
+              try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
+            }
           }
         }
       } catch {
@@ -558,7 +576,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
       }
     })()
     return () => { cancelled = true }
-  }, [uiState, beaconsThisRun, beaconReward])
+  }, [uiState, beaconsThisRun, beaconReward, adapter])
 
   // Fire the floating "+N coin" animation ~350ms after the wreck
   // modal appears (so the player reads the static block first), and
@@ -1002,7 +1020,9 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
         // (in the rock-collision branch below) would leave `score`
         // stuck at an integer and every beacon death would display .0.
         setScore(finalMeters)
-        recordTideRunRun(Math.floor(g.distance), g.beaconsSmashed).catch(() => {})
+        // Stats, payout and personal best are all settled ONCE, from the
+        // death effect, against this run's token. Firing them here as well
+        // would be a second unguarded path to the same writes.
         if (finalMeters > highScore) {
           // BOATS EARNED BY THIS RUN, worked out from the distance the PB
           // crossed rather than from a server round trip — the wreck screen
@@ -1014,12 +1034,6 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
           const earnedSeas = seasUnlockedBetween(highScore, finalMeters)
           if (earnedSeas.length) setJustUnlockedSeas(earnedSeas)
           setHighScore(finalMeters)
-          // Chain the rank refresh off the PB submission so the wreck
-          // modal lands on the updated position, not the stale one.
-          submitTideRunBest(finalMeters)
-            .then(() => getPlayerTideRunRank())
-            .then(r => { if (r) setRank(r) })
-            .catch(() => {})
         }
       }
       return
@@ -1303,20 +1317,15 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
       const finalMeters = Math.round(g.distance * 10) / 10
       setScore(finalMeters)
       setUiState('dead')
-      recordTideRunRun(Math.floor(g.distance), g.beaconsSmashed).catch(() => {})
+      // Settled once from the death effect — see the note at the other death
+      // site. The unlock detection and the local PB stay here because the
+      // wreck screen should show them before the network has agreed.
       if (finalMeters > highScore) {
+        const earned = boatsUnlockedBetween(highScore, finalMeters)
+        if (earned.length) setJustUnlocked(earned)
+        const earnedSeas = seasUnlockedBetween(highScore, finalMeters)
+        if (earnedSeas.length) setJustUnlockedSeas(earnedSeas)
         setHighScore(finalMeters)
-        // Chain the rank refresh off the PB submission so the wreck
-        // modal lands on the updated position, not the stale one.
-        submitTideRunBest(finalMeters)
-          .then(res => {
-            if (res && 'wonTideChampion' in res && res.wonTideChampion) {
-              setPodiumNotif({ category: 'Tide Champion', position: 1 })
-            }
-            return getPlayerTideRunRank()
-          })
-          .then(r => { if (r) setRank(r) })
-          .catch(() => {})
       }
     } else {
       const now = performance.now()
@@ -2351,7 +2360,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
             const last = justUnlocked[justUnlocked.length - 1]
             setJustUnlocked([])
             setBoatId(last.id)
-            void setTideRunBoat(last.id).catch(() => {})
+            void adapter.setBoat(last.id).catch(() => {})
           }}
         />
       )}
@@ -2366,7 +2375,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
             const last = justUnlockedSeas[justUnlockedSeas.length - 1]
             setJustUnlockedSeas([])
             setSeaId(last.id)
-            void setTideRunSea(last.id).catch(() => {})
+            void adapter.setSea(last.id).catch(() => {})
           }}
         />
       )}
@@ -2376,6 +2385,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
           bestDistance={highScore}
           equippedId={boatId}
           equippedSeaId={seaId}
+          adapter={adapter}
           onEquip={setBoatId}
           onEquipSea={setSeaId}
           onClose={() => setLockerOpen(false)}
