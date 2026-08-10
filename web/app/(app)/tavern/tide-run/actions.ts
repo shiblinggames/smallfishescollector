@@ -416,3 +416,94 @@ export async function setTideRunSea(seaId: string): Promise<{ ok: true; seaId: s
     return { error: 'Server error' }
   }
 }
+
+/**
+ * SETTLE A RUN, once, against its token.
+ *
+ * Death used to fire three separate calls — stats, beacon payout, personal best
+ * — and only the payout was guarded, because a run mints ONE token and only one
+ * caller can consume it. That left the DISTANCE unguarded, which mattered less
+ * when the leaderboard was a side attraction and matters completely now that a
+ * standalone build is planned where the leaderboard IS the game. A forged
+ * distance is the whole product broken.
+ *
+ * One call, one token, one settle. Everything the run produced is validated
+ * together or none of it is, and the client stops making three round trips at
+ * the exact moment it is animating a death.
+ *
+ * Fails SOFT on a missing token (the run still counts, capped and unverified,
+ * so a network blip never eats somebody's personal best) and HARD on a supplied
+ * token that is already spent, because that is a replay.
+ */
+export async function settleTideRun(input: {
+  distance: number
+  beacons: number
+  token?: string | null
+}): Promise<{
+  ok: true
+  best: number
+  isNewBest: boolean
+  doubloons: number
+  newDoubloonTotal: number
+  wonTideChampion: boolean
+} | { error: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const meters = Math.round(Math.max(0, Number(input.distance) || 0) * 10) / 10
+    if (meters > 100000) return { error: 'Invalid distance' }
+    const rawBeacons = Math.max(0, Math.floor(Number(input.beacons) || 0))
+
+    const admin = createAdminClient()
+
+    // ONE consume, covering the whole settle. A replayed settle finds the token
+    // spent and is refused outright — distance included, which is the point.
+    const spent = await consumeRunToken(admin, user.id, 'tide_run', input.token)
+    if (input.token && !spent) {
+      await flagAnomaly(admin, user.id, 'replay:tideRunSettle', 3, { meters, beacons: rawBeacons })
+      return { error: 'That run has already been settled.' }
+    }
+
+    if (rawBeacons > TIDE_RUN_PLAUSIBLE_BEACONS) {
+      await flagAnomaly(admin, user.id, 'implausible:tideRunBeacons', rawBeacons > 5000 ? 3 : 2, { beacons: rawBeacons })
+    }
+    const paidBeacons = Math.min(rawBeacons, TIDE_RUN_MAX_BEACONS)
+
+    // Lifetime counters, clamped the same way so a forged run cannot buy a
+    // record once it can no longer buy money.
+    await admin.rpc('bump_tide_run_stats', {
+      uid: user.id,
+      dist: Math.min(100000, Math.floor(meters)),
+      beacons: paidBeacons,
+    })
+
+    // Beacon payout.
+    let doubloons = 0
+    let newDoubloonTotal = 0
+    if (paidBeacons > 0) {
+      const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', user.id).single()
+      doubloons = paidBeacons * DOUBLOONS_PER_BEACON
+      newDoubloonTotal = (profile?.doubloons ?? 0) + doubloons
+      await admin.from('profiles').update({ doubloons: newDoubloonTotal }).eq('id', user.id)
+      await admin.from('doubloon_transactions').insert({
+        user_id: user.id,
+        amount: doubloons,
+        reason: paidBeacons === rawBeacons
+          ? `Tide Run beacons smashed (${paidBeacons})`
+          : `Tide Run beacons smashed (${paidBeacons}, capped from ${rawBeacons})`,
+      }).then(() => {}, () => {})
+    }
+
+    // Personal best + the contest, reusing the existing path so the Tide
+    // Champion claim and its mail keep working exactly as before.
+    const bestRes = await submitTideRunBest(meters)
+    const best = 'ok' in bestRes ? bestRes.best : meters
+    const wonTideChampion = 'ok' in bestRes ? (bestRes.wonTideChampion ?? false) : false
+
+    return { ok: true, best, isNewBest: meters >= best, doubloons, newDoubloonTotal, wonTideChampion }
+  } catch {
+    return { error: 'Server error' }
+  }
+}
