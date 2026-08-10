@@ -630,8 +630,30 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
   useEffect(() => {
     resize()
     window.addEventListener('resize', resize)
-    return () => window.removeEventListener('resize', resize)
+    // VISUAL VIEWPORT TOO. The wrapper is sized in CSS off 100dvh, but the
+    // canvas's pixel size only changes when resize() runs. Opening a
+    // full-screen scrollable sheet collapses the mobile URL bar, which moves
+    // dvh and reflows the wrapper — and iOS frequently reports that on
+    // visualViewport WITHOUT firing a window resize. Listening to only the
+    // window left the canvas at its old size inside a shorter box: the whole
+    // scene shifted up and the page behind showed through underneath it.
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    vv?.addEventListener('resize', resize)
+    return () => {
+      window.removeEventListener('resize', resize)
+      vv?.removeEventListener('resize', resize)
+    }
   }, [resize])
+
+  // Belt and braces: re-measure whenever a full-screen sheet closes. The
+  // viewport can settle a frame or two AFTER the overlay unmounts, so the
+  // listener above can miss the final step — and a stale canvas is the one
+  // thing a player definitely notices, because the sea stops meeting the sky.
+  useEffect(() => {
+    if (lockerOpen || justUnlocked.length || justUnlockedSeas.length) return
+    const id = requestAnimationFrame(() => resize())
+    return () => cancelAnimationFrame(id)
+  }, [lockerOpen, justUnlocked.length, justUnlockedSeas.length, resize])
 
   // ── Reset game ─────────────────────────────────────────────────────────────
   const reset = useCallback(() => {
