@@ -2,12 +2,24 @@
 // past its own distance number.
 //
 // UNLOCKED BY BEST DISTANCE, which is the only currency this game has and the
-// only one a standalone build could carry offline. Thresholds are pinned to
-// what players actually reach rather than to round numbers: across 38 captains
-// the median best is 306m, the 25th percentile 224m, the 90th 467m and the
-// all-time record 813m. So the first boat lands before most players' first
-// serious run, the middle of the ladder sits where the median already is, and
-// the last two are past anything anyone has ever done.
+// only one a standalone build could carry offline.
+//
+// Anchored to the BADGE LADDER, which is the game's own published statement of
+// what good looks like: Tide Runner at 300m, Tide Champion at 450m, Tide Master
+// at 600m. A boat lands on each of those, so the cosmetic ladder and the
+// achievement ladder agree instead of quietly disagreeing about what a great
+// run is.
+//
+// The rest are pinned to what players actually reach: across 38 captains the
+// median best is 306m, the 25th percentile 224m and the 90th 467m. The genuine
+// record is catman at 570m — the 813m on the board belongs to an account with
+// 203 anomaly flags, and distance is client-authored (submitTideRunBest bounds
+// it only at 100,000), so that figure is almost certainly forged and is
+// deliberately NOT used to set anything here. Building a ladder around a cheat's
+// number would price the top of it out of reach for everyone honest.
+//
+// So the top boat sits at 900m: half again beyond Tide Master, comfortably past
+// the real record, and reachable rather than mythical.
 //
 // THE ART DOES NOT DRIVE THE HITBOX. Every boat here is 320x202 (aspect 1.58)
 // while the original is 1.35, and the collision box is derived from SHIP_ASPECT
@@ -32,18 +44,21 @@ export type TideRunBoat = {
 export const DEFAULT_BOAT_ID = 'original'
 
 export const TIDE_RUN_BOATS: TideRunBoat[] = [
-  { id: 'original',  name: 'The Old Hull',   unlockAt: 0,    image: null,                       blurb: 'The one you started with. It has seen things.' },
-  { id: 'gray',      name: 'Gunmetal',       unlockAt: 100,  image: '/tiderun/gray.png',        blurb: 'Plain, honest, and quietly fast.' },
-  { id: 'seafoam',   name: 'Seafoam',        unlockAt: 200,  image: '/tiderun/seafoam.png',     blurb: 'The colour of the water right behind you.' },
-  { id: 'green',     name: 'Kelp',           unlockAt: 300,  image: '/tiderun/green.png',       blurb: 'Painted to vanish against the shallows.' },
-  { id: 'blueberry', name: 'Blueberry',      unlockAt: 400,  image: '/tiderun/blueberry.png',   blurb: 'Deep water blue, for deeper water runs.' },
-  { id: 'taupe',     name: 'Driftwood',      unlockAt: 500,  image: '/tiderun/taupe.png',       blurb: 'Weathered by more crossings than most.' },
-  { id: 'pink',      name: 'Coral',          unlockAt: 650,  image: '/tiderun/pink.png',        blurb: 'Bright enough that the beacons see you coming.' },
-  { id: 'cherry',    name: 'Cherry',         unlockAt: 800,  image: '/tiderun/cherry.png',      blurb: 'Racing red, and it knows it.' },
-  { id: 'grape',     name: 'Grape',          unlockAt: 1000, image: '/tiderun/grape.png',       blurb: 'Past a thousand metres, you pick your own colours.' },
-  { id: 'black',     name: 'Pitch',          unlockAt: 1300, image: '/tiderun/black.png',       blurb: 'Runs the night stretch without being seen.' },
-  { id: 'golden',    name: 'Gilded',         unlockAt: 1600, image: '/tiderun/golden.png',      blurb: 'Heavier than it looks. Worth more than it weighs.' },
-  { id: 'ghost',     name: 'The Ghost',      unlockAt: 2000, image: '/tiderun/ghost.png',       blurb: 'Nobody has sailed this far. Yet.' },
+  { id: 'original',  name: 'The Old Hull',   unlockAt: 0,   image: null,                     blurb: 'The one you started with. It has seen things.' },
+  { id: 'gray',      name: 'Gunmetal',       unlockAt: 75,  image: '/tiderun/gray.png',      blurb: 'Plain, honest, and quietly fast.' },
+  { id: 'seafoam',   name: 'Seafoam',        unlockAt: 150, image: '/tiderun/seafoam.png',   blurb: 'The colour of the water right behind you.' },
+  { id: 'green',     name: 'Kelp',           unlockAt: 225, image: '/tiderun/green.png',     blurb: 'Painted to vanish against the shallows.' },
+  // Tide Runner sits here.
+  { id: 'blueberry', name: 'Blueberry',      unlockAt: 300, image: '/tiderun/blueberry.png', blurb: 'Deep water blue, for deeper water runs.' },
+  { id: 'taupe',     name: 'Driftwood',      unlockAt: 375, image: '/tiderun/taupe.png',     blurb: 'Weathered by more crossings than most.' },
+  // Tide Champion sits here.
+  { id: 'pink',      name: 'Coral',          unlockAt: 450, image: '/tiderun/pink.png',      blurb: 'Bright enough that the beacons see you coming.' },
+  { id: 'cherry',    name: 'Cherry',         unlockAt: 525, image: '/tiderun/cherry.png',    blurb: 'Racing red, and it knows it.' },
+  // Past the genuine record (570m) from here on.
+  { id: 'grape',     name: 'Grape',          unlockAt: 600, image: '/tiderun/grape.png',     blurb: 'Tide Master water. You are in rare company.' },
+  { id: 'black',     name: 'Pitch',          unlockAt: 700, image: '/tiderun/black.png',     blurb: 'Runs the night stretch without being seen.' },
+  { id: 'golden',    name: 'Gilded',         unlockAt: 800, image: '/tiderun/golden.png',    blurb: 'Heavier than it looks. Worth more than it weighs.' },
+  { id: 'ghost',     name: 'The Ghost',      unlockAt: 900, image: '/tiderun/ghost.png',     blurb: 'Nobody has honestly sailed this far. Yet.' },
 ]
 
 export function tideRunBoat(id: string | null | undefined): TideRunBoat {
