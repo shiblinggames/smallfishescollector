@@ -82,7 +82,20 @@ export default function BoatLocker({
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          maxWidth: 520, margin: '0 auto', padding: '1.1rem 1rem 1.3rem',
+          // WIDTH 100%, and that is the fix for the pop-and-expand. The shell's
+          // wrapper is a flex container, so a child with only a maxWidth is a
+          // flex item sized to its CONTENT: the panel opened at the width of the
+          // text, then the lazy card images arrived and shoved it out to 520.
+          // A definite width means it is the right size on the first frame and
+          // nothing reflows.
+          width: '100%', maxWidth: 520, margin: '0 auto', alignSelf: 'flex-start',
+          // Horizontal padding only INSIDE the panel — the shell already pads
+          // the wrapper 1rem each side, and doubling it was squeezing the grid.
+          // The bottom pad is the real clearance for the mobile tab bar: a flex
+          // scroll container's own padding-bottom is not reliably honoured at
+          // the end of the scroll, which is why the shell's was not enough and
+          // the last row of cards still sat under the bar.
+          padding: '1.1rem 0.85rem calc(env(safe-area-inset-bottom, 0px) + 96px)',
           // A SOLID BASE. The shell only dims the game behind it, and a locker
           // read against a moving sea with boats sliding past is genuinely hard
           // to look at. Panels over live art need their own opaque ground —
