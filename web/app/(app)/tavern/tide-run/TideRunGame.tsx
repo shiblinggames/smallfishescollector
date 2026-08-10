@@ -1869,9 +1869,14 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
           onClick={(e) => { e.stopPropagation(); setShowTour(true) }}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="How to play"
-          className="font-karla font-700"
+          // Cleared of the top nav the same way the sound button clears the
+          // bottom tab bar, and by the same 76px, so the two corners are inset
+          // identically. The canvas runs behind both bars, so a flat 10px put
+          // these two underneath the nav while the sound button sat correctly
+          // above the tab bar — the asymmetry was the bug.
+          className="font-karla font-700 top-[calc(env(safe-area-inset-top,0px)+76px)] sm:top-[10px]"
           style={{
-            position: 'absolute', top: 10, left: 10, zIndex: 5,
+            position: 'absolute', left: 10, zIndex: 5,
             width: 30, height: 30, borderRadius: '50%',
             border: '1px solid rgba(189,160,90,0.5)',
             background: 'rgba(6,18,34,0.7)',
@@ -1935,7 +1940,9 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
           <div
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
-            style={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}
+            // Same inset as How to Play and the sound button.
+            className="top-[calc(env(safe-area-inset-top,0px)+76px)] sm:top-[10px]"
+            style={{ position: 'absolute', right: 10, zIndex: 5 }}
           >
             <LeaderboardModal boards={['tideRun']} title="Tide Run Leaderboard" />
           </div>
