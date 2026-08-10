@@ -789,7 +789,10 @@ export default function RaidCombat({
     const statusOnHitList: { status: string; chance: number; magnitude: number; turns: number }[] = []
     const playerStartStatusList: { status: string; magnitude: number; turns: number }[] = []
     let shieldPierceFrac = 0        // Armor-Piercing: fraction of enemy barrier ignored
-    let stunOnHitChance = 0, stunOnHitTurns = 1   // Kraken's Grip
+    let stunOnHitChance = 0, stunOnHitTurns = 1   // legacy chance-stun (Deep Terror)
+    // Kraken's Grip — deterministic. Strongest source wins on each axis rather
+    // than summing, so two sources can't trivialise the counter.
+    let gripHits = 0, gripTurns = 1, gripCrushPct = 0
     let guaranteedCritEvery = 0     // Loaded for Bear: 0 = off; else every Nth shot crits
     let stealChargeChance = 0       // Press-Gang
     let parryChance = 0, parryReflectPct = 0      // Cutlass Guard
@@ -910,6 +913,9 @@ export default function RaidCombat({
         case 'playerStartStatus':     playerStartStatusList.push({ status: e.status, magnitude: e.magnitude, turns: e.turns }); break
         case 'shieldPierce':          shieldPierceFrac = Math.max(shieldPierceFrac, e.pct); break
         case 'stunOnHit':             if (e.chance > stunOnHitChance) { stunOnHitChance = e.chance; stunOnHitTurns = e.turns } break
+        case 'gripStacks':            if (gripHits === 0 || e.hits < gripHits) gripHits = e.hits
+                                      gripTurns = Math.max(gripTurns, e.turns)
+                                      gripCrushPct = Math.max(gripCrushPct, e.crushPct); break
         case 'guaranteedCritEvery':   if (e.n > 0 && (guaranteedCritEvery === 0 || e.n < guaranteedCritEvery)) guaranteedCritEvery = e.n; break
         case 'stealCharge':           stealChargeChance = Math.max(stealChargeChance, e.chance); break
         case 'parryChance':           if (e.chance > parryChance) { parryChance = e.chance; parryReflectPct = e.reflectPct } break
@@ -949,7 +955,7 @@ export default function RaidCombat({
       critStreakPerStack, critStreakMaxStacks, counterFireChance,
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
       statusOnHitList, playerStartStatusList,
-      shieldPierceFrac, stunOnHitChance, stunOnHitTurns, guaranteedCritEvery, stealChargeChance,
+      shieldPierceFrac, stunOnHitChance, stunOnHitTurns, gripHits, gripTurns, gripCrushPct, guaranteedCritEvery, stealChargeChance,
       parryChance, parryReflectPct, aimClarity, randomFightBuff, abilityRefundChance,
       enemyUltDmgMult, enemyUltChargeChance, enemyChargeSteal, enemyParryChance, enemyLifesteal, randomFightDebuff,
       flareFuseMult, flareDmgMult, barrierRegrow,
@@ -2133,6 +2139,9 @@ export default function RaidCombat({
   // turns to apply next round (a freeze procced this round skips the NEXT turn).
   const enemyFrozenRef = useRef(0)
   const enemyFreezePendingRef = useRef(0)
+  /** Kraken's Grip stacks. PER FIGHT: the coils are around THIS hull, so a fresh
+   *  enemy starts clean rather than inheriting a nearly-full counter. */
+  const gripStacksRef = useRef(0)
   const playerBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
   const playerFrozenRef = useRef(false)
   const playerFreezePendingRef = useRef(false)
@@ -2263,6 +2272,7 @@ export default function RaidCombat({
     const eShield = Math.round(scaledHp * eShieldPct)
     enemyShieldRef.current = eShield; setEnemyShieldHp(eShield)
     enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = 0; enemyFreezePendingRef.current = 0; snareBlockedRef.current = false; carapaceLoggedRef.current = false
+    gripStacksRef.current = 0
     playerBurnRef.current = { turns: 0, dmg: 0 }; playerFrozenRef.current = false; playerFreezePendingRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
@@ -5094,6 +5104,27 @@ export default function RaidCombat({
               // it is a SEIZING, not an icing, and borrowing the frost visual
               // made the two effects indistinguishable on screen.
               procStatus = 'stun'
+            }
+            // Kraken's Grip (boon) — DETERMINISTIC. Stacks build on every landed
+            // hit and never decay; the n-th drags the hull under. Crush is a
+            // share of the ENEMY's max HP, so it keeps pace with the depth curve
+            // instead of going stale the way a flat number would, and it is the
+            // one damage source on the board that ignores your own guns.
+            if (tide.gripHits > 0 && eHp > 0) {
+              gripStacksRef.current += 1
+              if (gripStacksRef.current >= tide.gripHits) {
+                gripStacksRef.current = 0
+                enemyFreezePendingRef.current = Math.max(enemyFreezePendingRef.current, tide.gripTurns)
+                const crush = Math.max(1, Math.round(enemyHpMaxRef.current * tide.gripCrushPct * tide.gripTurns))
+                eHp = Math.max(0, eHp - crush)
+                stepLines.push(tide.gripTurns > 1
+                  ? `Kraken's Grip! The deep drags the ${enemy.name} under for its next two turns, crushing it for ${crush}.`
+                  : `Kraken's Grip! The deep drags the ${enemy.name} under, crushing it for ${crush}.`)
+                onStat?.({ dmgDealt: crush })
+                procStatus = 'stun'
+              } else {
+                stepLines.push(`The deep coils tighter around the ${enemy.name}. (${gripStacksRef.current}/${tide.gripHits})`)
+              }
             }
             // THE RACK — a landed hit fires a SPREAD. One roll, and every round the
             // equipped rack carries lands together through the shared status pipeline.

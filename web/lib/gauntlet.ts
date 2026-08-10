@@ -1995,8 +1995,8 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Every 3rd landed shot is a guaranteed crit', detail: 'Every 3rd landed shot each fight is upgraded to a guaranteed critical hit.', effect: { kind: 'guaranteedCritEvery', n: 3 } },
   ] },
   { id: 'krakens_grip', image: '/gauntlet/boons/krakens_grip.png', name: "Kraken's Grip", gauntlet: 'don', flavor: 'A landed shot calls the deep up around their hull — and the deep does not let go.', rarity: 'legendary', tiers: [
-    { desc: '18% on a hit to STUN the enemy (skips its next turn)', detail: 'Whenever you land a hit, there’s an 18% chance the deep seizes the enemy — it loses its next turn entirely, exactly like a freeze. Bosses are not immune.', effect: { kind: 'stunOnHit', chance: 0.18, turns: 1 } },
-    { desc: '26% on a hit to STUN the enemy for 2 turns', detail: 'Whenever you land a hit, there’s a 26% chance the deep seizes the enemy and holds it for its next TWO turns.', effect: { kind: 'stunOnHit', chance: 0.26, turns: 2 } },
+    { desc: 'Every 5 hits drags the enemy under: it loses a turn and takes 6% of its max HP', detail: 'Every hit you land coils the deep tighter, and the fifth one drags the hull under: it loses its next turn and takes 6% of its OWN maximum HP as the coils crush it. No luck involved — the count is the whole mechanic, and it never resets until it fires. The coils are around that hull, so a fresh enemy starts the count again. Bosses are not immune, and because the crush is a share of their own hull it hits the biggest ships hardest.', effect: { kind: 'gripStacks', hits: 5, turns: 1, crushPct: 0.06 } },
+    { desc: 'Every 4 hits drags the enemy under for 2 turns and takes 18% of its max HP', detail: 'The count drops to four and the deep holds on: the hull loses its next TWO turns and is crushed for 9% of its own maximum HP each of them. Still no luck involved. Bosses are not immune, and the crush hits the biggest ships hardest.', effect: { kind: 'gripStacks', hits: 4, turns: 2, crushPct: 0.09 } },
   ] },
   { id: 'cutlass_guard', image: '/gauntlet/boons/cutlass_guard.png', name: 'Cutlass Guard', gauntlet: 'don', flavor: 'Meet the blow, turn it, and answer before they’ve recovered.', rarity: 'rare', tiers: [
     { desc: '20% to parry a hit (take nothing) and lash back 40%', detail: 'Every enemy blow that would land has a 20% chance to be PARRIED — you take no damage, and 40% of the hit it aimed at you is flung straight back. A parry counts as an avoided hit.', effect: { kind: 'parryChance', chance: 0.20, reflectPct: 0.40 } },
@@ -2524,10 +2524,10 @@ export const CONFLUENCES: Confluence[] = [
     id: 'deep_terror', image: '/gauntlet/synergies/deep_terror.png', name: 'Deep Terror', gauntlet: 'don',
     requires: [{ boonId: 'krakens_grip' }, { boonId: 'permafrost' }],
     flavor: 'Frozen solid and seized by the deep. Some hulls never get another turn.',
-    detail: 'Total lockdown: your hits stun far more often on top of Permafrost’s freezes, and a held hull takes extra damage while it can’t act.',
+    detail: 'Total lockdown. The deep needs one hit fewer to drag a hull under, Permafrost’s freezes land on top of it, and you hit harder for the whole fight.',
     levels: [
-      { desc: '+15% stun chance on hit; +14% damage', effects: [{ kind: 'stunOnHit', chance: 0.15, turns: 1 }, { kind: 'damageMult', mult: 1.14 }] },
-      { desc: '+22% stun chance (2 turns); +22% damage', effects: [{ kind: 'stunOnHit', chance: 0.22, turns: 2 }, { kind: 'damageMult', mult: 1.22 }] },
+      { desc: 'The deep drags under a hit sooner; +14% damage', effects: [{ kind: 'gripStacks', hits: 4, turns: 1, crushPct: 0.06 }, { kind: 'damageMult', mult: 1.14 }] },
+      { desc: 'A hit sooner again, held 2 turns; +22% damage', effects: [{ kind: 'gripStacks', hits: 3, turns: 2, crushPct: 0.09 }, { kind: 'damageMult', mult: 1.22 }] },
     ],
   },
   {
