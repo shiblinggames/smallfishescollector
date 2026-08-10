@@ -267,3 +267,100 @@ Distance is client-authored on the web and only partly guarded. Standalone that
 matters more, because the leaderboard IS the game: submit to Game Center from
 as close to the run's own state as possible, and treat an impossible score the
 way the web build treats an impossible beacon count.
+
+---
+
+# GETTING STARTED ON THE MAC
+
+Written down so none of it has to be remembered.
+
+## 1. Clone, shallow
+
+The history is about a gigabyte and none of it is needed:
+
+    git clone --depth 1 https://github.com/shiblinggames/smallfishescollector.git
+
+**Do not build or run the web app.** No `npm install`, no Node, no Supabase
+keys. The repo is here for exactly two things: the spec, and the assets.
+
+## 2. What is actually used out of it
+
+| Path | Why |
+|---|---|
+| `ios/PORT_BRIEF.md` | this file — the spec |
+| `web/app/(app)/tavern/tide-run/TideRunGame.tsx` | THE reference: physics, spawning, every draw call |
+| `web/lib/tideRunBoats.ts` | 12 boats + thresholds, port as Swift structs |
+| `web/lib/tideRunSeas.ts` | 6 seas, four palette stops each, no art |
+| `web/app/(app)/tavern/tide-run/adapter.ts` | `localAdapter` is the UserDefaults spec |
+| `web/public/boatrun.png` | the starter boat |
+| `web/public/tiderun/*.png` | the other 11 boats, 320x237, already compressed |
+| `web/public/tiderun_beaconcatch.mp3` `tiderun_beaconcrash.mp3` `tiderun_splash.mp3` `tiderun_crash.mp3` | the four SFX |
+
+Copy the images and audio into the Xcode asset bundle. Everything else is read,
+never shipped.
+
+## 3. Prerequisites
+
+    xcode-select --install        # after installing Xcode from the App Store
+
+Xcode is a 10GB+ download — start it before anything else. An Apple Developer
+account ($99/yr) is needed to put a build on a device or in TestFlight, but not
+to run in the simulator.
+
+## 4. Where the Xcode project goes
+
+`ios/TideRun/`, inside this repo, so the spec and the assets are one directory
+away while you are cross-referencing. A standalone App Store product eventually
+wants its own repo — split it once it stands on its own, not before.
+
+## 5. Renderer: NOT SpriteKit first
+
+This is the one architectural call worth getting right up front.
+
+Tide Run is IMMEDIATE MODE. It clears and redraws every frame inside a custom
+RAF loop — 41 `beginPath`, 53 `lineTo`, 26 `fill`, a handful of gradients and
+ellipses. SpriteKit is a retained scene graph, and the naive translation (an
+`SKShapeNode` per hazard, its path rebuilt each frame) is a well-known framerate
+killer. Choosing native for performance and then giving it back would be a poor
+trade.
+
+**Start with `CADisplayLink` + Core Graphics drawing into a `UIView`.** That is
+architecturally identical to what already exists: same loop, same
+draw-everything-each-frame model, and the canvas calls map almost one to one:
+
+| Canvas 2D | Core Graphics |
+|---|---|
+| `beginPath` / `moveTo` / `lineTo` / `closePath` | `CGMutablePath` + `move(to:)` / `addLine(to:)` / `closeSubpath()` |
+| `fill` / `stroke` | `fillPath()` / `strokePath()` |
+| `fillStyle` / `strokeStyle` | `setFillColor` / `setStrokeColor` |
+| `createLinearGradient` | `CGGradient` + `drawLinearGradient` |
+| `ellipse` / `arc` | `CGPath(ellipseIn:)` / `addArc` |
+| `bezierCurveTo` | `addCurve(to:control1:control2:)` |
+| `save` / `restore` / `translate` | `saveGState` / `restoreGState` / `translateBy` |
+| `globalAlpha` | `setAlpha` |
+| `globalCompositeOperation = 'screen'` | `setBlendMode(.screen)` |
+
+Move to SpriteKit later only if its particles or physics are wanted, and port
+from something already working rather than from TypeScript.
+
+The UI is the part that does NOT translate: the wreck screen, start screen,
+locker, unlock overlays and tour are React and CSS, and get rebuilt in SwiftUI.
+That is new work, not a port.
+
+## 6. The first session
+
+Phase 1 only. Paste something like:
+
+> Read `ios/PORT_BRIEF.md`, including the updates at the bottom. I'm rebuilding
+> Tide Run as a standalone native iOS game in this repo under `ios/TideRun/`.
+> Start with phase 1 ONLY: a CADisplayLink + Core Graphics view with the
+> scrolling sea and the hold-to-jump boat. No hazards, no audio, no UI.
+> `web/app/(app)/tavern/tide-run/TideRunGame.tsx` is the spec — port
+> `seaSurfaceY()` and the physics constants verbatim.
+
+The root `CLAUDE.md` router and `docs/systems/` come with the clone, so a
+session started in this repo already knows the wider codebase conventions.
+
+**The one thing numbers alone will not give you: the FEEL of the hold-jump.**
+The constants port verbatim, but whether it feels right is a judgement call that
+has to be made on a device, by hand, against the web build running beside it.
