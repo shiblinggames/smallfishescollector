@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { gemPack } from '@/lib/gemPacks'
 import type Stripe from 'stripe'
 
 // Stripe webhook — the authoritative fulfillment for membership purchases. On a
@@ -35,6 +36,37 @@ export async function POST(req: NextRequest) {
       await admin.from('profiles')
         .update({ is_premium: true, premium_expires_at: null })
         .eq('id', userId)
+    }
+
+    // ── Gem packs ───────────────────────────────────────────────────────────
+    // EXACTLY ONCE, which the membership grant gets for free by being a boolean
+    // and gems do not. Stripe retries a webhook until it gets a 2xx, so the same
+    // session can arrive several times; adding gems on each would pay a player
+    // twice for one purchase.
+    //
+    // The ledger row is the lock. payment_ref is UNIQUE, so the first delivery
+    // inserts and every later one loses that insert and returns here having
+    // granted nothing. Insert BEFORE the balance moves: a crash between the two
+    // leaves a recorded purchase and no gems, which is a support ticket, where
+    // the other order leaves gems nobody can account for, which is a hole.
+    //
+    // The gem COUNT is re-read from the catalog rather than taken from the
+    // session, so the amount paid out is whatever that pack is worth today.
+    if (session.metadata?.kind === 'gems' && paid && userId) {
+      const pack = gemPack(session.metadata?.pack ?? '')
+      if (pack) {
+        const admin = createAdminClient()
+        const { error: claimErr } = await admin.from('gem_transactions').insert({
+          user_id: userId,
+          amount: pack.gems,
+          reason: `Bought the ${pack.name}`,
+          payment_ref: session.id,
+        })
+        // Duplicate delivery — already fulfilled, nothing to do.
+        if (!claimErr) {
+          await admin.rpc('increment_gems', { user_id: userId, amount: pack.gems })
+        }
+      }
     }
   }
 
