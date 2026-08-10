@@ -3988,9 +3988,26 @@ export default function GauntletGame(props: GauntletGameProps) {
                           role="button" tabIndex={0} aria-label={`What ${b.name} does`}
                           onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg,
                             rungs: fam?.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= b.tier, current: i + 1 === b.tier })) }) }}
-                          className="font-cinzel font-700 tap"
-                          style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1 }}>
-                          i
+                          className="tap"
+                          // The card itself DRAFTS on tap, and a draft cannot be
+                          // taken back — so the read-only affordance sitting on
+                          // top of it was the worst possible thing to make a
+                          // 24px target. It stopped propagation correctly; the
+                          // misses were fingers landing outside 24px and hitting
+                          // the card underneath, which committed a boon.
+                          //
+                          // Padding buys a ~46px touch target and the equal
+                          // negative margin cancels it for layout, so the circle
+                          // sits exactly where it did. pointerdown is stopped
+                          // too: the card fires its haptic on pointerdown, so
+                          // without this the tap that opens the popup still
+                          // buzzed as though something had been chosen.
+                          onPointerDown={e => e.stopPropagation()}
+                          style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, margin: -10, cursor: 'pointer', touchAction: 'manipulation' }}>
+                          <span aria-hidden className="font-cinzel font-700"
+                            style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.38)', color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1 }}>
+                            i
+                          </span>
                         </span>
                       </div>
                       {/* The power gained — the payoff, green + clear. Set in
