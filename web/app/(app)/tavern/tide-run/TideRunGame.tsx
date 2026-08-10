@@ -2011,14 +2011,21 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
 
         {uiState === 'ready' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none pb-[calc(env(safe-area-inset-bottom,0px)+32px)] sm:pb-0">
+            {/* Matched to the wreck modal: same width, padding and corner. The
+                two alternate on the same screen — start, run, wreck, start —
+                so any difference between them reads as the panel jumping
+                rather than as two designs. width:100% as well as maxWidth,
+                because without it the box sizes to its content and the start
+                screen, which holds less text, came out narrower again. */}
             <div style={{
-              padding: '22px 26px',
-              borderRadius: 16,
+              width: '100%',
+              maxWidth: 360,
+              padding: '18px 20px 16px',
+              borderRadius: 18,
               background: 'rgba(6, 18, 34, 0.84)',
               border: '1px solid rgba(189,160,90,0.5)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
-              maxWidth: 340,
             }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 20 }}>
                 Tide Run
