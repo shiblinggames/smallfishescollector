@@ -106,7 +106,7 @@ const SHOAL_CLUSTER_SAFE_GAP_MAX_PX = 235   // safe-landing strip — max width
 // "see rock → jump" reflex. On airborne contact, the game pauses for
 // BEACON_DETECT_FLASH_SEC while a beam of light fires upward, then wreck.
 const BEACON_CHANCE              = 0.22  // probability a spawn becomes a beacon (signature mechanic)
-const BEACON_WARMUP_M            = 75    // beacons only after 75m (player learns rocks first)
+const BEACON_WARMUP_M            = 66    // beacons only after 66m (player learns rocks first)
 const BEACON_AFTER_ROCK_TIME_SEC = 1.05  // need to land from a previous jump before reaching one
 const BEACON_DETECT_FLASH_SEC    = 0.55  // duration the detection beam plays before wrecked screen
 
