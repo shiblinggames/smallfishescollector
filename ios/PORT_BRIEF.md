@@ -176,3 +176,94 @@ boat. On iPhone-only this matters less, but keep the clamp for iPad.
 
 Step 4 is the milestone that matters: if the boat-on-wave + hold-jump doesn't feel like
 the web game side-by-side on the same phone, stop and fix before building anything else.
+
+---
+
+# UPDATE — 2026-08-10
+
+The brief above is still broadly right about the game loop, but the game has
+grown since it was written and one section of it is now wrong. Read this before
+starting.
+
+## The decision, settled
+
+**Native Swift + SpriteKit, iOS only, and its own leaderboard via Game Center.**
+Nothing about the standalone touches Small Fishes: no account, no Supabase, no
+doubloons, no shared board. That is a deliberate simplification rather than a
+limitation — see "What NOT to port".
+
+## The source is still the spec, and here is what changed
+
+`web/app/(app)/tavern/tide-run/TideRunGame.tsx` remains THE reference. Constants
+verified against it on 2026-08-10:
+
+| | |
+|---|---|
+| `GRAVITY` | 2800 px/s² |
+| `JUMP_IMPULSE` | 590 px/s |
+| `JUMP_HOLD_GRAVITY_MULT` | 0.30 |
+| `JUMP_MAX_HOLD_SEC` | 0.40 |
+| `BASE_SPEED` / `SPEED_RAMP` / `MAX_SPEED` | 290 / 5 / 1500 |
+| `SEA_BASE_Y_PCT` | 0.60 |
+| `HAZARD_SPAWN_SPACING` | 360 world px |
+| `SHIP_HEIGHT_PCT` / `SHIP_SIZING_REF_H` / `SHIP_ASPECT` | 0.095 / 620 / 805:595 |
+| `CYCLE_DISTANCE_M` | 2400 (a full day/night cycle) |
+
+**Beacons now start at 66m, not 75m.** `BEACON_CHANCE` 0.22, no two in a row,
+and a `BEACON_AFTER_ROCK_TIME_SEC` 1.05 landing buffer scaled by current speed —
+a TIME floor, not a distance, which is what keeps them fair as the run speeds up.
+
+## New since the brief: cosmetics, and they are most of the remaining work
+
+Two unlock ladders, both keyed on best distance and both interleaved so
+something is always close. Catalogs are plain data and port directly:
+
+- `web/lib/tideRunBoats.ts` — 12 boats. Art in `web/public/tiderun/`, eleven
+  320x237 transparent PNGs plus `boatrun.png` as the starter. Thresholds
+  0/75/150/225/300/375/450/525/600/700/800/900.
+- `web/lib/tideRunSeas.ts` — 6 seas. NO ART: a sea is four palette stops of
+  eight colours which the renderer already draws every sky, sea, island, cloud
+  and foam pixel from. Thresholds 0/125/250/400/550/750.
+
+Two rules the port must keep:
+
+1. **The art never drives the hitbox.** Every boat shares the original's 1.353
+   aspect precisely so `SHIP_ASPECT` and the `HITBOX_INSET` box are identical
+   whichever is equipped. A cosmetic that changes your hitbox is not a cosmetic.
+2. **Hazards do not use the palette's `island` colour.** Rocks, shoals and
+   beacons have their own hardcoded colours, so a sea can only ever restyle
+   decoration (far ridge, distant isles, sea stacks). A new sea can never make
+   a hazard invisible.
+
+UI to rebuild: the locker (two tabs, locked entries shown silhouetted with their
+distance, "Sailing" chip on the equipped one), the unlock overlay (dismissed by
+TAP not a timer, equips on dismiss, seas queue behind boats), and the entry
+points on the start and wreck screens.
+
+## Persistence: `adapter.ts` is your spec
+
+`web/app/(app)/tavern/tide-run/adapter.ts` defines the whole surface the game
+needs from its host, and `localAdapter` in that file is exactly what the native
+build should do — in UserDefaults instead of localStorage:
+
+    bestDistance, boatId, seaId, hasSeenTour
+
+Ownership is DERIVED from `bestDistance` against the thresholds, never stored as
+a list. Keep that: it means retuning a threshold retunes who owns what, and
+there is no granted list to drift out of step.
+
+## What NOT to port
+
+- **Doubloons and the beacon payout.** No economy standalone. This deletes the
+  entire exploit surface with it: the clamp, the anomaly flags and the
+  server-issued run token all exist only because beacons pay real currency.
+- **Auth, Supabase, and everything in `actions.ts` / `serverAdapter.ts`.**
+- **The shared leaderboard, `LeaderboardModal` and `PodiumToast`.** Game Center
+  replaces all three.
+
+## One thing to get right that the web version does not
+
+Distance is client-authored on the web and only partly guarded. Standalone that
+matters more, because the leaderboard IS the game: submit to Game Center from
+as close to the run's own state as possible, and treat an impossible score the
+way the web build treats an impossible beacon count.
