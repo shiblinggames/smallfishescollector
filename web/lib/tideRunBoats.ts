@@ -21,13 +21,18 @@
 // So the top boat sits at 900m: half again beyond Tide Master, comfortably past
 // the real record, and reachable rather than mythical.
 //
-// THE ART DOES NOT DRIVE THE HITBOX. Every boat here is 320x202 (aspect 1.58)
-// while the original is 1.35, and the collision box is derived from SHIP_ASPECT
-// via HITBOX_INSET. Sizing the box off the art would have made every new boat
-// ~17% wider to hit, quietly making the game harder for anyone who unlocked
-// one. The box stays exactly as it was and the art is drawn around it, so a
-// wider hull overhangs slightly — collision that is more forgiving than it
-// looks, which is the right direction for a runner and the standard trick.
+// EVERY BOAT SHARES THE ORIGINAL'S PROPORTIONS, 320x237 against boatrun.png's
+// 1.353, so SHIP_ASPECT and the HITBOX_INSET box it feeds are untouched and no
+// boat changes how the game plays. A cosmetic that alters your hitbox is not a
+// cosmetic.
+//
+// That took undoing something first. The source art is a recolour of the same
+// boat, but it was generated on a 16:9 canvas (1376x768) and the hull came out
+// stretched about 17% wide — visibly flatter side by side, and enough to have
+// widened the collision box had it been adopted as-is. The processing step
+// trims to content then resizes with fit:'fill' back to the original aspect,
+// which is the one case where a deliberate distortion is correct: it is
+// cancelling the generator's, not adding one.
 
 export type TideRunBoat = {
   id: string
