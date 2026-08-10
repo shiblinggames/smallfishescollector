@@ -82,25 +82,21 @@ export default function BoatLocker({
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          // WIDTH 100%, and that is the fix for the pop-and-expand. The shell's
-          // wrapper is a flex container, so a child with only a maxWidth is a
-          // flex item sized to its CONTENT: the panel opened at the width of the
-          // text, then the lazy card images arrived and shoved it out to 520.
-          // A definite width means it is the right size on the first frame and
-          // nothing reflows.
-          width: '100%', maxWidth: 520, margin: '0 auto', alignSelf: 'flex-start',
-          // Horizontal padding only INSIDE the panel — the shell already pads
-          // the wrapper 1rem each side, and doubling it was squeezing the grid.
-          // The bottom pad is the real clearance for the mobile tab bar: a flex
-          // scroll container's own padding-bottom is not reliably honoured at
-          // the end of the scroll, which is why the shell's was not enough and
-          // the last row of cards still sat under the bar.
-          padding: '1.1rem 0.85rem calc(env(safe-area-inset-bottom, 0px) + 96px)',
-          // A SOLID BASE. The shell only dims the game behind it, and a locker
-          // read against a moving sea with boats sliding past is genuinely hard
-          // to look at. Panels over live art need their own opaque ground —
-          // near-black rather than pure, so it still reads as part of the sea
-          // rather than as a browser dialog dropped on top.
+          // The panel BOUNDS ITSELF and scrolls inside, rather than growing
+          // until the page has to scroll it. That is what fixes both faults at
+          // once: padding the bottom to dodge the tab bar left a dead gap under
+          // short tabs (Waters is six cards, Boats is twelve) and still let the
+          // long one run under the bar, because a flex scroll container does not
+          // reliably honour its own padding-bottom at the end of the scroll.
+          //
+          // maxHeight:100% resolves against the shell's CONTENT box — the space
+          // already inset past the nav bar and the tab bar — so the panel simply
+          // cannot reach either of them whatever it contains. minHeight:0 is
+          // required for a flex child to be allowed to shrink and scroll at all.
+          width: '100%', maxWidth: 520, margin: '0 auto',
+          alignSelf: 'flex-start', maxHeight: '100%', minHeight: 0,
+          overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
+          padding: '1.1rem 0.85rem 1.2rem',
           background: 'linear-gradient(180deg, #0a1622 0%, #060e18 100%)',
           border: '1px solid rgba(127,208,232,0.22)',
           borderRadius: 18,
