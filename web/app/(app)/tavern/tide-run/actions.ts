@@ -5,11 +5,26 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { TIDE_CHAMPION_CONTEST_ID, TIDE_CHAMPION_GOAL_M, TIDE_CHAMPION_PRIZE_CODE } from '@/lib/contests'
 import { flagAnomaly } from '@/lib/anomaly'
 
-// A great run smashes tens of beacons (they only spawn past 75m, spaced hundreds
-// of world-px apart). This isn't a payout CAP — Tide Run income is uncapped by
-// design — it's purely the line past which a beacon count can't be a real run, so
-// we FLAG it for review without touching the (intentionally uncapped) reward.
-const TIDE_RUN_PLAUSIBLE_BEACONS = 500
+// Beacon counts are CLIENT-AUTHORED, so these two lines are the only thing
+// standing between a forged call and minted currency. Flagging alone was not
+// enough: one account replayed 10,000 beacons 283 times over 25 days and minted
+// 5,660,000 doubloons while every call was dutifully flagged and paid.
+//
+// Both numbers come from the 2,678 real credits on the ledger, not from taste.
+// A real run smashes 2.6 beacons on average, 8 at the 99th percentile, 14 at the
+// 99.9th, and the highest ever recorded is 200.
+//
+// MAX is what a run can be PAID for. 250 sits above the highest real run ever
+// seen, so it can never cut a legitimate player, while a forged 10,000 pays as
+// 250 — the exploit keeps 2.5% of its yield. Same shape as maxLegitKillGrant()
+// for raid gold.
+//
+// PLAUSIBLE is what gets FLAGGED, and it was 500: thirty-six times the 99.9th
+// percentile, so a patient cheat could have sent 499 a call, about 240,000
+// doubloons an hour, and never tripped anything. 25 is clear of real play and
+// catches abuse roughly twenty times sooner.
+const TIDE_RUN_MAX_BEACONS = 250
+const TIDE_RUN_PLAUSIBLE_BEACONS = 25
 
 /**
  * Record the player's distance for the all-time best (leaderboard). Only
@@ -103,7 +118,11 @@ export async function recordTideRunRun(distance: number, beacons: number): Promi
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const dist = Math.max(0, Math.min(100000, Math.floor(Number(distance) || 0)))
-    const smashed = Math.max(0, Math.min(10000, Math.floor(Number(beacons) || 0)))
+    // Same ceiling as the payout path. These counters feed admin aggregates and
+    // "most beacons smashed", so leaving this at 10,000 would keep the career
+    // stats inflated even once the doubloons were clamped — the exploit would
+    // simply buy a record instead of money.
+    const smashed = Math.max(0, Math.min(TIDE_RUN_MAX_BEACONS, Math.floor(Number(beacons) || 0)))
     if (dist === 0 && smashed === 0) return
     const admin = createAdminClient()
     await admin.rpc('bump_tide_run_stats', { uid: user.id, dist, beacons: smashed })
@@ -149,14 +168,18 @@ export async function awardTideRunBeacons(beacons: number): Promise<AwardTideRun
       .single()
     if (!profile) return { error: 'Profile not found' }
 
-    // Beacon count is client-authored (combat runs client-side), so an implausible
-    // count is a forged/replayed call. We DON'T clamp the payout (uncapped by
-    // design), just flag it — the real fix is the phase-2 server run token.
+    // Beacon count is client-authored, so a forged call arrives looking exactly
+    // like a good run. Flag it AND clamp it: flagging alone let one account mint
+    // 5.66M over 25 days with every call recorded and paid.
     if (smashed > TIDE_RUN_PLAUSIBLE_BEACONS) {
       await flagAnomaly(admin, user.id, 'implausible:tideRunBeacons', smashed > 5000 ? 3 : 2, { beacons: smashed })
     }
 
-    const doubloonsEarned = smashed * DOUBLOONS_PER_BEACON
+    // The clamp is what actually costs a cheat anything. It is deliberately
+    // above the best run ever recorded, so no honest player ever meets it, and
+    // the flag above still records the raw figure for review.
+    const paidBeacons = Math.min(smashed, TIDE_RUN_MAX_BEACONS)
+    const doubloonsEarned = paidBeacons * DOUBLOONS_PER_BEACON
     const newDoubloons = (profile.doubloons ?? 0) + doubloonsEarned
 
     const { error: updateErr } = await admin
@@ -169,7 +192,11 @@ export async function awardTideRunBeacons(beacons: number): Promise<AwardTideRun
     await admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: doubloonsEarned,
-      reason: `Tide Run beacons smashed (${smashed})`,
+      // Records what was PAID, and the raw claim too when they differ, so the
+      // ledger reads as forensics rather than as a payout that never happened.
+      reason: paidBeacons === smashed
+        ? `Tide Run beacons smashed (${smashed})`
+        : `Tide Run beacons smashed (${paidBeacons}, capped from ${smashed})`,
     }).then(() => {}, () => {})
 
     return { ok: true, doubloons: doubloonsEarned, newDoubloonTotal: newDoubloons }
