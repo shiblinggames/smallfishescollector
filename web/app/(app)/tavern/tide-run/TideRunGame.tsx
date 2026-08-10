@@ -1424,8 +1424,19 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     }
 
     // ── Foam crest ──
+    // Deliberately faint. At full palette alpha and 2px this was a uniform bright
+    // rule from edge to edge, and a line of constant weight across a moving
+    // surface reads as drawn rather than as water — the eye takes it for the
+    // horizon. The foam CAPS below already mark where foam actually forms, on
+    // the peaks, so the continuous line only has to imply a surface and can sit
+    // well under them. Scaled with globalAlpha rather than by editing pal.foam,
+    // because the caps and the splash particles share that colour and should
+    // keep their strength. One stroke, not one per segment: this runs every
+    // frame inside the game loop.
+    ctx.save()
+    ctx.globalAlpha = 0.42
     ctx.strokeStyle = pal.foam
-    ctx.lineWidth = 2
+    ctx.lineWidth = 1.2
     ctx.beginPath()
     for (let x = 0; x <= cw; x += 4) {
       const y = seaSurfaceY(x + g.scrollX, ch, g.scrollX)
@@ -1433,6 +1444,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
       else ctx.lineTo(x, y)
     }
     ctx.stroke()
+    ctx.restore()
 
     // ── Foam caps at wave peaks (detects local maxima) ──
     ctx.fillStyle = pal.foam
