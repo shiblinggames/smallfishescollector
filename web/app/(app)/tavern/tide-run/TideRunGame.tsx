@@ -2010,6 +2010,33 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
                   Best: {fmtDistance(highScore)}m
                 </p>
               )}
+
+              {/* THE BOATHOUSE, from the start screen too. Picking your boat and
+                  your water is something you want to do BEFORE a run, not only
+                  in the half-second after dying — and the wreck screen was the
+                  only door to it. Shows what you are currently sailing, so the
+                  button is a status line as well as a way in.
+
+                  stopPropagation on both pointerdown and click: the whole screen
+                  is the "tap to start" target, so without it opening the locker
+                  also launches a run underneath it. */}
+              <button
+                type="button"
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); hapticTap(); setLockerOpen(true) }}
+                className="pointer-events-auto tap font-karla font-700"
+                style={{
+                  width: '100%', marginTop: 14, padding: '0.6rem 0.7rem', borderRadius: 11,
+                  fontSize: '0.74rem', color: '#dff1f8',
+                  background: 'rgba(127,208,232,0.1)', border: '1px solid rgba(127,208,232,0.36)',
+                  cursor: 'pointer', touchAction: 'manipulation',
+                }}
+              >
+                Boats &amp; Waters
+                <span style={{ display: 'block', fontSize: '0.62rem', color: '#8fa6b8', marginTop: 2 }}>
+                  {tideRunBoat(boatId).name} · {tideRunSea(seaId).name}
+                </span>
+              </button>
             </div>
           </div>
         )}
