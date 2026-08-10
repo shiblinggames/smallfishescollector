@@ -32,6 +32,27 @@ Turn-based ship combat along a chaptered node chain. The other half of Expeditio
   pattern: dormant until an enemy uses them, answered by a specific crew class.
 - **Progressive reveal is intentional** — the map fogs past `REVEAL_AHEAD`. Don't
   "helpfully" show the whole chain.
+- **A heal cap is DERIVED FROM ITS RATE, never a flat number.** Every
+  damage-scaled heal (Leviathan's Hunger, the Blood Cannon family, Feeding
+  Frenzy, the overkill boon) shares one per-hit ceiling in `RaidCombat.tsx`:
+  a fixed multiple of your total rate, as a share of max HP
+  (`lifestealHealCap` / `LIFESTEAL_CAP_PER_RATE`). Two reasons, both learned
+  the hard way. A flat ceiling silently deletes the effect once damage outgrows
+  the hull — a real depth-96 run realised barely a fifth of the rate its own
+  card advertised, because every big hit was shaved to the same number. And
+  any ceiling that ignores the rate makes every point above it worthless, so
+  stacking sources buys nothing. Deriving it from the rate means each source
+  raises the heal AND the ceiling together, so a bigger stack always pays. The
+  separate `LIFESTEAL_CAP` bounds the summed ratio and is what keeps the
+  dedicated sustain build short of unkillable.
+
+## Sustain copy
+
+Whatever the numbers become, the cap must be STATED on the card that grants it
+— boon tiers, the item's generated effect line, and any synergy that moves it.
+Players read an unpredictable cap as a broken effect, which is exactly how the
+above was found. Keep one sentence shape across all of them so the rule is
+learned once.
 
 ## Tuning discipline
 
