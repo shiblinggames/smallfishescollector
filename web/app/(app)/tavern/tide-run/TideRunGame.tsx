@@ -1962,7 +1962,10 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
 
         {uiState === 'playing' && (
           <>
-            <div className="absolute top-3 left-0 right-0 flex flex-col items-center pointer-events-none">
+            {/* Same 22px top as the How to Play and Ranks buttons. The HUD was on
+                top-3 (12px) while the buttons sat at 22, so the three things
+                across the top of the screen were on two different lines. */}
+            <div className="absolute top-[22px] left-0 right-0 flex flex-col items-center pointer-events-none">
               <p className="font-cinzel font-700" style={{
                 fontSize: '2.2rem',
                 color: '#ffffff',
@@ -1995,7 +1998,7 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
               </AnimatePresence>
             </div>
             {highScore > 0 && (
-              <div className="absolute top-3 right-3 pointer-events-none text-right">
+              <div className="absolute top-[22px] right-[10px] pointer-events-none text-right">
                 <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{
                   fontSize: '0.55rem',
                   color: 'rgba(255,255,255,0.65)',
