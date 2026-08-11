@@ -10,3 +10,17 @@ build-banner.mjs
 commitmsg.txt
 .git-commit-msg.tmp
 .build-out.txt
+
+# Xcode, for the Tide Run port in ios/. Build output and per-developer editor
+# state only. The .xcodeproj/project.pbxproj itself MUST stay tracked, since it
+# is the project, so nothing here matches it.
+.DS_Store
+DerivedData/
+build/
+*.xcuserstate
+**/xcuserdata/
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+.swiftpm/
