@@ -221,6 +221,14 @@ something is always close. Catalogs are plain data and port directly:
 - `web/lib/tideRunBoats.ts` — 12 boats. Art in `web/public/tiderun/`, eleven
   320x237 transparent PNGs plus `boatrun.png` as the starter. Thresholds
   0/75/150/225/300/375/450/525/600/700/800/900.
+- **Five more boats exist that the web game does not use.** `ethereal.png`,
+  `galaxy.png`, `prism.png`, `tundra.png`, `volcanic.png`, in the same folder and
+  the same 320x237 format, cut by the same script. They are deliberately absent
+  from `tideRunBoats.ts`, so nothing in the web build reads them: they were made
+  FOR the standalone, as a tier above the flat recolours (pearl, nebula,
+  iridescent, ice, cracked lava). Where they sit on the standalone's ladder is
+  still open. They are the obvious candidates for the top of it, or for whatever
+  the standalone grows that distance alone cannot unlock.
 - `web/lib/tideRunSeas.ts` — 6 seas. NO ART: a sea is four palette stops of
   eight colours which the renderer already draws every sky, sea, island, cloud
   and foam pixel from. Thresholds 0/125/250/400/550/750.
@@ -293,7 +301,8 @@ keys. The repo is here for exactly two things: the spec, and the assets.
 | `web/lib/tideRunSeas.ts` | 6 seas, four palette stops each, no art |
 | `web/app/(app)/tavern/tide-run/adapter.ts` | `localAdapter` is the UserDefaults spec |
 | `web/public/boatrun.png` | the starter boat |
-| `web/public/tiderun/*.png` | the other 11 boats, 320x237, already compressed |
+| `web/public/tiderun/*.png` | the other 16 boats, 320x237, already compressed. 11 are on the web ladder, 5 are standalone-only (see above) |
+| `web/slice-tiderun-boats.mjs` | cuts a new recolour to that format. `node slice-tiderun-boats.mjs` from `web/`. Only needed if more art arrives |
 | `web/public/tiderun_beaconcatch.mp3` `tiderun_beaconcrash.mp3` `tiderun_splash.mp3` `tiderun_crash.mp3` | the four SFX |
 
 Copy the images and audio into the Xcode asset bundle. Everything else is read,
