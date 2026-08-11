@@ -3961,6 +3961,58 @@ export default function RaidCombat({
     // can deplete them in lockstep with the animation (see syncPHp/syncEHp)
     // instead of the whole turn's soak landing the instant it resolves.
     const pushStep = (s: Step) => { steps.push({ ...s, pShield: abyssalShieldRef.current, eShield: enemyShieldRef.current }) }
+    /**
+     * THE FINISHING CHECK, and the only copy of it.
+     *
+     * Executioner promises "the instant ANY hit drops an enemy to 5% of its
+     * health or lower", and Reaper's Tithe promises "every enemy you sink heals
+     * you". Both used to be written inline in the player's own attack path, so
+     * neither fired for the nine OTHER ways an enemy loses HP: burn ticks,
+     * thorns, both parries, the Aegis, Kraken's crush, the counter-shot and a
+     * Thermal Shock burst. A build could reflect a hull down to 3% and still owe
+     * it a shot, which is exactly backwards for a boon whose whole promise is
+     * not having to chip out the last sliver.
+     *
+     * Every route that lowers enemy HP calls this straight afterwards. It takes
+     * and returns the two locals it can move, so a caller cannot apply damage
+     * and silently skip the consequence.
+     *
+     * `crit` is passed only by the attack path, because Coup de Grâce is
+     * crit-gated by design and a crit does not exist anywhere else. The base
+     * execute is tested FIRST so a crit landing under both marks still reads as
+     * the plain Executioner it always has, rather than being relabelled.
+     */
+    const finishCheck = (
+      hp: number, php: number, lines: string[], crit = false,
+    ): { eHp: number; pHp: number; executed?: 'execute' | 'coup'; tithed: number } => {
+      let executed: 'execute' | 'coup' | undefined
+      // Both marks route the kill through wardFloor rather than zeroing eHp.
+      // Setting it to 0 directly walked straight through a boss's "cannot be
+      // killed for N turns" ward: chip damage could never reach the 0 that
+      // triggers the save, so the ward was dead weight against any Executioner.
+      if (hp > 0 && tide.executeThreshold > 0 && hp <= Math.ceil(enemyHpMaxRef.current * tide.executeThreshold)) {
+        hp = wardFloor(0)
+        if (hp === 0) { executed = 'execute'; lines.push(`Executioner! The ${enemy.name} drops past saving and is dragged under.`) }
+      }
+      if (!executed && crit && hp > 0 && tide.critExecutePct > 0 && hp <= Math.ceil(enemyHpMaxRef.current * tide.critExecutePct)) {
+        hp = wardFloor(0)
+        if (hp === 0) { executed = 'coup'; lines.push(`Coup de Grâce! The crit finds the killing mark and the ${enemy.name} is gone.`) }
+      }
+      // Reaper's Tithe pays for the hull being SUNK, however it went down, so it
+      // reads hp === 0 rather than asking whether an execute is what did it.
+      // Skips a phase-1 boss "kill" that is about to revive: it is not really
+      // sunk yet, and the real phase-2 death pays out instead.
+      let tithed = 0
+      if (hp === 0 && tide.executeHealPct > 0 && php > 0 && !(enemyPhaseRef.current <= phaseList.length)) {
+        const heal = Math.min(
+          playerHpMax - php,
+          Math.round(enemyHpMaxRef.current * tide.executeHealPct),
+          Math.round(playerHpMax * REAPER_HEAL_CAP_PCT),
+        )
+        if (heal > 0) { php += heal; tithed = heal; lines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
+      }
+      return { eHp: hp, pHp: php, executed, tithed }
+    }
     // Barrier Regrowth curse: the enemy barrier reknits a slice of its full value
     // at the top of each round, BEFORE the player's shot lands — so a slow chip
     // never breaks through and the hull only takes damage once you burst the wall
@@ -4039,7 +4091,12 @@ export default function RaidCombat({
         feedHeal = Math.min(Math.round(lifestealHealCap(playerHpMax, tide.burnTickHealPct)), healCap - pHp, Math.round(total * tide.burnTickHealPct))
         if (feedHeal > 0) { pHp += feedHeal; onStat?.({ dmgHealed: feedHeal }) }
       }
-      pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
+      // The tick gets the same finishing check a shot does, so fire can carry a
+      // hull past the mark on its own instead of leaving it there for you.
+      const burnLines: string[] = [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`]
+      const burnFin = finishCheck(eHp, pHp, burnLines)
+      eHp = burnFin.eHp; pHp = burnFin.pHp
+      pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: burnLines, burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined, executed: burnFin.executed, titheHeal: burnFin.tithed || undefined })
     }
 
     // The vengeance ward's fuse burns at the same boundary the burn decays at, so
@@ -4207,14 +4264,17 @@ export default function RaidCombat({
         }
         // Return to Sender: fling their would-be shell right back at them.
         let reflectOut = 0
+        let counterFin: ReturnType<typeof finishCheck> | null = null
         if (tide.counterReflectPct > 0) {
           const eBase = (Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg) * (eAction === 'volley' ? 2 : 1)
           const pm = enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2] ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
           reflectOut = Math.max(1, Math.floor(eBase * pm * tide.counterReflectPct))
           eHp = Math.max(0, eHp - reflectOut)
           cLines.push(`Return to Sender — their own shell, flung back for ${reflectOut}.`)
+          counterFin = finishCheck(eHp, pHp, cLines)
+          eHp = counterFin.eHp; pHp = counterFin.pHp
         }
-        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: reflectOut > 0 ? `-${reflectOut}` : 'Countered', splatColor: '#7dd3fc', logLines: cLines, countered: true })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: reflectOut > 0 ? `-${reflectOut}` : 'Countered', splatColor: '#7dd3fc', logLines: cLines, countered: true, executed: counterFin?.executed, titheHeal: counterFin?.tithed || undefined })
         continue
       }
       // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
@@ -4826,6 +4886,10 @@ export default function RaidCombat({
               eHp = wardFloor(eHp - soakEnemyShield(spite))
               reflectDmgOut = (reflectDmgOut ?? 0) + spite
               stepLines.push(`Spiteful Wake — you slip the shot and the wake lashes back for ${spite}.`)
+              const fin = finishCheck(eHp, pHp, stepLines)
+              eHp = fin.eHp; pHp = fin.pHp
+              if (fin.executed) executeKind = fin.executed
+              titheHealedOut += fin.tithed
             }
 
             // ── Parry layer on top of the dodge result ───────────────────
@@ -4872,10 +4936,17 @@ export default function RaidCombat({
                 eHp = wardFloor(eHp - soakEnemyShield(reflectDmg))
                 reflectDmgOut = reflectDmg
                 stepLines.push(`Riposte! You turn the shot back, slicing ${reflectDmg} into ${enemy.name}.`)
+                const fin = finishCheck(eHp, pHp, stepLines)
+                eHp = fin.eHp; pHp = fin.pHp
+                if (fin.executed) executeKind = fin.executed
+                titheHealedOut += fin.tithed
               }
             }
 
-            pushStep({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut, riposteDmg: riposteDmgOut })
+            // This branch CONTINUES, so it is the end of the road for a dodge
+            // step: anything the reflect above set has to ride out on this step
+            // or it never reaches the screen at all.
+            pushStep({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut, riposteDmg: riposteDmgOut, executed: executeKind, titheHeal: titheHealedOut || undefined })
             continue
           } else {
             // A player dodge that failed — you took the hit anyway.
@@ -5011,33 +5082,15 @@ export default function RaidCombat({
             overkillHealedOut = pHp - before
             if (overkillHealedOut > 0) onStat?.({ dmgHealed: overkillHealedOut })
           }
-          // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
-          // it's sunk outright (only when it actually landed + isn't already dead).
-          if (dmg > 0 && eHp > 0 && tide.executeThreshold > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.executeThreshold)) {
-            eHp = 0
-            executeKind = 'execute'
-            stepLines.push(`Executioner! The ${enemy.name} drops past saving and is dragged under.`)
-          }
-          // Coup de Grâce confluence: a CRITICAL hit that leaves the hull wounded
-          // (<= critExecutePct of max) finishes it on the spot — a far wider mark
-          // than the base Executioner, but only on a crit.
-          if (dmg > 0 && eHp > 0 && lockedAimResult === 'critical' && tide.critExecutePct > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.critExecutePct)) {
-            eHp = 0
-            executeKind = 'coup'
-            stepLines.push(`Coup de Grâce! The crit finds the killing mark and the ${enemy.name} is gone.`)
-          }
-          // Reaper's Tithe confluence: sinking a hull heals you a slice of ITS
-          // max HP. Skips a phase-1 boss "kill" that's about to revive (it isn't
-          // really sunk yet — the real phase-2 death pays out instead).
-          if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemyPhaseRef.current <= phaseList.length)) {
-            // Scales with the sunk hull's max HP, but CAPPED at a slice of YOUR
-            // own max so a big-HP boss can't near-full-heal you.
-            const heal = Math.min(
-              playerHpMax - pHp,
-              Math.round(enemyHpMaxRef.current * tide.executeHealPct),
-              Math.round(playerHpMax * REAPER_HEAL_CAP_PCT),
-            )
-            if (heal > 0) { pHp += heal; titheHealedOut += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
+          // Executioner / Coup de Grâce / Reaper's Tithe — see finishCheck. Still
+          // gated on dmg > 0: the mark is for a hit that DROVE the hull under it,
+          // not for finding it already there, or a shot that missed would sink an
+          // enemy the previous turn had left in the window.
+          if (dmg > 0) {
+            const fin = finishCheck(eHp, pHp, stepLines, lockedAimResult === 'critical')
+            eHp = fin.eHp; pHp = fin.pHp
+            if (fin.executed) executeKind = fin.executed
+            titheHealedOut += fin.tithed
           }
           // Incendiary / Frozen cannonball — 15% on-hit procs, only when the
           // shot actually landed and didn't already sink them. Burn refreshes
@@ -5131,6 +5184,10 @@ export default function RaidCombat({
                   : `Kraken's Grip! ${coils} coils close on the ${enemy.name} — it loses its next turn and takes ${crush}.`)
                 onStat?.({ dmgDealt: crush })
                 procStatus = 'stun'
+                const fin = finishCheck(eHp, pHp, stepLines)
+                eHp = fin.eHp; pHp = fin.pHp
+                if (fin.executed) executeKind = fin.executed
+                titheHealedOut += fin.tithed
               } else {
                 stepLines.push(`The deep coils tighter around the ${enemy.name}. (${coils}/${tide.gripHits})`)
               }
@@ -5196,12 +5253,13 @@ export default function RaidCombat({
             thermalBurstOut = burst
             onPlayerHit?.(dmg + burst)   // the shatter counts toward Biggest Hit
             stepLines.push(`Thermal Shock! Ice meets fire and the frozen hull shatters apart for ${burst}.`)
-            // Credit Reaper's Tithe if the shatter is what sank the hull (the base
-            // execute/heal checks ran before the procs, so re-check here).
-            if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemyPhaseRef.current <= phaseList.length)) {
-              const heal = Math.min(playerHpMax - pHp, Math.round(enemyHpMaxRef.current * tide.executeHealPct), Math.round(playerHpMax * REAPER_HEAL_CAP_PCT))
-              if (heal > 0) { pHp += heal; titheHealedOut += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
-            }
+            // The base checks ran before the procs, so the shatter gets its own.
+            // It used to re-check the Tithe alone, which meant a burst that drove
+            // the hull into the execute window sat there instead of sinking.
+            const fin = finishCheck(eHp, pHp, stepLines)
+            eHp = fin.eHp; pHp = fin.pHp
+            if (fin.executed) executeKind = fin.executed
+            titheHealedOut += fin.tithed
           }
           // Nuke Fallout: the blast always leaves the wreck burning (overwrites a
           // weaker Incendiary proc with the stronger DoT). Capped per tick like
@@ -5309,6 +5367,10 @@ export default function RaidCombat({
               const reflect = Math.max(1, Math.round(rawIncoming * tide.parryReflectPct))
               eHp = wardFloor(eHp - soakEnemyShield(reflect))
               stepLines.push(`Cutlass Guard! You turn the ${enemy.name}'s blow and lash back for ${reflect}.`)
+              const fin = finishCheck(eHp, pHp, stepLines)
+              eHp = fin.eHp; pHp = fin.pHp
+              if (fin.executed) executeKind = fin.executed
+              titheHealedOut += fin.tithed
             } else {
               stepLines.push(`Cutlass Guard! You turn the ${enemy.name}'s blow clean aside.`)
             }
@@ -5333,6 +5395,10 @@ export default function RaidCombat({
                 const reflect = Math.max(1, Math.round(rawIncoming * reflectPct))
                 eHp = wardFloor(eHp - soakEnemyShield(reflect))
                 stepLines.push(`The Aegis braces for the opening blow and throws ${reflect} straight back.`)
+                const fin = finishCheck(eHp, pHp, stepLines)
+                eHp = fin.eHp; pHp = fin.pHp
+                if (fin.executed) executeKind = fin.executed
+                titheHealedOut += fin.tithed
               } else {
                 stepLines.push(`The Aegis braces — the opening blow glances clean off the hull.`)
               }
@@ -5429,6 +5495,10 @@ export default function RaidCombat({
             const thorns = Math.max(1, Math.round(rawIncoming * tide.retaliatePct * tide.retaliateBoostMult))
             eHp = wardFloor(eHp - soakEnemyShield(thorns))
             stepLines.push(tide.retaliateBoostMult > 1 ? `Iron Tempest! The blow is flung back for ${thorns}.` : `Spiteful Wake bites back for ${thorns}.`)
+            const fin = finishCheck(eHp, pHp, stepLines)
+            eHp = fin.eHp; pHp = fin.pHp
+            if (fin.executed) executeKind = fin.executed
+            titheHealedOut += fin.tithed
           }
           // Scorching / Glacial affixes: the elite's landed hit has a chance to
           // set the player ablaze (DoT scaled to this hit, like the player's
@@ -5891,6 +5961,42 @@ export default function RaidCombat({
         playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 520))
         vibrate([0, 35, 25, 55])
       }
+      // Executioner / Coup de Grâce — the finishing blow. A beat after the step
+      // opens: a gold center flash + hard impact, so a synergy kill reads as an
+      // earned execution rather than a hull quietly hitting zero.
+      //
+      // Lives at the TOP of the step, not inside the enemy-splat branch it used
+      // to sit in. Now that thorns, both parries, a burn tick and the counter
+      // shot can all execute, the finish has to fire on steps that splat on the
+      // PLAYER (a dodge that reflected) or nowhere at all — and in that branch
+      // the old placement was simply never reached.
+      if (step.executed) {
+        const xk = Date.now() + i + 23
+        const coup = step.executed === 'coup'
+        playStepChainRef.current.push(setTimeout(() => {
+          setBoonFlash({ label: coup ? 'COUP DE GRÂCE' : 'EXECUTIONER', sub: coup ? 'The crit finds the killing mark' : 'Dropped past saving', color: '#f5c542', key: xk })
+          setCritFlash(true)
+          setEnemyImpact({ key: xk + 1, kind: 'crit' })
+          setEnemyShakeKind('crit'); setEnemyShakeKey(k => k + 1)
+          cameraShake('crit')
+          vibrate([0, 60, 40, 90])
+          playStepChainRef.current.push(setTimeout(() => { setCritFlash(false); setBoonFlash(bf => (bf && bf.key === xk ? null : bf)) }, 1400))
+        }, 260))
+      }
+      // Reaper's Tithe paid by something OTHER than your own shot: thorns, a
+      // parry, a burn tick, the counter shell. The attack path pays its own gold
+      // splat once the shell has landed, so it is excluded here rather than
+      // hoisted, which would have pulled that one forward into the flight.
+      if (step.titheHeal && step.titheHeal > 0 && !(isAttack && step.who === 'player')) {
+        const rk = Date.now() + i + 47
+        const tithed = step.titheHeal
+        playStepChainRef.current.push(setTimeout(() => {
+          setPHitsplat({ key: rk, text: `+${tithed}`, color: '#f5c542', big: true })
+          setPlayerAura({ key: rk + 1, kind: 'heal', color: '#f5c542' })
+          vibrate([0, 30])
+          playStepChainRef.current.push(setTimeout(() => { setPHitsplat(null); setPlayerAura(a => (a && a.key === rk + 1 ? null : a)) }, SPLAT_HOLD_MS))
+        }, 340))
+      }
       // Cannonade — sync the heat rim + streak badge on the player hull to the
       // committed streak (0 = the chain just broke, badge clears).
       if (step.cannonade !== undefined) setCannonadeStacks(step.cannonade)
@@ -6156,22 +6262,6 @@ export default function RaidCombat({
                 vibrate([0, 45, 28, 70])
                 playStepChainRef.current.push(setTimeout(() => { setThermalShockFx(null); setEHitsplat(null) }, 760))
               }, 200))
-            }
-            // Executioner / Coup de Grâce — the finishing blow. A beat after the
-            // hit lands: a gold center flash + hard impact, so a synergy kill
-            // reads as an earned execution, not just a hull hitting zero.
-            if (step.executed) {
-              const xk = Date.now() + i + 23
-              const coup = step.executed === 'coup'
-              playStepChainRef.current.push(setTimeout(() => {
-                setBoonFlash({ label: coup ? 'COUP DE GRÂCE' : 'EXECUTIONER', sub: coup ? 'The crit finds the killing mark' : 'Dropped past saving', color: '#f5c542', key: xk })
-                setCritFlash(true)
-                setEnemyImpact({ key: xk + 1, kind: 'crit' })
-                setEnemyShakeKind('crit'); setEnemyShakeKey(k => k + 1)
-                cameraShake('crit')
-                vibrate([0, 60, 40, 90])
-                playStepChainRef.current.push(setTimeout(() => { setCritFlash(false); setBoonFlash(bf => (bf && bf.key === xk ? null : bf)) }, 1400))
-              }, 260))
             }
             // Rattling Shot / Chainshot / the rack — a debuff-landed flare on the
             // enemy hull so a control build sees its hex/snare take hold.
