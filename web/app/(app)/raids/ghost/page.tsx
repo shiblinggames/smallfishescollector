@@ -28,12 +28,20 @@ export default async function QuartermastersGhostRaidPage() {
   // The ghost's own gate, enforced here and not only in the map: he will not deal
   // until you have put him down ALIVE, in his challenge run. The node carries the
   // same requiresClearedNode, but the route is reachable by typing the URL.
+  //
+  // .limit(1) IS LOAD-BEARING. raid_completions is an append-only log with a row
+  // per clear, and maybeSingle() ERRORS when more than one row comes back rather
+  // than returning the first. So beating the challenge a SECOND time turned this
+  // gate against the player: data came back null, and the boss they had already
+  // farmed started bouncing them to /expeditions. Two captains hit it, and both
+  // stopped dead on the exact day of their second challenge clear.
   const admin = createAdminClient()
   const { data: beatenAlive } = await admin
     .from('raid_completions')
-    .select('raid_id')
+    .select('id')
     .eq('user_id', user.id)
     .eq('raid_id', 'the_quartermaster_challenge')
+    .limit(1)
     .maybeSingle()
   if (!beatenAlive) redirect('/expeditions')
 
