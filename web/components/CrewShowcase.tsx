@@ -3,7 +3,7 @@
 // Shared crew showcase: the portrait tiles a player features on their profile,
 // public profile, and social card. Read-only display + an optional Edit hook.
 
-import { applyCrewEffects } from '@/lib/crewEffects'
+import { applyCrewEffects, isDivineTrait, netTraitStats, traitKind, traitLabel } from '@/lib/crewEffects'
 import { RARITY_COLORS, RARITY_NAMES, type CrewRarity } from '@/lib/crewGen'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkinByFilename, skinArtGlow } from '@/lib/crewSkins'
@@ -46,6 +46,14 @@ export function CrewPortrait({ crew, w = 148, dimmed, fill, hideStats }: { crew:
   const glow = skinColor ?? color
   const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects, crew.xp ?? 0)
   const level = crewLevelFromXP(crew.xp ?? 0)
+  // The trait, which is the third thing that makes a hand worth showing off and
+  // the only one of the three you cannot buy or grind directly. It rides in the
+  // caption rather than the stat line on purpose: the profile passes hideStats,
+  // so anything down there is invisible on the surface this is mostly for.
+  const trait = netTraitStats(crew.effects)
+  const traitName = traitLabel(trait)
+  const traitTone = traitKind(trait)
+  const traitDivine = isDivineTrait(trait)
   return (
     <div style={{ width: fill ? '100%' : w, flexShrink: 0, opacity: dimmed ? 0.4 : 1, transition: 'opacity 0.15s' }}>
       {/* Borderless art hero — a poster, not a card. Aura in the rarity (or
@@ -75,6 +83,24 @@ export function CrewPortrait({ crew, w = 148, dimmed, fill, hideStats }: { crew:
           <p className="font-cinzel font-700" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', textTransform: 'uppercase', color, textAlign: 'center', marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
             {RARITY_NAMES[(crew.rarity as CrewRarity)] ?? 'Common'}
           </p>
+          {/* Its own line rather than "LEGENDARY · UNTOUCHABLE" on one. At this
+              size and letter-spacing the pair overruns a 148px tile and wraps
+              mid-word, and a trait is a big enough brag to get its own row.
+              Divine paints itself through .trait-divine, a gradient clipped to
+              the glyphs, so it takes no `color` and no text-shadow: both would
+              show through the transparent fill and muddy it. */}
+          {traitName && (
+            <p className={`font-cinzel font-700${traitDivine ? ' trait-divine' : ''}`} style={{
+              fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+              textAlign: 'center', marginTop: 2,
+              ...(traitDivine ? {} : {
+                color: traitTone === 'buff' ? '#9fd9b1' : traitTone === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.62)',
+                textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+              }),
+            }}>
+              {traitName}
+            </p>
+          )}
         </div>
       </div>
       {/* Slim stat line — the three numbers to brag with, no box. */}
