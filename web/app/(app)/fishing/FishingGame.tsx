@@ -56,7 +56,7 @@ import { DialSVG, arcPath, polar, CX, CY, OUTER_R, INNER_R } from '@/components/
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { rewardsOwed, nextLevelReward, rewardLabel, LEVEL_REWARD_MAX, type LevelReward } from '@/lib/levelRewards'
-import { renownLevel, renownProgress, spentPoints, fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
+import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
 import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
@@ -4122,10 +4122,10 @@ export default function FishingGame({
   const eventTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fishingLevel = getLevelFromXP(fishingXP)
-  // Renown Precision widens the catch window a hair per point (post-100). Folds
-  // into the same catch-zone budget as level/bait/rod bonuses.
-  const renownZoneBonus = fishingRenownEffects(fishingRenownAlloc).catchZoneBonus
-  const levelBonus   = levelCatchBonus(fishingLevel) + renownZoneBonus
+  // Renown no longer touches the catch window. Precision widened it a hair per
+  // point and was replaced by Providence, which is a crate-rate multiplier
+  // resolved server-side in castLine, so nothing here reads it.
+  const levelBonus   = levelCatchBonus(fishingLevel)
 
   // Needle state
   const [angle, setAngle]           = useState(270)

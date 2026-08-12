@@ -95,7 +95,18 @@ export const FISHING_RENOWN_STATS: RenownStat[] = [
   { id: 'bounty',    name: 'Bounty',    blurb: 'When you sell your catch at market.', unit: 'doubloons',  perPoint: 0.015, kind: 'pct',  color: '#f0c040' },
   { id: 'wisdom',    name: 'Wisdom',    blurb: 'From every catch you land.',           unit: 'Fishing XP', perPoint: 0.02,  kind: 'pct',  color: '#5eead4' },
   { id: 'patience',  name: 'Patience',  blurb: 'Fish take the hook sooner.',           unit: 'bite speed', perPoint: 0.004, kind: 'pct',  color: '#60a5fa' },
-  { id: 'precision', name: 'Precision', blurb: 'A wider green band on the dial.',       unit: 'catch zone', perPoint: 0.30,  kind: 'deg',  color: '#a78bfa' },
+  // PROVIDENCE replaced PRECISION (a wider green band, +0.3 degrees a point).
+  //
+  // Renown is spent by players who already finished the level curve, and by then
+  // a rod, hook, line and bait stack has made the dial a formality. Precision
+  // sold consistency to the only people who had already bought it. Every one of
+  // the first five captains past 100 said so with their points: 47 spent between
+  // them, not one on Precision.
+  //
+  // Crates answer the same players differently. They are the only source of pets
+  // and several cosmetics, so the stat is a faucet on content rather than a
+  // smaller margin for error on a thing that no longer goes wrong.
+  { id: 'providence', name: 'Providence', blurb: 'Supply crates surface more often.', unit: 'crate chance', perPoint: 0.03, kind: 'pct', color: '#a78bfa' },
 ]
 
 export const NAV_RENOWN_STATS: RenownStat[] = [
@@ -143,7 +154,7 @@ export function formatRenownTotal(stat: RenownStat, points: number): string {
 const perPointOf = (skill: RenownSkill, id: string): number =>
   renownStats(skill).find(s => s.id === id)?.perPoint ?? 0
 
-export interface FishingRenownEffects { sellMult: number; xpMult: number; biteWaitMult: number; catchZoneBonus: number }
+export interface FishingRenownEffects { sellMult: number; xpMult: number; biteWaitMult: number; crateChanceMult: number }
 export function fishingRenownEffects(alloc: RenownAlloc | null | undefined): FishingRenownEffects {
   return {
     sellMult: 1 + pts(alloc, 'bounty') * perPointOf('fishing', 'bounty'),
@@ -151,7 +162,13 @@ export function fishingRenownEffects(alloc: RenownAlloc | null | undefined): Fis
     // faster bites; the reduction from Renown alone is soft-capped at −30%
     // (the 3000ms hard floor in fishWaitMs still applies on top).
     biteWaitMult: 1 - Math.min(0.30, pts(alloc, 'patience') * perPointOf('fishing', 'patience')),
-    catchZoneBonus: pts(alloc, 'precision') * perPointOf('fishing', 'precision'),
+    // MULTIPLIER, not added percentage points, so it composes with the rod and
+    // the Angler's Patience the way those already compose with each other, and
+    // so it is worth the same proportionally in the Ancient Deep (3%) as in the
+    // shallows (2%) rather than quietly being worth less where crates are best.
+    // At 0.03 a point, matching a Treasure Rod's flat 2x takes 33 points, which
+    // is a long way past where anyone is today.
+    crateChanceMult: 1 + pts(alloc, 'providence') * perPointOf('fishing', 'providence'),
   }
 }
 

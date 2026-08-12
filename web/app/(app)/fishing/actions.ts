@@ -203,7 +203,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   await settleDeferredSpeciesCredit(admin, user.id, profile)
 
   const bait = getBait(baitType)
-  const renownWaitMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).biteWaitMult
+  const renownFishing = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null)
+  const renownWaitMult = renownFishing.biteWaitMult
 
   // Validate zone access by fishing level
   const fishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
@@ -323,7 +324,10 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // seconds, so sharing the shallows' 2% would make a chest an hour-plus event.
   // The gear multipliers still apply, so a Treasure Rod is worth bringing down
   // here too.
-  const isCrate = Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult
+  // Renown PROVIDENCE joins the rod and the Angler's Patience as a third
+  // multiplier on the same roll. Server-side, like every other renown effect:
+  // the client is never told the crate rate, so it cannot be talked up.
+  const isCrate = Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
   // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
