@@ -152,7 +152,13 @@ export interface BadgeProfileFields {
 
 export interface BadgeJoinData {
   raids: { raid_id: string; elapsed_ms: number | null }[]
-  crew: { xp: number | null; died_at: string | null; slug: string | null; effects?: string[] | null }[]
+  /** `effects` is REQUIRED, not optional, and that is the whole point. It used
+   *  to be optional, and every one of the three callers selected it from
+   *  user_crew and then quietly dropped it while mapping rows. Nothing
+   *  complained, so deep_cut, divine_hand and six_divine could not be earned by
+   *  anyone: the trait always read as 0/0/0. Required means the compiler finds
+   *  the next caller that forgets. */
+  crew: { xp: number | null; died_at: string | null; slug: string | null; effects: string[] | null }[]
   voyageCount: number       // revealed daily_voyages
   collectionCount: number   // lifetime distinct species (prestige-proof)
   rodTiers: number[]        // rod_inventory rod_tier values (owned rods)

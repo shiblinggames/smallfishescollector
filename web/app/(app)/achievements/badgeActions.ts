@@ -32,10 +32,10 @@ export async function reconcileBadges(): Promise<string[]> {
 
   const have = new Set<string>((profile.unlocked_badges as string[] | null) ?? [])
   // Supabase types cards as an array though it's a to-one object at runtime.
-  const crew = (crewRows ?? []) as unknown as { xp: number | null; died_at: string | null; cards: { slug: string | null } | null }[]
+  const crew = (crewRows ?? []) as unknown as { xp: number | null; died_at: string | null; effects: string[] | null; cards: { slug: string | null } | null }[]
   const derived = earnedBadgeIds(profile as BadgeProfileFields, {
     raids: (raidRows ?? []) as { raid_id: string; elapsed_ms: number | null }[],
-    crew: crew.map(c => ({ xp: c.xp, died_at: c.died_at, slug: c.cards?.slug ?? null })),
+    crew: crew.map(c => ({ xp: c.xp, died_at: c.died_at, effects: c.effects ?? null, slug: c.cards?.slug ?? null })),
     voyageCount: voyageCount ?? 0,
     // Lifetime species (prestige-proof) drives the collection badges; fall back
     // to the live count for any row the backfill hasn't reached.

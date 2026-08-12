@@ -60,10 +60,10 @@ const getCachedAchievementRows = unstable_cache(
       raidsBy.set(r.user_id, arr)
     }
     // Supabase types cards as an array though it's a to-one object at runtime.
-    const crewBy = new Map<string, { xp: number | null; died_at: string | null; slug: string | null }[]>()
-    for (const c of (crewRows ?? []) as unknown as Array<{ user_id: string; xp: number | null; died_at: string | null; cards: { slug: string | null } | null }>) {
+    const crewBy = new Map<string, { xp: number | null; died_at: string | null; slug: string | null; effects: string[] | null }[]>()
+    for (const c of (crewRows ?? []) as unknown as Array<{ user_id: string; xp: number | null; died_at: string | null; effects: string[] | null; cards: { slug: string | null } | null }>) {
       const arr = crewBy.get(c.user_id) ?? []
-      arr.push({ xp: c.xp, died_at: c.died_at, slug: c.cards?.slug ?? null })
+      arr.push({ xp: c.xp, died_at: c.died_at, effects: c.effects ?? null, slug: c.cards?.slug ?? null })
       crewBy.set(c.user_id, arr)
     }
     const voyageBy = new Map<string, number>()
@@ -138,10 +138,10 @@ const getCachedUserPoints = unstable_cache(
     ])
     if (!profile) return 0
     const p = profile as unknown as BadgeProfileFields & { unlocked_badges: string[] | null }
-    const crew = (crewRows ?? []) as unknown as Array<{ xp: number | null; died_at: string | null; cards: { slug: string | null } | null }>
+    const crew = (crewRows ?? []) as unknown as Array<{ xp: number | null; died_at: string | null; effects: string[] | null; cards: { slug: string | null } | null }>
     const derived = earnedBadgeIds(p, {
       raids: (raidRows ?? []) as Array<{ raid_id: string; elapsed_ms: number | null }>,
-      crew: crew.map(c => ({ xp: c.xp, died_at: c.died_at, slug: c.cards?.slug ?? null })),
+      crew: crew.map(c => ({ xp: c.xp, died_at: c.died_at, effects: c.effects ?? null, slug: c.cards?.slug ?? null })),
       voyageCount: voyageCount ?? 0,
       // Lifetime species (prestige-proof), with the live count as a floor.
       collectionCount: Math.max(collectionCount ?? 0, Number(p.lifetime_species_count ?? 0)),
