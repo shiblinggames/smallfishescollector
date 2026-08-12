@@ -467,6 +467,20 @@ export interface RaidNode {
    *  Quartermaster's Ghost sits in Chapter IV but only opens once you have put the
    *  Quartermaster down in his CHALLENGE run). Both must be cleared. */
   requiresClearedNode?: string
+  /** This node's own words for its `requiresClearedNode` gate, used instead of
+   *  the sentence built from that node's label.
+   *
+   *  The derived sentence is "Clear <label> first", which only helps when the
+   *  player can go and find a card by that name. CHALLENGE variants are filtered
+   *  off the map spine on purpose (the boss's own Normal/Challenge switch is
+   *  meant to be the single door), so for the Quartermaster's Ghost it read
+   *  "Clear Challenge: The Quartermaster first" and named a destination that
+   *  does not visibly exist. A player who already knew where Challenge mode
+   *  lived was fine; everyone else was hunting a card that was never drawn.
+   *
+   *  Only the off-chain gate takes an override. `requiresNode` always points at
+   *  a card on this map, so its sentence can never have this problem. */
+  gateLockNote?: string
   /** Locked, but still OPENABLE. A locked node is normally inert: tapping it does
    *  nothing and its sheet never opens. That is right for the story chain, where a
    *  locked node is just the next thing you have not reached. It is wrong for a node
@@ -2244,6 +2258,9 @@ export const RAID_MAP: RaidNode[] = [
     // where a captain has just been told what he is for.
     requiresNode: 'blockade_muster',
     requiresClearedNode: 'the_quartermaster_challenge',
+    // Says where, not just what. The challenge is not a card on this map by
+    // design, so naming it alone sent players looking for one.
+    gateLockNote: 'Beat The Quartermaster on Challenge first. Open his raid card and pick Challenge.',
     sideBranch: { parentId: 'blockade_muster' },
     // He is a GOAL, not a wall. A captain who has not yet beaten the Quartermaster's
     // challenge should still be able to open him up and see the eight Cache items he
@@ -3091,8 +3108,14 @@ export function computeRaidMap(
     if (!prereqOk || !gateOk || !navOk || !ancientsOk) {
       const req = RAID_MAP.find(n => n.id === (prereqOk ? node.requiresClearedNode : node.requiresNode))
       const verb = req?.type === 'story' ? 'Read' : 'Clear'
+      // The chain gate is reported first and always in the derived words, so a
+      // node still on its way up the spine hears about the stop in front of it
+      // rather than about a gate two steps further out.
+      const gateSentence = (prereqOk && !gateOk && node.gateLockNote)
+        ? node.gateLockNote
+        : `${verb} ${req?.label ?? 'the previous stop'} first`
       const reason = (!prereqOk || !gateOk)
-        ? `${verb} ${req?.label ?? 'the previous stop'} first`
+        ? gateSentence
         : !navOk
           ? `Reach Navigation Level ${node.requiresNavLevel}`
           : `Land all ${node.requiresAncients} Ancient Deep giants (${ancientsCaught}/${node.requiresAncients})`
