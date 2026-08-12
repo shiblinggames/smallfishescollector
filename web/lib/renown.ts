@@ -74,6 +74,14 @@ export function renownProgress(skill: RenownSkill, xp: number): { level: number;
   return { level, into, span, progress: span > 0 ? Math.min(1, into / span) : 1 }
 }
 
+/** Gems for one respec token, which clears ONE board back to banked points.
+ *
+ *  Lives here rather than beside the action that spends it: actions/renown.ts
+ *  carries 'use server', and a non-async export from one of those is silently
+ *  dropped, so the panel would have imported `undefined` and priced the button
+ *  at NaN with nothing failing loudly. */
+export const RENOWN_RESPEC_GEM_COST = 2000
+
 // ── Stat boards ──────────────────────────────────────────────────────────────
 export type RenownAlloc = Record<string, number>
 

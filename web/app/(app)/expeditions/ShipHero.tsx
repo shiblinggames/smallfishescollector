@@ -559,6 +559,9 @@ export default function ShipHero({
     skill: 'nav', level: navRenownLevel,
     spent: spentPoints('nav', navRenownAllocState),
     available: navRenownAvailable, alloc: navRenownAllocState,
+      // The panel refetches these on open; a bar built from page-load props
+    // cannot know a live gem balance.
+    respecs: 0, gems: 0,
   }
   // Blink the nav bar when there's a reason to tap it — a new Nav level not yet
   // viewed (blue), or an unspent Renown point (gold). "Seen" level is remembered

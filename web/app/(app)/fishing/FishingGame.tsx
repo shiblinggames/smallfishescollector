@@ -4032,6 +4032,9 @@ export default function FishingGame({
     skill: 'fishing', level: fishingRenownLevel,
     spent: spentPoints('fishing', fishingRenownAlloc),
     available: fishingRenownAvailable, alloc: fishingRenownAlloc,
+      // The panel refetches these on open; a bar built from page-load props
+    // cannot know a live gem balance.
+    respecs: 0, gems: 0,
   }
   // Trawls (crew passive fishing) collect off-screen in the Trawls panel; when
   // a haul lands it dispatches these so the fishing screen's own XP bar + purse
