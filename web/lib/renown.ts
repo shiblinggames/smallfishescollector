@@ -106,11 +106,13 @@ export const FISHING_RENOWN_STATS: RenownStat[] = [
   // Crates answer the same players differently. They are the only source of pets
   // and several cosmetics, so the stat is a faucet on content rather than a
   // smaller margin for error on a thing that no longer goes wrong.
-  // Priced against the Treasure Rod, which is the thing players already know a
-  // crate bonus by: the rod is a flat 2x, and ten points here is a second one.
-  // 3% a point was the first pass and it was too timid to be chosen over Bounty,
-  // which is how Precision died.
-  { id: 'providence', name: 'Providence', blurb: 'Supply crates surface more often.', unit: 'more crates', perPoint: 0.10, kind: 'pct', color: '#a78bfa' },
+  // Priced against the Treasure Rod, the crate bonus players already know: the
+  // rod is a flat 2x and TWENTY points here is a second one. 3% a point was too
+  // timid to beat Bounty, which is how Precision died; 10% made ten points a
+  // whole rod, and stacked on the rod and a level-IV Primeval Eye that put the
+  // ceiling at 8x, roughly a chest every four casts in the Ancient Deep. Half of
+  // that keeps the stat worth choosing without the top end running away.
+  { id: 'providence', name: 'Providence', blurb: 'Supply crates surface more often.', unit: 'more crates', perPoint: 0.05, kind: 'pct', color: '#a78bfa' },
 ]
 
 export const NAV_RENOWN_STATS: RenownStat[] = [
@@ -170,10 +172,10 @@ export function fishingRenownEffects(alloc: RenownAlloc | null | undefined): Fis
     // the Angler's Patience the way those already compose with each other, and
     // so it is worth the same proportionally in the Ancient Deep (3%) as in the
     // shallows (2%) rather than quietly being worth less where crates are best.
-    // At 0.10 a point, ten points IS a second Treasure Rod, which is the whole
-    // point of the number: it is priced against the crate bonus players already
-    // know. Worth watching, because the rod and a level-4 Angler's Patience are
-    // both flat 2x and all three multiply.
+    // At 0.05 a point, twenty points is a second Treasure Rod. The number is
+    // priced against the rod because that is the crate bonus players already
+    // know, and halved from a first pass at 0.10 because the rod and a level-IV
+    // Primeval Eye are both flat 2x and all three multiply.
     crateChanceMult: 1 + pts(alloc, 'providence') * perPointOf('fishing', 'providence'),
   }
 }
