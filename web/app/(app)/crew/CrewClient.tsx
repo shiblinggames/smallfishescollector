@@ -3054,7 +3054,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                               const color = ROSTER_SORTS.find(o => o.k === sel.value)?.color ?? '#bcb29a'
                               return (
                                 <label key={sel.label} style={{ display: 'block', position: 'relative' }}>
-                                  <span className="font-karla font-700 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.42)', marginBottom: 3, paddingLeft: 2 }}>
+                                  <span className="font-karla font-700 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.66)', textShadow: '0 1px 3px rgba(0,0,0,0.8)', marginBottom: 3, paddingLeft: 2 }}>
                                     {sel.label}
                                   </span>
                                   <select
@@ -3065,8 +3065,16 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                                       width: '100%', appearance: 'none', WebkitAppearance: 'none',
                                       padding: '0.42rem 1.5rem 0.42rem 0.6rem', borderRadius: 10,
                                       fontSize: '0.72rem', color,
-                                      background: 'rgba(255,255,255,0.05)',
-                                      border: `1px solid ${color}66`,
+                                      // SOLID BASE. The crew page is drawn over
+                                      // art, so a 5% white wash read as loose
+                                      // text floating on the backdrop rather
+                                      // than a control. Same near-opaque ground
+                                      // the tab strip above it stands on, with
+                                      // the accent as a tint on top so the two
+                                      // selects still carry their key's colour.
+                                      background: `linear-gradient(${color}1c, ${color}1c), rgba(14,19,28,0.97)`,
+                                      border: `1px solid ${color}99`,
+                                      boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
                                       cursor: 'pointer', touchAction: 'manipulation',
                                     }}>
                                     {ROSTER_SORTS.filter(o => o.k !== sel.omit).map(o => (
