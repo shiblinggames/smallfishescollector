@@ -198,6 +198,12 @@ function generateBoardRows(
    *  the player can actually roll — the campaign gate below still applies, so
    *  this cannot hand out someone whose chapter is unfinished. */
   guaranteeLegendary = false,
+  /** WHICH legendary, when the flag above is set. Without it the card is drawn
+   *  at random from every legendary in reach, so a gift aimed at one of the four
+   *  was a one-in-four. Advisory: a slug that is locked or unknown falls through
+   *  to the random draw rather than failing the roll, so the gate still decides
+   *  what is reachable and this only decides among what already is. */
+  legendarySlug: string | null = null,
 ) {
   // Campaign gate: a locked legendary (Mako/Dole/Laz/Mira before its chapter
   // node is cleared) is dropped from the group-4 pool for THIS player. Catfish
@@ -213,7 +219,13 @@ function generateBoardRows(
     while (poolFor(rarity).length === 0 && rarity > 1) rarity = (rarity - 1) as CrewRarity
     const pool = poolFor(rarity)
     if (pool.length === 0) continue
-    const cardId = pool[Math.floor(Math.random() * pool.length)]
+    // The pinned legendary, if this is the guaranteed slot and it is genuinely
+    // in the pool. `pool` is already gate-filtered, so a hit here means the
+    // player could have rolled them anyway.
+    const pinned = guaranteeLegendary && slot === 0 && rarity === 4 && legendarySlug
+      ? pool.find(id => (meta.get(id)?.slug ?? '').toLowerCase() === legendarySlug.toLowerCase())
+      : undefined
+    const cardId = pinned ?? pool[Math.floor(Math.random() * pool.length)]
     const m = meta.get(cardId)
     const profile = { power: m?.power ?? 1, dodge: m?.dodge ?? 1, fortune: m?.fortune ?? 1 }
     const c = rollCrew(cardId, rarity, profile)
@@ -282,7 +294,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks, crew_next_roll_legendary')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, crew_drill_level, crew_stores_level, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress, ship_classes, has_sixth_berth, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -309,10 +321,10 @@ export async function getCrewState(): Promise<CrewState | null> {
     // can — a second tab arriving late finds the flag already spent.
     const owedLegendary = (prof as any).crew_next_roll_legendary === true
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary)
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, (prof as any).crew_next_roll_legendary_slug ?? null)
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles')
-      .update({ last_free_recruit_date: today, ...(owedLegendary ? { crew_next_roll_legendary: false } : {}) })
+      .update({ last_free_recruit_date: today, ...(owedLegendary ? { crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null } : {}) })
       .eq('id', user.id)
   }
 
@@ -421,7 +433,7 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   const tier = bloodRerollTier(bloodTierId)
   if (bloodTierId && !tier) return { error: 'Unknown reroll tier' }
 
-  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges, legendary_unlocks, crew_next_roll_legendary').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug').eq('id', user.id).single()
   const gems = (prof as any)?.gems ?? 0
   const bloodGems = ((prof as any)?.blood_gems as number | null) ?? 0
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
@@ -455,9 +467,11 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   // Same one-shot flag as the free board — whichever roll the captain does
   // first spends it.
   const owedLegendary = (prof as any)?.crew_next_roll_legendary === true
-  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, 0, legendaryUnlocks, owedLegendary)
+  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, 0, legendaryUnlocks, owedLegendary, (prof as any)?.crew_next_roll_legendary_slug ?? null)
   if (rows.length) await admin.from('daily_recruits').insert(rows)
-  if (owedLegendary) await admin.from('profiles').update({ crew_next_roll_legendary: false }).eq('id', user.id)
+  // Cleared TOGETHER. A pin left behind after its flag is spent would quietly
+  // aim the next gift somebody was given at the wrong crew.
+  if (owedLegendary) await admin.from('profiles').update({ crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null }).eq('id', user.id)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
