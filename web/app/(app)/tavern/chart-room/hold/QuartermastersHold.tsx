@@ -27,11 +27,23 @@ const CONFLICT = '#d98a2b'
 type Board = { entries: string[]; notes: number[][] }
 type SolvedResult = { doubloons: number; clean: boolean }
 
-function boardFromGivens(givens: string, progress: string | null): Board {
+/** Pencil marks serialise as 81 comma-separated digit runs. They used to be
+ *  left out of the save entirely, so pen survived a reload and pencil did not,
+ *  which is a rough deal on a puzzle where the pencil work IS the thinking. */
+const notesToStr = (notes: number[][]) => notes.map(n => n.join('')).join(',')
+function notesFromStr(s: string | null): number[][] {
+  const empty = () => Array.from({ length: 81 }, () => [] as number[])
+  if (!s) return empty()
+  const parts = s.split(',')
+  if (parts.length !== 81) return empty()
+  return parts.map(p => p.split('').map(Number).filter(n => n >= 1 && n <= 9))
+}
+
+function boardFromGivens(givens: string, progress: string | null, notes: string | null = null): Board {
   const src = progress ?? givens
   return {
     entries: src.split('').map(c => (c === '.' ? '' : c)),
-    notes: Array.from({ length: 81 }, () => []),
+    notes: notesFromStr(notes),
   }
 }
 
@@ -69,7 +81,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
   // for all four so switching tabs preserves each hold's state.
   const [boards, setBoards] = useState<Record<HoldDifficulty, Board>>(() => {
     const m = {} as Record<HoldDifficulty, Board>
-    for (const d of HOLD_DIFFICULTIES) m[d] = boardFromGivens(puzzleMap[d].givens, puzzleMap[d].progress)
+    for (const d of HOLD_DIFFICULTIES) m[d] = boardFromGivens(puzzleMap[d].givens, puzzleMap[d].progress, puzzleMap[d].notes)
     return m
   })
   const [solvedMap, setSolvedMap] = useState<Record<HoldDifficulty, SolvedResult | null>>(() => {
@@ -104,6 +116,7 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
   const isGiven = useCallback((i: number) => givens[i] !== '.', [givens])
   const entries = board.entries
   const boardStr = entries.map(c => c || '.').join('')
+  const notesStr = notesToStr(board.notes)
   const isFull = !boardStr.includes('.')
   const cleanStill = hints === 0
 
@@ -153,10 +166,10 @@ export default function QuartermastersHold({ initial }: { initial: HoldState }) 
   // Autosave (debounced) — keyed to the hold on the bench.
   useEffect(() => {
     if (solved) return
-    const t = setTimeout(() => { void saveHoldProgress(selected, boardStr) }, 800)
+    const t = setTimeout(() => { void saveHoldProgress(selected, boardStr, notesStr) }, 800)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardStr, selected, solved])
+  }, [boardStr, notesStr, selected, solved])
 
   function pickDifficulty(d: HoldDifficulty) {
     if (d === selected) return

@@ -91,6 +91,9 @@ export interface HoldPuzzleClient {
   givens: string
   /** The player's saved in-progress entries (81-char), or null. */
   progress: string | null
+  /** Pencil marks, 81 comma-separated digit runs. Null on saves written before
+   *  they were persisted, which restore as an empty pencil grid. */
+  notes: string | null
   hintsUsed: number
   solved: null | { doubloons: number; clean: boolean }
 }

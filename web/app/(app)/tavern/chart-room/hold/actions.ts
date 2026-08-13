@@ -30,7 +30,10 @@ import {
   type SubmitHoldResult,
 } from './constants'
 
-interface ProgressEntry { entries: string; hints: number }
+/** `notes` are the PENCIL marks, 81 comma-separated digit runs ("12,,459,...").
+ *  Optional: saves written before pencil marks were persisted have no field,
+ *  and an absent one restores as an empty grid exactly as it did then. */
+interface ProgressEntry { entries: string; hints: number; notes?: string }
 interface SolvedEntry { doubloons: number; clean: boolean; points: number; solved_at: string }
 
 interface AttemptRow {
@@ -89,6 +92,7 @@ export async function getHoldState(): Promise<HoldState | { error: string }> {
       difficulty: d,
       givens: puzzles[d].givens,           // givens ONLY — never the solution
       progress: prog?.entries ?? null,
+      notes: prog?.notes ?? null,
       hintsUsed: prog?.hints ?? 0,
       solved: solved ? { doubloons: solved.doubloons, clean: solved.clean } : null,
     }
@@ -104,15 +108,26 @@ export async function getHoldState(): Promise<HoldState | { error: string }> {
 
 /** Persist in-flight entries so the player can resume. Lightweight:
  *  writes only the board, never touches the hint count or solved map. */
+/** 81 comma-separated runs of unique digits 1-9, or empty. Rejects anything
+ *  else so a forged save cannot stuff arbitrary text into the attempt row. */
+function isValidNotesString(n: string): boolean {
+  if (n.length > 81 * 10) return false
+  const parts = n.split(',')
+  if (parts.length !== 81) return false
+  return parts.every(p => /^[1-9]*$/.test(p) && new Set(p).size === p.length)
+}
+
 export async function saveHoldProgress(
   difficulty: HoldDifficulty,
   entries: string,
+  notes?: string,
 ): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
   if (!isHoldDifficulty(difficulty)) return { error: 'Unknown hold' }
   if (!isValidBoardString(entries)) return { error: 'Invalid board' }
+  if (notes != null && !isValidNotesString(notes)) return { error: 'Invalid notes' }
 
   const admin = createAdminClient()
   const today = todayStr()
@@ -120,7 +135,8 @@ export async function saveHoldProgress(
   if (attempt.solved[difficulty]) return { ok: true } // already banked
 
   const prevHints = attempt.progress[difficulty]?.hints ?? 0
-  const progress = { ...attempt.progress, [difficulty]: { entries, hints: prevHints } }
+  const prevNotes = attempt.progress[difficulty]?.notes
+  const progress = { ...attempt.progress, [difficulty]: { entries, hints: prevHints, notes: notes ?? prevNotes } }
   await admin.from('sudoku_attempts').upsert({
     user_id: user.id, date: today,
     progress, solved: attempt.solved, doubloons_awarded: attempt.doubloons_awarded,
