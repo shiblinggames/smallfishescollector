@@ -20,8 +20,8 @@
 // be a pure "pay for more bench", where a hall tier already carries the bunks
 // that keep a bigger bench busy. More roster and more training arrive together.
 
-import { getLevelFromXP } from './expeditionLevel'
-import { clampHallTier } from './crewHall'
+import { getLevelFromXP, MAX_LEVEL as NAV_MAX_LEVEL } from './expeditionLevel'
+import { clampHallTier, CREW_HALL_MAX_TIER } from './crewHall'
 
 const BASE_CAPACITY = 10
 const PER_LEVELS = 5
@@ -40,4 +40,39 @@ export function crewCapacity(navLevel: number, hallTier?: number | null): number
 
 export function crewCapacityForXP(expeditionXp: number, hallTier?: number | null): number {
   return crewCapacity(getLevelFromXP(expeditionXp), hallTier)
+}
+
+export interface CapacityBreakdown {
+  base: number
+  fromNav: number
+  fromHall: number
+  total: number
+  /** Navigation level that pays the next slot, or null once Nav is maxed. */
+  nextNavLevel: number | null
+  /** Hall tier that pays the next slots, or null once the hall is maxed. */
+  nextHallTier: number | null
+  /** What that next hall tier would add, for the "and it would give you" line. */
+  perHallTier: number
+  navPerLevels: number
+}
+
+/**
+ * The same sum the cap is built from, itemised, so the pill can show its
+ * working. Derived here rather than in the panel: a second copy of "10 plus a
+ * fifth of your Nav" would be a copy that can disagree with the real cap, and
+ * the number it disagreed with is the one that stops you recruiting.
+ */
+export function capacityBreakdown(navLevel: number, hallTier?: number | null): CapacityBreakdown {
+  const tier = clampHallTier(hallTier)
+  const nextNav = (Math.floor(navLevel / PER_LEVELS) + 1) * PER_LEVELS
+  return {
+    base: BASE_CAPACITY,
+    fromNav: Math.floor(navLevel / PER_LEVELS),
+    fromHall: hallRosterBonus(tier),
+    total: crewCapacity(navLevel, tier),
+    nextNavLevel: nextNav <= NAV_MAX_LEVEL ? nextNav : null,
+    nextHallTier: tier < CREW_HALL_MAX_TIER ? tier + 1 : null,
+    perHallTier: ROSTER_PER_HALL_TIER,
+    navPerLevels: PER_LEVELS,
+  }
 }

@@ -14,8 +14,8 @@ import {
 import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
-import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
-import { hallRosterBonus } from '@/lib/crewCapacity'
+import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER, CREW_HALL_TIERS, type CrewHallTierNum } from '@/lib/crewHall'
+import { hallRosterBonus, capacityBreakdown } from '@/lib/crewCapacity'
 import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { CREW_PANEL_BG, CREW_PANEL_BORDER } from '@/lib/crewPanel'
@@ -1272,6 +1272,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   }
   // "How the Blood Market works" help modal.
   const [showBloodHelp, setShowBloodHelp] = useState(false)
+  const [capacityOpen, setCapacityOpen] = useState(false)
   // Blood offerings are woven into Recruit and the Trunk rather than sitting
   // in a market tab of their own. Same gate the tab used.
   const bloodMarketShown = state.hardcoreUnlocked || state.bloodGems > 0
@@ -1490,16 +1491,26 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             const cap = state.capacity
             const isFull = filled >= cap
             return (
-              <span className="font-karla font-700" style={{
-                fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: isFull ? '#f2b0b0' : '#c8b890',
-                background: isFull ? 'rgba(220,90,90,0.10)' : 'rgba(200,170,100,0.08)',
-                border: `1px solid ${isFull ? 'rgba(220,90,90,0.32)' : 'rgba(200,170,100,0.24)'}`,
-                padding: '0.18rem 0.5rem', borderRadius: 5, lineHeight: 1.2,
-                whiteSpace: 'nowrap',
-              }}>
+              // Tappable, because "26 / 40" raises the question of where 40 came
+              // from and the answer is two ladders deep. The chevron is there to
+              // say so: a pill that reads like a label gets read like a label.
+              <button
+                type="button"
+                onClick={() => setCapacityOpen(true)}
+                aria-label={`${filled} of ${cap} crew. See how the limit is worked out.`}
+                className="font-karla font-700 tap"
+                style={{
+                  fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: isFull ? '#f2b0b0' : '#c8b890',
+                  background: isFull ? 'rgba(220,90,90,0.10)' : 'rgba(200,170,100,0.08)',
+                  border: `1px solid ${isFull ? 'rgba(220,90,90,0.32)' : 'rgba(200,170,100,0.24)'}`,
+                  padding: '0.18rem 0.44rem 0.18rem 0.5rem', borderRadius: 5, lineHeight: 1.2,
+                  whiteSpace: 'nowrap', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}>
                 {filled} / {cap} Crew
-              </span>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.6, flexShrink: 0 }}><path d="M9 6l6 6-6 6" /></svg>
+              </button>
             )
           })()}
           {/* Back to the hub — matches the Ship / Items / Forge routes. */}
@@ -4066,6 +4077,75 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               </motion.div>
             </motion.div>
           )}
+
+          {/* WHERE THE LIMIT CAME FROM. Two ladders feed it and neither is
+              visible from this screen, so a captain at a full roster had no way
+              to find out what to go and do about it. The sum shows its working,
+              then names the next thing on each ladder that would move it. */}
+          {capacityOpen && (() => {
+            const b = capacityBreakdown(state.navLevel, state.hallTier)
+            const nextHall = b.nextHallTier ? CREW_HALL_TIERS[b.nextHallTier as CrewHallTierNum] : null
+            const GOLD = '#c4a96a'
+            const Row = ({ label, sub, value }: { label: string; sub: string; value: number }) => (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '0.5rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.8rem', color: '#f0ede8' }}>{label}</span>
+                  <span className="font-karla" style={{ display: 'block', fontSize: '0.66rem', color: '#948e84', lineHeight: 1.4, marginTop: 1 }}>{sub}</span>
+                </span>
+                <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                  {value > 0 ? `+${value}` : value}
+                </span>
+              </div>
+            )
+            return (
+              <motion.div key="cap-help" onClick={() => setCapacityOpen(false)}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 270, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.4rem', background: 'rgba(4,3,2,0.84)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+                <motion.div onClick={e => e.stopPropagation()}
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
+                  style={{ position: 'relative', width: '100%', maxWidth: 340, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', background: 'linear-gradient(180deg, rgba(20,17,12,0.99), rgba(9,8,6,0.99))', border: `1px solid ${GOLD}55`, boxShadow: `0 0 40px ${GOLD}22, 0 20px 50px rgba(0,0,0,0.6)` }}>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#f4ecd8', textAlign: 'center' }}>Your Crew Limit</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: GOLD, textAlign: 'center', lineHeight: 1.1, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                    {b.total}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.68rem', color: '#948e84', textAlign: 'center', marginTop: 2 }}>
+                    {state.roster.length} aboard, {Math.max(0, b.total - state.roster.length)} berth{b.total - state.roster.length === 1 ? '' : 's'} free
+                  </p>
+
+                  <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    <Row label="Every captain" sub="What you start with." value={b.base} />
+                    <Row label={`Navigation ${state.navLevel}`} sub={`One more for every ${b.navPerLevels} Navigation levels.`} value={b.fromNav} />
+                    <Row label={`${hallTierDef(state.hallTier).name}`} sub={`${b.perHallTier} for every hall tier past the first.`} value={b.fromHall} />
+                  </div>
+
+                  {(b.nextNavLevel || nextHall) ? (
+                    <div style={{ marginTop: 12, padding: '0.6rem 0.7rem', borderRadius: 10, background: `${GOLD}0f`, border: `1px solid ${GOLD}33` }}>
+                      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: '#948e84' }}>To raise it</p>
+                      {b.nextNavLevel && (
+                        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.5, marginTop: 3 }}>
+                          Navigation {b.nextNavLevel} adds <span style={{ color: GOLD, fontWeight: 700 }}>1</span> more.
+                        </p>
+                      )}
+                      {nextHall && (
+                        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.5, marginTop: 3 }}>
+                          Building the {nextHall.name} adds <span style={{ color: GOLD, fontWeight: 700 }}>{b.perHallTier}</span> more, and a bunk with them.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.5, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
+                      Navigation maxed and the hall built out. There is no bigger crew than this one.
+                    </p>
+                  )}
+
+                  <button onClick={() => setCapacityOpen(false)} className="font-karla font-700 uppercase tracking-[0.1em] active:scale-95"
+                    style={{ marginTop: 12, width: '100%', padding: '0.62rem', borderRadius: 11, fontSize: '0.62rem', background: `${GOLD}22`, border: `1px solid ${GOLD}66`, color: '#f4ecd8', cursor: 'pointer' }}>
+                    Got it
+                  </button>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
         </AnimatePresence>,
         document.body,
       )}
