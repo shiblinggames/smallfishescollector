@@ -172,12 +172,18 @@ const ROSTER_SORTS = [
   // go. Players were doing this sum by hand, card by card, to decide who to
   // dismiss. Level alone rewards whoever has been aboard longest; the stat
   // sorts each answer a third of the question.
+  //
+  // Every entry here is usable as EITHER key, which is why none of them carry
+  // their own private tie-break any more: the second dropdown is the tie-break,
+  // and a key that also sorted by something else behind the player's back would
+  // make the pair of dropdowns a lie.
   { k: 'overall' as const, label: 'Overall', color: '#f0ede8' },
   // POTENTIAL answers the other half of the dismiss question. Overall ranks who
   // is carrying the crew TODAY, which buries a promising hand for the crime of
   // being new. This ranks what each hand becomes at Lv 100, so a fresh recruit
   // and a veteran are judged on the same footing and the roster can say "this
-  // Lv 1 outgrows that Lv 17" without anyone doing the arithmetic.
+  // Lv 1 outgrows that Lv 17" without anyone doing the arithmetic. Pairs
+  // naturally with Level as the second key: best ceiling, least distance left.
   { k: 'potential' as const, label: 'Potential', color: '#c9a7f5' },
   { k: 'level'   as const, label: 'Level',   color: '#7fdfa3' },
   { k: 'name'    as const, label: 'Name',    color: '#bcb29a' },
@@ -925,7 +931,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // active tab isn't available for the viewed crew (e.g. Skins on a non-skin
   // crew). Reset on modal close.
   const [detailTab, setDetailTab] = useState<'stats' | 'ability' | 'skins'>('stats')
-  const [rosterSort, setRosterSort] = useState<RosterSort>('level')
+  const [rosterSort, setRosterSort] = useState<RosterSort>('overall')
+  // The tie-break, chosen rather than hard-coded. Overall on its own answers
+  // "who is strongest", and the second key is what turns that into a decision:
+  // strongest, and among equals the one with furthest to go, or the rarer one,
+  // or the harder hitter.
+  const [rosterSort2, setRosterSort2] = useState<RosterSort>('level')
 
   // Crew skins (legendary-only) — the tile the player is previewing in the
   // detail modal's Skins tab. undefined = show the currently equipped skin;
@@ -1352,57 +1363,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   // instead of shuffling between renders.
   const sortedRoster = useMemo(() => {
     const byName = (a: CrewMember, b: CrewMember) => a.name.localeCompare(b.name)
-    const r = [...state.roster]
     const eff = (c: CrewMember) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
     /** What this hand would be at the level ceiling: the same resolver, with the
      *  XP dialled to Lv 100 so every crew is measured at the same point. */
-    const potential = (c: CrewMember) =>
+    const pot = (c: CrewMember) =>
       applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, MAX_LEVEL_XP)
-    const within = (a: CrewMember, b: CrewMember) => {
-      if (rosterSort === 'name') return byName(a, b)
-      if (rosterSort === 'level') return crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) || byName(a, b)
-      if (rosterSort === 'rarity') return b.rarity - a.rarity || byName(a, b)
-      if (rosterSort === 'potential') {
-        // The SAME maths as Overall, with everyone's level held at the ceiling
-        // instead of where they happen to be. Level scaling keys off the crew's
-        // own stat affinity, so this is not a flat multiple of the base sum:
-        // two hands with the same total today can grow apart, which is exactly
-        // the comparison a player cannot eyeball.
-        //
-        // Ties fall through to who is closer to it, then rarity, then the
-        // stats. A hand already part-way there is worth more than an identical
-        // one still at Lv 1, since the levels are banked rather than owed.
-        const pa = potential(a), pb = potential(b)
-        const sum = (e: typeof pa) => e.power + e.dodge + e.fortune
-        return sum(pb) - sum(pa)
-          || crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp)
-          || b.rarity - a.rarity
-          || pb.power - pa.power
-          || pb.dodge - pa.dodge
-          || pb.fortune - pa.fortune
-          || byName(a, b)
+    const total = (e: { power: number; dodge: number; fortune: number }) => e.power + e.dodge + e.fortune
+
+    /** ONE key, compared. The roster sorts on a PRIMARY and then a SECONDARY the
+     *  player picks, so every ordering has to be expressible on its own rather
+     *  than as a hard-coded cascade. Name settles whatever is left, so the order
+     *  never shuffles between renders. */
+    const cmpBy = (k: RosterSort, a: CrewMember, b: CrewMember): number => {
+      switch (k) {
+        case 'name':      return byName(a, b)
+        case 'level':     return crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp)
+        case 'rarity':    return b.rarity - a.rarity
+        case 'overall':   return total(eff(b)) - total(eff(a))
+        case 'potential': return total(pot(b)) - total(pot(a))
+        default:          return eff(b)[k] - eff(a)[k]
       }
-      if (rosterSort === 'overall') {
-        // EFFECTIVE stats, so level scaling and the trait are already folded
-        // in. That is what makes two hands at different levels comparable at
-        // all, and it is the sum a player was otherwise doing by hand, card by
-        // card, to work out who was safe to dismiss.
-        //
-        // Then level and rarity, in that order, as the requested tie-breaks,
-        // then the three stats, then name so the order is stable between
-        // renders rather than shuffling on every re-sort.
-        const ea = eff(a), eb = eff(b)
-        const sum = (e: typeof ea) => e.power + e.dodge + e.fortune
-        return sum(eb) - sum(ea)
-          || crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp)
-          || b.rarity - a.rarity
-          || eb.power - ea.power
-          || eb.dodge - ea.dodge
-          || eb.fortune - ea.fortune
-          || byName(a, b)
-      }
-      return eff(b)[rosterSort] - eff(a)[rosterSort] || byName(a, b)
     }
+
     // LEVELLED-UP HANDS FIRST, whatever the sort. The dot told you somebody had
     // gained a level and then left you to find them by scrolling a roster of
     // thirty, which is the part that made an FYI feel like a chore. Grouping
@@ -1415,8 +1397,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
       const seen = seenLevels[c.id]
       return seen !== undefined && seen < crewLevelFromXP(c.xp)
     }
-    return r.sort((a, b) => (Number(isNew(b)) - Number(isNew(a))) || within(a, b))
-  }, [state.roster, rosterSort, seenLevels])
+    return [...state.roster].sort((a, b) =>
+      (Number(isNew(b)) - Number(isNew(a)))
+      || cmpBy(rosterSort, a, b)
+      || cmpBy(rosterSort2, a, b)
+      || byName(a, b))
+  }, [state.roster, rosterSort, rosterSort2, seenLevels])
   // Swipe-to-recruit teaser: auto-peek the first recruitable card ONCE per visit
   // to show the gesture, then rely on the persistent arrow. Ref (not state) so
   // flipping it never re-renders; firstRecruitHintId re-reads it each render.
@@ -3045,49 +3031,57 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       </p>
                     ) : (
                       <>
-                        {/* SORT. Two failed shapes before this one, and both
-                            failures were the same mistake: treating a full-width
-                            row as a place to put a hugging pill.
+                        {/* SORT: a PRIMARY and a SECONDARY, both chosen.
+                            Was a segmented control of six equal tracks, which
+                            worked while there were six. Overall and Potential
+                            took it to eight and the labels were down to 0.55rem
+                            and truncating, and more importantly a single key
+                            cannot express the thing players were actually doing
+                            by hand: rank on one measure, break the ties on
+                            another. Two selects say that outright and stay one
+                            row however many keys exist.
 
-                            First it was a block div, so the stadium stretched the
-                            whole width with the chips crammed into the left third
-                            and a long empty tail. Then fit-content, which fixed
-                            the tail and produced a small pill marooned in the
-                            top-left corner of a wide screen instead.
-
-                            It is a segmented control now: equal tracks across the
-                            full width, so the row is FULL rather than hugging or
-                            stretched, and every option is the same size target.
-                            minmax(0, 1fr) because a bare 1fr carries an implicit
-                            auto minimum and cannot shrink below its text.
-
-                            No label. It read as a filter when the chips were a
-                            pill marooned in the corner; filling the row fixed
-                            that, and a caption on top of six plain words was
-                            just a line of chrome above the only control there
-                            is. */}
+                            Native <select> on purpose. It is the control mobile
+                            already knows, it opens the OS picker with a proper
+                            touch target for eight options, and it is keyboard
+                            and screen-reader correct for free. */}
                         {state.roster.length > 1 && (
-                          <div style={{ marginBottom: 10 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ROSTER_SORTS.length}, minmax(0, 1fr))`, gap: 3, padding: 3, borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                              {ROSTER_SORTS.map(o => {
-                                const on = rosterSort === o.k
-                                return (
-                                  <button key={o.k} type="button" onClick={() => setRosterSort(o.k)}
-                                    className="font-karla font-700 uppercase tracking-[0.04em]"
-                                    aria-pressed={on}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
+                            {([
+                              { label: 'Sort by', value: rosterSort,  set: setRosterSort,  omit: null as RosterSort | null },
+                              { label: 'Then by', value: rosterSort2, set: setRosterSort2, omit: rosterSort },
+                            ]).map(sel => {
+                              const color = ROSTER_SORTS.find(o => o.k === sel.value)?.color ?? '#bcb29a'
+                              return (
+                                <label key={sel.label} style={{ display: 'block', position: 'relative' }}>
+                                  <span className="font-karla font-700 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.42)', marginBottom: 3, paddingLeft: 2 }}>
+                                    {sel.label}
+                                  </span>
+                                  <select
+                                    value={sel.value}
+                                    onChange={e => sel.set(e.target.value as RosterSort)}
+                                    className="font-karla font-700"
                                     style={{
-                                      minWidth: 0, padding: '0.34rem 0.25rem', borderRadius: 999, fontSize: '0.55rem',
-                                      background: on ? `${o.color}26` : 'transparent',
-                                      border: `1px solid ${on ? `${o.color}88` : 'transparent'}`,
-                                      color: on ? o.color : 'rgba(255,255,255,0.5)',
-                                      cursor: 'pointer', textAlign: 'center', touchAction: 'manipulation',
-                                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                      width: '100%', appearance: 'none', WebkitAppearance: 'none',
+                                      padding: '0.42rem 1.5rem 0.42rem 0.6rem', borderRadius: 10,
+                                      fontSize: '0.72rem', color,
+                                      background: 'rgba(255,255,255,0.05)',
+                                      border: `1px solid ${color}66`,
+                                      cursor: 'pointer', touchAction: 'manipulation',
                                     }}>
-                                    {o.label}
-                                  </button>
-                                )
-                              })}
-                            </div>
+                                    {ROSTER_SORTS.filter(o => o.k !== sel.omit).map(o => (
+                                      // Options are painted by the OS, so the dark
+                                      // ground has to be set here or the picker
+                                      // renders white-on-white in dark mode.
+                                      <option key={o.k} value={o.k} style={{ background: '#0e131c', color: '#f0ede8' }}>{o.label}</option>
+                                    ))}
+                                  </select>
+                                  <span aria-hidden style={{ position: 'absolute', right: 8, bottom: 10, pointerEvents: 'none', color, opacity: 0.7, display: 'flex' }}>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                                  </span>
+                                </label>
+                              )
+                            })}
                           </div>
                         )}
                         {grid(sortedRoster, 0, SECTION_NEUTRAL)}
