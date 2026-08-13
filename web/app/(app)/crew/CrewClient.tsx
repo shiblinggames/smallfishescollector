@@ -27,7 +27,11 @@ import AssignBoard from './AssignBoard'
 import AssignPicker from './AssignPicker'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
-import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
+import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL, XP_TABLE as CREW_XP_TABLE } from '@/lib/crewLevel'
+
+/** Total XP at the crew level ceiling. Drives the Potential sort, which judges
+ *  every hand at Lv 100 rather than wherever it happens to be today. */
+const MAX_LEVEL_XP = CREW_XP_TABLE[CREW_MAX_LEVEL - 1]
 import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef } from '@/lib/crewClasses'
 import { vibrate, hapticTap } from '@/lib/haptics'
 import SwipeAction from '@/components/SwipeAction'
@@ -169,6 +173,12 @@ const ROSTER_SORTS = [
   // dismiss. Level alone rewards whoever has been aboard longest; the stat
   // sorts each answer a third of the question.
   { k: 'overall' as const, label: 'Overall', color: '#f0ede8' },
+  // POTENTIAL answers the other half of the dismiss question. Overall ranks who
+  // is carrying the crew TODAY, which buries a promising hand for the crime of
+  // being new. This ranks what each hand becomes at Lv 100, so a fresh recruit
+  // and a veteran are judged on the same footing and the roster can say "this
+  // Lv 1 outgrows that Lv 17" without anyone doing the arithmetic.
+  { k: 'potential' as const, label: 'Potential', color: '#c9a7f5' },
   { k: 'level'   as const, label: 'Level',   color: '#7fdfa3' },
   { k: 'name'    as const, label: 'Name',    color: '#bcb29a' },
   { k: 'rarity'  as const, label: 'Rarity',  color: '#a78bfa' },
@@ -1344,10 +1354,34 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     const byName = (a: CrewMember, b: CrewMember) => a.name.localeCompare(b.name)
     const r = [...state.roster]
     const eff = (c: CrewMember) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
+    /** What this hand would be at the level ceiling: the same resolver, with the
+     *  XP dialled to Lv 100 so every crew is measured at the same point. */
+    const potential = (c: CrewMember) =>
+      applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, MAX_LEVEL_XP)
     const within = (a: CrewMember, b: CrewMember) => {
       if (rosterSort === 'name') return byName(a, b)
       if (rosterSort === 'level') return crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) || byName(a, b)
       if (rosterSort === 'rarity') return b.rarity - a.rarity || byName(a, b)
+      if (rosterSort === 'potential') {
+        // The SAME maths as Overall, with everyone's level held at the ceiling
+        // instead of where they happen to be. Level scaling keys off the crew's
+        // own stat affinity, so this is not a flat multiple of the base sum:
+        // two hands with the same total today can grow apart, which is exactly
+        // the comparison a player cannot eyeball.
+        //
+        // Ties fall through to who is closer to it, then rarity, then the
+        // stats. A hand already part-way there is worth more than an identical
+        // one still at Lv 1, since the levels are banked rather than owed.
+        const pa = potential(a), pb = potential(b)
+        const sum = (e: typeof pa) => e.power + e.dodge + e.fortune
+        return sum(pb) - sum(pa)
+          || crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp)
+          || b.rarity - a.rarity
+          || pb.power - pa.power
+          || pb.dodge - pa.dodge
+          || pb.fortune - pa.fortune
+          || byName(a, b)
+      }
       if (rosterSort === 'overall') {
         // EFFECTIVE stats, so level scaling and the trait are already folded
         // in. That is what makes two hands at different levels comparable at
