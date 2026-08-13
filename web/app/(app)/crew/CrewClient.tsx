@@ -163,6 +163,12 @@ const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
  *  recruited_at order is no longer offered, so newly signed hands sort by
  *  merit like everyone else rather than sitting at the top. */
 const ROSTER_SORTS = [
+  // OVERALL leads because it answers the question the roster is usually open
+  // for: who is actually carrying this crew, and therefore who is safe to let
+  // go. Players were doing this sum by hand, card by card, to decide who to
+  // dismiss. Level alone rewards whoever has been aboard longest; the stat
+  // sorts each answer a third of the question.
+  { k: 'overall' as const, label: 'Overall', color: '#f0ede8' },
   { k: 'level'   as const, label: 'Level',   color: '#7fdfa3' },
   { k: 'name'    as const, label: 'Name',    color: '#bcb29a' },
   { k: 'rarity'  as const, label: 'Rarity',  color: '#a78bfa' },
@@ -1337,11 +1343,30 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const sortedRoster = useMemo(() => {
     const byName = (a: CrewMember, b: CrewMember) => a.name.localeCompare(b.name)
     const r = [...state.roster]
+    const eff = (c: CrewMember) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
     const within = (a: CrewMember, b: CrewMember) => {
       if (rosterSort === 'name') return byName(a, b)
       if (rosterSort === 'level') return crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) || byName(a, b)
       if (rosterSort === 'rarity') return b.rarity - a.rarity || byName(a, b)
-      const eff = (c: CrewMember) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
+      if (rosterSort === 'overall') {
+        // EFFECTIVE stats, so level scaling and the trait are already folded
+        // in. That is what makes two hands at different levels comparable at
+        // all, and it is the sum a player was otherwise doing by hand, card by
+        // card, to work out who was safe to dismiss.
+        //
+        // Then level and rarity, in that order, as the requested tie-breaks,
+        // then the three stats, then name so the order is stable between
+        // renders rather than shuffling on every re-sort.
+        const ea = eff(a), eb = eff(b)
+        const sum = (e: typeof ea) => e.power + e.dodge + e.fortune
+        return sum(eb) - sum(ea)
+          || crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp)
+          || b.rarity - a.rarity
+          || eb.power - ea.power
+          || eb.dodge - ea.dodge
+          || eb.fortune - ea.fortune
+          || byName(a, b)
+      }
       return eff(b)[rosterSort] - eff(a)[rosterSort] || byName(a, b)
     }
     // LEVELLED-UP HANDS FIRST, whatever the sort. The dot told you somebody had
