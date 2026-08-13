@@ -270,6 +270,22 @@ export default async function FishingPage() {
       : { avgValue: 0, avgXp: 0, topValue: 0, count: 0 }
   }
 
+  // ZONES THIS CAPTAIN HAS EVER FISHED, across every prestige cycle.
+  //
+  // The per-zone collection resets on prestige, so on its own it says a veteran
+  // who has just prestiged has never fished anywhere. lifetime_species does not
+  // reset, which is the whole reason it exists. Ancient trophies live in their
+  // own column and never enter fish_collection at all, so they are added here
+  // rather than inferred.
+  const lifetimeIds = new Set((profile?.lifetime_species as number[] | null) ?? [])
+  const zonesEverFished: string[] = []
+  for (const z of ALL_ZONES) {
+    const touched = (allSpecies ?? []).some((f: { id: number; habitat: string }) =>
+      f.habitat === z && lifetimeIds.has(f.id))
+    if (touched) zonesEverFished.push(z)
+  }
+  if (((profile?.ancient_catches as number[] | null) ?? []).length > 0) zonesEverFished.push('ancient_deep')
+
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number; is_golden: boolean }) => r.fish_id)
   const mountedFishIds = (collectionRows ?? [])
@@ -369,6 +385,7 @@ export default async function FishingPage() {
           unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
           zoneStats={zoneStats}
+          zonesEverFished={zonesEverFished}
           ancientDeepUnlocked={ancientDeepUnlocked}
           ownedRods={ownedRods}
           initialCompletionistEffects={(profile?.completionist_effects as number[] | null) ?? []}

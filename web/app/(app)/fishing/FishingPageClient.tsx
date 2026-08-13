@@ -52,7 +52,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
-  initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, ancientDeepUnlocked,
+  initialDoubloons, initialGems, initialFathoms, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats, zonesEverFished, ancientDeepUnlocked,
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
   hubSpeciesCaught, hubSpeciesTotal, hubMarketMood, hubMarketNextUpdate, hubOpenContracts, hubExchangeUnveil, hubTicker,
   hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, username, zoneRewardsClaimed,
@@ -73,6 +73,8 @@ export default function FishingPageClient({
   initialInventory: InventoryItem[]
   uniqueSpeciesCaught: number
   zoneStats: Record<string, ZoneStat>
+  /** Zones with a lifetime catch, so prestige cannot make a veteran look new. */
+  zonesEverFished: string[]
   ancientDeepUnlocked: boolean
   fishHoldTier: number
   ownedRods: number[]
@@ -214,6 +216,18 @@ export default function FishingPageClient({
     return rec
   }, [allFishSpecies, caughtFishIds, ancientCatches])
 
+  /** Has this captain ever landed anything here? Three independent proofs, any
+   *  one of which settles it: something caught THIS cycle, something caught in
+   *  any past cycle (lifetime_species, which prestige does not clear), or a
+   *  prestige actually completed in that water. The union matters because
+   *  lifetime_species was backfilled and may be thin on the oldest rows. */
+  const everFishedSet = useMemo(() => new Set(zonesEverFished), [zonesEverFished])
+  const everFished = useCallback((z: string) =>
+    everFishedSet.has(z)
+    || (zoneCollection[z]?.caught ?? 0) > 0
+    || (prestigeLevels[z] ?? 0) > 0,
+  [everFishedSet, zoneCollection, prestigeLevels])
+
   const [selectedZone, setSelectedZone] = useState<ZoneKey | null>(() => {
     if (typeof window === 'undefined') return null
     const saved = localStorage.getItem(LAST_ZONE_KEY) as ZoneKey | null
@@ -321,6 +335,7 @@ export default function FishingPageClient({
         username={username}
         zoneStats={zoneStats}
         zoneCollection={zoneCollection}
+        everFished={everFished}
         prestigeLevels={prestigeLevels}
         goldenBoosts={goldenBoosts}
         ancientDeepUnlocked={ancientDeepUnlocked}
@@ -344,7 +359,7 @@ export default function FishingPageClient({
         z !== selectedZone
         && fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)
         && (z !== 'ancient_deep' || ancientDeepUnlocked)
-        && (zoneCollection[z]?.caught ?? 0) === 0).length}
+        && !everFished(z)).length}
       hookTier={hookTier}
       rodTier={rodTier}
       reelTier={reelTier}

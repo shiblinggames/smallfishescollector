@@ -104,7 +104,7 @@ function BigStat({ value, label, accent }: { value: string; label: string; accen
 }
 
 export default function ZoneLanding({
-  fishingLevel, fishingXP, username, zoneStats, zoneCollection, prestigeLevels, goldenBoosts, ancientDeepUnlocked, onSelect,
+  fishingLevel, fishingXP, username, zoneStats, zoneCollection, everFished, prestigeLevels, goldenBoosts, ancientDeepUnlocked, onSelect,
   currentZone, characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
   onBack,
 }: {
@@ -114,6 +114,9 @@ export default function ZoneLanding({
   zoneStats: Record<string, ZoneStat>
   /** Species caught vs zone total (this prestige cycle), every zone alike. */
   zoneCollection: Record<string, { caught: number; total: number }>
+  /** Prestige-proof "have I ever fished here". Not the per-cycle collection: a
+   *  captain who has just prestiged has an empty collection everywhere. */
+  everFished: (zone: string) => boolean
   prestigeLevels: Record<string, number>
   /** Per-zone golden boost (wipes past Max Prestige) — +10% golden odds each. */
   goldenBoosts: Record<string, number>
@@ -274,15 +277,16 @@ export default function ZoneLanding({
               // until Lv 50. A crossing is a bad place to keep something you
               // need later.
               //
-              // Read off zoneCOLLECTION, not zoneStats. zoneStats is built from
-              // the species reference table, so its `count` is how many fish
-              // live in a zone and is the same for everybody; only the
-              // collection knows what THIS captain has landed.
+              // Prestige-proof, and that is the whole difficulty. The obvious
+              // reads are both wrong: zoneStats.count is built from the species
+              // reference table so it is the same for every player, and the
+              // per-cycle collection empties on prestige, which would tell a
+              // veteran who just prestiged that they have never fished anywhere.
               //
               // Derived rather than a seen-flag, so it needs no column, cannot
               // be dismissed by accident, and puts itself out the first time you
               // land anything down there.
-              const neverFished = accessible && !isCurrent && (zoneCollection[zone]?.caught ?? 0) === 0
+              const neverFished = accessible && !isCurrent && !everFished(zone)
               const enter = () => { if (accessible) onSelect(zone) }
               // An odd zone count leaves the last card alone on its row. Let it
               // span instead of sitting in a half-empty row.
