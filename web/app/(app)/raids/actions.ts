@@ -14,7 +14,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { getShipSkin } from '@/lib/shipSkins'
 import { computeRaidMap } from '@/lib/raidMap'
 import { buildClearedSet } from '@/lib/raidProgress'
-import { getRaidConfigById, raidUniqueLootIds, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
+import { getRaidConfigById, raidUniqueLootIds, rollRaidCurrency, ITEM_GRANTS, MAX_CRATE_BASE_DOUBLOONS } from '@/lib/raidRegistry'
 import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendaryLootMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
@@ -460,10 +460,17 @@ export async function claimRaidLoot(
   elapsedMs: number,
   damageTaken: number,
   raidId: string = 'corsairs_reckoning',
-): Promise<{ newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[] }> {
+): Promise<{
+  newShipSkins: string[]; newDoubloonTotal: number; newRaidItems: string[]
+  /** The currency row the SERVER drew, so the reveal can land the reel on the
+   *  thing that was actually paid instead of a row the client picked alone. */
+  currencyId: string | null
+  gemsGranted: number
+  crateDoubloons: number
+}> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+  if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], currencyId: null, gemsGranted: 0, crateDoubloons: 0 }
 
   // ── WHAT THIS FUNCTION CAN AND CANNOT DO ───────────────────────────────────
   // Raid combat runs entirely on the client, so the server can never PROVE a win
@@ -480,7 +487,7 @@ export async function claimRaidLoot(
   // you were already allowed to farm. That is a shortcut past a fight, not a way to
   // mint currency or pull items out of raids you have never even unlocked.
   const config = getRaidConfigById(raidId)
-  if (!config) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+  if (!config) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], currencyId: null, gemsGranted: 0, crateDoubloons: 0 }
   // Challenge-mode boss-clear badge unlocks live in RaidGame's
   // handleEnemyDefeated (the moment the boss sinks) so the celebration
   // pops as part of the kill beat, not after the loot crate is claimed.
@@ -493,7 +500,7 @@ export async function claimRaidLoot(
     .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, equipped_raid_items, ship_classes, has_completed_practice_raid, raid_node_progress, is_admin, expedition_xp, ancient_catches')
     .eq('id', user.id)
     .single()
-  if (!profile) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+  if (!profile) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], currencyId: null, gemsGranted: 0, crateDoubloons: 0 }
 
   // 1. REACHABLE? You may only claim a crate from a raid whose map node is actually
   //    open to you. This is the check that protects the Quartermaster's Ghost: his
@@ -508,7 +515,7 @@ export async function claimRaidLoot(
   const nodeView = computeRaidMap(cleared, profile.doubloons ?? 0, navLevel, profile.is_admin === true, ancientsCaught)
     .find(v => v.node.raidId === raidId)
   if (!nodeView || nodeView.status === 'locked') {
-    return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
+    return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [], currencyId: null, gemsGranted: 0, crateDoubloons: 0 }
   }
 
   // 2. FROM THIS RAID? The ids used to be looked up in the global ITEM_GRANTS map,
@@ -539,8 +546,31 @@ export async function claimRaidLoot(
   const classPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
   const classDoubloonMult = aggregateShipClasses(classPicks).doubloonMult
   const scaledBaseDoubloons = Math.round(safeBaseDoubloons * classDoubloonMult)
-  let doubloons       = (profile?.doubloons ?? 0) + scaledBaseDoubloons
-  let gems            = profile?.gems ?? 0
+
+  // ── THE CURRENCY ROW, drawn HERE ───────────────────────────────────────────
+  // The crate's currency half is rolled server-side and paid out as whatever it
+  // lands on, which is what the reel has always claimed to be doing.
+  //
+  // It used to work that way: before the drop-table rework the client sent the
+  // one row it drew and the server honoured it, gems included. The rework split
+  // the crate into currency plus independent uniques, the client started sending
+  // only the uniques, and the currency row stopped being claimed by anybody
+  // while the reveal went on printing its label. "50 Gems" paid coins for eleven
+  // days and nothing failed loudly, because a label and a grant with no wire
+  // between them cannot disagree in a way anything can detect.
+  //
+  // Drawing it here rather than accepting an id is also strictly safer than the
+  // old shape: a forged claim cannot name a currency row at all.
+  const currencyId = rollRaidCurrency(raidId)
+  const currencyGrant = currencyId ? ITEM_GRANTS[currencyId] : undefined
+  // A gem row pays gems INSTEAD of the coin roll, not on top. The reel shows one
+  // reward and one is what you get; paying both would make every gem row a
+  // strictly better doubloon row.
+  const currencyGems = currencyGrant?.gems ?? 0
+  const crateDoubloons = currencyGems > 0 ? 0 : scaledBaseDoubloons
+
+  let doubloons       = (profile?.doubloons ?? 0) + crateDoubloons
+  let gems            = (profile?.gems ?? 0) + currencyGems
   const ownedSkins    = (profile?.ship_skins as string[] | null) ?? []
   let equippedSkin    = (profile?.equipped_ship_skin as string | null) ?? null
   let grantedSpecial: string | null = null   // a has_* column to flip, if a special item dropped
@@ -590,5 +620,8 @@ export async function claimRaidLoot(
     newShipSkins: newSkins.filter(s => !ownedSkins.includes(s)),
     newDoubloonTotal: doubloons,
     newRaidItems: newRaidItems.filter(i => !ownedRaidItems.includes(i)),
+    currencyId,
+    gemsGranted: currencyGems,
+    crateDoubloons,
   }
 }

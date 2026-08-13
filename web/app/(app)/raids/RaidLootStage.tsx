@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { motion } from 'framer-motion'
-import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
+import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR, isUniqueLoot } from '@/lib/bossRaids'
 import type { RaidClearTimes } from './actions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { vibrate } from '@/lib/haptics'
@@ -20,6 +20,8 @@ interface Props {
   clearTimes?: RaidClearTimes | null
   /** Doubloons + XP earned from the kill itself. */
   killGold: number
+  /** Gems the crate's currency row paid, as granted by the server. */
+  lootGems?: number
   killXP: number
   /** Pre-rolled loot pick + display amount (computed in RaidGame). The reveal
    *  shows this entry directly — no slot spin. */
@@ -152,7 +154,7 @@ const ANTICIPATION_MS = 750
 
 export default function RaidLootStage(props: Props) {
   const {
-    boss, killGold, killXP,
+    boss, killGold, killXP, lootGems = 0,
     clearTimeMs, clearTimes,
     loot, slotFinal, itemIdxs = [], lootAmount, fortuneMult, lootFortuneMult = 1, clearBonusXp = 0,
     shipImageUrl,
@@ -172,6 +174,18 @@ export default function RaidLootStage(props: Props) {
   const tier = RARITY_TIER[finalItem.rarity] ?? 1
   const grand = tier >= 4
   const totalDoubloons = killGold + lootAmount
+
+  // WHAT THE HEADLINE SAYS WHEN THE REEL LANDS ON COIN.
+  //
+  // The coin rows are labelled with fixed amounts ("+600", "+1,200") but the
+  // crate's coin payout is a rolled range scaled by Fortune, so the two only
+  // agreed by accident. The server settles the currency row now, which fixes
+  // gems outright; for coin the honest thing to print is the figure actually
+  // granted rather than the row's nominal one. Uniques and gem rows keep their
+  // own labels, which are true.
+  const headlineLabel = !isUniqueLoot(finalItem) && lootGems <= 0
+    ? `+${lootAmount.toLocaleString()} ⟡`
+    : finalItem.label
   const totalNavXp = killXP + clearBonusXp
   const crewGains = crewXP.filter(c => c.newXP > c.oldXP)
 
@@ -290,7 +304,7 @@ export default function RaidLootStage(props: Props) {
               </motion.div>
               <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 240, damping: 18 }}
                 className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: accent, lineHeight: 1.12, marginTop: 6, textShadow: `0 0 22px ${accent}44` }}>
-                {finalItem.label}
+                {headlineLabel}
               </motion.p>
               {/* THE REST OF THE CRATE. Independent rolls mean a second item
                   can land beside the headline, which the single-draw model
@@ -328,6 +342,12 @@ export default function RaidLootStage(props: Props) {
               {/* Reward lines — count up into the panel a beat after the reveal */}
               <div style={{ marginTop: 16, textAlign: 'left', background: 'rgba(0,0,0,0.3)', border: `1px solid ${GOLD}26`, borderRadius: 14, padding: '0.5rem 0.85rem 0.7rem' }}>
                 <RewardLine label="Doubloons" to={totalDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} run={counting} />
+                {/* Only when the crate's currency row was a gem row. Its own
+                    line rather than folded into the coin one: they are different
+                    currencies, and the row pays one or the other. */}
+                {lootGems > 0 && (
+                  <RewardLine label="Gems" to={lootGems} suffix=" ◆" color="#c084fc" delay={0.26} run={counting} />
+                )}
                 <RewardLine label="Nav XP" to={totalNavXp} color="#4ade80" delay={0.32} run={counting} />
               </div>
 

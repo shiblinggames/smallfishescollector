@@ -553,6 +553,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [playerHitShake, setPlayerHitShake] = useState(false)
   const [clearReady, setClearReady]     = useState(false)
   const [lootAmount, setLootAmount]     = useState(0)
+  /** Gems the crate's currency row actually paid, straight from the server. */
+  const [lootGems, setLootGems]         = useState(0)
   const [lootBase, setLootBase]         = useState(0)
   const [lootClaimed, setLootClaimed]   = useState(false)
   // Clear time for the victory screen: this run + your best + global best.
@@ -1240,7 +1242,23 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           lootGrantedRef.current = true
           const lootElapsedMs = performance.now() - raidStartTimeRef.current
           claimRaidLoot(total, crate.itemIdxs.map(i => config.loot[i].id), lootElapsedMs, playerHPMax - playerHP, config.raidId)
-            .then(res => { lootResultRef.current = res })
+            .then(res => {
+              lootResultRef.current = res
+              // THE REEL FOLLOWS THE SERVER. The currency half is drawn there
+              // now, so the row shown when nothing unique dropped has to be the
+              // row that was actually paid, or the reveal goes back to printing
+              // a reward nobody received. Only when no unique landed: a unique
+              // is still the headline and the client already knows which.
+              if (!crate.itemIdxs.length && res.currencyId) {
+                const idx = config.loot.findIndex(l => l.id === res.currencyId)
+                if (idx >= 0) setSlotFinal(idx)
+              }
+              if (res.gemsGranted > 0) setLootGems(res.gemsGranted)
+              // A gem row pays gems INSTEAD of coin, so the coin figure on the
+              // reveal has to drop to nothing or it claims a purse that was
+              // never handed over.
+              setLootAmount(res.crateDoubloons)
+            })
             .catch(() => { lootGrantedRef.current = false })
         }
         // Award the boss kill XP + the full-clear bonus (25% of the run's kill
@@ -1899,6 +1917,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             slotFinal={slotFinal}
             itemIdxs={lootItemIdxs}
             lootAmount={lootAmount}
+            lootGems={lootGems}
             fortuneMult={fortuneMult}
             lootFortuneMult={lootFortuneMult}
             shipImageUrl={shipImageUrl}

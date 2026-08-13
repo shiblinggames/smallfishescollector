@@ -56,6 +56,31 @@ export function raidUniqueLootIds(raidId: string): Set<string> {
   return new Set((RAID_BY_ID[raidId]?.loot ?? []).filter(isUniqueLoot).map(l => l.id))
 }
 
+/**
+ * The currency half of a raid's table, which the SERVER now draws from itself.
+ *
+ * It used to be drawn on the client and never sent, so the reel could land on
+ * "50 Gems", print it, and hand over a doubloon roll instead: gems from crates
+ * silently stopped paying on 2026-08-02 when the crate split into currency plus
+ * independent uniques, and nothing failed loudly because the label and the grant
+ * had no connection left. Rolling it here closes that and is strictly safer than
+ * accepting an id, since a forged claim cannot name a row at all.
+ */
+export function raidCurrencyRows(raidId: string): { id: string; weight: number }[] {
+  return (RAID_BY_ID[raidId]?.loot ?? []).filter(l => !isUniqueLoot(l)).map(l => ({ id: l.id, weight: l.weight }))
+}
+
+/** Weighted draw over a raid's currency rows. Returns null for a table with no
+ *  currency at all, which no shipped raid has but a future one might. */
+export function rollRaidCurrency(raidId: string): string | null {
+  const rows = raidCurrencyRows(raidId)
+  const total = rows.reduce((s, r) => s + r.weight, 0)
+  if (total <= 0) return null
+  let r = Math.random() * total
+  for (const row of rows) { r -= row.weight; if (r <= 0) return row.id }
+  return rows[rows.length - 1].id
+}
+
 /** The most doubloons a crate can HONESTLY be worth, used to clamp the amount the
  *  client reports. The client rolls `floor(base * fortuneMult) + tideDoubloons`,
  *  where base is 300-600, fortuneMult is 1 + fortune/75 (about 2x at max crew luck),
