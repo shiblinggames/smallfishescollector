@@ -3146,7 +3146,7 @@ export default function FishingGame({
   initialPersonalBests, initialCatchCounts,
   initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
-  selectedZone: initialZone, onBack, onHome, zoneRewardsClaimed,
+  selectedZone: initialZone, onBack, onHome, zoneRewardsClaimed, unfishedZones = 0,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
   initialEquippedSpecial2,
@@ -3196,6 +3196,10 @@ export default function FishingGame({
   initialShowWaitTimer: boolean
   selectedZone: ZoneKey
   onBack: () => void
+  /** Open zones this captain has never landed anything in. Drives the dot on the
+   *  zone breadcrumb, which is the only route back to the picker that badges
+   *  them. Derived from catch counts upstream, so it clears itself. */
+  unfishedZones?: number
   /** Straight out to the fishing hub, past the zone selector. */
   onHome: () => void
   zoneRewardsClaimed: Record<string, boolean>
@@ -6740,18 +6744,35 @@ export default function FishingGame({
                   <path d="M5.5 9.5V20h13V9.5" />
                 </svg>
               </button>
+              {/* A DOT WHEN THERE IS WATER YOU HAVE NEVER FISHED. The zone
+                  cards carry a "Never fished" badge, but a player who does not
+                  know a zone opened has no reason to go and look at them, which
+                  is exactly how someone reached Lv 50 without finding the Deep
+                  or the Abyss. This is the only route back to that screen, so
+                  the nudge belongs here. Derived from catch counts, so it puts
+                  itself out the first time you land something there. */}
               <button
                 onClick={onBack}
                 className="font-karla font-600 uppercase tracking-[0.1em]"
+                aria-label={unfishedZones > 0
+                  ? `${HABITAT_LABEL[selectedZone]}. ${unfishedZones} other water${unfishedZones === 1 ? '' : 's'} you have never fished.`
+                  : undefined}
                 style={{
+                  position: 'relative',
                   display: 'inline-flex', alignItems: 'center',
                   height: 26, padding: '0 0.7rem', borderRadius: 20,
                   fontSize: '0.55rem', color: HABITAT_COLOR[selectedZone],
-                  background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
+                  background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}${unfishedZones > 0 ? 'aa' : '50'}`,
                   cursor: 'pointer', touchAction: 'manipulation',
                 }}
               >
                 ← {HABITAT_LABEL[selectedZone]}
+                {unfishedZones > 0 && (
+                  <motion.span aria-hidden
+                    animate={{ scale: [1, 1.25, 1], opacity: [0.85, 1, 0.85] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{ position: 'absolute', top: -3, right: -3, width: 9, height: 9, borderRadius: '50%', background: '#f0c040', boxShadow: '0 0 8px rgba(240,192,64,0.9)' }} />
+                )}
               </button>
             </div>
 

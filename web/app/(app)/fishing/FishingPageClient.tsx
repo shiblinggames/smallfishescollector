@@ -9,7 +9,7 @@ import FishingHub from './FishingHub'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import type { RenownAlloc } from '@/lib/renown'
-import { ZONE_MIN_LEVEL } from './zoneData'
+import { ZONE_MIN_LEVEL, ZONE_ORDER } from './zoneData'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import type { TickerItem } from '@/components/MarketTicker'
 
@@ -340,6 +340,11 @@ export default function FishingPageClient({
 
   return (
     <FishingGame
+      unfishedZones={ZONE_ORDER.filter(z =>
+        z !== selectedZone
+        && fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)
+        && (z !== 'ancient_deep' || ancientDeepUnlocked)
+        && (zoneCollection[z]?.caught ?? 0) === 0).length}
       hookTier={hookTier}
       rodTier={rodTier}
       reelTier={reelTier}

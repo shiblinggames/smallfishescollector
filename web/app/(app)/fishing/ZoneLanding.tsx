@@ -267,6 +267,22 @@ export default function ZoneLanding({
               const color = HABITAT_COLOR[zone]
               const prestige = prestigeLevels[zone] ?? 0
               const isCurrent = accessible && zone === currentZone
+              // NEVER FISHED, BUT OPEN. The only thing that ever announced a new
+              // zone was a callout on the level-up overlay at the moment you
+              // crossed the threshold, and a player head-down on the Open Waters
+              // almanac skipped past it and did not find the Deep or the Abyss
+              // until Lv 50. A crossing is a bad place to keep something you
+              // need later.
+              //
+              // Read off zoneCOLLECTION, not zoneStats. zoneStats is built from
+              // the species reference table, so its `count` is how many fish
+              // live in a zone and is the same for everybody; only the
+              // collection knows what THIS captain has landed.
+              //
+              // Derived rather than a seen-flag, so it needs no column, cannot
+              // be dismissed by accident, and puts itself out the first time you
+              // land anything down there.
+              const neverFished = accessible && !isCurrent && (zoneCollection[zone]?.caught ?? 0) === 0
               const enter = () => { if (accessible) onSelect(zone) }
               // An odd zone count leaves the last card alone on its row. Let it
               // span instead of sitting in a half-empty row.
@@ -324,6 +340,12 @@ export default function ZoneLanding({
                       </span>
                     ) : isCurrent ? (
                       <span className="font-karla font-800 uppercase" style={{ position: 'absolute', top: 7, right: 7, padding: '0.1rem 0.4rem', borderRadius: 999, background: 'rgba(2,6,12,0.72)', border: `1px solid ${color}`, fontSize: '0.42rem', letterSpacing: '0.1em', color: '#fff' }}>You are here</span>
+                    ) : neverFished ? (
+                      <motion.span className="font-karla font-800 uppercase"
+                        animate={{ scale: [1, 1.07, 1] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ position: 'absolute', top: 7, right: 7, padding: '0.14rem 0.45rem', borderRadius: 999, background: color, border: `1px solid ${color}`, fontSize: '0.44rem', letterSpacing: '0.12em', color: '#06121c', boxShadow: `0 0 14px ${color}88` }}>
+                        Never fished
+                      </motion.span>
                     ) : (
                       <span aria-hidden style={{ position: 'absolute', top: 7, right: 7, width: 21, height: 21, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(2,6,12,0.5)', border: `1px solid ${color}99` }}>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
