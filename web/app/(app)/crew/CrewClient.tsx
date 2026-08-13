@@ -15,6 +15,7 @@ import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
+import { hallRosterBonus } from '@/lib/crewCapacity'
 import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { CREW_PANEL_BG, CREW_PANEL_BORDER } from '@/lib/crewPanel'
@@ -1699,6 +1700,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             <div style={{ width: '100%' }}>
             <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', marginTop: 5, lineHeight: 1.45 }}>
               <span style={{ color: hall.accent }}>{hall.bunks} bunks</span> for training idle crew
+              {hallRosterBonus(state.hallTier) > 0 && (
+                <>, and <span style={{ color: hall.accent }}>+{hallRosterBonus(state.hallTier)} roster</span></>
+              )}
             </p>
             {navShort && nextTier && (
               <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9fc4e8', marginTop: 4, lineHeight: 1.45 }}>
@@ -1754,6 +1758,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       1,000,000 price tag. */}
                   <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: nextTier.accent }}>
                     + Opens bunk {nextTier.bunks}
+                  </span>
+                  {/* The roster slots the tier also carries. Its own line, not
+                      folded into the bunk one: they answer different problems,
+                      and a captain sitting at a full roster is here FOR this. */}
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: nextTier.accent }}>
+                    + {hallRosterBonus(nextTier.tier) - hallRosterBonus(state.hallTier)} crew you can keep
                   </span>
                   {isLeviathanSlot(nextTier.bunks - 1) && (
                     <span className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: LEVIATHAN_COLOR }}>

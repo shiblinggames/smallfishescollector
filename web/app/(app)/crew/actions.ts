@@ -286,7 +286,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const premium = isPremiumActive(prof as any)
   const navLevel = getLevelFromXP((prof as any).expedition_xp ?? 0)
-  const capacity = crewCapacity(navLevel)
+  const capacity = crewCapacity(navLevel, (prof as any).crew_hall_tier)
   const gems = (prof as any).gems ?? 0
   const shipTier = (prof as any).ship_tier ?? 0
   // Hull berths + the Ch4 Expanded Quarters augment.
@@ -513,8 +513,8 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('expedition_xp').eq('id', user.id).single()
-  const capacity = crewCapacity(getLevelFromXP((prof as any)?.expedition_xp ?? 0))
+  const { data: prof } = await admin.from('profiles').select('expedition_xp, crew_hall_tier').eq('id', user.id).single()
+  const capacity = crewCapacity(getLevelFromXP((prof as any)?.expedition_xp ?? 0), (prof as any)?.crew_hall_tier)
   // Capacity check counts LIVE roster only — fallen crew don't take
   // up a roster slot (graveyard is unlimited memorial space).
   const { count } = await admin
