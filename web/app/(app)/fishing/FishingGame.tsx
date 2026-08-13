@@ -4855,7 +4855,8 @@ export default function FishingGame({
 
   // ── Finn rival helpers ──────────────────────────────────────────────────
 
-  function fireFinnEncounter() {
+  /** True if Finn actually appeared. False means the cast should carry on. */
+  function fireFinnEncounter(): boolean {
     // Reveal supersedes every other beat once the player has landed an
     // Ancient Deep trophy and hasn't seen the climax yet.
     const hasAncientTrophy = ancientCatches.size > 0
@@ -4864,7 +4865,7 @@ export default function FishingGame({
       setFinnRevealed(true)
       setFinnSeenBeats(prev => prev.includes('reveal') ? prev : [...prev, 'reveal'])
       startTransition(() => { void markFinnRevealSeen() })
-      return
+      return true
     }
 
     // Normal encounter — bump counters, pick story beat (if any), pick challenge.
@@ -4875,8 +4876,35 @@ export default function FishingGame({
     // Deep (boss-style multi-stage catches break the timer concept), so
     // we force perfect_streak there.
     const zoneSpeedMult = FINN_SPEED_ZONE_MULT[selectedZone] ?? 1
-    const type = zoneSpeedMult === 0 ? 'perfect_streak' : pickChallengeType()
-    const tier = pickFinnTier()
+
+    // THE HOLD HAS TO BE ABLE TO TAKE THE WIN.
+    //
+    // Every challenge is counted in FISH LANDED, so a bet needing seven fish
+    // against two free slots cannot be won without going to sell, and going
+    // anywhere unmounts this screen and takes the challenge with it. A player
+    // lost several that way and reasonably read it as the game punishing him
+    // for stepping out.
+    //
+    // The bet is therefore sized to the room actually available: fall back to
+    // the other challenge type if the rolled one cannot fit, then walk the tier
+    // down. Below the smallest bet of either type there is nothing honest to
+    // offer, so Finn does not appear at all and the cast carries on. The
+    // encounter is free and there will be another one.
+    const freeSlots = selectedZone === 'ancient_deep'
+      ? Number.MAX_SAFE_INTEGER          // trophies bypass the hold entirely
+      : Math.max(0, holdCapacity - holdTotalCount)
+    const needOf = (ty: FinnChallengeType, t: number) => ty === 'perfect_streak'
+      ? FINN_PERFECT_TIERS[t - 1].perfects
+      : FINN_SPEED_TIERS[t - 1].fish
+
+    let type: FinnChallengeType = zoneSpeedMult === 0 ? 'perfect_streak' : pickChallengeType()
+    if (zoneSpeedMult !== 0 && needOf(type, 1) > freeSlots) {
+      const other: FinnChallengeType = type === 'perfect_streak' ? 'speed_catch' : 'perfect_streak'
+      if (needOf(other, 1) <= freeSlots) type = other
+    }
+    let tier = pickFinnTier()
+    while (tier > 1 && needOf(type, tier) > freeSlots) tier--
+    if (needOf(type, tier) > freeSlots) return false
 
     let perfectsTarget: number | undefined
     let fishTarget: number | undefined
@@ -4953,6 +4981,7 @@ export default function FishingGame({
         setFinnSeenBeats(res.seenBeats)
       })
     })
+    return true
   }
 
   function handleFinnAccept() {
@@ -5080,8 +5109,9 @@ export default function FishingGame({
       // the tap from feeling unresponsive during the 500ms lead-in.
       setCastRippleKey(k => k + 1)
       setTimeout(() => setCastRippleKey(0), 1800)
-      fireFinnEncounter()
-      return
+      // Finn declines to show when the hold cannot take the win. The cast then
+      // has to carry on as a normal cast rather than being eaten.
+      if (fireFinnEncounter()) return
     }
     // cast SFX is fired from the charFrame useEffect when the pose
     // actually flips to 'cast' — keeps audio synced to the visible
