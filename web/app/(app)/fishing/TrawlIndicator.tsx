@@ -820,7 +820,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             )}
             {/* Controls. Sort by what you actually want out of the run, and
                 filter on the one thing that costs you something elsewhere. */}
-            {state.freeCrew.length > 1 && (
+            {/* Also shown with a SINGLE free hand when that hand is in the raid
+                party: the who-filter is the only thing standing between the
+                player and the empty list, so hiding it there hid the fix. */}
+            {(state.freeCrew.length > 1 || state.freeCrew.some(c => c.inRaidParty)) && (
               <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
                 {([
                   { key: 'sort' as const, value: trawlSort, set: setTrawlSort as (v: string) => void, opts: [
@@ -861,7 +864,22 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               : trawlWho === 'free' && state.freeCrew.some(c => c.inRaidParty)
                 // The default filter hides raid hands, so say WHY the list is
                 // empty rather than blaming an invisible filter.
-                ? <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '1.6rem 0', lineHeight: 1.5 }}>Every hand you have left is in your raid party. Tap <span style={{ color: '#e07c7c' }}>In raid</span> above to send one anyway — they&apos;ll be locked out of the raid for the whole cycle.</p>
+                // THE INSTRUCTION IS THE BUTTON. This used to read "tap In raid
+                // above", naming a filter chip that is itself hidden while you
+                // have only one free hand, which is exactly the state that
+                // produces this message. So the one player who most needed the
+                // way out was told to press something that was not on screen.
+                // A button here cannot go missing and cannot be misread.
+                ? <div style={{ textAlign: 'center', padding: '1.4rem 0' }}>
+                    <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', lineHeight: 1.5 }}>
+                      Every hand you have left is in your raid party. You can still send one, but they will be locked out of the raid for the whole cycle.
+                    </p>
+                    <button type="button" onClick={() => setTrawlWho('raid')}
+                      className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                      style={{ marginTop: '0.85rem', padding: '0.5rem 1rem', borderRadius: 999, fontSize: '0.62rem', background: 'rgba(224,124,124,0.14)', border: '1px solid rgba(224,124,124,0.55)', color: '#e07c7c', cursor: 'pointer' }}>
+                      Show my raid party
+                    </button>
+                  </div>
                 : <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '1.6rem 0' }}>No crew match that filter.</p>)}
             {/* Three across, art first — same language as the raid and voyage
                 assign pickers, so choosing a hand feels the same everywhere. */}
