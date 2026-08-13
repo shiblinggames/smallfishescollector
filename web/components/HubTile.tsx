@@ -23,7 +23,9 @@ export default function HubTile({
   title: string
   status: string
   statusColor?: string
-  sub?: string | null
+  /** A node, not just a string, so a tile can carry a live countdown. Still
+   *  rendered on ONE ellipsised line, so keep whatever goes in here short. */
+  sub?: React.ReactNode
   subLock?: boolean
   locked?: boolean
   lockLabel?: string

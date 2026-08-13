@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { vibrate } from '@/lib/haptics'
+import ResetCountdown from '@/components/ResetCountdown'
 import PopupShell from '@/components/PopupShell'
 import HubTile, { HUB_GRID } from '@/components/HubTile'
 import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
@@ -142,6 +143,12 @@ export default function HubCards({
   // not block the hub painting. The tile shows its ordinary self until the
   // answer arrives and then grows the marker.
   const [bountyReady, setBountyReady] = useState(0)
+  // Orders still open: not claimed and not yet finished. The tile knew when
+  // something was waiting to be COLLECTED but said the same "Open" whether
+  // three orders sat untouched or the day was already done, so the only way to
+  // find out was to go in and look. Same fetch, two more numbers off it.
+  const [bountyOpen, setBountyOpen] = useState(0)
+  const [bountyTotal, setBountyTotal] = useState(0)
   const checkBounties = useCallback(() => {
     if (!bountiesOpen) return
     getBountyBoard().then(b => {
@@ -151,6 +158,8 @@ export default function HubCards({
       setBountyReady(
         b.bounties.filter(x => !x.claimed && x.progress >= x.target).length + b.milestonesReady,
       )
+      setBountyOpen(b.bounties.filter(x => !x.claimed && x.progress < x.target).length)
+      setBountyTotal(b.bounties.length)
     }).catch(() => {})
   }, [bountiesOpen])
   useEffect(() => { checkBounties() }, [checkBounties])
@@ -262,10 +271,18 @@ export default function HubCards({
             chapters of work stood in front of a door they were one raid from. */}
         <HubTile
           bgImage="/exp-bounties.jpg" accent={bountyAccent} title="Bounties"
-          status={bountiesOpen ? (bountyReady > 0 ? `${bountyReady} to collect ›` : 'Open ›') : 'Locked'}
-          statusColor={bountyReady > 0 ? '#ffd96a' : bountyAccent}
+          status={bountiesOpen
+            ? (bountyReady > 0 ? `${bountyReady} to collect ›`
+              : bountyOpen > 0 ? `${bountyOpen} open ›`
+              : bountyTotal > 0 ? 'All done ›' : 'Open ›')
+            : 'Locked'}
+          statusColor={bountyReady > 0 ? '#ffd96a' : bountyOpen > 0 ? bountyAccent : 'rgba(255,255,255,0.55)'}
           sub={bountiesOpen
-            ? (bountyReady > 0 ? 'Paid the moment you claim it' : 'Daily orders, paid in gems')
+            ? (bountyReady > 0 ? 'Paid the moment you claim it'
+              : bountyOpen > 0 ? 'Daily orders, paid in gems'
+              // Finished for the day says WHEN the next lot lands, rather than
+              // repeating an invitation the player has already accepted.
+              : bountyTotal > 0 ? <ResetCountdown prefix="New orders in" /> : 'Daily orders, paid in gems')
             : `Sink ${BOUNTY_RUNGS[0].boss} and the board opens`}
           locked={!bountiesOpen} lockLabel={`Beat ${BOUNTY_RUNGS[0].boss}`}
           // A pill rather than a dot: the Gauntlets tile beside it already uses

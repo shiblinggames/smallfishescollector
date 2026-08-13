@@ -22,6 +22,7 @@
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import ResetCountdown from '@/components/ResetCountdown'
 import { getBountyBoard, claimBounty, rerollBounty, claimBountyMilestone, type BountyBoard, type BountyView } from './bountyActions'
 import { BOUNTY_POINTS, BOUNTY_MILESTONES } from '@/lib/bounties'
 import { rankForPoints, nextRank, rankGained, type BountyRank } from '@/lib/bountyRanks'
@@ -830,8 +831,13 @@ export default function BountiesPanel({ onGems, onClose }: {
           ))}
       </div>
 
+      {/* A CLOCK, NOT A TIME OF DAY. "Every morning" is only true in one
+          timezone: the board turns over at UTC midnight, which is the middle of
+          the afternoon for some captains and the middle of the night for
+          others. The Tavern already counts down to the same instant with the
+          same component, so a player who has seen one reads this one for free. */}
       <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: '#8d7f66', marginTop: 10, textAlign: 'center', lineHeight: 1.5 }}>
-        New orders posted every morning.
+        <ResetCountdown prefix="New orders in" />
         {board.next && (
           <>
             <br />
