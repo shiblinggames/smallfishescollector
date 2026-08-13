@@ -90,12 +90,7 @@ export default function MobileTabBar() {
     })
   }, [pathname])
 
-  useEffect(() => {
-    const inFishing = pathname.startsWith('/fishing')
-    const needFetch = !trawlsFetchedRef.current || wasFishingRef.current || inFishing
-    wasFishingRef.current = inFishing
-    if (!needFetch) return
-    trawlsFetchedRef.current = true
+  const fetchTrawls = useCallback(() => {
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string } } | null } }) => {
@@ -107,7 +102,28 @@ export default function MobileTabBar() {
         .eq('user_id', user.id)
         .then(({ data }: { data: { ends_at: string }[] | null }) => setTrawls(data ?? []))
     })
-  }, [pathname])
+  }, [])
+
+  useEffect(() => {
+    const inFishing = pathname.startsWith('/fishing')
+    const needFetch = !trawlsFetchedRef.current || wasFishingRef.current || inFishing
+    wasFishingRef.current = inFishing
+    if (!needFetch) return
+    trawlsFetchedRef.current = true
+    fetchTrawls()
+  }, [pathname, fetchTrawls])
+
+  // Collecting or deploying a trawl fires `trawls-changed` → refetch, so the dot
+  // clears the moment the last ready haul is taken in. This effect used to key
+  // on pathname alone, which meant nothing refetched while you STAYED on the
+  // fishing screen: the very place trawls are collected from was the one place
+  // the dot could not go out, and it only cleared once you navigated away and
+  // back. Mirrors what `badges-changed` already does for the Badges pill.
+  useEffect(() => {
+    const h = () => fetchTrawls()
+    window.addEventListener('trawls-changed', h)
+    return () => window.removeEventListener('trawls-changed', h)
+  }, [fetchTrawls])
 
   const fetchBadgeState = useCallback(() => {
     const { createClient } = require('@/lib/supabase/client')

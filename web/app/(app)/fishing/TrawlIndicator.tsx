@@ -422,6 +422,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     }
     pushRecentCrew(zone, crewId)
     setState(r); setPicking(null); setNow(Date.now())
+    // The tab bar keeps its own copy of the trawl rows and only refetched on a
+    // route change, so the fishing tab's ready-dot could not go out while you
+    // stood on the fishing screen. Tell it directly.
+    window.dispatchEvent(new CustomEvent('trawls-changed'))
     if (!crew) { setFlashZone(zone); setTimeout(() => setFlashZone(null), 850) }
   }
 
@@ -439,6 +443,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     haptic(tier === 'jackpot' ? [0, 40, 30, 70, 30, 95] : tier === 'bumper' ? [0, 35, 30, 60, 30, 70] : tier === 'good' ? [0, 30, 35, 45] : tier === 'slim' ? [0, 18, 30, 20] : [0, 25, 40, 30])
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     window.dispatchEvent(new CustomEvent('fishing-xp-changed', { detail: r.newFishingXP }))
+    window.dispatchEvent(new CustomEvent('trawls-changed'))
     const coinCount = tier === 'jackpot' ? 18 : tier === 'bumper' ? 14 : tier === 'good' ? 11 : tier === 'slim' ? 6 : 8
     setCoins(Array.from({ length: coinCount }, () => ({ id: pid.current++ })))
     setTimeout(() => setCoins([]), 900)
