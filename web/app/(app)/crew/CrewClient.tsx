@@ -16,7 +16,7 @@ import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER, CREW_HALL_TIERS, type CrewHallTierNum } from '@/lib/crewHall'
 import { hallRosterBonus, capacityBreakdown } from '@/lib/crewCapacity'
-import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR } from '@/lib/crewBunks'
+import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR, bunkCount } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { CREW_PANEL_BG, CREW_PANEL_BORDER } from '@/lib/crewPanel'
 import HallBunks from './HallBunks'
@@ -1256,6 +1256,32 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   })() as 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'
   const [activeTab, setActiveTab] = useState<'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'>(initialTab)
 
+  /**
+   * VIEWING THE ROSTER IS THE ACKNOWLEDGEMENT.
+   *
+   * A level-up has nothing for the player to DO, so a notice that has to be
+   * dismissed by hand is asking for work in exchange for information. Crew
+   * level often enough that "Mark all seen" became a recurring errand, which is
+   * a bad trade for a courtesy.
+   *
+   * So the ledger catches up when you LEAVE the roster, not when you arrive:
+   * during the visit the hands stay flagged and sorted to the top, which is what
+   * makes the notice worth showing at all, and by the next visit it is spent.
+   * The button stays for anyone who wants to clear it without scrolling.
+   */
+  const sawRosterRef = useRef(false)
+  useEffect(() => {
+    if (activeTab === 'roster') { sawRosterRef.current = true; return }
+    if (!sawRosterRef.current) return
+    sawRosterRef.current = false
+    markAllCrewSeen()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+  useEffect(() => () => { if (sawRosterRef.current) markAllCrewSeen() },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [])
+
+
   // First-time Crew Hall guide: step through the core tabs, switching to and
   // flashing each one. Marked seen at the end.
   const [crewGuideStep, setCrewGuideStep] = useState<number | null>(null)
@@ -1311,12 +1337,27 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   const sortedRoster = useMemo(() => {
     const byName = (a: CrewMember, b: CrewMember) => a.name.localeCompare(b.name)
     const r = [...state.roster]
-    if (rosterSort === 'name') return r.sort(byName)
-    if (rosterSort === 'level') return r.sort((a, b) => crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) || byName(a, b))
-    if (rosterSort === 'rarity') return r.sort((a, b) => b.rarity - a.rarity || byName(a, b))
-    const eff = (c: CrewMember) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
-    return r.sort((a, b) => eff(b)[rosterSort] - eff(a)[rosterSort] || byName(a, b))
-  }, [state.roster, rosterSort])
+    const within = (a: CrewMember, b: CrewMember) => {
+      if (rosterSort === 'name') return byName(a, b)
+      if (rosterSort === 'level') return crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) || byName(a, b)
+      if (rosterSort === 'rarity') return b.rarity - a.rarity || byName(a, b)
+      const eff = (c: CrewMember) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
+      return eff(b)[rosterSort] - eff(a)[rosterSort] || byName(a, b)
+    }
+    // LEVELLED-UP HANDS FIRST, whatever the sort. The dot told you somebody had
+    // gained a level and then left you to find them by scrolling a roster of
+    // thirty, which is the part that made an FYI feel like a chore. Grouping
+    // them answers the notice on the same screen it appears on.
+    //
+    // It only regroups while they are still unseen, and unseen clears when you
+    // leave the tab, so the order settles back on the next visit rather than
+    // permanently fighting whichever sort was chosen.
+    const isNew = (c: CrewMember) => {
+      const seen = seenLevels[c.id]
+      return seen !== undefined && seen < crewLevelFromXP(c.xp)
+    }
+    return r.sort((a, b) => (Number(isNew(b)) - Number(isNew(a))) || within(a, b))
+  }, [state.roster, rosterSort, seenLevels])
   // Swipe-to-recruit teaser: auto-peek the first recruitable card ONCE per visit
   // to show the gesture, then rely on the persistent arrow. Ref (not state) so
   // flipping it never re-renders; firstRecruitHintId re-reads it each render.
@@ -1557,11 +1598,18 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           // rather than stored, so it stays right as stints tick over.
           const readyBunks = Object.values(state.bunkTerms ?? {})
             .filter(t => stintDone(t.since, Date.now(), t.cap)).length
-          const hallWaiting = readyBunks
+          // AN EMPTY BUNK IS ALSO SOMETHING TO DO, and it is the one that
+          // actually costs you: a finished stint is XP already banked and
+          // waiting, while an empty bunk is XP not being earned at all. The tab
+          // only ever counted the finished ones, so the hall went quiet in
+          // exactly the state a player most wants pointing out. Trawls have
+          // always nudged on an idle zone; this is the same courtesy.
+          const openBunks = Math.max(0, bunkCount(state.hallTier) - (state.bunkedCrewIds?.length ?? 0))
+          const hallWaiting = readyBunks + openBunks
           const iconProps = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
           // Uniform icon + label tabs so every destination is self-explanatory
           // (the old icon-only Blood/Wardrobe/Graveyard tabs weren't obvious).
-          const tabs: { id: typeof activeTab; label: string; accent: string; count?: number; pulse?: boolean; icon: ReactNode }[] = [
+          const tabs: { id: typeof activeTab; label: string; accent: string; count?: number; pulse?: boolean; pulseLabel?: string; icon: ReactNode }[] = [
             { id: 'assign',   label: 'Assign',  accent: ASSIGN_RAID, count: assignedCount || undefined,
               icon: <svg {...iconProps}><path d="M9 11l3 3 8-8" /><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg> },
             { id: 'roster',   label: 'Roster',  accent: SECTION_ROSTER, count: state.roster.length || undefined,
@@ -1569,6 +1617,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             { id: 'recruits', label: 'Recruit', accent: '#f0d696', count: boardCount || undefined,
               icon: <svg {...iconProps}><path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="3.2" /><path d="M19 8v6M22 11h-6" /></svg> },
             { id: 'hall',     label: 'Hall',    accent: '#f0c040', count: hallWaiting || undefined, pulse: hallWaiting > 0,
+              pulseLabel: [readyBunks ? `${readyBunks} trained and waiting` : '', openBunks ? `${openBunks} bunk${openBunks === 1 ? '' : 's'} empty` : ''].filter(Boolean).join(', '),
               icon: <svg {...iconProps}><path d="M3 21h18" /><path d="M5 21V10l7-5 7 5v11" /><path d="M10 21v-5h4v5" /></svg> },
             { id: 'wardrobe', label: 'Skins',  accent: '#5ec8e8',
               icon: <svg {...iconProps}><path d="M12 3a2 2 0 0 0-2 2c0 1 1 1.6 2 2M3 20l9-7 9 7M3 20l9-4 9 4M3 20v-1l9-6 9 6v1" /></svg> },
@@ -1594,7 +1643,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     <span style={{ fontSize: '0.5rem', letterSpacing: '0.07em', lineHeight: 1 }}>{t.label}</span>
                     {t.count != null && (
                       <span className={`font-karla font-800${t.pulse ? ' crew-levelup-dot' : ''}`}
-                        aria-label={t.pulse ? `${t.count} ready to collect` : undefined}
+                        aria-label={t.pulse ? t.pulseLabel ?? `${t.count} ready to collect` : undefined}
                         style={{ position: 'absolute', top: 2, right: 3, minWidth: 13, textAlign: 'center', fontSize: '0.5rem', color: '#0b0b0d', background: t.pulse ? '#ffd96a' : active ? t.accent : 'rgba(255,255,255,0.7)', borderRadius: 999, padding: '0 3px', lineHeight: 1.35 }}>{t.count}</span>
                     )}
                   </button>
