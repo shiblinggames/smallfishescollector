@@ -14,8 +14,9 @@ import {
 import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW_SKINS } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
+import { XP_TABLE as NAV_XP_TABLE, MAX_LEVEL as NAV_MAX_LEVEL } from '@/lib/expeditionLevel'
 import { hallTierDef, nextHallTier, hallUpgradeBlocker, CREW_HALL_MAX_TIER, CREW_HALL_TIERS, type CrewHallTierNum } from '@/lib/crewHall'
-import { hallRosterBonus, capacityBreakdown } from '@/lib/crewCapacity'
+import { hallRosterBonus, capacityBreakdown, crewCapacity } from '@/lib/crewCapacity'
 import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost, nextStoresCost, ladderHallLocked, isLeviathanSlot, DRILL_MAX_LEVEL, LEVIATHAN_COLOR, bunkCount } from '@/lib/crewBunks'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { CREW_PANEL_BG, CREW_PANEL_BORDER } from '@/lib/crewPanel'
@@ -1583,19 +1584,32 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               <button
                 type="button"
                 onClick={() => setCapacityOpen(true)}
-                aria-label={`${filled} of ${cap} crew. See how the limit is worked out.`}
-                className="font-karla font-700 tap"
+                aria-label={`${filled} of ${cap} crew. See how the limit is worked out and how to raise it.`}
+                className="font-karla font-700 tap active:scale-95"
                 style={{
                   fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase',
-                  color: isFull ? '#f2b0b0' : '#c8b890',
-                  background: isFull ? 'rgba(220,90,90,0.10)' : 'rgba(200,170,100,0.08)',
-                  border: `1px solid ${isFull ? 'rgba(220,90,90,0.32)' : 'rgba(200,170,100,0.24)'}`,
-                  padding: '0.18rem 0.44rem 0.18rem 0.5rem', borderRadius: 5, lineHeight: 1.2,
+                  color: isFull ? '#f4c4c4' : '#e0cfa4',
+                  // A CONTROL, NOT A CAPTION. It was a faint tinted wash with a
+                  // hairline, which is how every read-only stat chip on this page
+                  // is drawn, so nobody had a reason to press it. Solid ground,
+                  // a full-strength border and a ringed glyph instead: the same
+                  // vocabulary the page uses for things that do something.
+                  background: isFull
+                    ? 'linear-gradient(rgba(220,90,90,0.22), rgba(220,90,90,0.22)), rgba(14,19,28,0.97)'
+                    : 'linear-gradient(rgba(200,170,100,0.18), rgba(200,170,100,0.18)), rgba(14,19,28,0.97)',
+                  border: `1px solid ${isFull ? 'rgba(240,150,150,0.72)' : 'rgba(210,182,116,0.6)'}`,
+                  boxShadow: `0 1px 6px rgba(0,0,0,0.45)${isFull ? ', 0 0 12px rgba(220,90,90,0.28)' : ''}`,
+                  padding: '0.22rem 0.4rem 0.22rem 0.55rem', borderRadius: 7, lineHeight: 1.2,
                   whiteSpace: 'nowrap', cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
                 }}>
                 {filled} / {cap} Crew
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.6, flexShrink: 0 }}><path d="M9 6l6 6-6 6" /></svg>
+                <span aria-hidden style={{
+                  display: 'grid', placeItems: 'center', flexShrink: 0,
+                  width: 13, height: 13, borderRadius: '50%',
+                  border: '1px solid currentColor', opacity: 0.85,
+                  fontSize: '0.5rem', fontStyle: 'italic', lineHeight: 1,
+                }}>i</span>
               </button>
             )
           })()}
@@ -4231,16 +4245,49 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   {(b.nextNavLevel || nextHall) ? (
                     <div style={{ marginTop: 12, padding: '0.6rem 0.7rem', borderRadius: 10, background: `${GOLD}0f`, border: `1px solid ${GOLD}33` }}>
                       <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: '#948e84' }}>To raise it</p>
-                      {b.nextNavLevel && (
-                        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.5, marginTop: 3 }}>
-                          Navigation {b.nextNavLevel} adds <span style={{ color: GOLD, fontWeight: 700 }}>1</span> more.
-                        </p>
-                      )}
-                      {nextHall && (
-                        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.5, marginTop: 3 }}>
-                          Building the {nextHall.name} adds <span style={{ color: GOLD, fontWeight: 700 }}>{b.perHallTier}</span> more, and a bunk with them.
-                        </p>
-                      )}
+                      {/* NOT JUST WHAT, BUT HOW FAR. "Navigation 60 adds 1" is
+                          a fact; "4,100 XP to go" is what a captain deciding
+                          whether to dismiss a hand or wait one more level
+                          actually needs. Same for the hall: the price against
+                          the purse, and said plainly when the purse is short. */}
+                      {b.nextNavLevel && (() => {
+                        const need = Math.max(0, (NAV_XP_TABLE[b.nextNavLevel - 1] ?? 0) - state.navXp)
+                        return (
+                          <div style={{ marginTop: 5 }}>
+                            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.45 }}>
+                              <span style={{ color: GOLD, fontWeight: 700 }}>+1</span> at Navigation {b.nextNavLevel}
+                            </p>
+                            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#948e84', lineHeight: 1.4, marginTop: 1 }}>
+                              {need > 0 ? `${need.toLocaleString()} Navigation XP to go` : 'Earned. It lands on your next raid or voyage.'}
+                            </p>
+                          </div>
+                        )
+                      })()}
+                      {nextHall && (() => {
+                        const short = Math.max(0, nextHall.cost - state.doubloons)
+                        const navShortHere = state.navLevel < nextHall.minNav
+                        return (
+                          <div style={{ marginTop: 7 }}>
+                            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.45 }}>
+                              <span style={{ color: GOLD, fontWeight: 700 }}>+{b.perHallTier}</span> from the {nextHall.name}, and a bunk with them
+                            </p>
+                            <p className="font-karla" style={{ fontSize: '0.64rem', color: !navShortHere && short === 0 ? '#9fd9b1' : '#948e84', lineHeight: 1.4, marginTop: 1 }}>
+                              {navShortHere
+                                ? `Opens at Navigation ${nextHall.minNav}`
+                                : short > 0
+                                  ? `${nextHall.cost.toLocaleString()} ⟡, you are ${short.toLocaleString()} short`
+                                  : `${nextHall.cost.toLocaleString()} ⟡, and you can afford it`}
+                            </p>
+                          </div>
+                        )
+                      })()}
+                      {/* The whole ladder, so "wait or dismiss" is answerable
+                          past the very next rung. Nav pays a berth every five
+                          levels forever, which is the part nobody can see from a
+                          single next-step line. */}
+                      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7d776e', lineHeight: 1.45, marginTop: 8, fontStyle: 'italic' }}>
+                        Every {b.navPerLevels} Navigation levels is another berth, up to {crewCapacity(NAV_MAX_LEVEL, CREW_HALL_MAX_TIER)} with both ladders topped out.
+                      </p>
                     </div>
                   ) : (
                     <p className="font-karla" style={{ fontSize: '0.72rem', color: '#d8d2c6', lineHeight: 1.5, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>

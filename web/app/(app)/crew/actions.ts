@@ -86,6 +86,9 @@ export type CrewState = {
   roster: CrewMember[]
   capacity: number
   navLevel: number
+  /** Raw Navigation XP. The crew-limit sheet turns "Navigation 60" into "4,100
+   *  XP to go", which is the difference between a milestone and a plan. */
+  navXp: number
   gems: number
   isPremium: boolean
   rerollCost: number
@@ -372,6 +375,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     capHours: storesCapHours((prof as any).crew_stores_level ?? 1),
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,
+    navXp: (prof as any).expedition_xp ?? 0,
     bloodGems: ((prof as any).blood_gems as number | null) ?? 0,
     hardcoreUnlocked: hardcoreUnlocked({
       isAdmin: (prof as any).is_admin,
