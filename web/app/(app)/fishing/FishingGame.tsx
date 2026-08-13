@@ -7991,7 +7991,14 @@ export default function FishingGame({
                   const hasNew = uncheckedNewFishIds.size > 0
                   const flashing = freshCatchHook != null
                   const flashAccent = freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
-                  const accent = flashing ? flashAccent : zoneColor
+                  // GOOD NEWS KEEPS ITS OWN COLOUR. The unread-entries state
+                  // used to borrow the zone accent, which is #f87171 in the
+                  // Abyss, so "you logged a new species" arrived down there
+                  // looking like a warning. Its meaning does not change by zone,
+                  // so neither should its colour, and warm gold is what the
+                  // catch itself already flashed a moment earlier.
+                  const NEW_ACCENT = '#fde68a'
+                  const accent = flashing ? flashAccent : hasNew ? NEW_ACCENT : zoneColor
                   return (
                     <motion.button
                       key={freshCatchHook ?? 'logbook-tile'}
@@ -8013,7 +8020,7 @@ export default function FishingGame({
                           `0 0 30px ${flashAccent}ee, 0 0 60px ${flashAccent}88`,
                           `0 0 14px ${flashAccent}88, 0 0 28px ${flashAccent}44`,
                         ],
-                      } : { boxShadow: hasNew ? `0 0 12px ${zoneColor}55` : '0 0 0 rgba(0,0,0,0)' }}
+                      } : { boxShadow: hasNew ? `0 0 12px ${NEW_ACCENT}55` : '0 0 0 rgba(0,0,0,0)' }}
                       transition={flashing
                         ? { duration: 1.2, ease: 'easeInOut', repeat: Infinity }
                         : { duration: 0.2 }}
@@ -8027,7 +8034,7 @@ export default function FishingGame({
                           : flashing
                             ? `linear-gradient(180deg, ${flashAccent}28 0%, rgba(4,10,18,0.72) 100%)`
                             : hasNew
-                              ? `linear-gradient(180deg, ${zoneColor}18 0%, rgba(4,10,18,0.72) 100%)`
+                              ? `linear-gradient(180deg, ${NEW_ACCENT}18 0%, rgba(4,10,18,0.72) 100%)`
                               : 'rgba(4,10,18,0.72)',
                         border: `1px solid ${collectionOpen ? accent + '55' : flashing ? flashAccent : hasNew ? accent + 'aa' : 'rgba(255,255,255,0.12)'}`,
                         position: 'relative',
@@ -8070,9 +8077,14 @@ export default function FishingGame({
                         <span style={{
                           position: 'absolute', top: -5, right: -5,
                           minWidth: 16, height: 16, borderRadius: 8,
-                          background: '#f87171', border: '1.5px solid #08121c',
+                          // Gold with dark type, the same shape the crew and
+                          // badge tab counts already use. It was a hardcoded
+                          // #f87171 in EVERY zone, so a count of new discoveries
+                          // was drawn in the one colour the rest of the app
+                          // reserves for something being wrong.
+                          background: '#ffd96a', border: '1.5px solid #08121c',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '0.5rem', fontWeight: 700, color: '#fff',
+                          fontSize: '0.5rem', fontWeight: 700, color: '#0b0b0d',
                           paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
                           fontFamily: 'var(--font-karla)',
                         }}>{uncheckedNewFishIds.size}</span>
