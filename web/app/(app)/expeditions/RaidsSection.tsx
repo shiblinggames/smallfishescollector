@@ -301,6 +301,18 @@ function NodeDetailSheet({
   const [sceneOpen, setSceneOpen] = useState(false)
   // Gauntlet node: deepest-run board (global #1 + this player's best).
   const [gauntletBoard, setGauntletBoard] = useState<{ top: { name: string; depth: number } | null; mine: number } | null>(null)
+  /**
+   * ARMED, NOT TAKEN. The Cache pick and the Captain's Choice are both permanent
+   * and both used the whole card as the button, so one tap anywhere on it spent
+   * the choice. A player reported losing his Cache to a tap meant to expand a
+   * description clamped at three lines: the gesture for "let me read the rest"
+   * and the gesture for "I'll take it forever" were the same gesture.
+   *
+   * Arming instead is the pattern the Spoils board already uses, and the confirm
+   * shows the FULL text, so the tap that used to spend the choice now does the
+   * thing he was actually reaching for.
+   */
+  const [armedChoice, setArmedChoice] = useState<{ kind: 'item' | 'class'; id: string } | null>(null)
   const { node, status, claimable, lockReason } = view
   useEffect(() => {
     if (node.type !== 'gauntlet') return
@@ -970,8 +982,8 @@ function NodeDetailSheet({
                     ) : goneHere ? (
                       <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ marginTop: 10, fontSize: '0.55rem', color: '#6a6764', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '0.28rem 0.7rem' }}>Gone</span>
                     ) : (
-                      <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.6rem', color: locked ? '#5a5856' : rc, background: locked ? 'rgba(255,255,255,0.05)' : `${rc}22`, border: `1px solid ${locked ? 'rgba(255,255,255,0.12)' : `${rc}66`}`, borderRadius: 999, padding: '0.32rem 0.85rem' }}>
-                        {pending ? '…' : locked ? <><IconLock size={11} /> Locked</> : 'Choose'}
+                      <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ marginTop: 11, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.6rem', color: locked ? '#5a5856' : rc, background: locked ? 'rgba(255,255,255,0.05)' : armedChoice?.id === itemId ? `${rc}3a` : `${rc}22`, border: `1px solid ${locked ? 'rgba(255,255,255,0.12)' : armedChoice?.id === itemId ? rc : `${rc}66`}`, borderRadius: 999, padding: '0.32rem 0.85rem' }}>
+                        {pending ? '…' : locked ? <><IconLock size={11} /> Locked</> : armedChoice?.kind === 'item' && armedChoice.id === itemId ? 'Selected' : 'Choose'}
                       </span>
                     )}
                   </>
@@ -981,13 +993,50 @@ function NodeDetailSheet({
                   <motion.div key={itemId} {...entrance} style={cardStyle}>{inner}</motion.div>
                 ) : (
                   <motion.button key={itemId} type="button" {...entrance}
-                    onClick={() => { if (canChoose) { vibrate([0, 16]); chooseItem(itemId) } }}
+                    onClick={() => { if (canChoose) { vibrate([0, 16]); setArmedChoice({ kind: 'item', id: itemId }) } }}
                     disabled={pending || locked}
                     whileTap={canChoose ? { scale: 0.97 } : undefined}
                     className="tap" style={cardStyle}>{inner}</motion.button>
                 )
               })}
             </div>
+            {/* THE CONFIRM. Sits under the pair rather than over them, so the
+                item you armed stays on screen next to what you are agreeing to.
+                The description is UNCLAMPED here: reading the rest of it is what
+                the tap was for. */}
+            {armedChoice?.kind === 'item' && (() => {
+              const it = getRaidItem(armedChoice.id)
+              if (!it) return null
+              const other = node.choice?.items.find(id => id !== armedChoice.id)
+              const otherName = other ? getRaidItem(other)?.name : null
+              const rc = RARITY_COLOR[it.rarity] ?? '#9ca3af'
+              return (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
+                  style={{ marginTop: '0.8rem', padding: '0.85rem 0.9rem', borderRadius: 14, background: `${rc}12`, border: `1px solid ${rc}55` }}>
+                  <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>{it.name}</p>
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.5, marginTop: 5 }}>{it.description}</p>
+                  {otherName && (
+                    <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e0b0a0', lineHeight: 1.45, marginTop: 8 }}>
+                      Take this and the {otherName} is gone for good.
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <motion.button whileTap={{ scale: 0.96 }} type="button" disabled={pending}
+                      onClick={() => { vibrate([0, 18]); chooseItem(armedChoice.id) }}
+                      className="font-cinzel font-700 uppercase tracking-[0.08em]"
+                      style={{ flex: 1, padding: '0.62rem', borderRadius: 11, fontSize: '0.72rem', background: `${rc}2a`, border: `1px solid ${rc}88`, color: '#f4efe4', cursor: pending ? 'wait' : 'pointer', opacity: pending ? 0.6 : 1 }}>
+                      {pending ? 'Taking…' : `Take the ${it.name}`}
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.96 }} type="button" disabled={pending}
+                      onClick={() => setArmedChoice(null)}
+                      className="font-karla font-600"
+                      style={{ padding: '0.62rem 1rem', borderRadius: 11, fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.66)', cursor: 'pointer' }}>
+                      Back
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )
+            })()}
             {detail.dropsNote && (
               <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: '0.55rem', lineHeight: 1.5 }}>
                 {detail.dropsNote}
@@ -1429,8 +1478,13 @@ function NodeDetailSheet({
                           ))}
                         </div>
                       </div>
-                      {/* Right cue: check medallion on the chosen card, else a
-                          nudging chevron (or lock) inviting the tap. */}
+                      {/* Right cue: check medallion once chosen, else a RADIO.
+                          It used to be a nudging chevron, which reads as "there
+                          is more to see through here" on a row where tapping
+                          used to commit you for the rest of the game. A radio
+                          says the true thing: these are the options, pick one.
+                          It fills when armed, so the card you are confirming is
+                          obvious while the confirm sits below. */}
                       {isChosen ? (
                         <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${c}1c`, border: `2px solid ${c}` }}>
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
@@ -1439,9 +1493,18 @@ function NodeDetailSheet({
                         locked ? (
                           <span style={{ flexShrink: 0, display: 'flex', color: '#5a5856' }}><IconLock size={16} /></span>
                         ) : (
-                          <motion.span aria-hidden animate={{ x: [0, 3, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ flexShrink: 0, display: 'flex', color: c }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                          </motion.span>
+                          <span aria-hidden style={{
+                            flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                            border: `2px solid ${armedChoice?.kind === 'class' && armedChoice.id === cls.id ? c : `${c}66`}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: armedChoice?.kind === 'class' && armedChoice.id === cls.id ? `${c}1c` : 'transparent',
+                            transition: 'border-color 0.15s, background 0.15s',
+                          }}>
+                            {armedChoice?.kind === 'class' && armedChoice.id === cls.id && (
+                              <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                                style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+                            )}
+                          </span>
                         )
                       ) : null}
                     </>
@@ -1451,7 +1514,7 @@ function NodeDetailSheet({
                     <motion.div key={cls.id} {...entrance} style={cardStyle}>{inner}</motion.div>
                   ) : (
                     <motion.button key={cls.id} type="button" {...entrance}
-                      onClick={() => { if (canChoose) { vibrate([0, 16]); chooseClass(cls.id) } }}
+                      onClick={() => { if (canChoose) { vibrate([0, 16]); setArmedChoice({ kind: 'class', id: cls.id }) } }}
                       disabled={pending || locked}
                       whileTap={canChoose ? { scale: 0.985 } : undefined}
                       aria-label={`Pick ${cls.name}`}
@@ -1459,6 +1522,36 @@ function NodeDetailSheet({
                   )
                 })}
               </div>
+              {/* Same arm-then-confirm as the Cache. This one is a whole-card
+                  tap target too, and it is just as permanent. */}
+              {armedChoice?.kind === 'class' && (() => {
+                const cl = offered.find(c => c.id === armedChoice.id)
+                if (!cl) return null
+                return (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
+                    style={{ marginTop: '0.8rem', padding: '0.85rem 0.9rem', borderRadius: 14, background: `${cl.color}12`, border: `1px solid ${cl.color}55` }}>
+                    <p className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>{cl.name}</p>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.5, marginTop: 5, fontStyle: 'italic' }}>{cl.tagline}</p>
+                    <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e0b0a0', lineHeight: 1.45, marginTop: 8 }}>
+                      This is the captain you become. There is no changing it later.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      <motion.button whileTap={{ scale: 0.96 }} type="button" disabled={pending}
+                        onClick={() => { vibrate([0, 18]); chooseClass(cl.id) }}
+                        className="font-cinzel font-700 uppercase tracking-[0.08em]"
+                        style={{ flex: 1, padding: '0.62rem', borderRadius: 11, fontSize: '0.72rem', background: `${cl.color}2a`, border: `1px solid ${cl.color}88`, color: '#f4efe4', cursor: pending ? 'wait' : 'pointer', opacity: pending ? 0.6 : 1 }}>
+                        {pending ? 'Signing on…' : `Sail as the ${cl.name}`}
+                      </motion.button>
+                      <motion.button whileTap={{ scale: 0.96 }} type="button" disabled={pending}
+                        onClick={() => setArmedChoice(null)}
+                        className="font-karla font-600"
+                        style={{ padding: '0.62rem 1rem', borderRadius: 11, fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.66)', cursor: 'pointer' }}>
+                        Back
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )
+              })()}
               <p className="font-karla" style={{ fontSize: '0.7rem', color: '#6a6764', marginTop: '0.7rem', lineHeight: 1.5 }}>
                 Permanent. Class effects apply to every raid from here on and stack with raid items.
               </p>
