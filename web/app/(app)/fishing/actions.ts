@@ -2198,3 +2198,41 @@ export async function claimFishingLevelRewards(): Promise<{
 
   return { granted: owed, newDoubloons: doubloons, newGems: gems, newHoldTier: holdTier }
 }
+
+/**
+ * The hold, re-read from the database.
+ *
+ * FishingGame seeds `inventory` from a server-rendered prop and then only ever
+ * mutates it locally, so the moment the browser serves the fishing route from
+ * its back/forward cache the count on screen freezes at whatever it was when
+ * that snapshot was taken. A player reported the pill reading 38/40 while the
+ * cast refused with "hold full", and reading a DIFFERENT stale number each time
+ * he came back to the tab, which is exactly what a restored page looks like.
+ *
+ * Back/forward caching is deliberate on Next's side (it protects scroll position
+ * and stops layout shift) and is not something to defeat. Re-reading when the
+ * screen becomes visible again is the honest fix: the server stays the authority
+ * and the display catches up to it.
+ *
+ * Same query the fishing page builds the prop from, so the two cannot disagree.
+ */
+export async function syncFishHold(): Promise<{ fish_id: number; quantity: number; fish_species: {
+  id: number; name: string; scientific_name: string
+  description: string | null; fun_fact: string; habitat: string
+  bite_rarity: number; catch_difficulty: number; catch_score: number; sell_value: number
+} }[] | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('fish_inventory')
+    .select('fish_id, quantity, fish_species(*)')
+    .eq('user_id', user.id)
+    .gt('quantity', 0)
+  return (data ?? []) as unknown as { fish_id: number; quantity: number; fish_species: {
+  id: number; name: string; scientific_name: string
+  description: string | null; fun_fact: string; habitat: string
+  bite_rarity: number; catch_difficulty: number; catch_score: number; sell_value: number
+} }[]
+}

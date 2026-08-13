@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence, useDragControls, type MotionStyle } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies, syncFishHold } from './actions'
 import { equipSecondSpecial } from '../expeditions/spoilsActions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import { buyBaitWithFathoms } from '@/app/(app)/raids/gauntlet/actions'
@@ -3416,6 +3416,29 @@ export default function FishingGame({
   const [baitSwapDir, setBaitSwapDir] = useState<1 | -1>(1)
   const baitDraggedRef = useRef(false)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
+  // THE HOLD CATCHES UP WHEN YOU COME BACK.
+  //
+  // `inventory` is seeded from a server-rendered prop and then only ever mutated
+  // locally, so a route restored from the browser's back/forward cache shows the
+  // count from whenever that snapshot was taken. That is what produced a pill
+  // reading 38/40 beside a refusal saying the hold was full, and a different
+  // stale number on each return.
+  //
+  // pageshow catches the bfcache restore itself (its `persisted` flag is exactly
+  // this case); visibilitychange catches app-switching back on mobile, which the
+  // Android back button and the task switcher both land on.
+  useEffect(() => {
+    const resync = () => {
+      if (document.visibilityState !== 'visible') return
+      syncFishHold().then(rows => { if (rows) setInventory(rows) }).catch(() => {})
+    }
+    document.addEventListener('visibilitychange', resync)
+    window.addEventListener('pageshow', resync)
+    return () => {
+      document.removeEventListener('visibilitychange', resync)
+      window.removeEventListener('pageshow', resync)
+    }
+  }, [])
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
   const [gems, setGems]             = useState(initialGems)
   // Keep the local gem balance in step with gem changes fired anywhere (crate
@@ -4724,6 +4747,11 @@ export default function FishingGame({
         ))
         setCastNotice(res.error)
         setPhase('idle')
+        // The server just contradicted the screen. That is the strongest signal
+        // there is that the local hold has drifted, and the case it was reported
+        // in is exactly this one: a pill reading 38/40 next to a refusal saying
+        // the hold is full. Re-read rather than leave the two disagreeing.
+        syncFishHold().then(rows => { if (rows) setInventory(rows) }).catch(() => {})
         return
       }
 
