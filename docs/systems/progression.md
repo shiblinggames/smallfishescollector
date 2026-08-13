@@ -18,6 +18,21 @@ fishing Prestige, and the daily challenge cadence.
   Navigation gates the expedition half. Neither converts into the other.
 - **Renown is post-cap only** and intentionally modest — it exists so max-level play
   still ticks, not to reopen power growth.
+- **A renown stat has to answer the player who is actually buying it.** Everyone spending
+  these points has already finished the level curve and the gear ladder, so anything that
+  sells *consistency* is selling them something they own. Fishing's Precision (a wider
+  catch band) drew literally zero points across every post-100 captain before it was
+  replaced. Check the live allocations before adding or tuning one; a boycott shows up
+  there long before anyone files it as feedback.
+- **Price a renown stat against the thing it competes with**, not in the abstract. The
+  crate stat is quoted against the Treasure Rod because that is the crate bonus players
+  already understand. Watch what it MULTIPLIES with: rod, Primeval Eye and renown all
+  stack on the same crate roll, and the ceiling is the number to sanity-check, not the
+  per-point one.
+- **Allocation is undone only by a respec token** (`renown_respecs`, one per board,
+  buyable for gems). Retiring a stat is therefore safe without a migration: `spentPoints`
+  only counts ids still in the catalog, so points in a removed stat return as banked
+  rather than vanishing.
 - **Prestige is hard-capped** with fixed perks (doubloon multiplier + catch XP boost —
   values in code). It grants NO sell bonus; that was rejected to keep prestige from
   compounding into the economy.
