@@ -319,9 +319,17 @@ export async function getCrewState(): Promise<CrewState | null> {
     // One-shot guaranteed legendary, if one is owed. Cleared in the SAME update
     // that stamps the date, so the roll that honours it is the only roll that
     // can — a second tab arriving late finds the flag already spent.
-    const owedLegendary = (prof as any).crew_next_roll_legendary === true
+    //
+    // A PINNED legendary is reserved for the PAID reroll and this path leaves it
+    // alone entirely, neither honouring nor clearing it. The free board fills
+    // itself the moment the crew screen is opened, so without this a gift aimed
+    // at a specific crew would be spent by simply visiting the page the next
+    // day, and spent on a roll the player never chose to take. An UNPINNED flag
+    // still fires here exactly as it always has.
+    const pinnedSlug = ((prof as any).crew_next_roll_legendary_slug as string | null) ?? null
+    const owedLegendary = (prof as any).crew_next_roll_legendary === true && !pinnedSlug
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, (prof as any).crew_next_roll_legendary_slug ?? null)
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, null)
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles')
       .update({ last_free_recruit_date: today, ...(owedLegendary ? { crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null } : {}) })
