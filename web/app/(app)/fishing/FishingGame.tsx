@@ -10664,8 +10664,16 @@ export default function FishingGame({
               style={{ width: '100%', maxWidth: 320, background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}
             >
               <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', marginBottom: 6 }}>Leave mid-cast?</p>
+              {/* Says the CONSEQUENCE, not the implementation. It used to read
+                  "your perfect streak breaks on your next cast", which is how
+                  the server does it: leaving sets catch_pending and the next
+                  cast is what zeroes the counter. As a warning that is worse
+                  than useless, because it sounds like a delay you might get out
+                  of by not casting. Nothing gets you out of it. The streak is
+                  already displayed as 0 the moment you come back, so this line
+                  was also the only surface still calling it alive. */}
               <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
-                Your bait is already in the water. Walk away now and it&apos;s gone, and your perfect streak breaks on your next cast.
+                Your bait is already in the water. Walk away now and it&apos;s gone, and your perfect streak with it.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
