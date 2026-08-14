@@ -55,7 +55,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DialAimBonus } from '@/lib/dialAim'
-import { installSpaceAction } from '@/lib/spaceAction'
+import { installSpaceAction, typingInField, uncoveredCenter } from '@/lib/spaceAction'
 import { createPortal } from 'react-dom'
 import { DialSVG, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
 import type { ZoneDef } from '@/app/(app)/fishing/depths'
@@ -11182,8 +11182,50 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
     item.onClick()
   }
 
+  // ── Desktop keyboard ──────────────────────────────────────────────────────
+  // One key per slot, matching the icons left to right: D dodge · S special ·
+  // R reload · F fire — plus V volley and M mega, which skip the fire chooser
+  // outright (the chooser exists because ONE thumb needs to reach three
+  // options; a keyboard has a key per option, so F is always the single shot
+  // and V/M spend the charges directly). Escape closes either chooser.
+  //
+  // Guards mirror the buttons exactly: same enabled conditions, dead while
+  // `disabled` (reveal/resolve), dead behind any overlay (uncoveredCenter on
+  // the menu root — tides, loot, pause all cover it), and dead while the
+  // special chooser is up so a stray F cannot fire behind it. During aiming
+  // this whole component is unmounted, so the keys go dead there for free.
+  const menuRootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return
+      if (typingInField(e.target)) return
+      const root = menuRootRef.current
+      if (!root || !uncoveredCenter(root)) return
+
+      const k = e.key.toLowerCase()
+      if (k === 'escape') {
+        if (fireMenu || specialMenu) { e.preventDefault(); setFireMenu(false); setSpecialMenu(false) }
+        return
+      }
+      if (specialMenu) {
+        // Chooser is up: S toggles it away, everything else stays inert.
+        if (k === 's') { e.preventDefault(); setSpecialMenu(false) }
+        return
+      }
+      if (disabled) return
+      if (k === 'd' && canDodge)                 { e.preventDefault(); setFireMenu(false); onSelect('dodge') }
+      else if (k === 'r' && canReload)           { e.preventDefault(); setFireMenu(false); onSelect('reload') }
+      else if (k === 'f' && canFire)             { e.preventDefault(); setFireMenu(false); onSelect('fire') }
+      else if (k === 'v' && canVolley)           { e.preventDefault(); setFireMenu(false); onSelect('volley') }
+      else if (k === 'm' && canMega)             { e.preventDefault(); setFireMenu(false); onSelect('mega') }
+      else if (k === 's' && hasSpecial)          { e.preventDefault(); setSpecialMenu(true) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [canDodge, canReload, canFire, canVolley, canMega, hasSpecial, disabled, fireMenu, specialMenu, onSelect])
+
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={menuRootRef} style={{ position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <CircleBtn
           icon={ACTION_ICON.dodge} label="Dodge" color="#38bdf8"

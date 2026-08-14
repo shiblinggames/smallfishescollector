@@ -20,10 +20,19 @@
 // Space only, deliberately. Enter is the form-submit key and the browser's
 // focused-button activator; giving it a second meaning invites double-fires.
 
-/** True while the user is typing somewhere Space must keep its meaning. */
-function typingInField(t: EventTarget | null): boolean {
+/** True while the user is typing somewhere game keys must keep their meaning. */
+export function typingInField(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false
   return t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable
+}
+
+/** True when the element is visible and no overlay covers its centre — the
+ *  geometric guard both keyboard layers share (see the file comment). */
+export function uncoveredCenter(el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect()
+  if (r.width === 0 || r.height === 0) return false
+  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+  return !!hit && (el === hit || el.contains(hit))
 }
 
 /** Install the listener; returns the uninstaller (use as a useEffect body). */
@@ -37,10 +46,7 @@ export function installSpaceAction(): () => void {
 
     // Visible and uncovered? A hidden button (display:none ancestor) has a
     // zero rect; a covered one loses the elementFromPoint test to the overlay.
-    const r = btn.getBoundingClientRect()
-    if (r.width === 0 || r.height === 0) return
-    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
-    if (!hit || !(btn === hit || btn.contains(hit))) return
+    if (!uncoveredCenter(btn)) return
 
     // We own this keypress: stop the page-scroll default, and blur any
     // focused control so the browser's own Space-activates-focused-button
