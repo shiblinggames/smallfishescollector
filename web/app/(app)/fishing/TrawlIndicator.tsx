@@ -8,6 +8,7 @@
 // Collecting fires the reveal (coins fly to the Nav purse, fishing XP ticks).
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ctaPill, CTA_TEXT } from '@/lib/uiTokens'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
@@ -554,10 +555,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             here for you" count in the app. */}
         <span className={`font-karla font-${anyReady ? '800' : '700'}${anyReady ? ' uppercase' : ''}`} style={{
           fontSize: '0.62rem', letterSpacing: anyReady ? '0.14em' : '0.04em', padding: '2px 9px', borderRadius: 999, whiteSpace: 'nowrap',
-          background: anyReady ? GOLD : 'rgba(8,12,18,0.82)',
-          border: `1px solid ${anyReady ? '#ffe9a8' : ringColor}`,
-          color: anyReady ? '#1a1205' : indicatorTrawl ? '#e6dcc2' : '#b6a98c',
-          boxShadow: anyReady ? `0 0 14px ${GOLD}99, 0 2px 6px rgba(0,0,0,0.5)` : '0 1px 4px rgba(0,0,0,0.45)',
+          ...(anyReady ? ctaPill() : {
+            background: 'rgba(8,12,18,0.82)',
+            border: `1px solid ${ringColor}`,
+            color: indicatorTrawl ? '#e6dcc2' : '#b6a98c',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.45)',
+          }),
         }}>
           {anyReady ? (readyTrawls.length > 1 ? `${readyTrawls.length} Ready` : 'Ready') : indicatorTrawl ? fmtCountdown(indicatorMs) : 'Trawls'}
         </span>
@@ -709,12 +712,14 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       padding: '0.24rem 0.62rem', borderRadius: 999,
                       // Filled means SOLID, not a wash. A 2a tint over a card
                       // that is itself already gold read as barely a pill at all.
-                      background: status.filled ? status.c : 'rgba(0,0,0,0.5)',
-                      border: `1px solid ${status.filled ? '#fff1c8' : `${status.c}55`}`,
-                      boxShadow: status.filled ? `0 0 14px ${status.c}88` : 'none',
+                      ...(status.filled ? ctaPill() : {
+                        background: 'rgba(0,0,0,0.5)',
+                        border: `1px solid ${status.c}55`,
+                        boxShadow: 'none',
+                      }),
                     }}>
                       {status.dot && <span className="trawl-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: status.c, boxShadow: `0 0 6px ${status.c}`, flexShrink: 0 }} />}
-                      <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.07em', color: status.filled ? '#1a1205' : status.c, textShadow: status.filled ? 'none' : '0 1px 2px rgba(0,0,0,0.8)', whiteSpace: 'nowrap' }}>{status.label}</span>
+                      <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.07em', color: status.filled ? CTA_TEXT : status.c, textShadow: status.filled ? 'none' : '0 1px 2px rgba(0,0,0,0.8)', whiteSpace: 'nowrap' }}>{status.label}</span>
                     </div>
                     {running && (
                       <div style={{ width: '100%', maxWidth: barMaxW, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', marginTop: 2 }}>

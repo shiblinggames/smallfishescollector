@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
+import { ctaPill } from '@/lib/uiTokens'
 import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
@@ -8082,9 +8083,9 @@ export default function FishingGame({
                           // #f87171 in EVERY zone, so a count of new discoveries
                           // was drawn in the one colour the rest of the app
                           // reserves for something being wrong.
-                          background: '#ffd96a', border: '1.5px solid #08121c',
+                          ...ctaPill(false), border: '1.5px solid #08121c',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '0.5rem', fontWeight: 700, color: '#0b0b0d',
+                          fontSize: '0.5rem', fontWeight: 700,
                           paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
                           fontFamily: 'var(--font-karla)',
                         }}>{uncheckedNewFishIds.size}</span>

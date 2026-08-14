@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { ctaPill } from '@/lib/uiTokens'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -246,7 +247,10 @@ export default function AchievementsClient({ groups }: Props) {
               className="font-cinzel font-700 uppercase tracking-[0.06em]"
               style={{
                 flexShrink: 0, whiteSpace: 'nowrap', padding: '0.5rem 0.95rem', borderRadius: 9, cursor: busy ? 'default' : 'pointer',
-                background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.74rem',
+                // Same gold-on-gold-on-gold as the per-badge Claim it sits above.
+                // The banner behind it keeps its tint: it is the frame, not the
+                // thing to press.
+                ...ctaPill(), fontSize: '0.74rem',
                 opacity: busy === 'all' ? 0.6 : 1,
               }}>
               {busy === 'all' ? 'Claiming…' : 'Claim All'}
@@ -681,7 +685,10 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         {state === 'ready' ? (
           <motion.button whileTap={{ scale: 0.92 }} onClick={e => { e.stopPropagation(); onClaim(rectCenter(e.currentTarget)) }} disabled={busy}
             className="font-cinzel font-700 uppercase tracking-[0.06em]"
-            style={{ padding: '0.55rem 0.95rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer', background: `${GOLD}22`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.8rem', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+            // A reward waiting to be taken, sitting on a row that is itself
+            // faintly gold. Gold type on a 13% gold ground on a gold row is
+            // three quiet things stacked; this is the one loud one.
+            style={{ padding: '0.55rem 0.95rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer', ...ctaPill(), fontSize: '0.8rem', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap' }}>
             {busy ? '…' : 'Claim'}
           </motion.button>
         ) : state === 'claimed' ? (

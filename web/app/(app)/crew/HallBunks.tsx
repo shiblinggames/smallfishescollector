@@ -34,6 +34,7 @@ import {
   stintXP, nextDrillCost, nextStoresCost, storesCapHours, storesMaxed,
   tierNumeral, LEVIATHAN_COLOR,
 } from '@/lib/crewBunks'
+import { ctaPill } from '@/lib/uiTokens'
 import type { CrewMember, CrewState } from './actions'
 
 /**
@@ -388,7 +389,11 @@ export default function HallBunks({
                 <span className="bunk-claim-pulse font-karla font-800 uppercase" style={{
                   display: 'inline-block', padding: '0.2rem 0.7rem', borderRadius: 999,
                   fontSize: '0.66rem', letterSpacing: '0.1em', lineHeight: 1.45,
-                  background: `${GOLD}26`, border: `1px solid ${GOLD}99`, color: '#f6e6b4',
+                  // The stint is DONE and the XP is sitting there unclaimed, so
+                  // this is the call to action, not a status. Was a 15% wash
+                  // with pale type, which is the quiet end of this card's own
+                  // palette rather than the loud one.
+                  ...ctaPill(),
                 }}>
                   {claiming === crew.id ? 'Hauling in' : 'Claim'}
                 </span>

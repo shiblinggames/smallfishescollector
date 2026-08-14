@@ -24,6 +24,7 @@
 //   4. THE COST      — open a recipe and it tells you, plainly, what forging it
 //                      spends and what that closes off.
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ctaPill } from '@/lib/uiTokens'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
@@ -478,9 +479,19 @@ export default function ForgeBoard({
                   ) : state === 'locked' ? (
                     <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: BLUE }}>{recipe.fathomCost} Fathoms</span>
                   ) : (
-                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent }}>
-                      {state === 'ready' ? 'Ready' : `${have}/${recipe.components.length} parts`}
-                    </span>
+                    // READY is the only one of these you can act on, so it gets
+                    // the pill and the rest stay as plain counts. The CARD keeps
+                    // its tint: a grid of solid gold plates would be the garish
+                    // case the no-solid-fills rule is actually about.
+                    state === 'ready' ? (
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', padding: '0.1rem 0.5rem', borderRadius: 999, ...ctaPill(false) }}>
+                        Ready
+                      </span>
+                    ) : (
+                      <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: accent }}>
+                        {`${have}/${recipe.components.length} parts`}
+                      </span>
+                    )
                   )}
                 </motion.button>
               )
