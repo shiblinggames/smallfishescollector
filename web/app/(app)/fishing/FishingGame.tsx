@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
 import { ctaPill } from '@/lib/uiTokens'
+import { installSpaceAction } from '@/lib/spaceAction'
 import CloseButton from '@/components/CloseButton'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
@@ -4180,6 +4181,12 @@ export default function FishingGame({
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
   const phaseRef        = useRef<Phase>('idle')
+  // Desktop keyboard: Space presses whatever the action row currently shows
+  // (Cast / Reel In / Open Crate / Claim / Cast Again / Claim Trophy — the
+  // tagged data-space-action button). The dispatcher fires the same
+  // pointerdown the button binds, so nothing here re-derives button guards.
+  useEffect(() => installSpaceAction(), [])
+
   const animRef         = useRef<number | null>(null)
   const blackoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastTimeRef     = useRef(0)
@@ -7579,7 +7586,7 @@ export default function FishingGame({
                 </motion.div>
               )}
               {phase === 'idle' && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
-                <motion.button key="cast"
+                <motion.button key="cast" data-space-action
                   // pointerdown rather than onClick — fires on tap-start
                   // (~50–100 ms earlier than click on touch devices), so
                   // the cast SFX lands in sync with the player's tap
@@ -7623,7 +7630,7 @@ export default function FishingGame({
                 </motion.div>
               )}
               {phase === 'catching' && (
-                <motion.button key="reel"
+                <motion.button key="reel" data-space-action
                   onPointerDown={e => { e.preventDefault(); handleReelIn() }}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -7659,7 +7666,7 @@ export default function FishingGame({
                   slot as Cast / Reel so the action button never shifts
                   position between phases. */}
               {phase === 'result' && crateResult && cratePhase === 'closed' && (
-                <motion.button key="open-crate"
+                <motion.button key="open-crate" data-space-action
                   onPointerDown={(e) => { e.preventDefault(); setCrateOpenSignal(true) }}
                   className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                   style={{
@@ -7691,7 +7698,7 @@ export default function FishingGame({
                 const accent = isCosmetic ? '#4ade80' : isDoubloons ? '#fbbf24' : '#86efac'
                 const accentRgb = isCosmetic ? '74,222,128' : isDoubloons ? '251,191,36' : '134,239,172'
                 return (
-                  <motion.button key="claim-crate"
+                  <motion.button key="claim-crate" data-space-action
                     onPointerDown={(e) => { e.preventDefault(); handleClaimCrate() }}
                     className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                     style={{
@@ -7751,6 +7758,7 @@ export default function FishingGame({
                         <motion.button
                           key="claim-trophy"
                           type="button"
+                          data-space-action
                           onPointerDown={(e) => { e.preventDefault(); setShinyChoiceModalOpen(true) }}
                           className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                           style={{
@@ -7776,7 +7784,7 @@ export default function FishingGame({
                   )
                 }
                 return (
-                  <motion.button key="again"
+                  <motion.button key="again" data-space-action
                     onPointerDown={(e) => { e.preventDefault(); handleCastAgain() }}
                     className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                     style={{

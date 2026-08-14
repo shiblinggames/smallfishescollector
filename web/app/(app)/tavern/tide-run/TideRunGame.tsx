@@ -1808,6 +1808,37 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
     }
   }, [step, render])
 
+  // ── Desktop keyboard ───────────────────────────────────────────────────────
+  // Hold Space to dive, exactly the pointer contract: keydown = press (with
+  // e.repeat filtered so OS key-repeat doesn't stutter the dive), keyup =
+  // release. Guarded off while the locker or tour is open — their pointer
+  // shields stopPropagation on taps, and this is the keyboard's version of
+  // that shield. window blur releases too, so tabbing away mid-dive doesn't
+  // leave the boat pinned underwater.
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (lockerOpen || showTour) return
+      e.preventDefault()
+      onPress()
+    }
+    const up = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return
+      onRelease()
+    }
+    const blur = () => onRelease()
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', blur)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', blur)
+    }
+  }, [onPress, onRelease, lockerOpen, showTour])
+
   // ── Pause on tab hide ──────────────────────────────────────────────────────
   useEffect(() => {
     const onVis = () => {

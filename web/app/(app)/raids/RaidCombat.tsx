@@ -55,6 +55,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DialAimBonus } from '@/lib/dialAim'
+import { installSpaceAction } from '@/lib/spaceAction'
 import { createPortal } from 'react-dom'
 import { DialSVG, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
 import type { ZoneDef } from '@/app/(app)/fishing/depths'
@@ -1101,6 +1102,12 @@ export default function RaidCombat({
   const aimGrazeW = GRAZE_W * hitScale
   const aimHitWRef   = useRef(aimHitW)
   const aimGrazeWRef = useRef(aimGrazeW)
+  // Desktop keyboard: Space presses the aim bar's Lock button while it is
+  // mounted (data-space-action above). Installed once per combat; the
+  // dispatcher no-ops whenever no tagged button is on screen, and its
+  // occlusion check keeps Space dead under any overlay (tides, loot, pause).
+  useEffect(() => installSpaceAction(), [])
+
   useEffect(() => { aimHitWRef.current = aimHitW;   }, [aimHitW])
   useEffect(() => { aimGrazeWRef.current = aimGrazeW }, [aimGrazeW])
   const liveCritWRef = useRef(liveCritW)
@@ -11797,6 +11804,9 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
           <motion.button
             whileTap={{ scale: 0.96 }}
+            // Desktop keyboard: Space locks too (lib/spaceAction dispatcher,
+            // installed for the combat's lifetime below RaidCombat's state).
+            data-space-action
             // pointerdown, not click — iOS synthesizes click ~100-200 ms
             // after the finger lands, which on a precision timing tap
             // reads as the aim bar "robbing" the player. Mirrors the
