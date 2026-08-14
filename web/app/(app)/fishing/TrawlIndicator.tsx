@@ -545,13 +545,21 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             }}>{activeTrawls.length}</span>
           )}
         </motion.div>
-        <span className="font-karla font-700" style={{
+        {/* READY IS A SOLID PILL, and it has to be. It used to be gold text on
+            an 11%-opacity gold wash with a 33% border, which floats over the
+            water and is fainter than the plain dark countdown it replaces. The
+            one state that wants your attention was the least visible one on the
+            widget.
+            Gold ground with dark type, matching every other "there is something
+            here for you" count in the app. */}
+        <span className={`font-karla font-${anyReady ? '800' : '700'}${anyReady ? ' uppercase' : ''}`} style={{
           fontSize: '0.62rem', letterSpacing: anyReady ? '0.14em' : '0.04em', padding: '2px 9px', borderRadius: 999, whiteSpace: 'nowrap',
-          background: anyReady ? `${GOLD}1c` : 'rgba(8,12,18,0.82)',
-          border: `1px solid ${anyReady ? `${GOLD}55` : ringColor}`,
-          color: anyReady ? GOLD : indicatorTrawl ? '#e6dcc2' : '#b6a98c',
+          background: anyReady ? GOLD : 'rgba(8,12,18,0.82)',
+          border: `1px solid ${anyReady ? '#ffe9a8' : ringColor}`,
+          color: anyReady ? '#1a1205' : indicatorTrawl ? '#e6dcc2' : '#b6a98c',
+          boxShadow: anyReady ? `0 0 14px ${GOLD}99, 0 2px 6px rgba(0,0,0,0.5)` : '0 1px 4px rgba(0,0,0,0.45)',
         }}>
-          {anyReady ? 'Ready' : indicatorTrawl ? fmtCountdown(indicatorMs) : 'Trawls'}
+          {anyReady ? (readyTrawls.length > 1 ? `${readyTrawls.length} Ready` : 'Ready') : indicatorTrawl ? fmtCountdown(indicatorMs) : 'Trawls'}
         </span>
       </motion.div>
     </div>
@@ -620,7 +628,11 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // plate for legibility; filled gold for the standout Ready), not
                 // a full-width bordered header bar.
                 const status = {
-                  ready:    { c: '#fff1c8',     label: collectingZone === z.key ? 'Hauling In…' : 'Tap to Collect', filled: false, dot: false },
+                  // FILLED. The comment above has always said "filled gold for
+                  // the standout Ready" and the flag said otherwise, so the one
+                  // state meant to stand out was drawn like the four that are
+                  // not: pale text on the same black plate.
+                  ready:    { c: '#ffd96a',     label: collectingZone === z.key ? 'Hauling In…' : 'Tap to Collect', filled: true,  dot: false },
                   running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
                   sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
                   noslot:   { c: '#9a958c',    label: 'No free slot',                  filled: false, dot: false },
@@ -695,12 +707,14 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                     <div style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2,
                       padding: '0.24rem 0.62rem', borderRadius: 999,
-                      background: status.filled ? `${status.c}2a` : 'rgba(0,0,0,0.5)',
-                      border: `1px solid ${status.c}${status.filled ? 'c0' : '55'}`,
-                      boxShadow: status.filled ? `0 0 12px ${status.c}66` : 'none',
+                      // Filled means SOLID, not a wash. A 2a tint over a card
+                      // that is itself already gold read as barely a pill at all.
+                      background: status.filled ? status.c : 'rgba(0,0,0,0.5)',
+                      border: `1px solid ${status.filled ? '#fff1c8' : `${status.c}55`}`,
+                      boxShadow: status.filled ? `0 0 14px ${status.c}88` : 'none',
                     }}>
                       {status.dot && <span className="trawl-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: status.c, boxShadow: `0 0 6px ${status.c}`, flexShrink: 0 }} />}
-                      <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.07em', color: status.filled ? '#ffe7ad' : status.c, textShadow: '0 1px 2px rgba(0,0,0,0.8)', whiteSpace: 'nowrap' }}>{status.label}</span>
+                      <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.07em', color: status.filled ? '#1a1205' : status.c, textShadow: status.filled ? 'none' : '0 1px 2px rgba(0,0,0,0.8)', whiteSpace: 'nowrap' }}>{status.label}</span>
                     </div>
                     {running && (
                       <div style={{ width: '100%', maxWidth: barMaxW, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', marginTop: 2 }}>
