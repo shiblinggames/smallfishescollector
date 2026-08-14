@@ -23,6 +23,15 @@ fish. Streaks of perfect catches build "on fire" state with escalating rewards.
   where it was, with zero rewind or re-roll. Read the comment block above `handleReelIn`
   before touching anything in that path. What you see at the moment of tap is what the
   server scores (WYSIWYG).
+- **An interrupted cast RESUMES, it does not reroll.** `castLine` writes `pending_cast`
+  with the exact payload it handed the client, and hands that same roll back until it is
+  resolved. This closes a live exploit: the cast response names the species and uses
+  `fishId: -1` for a chest, so a player could read it off the network tab and refresh away
+  any roll they disliked for the price of one worm (1 doubloon), keeping only chests,
+  legendaries and Ancient trophies. Bait is charged once per ROLL, not per cast, so a
+  dropped connection resumes rather than costing the cast. A stale token from a DIFFERENT
+  zone cannot be replayed, so the species rerolls but the crate decision is inherited —
+  otherwise zone-hopping would reroll the chest check, which is the prize.
 - **Fish size variance grants no XP or sell bonus.** Length rolls and personal-best tiers
   are bragging rights only (`web/lib/fishSize.ts`). Adding an economic reward to size was
   considered and rejected: it would turn a flavor system into a grind target.

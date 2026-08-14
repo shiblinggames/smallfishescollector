@@ -161,6 +161,18 @@ type PendingCast = {
   doubleCatch: boolean     // server-rolled double catch
   catchQty?: number        // Locked-In Rod guaranteed haul (3 at streak 5+); overrides double
   castAt: number
+  /** The EXACT payload this cast handed the client. Stored so an interrupted
+   *  cast can be replayed byte-for-byte instead of re-derived from current gear
+   *  (which would let a player swap rods mid-abandon to improve a live roll).
+   *  Optional: tokens written before this shipped simply cannot be resumed. */
+  shot?: CastShot
+}
+
+/** castLine's client payload, minus baitRemaining (which is read live). */
+type CastShot = {
+  fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number
+  crateTier?: CrateTier; instantBite?: boolean; jackpotMult?: number
+  doubleCatch?: boolean; catchQty?: number; lockedStage?: number
 }
 
 function rollCrateTier(habitat: string): CrateTier {
@@ -190,7 +202,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
     .eq('id', user.id)
     .single()
 
@@ -252,6 +264,30 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
   if (totalFish >= fishHold.capacity) {
     return { error: `Fish hold full (${fishHold.capacity}/${fishHold.capacity}). Sell some fish to make room.` }
+  }
+
+  // ── RESUME AN INTERRUPTED CAST ───────────────────────────────────────────
+  // A cast that is never reeled leaves its token behind: refreshing the browser
+  // calls no server action at all. castLine used to not even SELECT that token,
+  // so it rolled fresh and silently overwrote it -- which meant the response
+  // (fishId, and CRATE_FISH_ID === -1 for a chest) could be read off the network
+  // tab and any roll you did not like thrown back for the price of one worm.
+  //
+  // The token was already authoritative for what a cast PAYS (reelIn rebinds the
+  // client's fishId to it). It is now authoritative for what a cast OWES too:
+  // the same roll is handed back until it is resolved, so there is nothing to
+  // reroll and no reason to refresh.
+  //
+  // Charged once per ROLL, not per cast: the player already paid for this one,
+  // and not double-billing means a dropped connection or a backgrounded PWA
+  // resumes the cast instead of eating it.
+  const live = (profile as { pending_cast?: PendingCast | null }).pending_cast ?? null
+  if (live?.shot && live.habitat === habitat) {
+    // Walking away mid-catch still breaks the streak, exactly as before.
+    if (((profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0) > 0) {
+      await admin.from('profiles').update({ current_perfect_streak: 0 }).eq('id', user.id)
+    }
+    return { ...live.shot, baitRemaining: !noBait && baitRow ? baitRow.quantity : undefined }
   }
 
   if (!noBait && (!baitRow || baitRow.quantity <= 0)) return { error: 'No bait remaining.' }
@@ -327,7 +363,15 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // Renown PROVIDENCE joins the rod and the Angler's Patience as a third
   // multiplier on the same roll. Server-side, like every other renown effect:
   // the client is never told the crate rate, so it cannot be talked up.
-  const isCrate = Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult
+  // A stale token from a DIFFERENT zone cannot be replayed -- its species does
+  // not live in these waters. So the species rerolls, but the crate decision is
+  // INHERITED: otherwise abandoning and hopping zones would reroll the chest
+  // check, which is the whole prize. Inheriting cuts both ways, so a chest you
+  // walked away from is still a chest when you come back.
+  const stale = (live?.shot && live.habitat !== habitat) ? live : null
+  const isCrate = stale
+    ? stale.fishId === CRATE_FISH_ID
+    : Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
   // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
@@ -358,9 +402,10 @@ export async function castLine(baitType: string, habitat: string): Promise<
     // Persist the server-rolled crate token; reelCrate binds to THIS tier and
     // clears it one-shot, so the client can't name its own tier or open a crate
     // it never cast for. Awaited so it commits before the client can call back.
-    const crateToken: PendingCast = { fishId: CRATE_FISH_ID, habitat, baitType, crateTier, jackpotMult: 1, doubleCatch: false, castAt: Date.now() }
+    const crateShot: CastShot = { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait, crateTier }
+    const crateToken: PendingCast = { fishId: CRATE_FISH_ID, habitat, baitType, crateTier, jackpotMult: 1, doubleCatch: false, castAt: Date.now(), shot: crateShot }
     await admin.from('profiles').update({ pending_cast: crateToken }).eq('id', user.id)
-    return { fishId: CRATE_FISH_ID, catchDifficulty: 1, biteRarity: 1, waitMs: crateWait, crateTier, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
+    return { ...crateShot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
   }
 
   if (!noBait && baitRow) {
@@ -427,10 +472,11 @@ export async function castLine(baitType: string, habitat: string): Promise<
     && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
 
   const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
-  const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: Date.now() }
+  const shot: CastShot = { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, lockedStage: locked.stage }
+  const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: Date.now(), shot }
   await admin.from('profiles').update({ pending_cast: token }).eq('id', user.id)
 
-  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, lockedStage: locked.stage }
+  return { ...shot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
 }
 
 const CRATE_FISH_ID = -1
