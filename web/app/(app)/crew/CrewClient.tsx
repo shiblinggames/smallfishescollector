@@ -1740,16 +1740,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             bunkedCrewIds={state.bunkedCrewIds}
             artSrc={artSrc}
             onPickSeat={(track, slot) => setAssignSeat({ track, slot })}
-            onTapCrew={m => {
-              if (comparePick) {
-                if (m.id === comparePick.id) { setComparePick(null); return }
-                setComparePair({ a: comparePick, b: m })
-                setComparePick(null)
-                vibrate([10, 30, 14])
-                return
-              }
-              setDetail({ kind: 'roster', item: m })
-            }}
+            onTapCrew={m => setDetail({ kind: 'roster', item: m })}
             onClearParty={track => setClearAsk(track)}
             clearing={clearingTrack}
             raidAccent={ASSIGN_RAID}
@@ -2127,14 +2118,20 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           )
         })()}
 
-        {/* The comparison sheet. Portalled like every other full-screen
-            surface on this page. */}
-        <CrewCompare
-          open={!!comparePair}
-          a={comparePair?.a ?? null}
-          b={comparePair?.b ?? null}
-          onClose={() => setComparePair(null)}
-        />
+        {/* PORTALLED TO BODY, like the assign picker beside it. PopupShell
+            positions itself `fixed`, and a fixed child of a TRANSFORMED ancestor
+            is positioned against that ancestor rather than the viewport. This
+            page animates its panels, so the sheet has to leave the tree to be
+            sure of covering the screen. */}
+        {comparePair && typeof document !== 'undefined' && createPortal(
+          <CrewCompare
+            open
+            a={comparePair.a}
+            b={comparePair.b}
+            onClose={() => setComparePair(null)}
+          />,
+          document.body,
+        )}
 
         {/* Fill-a-seat picker. Art-forward and three across, matching the
             board it opens from. */}
@@ -3068,7 +3065,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         bunkLocked={state.bunkLockedCrewIds.includes(m.id)}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
-                        onClick={() => openDetail('roster', m)} />
+                        // In pick mode this card CHOOSES rather than opens. The
+                        // handler lived on AssignBoard first, which is a
+                        // different surface on a different tab, so the banner
+                        // appeared on the roster and tapping a hand there just
+                        // opened its sheet: the compare could never complete.
+                        onClick={() => {
+                          if (comparePick) {
+                            if (m.id === comparePick.id) { setComparePick(null); return }
+                            setComparePair({ a: comparePick, b: m })
+                            setComparePick(null)
+                            vibrate([10, 30, 14])
+                            return
+                          }
+                          openDetail('roster', m)
+                        }} />
                     </SwipeAction>
                   )
                 }
