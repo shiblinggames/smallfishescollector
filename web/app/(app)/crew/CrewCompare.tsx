@@ -195,7 +195,11 @@ export default function CrewCompare({ a, b, open, onClose }: {
   const totalB = levelled ? B.maxTotal : B.nowTotal
 
   return (
-    <PopupShell open={open} onClose={onClose}>
+    // zIndex ABOVE this page's own overlays. PopupShell defaults to 111 and
+    // every sheet on the crew screen sits at 200 to 275, so the default put
+    // this one behind the page: it opened, painted underneath, and read as
+    // nothing happening at all.
+    <PopupShell open={open} onClose={onClose} zIndex={280}>
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}

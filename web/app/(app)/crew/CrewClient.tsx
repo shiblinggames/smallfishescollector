@@ -2981,23 +2981,45 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   out, because a roster that has quietly changed what tapping a
                   card does has to say so. */}
               {comparePick && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                  padding: '0.5rem 0.7rem', borderRadius: 10, marginBottom: 9,
-                  background: 'rgba(94,234,212,0.10)', border: '1px solid rgba(94,234,212,0.4)',
-                }}>
-                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#8fe6d6' }}>
-                    Tap a hand to weigh against {comparePick.name}
+                // STICKY, and carrying the face. A one-line tinted strip that
+                // scrolled away left no sign the roster had changed what a tap
+                // does, so the second tap felt like nothing. This rides the top
+                // of the list the whole time, shows WHO you armed, and pulses,
+                // so the mode is impossible to be in without knowing.
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    position: 'sticky', top: 0, zIndex: 6,
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '0.5rem 0.6rem', borderRadius: 12, marginBottom: 10,
+                    background: 'linear-gradient(rgba(94,234,212,0.16), rgba(94,234,212,0.16)), rgba(9,16,22,0.98)',
+                    border: '1px solid rgba(94,234,212,0.75)',
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.5), 0 0 18px rgba(94,234,212,0.22)',
+                  }}>
+                  <motion.span
+                    animate={{ boxShadow: ['0 0 0 rgba(94,234,212,0)', '0 0 14px rgba(94,234,212,0.75)', '0 0 0 rgba(94,234,212,0)'] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: '1.5px solid #5eead4', display: 'block' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={artSrc(comparePick.filename)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 32%' }} />
+                  </motion.span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.16em', color: '#5eead4' }}>
+                      Comparing
+                    </span>
+                    <span className="font-karla font-700" style={{ display: 'block', fontSize: '0.74rem', color: '#eafaf6', lineHeight: 1.3 }}>
+                      Tap another hand to weigh against {comparePick.name}
+                    </span>
                   </span>
                   <button type="button" onClick={() => setComparePick(null)} className="font-karla font-700 tap"
                     style={{
-                      flexShrink: 0, padding: '0.32rem 0.7rem', borderRadius: 8, fontSize: '0.68rem',
-                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                      flexShrink: 0, padding: '0.36rem 0.7rem', borderRadius: 8, fontSize: '0.66rem',
+                      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)',
                       color: '#e0d9cc', cursor: 'pointer',
                     }}>
                     Cancel
                   </button>
-                </div>
+                </motion.div>
               )}
               {levelledUp.length > 0 && (
                 <div style={{
@@ -3065,6 +3087,9 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         bunkLocked={state.bunkLockedCrewIds.includes(m.id)}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
+                        // The hand you already armed steps back, so the rest of
+                        // the roster reads as the live targets it now is.
+                        dimmed={!!comparePick && m.id === comparePick.id}
                         // In pick mode this card CHOOSES rather than opens. The
                         // handler lived on AssignBoard first, which is a
                         // different surface on a different tab, so the banner
