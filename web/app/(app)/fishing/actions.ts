@@ -278,19 +278,29 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // the same roll is handed back until it is resolved, so there is nothing to
   // reroll and no reason to refresh.
   //
-  // Charged once per ROLL, not per cast: the player already paid for this one,
-  // and not double-billing means a dropped connection or a backgrounded PWA
-  // resumes the cast instead of eating it.
+  // Bait is still charged PER CAST, including a resume. The sticky roll is what
+  // kills the exploit; this is the separate, deliberate rule that walking away
+  // mid-cast should sting, alongside the broken streak. It means an interruption
+  // you did not choose (locked phone, backgrounded PWA, dropped signal) also
+  // costs a bait -- accepted, and unchanged from how it has always behaved.
   const live = (profile as { pending_cast?: PendingCast | null }).pending_cast ?? null
-  if (live?.shot && live.habitat === habitat) {
+  const resuming = !!live?.shot && live.habitat === habitat
+
+  if (!noBait && (!baitRow || baitRow.quantity <= 0)) return { error: 'No bait remaining.' }
+
+  if (resuming && live?.shot) {
+    if (!noBait && baitRow) {
+      await admin.from('bait_inventory').update({ quantity: baitRow.quantity - 1 }).eq('user_id', user.id).eq('bait_type', baitType)
+      void admin.rpc('bump_profile_json_counter', { uid: user.id, col: 'bait_used', key: baitType, n: 1 }).then(() => {}, () => {})
+    }
+    // A re-cast is a cast for the career stat, even though the roll is the same.
+    void admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_casts', n: 1 }).then(() => {}, () => {})
     // Walking away mid-catch still breaks the streak, exactly as before.
     if (((profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0) > 0) {
       await admin.from('profiles').update({ current_perfect_streak: 0 }).eq('id', user.id)
     }
-    return { ...live.shot, baitRemaining: !noBait && baitRow ? baitRow.quantity : undefined }
+    return { ...live.shot, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
   }
-
-  if (!noBait && (!baitRow || baitRow.quantity <= 0)) return { error: 'No bait remaining.' }
 
   if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
 

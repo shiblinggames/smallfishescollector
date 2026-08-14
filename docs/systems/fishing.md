@@ -28,8 +28,9 @@ fish. Streaks of perfect catches build "on fire" state with escalating rewards.
   resolved. This closes a live exploit: the cast response names the species and uses
   `fishId: -1` for a chest, so a player could read it off the network tab and refresh away
   any roll they disliked for the price of one worm (1 doubloon), keeping only chests,
-  legendaries and Ancient trophies. Bait is charged once per ROLL, not per cast, so a
-  dropped connection resumes rather than costing the cast. A stale token from a DIFFERENT
+  legendaries and Ancient trophies. Bait is still charged PER CAST including a resume:
+  the sticky roll is what kills the exploit, and the bait is the separate, deliberate
+  cost of walking away (alongside the broken streak). A stale token from a DIFFERENT
   zone cannot be replayed, so the species rerolls but the crate decision is inherited —
   otherwise zone-hopping would reroll the chest check, which is the prize.
 - **Fish size variance grants no XP or sell bonus.** Length rolls and personal-best tiers
