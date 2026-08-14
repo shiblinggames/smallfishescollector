@@ -3845,42 +3845,75 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     )
                   }
 
-                  const btn = (label: string, act: 'swap' | 'promote' | 'remove' | 'dismiss', danger = false) => (
+                  // Seat actions only. Dismiss dropped to the footer and took
+                  // the `danger` branch with it, so this is now one shape.
+                  const btn = (label: string, act: 'swap' | 'promote' | 'remove') => (
                     <button key={label} type="button" disabled={pending} onClick={() => setConfirmAct(act)}
-                      className="font-karla font-700 uppercase"
+                      className="font-karla font-700 uppercase active:scale-95"
                       style={{
                         flex: 1, minWidth: 0, padding: '0.6rem 0.25rem', borderRadius: 9,
                         fontSize: '0.68rem', letterSpacing: '0.04em', whiteSpace: 'nowrap',
-                        background: danger ? 'transparent' : 'rgba(255,255,255,0.05)',
-                        border: '1px solid ' + (danger ? 'rgba(228,114,114,0.4)' : 'rgba(255,255,255,0.18)'),
-                        color: danger ? 'rgba(232,150,150,0.9)' : 'rgba(240,236,228,0.88)',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.18)',
+                        color: 'rgba(240,236,228,0.88)',
                         cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
                       }}>
                       {label}
                     </button>
                   )
                   return (
-                    <div className="flex items-center" style={{ gap: 6 }}>
-                      {track !== null && btn('Swap', 'swap')}
-                      {track !== null && !isCap && btn('Promote', 'promote')}
-                      {track !== null && btn('Remove', 'remove')}
-                      {/* Sits NEXT to Dismiss on purpose. This is the question
-                          asked in the same breath as that one, and answering it
-                          first is usually the point. */}
-                      {state.roster.length > 1 && (
-                        <button type="button" disabled={pending}
-                          onClick={() => { setComparePick(m); close(); setActiveTab('roster') }}
-                          className="font-cinzel font-700 uppercase active:scale-95"
-                          style={{
-                            flex: 1, minWidth: 0, padding: '0.6rem 0.25rem', borderRadius: 9,
-                            fontSize: '0.68rem', letterSpacing: '0.04em', whiteSpace: 'nowrap',
-                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.18)',
-                            color: 'rgba(240,236,228,0.88)', cursor: pending ? 'not-allowed' : 'pointer',
-                          }}>
-                          Compare
-                        </button>
+                    /* TWO TIERS, BY WHAT THEY ACT ON.
+                     *
+                     * This was five equal pills in one row: Swap, Promote,
+                     * Remove, Compare, Dismiss, all flex:1 with nowrap labels at
+                     * 0.68rem. On a phone that is five cramped tabs of the same
+                     * weight, which is both ugly and a lie, because a permanent
+                     * dismissal is not the same kind of thing as opening a
+                     * comparison.
+                     *
+                     * The three seat actions belong together and only exist when
+                     * the hand is actually in a party, so they get the row. The
+                     * two that are about the CREW rather than their seat drop to
+                     * a quiet footer, with the destructive one as plain red text
+                     * so it stops competing for the eye it should never have.
+                     */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                      {track !== null && (
+                        <div className="flex items-center" style={{ gap: 6 }}>
+                          {btn('Swap', 'swap')}
+                          {!isCap && btn('Promote', 'promote')}
+                          {btn('Remove', 'remove')}
+                        </div>
                       )}
-                      {btn('Dismiss', 'dismiss', true)}
+                      <div className="flex items-center" style={{
+                        gap: 10, justifyContent: 'space-between',
+                        paddingTop: track !== null ? 9 : 0,
+                        borderTop: track !== null ? '1px solid rgba(255,255,255,0.08)' : undefined,
+                      }}>
+                        {state.roster.length > 1 ? (
+                          <button type="button" disabled={pending}
+                            onClick={() => { setComparePick(m); close(); setActiveTab('roster') }}
+                            className="font-karla font-700 uppercase active:scale-95"
+                            style={{
+                              padding: '0.5rem 0.9rem', borderRadius: 9,
+                              fontSize: '0.66rem', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.18)',
+                              color: 'rgba(240,236,228,0.88)', cursor: pending ? 'not-allowed' : 'pointer',
+                            }}>
+                            Compare
+                          </button>
+                        ) : <span />}
+                        <button type="button" disabled={pending} onClick={() => setConfirmAct('dismiss')}
+                          className="font-karla font-700 uppercase active:scale-95"
+                          style={{
+                            padding: '0.5rem 0.35rem', background: 'none', border: 'none',
+                            fontSize: '0.64rem', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                            color: 'rgba(226,138,138,0.85)', cursor: pending ? 'not-allowed' : 'pointer',
+                            opacity: pending ? 0.6 : 1,
+                          }}>
+                          Dismiss
+                        </button>
+                      </div>
                     </div>
                   )
                 })()}
