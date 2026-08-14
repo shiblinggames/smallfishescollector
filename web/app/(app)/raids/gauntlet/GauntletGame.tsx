@@ -2365,7 +2365,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <span aria-hidden style={{ width: 14, height: 2, borderRadius: 2, background: `${AC}aa` }} />
                 <span className="font-karla font-800 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.2em', color: '#c2bcae', textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}>Choose Your Descent</span>
               </span>
-              <LeaderboardModal boards={isDonG ? ['gauntletDonsDepth'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title={isDonG ? "Don's Gauntlet" : 'The Gauntlet'} label="Full ranks"
+              {/* Both towers offer the same THREE boards: standard depth, hardcore
+                  depth, and Biggest Hit. Don's used to offer only its depth board,
+                  so its hardcore ladder was unreachable in the UI despite the view
+                  existing. Biggest Hit is deliberately on both screens because it
+                  is ONE board (profiles.gauntlet_big_hit) fed by every gauntlet
+                  fight, Don's included. */}
+              <LeaderboardModal boards={isDonG ? ['gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title={isDonG ? "Don's Gauntlet" : 'The Gauntlet'} label="Full ranks"
                 triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

@@ -30,7 +30,7 @@ export interface LeaderboardEntry {
 export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'chartingPoints'
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
-  | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'gauntletDonsDepth' | 'achievementPoints'
+  | 'gauntletDepth' | 'gauntletHardcore' | 'gauntletBigHit' | 'gauntletDonsDepth' | 'gauntletDonsHardcore' | 'achievementPoints'
   | 'parlorPoints' | 'exchangeNet' | 'exchangeWeek'
   | 'species' | 'fishSold' | 'trophies' | 'bountyPoints'
 
@@ -87,6 +87,9 @@ export const BOARD_META: Record<BoardKey, {
   gauntletHardcore: { label: 'Hardcore Gauntlet', accent: '#e0555a', unit: n => `Depth ${n}`,             subUnit: () => 'hardcore' },
   gauntletBigHit:{ label: 'Biggest Hit',     accent: '#f87171', unit: n => `${n.toLocaleString()}`,       subUnit: () => 'in one blow' },
   gauntletDonsDepth: { label: "Don's Gauntlet", accent: '#3fbf82', unit: n => `Depth ${n}`,               subUnit: () => 'cashed out' },
+  // Don's green crossed with hardcore's blood red. Both halves of what the
+  // board is, and distinct from either parent at a glance in the picker.
+  gauntletDonsHardcore: { label: "Don's Hardcore", accent: '#b8703f', unit: n => `Depth ${n}`,            subUnit: () => 'hardcore' },
   achievementPoints: { label: 'Achievement Points', accent: '#e6b94a', unit: n => `${n.toLocaleString()}`, subUnit: n => `point${n === 1 ? '' : 's'}` },
   species:       { label: 'Fish Collection', accent: '#4ec9a8', unit: n => `${n.toLocaleString()}`, subUnit: n => `species${n === 1 ? '' : ''} caught` },
   fishSold:      { label: 'Biggest Earner',  accent: '#f0c040', unit: n => `${n.toLocaleString()} ⟡`, subUnit: () => 'earned selling fish' },
@@ -121,7 +124,7 @@ export const BOARD_META: Record<BoardKey, {
 export const LEADERBOARD_SECTIONS: { label: string; boards: BoardKey[] }[] = [
   { label: 'Achievements', boards: ['achievementPoints'] },
   { label: 'Fishing',      boards: ['perfectStreak', 'fishingLevel', 'species', 'trophies', 'fishSold'] },
-  { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'bountyPoints', 'gauntletDepth', 'gauntletHardcore', 'gauntletDonsDepth', 'gauntletBigHit'] },
+  { label: 'Expeditions',  boards: ['raidProgress', 'expedition', 'bountyPoints', 'gauntletDepth', 'gauntletHardcore', 'gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] },
   { label: 'Charting',     boards: ['chartingPoints'] },
   { label: 'The Parlor',   boards: ['parlorPoints'] },
   { label: 'Tavern',       boards: ['tideRun'] },
