@@ -32,7 +32,9 @@ import {
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, fathomsForDepth,
   emptyRunStats, addRunStats, coerceRunStats,
   dropOddsInfo, type DropOddsInfo,
-  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant } from '@/lib/gauntlet'
+  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats, chestOdds, type GauntletVariant,
+  fmtRunTime, fmtSplitDelta, type DepthSplit } from '@/lib/gauntlet'
+import { CTA_BG } from '@/lib/uiTokens'
 import { GAUNTLET_TERMS, TERM_GROUP_META, termsTitle, resolveTerms, termPressure, termTideEffects, pressureGemMult, pressureDepthFactor, NO_TERM_EFFECTS, PRESSURE_CAP, PRESSURE_DEPTH_FLOOR, PRESSURE_DEPTH_FULL, PRESSURE_SKIN_THRESHOLD, PRESSURE_SKIN_DEPTH, PRESSURE_SKIN_ID, MAX_AVAILABLE_PRESSURE, type SignedTerms } from '@/lib/gauntletTerms'
 import GauntletTermsPanel from './GauntletTermsPanel'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, setGauntletUpgradeActive, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, pauseGauntletRun, resumeGauntletRun, buyBaitWithFathoms, rollDavyOffer, buyMerchantItem, claimDailyTribute } from './actions'
@@ -573,6 +575,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // breather opens; we are only ever told what it is. Cleared the instant we dive,
   // so it can never be carried down to a fatter pot.
   const [offer, setOffer] = useState<DavyOffer | null>(null)
+  // This depth's timing against the fastest you have ever reached it. Carries its
+  // own depth so a split from the last breather can never be drawn on this one.
+  const [depthSplit, setDepthSplit] = useState<DepthSplit | null>(null)
   // First-timer explainer. Auto-opens once (server flag), reopenable via the
   // "How it works" link.
   const [introOpen, setIntroOpen] = useState(!props.hasSeenIntro)
@@ -1071,7 +1076,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     // is awaited, because the server reads the depth out of that very row — so the
     // depth an offer is stamped with is one we wrote, never one the client named.
     void (async () => {
-      await checkpointGauntletRun(buildCheckpoint()).catch(() => {})
+      // The checkpoint hands back this depth's split (it already holds the clock
+      // and the depth, so the ghost costs no extra round trip).
+      const { split } = await checkpointGauntletRun(buildCheckpoint()).catch(() => ({ split: undefined }))
+      // KEEP THE FIRST split for a depth. A pause-and-resume re-enters this
+      // breather and checkpoints again, and that second call measures a later
+      // clock against the record the first call just set — so it would report
+      // "off your best" against your own time from moments earlier.
+      setDepthSplit(prev => (split ? (prev && prev.depth === split.depth ? prev : split) : null))
       const hpPct = playerHPRef.current / Math.max(1, hpMax)
       const { offer: o } = await rollDavyOffer(hpPct).catch(() => ({ offer: null }))
       setOffer(o)
@@ -3280,6 +3292,26 @@ export default function GauntletGame(props: GauntletGameProps) {
           <p className="font-cinzel font-700" style={{ fontSize: '1.22rem', color: '#f4eee2', marginTop: 14, lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             Depth {combatDepth} · {band.name}
           </p>
+          {/* THE GHOST. Your run clock, and how it stands against the fastest you
+              have ever taken to get this deep. Guarded on the depth so a split
+              still in state from the last breather cannot be drawn on this one.
+
+              A first visit shows the clock ALONE, no "first time this deep" note:
+              on an early run every depth would say it, which turns the one line
+              meant to mean something into wallpaper. */}
+          {depthSplit && depthSplit.depth === cleared && (
+            <p className="font-karla font-700 uppercase tracking-[0.14em]"
+              style={{
+                fontSize: '0.58rem', marginTop: 7, fontVariantNumeric: 'tabular-nums',
+                color: depthSplit.isRecord ? CTA_BG : 'rgba(226,232,240,0.58)',
+                textShadow: '0 1px 6px rgba(0,0,0,0.8)',
+              }}>
+              {fmtRunTime(depthSplit.ms)}
+              {depthSplit.prevMs != null && (
+                <> · {fmtSplitDelta(depthSplit.ms, depthSplit.prevMs)} {depthSplit.isRecord ? 'new best' : 'off your best'}</>
+              )}
+            </p>
+          )}
           <p className="font-karla" style={{ fontSize: '0.86rem', fontStyle: 'italic', color: 'rgba(184,222,213,0.92)', lineHeight: 1.4, marginTop: 7, maxWidth: 340, marginInline: 'auto', textShadow: '0 1px 8px rgba(0,0,0,0.75)' }}>
             &ldquo;{breathLine}&rdquo;
           </p>

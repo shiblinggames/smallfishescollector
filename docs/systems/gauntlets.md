@@ -21,6 +21,27 @@ raises stakes; cash out or press on. The main repeatable endgame.
   reconstructs a run from local state.
 - An open run LOCKS the campaign party (bulk-clear and reassignment both refuse).
 
+## Run timing and depth splits
+
+- `profiles.gauntlet_run_active_ms` is ACTIVE time, not wall clock: `tickActiveMs()` folds
+  each gap in capped at 5 minutes, and a deliberate pause stops the clock outright. A finished
+  run lands one row in `gauntlet_runs`.
+- **Per-depth personal bests** live in `gauntlet_depth_bests`, keyed
+  `(user_id, variant, hardcore, depth)`. A breather opens exactly once per depth right after
+  it falls, so the clock the checkpoint just wrote IS the time to reach that depth — there is
+  no separate measurement, and the depth comes off server-persisted state.
+- **The table is bounded on purpose**: the natural key caps a player at 400 rows forever, so
+  writes become pure UPDATEs. Do NOT switch this to a per-run splits log — that grows without
+  limit for the same feature.
+- `record_gauntlet_depth_best()` keeps the FASTEST and returns `(prev_ms, is_record)` so the
+  breather can draw a ghost with no extra round trip. A first visit returns `prev_ms = null`
+  and `is_record = false`: there is nothing to have beaten, and the descent is already its own
+  moment. The client keeps the FIRST split per depth, because a pause-and-resume re-checkpoints
+  the same depth against the record it just set.
+- Keyed by variant AND hardcore because those descents are not comparable. Deliberately NOT a
+  global leaderboard: builds differ run to run, so a fast split can mean a lucky draft rather
+  than better play. Personal ladder only.
+
 ## Variants and layers
 
 - **Don's Gauntlet (G2)** is live with its own Locker and records, parallel to Davy's.

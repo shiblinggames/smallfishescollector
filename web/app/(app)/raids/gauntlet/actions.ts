@@ -19,7 +19,7 @@ import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { termPressure, pressureGemMult, pressureFeats, pressureSkinDropChance, resolveTerms, PRESSURE_SKIN_ID, getTerm, type SignedTerms } from '@/lib/gauntletTerms'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
-import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestLabelFor, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
+import { GOLD_HULL_SKIN_ID, GOLD_HULL_CHEST_TIER, BLOOD_HULL_SKIN_ID, BLOOD_HULL_CHEST_TIER, GALAXY_HULL_SKIN_ID, GALAXY_HULL_CHEST_TIER, GHOST_HULL_SKIN_ID, GHOST_HULL_CHEST_TIER, GHOST_HULL_DROP_MULT, DONS_GAUNTLET_ITEM_IDS, BLOOD_CANNON_ITEM_ID, BLOOD_CANNON_CHEST_TIER, maxPotForDepth, chestForDepth, chestLabelFor, chestCannonDropChance, chestSkinDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, DONS_CHEST_GEM_MULT, CONFLUENCES, hardcoreUnlocked, donsHardcoreUnlocked, hcCols, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, coerceRunStats, chestOdds, type DepthSplit, type GauntletRunSnapshot, type GauntletRunState, type GauntletVariant } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, isToggleableUpgrade, activeGauntletUpgrades, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, donsBloodGemMult, DONS_DAILY_TRIBUTE_ID, DONS_DAILY_TRIBUTE_AMOUNT } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import {
@@ -523,21 +523,41 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
 
 /** Checkpoint an in-progress run's resumable state between fights. Fire-and-
  *  forget from the client at each breather; only writes while a run is open. */
-export async function checkpointGauntletRun(state: GauntletRunState): Promise<{ ok: boolean }> {
+export async function checkpointGauntletRun(state: GauntletRunState): Promise<{ ok: boolean; split?: DepthSplit }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
-    .from('profiles').select('gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at').eq('id', user.id).single()
+    .from('profiles').select('gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_variant, gauntlet_run_hardcore').eq('id', user.id).single()
   if (profile?.gauntlet_run_open !== true) return { ok: false }
 
-  await admin.from('profiles').update({
-    gauntlet_run_state: state,
-    ...tickActiveMs((profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at),
-  }).eq('id', user.id)
-  return { ok: true }
+  const clock = tickActiveMs((profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at)
+  await admin.from('profiles').update({ gauntlet_run_state: state, ...clock }).eq('id', user.id)
+
+  // PER-DEPTH SPLIT. A breather opens exactly once per depth, right after that
+  // depth fell, so the clock we just wrote IS the time to reach it — no separate
+  // measurement, and the depth comes off the state the server just persisted
+  // rather than anything the client named.
+  //
+  // Failure here is deliberately silent: a personal best is vanity, and losing
+  // one must never cost a player their checkpoint (which is already written).
+  const depth = Math.floor(state?.cleared ?? 0)
+  if (depth < 1 || depth > MAX_GAUNTLET_DEPTH) return { ok: true }
+  const ms = clock.gauntlet_run_active_ms
+
+  const { data: rec } = await admin.rpc('record_gauntlet_depth_best', {
+    uid: user.id,
+    v: ((profile as any).gauntlet_run_variant as GauntletVariant | null) ?? 'davy',
+    hc: (profile as any).gauntlet_run_hardcore === true,
+    d: depth,
+    ms,
+  })
+  const row = Array.isArray(rec) ? rec[0] : rec
+  if (!row) return { ok: true }
+  const prevMs = row.prev_ms == null ? null : Number(row.prev_ms)
+  return { ok: true, split: { depth, ms, prevMs, isRecord: row.is_record === true } }
 }
 
 /** DELIBERATE pause — the player hit "Pause & step away" at a breather. Saves the

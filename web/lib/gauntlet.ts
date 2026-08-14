@@ -330,6 +330,33 @@ export function estimatePotForDepth(depth: number, variant: GauntletVariant = 'd
   return total
 }
 
+// ── DEPTH SPLITS ────────────────────────────────────────────────────────────
+/** One depth's timing, handed back by the checkpoint so the breather can show a
+ *  ghost. `prevMs` is null the FIRST time you ever reach this depth, which is a
+ *  different moment from beating a time and reads differently in the UI. */
+export type DepthSplit = {
+  depth: number
+  /** active run time when this depth fell */
+  ms: number
+  /** the time this depth stood at before now, or null if this is a first visit */
+  prevMs: number | null
+  /** true only when a standing time was BEATEN, never on a first visit */
+  isRecord: boolean
+}
+
+/** m:ss for a run clock. Runs are minutes long, so hours never appear and the
+ *  minute field is deliberately unpadded ("7:04", not "07:04"). */
+export function fmtRunTime(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+/** Signed gap against your best, e.g. "-0:08" ahead or "+1:12" behind. */
+export function fmtSplitDelta(ms: number, prevMs: number): string {
+  const d = ms - prevMs
+  return `${d < 0 ? '-' : '+'}${fmtRunTime(Math.abs(d))}`
+}
+
 /** Hard sanity cap on reported depth — bounds an obviously-forged value.
  *  RAISED 60 → 100 (2026-07-11): the HP-scaling boons made 60+ legitimately
  *  reachable and the old cap silently clamped a real depth-70 cash-out to 60
