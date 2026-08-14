@@ -49,6 +49,7 @@ export default function LegendDiscoveryOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.4 } }}
           transition={{ duration: 0.35 }}
+          data-any-key
           onClick={onDismiss}
           style={{
             position: 'fixed', inset: 0, zIndex: 120,

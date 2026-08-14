@@ -4039,7 +4039,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               ? `drop-shadow(0 0 26px ${c}) drop-shadow(0 0 72px ${c}88)`
               : `drop-shadow(0 0 12px ${c}) drop-shadow(0 0 30px ${c}66)`
             return (
-              <motion.div key="skin-unlock" onClick={() => setSkinUnlock(null)}
+              <motion.div key="skin-unlock" data-any-key onClick={() => setSkinUnlock(null)}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}
                 style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', cursor: 'pointer', background: 'rgba(3,2,6,0.9)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
                 {/* Ray-fan burst behind the art */}
@@ -4452,7 +4452,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             const rolling = skinGamble.phase === 'rolling'
             const won = skinGamble.phase === 'revealed' && skinGamble.skinId ? getCrewSkin(skinGamble.skinId) : null
             return (
-              <motion.div key="blood-gamble" onClick={() => { if (!rolling) setSkinGamble(null) }}
+              <motion.div key="blood-gamble" data-any-key onClick={() => { if (!rolling) setSkinGamble(null) }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
                 style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center', cursor: rolling ? 'default' : 'pointer', overflow: 'hidden', background: 'radial-gradient(ellipse at center, rgba(52,6,12,0.95) 0%, rgba(6,2,4,0.98) 100%)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
                 {/* Rotating crimson ray-fan — faster while rolling, grand on reveal. */}

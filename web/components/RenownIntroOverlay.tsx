@@ -55,6 +55,7 @@ export default function RenownIntroOverlay({ open, skill, onDismiss }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.35 } }}
           transition={{ duration: 0.3 }}
+          data-any-key
           onClick={() => { if (canDismiss) onDismiss() }}
           style={{
             position: 'fixed', inset: 0, zIndex: 95,

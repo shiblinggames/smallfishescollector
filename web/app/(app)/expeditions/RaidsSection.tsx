@@ -2107,6 +2107,7 @@ function ChapterUnlockOverlay({
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
       }}
+data-any-key
       onClick={onDismiss}
     >
       {/* Sparkle particles — float up + sway. pointer-events:none so

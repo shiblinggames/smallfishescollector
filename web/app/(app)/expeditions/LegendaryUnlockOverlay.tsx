@@ -31,6 +31,7 @@ export function LegendaryUnlockOverlay({ crew, onClose }: { crew: UnlockedLegend
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
+      data-any-key
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', flexDirection: 'column',

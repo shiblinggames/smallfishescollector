@@ -43,6 +43,10 @@ export interface PopupShellProps {
   zIndex?: number
   /** Backdrop color/alpha. Default rgba(0,0,0,0.7). */
   backdropColor?: string
+  /** Tag the wrapper data-any-key so a keypress closes it (KeyboardAdvance).
+   *  Opt-in, for sheets that say Tap anywhere to close - NOT for management
+   *  drawers, where a stray key would eat the panel. */
+  anyKey?: boolean
   /** Optional override for the bottom padding (in case a modal lives above
    *  the MobileTabBar already, e.g. inside the raid combat region). */
   paddingBottom?: string
@@ -55,6 +59,7 @@ export default function PopupShell({
   open,
   onClose,
   zIndex = 111,
+  anyKey = false,
   backdropColor = 'rgba(0,0,0,0.7)',
   paddingTop = 'calc(env(safe-area-inset-top, 0px) + 76px)',
   paddingBottom = 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
@@ -90,6 +95,7 @@ export default function PopupShell({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
+            {...(anyKey ? { 'data-any-key': true } : {})}
             onClick={e => { if (e.target === e.currentTarget) onClose() }}
             style={{
               position: 'fixed', inset: 0, zIndex,

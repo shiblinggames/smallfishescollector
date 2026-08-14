@@ -7,6 +7,7 @@ import MobileTabBar from '@/components/MobileTabBar'
 import BadgeWatcher from '@/components/BadgeWatcher'
 import BackgroundAnimationPauser from '@/components/BackgroundAnimationPauser'
 import DragScrollRows from '@/components/DragScrollRows'
+import KeyboardAdvance from '@/components/KeyboardAdvance'
 import PendingSalesWatcher from '@/components/PendingSalesWatcher'
 import FishingAudioPrimer from '@/components/FishingAudioPrimer'
 import ActivityPing from '@/components/ActivityPing'
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ActivityPing />
         <BackgroundAnimationPauser />
         <DragScrollRows />
+        <KeyboardAdvance />
         <footer className="sm:pb-4 pt-3 text-center">
           <p className="font-karla font-300 text-[#3a3835]" style={{ fontSize: '0.65rem' }}>
             &copy; {new Date().getFullYear()} Shibling Games LLC

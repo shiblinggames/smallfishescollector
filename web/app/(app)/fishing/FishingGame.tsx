@@ -2938,6 +2938,7 @@ function JackpotBoomOverlay({ qty, onDone }: { qty: number; onDone: () => void }
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
+      data-any-key
       onClick={onDone}
       style={{
         position: 'fixed', inset: 0, zIndex: 9000,
@@ -3053,6 +3054,7 @@ function AncientSlainCinematic({ fish, count, total, isMegalodon, onDone }: {
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.28 }}
+      data-any-key
       onClick={onDone}
       style={{
         position: 'fixed', inset: 0, zIndex: 9200,
@@ -8308,6 +8310,7 @@ export default function FishingGame({
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'rgba(3,8,16,0.82)', backdropFilter: 'blur(6px)',
               }}
+              data-any-key
               onClick={() => setSkinUnlockToast(null)}
             >
               <div style={{
@@ -8359,6 +8362,7 @@ export default function FishingGame({
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'rgba(3,8,16,0.82)', backdropFilter: 'blur(6px)',
               }}
+              data-any-key
               onClick={() => setBoatUnlockToast(null)}
             >
               <div style={{
@@ -8407,6 +8411,7 @@ export default function FishingGame({
                 background: 'rgba(3,8,16,0.82)',
                 backdropFilter: 'blur(6px)',
               }}
+              data-any-key
               onClick={() => setZoneClaimToast(null)}
             >
               {/* Burst rings */}
@@ -9619,6 +9624,7 @@ export default function FishingGame({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
+              data-any-key
               onClick={() => setForgeFlourish(false)}
               style={{
                 position: 'fixed', inset: 0, zIndex: 100000,
@@ -10787,6 +10793,7 @@ export default function FishingGame({
           return (
           <motion.div
             key="levelup"
+            data-any-key
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.3 } }}
@@ -11663,6 +11670,7 @@ function PrestigeCeremonyOverlay({ zone, level, goldenBoost, skinName, onDone }:
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(2,5,10,0.93)', padding: '1.5rem',
       }}
+      data-any-key
       onClick={onDone}
     >
       {/* rising flecks — more, and gold, on the crowning moments. */}

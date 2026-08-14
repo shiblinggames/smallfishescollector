@@ -20,6 +20,7 @@ export default function TapToContinueGate({ visible, onTap }: Props) {
         <motion.button
           key="tap-to-continue"
           type="button"
+          data-any-key
           onClick={onTap}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

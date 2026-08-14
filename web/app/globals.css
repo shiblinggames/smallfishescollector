@@ -2293,3 +2293,26 @@ body.hardcore-gauntlet::after {
 }
 .rung-slider:focus-visible::-webkit-slider-thumb { outline: 2px solid #7dd3fc; outline-offset: 2px; }
 .rung-slider:focus-visible::-moz-range-thumb     { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+
+/* ── Desktop key hints ─────────────────────────────────────────────────────
+   Tiny <kbd>-style chips that teach the game's keyboard bindings (raid action
+   letters, Space on the aim Lock). Hidden wherever the primary pointer is a
+   finger: a phone must never advertise keys it does not have. Colors ride on
+   currentColor so one chip reads correctly on a lit, dimmed or solid-green
+   button alike. */
+.key-hint { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .key-hint {
+    display: inline-block;
+    font-family: var(--font-karla);
+    font-weight: 700;
+    font-size: 0.5rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    padding: 2px 4px 1.5px;
+    border-radius: 4px;
+    border: 1px solid currentColor;
+    opacity: 0.62;
+    vertical-align: 1px;
+  }
+}

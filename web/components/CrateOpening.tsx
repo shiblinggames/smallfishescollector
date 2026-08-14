@@ -219,6 +219,7 @@ function RareReveal({ loot, onClose }: { loot: CrateLootView; onClose: () => voi
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      data-any-key
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1200,

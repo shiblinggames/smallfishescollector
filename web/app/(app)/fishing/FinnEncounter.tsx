@@ -111,6 +111,7 @@ export default function FinnEncounter({
           <motion.div
             key="finn-backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            data-any-key
             onClick={handleBackdropClick}
             style={{
               position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',

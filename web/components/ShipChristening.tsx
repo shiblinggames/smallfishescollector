@@ -85,6 +85,7 @@ export default function ShipChristening({ data, onDone }: { data: ChristeningDat
 
   return createPortal(
     <motion.div
+      data-any-key
       onClick={onDone}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}

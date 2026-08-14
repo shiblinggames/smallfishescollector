@@ -1227,6 +1227,7 @@ export default function TackleShopClient({
           <motion.div
             key="comp-claim-reveal"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}
+            data-any-key
             onClick={() => setShowClaimReveal(false)}
             style={{
               position: 'fixed', inset: 0, zIndex: 100000,

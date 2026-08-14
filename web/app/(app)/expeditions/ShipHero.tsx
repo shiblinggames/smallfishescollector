@@ -450,6 +450,7 @@ function KitCelebration({ kitId, fortune, onDone }: { kitId: string; fortune: nu
   }, [onDone])
   return (
     <motion.div
+data-any-key
       onClick={onDone}
       initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
@@ -3657,7 +3658,7 @@ function ForgeHelpModal({ onClose }: { onClose: () => void }) {
 // anywhere to dismiss. The result art may be pending (emoji/anvil fallback).
 function RecipeUnlockedOverlay({ name, image, onDone }: { name: string; image: string | null; onDone: () => void }) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onDone}
+    <motion.div data-any-key initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onDone}
       style={{ position: 'fixed', inset: 0, zIndex: 1600, background: 'rgba(3,5,10,0.9)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center', cursor: 'pointer' }}>
       <div style={{ position: 'relative', width: 130, height: 130, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.4, opacity: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }}

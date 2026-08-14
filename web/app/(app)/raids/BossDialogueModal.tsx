@@ -160,6 +160,7 @@ export default function BossDialogueModal({
   const modal = (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      data-any-key
       onClick={tap}
       style={{
         position: 'fixed', inset: 0, zIndex: 100, overflow: 'hidden',

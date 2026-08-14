@@ -199,6 +199,7 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
   const scene = (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      data-any-key
       onClick={tap}
       style={{
         position: 'fixed', inset: 0, zIndex: 1100, overflow: 'hidden',

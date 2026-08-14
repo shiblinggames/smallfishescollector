@@ -3259,6 +3259,7 @@ export default function GearScreen({
           return (
             <motion.div key="cosmetic-detail"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+              data-any-key
               onClick={close}
               style={{ position: 'fixed', inset: 0, zIndex: 320, background: 'rgba(0,0,0,0.74)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
             >

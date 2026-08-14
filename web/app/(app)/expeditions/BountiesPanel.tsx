@@ -223,6 +223,7 @@ function RankUpOverlay({ rank, onClose }: { rank: BountyRank | null; onClose: ()
       {rank && (
         <motion.div
           role="dialog" aria-modal="true" aria-label={`New rank ${rank.title}`}
+          data-any-key
           onClick={onClose}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           style={{

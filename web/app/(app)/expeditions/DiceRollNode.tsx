@@ -111,6 +111,7 @@ export default function DiceRollNode({
           {result.doubloonsDelta === 0 && result.navXpDelta === 0 && <RewardChip text="Nothing this time" color="#8a8880" />}
         </div>
         <button
+          data-any-key
           onClick={onResolved}
           className="font-cinzel font-700 uppercase tracking-[0.06em]"
           style={{ width: '100%', marginTop: '1.1rem', padding: '0.8rem', borderRadius: 12, fontSize: '0.98rem', background: `${GOLD}26`, border: `1px solid ${GOLD}66`, color: GOLD, cursor: 'pointer' }}

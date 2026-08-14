@@ -1607,7 +1607,7 @@ export default function ProfileClient({
 
       {/* ── Purchase confirmation ── */}
       {/* Skin detail — tap a thumbnail to equip, buy, or see how it unlocks. */}
-      <PopupShell open={!!skinDetail} onClose={() => setSkinDetail(null)} zIndex={115} backdropColor="rgba(2,5,10,0.8)">
+      <PopupShell open={!!skinDetail} onClose={() => setSkinDetail(null)} zIndex={115} anyKey backdropColor="rgba(2,5,10,0.8)">
         {skinDetail && (() => {
           const c = CHARACTER_COLORS.find(x => x.id === skinDetail)
           if (!c) return null

@@ -11043,7 +11043,7 @@ const ACTION_ICON: Record<'dodge' | 'special' | 'reload' | 'fire' | 'volley', Re
   ),
 }
 
-function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPulse }: {
+function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPulse, keyHint }: {
   icon: React.ReactNode
   label: string
   color: string
@@ -11054,6 +11054,9 @@ function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPul
    *  passive "something's ready to fire" indicator. Currently used only
    *  by the Special slot to flag a crew ability is off cooldown. */
   readyPulse?: boolean
+  /** Desktop keyboard binding, shown as a tiny chip beside the label —
+   *  .key-hint renders only where the primary pointer is a mouse. */
+  keyHint?: string
 }) {
   const lit = enabled || highlighted
   const borderColor = highlighted ? color : enabled ? `${color}cc` : '#2a3548'
@@ -11103,7 +11106,7 @@ function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPul
       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{
         fontSize: '0.62rem', color: lit ? color : '#4a5468',
       }}>
-        {label}
+        {label}{keyHint && <span className="key-hint" style={{ marginLeft: 5 }}>{keyHint}</span>}
       </span>
     </div>
   )
@@ -11228,23 +11231,23 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
     <div ref={menuRootRef} style={{ position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <CircleBtn
-          icon={ACTION_ICON.dodge} label="Dodge" color="#38bdf8"
+          icon={ACTION_ICON.dodge} label="Dodge" color="#38bdf8" keyHint="D"
           enabled={canDodge && !disabled} highlighted={dodgeHighlighted}
           onClick={() => { if (canDodge && !disabled) onSelect('dodge') }}
         />
         <CircleBtn
-          icon={ACTION_ICON.special} label="Special" color="#c084fc"
+          icon={ACTION_ICON.special} label="Special" color="#c084fc" keyHint="S"
           enabled={hasSpecial && !disabled} highlighted={false}
           readyPulse={crewAbilityReady}
           onClick={tapSpecial}
         />
         <CircleBtn
-          icon={ACTION_ICON.reload} label={canReload ? 'Reload' : 'Full'} color="#a8b8d0"
+          icon={ACTION_ICON.reload} label={canReload ? 'Reload' : 'Full'} color="#a8b8d0" keyHint="R"
           enabled={canReload && !disabled} highlighted={reloadHighlighted}
           onClick={() => { if (canReload && !disabled) onSelect('reload') }}
         />
         <CircleBtn
-          icon={ACTION_ICON.fire} label="Fire" color="#4ade80"
+          icon={ACTION_ICON.fire} label="Fire" color="#4ade80" keyHint="F"
           enabled={canFire && !disabled} highlighted={fireHighlighted}
           onClick={tapFire}
         />
@@ -11335,7 +11338,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
               }}
             >
               <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>Fire</span>
-              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#4ade80' }}>1 ◆ · single</span>
+              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#4ade80' }}>1 ◆ · single <span className="key-hint">F</span></span>
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -11347,7 +11350,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
               }}
             >
               <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>Volley</span>
-              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>{volleyCost} ◆ · 2× dmg</span>
+              <span className="font-karla" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>{volleyCost} ◆ · 2× dmg <span className="key-hint">V</span></span>
             </motion.button>
             {canMega && megaAugment && (
               <motion.button
@@ -11361,7 +11364,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
                 }}
               >
                 <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>{megaAugment.name}</span>
-                <span className="font-karla" style={{ fontSize: '0.62rem', color: megaAugment.color }}>{megaCost} ◆ · Mega</span>
+                <span className="font-karla" style={{ fontSize: '0.62rem', color: megaAugment.color }}>{megaCost} ◆ · Mega <span className="key-hint">M</span></span>
               </motion.button>
             )}
           </motion.div>
@@ -11866,7 +11869,7 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
               willChange: 'transform', position: 'relative', zIndex: 20,
             }}
           >
-            Lock Shot
+            Lock Shot <span className="key-hint" style={{ verticalAlign: 2 }}>SPACE</span>
           </motion.button>
           {/* Invisible caption — matches CircleBtn's label slot so the
               column's natural height equals an ActionMenu column's. */}
