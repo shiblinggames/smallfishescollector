@@ -46,6 +46,42 @@ import { getRaidPlayerStats } from '../actions'
 /** Record a single gauntlet hit; persists the all-time biggest via greatest()
  *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
  *  so the Biggest Hit board reflects the largest blow ever landed in a descent. */
+/**
+ * ACTIVE TIME ON THE OPEN RUN.
+ *
+ * gauntlet_best_depth_ms is wall clock, which is why the board carries a
+ * 537-minute "run": a gauntlet pauses, resumes and survives a crash, so wall
+ * clock measures how long ago you started rather than how long you played.
+ *
+ * The run already checkpoints at every breather, so the gap between two ticks
+ * is a fight's worth of play. Gaps longer than the cap are somebody who walked
+ * away, and are dropped rather than counted. That makes the number an
+ * UNDER-estimate in the worst case and never an over-estimate, which is the
+ * right way round for a figure used to reason about pacing.
+ *
+ * Server-side and unprompted by the client, so there is nothing here to forge.
+ */
+const ACTIVE_GAP_CAP_MS = 5 * 60_000
+
+/** Fold the time since the last tick into the run's total. Returns the fields
+ *  to write; the caller merges them into whatever update it was already doing,
+ *  so this costs no extra round trip. */
+function tickActiveMs(
+  prevMs: number | null | undefined,
+  tickAt: string | null | undefined,
+  { stop = false }: { stop?: boolean } = {},
+): { gauntlet_run_active_ms: number; gauntlet_run_tick_at: string | null } {
+  const prev = Math.max(0, Number(prevMs ?? 0))
+  const since = tickAt ? Date.now() - new Date(tickAt).getTime() : 0
+  const add = since > 0 ? Math.min(since, ACTIVE_GAP_CAP_MS) : 0
+  return {
+    gauntlet_run_active_ms: prev + add,
+    // `stop` leaves the clock off, for a pause or a finish. Anything else is
+    // still running, so the next tick measures from now.
+    gauntlet_run_tick_at: stop ? null : new Date().toISOString(),
+  }
+}
+
 export async function recordGauntletHit(dmg: number): Promise<void> {
   if (!Number.isFinite(dmg) || dmg <= 0) return
   const supabase = await createClient()
@@ -494,10 +530,13 @@ export async function checkpointGauntletRun(state: GauntletRunState): Promise<{ 
 
   const admin = createAdminClient()
   const { data: profile } = await admin
-    .from('profiles').select('gauntlet_run_open').eq('id', user.id).single()
+    .from('profiles').select('gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at').eq('id', user.id).single()
   if (profile?.gauntlet_run_open !== true) return { ok: false }
 
-  await admin.from('profiles').update({ gauntlet_run_state: state }).eq('id', user.id)
+  await admin.from('profiles').update({
+    gauntlet_run_state: state,
+    ...tickActiveMs((profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at),
+  }).eq('id', user.id)
   return { ok: true }
 }
 
@@ -511,10 +550,14 @@ export async function pauseGauntletRun(state: GauntletRunState): Promise<{ ok: b
 
   const admin = createAdminClient()
   const { data: profile } = await admin
-    .from('profiles').select('gauntlet_run_open').eq('id', user.id).single()
+    .from('profiles').select('gauntlet_run_open, gauntlet_run_active_ms, gauntlet_run_tick_at').eq('id', user.id).single()
   if (profile?.gauntlet_run_open !== true) return { ok: false }
 
-  await admin.from('profiles').update({ gauntlet_run_state: state, gauntlet_run_paused: true }).eq('id', user.id)
+  // Stops the clock. A deliberate break is exactly the time this must not count.
+  await admin.from('profiles').update({
+    gauntlet_run_state: state, gauntlet_run_paused: true,
+    ...tickActiveMs((profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at, { stop: true }),
+  }).eq('id', user.id)
   return { ok: true }
 }
 
@@ -543,14 +586,15 @@ export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; s
   if (profile?.gauntlet_run_paused === true) {
     // Deliberate pause: unlimited, no crash budget spent. Clear the flag — the run
     // is live again (a later disconnect from here is a normal crash resume).
-    await admin.from('profiles').update({ gauntlet_run_paused: false }).eq('id', user.id)
+    // Picking it back up restarts the clock. The time away is simply not in it.
+    await admin.from('profiles').update({ gauntlet_run_paused: false, gauntlet_run_tick_at: new Date().toISOString() }).eq('id', user.id)
     return { ok: true, state, offer }
   }
 
   // Crash resume: one per run, server-owned counter (ignores any client value).
   const used = (profile?.gauntlet_resumes_used as number | null) ?? 0
   if (used >= 1) return { ok: false }
-  await admin.from('profiles').update({ gauntlet_resumes_used: used + 1 }).eq('id', user.id)
+  await admin.from('profiles').update({ gauntlet_resumes_used: used + 1, gauntlet_run_tick_at: new Date().toISOString() }).eq('id', user.id)
   return { ok: true, state, offer }
 }
 
@@ -649,7 +693,9 @@ export async function startGauntletRun(hardcore = false, terms?: SignedTerms, va
 
   await admin
     .from('profiles')
-    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_variant: variant, gauntlet_run_state: null, gauntlet_resumes_used: 0, gauntlet_run_paused: false, gauntlet_run_offer: null, ...hcFields })
+    // A fresh run zeroes the clock and starts it. Everything else here already
+    // resets per run; the timer joins them rather than carrying over.
+    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_variant: variant, gauntlet_run_state: null, gauntlet_resumes_used: 0, gauntlet_run_paused: false, gauntlet_run_offer: null, gauntlet_run_active_ms: 0, gauntlet_run_tick_at: new Date().toISOString(), ...hcFields })
     .eq('id', user.id)
 
   return { started: true, deepest }
@@ -767,7 +813,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, dons_gauntlet_hc_deepest, dons_gauntlet_hc_best_depth, dons_gauntlet_hc_best_depth_ms, dons_gauntlet_hc_best_pressure, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
+    .select('gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_best_depth, dons_gauntlet_best_depth_ms, dons_gauntlet_deepest_run, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, dons_gauntlet_hc_deepest, dons_gauntlet_hc_best_depth, dons_gauntlet_hc_best_depth_ms, dons_gauntlet_hc_best_pressure, blood_gems, blood_gems_earned, gauntlet_run_terms, gauntlet_hc_best_pressure, gauntlet_run_offer, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid')
     .eq('id', user.id)
     .single()
 
@@ -1029,6 +1075,11 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }
   }
 
+  // The run is over, so fold in the final stretch and stop the clock. Computed
+  // once and used by both the profile write and the run row.
+  const runClock = tickActiveMs(
+    (profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at, { stop: true })
+
   const [, , crewXP] = await Promise.all([
     admin.from('profiles').update({
       doubloons: newDoubloons,
@@ -1055,6 +1106,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
       gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
       raid_items: newRaidItems,
+      // Fold in the last stretch and stop the clock. The run row below reads the
+      // same figure, so the log and the profile cannot disagree.
+      ...runClock,
       ...skinFields,
       ...recordFields,
     }).eq('id', user.id),
@@ -1066,6 +1120,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     // Crew XP is DECOUPLED from the player's Nav XP onto a raid-calibrated scale.
     // Hardcore survivors earn a bonus for bringing the squad home alive.
     grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(payDepth, variant) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
+    // LAST in the array on purpose: crewXP is destructured positionally above,
+    // so anything inserted mid-list silently hands it the wrong result.
+    admin.from('gauntlet_runs').insert({
+      user_id: user.id, variant, hardcore: hc, depth: cd,
+      duration_ms: runClock.gauntlet_run_active_ms, outcome: 'cashed',
+    }),
   ])
 
   // Davy's Terms feats. Awaited (never fire-and-forget) so the write lands before
@@ -1145,7 +1205,7 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_deepest_died, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died, dons_gauntlet_hc_deepest_died')
+    .select('gauntlet_run_active_ms, gauntlet_run_tick_at, gauntlet_run_open, gauntlet_run_variant, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades, gauntlet_upgrades_off, dons_gauntlet_deepest, dons_gauntlet_deepest_died, dons_gauntlet_upgrades, dons_gauntlet_upgrades_off, gauntlet_run_hardcore, gauntlet_hc_squad, gauntlet_hc_deepest_died, dons_gauntlet_hc_deepest_died')
     .eq('id', user.id)
     .single()
 
@@ -1204,6 +1264,9 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // Close the run + bank Fathoms ONLY (hardcore banks at the normal rate — the
   // premium is reserved for surviving). Deepest record / recap / unlocks belong
   // to cash-outs. Lifetime badge counters advance (a death still ends a run).
+  const deathClock = tickActiveMs(
+    (profile as any).gauntlet_run_active_ms, (profile as any).gauntlet_run_tick_at, { stop: true })
+
   await admin
     .from('profiles')
     .update({
@@ -1216,9 +1279,17 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
       gauntlet_run_offer: null,
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
       gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
+      ...deathClock,
       ...deathFields,
     })
     .eq('id', user.id)
+
+  // A death is a finished run too, and the one that matters most for pacing:
+  // logging only cash-outs would measure the runs that went well.
+  await admin.from('gauntlet_runs').insert({
+    user_id: user.id, variant: isDon ? 'don' : 'davy', hardcore,
+    depth: cd, duration_ms: deathClock.gauntlet_run_active_ms, outcome: 'died',
+  })
 
   return { ok: true, deepest: prevDeepest, earnedFathoms, newFathoms, hardcore, fallenCount }
 }
