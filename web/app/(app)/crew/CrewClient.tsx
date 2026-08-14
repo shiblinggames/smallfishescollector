@@ -26,6 +26,7 @@ import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS
 import { applyCrewEffects, decodeTraitStats, isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
 import AssignPicker from './AssignPicker'
+import CrewCompare from './CrewCompare'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL, XP_TABLE as CREW_XP_TABLE } from '@/lib/crewLevel'
@@ -1030,6 +1031,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
   }
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
+  /**
+   * COMPARE. `pick` is the hand you armed from its own card and are now
+   * choosing an opponent for; the roster goes into a pick mode until you tap a
+   * second one or back out. `pair` is the two being shown.
+   *
+   * Armed from the detail sheet rather than a mode you enter first, because the
+   * question always starts at ONE crew you are unsure about, never at an empty
+   * board.
+   */
+  const [comparePick, setComparePick] = useState<CrewMember | null>(null)
+  const [comparePair, setComparePair] = useState<{ a: CrewMember; b: CrewMember } | null>(null)
   // Crew Hall upgrade flow — confirm modal + the one-shot celebration
   // overlay that plays over the recruit board after a successful upgrade
   // (the board's theme swaps underneath it, so the moment of change is
@@ -1728,7 +1740,16 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             bunkedCrewIds={state.bunkedCrewIds}
             artSrc={artSrc}
             onPickSeat={(track, slot) => setAssignSeat({ track, slot })}
-            onTapCrew={m => setDetail({ kind: 'roster', item: m })}
+            onTapCrew={m => {
+              if (comparePick) {
+                if (m.id === comparePick.id) { setComparePick(null); return }
+                setComparePair({ a: comparePick, b: m })
+                setComparePick(null)
+                vibrate([10, 30, 14])
+                return
+              }
+              setDetail({ kind: 'roster', item: m })
+            }}
             onClearParty={track => setClearAsk(track)}
             clearing={clearingTrack}
             raidAccent={ASSIGN_RAID}
@@ -2105,6 +2126,15 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         </>
           )
         })()}
+
+        {/* The comparison sheet. Portalled like every other full-screen
+            surface on this page. */}
+        <CrewCompare
+          open={!!comparePair}
+          a={comparePair?.a ?? null}
+          b={comparePair?.b ?? null}
+          onClose={() => setComparePair(null)}
+        />
 
         {/* Fill-a-seat picker. Art-forward and three across, matching the
             board it opens from. */}
@@ -2950,6 +2980,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   filtering. Replaced the All/Raid/Voyage/Bench filter chips. */}
               {/* Only here when there is something to put down, and it says
                   how many so the button is worth the row it costs. */}
+              {/* PICK MODE. Says whose opponent you are choosing and how to get
+                  out, because a roster that has quietly changed what tapping a
+                  card does has to say so. */}
+              {comparePick && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  padding: '0.5rem 0.7rem', borderRadius: 10, marginBottom: 9,
+                  background: 'rgba(94,234,212,0.10)', border: '1px solid rgba(94,234,212,0.4)',
+                }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#8fe6d6' }}>
+                    Tap a hand to weigh against {comparePick.name}
+                  </span>
+                  <button type="button" onClick={() => setComparePick(null)} className="font-karla font-700 tap"
+                    style={{
+                      flexShrink: 0, padding: '0.32rem 0.7rem', borderRadius: 8, fontSize: '0.68rem',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                      color: '#e0d9cc', cursor: 'pointer',
+                    }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
               {levelledUp.length > 0 && (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
@@ -3812,6 +3864,22 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                       {track !== null && btn('Swap', 'swap')}
                       {track !== null && !isCap && btn('Promote', 'promote')}
                       {track !== null && btn('Remove', 'remove')}
+                      {/* Sits NEXT to Dismiss on purpose. This is the question
+                          asked in the same breath as that one, and answering it
+                          first is usually the point. */}
+                      {state.roster.length > 1 && (
+                        <button type="button" disabled={pending}
+                          onClick={() => { setComparePick(m); close(); setActiveTab('roster') }}
+                          className="font-cinzel font-700 uppercase active:scale-95"
+                          style={{
+                            flex: 1, minWidth: 0, padding: '0.6rem 0.25rem', borderRadius: 9,
+                            fontSize: '0.68rem', letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.18)',
+                            color: 'rgba(240,236,228,0.88)', cursor: pending ? 'not-allowed' : 'pointer',
+                          }}>
+                          Compare
+                        </button>
+                      )}
                       {btn('Dismiss', 'dismiss', true)}
                     </div>
                   )
