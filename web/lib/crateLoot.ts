@@ -13,13 +13,19 @@ import { getBait } from '@/lib/bait'
  *  container and it is the best one in the game. */
 export type CrateTier = 'wooden' | 'metal' | 'gold' | 'diamond' | 'ancient'
 
-export type CrateLoot =
+/** A pet roll that landed on one already aboard. The crate pays its normal
+ *  outcome instead; this rides along purely so the reveal can say what was
+ *  passed over. */
+export type DupePet = { petId: string; petName: string; petImageUrl: string; petAccent: string }
+
+export type CrateLoot = (
   | { type: 'doubloons'; amount: number }
   | { type: 'bait';      baitType: string; baitName: string; quantity: number }
   | { type: 'skin';      skinId: string;   skinName: string }
   | { type: 'hat';       hatId: string;    hatName: string;  hatImageUrl: string  }
   | { type: 'boat';      boatId: string;   boatName: string; boatImageUrl: string }
-  | { type: 'pet';       petId: string;    petName: string;  petImageUrl: string; petAccent: string; isDuplicate: boolean }
+  | { type: 'pet';       petId: string;    petName: string;  petImageUrl: string; petAccent: string }
+) & { dupePet?: DupePet }
 
 // Crate loot tables — doubloons and bait pool depend on crate tier, not zone.
 const CRATE_DOUBLOON_RANGE: Record<CrateTier, [number, number]> = {
@@ -120,24 +126,36 @@ export async function grantCrateLoot(
   // ── Pet roll — OVERRIDE the normal outcome on hit ─────────────────
   // Rolled FIRST and exclusively, so the rare moment owns the screen instead of
   // fighting a doubloons/bait/cosmetic result. Rates in lib/pets.CRATE_PET_CHANCE.
+  // The roll is DELIBERATELY blind to what you already own. Duplicates are what
+  // keep the full 19-pet set hard, and filtering the pool would renormalise the
+  // six 1.2% golds upward every time you closed out a common one.
+  //
+  // What a duplicate must NOT do is eat the crate. The pet roll overrides the
+  // normal outcome, so a dupe used to resolve to an empty screen: no pet, and no
+  // doubloons, bait or cosmetic either. At 1-in-333 casts in the Ancient Deep
+  // that is the rarest moment in fishing paying nothing at all. A dupe now falls
+  // through to the normal roll and rides along on it for the reveal.
+  let dupePet: DupePet | undefined
   if (Math.random() < CRATE_PET_CHANCE[tier]) {
     const pet = rollPet()
-    const isDuplicate = unlockedPets.includes(pet.id)
-    if (!isDuplicate) {
+    if (!unlockedPets.includes(pet.id)) {
       await admin.from('profiles').update({
         unlocked_pets: [...unlockedPets, pet.id],
         // Auto-equip the first pet so it lands in the loadout without an extra tap.
         equipped_pet: (profile?.equipped_pet as string | null) ?? pet.id,
       }).eq('id', userId)
+      return {
+        type: 'pet',
+        petId: pet.id, petName: pet.name,
+        petImageUrl: pet.restImageUrl,
+        petAccent: pet.accentColor,
+      }
     }
-    return {
-      type: 'pet',
-      petId: pet.id, petName: pet.name,
-      petImageUrl: pet.restImageUrl,
-      petAccent: pet.accentColor,
-      isDuplicate,
-    }
+    dupePet = { petId: pet.id, petName: pet.name, petImageUrl: pet.restImageUrl, petAccent: pet.accentColor }
   }
+
+  /** Tag whatever the crate actually paid with the pet it passed over. */
+  const pay = <T extends CrateLoot>(loot: T): T => (dupePet ? { ...loot, dupePet } : loot)
 
   const isOwned = (entry: typeof CRATE_COSMETIC_POOL[number]) => {
     if (entry.kind === 'skin') return unlockedSkins.includes(entry.id)
@@ -166,21 +184,21 @@ export async function grantCrateLoot(
     const picked = unownedCosmetics[Math.floor(Math.random() * unownedCosmetics.length)]
     if (picked.kind === 'skin') {
       await admin.from('profiles').update({ unlocked_character_colors: [...unlockedSkins, picked.id] }).eq('id', userId)
-      return { type: 'skin', skinId: picked.id, skinName: picked.name }
+      return pay({ type: 'skin', skinId: picked.id, skinName: picked.name })
     }
     if (picked.kind === 'boat') {
       await admin.from('profiles').update({ unlocked_boats: [...unlockedBoats, picked.id] }).eq('id', userId)
-      return { type: 'boat', boatId: picked.id, boatName: picked.name, boatImageUrl: picked.imageUrl }
+      return pay({ type: 'boat', boatId: picked.id, boatName: picked.name, boatImageUrl: picked.imageUrl })
     }
     await admin.from('profiles').update({ unlocked_hats: [...unlockedHats, picked.id] }).eq('id', userId)
-    return { type: 'hat', hatId: picked.id, hatName: picked.name, hatImageUrl: picked.imageUrl }
+    return pay({ type: 'hat', hatId: picked.id, hatName: picked.name, hatImageUrl: picked.imageUrl })
   }
 
   if (outcome === 'doubloons') {
     const [min, max] = CRATE_DOUBLOON_RANGE[tier]
     const amount = Math.floor(min + Math.random() * (max - min + 1))
     await admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + amount }).eq('id', userId)
-    return { type: 'doubloons', amount }
+    return pay({ type: 'doubloons', amount })
   }
 
   // Bait — weighted random pick from this tier's pool
@@ -197,5 +215,5 @@ export async function grantCrateLoot(
     await admin.from('bait_inventory').insert({ user_id: userId, bait_type: picked.type, quantity: qty })
   }
   const baitName = getBait(picked.type).name
-  return { type: 'bait', baitType: picked.type, baitName, quantity: qty }
+  return pay({ type: 'bait', baitType: picked.type, baitName, quantity: qty })
 }

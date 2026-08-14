@@ -48,13 +48,19 @@ import { hapticTap, vibrate } from '@/lib/haptics'
 export type CrateTierId = 'wooden' | 'metal' | 'gold' | 'diamond' | 'ancient'
 
 /** The loot shapes a crate can produce. Mirrors CrateLoot in lib/crateLoot. */
-export type CrateLootView =
+export type CrateLootView = (
   | { type: 'doubloons'; amount: number }
   | { type: 'bait';      baitType: string; baitName: string; quantity: number }
   | { type: 'skin';      skinId: string;   skinName: string }
   | { type: 'hat';       hatId?: string;   hatName: string;  hatImageUrl: string  }
   | { type: 'boat';      boatId?: string;  boatName: string; boatImageUrl: string }
-  | { type: 'pet';       petId?: string;   petName: string;  petImageUrl: string; petAccent: string; isDuplicate?: boolean }
+  | { type: 'pet';       petId?: string;   petName: string;  petImageUrl: string; petAccent: string }
+) & {
+  /** A pet roll that hit one already aboard. The crate paid its normal outcome
+   *  instead, so this is shown as a footnote on that reward rather than being a
+   *  result of its own. */
+  dupePet?: { petId: string; petName: string; petImageUrl: string; petAccent: string }
+}
 
 /** Tier identity. The accent is the whole point: it is what makes a Diamond
  *  crate feel unlike a Wooden one before a single tile has scrolled. */
@@ -148,7 +154,7 @@ function lootSubtitle(loot: CrateLootView): string {
     case 'skin':      return 'Character colorway'
     case 'hat':       return 'Bandana'
     case 'boat':      return 'Boat'
-    case 'pet':       return loot.isDuplicate ? 'Already aboard' : 'New pet'
+    case 'pet':       return 'New pet'
   }
 }
 
@@ -203,11 +209,9 @@ function CrateTile({ loot }: { loot: CrateLootView }) {
 function RareReveal({ loot, onClose }: { loot: CrateLootView; onClose: () => void }) {
   const accent = lootTint(loot)
   const isPet = loot.type === 'pet'
-  const eyebrow = isPet
-    ? (loot.isDuplicate ? 'Duplicate' : 'Pet unlocked')
-    : 'Rare find'
+  const eyebrow = isPet ? 'Pet unlocked' : 'Rare find'
   const sub =
-    loot.type === 'pet'  ? (loot.isDuplicate ? 'You already own this one.' : 'Equip it from your Appearance loadout.')
+    loot.type === 'pet'  ? 'Equip it from your Appearance loadout.'
     : loot.type === 'skin' ? 'New character color unlocked.'
     : loot.type === 'hat'  ? 'New bandana unlocked.'
     :                        'New boat unlocked.'
@@ -461,7 +465,7 @@ export default function CrateOpening({
                   fontSize: '0.55rem', letterSpacing: '0.22em',
                   color: lootTint(loot), marginBottom: 6,
                 }}>
-                  {loot.type === 'pet' && loot.isDuplicate ? 'Duplicate' : 'Rare find'}
+                  {'Rare find'}
                 </p>
               )}
 
@@ -497,6 +501,19 @@ export default function CrateOpening({
                   }}>
                     {lootSubtitle(loot)}
                   </p>
+                  {/* The pet the roll passed over. A footnote, not a result: the
+                      chest still paid what it paid, and this only explains that
+                      something rarer was in the water and you already had it. */}
+                  {loot.dupePet && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={loot.dupePet.petImageUrl} alt="" width={16} height={16}
+                        style={{ height: 16, width: 16, objectFit: 'contain', flexShrink: 0, opacity: 0.7 }} />
+                      <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.38)' }}>
+                        {loot.dupePet.petName} surfaced too. Already aboard.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

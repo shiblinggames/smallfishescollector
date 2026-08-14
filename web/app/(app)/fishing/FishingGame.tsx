@@ -3844,7 +3844,7 @@ export default function FishingGame({
     | { type: 'skin';      skinId: string;   skinName: string }
     | { type: 'hat';       hatId: string;    hatName: string;  hatImageUrl: string  }
     | { type: 'boat';      boatId: string;   boatName: string; boatImageUrl: string }
-    | { type: 'pet';       petId: string;    petName: string;  petImageUrl: string; petAccent: string; isDuplicate: boolean }
+    | { type: 'pet';       petId: string;    petName: string;  petImageUrl: string; petAccent: string }
     | null
   >(null)
   // Mirrors CrateOpening's internal phase, driven by its onOpened/onSettled
@@ -6048,14 +6048,12 @@ export default function FishingGame({
       // Server already added the pet to unlocked_pets + auto-equipped on
       // first pet ever. Mirror that locally so the Appearance picker
       // sees the new parrot the moment the claim animation finishes.
-      if (!result.isDuplicate) {
-        setUnlockedPets(prev => {
-          const next = prev.includes(result.petId) ? prev : [...prev, result.petId]
-          onPetStateChange?.(equippedPet ?? result.petId, next)
-          return next
-        })
-        if (!equippedPet) setEquippedPet(result.petId)
-      }
+      setUnlockedPets(prev => {
+        const next = prev.includes(result.petId) ? prev : [...prev, result.petId]
+        onPetStateChange?.(equippedPet ?? result.petId, next)
+        return next
+      })
+      if (!equippedPet) setEquippedPet(result.petId)
     }
     setCratePhase('closed')
     // Don't auto-cast after the player taps Claim — they should decide
