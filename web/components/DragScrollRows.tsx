@@ -1,28 +1,27 @@
 'use client'
 
-// MOUSE DRAG-TO-SCROLL FOR EVERY HIDDEN-SCROLLBAR ROW. Mounted once in the
-// root layout; renders nothing.
+// MOUSE DRAG-TO-SCROLL FOR EVERY HORIZONTAL ROW. Mounted once in the root
+// layout; renders nothing.
 //
-// The cosmetic rails (boats / hats / pets in the gear drawer, the profile
-// showcase) hide their scrollbars for the mobile look, which strands them on
-// desktop: the wheel scrolls vertically, there is no finger to swipe with,
-// nothing is draggable, and the hidden scrollbar removes the one hint that
-// more content exists off-edge. A Windows player cannot tell the boat row
-// scrolls at all, let alone how.
+// The game's rails (cosmetic rows in the gear drawer, the profile showcase,
+// the crew strip, the almanac shelves) scroll horizontally, which strands them
+// on desktop: the wheel scrolls vertically, there is no finger to swipe with,
+// and half the rows hide their scrollbar for the mobile look, removing the one
+// hint that content continues off-edge. A Windows player cannot tell the boat
+// row scrolls at all, let alone how.
 //
-// One DELEGATED handler instead of a wrapper component on purpose: the rows
-// already share an identity — the .scrollbar-hide class — so keying off it
-// covers every current and future row with zero markup changes, the same way
-// the class itself already styles them all from one place. Walks up from the
-// press target to the nearest .scrollbar-hide element that actually overflows
-// horizontally and drags that.
+// One DELEGATED handler instead of a wrapper component on purpose: it walks up
+// from the press target to the nearest element whose computed overflow-x says
+// it scrolls and that actually overflows, so every current and future rail is
+// covered with zero markup changes. (v1 keyed off the .scrollbar-hide class;
+// that missed every rail that shows its scrollbar — the profile crew strip,
+// the colorway rows — which are exactly as wheel-stranded on desktop.)
 //
 // Rules:
 //  • MOUSE ONLY (pointerType check). Touch already scrolls these rows
 //    natively — intercepting it would fight momentum scrolling.
-//  • HORIZONTAL OVERFLOW ONLY. The vertical .scrollbar-hide drawers (crew
-//    pickers, gear list) scroll fine with the wheel; they are skipped by the
-//    scrollWidth check.
+//  • HORIZONTAL OVERFLOW ONLY. Vertical scrollers wheel fine; the
+//    scrollWidth check skips them.
 //  • Drag starts on the first real MOVE (4px), not on pointerdown, so a plain
 //    click on a thumb stays a plain click with native focus behaviour. On the
 //    first real move the row takes pointer capture, releasing any child
@@ -31,6 +30,16 @@
 //    in the capture phase — dragging across a row of buy buttons must never
 //    buy a boat. The flag also clears on the next pointerdown, because a
 //    release outside the row produces no click at all.
+//
+// NATIVE DRAGSTART IS SUPPRESSED GLOBALLY, and it is load-bearing: the rails
+// are walls of <img> cards, and a mouse press-and-move on an image starts the
+// browser's own drag (a translucent ghost of the artwork) which CANCELS the
+// pointer stream before the 4px threshold ever engages — on art-heavy rows
+// the drag never worked without this. It also kills the drag ghost everywhere
+// else (dial art, fish cards, links), which reads as game-app behaviour, the
+// same stance as the global user-select: none. The game has no native
+// drag-and-drop feature — every puzzle drags via pointer events — so nothing
+// legitimate is lost. If one ever ships, opt it back in here by tag.
 
 import { useEffect } from 'react'
 
@@ -46,8 +55,10 @@ export default function DragScrollRows() {
     const findRow = (t: EventTarget | null): HTMLElement | null => {
       let el: Element | null = t instanceof Element ? t : null
       while (el) {
-        if (el instanceof HTMLElement && el.classList.contains('scrollbar-hide')
-          && el.scrollWidth > el.clientWidth + 4) return el
+        if (el instanceof HTMLElement && el.scrollWidth > el.clientWidth + 4) {
+          const ox = getComputedStyle(el).overflowX
+          if (ox === 'auto' || ox === 'scroll') return el
+        }
         el = el.parentElement
       }
       return null
@@ -85,18 +96,21 @@ export default function DragScrollRows() {
       e.preventDefault()
       e.stopPropagation()
     }
+    const dragstart = (e: DragEvent) => e.preventDefault()
 
     document.addEventListener('pointerdown', down)
     document.addEventListener('pointermove', move)
     document.addEventListener('pointerup', up)
     document.addEventListener('pointercancel', up)
     document.addEventListener('click', clickCapture, { capture: true })
+    document.addEventListener('dragstart', dragstart)
     return () => {
       document.removeEventListener('pointerdown', down)
       document.removeEventListener('pointermove', move)
       document.removeEventListener('pointerup', up)
       document.removeEventListener('pointercancel', up)
       document.removeEventListener('click', clickCapture, { capture: true })
+      document.removeEventListener('dragstart', dragstart)
     }
   }, [])
 
