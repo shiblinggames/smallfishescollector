@@ -2927,7 +2927,9 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "He went down with two things worth taking, and they answer to the two halves of your life out here.\n\nTHE DEEP REEL opens a SECOND special slot on your fishing rig, and only The Primeval Eye will seat in it.\n\nTHE SIXTH MOUNT frames one more raid item onto your hull, and only The Primeval Maw will mount there.\n\nNeither tool is in your hold yet. This opens the berth. The wreck still has to give the piece up.\n\nTake one now. The other keeps, and it keeps expensive.",
-      ctaLabel: 'Coming Soon',
+      // Was 'Coming Soon' from before the spoils shipped -- on a node that is
+      // fully live, that alone reads as unfinished.
+      ctaLabel: 'Take your pick',
       summary: 'Choose one of his two spoils. The other costs 2,500,000 doubloons.',
       dropsNote: 'Each slot fits exactly one item, and that item only ever drops from him.',
     },

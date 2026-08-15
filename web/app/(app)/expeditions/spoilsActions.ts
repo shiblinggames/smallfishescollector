@@ -39,6 +39,23 @@ async function loadSpoils() {
   return { user, admin, profile, cleared: !!cleared }
 }
 
+/** Mark the spoils node itself as cleared.
+ *
+ *  Without this the node sat unfinished on the map forever: computeRaidMap
+ *  reads raid_node_progress.cleared, and choosing a spoil wrote only the
+ *  finn_spoil_* column — so the last node of the campaign kept its unclaimed
+ *  chrome no matter what you took off the wreck. Same persistence every other
+ *  interactive node uses (milestones, story reads, the berth). */
+async function markSpoilsNodeCleared(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const { data: row } = await admin.from('profiles')
+    .select('raid_node_progress').eq('id', userId).single()
+  const prog = (row?.raid_node_progress as { cleared?: string[] } | null) ?? {}
+  if ((prog.cleared ?? []).includes('spoils_of_the_hand')) return
+  await admin.from('profiles')
+    .update({ raid_node_progress: { ...prog, cleared: [...new Set([...(prog.cleared ?? []), 'spoils_of_the_hand'])] } })
+    .eq('id', userId)
+}
+
 /** Take one side FREE. Only ever succeeds once. */
 export async function chooseSpoil(side: unknown): Promise<{ ok: boolean; error?: string }> {
   if (!isSide(side)) return { ok: false, error: 'Unknown spoil.' }
@@ -58,6 +75,7 @@ export async function chooseSpoil(side: unknown): Promise<{ ok: boolean; error?:
     .select('finn_spoil_free')
     .maybeSingle()
   if (!updated) return { ok: false, error: 'You already took one off his wreck.' }
+  await markSpoilsNodeCleared(admin, user.id)
   return { ok: true }
 }
 
@@ -86,6 +104,7 @@ export async function buySpoil(side: unknown): Promise<{ ok: boolean; error?: st
     .select('finn_spoil_paid')
     .maybeSingle()
   if (!updated) return { ok: false, error: 'You already bought the other.' }
+  await markSpoilsNodeCleared(admin, user.id)
   return { ok: true, doubloons: newDoubloons }
 }
 
