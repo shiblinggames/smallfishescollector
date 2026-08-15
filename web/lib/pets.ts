@@ -175,12 +175,14 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 66.3, left: 76.7, width: 25, rotate: 0 },
     cast: { top: 70.2, left: 75.1, width: 25, rotate: 0 },
   },
-  // PLACEHOLDER — seeded off the seal (the other low, long-bodied sitter) so
-  // the overlay renders, then tune on /fishing-test when the art lands.
+  // Tuned on /fishing-test. THE BOW: `left` sits around 21-28 against every
+  // other pet's 57-77, which is the whole point — it rides the front of the
+  // boat facing out, so it shares the deck with a stern pet instead of
+  // fighting it for the same spot. The 6.5 degree list is the hull's rake.
   plesiosaur: {
-    rest: { top: 63.2, left: 56.9, width: 41.4, rotate: 0 },
-    wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
-    cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
+    rest: { top: 65.3, left: 20.8, width: 35.8, rotate: 6.5 },
+    wait: { top: 61.4, left: 28.3, width: 35.8, rotate: 6.5 },
+    cast: { top: 65.3, left: 27.5, width: 35.8, rotate: 6.5 },
   },
 }
 
