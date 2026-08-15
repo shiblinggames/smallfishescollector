@@ -32,7 +32,7 @@ import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
-import { vigilScale, vigilNumeral, VIGIL_MAX_RANK, VIGIL_FRAME, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
+import { vigilScale, vigilNumeral, VIGIL_MAX_RANK, VIGIL_FRAME, VIGIL_DIAL, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -214,30 +214,20 @@ const ANCIENT_ZONE_COLOR: Record<ZoneType, string> = {
   penalty: '#fb5f7a', // hot rose — danger, but hotter/pinker than the normal red
   miss:    '#4b3a63', // void-violet — dead water
 }
-/** `rankAccent` tints the DEAD WATER only. The catch band stays cyan and the
- *  perfect band stays gold on purpose — those two carry the semantic read and
- *  must never move, and at Rank V a gold catch band would collide with the
- *  gold target outright. Recolouring the void instead changes the whole mood
- *  of the dial (it is the largest area on it) while leaving the read intact,
- *  so a blood-dark Rank IV fight is unmistakably not a Rank II one. */
-function applyAncientPalette(zones: ZoneDef[], rankAccent?: string): ZoneDef[] {
+/** The ancient dial, repainted for the rank being fought.
+ *
+ *  Rank 1 (and any non-Vigil ancient catch) gets ANCIENT_ZONE_COLOR, which is
+ *  the palette as shipped. Higher ranks take their own from VIGIL_DIAL — see
+ *  the rules that survive the repaint there: perfect stays the brightest band
+ *  on the dial, and danger stays red. The needle inherits currentZone.color,
+ *  so it adopts whichever palette is live for free. */
+function applyAncientPalette(zones: ZoneDef[], rank?: number): ZoneDef[] {
+  const pal = rank ? VIGIL_DIAL[rank] : undefined
   return zones.map(z => ({
     ...z,
-    color: z.type === 'miss' && rankAccent
-      ? rankAccent
+    color: pal ? (pal[z.type] ?? ANCIENT_ZONE_COLOR[z.type] ?? z.color)
       : ANCIENT_ZONE_COLOR[z.type] ?? z.color,
   }))
-}
-
-/** The void tint for a rank — the accent pulled well down so it reads as dead
- *  water rather than a second target. */
-function vigilVoid(rank: number | undefined): string | undefined {
-  if (!rank) return undefined
-  const a = VIGIL_FRAME[rank]?.accent
-  if (!a) return undefined
-  const r = parseInt(a.slice(1, 3), 16), g = parseInt(a.slice(3, 5), 16), b = parseInt(a.slice(5, 7), 16)
-  const dim = (v: number) => Math.round(v * 0.34 + 24)
-  return `rgb(${dim(r)}, ${dim(g)}, ${dim(b)})`
 }
 
 // Megalodon (fish id 143) is the final-final boss. The SERVER gates it out of the
@@ -6310,7 +6300,7 @@ export default function FishingGame({
     const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0) - shrinkCatch, rod.perfectZoneBonus + 1)
     const withMods = selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
     // The 6 giants fight on the eldritch palette; regulars keep the normal dial.
-    return isAncientTrophyFight ? applyAncientPalette(withMods, vigilVoid(vigilRank)) : withMods
+    return isAncientTrophyFight ? applyAncientPalette(withMods, vigilRank) : withMods
   }, [hookedFish, hookTier, line.penaltyMultiplier, selectedZone, levelBonus, selectedBait, rod.catchZoneBonus, rod.perfectZoneBonus, activeEvent?.type, activeBossMechanic, bossZoneShrink, isAncientTrophyFight])
   // Mirror the latest zones so the needle rAF loop can detect zone
   // crossings without depending on per-frame React state.
@@ -6342,7 +6332,7 @@ export default function FishingGame({
       const s = AMP * (0.5 - 0.5 * Math.cos((t / PERIOD) * Math.PI * 2))
       const base = buildFishZones(diff, hookTier, line.penaltyMultiplier, catchMult, baseBonus - s, perfBonus)
       let zones = applyBossMods(base, 'shrink', s)
-      if (trophy) zones = applyAncientPalette(zones, vigilVoid(vigilRankRef.current))
+      if (trophy) zones = applyAncientPalette(zones, vigilRankRef.current)
       catchingZonesRef.current = zones
       const zg = zonesGroupRef.current
       if (zg) {

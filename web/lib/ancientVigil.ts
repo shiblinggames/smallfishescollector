@@ -192,6 +192,41 @@ export function isReleased(state: VigilState, fishId: number): boolean {
   return state[String(fishId)]?.released === true
 }
 
+// -- THE DIAL, PER RANK -----------------------------------------------------
+// Green catch and gold perfect have been constant since the first cast, and
+// the Ancient Deep already bends that once (cyan water, gold target, rose
+// danger, violet void). The Vigil bends it again per rank, because breaking a
+// constant the whole game has held IS the statement that this is endgame.
+//
+// TWO RULES SURVIVE THE REPAINT, and everything else is free:
+//
+//  1. PERFECT IS ALWAYS THE BRIGHTEST BAND ON THE DIAL. That, not the colour
+//     gold, is what players actually read at speed -- so the hue can move as
+//     long as the luminance hierarchy does not. Every `perfect` below is a
+//     near-white tint of its rank, verified 26-51% brighter than its catch.
+//  2. DANGER STAYS IN THE RED FAMILY. Snag costs bait, so the one band that
+//     must never be mistaken keeps its shipped meaning at every rank. That is
+//     also why no rank paints its CATCH band red -- at Blood-dark the catch
+//     goes violet instead of crimson, precisely so it cannot be confused with
+//     the penalty sitting beside it.
+export interface VigilDial { catch: string; perfect: string; penalty: string; miss: string }
+
+export const VIGIL_DIAL: Record<number, VigilDial> = {
+  // I -- the Ancient Deep exactly as it ships. The baseline you already know.
+  1: { catch: '#22d3ee', perfect: '#fde68a', penalty: '#fb5f7a', miss: '#4b3a63' },
+  // II -- cold forged iron. Colour drains out of the water.
+  2: { catch: '#93c5fd', perfect: '#f1f5f9', penalty: '#fb5f7a', miss: '#2b3648' },
+  // III -- verdigris. The one rank that lands near the game's original green,
+  // which reads as a homecoming rather than a repeat.
+  3: { catch: '#34d399', perfect: '#ecfccb', penalty: '#fb5f7a', miss: '#173c37' },
+  // IV -- blood-dark. Catch goes VIOLET, not crimson: the danger band is red
+  // and these two sit next to each other on the dial.
+  4: { catch: '#a78bfa', perfect: '#fce7f3', penalty: '#fb5f7a', miss: '#3a1220' },
+  // V -- struck in gold. The whole dial runs molten; perfect is the white-hot
+  // centre of it, so it still wins on luminance against an amber catch band.
+  5: { catch: '#fcd34d', perfect: '#fffbeb', penalty: '#fb5f7a', miss: '#3d2a08' },
+}
+
 /** The capstone: all six giants at rank 5 pays the one pet in the game that no
  *  crate can produce. Lives here rather than in lib/pets so the Vigil owns what
  *  the Vigil awards. */
