@@ -214,8 +214,30 @@ const ANCIENT_ZONE_COLOR: Record<ZoneType, string> = {
   penalty: '#fb5f7a', // hot rose — danger, but hotter/pinker than the normal red
   miss:    '#4b3a63', // void-violet — dead water
 }
-function applyAncientPalette(zones: ZoneDef[]): ZoneDef[] {
-  return zones.map(z => ({ ...z, color: ANCIENT_ZONE_COLOR[z.type] ?? z.color }))
+/** `rankAccent` tints the DEAD WATER only. The catch band stays cyan and the
+ *  perfect band stays gold on purpose — those two carry the semantic read and
+ *  must never move, and at Rank V a gold catch band would collide with the
+ *  gold target outright. Recolouring the void instead changes the whole mood
+ *  of the dial (it is the largest area on it) while leaving the read intact,
+ *  so a blood-dark Rank IV fight is unmistakably not a Rank II one. */
+function applyAncientPalette(zones: ZoneDef[], rankAccent?: string): ZoneDef[] {
+  return zones.map(z => ({
+    ...z,
+    color: z.type === 'miss' && rankAccent
+      ? rankAccent
+      : ANCIENT_ZONE_COLOR[z.type] ?? z.color,
+  }))
+}
+
+/** The void tint for a rank — the accent pulled well down so it reads as dead
+ *  water rather than a second target. */
+function vigilVoid(rank: number | undefined): string | undefined {
+  if (!rank) return undefined
+  const a = VIGIL_FRAME[rank]?.accent
+  if (!a) return undefined
+  const r = parseInt(a.slice(1, 3), 16), g = parseInt(a.slice(3, 5), 16), b = parseInt(a.slice(5, 7), 16)
+  const dim = (v: number) => Math.round(v * 0.34 + 24)
+  return `rgb(${dim(r)}, ${dim(g)}, ${dim(b)})`
 }
 
 // Megalodon (fish id 143) is the final-final boss. The SERVER gates it out of the
@@ -1267,10 +1289,12 @@ function WaitTimer() {
   )
 }
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, lockedStage = 0, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, lockedStage = 0, catchQty = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, isShiny = false, deepStirs = false, vigilRankUp = null }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
+  /** THE LONG VIGIL — set when this catch banked a rank. */
+  vigilRankUp?: { from: number; to: number } | null
   isPerfect: boolean
   xpGained: number
   doubleCatch?: boolean
@@ -1968,6 +1992,23 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                   padding: '0.18rem 0.6rem', borderRadius: '2rem' }}
               >New ✦</motion.span>
             )}
+            {/* THE RANK YOU JUST TOOK, on the card itself. Without it the
+                hardest catch in the game reads identically to an ordinary one
+                until the Mounting arrives a beat and a half later. */}
+            {vigilRankUp && (() => {
+              const vf = VIGIL_FRAME[vigilRankUp.to]
+              return (
+                <motion.span
+                  initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 16, delay: 0.28 }}
+                  className="font-karla font-800 uppercase tracking-[0.18em]"
+                  style={{ fontSize: '0.58rem', color: vf.accent,
+                    background: `${vf.accent}1e`, border: `1px solid ${vf.accent}70`,
+                    padding: '0.18rem 0.6rem', borderRadius: '2rem',
+                    textShadow: `0 0 10px ${vf.glow}` }}
+                >{vigilRankUp.to >= VIGIL_MAX_RANK ? 'Mastered ★' : `Rank ${vigilNumeral(vigilRankUp.to)}`}</motion.span>
+              )
+            })()}
           </div>
         )}
 
@@ -3871,6 +3912,7 @@ export default function FishingGame({
     catchQty?: number
     /** Ancient Deep: a rare, subtle omen line hinting the giants want a rarer
      *  lure — shown only on a common-bait catch while trophies remain. */
+    vigilRankUp?: { from: number; to: number } | null
     deepStirs?: boolean
   } | null>(null)
   const [rerollingWormhole, setRerollingWormhole] = useState(false)
@@ -4037,7 +4079,9 @@ export default function FishingGame({
   // pulse for ANY unviewed entry; this state stacks a stronger
   // momentary flash on top so the player notices THIS catch without
   // being forced into the drawer — totally optional.
-  const [freshCatchHook, setFreshCatchHook] = useState<'new-species' | 'pb' | null>(null)
+  // What the Log tile is flashing ABOUT. A vigil rank-up carries its rank so
+  // the flash can wear that rank's own material instead of the generic gold.
+  const [freshCatchHook, setFreshCatchHook] = useState<'new-species' | 'pb' | { vigil: number } | null>(null)
 
   // Latest noteworthy catch's habitat — used to auto-expand the right
   // zone when the player taps the flashing Logbook button after a new
@@ -5583,6 +5627,7 @@ export default function FishingGame({
         if (ru) {
           const petGranted = (res as { vigilPetGranted?: boolean }).vigilPetGranted === true
           setAncientVigil(prev => ({ ...prev, [String(res.fish.id)]: { rank: ru.to, released: false } }))
+          setFreshCatchHook({ vigil: ru.to })
           setTimeout(() => setRankUp({ name: res.fish.name, from: ru.from, to: ru.to, petGranted }), 1500)
           if (petGranted) setUnlockedPets(prev => prev.includes(VIGIL_PET_ID) ? prev : [...prev, VIGIL_PET_ID])
         }
@@ -5635,6 +5680,7 @@ export default function FishingGame({
           wormhole: (res as { wormhole?: boolean }).wormhole ?? false,
           catchQty: actualQty,
           deepStirs: (res as { deepStirs?: boolean }).deepStirs ?? false,
+          vigilRankUp: (res as { vigilRankUp?: { from: number; to: number } | null }).vigilRankUp ?? null,
         })
         // YOLO Rod jackpot — fire the full-screen celebration overlay on top
         // of the result card. Renders particles + a slamming "JACKPOT"
@@ -6264,7 +6310,7 @@ export default function FishingGame({
     const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0) - shrinkCatch, rod.perfectZoneBonus + 1)
     const withMods = selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
     // The 6 giants fight on the eldritch palette; regulars keep the normal dial.
-    return isAncientTrophyFight ? applyAncientPalette(withMods) : withMods
+    return isAncientTrophyFight ? applyAncientPalette(withMods, vigilVoid(vigilRank)) : withMods
   }, [hookedFish, hookTier, line.penaltyMultiplier, selectedZone, levelBonus, selectedBait, rod.catchZoneBonus, rod.perfectZoneBonus, activeEvent?.type, activeBossMechanic, bossZoneShrink, isAncientTrophyFight])
   // Mirror the latest zones so the needle rAF loop can detect zone
   // crossings without depending on per-frame React state.
@@ -6296,7 +6342,7 @@ export default function FishingGame({
       const s = AMP * (0.5 - 0.5 * Math.cos((t / PERIOD) * Math.PI * 2))
       const base = buildFishZones(diff, hookTier, line.penaltyMultiplier, catchMult, baseBonus - s, perfBonus)
       let zones = applyBossMods(base, 'shrink', s)
-      if (trophy) zones = applyAncientPalette(zones)
+      if (trophy) zones = applyAncientPalette(zones, vigilVoid(vigilRankRef.current))
       catchingZonesRef.current = zones
       const zg = zonesGroupRef.current
       if (zg) {
@@ -7345,6 +7391,7 @@ export default function FishingGame({
                       fish={catchResult.fish}
                       baitSaved={catchResult.baitSaved}
                       isNewSpecies={catchResult.isNewSpecies}
+                      vigilRankUp={catchResult.vigilRankUp ?? null}
                       isPerfect={catchResult.isPerfect}
                       xpGained={catchResult.xpGained}
                       doubleCatch={catchResult.doubleCatch}
@@ -8088,7 +8135,12 @@ export default function FishingGame({
                   const caught = caughtFishIds.size + ancientCatches.size
                   const hasNew = uncheckedNewFishIds.size > 0
                   const flashing = freshCatchHook != null
-                  const flashAccent = freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
+                  const vigilFlash = freshCatchHook && typeof freshCatchHook === 'object' ? freshCatchHook.vigil : null
+                  // A rank-up flashes in the RANK's colour — blood-dark at IV,
+                  // gold at V — so the tile tells you which rung you just took
+                  // before you have opened anything.
+                  const flashAccent = vigilFlash ? (VIGIL_FRAME[vigilFlash]?.accent ?? '#fde68a')
+                    : freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
                   // GOOD NEWS KEEPS ITS OWN COLOUR. The unread-entries state
                   // used to borrow the zone accent, which is #f87171 in the
                   // Abyss, so "you logged a new species" arrived down there
@@ -8099,7 +8151,7 @@ export default function FishingGame({
                   const accent = flashing ? flashAccent : hasNew ? NEW_ACCENT : zoneColor
                   return (
                     <motion.button
-                      key={freshCatchHook ?? 'logbook-tile'}
+                      key={vigilFlash ? `vigil-${vigilFlash}` : (freshCatchHook as string | null) ?? 'logbook-tile'}
                       className={flashTab === 'log' ? 'coach-flash' : undefined}
                       onClick={() => {
                         const opening = !collectionOpen
@@ -8165,7 +8217,7 @@ export default function FishingGame({
                             color: '#fff',
                             lineHeight: 1,
                             textShadow: `0 0 6px ${flashAccent}`,
-                          }}>{freshCatchHook === 'pb' ? 'New PB!' : 'New!'}</span>
+                          }}>{vigilFlash ? `Rank ${vigilNumeral(vigilFlash)}` : freshCatchHook === 'pb' ? 'New PB!' : 'New!'}</span>
                         )}
                         <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: flashing ? '#fff' : accent, whiteSpace: 'nowrap' }}>
                           {caught}<span className="font-karla font-400" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)' }}>/{total}</span>
