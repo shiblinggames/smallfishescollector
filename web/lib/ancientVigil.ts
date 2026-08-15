@@ -156,6 +156,11 @@ export function isReleased(state: VigilState, fishId: number): boolean {
   return state[String(fishId)]?.released === true
 }
 
+/** The capstone: all six giants at rank 5 pays the one pet in the game that no
+ *  crate can produce. Lives here rather than in lib/pets so the Vigil owns what
+ *  the Vigil awards. */
+export const VIGIL_PET_ID = 'plesiosaur_baby'
+
 /** Roman numeral for the rank chrome. Only ever 1-5 here. */
 export function vigilNumeral(rank: number): string {
   return ['', 'I', 'II', 'III', 'IV', 'V'][Math.max(0, Math.min(5, rank))] ?? ''

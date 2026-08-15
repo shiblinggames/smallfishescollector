@@ -17,7 +17,7 @@ import { getSpecialItem, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
-import { vigilFor, isReleased, vigilTotal, vigilComplete, VIGIL_MAX_RANK, ANCIENT_IDS } from '@/lib/ancientVigil'
+import { vigilFor, isReleased, vigilTotal, vigilComplete, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
@@ -699,6 +699,8 @@ export async function reelIn(
       vigilTotal?: number
       /** All six giants at rank 5 — the ancient pet is owed. */
       vigilComplete?: boolean
+      /** The baby plesiosaurus just landed in unlocked_pets (first time only). */
+      vigilPetGranted?: boolean
     }
   | { caught: false }
   | { error: string }
@@ -739,7 +741,7 @@ export async function reelIn(
   }
 
   const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, ancient_vigil, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, ancient_vigil, unlocked_pets, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -824,6 +826,7 @@ export async function reelIn(
     const vigilKey = String(fishId)
     const wasReleased = vigil[vigilKey]?.released === true
     let vigilRankUp: { from: number; to: number } | null = null
+    let vigilPetGranted = false
     if (wasReleased) {
       const from = vigil[vigilKey].rank
       const ranked = result === 'perfect' && from < VIGIL_MAX_RANK
@@ -831,6 +834,18 @@ export async function reelIn(
       vigil[vigilKey] = { rank: to, released: false }
       updates.ancient_vigil = vigil
       if (ranked) vigilRankUp = { from, to }
+
+      // THE CAPSTONE — all six at rank 5 pays the baby plesiosaurus, the one
+      // pet no crate can produce. Granted on STATE, not on the crossing (the
+      // house pattern): re-checked on every landing, so it lands for anyone
+      // already complete the moment the pet def exists, with no backfill.
+      if (vigilComplete(vigil)) {
+        const ownedPets = ((profile as { unlocked_pets?: string[] } | null)?.unlocked_pets ?? [])
+        if (!ownedPets.includes(VIGIL_PET_ID)) {
+          updates.unlocked_pets = [...ownedPets, VIGIL_PET_ID]
+          vigilPetGranted = true
+        }
+      }
     }
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
     if (newTrophies.length >= 6) await grantBadgeDirect(user.id, 'ancient_ones')
@@ -900,6 +915,7 @@ export async function reelIn(
       vigilRankUp,
       vigilTotal: updates.ancient_vigil ? vigilTotal(vigil) : undefined,
       vigilComplete: updates.ancient_vigil ? vigilComplete(vigil) : undefined,
+      vigilPetGranted,
     }
   }
 

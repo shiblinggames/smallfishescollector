@@ -13,7 +13,7 @@
 // Pet ids stay stable across releases. Persisted to
 // profiles.unlocked_pets (text[]) + profiles.equipped_pet (text).
 
-export type PetSpecies = 'parrot' | 'monkey' | 'seal' | 'lizard' | 'raccoon' | 'crab'
+export type PetSpecies = 'parrot' | 'monkey' | 'seal' | 'lizard' | 'raccoon' | 'crab' | 'plesiosaur'
 
 export interface PetDef {
   id: string
@@ -24,6 +24,11 @@ export interface PetDef {
   restImageUrl: string
   /** UI accent color for cards, equip glow, etc. */
   accentColor: string
+  /** EARNED, never rolled. Excluded from the crate roll entirely (its species
+   *  is absent from PET_SPECIES_WEIGHTS, so the first roll can never select
+   *  it) and reported at 0% of finds. The Vigil's baby plesiosaurus is the
+   *  first and only one: the pet you cannot be lucky into. */
+  earnedOnly?: boolean
 }
 
 export const PETS: PetDef[] = [
@@ -65,6 +70,13 @@ export const PETS: PetDef[] = [
   { id: 'crab_orange',     species: 'crab',   name: 'Orange Crab',     weight: 60, restImageUrl: '/crab_orange.png',     accentColor: '#c85a28' },
   { id: 'crab_blue',       species: 'crab',   name: 'Blue Crab',       weight: 30, restImageUrl: '/crab_blue.png',       accentColor: '#5878a8' },
   { id: 'crab_gold',       species: 'crab',   name: 'Gold Crab',       weight: 10, restImageUrl: '/crab_gold.png',       accentColor: '#f0c040' },
+  // ── The Long Vigil's capstone. NOT a crate pet. ──
+  // Earned by taking all six Ancient Deep giants to Vigil rank 5, which is the
+  // hardest thing in fishing. 'plesiosaur' is deliberately absent from
+  // PET_SPECIES_WEIGHTS, so rollPet's species roll can never reach it — the
+  // crate cannot hand this out no matter how many chests you open. Crimson is
+  // the established ancient rarity accent.
+  { id: 'plesiosaur_baby', species: 'plesiosaur', name: 'Baby Plesiosaurus', weight: 1, restImageUrl: '/plesiosaur_baby.png', accentColor: '#e0455a', earnedOnly: true },
 ]
 
 export function getPet(id: string | null | undefined): PetDef | undefined {
@@ -86,6 +98,7 @@ export const PET_SPECIES_LABEL: Record<PetSpecies, string> = {
   lizard:  'Lizards',
   raccoon: 'Raccoons',
   crab:    'Crabs',
+  plesiosaur: 'Ancients',
 }
 
 /** Species in registry order. Derived from PETS, so a new one appears in every
@@ -156,9 +169,20 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 66.3, left: 76.7, width: 25, rotate: 0 },
     cast: { top: 70.2, left: 75.1, width: 25, rotate: 0 },
   },
+  // PLACEHOLDER — seeded off the seal (the other low, long-bodied sitter) so
+  // the overlay renders, then tune on /fishing-test when the art lands.
+  plesiosaur: {
+    rest: { top: 63.2, left: 56.9, width: 41.4, rotate: 0 },
+    wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
+    cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
+  },
 }
 
 /** Convenience for callsites that have a PetDef in hand. */
+// NEEDS TUNING ON /fishing-test once the art lands. Seeded off the seal (the
+// other low, long-bodied sitter) purely so the overlay renders at all —
+// species coords are never interchangeable here, and shipping a borrowed set
+// as if it were tuned is exactly how a pet ends up floating off the hull.
 export function getPetOverlay(species: PetSpecies, frame: 'rest' | 'wait' | 'cast'): { top: number; left: number; width: number; rotate: number } {
   return PET_OVERLAYS[species][frame]
 }
@@ -172,7 +196,12 @@ export function getPetOverlay(species: PetSpecies, frame: 'rest' | 'wait' | 'cas
 // the one players already associate with the game; the other five split the
 // rest evenly. Sums to 100 for readability, though the picker normalizes
 // against the live sum so these can be changed without doing the math.
-const PET_SPECIES_WEIGHTS: Record<PetSpecies, number> = {
+/** Species the crate can actually roll. Excluding 'plesiosaur' here is the
+ *  enforcement, not a convention: rollPet walks these entries, so the Vigil pet
+ *  is unreachable by construction, and adding it back becomes a type error. */
+type RollablePetSpecies = Exclude<PetSpecies, 'plesiosaur'>
+
+const PET_SPECIES_WEIGHTS: Record<RollablePetSpecies, number> = {
   parrot: 40,
   monkey: 12,
   seal: 12,
@@ -196,7 +225,7 @@ export function rollPet(): PetDef {
   }
 
   // Variant roll within the species pool, weighted.
-  const pool = PETS.filter(p => p.species === species)
+  const pool = PETS.filter(p => p.species === species && !p.earnedOnly)
   const totalWeight = pool.reduce((s, p) => s + p.weight, 0)
   let variantRoll = Math.random() * totalWeight
   for (const p of pool) {
@@ -219,9 +248,12 @@ export function rollPet(): PetDef {
  *  (CRATE_PET_CHANCE runs 1 in 200 up to 1 in 10), so there is no single number
  *  to print on a pet. */
 export function petDropShare(pet: PetDef): number {
+  // Earned pets are not in the roll at all. Without this the lookup below is
+  // undefined and the printed odds come out NaN.
+  if (pet.earnedOnly) return 0
   const speciesTotal = Object.values(PET_SPECIES_WEIGHTS).reduce((s, w) => s + w, 0)
   const pool = PETS.filter(p => p.species === pet.species)
   const poolTotal = pool.reduce((s, p) => s + p.weight, 0)
   if (!speciesTotal || !poolTotal) return 0
-  return (PET_SPECIES_WEIGHTS[pet.species] / speciesTotal) * (pet.weight / poolTotal)
+  return ((PET_SPECIES_WEIGHTS[pet.species as RollablePetSpecies] ?? 0) / speciesTotal) * (pet.weight / poolTotal)
 }
