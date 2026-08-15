@@ -55,6 +55,8 @@ export default async function BadgesPage() {
 
   // ── Derive everything from existing data — no new columns ────────────────
   const has = (id: string) => unlocked.includes(id)
+  // badge id -> ISO string earned, or null for the ones that predate stamping.
+  const stampMap = ((profile?.badge_unlocked_at as Record<string, string | null> | null) ?? {})
   const badgeRarity = new Map<string, number>(
     ((rarityRes.data ?? []) as { badge_id: string; pct: number }[]).map(r => [r.badge_id, r.pct]),
   )
@@ -247,6 +249,9 @@ export default async function BadgesPage() {
       difficulty: BADGE_MAP[badgeId]?.difficulty,
       reward: badgeReward(badgeId),
       claimed: claimed.has(badgeId),
+      // `in` rather than a truthiness check: a NULL stamp is meaningful (it
+      // predates tracking), and must not read the same as no stamp at all.
+      earnedAt: earned ? (badgeId in stampMap ? stampMap[badgeId] : null) : undefined,
       detail: badgeDetail(badgeId),
       rarityPct: badgeRarity.get(badgeId),
     }

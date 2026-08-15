@@ -16,7 +16,7 @@ export async function grantBadgeDirect(userId: string, badgeId: string): Promise
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('unlocked_badges')
+    .select('unlocked_badges, badge_unlocked_at')
     .eq('id', userId)
     .single()
   if (!profile) return
@@ -24,6 +24,28 @@ export async function grantBadgeDirect(userId: string, badgeId: string): Promise
   if (current.includes(badgeId)) return
   await admin
     .from('profiles')
-    .update({ unlocked_badges: [...current, badgeId] })
+    .update({
+      unlocked_badges: [...current, badgeId],
+      badge_unlocked_at: stampBadges((profile as { badge_unlocked_at?: unknown }).badge_unlocked_at, [badgeId]),
+    })
     .eq('id', userId)
+}
+
+/** Add "earned now" stamps for newly granted badges, preserving every stamp
+ *  already there -- including the NULLs that mean "before the log was kept".
+ *
+ *  Shared on purpose: badges are written from three places (this,
+ *  reconcileBadges, and the locked-down unlockBadge action), and a stamp some
+ *  paths forget is worse than no stamp at all -- the dates would be silently
+ *  incomplete rather than visibly absent. */
+export function stampBadges(existing: unknown, newlyEarned: string[]): Record<string, string | null> {
+  const map: Record<string, string | null> =
+    existing && typeof existing === 'object' ? { ...(existing as Record<string, string | null>) } : {}
+  const now = new Date().toISOString()
+  for (const id of newlyEarned) {
+    // Never overwrite. The FIRST time you earned it is the answer, and a
+    // re-grant must not quietly re-date a trophy.
+    if (!(id in map)) map[id] = now
+  }
+  return map
 }

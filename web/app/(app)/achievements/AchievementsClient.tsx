@@ -27,6 +27,10 @@ export interface JourneyGoal {
   /** Global rarity — % of active players who've unlocked this badge. Undefined
    *  means no one has earned it yet. */
   rarityPct?: number
+  /** WHEN this was earned. An ISO string dates it; NULL means it predates the
+   *  stamping and is shown as such rather than guessed at; undefined means the
+   *  badge is not earned yet. */
+  earnedAt?: string | null
 }
 
 export interface JourneyGroup {
@@ -432,6 +436,15 @@ export default function AchievementsClient({ groups }: Props) {
 
                   {/* In-depth blurb */}
                   <p className="font-karla" style={{ fontSize: '0.86rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.55, marginTop: 14 }}>{g.detail || g.desc}</p>
+                  {/* WHEN. A null stamp is a badge older than the stamping, and
+                      says so rather than inventing a day for it. */}
+                  {g.done && 'earnedAt' in g && (
+                    <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: g.earnedAt ? 'rgba(196,169,106,0.85)' : 'rgba(150,140,120,0.7)', marginTop: 12 }}>
+                      {g.earnedAt
+                        ? `Earned ${new Date(g.earnedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`
+                        : 'Earned before the log was kept'}
+                    </p>
+                  )}
 
                   {/* Progress / state */}
                   {!g.done && !g.binary && (

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { stampBadges } from '@/lib/badgeGrant'
 import { getBait } from '@/lib/bait'
 import { RODS, isCaptainRod } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
@@ -211,10 +212,10 @@ export async function claimCompletionistRod(): Promise<{ ownedRods: number[] } |
 
   // The Completionist badge — hook-granted at the moment of claim (not derivable
   // from profile columns; rod ownership lives in rod_inventory).
-  const { data: badgeRow } = await admin.from('profiles').select('unlocked_badges').eq('id', user.id).single()
+  const { data: badgeRow } = await admin.from('profiles').select('unlocked_badges, badge_unlocked_at').eq('id', user.id).single()
   const badges = (badgeRow?.unlocked_badges as string[] | null) ?? []
   if (!badges.includes('completionist_rod')) {
-    await admin.from('profiles').update({ unlocked_badges: [...badges, 'completionist_rod'] }).eq('id', user.id)
+    await admin.from('profiles').update({ unlocked_badges: [...badges, 'completionist_rod'], badge_unlocked_at: stampBadges((badgeRow as { badge_unlocked_at?: unknown } | null)?.badge_unlocked_at, ['completionist_rod']) }).eq('id', user.id)
   }
 
   const { data: rows } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id)

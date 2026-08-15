@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { stampBadges } from '@/lib/badgeGrant'
 import { BADGES, BADGE_MAP, BADGE_REWARD, badgeReward, MAX_EQUIPPED_BADGES } from '@/lib/badges'
 import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields, exchangeStatsFrom, type ExchangePositionRow } from '@/lib/badgeConditions'
 
@@ -19,7 +20,7 @@ export async function reconcileBadges(): Promise<string[]> {
 
   const admin = createAdminClient()
   const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }, { data: rodRows }, { count: goldenCount }, { data: exchangeRows }] = await Promise.all([
-    admin.from('profiles').select(`unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('id', user.id).single(),
+    admin.from('profiles').select(`unlocked_badges, badge_unlocked_at, ${BADGE_PROFILE_COLUMNS}`).eq('id', user.id).single(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
     admin.from('user_crew').select('xp, died_at, effects, cards(slug)').eq('user_id', user.id),
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
@@ -49,7 +50,10 @@ export async function reconcileBadges(): Promise<string[]> {
   if (toGrant.length === 0) return [...have]
 
   const next = [...have, ...toGrant]
-  await admin.from('profiles').update({ unlocked_badges: next }).eq('id', user.id)
+  await admin.from('profiles').update({
+    unlocked_badges: next,
+    badge_unlocked_at: stampBadges((profile as { badge_unlocked_at?: unknown }).badge_unlocked_at, toGrant),
+  }).eq('id', user.id)
   return next
 }
 
@@ -145,7 +149,7 @@ export async function unlockBadge(badgeId: string): Promise<{ ok: true } | { err
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('unlocked_badges')
+    .select('unlocked_badges, badge_unlocked_at')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
@@ -155,7 +159,10 @@ export async function unlockBadge(badgeId: string): Promise<{ ok: true } | { err
 
   await admin
     .from('profiles')
-    .update({ unlocked_badges: [...current, badgeId] })
+    .update({
+      unlocked_badges: [...current, badgeId],
+      badge_unlocked_at: stampBadges((profile as { badge_unlocked_at?: unknown }).badge_unlocked_at, [badgeId]),
+    })
     .eq('id', user.id)
 
   return { ok: true }

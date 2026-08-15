@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { stampBadges } from '@/lib/badgeGrant'
 import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { crewCapacity } from '@/lib/crewCapacity'
@@ -441,7 +442,7 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   const tier = bloodRerollTier(bloodTierId)
   if (bloodTierId && !tier) return { error: 'Unknown reroll tier' }
 
-  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges, badge_unlocked_at, legendary_unlocks, crew_next_roll_legendary, crew_next_roll_legendary_slug').eq('id', user.id).single()
   const gems = (prof as any)?.gems ?? 0
   const bloodGems = ((prof as any)?.blood_gems as number | null) ?? 0
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
@@ -464,7 +465,7 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   if (tier) {
     const badges = ((prof as any)?.unlocked_badges as string[] | null) ?? []
     if (!badges.includes('blood_charged')) {
-      await admin.from('profiles').update({ unlocked_badges: [...badges, 'blood_charged'] }).eq('id', user.id)
+      await admin.from('profiles').update({ unlocked_badges: [...badges, 'blood_charged'], badge_unlocked_at: stampBadges((prof as { badge_unlocked_at?: unknown } | null)?.badge_unlocked_at, ['blood_charged']) }).eq('id', user.id)
     }
   }
 
@@ -496,7 +497,7 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('blood_gems, owned_crew_skins, unlocked_badges').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('blood_gems, owned_crew_skins, unlocked_badges, badge_unlocked_at').eq('id', user.id).single()
   if (!prof) return { error: 'Profile not found' }
   const bloodGems = ((prof as any).blood_gems as number | null) ?? 0
   if (bloodGems < BLOOD_SKIN_GAMBLE_COST) return { error: 'Not enough Blood Gems' }
@@ -523,7 +524,7 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
   // out a skin (can't be derived from stored state; mirrors catfish_jackpot).
   const badges = ((prof as any).unlocked_badges as string[] | null) ?? []
   if (!badges.includes('crimson_fortune')) {
-    await admin.from('profiles').update({ unlocked_badges: [...badges, 'crimson_fortune'] }).eq('id', user.id)
+    await admin.from('profiles').update({ unlocked_badges: [...badges, 'crimson_fortune'], badge_unlocked_at: stampBadges((prof as { badge_unlocked_at?: unknown } | null)?.badge_unlocked_at, ['crimson_fortune']) }).eq('id', user.id)
   }
 
   const state = await getCrewState()
