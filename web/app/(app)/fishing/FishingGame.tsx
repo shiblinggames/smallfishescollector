@@ -5785,15 +5785,19 @@ export default function FishingGame({
   // an auto-caster running, CrateOpening pries itself open after a beat so the
   // player watches the spin instead of chasing a button. 700ms is long enough
   // to register the closed crate and its tier first.
-  const autoCrateOpenMs = ((equippedSpecial === 'auto_caster' && ownedAutoCaster)
-    || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)) && autoEnabled
-    ? 700 : undefined
+  // ONE Auto item, two tiers. The Caster/Catcher pair is a single piece of
+  // gear now — the Catcher is a permanent upgrade, not a sibling — so the
+  // runtime derives a tier instead of matching ids: equipping the Auto item
+  // at all gives tier 1 (auto-cast), owning the upgrade lifts it to tier 2
+  // (auto-catch). Legacy equipped_special === 'auto_catcher' rows (written
+  // before the merge) resolve identically.
+  const autoTier = ((equippedSpecial === 'auto_caster' || equippedSpecial === 'auto_catcher') && ownedAutoCaster)
+    ? (ownedAutoCatcher ? 2 : 1) : 0
+  const autoCrateOpenMs = autoTier > 0 && autoEnabled ? 700 : undefined
 
   useEffect(() => {
-    // Both the Auto Caster and its upgrade (Auto Catcher) auto-cast.
-    const autoCastActive = (equippedSpecial === 'auto_caster' && ownedAutoCaster)
-      || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)
-    if (!autoCastActive || !autoEnabled) return
+    // Both tiers auto-cast; tier 2 adds the auto-catch below.
+    if (autoTier === 0 || !autoEnabled) return
     if (phase !== 'result') return
     if (catchResult?.isShiny) return
 
@@ -5815,7 +5819,7 @@ export default function FishingGame({
     const t = setTimeout(() => { handleCastAgain() }, 1400)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCaster, ownedAutoCatcher, autoEnabled, cratePhase, catchResult?.isShiny, crateResult])
+  }, [phase, autoTier, autoEnabled, cratePhase, catchResult?.isShiny, crateResult])
 
   // Auto Catcher: while a common/uncommon fish is on the dial, watch the
   // needle spin and "tap" the instant it's about to land in a green CATCH
@@ -5825,7 +5829,7 @@ export default function FishingGame({
   // gold Perfect sliver, never a miss/snag). Rare+ fish, crates, the Ancient
   // Deep, and active Finn challenges are left for the player's own hand.
   useEffect(() => {
-    if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher || !autoEnabled) return
+    if (autoTier !== 2 || !autoEnabled) return
     if (phase !== 'catching' || !hookedFish) return
     if (hookedFish.fishId === CRATE_FISH_ID) return
     // Commons + uncommons (tiers 1-2) by default; Tireless Catcher extends it to
@@ -5857,7 +5861,7 @@ export default function FishingGame({
     raf = requestAnimationFrame(tick)
     return () => { done = true; cancelAnimationFrame(raf) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCatcher, autoEnabled, hookedFish, selectedZone, finnChallenge, gauntletUpgrades])
+  }, [phase, autoTier, autoEnabled, hookedFish, selectedZone, finnChallenge, gauntletUpgrades])
 
   // Golden catches force a Sell-or-Mount decision via a modal. Both
   // resolve through this helper to clear the catch result back to the
@@ -6893,8 +6897,7 @@ export default function FishingGame({
             {(() => {
               const hasChip =
                 (equippedSpecial === 'tide_turner' && tideTurnerSkipsLeft > 0 && phase === 'catching') ||
-                (equippedSpecial === 'auto_caster' && ownedAutoCaster) ||
-                (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)
+                autoTier > 0
               const rowActive = hasChip || !!activeEvent
               return (
                 <div style={{ marginTop: rowActive ? '0.4rem' : 0, minHeight: rowActive ? 26 : 0, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -6932,8 +6935,8 @@ export default function FishingGame({
                       )}
                       {/* Auto Caster / Catcher — on/off toggle, always available while
                           one is equipped so you can pause it without the gear shop. */}
-                      {((equippedSpecial === 'auto_caster' && ownedAutoCaster) || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)) && (() => {
-                        const isCatcher = equippedSpecial === 'auto_catcher'
+                      {autoTier > 0 && (() => {
+                        const isCatcher = autoTier === 2
                         const col = isCatcher ? '#46e0c0' : '#f0c040'
                         return (
                           <motion.button
@@ -9590,12 +9593,12 @@ export default function FishingGame({
               onBuySpecialItem={async (itemId) => {
                 const res = await buySpecialItem(itemId)
                 if ('ok' in res) {
-                  if (itemId === 'auto_caster' || itemId === 'auto_catcher') {
-                    if (itemId === 'auto_caster') setOwnedAutoCaster(true)
-                    else setOwnedAutoCatcher(true)
-                    const spent = itemId === 'auto_caster' ? 5000 : 25000
+                  // Only the base Auto Caster is doubloon-bought here; its
+                  // upgrade is a Fathoms purchase in the Gauntlet's Locker.
+                  if (itemId === 'auto_caster') {
+                    setOwnedAutoCaster(true)
                     setDoubloons(d => {
-                      const next = d - spent
+                      const next = d - 5000
                       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
                       return next
                     })

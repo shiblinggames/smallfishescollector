@@ -15,6 +15,14 @@ export type SpecialItemDef = {
   costFathoms?: number
   /** Other special item that must be owned before this one can be bought. */
   requiresItem?: SpecialItemId
+  /** This item is a permanent TIER UPGRADE of another item, not a separate
+   *  piece of gear. The pair renders as ONE card everywhere (shop, loadout,
+   *  profiles): the base item's card, wearing this def once owned. The two
+   *  ownership columns stay as-is — the upgrade column is simply the tier
+   *  flag. Born from the Auto Caster/Catcher split, which put two cards in
+   *  one slot where the second strictly superseded the first (a tester was
+   *  found running the lesser one while owning both). */
+  upgradeOf?: SpecialItemId
   /** Minimum Davy Jones' Gauntlet depth required to unlock the purchase. */
   requiresGauntletDepth?: number
   /** THE SUNKEN HAND. Only fits the SECOND special slot, which only opens by
@@ -57,7 +65,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     name: 'Auto Caster',
     color: '#f0c040',
     image: '/autocaster.png',
-    description: 'Snaps a new cast every half-second after each catch, and auto-opens & claims any crates along the way. Stops when your hold is full or you run out of bait.',
+    description: 'Snaps a new cast every half-second after each catch, and auto-opens & claims any crates along the way. Stops when your hold is full or you run out of bait. Can be permanently upgraded into the Auto Catcher in Davy Jones’ Gauntlet.',
     effectLabel: 'Auto cast',
     shopCost: 5000,
   },
@@ -66,11 +74,12 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     name: 'Auto Catcher',
     color: '#46e0c0',
     image: '/autocaster.png',
-    description: 'Auto-casts and reels in common and uncommon fish for you — no tapping. Rarer fish still need your hand. Stops when your hold or bait runs out.',
+    description: 'Your Auto Caster, permanently upgraded: it now reels in common and uncommon fish on its own too. Rarer fish still need your hand. Stops when your hold or bait runs out.',
     effectLabel: 'Auto cast + catch commons & uncommons',
     costFathoms: 30,
     requiresItem: 'auto_caster',
     requiresGauntletDepth: 5,
+    upgradeOf: 'auto_caster',
   },
   {
     id: 'perfected_sigil',
@@ -85,6 +94,19 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
 
 export function getSpecialItem(id: string): SpecialItemDef | undefined {
   return SPECIAL_ITEMS.find(s => s.id === id)
+}
+
+/** The def an equipped special should DISPLAY as, with tier upgrades folded
+ *  in: an upgraded base item wears its upgrade's name/effect, and a legacy
+ *  equip of the upgrade id itself (rows from before the merge) resolves the
+ *  same way. Use this instead of getSpecialItem wherever an EQUIPPED item is
+ *  shown (loadout slot, profile chips). */
+export function effectiveSpecialDef(id: string | null | undefined, ownedIds: SpecialItemId[]): SpecialItemDef | undefined {
+  if (!id) return undefined
+  const def = getSpecialItem(id)
+  if (!def) return undefined
+  const upgraded = SPECIAL_ITEMS.find(s => s.upgradeOf === def.id && ownedIds.includes(s.id))
+  return upgraded ?? def
 }
 
 /** Ownership for each special lives in its own boolean column. Kept here so a

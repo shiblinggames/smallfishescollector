@@ -24,6 +24,12 @@ Shop UIs: `web/app/(app)/marketplace/tackle-shop/` and `marketplace/shipyard/`.
   skipped the event (offline, refund, migration) still gets it. Apply this pattern to any
   new unlock.
 - The unlock celebration rows live in `web/lib/gearUnlocks.ts` / `web/lib/levelRewards.ts`.
+- **The Auto Caster and Auto Catcher are ONE item with a tier upgrade**, not two
+  specials (`upgradeOf` on the def in `lib/specialItems.ts`). Both ownership
+  columns remain (`has_auto_catcher` is the tier flag), the canonical equip id is
+  `auto_caster`, and every surface folds the pair (runtime derives an `autoTier`,
+  display goes through `effectiveSpecialDef`). Never render them as two cards —
+  the split had a tester running the lesser one while owning both.
 
 ## Connects to
 

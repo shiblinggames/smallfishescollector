@@ -22,7 +22,7 @@ import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat } fr
 import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
-import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import { SPECIAL_ITEMS, getSpecialItem, effectiveSpecialDef } from '@/lib/specialItems'
 import { PETS, getPet, getPetOverlay, PET_SPECIES_ORDER, PET_SPECIES_LABEL } from '@/lib/pets'
 import FisherPose from '@/components/FisherPose'
 
@@ -379,7 +379,7 @@ function CosmeticLegend() {
 }
 
 function SpecialItemRow({
-  item, owned, isEquipped, tideTurnerSkipsLeft, lockReason,
+  item, owned, isEquipped, tideTurnerSkipsLeft, lockReason, upgradeNote,
   onEquip, onRequestBuy,
 }: {
   item: import('@/lib/specialItems').SpecialItemDef
@@ -389,6 +389,9 @@ function SpecialItemRow({
   /** When set (and not owned), the item is gated: shows a lock + this reason
    *  instead of a Buy button. */
   lockReason?: string | null
+  /** Owned but upgradeable elsewhere (the Auto Caster's Locker upgrade):
+   *  a quiet pointer line under the card body. */
+  upgradeNote?: string | null
   onEquip: () => void
   onRequestBuy: () => void
 }) {
@@ -479,6 +482,11 @@ function SpecialItemRow({
       {locked && (
         <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#caa05a', marginTop: 4, lineHeight: 1.4 }}>
           {lockReason}
+        </p>
+      )}
+      {upgradeNote && (
+        <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#caa05a', marginTop: 6, paddingTop: 6, borderTop: `1px solid ${item.color}18`, lineHeight: 1.4 }}>
+          {upgradeNote}
         </p>
       )}
       {owned && item.id === 'tide_turner' && (
@@ -1190,7 +1198,7 @@ export default function GearScreen({
         {/* Row 4: the two Special slots either side of Badges. */}
         <div style={{ gridColumn: '1', gridRow: '4' }}>
           {(() => {
-          const equippedDef = SPECIAL_ITEMS.find(s => s.id === equippedSpecial)
+          const equippedDef = effectiveSpecialDef(equippedSpecial, hasAutoCatcher ? ['auto_catcher'] : [])
           return (
             <GearSlot
               label="Special" accent={SLOT_FAMILY.special}
@@ -2553,32 +2561,38 @@ export default function GearScreen({
                         
                         Filtered rather than special-cased so the next finale
                         spoil is excluded automatically. */}
-                    {SPECIAL_ITEMS.filter(item => !item.finaleSlotOnly).map(item => {
-                      const owned = item.id === 'tide_turner' ? hasTideTurner
-                        : item.id === 'phantom_hook' ? hasPhantomHook
-                        : item.id === 'auto_caster' ? hasAutoCaster
-                        : item.id === 'auto_catcher' ? hasAutoCatcher
-                        : item.id === 'perfected_sigil' ? hasPerfectedSigil
+                    {/* The Auto pair is ONE item with a tier upgrade, so the
+                        upgrade never renders as its own row: the base card
+                        wears the upgraded def once the Locker purchase lands
+                        (upgradeOf on the def), and until then a note under the
+                        owned card points at where the upgrade is sold. */}
+                    {SPECIAL_ITEMS.filter(item => !item.finaleSlotOnly && !item.upgradeOf).map(baseItem => {
+                      const item = baseItem.id === 'auto_caster' && hasAutoCatcher
+                        ? (getSpecialItem('auto_catcher') ?? baseItem)
+                        : baseItem
+                      const owned = baseItem.id === 'tide_turner' ? hasTideTurner
+                        : baseItem.id === 'phantom_hook' ? hasPhantomHook
+                        : baseItem.id === 'auto_caster' ? hasAutoCaster
+                        : baseItem.id === 'perfected_sigil' ? hasPerfectedSigil
                         : false
-                      const isEquipped = equippedSpecial === item.id
-                      // The Auto Catcher is no longer bought here — it's a Shore
-                      // unlock in the Davy Jones Gauntlet's Locker (paid in
-                      // Fathoms). This card just shows it + points the way; once
-                      // owned it equips here like any special item.
-                      const lockReason = !owned && item.id === 'auto_catcher'
-                        ? (!hasAutoCaster
-                            ? 'Get the Auto Caster first, then unlock this in the Gauntlet’s Locker'
-                            : 'Unlock in Davy Jones’ Gauntlet — the Locker')
+                      // Equip always writes the BASE id; legacy rows that equipped
+                      // the upgrade id directly still light the same card.
+                      const isEquipped = equippedSpecial === baseItem.id
+                        || (baseItem.id === 'auto_caster' && equippedSpecial === 'auto_catcher')
+                      const lockReason = null
+                      const upgradeNote = baseItem.id === 'auto_caster' && owned && !hasAutoCatcher
+                        ? 'Upgrade available: the Auto Catcher, in Davy Jones’ Gauntlet’s Locker. Depth 5, 30 Fathoms.'
                         : null
                       return (
                         <SpecialItemRow
-                          key={item.id}
+                          key={baseItem.id}
                           item={item}
+                          upgradeNote={upgradeNote}
                           owned={owned}
                           isEquipped={isEquipped}
                           tideTurnerSkipsLeft={tideTurnerSkipsLeft}
                           lockReason={lockReason}
-                          onEquip={() => onEquipSpecial(isEquipped ? null : item.id)}
+                          onEquip={() => onEquipSpecial(isEquipped ? null : baseItem.id)}
                           onRequestBuy={() => {
                             // Price in either currency: doubloons (shopCost) or Fathoms.
                             const cost = item.shopCost ?? item.costFathoms
@@ -2586,7 +2600,7 @@ export default function GearScreen({
                             const fathoms = typeof item.costFathoms === 'number'
                             setPendingPurchase({
                               name: item.name, color: item.color, cost, currency: fathoms ? 'fathoms' : 'doubloons',
-                              onConfirm: async () => { if (!fathoms) flashPurchase(item.name, item.color, cost, 'special'); await onBuySpecialItem(item.id) },
+                              onConfirm: async () => { if (!fathoms) flashPurchase(item.name, item.color, cost, 'special'); await onBuySpecialItem(baseItem.id) },
                             })
                           }}
                         />

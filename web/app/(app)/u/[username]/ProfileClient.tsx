@@ -15,7 +15,7 @@ import { getCharacterSprites } from '@/lib/characters'
 import { getBoat, boatGlowClass } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { getPet, getPetOverlay } from '@/lib/pets'
-import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import { SPECIAL_ITEMS, effectiveSpecialDef, type SpecialItemId } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
@@ -135,7 +135,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
   const ship = getShip(gear.shipTier)
   const shipSkin = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
   const charSprites = getCharacterSprites(characterColor)
-  const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
+  const equippedSpecial = effectiveSpecialDef(equippedSpecialId, ownedSpecialIds as SpecialItemId[]) ?? null
 
   // Page background — the profile owner's saved zone painting (read-only here).
   // Same render as /profile: fixed image + scrim, focal point pans with scroll

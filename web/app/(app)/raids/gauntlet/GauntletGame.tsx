@@ -6764,13 +6764,15 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
             // via buySpecialItem) — Don's Permanent Upgrades doesn't re-list it.
             const ac = variant === 'davy' ? getSpecialItem('auto_catcher') : null
             const autoCatcher: ShopEntry | null = ac ? {
-              id: 'auto_catcher', name: ac.name, description: ac.description,
+              // Framed as an UPGRADE, because it is one: the Caster/Catcher pair
+              // is a single item with a tier, not two competing specials.
+              id: 'auto_catcher', name: `${ac.name} · Upgrade`, description: ac.description,
               depthRequired: ac.requiresGauntletDepth ?? 5, cost: ac.costFathoms ?? 0,
               scope: 'world', owned: state.hasAutoCatcher,
               // Names the EXACT path. This used to say "the fishing shop", which
               // reads as the Tackle Shop, where the Auto Caster is not sold —
               // testers went looking there and came back empty (peterdotcom #18).
-              lockNote: state.hasAutoCaster ? null : 'Buy the Auto Caster first: on the fishing screen, open Gear & Shop, then the Shop tab, under Special Items. 5,000 ⟡.',
+              lockNote: state.hasAutoCaster ? null : 'Upgrades the Auto Caster, so you need that first: on the fishing screen, open Gear & Shop, then the Shop tab, under Special Items. 5,000 ⟡.',
               demo: false, special: true, category: 'fishing',
             } : null
             // Run shop reads as a clean cheap→dear ladder regardless of catalog

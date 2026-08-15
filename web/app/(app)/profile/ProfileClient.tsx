@@ -28,7 +28,7 @@ import { getReel } from '@/lib/reels'
 import { getHook, hookGlowClass } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
-import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import { SPECIAL_ITEMS, effectiveSpecialDef, type SpecialItemId } from '@/lib/specialItems'
 import PopupShell from '@/components/PopupShell'
 
 interface Props {
@@ -490,7 +490,7 @@ export default function ProfileClient({
   const ship = getShip(shipTier)
   const shipSkinDef = equippedShipSkin ? getShipSkin(equippedShipSkin) : null
   const charSprites = getCharacterSprites(characterColor)
-  const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
+  const equippedSpecial = effectiveSpecialDef(equippedSpecialId, ownedSpecialIds as SpecialItemId[]) ?? null
 
   // Showcase honors the player's explicit pick first; if they haven't
   // featured anyone yet, fall back to whoever's actually on the voyage

@@ -360,9 +360,14 @@ export function SpecialTackle({ items, equippedIds = [] }: { items: string[]; eq
   // Two slots can be seated at once (the ordinary special, plus the Sunken
   // Hand's second slot), so this is a set, not one id.
   const seated = new Set(equippedIds.filter(Boolean) as string[])
+  const owned = new Set(items)
   const defs = [...new Set(items)]
     .map(id => SPECIAL_ITEMS.find(s => s.id === id))
     .filter((s): s is SpecialItemDef => !!s)
+    // A tier upgrade and its base are ONE item: once the upgrade is owned the
+    // base card leaves the rail, and equipping the base counts as the upgrade
+    // being seated (equip rows write the base id).
+    .filter(s => !SPECIAL_ITEMS.some(u => u.upgradeOf === s.id && owned.has(u.id)))
     // Ancient first, mirroring the Arsenal's ranking; then the seated one, so
     // what you are actually fishing with is never buried.
     .sort((a, b) =>
@@ -374,7 +379,7 @@ export function SpecialTackle({ items, equippedIds = [] }: { items: string[]; eq
       {defs.map(it => {
         // finaleSlotOnly is the Sunken Hand spoil — the one ancient in the set.
         const ancient = !!it.finaleSlotOnly
-        const equipped = seated.has(it.id)
+        const equipped = seated.has(it.id) || (!!it.upgradeOf && seated.has(it.upgradeOf))
         const c = ancient ? ITEM_RARITY_COLOR.ancient : it.color
         return (
           <div key={it.id} style={{
