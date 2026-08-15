@@ -132,6 +132,13 @@ function describeVoyage(
       statusLabel: `Sailing · ${eta} left`,
       routeName: ROUTE_LABELS[todayVoyage.route] ?? todayVoyage.route,
       progress: Math.min(1, elapsed / duration),
+      // Raw deadline + span so the CLIENT can keep the countdown moving. The
+      // baked label above is only the SSR first paint: this page is a server
+      // component, so anything derived from Date.now() here is frozen at
+      // render time — a player who stayed on the page watched the ETA never
+      // move (peterdotcom #20).
+      returnAt: started + duration,
+      durationMs: duration,
     }
   }
   return { status: 'idle', statusLabel: 'Ready to set sail', routeName: null, progress: null }

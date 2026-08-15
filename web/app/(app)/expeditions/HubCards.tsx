@@ -47,6 +47,11 @@ export type VoyageStatus = 'idle' | 'sailing' | 'returned'
 
 export type VoyageCardData = {
   status: VoyageStatus
+  /** Epoch ms the sailing voyage lands, + its full span — present only while
+   *  sailing. Lets the client tick the countdown; the statusLabel is just the
+   *  SSR first paint. */
+  returnAt?: number | null
+  durationMs?: number | null
   statusLabel: string
   routeName: string | null
   /** 0..1 voyage completion when status is 'sailing', otherwise null. Drives
@@ -142,6 +147,28 @@ export default function HubCards({
   // It is also the whole board's worth of measurement, so it deliberately does
   // not block the hub painting. The tile shows its ordinary self until the
   // answer arrives and then grows the marker.
+  // LIVE VOYAGE COUNTDOWN (peterdotcom #20). The server bakes statusLabel and
+  // progress at render time, and this page can sit open for hours: the ETA
+  // never moved, and a voyage that landed while you watched never flipped to
+  // "Claim reward" until you navigated away and back. While sailing, re-derive
+  // the label/progress from the raw deadline every 30s (the label shows whole
+  // minutes, so finer ticks buy nothing) and flip to returned at zero.
+  const [voyageNow, setVoyageNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (voyages.status !== 'sailing' || !voyages.returnAt) return
+    const id = setInterval(() => setVoyageNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [voyages.status, voyages.returnAt])
+  const liveVoyage = (() => {
+    if (voyages.status !== 'sailing' || !voyages.returnAt || !voyages.durationMs) return voyages
+    const ms = Math.max(0, voyages.returnAt - voyageNow)
+    if (ms === 0) return { ...voyages, status: 'returned' as VoyageStatus, statusLabel: 'Claim reward', progress: null }
+    const totalMin = Math.ceil(ms / 60000)
+    const h = Math.floor(totalMin / 60)
+    const eta = h > 0 ? `${h}h ${totalMin % 60}m` : `${totalMin}m`
+    return { ...voyages, statusLabel: `Sailing · ${eta} left`, progress: Math.min(1, 1 - ms / voyages.durationMs) }
+  })()
+
   const [bountyReady, setBountyReady] = useState(0)
   // Orders still open: not claimed and not yet finished. The tile knew when
   // something was waiting to be COLLECTED but said the same "Open" whether
@@ -252,11 +279,11 @@ export default function HubCards({
         <HubTile
           coachId="voyages"
           bgImage="/exp-voyages.jpg" accent={vAcc.fg} title="Voyages"
-          status={voyages.statusLabel} statusColor={vAcc.fg}
+          status={liveVoyage.statusLabel} statusColor={vAcc.fg}
           sub={voyages.routeName}
-          glow={voyages.status === 'sailing' || voyages.status === 'returned'}
-          dot={voyages.status === 'returned' ? 'returned' : voyages.status === 'sailing' ? 'sailing' : null}
-          progress={voyages.status === 'sailing' ? voyages.progress : null}
+          glow={liveVoyage.status === 'sailing' || liveVoyage.status === 'returned'}
+          dot={liveVoyage.status === 'returned' ? 'returned' : liveVoyage.status === 'sailing' ? 'sailing' : null}
+          progress={liveVoyage.status === 'sailing' ? liveVoyage.progress : null}
           onClick={() => setModal('voyages')}
         />
         {/* BOUNTIES took this slot from PvP, which was parked indefinitely and
