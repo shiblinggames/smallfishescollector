@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { DIFFICULTY_META, BADGE_POINTS, type BadgeDifficulty } from '@/lib/badges'
 import { vibrate } from '@/lib/haptics'
 import { claimBadgeReward, claimAllBadgeRewards } from './badgeActions'
+import BadgeTimeline from './BadgeTimeline'
 
 export interface JourneyGoal {
   id: string
@@ -70,6 +71,9 @@ export default function AchievementsClient({ groups }: Props) {
   const [tierFilter, setTierFilter] = useState<Filter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
+  // The board reads two ways: a CHECKLIST of what is left, or the VOYAGE --
+  // the same badges in the order you earned them.
+  const [view, setView] = useState<'board' | 'timeline'>('board')
   // Category sections start COLLAPSED so the board mounts as a scannable index
   // (each header still shows its N/total progress) instead of rendering all ~170
   // goal rows at once. Players tap a section, or use "Expand all", to open them.
@@ -315,6 +319,33 @@ export default function AchievementsClient({ groups }: Props) {
           options={[{ value: 'all', label: 'All Tiers' }, ...TIER_ORDER.map(t => ({ value: t, label: DIFFICULTY_META[t].label }))]} />
       </div>
 
+      {/* BOARD vs VOYAGE. Above the filters on purpose: it changes what the
+          controls below it are even filtering, so it has to read as the outer
+          choice rather than a fourth peer. */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        {([['board', 'The Board'], ['timeline', 'The Voyage']] as const).map(([val, label]) => {
+          const active = view === val
+          return (
+            <button key={val} type="button" onClick={() => setView(val)}
+              className="font-cinzel font-700 tap"
+              style={{
+                flex: 1, padding: '0.55rem 0.4rem', borderRadius: 11, fontSize: '0.8rem', cursor: 'pointer',
+                background: active ? `${GOLD}22` : 'rgba(255,255,255,0.04)',
+                color: active ? GOLD : '#e8e2d6',
+                border: `1px solid ${active ? `${GOLD}99` : 'rgba(196,169,106,0.34)'}`,
+                boxShadow: active ? `0 0 16px ${GOLD}22` : 'none',
+              }}>
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
+      {view === 'timeline' ? (
+        <BadgeTimeline goals={badgeGoals} onOpen={setDetailGoal} />
+      ) : (
+      <>
+
       {/* Claim status — a segmented toggle so it reads as one control, not a
           third dropdown crowding the row. */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
@@ -392,7 +423,11 @@ export default function AchievementsClient({ groups }: Props) {
         )}
       </div>
 
-      {/* Achievement detail modal — what it means + how to earn it. */}
+      </>
+      )}
+
+      {/* Achievement detail modal — what it means + how to earn it. Shared by
+          both views, so tapping a badge on the rope opens the same sheet. */}
       {mounted && createPortal(
         <AnimatePresence>
           {detailGoal && (() => {
