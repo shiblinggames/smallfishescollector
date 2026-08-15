@@ -229,34 +229,43 @@ export const VIGIL_FRAME: Record<number, {
   trophy?: boolean
 }> = {
   1: {
-    label: 'Rope and driftwood', accent: '#5eead4', glow: 'rgba(94,234,212,0.22)',
-    plate: 'linear-gradient(180deg, rgba(10,26,30,0.55) 0%, rgba(6,12,20,0.85) 100%)',
-    border: '1px solid rgba(94,234,212,0.42)',
+    // Salt-bleached driftwood and lashed rope. Warm and humble on purpose: it
+    // is the rung everyone starts on, and it must not compete with anything.
+    label: 'Rope and driftwood', accent: '#c08a5a', glow: 'rgba(192,138,90,0.20)',
+    plate: 'linear-gradient(180deg, rgba(34,24,14,0.5) 0%, rgba(8,10,16,0.85) 100%)',
+    border: '1px solid rgba(192,138,90,0.45)',
   },
   2: {
+    // Cold forged iron. The first real metal.
     label: 'Iron banding', accent: '#b8c4d0', glow: 'rgba(184,196,208,0.26)',
-    plate: 'linear-gradient(180deg, rgba(28,34,44,0.7) 0%, rgba(8,12,20,0.9) 100%)',
-    border: '2px solid rgba(184,196,208,0.5)',
+    plate: 'linear-gradient(180deg, rgba(30,38,48,0.72) 0%, rgba(8,12,20,0.9) 100%)',
+    border: '2px solid rgba(184,196,208,0.55)',
   },
   3: {
+    // Brass gone green in the salt.
     label: 'Verdigris brass', accent: '#2dd4bf', glow: 'rgba(45,212,191,0.3)',
-    plate: 'radial-gradient(120% 70% at 50% 0%, rgba(45,212,191,0.22) 0%, transparent 58%), linear-gradient(180deg, rgba(12,38,38,0.72) 0%, rgba(6,14,18,0.92) 100%)',
-    border: '2px solid rgba(45,212,191,0.6)',
+    plate: 'radial-gradient(120% 70% at 50% 0%, rgba(45,212,191,0.24) 0%, transparent 58%), linear-gradient(180deg, rgba(10,40,38,0.74) 0%, rgba(5,14,18,0.92) 100%)',
+    border: '2px solid rgba(45,212,191,0.62)',
   },
   4: {
-    label: 'Gilded', accent: '#f0c040', glow: 'rgba(240,192,64,0.32)',
-    plate: 'radial-gradient(120% 70% at 50% 0%, rgba(240,192,64,0.26) 0%, transparent 60%), linear-gradient(180deg, rgba(44,32,10,0.78) 0%, rgba(12,9,4,0.94) 100%)',
-    border: '2px solid rgba(240,192,64,0.7)',
+    // ANCIENT CRIMSON -- the game's own rarity colour for Finn's spoils, and
+    // the one rung that is not a metal. It used to be "Gilded", a warm gold,
+    // which made rank IV and rank V read as the same card twice: the gold has
+    // to arrive ONCE, at the top, or it means nothing. Crimson also earns its
+    // place in the story -- this is the rung where a giant turns dangerous.
+    label: 'Blood-dark', accent: '#e0455a', glow: 'rgba(224,69,90,0.34)',
+    plate: 'radial-gradient(120% 70% at 50% 0%, rgba(224,69,90,0.28) 0%, transparent 60%), linear-gradient(180deg, rgba(48,10,16,0.8) 0%, rgba(14,4,8,0.95) 100%)',
+    border: '2px solid rgba(224,69,90,0.72)',
   },
   5: {
+    // Struck in gold, fish and all. The only gold on the ladder, so it lands
+    // as an arrival rather than one more warm rung.
     label: 'Struck in gold', accent: '#fbcc4a', glow: 'rgba(251,204,74,0.55)',
-    plate: 'radial-gradient(120% 80% at 50% 0%, rgba(251,204,74,0.38) 0%, rgba(240,160,32,0.16) 45%, transparent 70%), linear-gradient(180deg, rgba(74,52,12,0.85) 0%, rgba(28,18,4,0.95) 60%, rgba(12,8,2,0.97) 100%)',
-    border: '2px solid rgba(251,204,74,0.9)',
-    // The game's own golden-catch treatment, so a mastered giant reads as the
-    // same class of prize a golden fish does. Defined in lib/shiny.
+    plate: 'radial-gradient(120% 80% at 50% 0%, rgba(251,204,74,0.40) 0%, rgba(240,160,32,0.18) 45%, transparent 70%), linear-gradient(180deg, rgba(78,54,12,0.86) 0%, rgba(30,19,4,0.95) 60%, rgba(12,8,2,0.97) 100%)',
+    border: '3px solid rgba(251,204,74,0.95)',
     fishFilter:
       'grayscale(1) sepia(1) saturate(7) hue-rotate(-15deg) brightness(1.25) contrast(1.05) '
       + 'drop-shadow(0 0 10px rgba(251,191,36,0.95)) drop-shadow(0 0 22px rgba(251,191,36,0.5))',
     trophy: true,
-  },
+  }
 }
