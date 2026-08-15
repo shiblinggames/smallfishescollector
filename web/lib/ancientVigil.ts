@@ -81,6 +81,35 @@ const VIGIL_SCALE: Record<number, VigilScale> = {
   5: { extraPhases: 2, perfectShrinkStart: -15, perfectShrinkStep: 4.0, speedStepMult: 1.15, blackoutBonus: 0.08 },
 }
 
+// -- THE HUNT ---------------------------------------------------------------
+// Finding a released giant is deliberately NOT the same roll as finding one
+// for the first time.
+//
+// The original hunt (uncaught giants, the one that gates the finale) is
+// untouched at 20% on a Golden Lure, amplified x(1 + bonus*4) -- which the
+// Legendary Rod turns into 84%, near enough a guaranteed summon. That is fine
+// for a one-time story gate you clear six times and never again.
+//
+// It is NOT fine for a repeatable ladder. At 84% the hunt is a formality and
+// the whole cost of a rank sits in the fight. So a released giant runs its own
+// rate: lower to begin with, TIGHTER THE HIGHER THE RANK (the ones you have
+// beaten most are the wariest), and with the rod's influence cut from x4 to
+// x1.5 so gear still clearly helps without erasing the search.
+const VIGIL_HUNT_BASE: Record<number, number> = { 2: 0.15, 3: 0.12, 4: 0.10, 5: 0.08 }
+/** Even a maxed build cannot make the hunt a formality. */
+const VIGIL_HUNT_CAP = 0.45
+/** Luminous finds them less readily than Golden, same ratio as the first hunt. */
+const VIGIL_LUMINOUS_RATIO = 0.75
+
+/** Chance a single lure cast raises this released giant. `rarityBonus` is the
+ *  summed rod + event + Locked-In bonus, exactly as the first hunt reads it. */
+export function vigilHuntChance(attemptingRank: number, rarityBonus: number, lure: 'golden' | 'luminous'): number {
+  const base = VIGIL_HUNT_BASE[attemptingRank]
+  if (!base) return 0
+  const lured = lure === 'luminous' ? base * VIGIL_LUMINOUS_RATIO : base
+  return Math.min(VIGIL_HUNT_CAP, lured * (1 + Math.max(0, rarityBonus) * 1.5))
+}
+
 /** The scaling for an attempt. Null at rank 1 (the fight as shipped). */
 export function vigilScale(attemptingRank: number): VigilScale | null {
   return VIGIL_SCALE[attemptingRank] ?? null

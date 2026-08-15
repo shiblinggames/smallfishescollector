@@ -18,7 +18,7 @@ import { getPet, petSlot, PET_SLOT_COLUMN } from '@/lib/pets'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
-import { vigilFor, isReleased, vigilTotal, vigilComplete, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
+import { vigilFor, isReleased, vigilTotal, vigilComplete, vigilHuntChance, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
@@ -450,16 +450,37 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // filtered out above), so baseTrophyChance is 0 for them and this is lure-only.
   let fish: (typeof pool)[number]
   if (habitat === 'ancient_deep') {
-    const trophyPool  = pool.filter(f => (f.sell_value ?? 0) === 0)   // uncaught trophies (lure casts only)
+    const trophyPool  = pool.filter(f => (f.sell_value ?? 0) === 0)
     const regularPool = pool.filter(f => (f.sell_value ?? 0) > 0)
+    // TWO DIFFERENT HUNTS share this pool. A giant you have never landed is the
+    // original story gate and keeps its shipped rate. One you RELEASED runs the
+    // Vigil's own, much tighter roll (see vigilHuntChance). Post-finale the two
+    // sets never overlap -- you cannot reach Finn without all six -- but they
+    // are split explicitly rather than assumed.
+    const everCaught = new Set<number>((profile.ancient_catches as number[] | null) ?? [])
+    const firstHunt = trophyPool.filter(f => !everCaught.has(f.id))
+    const released  = trophyPool.filter(f => everCaught.has(f.id))
+    const rarityBonus = rod.rarityBonus + eventRarityBonus + locked.rarityBonus
     const baseTrophyChance = baitType === 'golden' ? 0.20 : baitType === 'luminous' ? 0.15 : 0
-    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus + locked.rarityBonus) * 4))
+    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + rarityBonus * 4))
+    // Each released giant rolls on ITS OWN rank, so two out means two chances
+    // (the water is genuinely busier) and the wariest stays hardest to raise.
+    const onLure = baitType === 'luminous' || baitType === 'golden'
+    const vigilHit = onLure
+      ? released.find(f => Math.random() < vigilHuntChance(
+          Math.min(VIGIL_MAX_RANK, (vigilState[String(f.id)]?.rank ?? 1) + 1),
+          rarityBonus,
+          baitType === 'golden' ? 'golden' : 'luminous',
+        ))
+      : undefined
     if (ALWAYS_ANCIENT_TROPHY && trophyPool.length > 0) {
       // Test account: always the lowest-id uncaught giant, so they surface in a
       // predictable order (144→148, then Megalodon once the gate opens).
       fish = [...trophyPool].sort((a, b) => a.id - b.id)[0]
-    } else if (trophyPool.length > 0 && Math.random() < trophyChance) {
-      fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
+    } else if (vigilHit) {
+      fish = vigilHit
+    } else if (firstHunt.length > 0 && Math.random() < trophyChance) {
+      fish = firstHunt[Math.floor(Math.random() * firstHunt.length)]
     } else if (regularPool.length > 0) {
       fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
     } else {
