@@ -1,21 +1,21 @@
 'use client'
 
-// The Giants room. Two kinds of "big" that mean different things:
+// The Giants room — the six Ancient Deep mounts, and nothing else.
 //
-//   THE ANCIENT DEEP MOUNTS — six species worth nothing at market because they
-//   are not stock, they are mounts. Each is caught once and that is the whole
-//   record, so they get full-width slabs rather than grid cells.
+// They are worth nothing at market because they are not stock, they are
+// mounts, so they get full-width slabs rather than grid cells. Post-finale
+// each slab carries its VIGIL RANK and can be released back into the deep.
 //
-//   YOUR TROPHY RECORDS — ordinary species where your personal best landed in
-//   the top size tier. Nothing gates these; they are the long tail of every
-//   time the roll went your way, ranked by how close to the species maximum
-//   you got.
+// Trophy records used to share this room. They were cut: an ordinary species
+// whose PB landed in the top size tier already wears a trophy icon in the
+// collection, so listing them again here said the same thing twice and buried
+// the six under a long tail of everything else.
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZONE_LABEL, ZONE_COLOR, ZONE_BG } from './zoneData'
-import { fishArt, shortDate, isGiant } from '@/lib/almanac'
-import { tierForLength, TIER_COLOR, TIER_LABEL, formatFishLength } from '@/lib/fishSize'
+import { ZONE_BG } from './zoneData'
+import { fishArt, shortDate } from '@/lib/almanac'
+import { formatFishLength } from '@/lib/fishSize'
 import type { AlmanacData, AlmanacEntry } from './almanacActions'
 import {
   VIGIL_MAX_RANK, VIGIL_MAX_TOTAL, VIGIL_FIGHT_TELL, VIGIL_FRAME,
@@ -27,14 +27,6 @@ import { releaseAncient } from './actions'
 const ANCIENT = '#c084fc'
 
 export default function AlmanacGiants({ data, giants }: { data: AlmanacData; giants: AlmanacEntry[] }) {
-  // Every species whose PB hit the top tier, best proportion first. A 40in fish
-  // that maxes at 42 is a better story than a 90in one that maxes at 200.
-  const trophies = useMemo(() => data.entries
-    .filter(e => !isGiant(e.sellValue, e.habitat) && e.pbLength != null && e.lengthMin != null && e.lengthMax != null)
-    .map(e => ({ e, pct: (e.pbLength! - e.lengthMin!) / Math.max(0.01, e.lengthMax! - e.lengthMin!) }))
-    .filter(x => tierForLength(x.e.pbLength!, x.e.lengthMin!, x.e.lengthMax!) === 'trophy')
-    .sort((a, b) => b.pct - a.pct), [data.entries])
-
   const got = giants.filter(g => g.everCaught).length
   const vigil = data.vigil
   const unlocked = data.vigilUnlocked
@@ -233,38 +225,6 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
         />
       )}
 
-      {/* ── Trophy records ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span aria-hidden style={{ width: 3, height: 15, borderRadius: 2, background: TIER_COLOR.trophy, flexShrink: 0 }} />
-        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#e8e3f5', flex: 1 }}>Trophy Records</p>
-        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#a49dc0', fontVariantNumeric: 'tabular-nums' }}>{trophies.length}</span>
-      </div>
-
-      {trophies.length === 0 ? (
-        <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#8a83ad', lineHeight: 1.5, padding: '1rem 0' }}>
-          No trophy-size catches yet. Every fish is rolled against its own length range, and the top of that range is a trophy.
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {trophies.map(({ e, pct }) => (
-            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.35rem 0.1rem', borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={fishArt(e.name)} alt="" aria-hidden loading="lazy" decoding="async"
-                style={{ width: 34, height: 26, objectFit: 'contain', flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e4dff2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: ZONE_COLOR[e.habitat] ?? '#a49dc0' }}>{ZONE_LABEL[e.habitat] ?? e.habitat}</p>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: TIER_COLOR.trophy, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{formatFishLength(e.pbLength!)}</p>
-                <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#ab9f86', marginTop: 2 }}>
-                  {Math.round(pct * 100)}% of max · {TIER_LABEL.trophy}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   )
 }

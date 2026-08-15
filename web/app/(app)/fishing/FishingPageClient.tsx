@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
+import type { VigilState } from '@/lib/ancientVigil'
 import FishingGame from './FishingGame'
 import FishingHub from './FishingHub'
 import type { FishSpecies } from './actions'
@@ -56,7 +57,7 @@ export default function FishingPageClient({
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
   hubSpeciesCaught, hubSpeciesTotal, hubMarketMood, hubMarketNextUpdate, hubOpenContracts, hubExchangeUnveil, hubTicker,
   hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, equippedPetBow, unlockedPets,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, ancientVigil, vigilUnlocked, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, equippedPetBow, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
@@ -120,6 +121,8 @@ export default function FishingPageClient({
   prestigeLevels: Record<string, number>
   goldenBoosts: Record<string, number>
   ancientCatches: number[]
+  ancientVigil: VigilState
+  vigilUnlocked: boolean
   characterColor: string
   unlockedCharacterColors: string[]
   newlyUnlockedSkins: string[]
@@ -412,6 +415,8 @@ export default function FishingPageClient({
       initialPrestigeLevels={prestigeLevels}
       initialGoldenBoosts={goldenBoosts}
       initialAncientCatches={ancientCatches}
+      initialAncientVigil={ancientVigil}
+      vigilUnlocked={vigilUnlocked}
       characterColor={characterColor}
       unlockedCharacterColors={unlockedCharacterColors}
       newlyUnlockedSkins={newlyUnlockedSkins}

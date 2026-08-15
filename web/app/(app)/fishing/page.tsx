@@ -16,6 +16,7 @@ import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { catchXP } from '@/lib/fishingLevel'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { vigilFor } from '@/lib/ancientVigil'
 import { getCachedFishMarket } from '@/lib/fishMarket'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import type { ZoneStat } from './ZoneLanding'
@@ -61,6 +62,7 @@ export default async function FishingPage() {
     { data: ch3Row },
     { data: lifetimeRows },
     { data: marketState },
+    { data: finaleRow },
   ] = await Promise.all([
     getDailyChallenge(),
     getCurrentProfile(),
@@ -100,7 +102,13 @@ export default async function FishingPage() {
     // links to the moment anyone prestiged.
     admin.from('fish_lifetime').select('fish_id, catches').eq('user_id', user.id),
     admin.from('market_state').select('mood, next_update_at').eq('id', 1).maybeSingle(),
+    // THE LONG VIGIL's gate. Self-enforcing: One Last Ride carries
+    // requiresAncients: 6, so clearing it means the wall was full.
+    admin.from('raid_completions')
+      .select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle(),
   ])
+
+  const vigilUnlocked = !!finaleRow
 
   const marketMultipliers: Record<number, number> = {}
   for (const row of (marketRows ?? []) as { fish_id: number; multiplier: number | string }[]) {
@@ -434,6 +442,8 @@ export default async function FishingPage() {
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
           goldenBoosts={(profile?.zone_golden_boost as Record<string, number> | null) ?? {}}
           ancientCatches={(profile?.ancient_catches as number[] | null) ?? []}
+          ancientVigil={vigilFor(profile?.ancient_vigil, (profile?.ancient_catches as number[] | null))}
+          vigilUnlocked={vigilUnlocked}
           characterColor={characterColor}
           unlockedCharacterColors={unlockedCharacterColors}
           newlyUnlockedSkins={newlyUnlockedSkins}

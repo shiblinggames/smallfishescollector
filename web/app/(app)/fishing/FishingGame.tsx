@@ -9,13 +9,14 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence, useDragControls, type MotionStyle } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies, syncFishHold } from './actions'
+import { releaseAncient, castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies, syncFishHold } from './actions'
 import { equipSecondSpecial } from '../expeditions/spoilsActions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import { buyBaitWithFathoms } from '@/app/(app)/raids/gauntlet/actions'
 import FinnEncounter from './FinnEncounter'
 import FinnScene from './FinnScene'
 import TrawlIndicator from './TrawlIndicator'
+import AncientRelease from './AncientRelease'
 import {
   FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT, FINN_REVEAL_BEAT,
   FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
@@ -30,7 +31,7 @@ import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
-import { vigilScale, vigilNumeral } from '@/lib/ancientVigil'
+import { vigilScale, vigilNumeral, VIGIL_MAX_RANK, VIGIL_FRAME, type VigilState } from '@/lib/ancientVigil'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -3191,7 +3192,7 @@ export default function FishingGame({
   hasDeepReel = false,
   hasAnglersPatience = false,
   anglersPatienceXp = 0,
-  initialPrestigeLevels, initialGoldenBoosts, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
+  initialPrestigeLevels, initialGoldenBoosts, initialAncientCatches, initialAncientVigil, vigilUnlocked = false, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
   initialEquippedPet, initialEquippedPetBow, initialUnlockedPets, onPetStateChange,
@@ -3266,6 +3267,10 @@ export default function FishingGame({
   initialPrestigeLevels: Record<string, number>
   initialGoldenBoosts: Record<string, number>
   initialAncientCatches: number[]
+  /** THE LONG VIGIL — per-giant rank + released state, and whether the finale
+   *  has been cleared at all. */
+  initialAncientVigil?: VigilState
+  vigilUnlocked?: boolean
   characterColor: string
   unlockedCharacterColors: string[]
   newlyUnlockedSkins: string[]
@@ -3666,6 +3671,9 @@ export default function FishingGame({
   const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
   const [ancientCatches, setAncientCatches] = useState(() => new Set(initialAncientCatches))
+  const [ancientVigil, setAncientVigil] = useState<VigilState>(() => initialAncientVigil ?? {})
+  // The giant whose release ceremony is open, from the collection drawer.
+  const [releasingAncient, setReleasingAncient] = useState<FishSpeciesBasic | null>(null)
 
   // Lock body scroll while the trophy detail modal is open. Without
   // this, the collection drawer's overflowY:auto underneath catches
@@ -9210,7 +9218,9 @@ export default function FishingGame({
                         textShadow: `0 0 14px ${zoneColor}88`,
                         letterSpacing: '0.28em',
                       }}>
-                        ✦ The Ancients · {trophiesCaught} of {trophies.length} awakened
+                        ✦ The Ancients · {vigilUnlocked
+                          ? `${Object.values(ancientVigil).reduce((n, e) => n + e.rank, 0)} of ${trophies.length * VIGIL_MAX_RANK} vigil`
+                          : `${trophiesCaught} of ${trophies.length} awakened`}
                       </p>
                       {trophies.map(f => {
                         const caught = ancientCatches.has(f.id)
@@ -9272,12 +9282,22 @@ export default function FishingGame({
                               textShadow: `0 0 10px ${zoneColor}cc`,
                               lineHeight: 1,
                             }}>✦</span>
-                            <p className="font-karla font-700 uppercase" style={{
-                              fontSize: '0.5rem',
-                              color: `${zoneColor}b0`,
-                              letterSpacing: '0.36em',
-                              marginBottom: 4,
-                            }}>ANCIENT</p>
+                            {(() => {
+                              // THE LONG VIGIL — the same rank the Giants room
+                              // shows, so the two surfaces never disagree.
+                              const ve = vigilUnlocked ? ancientVigil[String(f.id)] : undefined
+                              const vr = ve?.rank ?? 0
+                              const out = ve?.released === true
+                              const vf = vr ? VIGIL_FRAME[vr] : null
+                              return (
+                                <p className="font-karla font-700 uppercase" style={{
+                                  fontSize: '0.5rem',
+                                  color: out ? 'rgba(148,163,184,0.9)' : vf ? vf.accent : `${zoneColor}b0`,
+                                  letterSpacing: '0.36em',
+                                  marginBottom: 4,
+                                }}>{out ? 'AT LARGE' : vr ? `RANK ${vigilNumeral(vr)}` : 'ANCIENT'}</p>
+                              )
+                            })()}
                             <div style={{ width: '100%', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
                               <FishImg name={f.name} style={{
                                 maxWidth: '78%', maxHeight: 64, objectFit: 'contain',
@@ -9300,6 +9320,42 @@ export default function FishingGame({
                               marginTop: 2,
                               textAlign: 'center',
                             }}>{f.scientific_name}</p>
+                            {(() => {
+                              const ve = vigilUnlocked ? ancientVigil[String(f.id)] : undefined
+                              if (!ve) return null
+                              if (ve.released) {
+                                return (
+                                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: 'rgba(148,163,184,0.85)', marginTop: 7, textAlign: 'center', lineHeight: 1.4 }}>
+                                    Out there now. Bring a lure.
+                                  </p>
+                                )
+                              }
+                              if (ve.rank >= VIGIL_MAX_RANK) {
+                                return (
+                                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#e7d5aa', marginTop: 7, textAlign: 'center' }}>Mastered</p>
+                                )
+                              }
+                              const vf = VIGIL_FRAME[Math.min(VIGIL_MAX_RANK, ve.rank + 1)]
+                              return (
+                                // A DIV, not a button: this slab is itself a
+                                // <button> that opens the fish sheet, and a
+                                // nested button is invalid HTML that React will
+                                // hydrate wrong. stopPropagation keeps the tap
+                                // from also opening the sheet behind it.
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={e => { e.stopPropagation(); setReleasingAncient(f) }}
+                                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); setReleasingAncient(f) } }}
+                                  className="font-karla font-700 uppercase tracking-[0.14em] tap"
+                                  style={{
+                                    marginTop: 9, padding: '0.42rem 0.9rem', borderRadius: 9,
+                                    border: `1px solid ${vf.accent}66`, color: vf.accent,
+                                    fontSize: '0.56rem', cursor: 'pointer',
+                                  }}
+                                >Release for Rank {vigilNumeral(ve.rank + 1)}</div>
+                              )
+                            })()}
                           </motion.button>
                         )
                       })}
@@ -9321,6 +9377,21 @@ export default function FishingGame({
           neighbouring cards around. Mounted at the FishingGame root so
           it floats above the drawer (PopupShell handles z-index +
           safe-area + tap-outside-to-close). */}
+      {/* THE RELEASE, from the in-game log. Same ceremony the Giants room uses;
+          it portals to body so the drawer above it is irrelevant. */}
+      {releasingAncient && (
+        <AncientRelease
+          name={releasingAncient.name}
+          fishId={releasingAncient.id}
+          rank={ancientVigil[String(releasingAncient.id)]?.rank ?? 1}
+          onConfirm={async () => {
+            const res = await releaseAncient(releasingAncient.id)
+            if ('ok' in res) setAncientVigil(res.vigil)
+          }}
+          onClose={() => setReleasingAncient(null)}
+        />
+      )}
+
       <PopupShell open={tappedFishId != null} onClose={() => setTappedFishId(null)}>
         {tappedFishId != null && (() => {
           const f = allFishSpecies.find(x => x.id === tappedFishId)
