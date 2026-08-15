@@ -247,7 +247,11 @@ export interface GauntletDepthUnlock {
   where: string
 }
 export const GAUNTLET_DEPTH_UNLOCKS: GauntletDepthUnlock[] = [
-  { depth: 5,  name: 'Auto Catcher',        blurb: 'Auto-reels common & uncommon fish for you, no dial needed.', where: 'Buy it in the Fishing shop' },
+  // "Buy it in the Fishing shop" was wrong on BOTH counts (peterdotcom #18):
+  // the Auto Catcher is bought HERE in the Locker with Fathoms, and the thing
+  // that lives in the fishing screen's shop is its prerequisite, the Auto
+  // Caster. Same phrasing as the depth-10 row so the ladder reads uniform.
+  { depth: 5,  name: 'Auto Catcher',        blurb: 'Auto-reels common & uncommon fish for you, no dial needed.', where: 'Buy it in the Locker shop. Needs the Auto Caster.' },
   { depth: 10, name: 'Extra Cannonball Rack', blurb: 'Stockpile a 4th cannonball in every raid (volleys still cost 3).', where: 'Buy it in the Locker shop' },
 ]
 

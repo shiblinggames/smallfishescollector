@@ -6767,7 +6767,10 @@ function LockerUpgradesModal({ section, variant, onClose, onClaimed, onToggled }
               id: 'auto_catcher', name: ac.name, description: ac.description,
               depthRequired: ac.requiresGauntletDepth ?? 5, cost: ac.costFathoms ?? 0,
               scope: 'world', owned: state.hasAutoCatcher,
-              lockNote: state.hasAutoCaster ? null : 'Buy the Auto Caster in the fishing shop first.',
+              // Names the EXACT path. This used to say "the fishing shop", which
+              // reads as the Tackle Shop, where the Auto Caster is not sold —
+              // testers went looking there and came back empty (peterdotcom #18).
+              lockNote: state.hasAutoCaster ? null : 'Buy the Auto Caster first: on the fishing screen, open Gear & Shop, then the Shop tab, under Special Items. 5,000 ⟡.',
               demo: false, special: true, category: 'fishing',
             } : null
             // Run shop reads as a clean cheap→dear ladder regardless of catalog
