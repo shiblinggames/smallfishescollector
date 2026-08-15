@@ -77,10 +77,12 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                 position: 'relative', height: 118, borderRadius: 14, overflow: 'hidden',
                 // An empty berth is DASHED and unlit: it must not read as a
                 // mount with different text on it.
-                border: atLarge ? '1px dashed rgba(120,150,180,0.42)' : `1px solid ${edge}`,
+                // The rank's own border -- it thickens and brightens up the
+                // ladder, so the six read as different objects at a glance.
+                border: atLarge ? '1px dashed rgba(120,150,180,0.42)' : frame ? frame.border : `1px solid ${edge}`,
                 cursor: tappable ? 'pointer' : undefined,
                 boxShadow: atLarge ? 'inset 0 -34px 60px -34px rgba(56,110,150,0.4)'
-                  : caught ? (frame ? `0 6px 22px rgba(0,0,0,0.5), 0 0 18px ${frame.glow}` : '0 6px 22px rgba(0,0,0,0.5)') : undefined,
+                  : caught ? (frame ? `0 6px 22px rgba(0,0,0,0.5), 0 0 ${frame.trophy ? 34 : 18}px ${frame.glow}` : '0 6px 22px rgba(0,0,0,0.5)') : undefined,
               }}>
               {/* The Ancient Deep itself behind each mount. Uncaught slabs keep
                   the water but lose the colour, so the room reads as six berths
@@ -90,6 +92,9 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${8 + i * 3}%`,
                   filter: atLarge ? 'saturate(0.5) brightness(0.5)' : caught ? undefined : 'grayscale(0.9) brightness(0.4)' }} />
               <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(6,5,12,0.94) 0%, rgba(6,5,12,0.72) 46%, rgba(6,5,12,0.34) 100%)' }} />
+              {/* THE RANK'S MATERIAL. Layered gradients, never a flat fill, so
+                  the painted water still reads through it. */}
+              {frame && !atLarge && <span aria-hidden style={{ position: 'absolute', inset: 0, background: frame.plate }} />}
               {caught && !atLarge && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 76% 52%, ${ANCIENT}1e, transparent 58%)` }} />}
               {atLarge && <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 76% 92%, rgba(56,110,150,0.22), transparent 62%)' }} />}
 
@@ -102,6 +107,8 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                     // to a shape in the dark, so an empty slot reads as absence
                     // rather than as never-caught.
                     filter: atLarge ? 'brightness(0.16) opacity(0.4) blur(0.6px)'
+                      // Rank V: the giant itself is struck in gold.
+                      : frame?.fishFilter ? frame.fishFilter
                       : caught ? `drop-shadow(0 5px 10px rgba(0,0,0,0.6))${frame ? ` drop-shadow(0 0 12px ${frame.glow})` : ''}`
                       : 'brightness(0) opacity(0.42)' }} />
               </div>
@@ -114,6 +121,7 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                       numbers never stack. */}
                   {!caught ? 'Unraised'
                     : atLarge ? 'Berth empty'
+                    : frame?.trophy ? 'Mastered'
                     : rank ? `Rank ${vigilNumeral(rank)} of ${vigilNumeral(VIGIL_MAX_RANK)}`
                     : `Mount ${i + 1} of ${giants.length}`}
                 </p>

@@ -173,17 +173,61 @@ export function vigilNumeral(rank: number): string {
   return ['', 'I', 'II', 'III', 'IV', 'V'][Math.max(0, Math.min(5, rank))] ?? ''
 }
 
-/** The frame a rank wears in the Giants room and the release ceremony. The
- *  giant's own art is the hero at every rank; this is what changes around it,
- *  so five distinct looks cost no new art.
+/** THE FRAME A RANK WEARS. The giant's own art is the hero at every rank; this
+ *  is everything AROUND it, which is how five genuinely different-looking
+ *  cards cost no new art.
  *
- *  Gold is deliberately TRANSLUCENT (house rule: no solid gold fills), and
- *  rank 5 lands on the established ancient crimson so the top of this ladder
- *  matches the rarity it belongs to. */
-export const VIGIL_FRAME: Record<number, { label: string; accent: string; glow: string }> = {
-  1: { label: 'Rope and driftwood', accent: '#5eead4', glow: 'rgba(94,234,212,0.22)' },
-  2: { label: 'Iron banding',       accent: '#94a3b8', glow: 'rgba(148,163,184,0.24)' },
-  3: { label: 'Verdigris brass',    accent: '#2dd4bf', glow: 'rgba(45,212,191,0.26)' },
-  4: { label: 'Gilded',             accent: '#f0c040', glow: 'rgba(240,192,64,0.24)' },
-  5: { label: 'Older than the fish', accent: '#e0455a', glow: 'rgba(224,69,90,0.30)' },
+ *  The ladder is material, and it climbs: lashed rope, then iron, then brass
+ *  gone green in the salt, then gilding — and at the top the whole thing turns
+ *  to gold, fish included. Rank V is not a fifth colourway, it is the mount
+ *  becoming a trophy, and it reuses the game's existing golden-fish treatment
+ *  (SHINY_FISH_FILTER) so it reads as the same kind of prize a golden catch is.
+ *
+ *  `plate` is a full background, deliberately layered gradients rather than a
+ *  flat fill — the house rule is no solid gold, and a translucent build also
+ *  lets the zone art behind it show through. */
+export const VIGIL_FRAME: Record<number, {
+  label: string
+  accent: string
+  glow: string
+  /** Background layers for the slab at this rank. */
+  plate: string
+  /** Border. Thickens and brightens as the ladder climbs. */
+  border: string
+  /** Applied to the fish art. Rank V turns it to gold. */
+  fishFilter?: string
+  /** Rank V only: the card is a trophy and says so. */
+  trophy?: boolean
+}> = {
+  1: {
+    label: 'Rope and driftwood', accent: '#5eead4', glow: 'rgba(94,234,212,0.22)',
+    plate: 'linear-gradient(180deg, rgba(10,26,30,0.55) 0%, rgba(6,12,20,0.85) 100%)',
+    border: '1px solid rgba(94,234,212,0.42)',
+  },
+  2: {
+    label: 'Iron banding', accent: '#b8c4d0', glow: 'rgba(184,196,208,0.26)',
+    plate: 'linear-gradient(180deg, rgba(28,34,44,0.7) 0%, rgba(8,12,20,0.9) 100%)',
+    border: '2px solid rgba(184,196,208,0.5)',
+  },
+  3: {
+    label: 'Verdigris brass', accent: '#2dd4bf', glow: 'rgba(45,212,191,0.3)',
+    plate: 'radial-gradient(120% 70% at 50% 0%, rgba(45,212,191,0.22) 0%, transparent 58%), linear-gradient(180deg, rgba(12,38,38,0.72) 0%, rgba(6,14,18,0.92) 100%)',
+    border: '2px solid rgba(45,212,191,0.6)',
+  },
+  4: {
+    label: 'Gilded', accent: '#f0c040', glow: 'rgba(240,192,64,0.32)',
+    plate: 'radial-gradient(120% 70% at 50% 0%, rgba(240,192,64,0.26) 0%, transparent 60%), linear-gradient(180deg, rgba(44,32,10,0.78) 0%, rgba(12,9,4,0.94) 100%)',
+    border: '2px solid rgba(240,192,64,0.7)',
+  },
+  5: {
+    label: 'Struck in gold', accent: '#fbcc4a', glow: 'rgba(251,204,74,0.55)',
+    plate: 'radial-gradient(120% 80% at 50% 0%, rgba(251,204,74,0.38) 0%, rgba(240,160,32,0.16) 45%, transparent 70%), linear-gradient(180deg, rgba(74,52,12,0.85) 0%, rgba(28,18,4,0.95) 60%, rgba(12,8,2,0.97) 100%)',
+    border: '2px solid rgba(251,204,74,0.9)',
+    // The game's own golden-catch treatment, so a mastered giant reads as the
+    // same class of prize a golden fish does. Defined in lib/shiny.
+    fishFilter:
+      'grayscale(1) sepia(1) saturate(7) hue-rotate(-15deg) brightness(1.25) contrast(1.05) '
+      + 'drop-shadow(0 0 10px rgba(251,191,36,0.95)) drop-shadow(0 0 22px rgba(251,191,36,0.5))',
+    trophy: true,
+  },
 }

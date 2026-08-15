@@ -116,9 +116,10 @@ export default function AncientRelease({ name, fishId, rank, onConfirm, onClose 
                 until the water takes it and the colour comes back. */}
             <div style={{
               position: 'relative', borderRadius: 16, overflow: 'hidden',
-              border: `1px solid ${frame.accent}66`,
+              border: frame.border,
               boxShadow: `0 0 34px ${frame.glow}, 0 18px 50px rgba(0,0,0,0.7)`,
-              background: 'linear-gradient(180deg, rgba(14,18,32,0.9), rgba(4,6,14,0.95))',
+              // The rank you are giving UP, in its own material.
+              background: frame.plate,
             }}>
               {/* The tide. A plain scaleY on a gradient -- compositor-owned, no
                   per-frame layout, and it reads as water because it rises from

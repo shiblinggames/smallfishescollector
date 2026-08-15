@@ -9267,19 +9267,25 @@ export default function FishingGame({
                             className="text-left w-full"
                             style={{
                               position: 'relative',
+                              // THE RANK'S MATERIAL — same ladder the Giants
+                              // room wears, off the same table, so a giant
+                              // looks identical in both places.
                               background: atLarge
                                 ? `
                                   radial-gradient(120% 70% at 50% 100%, rgba(56,110,150,0.20) 0%, transparent 60%),
                                   linear-gradient(180deg, rgba(6,10,18,0.96) 0%, rgba(4,8,15,0.97) 100%)
                                 `
+                                : vframe ? vframe.plate
                                 : `
                                 radial-gradient(120% 60% at 50% 0%, ${zoneColor}42 0%, transparent 55%),
                                 linear-gradient(180deg, rgba(28,18,10,0.85) 0%, rgba(10,8,16,0.95) 70%, rgba(6,6,14,0.97) 100%)
                               `,
-                              border: atLarge ? '1px dashed rgba(120,150,180,0.4)' : `1px solid ${zoneColor}66`,
+                              border: atLarge ? '1px dashed rgba(120,150,180,0.4)' : vframe ? vframe.border : `1px solid ${zoneColor}66`,
                               boxShadow: atLarge
                                 ? 'inset 0 -30px 50px -30px rgba(56,110,150,0.35), 0 4px 14px rgba(0,0,0,0.5)'
-                                : `inset 0 0 0 1px ${zoneColor}18, inset 0 32px 64px -22px ${zoneColor}30, 0 6px 22px rgba(0,0,0,0.55), 0 0 18px ${zoneColor}22`,
+                                : vframe
+                                  ? `0 6px 22px rgba(0,0,0,0.55), 0 0 ${vframe.trophy ? 34 : 18}px ${vframe.glow}`
+                                  : `inset 0 0 0 1px ${zoneColor}18, inset 0 32px 64px -22px ${zoneColor}30, 0 6px 22px rgba(0,0,0,0.55), 0 0 18px ${zoneColor}22`,
                               borderRadius: 14,
                               padding: '1rem 1rem 0.95rem',
                               marginBottom: '0.5rem',
@@ -9292,10 +9298,10 @@ export default function FishingGame({
                           >
                             <span aria-hidden style={{
                               position: 'absolute', top: 8, right: 10,
-                              fontSize: '0.78rem', color: atLarge ? 'rgba(120,150,180,0.6)' : zoneColor,
-                              textShadow: atLarge ? 'none' : `0 0 10px ${zoneColor}cc`,
+                              fontSize: '0.78rem', color: atLarge ? 'rgba(120,150,180,0.6)' : vframe ? vframe.accent : zoneColor,
+                              textShadow: atLarge ? 'none' : `0 0 10px ${vframe ? vframe.accent : zoneColor}cc`,
                               lineHeight: 1,
-                            }}>{atLarge ? '〜' : '✦'}</span>
+                            }}>{atLarge ? '〜' : vframe?.trophy ? '★' : '✦'}</span>
                             {/* THE LONG VIGIL — the same rank the Giants room
                                 shows, off the same state, so the two surfaces
                                 cannot disagree. */}
@@ -9304,20 +9310,23 @@ export default function FishingGame({
                               color: atLarge ? 'rgba(150,180,205,0.95)' : vframe ? vframe.accent : `${zoneColor}b0`,
                               letterSpacing: '0.36em',
                               marginBottom: 4,
-                            }}>{atLarge ? 'BERTH EMPTY' : vrank ? `RANK ${vigilNumeral(vrank)}` : 'ANCIENT'}</p>
+                            }}>{atLarge ? 'BERTH EMPTY' : vframe?.trophy ? 'MASTERED' : vrank ? `RANK ${vigilNumeral(vrank)}` : 'ANCIENT'}</p>
                             <div style={{ width: '100%', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
                               <FishImg name={f.name} style={{
                                 maxWidth: '78%', maxHeight: 64, objectFit: 'contain',
                                 filter: atLarge
                                   ? 'brightness(0.16) opacity(0.4) blur(0.6px)'
-                                  : `sepia(0.3) saturate(1.1) brightness(1.05) drop-shadow(0 4px 14px ${zoneColor}55)`,
+                                  // Rank V: struck in gold, the same treatment
+                                  // a golden catch gets.
+                                  : vframe?.fishFilter
+                                  ?? `sepia(0.3) saturate(1.1) brightness(1.05) drop-shadow(0 4px 14px ${zoneColor}55)`,
                               }} />
                             </div>
                             <p className="font-cinzel font-700 uppercase" style={{
                               fontSize: '0.95rem',
-                              color: atLarge ? 'rgba(190,205,220,0.72)' : '#fbe9c2',
+                              color: atLarge ? 'rgba(190,205,220,0.72)' : vframe?.trophy ? '#fff5d0' : '#fbe9c2',
                               letterSpacing: '0.16em',
-                              textShadow: atLarge ? '0 1px 0 rgba(0,0,0,0.5)' : `0 0 14px ${zoneColor}aa, 0 1px 0 rgba(0,0,0,0.5)`,
+                              textShadow: atLarge ? '0 1px 0 rgba(0,0,0,0.5)' : `0 0 14px ${vframe ? vframe.accent : zoneColor}aa, 0 1px 0 rgba(0,0,0,0.5)`,
                               lineHeight: 1.1,
                               textAlign: 'center',
                               marginTop: 2,
