@@ -51,12 +51,11 @@ export type VigilState = Record<string, VigilEntry>
 export interface VigilScale {
   /** Added to BossConfig.phases. More stages to hold your nerve through. */
   extraPhases: number
-  /** Added to the phase-1 perfect window's shrink (positive = tighter from the
-   *  first phase). Bosses with their own opening curve keep theirs and take
-   *  this on top. */
+  /** The phase-1 perfect window, as a shrink (NEGATIVE = opens wider than the
+   *  shipped 5 degrees). Applied only to giants with no curve of their own —
+   *  Megalodon ships one and keeps it whole. */
   perfectShrinkStart: number
-  /** Degrees the perfect window closes per phase. Megalodon ships with 6; every
-   *  other giant gets this from the Vigil, so the window closes on all of them. */
+  /** Degrees the window closes per phase, for those same giants. */
   perfectShrinkStep: number
   /** Needle speed multiplier compounded per phase. */
   speedStepMult: number
@@ -66,12 +65,20 @@ export interface VigilScale {
 
 /** Keyed by the rank you are ATTEMPTING, 2 through 5. Rank 1 was the original
  *  catch at the fight's shipped difficulty, so it has no row — the ladder is
- *  four rungs, not five. */
+ *  four rungs, not five.
+ *
+ *  perfectShrinkStart is NEGATIVE on purpose. applyBossMods floors the perfect
+ *  half-width at 2 (a 4-degree window), and the band ships at 5 degrees, so a
+ *  window that only ever narrows has ONE degree of travel and saturates on the
+ *  first phase. Megalodon already solved this: it opens deliberately WIDE
+ *  (-18) and closes hard, which is what gives its fight an arc instead of a
+ *  wall. The Vigil hands every giant that same shape, opening wider the higher
+ *  the rank so the close has further to fall. */
 const VIGIL_SCALE: Record<number, VigilScale> = {
-  2: { extraPhases: 0, perfectShrinkStart: 0, perfectShrinkStep: 1.5, speedStepMult: 1.06, blackoutBonus: 0.00 },
-  3: { extraPhases: 1, perfectShrinkStart: 0, perfectShrinkStep: 2.0, speedStepMult: 1.09, blackoutBonus: 0.03 },
-  4: { extraPhases: 1, perfectShrinkStart: 1, perfectShrinkStep: 2.5, speedStepMult: 1.12, blackoutBonus: 0.05 },
-  5: { extraPhases: 2, perfectShrinkStart: 2, perfectShrinkStep: 3.0, speedStepMult: 1.15, blackoutBonus: 0.08 },
+  2: { extraPhases: 0, perfectShrinkStart: -6,  perfectShrinkStep: 2.5, speedStepMult: 1.06, blackoutBonus: 0.00 },
+  3: { extraPhases: 1, perfectShrinkStart: -9,  perfectShrinkStep: 3.0, speedStepMult: 1.09, blackoutBonus: 0.03 },
+  4: { extraPhases: 1, perfectShrinkStart: -12, perfectShrinkStep: 3.5, speedStepMult: 1.12, blackoutBonus: 0.05 },
+  5: { extraPhases: 2, perfectShrinkStart: -15, perfectShrinkStep: 4.0, speedStepMult: 1.15, blackoutBonus: 0.08 },
 }
 
 /** The scaling for an attempt. Null at rank 1 (the fight as shipped). */

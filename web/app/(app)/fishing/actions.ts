@@ -175,6 +175,11 @@ type CastShot = {
   fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number
   crateTier?: CrateTier; instantBite?: boolean; jackpotMult?: number
   doubleCatch?: boolean; catchQty?: number; lockedStage?: number
+  /** THE LONG VIGIL: the rank this hooked giant is being fought FOR (current
+   *  rank + 1). Absent unless a released ancient is on the line. Drives the
+   *  client's boss-fight scaling, and rides in the shot so a resumed cast
+   *  replays the same difficulty. */
+  vigilRank?: number
 }
 
 function rollCrateTier(habitat: string): CrateTier {
@@ -193,7 +198,7 @@ function rollCrateTier(habitat: string): CrateTier {
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
-  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number; lockedStage?: number }
+  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number; lockedStage?: number; vigilRank?: number }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -318,6 +323,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // without the RNG grind. Scoped to this one id so it can never touch a real
   // player. The Megalodon gate below still applies, so the giants come in order.
   const ALWAYS_ANCIENT_TROPHY = user.id === 'a67c8905-45a9-4a71-9720-f6396187fde6'
+  // Set inside the ancient_deep branch below; read again when the shot is built.
+  let vigilState: ReturnType<typeof vigilFor> = {}
 
   let pool = candidates
   if (habitat === 'ancient_deep') {
@@ -327,6 +334,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     // the finale gate and the ancient_ones badge read it), so "on the wall" is
     // caught AND not released.
     const vigil = vigilFor(profile.ancient_vigil, profile.ancient_catches as number[] | null)
+    vigilState = vigil
     const isLure = baitType === 'luminous' || baitType === 'golden'
     // Megalodon (143) is the final-final boss of fishing: it never surfaces until
     // the other five giants (144-148) are all on the wall. Enforced HERE, server-
@@ -489,7 +497,12 @@ export async function castLine(baitType: string, habitat: string): Promise<
     && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
 
   const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
-  const shot: CastShot = { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, lockedStage: locked.stage }
+  // A RELEASED giant fights for its next rank. vigilFor seeds rank 1 from
+  // ancient_catches, so `+ 1` is the rank being attempted.
+  const vigilAttempt = habitat === 'ancient_deep' && isReleased(vigilState, fish.id)
+    ? Math.min(VIGIL_MAX_RANK, (vigilState[String(fish.id)]?.rank ?? 1) + 1)
+    : undefined
+  const shot: CastShot = { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, instantBite, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, lockedStage: locked.stage, vigilRank: vigilAttempt }
   const token: PendingCast = { fishId: fish.id, habitat, baitType, jackpotMult: rolledJackpotMult, doubleCatch: rolledDoubleCatch, catchQty: lockedQty, castAt: Date.now(), shot }
   await admin.from('profiles').update({ pending_cast: token }).eq('id', user.id)
 

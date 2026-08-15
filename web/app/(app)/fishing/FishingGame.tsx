@@ -30,6 +30,7 @@ import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
+import { vigilScale, vigilNumeral } from '@/lib/ancientVigil'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -328,6 +329,39 @@ const BOSS_CONFIG: Record<string, BossConfig> = {
   'Black Dragonfish':   { mechanic: 'shrink',     phases: 2, wildcard: true },
 }
 const WILDCARD_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split', 'precision', 'gyre']
+
+/** THE LONG VIGIL — a released giant fights for its next rank, and the rank
+ *  STEEPENS ITS OWN FIGHT rather than replacing it. The mechanic is that
+ *  giant's identity and never changes; what changes is how many phases you
+ *  must hold, how hard the landing window closes, and how fast the needle
+ *  gets. Rank 1 (no scale) is the fight exactly as shipped.
+ *
+ *  Megalodon already proved this shape with its own perfectShrinkStep, so the
+ *  Vigil hands that curve to every giant and steepens whatever is there. */
+function vigilBossConfig(base: BossConfig, mechanic: BossMechanic, rank: number | undefined): BossConfig {
+  const sc = rank ? vigilScale(rank) : null
+  if (!sc) return base
+  // TWO carve-outs on the perfect curve:
+  //  - 'shrink' BREATHES in real time off bossStage and deliberately holds
+  //    bossZoneShrink at 0, so writing a curve here would fight its mechanic.
+  //  - a giant that ships its OWN curve (Megalodon) keeps it whole. Layering
+  //    the Vigil's opening on top of its -18 would throw the window absurdly
+  //    wide, and its 4-phase close is already the shape this borrows.
+  // Both still escalate through phases and needle speed.
+  const ownCurve = base.perfectShrinkStep != null
+  const stepsShrink = mechanic !== 'shrink' && !ownCurve
+  // accelerate/surge ramp 1.4x a phase in the stage handler's own branch. Once
+  // a perfectShrinkStep exists that branch is skipped, so fold the 1.4 in here
+  // or the Vigil would make those two SLOWER than they ship.
+  const ramps = mechanic === 'accelerate' || mechanic === 'surge'
+  return {
+    ...base,
+    phases: base.phases + sc.extraPhases,
+    perfectShrinkStart: stepsShrink ? sc.perfectShrinkStart : base.perfectShrinkStart,
+    perfectShrinkStep: stepsShrink ? sc.perfectShrinkStep : base.perfectShrinkStep,
+    speedStepMult: (base.speedStepMult ?? (ramps ? 1.4 : 1)) * sc.speedStepMult,
+  }
+}
 
 const RARITY: Record<number, { label: string; color: string; hookedText: string }> = {
   1: { label: 'Common',    color: '#94a3b8', hookedText: "Something's on the line…" },
@@ -3769,6 +3803,11 @@ export default function FishingGame({
     return () => clearTimeout(t)
   }, [lowBaitMsg])
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: CrateTier; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number } | null>(null)
+  // THE LONG VIGIL: the rank this hooked giant is being fought for, straight
+  // from the server's cast token. A ref because the boss-stage handlers read it
+  // outside React's render cycle.
+  const vigilRankRef = useRef<number | undefined>(undefined)
+  const [vigilRank, setVigilRank] = useState<number | undefined>(undefined)
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
   const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
@@ -4784,6 +4823,8 @@ export default function FishingGame({
 
       await new Promise(r => setTimeout(r, res.waitMs))
 
+      vigilRankRef.current = res.vigilRank
+      setVigilRank(res.vigilRank)
       setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier, jackpotMult: res.jackpotMult, doubleCatch: res.doubleCatch, catchQty: res.catchQty })
 
       // Lightsaber Lightspeed cue — the blade flashed the fish onto the line.
@@ -4811,10 +4852,11 @@ export default function FishingGame({
       // the mechanic per stage.
       if (selectedZone === 'ancient_deep') {
         const bossName = allFishSpecies.find(f => f.id === res.fishId)?.name ?? ''
-        const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
-        const mechanic = cfg.wildcard
+        const baseCfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
+        const mechanic = baseCfg.wildcard
           ? WILDCARD_MECHANICS[Math.floor(Math.random() * WILDCARD_MECHANICS.length)]
-          : cfg.mechanic
+          : baseCfg.mechanic
+        const cfg = vigilBossConfig(baseCfg, mechanic, res.vigilRank)
         activeBossMechanicRef.current = mechanic
         setActiveBossMechanic(mechanic)
         bossStageRef.current = 1
@@ -5256,7 +5298,11 @@ export default function FishingGame({
       } else {
         const stage = bossStageRef.current
         const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
-        const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
+        const cfg = vigilBossConfig(
+          BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 },
+          activeBossMechanicRef.current ?? 'shrink',
+          vigilRankRef.current,
+        )
         if (stage < cfg.phases) {
           // Mid-stage perfect feedback: the SFX + haptic + needle glow
           // already fired in the tap's JS tick (pre-hop, see the lock-in
@@ -7150,7 +7196,9 @@ export default function FishingGame({
                         {(() => {
                           if (retryFlash) return 'Second Wind!'
                           const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
-                          const maxStages = BOSS_CONFIG[name]?.phases ?? 2
+                          // Ranked fights add phases, so the shipped count would lie.
+                          const base = BOSS_CONFIG[name] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
+                          const maxStages = vigilBossConfig(base, base.mechanic, vigilRankRef.current).phases
                           return `Stage ${bossStage - 1}/${maxStages}`
                         })()}
                       </p>
@@ -7161,10 +7209,19 @@ export default function FishingGame({
                         3 dots + 'X/3'. */}
                     {selectedZone === 'ancient_deep' && phase === 'catching' && bossStage > 0 && (() => {
                       const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
-                      const maxStages = BOSS_CONFIG[name]?.phases ?? 2
+                      const base = BOSS_CONFIG[name] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
+                      const maxStages = vigilBossConfig(base, base.mechanic, vigilRank).phases
                       const stages = Array.from({ length: maxStages }, (_, i) => i + 1)
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 4 }}>
+                          {/* THE LONG VIGIL: what this fight is FOR. Only on a
+                              released giant, so an ordinary ancient catch reads
+                              exactly as it always has. */}
+                          {vigilRank && (
+                            <p className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#e0455a' }}>
+                              Rank {vigilNumeral(vigilRank)}
+                            </p>
+                          )}
                           <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#c084fc99' }}>Stage</p>
                           {stages.map(s => (
                             <div key={s} style={{
