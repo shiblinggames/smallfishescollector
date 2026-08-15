@@ -2122,24 +2122,33 @@ export default function GauntletGame(props: GauntletGameProps) {
             </>
           ) : (
             <>
-              {/* Crash resume. In hardcore, "Let it go" DROWNS the crew (it ends the
-                  run = a death), so require a second, explicit tap to confirm. */}
+              {/* Crash resume's abandon. TWO taps for EVERY run, not just
+                  hardcore, and named literally ("End the run", never "Let it
+                  go"): the paused screen's safe secondary is "Leave it held",
+                  and a tester who came back after an hour away read "Let it
+                  go" as that same held-run option and aborted a live run on
+                  one tap (peterdotcom #19). Quiet buttons with opposite
+                  semantics must not share a register. */}
               <button
-                onClick={hardcoreRun && !letGoArmed ? () => setLetGoArmed(true) : abandonResume}
+                onClick={!letGoArmed ? () => setLetGoArmed(true) : abandonResume}
                 disabled={resuming}
                 className="font-karla font-700 tap"
                 style={{ marginTop: 12, width: '100%', padding: '0.7rem', borderRadius: 12, fontSize: '0.78rem',
-                  color: hardcoreRun ? '#f0a6a6' : '#9a948a', background: 'transparent',
-                  border: `1px solid ${hardcoreRun && letGoArmed ? 'rgba(224,85,90,0.6)' : 'rgba(154,148,138,0.28)'}`,
+                  color: hardcoreRun ? '#f0a6a6' : letGoArmed ? '#e0b8a0' : '#9a948a', background: 'transparent',
+                  border: `1px solid ${letGoArmed ? 'rgba(224,85,90,0.6)' : 'rgba(154,148,138,0.28)'}`,
                   cursor: resuming ? 'wait' : 'pointer' }}>
-                {hardcoreRun ? (letGoArmed ? 'Yes — end it and lose the crew' : 'Let it go') : 'Let it go'}
+                {letGoArmed
+                  ? (hardcoreRun ? 'Yes, end it and lose the crew' : 'Yes, end the run for good')
+                  : 'End the run'}
               </button>
               <p className="font-karla" style={{ fontSize: '0.62rem', color: hardcoreRun ? '#c88a8a' : '#7d776e', lineHeight: 1.5, marginTop: 12 }}>
                 {hardcoreRun
                   ? (letGoArmed
                       ? 'This ends the run and drowns your whole squad, for good. Tap once more to confirm, or resume above.'
-                      : 'A crashed run can be resumed once. Letting it go ends the run AND drowns your hardcore crew — permanently.')
-                  : 'A crashed run can be resumed once. Letting it go banks the Fathoms you earned and ends the run.'}
+                      : 'A crashed run can be resumed once. Ending it is not a pause: it ends the run AND drowns your hardcore crew, permanently.')
+                  : (letGoArmed
+                      ? 'This ends the run for good and banks your Fathoms. Tap once more to confirm, or resume above.'
+                      : 'A crashed run can be resumed once. Ending it is not a pause: the run is over for good, and the Fathoms you earned are banked.')}
               </p>
             </>
           )}
