@@ -157,11 +157,26 @@ export const BLOOD_SKIN_GAMBLE_COST = 250
  *  candidate %s. */
 export interface BloodRerollTier { id: string; name: string; bloodCost: number; weights: [number, number, number, number] }
 export const BLOOD_REROLL_TIERS: BloodRerollTier[] = [
-  // Per-candidate C/R/E/L (sum 100). Tuned so the PER-REROLL (3 candidates)
-  // odds land on the round targets: Bloodied ≈ 33% Epic / 1-in-30 Legendary,
-  // Sanguine ≈ 50% Epic / 1-in-15 Legendary. (Base gem reroll ≈ 10% / 1-in-52.)
-  { id: 'bloodied', name: 'Bloodied', bloodCost: 15, weights: [52.38, 34, 12.5,  1.12] },
-  { id: 'sanguine', name: 'Sanguine', bloodCost: 40, weights: [43.10, 34, 20.63, 2.27] },
+  // Per-candidate C/R/E/L (sum 100). Read as PER-REROLL (3 candidates):
+  //   Bloodied  15 BG   1-in-30 Legendary   36% Epic+
+  //   Sanguine  40 BG   1-in-10 Legendary   65% Epic+
+  //   (base gem reroll, no blood: ~10% Epic+ / 1-in-52 Legendary)
+  //
+  // EACH TIER HAS TO WIN SOMETHING, or the cheaper one simply wins. Sanguine
+  // used to sit at 1-in-15, which made it strictly DOMINATED: two Bloodied
+  // rolls cost 30 blood against its 40 and delivered the same legendary odds
+  // (6.53% vs 6.66%) plus MORE epics. There was no reason to ever buy it.
+  //
+  // The two are now split by what you are hunting, measured per BLOOD GEM:
+  //   Bloodied is the volume roll -- 2.37 epic% per blood vs Sanguine's 1.63
+  //   Sanguine is the chase       -- 0.239 legendary% per blood vs 0.222, and
+  //                                  it beats the two-Bloodied benchmark
+  //                                  (0.218) that used to dominate it
+  // Sanguine also lands a legendary in a THIRD of the rerolls, so it saves
+  // gems heavily on that hunt, while Bloodied stays the right call for
+  // stocking epics. Neither is a trap, and the answer changes with the need.
+  { id: 'bloodied', name: 'Bloodied', bloodCost: 15, weights: [52.38, 34, 12.5, 1.12] },
+  { id: 'sanguine', name: 'Sanguine', bloodCost: 40, weights: [36.4,  34, 26.3, 3.3 ] },
 ]
 export function bloodRerollTier(id: string | null | undefined): BloodRerollTier | undefined {
   return id ? BLOOD_REROLL_TIERS.find(t => t.id === id) : undefined
