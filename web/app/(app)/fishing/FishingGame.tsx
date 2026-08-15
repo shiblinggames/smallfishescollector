@@ -9224,6 +9224,13 @@ export default function FishingGame({
                       </p>
                       {trophies.map(f => {
                         const caught = ancientCatches.has(f.id)
+                        const ve = vigilUnlocked ? ancientVigil[String(f.id)] : undefined
+                        // AT LARGE is its own state, and must not look like a
+                        // mount: the berth is yours but empty, the water still
+                        // moving where it went under.
+                        const atLarge = ve?.released === true
+                        const vrank = ve?.rank ?? 0
+                        const vframe = vrank ? VIGIL_FRAME[vrank] : null
                         const monoVariants = {
                           hidden:  { opacity: 0, y: 6, scale: 0.98 },
                           visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.2, 0.7, 0.3, 1] as [number, number, number, number] } },
@@ -9260,12 +9267,19 @@ export default function FishingGame({
                             className="text-left w-full"
                             style={{
                               position: 'relative',
-                              background: `
+                              background: atLarge
+                                ? `
+                                  radial-gradient(120% 70% at 50% 100%, rgba(56,110,150,0.20) 0%, transparent 60%),
+                                  linear-gradient(180deg, rgba(6,10,18,0.96) 0%, rgba(4,8,15,0.97) 100%)
+                                `
+                                : `
                                 radial-gradient(120% 60% at 50% 0%, ${zoneColor}42 0%, transparent 55%),
                                 linear-gradient(180deg, rgba(28,18,10,0.85) 0%, rgba(10,8,16,0.95) 70%, rgba(6,6,14,0.97) 100%)
                               `,
-                              border: `1px solid ${zoneColor}66`,
-                              boxShadow: `inset 0 0 0 1px ${zoneColor}18, inset 0 32px 64px -22px ${zoneColor}30, 0 6px 22px rgba(0,0,0,0.55), 0 0 18px ${zoneColor}22`,
+                              border: atLarge ? '1px dashed rgba(120,150,180,0.4)' : `1px solid ${zoneColor}66`,
+                              boxShadow: atLarge
+                                ? 'inset 0 -30px 50px -30px rgba(56,110,150,0.35), 0 4px 14px rgba(0,0,0,0.5)'
+                                : `inset 0 0 0 1px ${zoneColor}18, inset 0 32px 64px -22px ${zoneColor}30, 0 6px 22px rgba(0,0,0,0.55), 0 0 18px ${zoneColor}22`,
                               borderRadius: 14,
                               padding: '1rem 1rem 0.95rem',
                               marginBottom: '0.5rem',
@@ -9278,37 +9292,32 @@ export default function FishingGame({
                           >
                             <span aria-hidden style={{
                               position: 'absolute', top: 8, right: 10,
-                              fontSize: '0.78rem', color: zoneColor,
-                              textShadow: `0 0 10px ${zoneColor}cc`,
+                              fontSize: '0.78rem', color: atLarge ? 'rgba(120,150,180,0.6)' : zoneColor,
+                              textShadow: atLarge ? 'none' : `0 0 10px ${zoneColor}cc`,
                               lineHeight: 1,
-                            }}>✦</span>
-                            {(() => {
-                              // THE LONG VIGIL — the same rank the Giants room
-                              // shows, so the two surfaces never disagree.
-                              const ve = vigilUnlocked ? ancientVigil[String(f.id)] : undefined
-                              const vr = ve?.rank ?? 0
-                              const out = ve?.released === true
-                              const vf = vr ? VIGIL_FRAME[vr] : null
-                              return (
-                                <p className="font-karla font-700 uppercase" style={{
-                                  fontSize: '0.5rem',
-                                  color: out ? 'rgba(148,163,184,0.9)' : vf ? vf.accent : `${zoneColor}b0`,
-                                  letterSpacing: '0.36em',
-                                  marginBottom: 4,
-                                }}>{out ? 'AT LARGE' : vr ? `RANK ${vigilNumeral(vr)}` : 'ANCIENT'}</p>
-                              )
-                            })()}
+                            }}>{atLarge ? '〜' : '✦'}</span>
+                            {/* THE LONG VIGIL — the same rank the Giants room
+                                shows, off the same state, so the two surfaces
+                                cannot disagree. */}
+                            <p className="font-karla font-700 uppercase" style={{
+                              fontSize: '0.5rem',
+                              color: atLarge ? 'rgba(150,180,205,0.95)' : vframe ? vframe.accent : `${zoneColor}b0`,
+                              letterSpacing: '0.36em',
+                              marginBottom: 4,
+                            }}>{atLarge ? 'BERTH EMPTY' : vrank ? `RANK ${vigilNumeral(vrank)}` : 'ANCIENT'}</p>
                             <div style={{ width: '100%', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
                               <FishImg name={f.name} style={{
                                 maxWidth: '78%', maxHeight: 64, objectFit: 'contain',
-                                filter: `sepia(0.3) saturate(1.1) brightness(1.05) drop-shadow(0 4px 14px ${zoneColor}55)`,
+                                filter: atLarge
+                                  ? 'brightness(0.16) opacity(0.4) blur(0.6px)'
+                                  : `sepia(0.3) saturate(1.1) brightness(1.05) drop-shadow(0 4px 14px ${zoneColor}55)`,
                               }} />
                             </div>
                             <p className="font-cinzel font-700 uppercase" style={{
                               fontSize: '0.95rem',
-                              color: '#fbe9c2',
+                              color: atLarge ? 'rgba(190,205,220,0.72)' : '#fbe9c2',
                               letterSpacing: '0.16em',
-                              textShadow: `0 0 14px ${zoneColor}aa, 0 1px 0 rgba(0,0,0,0.5)`,
+                              textShadow: atLarge ? '0 1px 0 rgba(0,0,0,0.5)' : `0 0 14px ${zoneColor}aa, 0 1px 0 rgba(0,0,0,0.5)`,
                               lineHeight: 1.1,
                               textAlign: 'center',
                               marginTop: 2,
@@ -9321,12 +9330,11 @@ export default function FishingGame({
                               textAlign: 'center',
                             }}>{f.scientific_name}</p>
                             {(() => {
-                              const ve = vigilUnlocked ? ancientVigil[String(f.id)] : undefined
                               if (!ve) return null
                               if (ve.released) {
                                 return (
-                                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: 'rgba(148,163,184,0.85)', marginTop: 7, textAlign: 'center', lineHeight: 1.4 }}>
-                                    Out there now. Bring a lure.
+                                  <p className="font-karla font-600 italic" style={{ fontSize: '0.6rem', color: 'rgba(150,180,205,0.8)', marginTop: 8, textAlign: 'center', lineHeight: 1.45 }}>
+                                    Somewhere in the Ancient Deep.<br />It rises for a lure, and nothing else.
                                   </p>
                                 )
                               }

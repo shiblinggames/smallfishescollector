@@ -75,18 +75,23 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
               onClick={tappable ? () => setOpenId(v => (v === g.id ? null : g.id)) : undefined}
               style={{
                 position: 'relative', height: 118, borderRadius: 14, overflow: 'hidden',
-                border: `1px solid ${edge}`,
+                // An empty berth is DASHED and unlit: it must not read as a
+                // mount with different text on it.
+                border: atLarge ? '1px dashed rgba(120,150,180,0.42)' : `1px solid ${edge}`,
                 cursor: tappable ? 'pointer' : undefined,
-                boxShadow: caught ? (frame ? `0 6px 22px rgba(0,0,0,0.5), 0 0 18px ${frame.glow}` : '0 6px 22px rgba(0,0,0,0.5)') : undefined,
+                boxShadow: atLarge ? 'inset 0 -34px 60px -34px rgba(56,110,150,0.4)'
+                  : caught ? (frame ? `0 6px 22px rgba(0,0,0,0.5), 0 0 18px ${frame.glow}` : '0 6px 22px rgba(0,0,0,0.5)') : undefined,
               }}>
               {/* The Ancient Deep itself behind each mount. Uncaught slabs keep
                   the water but lose the colour, so the room reads as six berths
                   in one place rather than six unrelated cards. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={ZONE_BG.ancient_deep} alt="" aria-hidden loading="lazy" decoding="async"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${8 + i * 3}%`, filter: caught ? undefined : 'grayscale(0.9) brightness(0.4)' }} />
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${8 + i * 3}%`,
+                  filter: atLarge ? 'saturate(0.5) brightness(0.5)' : caught ? undefined : 'grayscale(0.9) brightness(0.4)' }} />
               <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(6,5,12,0.94) 0%, rgba(6,5,12,0.72) 46%, rgba(6,5,12,0.34) 100%)' }} />
-              {caught && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 76% 52%, ${ANCIENT}1e, transparent 58%)` }} />}
+              {caught && !atLarge && <span aria-hidden style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 76% 52%, ${ANCIENT}1e, transparent 58%)` }} />}
+              {atLarge && <span aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 76% 92%, rgba(56,110,150,0.22), transparent 62%)' }} />}
 
               {/* The beast, given the right half of the slab. */}
               <div style={{ position: 'absolute', right: 4, top: 0, bottom: 0, width: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -96,7 +101,7 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                     // At large: the berth keeps its water but the mount is gone
                     // to a shape in the dark, so an empty slot reads as absence
                     // rather than as never-caught.
-                    filter: atLarge ? 'brightness(0.22) opacity(0.5)'
+                    filter: atLarge ? 'brightness(0.16) opacity(0.4) blur(0.6px)'
                       : caught ? `drop-shadow(0 5px 10px rgba(0,0,0,0.6))${frame ? ` drop-shadow(0 0 12px ${frame.glow})` : ''}`
                       : 'brightness(0) opacity(0.42)' }} />
               </div>
@@ -108,11 +113,11 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                       slot carries the rank instead, and two ordinal-looking
                       numbers never stack. */}
                   {!caught ? 'Unraised'
-                    : atLarge ? 'At large'
+                    : atLarge ? 'Berth empty'
                     : rank ? `Rank ${vigilNumeral(rank)} of ${vigilNumeral(VIGIL_MAX_RANK)}`
                     : `Mount ${i + 1} of ${giants.length}`}
                 </p>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.08rem', lineHeight: 1.08, color: caught ? '#f2ecff' : '#8a83ad', textShadow: caught ? `0 2px 8px rgba(0,0,0,0.9), 0 0 14px ${ANCIENT}44` : undefined }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.08rem', lineHeight: 1.08, color: atLarge ? 'rgba(190,205,220,0.72)' : caught ? '#f2ecff' : '#8a83ad', textShadow: atLarge ? '0 2px 8px rgba(0,0,0,0.9)' : caught ? `0 2px 8px rgba(0,0,0,0.9), 0 0 14px ${ANCIENT}44` : undefined }}>
                   {caught ? g.name : '???'}
                 </p>
                 {caught ? (
@@ -122,7 +127,7 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
                         count, so a fixed separator printed a leading dot on
                         exactly the six that matter most in this room. */}
                     {atLarge
-                      ? 'Back in the water. Bring a lure to the Ancient Deep.'
+                      ? 'Somewhere in the Ancient Deep. It rises for a lure, and nothing else.'
                       : ([
                           shortDate(g.firstCaughtAt),
                           g.pbLength != null ? formatFishLength(g.pbLength) : '',
