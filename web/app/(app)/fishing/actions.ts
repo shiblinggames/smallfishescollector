@@ -14,6 +14,7 @@ import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
+import { getPet, petSlot, PET_SLOT_COLUMN } from '@/lib/pets'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
@@ -2062,21 +2063,37 @@ export async function equipHat(hatId: string | null): Promise<{ ok: true } | { e
   return { ok: true }
 }
 
-/** Equip / unequip a pet. Pets are crate-only today (no shop), so the
- *  ownership check rejects any id not in unlocked_pets. Pass null to
- *  unequip. */
-export async function equipPet(petId: string | null): Promise<{ ok: true } | { error: string }> {
+/** Equip / unequip a pet. Ownership is checked against unlocked_pets, so a
+ *  crafted id cannot seat a pet you never found.
+ *
+ *  TWO SLOTS, routed by the PET, not by the caller. Stern pets (everything
+ *  that faces the back of the boat) go in equipped_pet; front-facing pets go
+ *  in equipped_pet_bow. The client never names a slot — it passes an id and
+ *  the pet's own `bow` flag decides — so the two can never end up holding
+ *  each other's kind, and a future front-facing pet needs no changes here.
+ *
+ *  Unequip (null) needs a slot, since there is nothing to read a flag off:
+ *  `slot` defaults to stern, which is every pet that existed before the bow. */
+export async function equipPet(petId: string | null, slot: 'stern' | 'bow' = 'stern'): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+  let column: string = PET_SLOT_COLUMN[slot]
   if (petId !== null) {
     const { data: profile } = await admin.from('profiles').select('unlocked_pets').eq('id', user.id).single()
     const unlocked = (profile?.unlocked_pets as string[] | null) ?? []
     if (!unlocked.includes(petId)) return { error: 'Pet not unlocked' }
+    const def = getPet(petId)
+    if (!def) return { error: 'No such pet' }
+    // The pet picks its own slot. A bow pet seated in the stern column would
+    // draw two pets back to back in the same spot.
+    const own = petSlot(def)
+    if (!own) return { error: 'No such pet' }
+    column = PET_SLOT_COLUMN[own]
   }
-  await admin.from('profiles').update({ equipped_pet: petId }).eq('id', user.id)
+  await admin.from('profiles').update({ [column]: petId }).eq('id', user.id)
   return { ok: true }
 }
 

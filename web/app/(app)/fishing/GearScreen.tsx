@@ -664,12 +664,14 @@ function GearSlot({
 // Not a button. The pickers are the four rows underneath it now, so the
 // preview has nothing to open and shouldn't invite a tap that goes nowhere.
 function FisherPreview({
-  characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
+  characterColor, equippedHat, equippedBoat, equippedPet, equippedPetBow, rodTier, reelTier, hookTier,
 }: {
   characterColor: string
   equippedHat: string | null
   equippedBoat: string | null
   equippedPet: string | null
+  /** Front-facing pet in the bow slot (rides alongside the stern pet). */
+  equippedPetBow?: string | null
   rodTier: number
   reelTier: number
   hookTier: number
@@ -727,6 +729,7 @@ function FisherPreview({
           equippedHat={equippedHat}
           equippedBoat={equippedBoat}
           equippedPet={equippedPet}
+          equippedPetBow={equippedPetBow}
           rodTier={rodTier}
           reelTier={reelTier}
           hookTier={hookTier}
@@ -758,7 +761,7 @@ export default function GearScreen({
   characterColor, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onBuyColor, onEquipBadge,
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons, gems,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
-  equippedPet, unlockedPets, onEquipPet,
+  equippedPet, equippedPetBow, unlockedPets, onEquipPet,
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
   equippedSpecial, onEquipSpecial, onBuySpecialItem, equippedSpecial2, onEquipSpecial2, hasDeepReel = false, hasAnglersPatience = false, anglersPatienceXp = 0,
   fishingLevel,
@@ -815,6 +818,8 @@ export default function GearScreen({
   onEquipHat: (id: string | null) => void
   onBuyHat: (id: string) => void
   equippedPet: string | null
+  /** Front-facing pet in the bow slot (rides alongside the stern pet). */
+  equippedPetBow?: string | null
   unlockedPets: string[]
   onEquipPet: (id: string | null) => void
   doubloons: number
@@ -1106,6 +1111,7 @@ export default function GearScreen({
             equippedHat={equippedHat}
             equippedBoat={equippedBoat}
             equippedPet={equippedPet}
+            equippedPetBow={equippedPetBow}
             rodTier={rod.tier}
             reelTier={reel.tier}
             hookTier={hook.tier}
@@ -2981,7 +2987,7 @@ export default function GearScreen({
                     // stay a mystery until landed; owned show full colour + green tick.
                     const renderPetThumb = (p: typeof PETS[number]) => {
                       const owned = unlockedPets.includes(p.id)
-                      const isEquipped = equippedPet === p.id
+                      const isEquipped = equippedPet === p.id || equippedPetBow === p.id
                       return (
                         <button
                           key={p.id}
@@ -3028,6 +3034,9 @@ export default function GearScreen({
                     const species = PET_SPECIES_ORDER.map(key => ({ key, label: PET_SPECIES_LABEL[key] }))
                     const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
+                    // "None" clears the STERN slot only. A bow pet rides in
+                    // its own slot alongside, so unequipping your stern pet
+                    // must not sweep the plesiosaur off the bow with it.
                     const noneEquipped = !equippedPet
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

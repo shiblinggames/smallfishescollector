@@ -29,7 +29,7 @@ import {
 import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
-import { getPet, getPetOverlay } from '@/lib/pets'
+import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -3160,7 +3160,7 @@ export default function FishingGame({
   initialPrestigeLevels, initialGoldenBoosts, initialAncientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, newlyUnlockedBoats, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
-  initialEquippedPet, initialUnlockedPets, onPetStateChange,
+  initialEquippedPet, initialEquippedPetBow, initialUnlockedPets, onPetStateChange,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
@@ -3247,6 +3247,8 @@ export default function FishingGame({
   initialUnlockedHats: string[]
   onHatStateChange?: (equipped: string | null, unlocked: string[]) => void
   initialEquippedPet: string | null
+  /** Front-facing pet, the second slot. Only bow pets seat here. */
+  initialEquippedPetBow?: string | null
   initialUnlockedPets: string[]
   onPetStateChange?: (equipped: string | null, unlocked: string[]) => void
   initialFinnEncounters: number
@@ -3272,6 +3274,7 @@ export default function FishingGame({
   // Pet state — same shape as hat. Mutations go through onPetStateChange
   // (in GearScreen below) and equipPet() / the crate drop server action.
   const [equippedPet, setEquippedPet] = useState<string | null>(initialEquippedPet)
+  const [equippedPetBow, setEquippedPetBow] = useState<string | null>(initialEquippedPetBow ?? null)
   const [unlockedPets, setUnlockedPets] = useState<string[]>(initialUnlockedPets)
   const [localEquippedBadges, setLocalEquippedBadges] = useState(equippedBadges)
   const charSrc = getCharSrc(localCharacterColor)
@@ -6660,12 +6663,17 @@ export default function FishingGame({
                     (boat / rod / reel / hook / badges). Pet is shared
                     across all rest/wait/cast frames using the per-frame
                     CHAR_PET_OVERLAY coords tuned in /fishing-test. */}
-                {(() => {
-                  const pet = getPet(equippedPet)
+                {/* TWO pets can ride at once, and only ever one of each kind:
+                    a stern pet and a front-facing bow pet. They are drawn from
+                    separate slots with separate coords, so they never overlap
+                    the way two stern pets would. */}
+                {[equippedPet, equippedPetBow].map((id, slotIdx) => {
+                  const pet = getPet(id)
                   if (!pet) return null
                   const pp = getPetOverlay(pet.species, f)
                   return (
                     <img
+                      key={slotIdx}
                       src={pet.restImageUrl}
                       alt=""
                       style={{
@@ -6680,7 +6688,7 @@ export default function FishingGame({
                       }}
                     />
                   )
-                })()}
+                })}
               </div>
             )
           }) })()}
@@ -9559,9 +9567,19 @@ export default function FishingGame({
               equippedPet={equippedPet}
               unlockedPets={unlockedPets}
               onEquipPet={async (id) => {
+                // The PET picks its slot, not the caller — a bow pet seats at
+                // the bow and leaves the stern pet where it is, which is the
+                // whole reason two can ride at once. Unequip (null) always
+                // means the stern slot; the bow pet is cleared by tapping it.
+                const slot = petSlot(getPet(id)) ?? 'stern'
+                if (slot === 'bow') {
+                  setEquippedPetBow(prev => (prev === id ? null : id))
+                  await equipPet(equippedPetBow === id ? null : id, 'bow')
+                  return
+                }
                 setEquippedPet(id)
                 onPetStateChange?.(id, unlockedPets)
-                await equipPet(id)
+                await equipPet(id, 'stern')
               }}
               hasTideTurner={hasTideTurner}
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}

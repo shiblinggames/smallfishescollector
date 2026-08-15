@@ -15,13 +15,15 @@ import { getReel } from '@/lib/reels'
 import { getHook, hookGlowClass } from '@/lib/hooks'
 
 export default function FisherPose({
-  characterColor, equippedHat, equippedBoat, equippedPet, rodTier, reelTier, hookTier,
+  characterColor, equippedHat, equippedBoat, equippedPet, equippedPetBow, rodTier, reelTier, hookTier,
   noGlow = false,
 }: {
   characterColor: string
   equippedHat: string | null
   equippedBoat: string | null
   equippedPet: string | null
+  /** Front-facing pet, drawn alongside the stern one. */
+  equippedPetBow?: string | null
   rodTier: number
   reelTier: number
   hookTier: number
@@ -43,7 +45,7 @@ export default function FisherPose({
   const hook = getHook(hookTier)
   const hd = getHat(equippedHat)
   const bd = getBoat(equippedBoat)
-  const pet = getPet(equippedPet)
+  const pets = [getPet(equippedPet), getPet(equippedPetBow)].filter(Boolean) as NonNullable<ReturnType<typeof getPet>>[]
 
   return (
     <div style={{ position: 'relative', width: '100%', pointerEvents: 'none' }}>
@@ -116,18 +118,20 @@ export default function FisherPose({
       )}
 
       {/* Pet — foreground, above every equipment layer. */}
-      {pet && (() => {
+      {/* Up to two: a stern pet and a front-facing bow pet, each on its own
+          coords so they never land in the same spot. */}
+      {pets.map((pet, i) => {
         const pp = getPetOverlay(pet.species, 'rest')
         return (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={pet.restImageUrl} alt="" loading="lazy" decoding="async" style={{
+          <img key={i} src={pet.restImageUrl} alt="" loading="lazy" decoding="async" style={{
             position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
             width: `${pp.width}%`, transform: `rotate(${pp.rotate}deg)`,
             transformOrigin: 'center center',
             filter: `drop-shadow(0 0 6px ${pet.accentColor}55)`,
           }} />
         )
-      })()}
+      })}
     </div>
   )
 }

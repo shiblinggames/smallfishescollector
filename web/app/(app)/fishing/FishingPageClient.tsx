@@ -56,7 +56,7 @@ export default function FishingPageClient({
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
   hubSpeciesCaught, hubSpeciesTotal, hubMarketMood, hubMarketNextUpdate, hubOpenContracts, hubExchangeUnveil, hubTicker,
   hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, equippedPetBow, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
@@ -133,6 +133,7 @@ export default function FishingPageClient({
   equippedHat: string | null
   unlockedHats: string[]
   equippedPet: string | null
+  equippedPetBow: string | null
   unlockedPets: string[]
   initialFinnEncounters: number
   initialFinnWins: number
@@ -178,6 +179,7 @@ export default function FishingPageClient({
   // Pet equip/unlock state — lifted here so zone switches don't lose
   // the new parrot the player just unlocked from a crate.
   const [persistedEquippedPet, setPersistedEquippedPet] = useState<string | null>(equippedPet)
+  const [persistedEquippedPetBow, setPersistedEquippedPetBow] = useState<string | null>(equippedPetBow)
   const [persistedUnlockedPets, setPersistedUnlockedPets] = useState<string[]>(unlockedPets)
   const handlePetStateChange = useCallback((equipped: string | null, unlocked: string[]) => {
     setPersistedEquippedPet(equipped)
@@ -424,6 +426,7 @@ export default function FishingPageClient({
       initialUnlockedHats={persistedUnlockedHats}
       onHatStateChange={handleHatStateChange}
       initialEquippedPet={persistedEquippedPet}
+      initialEquippedPetBow={persistedEquippedPetBow}
       initialUnlockedPets={persistedUnlockedPets}
       onPetStateChange={handlePetStateChange}
       initialFinnEncounters={initialFinnEncounters}

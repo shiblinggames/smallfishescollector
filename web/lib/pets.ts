@@ -24,6 +24,12 @@ export interface PetDef {
   restImageUrl: string
   /** UI accent color for cards, equip glow, etc. */
   accentColor: string
+  /** FRONT-FACING. Sits at the bow, where no other pet wants to be, so it can
+   *  be equipped ALONGSIDE a stern pet instead of replacing it. profiles keeps
+   *  the two in separate columns (equipped_pet / equipped_pet_bow) because the
+   *  slots are not interchangeable — "two pets" is always exactly one of each,
+   *  never two of the same kind stacked in one spot. */
+  bow?: boolean
   /** EARNED, never rolled. Excluded from the crate roll entirely (its species
    *  is absent from PET_SPECIES_WEIGHTS, so the first roll can never select
    *  it) and reported at 0% of finds. The Vigil's baby plesiosaurus is the
@@ -76,7 +82,7 @@ export const PETS: PetDef[] = [
   // PET_SPECIES_WEIGHTS, so rollPet's species roll can never reach it — the
   // crate cannot hand this out no matter how many chests you open. Crimson is
   // the established ancient rarity accent.
-  { id: 'plesiosaur_baby', species: 'plesiosaur', name: 'Baby Plesiosaurus', weight: 1, restImageUrl: '/plesiosaur_baby.png', accentColor: '#e0455a', earnedOnly: true },
+  { id: 'plesiosaur_baby', species: 'plesiosaur', name: 'Baby Plesiosaurus', weight: 1, restImageUrl: '/plesiosaur_baby.png', accentColor: '#e0455a', earnedOnly: true, bow: true },
 ]
 
 export function getPet(id: string | null | undefined): PetDef | undefined {
@@ -178,11 +184,20 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
   },
 }
 
+/** Which slot a pet belongs in. The equip action and every picker route
+ *  through this rather than testing the id, so a future front-facing pet needs
+ *  only its `bow` flag. */
+export function petSlot(pet: PetDef | undefined | null): 'bow' | 'stern' | null {
+  if (!pet) return null
+  return pet.bow ? 'bow' : 'stern'
+}
+
+/** The profiles column a pet equips into. The slots are NOT interchangeable:
+ *  stern holds everything that faces the back of the boat, bow holds
+ *  front-facing pets, so a loadout is always at most one of each. */
+export const PET_SLOT_COLUMN = { stern: 'equipped_pet', bow: 'equipped_pet_bow' } as const
+
 /** Convenience for callsites that have a PetDef in hand. */
-// NEEDS TUNING ON /fishing-test once the art lands. Seeded off the seal (the
-// other low, long-bodied sitter) purely so the overlay renders at all —
-// species coords are never interchangeable here, and shipping a borrowed set
-// as if it were tuned is exactly how a pet ends up floating off the hull.
 export function getPetOverlay(species: PetSpecies, frame: 'rest' | 'wait' | 'cast'): { top: number; left: number; width: number; rotate: number } {
   return PET_OVERLAYS[species][frame]
 }
