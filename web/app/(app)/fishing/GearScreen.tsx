@@ -3004,7 +3004,19 @@ export default function GearScreen({
                             {/* The pet art sits in a small patch of a big transparent
                                 canvas; crop+zoom into it so the creature fills the tile
                                 (the source stays untouched for the in-game overlay). */}
-                            <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: `url(${p.restImageUrl})`, backgroundSize: '220%', backgroundPosition: '50% 45%', backgroundRepeat: 'no-repeat', filter: owned ? undefined : 'grayscale(1) brightness(0.28)' }} />
+                            {/* A dimmed silhouette is a TEASE, which is right for
+                                a crate pet you might get lucky on. An EARNED pet
+                                is a reward for the hardest thing in fishing and
+                                its shape is the surprise, so it is concealed
+                                outright until it is yours -- a silhouette gives
+                                away a long-necked plesiosaur instantly. */}
+                            {!owned && p.earnedOnly ? (
+                              <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 6px, transparent 6px 12px)' }}>
+                                <span className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: 'rgba(224,69,90,0.5)' }}>?</span>
+                              </div>
+                            ) : (
+                              <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: `url(${p.restImageUrl})`, backgroundSize: '220%', backgroundPosition: '50% 45%', backgroundRepeat: 'no-repeat', filter: owned ? undefined : 'grayscale(1) brightness(0.28)' }} />
+                            )}
                             {!owned && (
                               <div style={{ position: 'absolute', right: 3, bottom: 3, width: 22, height: 22, borderRadius: '50%', background: 'rgba(12,14,18,0.96)', border: '2px solid #0a0f18', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
@@ -3191,6 +3203,9 @@ export default function GearScreen({
             price?: number; currency?: 'gems' | 'doubloons'; unlockHint?: string
             skinRest?: string; boatImg?: string; boatGlow?: boolean; boatAsh?: boolean
             itemImg?: string; mystery?: boolean
+            /** Hide the art ENTIRELY (not just darken it) — for earned rewards
+             *  whose shape is part of the surprise. */
+            concealed?: boolean
           }
           let info: Info | null = null
           if (cosmeticDetail.kind === 'skin') {
@@ -3226,8 +3241,10 @@ export default function GearScreen({
                 // Neutral accent while locked so the gold/rare hues stay a surprise.
                 kind: 'pet', id: p.id, name: owned ? p.name : '???', accent: owned ? p.accentColor : '#8a8578',
                 owned, equipped: equippedPet === p.id, purchasable: false,
-                unlockHint: 'A rare find in fishing crates — golden variants are the trophies.',
-                itemImg: p.restImageUrl, mystery: !owned,
+                unlockHint: p.earnedOnly
+                  ? 'Not a crate drop. Take all six Ancient Deep giants to Vigil Rank V.'
+                  : 'A rare find in fishing crates — golden variants are the trophies.',
+                itemImg: p.restImageUrl, mystery: !owned, concealed: !owned && p.earnedOnly === true,
               }
             }
           } else if (cosmeticDetail.id === 'driftwood') {
@@ -3310,7 +3327,13 @@ export default function GearScreen({
                   // crop+zoom into it so the creature reads large; locked stays a
                   // dark silhouette. Source is untouched (in-game overlay needs it).
                   <div style={{ position: 'relative', width: 150, height: 132, margin: '0 auto 0.9rem', borderRadius: 16, overflow: 'hidden', border: `1px solid ${i.accent}30`, background: 'rgba(4,10,18,0.5)' }}>
-                    <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: `url(${i.itemImg})`, backgroundSize: '210%', backgroundPosition: '50% 45%', backgroundRepeat: 'no-repeat', filter: i.mystery ? 'grayscale(1) brightness(0.25)' : undefined }} />
+                    {i.concealed ? (
+                      <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 8px, transparent 8px 16px)' }}>
+                        <span className="font-cinzel font-800" style={{ fontSize: '2.6rem', color: 'rgba(224,69,90,0.45)' }}>?</span>
+                      </div>
+                    ) : (
+                      <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: `url(${i.itemImg})`, backgroundSize: '210%', backgroundPosition: '50% 45%', backgroundRepeat: 'no-repeat', filter: i.mystery ? 'grayscale(1) brightness(0.25)' : undefined }} />
+                    )}
                   </div>
                 ) : (
                   // Hat — a centred image (its art is already tightly framed).

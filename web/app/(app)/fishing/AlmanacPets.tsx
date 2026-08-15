@@ -60,9 +60,16 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
                           background: `radial-gradient(circle, ${p.accentColor}1c 0%, transparent 66%)`,
                         }} />
                       )}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={petArt(p.restImageUrl)} alt="" aria-hidden loading="lazy" decoding="async"
-                        style={{ position: 'relative', maxWidth: 112, maxHeight: 106, objectFit: 'contain', filter: has ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.55))' : 'brightness(0) opacity(0.26)' }} />
+                      {/* An EARNED pet is concealed outright rather than shown
+                          as a silhouette: its shape is the surprise, and the
+                          Vigil's plesiosaur is unmistakable in outline. */}
+                      {!has && p.earnedOnly ? (
+                        <span aria-hidden className="font-cinzel font-800" style={{ position: 'relative', fontSize: '2.4rem', color: 'rgba(224,69,90,0.4)' }}>?</span>
+                      ) : (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={petArt(p.restImageUrl)} alt="" aria-hidden loading="lazy" decoding="async"
+                          style={{ position: 'relative', maxWidth: 112, maxHeight: 106, objectFit: 'contain', filter: has ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.55))' : 'brightness(0) opacity(0.26)' }} />
+                      )}
                       {has && (
                         <span aria-hidden style={{
                           position: 'absolute', left: '50%', bottom: 2, transform: 'translateX(-50%)',
