@@ -23,6 +23,7 @@ import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { ownedSpecialIds } from '@/lib/specialItems'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { parseAbyssalConversion } from '@/lib/abyssalAccelerator'
 import { SkeletonBox } from '@/components/Skeleton'
@@ -269,6 +270,7 @@ async function ExpeditionHub() {
       campaign={campaign}
       voyages={voyages}
       ownedRaidItems={ownedRaidItems}
+      ownedSpecialItems={ownedSpecialIds(profile as unknown as Record<string, unknown>)}
       equippedRaidItems={equippedRaidItems}
       raidItemSlots={raidItemSlotsForTier(shipTier) + slotBonus.itemSlots + (profile?.has_armory_expansion === true ? 1 : 0)}
       roster={roster}

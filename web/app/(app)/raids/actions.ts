@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { dialAimBonus, type DialAimBonus } from '@/lib/dialAim'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ownedSpecialIds } from '@/lib/specialItems'
 import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
@@ -67,6 +68,12 @@ export interface RaidPlayerStats {
    *  already-owned items from the boss loot roll so duplicates re-roll
    *  into something new. */
   ownedRaidItems: string[]
+  /** Fishing SPECIALS the player owns, which live one boolean column each
+   *  rather than in raid_items. Finn's table drops one (The Primeval Eye), so
+   *  without this the exclusion above cannot see it and he can hand out a
+   *  second copy -- burning a 2.5% ancient roll on something that grants
+   *  nothing. Same blind spot the grant path already had to be taught about. */
+  ownedSpecialItems: string[]
   /** Aggregated ship-class effects from every chapter the player has
    *  picked one for. damageMult and doubloonMult are passed through to
    *  RaidGame to apply at hit time; hpMult + speedFlat are already
@@ -98,7 +105,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, finn_spoil_free, finn_spoil_paid, borrowed_jaw_xp, rod_tier, hook_tier, reel_tier, completionist_effects')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, dons_gauntlet_upgrades, manowar_augment, manowar_augment_build, has_sixth_berth, has_armory_expansion, finn_spoil_free, finn_spoil_paid, borrowed_jaw_xp, has_tide_turner, has_phantom_hook, has_auto_caster, has_auto_catcher, has_perfected_sigil, has_anglers_patience, rod_tier, hook_tier, reel_tier, completionist_effects')
     .eq('id', userId)
     .single()
 
@@ -227,6 +234,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    chargedItems,
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
+    ownedSpecialItems:    ownedSpecialIds(profile as unknown as Record<string, unknown>),
     classDamageMult:      classEffects.damageMult * navRenown.damageMult,
     legendaryLootMult:    donsLegendaryLootMult(accountUpgrades),
     classDoubloonMult:    classEffects.doubloonMult,

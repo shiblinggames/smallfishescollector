@@ -63,6 +63,7 @@ interface Props {
   campaign: CampaignCardData
   voyages: VoyageCardData
   ownedRaidItems: string[]
+  ownedSpecialItems: string[]
   equippedRaidItems: string[]
   raidItemSlots: number
   roster: CrewMember[]
@@ -125,7 +126,7 @@ const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }
 
 export default function HubCards({
   campaign, voyages,
-  ownedRaidItems, equippedRaidItems, raidItemSlots,
+  ownedRaidItems, ownedSpecialItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
   bountiesOpen, bountyNews, gauntletOpen, donsGauntletOpen, gauntletResumable, davyResumable, donsResumable, gauntletUpgrades,

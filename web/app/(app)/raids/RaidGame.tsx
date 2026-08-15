@@ -305,6 +305,7 @@ interface RaidCrewMember {
 
 export default function RaidGame({ config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
+  ownedSpecialItems = [],
   classDamageMult,
   classDoubloonMult,
   shipClasses,
@@ -335,6 +336,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   shipSkins: string[]
   equippedItems: string[]
   ownedRaidItems: string[]
+  /** Fishing specials owned (boolean columns, not raid_items). */
+  ownedSpecialItems?: string[]
   /** Aggregated ship-class multiplier for player outgoing damage in
    *  raids (1.15 = +15% from one Master Gunner pick, stacks
    *  multiplicatively across chapters). */
@@ -372,6 +375,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const ownedUniqueIds    = new Set<string>([
     ...shipSkins,
     ...ownedRaidItems,
+    // Fishing SPECIALS live one boolean column each, not in raid_items, so
+    // without this Finn's table can roll a second Primeval Eye at a player who
+    // already carries one -- a 2.5% ancient drop spent on nothing.
+    ...ownedSpecialItems,
   ])
   const dodgeBonus        = totalDodge * 5
   // Two different jobs, two different curves. Coin scales uncapped because a

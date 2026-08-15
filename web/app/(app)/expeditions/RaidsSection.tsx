@@ -201,11 +201,19 @@ function makeLiveChance(
   ownedRaidItems: string[],
   ownedShipSkins: string[],
   totalFortune: number,
+  ownedSpecialItems: string[] = [],
 ) {
+  // THREE places an owned unique can live, and the boss cards have to know all
+  // of them. Finn's table drops one FISHING SPECIAL (The Primeval Eye), which
+  // is a boolean column rather than a raid_items entry -- so checking only
+  // raid_items meant a player carrying the Eye still saw it listed as
+  // unclaimed on his card, with a live drop rate, forever.
   const dropOwned = (d: RaidNodeDrop): boolean =>
-    (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
+    (!!d.id && (ownedRaidItems.includes(d.id) || ownedSpecialItems.includes(d.id)))
+    || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
   const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
-    ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
+    ownedRaidItems.includes(l.id) || ownedSpecialItems.includes(l.id)
+    || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
   const liveChance = (d: RaidNodeDrop): string | undefined => {
     if (!cfg || !d.id) return undefined
     const row = cfg.loot.find(l => l.id === d.id)
@@ -227,7 +235,7 @@ function NodeDetailSheet({
   spoilPaid,
   navLevel,
   ownedRaidItems,
-  ownedShipSkins, totalFortune = 0,
+  ownedShipSkins, ownedSpecialItems = [], totalFortune = 0,
   equippedRaidItems,
   shipClasses,
   raidRecords,
@@ -249,6 +257,7 @@ function NodeDetailSheet({
   navLevel: number
   ownedRaidItems: string[]
   ownedShipSkins: string[]
+  ownedSpecialItems?: string[]
   /** Crew Fortune, so the drop chances on this sheet match the roll. */
   totalFortune?: number
   equippedRaidItems: string[]
@@ -291,7 +300,7 @@ function NodeDetailSheet({
   // Component level, because the drop-detail modal below is rendered here and
   // needs the same number the chips inside the drops block show.
   const nodeCfg = view.node.raidId ? getRaidConfigById(view.node.raidId) : undefined
-  const { liveChance } = makeLiveChance(nodeCfg, ownedRaidItems, ownedShipSkins, totalFortune)
+  const { liveChance } = makeLiveChance(nodeCfg, ownedRaidItems, ownedShipSkins, totalFortune, ownedSpecialItems)
   // Dialogue scene overlay (any node with node.scene). Story nodes:
   // first read plays the scene and its final CTA marks the node read.
   // Milestone/event nodes: the scene is an intro cutscene — finishing
@@ -2636,11 +2645,12 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
   )
 }
 
-function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, totalFortune = 0, repairOwed, onRepairBlocked }: {
+function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, repairOwed, onRepairBlocked }: {
   views: RaidNodeView[]
   raidRecords: Record<string, RaidRecords>
   ownedRaidItems: string[]
   ownedShipSkins: string[]
+  ownedSpecialItems?: string[]
   totalFortune?: number
   repairOwed: number
   onRepairBlocked: () => void
@@ -2719,6 +2729,7 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, totalF
           challengeRec={challengeOf(modalBoss)?.node.raidId ? raidRecords[challengeOf(modalBoss)!.node.raidId!] ?? null : null}
           ownedRaidItems={ownedRaidItems}
           ownedShipSkins={ownedShipSkins}
+          ownedSpecialItems={ownedSpecialItems}
             totalFortune={totalFortune}
           isNext={modalBoss.node.id === nextUpId}
           repairOwed={repairOwed}
@@ -2789,13 +2800,14 @@ function BossTile({ view, isNext, challengeCleared, clearedNodeIds, onOpen }: { 
 
 // The boss fight modal — opens on a tile tap. Shows the big portrait, the drops,
 // and the choice of Fight (normal) vs Challenge. Portaled + backdrop-dismissable.
-function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
+function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
   boss: RaidNodeView
   challenge: RaidNodeView | null
   rec: RaidRecords | null
   challengeRec: RaidRecords | null
   ownedRaidItems: string[]
   ownedShipSkins: string[]
+  ownedSpecialItems?: string[]
   totalFortune?: number
   isNext: boolean
   repairOwed: number
@@ -2836,11 +2848,10 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
   // slice of the crate split across the uniques you still need, so a static "8%"
   // is really 50% when only one is left — recompute against what you own.
   const cfg = activeNode.raidId ? getRaidConfigById(activeNode.raidId) : undefined
-  const dropOwned = (d: RaidNodeDrop): boolean =>
-    (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
-  const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
-    ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
-  const { liveChance } = makeLiveChance(cfg, ownedRaidItems, ownedShipSkins, totalFortune)
+  // These used to be a hand-copied second pair, which is exactly how the Eye
+  // could be taught to makeLiveChance and STILL show unclaimed here. Taken off
+  // the one helper now so there is a single answer to "do I own this".
+  const { liveChance, dropOwned, lootOwned } = makeLiveChance(cfg, ownedRaidItems, ownedShipSkins, totalFortune, ownedSpecialItems)
   // specialItemId is in here because Finn's Eye is a FISHING special: without it
   // the headline drop off the final boss never rendered on his own card. The cap
   // is 6 rather than 4 for the same reason, since he alone drops five.
@@ -3228,7 +3239,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
   )
 }
 
-export default function RaidsSection({ views, doubloons, totalFortune = 0, spoilFree = null, spoilPaid = null, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; /** Crew Fortune, so a boss card quotes the odds that boss actually rolls. */ totalFortune?: number; spoilFree?: string | null; spoilPaid?: string | null; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
+export default function RaidsSection({ views, doubloons, totalFortune = 0, spoilFree = null, spoilPaid = null, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], ownedSpecialItems = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; /** Crew Fortune, so a boss card quotes the odds that boss actually rolls. */ totalFortune?: number; spoilFree?: string | null; spoilPaid?: string | null; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; /** Fishing specials owned (boolean columns, not raid_items) — Finn drops one. */ ownedSpecialItems?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   const router = useRouter()
   // Journey (the story map) vs Bosses (a farm deck — every boss with Fight +
@@ -3389,7 +3400,7 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
               tap away, its drops, and your best clear time. */}
           <ViewToggle view={view} onChange={setView} />
           {view === 'bosses' ? (
-            <BossesView views={views} raidRecords={raidRecords} ownedRaidItems={ownedRaidItems} ownedShipSkins={ownedShipSkins}
+            <BossesView views={views} raidRecords={raidRecords} ownedRaidItems={ownedRaidItems} ownedShipSkins={ownedShipSkins} ownedSpecialItems={ownedSpecialItems}
             totalFortune={totalFortune} repairOwed={repairOwed} onRepairBlocked={() => setRepairPromptOpen(true)} />
           ) : (() => {
             const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
@@ -3569,6 +3580,7 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
               challengeRec={challenge?.node.raidId ? raidRecords[challenge.node.raidId] ?? null : null}
               ownedRaidItems={ownedRaidItems}
               ownedShipSkins={ownedShipSkins}
+          ownedSpecialItems={ownedSpecialItems}
             totalFortune={totalFortune}
               isNext={mainBoss.node.id === nextBossId}
               repairOwed={repairOwed}
@@ -3589,6 +3601,7 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
             navLevel={navLevel}
             ownedRaidItems={ownedRaidItems}
             ownedShipSkins={ownedShipSkins}
+          ownedSpecialItems={ownedSpecialItems}
             totalFortune={totalFortune}
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
