@@ -17,6 +17,7 @@ import FinnEncounter from './FinnEncounter'
 import FinnScene from './FinnScene'
 import TrawlIndicator from './TrawlIndicator'
 import AncientRelease from './AncientRelease'
+import AncientRankUp from './AncientRankUp'
 import {
   FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT, FINN_REVEAL_BEAT,
   FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
@@ -31,7 +32,7 @@ import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
-import { vigilScale, vigilNumeral, VIGIL_MAX_RANK, VIGIL_FRAME, type VigilState } from '@/lib/ancientVigil'
+import { vigilScale, vigilNumeral, VIGIL_MAX_RANK, VIGIL_FRAME, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -3674,6 +3675,8 @@ export default function FishingGame({
   const [ancientVigil, setAncientVigil] = useState<VigilState>(() => initialAncientVigil ?? {})
   // The giant whose release ceremony is open, from the collection drawer.
   const [releasingAncient, setReleasingAncient] = useState<FishSpeciesBasic | null>(null)
+  // The mounting ceremony, queued off a perfect landing of a released giant.
+  const [rankUp, setRankUp] = useState<{ name: string; from: number; to: number; petGranted: boolean } | null>(null)
 
   // Lock body scroll while the trophy detail modal is open. Without
   // this, the collection drawer's overflowY:auto underneath catches
@@ -5572,6 +5575,16 @@ export default function FishingGame({
         // refresh, which is fine for a one-shot lifetime event.
         if ((res as { firstAncientCatch?: boolean }).firstAncientCatch) {
           setTimeout(() => setFirstAncientCeleb(true), 1500)
+        }
+        // THE MOUNTING. A released giant landed on a perfect final phase, so
+        // the wall claims it a rank higher. Delayed like the first-ancient
+        // celebration so the catch result reads before the ceremony takes over.
+        const ru = (res as { vigilRankUp?: { from: number; to: number } | null }).vigilRankUp
+        if (ru) {
+          const petGranted = (res as { vigilPetGranted?: boolean }).vigilPetGranted === true
+          setAncientVigil(prev => ({ ...prev, [String(res.fish.id)]: { rank: ru.to, released: false } }))
+          setTimeout(() => setRankUp({ name: res.fish.name, from: ru.from, to: ru.to, petGranted }), 1500)
+          if (petGranted) setUnlockedPets(prev => prev.includes(VIGIL_PET_ID) ? prev : [...prev, VIGIL_PET_ID])
         }
         // Reconcile the streak from the server (authoritative). reelIn already
         // persisted current_perfect_streak, the highest-streak record, and the
@@ -9396,6 +9409,16 @@ export default function FishingGame({
           safe-area + tap-outside-to-close). */}
       {/* THE RELEASE, from the in-game log. Same ceremony the Giants room uses;
           it portals to body so the drawer above it is irrelevant. */}
+      {rankUp && (
+        <AncientRankUp
+          name={rankUp.name}
+          from={rankUp.from}
+          to={rankUp.to}
+          petGranted={rankUp.petGranted}
+          onClose={() => setRankUp(null)}
+        />
+      )}
+
       {releasingAncient && (
         <AncientRelease
           name={releasingAncient.name}
