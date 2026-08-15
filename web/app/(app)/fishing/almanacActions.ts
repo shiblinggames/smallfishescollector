@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { vigilFor, type VigilState } from '@/lib/ancientVigil'
 
 // The Angler's Almanac's data is loaded ON OPEN, not with the fishing page.
 //
@@ -97,6 +98,11 @@ export type AlmanacData = {
   goldens: GoldenCatch[]
   unlockedPets: string[]
   ancientCatches: number[]
+  /** THE LONG VIGIL — per-giant rank + released state. Only populated once the
+   *  finale is cleared; before that the room shows the wall as it always was. */
+  vigil: VigilState
+  /** Whether the Vigil is unlocked at all (One Last Ride cleared). */
+  vigilUnlocked: boolean
   prestige: Record<string, number>
   stats: AlmanacStats
 }
@@ -111,7 +117,7 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
 
   const admin = createAdminClient()
 
-  const [species, collection, lifetime, bests, goldens, profile] = await Promise.all([
+  const [species, collection, lifetime, bests, goldens, profile, finale] = await Promise.all([
     admin.from('fish_species')
       .select('id, name, scientific_name, description, fun_fact, habitat, bite_rarity, catch_difficulty, sell_value, length_min_in, length_max_in, size_category, diet_type, water_type, region, sort_order')
       .order('sort_order', { ascending: true }),
@@ -129,12 +135,18 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
       .eq('user_id', uid)
       .order('caught_at', { ascending: false }),
     admin.from('profiles')
-      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, prestige_levels, crate_opens, bait_used, biggest_fish_sale, fish_sold_count')
+      .select('fishing_casts, total_perfects, highest_perfect_streak, trophy_size_catches, fishing_crates_opened, fishing_double_catches, fishing_jackpots, fishing_snags, fish_sold_doubloons, fishing_xp, unlocked_pets, ancient_catches, ancient_vigil, prestige_levels, crate_opens, bait_used, biggest_fish_sale, fish_sold_count')
       .eq('id', uid)
       .maybeSingle(),
+    // The Vigil's gate. Self-enforcing: One Last Ride carries
+    // requiresAncients: 6, so clearing it means the wall was full.
+    admin.from('raid_completions')
+      .select('id').eq('user_id', uid).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle(),
   ])
 
   if (species.error) return { error: 'Could not read the species list' }
+
+  const vigilUnlocked = !!finale.data
 
   // THE SIX ANCIENT DEEP TROPHIES ARE NOT IN fish_collection. They are
   // recorded as ids on profiles.ancient_catches and nowhere else, which is why
@@ -212,6 +224,8 @@ export async function getAlmanacData(): Promise<AlmanacData | { error: string }>
     goldens: goldenList,
     unlockedPets: (p?.unlocked_pets as string[] | null) ?? [],
     ancientCatches: (p?.ancient_catches as number[] | null) ?? [],
+    vigil: vigilUnlocked ? vigilFor(p?.ancient_vigil, (p?.ancient_catches as number[] | null)) : {},
+    vigilUnlocked,
     prestige: (p?.prestige_levels as Record<string, number> | null) ?? {},
     stats: {
       casts: p?.fishing_casts ?? 0,
