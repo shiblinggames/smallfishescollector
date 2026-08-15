@@ -190,7 +190,9 @@ export default function AvatarTunerPage() {
             {'  ·  '}
             focal Y <span style={{ color: '#60a5fa' }}>{focalY}%</span>
           </p>
-          <pre style={{
+          {/* select-text: the app-wide user-select: none would otherwise make
+              these coords impossible to highlight and copy. */}
+          <pre className="select-text" style={{
             fontSize: '0.7rem',
             color: 'rgba(240,237,232,0.75)',
             background: 'rgba(255,255,255,0.025)',

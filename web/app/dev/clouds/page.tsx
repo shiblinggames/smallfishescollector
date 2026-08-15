@@ -459,7 +459,10 @@ function CodeBlock({ title, code }: { title: string; code: string }) {
           {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
-      <pre style={{
+      {/* select-text: globals.css sets user-select: none app-wide, so a bare
+          <pre> is unhighlightable. The Copy button above is the main path;
+          this makes hand-picking a few lines possible too. */}
+      <pre className="select-text" style={{
         background: '#04080e',
         border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: 8,

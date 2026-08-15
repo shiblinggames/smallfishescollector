@@ -628,7 +628,16 @@ export default function FishingTestClient() {
                 lib/pets.PET_OVERLAYS. */}
             <details style={{ marginTop: 10 }}>
               <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: 11 }}>Show config (copy to lib/pets)</summary>
-              <pre style={{ fontSize: 10, color: '#cbd5e1', background: '#0b1422', padding: 8, borderRadius: 6, marginTop: 6, whiteSpace: 'pre-wrap' }}>
+              {/* select-text is REQUIRED, not decorative: globals.css sets
+                  user-select: none on the whole app for the game feel, so a
+                  bare <pre> here cannot be highlighted at all and the tuned
+                  numbers are trapped on screen. The button is the real path —
+                  highlighting a wrapped code block on a phone is miserable. */}
+              <button
+                onClick={() => { void navigator.clipboard?.writeText(dumpPetOverlays(petCfg)) }}
+                style={{ marginTop: 6, width: '100%', padding: '5px 0', borderRadius: 6, background: '#1e2d3e', border: '1px solid #334', color: '#94a3b8', fontWeight: 600, fontSize: 10, cursor: 'pointer' }}
+              >Copy PET_OVERLAYS to clipboard</button>
+              <pre className="select-text" style={{ fontSize: 10, color: '#cbd5e1', background: '#0b1422', padding: 8, borderRadius: 6, marginTop: 6, whiteSpace: 'pre-wrap', cursor: 'text' }}>
 {dumpPetOverlays(petCfg)}
               </pre>
             </details>
