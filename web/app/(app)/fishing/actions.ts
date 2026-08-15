@@ -17,6 +17,7 @@ import { getSpecialItem, SPECIAL_OWNED_COLUMN } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
+import { vigilFor, isReleased, vigilTotal, vigilComplete, VIGIL_MAX_RANK, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
@@ -202,7 +203,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
     .eq('id', user.id)
     .single()
 
@@ -320,6 +321,11 @@ export async function castLine(baitType: string, habitat: string): Promise<
   let pool = candidates
   if (habitat === 'ancient_deep') {
     const caught = new Set<number>((profile.ancient_catches as number[] | null) ?? [])
+    // THE LONG VIGIL: a giant you have RELEASED is back in the water and can be
+    // hooked again. ancient_catches still lists it (that array is append-only —
+    // the finale gate and the ancient_ones badge read it), so "on the wall" is
+    // caught AND not released.
+    const vigil = vigilFor(profile.ancient_vigil, profile.ancient_catches as number[] | null)
     const isLure = baitType === 'luminous' || baitType === 'golden'
     // Megalodon (143) is the final-final boss of fishing: it never surfaces until
     // the other five giants (144-148) are all on the wall. Enforced HERE, server-
@@ -328,7 +334,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     const MEGALODON_PREREQS = [144, 145, 146, 147, 148]
     const megalodonLocked = !MEGALODON_PREREQS.every(id => caught.has(id))
     pool = candidates.filter(f => {
-      if (caught.has(f.id)) return false
+      if (caught.has(f.id) && !isReleased(vigil, f.id)) return false
       if (!isLure && !ALWAYS_ANCIENT_TROPHY && (f.sell_value ?? 0) === 0) return false
       if (f.id === MEGALODON_ID && megalodonLocked) return false
       return true
@@ -684,6 +690,15 @@ export async function reelIn(
        *  something larger passed. Deliberately vague (never names the lure); a
        *  breadcrumb toward the trophies, pairing with the lures' own flavor. */
       deepStirs?: boolean
+      /** THE LONG VIGIL. Set only when a RELEASED giant was landed on a perfect
+       *  final phase: the rank it climbed from and to. Drives the rank-up
+       *  celebration and the wall's new numeral. */
+      vigilRankUp?: { from: number; to: number } | null
+      /** Sum of the six ranks (6 at the floor, 30 at the capstone), present on
+       *  any catch that wrote the vigil. */
+      vigilTotal?: number
+      /** All six giants at rank 5 — the ancient pet is owed. */
+      vigilComplete?: boolean
     }
   | { caught: false }
   | { error: string }
@@ -724,7 +739,7 @@ export async function reelIn(
   }
 
   const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, ancient_vigil, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -798,6 +813,25 @@ export async function reelIn(
       updates.best_streak_zone = 'ancient_deep'
     }
     if (isNewTrophy) updates.ancient_catches = [...existing, fishId]
+
+    // ── THE LONG VIGIL ──────────────────────────────────────────────────────
+    // Landing a giant you RELEASED. reelIn is only reached once the whole
+    // multi-phase boss fight is cleared, so `result` here is the FINAL phase:
+    // perfect lands the rank, an ordinary catch just puts it back on the wall.
+    // ancient_catches is deliberately untouched by any of this — it is the
+    // finale's gate and stays append-only.
+    const vigil = vigilFor(profile.ancient_vigil, existing)
+    const vigilKey = String(fishId)
+    const wasReleased = vigil[vigilKey]?.released === true
+    let vigilRankUp: { from: number; to: number } | null = null
+    if (wasReleased) {
+      const from = vigil[vigilKey].rank
+      const ranked = result === 'perfect' && from < VIGIL_MAX_RANK
+      const to = ranked ? from + 1 : from
+      vigil[vigilKey] = { rank: to, released: false }
+      updates.ancient_vigil = vigil
+      if (ranked) vigilRankUp = { from, to }
+    }
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
     if (newTrophies.length >= 6) await grantBadgeDirect(user.id, 'ancient_ones')
     if (aStreak >= 10) await grantBadgeDirect(user.id, 'unbroken')
@@ -861,6 +895,11 @@ export async function reelIn(
       sigilBonus: ancientSigilBonus,
       newDoubloons: ancientSigilBonus > 0 ? ancientNewDoubloons : undefined,
       firstAncientCatch,
+      // Set only when a RELEASED giant was landed on a perfect — drives the
+      // rank-up celebration and the wall's new numeral.
+      vigilRankUp,
+      vigilTotal: updates.ancient_vigil ? vigilTotal(vigil) : undefined,
+      vigilComplete: updates.ancient_vigil ? vigilComplete(vigil) : undefined,
     }
   }
 
@@ -1888,6 +1927,46 @@ export async function equipSpecialItem(itemId: string | null): Promise<{ ok: tru
 
   await admin.from('profiles').update({ equipped_special: itemId }).eq('id', user.id)
   return { ok: true }
+}
+
+/** THE LONG VIGIL — release a mounted giant back into the Ancient Deep.
+ *
+ *  Gated on clearing the finale, and that gate is self-enforcing: One Last Ride
+ *  carries `requiresAncients: 6`, so anyone who has beaten Finn necessarily had
+ *  all six on the wall. There is no path to a partial wall with a release.
+ *
+ *  Deliberately does NOT touch ancient_catches. That array gates the finale,
+ *  feeds the ancient_ones badge and drives the almanac's everCaught — releasing
+ *  a giant must never un-gate a captain's own endgame. "On the wall" is
+ *  ancient_catches AND not released; the vigil column owns the second half.
+ */
+export async function releaseAncient(fishId: number): Promise<
+  { ok: true; vigil: Record<string, { rank: number; released: boolean }> } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  if (!ANCIENT_IDS.includes(fishId as (typeof ANCIENT_IDS)[number])) return { error: 'That is not an Ancient' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles').select('ancient_catches, ancient_vigil').eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const { data: finale } = await admin.from('raid_completions')
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle()
+  if (!finale) return { error: 'The deep does not answer to you yet.' }
+
+  const vigil = vigilFor(profile.ancient_vigil, profile.ancient_catches as number[] | null)
+  const key = String(fishId)
+  const entry = vigil[key]
+  if (!entry) return { error: 'You have never landed that one' }
+  if (entry.released) return { error: 'That one is already out there' }
+  if (entry.rank >= VIGIL_MAX_RANK) return { error: 'That one is already mastered' }
+
+  vigil[key] = { rank: entry.rank, released: true }
+  await admin.from('profiles').update({ ancient_vigil: vigil }).eq('id', user.id)
+  return { ok: true, vigil }
 }
 
 export async function equipBoat(boatId: string | null): Promise<{ ok: true } | { error: string }> {
