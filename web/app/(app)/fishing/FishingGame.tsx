@@ -18,6 +18,7 @@ import FinnScene from './FinnScene'
 import TrawlIndicator from './TrawlIndicator'
 import AncientRelease from './AncientRelease'
 import AncientRankUp from './AncientRankUp'
+import VigilCapstone from './VigilCapstone'
 import {
   FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT, FINN_REVEAL_BEAT,
   FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
@@ -32,7 +33,7 @@ import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
-import { vigilScale, vigilNumeral, VIGIL_MAX_RANK, VIGIL_FRAME, VIGIL_DIAL, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
+import { vigilScale, vigilNumeral, ANCIENT_IDS, VIGIL_MAX_RANK, VIGIL_FRAME, VIGIL_DIAL, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -3708,6 +3709,8 @@ export default function FishingGame({
   const [releasingAncient, setReleasingAncient] = useState<FishSpeciesBasic | null>(null)
   // The mounting ceremony, queued off a perfect landing of a released giant.
   const [rankUp, setRankUp] = useState<{ name: string; from: number; to: number; petGranted: boolean } | null>(null)
+  /** The Vigil finished. Plays once, ever, after the final mounting closes. */
+  const [vigilCapstone, setVigilCapstone] = useState(false)
 
   // Lock body scroll while the trophy detail modal is open. Without
   // this, the collection drawer's overflowY:auto underneath catches
@@ -5617,12 +5620,21 @@ export default function FishingGame({
         // the wall claims it a rank higher. Delayed like the first-ancient
         // celebration so the catch result reads before the ceremony takes over.
         const ru = (res as { vigilRankUp?: { from: number; to: number } | null }).vigilRankUp
+        const petGranted = (res as { vigilPetGranted?: boolean }).vigilPetGranted === true
         if (ru) {
-          const petGranted = (res as { vigilPetGranted?: boolean }).vigilPetGranted === true
           setAncientVigil(prev => ({ ...prev, [String(res.fish.id)]: { rank: ru.to, released: false } }))
           setFreshCatchHook({ vigil: ru.to })
           setTimeout(() => setRankUp({ name: res.fish.name, from: ru.from, to: ru.to, petGranted }), 1500)
-          if (petGranted) setUnlockedPets(prev => prev.includes(VIGIL_PET_ID) ? prev : [...prev, VIGIL_PET_ID])
+        }
+        if (petGranted) {
+          setUnlockedPets(prev => prev.includes(VIGIL_PET_ID) ? prev : [...prev, VIGIL_PET_ID])
+          // The pet is granted on STATE, not on the crossing, so it can land
+          // WITHOUT a rank-up: a captain already at 30/30 before the pet def
+          // existed collects it on their next landing, and that landing ranks
+          // nothing. Chaining the capstone solely off the mounting would hand
+          // them the game's rarest pet in silence. No rank-up means no
+          // ceremony to wait for, so it opens on its own.
+          if (!ru) setTimeout(() => setVigilCapstone(true), 1500)
         }
         // Reconcile the streak from the server (authoritative). reelIn already
         // persisted current_perfect_streak, the highest-streak record, and the
@@ -9488,8 +9500,21 @@ export default function FishingGame({
           name={rankUp.name}
           from={rankUp.from}
           to={rankUp.to}
-          petGranted={rankUp.petGranted}
-          onClose={() => setRankUp(null)}
+          // Completing the Vigil hands off to its own sequence rather than
+          // riding along inside the rank-up: the mounting finishes and gets
+          // dismissed, THEN the wall closes and the pet surfaces.
+          onClose={() => {
+            const finished = rankUp.petGranted
+            setRankUp(null)
+            if (finished) setVigilCapstone(true)
+          }}
+        />
+      )}
+
+      {vigilCapstone && (
+        <VigilCapstone
+          names={ANCIENT_IDS.map(id => allFishSpecies.find(f => f.id === id)?.name).filter((n): n is string => !!n)}
+          onClose={() => setVigilCapstone(false)}
         />
       )}
 

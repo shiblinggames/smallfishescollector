@@ -39,12 +39,13 @@ type Beat = 'rising' | 'struck'
  *  took something to haul up. */
 const RISE_MS: Record<number, number> = { 2: 900, 3: 1050, 4: 1200, 5: 1500 }
 
-export default function AncientRankUp({ name, from, to, petGranted, onClose }: {
+export default function AncientRankUp({ name, from, to, onClose }: {
   name: string
   from: number
   to: number
-  /** The Vigil completed and paid its capstone — the one pet no crate drops. */
-  petGranted?: boolean
+  /** NOTE: completing the Vigil is deliberately NOT announced here. The caller
+   *  chains <VigilCapstone /> off onClose instead, so the pet gets its own
+   *  reveal rather than a paragraph inside a Rank II-shaped card. */
   onClose: () => void
 }) {
   const reduced = prefersReducedMotion()
@@ -188,21 +189,6 @@ export default function AncientRankUp({ name, from, to, petGranted, onClose }: {
                   : 'Back on the wall, and heavier than it was. Let it go again when you want the next rung.'}
               </p>
 
-              {petGranted && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 18 }}
-                  style={{
-                    marginTop: 14, padding: '0.8rem 0.9rem', borderRadius: 12,
-                    background: 'rgba(224,69,90,0.10)', border: '1px solid rgba(224,69,90,0.45)',
-                  }}>
-                  <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.5rem', color: '#e0455a' }}>The Vigil is kept</p>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: '#f4eee2', marginTop: 5 }}>A Baby Plesiosaurus follows you home</p>
-                  <p className="font-karla" style={{ fontSize: '0.68rem', color: '#b9b2a6', marginTop: 5, lineHeight: 1.45 }}>
-                    All six mastered. It rides the bow, so it sails alongside whatever pet you already keep. No crate will ever hand out another.
-                  </p>
-                </motion.div>
-              )}
 
               <p className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.54rem', color: '#6f6890', marginTop: 18 }}>
                 Tap to continue
