@@ -18,7 +18,7 @@ import { getPet, petSlot, PET_SLOT_COLUMN } from '@/lib/pets'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
-import { vigilFor, isReleased, vigilTotal, vigilComplete, vigilHuntChance, ancientCatchXP, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
+import { vigilFor, isReleased, vigilTotal, vigilComplete, vigilHuntChance, ancientCatchXP, vigilPaidAfter, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
@@ -843,12 +843,14 @@ export async function reelIn(
     const vigilKey = String(fishId)
     const wasReleased = vigil[vigilKey]?.released === true
     const fromRank = vigil[vigilKey]?.rank ?? 1
+    const paidThrough = vigil[vigilKey]?.paid ?? 0
 
     const xpGained = Math.round(ancientCatchXP({
       firstCatch: isNewTrophy,
       wasReleased,
       fromRank,
       perfect: result === 'perfect',
+      paidThrough,
     }) * renownXpMult)
     // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
     // The mirror of the reel: his raid item is fed by the fishing half of the
@@ -878,7 +880,11 @@ export async function reelIn(
     if (wasReleased) {
       const ranked = result === 'perfect' && fromRank < VIGIL_MAX_RANK
       const to = ranked ? fromRank + 1 : fromRank
-      vigil[vigilKey] = { rank: to, released: false }
+      // `paid` records that this rung has spent its one consolation, so a
+      // failed attempt can never pay twice. Written from the same inputs the
+      // payout above read, via a helper that lives beside it.
+      const paid = vigilPaidAfter({ wasReleased, fromRank, perfect: result === 'perfect', paidThrough })
+      vigil[vigilKey] = paid > 0 ? { rank: to, released: false, paid } : { rank: to, released: false }
       updates.ancient_vigil = vigil
       if (ranked) vigilRankUp = { from: fromRank, to }
 

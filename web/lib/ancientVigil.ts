@@ -42,7 +42,12 @@ export const VIGIL_MAX_TOTAL = ANCIENT_IDS.length * VIGIL_MAX_RANK   // 30
  *  rank 1. The floor of the ladder, not zero. */
 export const VIGIL_START_TOTAL = ANCIENT_IDS.length                  // 6
 
-export type VigilEntry = { rank: number; released: boolean }
+/** `paid` is the highest rung whose consolation XP has already been collected.
+ *  It exists purely to put a HARD ceiling on what the ladder can pay: without
+ *  it the consolation multiplies by an unbounded number of failed attempts.
+ *  Optional so every row written before it, and the ranks seeded from
+ *  ancient_catches, read as "nothing collected yet". */
+export type VigilEntry = { rank: number; released: boolean; paid?: number }
 export type VigilState = Record<string, VigilEntry>
 
 /** How a Vigil rank steepens a giant's EXISTING boss fight. Merged over its
@@ -135,29 +140,65 @@ export function vigilHuntChance(attemptingRank: number, rarityBonus: number, lur
 /** Paid ONLY when a perfect actually takes the rank. */
 export const VIGIL_RANKUP_XP: Record<number, number> = { 2: 3000, 3: 4000, 4: 5500, 5: 7500 }
 /** Landed a released giant without the perfect: no rank, a nod for the fight.
- *  This is the number that governs the ceiling -- raise it with care. */
-export const VIGIL_LANDED_XP = 250
+ *  Paid ONCE PER RUNG, the first time a captain fails at it -- see below. */
+export const VIGIL_LANDED_XP = 500
 /** The first time each giant is ever caught: the finale beat, not the ladder.
  *  Six of these exist per captain, ever, so it cannot be farmed. */
 export const ANCIENT_FIRST_CATCH_XP = 7000
 
+// WHY THE CONSOLATION IS PAID ONCE PER RUNG.
+//
+// A flat per-landing token cannot be capped, however small it is: it multiplies
+// by the number of failed attempts, which is unbounded, so the worse a captain
+// aims the more the ladder pays. At 250 a captain weaker than any of the three
+// currently past Finn cleared 218k; even at 120, one barely aiming cleared 220k.
+// Shrinking the number only moves where it breaks.
+//
+// So the rung pays it once, the first time you fail there, and never again. The
+// consolation is for LEARNING a fight, not for grinding it, and because it can
+// only land four times per giant it can be worth having (500) instead of the
+// apologetic 120 an uncapped version forced.
+//
+// The whole ladder is now bounded by construction rather than by tuning:
+//   first catches   6 x 7,000                        =  42,000
+//   rank-ups        6 x (3,000+4,000+5,500+7,500)    = 120,000
+//   consolations    6 x 4 x 500                      =  12,000
+//                                                      -------
+//   ABSOLUTE MAXIMUM, any captain, any skill           174,000
+//
 /** Every XP payout an ancient can make, in one place so the ceiling above is
- *  provable. `fromRank` is the rank held BEFORE this landing. */
+ *  provable. `fromRank` is the rank held BEFORE this landing; `paidThrough` is
+ *  the entry's `paid` (0 when it has never paid a consolation). */
 export function ancientCatchXP(opts: {
   firstCatch: boolean
   wasReleased: boolean
   fromRank: number
   perfect: boolean
+  paidThrough?: number
 }): number {
   // The first landing of a giant is the story moment and outranks the ladder.
   if (opts.firstCatch) return ANCIENT_FIRST_CATCH_XP
   // On the wall and not released: a re-catch that was never a Vigil attempt.
-  if (!opts.wasReleased) return VIGIL_LANDED_XP
-  // Released. A perfect below the cap takes the rank and its reward.
+  if (!opts.wasReleased) return 0
+  // Released. A perfect below the cap takes the rung and its reward.
   if (opts.perfect && opts.fromRank < VIGIL_MAX_RANK) {
-    return VIGIL_RANKUP_XP[opts.fromRank + 1] ?? VIGIL_LANDED_XP
+    return VIGIL_RANKUP_XP[opts.fromRank + 1] ?? 0
   }
-  return VIGIL_LANDED_XP
+  // Failed the rung. Pays only if this rung has never paid before.
+  return opts.fromRank > (opts.paidThrough ?? 0) ? VIGIL_LANDED_XP : 0
+}
+
+/** The `paid` value to store after this landing — unchanged unless the
+ *  consolation just fired. Kept beside the payout so the two cannot drift. */
+export function vigilPaidAfter(opts: {
+  wasReleased: boolean
+  fromRank: number
+  perfect: boolean
+  paidThrough?: number
+}): number {
+  const prev = opts.paidThrough ?? 0
+  const failed = opts.wasReleased && !(opts.perfect && opts.fromRank < VIGIL_MAX_RANK)
+  return failed ? Math.max(prev, opts.fromRank) : prev
 }
 
 /** The scaling for an attempt. Null at rank 1 (the fight as shipped). */
@@ -202,9 +243,12 @@ export function readVigil(raw: unknown): VigilState {
   const out: VigilState = {}
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
     if (!v || typeof v !== 'object') continue
-    const e = v as { rank?: unknown; released?: unknown }
+    const e = v as { rank?: unknown; released?: unknown; paid?: unknown }
     const rank = Math.max(1, Math.min(VIGIL_MAX_RANK, Math.floor(Number(e.rank ?? 1)) || 1))
-    out[k] = { rank, released: e.released === true }
+    // Clamped the same way as rank: this gates a payout, so a hand-edited or
+    // corrupt value must never widen what it unlocks.
+    const paid = Math.max(0, Math.min(VIGIL_MAX_RANK, Math.floor(Number(e.paid ?? 0)) || 0))
+    out[k] = paid > 0 ? { rank, released: e.released === true, paid } : { rank, released: e.released === true }
   }
   return out
 }
