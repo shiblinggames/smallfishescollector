@@ -110,6 +110,56 @@ export function vigilHuntChance(attemptingRank: number, rarityBonus: number, lur
   return Math.min(VIGIL_HUNT_CAP, lured * (1 + Math.max(0, rarityBonus) * 1.5))
 }
 
+// ── WHAT A GIANT PAYS ───────────────────────────────────────────────────────
+// The ancients used to run a flat `catchXP x 3`, which was correct when they
+// were six one-time trophies and wrong the moment the Vigil made them
+// repeatable. That x3 paid 7,560 for a perfect and 6,300 for landing one
+// WITHOUT the perfect -- 83% of the reward for none of the progress.
+//
+// The leak is not the miss. A miss resets the whole fight and pays nothing, and
+// the odds of clearing every phase cancel out of the arithmetic entirely
+// (they divide the reward per encounter and multiply the encounters needed).
+// What is left is exactly:
+//
+//     XP per rank  =  rank-up XP  +  landed XP x (non-perfect landings / perfects)
+//
+// So the ONLY thing that governs the total is what a non-perfect landing pays.
+// At 6,300 a typical ladder paid ~681k across the six and a shaky one 1.1M --
+// a quarter to a half of an entire Lv 1-100 climb, from a trophy system.
+//
+// Now the rank-up carries the reward and the landing carries a token. Every
+// skill level lands inside 162k-199k for the whole thing, six giants, first
+// catch through Rank V, so the ladder cannot be farmed into a levelling
+// strategy no matter how it is played. Escalating per rank means the hardest
+// rung also pays the most, which the flat rate had exactly backwards.
+/** Paid ONLY when a perfect actually takes the rank. */
+export const VIGIL_RANKUP_XP: Record<number, number> = { 2: 3000, 3: 4000, 4: 5500, 5: 7500 }
+/** Landed a released giant without the perfect: no rank, a nod for the fight.
+ *  This is the number that governs the ceiling -- raise it with care. */
+export const VIGIL_LANDED_XP = 250
+/** The first time each giant is ever caught: the finale beat, not the ladder.
+ *  Six of these exist per captain, ever, so it cannot be farmed. */
+export const ANCIENT_FIRST_CATCH_XP = 7000
+
+/** Every XP payout an ancient can make, in one place so the ceiling above is
+ *  provable. `fromRank` is the rank held BEFORE this landing. */
+export function ancientCatchXP(opts: {
+  firstCatch: boolean
+  wasReleased: boolean
+  fromRank: number
+  perfect: boolean
+}): number {
+  // The first landing of a giant is the story moment and outranks the ladder.
+  if (opts.firstCatch) return ANCIENT_FIRST_CATCH_XP
+  // On the wall and not released: a re-catch that was never a Vigil attempt.
+  if (!opts.wasReleased) return VIGIL_LANDED_XP
+  // Released. A perfect below the cap takes the rank and its reward.
+  if (opts.perfect && opts.fromRank < VIGIL_MAX_RANK) {
+    return VIGIL_RANKUP_XP[opts.fromRank + 1] ?? VIGIL_LANDED_XP
+  }
+  return VIGIL_LANDED_XP
+}
+
 /** The scaling for an attempt. Null at rank 1 (the fight as shipped). */
 export function vigilScale(attemptingRank: number): VigilScale | null {
   return VIGIL_SCALE[attemptingRank] ?? null

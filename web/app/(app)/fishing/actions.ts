@@ -18,7 +18,7 @@ import { getPet, petSlot, PET_SLOT_COLUMN } from '@/lib/pets'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostMult } from '@/lib/zoneRewards'
 import { hasPrestigedAllZones } from '@/lib/collection'
-import { vigilFor, isReleased, vigilTotal, vigilComplete, vigilHuntChance, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
+import { vigilFor, isReleased, vigilTotal, vigilComplete, vigilHuntChance, ancientCatchXP, VIGIL_MAX_RANK, VIGIL_PET_ID, ANCIENT_IDS } from '@/lib/ancientVigil'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 import { grantCrateLoot, type CrateTier, type CrateLoot } from '@/lib/crateLoot'
@@ -827,7 +827,29 @@ export async function reelIn(
   if (fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0) {
     const existing = ((profile.ancient_catches as number[] | null) ?? [])
     const isNewTrophy = !existing.includes(fishId)
-    const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3 * renownXpMult)
+
+    // ── THE LONG VIGIL ──────────────────────────────────────────────────────
+    // Landing a giant you RELEASED. reelIn is only reached once the whole
+    // multi-phase boss fight is cleared, so `result` here is the FINAL phase:
+    // perfect lands the rank, an ordinary catch just puts it back on the wall.
+    // (A miss never arrives here at all — it resets the fight and returns
+    // above, paying nothing, which is why the ceiling is governed entirely by
+    // what a non-perfect LANDING pays. See lib/ancientVigil.)
+    //
+    // The ladder is read BEFORE the XP because what this landing is worth
+    // depends on whether it took a rank. ancient_catches is deliberately
+    // untouched by any of this — it is the finale's gate and stays append-only.
+    const vigil = vigilFor(profile.ancient_vigil, existing)
+    const vigilKey = String(fishId)
+    const wasReleased = vigil[vigilKey]?.released === true
+    const fromRank = vigil[vigilKey]?.rank ?? 1
+
+    const xpGained = Math.round(ancientCatchXP({
+      firstCatch: isNewTrophy,
+      wasReleased,
+      fromRank,
+      perfect: result === 'perfect',
+    }) * renownXpMult)
     // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
     // The mirror of the reel: his raid item is fed by the fishing half of the
     // game, so wearing it is a standing reason to keep casting.
@@ -851,24 +873,14 @@ export async function reelIn(
     }
     if (isNewTrophy) updates.ancient_catches = [...existing, fishId]
 
-    // ── THE LONG VIGIL ──────────────────────────────────────────────────────
-    // Landing a giant you RELEASED. reelIn is only reached once the whole
-    // multi-phase boss fight is cleared, so `result` here is the FINAL phase:
-    // perfect lands the rank, an ordinary catch just puts it back on the wall.
-    // ancient_catches is deliberately untouched by any of this — it is the
-    // finale's gate and stays append-only.
-    const vigil = vigilFor(profile.ancient_vigil, existing)
-    const vigilKey = String(fishId)
-    const wasReleased = vigil[vigilKey]?.released === true
     let vigilRankUp: { from: number; to: number } | null = null
     let vigilPetGranted = false
     if (wasReleased) {
-      const from = vigil[vigilKey].rank
-      const ranked = result === 'perfect' && from < VIGIL_MAX_RANK
-      const to = ranked ? from + 1 : from
+      const ranked = result === 'perfect' && fromRank < VIGIL_MAX_RANK
+      const to = ranked ? fromRank + 1 : fromRank
       vigil[vigilKey] = { rank: to, released: false }
       updates.ancient_vigil = vigil
-      if (ranked) vigilRankUp = { from, to }
+      if (ranked) vigilRankUp = { from: fromRank, to }
 
       // THE CAPSTONE — all six at rank 5 pays the baby plesiosaurus, the one
       // pet no crate can produce. Granted on STATE, not on the crossing (the
