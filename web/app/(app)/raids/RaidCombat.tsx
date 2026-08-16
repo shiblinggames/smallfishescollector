@@ -9573,6 +9573,31 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
     }
   }
 
+  // THE WAVE RUNS OFF ONE CLAMPED rAF CLOCK, NOT A FAN OF TIMERS.
+  //
+  // It used to be a setTimeout per spawn and a setTimeout per fuse. That breaks
+  // the instant the phone locks: mobile engines SUSPEND timers on a
+  // backgrounded tab, so on return every pending spawn and every pending fuse
+  // fires in one burst -- the rest of the barrage appears and expires as
+  // "missed" in the same frame, before a finger can move. And because
+  // globals.css freezes CSS animations while hidden (.doc-hidden), whatever is
+  // on screen renders stuck at its FIRST keyframe: rc-flare-in at scale(0.2),
+  // and the red rc-flare-pop penalty burst pinned at full opacity instead of
+  // fading. Small red dots with no ring, unresponsive, and a wave of free
+  // damage -- exactly what was reported after a 4-minute lock.
+  //
+  // A single rAF loop with a CLAMPED per-frame delta fixes all of it. rAF does
+  // not tick while hidden, and clamping the first frame back to one frame's
+  // worth means the barrage simply PAUSES with the phone and resumes where it
+  // stopped. It pauses in lockstep with the CSS animations, which the same
+  // event freezes, so every fuse ring stays true to its own timer.
+  //
+  // Deliberately NOT "forgive the wave if the app was hidden": that would make
+  // backgrounding the app a free skip on every barrage, which is worse than the
+  // bug. Pausing is the honest fix -- you get back exactly the wave you left.
+  const resolveRef = useRef(resolveFlare)
+  resolveRef.current = resolveFlare
+
   useEffect(() => {
     if (count <= 0) { onComplete(0, 0); return }
     // Spacing: keep a new flare's center far enough from any flare still on
@@ -9588,6 +9613,9 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
     const sepX = (SEP_PX / W) * 100
     const sepY = (SEP_PX / H) * 100
     const placed: { x: number; y: number; end: number }[] = []
+    // The whole wave is planned up front as data — appear/expire offsets in ms
+    // from the wave's own clock — so the driver below is a pure read of it.
+    const schedule: { f: Flare; appearAt: number; expireAt: number }[] = []
     let t = 420
     for (let k = 0; k < count; k++) {
       const fuse = (Math.max(560, 960 - k * 34) + Math.random() * 150) * fuseScale   // tighten as it goes (higher floor after the 2026 speed nerf)
@@ -9612,10 +9640,7 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
       const feint = k > 0 && Math.random() < feintChance
       const f = { id: k, x, y, fuse, feint }
       placed.push({ x, y, end: t + fuse })
-      timersRef.current.push(setTimeout(() => {
-        setFlares(prev => [...prev, f])
-        timersRef.current.push(setTimeout(() => resolveFlare(f, false), fuse))
-      }, t))
+      schedule.push({ f, appearAt: t, expireAt: t + fuse })
       // Arrhythmic gap to the next spawn — cluster, lull, or normal.
       const r = Math.random()
       const gap = r < clusterChance ? 205 + Math.random() * 110      // cluster (back-to-back, but spaced enough to tap — 2026 nerf, was 115+85)
@@ -9623,7 +9648,31 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
                 : 380 + Math.random() * 230                          // normal
       t += gap
     }
-    return () => { timersRef.current.forEach(clearTimeout) }
+
+    // One frame's worth of catch-up, max. This single clamp is what makes the
+    // wave immune to a lock screen: a 4-minute gap advances the wave by 100ms.
+    const MAX_DT = 100
+    const spawned = new Set<number>()
+    let elapsed = 0
+    let last = -1
+    let raf = 0
+    const tick = (now: number) => {
+      if (last < 0) last = now
+      elapsed += Math.min(now - last, MAX_DT)
+      last = now
+      for (const s of schedule) {
+        if (!spawned.has(s.f.id) && elapsed >= s.appearAt) {
+          spawned.add(s.f.id)
+          setFlares(prev => prev.some(p => p.id === s.f.id) ? prev : [...prev, s.f])
+        }
+        // Fuse burned out with no tap. resolveFlare self-guards on
+        // resolvedIds, so a tap that already landed is not double-counted.
+        if (spawned.has(s.f.id) && elapsed >= s.expireAt) resolveRef.current(s.f, false)
+      }
+      if (resolvedIds.current.size < count) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => { cancelAnimationFrame(raf); timersRef.current.forEach(clearTimeout) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

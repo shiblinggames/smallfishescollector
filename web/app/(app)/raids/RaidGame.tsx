@@ -790,11 +790,28 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // boss kill / defeat leaves it), so the Back sentinel is pushed just once.
   const fleeNavRef = useRef<(() => void) | null>(null)
   const [fleeTick, setFleeTick] = useState(0)
+  // ONCE A FLEE IS WON, THE GUARD STANDS DOWN.
+  //
+  // `phase` is still 'playing' at the moment a clean getaway navigates -- the
+  // fight is only left behind once the route actually changes -- so without
+  // this the guard is still armed during the transition and can catch the very
+  // navigation it just granted. On iOS a swipe-back that completes during the
+  // push fires another popstate, which re-arms the sentinel and signals ANOTHER
+  // flee, dropping the player back into the fight holding a won roll. Repeat
+  // and you get the reported "rolled successfully three times in a row and it
+  // never let me out", ending in a death on the fourth.
+  //
+  // Set the instant a flee is granted, and checked by every handler below, so
+  // an escape that has been earned can never be re-intercepted.
+  const fledRef = useRef(false)
+  /** Wrap a flee navigation so winning it disarms the guard before it runs. */
+  const grantFlee = (nav: () => void) => () => { fledRef.current = true; nav() }
   useEffect(() => {
     if (phase !== 'playing') return
     window.history.pushState(null, '', window.location.href) // Back sentinel
-    const signal = (nav: () => void) => { fleeNavRef.current = nav; setFleeTick(t => t + 1) }
+    const signal = (nav: () => void) => { fleeNavRef.current = grantFlee(nav); setFleeTick(t => t + 1) }
     const onClickCapture = (e: MouseEvent) => {
+      if (fledRef.current) return
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
       const a = (e.target as HTMLElement | null)?.closest('a')
       if (!a) return
@@ -808,10 +825,14 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       signal(() => router.push(href))
     }
     const onPop = () => {
+      if (fledRef.current) return                                // escape already won
       window.history.pushState(null, '', window.location.href)   // re-arm; stay put
       signal(() => router.push('/expeditions'))
     }
-    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (fledRef.current) return   // don't warn about leaving a fight already fled
+      e.preventDefault(); e.returnValue = ''
+    }
     document.addEventListener('click', onClickCapture, true)
     window.addEventListener('popstate', onPop)
     window.addEventListener('beforeunload', onBeforeUnload)
@@ -1643,7 +1664,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 onNoShotKill={() => { unlockBadge('not_a_shot_fired').catch(() => {}); window.dispatchEvent(new Event('badges-may-have-changed')) }}
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
-                onLeave={() => router.push('/expeditions')}
+                onLeave={grantFlee(() => router.push('/expeditions'))}
                 riskyFlee
                 fleeSignal={fleeTick}
                 fleeNav={fleeNavRef.current}
