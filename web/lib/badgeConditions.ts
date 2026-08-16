@@ -520,9 +520,18 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     // ancient_tackle is written against the RARITY so it keeps meaning if more
     // Ancient items ever ship.
     // ── THE LONG VIGIL ──
-    // All derived from the vigil map except back_to_the_dark, which is hooked
-    // at the moment of release: "has ever released one" is not recoverable
-    // from state, since releasing and landing it again clears the flag.
+    // back_to_the_dark is ALSO hooked at the moment of release, because the
+    // released flag clears the instant you land one again -- so a captain who
+    // released and re-caught leaves no trace of having done it. This derived
+    // fallback catches everything the hook can miss, and both are needed:
+    //   - at large NOW           -> obviously released it
+    //   - any rank above 1       -> PROVES a release, since the only way to
+    //                               climb is to put one back in the water
+    // What neither state can show is "released once, landed it without a
+    // perfect, so rank never moved" -- that is what the hook is for. dkmuppy
+    // hit exactly this gap: four releases before the hook shipped, and no way
+    // to ever earn the badge for them.
+    back_to_the_dark:     vigilAtLarge > 0 || vigilTopRank >= 2,
     twice_landed:         vigilTopRank >= 2,
     struck_in_gold:       vigilTopRank >= VIGIL_MAX_RANK,
     six_adrift:           vigilAtLarge === ANCIENT_IDS.length,
