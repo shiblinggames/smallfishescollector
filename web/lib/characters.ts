@@ -9,6 +9,22 @@ export interface CharacterColor {
   gemPrice?: number
 }
 
+// ── ACHIEVEMENT-POINT GATES ─────────────────────────────────────────────────
+// Declared up here because the unlockHint strings below interpolate them. They
+// used to be written out by hand in three places (both hints and the fishing
+// tip pool), which had already drifted once.
+//
+// SET RELATIVE TO THE BADGE POOL, NOT ABSOLUTELY. When these were first tuned
+// on 2026-07-21 the pool was 410 points, so Galaxy at 300 meant 73% of every
+// badge in the game and Ethereal at 350 meant 85%. The pool has since grown to
+// 642, which quietly cut them to 47% and 55% without anyone touching a number.
+// Re-tuned 2026-08-16 to sit at ~61% and ~70%. A straight proportional restore
+// would be 470 and 548; that was judged too steep for a cosmetic, so these land
+// deliberately short of the original share. Re-check whenever a batch of badges
+// ships. See lib/boats.ts for the two boat gates, tuned in the same pass.
+const GALAXY_PTS = 390
+const ETHEREAL_PTS = 450
+
 export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'default', name: 'Green',  free: true  },
   { id: 'gray',    name: 'Gray',   free: true  },
@@ -24,9 +40,9 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'ice',      name: 'Ice',      free: false, unlockHint: 'Reach Fishing Level 75' },
   { id: 'lavender', name: 'Lavender', free: false, unlockHint: 'Rare drop from fishing crates' },
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
-  { id: 'galaxy',   name: 'Galaxy',   free: false, unlockHint: 'Reach 300 achievement points' },
+  { id: 'galaxy',   name: 'Galaxy',   free: false, unlockHint: `Reach ${GALAXY_PTS} achievement points` },
   { id: 'crystal',  name: 'Crystal',  free: false, unlockHint: 'Max out — Fishing 100 and Navigation 100' },
-  { id: 'ethereal', name: 'Ethereal', free: false, unlockHint: 'Reach 350 achievement points' },
+  { id: 'ethereal', name: 'Ethereal', free: false, unlockHint: `Reach ${ETHEREAL_PTS} achievement points` },
   { id: 'lava',     name: 'Lava',     free: false, unlockHint: '500 ◆', gemPrice: 500 },
   { id: 'gilded',   name: 'Gilded',   free: false, unlockHint: '1,000,000 ⟡', price: 1_000_000 },
   { id: 'frozen',   name: 'Frozen',   free: false, unlockHint: '500 ◆', gemPrice: 500 },
@@ -38,8 +54,8 @@ export const CHARACTER_COLORS: CharacterColor[] = [
  *  separate from LEVEL_COLORS because the gating stat (summed badge points) is
  *  derived, not a plain profile column — see lib/achievementPoints. */
 export const ACHIEVEMENT_COLORS: { id: string; points: number }[] = [
-  { id: 'galaxy', points: 300 },
-  { id: 'ethereal', points: 350 },
+  { id: 'galaxy',   points: GALAXY_PTS },
+  { id: 'ethereal', points: ETHEREAL_PTS },
 ]
 
 /** Achievement-gated colors the player has earned (>= threshold) but doesn't

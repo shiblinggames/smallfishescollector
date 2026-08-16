@@ -206,7 +206,7 @@ export const BOATS: BoatDef[] = [
     name: 'Celestial',
     color: '#b0a8e0',
     cost: 0,
-    achievementPoints: 325,
+    achievementPoints: 420,   // see lib/characters.ts for the pool-relative reasoning
     restImageUrl: '/boat_celestial_rest.png',
     castImageUrl: '/boat_celestial_cast.png',
     positions: SHARED_POSITIONS,
@@ -216,7 +216,7 @@ export const BOATS: BoatDef[] = [
     name: 'Abyssal',
     color: '#3a2f5a',
     cost: 0,
-    achievementPoints: 275,
+    achievementPoints: 350,   // see lib/characters.ts for the pool-relative reasoning
     restImageUrl: '/boat_abyssal_rest.png',
     castImageUrl: '/boat_abyssal_cast.png',
     positions: SHARED_POSITIONS,

@@ -38,7 +38,7 @@ import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, playForgeSfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
-import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import { CHARACTER_COLORS, ACHIEVEMENT_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons, PRESTIGE_MAX, goldenBoostPct } from '@/lib/zoneRewards'
 import { updateCharacterColor, purchaseCharacterColor, persistEarnedSkins, persistEarnedBoats } from '@/app/(app)/u/actions'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
@@ -533,7 +533,7 @@ const SKIN_TIPS = [
   "Tip: open fishing crates for a rare chance to find the Mint character color.",
   "Tip: reach Fishing Level 75 to unlock the Ice character color.",
   "Tip: several character colors, like Autumn and Ruby, can be bought with gems from your profile.",
-  "Tip: reach 300 achievement points to unlock the Galaxy character color.",
+  `Tip: reach ${ACHIEVEMENT_COLORS.find(c => c.id === 'galaxy')?.points ?? 0} achievement points to unlock the Galaxy character color.`,
   "Tip: max out both Fishing and Navigation to Level 100 to unlock the Crystal character color.",
 ]
 
