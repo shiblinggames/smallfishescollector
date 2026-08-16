@@ -4029,6 +4029,9 @@ export default function FishingGame({
   // Quick on/off for the equipped auto item, toggled from a chip under the XP
   // bar — pauses auto-cast/catch without unequipping in the gear shop.
   const [autoEnabled, setAutoEnabled] = useState(true)
+  /** Set only when the AUTO loop claimed a crate, so the resume below can tell
+   *  that apart from a player tapping Claim themselves. */
+  const autoResumeRef = useRef(false)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -5911,7 +5914,17 @@ export default function FishingGame({
     // so all that is left here is the auto-claim once the reward is up.
     if (crateResult) {
       if (cratePhase === 'revealed') {
-        const t = setTimeout(() => { void handleClaimCrate() }, 1200)
+        const t = setTimeout(() => {
+          // Mark this claim as the AUTO one. handleClaimCrate parks the game
+          // at 'idle' (it has to -- there is no fish or miss behind a crate,
+          // so the Cast Again slot would render empty), and 'idle' is where
+          // the auto-cast loop below stops. Without this flag a crate quietly
+          // ended every unattended session, which is not a decision anyone
+          // made: the loop had already opened AND claimed the crate, so the
+          // player got neither the moment nor the continuation.
+          autoResumeRef.current = true
+          void handleClaimCrate()
+        }, 1200)
         return () => clearTimeout(t)
       }
       return
@@ -5926,6 +5939,25 @@ export default function FishingGame({
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, autoTier, autoEnabled, cratePhase, catchResult?.isShiny, crateResult])
+
+  // Resume after an AUTO-claimed crate. Deliberately gated on the ref rather
+  // than just 'idle': a bare "auto-cast whenever idle" rule would also fire on
+  // page load and after a MANUAL claim, and the manual stop is intentional --
+  // a player who taps Claim themselves has said they want the wheel.
+  useEffect(() => {
+    if (!autoResumeRef.current) return
+    if (phase !== 'idle') return
+    autoResumeRef.current = false
+    // Re-checked here rather than trusted from the claim: auto can be switched
+    // off, or the item unequipped, during the crate reveal.
+    if (autoTier === 0 || !autoEnabled) return
+    const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
+    const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
+    if (currentBaitQty <= 0 || currentHoldCount >= holdCapacity) return
+    const t = setTimeout(() => { void handleCast() }, 900)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, autoTier, autoEnabled])
 
   // Auto Catcher: while a common/uncommon fish is on the dial, watch the
   // needle spin and "tap" the instant it's about to land in a green CATCH
