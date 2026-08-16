@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BADGE_MAP, badgeReward, badgeDetail } from '@/lib/badges'
+import { vigilFor, vigilTotal, VIGIL_MAX_RANK, VIGIL_MAX_TOTAL, type VigilState } from '@/lib/ancientVigil'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import AchievementsClient, { type JourneyGroup, type JourneyGoal } from '@/app/(app)/achievements/AchievementsClient'
@@ -199,6 +200,15 @@ export default async function BadgesPage() {
   const ownsAllBoatSkins = SHIP_SKINS.every(s => ((profile?.ship_skins as string[] | null) ?? []).includes(s.id))
 
   const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
+  // THE LONG VIGIL. vigilFor seeds rank 1 off ancient_catches, so a full wall
+  // reads as 6 points before anything has been released.
+  const vigilState: VigilState = vigilFor(profile?.ancient_vigil, (profile?.ancient_catches as number[] | null))
+  const vigilPoints = vigilTotal(vigilState)
+  const vigilTopRank = Math.max(0, ...Object.values(vigilState).map(v => v.rank))
+  const vigilAtLarge = Object.values(vigilState).filter(v => v.released).length
+  // The release badge is hook-granted (the flag clears once you land it again),
+  // so its progress reads off the badge itself plus the states that prove it.
+  const vigilEverReleased = has('back_to_the_dark') || vigilAtLarge > 0 || vigilTopRank >= 2
   const trophySizeCatches = Number(profile?.trophy_size_catches ?? 0)
 
   const nonAncientIds = new Set(
@@ -324,6 +334,13 @@ export default async function BadgesPage() {
         badgeGoal('half_the_sea', 'Half the Sea', 'Catch 50 fish species', collectionCount, 50, '/fishing'),
         badgeGoal('hundred_fins', 'A Hundred Fins', 'Catch 100 fish species', collectionCount, 100, '/fishing'),
         badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep giants', ancientsCaught, 6, '/fishing'),
+        // ── THE LONG VIGIL ── the six giants mastered, post-finale.
+        badgeGoal('back_to_the_dark', 'Back to the Dark', 'Release an Ancient back into the deep', vigilEverReleased ? 1 : 0, 1, '/fishing', { binary: true }),
+        badgeGoal('twice_landed', 'Twice Landed', 'Raise an Ancient to Vigil Rank II', vigilTopRank, 2, '/fishing'),
+        badgeGoal('six_adrift', 'Six Adrift', 'Have all six Ancients at large at once', vigilAtLarge, 6, '/fishing'),
+        badgeGoal('struck_in_gold', 'Struck in Gold', 'Take an Ancient to Vigil Rank V', vigilTopRank, VIGIL_MAX_RANK, '/fishing'),
+        badgeGoal('deep_remembers', 'The Deep Remembers', 'Reach 20 total Vigil', vigilPoints, 20, '/fishing'),
+        badgeGoal('the_long_vigil', 'The Long Vigil', 'Master all six Ancients at Rank V', vigilPoints, VIGIL_MAX_TOTAL, '/fishing'),
         badgeGoal('a_real_keeper', 'A Real Keeper', 'Land 10 Trophy-size catches', trophySizeCatches, 10, '/fishing'),
         badgeGoal('trophy_hunter', 'Trophy Hunter', 'Land 25 Trophy-size catches', trophySizeCatches, 25, '/fishing'),
         badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${prestigedAll ? speciesTotal : collected}/${speciesTotal})`, prestigedAll ? speciesTotal : collected, speciesTotal, '/fishing'),

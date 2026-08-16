@@ -2017,6 +2017,9 @@ export async function releaseAncient(fishId: number): Promise<
 
   vigil[key] = { rank: entry.rank, released: true }
   await admin.from('profiles').update({ ancient_vigil: vigil }).eq('id', user.id)
+  // Hooked rather than derived: once you land it again the released flag
+  // clears, so "has ever given one back" is not recoverable from state.
+  try { await grantBadgeDirect(user.id, 'back_to_the_dark') } catch { /* best-effort */ }
   return { ok: true, vigil }
 }
 

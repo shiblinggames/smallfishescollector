@@ -20,6 +20,7 @@ import { DEEP_TRAIT_MAX } from './crewGen'
 import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem, isAbyssalForgedItem, GAUNTLET2_BASE_ITEM_IDS, RAID_ITEMS, baseItemId } from './raidItems'
 import { finnItemLevel, FINN_ITEM_MAX_LEVEL } from './finnItems'
+import { vigilFor, vigilTotal, vigilComplete, VIGIL_MAX_RANK, ANCIENT_IDS } from './ancientVigil'
 import { raidItemSlotsForTier } from './expeditions'
 import { CREW_SKINS } from './crewSkins'
 import { BUYABLE_ROD_TIERS } from './rods'
@@ -89,6 +90,7 @@ export interface BadgeProfileFields {
   gauntlet_deepest?: number | null
   gauntlet_fathoms?: number | null
   ancient_catches?: number[] | null   // the ≤6 Ancient Deep giants (Megalodon etc.)
+  ancient_vigil?: unknown             // THE LONG VIGIL: per-giant rank + released state
   trophy_size_catches?: number | null  // lifetime count of Trophy-SIZE catches
   prestige_levels?: Record<string, number> | null
   finn_wins?: number | null
@@ -247,6 +249,14 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   // The Eye is a FISHING special (its own boolean); the Maw is a raid item, so
   // it lives in raid_items. Charged ids carry their tier as "borrowed_jaw#4",
   // so strip the tag before matching or an upgraded Maw stops being recognised.
+  // THE LONG VIGIL. vigilFor seeds rank 1 from ancient_catches, so a captain
+  // who has never released anything still reads as six-at-rank-1 rather than
+  // empty -- which is what makes the 20-point threshold meaningful.
+  const vigilState = vigilFor(p.ancient_vigil, p.ancient_catches ?? null)
+  const vigilPoints = vigilTotal(vigilState)
+  const vigilTopRank = Math.max(0, ...Object.values(vigilState).map(v => v.rank))
+  const vigilAtLarge = Object.values(vigilState).filter(v => v.released).length
+
   const ownsEye = p.has_anglers_patience === true
   const ownsMaw = raidItems.some(id => baseItemId(id) === 'borrowed_jaw')
   // Highest tier reached on a spoil the player ACTUALLY holds — a leftover xp
@@ -509,6 +519,16 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     // something_old currently fire together. Kept separate deliberately:
     // ancient_tackle is written against the RARITY so it keeps meaning if more
     // Ancient items ever ship.
+    // ── THE LONG VIGIL ──
+    // All derived from the vigil map except back_to_the_dark, which is hooked
+    // at the moment of release: "has ever released one" is not recoverable
+    // from state, since releasing and landing it again clears the flag.
+    twice_landed:         vigilTopRank >= 2,
+    struck_in_gold:       vigilTopRank >= VIGIL_MAX_RANK,
+    six_adrift:           vigilAtLarge === ANCIENT_IDS.length,
+    deep_remembers:       vigilPoints >= 20,
+    the_long_vigil:       vigilComplete(vigilState),
+
     ancient_tackle:       ownsEye || ownsMaw,
     something_old:        ownsEye || ownsMaw,
     both_in_hand:         ownsEye && ownsMaw,
@@ -562,7 +582,7 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps, voyage_booty_hauls, daily_master_cleared, bounties_claimed, bounty_boards_cleared, bounty_elites_claimed, bounty_gems_earned'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, crew_drill_level, crew_stores_level, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, charting_landmarks_claimed, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, ancient_vigil, trophy_size_catches, prestige_levels, finn_wins, fish_sold_doubloons, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, ship_skins, owned_crew_skins, equipped_crew_skins, has_sixth_berth, has_armory_expansion, dons_gauntlet_deepest, parlor_best_streak, parlor_points, lifetime_species_count, raid_node_progress, equipped_raid_items, finn_spoil_free, finn_spoil_paid, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, daily_challenge_sweeps, voyage_booty_hauls, daily_master_cleared, bounties_claimed, bounty_boards_cleared, bounty_elites_claimed, bounty_gems_earned'
 
 // EVERY FIELD A CONDITION READS MUST BE LISTED ABOVE. A missing column does not
 // error: the field comes back undefined, `?? 0` turns it into zero, and the

@@ -348,6 +348,18 @@ export const BADGES: Badge[] = [
   //    content that shipped 2026-08-05 and had no recognition at all.
   { id: 'massive_booty',   name: 'Massive Booty',      description: 'Land a Massive Booty on a voyage',                imageUrl: '/badges/massive_booty.png',   difficulty: 'veteran'     },
   { id: 'the_fourth_task', name: 'The Fourth Task',    description: 'Clear 25 Master daily challenges',                imageUrl: '/badges/the_fourth_task.png', difficulty: 'master'      },
+
+  // ── Sheet 28 — THE LONG VIGIL. The six Ancient Deep giants, mastered.
+  //    One full plate, and the shape of the ladder itself: two firsts (the
+  //    release, and proving you can land one again), one flex (every berth
+  //    empty at once), then the three rungs of the climb. Gated behind the
+  //    finale, so none of these can be seen before the coda.
+  { id: 'back_to_the_dark', name: 'Back to the Dark',   description: 'Release an Ancient back into the deep',           imageUrl: '/badges/back_to_the_dark.png', difficulty: 'veteran'     },
+  { id: 'twice_landed',     name: 'Twice Landed',       description: 'Raise an Ancient to Vigil Rank II',               imageUrl: '/badges/twice_landed.png',     difficulty: 'veteran'     },
+  { id: 'six_adrift',       name: 'Six Adrift',         description: 'Have all six Ancients at large at once',          imageUrl: '/badges/six_adrift.png',       difficulty: 'master'      },
+  { id: 'struck_in_gold',   name: 'Struck in Gold',     description: 'Take an Ancient to Vigil Rank V',                 imageUrl: '/badges/struck_in_gold.png',   difficulty: 'master'      },
+  { id: 'deep_remembers',   name: 'The Deep Remembers', description: 'Reach 20 total Vigil',                            imageUrl: '/badges/deep_remembers.png',   difficulty: 'master'      },
+  { id: 'the_long_vigil',   name: 'The Long Vigil',     description: 'Master all six Ancients at Rank V',               imageUrl: '/badges/the_long_vigil.png',   difficulty: 'grandmaster' },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -524,6 +536,13 @@ export const BADGE_DETAIL: Record<string, string> = {
   six_aboard:       'Buy the Sixth Berth and sail with a crew of six. One more hand, and one more ability, on every raid and voyage from here on.',
   expanded_armory:  'Buy the Expanded Armory from the don’s shipwright and bolt one more raid-item mount to your deck. One more piece of gear working every fight.',
   full_tackle_box:  'Own every purchasable rod in the tackle shop, from the Driftwood Staff to the Lightsaber. The Completionist Rod is earned, not bought, so it does not count. A serious pile of doubloons spent across the whole catalogue.',
+  // ── The Long Vigil ──
+  back_to_the_dark: 'Put a mounted Ancient back in the water. It is the only way to face one twice, and your wall is one short until you land it again.',
+  twice_landed:     'Land a released Ancient on a perfect and raise it to Rank II. Only a perfect final phase counts, and no rod in the game can widen that window.',
+  six_adrift:       'Have all six Ancients at large at the same time. Every berth on your wall empty at once, and six things loose in the deep that only rise for a lure.',
+  struck_in_gold:   'Take one Ancient all the way to Rank V. Six phases, a landing window that closes as you hold it, and the mount comes back struck in gold.',
+  deep_remembers:   'Reach 20 total Vigil across the six. Two thirds of the way up a ladder that only moves on perfect catches.',
+  the_long_vigil:   'Every one of the six Ancients at Rank V. The hardest thing in fishing, and the only way to earn the Baby Plesiosaurus, which no crate will ever hand out.',
 }
 
 /** Detail blurb for a badge id (falls back to its short description). */
