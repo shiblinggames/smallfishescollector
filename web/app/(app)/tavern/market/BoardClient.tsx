@@ -761,7 +761,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
           </div>
 
           <Step label="How long" />
-          <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 4, marginBottom: 13, scrollbarWidth: 'none' }}>
+          <div className="scrollbar-hide" style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 4, marginBottom: 13 }}>
             {TERMS.map(t => (
               <button key={t} type="button" onClick={() => setTerm(t)} className="font-karla font-700"
                 style={{

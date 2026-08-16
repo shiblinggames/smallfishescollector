@@ -145,7 +145,7 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
     <>
       {/* One row, horizontally scrollable, one active at a time. A dropdown
           would hide eight of the nine questions behind a tap. */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', overflowY: 'hidden', marginBottom: '1.1rem', paddingBottom: 2, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+      <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto', overflowY: 'hidden', marginBottom: '1.1rem', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
         {VIEWS.map(v => {
           const on = view === v.key
           return (

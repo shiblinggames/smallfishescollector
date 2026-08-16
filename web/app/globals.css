@@ -247,6 +247,58 @@ html, body {
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* ── SCROLLBARS ──
+   The game has ~84 scrolling containers and, until now, zero scrollbar
+   styling, so every one of them wore the raw Windows chrome: a 15px light-grey
+   trough with arrow buttons, sitting on a black pirate UI. The horizontal
+   rails were the worst of it, because a fat grey bar runs the full width
+   directly under rows of hand-painted art.
+
+   One universal rule replaces all of them with a slim pill that reads as part
+   of the game: quiet warm-white at rest, waking to gold when the cursor is
+   anywhere inside the region that scrolls, brighter still on the thumb itself.
+   The track and corner are transparent, so what you see is a floating pill
+   rather than a trough, and the arrow buttons are gone entirely.
+
+   POINTER: FINE GATES THE WHOLE BLOCK, and that is load-bearing. Touch
+   browsers draw overlay scrollbars that fade out on their own; the moment you
+   style ::-webkit-scrollbar with a width, iOS and Android promote them to
+   permanent space-taking bars. Gating on a mouse keeps phones exactly as they
+   are, which matters most for the installed PWA.
+
+   SPECIFICITY IS THE OPT-OUT. Every selector here is universal (0,0,0), so any
+   class-based scrollbar rule beats it regardless of source order -- both
+   .scrollbar-hide above and RaidCombat's blue-steel .rc-log-scroll keep
+   winning without needing !important or a reordering.
+
+   Firefox gets scrollbar-width/color, which is all it exposes. It cannot do
+   the hover brightening, so it holds the rest colour throughout. */
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(240,237,232,0.20) transparent;
+  }
+  *::-webkit-scrollbar        { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track  { background: transparent; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+  /* The stepper arrows are pure Windows-98 tell. */
+  *::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  *::-webkit-scrollbar-thumb {
+    background-color: rgba(240,237,232,0.20);
+    /* Transparent border + padding-box clip insets the pill inside the track,
+       so it floats with air around it instead of filling the gutter. */
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+    transition: background-color 0.18s ease;
+  }
+  /* Hovering ANYWHERE in the scrolling region lights the bar -- the cursor is
+     inside the container long before it finds a 6px pill. */
+  *:hover::-webkit-scrollbar-thumb  { background-color: rgba(240,192,64,0.45); }
+  *::-webkit-scrollbar-thumb:hover  { background-color: rgba(240,192,64,0.70); }
+  *::-webkit-scrollbar-thumb:active { background-color: rgba(240,192,64,0.88); }
+}
+
 .sg-input {
   font-family: var(--font-karla), sans-serif;
   font-weight: 300;

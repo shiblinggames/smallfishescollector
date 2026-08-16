@@ -806,7 +806,7 @@ export default function TackleShopClient({
                   )
                 })}
               </div>
-              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none' }}>
+              <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 3 }}>
                 {[{ key: null as string | null, label: 'All abilities' }, ...availableMechanics].map(m => {
                   const on = rodMechanic === m.key
                   return (

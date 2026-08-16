@@ -3391,7 +3391,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.46rem', color: sweetened ? '#c9a7ff' : '#8f8a80', marginBottom: 6, textAlign: 'left' }}>
                       In the Chest{sweetened ? ` · Davy's ${offerChest}x` : ''}{ftnMult > 1 ? ` · Fortune ${ftnMult.toFixed(2)}x` : ''}
                     </p>
-                    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+                    <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
                       {odds.map(o => {
                         const img = o.kind === 'skin'
                           ? getShipSkin(o.id)?.imageByTier?.[6]
