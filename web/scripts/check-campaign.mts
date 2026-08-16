@@ -13,6 +13,27 @@ import { getRaidConfigById } from '../lib/raidRegistry'
 
 const problems: string[] = []
 
+// ── 0. Every map node's raid is in the registry ──────────────────────────────
+// claimRaidLoot validates a claim against `raidUniqueLootIds(raidId)`, which
+// reads RAID_BY_ID. A raid the registry does not know returns an EMPTY set, so
+// every unique it rolled is filtered out as unclaimable and the crate pays
+// nothing but coins -- silently, because the client still drew the item and
+// still printed its label.
+//
+// THE_SUNKEN_HAND_CHALLENGE shipped exactly like this: imported into the
+// registry file and left out of ALL_RAIDS, so Finn's challenge crate could not
+// grant a hull, a raid item or a gem row to anybody. It was reported as "the
+// chest was empty" twice before the cause was found, because nothing failed
+// loudly -- the only symptom is a reward you are shown and do not receive.
+//
+// The type system cannot see this: an unused import is legal, and the map node
+// only references the config's `.raidId` string.
+for (const node of RAID_MAP) {
+  if (node.raidId && !getRaidConfigById(node.raidId)) {
+    problems.push(`Raid node "${node.id}" points at raidId "${node.raidId}", which is not in ALL_RAIDS (lib/raidRegistry). Its crate will grant nothing but coins.`)
+  }
+}
+
 // ── 1. Nobody speaks before they join ────────────────────────────────────────
 // CREW_SPEAKER's own doc says "Doby + Kat from the start, then one legendary per
 // chapter", but nothing enforced it, and two lines shipped with Mira on stage in
