@@ -254,6 +254,13 @@ const PLAN = [
   [36, 1, 0, 'fifty_orders'],
   [36, 1, 1, 'seven_boards'],
   [36, 1, 2, 'bounty_hoard'],
+  // ── batch 37 — The Long Vigil ──
+  [37, 0, 0, 'back_to_the_dark'],
+  [37, 0, 1, 'twice_landed'],
+  [37, 0, 2, 'six_adrift'],
+  [37, 1, 0, 'struck_in_gold'],
+  [37, 1, 1, 'deep_remembers'],
+  [37, 1, 2, 'the_long_vigil'],
 ]
 
 // Optional: `ONLY=30 node slice-badges.mjs` slices just that sheet (so re-running
