@@ -20,22 +20,29 @@ const STEPS: TourStep[] = [
     body: (
       <>
         <span style={{ color: '#bda05a', fontWeight: 700 }}>Tap and hold</span>
-        {' '}anywhere to jump. Quick tap hops, long hold leaps.
+        {' '}anywhere to jump the rocks. Quick tap hops, long hold leaps.
       </>
     ),
   },
   {
     eyebrow: 'The Trick',
     title: 'Smash the Beacons',
+    // "Smash them on the water" was the reported sticking point, and the fault
+    // is position rather than vocabulary: the card BEFORE this one teaches
+    // jumping, so a player arrives here primed to jump everything and reads
+    // "smash" as something they do in the air. The fix is to name the wrong
+    // instinct out loud before giving the right one, and to say plainly what
+    // the boat physically does. Players did work it out unaided, so this is a
+    // clarification and not a redesign.
     body: (
       <>
         Rocks with a blinking
         <span style={{ color: '#ffb84d', fontWeight: 700 }}> amber light </span>
         are beacons.{' '}
-        <span style={{ color: '#9ae6b4', fontWeight: 700 }}>Smash them on the water</span>
-        {' '}to take them out.{' '}
-        <span style={{ color: '#fda4a4', fontWeight: 700 }}>Jump one</span> and the
-        alarm wrecks you.
+        <span style={{ color: '#fda4a4', fontWeight: 700 }}>Never jump a beacon.</span>
+        {' '}Stay down on the water and{' '}
+        <span style={{ color: '#9ae6b4', fontWeight: 700 }}>ram straight through it</span>
+        {' '}to take it out. Jump one and the alarm wrecks you.
       </>
     ),
   },
