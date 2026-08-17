@@ -26,16 +26,48 @@ import { tideRunSea, isSeaUnlocked } from '@/lib/tideRunSeas'
 // percentile, so a patient cheat could have sent 499 a call, about 240,000
 // doubloons an hour, and never tripped anything. 25 is clear of real play and
 // catches abuse roughly twenty times sooner.
+/**
+ * DISTANCE CEILINGS, sized off real play rather than guessed.
+ *
+ * Across 38 captains the median best is 306m, the 90th percentile 467m, and the
+ * best genuine run on record is 1,011m (dkmuppy, earned across 105km of total
+ * distance and 11,241 beacons). PLAUSIBLE sits comfortably above that so a real
+ * record is never impugned; ABSURD is a hard refusal, far past anything the
+ * speed curve can produce in one run.
+ *
+ * A flag is advisory and a refusal is not: between them, a forged settle either
+ * leaves a review trail or does not land at all. Deliberately NOT clamped the
+ * way beacons are -- clamping a distance would write a fake number onto the
+ * leaderboard as if it were real, which is worse than refusing it.
+ */
+const TIDE_RUN_PLAUSIBLE_M = 1500
+const TIDE_RUN_ABSURD_M = 5000
+
 const TIDE_RUN_MAX_BEACONS = 250
 const TIDE_RUN_PLAUSIBLE_BEACONS = 25
 
 /**
  * Record the player's distance for the all-time best (leaderboard). Only
  * updates `profiles.tide_run_best_distance` if the new distance is higher.
- * Called from the client after every death (and on mount with localStorage
- * best, to backfill old scores).
+ *
+ * NOT EXPORTED, and that is the whole point. Every async export in a
+ * 'use server' file is a live HTTP endpoint any signed-in user can POST to,
+ * so while settleTideRun grew a run token, a replay check and beacon caps,
+ * this sat beside it accepting any finite number with no token at all. A
+ * tester walked straight through it: fresh account, 1,800m recorded 52 minutes
+ * after signup, zero beacons smashed across 7,937m of "play" -- which is not a
+ * good run, it is a contradiction, since a beacon has to be smashed grounded or
+ * it detects you.
+ *
+ * It was known: lib/tideRunBoats notes an earlier forged 813m from an account
+ * carrying 203 anomaly flags, and the boat ladder was priced around that number
+ * rather than the hole being shut. Shutting it is one keyword.
+ *
+ * settleTideRun is now the only way distance reaches the leaderboard, which
+ * means distance inherits the token, the replay refusal and the flagging that
+ * beacons already had.
  */
-export async function submitTideRunBest(distance: number): Promise<{ ok: true; best: number; wonTideChampion?: boolean } | { error: string }> {
+async function submitTideRunBest(distance: number): Promise<{ ok: true; best: number; wonTideChampion?: boolean } | { error: string }> {
   try {
     if (typeof distance !== 'number' || !isFinite(distance) || distance < 0) {
       return { error: 'Invalid distance' }
@@ -108,31 +140,6 @@ export async function submitTideRunBest(distance: number): Promise<{ ok: true; b
   }
 }
 
-/**
- * Accumulate lifetime Tide Run stats on EVERY run end (win or lose), unlike
- * submitTideRunBest which only fires on a new record. Atomic increment via
- * bump_tide_run_stats() so it's race-safe. Fire-and-forget from the client.
- * These per-player counters let admins pull aggregates later (total distance
- * sailed by everyone, most beacons smashed, etc.).
- */
-export async function recordTideRunRun(distance: number, beacons: number): Promise<void> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const dist = Math.max(0, Math.min(100000, Math.floor(Number(distance) || 0)))
-    // Same ceiling as the payout path. These counters feed admin aggregates and
-    // "most beacons smashed", so leaving this at 10,000 would keep the career
-    // stats inflated even once the doubloons were clamped — the exploit would
-    // simply buy a record instead of money.
-    const smashed = Math.max(0, Math.min(TIDE_RUN_MAX_BEACONS, Math.floor(Number(beacons) || 0)))
-    if (dist === 0 && smashed === 0) return
-    const admin = createAdminClient()
-    await admin.rpc('bump_tide_run_stats', { uid: user.id, dist, beacons: smashed })
-  } catch {
-    // best-effort; never block the wreck screen
-  }
-}
 
 /** Doubloon payout per beacon smashed. Tiny passive income so every
  *  run feels rewarded; the leaderboard chase is what drives long
@@ -174,83 +181,6 @@ export type AwardTideRunResult =
   | { ok: true; doubloons: number; newDoubloonTotal: number }
   | { error: string }
 
-/** Award doubloons for beacons smashed in a single run. Called on
- *  every wreck (or successful completion if we ever add one), no
- *  daily cap. Beacons are sanity-clamped against absurd values; the
- *  client is trusted enough that the leaderboard is just distance,
- *  but a hard ceiling keeps a manipulated payload from minting
- *  arbitrary doubloons. */
-export async function awardTideRunBeacons(beacons: number, token?: string | null): Promise<AwardTideRunResult> {
-  try {
-    if (typeof beacons !== 'number' || !isFinite(beacons) || beacons < 0) {
-      return { error: 'Invalid beacon count' }
-    }
-    const smashed = Math.max(0, Math.min(10000, Math.floor(beacons)))
-    if (smashed === 0) return { error: 'No beacons smashed' }
-
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
-
-    const admin = createAdminClient()
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('doubloons')
-      .eq('id', user.id)
-      .single()
-    if (!profile) return { error: 'Profile not found' }
-
-    // Beacon count is client-authored, so a forged call arrives looking exactly
-    // like a good run. Flag it AND clamp it: flagging alone let one account mint
-    // 5.66M over 25 days with every call recorded and paid.
-    if (smashed > TIDE_RUN_PLAUSIBLE_BEACONS) {
-      await flagAnomaly(admin, user.id, 'implausible:tideRunBeacons', smashed > 5000 ? 3 : 2, { beacons: smashed })
-    }
-
-    // ONE PAYOUT PER RUN. The token was minted when the run opened and is
-    // consumed atomically here, so a replayed call finds it already spent and
-    // gets nothing. This is what the clamp above could not do: the clamp bounds
-    // what a single forged call is worth, and this bounds how many times any
-    // call — forged or genuine — can be honoured.
-    //
-    // Rejects rather than falling back when a token is supplied and refused: a
-    // present-but-spent token is a replay, and the only correct answer to a
-    // replay is no.
-    const spent = await consumeRunToken(admin, user.id, 'tide_run', token)
-    if (token && !spent) {
-      await flagAnomaly(admin, user.id, 'replay:tideRunReward', 3, { beacons: smashed })
-      return { error: 'That run has already been paid out.' }
-    }
-
-    // The clamp is what actually costs a cheat anything. It is deliberately
-    // above the best run ever recorded, so no honest player ever meets it, and
-    // the flag above still records the raw figure for review.
-    const paidBeacons = Math.min(smashed, TIDE_RUN_MAX_BEACONS)
-    const doubloonsEarned = paidBeacons * DOUBLOONS_PER_BEACON
-    const newDoubloons = (profile.doubloons ?? 0) + doubloonsEarned
-
-    const { error: updateErr } = await admin
-      .from('profiles')
-      .update({ doubloons: newDoubloons })
-      .eq('id', user.id)
-    if (updateErr) return { error: 'Update failed' }
-
-    // Best-effort audit row.
-    await admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: doubloonsEarned,
-      // Records what was PAID, and the raw claim too when they differ, so the
-      // ledger reads as forensics rather than as a payout that never happened.
-      reason: paidBeacons === smashed
-        ? `Tide Run beacons smashed (${smashed})`
-        : `Tide Run beacons smashed (${paidBeacons}, capped from ${smashed})`,
-    }).then(() => {}, () => {})
-
-    return { ok: true, doubloons: doubloonsEarned, newDoubloonTotal: newDoubloons }
-  } catch {
-    return { error: 'Server error — please try again' }
-  }
-}
 
 /** Top-of-leaderboard reader. Shown on the wreck screen so the
  *  player always sees the target to beat right next to their own
@@ -464,6 +394,23 @@ export async function settleTideRun(input: {
     if (input.token && !spent) {
       await flagAnomaly(admin, user.id, 'replay:tideRunSettle', 3, { meters, beacons: rawBeacons })
       return { error: 'That run has already been settled.' }
+    }
+
+    // Distance, held to the same standard as beacons. Refuse the absurd
+    // outright rather than clamping: a clamped distance would sit on the
+    // leaderboard looking earned.
+    if (meters > TIDE_RUN_ABSURD_M) {
+      await flagAnomaly(admin, user.id, 'implausible:tideRunDistance', 3, { meters, beacons: rawBeacons })
+      return { error: 'Invalid distance' }
+    }
+    if (meters > TIDE_RUN_PLAUSIBLE_M) {
+      await flagAnomaly(admin, user.id, 'implausible:tideRunDistance', 2, { meters, beacons: rawBeacons })
+    }
+    // A long run with NO beacons is the shape a forged payload takes: beacons
+    // must be smashed grounded or they detect you, so distance without them is
+    // not a good run, it is a contradiction.
+    if (meters > TIDE_RUN_PLAUSIBLE_M / 2 && rawBeacons === 0) {
+      await flagAnomaly(admin, user.id, 'suspicious:tideRunNoBeacons', 2, { meters })
     }
 
     if (rawBeacons > TIDE_RUN_PLAUSIBLE_BEACONS) {
