@@ -229,11 +229,26 @@ export function stintProgress(since: string | Date, nowMs: number, capHours: num
   return Math.min(1, Math.max(0, (nowMs - start) / (capHours * 3_600_000)))
 }
 
-/** Milliseconds left on this stint, or 0 if it is done. */
+/**
+ * Milliseconds left on this stint. 0 when done, and never more than the stint
+ * itself.
+ *
+ * THE UPPER CLAMP IS NOT COSMETIC. `since` is stamped by Postgres now(), while
+ * this runs against the browser's Date.now(). A client clock even a millisecond
+ * behind the database makes the subtraction return slightly MORE than the full
+ * stint, and the display ceils to the next minute -- so a fresh 1-hour stint
+ * read "1h 1m left". Reported, and it looks like the game shorted you a minute
+ * before you started.
+ *
+ * There is no legitimate reading in which more time remains than the whole
+ * stint, so clamp it. stintProgress directly below already clamps 0..1 for the
+ * same reason; this end simply never got the same treatment.
+ */
 export function msUntilDone(since: string | Date, nowMs: number, capHours: number): number {
   const start = since instanceof Date ? since.getTime() : new Date(since).getTime()
   if (!Number.isFinite(start)) return 0
-  return Math.max(0, start + capHours * 3_600_000 - nowMs)
+  const full = capHours * 3_600_000
+  return Math.min(full, Math.max(0, start + full - nowMs))
 }
 
 /**
