@@ -2304,7 +2304,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             return (
               <motion.div key="bunk-reveal"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setBunkReveal(null)}
+                // Tap-outside dismisses an ordinary collect and is DISABLED on
+                // an offer, for the same reason the button above is hidden: it
+                // strands the draw. An offer has exactly two exits, and both of
+                // them are answers.
+                onClick={() => { if (!up) setBunkReveal(null) }}
                 // SCRIM OWNS THE SCROLL. This was a centred flex box with flat
                 // padding, which is fine until the card grows -- and the offer
                 // panel made it grow a lot. On a phone the confirm buttons ended
@@ -2423,11 +2427,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                     </div>
                   </motion.div>
 
-                  <motion.button onClick={() => setBunkReveal(null)} whileTap={{ scale: 0.92 }}
-                    className="font-cinzel font-700 uppercase"
-                    style={{ marginTop: 18, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.8rem', background: '#f0c04022', border: '1px solid #f0c0407a', color: '#f4ecd8', boxShadow: '0 0 14px #f0c04022', cursor: 'pointer' }}>
-                    Back to work
-                  </motion.button>
+                  {/* NO THIRD EXIT ON AN OFFER. "Back to work" reads exactly
+                      like Keep and does something quite different: it dismisses
+                      without answering, so pending_trait stays set. Nothing
+                      surfaces a pending offer anywhere, and recutLeviathanTraits
+                      skips a hand that already has one -- so a stray tap here
+                      locked that crew out of the deep bunk for good. Keep IS
+                      the "leave it alone" answer; this button only belongs on an
+                      ordinary collect, where there is nothing to answer. */}
+                  {!up && (
+                    <motion.button onClick={() => setBunkReveal(null)} whileTap={{ scale: 0.92 }}
+                      className="font-cinzel font-700 uppercase"
+                      style={{ marginTop: 18, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.8rem', background: '#f0c04022', border: '1px solid #f0c0407a', color: '#f4ecd8', boxShadow: '0 0 14px #f0c04022', cursor: 'pointer' }}>
+                      Back to work
+                    </motion.button>
+                  )}
                 </motion.div>
               </motion.div>
             )
