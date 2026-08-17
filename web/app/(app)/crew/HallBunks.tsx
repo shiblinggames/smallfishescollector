@@ -818,11 +818,17 @@ function BunkPicker({
             across two blocks -- the rules, the odds, the never-worse promise and
             the target -- on a page whose job is only to pick a hand and a
             length. The target line does most of the work, because "+4/+4/+4 =
-            Divine" is understood at a glance in a way a paragraph never is. */}
+            Divine" is understood at a glance in a way a paragraph never is.
+
+            No odds claim here on purpose. "Most land worse" was true only
+            against a strong trait: a hand carrying nothing sees 19 of the 28
+            entries come back net-positive. Whether a draw is a downgrade
+            depends entirely on what that crew already has, so the panel says
+            it per-crew at the moment of the choice, where it can be right. */}
         {leviathan && (
           <div style={{ margin: '0 1rem 0.85rem', paddingTop: '0.7rem', borderTop: `1px solid ${LEVIATHAN}2e` }}>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.66)', lineHeight: 1.5 }}>
-              One new trait per stint, offered against theirs. Most land worse. You choose.
+              One new trait per stint, offered against theirs. Take it or keep what they have.
             </p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1.5, marginTop: 5 }}>
               <span style={{ color: `${LEVIATHAN}cc`, fontVariantNumeric: 'tabular-nums' }}>+4 / +4 / +4</span>
