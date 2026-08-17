@@ -543,10 +543,27 @@ export async function claimRaidLoot(
   const table = raidUniqueLootIds(raidId)
   const safeItemIds = [...new Set(rolledItemIds.filter(id => table.has(id)))].slice(0, table.size)
 
+  // BOTH CLAMPS BELOW USED TO TRIP SILENTLY, on the largest reward path in the
+  // game. A legit client can only roll ids from its own raid's table and can
+  // only earn a crate inside the bound, so either trip is a near-certain forged
+  // call -- exactly the signal lib/anomaly exists to record. Dropping them
+  // quietly meant the request was refused and then forgotten, which protects
+  // the economy but tells you nothing about who is probing it.
+  const foreignIds = rolledItemIds.filter(id => !table.has(id))
+  if (foreignIds.length > 0) {
+    await flagAnomaly(admin, user.id, 'cap_trip:claimRaidLoot_foreignItem', 3,
+      { raidId, claimed: foreignIds.slice(0, 8), tableSize: table.size })
+  }
+
   // 3. WORTH THAT MUCH? The exact figure can't be recomputed (tides are rolled
   //    mid-run on the client), but it can be bounded. See MAX_CRATE_BASE_DOUBLOONS.
   const claimedBase = Number.isFinite(baseDoubloons) ? Math.floor(baseDoubloons) : 0
   const safeBaseDoubloons = Math.max(0, Math.min(claimedBase, MAX_CRATE_BASE_DOUBLOONS))
+  if (claimedBase > MAX_CRATE_BASE_DOUBLOONS) {
+    await flagAnomaly(admin, user.id, 'cap_trip:claimRaidLoot_doubloons',
+      claimedBase > MAX_CRATE_BASE_DOUBLOONS * 5 ? 3 : 2,
+      { raidId, claimed: claimedBase, ceiling: MAX_CRATE_BASE_DOUBLOONS })
+  }
 
   // Helmsman + future doubloon-mult class picks scale the crate
   // doubloons too, in addition to the per-kill gold (which scales via
