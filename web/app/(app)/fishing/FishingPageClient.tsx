@@ -1,11 +1,36 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
 import type { VigilState } from '@/lib/ancientVigil'
-import FishingGame from './FishingGame'
+
+// ── THE GAME ITSELF, OFF THE FIRST LOAD ─────────────────────────────────────
+// FishingGame is 12,037 lines: 58% of this route's client code, and the largest
+// component in the app by a distance. It was imported statically, so it was
+// downloaded, parsed and hydrated before the player had picked a zone -- the
+// two views most visits actually open FIRST (the hub and the zone selector)
+// were waiting on the one view they had not asked for yet. That is why this
+// route loaded slower than every other page by a wide margin.
+//
+// Split, the hub and the selector paint from a much smaller bundle and the
+// game's chunk fetches when a zone is chosen. A returning player whose zone
+// restores from localStorage still needs it immediately, but it now arrives in
+// parallel with the shell instead of blocking it.
+//
+// ssr:false because the game is entirely interactive -- refs, rAF, Web
+// Animations, audio -- and has nothing meaningful to server-render.
+const FishingGame = dynamic(() => import('./FishingGame'), {
+  ssr: false,
+  loading: () => (
+    <div className="font-karla font-700 uppercase tracking-[0.14em]"
+      style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6a6764', fontSize: '0.7rem' }}>
+      Rigging the line&hellip;
+    </div>
+  ),
+})
 import FishingHub from './FishingHub'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
