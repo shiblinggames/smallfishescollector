@@ -38,7 +38,16 @@ export type TraitUpgrade = {
   afterLabel: string
   /** Which stats actually moved, for the reveal to highlight. */
   gained: { power: boolean; dodge: boolean; fortune: boolean }
+  /** True once the roll is an OFFER awaiting an answer rather than something
+   *  already written. Always true for Leviathan re-cuts now; the field exists
+   *  so the reveal can say "keep or replace" instead of "here is your trait". */
+  pending?: boolean
 }
+
+/** A drawn trait of 0/0/0 encodes to null, which is indistinguishable from "no
+ *  offer". Park this sentinel instead so an offer of nothing is still an offer
+ *  the captain has to answer. Decoded back to a neutral line on resolve. */
+export const NEUTRAL_OFFER = 's:0,0,0'
 
 export type BunkRow = {
   id: number
@@ -168,16 +177,23 @@ export async function settleBunks(
 }
 
 /**
- * The Leviathan bunk's ability: EVERY finished stint in slot 5 rolls a fresh
- * trait and keeps whatever it improves, stat by stat.
+ * THE LEVIATHAN RE-CUT — roll a trait and OFFER it.
  *
- * Every stint, not one in five, and applied rather than offered. The gate made
- * sense while the result was free to receive; the offer made sense while
- * "better" was ambiguous. Per-stat merging removed both: `max` can only raise a
- * number, so there is nothing to gate and nothing to ask.
+ * It used to merge per-stat with Math.max and write the result. That could only
+ * ever raise a number, which sounds generous and quietly made Divine a
+ * COUNTDOWN rather than a chase: nothing was ever lost, so every roll was
+ * permanent progress and a Legendary arrived at a perfect line in about
+ * fourteen rolls. It also meant there was no decision to make, which is why the
+ * file's own docs promised "offers, not applies" while the code applied.
  *
- * Rolls DEEP, the only table in the game that reaches 4, and on the crew's own
- * rarity so the top hall does not quietly hand Commons legendary-grade stats.
+ * The draw is flat now (lib/crewTraits), so a roll can be worse than what the
+ * hand carries and the claim is a real choice. Nothing is written to `effects`
+ * here. The roll is parked on `user_crew.pending_trait` and stays there until
+ * the captain answers, which is what stops a refresh from re-rolling it - the
+ * same reason castLine holds a pending_cast token.
+ *
+ * A hand with an offer already open is skipped rather than overwritten: two
+ * stints cannot stack, and the older offer is the one that was earned first.
  */
 async function recutLeviathanTraits(
   admin: Admin,
@@ -188,51 +204,34 @@ async function recutLeviathanTraits(
   if (eligible.length === 0) return []
 
   const { data: crew } = await admin
-    .from('user_crew').select('id, rarity, effects').in('id', eligible.map(r => r.crew_id))
+    .from('user_crew').select('id, rarity, effects, pending_trait').in('id', eligible.map(r => r.crew_id))
 
   const out: TraitUpgrade[] = []
   for (const c of ((crew ?? []) as any[])) {
+    if (c.pending_trait) continue          // an unanswered offer is not replaced
     const before = netTraitStats((c.effects ?? []) as string[])
     const rolled = rollTrait((c.rarity ?? 1) as CrewRarity, true)
-    const after = {
-      power:   Math.max(before.power,   rolled.power),
-      dodge:   Math.max(before.dodge,   rolled.dodge),
-      fortune: Math.max(before.fortune, rolled.fortune),
-    }
-    const gained = {
-      power:   after.power   > before.power,
-      dodge:   after.dodge   > before.dodge,
-      fortune: after.fortune > before.fortune,
-    }
-    const moved = gained.power || gained.dodge || gained.fortune
+    const id = encodeTraitId(rolled)
 
-    // A roll that beat nothing still gets REPORTED, it just is not WRITTEN.
-    //
-    // It used to `continue` here, so a Leviathan stint that rolled under your
-    // current trait looked identical to an ordinary bunk: the hand came back,
-    // said "drilled and rested", and the player had no way to know the re-cut
-    // had happened at all. On a bunk whose entire purpose is the re-cut, silence
-    // reads as a bug. The reveal already knows how to draw a stat that held, so
-    // it only needed to be told.
-    if (!moved) {
-      out.push({
-        crewId: c.id, before, after: before, gained,
-        beforeLabel: traitLabel(before) || 'No trait',
-        afterLabel: traitLabel(before) || 'No trait',
-      })
-      continue
-    }
-
-    const id = encodeTraitId(after)
+    // A neutral draw ('Unremarkable') encodes to null. Park the literal string
+    // so an offer of "nothing" is still an offer the captain can refuse, rather
+    // than a null that reads as "no offer outstanding".
+    const parked = id ?? NEUTRAL_OFFER
     const { data: written } = await admin
-      .from('user_crew').update({ effects: id ? [id] : [] })
-      .eq('id', c.id).eq('user_id', userId).select('id')
+      .from('user_crew').update({ pending_trait: parked })
+      .eq('id', c.id).eq('user_id', userId).is('pending_trait', null).select('id')
     if (!(written ?? []).length) continue
 
     out.push({
-      crewId: c.id, before, after, gained,
+      crewId: c.id, before, after: rolled,
+      gained: {
+        power:   rolled.power   > before.power,
+        dodge:   rolled.dodge   > before.dodge,
+        fortune: rolled.fortune > before.fortune,
+      },
       beforeLabel: traitLabel(before) || 'No trait',
-      afterLabel: traitLabel(after) || 'No trait',
+      afterLabel:  traitLabel(rolled) || 'No trait',
+      pending: true,
     })
   }
   return out

@@ -9,6 +9,7 @@
 // rolled crew stay balanced against the live Voyage/Raid scoring formulas
 // (Common ~8-13, Rare ~13-18, Epic ~19-25, Legendary ~28-34 total).
 
+import { drawDeepTrait } from './crewTraits'
 import { FISH_GROUPS } from './fishGroups'
 import { effectPoolForRarity } from './crewEffects'
 
@@ -139,27 +140,19 @@ const MAG_WEIGHTS: Record<CrewRarity, [number, number, number, number]> = {
 export const TRAIT_MAX = 3
 
 /**
- * THE DEEP ROLL. Only the Leviathan bunk rolls on this table, and it is the
- * only way a 4 ever enters the game.
+ * THE DEEP CEILING. Only the Leviathan re-cut reaches 4, and it now gets there
+ * by drawing from lib/crewTraits rather than by rolling magnitudes -- the old
+ * DEEP_MAG_WEIGHTS table was removed with the lattice it fed.
  *
- * Keeping it off the recruit board matters twice over. It means nothing about
- * the existing balance moves - every crew you can buy still tops out at 3 -
- * and it means the best trait in the game is something you EARNED out of the
- * top hall rather than something you got lucky with on a board. A Divine hand
- * is proof of the chase, not proof of a good draw.
+ * Keeping the 4 off the recruit board still matters for the same reason it
+ * always did: every crew you can buy tops out at 3, so nothing about existing
+ * balance moves, and a Divine hand is proof of the chase rather than proof of
+ * a good draw.
  */
-const DEEP_MAG_WEIGHTS: Record<CrewRarity, [number, number, number, number, number]> = {
-  1: [58, 25, 11,  5,  1],   // Common:     P(0,1,2,3,4) magnitude
-  2: [37, 29, 20, 10,  4],   // Rare
-  3: [22, 24, 28, 18,  8],   // Epic
-  4: [ 8, 16, 24, 30, 22],   // Legendary
-}
-
-/** The ceiling on a deep roll. */
 export const DEEP_TRAIT_MAX = 4
 
-function rollMagnitude(rarity: CrewRarity, deep = false): number {
-  const w: readonly number[] = deep ? DEEP_MAG_WEIGHTS[rarity] : MAG_WEIGHTS[rarity]
+function rollMagnitude(rarity: CrewRarity): number {
+  const w: readonly number[] = MAG_WEIGHTS[rarity]
   let total = 0
   for (const n of w) total += n
   let r = Math.random() * total
@@ -185,11 +178,28 @@ export interface RolledTrait {
  * hall's re-cut passes it.
  */
 export function rollTrait(rarity: CrewRarity, deep = false): RolledTrait {
+  // THE DEEP ROLL IS A DRAW, NOT THREE ROLLS. Building a trait from three
+  // independent stats meant a 9x9x9 lattice: 729 outcomes nobody authored, 82%
+  // of them mixed-sign leftovers, and Divine sitting on one corner at 0.137% --
+  // about 30x rarer than a Terraria top reforge, which is the feel this bunk
+  // wanted. lib/crewTraits is a written list of 28 named results drawn flat, so
+  // every outcome is one somebody chose and Divine lands at 3.6%.
+  //
+  // Rarity is deliberately not consulted here: it already decides base stats
+  // (STAT_BUDGET), and a Common holding Divine still loses to a Legendary
+  // holding nothing, so weighting the draw too would count it twice.
+  if (deep) {
+    const t = drawDeepTrait()
+    return { power: t.power, dodge: t.dodge, fortune: t.fortune }
+  }
+  // The recruit board keeps the weighted roll. Rarity still shapes what shows
+  // up on a board, and a bought crew still tops out at 3 -- a 4 remains
+  // something only the top hall can produce.
   const sign = () => (Math.random() < 0.5 ? -1 : 1)
   return {
-    power:   rollMagnitude(rarity, deep) * sign(),
-    dodge:   rollMagnitude(rarity, deep) * sign(),
-    fortune: rollMagnitude(rarity, deep) * sign(),
+    power:   rollMagnitude(rarity) * sign(),
+    dodge:   rollMagnitude(rarity) * sign(),
+    fortune: rollMagnitude(rarity) * sign(),
   }
 }
 

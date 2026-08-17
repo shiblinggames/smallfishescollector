@@ -21,7 +21,7 @@ import { bunkRatePerHour, storesCapHours, stintDone, tierNumeral, nextDrillCost,
 import { crewAssignment } from '@/lib/crewAssignment'
 import { CREW_PANEL_BG, CREW_PANEL_BORDER } from '@/lib/crewPanel'
 import HallBunks from './HallBunks'
-import { bunkCrew, collectBunk, buyDrill, buyStores } from './bunkActions'
+import { bunkCrew, collectBunk, buyDrill, buyStores, resolveTraitOffer } from './bunkActions'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, decodeTraitStats, isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -1072,10 +1072,14 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     from: number; to: number
     /** What the deep improved, already applied. Present on a Leviathan collect
      *  that beat something. */
+    /** The deep's roll. An OFFER now, not something already applied — the flat
+     *  table can hand back worse than the hand carries, so the captain answers. */
     upgrade?: {
       before: TraitStats; after: TraitStats
       beforeLabel: string; afterLabel: string
       gained: { power: boolean; dodge: boolean; fortune: boolean }
+      pending?: boolean
+      crewId: number
     }
   } | null>(null)
   /** A hand who just came out Divine. The rarest outcome the game has, so it
@@ -1135,15 +1139,37 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
         upgrade: up && {
           before: up.before, after: up.after,
           beforeLabel: up.beforeLabel, afterLabel: up.afterLabel,
-          gained: up.gained,
+          gained: up.gained, pending: up.pending, crewId: up.crewId,
         },
       })
       // The rarest outcome in the game still gets its own screen. Gated on
       // something having MOVED, or a crew who already carries a divine trait
       // would replay the moment every time the Leviathan rolled and lost.
-      if (upMovedHaptic && up && isDivineTrait(up.after)) {
-        const crewNow = res.state.roster.find(c => c.id === id)
-        if (crewNow) setDivineMoment({ name: crewNow.name, filename: crewNow.filename })
+    })
+  }
+
+  /**
+   * Answer a Leviathan offer. The roll is only the hand's once it is TAKEN, so
+   * this is also where the Divine screen fires -- it used to run at collect,
+   * back when the re-cut applied itself and there was nothing to answer.
+   *
+   * Declining is a real decision and it costs you the draw, which is the point
+   * of a flat table. The offer is cleared server-side either way, so a refusal
+   * cannot be re-opened by refreshing.
+   */
+  function runTraitOffer(crewId: number, accept: boolean, after: TraitStats, name: string, filename: string) {
+    if (pending) return
+    setErr(null)
+    startTransition(async () => {
+      const res = await resolveTraitOffer(crewId, accept)
+      if ('error' in res) { setErr(res.error); return }
+      setState(res.state)
+      setBunkReveal(null)
+      if (accept) {
+        vibrate([22, 50, 22, 50, 40])
+        if (isDivineTrait(after)) setDivineMoment({ name, filename })
+      } else {
+        vibrate(14)
       }
     })
   }
@@ -1941,7 +1967,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               accent={hall.accent}
               pending={pending}
               pop={pop?.what === 'drill' || pop?.what === 'stores' ? pop.what : null}
-              onBunk={(id, slot) => run(() => bunkCrew(id, slot), id)}
+              onBunk={(id, slot, hours) => run(() => bunkCrew(id, slot, hours), id)}
               onCollectOne={id => runBunkClaim(() => collectBunk(id))}
               onBuyDrill={() => setLadderConfirm('drill')}
               onBuyStores={() => setLadderConfirm('stores')}
@@ -2350,16 +2376,20 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                               <span className="font-karla font-700" style={{ fontSize: '0.8rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: moved ? 'rgba(255,255,255,0.3)' : '#e6dcc2' }}>
                                 {fmt(up.before[k])}
                               </span>
-                              <span aria-hidden style={{ textAlign: 'center', fontSize: '0.7rem', color: moved ? LEVIATHAN_COLOR : 'transparent' }}>&rarr;</span>
-                              <span className="font-karla font-800" style={{ fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums', color: moved ? '#7fdfa3' : 'rgba(255,255,255,0.25)' }}>
-                                {moved ? fmt(up.after[k]) : 'held'}
+                              <span aria-hidden style={{ textAlign: 'center', fontSize: '0.7rem', color: LEVIATHAN_COLOR }}>&rarr;</span>
+                              {/* Both sides are real options now, so the offered
+                                  column is always shown: green when it beats what
+                                  the hand carries, red when it is a step down. A
+                                  flat table means most rolls are a step down. */}
+                              <span className="font-karla font-800" style={{ fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums', color: moved ? '#7fdfa3' : up.after[k] < up.before[k] ? '#e88a8a' : 'rgba(255,255,255,0.45)' }}>
+                                {fmt(up.after[k])}
                               </span>
                             </div>
                           )
                         })}
                       </div>
                       <div style={{ marginTop: 8, padding: '0.55rem 0.7rem', borderRadius: 11, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}4d`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)' }}>Now</span>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)' }}>{up.pending ? 'Offered' : 'Now'}</span>
                         <span className={`font-cinzel font-700${isDivineTrait(up.after) ? ' trait-divine' : ''}`}
                           style={{ fontSize: isDivineTrait(up.after) ? '1.02rem' : '0.92rem', ...(isDivineTrait(up.after) ? {} : { color: LEVIATHAN_COLOR }) }}>
                           {up.afterLabel}
@@ -2368,6 +2398,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                           {statLine(up.after)}
                         </span>
                       </div>
+
+                      {/* KEEP OR REPLACE. The draw is flat, so most rolls are
+                          worse than what the hand already carries and taking
+                          one has to be a decision. Refusing spends the draw -
+                          the offer is cleared server-side either way, so this
+                          cannot be re-opened by refreshing. */}
+                      {up.pending && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                          <button type="button" disabled={pending}
+                            onClick={() => runTraitOffer(up.crewId, false, up.after, r.name, r.filename)}
+                            className="tap font-karla font-700 uppercase tracking-[0.08em]"
+                            style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', color: '#cfcabf', fontSize: '0.74rem', cursor: 'pointer' }}>
+                            Keep {up.beforeLabel}
+                          </button>
+                          <button type="button" disabled={pending}
+                            onClick={() => runTraitOffer(up.crewId, true, up.after, r.name, r.filename)}
+                            className="tap font-karla font-700 uppercase tracking-[0.08em]"
+                            style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: `1px solid ${LEVIATHAN_COLOR}88`, background: `${LEVIATHAN_COLOR}22`, color: '#d6f5f0', fontSize: '0.74rem', cursor: 'pointer' }}>
+                            Take {up.afterLabel}
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   )}
 

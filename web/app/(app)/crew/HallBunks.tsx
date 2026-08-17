@@ -111,7 +111,12 @@ export default function HallBunks({
   /** Which tree just went up, so its art can pop IN PLACE rather than behind
    *  an overlay the hero's overflow:hidden would clip. */
   pop: 'drill' | 'stores' | null
-  onBunk: (crewId: number, slot: number) => void
+  /** `hours` is honoured on the Leviathan bunk only. Everywhere else the
+   *  Stores cap IS the stint, because a shorter one there trades nothing:
+   *  a stint pays rate x hours and takes hours, so XP per day is identical
+   *  whatever you pick. The sixth bunk rolls ONE trait per stint, so there
+   *  length is the whole decision. */
+  onBunk: (crewId: number, slot: number, hours?: number) => void
   /** Collect one hand's finished stint. The only way to collect: the reward
    *  belongs to a face, not to a header button. */
   onCollectOne: (crewId: number) => void
@@ -458,11 +463,12 @@ export default function HallBunks({
           artSrc={artSrc} accent={accent} pending={pending}
           stint={fmtStint(cap)} payout={payout}
           leviathan={isLeviathanSlot(picking)}
+          capHours={cap}
           lastCrew={(() => {
             const id = readLastBunkCrew(picking)
             return id == null ? null : eligible.find(c => c.id === id) ?? null
           })()}
-          onPick={id => { writeLastBunkCrew(picking, id); onBunk(id, picking); setPicking(null) }}
+          onPick={(id, hours) => { writeLastBunkCrew(picking, id); onBunk(id, picking, hours); setPicking(null) }}
           onClose={() => setPicking(null)}
         />, document.body)}
     </div>
@@ -619,7 +625,7 @@ function MaxedCard({ art, label, sub, accent, popping }: { art: string; label: s
 
 /** One sheet for both jobs: fill an empty bunk, or swap/remove the occupant. */
 function BunkPicker({
-  eligible, roster, blockers, artSrc, accent: hallAccent, pending, stint, payout, leviathan, lastCrew, onPick, onClose,
+  eligible, roster, blockers, artSrc, accent: hallAccent, pending, stint, payout, leviathan, capHours, lastCrew, onPick, onClose,
 }: {
   eligible: CrewMember[]
   /** Everyone alive, for the All tab. */
@@ -631,12 +637,17 @@ function BunkPicker({
   pending: boolean
   stint: string
   payout: number
-  /** Filling the sixth bunk, which re-cuts a trait every stint (per-stat max
-   *  against a fresh roll, so it can only ever improve them). */
+  /** Filling the sixth bunk, which draws ONE trait from the deep table every
+   *  stint and offers it. The draw is flat, so it can come back worse than
+   *  what the hand carries -- which is why the claim is a choice, and why the
+   *  stint length is a choice here. */
   leviathan: boolean
+  /** Longest stint the player's Stores allows. The Leviathan picker offers
+   *  1..this; every other bunk just takes the cap. */
+  capHours: number
   /** The hand who last trained in THIS bunk, if they are free to go back in. */
   lastCrew: CrewMember | null
-  onPick: (crewId: number) => void
+  onPick: (crewId: number, hours?: number) => void
   onClose: () => void
 }) {
   // The sheet takes the bunk's colour, so you can tell which one you are
@@ -648,6 +659,14 @@ function BunkPicker({
   // than like a roster that is busy.
   const [who, setWho] = useState<'available' | 'all'>('available')
   const shown = who === 'available' ? eligible : roster
+  // HOW LONG. Only the Leviathan bunk asks, and it defaults to the SHORTEST
+  // stint rather than the cap: this bunk rolls one trait per stay, so a long
+  // stint is fewer rolls, and defaulting to the cap is what made buying Stores
+  // quietly cut the re-cut rate to a sixth. XP per day is identical either way
+  // (rate x hours over hours), so nothing is being traded except how often you
+  // come back.
+  const [hours, setHours] = useState(1)
+  const hourChoices = Array.from({ length: Math.max(1, capHours) }, (_, i) => i + 1)
   const blockedCount = roster.length - eligible.length
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
@@ -693,7 +712,7 @@ function BunkPicker({
             the whole cost of a cycle. Only shown while they are actually free
             to go back in, so it can never be a dead button. */}
         {lastCrew && (
-          <button type="button" disabled={pending} onClick={() => onPick(lastCrew.id)}
+          <button type="button" disabled={pending} onClick={() => onPick(lastCrew.id, leviathan ? hours : undefined)}
             aria-label={`Train ${lastCrew.name} again`}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, width: 'calc(100% - 2rem)',
@@ -749,6 +768,33 @@ function BunkPicker({
           </p>
         )}
 
+        {/* HOW LONG. Leviathan only: this is the one bunk where stint
+            length is a real trade, because it rolls a single trait per stay.
+            Shorter stint = more rolls at the deep table for the same XP. */}
+        {leviathan && capHours > 1 && (
+          <div style={{ padding: '0 0.9rem 0.7rem' }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+              Stint &middot; one re-cut per stay
+            </p>
+            <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+              {hourChoices.map(h => {
+                const on = h === hours
+                return (
+                  <button key={h} type="button" onClick={() => setHours(h)}
+                    className="tap font-karla font-700"
+                    style={{
+                      flexShrink: 0, padding: '0.4rem 0.7rem', borderRadius: 999, cursor: 'pointer',
+                      border: `1px solid ${on ? accent : 'rgba(255,255,255,0.16)'}`,
+                      background: on ? `${accent}26` : 'rgba(255,255,255,0.04)',
+                      color: on ? '#e9fbf8' : 'rgba(255,255,255,0.6)', fontSize: '0.72rem',
+                    }}>
+                    {fmtStintShort(h)}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         {/* The whole reason to pick this bunk over the other five, and the
             goal at the end of it. Two short sentences carry the rules and the
             target line does the rest, because "+4 +4 +4 = Divine" is
@@ -780,7 +826,7 @@ function BunkPicker({
                 const blocked = blockers[m.id]
                 return (
                   <button key={m.id} type="button" disabled={pending || !!blocked}
-                    onClick={() => { if (!blocked) onPick(m.id) }}
+                    onClick={() => { if (!blocked) onPick(m.id, leviathan ? hours : undefined) }}
                     title={blocked ?? undefined}
                     aria-label={blocked
                       ? `${m.name} cannot take a bunk: ${blocked}`

@@ -68,6 +68,10 @@ export type CrewMember = {
   dodge: number
   fortune: number
   effects: string[]
+  /** A Leviathan re-cut waiting on a keep-or-replace answer, encoded s:P,D,F
+   *  (or the neutral sentinel). Null for almost every crew. Held server-side
+   *  so a refresh cannot re-roll it. */
+  pendingTrait: string | null
   /** Voyage party slot (0..N) or null if not on the voyage track. Mutually
    *  exclusive with raidSlot via the DB CHECK constraint. */
   voyageSlot: number | null
@@ -279,6 +283,9 @@ function toMember(r: any, meta: Map<number, CardMeta>, equippedSkins?: EquippedC
     slug,
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[],
+    // A Leviathan re-cut awaiting keep-or-replace. Rides on the member so the
+    // roster card can flag it wherever a crew is drawn, not just in the hall.
+    pendingTrait: (r.pending_trait as string | null) ?? null,
     voyageSlot: (r.voyage_slot as number | null) ?? null,
     raidSlot:   (r.raid_slot as number | null) ?? null,
     xp: (r.xp as number | null) ?? 0,
@@ -346,7 +353,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Crew Hall Graveyard tab, not the active roster.
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, pending_trait, voyage_slot, raid_slot, xp, nickname')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -421,7 +428,7 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
   const equippedCrewSkins = ((prof as any)?.equipped_crew_skins as EquippedCrewSkins | null) ?? {}
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, pending_trait, voyage_slot, raid_slot, xp, nickname')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -1050,6 +1057,8 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
       slug: (m?.slug ?? '').toLowerCase(),
       rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
       effects: (r.effects ?? []) as string[],
+      // A fallen hand holds no offer -- the Leviathan bunk cannot reach them.
+      pendingTrait: null,
       voyageSlot: null, raidSlot: null,
       xp: (r.xp as number | null) ?? 0,
       diedAt: r.died_at as string,

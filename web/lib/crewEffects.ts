@@ -19,6 +19,7 @@
 // Effects are stored on a crew member as an array of ids, so retuning a value
 // here updates every crew that carries it.
 
+import { traitDefFor } from './crewTraits'
 import { applyLevelBonuses } from './crewLevel'
 
 export type StatKey = 'power' | 'dodge' | 'fortune'
@@ -278,6 +279,15 @@ export function traitLabel(s: TraitStats): string {
     const table = positive.length === 2 ? PAIR_POS : negative.length === 2 ? PAIR_NEG : PAIR_MIXED
     return (table[pair] ?? table['dodge+power'])[tier]
   }
+
+  // THE TABLE'S OWN NAME WINS. Deep re-cuts draw from a written list where
+  // every entry is named (lib/crewTraits), so "Reckless" reads as a thing
+  // somebody wrote rather than as "+4/-2/0". The band labels below are kept as
+  // the FALLBACK, and that is load-bearing: every crew rolled before the table
+  // existed, and every recruit-board trait, still comes from the old weighted
+  // roll. Without the fallback they would all lose their labels at once.
+  const def = traitDefFor(s)
+  if (def) return def.name
 
   // Three-stat trait → broad labels by net direction.
   const net = s.power + s.dodge + s.fortune
