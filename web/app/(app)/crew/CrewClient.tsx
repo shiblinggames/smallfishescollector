@@ -2305,13 +2305,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               <motion.div key="bunk-reveal"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setBunkReveal(null)}
-                style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+                // SCRIM OWNS THE SCROLL. This was a centred flex box with flat
+                // padding, which is fine until the card grows -- and the offer
+                // panel made it grow a lot. On a phone the confirm buttons ended
+                // up under the tab bar with nothing scrollable, so the decision
+                // was unreachable. alignItems:flex-start + auto margins keeps a
+                // short card centred while letting a tall one scroll, and the
+                // bottom padding clears the tab bar and the home indicator.
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)',
+                  display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+                  overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
+                  padding: '1.25rem 1.25rem calc(env(safe-area-inset-bottom) + 5.5rem)',
+                }}>
                 <motion.div
                   initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 360, damping: 24 }}
                   onClick={e => e.stopPropagation()}
                   style={{
                     maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18,
+                    // Centres a short card in the scrolling scrim; a tall one
+                    // simply starts at the top and scrolls.
+                    marginTop: 'auto', marginBottom: 'auto', flexShrink: 0,
                     background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${accent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '),
                     border: `1px solid ${accent}${burst ? '9a' : '5e'}`,
                     boxShadow: burst ? `0 0 40px ${accent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)',
@@ -2348,14 +2363,17 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                         now: the draw is sitting there unanswered, and telling
                         someone the outcome above a choice they have not made
                         yet is the fastest way to get it tapped through. */}
-                    {up ? `The deep brings ${r.name} an offer`
-                      : levelled ? `${r.name} levelled up!`
-                      : `${r.name} is back`}
+                    {up ? `${r.name} drew` : levelled ? `${r.name} levelled up!` : `${r.name} is back`}
                   </motion.p>
-                  <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
-                    {up ? 'One draw, and it is yours to take or refuse'
-                      : 'Off the bunk, drilled and rested'}
-                  </p>
+                  {/* Dropped entirely on an offer rather than emptied: an
+                      empty <p> still holds its margin, and the panel's own
+                      "Carries now / The draw" headers already say what this
+                      line was saying a second time. */}
+                  {!up && (
+                    <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
+                      Off the bunk, drilled and rested
+                    </p>
+                  )}
 
                   {/* THE DECISION. Two earlier shapes both got this wrong by
                       assuming there was nothing to decide: tick boxes where

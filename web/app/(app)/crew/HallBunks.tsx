@@ -407,8 +407,19 @@ export default function HallBunks({
                   // with pale type, which is the quiet end of this card's own
                   // palette rather than the loud one.
                   ...ctaPill(),
+                  // ...except in the deep bunk, where the whole tile is teal
+                  // and a gold pill was the one piece still borrowing the
+                  // ordinary-bunk colour. Same shape and weight, so it still
+                  // reads as the call to action, just in the colour that says
+                  // WHICH action.
+                  ...(lev ? {
+                    background: `${LEVIATHAN}33`,
+                    color: '#eafffb',
+                    border: `1px solid ${LEVIATHAN}`,
+                    boxShadow: `0 0 14px ${LEVIATHAN}66, 0 1px 4px rgba(0,0,0,0.45)`,
+                  } : {}),
                 }}>
-                  {claiming === crew.id ? 'Hauling in' : 'Claim'}
+                  {claiming === crew.id ? 'Hauling in' : lev ? 'Draw' : 'Claim'}
                 </span>
               ) : (
                 <>
