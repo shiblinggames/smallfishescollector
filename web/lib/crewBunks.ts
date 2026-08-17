@@ -74,18 +74,29 @@ export function storesMaxed(level: number): boolean {
  * THE LEVIATHAN BUNK.
  *
  * The sixth bunk, opened only by the top hall, does something the other five
- * do not: every stint that finishes there rolls a new trait and OFFERS it.
+ * do not: every stint that finishes there DRAWS a whole new trait and offers
+ * it beside the one the hand already carries.
  *
- * Offers, not applies. It used to keep the roll automatically when it beat the
- * old one on a flat stat sum, which sounds generous and was actually the thing
- * stopping traits from ever being a chase: one comparator meant "better" was
- * identical for every hand in the game, so every crew converged on the same
- * trait and the player never made a decision. A voyage hand wants Fortune, a
- * raider wants Power and Dodge, and only the captain knows which this one is.
+ * Offers, not applies, and now the code actually does that. Two earlier shapes
+ * both failed for the same reason -- neither asked the captain anything. First
+ * it kept whatever beat the old trait on a flat stat sum, so "better" was
+ * identical for every hand in the game and every crew converged. Then it merged
+ * per-stat with Math.max, which could only ever raise a number: nothing was
+ * ever at risk, so Divine stopped being a chase and became a countdown a
+ * Legendary finished in about fourteen rolls.
  *
- * Nothing changes unless the offer is taken, so a good trait is never at risk.
- * It also rolls DEEP (see DEEP_MAG_WEIGHTS): the only table in the game that
- * reaches 4, which is why Divine can only come out of this bunk.
+ * The draw is flat and whole now (lib/crewTraits): 28 authored traits, one of
+ * them Divine, every hand drawing from the same table whatever its rarity --
+ * base stats already carry rarity, so weighting this too would count it twice.
+ * Most draws land WORSE than what the hand carries, which is what makes the
+ * claim a decision. Declining costs the draw, never the trait.
+ *
+ * It is also the only table that reaches 4, which is why Divine and Blighted
+ * can come from nowhere else.
+ *
+ * Stint length is chooseable HERE and nowhere else, because this is the only
+ * bunk where it trades anything: one draw per stay, so a shorter stint is more
+ * draws for the same XP a day.
  */
 export const LEVIATHAN_SLOT = 5
 

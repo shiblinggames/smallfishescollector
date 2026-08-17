@@ -417,7 +417,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   deep_cut:         'Carry a trait with a stat at 4. No recruit board rolls that high, so there is only one place it can have come from.',
   full_complement:  'Level ten separate crew to 100. A whole watch of them, every one finished.',
   divine_hand:      'Land the Divine trait on a crew: +4 Power, +4 Savvy and +4 Fortune, the ceiling of the encoding and the rarest thing the deep gives up.',
-  six_divine:       'Hold six Divine crew at the same time. Six perfect hands, built one stat at a time out of the Leviathan bunk.',
+  six_divine:       'Hold six Divine crew at the same time. Six perfect hands, each one drawn whole out of the Leviathan bunk.',
   navigator:        'Reach Navigation Level 50, earned steadily on raids and voyages.',
   fleet_admiral:    'Complete 100 voyages. Pure patience and a fleet that keeps sailing.',
   opening_salvo:    'Land a single raid cannon hit for 50 or more damage. Your guns are finding their range.',

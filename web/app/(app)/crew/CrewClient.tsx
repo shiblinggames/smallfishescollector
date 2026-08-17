@@ -2638,26 +2638,28 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   Opens bunk <span style={{ color: next.accent }}>{next.bunks}</span>, so {next.bunks} hands can train at once
                 </p>
                 {/* The top hall's second effect. Six figures deserves to know
-                    exactly what it buys, so the odds and the never-worse rule
-                    are both stated before the confirm, not discovered after. */}
+                    exactly what it buys, so the rules are stated before the
+                    confirm and not discovered after. REWRITTEN with the bunk:
+                    it used to promise a per-stat merge that could "never make
+                    it worse" and odds that scaled with rarity. Neither is true
+                    now -- the draw is flat and whole, so it can come back worse
+                    and every hand has the same shot. Leaving the old promise up
+                    would have sold a million-doubloon upgrade on a rule the
+                    code no longer follows. */}
                 {isLeviathanSlot(next.bunks - 1) && (
                   <div style={{ marginBottom: 14, padding: '0.75rem 0.85rem', borderRadius: 11, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}4d`, textAlign: 'left' }}>
                     <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: LEVIATHAN_COLOR, marginBottom: 5 }}>
                       And the bunk itself is different
                     </p>
                     <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
-                      Bunk {next.bunks} sits deepest in the hall. Every stint finished there rolls that hand a{' '}
-                      <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>brand new trait</span> and shows it beside
-                      the one they already have. Keep it <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>one stat
-                      at a time</span>, so a good number is never thrown back with a bad one. It is the only place a stat
-                      can reach 4, and the only road to a Divine hand.
+                      Bunk {next.bunks} sits deepest in the hall. Every stint finished there draws that hand a{' '}
+                      <span style={{ color: LEVIATHAN_COLOR, fontWeight: 700 }}>whole new trait</span> and offers it
+                      beside the one they already carry. You choose which they keep. It is the only place a stat can
+                      reach 4, and the only road to a Divine hand.
                     </p>
-                    {/* Said before the six figures, not discovered forty stints
-                        in. The re-cut table is rarity-weighted, so who you send
-                        down matters as much as owning the bunk. */}
                     <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, marginTop: 8 }}>
-                      How often a 4 lands depends on the hand: a Legendary rolls one far more often than
-                      an Epic, and an Epic more often than a Rare.
+                      Every hand draws from the same table, whatever their rarity, and most draws land worse than what
+                      they carry. You also set how long they stay: one draw per stint, so a shorter stay is more draws.
                     </p>
                   </div>
                 )}

@@ -265,9 +265,9 @@ export default function HallBunks({
             const opensAt = hallTierDef(Math.min(CREW_HALL_MAX_TIER, i + 1))
             return (
               <div key={`locked-${i}`}
-                title={lev ? `${opensAt.name} opens the Leviathan bunk, which re-cuts a trait every stint and never makes it worse` : `${opensAt.name} opens this bunk`}
+                title={lev ? `${opensAt.name} opens the Leviathan bunk, which offers a freshly drawn trait every stint` : `${opensAt.name} opens this bunk`}
                 aria-label={lev
-                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which re-cuts a trait every stint and never makes it worse.`
+                  ? `Locked. ${opensAt.name} opens the Leviathan bunk, which offers a freshly drawn trait every stint.`
                   : `Locked bunk. ${opensAt.name} opens it.`}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -692,18 +692,19 @@ function BunkPicker({
           trawl or be dismissed until the stint ends.
         </p>
 
-        {/* THE THING THAT DECIDES THE CHASE, said at the moment you choose who
-            goes down. The re-cut rolls on a rarity-weighted table, so the same
-            bunk is several times faster for a Legendary than for an Epic — and
-            with nothing on screen saying so, a slow Epic reads as bad luck or a
-            broken bunk rather than as the hand you picked. Stated as an
-            ORDERING, not as percentages: the weights get retuned, and a number
-            baked into copy would quietly start lying. */}
+        {/* WHAT DECIDES THE CHASE NOW. Rarity used to weight this table and no
+            longer does: base stats already carry rarity (a Common holding the
+            best trait in the game still loses to a Legendary holding none), so
+            weighting the draw counted it twice. The thing worth saying instead
+            is the thing that changed -- the draw is flat, so it can come back
+            WORSE, and the claim is a decision. Stated without a percentage on
+            purpose: the table length is the dial and a number baked into copy
+            would start lying the first time it moves. */}
         {leviathan && (
           <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.5 }}>
-            Rarity decides the odds down here. A <span style={{ color: accent }}>Legendary</span> rolls a
-            4 far more often than an Epic, and an Epic more often than a Rare. The rarer the hand, the
-            fewer stints it takes to finish them.
+            Every hand draws from the same table down here, whatever their rarity. Most draws come back{' '}
+            <span style={{ color: accent }}>worse</span> than what they already carry, so you choose whether
+            to take it. Refusing costs you the draw, not the trait.
           </p>
         )}
 
@@ -768,33 +769,62 @@ function BunkPicker({
           </p>
         )}
 
-        {/* HOW LONG. Leviathan only: this is the one bunk where stint
-            length is a real trade, because it rolls a single trait per stay.
-            Shorter stint = more rolls at the deep table for the same XP. */}
+        {/* HOW LONG — THE DECISION, NOT A SETTING.
+            This bunk draws ONE trait per stay, so the stint length IS the roll
+            rate: six 1h stints are six draws, one 6h stint is one. It was a
+            quiet chip row and read as a formatting option, which is exactly the
+            trap the old build had -- buying Stores to six silently cut the
+            chase to a sixth. So it gets a framed block, its own heading, the
+            consequence spelled out under it, and a live readout of what the
+            choice actually buys. */}
         {leviathan && capHours > 1 && (
-          <div style={{ padding: '0 0.9rem 0.7rem' }}>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
-              Stint &middot; one re-cut per stay
-            </p>
-            <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+          <div style={{
+            margin: '0 1rem 0.85rem', padding: '0.75rem 0.8rem', borderRadius: 12,
+            background: `${accent}12`, border: `1px solid ${accent}59`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#e9fbf8' }}>
+                How long do they stay?
+              </p>
+              {/* Reads the CHOSEN stint, not the cap. `payout` is the full-cap
+                  figure, so the hourly rate comes back out of it rather than
+                  being threaded down separately. Every stint is one draw
+                  whatever its length -- saying "1 draw" only next to 1h would
+                  imply a longer stay buys more, which is the exact backwards
+                  reading this control exists to kill. */}
+              <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: accent, fontVariantNumeric: 'tabular-nums' }}>
+                1 draw &middot; {(Math.floor(payout / Math.max(1, capHours)) * hours).toLocaleString()} XP
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${hourChoices.length}, 1fr)`, gap: 5 }}>
               {hourChoices.map(h => {
                 const on = h === hours
                 return (
                   <button key={h} type="button" onClick={() => setHours(h)}
-                    className="tap font-karla font-700"
+                    aria-pressed={on}
+                    className="tap font-karla font-800"
                     style={{
-                      flexShrink: 0, padding: '0.4rem 0.7rem', borderRadius: 999, cursor: 'pointer',
+                      padding: '0.5rem 0', borderRadius: 9, cursor: 'pointer',
                       border: `1px solid ${on ? accent : 'rgba(255,255,255,0.16)'}`,
-                      background: on ? `${accent}26` : 'rgba(255,255,255,0.04)',
-                      color: on ? '#e9fbf8' : 'rgba(255,255,255,0.6)', fontSize: '0.72rem',
+                      background: on ? `${accent}33` : 'rgba(255,255,255,0.04)',
+                      color: on ? '#eafffb' : 'rgba(255,255,255,0.55)',
+                      fontSize: '0.78rem', fontVariantNumeric: 'tabular-nums',
+                      boxShadow: on ? `0 0 12px ${accent}44` : 'none',
                     }}>
                     {fmtStintShort(h)}
                   </button>
                 )
               })}
             </div>
+            {/* The whole point, in one line, at the moment of the choice. */}
+            <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.45, marginTop: 8 }}>
+              One draw per stint, so a{' '}
+              <span style={{ color: accent, fontWeight: 700 }}>shorter stay is more draws</span>{' '}
+              for the same XP a day. Longer just means fewer trips back.
+            </p>
           </div>
         )}
+
         {/* The whole reason to pick this bunk over the other five, and the
             goal at the end of it. Two short sentences carry the rules and the
             target line does the rest, because "+4 +4 +4 = Divine" is
@@ -804,7 +834,7 @@ function BunkPicker({
         {leviathan && (
           <div style={{ margin: '0 1rem 0.85rem', paddingTop: '0.7rem', borderTop: `1px solid ${LEVIATHAN}2e` }}>
             <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-              Every stint rolls them a new trait. Keep the stats you want, roll again for the rest.
+              Every stint draws them a whole new trait and offers it beside the one they carry. Take it or keep what they have.
             </p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1.5, marginTop: 5 }}>
               <span style={{ color: `${LEVIATHAN}cc`, fontVariantNumeric: 'tabular-nums' }}>+4 / +4 / +4</span>
