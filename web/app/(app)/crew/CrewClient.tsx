@@ -22,6 +22,7 @@ import { crewAssignment } from '@/lib/crewAssignment'
 import { CREW_PANEL_BG, CREW_PANEL_BORDER } from '@/lib/crewPanel'
 import HallBunks from './HallBunks'
 import { bunkCrew, collectBunk, buyDrill, buyStores, resolveTraitOffer } from './bunkActions'
+import TraitOffer from './TraitOffer'
 import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, decodeTraitStats, isDivineTrait, netTraitStats, traitLabel, traitKind, type TraitStats } from '@/lib/crewEffects'
 import AssignBoard from './AssignBoard'
@@ -2341,86 +2342,38 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
 
                   <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}
                     className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: accent, marginTop: 12, textShadow: burst ? `0 0 12px ${accent}44` : 'none' }}>
-                    {/* A Leviathan stint that rolled under your current trait
-                        still reports. `up` present with nothing gained means the
-                        re-cut happened and lost, which is a different thing from
-                        an ordinary bunk and has to read as one. */}
-                    {upMoved ? `The deep sharpened ${r.name}`
-                      : up ? `The deep took its measure of ${r.name}`
+                    {/* NO VERDICT IN THE HEADING. It used to say "the deep
+                        sharpened them" or "nothing beat what they had", which
+                        was fair when the merge decided for you and is a lie
+                        now: the draw is sitting there unanswered, and telling
+                        someone the outcome above a choice they have not made
+                        yet is the fastest way to get it tapped through. */}
+                    {up ? `The deep brings ${r.name} an offer`
                       : levelled ? `${r.name} levelled up!`
                       : `${r.name} is back`}
                   </motion.p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9c917a', marginTop: 6 }}>
-                    {upMoved ? 'Their trait came back better than it went in'
-                      : up ? 'Nothing it rolled beat what they already had'
+                    {up ? 'One draw, and it is yours to take or refuse'
                       : 'Off the bunk, drilled and rested'}
                   </p>
 
-                  {/* WHAT MOVED. This was a set of tick boxes, which implied a
-                      decision that did not exist: the result is max(current,
-                      rolled) per stat, so everything worth taking was always
-                      pre-ticked and taking less was never right for any crew.
-                      It reports now instead of asking. */}
+                  {/* THE DECISION. Two earlier shapes both got this wrong by
+                      assuming there was nothing to decide: tick boxes where
+                      everything worth taking was pre-ticked, then a bare
+                      before/after report. The draw is flat and whole now, so
+                      most results are a step down and the comparison has to be
+                      readable enough to choose from. See TraitOffer. */}
                   {up && (
-                    <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.28, type: 'spring', stiffness: 300, damping: 20 }}
-                      style={{ marginTop: 14 }}>
-                      <div style={{ borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: `1px solid ${LEVIATHAN_COLOR}44`, padding: '0.7rem 0.75rem' }}>
-                        {(['power', 'dodge', 'fortune'] as const).map(k => {
-                          const lbl = k === 'power' ? 'PWR' : k === 'dodge' ? 'DGE' : 'FTN'
-                          const moved = up.gained[k]
-                          const fmt = (v: number) => (v > 0 ? `+${v}` : `${v}`)
-                          return (
-                            <div key={k} style={{ display: 'grid', gridTemplateColumns: '2.4rem 1fr 1.2rem 1fr', gap: 6, alignItems: 'center', padding: '0.22rem 0' }}>
-                              <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>{lbl}</span>
-                              <span className="font-karla font-700" style={{ fontSize: '0.8rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: moved ? 'rgba(255,255,255,0.3)' : '#e6dcc2' }}>
-                                {fmt(up.before[k])}
-                              </span>
-                              <span aria-hidden style={{ textAlign: 'center', fontSize: '0.7rem', color: LEVIATHAN_COLOR }}>&rarr;</span>
-                              {/* Both sides are real options now, so the offered
-                                  column is always shown: green when it beats what
-                                  the hand carries, red when it is a step down. A
-                                  flat table means most rolls are a step down. */}
-                              <span className="font-karla font-800" style={{ fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums', color: moved ? '#7fdfa3' : up.after[k] < up.before[k] ? '#e88a8a' : 'rgba(255,255,255,0.45)' }}>
-                                {fmt(up.after[k])}
-                              </span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div style={{ marginTop: 8, padding: '0.55rem 0.7rem', borderRadius: 11, background: `${LEVIATHAN_COLOR}12`, border: `1px solid ${LEVIATHAN_COLOR}4d`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.45)' }}>{up.pending ? 'Offered' : 'Now'}</span>
-                        <span className={`font-cinzel font-700${isDivineTrait(up.after) ? ' trait-divine' : ''}`}
-                          style={{ fontSize: isDivineTrait(up.after) ? '1.02rem' : '0.92rem', ...(isDivineTrait(up.after) ? {} : { color: LEVIATHAN_COLOR }) }}>
-                          {up.afterLabel}
-                        </span>
-                        <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#c6e8e2', fontVariantNumeric: 'tabular-nums' }}>
-                          {statLine(up.after)}
-                        </span>
-                      </div>
-
-                      {/* KEEP OR REPLACE. The draw is flat, so most rolls are
-                          worse than what the hand already carries and taking
-                          one has to be a decision. Refusing spends the draw -
-                          the offer is cleared server-side either way, so this
-                          cannot be re-opened by refreshing. */}
-                      {up.pending && (
-                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                          <button type="button" disabled={pending}
-                            onClick={() => runTraitOffer(up.crewId, false, up.after, r.name, r.filename)}
-                            className="tap font-karla font-700 uppercase tracking-[0.08em]"
-                            style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', color: '#cfcabf', fontSize: '0.74rem', cursor: 'pointer' }}>
-                            Keep {up.beforeLabel}
-                          </button>
-                          <button type="button" disabled={pending}
-                            onClick={() => runTraitOffer(up.crewId, true, up.after, r.name, r.filename)}
-                            className="tap font-karla font-700 uppercase tracking-[0.08em]"
-                            style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: `1px solid ${LEVIATHAN_COLOR}88`, background: `${LEVIATHAN_COLOR}22`, color: '#d6f5f0', fontSize: '0.74rem', cursor: 'pointer' }}>
-                            Take {up.afterLabel}
-                          </button>
-                        </div>
-                      )}
-                    </motion.div>
+                    <TraitOffer
+                      accent={LEVIATHAN_COLOR}
+                      before={up.before}
+                      after={up.after}
+                      beforeLabel={up.beforeLabel}
+                      afterLabel={up.afterLabel}
+                      busy={pending}
+                      onKeep={() => runTraitOffer(up.crewId, false, up.after, r.name, r.filename)}
+                      onTake={() => runTraitOffer(up.crewId, true, up.after, r.name, r.filename)}
+                    />
                   )}
 
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.4 }}
