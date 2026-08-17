@@ -1496,6 +1496,20 @@ export default function RaidCombat({
   // custom badge like 'Reserve Deck'). Set the instant the transition step plays.
   const [phaseCallout, setPhaseCallout] = useState('Phase 2')
   const [critFreeze, setCritFreeze]   = useState(false)   // briefly freezes the aim bar at the lock moment
+  // KAN-3. Finn's dial overlay is portalled to <body> and was centred in the
+  // VIEWPORT, while the Lock Shot button lives in the 580px combat column in
+  // normal flow. On a phone the column fills the screen and the button sits low,
+  // so a viewport-centred dial clears it. On a desktop window the column is only
+  // as tall as its content while the viewport keeps growing, so the button
+  // creeps UP toward the middle and the dial lands on top of it. Reported on
+  // browser, not mobile, which is exactly that shape.
+  //
+  // Measured rather than guessed at with a vh fraction: the answer is "wherever
+  // the action panel actually starts", and that moves with the log, the crew row
+  // and the window.
+  const actionPanelRef = useRef<HTMLDivElement | null>(null)
+  const [dialFloorPx, setDialFloorPx] = useState(0)
+
   // Enemy sink — set true the moment the kill step plays. Switches the
   // enemy ship sprite from its looping bob to a one-shot fall-and-fade
   // (~1.3s) so the sink lands during the kill-log + onEnemyDefeated
@@ -1582,6 +1596,20 @@ export default function RaidCombat({
   // spot. That keeps the dial from ever disagreeing with the judgment, which is
   // the whole point of the lock-in protocol.
   const onDial = aimStyle === 'dial'
+
+  useEffect(() => {
+    if (!(onDial && subPhase === 'aiming')) return
+    const measure = () => {
+      const r = actionPanelRef.current?.getBoundingClientRect()
+      // Distance from the viewport bottom up to where the panel begins. Clamped
+      // to half the viewport so a mis-measure can never squeeze the dial to
+      // nothing -- a slightly low dial is recoverable, an invisible one is not.
+      setDialFloorPx(r ? Math.min(window.innerHeight / 2, Math.max(0, window.innerHeight - r.top)) : 0)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [onDial, subPhase])
   // On the dial the ZONES are an SVG group inside DialSVG, rotated by its
   // transform ATTRIBUTE (same as the fishing drift mechanic), and the ship
   // marker orbits on its own layer at the same bearing.
@@ -7617,7 +7645,12 @@ export default function RaidCombat({
           document.body)}
         {onDial && subPhase === 'aiming' && typeof document !== 'undefined' && createPortal(
           <div style={{
-            position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'none',
+            position: 'fixed', top: 0, left: 0, right: 0,
+            // Stops where the action panel starts, so the dial centres in the
+            // space ABOVE the Lock Shot button at any window size instead of in
+            // the viewport, which only agreed with the button on a phone.
+            bottom: dialFloorPx,
+            zIndex: 1200, pointerEvents: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {/* The scrim is TOP-ANCHORED and ends above the action row, so the
@@ -8055,7 +8088,7 @@ export default function RaidCombat({
           reflow — this was the constraint that originally pushed the
           aim minigame to a body portal; matching heights lets it sit
           inline where the player's eye already is. */}
-      <div style={{
+      <div ref={actionPanelRef} style={{
         position: 'relative', zIndex: 1,
         // Translucent so the container backdrop (gradient + any zone image) reads
         // through — one continuous scene, no solid control slab, no divider frame.

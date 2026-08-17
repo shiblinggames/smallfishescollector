@@ -111,5 +111,8 @@
       "mcp__supabase__get_edge_function",
       "WebFetch(domain:seasthebooty.com)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "atlassian"
+  ]
 }

@@ -1642,13 +1642,16 @@ function NodeDetailSheet({
               //
               // The sheet knows what the player owns, so it can just tell the truth.
               const cfg = node.raidId ? getRaidConfigById(node.raidId) : undefined
-              // Ownership spans BOTH raid_items AND ship_skins — a hull drop is
-              // "owned" via profiles.ship_skins (its shipSkinId), never raid_items,
-              // so an items-only check silently missed every ship-skin drop.
-              const dropOwned = (d: RaidNodeDrop): boolean =>
-                (!!d.id && ownedRaidItems.includes(d.id)) || (!!d.shipSkinId && ownedShipSkins.includes(d.shipSkinId))
-              const lootOwned = (l: { id: string; shipSkinId?: string }): boolean =>
-                ownedRaidItems.includes(l.id) || (!!l.shipSkinId && ownedShipSkins.includes(l.shipSkinId))
+              // KAN-1. This was a hand-copied pair that checked raid_items and
+              // ship_skins but NOT the fishing specials, which live one boolean
+              // column each -- so a captain carrying The Primeval Eye saw it
+              // listed as unclaimed here forever. makeLiveChance above had
+              // already been taught the third place an owned unique can live;
+              // this copy never got the lesson, which is the whole argument
+              // against keeping a second copy.
+              const { dropOwned, lootOwned } = makeLiveChance(
+                cfg, ownedRaidItems, ownedShipSkins, totalFortune, ownedSpecialItems,
+              )
 
               const gemDrop = drops.find(d => d.emoji === GEM_GLYPH)
               const gemAmount = gemDrop?.label.replace(/\s*Gems$/i, '')
