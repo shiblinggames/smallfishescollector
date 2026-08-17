@@ -14,7 +14,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent, WILD } from './treasureMatch'
-import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, type MatchState } from './constants'
+import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, WILD_DROP_CHANCE, pointsForScore, nextMatchTier, type MatchState } from './constants'
 import ChartingNav from '@/components/ChartingNav'
 
 const GOLD = '#f0c040'
@@ -22,7 +22,6 @@ const GREEN = '#7bf0b0'
 // The main way to earn a Compass is now a 4-of-a-kind match (handled in the
 // engine). This is just a small extra chance a freshly-dropped tile is a
 // Compass — a touch of luck on top, kept low so wilds don't flood the board.
-const WILD_DROP_CHANCE = 0.01
 const WILD_RAINBOW = 'conic-gradient(from 210deg at 50% 50%, #ff7e1c, #ffd028, #0fd886, #2aa4ff, #bb55ff, #ff4631, #ff7e1c)'
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
@@ -105,6 +104,12 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   const { cols, rows, types, target, seed } = initial
 
   const rngRef = useRef(makeRng(seed))
+  // THE MOVE LOG. The server replays this against the same seed and derives the
+  // score itself, so the number on screen is never what gets submitted -- which
+  // is the whole point: a score held in memory can be edited, a sequence of
+  // swaps that has to actually resolve into matches cannot be faked without
+  // solving the puzzle.
+  const movesLogRef = useRef<[number, number][]>([])
   const [board, setBoard] = useState<number[]>(() => initialBoard(rngRef.current, cols, rows, types))
   const [score, setScore] = useState(0)
   const [movesLeft, setMovesLeft] = useState(initial.moves)
@@ -188,6 +193,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
   function resetBoard() {
     rngRef.current = makeRng(seed)
+    movesLogRef.current = []
     const nb = initialBoard(rngRef.current, cols, rows, types)
     boardRef.current = nb; setBoard(nb)
     scoreRef.current = 0; setScore(0)
@@ -200,7 +206,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   // Run ended (out of moves, or hit the top tier). Server tiers the best
   // score and banks the delta; we surface the result overlay.
   async function endRun(finalScore: number, perfect: boolean) {
-    const r = await submitMatch(finalScore)
+    const r = await submitMatch(movesLogRef.current)
     if ('error' in r) {
       setResult({ score: finalScore, best: Math.max(finalScore, bestRef.current), tier: pointsForScore(Math.max(finalScore, bestRef.current)), pointsWon: 0, maxed: perfect })
       return
@@ -221,6 +227,9 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     if (!res) { setInvalid([a, b]); haptic(10); await wait(230); setInvalid(null); return }
 
     busyRef.current = true
+    // Logged only once the swap RESOLVES. An invalid swap returns above without
+    // consuming a move or touching the RNG, so logging it would desync replay.
+    movesLogRef.current.push([a, b])
     setCombo(null); setTierUp(null) // reset last move's callouts so this move restarts clean
     if (usedWild) haptic([0, 20, 30, 24]) // a soft flourish for playing the wildcard
     const newMoves = movesRef.current - 1

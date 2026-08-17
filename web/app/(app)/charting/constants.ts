@@ -12,6 +12,15 @@ export const MATCH_TYPES = 6
 
 export const MATCH_MOVES = 25
 
+/** Chance a refilled cell drops in as a Compass wildcard.
+ *
+ *  SHARED, not client-local, and that is load-bearing. The board RNG is a
+ *  single stateful stream: collapseAndRefill draws from it on every refill, so
+ *  the server can only replay a run if it consumes the stream in exactly the
+ *  same order with exactly the same odds. A copy of this number drifting by a
+ *  hundredth would desync every replay after the first refill. */
+export const WILD_DROP_CHANCE = 0.01
+
 /** Tiered charting-point payout by best score in MATCH_MOVES moves. Calibrated
  *  against simulated play: a casual single run lands ~1000-2000; a dedicated
  *  retry player reaches ~2600-3000; ~3600 needs real cascade skill + grinding.
