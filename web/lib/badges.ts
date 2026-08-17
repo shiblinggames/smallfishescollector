@@ -356,7 +356,7 @@ export const BADGES: Badge[] = [
   //    finale, so none of these can be seen before the coda.
   { id: 'back_to_the_dark', name: 'Back to the Dark',   description: 'Release an Ancient back into the deep',           imageUrl: '/badges/back_to_the_dark.png', difficulty: 'veteran'     },
   { id: 'twice_landed',     name: 'Twice Landed',       description: 'Raise an Ancient to Vigil Rank II',               imageUrl: '/badges/twice_landed.png',     difficulty: 'veteran'     },
-  { id: 'six_adrift',       name: 'Six Adrift',         description: 'Have all six Ancients at large at once',          imageUrl: '/badges/six_adrift.png',       difficulty: 'master'      },
+  { id: 'six_abreast',      name: 'Six Abreast',        description: 'Every Ancient at Vigil Rank III or better',       imageUrl: '/badges/six_abreast.png',      difficulty: 'master'      },
   { id: 'struck_in_gold',   name: 'Struck in Gold',     description: 'Take an Ancient to Vigil Rank V',                 imageUrl: '/badges/struck_in_gold.png',   difficulty: 'master'      },
   { id: 'deep_remembers',   name: 'The Deep Remembers', description: 'Reach 20 total Vigil',                            imageUrl: '/badges/deep_remembers.png',   difficulty: 'master'      },
   { id: 'the_long_vigil',   name: 'The Long Vigil',     description: 'Master all six Ancients at Rank V',               imageUrl: '/badges/the_long_vigil.png',   difficulty: 'grandmaster' },
@@ -539,7 +539,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   // ── The Long Vigil ──
   back_to_the_dark: 'Put a mounted Ancient back in the water. It is the only way to face one twice, and your wall is one short until you land it again.',
   twice_landed:     'Land a released Ancient on a perfect and raise it to Rank II. Only a perfect final phase counts, and no rod in the game can widen that window.',
-  six_adrift:       'Have all six Ancients at large at the same time. Every berth on your wall empty at once, and six things loose in the deep that only rise for a lure.',
+  six_abreast:      'Take every one of the six Ancients to Rank III or better. Not one giant hauled up five times, but the whole wall brought along together, which is twelve perfect landings spread across all of them.',
   struck_in_gold:   'Take one Ancient all the way to Rank V. Six phases, a landing window that closes as you hold it, and the mount comes back struck in gold.',
   deep_remembers:   'Reach 20 total Vigil across the six. Two thirds of the way up a ladder that only moves on perfect catches.',
   the_long_vigil:   'Every one of the six Ancients at Rank V. The hardest thing in fishing, and the only way to earn the Baby Plesiosaurus, which no crate will ever hand out.',

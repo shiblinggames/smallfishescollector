@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BADGE_MAP, badgeReward, badgeDetail } from '@/lib/badges'
-import { vigilFor, vigilTotal, VIGIL_MAX_RANK, VIGIL_MAX_TOTAL, type VigilState } from '@/lib/ancientVigil'
+import { vigilFor, vigilTotal, ANCIENT_IDS, VIGIL_MAX_RANK, VIGIL_MAX_TOTAL, type VigilState } from '@/lib/ancientVigil'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import AchievementsClient, { type JourneyGroup, type JourneyGoal } from '@/app/(app)/achievements/AchievementsClient'
@@ -206,6 +206,10 @@ export default async function BadgesPage() {
   const vigilPoints = vigilTotal(vigilState)
   const vigilTopRank = Math.max(0, ...Object.values(vigilState).map(v => v.rank))
   const vigilAtLarge = Object.values(vigilState).filter(v => v.released).length
+  // Counted off every ANCIENT_ID rather than the stored entries: a giant never
+  // caught has no vigil row, and counting rows would quietly treat "not caught"
+  // as "not yet at III" in the progress bar while the unlock check disagreed.
+  const vigilAtRankIII = ANCIENT_IDS.filter(id => (vigilState[String(id)]?.rank ?? 0) >= 3).length
   // The release badge is hook-granted (the flag clears once you land it again),
   // so its progress reads off the badge itself plus the states that prove it.
   const vigilEverReleased = has('back_to_the_dark') || vigilAtLarge > 0 || vigilTopRank >= 2
@@ -337,7 +341,7 @@ export default async function BadgesPage() {
         // ── THE LONG VIGIL ── the six giants mastered, post-finale.
         badgeGoal('back_to_the_dark', 'Back to the Dark', 'Release an Ancient back into the deep', vigilEverReleased ? 1 : 0, 1, '/fishing', { binary: true }),
         badgeGoal('twice_landed', 'Twice Landed', 'Raise an Ancient to Vigil Rank II', vigilTopRank, 2, '/fishing'),
-        badgeGoal('six_adrift', 'Six Adrift', 'Have all six Ancients at large at once', vigilAtLarge, 6, '/fishing'),
+        badgeGoal('six_abreast', 'Six Abreast', 'Every Ancient at Vigil Rank III or better', vigilAtRankIII, 6, '/fishing'),
         badgeGoal('struck_in_gold', 'Struck in Gold', 'Take an Ancient to Vigil Rank V', vigilTopRank, VIGIL_MAX_RANK, '/fishing'),
         badgeGoal('deep_remembers', 'The Deep Remembers', 'Reach 20 total Vigil', vigilPoints, 20, '/fishing'),
         badgeGoal('the_long_vigil', 'The Long Vigil', 'Master all six Ancients at Rank V', vigilPoints, VIGIL_MAX_TOTAL, '/fishing'),

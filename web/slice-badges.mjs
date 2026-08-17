@@ -257,7 +257,7 @@ const PLAN = [
   // ── batch 37 — The Long Vigil ──
   [37, 0, 0, 'back_to_the_dark'],
   [37, 0, 1, 'twice_landed'],
-  [37, 0, 2, 'six_adrift'],
+  [37, 0, 2, 'six_abreast'],
   [37, 1, 0, 'struck_in_gold'],
   [37, 1, 1, 'deep_remembers'],
   [37, 1, 2, 'the_long_vigil'],

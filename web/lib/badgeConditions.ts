@@ -534,7 +534,9 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     back_to_the_dark:     vigilAtLarge > 0 || vigilTopRank >= 2,
     twice_landed:         vigilTopRank >= 2,
     struck_in_gold:       vigilTopRank >= VIGIL_MAX_RANK,
-    six_adrift:           vigilAtLarge === ANCIENT_IDS.length,
+    // Reads EVERY id rather than the stored entries, so a giant never caught
+    // (which has no vigil row at all) correctly fails instead of being skipped.
+    six_abreast:          ANCIENT_IDS.every(id => (vigilState[String(id)]?.rank ?? 0) >= 3),
     deep_remembers:       vigilPoints >= 20,
     the_long_vigil:       vigilComplete(vigilState),
 
