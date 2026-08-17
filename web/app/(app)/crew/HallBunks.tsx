@@ -360,8 +360,16 @@ export default function HallBunks({
                 // Done still reads gold, because that is the collect cue
                 // everywhere. A running Leviathan stint keeps the teal, so you
                 // can see at a glance that this one has a chance riding on it.
-                border: `1.5px solid ${done ? `${GOLD}aa` : lev ? `${LEVIATHAN}66` : 'rgba(255,255,255,0.16)'}`,
-                background: `linear-gradient(180deg, ${done ? `${GOLD}1f` : lev ? `${LEVIATHAN}14` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
+                // THE DEEP BUNK KEEPS ITS COLOUR IN EVERY STATE. Gold is the
+                // hall's "collect me" signal, so a finished Leviathan bunk used
+                // to turn gold like the other five and lose its identity at the
+                // exact moment it matters most -- the tap that opens a draw
+                // looked like the tap that pays out XP. It reads teal
+                // throughout now, and carries a glow when ready so "collect me"
+                // still lands without borrowing the colour.
+                border: `1.5px solid ${lev ? (done ? LEVIATHAN : `${LEVIATHAN}66`) : done ? `${GOLD}aa` : 'rgba(255,255,255,0.16)'}`,
+                background: `linear-gradient(180deg, ${lev ? (done ? `${LEVIATHAN}30` : `${LEVIATHAN}14`) : done ? `${GOLD}1f` : 'rgba(255,255,255,0.04)'} 0%, rgba(0,0,0,0.25) 100%)`,
+                boxShadow: done ? (lev ? `0 0 16px ${LEVIATHAN}55` : `0 0 14px ${GOLD}33`) : 'none',
                 touchAction: 'manipulation',
                 // The tapped tile dims and holds while the claim is in flight,
                 // so the wait reads as "working" rather than as "nothing
@@ -409,7 +417,7 @@ export default function HallBunks({
                   </span>
                   {/* scaleX on a solid fill, never width — width is layout. */}
                   <span aria-hidden style={{ display: 'block', width: '80%', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', marginTop: 2 }}>
-                    <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 2, background: GOLD, transformOrigin: 'left', transform: `scaleX(${pct})`, transition: 'transform 0.4s linear' }} />
+                    <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 2, background: lev ? LEVIATHAN : GOLD, transformOrigin: 'left', transform: `scaleX(${pct})`, transition: 'transform 0.4s linear' }} />
                   </span>
                 </>
               )}
@@ -687,26 +695,9 @@ function BunkPicker({
 
         {/* Said before the tap, not after. Whoever goes in is committed. */}
         <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.5 }}>
-          Whoever you pick is in for <span style={{ color: accent }}>{stint}</span> and earns{' '}
-          <span style={{ color: accent }}>{payout.toLocaleString()} XP</span>. They cannot raid, sail,
-          trawl or be dismissed until the stint ends.
+          In for <span style={{ color: accent }}>{stint}</span>, earns{' '}
+          <span style={{ color: accent }}>{payout.toLocaleString()} XP</span>. Locked in until it ends.
         </p>
-
-        {/* WHAT DECIDES THE CHASE NOW. Rarity used to weight this table and no
-            longer does: base stats already carry rarity (a Common holding the
-            best trait in the game still loses to a Legendary holding none), so
-            weighting the draw counted it twice. The thing worth saying instead
-            is the thing that changed -- the draw is flat, so it can come back
-            WORSE, and the claim is a decision. Stated without a percentage on
-            purpose: the table length is the dial and a number baked into copy
-            would start lying the first time it moves. */}
-        {leviathan && (
-          <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.5 }}>
-            Every hand draws from the same table down here, whatever their rarity. Most draws come back{' '}
-            <span style={{ color: accent }}>worse</span> than what they already carry, so you choose whether
-            to take it. Refusing costs you the draw, not the trait.
-          </p>
-        )}
 
         {/* TRAIN AGAIN. The same hand back into the same bunk is the common
             case by a distance, and finding them again in a roster of thirty was
@@ -765,7 +756,7 @@ function BunkPicker({
             are not broken, they are busy, and you free them somewhere else. */}
         {who === 'all' && blockedCount > 0 && (
           <p className="font-karla" style={{ padding: '0 1rem 0.8rem', fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.45 }}>
-            Greyed hands are already busy. Take them out of their raid party, voyage party or trawl first and they can take a bunk.
+            Greyed hands are busy. Free them from their party or trawl first.
           </p>
         )}
 
@@ -818,27 +809,24 @@ function BunkPicker({
             </div>
             {/* The whole point, in one line, at the moment of the choice. */}
             <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.45, marginTop: 8 }}>
-              One draw per stint, so a{' '}
-              <span style={{ color: accent, fontWeight: 700 }}>shorter stay is more draws</span>{' '}
-              for the same XP a day. Longer just means fewer trips back.
+              One draw per stint. <span style={{ color: accent, fontWeight: 700 }}>Shorter stay, more draws</span> for the same XP a day.
             </p>
           </div>
         )}
 
-        {/* The whole reason to pick this bunk over the other five, and the
-            goal at the end of it. Two short sentences carry the rules and the
-            target line does the rest, because "+4 +4 +4 = Divine" is
-            understood at a glance in a way a paragraph about magnitude
-            ceilings never is. The old copy explained the mechanic accurately
-            and never once said what you were aiming AT. */}
+        {/* WHAT THIS BUNK IS, in three lines. It used to run to five sentences
+            across two blocks -- the rules, the odds, the never-worse promise and
+            the target -- on a page whose job is only to pick a hand and a
+            length. The target line does most of the work, because "+4/+4/+4 =
+            Divine" is understood at a glance in a way a paragraph never is. */}
         {leviathan && (
           <div style={{ margin: '0 1rem 0.85rem', paddingTop: '0.7rem', borderTop: `1px solid ${LEVIATHAN}2e` }}>
-            <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-              Every stint draws them a whole new trait and offers it beside the one they carry. Take it or keep what they have.
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.66)', lineHeight: 1.5 }}>
+              One new trait per stint, offered against theirs. Most land worse. You choose.
             </p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1.5, marginTop: 5 }}>
               <span style={{ color: `${LEVIATHAN}cc`, fontVariantNumeric: 'tabular-nums' }}>+4 / +4 / +4</span>
-              {' '}makes a <span className="trait-divine font-700">Divine</span> hand. No other bunk rolls a 4.
+              {' '}is <span className="trait-divine font-700">Divine</span>. Only bunk that rolls a 4.
             </p>
           </div>
         )}
