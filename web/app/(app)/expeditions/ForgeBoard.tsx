@@ -210,11 +210,29 @@ export default function ForgeBoard({
 
   // The parts you hold that THIS tier's unforged recipes want, sorted by how
   // contested they are — a part feeding four recipes is the one to think about.
+  // KAN-1... KAN-5: "Feeds N" HAS TO COUNT WHAT THE BOARD SHOWS.
+  //
+  // This counted every unforged recipe in the tab that uses the part, but the
+  // board itself drops two more classes of recipe: tier-3 Abyssal ones before
+  // Don's Forge is owned, and any recipe consuming a Don's-Gauntlet component
+  // before Don's is reachable. So a part could read "Feeds 4" over a board
+  // showing two, and the missing pair were invisible by design rather than by
+  // accident.
+  //
+  // Fixed by teaching the count the board's own rules rather than by revealing
+  // the hidden recipes: that hiding exists specifically so the board cannot
+  // spoil content the player has no path to yet, and a silhouette would give
+  // exactly that away. A count that matches what is on screen is the honest
+  // version of the same information.
+  // tier is optional on ForgeRecipe (tier-2 rows omit it), matching how the
+  // board's own filter reads it.
+  const visibleToBoard = (r: { result: string; tier?: number }) =>
+    (r.tier !== 3 || abyssalUnlocked) && (!recipeNeedsGauntlet2(r.result) || hasDonsAccess)
   const parts = useMemo(() => forgeComponentIds()
     .filter(id => owned.has(id))
-    .map(id => ({ id, feeds: recipesUsingComponent(id).filter(r => !owned.has(r.result) && (r.tier === 3) === abyssalTab).length }))
+    .map(id => ({ id, feeds: recipesUsingComponent(id).filter(r => !owned.has(r.result) && (r.tier === 3) === abyssalTab && visibleToBoard(r)).length }))
     .filter(p => p.feeds > 0)
-    .sort((a, b) => b.feeds - a.feeds), [ownedRaidItems, abyssalTab])   // eslint-disable-line react-hooks/exhaustive-deps
+    .sort((a, b) => b.feeds - a.feeds), [ownedRaidItems, abyssalTab, abyssalUnlocked, hasDonsAccess])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const visible = filterPart
     ? tierRows.filter(r => r.recipe.components.includes(filterPart))
