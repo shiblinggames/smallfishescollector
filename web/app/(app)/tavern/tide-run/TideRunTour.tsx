@@ -30,19 +30,19 @@ const STEPS: TourStep[] = [
     // "Smash them on the water" was the reported sticking point, and the fault
     // is position rather than vocabulary: the card BEFORE this one teaches
     // jumping, so a player arrives here primed to jump everything and reads
-    // "smash" as something they do in the air. The fix is to name the wrong
-    // instinct out loud before giving the right one, and to say plainly what
-    // the boat physically does. Players did work it out unaided, so this is a
-    // clarification and not a redesign.
+    // "smash" as something they do in the air.
+    //
+    // Three facts, one sentence each: which rocks are beacons, what you do to
+    // them, what happens if you get it wrong. "Ram them head-on" is the whole
+    // fix -- it says the boat stays down without needing a clause about the
+    // water, and it cannot be read as anything you do mid-air.
     body: (
       <>
         Rocks with a blinking
         <span style={{ color: '#ffb84d', fontWeight: 700 }}> amber light </span>
         are beacons.{' '}
-        <span style={{ color: '#fda4a4', fontWeight: 700 }}>Never jump a beacon.</span>
-        {' '}Stay down on the water and{' '}
-        <span style={{ color: '#9ae6b4', fontWeight: 700 }}>ram straight through it</span>
-        {' '}to take it out. Jump one and the alarm wrecks you.
+        <span style={{ color: '#9ae6b4', fontWeight: 700 }}>Ram them head-on.</span>
+        {' '}Jumping one sets off the alarm and wrecks you.
       </>
     ),
   },
@@ -51,9 +51,9 @@ const STEPS: TourStep[] = [
     title: 'Smash for Doubloons',
     body: (
       <>
-        Every beacon you smash pays{' '}
-        <span style={{ color: '#bda05a', fontWeight: 700 }}>2 <span style={{ color: '#bda05a' }}>⟡</span></span>,
-        every run. Distance still chases the leaderboard.
+        Every beacon pays{' '}
+        <span style={{ color: '#bda05a', fontWeight: 700 }}>2 <span style={{ color: '#bda05a' }}>⟡</span></span>.
+        Distance chases the leaderboard.
       </>
     ),
   },
