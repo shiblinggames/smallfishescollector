@@ -13,12 +13,28 @@ import { releaseAncient, castLine, reelIn, reelCrate, rerollWormhole, quickSellA
 import { equipSecondSpecial } from '../expeditions/spoilsActions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import { buyBaitWithFathoms } from '@/app/(app)/raids/gauntlet/actions'
-import FinnEncounter from './FinnEncounter'
-import FinnScene from './FinnScene'
 import TrawlIndicator from './TrawlIndicator'
-import AncientRelease from './AncientRelease'
-import AncientRankUp from './AncientRankUp'
-import VigilCapstone from './VigilCapstone'
+
+// ── RARE OVERLAYS, SPLIT OUT OF THE FIRST LOAD ──────────────────────────────
+// These five only mount on events most sessions never see: Finn intercepts ~2%
+// of casts, and the three Vigil ceremonies are post-finale endgame. Statically
+// imported they were ~1,200 lines every player downloaded, parsed and hydrated
+// before their first cast, to be ready for something that probably will not
+// happen.
+//
+// ssr:false because they are overlays with nothing to server-render, and no
+// loading state because each one is already gated behind a state flag that
+// only flips at the moment it is wanted -- the chunk fetches while the
+// triggering animation plays.
+//
+// TrawlIndicator stays STATIC on purpose. It is 1,185 lines but it is mounted
+// on every render (it takes a `hidden` prop rather than unmounting), so
+// splitting it would buy nothing and cost a round trip on every load.
+const FinnEncounter = dynamic(() => import('./FinnEncounter'), { ssr: false })
+const FinnScene     = dynamic(() => import('./FinnScene'), { ssr: false })
+const AncientRelease = dynamic(() => import('./AncientRelease'), { ssr: false })
+const AncientRankUp  = dynamic(() => import('./AncientRankUp'), { ssr: false })
+const VigilCapstone  = dynamic(() => import('./VigilCapstone'), { ssr: false })
 import {
   FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT, FINN_REVEAL_BEAT,
   FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
