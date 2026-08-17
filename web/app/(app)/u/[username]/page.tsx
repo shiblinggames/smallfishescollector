@@ -1,3 +1,4 @@
+import { vigilFor } from '@/lib/ancientVigil'
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ownedSpecialIds } from '@/lib/specialItems'
@@ -27,7 +28,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, has_perfected_sigil, has_auto_caster, has_auto_catcher, has_anglers_patience, equipped_special_2, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage, equipped_crew_skins, prestige_levels')
+      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, has_perfected_sigil, has_auto_caster, has_auto_catcher, has_anglers_patience, equipped_special_2, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage, equipped_crew_skins, prestige_levels, ancient_catches, ancient_vigil')
       .ilike('username', username)
       .single(),
   ])
@@ -67,7 +68,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       .select('fish_species(id, name, bite_rarity, habitat, sell_value)')
       .eq('user_id', profile.id),
 
-    user ? admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single() : Promise.resolve({ data: null }),
+    user ? admin.from('profiles').select('packs_available, doubloons, gems, ancient_catches').eq('id', user.id).single() : Promise.resolve({ data: null }),
 
     user && user.id !== profile.id
       ? admin.from('crew').select('follower_id').eq('follower_id', user.id).eq('following_id', profile.id).single()
@@ -91,6 +92,20 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       .eq('is_golden', true)
       .order('fish_species(bite_rarity)', { ascending: false }),
   ])
+
+  // ── THE VAULT OF ANCIENTS, gated at BOTH ends ────────────────────────────
+  // OWNER must hold all six, or there is no wall worth showing. VIEWER must
+  // hold all six too: the giants are finale content, and a profile visit should
+  // not be how somebody finds out what is down there. So this is a thing
+  // finishers show to other finishers, which is the point of it.
+  const ANCIENT_SPECIES_IDS = [143, 144, 145, 146, 147, 148]
+  const ownerCaught = ((profile.ancient_catches as number[] | null) ?? [])
+  const viewerCaught = (((navProfileData.data as { ancient_catches?: number[] } | null)?.ancient_catches) ?? [])
+  const hasAllSix = (ids: number[]) => ANCIENT_SPECIES_IDS.every(id => ids.includes(id))
+  const showVault = hasAllSix(ownerCaught) && hasAllSix(viewerCaught)
+  const ancientVigil = showVault
+    ? vigilFor(profile.ancient_vigil, ownerCaught)
+    : undefined
 
   const goldenMounts = ((goldenRows ?? []) as any[])
     .map(r => r.fish_species)
@@ -134,6 +149,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       <main className="min-h-screen pb-24 sm:pb-0 pt-10">
         <ProfileClient
           username={profile.username}
+          ancientsCaught={showVault ? ownerCaught : null}
+          ancientVigil={ancientVigil}
           showcaseCrew={showcaseCrew}
           voyages={(voyagesData.data ?? []) as import('./ProfileClient').VoyageEntry[]}
           isPremium={isPremiumActive(profile)}

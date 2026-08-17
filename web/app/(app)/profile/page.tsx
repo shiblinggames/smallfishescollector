@@ -1,3 +1,4 @@
+import { vigilFor } from '@/lib/ancientVigil'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ownedSpecialIds } from '@/lib/specialItems'
 import { redirect } from 'next/navigation'
@@ -119,6 +120,7 @@ export default async function ProfilePage() {
           goldenMounts={goldenMounts}
           raidItemIds={(profile?.raid_items as string[] | null) ?? []}
           ancientTrophies={ancientTrophies}
+          ancientVigil={vigilFor(profile?.ancient_vigil, (profile?.ancient_catches as number[] | null) ?? null)}
           characterColor={profile?.character_color ?? 'default'}
           unlockedColors={unlockedColors}
           doubloons={profile?.doubloons ?? 0}

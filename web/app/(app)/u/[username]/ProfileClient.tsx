@@ -1,5 +1,7 @@
 'use client'
 
+import VaultOfAncients from '@/components/VaultOfAncients'
+import type { VigilState } from '@/lib/ancientVigil'
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { type ShowcaseCrew } from '@/components/CrewShowcase'
 import { addCrewMember, removeCrewMember } from '@/app/(app)/social/actions'
@@ -55,6 +57,11 @@ interface Gear {
 
 interface Props {
   username: string
+  /** The six giants this captain has landed, or null when the wall is hidden.
+   *  Both gates are decided on the server (owner and viewer must each hold all
+   *  six), so the client only has to ask whether it got a list. */
+  ancientsCaught?: number[] | null
+  ancientVigil?: VigilState
   showcaseCrew: ShowcaseCrew[]
   stats: Stats
   gear: Gear
@@ -119,7 +126,7 @@ function LevelChip({ color, label, value }: { color: string; label: string; valu
   )
 }
 
-export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, prestigeLevels, goldenMounts, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, ownedSpecialIds = [], equippedSpecial2Id = null, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
+export default function ProfileClient({ username, ancientsCaught, ancientVigil, showcaseCrew, voyages, stats, gear, rarestFish, prestigeLevels, goldenMounts, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, ownedSpecialIds = [], equippedSpecial2Id = null, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
@@ -472,6 +479,18 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
             <div>
               <SectionLabel color="#60a5fa" flavor="The odd gear they have talked out of the sea.">Tackle</SectionLabel>
               <SpecialTackle items={ownedSpecialIds} equippedIds={[equippedSpecialId ?? null, equippedSpecial2Id]} />
+            </div>
+          )}
+
+          {/* THE VAULT OF ANCIENTS. Server decides whether it renders at all:
+              the owner needs all six landed, and so does whoever is looking,
+              so this is finishers showing the wall to other finishers. A null
+              list means one of those two gates said no. Sits above Rarest
+              Catches because it outranks everything else on the page. */}
+          {ancientsCaught && ancientsCaught.length > 0 && (
+            <div>
+              <SectionLabel flavor="Every giant they have hauled up, and how far each has been carried.">Vault of Ancients</SectionLabel>
+              <VaultOfAncients caught={ancientsCaught} vigil={ancientVigil} />
             </div>
           )}
 
