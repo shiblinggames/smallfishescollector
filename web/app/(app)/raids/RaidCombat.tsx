@@ -10586,11 +10586,31 @@ function FinnDefeatFx({ lines, onDone }: { lines: string[]; onDone: () => void }
           }} />
       ))}
 
-      {/* HIS LAST WORDS. */}
-      <div style={{
-        position: 'absolute', left: 0, right: 0, top: '52%', padding: '0 2rem',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-      }}>
+      {/* HIS LAST WORDS, ON THEIR OWN PLATE.
+          KAN-10. The lines used to be painted straight onto the flash: near-black
+          with a white shadow, which reads beautifully on gold and not at all on
+          anything else. But the flash animates to opacity 0 at 4.2s while the
+          lines stay until onDone at 3000 + 1000 per line, so a three-line ending
+          spent its last two seconds as dark text sitting directly on the combat
+          log. The reported illegibility is that gap, not the position.
+          
+          A dark plate that fades in with the first line and holds for the whole
+          sequence fixes both halves: the text now has one background it is
+          styled for, whatever the flash is doing behind it. Light-on-dark reads
+          against gold and against the log equally. */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: beat > 0 ? 1 : 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: '50%', top: '52%', transform: 'translateX(-50%)',
+          width: 'min(520px, calc(100% - 2rem))',
+          padding: '0.9rem 1.1rem', borderRadius: 14,
+          background: 'rgba(6,10,18,0.86)',
+          border: '1px solid rgba(255,224,160,0.28)',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.55)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+        }}>
         {lines.map((l, i) => (
           <motion.p key={i} className="font-cinzel font-700"
             initial={{ opacity: 0, y: 8 }}
@@ -10600,14 +10620,13 @@ function FinnDefeatFx({ lines, onDone }: { lines: string[]; onDone: () => void }
               margin: 0, textAlign: 'center', maxWidth: 460,
               fontSize: i === lines.length - 1 ? '0.86rem' : '1.05rem',
               lineHeight: 1.45,
-              color: i === lines.length - 1 ? '#cbd5e1' : '#1a1206',
+              color: i === lines.length - 1 ? '#cbd5e1' : '#ffe9b5',
               fontStyle: i === lines.length - 1 ? 'italic' : 'normal',
-              textShadow: i === lines.length - 1 ? 'none' : '0 1px 0 rgba(255,255,255,0.5)',
             }}>
             {l}
           </motion.p>
         ))}
-      </div>
+      </motion.div>
     </div>
   )
 }
