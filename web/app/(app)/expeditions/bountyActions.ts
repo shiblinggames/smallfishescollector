@@ -1,5 +1,6 @@
 'use server'
 
+import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -106,7 +107,16 @@ async function readSignals(admin: Admin, uid: string, since: string): Promise<Si
 function measure(meter: BountyMeter, s: Signals, baseline: number): number {
   switch (meter.kind) {
     case 'raid_clear':
-      return s.raids.filter(r => r.raid_id === meter.raidId).length
+      // KAN-9. A challenge clear IS a clear of that raid, just a harder one, so
+      // it counts toward the base bounty. Beating the Cartographer on Challenge
+      // and being told the plain "Sink the Cartographer" order is still open
+      // reads as a bug, because it is the same boss at the same node.
+      //
+      // ONE DIRECTION ONLY: the challenge satisfies the base, never the reverse.
+      // Matched by stripping the suffix rather than by a prefix test, so a raid
+      // whose id happens to start with another's cannot cross-credit.
+      return s.raids.filter(r => r.raid_id === meter.raidId
+        || (isChallengeRaidId(r.raid_id) && baseRaidIdOf(r.raid_id) === meter.raidId)).length
     case 'raid_any':
       return s.raids.length
     case 'raid_any_of':
