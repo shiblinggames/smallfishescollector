@@ -20,7 +20,7 @@ import { bonusChargeSlots, gauntletRepairHealMult, donsRaidHpMult, donsLegendary
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { flagAnomaly } from '@/lib/anomaly'
-import { issueRunToken } from '@/lib/runToken'
+import { issueRunToken, markRunCleared } from '@/lib/runToken'
 import { logBountyEvent } from '@/app/(app)/expeditions/bountyActions'
 import { RAID_DAMAGE_MIN } from '@/lib/bounties'
 
@@ -341,12 +341,61 @@ export async function startRaidRun(raidId: string): Promise<{ token: string | nu
   return { token }
 }
 
-export async function recordRaidClear(raidId: string, elapsedMs: number): Promise<RaidClearTimes | null> {
+/**
+ * Record a clear. TOKEN-BOUND, which it was not.
+ *
+ * The doc on startRaidRun above says both reward calls "reference it so a run's
+ * rewards are bounded to its real mob count and its clear can't be replayed".
+ * awardRaidKill does. This one never took a token at all, so it inserted a
+ * raid_completions row for whatever raidId and time it was handed, as many times
+ * as it was called.
+ *
+ * That row is not cosmetic. It is the cleared set the raid map unlocks nodes
+ * from, the meter every raid bounty counts, and the speed record. Forging it
+ * meant unlocking the campaign, completing orders and taking the global record
+ * without fighting anything. Reported by a tester who replayed exactly this
+ * endpoint.
+ *
+ * The token is consumed here, so a run yields ONE clear. A replay finds it spent
+ * and is refused. The raidId is checked against the token's own meta, so a token
+ * minted for an easy raid cannot bank a clear of a hard one.
+ *
+ * Tolerant when no token is supplied: a run started before this shipped, or a
+ * client not yet updated, still records. That gap is watched rather than closed
+ * -- the flag below is where adoption gets checked before it is made mandatory.
+ */
+export async function recordRaidClear(raidId: string, elapsedMs: number, token?: string | null): Promise<RaidClearTimes | null> {
   if (!raidId || !Number.isFinite(elapsedMs) || elapsedMs <= 0) return null
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const admin = createAdminClient()
+
+  // A clear cannot be faster than the shortest honest fight. Anything under this
+  // is a forged time reaching for the global record, not a good run.
+  const MIN_PLAUSIBLE_CLEAR_MS = 20_000
+  if (elapsedMs < MIN_PLAUSIBLE_CLEAR_MS) {
+    await flagAnomaly(admin, user.id, 'implausible:raidClearTime', 3, { raidId, elapsedMs })
+    return null
+  }
+
+  if (token) {
+    // markRunCleared, NOT consumeRunToken: the boss-kill award fires after this
+    // and needs the token still open (bump_run_token_kill requires
+    // consumed_at IS NULL). Consuming here would take every honest player's
+    // boss XP and gold along with the replay.
+    const spent = await markRunCleared(admin, user.id, 'raid', token)
+    if (!spent) {
+      await flagAnomaly(admin, user.id, 'replay:recordRaidClear', 3, { raidId, elapsedMs })
+      return null
+    }
+    const tokenRaid = (spent.meta as { raidId?: string } | null)?.raidId
+    if (tokenRaid && tokenRaid !== raidId) {
+      await flagAnomaly(admin, user.id, 'mismatch:recordRaidClear', 3, { raidId, tokenRaid })
+      return null
+    }
+  }
+
   const ms = Math.floor(elapsedMs)
 
   // Who am I (username + admin flag — admins don't count toward the global record).

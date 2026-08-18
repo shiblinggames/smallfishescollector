@@ -44,6 +44,7 @@ export default async function QuartermasterRaidPage() {
             shipSkins={stats.shipSkins}
             equippedItems={stats.equippedRaidItems}
             ownedRaidItems={stats.ownedRaidItems}
+            ownedSpecialItems={stats.ownedSpecialItems}
             classDamageMult={stats.classDamageMult}
             legendaryLootMult={stats.legendaryLootMult}
             classDoubloonMult={stats.classDoubloonMult}

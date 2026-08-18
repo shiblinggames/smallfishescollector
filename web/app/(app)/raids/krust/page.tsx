@@ -18,7 +18,8 @@ export default async function KrustRaidPage() {
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
-    <>      <main className="min-h-screen pt-6">
+    <>
+      <main className="min-h-screen pt-6">
         <div className="px-3 pb-12 max-w-xl mx-auto">
           <RaidGame
             config={CAPTAIN_KRUST}
@@ -41,6 +42,7 @@ export default async function KrustRaidPage() {
             shipSkins={stats.shipSkins}
             equippedItems={stats.equippedRaidItems}
             ownedRaidItems={stats.ownedRaidItems}
+            ownedSpecialItems={stats.ownedSpecialItems}
             classDamageMult={stats.classDamageMult}
             legendaryLootMult={stats.legendaryLootMult}
             classDoubloonMult={stats.classDoubloonMult}

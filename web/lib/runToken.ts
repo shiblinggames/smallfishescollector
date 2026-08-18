@@ -73,3 +73,39 @@ export async function countRaidKill(
     return false
   }
 }
+
+/** Bank a raid CLEAR against an open token, once.
+ *
+ *  Deliberately NOT consumeRunToken. The clear is recorded the moment the boss
+ *  dies, but the boss-kill award fires after it and calls countRaidKill, which
+ *  needs an unconsumed token (bump_run_token_kill requires consumed_at IS NULL).
+ *  Consuming here would have taken every honest player's boss XP and gold with
+ *  the replay guard.
+ *
+ *  So the clear gets its own marker. The update is conditional on cleared_at
+ *  being null, which makes it atomic: a replayed call loses the race and gets
+ *  null back, while kills keep counting against the same still-open token.
+ *
+ *  Returns the token's meta on success, or null if it was already cleared,
+ *  missing, expired or foreign — all of which the caller must treat as a replay. */
+export async function markRunCleared(
+  admin: Admin,
+  userId: string,
+  kind: string,
+  tokenId: string | null | undefined,
+): Promise<{ meta: any } | null> {  // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!tokenId) return null
+  try {
+    const { data } = await admin
+      .from('run_tokens')
+      .update({ cleared_at: new Date().toISOString() })
+      .eq('id', tokenId).eq('user_id', userId).eq('kind', kind)
+      .is('cleared_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .select('meta')
+      .single()
+    return data ? { meta: data.meta } : null
+  } catch {
+    return null
+  }
+}

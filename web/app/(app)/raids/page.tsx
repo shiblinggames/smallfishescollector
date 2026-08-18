@@ -18,7 +18,8 @@ export default async function RaidPage() {
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
-    <>      <main className="min-h-screen pt-6">
+    <>
+      <main className="min-h-screen pt-6">
         <div className="px-3 pb-12 max-w-xl mx-auto">
           <RaidGame
             config={CORSAIRS_RECKONING}
@@ -41,6 +42,7 @@ export default async function RaidPage() {
             shipSkins={stats.shipSkins}
             equippedItems={stats.equippedRaidItems}
             ownedRaidItems={stats.ownedRaidItems}
+            ownedSpecialItems={stats.ownedSpecialItems}
             classDamageMult={stats.classDamageMult}
             legendaryLootMult={stats.legendaryLootMult}
             classDoubloonMult={stats.classDoubloonMult}

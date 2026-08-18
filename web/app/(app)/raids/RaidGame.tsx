@@ -1250,7 +1250,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setClearTimeMs(clearElapsedMs)   // this run's time, for the victory screen
         if (!clearRecordedRef.current) {
           clearRecordedRef.current = true
-          recordRaidClear(config.raidId, clearElapsedMs)
+          recordRaidClear(config.raidId, clearElapsedMs, runTokenRef.current ?? undefined)
             .then(t => { if (t) setClearTimes(t) })
             .catch(() => {
               // If the insert fails, clear the guard so the loot-claim
