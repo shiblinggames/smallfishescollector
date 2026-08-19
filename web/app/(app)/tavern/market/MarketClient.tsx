@@ -491,7 +491,7 @@ export default function MarketClient({
   isPremium,
   exchangeUnveil = false,
   exchangeOpen = false,
-  openContracts = 0,
+  openContracts: initialOpenContracts = 0,
 }: {
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
@@ -508,6 +508,14 @@ export default function MarketClient({
 }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
+  // The Exchange door's "N running" was read straight off the server prop, so
+  // closing a position refreshed the board and left the door lying until the
+  // page was reloaded. BoardClient reports the count off every load now, and
+  // the prop only seeds it.
+  const [openContracts, setOpenContracts] = useState(initialOpenContracts)
+  // A server prop into useState needs a resync, or navigating back with a fresh
+  // count would keep showing whatever this component was first mounted with.
+  useEffect(() => { setOpenContracts(initialOpenContracts) }, [initialOpenContracts])
   const [selling, setSelling] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [tradeFish, setTradeFish] = useState<MarketFishEntry | null>(null)
@@ -726,7 +734,7 @@ export default function MarketClient({
           )}
         </div>
 
-        {side === 'exchange' && <BoardClient onDoubloons={setDoubloons} />}
+        {side === 'exchange' && <BoardClient onDoubloons={setDoubloons} onOpenContracts={setOpenContracts} />}
 
         {side === 'hold' && <>
         {/* ── Market status ticker ── */}

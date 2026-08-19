@@ -77,7 +77,14 @@ function Line({ points, color, w = 64, h = 22, mark, markColor = '#ffd96a', flui
   )
 }
 
-export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number) => void }) {
+export default function BoardClient({ onDoubloons, onOpenContracts }: {
+  onDoubloons?: (n: number) => void
+  /** How many contracts are still running, reported on every load. The Exchange
+   *  door above this board prints that number, and it arrives as a server prop
+   *  -- so selling a position updated the board underneath and left the door
+   *  still saying "2 running" until the page was reloaded. */
+  onOpenContracts?: (n: number) => void
+}) {
   const [board, setBoard] = useState<Board | null>(null)
   const [ticket, setTicket] = useState<BoardIndex | null>(null)
   const [tab, setTab] = useState<'board' | 'bets'>('board')
@@ -90,8 +97,11 @@ export default function BoardClient({ onDoubloons }: { onDoubloons?: (n: number)
     getBoard().then(b => {
       setBoard(b)
       if (b.open) { onDoubloons?.(b.doubloons); purseChanged(b.doubloons) }
+      // Off the SAME response the board renders, so the door and the list under
+      // it can never disagree about how many are running.
+      onOpenContracts?.(b.open ? b.bets.filter(x => x.status === 'open').length : 0)
     })
-  }, [onDoubloons])
+  }, [onDoubloons, onOpenContracts])
   useEffect(() => { load() }, [load])
 
   // The board explains itself once, on arrival, and then only when asked.
