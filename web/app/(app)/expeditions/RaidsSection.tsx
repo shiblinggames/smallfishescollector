@@ -300,7 +300,7 @@ function NodeDetailSheet({
   // Component level, because the drop-detail modal below is rendered here and
   // needs the same number the chips inside the drops block show.
   const nodeCfg = view.node.raidId ? getRaidConfigById(view.node.raidId) : undefined
-  const { liveChance } = makeLiveChance(nodeCfg, ownedRaidItems, ownedShipSkins, totalFortune, ownedSpecialItems)
+  const { liveChance, dropOwned } = makeLiveChance(nodeCfg, ownedRaidItems, ownedShipSkins, totalFortune, ownedSpecialItems)
   // Dialogue scene overlay (any node with node.scene). Story nodes:
   // first read plays the scene and its final CTA marks the node read.
   // Milestone/event nodes: the scene is an intro cutscene — finishing
@@ -1824,7 +1824,7 @@ function NodeDetailSheet({
   // tapping a unique-drop chip inside the sheet opens this card without
   // closing the sheet itself. Both portal to <body> so they escape any
   // ancestor stacking context.
-  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} chance={liveChance(selectedDrop)} owned={(!!selectedDrop.id && ownedRaidItems.includes(selectedDrop.id)) || (!!selectedDrop.shipSkinId && ownedShipSkins.includes(selectedDrop.shipSkinId))} onClose={() => setSelectedDrop(null)} /> : null
+  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} chance={liveChance(selectedDrop)} owned={dropOwned(selectedDrop)} onClose={() => setSelectedDrop(null)} /> : null
 
   // Dialogue scene — StoryScene portals itself to <body> (z-1100, above
   // the sheet). Story nodes, first read: the final CTA fires the mark-read
@@ -1884,6 +1884,14 @@ function NodeDetailSheet({
 // X closes it without closing the underlying sheet.
 function DropDetailModal({ drop, owned, chance, onClose }: {
   drop: RaidNodeDrop
+  /**
+   * Pass makeLiveChance's `dropOwned`, never a hand-rolled check. Both call
+   * sites used to inline `ownedRaidItems.includes(id) || ownedShipSkins…`,
+   * which misses the THIRD place an owned unique lives: a fishing special is a
+   * boolean profile column, not a raid_items entry. So a captain already
+   * carrying The Primeval Eye tapped it on the node sheet and the card told
+   * him he had not earned it.
+   */
   owned: boolean
   /**
    * The LIVE chance, from crateItemChances. RaidNodeDrop.chance is baked at
@@ -3114,7 +3122,7 @@ function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ow
           <DropDetailModal
             drop={dropDetail}
             chance={liveChance(dropDetail)}
-            owned={(!!dropDetail.id && ownedRaidItems.includes(dropDetail.id)) || (!!dropDetail.shipSkinId && ownedShipSkins.includes(dropDetail.shipSkinId))}
+            owned={dropOwned(dropDetail)}
             onClose={() => setDropDetail(null)}
           />
         </div>
