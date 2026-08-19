@@ -4162,6 +4162,12 @@ export default function RaidCombat({
       pushStep({ who: 'enemy', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`Your ship is ablaze, burning for ${tick}.`], burnTurnsLeft: playerBurnRef.current.turns })
     }
 
+    // The enemy's move is locked in at reveal time, when it still had the
+    // cannonballs to pay for it. A crit strip (The Don's Signet / The Court's
+    // Fang) or a Press-Gang steal can empty its rack in the SAME round, before
+    // it acts — so the committed move has to be re-priced when its turn comes
+    // up rather than fired off an empty deck.
+    let eActionNow = eAction
     for (const who of order) {
       if (pHp <= 0 || eHp <= 0) break
       // ── HIS LASTING EFFECTS LAPSE HERE, at the very top of his turn and
@@ -4273,6 +4279,31 @@ export default function RaidCombat({
           }
         }
       }
+      // RE-PRICE THE COMMITTED SHOT. Stripping a round used to change nothing:
+      // the enemy fired anyway, dealing full damage off a rack the UI was
+      // showing as empty. Degrade exactly the way pickEnemyAction degrades an
+      // impossible action — fall back to a reload and hand the pattern slot
+      // back, so the shot it was owed is re-attempted next turn with a ball in
+      // hand. Never a soft-lock, just lost tempo, which is what the strip is
+      // meant to buy.
+      let rackStripped = false
+      if (who === 'enemy') {
+        const cost = eActionNow === 'ultimate' ? enemyMagazine
+          : eActionNow === 'volley' ? VOLLEY_COST
+          : eActionNow === 'fire' ? 1 : 0
+        if (cost > 0 && eCharges < cost) {
+          eActionNow = 'reload'
+          rackStripped = true
+          // An ultimate re-attempts until the clip fills and never advanced the
+          // slot, so only rewind what was actually spent — and tell foresight
+          // the slotted move never happened, or its countdown burns a turn on a
+          // move the enemy never made.
+          if (enemyAdvancedThisTurnRef.current) {
+            enemyPatternIdxRef.current = Math.max(0, enemyPatternIdxRef.current - 1)
+            enemyAdvancedThisTurnRef.current = false
+          }
+        }
+      }
       // Frozen Cannonball: the enemy loses this whole turn (skips before its
       // turn-start heal + action). This is the turn AFTER the proc; one turn,
       // then the ice breaks.
@@ -4287,9 +4318,9 @@ export default function RaidCombat({
       // never lands. Skip its attack step (like a frozen turn); your own fire
       // resolves in its own step. Rendered as a neutral 'reload' so no enemy
       // cannon animation loosens toward you.
-      if (who === 'enemy' && counterEnemyShot) {
+      if (who === 'enemy' && counterEnemyShot && !rackStripped) {
         counterEnemyShot = false
-        eCharges = Math.max(0, eCharges - (eAction === 'volley' ? VOLLEY_COST : 1))
+        eCharges = Math.max(0, eCharges - (eActionNow === 'volley' ? VOLLEY_COST : 1))
         const cLines = [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`]
         // Broadside Duel: you loaded while they didn't.
         if (tide.counterBonusRefund > 0) {
@@ -4301,7 +4332,7 @@ export default function RaidCombat({
         let reflectOut = 0
         let counterFin: ReturnType<typeof finishCheck> | null = null
         if (tide.counterReflectPct > 0) {
-          const eBase = (Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg) * (eAction === 'volley' ? 2 : 1)
+          const eBase = (Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg) * (eActionNow === 'volley' ? 2 : 1)
           const pm = enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2] ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
           reflectOut = Math.max(1, Math.floor(eBase * pm * tide.counterReflectPct))
           eHp = Math.max(0, eHp - reflectOut)
@@ -4319,7 +4350,7 @@ export default function RaidCombat({
         pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid — your turn is skipped.'], freezeEnds: true })
         continue
       }
-      const action = who === 'player' ? pAction : eAction
+      const action = who === 'player' ? pAction : eActionNow
       // False Colors fumble — the player locked onto a decoy band. The shot is a
       // dud: no cannon fires, but the loaded charge(s) are spent (you committed to
       // the shot), the player takes chip damage, and the turn is over (the enemy
@@ -4359,6 +4390,12 @@ export default function RaidCombat({
       let carapaceSoaked = false
       let aegisDownOut: 'shatter' | 'collapse' | undefined   // The Last Wall fell this step
       const stepLines: string[] = []
+      // Name the strip before the reload line lands, so "it had one round and
+      // fired anyway" becomes "you took its last round, so it had to load".
+      // Suppressed under Shuttered Ports, which hides the magazine on purpose.
+      if (rackStripped && !enemyChargesHidden) {
+        stepLines.push(`The ${enemy.name} goes to fire on an empty rack. You took its last cannonball — it has to load instead.`)
+      }
 
       // Snare made good — the enemy tried to slip aside but its helm is jammed,
       // so its dodge got swapped for a fire/reload. Surface it so the player
