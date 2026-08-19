@@ -36,6 +36,15 @@ export interface OfferState {
   refused: number
   /** Depth of the last offer made, so he does not pester you every breather. */
   lastAt: number
+  /** Depth this state was last ROLLED at, hit or miss. A breather can ask more
+   *  than once for the same depth — a leave-and-resume re-enters it, and so does
+   *  any beat that hands the rail back — and the answer has to stand. Without
+   *  this, asking again after a HIT fell into the cooldown check below and
+   *  returned nothing, which is how a live offer appeared on the rail and then
+   *  vanished a moment later; and asking again after a MISS handed out a free
+   *  second roll at the same depth. Optional so runs opened before this shipped
+   *  still read (they simply roll once more, which is the old behaviour). */
+  rolledAt?: number
 }
 
 export const EMPTY_OFFER_STATE: OfferState = { live: null, refused: 0, lastAt: 0 }
@@ -142,10 +151,16 @@ export function rollOffer(opts: {
   const { prev, depth, hpPct, chestWorthOffering } = opts
   const rand = opts.rand ?? Math.random
 
+  // ONE ROLL PER DEPTH, AND THE ANSWER STANDS. Everything below is a fresh
+  // random decision, and this function also PERSISTS what it returns — so a
+  // second ask at the same breather did not just re-decide the bargain, it
+  // overwrote it. Davy leans over the rail once per depth.
+  if (prev.rolledAt === depth) return prev
+
   // A live offer from a SHALLOWER breather means they dove past it. That is a
   // refusal, and it is the only thing that moves the tier.
   const refused = prev.live && prev.live.depth < depth ? prev.refused + 1 : prev.refused
-  const base: OfferState = { live: null, refused, lastAt: prev.lastAt }
+  const base: OfferState = { live: null, refused, lastAt: prev.lastAt, rolledAt: depth }
 
   if (depth < OFFER_MIN_DEPTH) return base
   if (hpPct < OFFER_MIN_HP_PCT) return base            // he does not haggle with the drowning
@@ -159,5 +174,6 @@ export function rollOffer(opts: {
     live: { kind, tier: clampTier(1 + refused), depth },
     refused,
     lastAt: depth,
+    rolledAt: depth,
   }
 }
