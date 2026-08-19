@@ -54,10 +54,17 @@ export async function bunkCrew(crewId: number, slot: number, hours?: number): Pr
   const admin = createAdminClient()
 
   const { data: crew } = await admin
-    .from('user_crew').select('id, xp, voyage_slot, raid_slot, died_at')
+    .from('user_crew').select('id, xp, voyage_slot, raid_slot, died_at, pending_trait')
     .eq('id', crewId).eq('user_id', user.id).maybeSingle()
   if (!crew) return { error: 'Crew not found' }
   if ((crew as any).died_at) return { error: 'That hand is gone.' }
+  // A hand already holding an unanswered draw cannot go back down for another.
+  // recutLeviathanTraits will not overwrite an open offer, so the stint would
+  // run its full length and hand back nothing -- which is precisely how this
+  // read as "the bunk stopped re-rolling". Answer the one you have first.
+  if ((crew as any).pending_trait) {
+    return { error: 'They are still holding a draw. Answer it first.' }
+  }
   if ((crew as any).voyage_slot !== null || (crew as any).raid_slot !== null) {
     return { error: 'Take them out of their party first.' }
   }

@@ -1102,6 +1102,48 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     const id = setTimeout(() => setPop(null), 1200)
     return () => clearTimeout(id)
   }, [pop])
+  /**
+   * AN UNANSWERED DRAW OUTLIVES THE SESSION.
+   *
+   * The offer is parked on the crew row and recutLeviathanTraits REFUSES to
+   * overwrite one, so a reveal that closed before it was answered — a refresh,
+   * a back-swipe, the "Back to work" button this panel used to carry — left
+   * that hand holding a draw nothing on screen mentioned. Every later stint in
+   * the deep bunk then came back with no new trait and no explanation, which
+   * reads exactly like the re-cut being broken.
+   *
+   * So re-open it from state. The decision is still the only way out, it just
+   * survives leaving the page now. One at a time: answering clears the row, the
+   * roster comes back without it, and the next hand owed an answer opens.
+   */
+  useEffect(() => {
+    if (bunkReveal) return
+    const crew = state.roster.find(c => !!c.pendingTrait)
+    if (!crew?.pendingTrait) return
+    // A neutral draw is parked as the literal 's:0,0,0' so that "nothing" is
+    // still an offer; it decodes to a real zero triple, not to null.
+    const after = decodeTraitStats(crew.pendingTrait) ?? { power: 0, dodge: 0, fortune: 0 }
+    const before = netTraitStats(crew.effects)
+    const level = crewLevelFromXP(crew.xp)
+    setBunkReveal({
+      name: crew.name, filename: crew.filename, rarity: crew.rarity,
+      // Nothing was earned by re-opening: the XP for that stint was paid when
+      // it was collected. Zeroed so the card reports the decision, not a
+      // second payout.
+      xp: 0, oldXP: crew.xp, newXP: crew.xp, from: level, to: level,
+      upgrade: {
+        crewId: crew.id, before, after,
+        beforeLabel: traitLabel(before) || 'No trait',
+        afterLabel: traitLabel(after) || 'No trait',
+        gained: {
+          power:   after.power   > before.power,
+          dodge:   after.dodge   > before.dodge,
+          fortune: after.fortune > before.fortune,
+        },
+        pending: true,
+      },
+    })
+  }, [state.roster, bunkReveal])
   /** Bunk claims and unbunks return { state, grants }, so they cannot go
    *  through `run` (which only knows { state } | { error }). Both surface what
    *  was paid; both are safe to call when nothing is owed. */
