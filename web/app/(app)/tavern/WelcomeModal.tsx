@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import StepTourModal, { type TourStep } from '@/components/StepTourModal'
 import GuideScene from '@/components/GuideScene'
 import { GUIDES } from '@/lib/onboardingScenes'
@@ -18,10 +19,11 @@ interface BeforeInstallPromptEvent extends Event {
 const WELCOME_SCENE: SceneLine[] = [
   { ...GUIDES.doby, text: "Welcome aboard, Captain! This is the Tavern, your home base." },
   { ...GUIDES.kat,  text: "The plan is simple: catch fish, sell them for coin, and build up a crew." },
-  { ...GUIDES.doby, text: "We'll guide you as you go. Let's get started." },
+  { ...GUIDES.doby, text: "We'll guide you as you go. Let's get you out on the water." },
 ]
 
 export default function WelcomeModal() {
+  const router = useRouter()
   const [, startTransition] = useTransition()
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [env, setEnv] = useState<{ standalone: boolean; ios: boolean; chromeIOS: boolean } | null>(null)
@@ -45,7 +47,17 @@ export default function WelcomeModal() {
 
   function grantAndClose() {
     setPhase('done')
-    startTransition(async () => { await claimWelcomePack() })
+    startTransition(async () => {
+      await claimWelcomePack()
+      // STRAIGHT TO THE WATER. The scene above tells a new captain the plan is
+      // to catch fish and sell them, then this used to close onto the Tavern:
+      // the densest page in the game, and the one place that plan cannot be
+      // acted on. "Let's Go" now goes somewhere. Awaited so the welcome pack is
+      // in the hold before /fishing reads the profile, and safe to fire blind
+      // because has_seen_welcome gates the whole modal -- it can never redirect
+      // a returning captain who chose to land here.
+      router.push('/fishing')
+    })
   }
 
   // Browser-only "install as an app" step (never in a PWA). Android/desktop

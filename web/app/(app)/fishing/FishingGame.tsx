@@ -3460,10 +3460,12 @@ export default function FishingGame({
   // lib/fishingMusic so the audio element survives React unmount and the
   // fade-out actually runs when the player leaves /fishing. Persists the
   // mute preference via localStorage.
+  // Default UNMUTED, matching FishingPageClient's start call. These two must
+  // agree: the parent decides whether the track plays, this decides which icon
+  // the toggle wears, and a disagreement shows a muted speaker over playing music.
   const [audioMuted, setAudioMuted] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true
-    const saved = window.localStorage.getItem('fishingAudioMuted')
-    return saved === null ? true : saved === 'true'
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('fishingAudioMuted') === 'true'
   })
   // SFX mute is independent of the music mute (separate localStorage key,
   // separate sfxGain node in lib/fishingMusic). Default ON (not muted).

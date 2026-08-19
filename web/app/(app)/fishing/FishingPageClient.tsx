@@ -185,7 +185,13 @@ export default function FishingPageClient({
     // zone with its own track (e.g. Open Waters) fades in the default track
     // and then toggles, blipping the wrong song for a moment.
     if (selectedZone) primeFishingTrack(fishingTrackForZone(selectedZone))
-    startFishingMusic(saved === null ? true : saved === 'true')
+    // NO SAVED PREF MEANS PLAY IT. It defaulted to muted, which sounds polite
+    // and mostly meant players never learned there was a soundtrack at all --
+    // an off switch is easy to find, an off switch you do not know exists is
+    // not. Autoplay policy still holds it until the first gesture, so nobody
+    // gets ambushed by sound they did not ask for. Keep this in lockstep with
+    // FishingGame's audioMuted initialiser or the toggle opens on the wrong icon.
+    startFishingMusic(saved === 'true')
     return () => { fadeOutFishingMusic() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
