@@ -861,3 +861,60 @@ export async function pickShipClass(
 
   return { ok: true }
 }
+
+/**
+ * THE REFIT — spend the one free re-choice of every class pick.
+ *
+ * Earned by putting the don under (the Chapter IV boss), spendable once, ever.
+ * The picks are permanent identity by design; this exists because the tradeoffs
+ * cannot be read until you have fought with them, and committing forever was
+ * the only way to find that out.
+ *
+ * Writes `ship_classes` and NOTHING ELSE. It deliberately does not re-open the
+ * class nodes on the map: the Chapter II class node IS the Gauntlet's unlock
+ * gate and later chapters hang off these nodes with requiresNode, so un-clearing
+ * them to make a captain "re-earn" the picks would re-lock the Gauntlet and half
+ * the campaign. The map is settled history; only the loadout moves.
+ */
+export async function refitShipClasses(
+  next: Record<string, string>,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('ship_classes, ship_refit_used')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+  if (profile.ship_refit_used === true) return { error: 'You have already taken your refit.' }
+
+  // The don has to be in the ground. Read off raid_completions, the same source
+  // every other Chapter IV reveal on the ship screen uses.
+  const { data: throne } = await admin.from('raid_completions')
+    .select('raid_id').eq('user_id', user.id).eq('raid_id', 'the_throne').maybeSingle()
+  if (!throne) return { error: 'The don is still sitting on his throne.' }
+
+  const picks = (profile.ship_classes as Record<string, string> | null) ?? {}
+  const chapters = Object.keys(picks)
+  if (chapters.length === 0) return { error: 'You have no classes to refit.' }
+
+  const { validateClassPicks } = await import('@/lib/shipClasses')
+  const check = validateClassPicks(next, chapters)
+  if (!check.ok) return { error: check.error }
+
+  // SPEND IT IN THE SAME WRITE. Conditional on the flag still being false, so
+  // two taps cannot both land and hand out two refits.
+  const { data: written } = await admin
+    .from('profiles')
+    .update({ ship_classes: next, ship_refit_used: true })
+    .eq('id', user.id)
+    .eq('ship_refit_used', false)
+    .select('id')
+  if (!(written ?? []).length) return { error: 'You have already taken your refit.' }
+
+  return { ok: true }
+}

@@ -1654,7 +1654,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "You read the Cartographer's seas, cracked the Gullet's cipher, and put its collector under. Pick a class for the deep water ahead. Once it's chosen it stays with you for every raid from here on, stacking with the captain you already are.",
-      dropsNote: 'Deepen the class you already sail (a Mark II that stacks on top of it) or branch into a fresh one. Permanent, and the other options are gone for good.',
+      dropsNote: 'Deepen the class you already sail (a Mark II that stacks on top of it) or branch into a fresh one. It stays with you for good, barring the single refit the end of the campaign buys you.',
       ctaLabel: 'Pick a class',
     },
   },
@@ -2113,7 +2113,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "You ran the harbor wall, faced the market's fleet, and put the Quartermaster under his own counter. Pick a class for the deep water where Finleone waits. It stays with you for every raid from here on, stacking with the captain you already are.",
-      dropsNote: 'Deepen the class you already sail or branch into a fresh one. Permanent, and the other options are gone for good.',
+      dropsNote: 'Deepen the class you already sail or branch into a fresh one. It stays with you for good, barring the single refit the end of the campaign buys you.',
       ctaLabel: 'Pick a class',
     },
   },

@@ -27,6 +27,28 @@ same files. Keep the vocabulary split.
 - Ship PvP was REMOVED (2026-08) — bounties absorbed its competitive role. Don't build
   ship-vs-ship features back in; see [bounties.md](bounties.md).
 
+## The Refit (one lifetime re-choice)
+
+Class picks are permanent IDENTITY by design. The single concession is the **Refit**:
+earned by clearing `the_throne` (Chapter IV's boss), spendable once ever, tracked by
+`profiles.ship_refit_used`. Offered at the foot of the Captain's Class modal on the
+ship screen (`ShipRefitPanel.tsx`, action `refitShipClasses`).
+
+Two rules it exists to protect:
+
+- **All chapters at once, in play order.** `offeredShipClasses` only offers a Mark II on
+  a line you already own, so resetting one chapter could strand a Mark II with no Mark I.
+  The panel re-walks every chapter and `validateClassPicks` re-checks the whole ladder
+  server-side.
+- **Never touch `raid_node_progress`.** The Chapter II class node IS `GAUNTLET_UNLOCK_NODE`
+  and later chapters hang off these nodes via `requiresNode`. Un-clearing them to make a
+  captain "re-earn" the picks would re-lock the Gauntlet and half the campaign. The refit
+  writes `ship_classes` and nothing else.
+
+Priced at nothing on purpose: a doubloon cost would make respec a wealth check, and a gem
+cost would be pay-to-win (re-tuning per boss). Earning it by finishing the campaign is the
+price.
+
 ## Connects to
 
 - [raids-campaign.md](raids-campaign.md) — class math and mounts apply there.

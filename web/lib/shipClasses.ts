@@ -284,6 +284,55 @@ export function offeredShipClassIds(picks: Record<string, string>): ShipClassId[
   return offeredShipClasses(picks).map(c => c.id)
 }
 
+// ── THE REFIT ────────────────────────────────────────────────────────────────
+// One lifetime re-choice of every class pick, earned by putting the don under.
+// The picks are IDENTITY and they stay permanent by default; this is the single
+// concession to the fact that the tradeoffs cannot be read until you have fought
+// with them, and there is no other way to learn them.
+//
+// ALL OR NOTHING, and always in chapter order. A per-chapter reset would let a
+// captain drop the Mark I out from under a Mark II they keep, which is a
+// loadout offeredShipClasses would never hand out -- so a refit re-walks the
+// whole ladder from the first chapter, exactly as it was walked the first time.
+
+/** The chapters that carry a class pick, in the order they are played. Must
+ *  match the classPick nodes in lib/raidMap.ts. */
+export const SHIP_CLASS_CHAPTER_ORDER = ['thread', 'sunken_hand', 'the_coffers'] as const
+
+/**
+ * Is this a loadout the picker itself could have produced?
+ *
+ * Walks the chapters in play order and asks the SAME question the class node
+ * asks: is this id on the menu, given everything chosen before it. So a Mark II
+ * still needs its Mark I, a line cannot be picked twice at the same tier, and a
+ * chapter cannot be filled in that was never picked to begin with.
+ *
+ * `allowed` is the set of chapters the captain has actually reached. Anything
+ * outside it is rejected rather than ignored, since this validates a payload
+ * that arrived over the wire.
+ */
+export function validateClassPicks(
+  next: Record<string, string>,
+  allowed: string[],
+): { ok: true } | { ok: false; error: string } {
+  const allow = new Set(allowed)
+  const keys = Object.keys(next)
+  if (keys.length !== allow.size || keys.some(k => !allow.has(k))) {
+    return { ok: false, error: 'That is not the set of chapters you have sailed.' }
+  }
+  const soFar: Record<string, string> = {}
+  for (const chapter of SHIP_CLASS_CHAPTER_ORDER) {
+    if (!allow.has(chapter)) continue
+    const id = next[chapter]
+    if (!(id in SHIP_CLASSES)) return { ok: false, error: 'Unknown class.' }
+    if (!offeredShipClassIds(soFar).includes(id as ShipClassId)) {
+      return { ok: false, error: `${SHIP_CLASSES[id as ShipClassId].name} is not on the menu at that point.` }
+    }
+    soFar[chapter] = id
+  }
+  return { ok: true }
+}
+
 export const SHIP_CLASS_LIST: ShipClassDef[] = [
   SHIP_CLASSES.master_gunner,
   SHIP_CLASSES.ironside,

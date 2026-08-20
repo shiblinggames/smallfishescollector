@@ -28,6 +28,7 @@ import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, 
 import UltimateBuildPanel from './UltimateBuildPanel'
 import SixthBerthPanel from './SixthBerthPanel'
 import ArmoryExpansionPanel from './ArmoryExpansionPanel'
+import ShipRefitPanel from './ShipRefitPanel'
 import { IconCrate } from '@/components/GameIcons'
 import { getShipAugment, type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge, hasAbyssalForge, hasAbyssalAccelerator } from '@/lib/gauntletUpgrades'
@@ -302,6 +303,9 @@ interface Props {
   hasSixthBerth?: boolean
   /** Cleared Raid 8 (the Throne) — unlocks the Expanded Armory purchase. */
   throneCleared?: boolean
+  /** The one free class refit has already been spent. Earned by clearing the
+   *  throne; see refitShipClasses. */
+  shipRefitUsed?: boolean
   /** Owns the Expanded Armory (extra raid-item mount). */
   hasArmoryExpansion?: boolean
   /** THE SIXTH MOUNT (Finn spoil). An EXTRA mount that takes exactly one
@@ -541,6 +545,7 @@ export default function ShipHero({
   blockadeCleared = false,
   hasSixthBerth = false,
   throneCleared = false,
+  shipRefitUsed = false,
   hasArmoryExpansion = false,
   hasSixthMount = false,
   focus,
@@ -829,6 +834,7 @@ export default function ShipHero({
   const [sixthBerthOpen, setSixthBerthOpen] = useState(false)
   const [armoryOpen, setArmoryOpen] = useState(false)
   const [classesOpen, setClassesOpen] = useState(false)
+  const [refitOpen, setRefitOpen] = useState(false)
   const [skinsOpen, setSkinsOpen] = useState(false)
   const [upgradeBusy, setUpgradeBusy] = useState(false)
   const [upgradeError, setUpgradeError] = useState<string | null>(null)
@@ -3290,6 +3296,30 @@ export default function ShipHero({
                 </div>
               )
             })()}
+            {/* THE REFIT. Only offered where the classes are already explained,
+                because the whole point of it is that the tradeoffs cannot be
+                read until you have fought with them. Earned by putting the don
+                under, spendable once, and gone from the panel afterwards rather
+                than sitting there greyed out as a permanent reminder. */}
+            {throneCleared && !shipRefitUsed && Object.keys(shipClasses).length > 0 && (
+              <button type="button" onClick={() => { setClassesOpen(false); setRefitOpen(true) }}
+                className="font-karla font-700"
+                style={{ width: '100%', marginTop: 12, padding: '0.62rem', borderRadius: 11, fontSize: '0.76rem', color: '#c084fc', background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.45)', cursor: 'pointer' }}>
+                The don&rsquo;s shipwright can cut these once &rsaquo;
+              </button>
+            )}
+          </motion.div>
+        )}
+      </PopupShell>
+
+      {/* The one free class refit. Its own sheet: the overview above is a read,
+          this is a decision, and stacking them in one modal made the read feel
+          like a menu. */}
+      <PopupShell open={refitOpen} onClose={() => setRefitOpen(false)}>
+        {refitOpen && (
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
+            <ShipRefitPanel picks={shipClasses} onClose={() => setRefitOpen(false)} />
           </motion.div>
         )}
       </PopupShell>
