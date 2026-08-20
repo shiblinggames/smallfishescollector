@@ -3305,7 +3305,7 @@ export default function ShipHero({
               <button type="button" onClick={() => { setClassesOpen(false); setRefitOpen(true) }}
                 className="font-karla font-700"
                 style={{ width: '100%', marginTop: 12, padding: '0.62rem', borderRadius: 11, fontSize: '0.76rem', color: '#c084fc', background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.45)', cursor: 'pointer' }}>
-                The don&rsquo;s shipwright can cut these once &rsaquo;
+                Refit your classes &middot; one time only &rsaquo;
               </button>
             )}
           </motion.div>
