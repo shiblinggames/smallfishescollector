@@ -264,7 +264,11 @@ export default function ShipRefitPanel({ picks, onClose }: {
         {editing !== null && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
             onClick={e => e.stopPropagation()}
-            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: `1px solid ${ACCENT}66`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '86vh', overflowY: 'auto' }}>
+            /* Same rule as the panel behind it: PopupShell is the scroller, so
+               this card sizes to its content and lets the scrim carry it. A
+               maxHeight + overflowY here scrolled the page instead of the card
+               and put its foot under the mobile nav. */
+            style={{ position: 'relative', width: '100%', maxWidth: 400, marginTop: 'auto', marginBottom: 'auto', flexShrink: 0, background: 'rgba(8,14,24,0.98)', border: `1px solid ${ACCENT}66`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem' }}>
             <CloseButton onClick={() => setEditing(null)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
             <p className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.16em', color: '#8a96a8' }}>
               {CHAPTER_NAME[chapters[editing]] ?? chapters[editing]}

@@ -3318,7 +3318,7 @@ export default function ShipHero({
       <PopupShell open={refitOpen} onClose={() => setRefitOpen(false)}>
         {refitOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
+            style={{ position: 'relative', width: '100%', maxWidth: 400, marginTop: 'auto', marginBottom: 'auto', flexShrink: 0, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
             <ShipRefitPanel picks={shipClasses} onClose={() => setRefitOpen(false)} />
           </motion.div>
         )}
