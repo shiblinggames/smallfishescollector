@@ -17,6 +17,21 @@ ladder (the prestige climb). Questions are generated nightly, not hand-authored.
   is a season-less prestige climb (evergreen — no resets, per the no-FOMO pillar).
 - Rewards route through the standard gem/doubloon ledgers.
 
+## Spin the Capstan: the two safety rails
+
+Both live in `capstan/actions.ts` and both are server-side. Neither is a display fix.
+
+- **No third hazard in a row.** The wheel carries one Overboard and one Lose a Turn in
+  sixteen, so three back to back is a 1-in-256 shot that ends a round before a letter is
+  ever called. After `CAPSTAN_MAX_HAZARD_RUN` hazards the spin pool narrows to the value
+  wedges. Narrow the POOL rather than re-rolling until it likes the answer: that keeps
+  every wedge equally likely within the pool and still returns a real index for the
+  client to animate to. Costs about 0.2% of hazard rate.
+- **A missed letter is a spent letter.** `run.called` records EVERY letter tried, hit or
+  miss. It used to record hits only, so the board never greyed a dead letter out and the
+  duplicate guard could not see it: the same miss could be called repeatedly, each time
+  costing a spin and a strike. Applies to bought vowels too, so a wasted fee is paid once.
+
 ## Connects to
 
 - [tavern.md](tavern.md) — its front door. [economy-membership.md](economy-membership.md)
