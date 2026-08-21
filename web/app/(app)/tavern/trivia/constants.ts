@@ -336,6 +336,22 @@ export const CAPSTAN_WHEEL: CapstanWedge[] = [
   650, 300, 450, 'lose_turn', 800, 250, 550, 150,
 ]
 
+/**
+ * Most hazards the wheel may deal BACK TO BACK before the next spin is forced to
+ * land on a value wedge.
+ *
+ * Two hazards in sixteen is a 1-in-256 chance of three in a row, which sounds
+ * like nothing until it happens: a captain spun Lose, Lose, Overboard, Lose and
+ * was out on strikes having never once called a letter. That is not a hard round,
+ * it is not being allowed to play, and no amount of skill or patience answers it.
+ *
+ * So the wheel is honest right up to the point where it would take the round away
+ * before it started, and then it is not. It costs the player nothing (the odds of
+ * a hazard fall from 12.5% to about 12.3%) and it removes the one outcome the
+ * game has no answer for.
+ */
+export const CAPSTAN_MAX_HAZARD_RUN = 2
+
 /** Parlor points a solved puzzle grants toward the shared rank — a base plus a
  *  clean (no-strike) bonus. Kept in line with the Board (1-3/card) and King. */
 export const CAPSTAN_SOLVE_POINTS = 3

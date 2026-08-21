@@ -20,6 +20,7 @@ import {
   isCapstanVowel,
   CAPSTAN_WHEEL,
   CAPSTAN_MAX_STRIKES,
+  CAPSTAN_MAX_HAZARD_RUN,
   CAPSTAN_VOWEL_COST,
   type CapstanStatus,
   type CapstanState,
@@ -30,15 +31,21 @@ import {
 } from '../constants'
 
 interface CapstanRun {
+  /** EVERY letter tried, hit or miss. Misses live here too so the board can grey
+   *  them out and the guards below can refuse a second go at a letter that is
+   *  already known not to be in the phrase. */
   called: string[]
   bank: number
   strikes: number
   status: CapstanStatus
   pendingValue: number | null
   earned: number
+  /** Hazards dealt back to back so far. See CAPSTAN_MAX_HAZARD_RUN. Optional
+   *  because runs opened before this shipped do not carry it; readRun defaults it. */
+  hazardRun?: number
 }
 
-const freshRun = (): CapstanRun => ({ called: [], bank: 0, strikes: 0, status: 'active', pendingValue: null, earned: 0 })
+const freshRun = (): CapstanRun => ({ called: [], bank: 0, strikes: 0, status: 'active', pendingValue: null, earned: 0, hazardRun: 0 })
 
 type RunsMap = Record<string, CapstanRun>
 
@@ -129,20 +136,33 @@ export async function spinCapstan(index: number): Promise<CapstanSpinResult | { 
   if (run.pendingValue !== null) return { error: 'Call a letter first.' }
 
   // Server-authoritative roll — the client only learns which wedge afterward.
-  const wedgeIndex = Math.floor(Math.random() * CAPSTAN_WHEEL.length)
-  const wedge = CAPSTAN_WHEEL[wedgeIndex]
+  //
+  // After CAPSTAN_MAX_HAZARD_RUN hazards in a row the pool narrows to the value
+  // wedges. Narrowing the POOL rather than re-rolling until it likes the answer
+  // keeps every wedge equally likely within that pool, and still returns a real
+  // index so the capstan animates to a wedge that is actually there.
+  const spent = (run.hazardRun ?? 0) >= CAPSTAN_MAX_HAZARD_RUN
+  const pool = CAPSTAN_WHEEL
+    .map((w, i) => ({ w, i }))
+    .filter(({ w }) => !spent || typeof w === 'number')
+  const pick = pool[Math.floor(Math.random() * pool.length)]
+  const wedgeIndex = pick.i
+  const wedge = pick.w
 
   let outcome: CapstanSpinResult['outcome']
   if (wedge === 'overboard') {
     outcome = 'overboard'
     run.bank = 0
+    run.hazardRun = (run.hazardRun ?? 0) + 1
   } else if (wedge === 'lose_turn') {
     outcome = 'lose_turn'
     run.strikes += 1
+    run.hazardRun = (run.hazardRun ?? 0) + 1
     if (run.strikes >= CAPSTAN_MAX_STRIKES) run.status = 'failed'
   } else {
     outcome = 'value'
     run.pendingValue = wedge
+    run.hazardRun = 0
   }
 
   ctx.runs[String(index)] = run
@@ -163,17 +183,21 @@ export async function callConsonant(index: number, letterRaw: string): Promise<C
 
   const letter = (letterRaw ?? '').toUpperCase()
   if (!/^[A-Z]$/.test(letter) || isCapstanVowel(letter)) return { error: 'Call a single consonant.' }
-  if (run.called.includes(letter)) return { error: 'Already called that one.' }
+  if (run.called.includes(letter)) return { error: 'You have already tried that letter.' }
 
   const value = run.pendingValue
   run.pendingValue = null
   const phrase = normalizeCapstan(gen.phrase)
   const count = phrase.split('').filter(ch => ch === letter).length
   let gained = 0
+  // RECORDED EITHER WAY. A miss used to go unrecorded, so the board never greyed
+  // it out and the guard above could not see it: the same dead letter could be
+  // called again and again, burning a spin and a strike each time on information
+  // the game already had.
+  run.called.push(letter)
   if (count > 0) {
     gained = value * count
     run.bank += gained
-    run.called.push(letter)
   } else {
     run.strikes += 1
     if (run.strikes >= CAPSTAN_MAX_STRIKES) run.status = 'failed'
@@ -197,13 +221,15 @@ export async function buyVowel(index: number, letterRaw: string): Promise<Capsta
 
   const letter = (letterRaw ?? '').toUpperCase()
   if (!/^[A-Z]$/.test(letter) || !isCapstanVowel(letter)) return { error: 'Pick a vowel.' }
-  if (run.called.includes(letter)) return { error: 'Already revealed that vowel.' }
+  if (run.called.includes(letter)) return { error: 'You have already tried that letter.' }
   if (run.bank < CAPSTAN_VOWEL_COST) return { error: `A vowel costs ${CAPSTAN_VOWEL_COST} in the bank.` }
 
   run.bank -= CAPSTAN_VOWEL_COST
   const phrase = normalizeCapstan(gen.phrase)
   const count = phrase.split('').filter(ch => ch === letter).length
-  if (count > 0) run.called.push(letter)
+  // Recorded even when absent, so a wasted fee is paid once rather than as many
+  // times as the player is willing to tap the same vowel.
+  run.called.push(letter)
 
   ctx.runs[String(index)] = run
   await persist(ctx.admin, ctx.userId, ctx.week, ctx.runs, ctx.doubloonsAwarded)
