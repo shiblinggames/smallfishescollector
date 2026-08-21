@@ -878,7 +878,7 @@ export async function pickShipClass(
  */
 export async function refitShipClasses(
   next: Record<string, string>,
-): Promise<{ ok: true } | { error: string }> {
+): Promise<{ ok: true; doubloons: number | null } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -886,11 +886,10 @@ export async function refitShipClasses(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_classes, ship_refit_used')
+    .select('ship_classes, ship_refits_used, doubloons')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
-  if (profile.ship_refit_used === true) return { error: 'You have already taken your refit.' }
 
   // The don has to be in the ground. Read off raid_completions, the same source
   // every other Chapter IV reveal on the ship screen uses.
@@ -902,19 +901,44 @@ export async function refitShipClasses(
   const chapters = Object.keys(picks)
   if (chapters.length === 0) return { error: 'You have no classes to refit.' }
 
-  const { validateClassPicks } = await import('@/lib/shipClasses')
+  const { validateClassPicks, shipRefitCost } = await import('@/lib/shipClasses')
   const check = validateClassPicks(next, chapters)
   if (!check.ok) return { error: check.error }
 
-  // SPEND IT IN THE SAME WRITE. Conditional on the flag still being false, so
-  // two taps cannot both land and hand out two refits.
+  // PRICED OFF THE COUNT, server-side. The first refit is free; every one after
+  // it costs. Read here rather than trusted from the client, which only ever
+  // sends the picks.
+  const used = (profile.ship_refits_used as number | null) ?? 0
+  const cost = shipRefitCost(used)
+  let spent: number | null = null
+
+  if (cost > 0) {
+    // Atomic, balance-guarded debit BEFORE the write, the same order the tackle
+    // shop uses: a refit that cannot be paid for must not land, and two taps
+    // must not both settle against one balance.
+    const { data: left } = await admin.rpc('deduct_doubloons', { uid: user.id, amount: cost })
+    if (left == null) return { error: `A refit costs ${cost.toLocaleString()} ⟡.` }
+    spent = left as number
+    await admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: -cost,
+      reason: 'Ship refit: re-cut your class picks',
+    })
+  }
+
+  // Conditional on the count still being what was priced, so a refit that raced
+  // another cannot be paid for once and taken twice. The debit above already
+  // landed if this loses, which is the safe direction to fail: the reward is
+  // withheld, never handed out unpaid.
   const { data: written } = await admin
     .from('profiles')
-    .update({ ship_classes: next, ship_refit_used: true })
+    .update({ ship_classes: next, ship_refits_used: used + 1 })
     .eq('id', user.id)
-    .eq('ship_refit_used', false)
+    .eq('ship_refits_used', used)
     .select('id')
-  if (!(written ?? []).length) return { error: 'You have already taken your refit.' }
+  if (!(written ?? []).length) return { error: 'That refit was already taken. Reload and try again.' }
 
-  return { ok: true }
+  // Handed back so the purse in the Nav ticks down with the payment rather than
+  // waiting for the next full load.
+  return { ok: true, doubloons: spent }
 }

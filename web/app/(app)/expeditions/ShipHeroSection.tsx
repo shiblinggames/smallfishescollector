@@ -72,7 +72,7 @@ export default async function ShipHeroSection({ focus }: { focus?: 'ship' | 'ite
       blockadeCleared={blockadeCleared}
       hasSixthBerth={hasSixthBerth}
       throneCleared={throneCleared}
-      shipRefitUsed={profile?.ship_refit_used === true}
+      shipRefitsUsed={Number(profile?.ship_refits_used ?? 0)}
       hasArmoryExpansion={profile?.has_armory_expansion === true}
       hasSixthMount={profile?.finn_spoil_free === 'nav' || profile?.finn_spoil_paid === 'nav'}
       isAdmin={profile?.is_admin === true}

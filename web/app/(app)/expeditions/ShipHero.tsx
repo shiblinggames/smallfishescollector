@@ -17,7 +17,7 @@ import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
-import { getShipClass, SHIP_CLASS_LINES, aggregateShipClasses, type ShipClassId } from '@/lib/shipClasses'
+import { getShipClass, SHIP_CLASS_LINES, aggregateShipClasses, shipRefitCost, type ShipClassId } from '@/lib/shipClasses'
 import { navLevelReqForShip } from '@/lib/gearGating'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
@@ -305,7 +305,9 @@ interface Props {
   throneCleared?: boolean
   /** The one free class refit has already been spent. Earned by clearing the
    *  throne; see refitShipClasses. */
-  shipRefitUsed?: boolean
+  /** Refits already taken. The first is free, every one after costs; see
+   *  shipRefitCost. */
+  shipRefitsUsed?: number
   /** Owns the Expanded Armory (extra raid-item mount). */
   hasArmoryExpansion?: boolean
   /** THE SIXTH MOUNT (Finn spoil). An EXTRA mount that takes exactly one
@@ -545,7 +547,7 @@ export default function ShipHero({
   blockadeCleared = false,
   hasSixthBerth = false,
   throneCleared = false,
-  shipRefitUsed = false,
+  shipRefitsUsed = 0,
   hasArmoryExpansion = false,
   hasSixthMount = false,
   focus,
@@ -3301,13 +3303,19 @@ export default function ShipHero({
                 read until you have fought with them. Earned by putting the don
                 under, spendable once, and gone from the panel afterwards rather
                 than sitting there greyed out as a permanent reminder. */}
-            {throneCleared && !shipRefitUsed && Object.keys(shipClasses).length > 0 && (
-              <button type="button" onClick={() => { setClassesOpen(false); setRefitOpen(true) }}
-                className="font-karla font-700"
-                style={{ width: '100%', marginTop: 12, padding: '0.62rem', borderRadius: 11, fontSize: '0.76rem', color: '#c084fc', background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.45)', cursor: 'pointer' }}>
-                Refit your classes &middot; one time only &rsaquo;
-              </button>
-            )}
+            {throneCleared && Object.keys(shipClasses).length > 0 && (() => {
+              // Always offered once the don is down. The first is free and the
+              // rest are priced, so the line says which rather than the entry
+              // point disappearing after one use.
+              const cost = shipRefitCost(shipRefitsUsed)
+              return (
+                <button type="button" onClick={() => { setClassesOpen(false); setRefitOpen(true) }}
+                  className="font-karla font-700"
+                  style={{ width: '100%', marginTop: 12, padding: '0.62rem', borderRadius: 11, fontSize: '0.76rem', color: '#c084fc', background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.45)', cursor: 'pointer' }}>
+                  Refit your classes &middot; {cost === 0 ? 'first one free' : `${cost.toLocaleString()} ⟡`} &rsaquo;
+                </button>
+              )
+            })()}
           </motion.div>
         )}
       </PopupShell>
@@ -3319,7 +3327,7 @@ export default function ShipHero({
         {refitOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
             style={{ position: 'relative', width: '100%', maxWidth: 400, marginTop: 'auto', marginBottom: 'auto', flexShrink: 0, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
-            <ShipRefitPanel picks={shipClasses} onClose={() => setRefitOpen(false)} />
+            <ShipRefitPanel picks={shipClasses} refitsUsed={shipRefitsUsed} doubloons={doubloons} onClose={() => setRefitOpen(false)} />
           </motion.div>
         )}
       </PopupShell>

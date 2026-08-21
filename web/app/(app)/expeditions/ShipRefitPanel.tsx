@@ -24,7 +24,7 @@ import PopupShell from '@/components/PopupShell'
 import CloseButton from '@/components/CloseButton'
 import {
   offeredShipClasses, offeredShipClassIds, getShipClass, aggregateShipClasses,
-  SHIP_CLASS_CHAPTER_ORDER, type ShipClassDef, type ShipClassId,
+  shipRefitCost, SHIP_REFIT_COST, SHIP_CLASS_CHAPTER_ORDER, type ShipClassDef, type ShipClassId,
 } from '@/lib/shipClasses'
 import { refitShipClasses } from './raidMapActions'
 
@@ -73,8 +73,11 @@ function ClassLines({ def }: { def: ShipClassDef }) {
   )
 }
 
-export default function ShipRefitPanel({ picks, onClose }: {
+export default function ShipRefitPanel({ picks, refitsUsed, doubloons, onClose }: {
   picks: Record<string, string>
+  /** Refits already taken. The first is free, the rest are priced. */
+  refitsUsed: number
+  doubloons: number
   onClose: () => void
 }) {
   const router = useRouter()
@@ -129,8 +132,11 @@ export default function ShipRefitPanel({ picks, onClose }: {
     setEditing(null)
   }
 
+  const cost = shipRefitCost(refitsUsed)
+  const affordable = doubloons >= cost
   const complete = chapters.every(c => !!chosen[c])
   const changed = chapters.some(c => chosen[c] !== picks[c])
+  const ready = complete && changed && affordable
   const before = aggregateShipClasses(picks)
   const after = aggregateShipClasses(chosen)
   const rowsBefore = statRows(before)
@@ -142,6 +148,11 @@ export default function ShipRefitPanel({ picks, onClose }: {
       setBusy(false)
       if ('error' in res) { setErr(res.error); return }
       vibrate([22, 50, 22, 50, 40])
+      // Tick the Nav purse with the payment instead of leaving it stale until
+      // the next full load. Same event every other doubloon spend fires.
+      if (res.doubloons != null) {
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      }
       onClose()
       router.refresh()
     })
@@ -151,8 +162,15 @@ export default function ShipRefitPanel({ picks, onClose }: {
     <div>
       <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: ACCENT }}>The Refit</p>
       <p className="font-karla" style={{ fontSize: '0.92rem', color: '#b8b2aa', marginTop: 6, lineHeight: 1.5 }}>
-        You get one of these, ever. Tap any chapter to pick a different class. Nothing is saved until you confirm.
+        {cost === 0
+          ? 'Your first refit is free. Tap any chapter to pick a different class. Nothing is saved until you confirm.'
+          : `This one costs ${cost.toLocaleString()} ⟡. Tap any chapter to pick a different class. Nothing is saved until you confirm.`}
       </p>
+      {cost > 0 && (
+        <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: affordable ? '#e0c07a' : '#e08a8a', marginTop: 6 }}>
+          You have {doubloons.toLocaleString()} &#10209;
+        </p>
+      )}
 
       {/* THE BOARD. All three at once, because the picks only make sense against
           each other. */}
@@ -236,20 +254,26 @@ export default function ShipRefitPanel({ picks, onClose }: {
 
       {err && <p className="font-karla font-600" style={{ fontSize: '0.88rem', color: '#e08a8a', marginTop: 12, textAlign: 'center' }}>{err}</p>}
 
-      <motion.button type="button" onClick={commit} disabled={busy || !complete || !changed} whileTap={{ scale: 0.97 }}
+      <motion.button type="button" onClick={commit} disabled={busy || !ready} whileTap={{ scale: 0.97 }}
         className="font-cinzel font-800 uppercase"
         style={{
           width: '100%', marginTop: 18, padding: '0.95rem', borderRadius: 13,
           letterSpacing: '0.1em', fontSize: '0.98rem',
-          color: complete && changed ? '#f4ecd8' : '#6f7887',
-          cursor: busy ? 'wait' : complete && changed ? 'pointer' : 'not-allowed',
-          background: complete && changed ? `${ACCENT}2e` : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${complete && changed ? `${ACCENT}99` : 'rgba(255,255,255,0.12)'}`,
+          color: ready ? '#f4ecd8' : '#6f7887',
+          cursor: busy ? 'wait' : ready ? 'pointer' : 'not-allowed',
+          background: ready ? `${ACCENT}2e` : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${ready ? `${ACCENT}99` : 'rgba(255,255,255,0.12)'}`,
         }}>
-        {busy ? 'Saving' : !complete ? 'Pick every chapter' : !changed ? 'Nothing changed yet' : 'Confirm the refit'}
+        {busy ? 'Saving'
+          : !complete ? 'Pick every chapter'
+          : !changed ? 'Nothing changed yet'
+          : !affordable ? `Need ${(cost - doubloons).toLocaleString()} more ⟡`
+          : cost === 0 ? 'Confirm the refit' : `Pay ${cost.toLocaleString()} ⟡ and refit`}
       </motion.button>
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#8a8480', marginTop: 10, textAlign: 'center', lineHeight: 1.45 }}>
-        This is your only refit. After you confirm, your classes are permanent again.
+        {cost === 0
+          ? `Your next refit will cost ${SHIP_REFIT_COST.toLocaleString()} ⟡.`
+          : 'You can refit again later at the same price.'}
       </p>
       <button type="button" onClick={onClose} disabled={busy} className="font-karla font-600"
         style={{ display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: '#8a8480', fontSize: '0.88rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>

@@ -300,6 +300,29 @@ export function offeredShipClassIds(picks: Record<string, string>): ShipClassId[
 export const SHIP_CLASS_CHAPTER_ORDER = ['thread', 'sunken_hand', 'the_coffers'] as const
 
 /**
+ * Price of a refit, given how many have already been taken. The first is free;
+ * every one after it costs SHIP_REFIT_COST.
+ *
+ * It was one free refit and no more, which left a hole: mark_of_mastery wants a
+ * Mark III, a Mark III wants all three picks in one line, and a captain who
+ * spread their picks on the original AND on the refit could never reach one
+ * again. That is not a missed badge, it is a permanently capped Achievement
+ * Point total, and those gate cosmetics.
+ *
+ * So the door stays open and the price shuts it to anyone browsing. Flat rather
+ * than escalating on purpose: a refit re-walks all three chapters at once, so
+ * swapping between fights was never a strategy anyone could run even for free,
+ * and escalation would only tax whoever experiments most.
+ *
+ * DOUBLOONS, never gems. The renown respec takes gems and that is precedent, but
+ * a paid re-tune of your COMBAT build is pay-to-win by our own pillar.
+ */
+export const SHIP_REFIT_COST = 1_000_000
+export function shipRefitCost(refitsUsed: number): number {
+  return Math.max(0, Math.floor(refitsUsed)) === 0 ? 0 : SHIP_REFIT_COST
+}
+
+/**
  * Is this a loadout the picker itself could have produced?
  *
  * Walks the chapters in play order and asks the SAME question the class node
