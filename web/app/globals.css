@@ -2368,3 +2368,88 @@ body.hardcore-gauntlet::after {
     vertical-align: 1px;
   }
 }
+
+/* ── THE SOUNDING (fishing route loading screen) ──────────────────────────────
+   /fishing waits on fourteen queries before anything real paints, and it is the
+   most-visited screen in the game, so the wait gets a moment of its own instead
+   of a grey skeleton. Everything here is CSS: loading.tsx must stay a server
+   component, and shipping JS to shorten a wait for JS is a joke at the player's
+   expense.
+
+   The trick that sells the descent is that the LURE never moves down. It bobs in
+   place while the depth ticks crawl upward past it, so the loop is seamless at
+   any duration and nothing ever has to reset visibly. */
+
+.fl-shaft {
+  animation: fl-shaft 11s ease-in-out infinite;
+  transform-origin: 50% 0%;
+  will-change: transform, opacity;
+}
+@keyframes fl-shaft {
+  0%, 100% { transform: skewX(-7deg) scaleY(1);    opacity: 0.30; }
+  50%      { transform: skewX(-2deg) scaleY(1.05); opacity: 0.52; }
+}
+
+/* Ticks travel a FIXED 1020px, not a percentage. The pattern repeats every 34px
+   and every 170px, and 1020 is a whole multiple of both, so the strip lands
+   exactly back on itself and the loop has no seam. A percentage would only line
+   up at one viewport height and visibly jump at every other. The strip is twice
+   the travel so nothing runs out from under the frame. */
+.fl-ticks {
+  height: 2040px;
+  animation: fl-ticks 13s linear infinite;
+  will-change: transform;
+}
+@keyframes fl-ticks {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-1020px); }
+}
+
+.fl-bob {
+  animation: fl-bob 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes fl-bob {
+  0%, 100% { transform: translateY(-5px) rotate(-3deg); }
+  50%      { transform: translateY(5px)  rotate(3deg); }
+}
+
+.fl-glint {
+  animation: fl-glint 2.4s ease-in-out infinite;
+}
+@keyframes fl-glint {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+/* Bubbles rise the full frame and fade at both ends, so they are never seen
+   appearing or popping. Each one carries its own delay inline. */
+.fl-bubble {
+  animation: fl-bubble 9s linear infinite;
+  will-change: transform, opacity;
+}
+@keyframes fl-bubble {
+  0%   { transform: translateY(0) translateX(0);      opacity: 0; }
+  12%  { opacity: 0.5; }
+  50%  { transform: translateY(-46%) translateX(7px); opacity: 0.5; }
+  88%  { opacity: 0.4; }
+  100% { transform: translateY(-92%) translateX(-4px); opacity: 0; }
+}
+
+/* Three tips stacked in one slot, cross-fading. A rotator with no timer: each
+   line holds a third of the cycle and the delays are set inline. */
+.fl-tip {
+  animation: fl-tip 15s ease-in-out infinite;
+}
+@keyframes fl-tip {
+  0%, 2%    { opacity: 0; transform: translateY(4px); }
+  6%, 28%   { opacity: 1; transform: translateY(0); }
+  33%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-shaft, .fl-ticks, .fl-bob, .fl-glint, .fl-bubble { animation: none; }
+  /* The tips still need to take turns or all three overlap into mush. Same
+     cycle, no travel. */
+  .fl-tip { animation: fl-tip 15s steps(1, end) infinite; transform: none; }
+}
