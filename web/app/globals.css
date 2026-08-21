@@ -2429,3 +2429,22 @@ body.hardcore-gauntlet::after {
      cycle, no travel. */
   .fl-tip { animation: fl-tip 15s steps(1, end) infinite; transform: none; }
 }
+
+/* Content ARRIVING over a backdrop that was already on screen.
+   /fishing's loading scene paints the hub's own water, so when the page lands
+   the picture behind does not move and only the furniture changes: the lure and
+   the tips vanish, the tiles appear, all in one frame. That single-frame swap is
+   what read as abrupt. Fading the incoming content in over the shared water
+   turns it into a dissolve.
+
+   OPACITY ONLY, deliberately. A translate here would be prettier and would also
+   make this element the containing block for any position:fixed descendant that
+   mounts while it runs, which is the exact trap documented in
+   feedback_transform_breaks_fixed_positioning. Not worth 10px of travel. */
+.surface-in {
+  animation: surfaceIn 420ms ease-out both;
+}
+@keyframes surfaceIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

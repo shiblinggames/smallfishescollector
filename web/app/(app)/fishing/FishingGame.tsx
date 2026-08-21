@@ -6497,7 +6497,7 @@ export default function FishingGame({
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0" style={{ background: '#08121c', zIndex: 40, display: 'flex', justifyContent: 'center' }}>
       <div
-        className={`relative w-full max-w-md overflow-hidden${(phase === 'catching' || phase === 'reeling') ? ' ambient-paused' : ''}`}
+        className={`relative w-full max-w-md overflow-hidden surface-in${(phase === 'catching' || phase === 'reeling') ? ' ambient-paused' : ''}`}
         style={{ height: '100%' }}
       >
 

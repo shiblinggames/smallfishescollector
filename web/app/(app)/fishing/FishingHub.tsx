@@ -120,7 +120,10 @@ export default function FishingHub({
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(2,8,14,0.62) 0%, rgba(2,8,14,0.20) 16%, rgba(2,8,14,0.38) 50%, rgba(2,6,10,0.72) 100%)' }} />
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* The loading scene has been showing this exact water. Fading the
+          furniture in over it makes the handoff a dissolve rather than a
+          single-frame swap. See .surface-in. */}
+      <div className="surface-in" style={{ position: 'relative', zIndex: 1 }}>
         <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
 
