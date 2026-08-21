@@ -47,8 +47,10 @@ const HUB_ART = [
  *  art: a picture that pops is a blemish, a loading screen that never leaves is
  *  a broken game. */
 const MAX_HOLD_MS = 4500
-/** Shortest it may show once it has decided to show at all. */
-const MIN_HOLD_MS = 350
+/** Shortest it may show once it has decided to show at all. Zero: the route's
+ *  own fallback has been showing this identical scene up to this moment, so
+ *  there is nothing to strobe against and a warm cache should cost nothing. */
+const MIN_HOLD_MS = 0
 const FADE_MS = 400
 
 function decoded(src: string): Promise<void> {
@@ -115,7 +117,12 @@ export default function FishingAssetGate() {
         // the chrome never blinks in and out across the handoff -- and so there
         // is always a way off this screen if the hold ever runs long.
         position: 'fixed', inset: 0, zIndex: 45,
-        background: '#02080e',
+        // NO BACKGROUND OF ITS OWN. It used to carry an opaque #02080e, which
+        // painted a frame of pure black before the scene inside it composited:
+        // a black flash on the way into every fishing visit, which is worse
+        // than the popping this was built to stop. SoundingScene brings its own
+        // ground, so a frame where that has not painted yet shows the page
+        // underneath rather than a hole.
         opacity: fading ? 0 : 1,
         transition: `opacity ${FADE_MS}ms ease-out`,
         // Deliberately DOES eat taps. The hub underneath is live and hydrated

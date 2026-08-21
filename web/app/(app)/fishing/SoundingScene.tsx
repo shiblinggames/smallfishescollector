@@ -27,7 +27,9 @@ export default function SoundingScene() {
   return (
     <>
       {/* Copied from FishingHub. Same layer, same z-index, same everything. */}
-      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+      {/* The deep-water base sits UNDER the photograph, so the seconds before
+          the jpg arrives read as dark water rather than as a black hole. */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, #0b2434 0%, #071722 45%, #01060b 100%)' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/fishing-zones-bg.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(2,8,14,0.62) 0%, rgba(2,8,14,0.20) 16%, rgba(2,8,14,0.38) 50%, rgba(2,6,10,0.72) 100%)' }} />
