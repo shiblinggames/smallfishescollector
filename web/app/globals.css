@@ -2376,34 +2376,10 @@ body.hardcore-gauntlet::after {
    component, and shipping JS to shorten a wait for JS is a joke at the player's
    expense.
 
-   The trick that sells the descent is that the LURE never moves down. It bobs in
-   place while the depth ticks crawl upward past it, so the loop is seamless at
-   any duration and nothing ever has to reset visibly. */
-
-.fl-shaft {
-  animation: fl-shaft 11s ease-in-out infinite;
-  transform-origin: 50% 0%;
-  will-change: transform, opacity;
-}
-@keyframes fl-shaft {
-  0%, 100% { transform: skewX(-7deg) scaleY(1);    opacity: 0.30; }
-  50%      { transform: skewX(-2deg) scaleY(1.05); opacity: 0.52; }
-}
-
-/* Ticks travel a FIXED 1020px, not a percentage. The pattern repeats every 34px
-   and every 170px, and 1020 is a whole multiple of both, so the strip lands
-   exactly back on itself and the loop has no seam. A percentage would only line
-   up at one viewport height and visibly jump at every other. The strip is twice
-   the travel so nothing runs out from under the frame. */
-.fl-ticks {
-  height: 2040px;
-  animation: fl-ticks 13s linear infinite;
-  will-change: transform;
-}
-@keyframes fl-ticks {
-  from { transform: translateY(0); }
-  to   { transform: translateY(-1020px); }
-}
+   The SCENE is not drawn here. loading.tsx paints FishingHub's own backdrop
+   image and scrim, so the water is already in place when the page arrives and
+   nothing has to cross-fade. These keyframes only carry the few things moving
+   on top of it: the lure on its line, the bubbles, and the tips taking turns. */
 
 .fl-bob {
   animation: fl-bob 3.6s ease-in-out infinite;
@@ -2448,7 +2424,7 @@ body.hardcore-gauntlet::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fl-shaft, .fl-ticks, .fl-bob, .fl-glint, .fl-bubble { animation: none; }
+  .fl-bob, .fl-glint, .fl-bubble { animation: none; }
   /* The tips still need to take turns or all three overlap into mush. Same
      cycle, no travel. */
   .fl-tip { animation: fl-tip 15s steps(1, end) infinite; transform: none; }
