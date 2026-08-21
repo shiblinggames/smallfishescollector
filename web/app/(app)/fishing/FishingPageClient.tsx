@@ -22,43 +22,30 @@ import type { VigilState } from '@/lib/ancientVigil'
 //
 // ssr:false because the game is entirely interactive -- refs, rAF, Web
 // Animations, audio -- and has nothing meaningful to server-render.
+//
+// THE FALLBACK IS THE ROUTE'S OWN LOADING SCREEN, not a second one. A returning
+// captain restores straight into a zone, so this chunk is fetched the moment the
+// page mounts and the wait for it lands immediately after the route's wait ends.
+// It used to answer that with a line of grey text reading "Rigging the line",
+// which made the trip read as two loads back to back: the water, then a bare
+// screen, then the game. Rendering the same scene means there is only ever one
+// wait on screen, and it ends when the game is genuinely ready to draw.
+//
+// Safe in a way the old asset-gate overlay was not: dynamic() swaps this out in
+// the same commit that mounts the game. No fade, no timer, nothing that can
+// linger over a finished page.
 const FishingGame = dynamic(() => import('./FishingGame'), {
   ssr: false,
-  loading: () => (
-    <div className="font-karla font-700 uppercase tracking-[0.14em]"
-      style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6a6764', fontSize: '0.7rem' }}>
-      Rigging the line&hellip;
-    </div>
-  ),
+  loading: () => <SoundingScene />,
 })
 import FishingHub from './FishingHub'
+import SoundingScene from './SoundingScene'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import type { RenownAlloc } from '@/lib/renown'
 import { ZONE_MIN_LEVEL, ZONE_ORDER } from './zoneData'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import type { TickerItem } from '@/components/MarketTicker'
-
-// STATICALLY IMPORTED, deliberately, after three attempts to fix this by moving
-// WHEN the fetch starts.
-//
-// It was dynamic with ssr:false to avoid shipping the game to players sitting on
-// ZoneLanding. But selectedZone restores from localStorage, so a returning
-// player lands STRAIGHT in the game — the split was optimising the rare path and
-// taxing the common one. And every warm-up runs in client code, so the earliest
-// any of them could fire was after hydration: HTML, hydrate, then fetch 312KB,
-// then parse 5,300 lines. No amount of starting it sooner from JS removes a step
-// that waits on JS.
-//
-// Imported normally, Next emits it in the page bundle and the HTML preloads it
-// with the rest of the page's script — the download starts WITH the document.
-// The waterfall is gone rather than shortened.
-//
-// SSR-SAFE, verified rather than assumed: dropping ssr:false means this now
-// server-renders. Every useState lazy initialiser was audited for render-time
-// window/document/localStorage access and each one either avoids it or guards
-// with `typeof window === 'undefined'` (see the audioMuted seed). Its RAF loops
-// and listeners all live in effects, which never run on the server.
 
 const LAST_ZONE_KEY = 'fishing_last_zone'
 // The zone you last fished — kept even after you return to the selector, so the
