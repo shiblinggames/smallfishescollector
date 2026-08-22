@@ -13,6 +13,10 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import {
+  PHASE_INITIAL, PHASE_ENTER, PHASE_EXIT,
+  ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
+} from '@/lib/gauntletMotion'
 import RaidCombat from '../RaidCombat'
 import { getShipSkin } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
@@ -2059,6 +2063,16 @@ export default function GauntletGame(props: GauntletGameProps) {
     </AnimatePresence>
   )
 
+  // ── PHASE VIEWS ────────────────────────────────────────────────────────
+  // Every phase below used to `return` straight out of the component, which
+  // meant a phase change was a bare unmount: React tore one subtree down and
+  // built the next, so every screen sprang in over most of a second and then
+  // vanished on a single frame. Entrances everywhere, exits nowhere, and that
+  // asymmetry is most of why the Gauntlet's menus read cheap.
+  //
+  // Gathered into one function so the real return below can hold them inside an
+  // AnimatePresence and give the leaving screen somewhere to go.
+  const phaseView = (() => {
   // ── Intro ──────────────────────────────────────────────────────────────
   // A crashed run offered back to the player — the crash safety net. Resume
   // (spends the run's one resume) or let it go (banks Fathoms + ends the run).
@@ -2075,8 +2089,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
@@ -2162,8 +2174,6 @@ export default function GauntletGame(props: GauntletGameProps) {
   if (phase === 'paused') {
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         <div className="pb-10 sm:pb-6" style={{ position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto', paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center' }}>
           <div style={{ fontSize: '2.4rem', marginTop: 30 }} aria-hidden>⏸</div>
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 10, textShadow: '0 0 26px rgba(240,192,64,0.3)' }}>
@@ -2187,8 +2197,6 @@ export default function GauntletGame(props: GauntletGameProps) {
   if (phase === 'intro') {
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
@@ -2247,7 +2255,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                               const here = g.id === currentId
                               return (
                                 <motion.button key={g.id} type="button"
-                                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 + i * 0.07 }}
+                                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: stagger(i, STAGGER, 0.05) }}
                                   onClick={here ? undefined : () => { vibrate([0, 16]); setSwitcherOpen(false); router.push(g.route) }}
                                   disabled={here}
                                   whileTap={here ? undefined : { scale: 0.97 }}
@@ -2634,8 +2642,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     const CRIMSON = isDonG ? '#2ea86a' : '#ef4444'
     return (
       <>
-        {hardcoreRun ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />}
-        <AbyssScrim />
         {/* Death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
@@ -2717,7 +2723,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           {/* Silver lining — the Fathoms you salvaged. Your deepest record is
               unchanged: only surviving and cashing out sets it. */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} style={{ marginTop: 14 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} style={{ marginTop: 14 }}>
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a766e' }}>Deepest run: depth {props.deepest}</p>
             {deathFathoms > 0 && (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '0.36rem 0.85rem', borderRadius: 999, background: `${AC}0e`, border: `1px solid ${AC}3a` }}>
@@ -2730,7 +2736,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>
             <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} convergencesTaken={convergencesTaken} stats={runStatsRef.current} events={runEventsRef.current} contracts={contractsWon} don={isDonG} />
           </motion.div>
 
@@ -2754,8 +2760,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     const canWager = fathomsNow >= 1
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
         <div style={{
@@ -2763,13 +2767,13 @@ export default function GauntletGame(props: GauntletGameProps) {
           padding: '12px 0.95rem', textAlign: 'center', overflow: 'hidden',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.32em' }} transition={{ duration: 0.8 }}
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.32em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: VIO, marginTop: 16, textShadow: `0 0 16px ${VIO}66` }}>
             A Drowned Shrine
           </motion.p>
           {/* A sunken idol, rising from the dark — only while you're choosing. */}
           {!shrineFlipping && !shrineCoin && (
-            <motion.div initial={{ opacity: 0, y: -26, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            <motion.div initial={{ opacity: 0, y: -26, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
               style={{ position: 'relative', width: 128, height: 128, margin: '16px auto 6px' }}>
               <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, ${VIO}3a 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
               <svg width="128" height="128" viewBox="0 0 24 24" fill="none" stroke={VIO} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', filter: `drop-shadow(0 6px 22px ${VIO}55)` }} aria-hidden>
@@ -2783,7 +2787,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {shrineFlipping ? (
             <div style={{ padding: '14px 0 10px' }}>
               <div style={{ perspective: 600, width: 112, height: 112, margin: '6px auto 0' }}>
-                <motion.div initial={{ rotateY: 0 }} animate={{ rotateY: 360 * 4 }} transition={{ duration: 1.05, ease: [0.4, 0, 0.3, 1] }}
+                <motion.div initial={{ rotateY: 0 }} animate={{ rotateY: 360 * 4 }} transition={ENTER}
                   style={{ width: 112, height: 112, borderRadius: '50%', transformStyle: 'preserve-3d', background: `radial-gradient(circle at 38% 30%, #ffe9a8, ${GOLD} 58%, #b07f2c)`, border: '3px solid #d9b25a', boxShadow: `0 0 32px ${GOLD}99, inset 0 0 16px rgba(70,40,0,0.35)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="52" height="52" viewBox="0 0 24 24" fill="#7a5418" aria-hidden style={{ opacity: 0.85 }}>
                     <path d="M12 2a7 7 0 0 0-7 7c0 2.2 1 3.7 2.4 4.8.4.3.6.7.6 1.2v1.2A1.4 1.4 0 0 0 9.4 18.8h.3l.4-1.4h-.9l-.3-1.2h1.4l.4 1.2.4-1.2h.9l.4 1.2h1.4l-.3 1.2h-.9l.4 1.4h.3a1.4 1.4 0 0 0 1.4-1.4v-1.2c0-.5.2-.9.6-1.2C18 12.7 19 11.2 19 9a7 7 0 0 0-7-7Z" />
@@ -2799,7 +2803,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           ) : !shrineCoin ? (
             <>
-              <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 18 }}
+              <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.06 }}
                 className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: '#efe7fb', lineHeight: 1.06, marginTop: 6, textShadow: `0 0 26px ${VIO}55` }}>
                 Make an Offering
               </motion.h1>
@@ -2808,7 +2812,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               </p>
 
               {/* Davy's Coin — double-or-nothing on your banked Fathoms */}
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
                 style={{ marginTop: 18, padding: '0.9rem 1rem 1rem', borderRadius: 16, background: `linear-gradient(180deg, ${GOLD}26, rgba(7,12,19,0.9) 60%)`, border: `1.5px solid ${GOLD}88`, boxShadow: `0 0 22px ${GOLD}20`, textAlign: 'left' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H9.5h3.5a1.8 1.8 0 0 1 0 3.6H9.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -2847,7 +2851,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
               {/* Blood Price — HP for a boon */}
               <motion.button whileTap={{ scale: 0.975 }} onClick={shrineBloodPrice} className="tap"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
                 style={{ width: '100%', textAlign: 'left', marginTop: 11, padding: '0.9rem 1rem', borderRadius: 16, background: `linear-gradient(180deg, rgba(239,68,68,0.16), rgba(8,13,22,0.6) 78%)`, border: '1.5px solid rgba(239,68,68,0.55)', color: '#f6e3e3', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" style={{ flexShrink: 0 }}><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -2863,7 +2867,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
               {/* Walk on — safe heal */}
               <motion.button whileTap={{ scale: 0.975 }} onClick={shrineWalkOn} className="tap"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
                 style={{ width: '100%', textAlign: 'left', marginTop: 11, padding: '0.85rem 1rem', borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e6e2', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M12 21s-7-4.3-9.5-8.5C.8 9.6 2.4 6 6 6c2 0 3.2 1.2 4 2.3C10.8 7.2 12 6 14 6c3.6 0 5.2 3.6 3.5 6.5C19 16.7 12 21 12 21z" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -2882,14 +2886,14 @@ export default function GauntletGame(props: GauntletGameProps) {
             <>
               {/* Coin resolved — the deep gives, or the deep takes. A win bursts. */}
               {won && (
-                <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.8 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
+                <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.8 }} animate={{ scale: 2.6, opacity: 0 }} transition={ENTER}
                   style={{ position: 'absolute', left: '50%', top: '34%', width: 240, height: 240, marginLeft: -120, marginTop: -120, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}66 0%, ${GOLD}1c 42%, transparent 70%)`, pointerEvents: 'none' }} />
               )}
-              <motion.h1 key={shrineCoin.result} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 16 }}
+              <motion.h1 key={shrineCoin.result} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={POP}
                 className="font-pirata" style={{ fontSize: '2.6rem', lineHeight: 1, marginTop: 6, color: won ? GOLD : '#ef4444', textShadow: won ? `0 0 30px ${GOLD}88` : '0 0 30px rgba(239,68,68,0.6)' }}>
                 {won ? 'The Coin Falls True!' : 'The Deep Takes Its Cut'}
               </motion.h1>
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
                 style={{ marginTop: 18, padding: '1.1rem', borderRadius: 16, background: won ? `${GOLD}14` : 'rgba(239,68,68,0.12)', border: `1px solid ${won ? `${GOLD}55` : 'rgba(239,68,68,0.45)'}` }}>
                 <p className="font-cinzel font-800" style={{ fontSize: '2.3rem', lineHeight: 1, color: won ? '#86efac' : '#fca5a5', textShadow: won ? `0 0 24px ${GOLD}55` : 'none' }}>
                   {won ? '+' : '−'}{shrineCoin.stake} <span style={{ fontSize: '1.1rem' }}>Fathoms</span>
@@ -2899,7 +2903,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </p>
               </motion.div>
               <motion.button whileTap={{ scale: 0.97 }} onClick={shrineDescend} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
                 style={{ width: '100%', marginTop: 22, padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#efe7fb', background: `linear-gradient(180deg, ${VIO}33, ${VIO}12)`, border: `1px solid ${VIO}77`, cursor: 'pointer' }}>
                 Leave the Shrine
               </motion.button>
@@ -2920,8 +2924,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     const spendable = Math.max(0, runFathoms - fenceSpent)
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
         <div style={{
@@ -2929,18 +2931,18 @@ export default function GauntletGame(props: GauntletGameProps) {
           padding: '12px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.3em' }} transition={{ duration: 0.8 }}
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.3em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
             A Black Market
           </motion.p>
-          <motion.div initial={{ opacity: 0, y: -18, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          <motion.div initial={{ opacity: 0, y: -18, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
             style={{ position: 'relative', width: 96, height: 96, margin: '14px auto 4px' }}>
             <div style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${MC}33 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
             <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke={MC} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', filter: `drop-shadow(0 6px 20px ${MC}55)` }} aria-hidden>
               <path d="M3 9l1.5-4.5h15L21 9" /><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" /><path d="M9 13h6" />
             </svg>
           </motion.div>
-          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 18 }}
+          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.12 }}
             className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
             The Fence
           </motion.h1>
@@ -2966,7 +2968,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               return (
                 <motion.button key={id} type="button" disabled={blocked} onClick={() => buyMerchant(id)}
                   whileTap={blocked ? undefined : { scale: 0.975 }}
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 + i * 0.08 }}
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: stagger(i, STAGGER, 0.1) }}
                   className={blocked ? '' : 'tap'}
                   style={{
                     position: 'relative', overflow: 'hidden', width: '100%', textAlign: 'left',
@@ -3000,7 +3002,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           <motion.button whileTap={{ scale: 0.97 }} onClick={merchantLeave} disabled={!!merchantBuying}
             className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
             style={{ width: '100%', marginTop: 18, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#e7f6ee', background: `linear-gradient(180deg, ${MC}2e, ${MC}10)`, border: `1px solid ${MC}66`, cursor: 'pointer' }}>
             Leave the Market
           </motion.button>
@@ -3019,21 +3021,19 @@ export default function GauntletGame(props: GauntletGameProps) {
     const MC = '#3fbf82'   // Don's court green
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
-          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={{ duration: 0.8 }}
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
             The Don Has a Job
           </motion.p>
-          <motion.div initial={{ opacity: 0, y: -14, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          <motion.div initial={{ opacity: 0, y: -14, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
             style={{ position: 'relative', width: 92, height: 92, margin: '14px auto 4px' }}>
             <div aria-hidden style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${MC}3a 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/donsgauntlet.png" alt="" loading="eager" decoding="async"
               style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${MC}aa`, filter: `drop-shadow(0 6px 20px ${MC}55)` }} />
           </motion.div>
-          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 220, damping: 18 }}
+          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.1 }}
             className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
             {def.name}
           </motion.h1>
@@ -3053,7 +3053,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
             {contractOffer.offers.map((offer, i) => (
               <motion.button key={offer.stake} type="button"
-                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.14 + i * 0.07 }}
+                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: stagger(i, STAGGER, 0.1) }}
                 whileTap={{ scale: 0.98 }} onClick={() => takeContract(offer)} className="tap"
                 style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 9, padding: '0.85rem 0.95rem 0.9rem 1.15rem', borderRadius: 14, cursor: 'pointer',
                   background: `linear-gradient(180deg, ${MC}20 0%, rgba(6,11,16,0.95) 60%)`, border: `1px solid ${MC}7a`, boxShadow: `0 4px 16px rgba(0,0,0,0.42)` }}>
@@ -3093,14 +3093,12 @@ export default function GauntletGame(props: GauntletGameProps) {
     const MC = won ? '#3fbf82' : '#f8716b'   // paid green / broken-deal red
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
-          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={{ duration: 0.7 }}
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 22, textShadow: `0 0 16px ${MC}55` }}>
             {won ? 'Contract Cleared' : 'Contract Broken'}
           </motion.p>
-          <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+          <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={POP}
             style={{ position: 'relative', width: 96, height: 96, margin: '16px auto 6px' }}>
             <div aria-hidden style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${MC}44 0%, transparent 66%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3114,14 +3112,14 @@ export default function GauntletGame(props: GauntletGameProps) {
           <p className="font-karla" style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.72)', lineHeight: 1.5, marginTop: 10, padding: '0 0.4rem' }}>
             &ldquo;{won ? 'Clean work. Here’s your cut.' : 'You gave me your word. Now you’ll pay it.'}&rdquo;
           </p>
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 240, damping: 16 }}
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.06 }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 18, padding: '0.6rem 1.1rem', borderRadius: 999,
               background: won ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)', border: `1px solid ${MC}66` }}>
             <span className="font-cinzel font-800 uppercase tracking-[0.06em]" style={{ fontSize: '0.95rem', color: won ? '#7fe0a8' : '#f8a5a5' }}>
               {won ? `▲ ${describeReward(contractResult.offer.reward)}` : `▼ ${describePenalty(contractResult.offer.penalty)}`}
             </span>
           </motion.div>
-          <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+          <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
             whileTap={{ scale: 0.97 }} type="button" onClick={() => { vibrate([0, 15]); contractResultContinue() }}
             className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
             style={{ width: '100%', marginTop: 24, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#e7f6ee', background: `linear-gradient(180deg, ${MC}2e, ${MC}10)`, border: `1px solid ${MC}66`, cursor: 'pointer' }}>
@@ -3139,8 +3137,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     const AK = isThrone ? '#f0c040' : KRAKEN   // the throne pays out in gold; the rest in his green
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 56%, ${AK}30 0%, ${AK}10 42%, transparent 72%)` }} />
         <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1.6rem 1.1rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           {/* His face, sinking + dimmed — he's going down. The throne clear glints gold. */}
@@ -3151,21 +3147,21 @@ export default function GauntletGame(props: GauntletGameProps) {
             <img src="/raid8_donfinleone.png" alt="" loading="eager" decoding="async"
               style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', filter: isThrone ? `drop-shadow(0 10px 30px ${AK}66)` : 'grayscale(0.5) brightness(0.7) drop-shadow(0 10px 30px rgba(0,0,0,0.8))' }} />
           </motion.div>
-          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={{ delay: 0.5, duration: 0.7 }}
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={{ delay: 0.45, duration: 0.7 }}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', color: AK, marginTop: 20, textShadow: `0 0 18px ${AK}88` }}>{fall.eyebrow}</motion.p>
-          <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.62, type: 'spring', stiffness: 200, damping: 16 }}
+          <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.45, type: 'spring', stiffness: 200, damping: 16 }}
             className="font-cinzel font-800" style={{ fontSize: '2rem', color: '#eafff2', lineHeight: 1.05, marginTop: 8, textShadow: `0 2px 12px rgba(0,0,0,0.7), 0 0 28px ${AK}55` }}>{fall.title}</motion.p>
-          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85, duration: 0.5 }}
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.5 }}
             className="font-karla" style={{ maxWidth: 340, fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(206,232,220,0.82)', lineHeight: 1.5, marginTop: 12 }}>
             &ldquo;{fall.line}&rdquo;
             <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ display: 'block', fontSize: '0.5rem', color: 'rgba(206,232,220,0.5)', marginTop: 6 }}>Don Finleone</span>
           </motion.p>
 
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15 }}
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}
             className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: 'rgba(230,244,236,0.6)', marginTop: 20 }}>
             You tear a piece off him
           </motion.p>
-          <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3 }}
+          <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
             whileTap={{ scale: 0.97 }} type="button" onClick={() => { vibrate([0, 18]); donFallenClaim() }}
             className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
             style={{ width: '100%', maxWidth: 360, marginTop: 10, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#0c1512', background: `linear-gradient(180deg, ${AK}, ${AK}bb)`, border: `1px solid ${AK}`, cursor: 'pointer', boxShadow: `0 0 22px ${AK}44` }}>
@@ -3241,8 +3237,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
@@ -3256,13 +3250,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                     (fades with the parent's opacity). */}
                 <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 44%, rgba(4,8,15,0.72) 0%, rgba(3,6,12,0.93) 100%)' }} />
                 {/* radial gold burst */}
-                <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.8, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
+                <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.8, opacity: 0 }} transition={ENTER}
                   style={{ position: 'absolute', width: 280, height: 280, borderRadius: '50%', background: `radial-gradient(circle, ${GLD}88 0%, ${GLD}22 40%, transparent 70%)` }} />
-                <motion.div initial={{ scale: 0.4, opacity: 0.8 }} animate={{ scale: 2.1, opacity: 0 }} transition={{ duration: 0.8, delay: 0.1, ease: 'easeOut' }}
+                <motion.div initial={{ scale: 0.4, opacity: 0.8 }} animate={{ scale: 2.1, opacity: 0 }} transition={{ ...ENTER, delay: 0.06 }}
                   style={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', border: `2px solid ${GLD}`, boxShadow: `0 0 28px ${GLD}` }} />
                 {/* Reveal card — a dark backing plate keeps the text readable on
                     top of the burst + backdrop. */}
-                <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 16 }}
+                <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ ...POP, delay: 0.12 }}
                   style={{ position: 'relative', padding: '1.3rem 1.5rem 1.4rem', borderRadius: 18, background: 'rgba(7,12,19,0.82)', border: `1px solid ${GLD}55`, boxShadow: `0 0 44px ${GLD}22, 0 12px 40px rgba(0,0,0,0.6)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
                   {confluenceBanner.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -3284,9 +3278,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             <motion.div key={curseShed.key} aria-hidden
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 1.2rem' }}>
-              <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
+              <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.6, opacity: 0 }} transition={ENTER}
                 style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: `radial-gradient(circle, ${AC}77 0%, ${AC}1c 42%, transparent 70%)` }} />
-              <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.1, type: 'spring', stiffness: 220, damping: 16 }}
+              <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ ...POP, delay: 0.1 }}
                 style={{ position: 'relative' }}>
                 <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${AC}aa)` }}><path d="M20 6 9 17l-5-5" /></svg>
                 <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: AC, marginTop: 10, textShadow: `0 0 16px ${AC}88` }}>Curse Shed</p>
@@ -3608,7 +3602,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {offer && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                transition={POP}
                 style={{ marginBottom: 10, padding: '0.75rem 0.85rem', borderRadius: 13, textAlign: 'left',
                   background: 'linear-gradient(180deg, rgba(78,44,124,0.34), rgba(38,20,64,0.18))',
                   border: '1px solid rgba(201,167,255,0.5)', boxShadow: '0 0 26px rgba(140,90,220,0.16)' }}>
@@ -3768,8 +3762,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     const curseTotalAfter = c.isUpgrade ? curseCount : curseCount + 1
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         {/* Crimson dread, bleeding up from the deep and breathing slowly. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
@@ -3778,7 +3770,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           padding: '12px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={{ duration: 0.9 }}
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', color: CRIM, marginTop: 16, textShadow: `0 0 18px ${CRIM}66` }}>
             {c.isUpgrade ? 'The Locker Tightens Its Grip' : 'The Locker Curses You'}
           </motion.p>
@@ -3786,7 +3778,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Curse art, sinking in from above like it's surfacing for you.
               Its own painted icon (matching the boon set) when we have one;
               the drowned skull sigil is the fallback. */}
-          <motion.div initial={{ opacity: 0, y: -32, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
+          <motion.div initial={{ opacity: 0, y: -32, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
             style={{ position: 'relative', width: 150, height: 150, margin: '18px auto 8px' }}>
             <div style={{ position: 'absolute', inset: -24, borderRadius: '50%', background: `radial-gradient(circle, ${CRIM}3c 0%, transparent 64%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
             {c.image ? (
@@ -3802,7 +3794,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             )}
           </motion.div>
 
-          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 220, damping: 18 }}
+          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.06 }}
             className="font-cinzel font-800" style={{ fontSize: '2.2rem', color: '#fdecec', lineHeight: 1.06, marginTop: 8, textShadow: `0 0 30px ${CRIM}55` }}>
             {c.name}{c.isUpgrade ? ` ${curseTierLabel(c.tier)}` : ''}
           </motion.h1>
@@ -3859,16 +3851,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     const revealDone = pendingBoons.slice(0, shownBoons).every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
-        <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
+        <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={ENTER}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${AC}24 0%, ${AC}08 38%, transparent 64%)` }} />
         {/* Legendary climax — a brief gold screen flash the instant the rarest
             card flips open (rare/common land quietly on the card itself). */}
         <AnimatePresence>
           {boonFlash > 0 && boonBanner && (
-            <motion.div key={boonFlash} aria-hidden initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }}
+            <motion.div key={boonFlash} aria-hidden initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={ENTER}
               style={{ position: 'fixed', inset: 0, zIndex: 58, pointerEvents: 'none', background: boonFromShrine
                 ? 'radial-gradient(circle at 50% 46%, rgba(220,50,60,0.4) 0%, rgba(220,50,60,0.12) 40%, transparent 72%)'
                 : 'radial-gradient(circle at 50% 46%, rgba(245,185,74,0.4) 0%, rgba(245,185,74,0.12) 40%, transparent 72%)' }} />
@@ -3878,7 +3868,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             PAID FOR in hull, and it should never read like a free depth gift.
             Static plain-gradient wash (no blend modes — perf audit rule). */}
         {boonFromShrine && (
-          <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
+          <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={ENTER}
             style={{
               position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
               background: [
@@ -3910,7 +3900,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: boonFromShrine ? '#f87171' : AC, marginTop: 10, textShadow: boonFromShrine ? '0 0 16px rgba(239,68,68,0.5)' : `0 0 16px ${AC}66` }}>
             {boonFromShrine ? 'Paid in Blood' : 'Plunder of the Deep'}
           </motion.p>
-          <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 17 }}
+          <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={POP}
             className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', whiteSpace: 'nowrap', color: boonFromShrine ? '#ffe9e9' : '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: boonFromShrine ? '0 0 32px rgba(220,50,60,0.55)' : `0 0 32px ${AC}55` }}>
             {boonFromShrine ? 'A Power Surfaces' : 'Choose a Power'}
           </motion.h1>
@@ -3922,7 +3912,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Blood-drop divider — the offering mark under the header (drawn, no
               emoji), so the shrine draft reads as a rite even at a glance. */}
           {boonFromShrine && (
-            <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.06 }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 18 }}>
               <span style={{ width: 54, height: 1, background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.55))' }} />
               <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(239,68,68,0.85)" aria-hidden>
@@ -3961,7 +3951,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   // — the pick should feel heavier than a menu tap.
                   whileTap={flipped ? { scale: 0.93 } : undefined}
                   whileHover={flipped ? { scale: 1.015 } : undefined}
-                  transition={{ type: 'spring', stiffness: 480, damping: 26 }}
+                  transition={POP}
                   onPointerDown={flipped ? () => hapticTap() : undefined}
                   // Armed to banish: the whole card becomes the "bin this one"
                   // target (and opens a confirm) instead of drafting it.
@@ -4211,7 +4201,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <motion.button
                   initial={{ opacity: 0, y: 22, scale: 0.94 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.12 + shownBoons * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
+                  transition={{ ...POP, delay: 0.12 }}
                   whileTap={{ scale: 0.93 }}
                   whileHover={{ scale: 1.015 }}
                   onPointerDown={() => hapticTap()}
@@ -4283,7 +4273,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <motion.button
                   initial={{ opacity: 0, y: 22, scale: 0.94 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.12 + pendingBoons.length * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
+                  transition={{ ...POP, delay: 0.12 }}
                   whileTap={{ scale: 0.945 }}
                   whileHover={{ scale: 1.015 }}
                   onClick={() => applyReprieve(pendingReprieve)}
@@ -4402,8 +4392,6 @@ export default function GauntletGame(props: GauntletGameProps) {
       const rise = donRiseCopy(d)
       return (
         <>
-          <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-          <AbyssScrim />
           <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 58%, ${KRAKEN_DEEP}3a 0%, ${KRAKEN_DEEP}14 40%, transparent 70%)` }} />
           <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem 1.2rem' }}>
             <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 0.97, scale: 1 }} transition={{ duration: 1.4, ease: 'easeOut' }} style={{ position: 'relative', width: 190, height: 190 }}>
@@ -4431,8 +4419,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     return (
       <>
-        <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
-        <AbyssScrim />
         <div style={{
           position: 'relative', zIndex: 1, minHeight: '60vh',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -4636,6 +4622,42 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   return null
+  })()
+
+  // THE ABYSS IS ONE MOUNT NOW. It used to be rendered inside all sixteen
+  // non-combat phases, so every phase change tore the water down and rebuilt it,
+  // keyframes and all. Hoisted, it simply persists underneath: the run reads as
+  // one continuous descent instead of a slideshow, and the phase wrapper below
+  // is free to animate without a position:fixed backdrop trapped inside it.
+  //
+  // Combat is the exception: it paints its own battle plate at zIndex -1, and
+  // the abyss at zIndex 0 would cover it.
+  return (
+    <>
+      {phase !== 'fighting' && (
+        <>
+          {/* Hardcore's death screen looks out over its own painted sea rather
+              than down the abyss. That swap used to live inside the phase; with
+              the abyss hoisted it has to live here or the two would stack. */}
+          {hardcoreRun && phase === 'dead'
+            ? <HcSeaBackdrop />
+            : <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />}
+          <AbyssScrim />
+        </>
+      )}
+      {/* mode="wait" so the two screens never overlap and stack their scrims.
+          The pair costs EXIT + ENTER, which the tokens keep under 400ms.
+          Combat is excluded outright: it owns rAF loops, fixed overlays and a
+          live aim bar, and is not something to wrap in an opacity animation. */}
+      {phase === 'fighting' ? phaseView : (
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={phase} initial={PHASE_INITIAL} animate={PHASE_ENTER} exit={PHASE_EXIT}>
+            {phaseView}
+          </motion.div>
+        </AnimatePresence>
+      )}
+    </>
+  )
 }
 
 // ── Cash-out chest reveal ─────────────────────────────────────────────────────
@@ -4920,7 +4942,6 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
   return (
     <>
       {r.hardcore ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={r.hardcore} don={don} />}
-      <AbyssScrim />
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
@@ -5073,7 +5094,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
               const item = getRaidItem(id)
               if (!item) return null
               return (
-                <motion.div key={id} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.15, type: 'spring', stiffness: 260, damping: 18 }}
+                <motion.div key={id} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: stagger(i, STAGGER_SLOW, 0.3), type: 'spring', stiffness: 260, damping: 18 }}
                   style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: 'rgba(232,200,121,0.10)', border: '1px solid rgba(232,200,121,0.55)', boxShadow: '0 0 22px rgba(232,200,121,0.18)' }}>
                   {item.image
                     // eslint-disable-next-line @next/next/no-img-element
@@ -5114,7 +5135,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
             {/* Depth-milestone unlocks earned by SURVIVING to this depth. Shown
                 here, in the moment, instead of a piece of mail after the fact. */}
             {r.unlockedThisRun.map((u, i) => (
-              <motion.div key={u.name} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.15, type: 'spring', stiffness: 260, damping: 18 }}
+              <motion.div key={u.name} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: stagger(i, STAGGER_SLOW, 0.3), type: 'spring', stiffness: 260, damping: 18 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${AC}12`, border: `1px solid ${AC}55`, boxShadow: `0 0 22px ${AC}1c` }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 11V7a5 5 0 0 1 10 0v4" /><rect x="3" y="11" width="18" height="11" rx="2" /></svg>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
@@ -7184,8 +7205,6 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
 function Shell({ children, wide, hardcore }: { children: React.ReactNode; wide?: boolean; hardcore?: boolean }) {
   return (
     <>
-      <AbyssBackdrop hardcore={hardcore} />
-      <AbyssScrim />
       <div className="flex flex-col" style={{
         position: 'relative', zIndex: 1,
         maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '12px 0.25rem',
