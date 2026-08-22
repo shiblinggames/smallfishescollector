@@ -369,6 +369,49 @@ export function resolveCompletionistRod(effectTiers: number[]): RodDef {
   return base
 }
 
+// ── Forge: is this donor actually worth a socket? ────────────────────────────
+// resolveCompletionistRod merges donors with Math.max PER FIELD, so two rods
+// whose signature lands on the same field do not stack: the stronger one wins
+// and the weaker one burns a socket for nothing. The Telescoping Rod (+0.10 rare
+// bias) next to the Legendary Rod (+0.80) is the clearest case, and the forge
+// gave no sign of it -- both simply read as a rare-bias effect.
+//
+// Fields split by what "no effect" means for them: 0 for chances and bonuses,
+// 1 for multipliers.
+const DONOR_ZERO_FIELDS = ['rarityBonus', 'doubleCatchChance', 'retryOnMissChance', 'jackpotChance', 'instantBiteChance'] as const
+const DONOR_MULT_FIELDS = ['crateChanceMult', 'perfectXpMult'] as const
+
+/** Would socketing this rod alongside `otherTiers` change the resolved rod at
+ *  all? False means every effect it carries is already matched or beaten. */
+export function completionistDonorAdds(donorTier: number, otherTiers: number[]): boolean {
+  const donor = RODS.find(r => r.tier === donorTier)
+  if (!donor || !rodHasUniqueEffect(donor)) return false
+  const merged = resolveCompletionistRod(otherTiers.filter(t => t !== donorTier))
+  for (const f of DONOR_ZERO_FIELDS) if ((donor[f] ?? 0) > (merged[f] ?? 0)) return true
+  for (const f of DONOR_MULT_FIELDS) if ((donor[f] ?? 1) > (merged[f] ?? 1)) return true
+  if (donor.wormhole && !merged.wormhole) return true
+  return false
+}
+
+/** WHO is already covering it, so the forge can name the rod rather than just
+ *  greying a row out. Returns a single rod's name where one covers the lot,
+ *  otherwise null for "between them, your other picks". */
+export function completionistDonorCoveredBy(donorTier: number, otherTiers: number[]): string | null {
+  const donor = RODS.find(r => r.tier === donorTier)
+  if (!donor) return null
+  for (const t of otherTiers) {
+    if (t === donorTier) continue
+    const other = RODS.find(r => r.tier === t)
+    if (!other) continue
+    const covers =
+      DONOR_ZERO_FIELDS.every(f => (other[f] ?? 0) >= (donor[f] ?? 0))
+      && DONOR_MULT_FIELDS.every(f => (other[f] ?? 1) >= (donor[f] ?? 1))
+      && (!donor.wormhole || !!other.wormhole)
+    if (covers) return other.name
+  }
+  return null
+}
+
 /** Effective rod def for a player: identical to getRod EXCEPT the Completionist,
  *  whose stats resolve from the player's absorbed effect tiers. Use this
  *  everywhere gameplay or display reads the equipped rod's stats — pass the

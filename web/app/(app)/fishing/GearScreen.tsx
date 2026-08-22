@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, rodSpeedPct, rodStatSplit, LOCKED_IN, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
+import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, rodSpeedPct, rodStatSplit, completionistDonorAdds, completionistDonorCoveredBy, LOCKED_IN, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -1707,6 +1707,16 @@ export default function GearScreen({
                               // toggleStaged), so it reads "Swap in" instead of
                               // dead-ending on a disabled "Full".
                               const swaps = !selected && stagedEffects.length >= COMPLETIONIST_MAX_EFFECTS
+                              // DEAD SOCKET WARNING. The merge is Math.max per
+                              // field, so two rods whose signature lands on the
+                              // same field do not stack: the stronger wins and the
+                              // weaker one buys nothing. Telescoping's +10% rare
+                              // bias beside the Legendary's +80% is the obvious
+                              // one, and the forge used to show both as a rare-bias
+                              // effect with no hint that picking both was a waste
+                              // of one of your three sockets.
+                              const dead = !completionistDonorAdds(fr.tier, stagedEffects)
+                              const coveredBy = dead ? completionistDonorCoveredBy(fr.tier, stagedEffects) : null
                               return (
                                 <motion.button
                                   key={fr.tier}
@@ -1723,21 +1733,30 @@ export default function GearScreen({
                                     // three PAINT properties, so one tap kicked off a
                                     // dozen simultaneous background/border tweens.
                                     background: selected ? `${fr.color}24` : 'rgba(255,255,255,0.03)',
-                                    border: `1px solid ${selected ? `${fr.color}cc` : 'rgba(255,255,255,0.1)'}`,
+                                    border: `1px solid ${selected && dead ? '#c9a24a' : selected ? `${fr.color}cc` : dead ? 'rgba(201,162,74,0.35)' : 'rgba(255,255,255,0.1)'}`,
                                     boxShadow: selected ? `0 0 12px ${fr.color}33` : 'none',
-                                    transition: 'background-color 0.22s ease, border-color 0.22s ease',
+                                    // Dimmed, never disabled. It is a bad buy, not
+                                    // an illegal one, and a captain who wants the
+                                    // weaker rod in there for its own reasons is
+                                    // allowed to have it.
+                                    opacity: dead && !selected ? 0.55 : 1,
+                                    transition: 'background-color 0.22s ease, border-color 0.22s ease, opacity 0.22s ease',
                                   }}
                                 >
                                   <span style={{ width: 9, height: 9, borderRadius: '50%', background: fr.color, boxShadow: `0 0 7px ${fr.color}99`, flexShrink: 0 }} />
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fr.name}</div>
-                                    <div className="font-karla" style={{ fontSize: '0.64rem', color: fr.color }}>{rodEffectLabel(fr)}</div>
+                                    <div className="font-karla" style={{ fontSize: '0.64rem', color: dead ? '#c9a24a' : fr.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {dead
+                                        ? `${rodEffectLabel(fr)} · already beaten by ${coveredBy ?? 'your other picks'}`
+                                        : rodEffectLabel(fr)}
+                                    </div>
                                   </div>
                                   <span className="font-karla font-700" style={{
                                     fontSize: '0.7rem', flexShrink: 0, whiteSpace: 'nowrap',
-                                    color: selected ? fr.color : '#7a8aa0',
+                                    color: selected && dead ? '#c9a24a' : selected ? fr.color : dead ? '#8a7a4a' : '#7a8aa0',
                                   }}>
-                                    {selected ? '− Remove' : swaps ? 'Swap in' : '+ Add'}
+                                    {selected && dead ? '− Dead socket' : selected ? '− Remove' : swaps ? 'Swap in' : '+ Add'}
                                   </span>
                                 </motion.button>
                               )
