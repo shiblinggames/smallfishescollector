@@ -10180,22 +10180,38 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
   const dmgMatch = /^-?(\d+)$/.exec(text)
   const dmg = dmgMatch ? Number(dmgMatch[1]) : null
   const isVolley = !!volley && !big
-  // Map damage into a 0.9x..1.7x scale, then a crit/volley bump on top.
-  const mag = dmg != null ? Math.max(0.9, Math.min(1.7, dmg / 45)) : 1
+  // A FIVE-FIGURE HIT IS A LANDMARK, so it stops looking like a four-figure one.
+  // Median raid damage in the live data is 42 and the best raid hit ever landed
+  // is 3,500; five figures happens only deep in a Gauntlet run. Exactly one
+  // captain has ever done it (14,808). Worth its own moment.
+  const huge = dmg != null && dmg >= HUGE_HIT
+  // The old curve was `min(1.7, dmg / 45)`, which pinned at its ceiling by 77
+  // damage. Everything from there up rendered identically: a 100 and a 14,808
+  // were the same number on screen, which is the actual reason big hits stopped
+  // feeling big. Below that it is unchanged (most hits live there); above it a
+  // log curve keeps breathing without running off the screen -- 760 reads 2.0,
+  // 7,600 reads 2.3, and it tops out just past that.
+  const mag = dmg == null ? 1
+    : dmg <= 76 ? Math.max(0.9, dmg / 45)
+    : Math.min(2.35, 1.7 + Math.log10(dmg / 76) * 0.3)
   const scaleMult = big ? mag * 1.22 : isVolley ? mag * 1.1 : mag
   const baseFontPx = big ? 32 : isVolley ? 27 : 23
   const fontPx     = Math.round(baseFontPx * scaleMult)
   // Outline via a tight 8-way dark shadow ring (smoother on serif glyphs than
   // WebkitTextStroke, which blobs on Cinzel's thin strokes), then a colored
   // glow + soft drop for depth.
-  const o = big ? 0.9 : isVolley ? 0.8 : 0.7
+  const o = huge ? 1.1 : big ? 0.9 : isVolley ? 0.8 : 0.7
   const ring = [
     `${o}px ${o}px 0 #0b0e14`, `-${o}px ${o}px 0 #0b0e14`,
     `${o}px -${o}px 0 #0b0e14`, `-${o}px -${o}px 0 #0b0e14`,
     `0 ${o}px 0 #0b0e14`, `0 -${o}px 0 #0b0e14`,
     `${o}px 0 0 #0b0e14`, `-${o}px 0 0 #0b0e14`,
   ].join(', ')
-  const glow = big
+  const glow = huge
+    // White-hot core under the damage colour, then two blooms. It reads as the
+    // number being too bright to hold its own edges.
+    ? `${ring}, 0 0 6px #fff, 0 2px 6px rgba(0,0,0,0.6), 0 0 18px ${color}, 0 0 44px ${color}cc`
+    : big
     ? `${ring}, 0 2px 5px rgba(0,0,0,0.55), 0 0 13px ${color}, 0 0 28px ${color}bb`
     : isVolley
       // Fiery edge — a warm bloom layered under the damage color so a volley
@@ -10207,18 +10223,22 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
       {/* Crit haymaker gets an MMO-style burst behind it — a star pop, an
           expanding ring, and radiating sparks in the number's color. */}
       {big && <CritFlare color={color} />}
+      {huge && <HugeHitRing color={color} />}
       <motion.div
         // Crits + volleys punch IN (start oversized, settle to 1); normal hits
         // grow in. Monotonic scale = no overshoot bounce that reads as flicker.
         // x:'-50%' is the centering offset (NOT a static `transform`, which FM
         // would clobber once it animates scale/y). Crits add a quick rotate-punch.
-        initial={{ opacity: 0, x: '-50%', y: 2, scale: big ? 1.62 : isVolley ? 1.3 : 0.55, rotate: big ? -7 : 0 }}
-        animate={{ opacity: 1, x: '-50%', y: big ? -38 : -30, scale: 1, rotate: 0 }}
-        exit={{ opacity: 0, x: '-50%', y: big ? -60 : -48, scale: big ? 1.1 : 0.92 }}
+        // A huge hit lands HARDER and then HANGS. It punches in from further
+        // out, barely drifts (weight, not lift), and leaves slowly, so the
+        // number you waited a whole run for is legible long enough to read.
+        initial={{ opacity: 0, x: '-50%', y: 2, scale: huge ? 2.1 : big ? 1.62 : isVolley ? 1.3 : 0.55, rotate: huge ? -4 : big ? -7 : 0 }}
+        animate={{ opacity: 1, x: '-50%', y: huge ? -22 : big ? -38 : -30, scale: 1, rotate: 0 }}
+        exit={{ opacity: 0, x: '-50%', y: huge ? -40 : big ? -60 : -48, scale: huge ? 1.16 : big ? 1.1 : 0.92 }}
         transition={{
-          opacity: { duration: 0.14 },
-          y:       { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
-          scale:   { duration: big ? 0.2 : isVolley ? 0.22 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
+          opacity: { duration: huge ? 0.1 : 0.14 },
+          y:       { duration: huge ? 0.62 : 0.34, ease: [0.22, 1, 0.36, 1] },
+          scale:   { duration: huge ? 0.3 : big ? 0.2 : isVolley ? 0.22 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
           rotate:  { duration: 0.28, ease: [0.2, 1.15, 0.4, 1] },
         }}
         style={{
@@ -10232,9 +10252,34 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
           whiteSpace: 'nowrap',
         }}
       >
-        {text}
+        {text.replace(/\d{4,}/g, n => Number(n).toLocaleString())}
       </motion.div>
     </>
+  )
+}
+
+/** Five figures and up. See HUGE_HIT. */
+const HUGE_HIT = 10_000
+
+// A five-figure hit gets a shockwave the crit burst does not: one hard ring
+// thrown outward and a slower second behind it. Localized to the number's
+// anchor and nowhere near the screen edges, per the house rule that juice stays
+// small and local -- no screen shake, however big the number is.
+function HugeHitRing({ color }: { color: string }) {
+  return (
+    <div aria-hidden style={{ position: 'absolute', left: '50%', top: '38%', zIndex: 8, pointerEvents: 'none' }}>
+      {[0, 1].map(i => (
+        <motion.div key={i}
+          initial={{ opacity: 0.85, scale: 0.2 }}
+          animate={{ opacity: 0, scale: i === 0 ? 3.4 : 4.6 }}
+          transition={{ duration: i === 0 ? 0.5 : 0.72, delay: i * 0.09, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            position: 'absolute', left: -34, top: -34, width: 68, height: 68,
+            borderRadius: '50%', border: `2px solid ${color}`,
+            boxShadow: `0 0 14px ${color}aa, inset 0 0 10px ${color}66`,
+          }} />
+      ))}
+    </div>
   )
 }
 
