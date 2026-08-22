@@ -3022,25 +3022,47 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
-          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={ENTER}
-            className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 16, textShadow: `0 0 16px ${MC}55` }}>
-            The Don Has a Job
-          </motion.p>
-          <motion.div initial={{ opacity: 0, y: -14, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={ENTER}
-            style={{ position: 'relative', width: 92, height: 92, margin: '14px auto 4px' }}>
-            <div aria-hidden style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${MC}3a 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/donsgauntlet.png" alt="" loading="eager" decoding="async"
-              style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${MC}aa`, filter: `drop-shadow(0 6px 20px ${MC}55)` }} />
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...POP, delay: 0.1 }}
-            className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#e7f6ee', lineHeight: 1.06, marginTop: 4, textShadow: `0 0 24px ${MC}44` }}>
-            {def.name}
-          </motion.h1>
-          <p className="font-karla" style={{ fontSize: '0.92rem', fontStyle: 'italic', color: 'rgba(214,240,228,0.9)', lineHeight: 1.5, marginTop: 8, padding: '0 0.3rem', textShadow: '0 1px 8px rgba(0,0,0,0.7)' }}>
-            &ldquo;{def.job}&rdquo;
-          </p>
-          <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#a7b0aa', lineHeight: 1.5, marginTop: 10, padding: '0 0.5rem', textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
+          {/* THE DON DOES NOT SIT IN THE MIDDLE OF THE PAGE.
+              Every meta screen here was the same centered column: eyebrow, round
+              portrait, big title, italic quote, body. Same rhythm every time,
+              which is what makes a set of screens read as generic no matter how
+              good the individual art is.
+              He is a person leaning in from the edge of the room now: the plate
+              bleeds off the right and runs past the top of the type, the words
+              are set hard left against it, and the round crop is gone. That crop
+              was the worse half of the problem, throwing away a painting's
+              composition to make it an avatar. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 118px', alignItems: 'start', columnGap: 10, textAlign: 'left', marginTop: 14 }}>
+            <div style={{ minWidth: 0, paddingTop: 6 }}>
+              <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.24em' }} transition={ENTER}
+                className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', color: MC, textShadow: `0 0 16px ${MC}55` }}>
+                The Don Has a Job
+              </motion.p>
+              <motion.h1 initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ ...ENTER, delay: 0.04 }}
+                className="font-cinzel font-800" style={{ fontSize: '1.62rem', color: '#e7f6ee', lineHeight: 1.04, marginTop: 6, textShadow: `0 0 24px ${MC}44` }}>
+                {def.name}
+              </motion.h1>
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ...ENTER, delay: 0.08 }}
+                className="font-karla" style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'rgba(214,240,228,0.9)', lineHeight: 1.45, marginTop: 8, textShadow: '0 1px 8px rgba(0,0,0,0.7)' }}>
+                &ldquo;{def.job}&rdquo;
+              </motion.p>
+            </div>
+            {/* Cropped by the SCREEN, not by a circle. The mask fades his lower
+                edge into the abyss so there is no cut line where the plate ends. */}
+            <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={ENTER}
+              style={{ position: 'relative', width: 138, height: 148, marginRight: -22, marginTop: -10 }}>
+              <div aria-hidden style={{ position: 'absolute', inset: '-12% -20% -6% -30%', background: `radial-gradient(ellipse at 60% 42%, ${MC}30 0%, transparent 68%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/donsgauntlet.png" alt="" loading="eager" decoding="async"
+                style={{
+                  position: 'relative', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%',
+                  maskImage: 'linear-gradient(180deg, #000 58%, transparent 100%)',
+                  WebkitMaskImage: 'linear-gradient(180deg, #000 58%, transparent 100%)',
+                  filter: `drop-shadow(-6px 8px 22px rgba(0,0,0,0.7)) drop-shadow(0 0 26px ${MC}3a)`,
+                }} />
+            </motion.div>
+          </div>
+          <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#a7b0aa', lineHeight: 1.5, marginTop: 4, textAlign: 'left', textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
             It rides your next dive. Clear it, get paid. Blow it, the Don collects. Once you take it, you&apos;re in.
           </p>
 
@@ -3103,7 +3125,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             <div aria-hidden style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${MC}44 0%, transparent 66%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/donsgauntlet.png" alt="" loading="eager" decoding="async"
-              style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${MC}cc`, filter: `drop-shadow(0 6px 22px ${MC}66)`, ...(won ? {} : { filter: `grayscale(0.4) drop-shadow(0 6px 22px ${MC}66)` }) }} />
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%', borderRadius: 14, border: `1.5px solid ${MC}cc`, filter: `drop-shadow(0 6px 22px ${MC}66)`, ...(won ? {} : { filter: `grayscale(0.4) drop-shadow(0 6px 22px ${MC}66)` }) }} />
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
             className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#e7f6ee', lineHeight: 1.08, marginTop: 4 }}>
