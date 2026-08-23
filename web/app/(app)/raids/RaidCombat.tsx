@@ -56,6 +56,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DialAimBonus } from '@/lib/dialAim'
 import { installSpaceAction, typingInField, uncoveredCenter } from '@/lib/spaceAction'
+import { compact } from '@/lib/almanac'
 import { createPortal } from 'react-dom'
 import { DialSVG, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
 import type { ZoneDef } from '@/app/(app)/fishing/depths'
@@ -10252,7 +10253,16 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
           whiteSpace: 'nowrap',
         }}
       >
-        {text.replace(/\d{4,}/g, n => Number(n).toLocaleString())}
+        {/* THE HOUSE ABBREVIATION, not a new one. compact() gives four figures
+            separators (3,500), five figures a k (14.8k) and seven an M (1.24M),
+            and the Gauntlet's pot readout sitting directly above this combat
+            already uses it at exactly those thresholds. A splat reading 14,808
+            beside a pot reading 14.8k was the inconsistency. The k is also
+            shorter, so the number can carry the bigger type without crowding,
+            and the suffix is itself a badge of magnitude. The exact figure is
+            not lost: gauntlet_max_hit and highest_raid_damage still record it
+            to the digit, and the records screens print it in full. */}
+        {text.replace(/\d{4,}/g, n => compact(Number(n)))}
       </motion.div>
     </>
   )
