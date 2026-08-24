@@ -66,3 +66,7 @@ scripts/*
 art-source/badgebatch*.png
 public/badgebatch*.png
 .git-commit-msg.tmp
+
+# Godot web export for /sea. A build artifact, not source: rebuild it with
+# Project > Export > Web from godot/sea (Thread Support OFF).
+/public/sea/

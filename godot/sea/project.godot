@@ -1,0 +1,36 @@
+; THE SEA — the exploration hub, phase 1.
+;
+; A boat you sail. Nothing else yet, and that is the point: the only question
+; this build answers is whether floating around is pleasant on a real phone.
+; Destinations, gating, art and crew all come after, and all of them are
+; decoration on top of a movement feel that either works or does not.
+;
+; GL Compatibility renderer on purpose. The Forward+ / Mobile renderers need
+; WebGL2 features that are patchy across phone browsers, and Compatibility is
+; the one that actually runs everywhere. This is a 2D map; nothing here needs
+; the expensive renderer.
+;
+; Portrait 1080x1920 to match the game it lives inside.
+
+config_version=5
+
+[application]
+
+config/name="Seas the Booty — The Sea"
+run/main_scene="res://scenes/Sea.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.02, 0.08, 0.13, 1)
