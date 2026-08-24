@@ -37,6 +37,37 @@ missing, so a fresh clone does not just show a black rectangle.
 
 `web/public/sea/` is gitignored — the export is a build artifact, not source.
 
+## Testing it on a phone
+
+Tap-to-sail cannot be judged on a laptop. Get it on glass early.
+
+**Over wifi, no deploy.** From `web/`:
+
+```
+npm run dev:lan
+```
+
+then open `http://<your-machine-ip>:3000/sea` on a phone on the same network.
+`next dev` binds to localhost only, which is why the `:lan` variant exists.
+
+Two things that bite: a VPN on the desktop (NordLynx, Tailscale and friends)
+will usually stop the phone reaching it, so drop it first. And Windows Firewall
+may prompt the first time — allow it on private networks.
+
+**On the live site.** `web/public/sea/` is gitignored, so an export never
+reaches Vercel. That is deliberate for now: a web export is tens of megabytes
+and every re-export would be a fresh blob in git history, which is a bad trade
+while the numbers in `boat.gd` are still moving.
+
+When it is worth putting in front of someone else, two options:
+
+- **Commit the build.** Un-ignore the folder and accept the blob. Simplest, and
+  fine if exports are rare by then.
+- **Serve it from Supabase storage**, the same way art already gets uploaded.
+  Keeps git clean and the iframe just points at the bucket URL. Needs the origin
+  check in `SeaFrame.tsx` widened to the storage host, since it would no longer
+  be same-origin.
+
 ## The contract with the web app
 
 One message each way. That small surface is the main reason this feature is a
