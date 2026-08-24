@@ -10,7 +10,7 @@ extends Node2D
 ## The deliberate absence of them is what keeps this build honest: if sailing is
 ## not pleasant with nothing to sail to, adding somewhere to sail will not fix it.
 
-@onready var boat: Node2D = $World/Boat
+@onready var boat: Boat = $World/Boat
 @onready var cam: Camera2D = $World/Camera
 @onready var water: ColorRect = $Background/Water
 @onready var wake: CPUParticles2D = $World/Boat/Wake
@@ -42,7 +42,7 @@ func _sail_to_screen(screen_pos: Vector2) -> void:
 	boat.sail_to(world)
 
 func _process(delta: float) -> void:
-	var lead := boat.velocity * cam_lead
+	var lead: Vector2 = boat.velocity * cam_lead
 	cam.global_position = cam.global_position.lerp(
 		boat.global_position + lead,
 		clamp(cam_follow * delta, 0.0, 1.0),

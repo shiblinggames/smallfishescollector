@@ -1,3 +1,4 @@
+class_name Boat
 extends Node2D
 
 ## THE BOAT.

@@ -37,6 +37,25 @@ missing, so a fresh clone does not just show a black rectangle.
 
 `web/public/sea/` is gitignored — the export is a build artifact, not source.
 
+### If the editor says "Failed to load script"
+
+On a fresh clone, `.godot/` does not exist yet, so no global class names are
+registered and `sea.gd`'s reference to `Boat` cannot resolve. **Opening the
+project in the editor once fixes it** — the import pass registers the class and
+everything loads on the next run.
+
+Only an issue for headless/CI use, where you need an editor pass first:
+
+```
+Godot_v4.x_console.exe --headless --path godot/sea --editor --quit
+```
+
+Parse-check a single script the same way:
+
+```
+Godot_v4.x_console.exe --headless --path godot/sea --check-only --script res://scripts/sea.gd
+```
+
 ## Testing it on a phone
 
 Tap-to-sail cannot be judged on a laptop. Get it on glass early.
