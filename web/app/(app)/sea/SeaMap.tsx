@@ -300,6 +300,53 @@ export default function SeaMap({
    *  the gesture does not also re-plot a course. */
   const swallowTap = useRef(false)
 
+  /** SPRITE PRELOAD, and the reason the cast used to tear.
+   *
+   *  The captain is not one image, it is a base sprite with the boat, hat, rod,
+   *  reel, hook and pet composited on top, and FOUR of those swap file when the
+   *  cast pose plays: the character, the boat, the hat and a per-frame rod.
+   *  React sets all four `src` attributes in the same commit, but each <img>
+   *  paints when ITS OWN bitmap is ready — so on a cold first cast they landed
+   *  on different frames and you saw the base in its new pose with the boat
+   *  still in the old one.
+   *
+   *  Same fix FishingGame uses: fetch and explicitly decode() every frame up
+   *  front, so by the time the src changes the bitmap is already decoded and
+   *  all four swap on one paint. The Cast button waits on this, which on any
+   *  warm load resolves before the button is ever on screen.
+   */
+  const [spritesReady, setSpritesReady] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    const urls: string[] = []
+    const c = getCharacterSprites(characterColor)
+    urls.push(c.rest, c.wait, c.cast)
+    const b = BOATS.find(x => x.id === boatId)
+    if (b) urls.push(b.restImageUrl, b.castImageUrl)
+    const h = HATS.find(x => x.id === hatId)
+    if (h) urls.push(h.restImageUrl, h.castImageUrl)
+    if (gear.rodSlug) urls.push(`/${gear.rodSlug}_rest.png`, `/${gear.rodSlug}_wait.png`, `/${gear.rodSlug}_cast.png`)
+    else if (gear.rod) urls.push(gear.rod)
+    if (gear.reel) urls.push(gear.reel)
+    if (gear.hook) urls.push(gear.hook)
+    if (gear.petArt) urls.push(gear.petArt)
+    Promise.all(urls.map(src => {
+      const img = new Image()
+      img.src = src
+      // decode() resolves when the bitmap is ready to PAINT, which is the whole
+      // point — a load event only means the bytes arrived.
+      if (typeof img.decode === 'function') {
+        return img.decode().catch(() => new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() }))
+      }
+      return new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() })
+    })).then(() => { if (!cancelled) setSpritesReady(true) })
+    return () => { cancelled = true }
+    // Depend on the PRIMITIVE sprite fields, never the `gear` object. It is
+    // stable today because it arrives as a prop, but FishingGame has the scar
+    // from the version of this that took an object rebuilt every render and
+    // thrashed its ready flag into a render loop.
+  }, [characterColor, boatId, hatId, gear.rodSlug, gear.rod, gear.reel, gear.hook, gear.petArt])
+
   // Only what the UI actually needs to re-render for.
   const [near, setNear] = useState<Place | null>(null)
   const [tick, setTick] = useState(0)
@@ -647,6 +694,7 @@ export default function SeaMap({
           mods={mods}
           onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
           onPose={setFrame}
+          spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest') }}
         />
       )}

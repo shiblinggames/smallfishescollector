@@ -71,7 +71,7 @@ export type FishingMods = {
 }
 
 export default function FishingHere({
-  zone, zoneName, bait, baitBonus, baitLeft, mods, onBaitSpent, onPose, onClose,
+  zone, zoneName, bait, baitBonus, baitLeft, mods, onBaitSpent, onPose, spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -84,6 +84,11 @@ export default function FishingHere({
    *  up, mid-cast, line in the water — so the map plays those rather than
    *  inventing a fourth. */
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
+  /** False until every frame of the loadout has been fetched AND decoded. The
+   *  cast waits on it, because the pose swaps four images at once and an
+   *  undecoded one paints a frame or two late — which is the base sprite
+   *  changing pose while the boat is still in the old one. See SeaMap. */
+  spritesReady: boolean
   onClose: () => void
 }) {
   const [phase, setPhase] = useState<Phase>('idle')
@@ -100,11 +105,13 @@ export default function FishingHere({
 
   const angleRef = useRef(0)
   const runningRef = useRef(false)
-  // TWO timers, two refs. The cast-pose timer and the bite timer overlap by
-  // design, and sharing one handle meant the second assignment orphaned the
-  // first — so unmounting mid-cast could still fire a pose change at a
-  // component that no longer exists.
+  // THREE overlapping timers, three refs. The cast splash, the pose flip and
+  // the bite all run at once, and sharing a handle means the second assignment
+  // orphans the first — which is how unmounting mid-cast could still fire a
+  // pose change at a component that no longer exists, and how the pose flip
+  // would silently vanish whenever the server answered inside 650ms.
   const poseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sfxRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const zones: ZoneDef[] = useMemo(() => {
@@ -143,10 +150,11 @@ export default function FishingHere({
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current)
     if (poseRef.current) clearTimeout(poseRef.current)
+    if (sfxRef.current) clearTimeout(sfxRef.current)
   }, [])
 
   const cast = useCallback(() => {
-    if (phase !== 'idle') return
+    if (phase !== 'idle' || !spritesReady) return
     setErr('')
     setCaught(null)
     setPhase('waiting')
@@ -163,13 +171,21 @@ export default function FishingHere({
     // and the only feedback was six small words for the several seconds the
     // server makes you wait for a bite.
     onPose('cast')
-    poseRef.current = setTimeout(() => { onPose('wait'); playCast2Sfx() }, 460)
+    // 600 then 650, lifted from FishingGame rather than picked. The gap is
+    // deliberate there: Web Audio's BufferSource.start has ~30-60ms of startup
+    // latency on iOS, so the splash is fired 50ms AHEAD of the pose flip to
+    // land with it. I had both at 460, which was both the wrong tempo and the
+    // sound arriving after the line.
+    sfxRef.current = setTimeout(() => playCast2Sfx(), 600)
+    poseRef.current = setTimeout(() => onPose('wait'), 650)
     castLine(bait, zone).then(res => {
       if ('error' in res) { setErr(res.error); setPhase('idle'); onPose('rest'); return }
       onBaitSpent(res.baitRemaining)
       // The server decides how long the fish takes to come. Honoured rather
       // than hurried: the wait is the tension.
-      const wait = Math.max(560, res.instantBite ? 620 : res.waitMs)
+      // Floored above the 650ms cast animation: an instant bite that landed
+      // mid-cast would put the dial up while the rod was still coming over.
+      const wait = Math.max(760, res.instantBite ? 820 : res.waitMs)
       timerRef.current = setTimeout(() => {
         angleRef.current = 0
         setAngle(0)
@@ -186,7 +202,7 @@ export default function FishingHere({
       setPhase('idle')
       onPose('rest')
     })
-  }, [phase, bait, zone, onBaitSpent, onPose])
+  }, [phase, spritesReady, bait, zone, onBaitSpent, onPose])
 
   const strike = useCallback(() => {
     if (phase !== 'hooked' || !hooked) return
@@ -361,13 +377,17 @@ export default function FishingHere({
                 width: 88, height: 88, borderRadius: '50%',
                 background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
                 border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
-                fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
+                fontSize: '0.72rem', touchAction: 'manipulation',
+                color: spritesReady ? '#67d4e8' : 'rgba(103,212,232,0.45)',
                 boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
               }}
               initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
-              whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
+              whileTap={spritesReady ? { scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' } : undefined}
               transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
-              Cast
+              {/* Only ever seen on a cold load: the frames are fetched the
+                  moment the map mounts, and you have to sail to a zone before
+                  this button exists at all. */}
+              {spritesReady ? 'Cast' : 'Rigging'}
             </motion.button>
             <button onClick={e => { e.stopPropagation(); onClose() }}
               className="font-karla font-700"
