@@ -126,7 +126,7 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
-  onBaitSpent, onPose, spritesReady, onClose,
+  onBaitSpent, onPose, onBusy, spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -163,6 +163,9 @@ export default function FishingHere({
   }
   tideTurner: { has: boolean; left: number }
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
+  /** Told when the dial is up, so the map can stop moving entirely behind it.
+   *  See the note on the freeze in SeaMap. */
+  onBusy: (busy: boolean) => void
   /** False until every frame of the loadout has been fetched AND decoded. The
    *  cast waits on it, because the pose swaps four images at once and an
    *  undecoded one paints a frame or two late — which is the base sprite
@@ -212,39 +215,90 @@ export default function FishingHere({
     )
   }, [hooked, zone, mods, baitBonus])
 
-  // ── The sweep ────────────────────────────────────────────────────────────
+  // THE DIAL IS THE ONLY THING THAT MATTERS while it is up. Announced to the
+  // map so it can stop its whole loop rather than competing for frames with the
+  // one instrument the player is actually reading.
+  useEffect(() => {
+    const busy = phase === 'hooked' || phase === 'reeling'
+    onBusy(busy)
+    return () => onBusy(false)
+  }, [phase, onBusy])
+
   const [retryFlash, setRetryFlash] = useState(false)
   const [sigilPaid, setSigilPaid] = useState(0)
-  /** A SHINY MUST BE RESOLVABLE WHERE IT WAS CAUGHT.
-   *
-   *  sellGoldenTrophy and mountGoldenTrophy live only on the fishing screen, so
-   *  a shiny landed out here was written into shiny_catches with no surface
-   *  anywhere in the app to sell or mount it. Shinies only roll on a PERFECT,
-   *  and the map allows perfects, so this was not hypothetical. */
+  /** A SHINY MUST BE RESOLVABLE WHERE IT WAS CAUGHT — sellGoldenTrophy and
+   *  mountGoldenTrophy exist only on the fishing screen, so a golden fish
+   *  landed out here would otherwise sit in shiny_catches with no surface
+   *  anywhere in the app to sell or mount it. */
   const [shiny, setShiny] = useState<{ id: number; alreadyMounted: boolean } | null>(null)
   /** The Galaxy Rod's one-shot reroll, offered by the server on eligible
    *  catches and simply never surfaced out here. */
   const [wormhole, setWormhole] = useState(false)
   const [busyChoice, setBusyChoice] = useState(false)
   const [choiceNote, setChoiceNote] = useState('')
-  useEffect(() => {
-    if (phase !== 'hooked') { runningRef.current = false; return }
-    runningRef.current = true
-    let raf = 0
-    let last = performance.now()
-    const step = (now: number) => {
-      if (!runningRef.current) return
-      // Clamped, so a backgrounded tab does not resume with the needle having
-      // silently swept a full revolution while nobody was looking.
-      const dt = Math.min(0.05, (now - last) / 1000)
-      last = now
-      angleRef.current = (angleRef.current + sweepRef.current * dt) % 360
-      setAngle(angleRef.current)
-      raf = requestAnimationFrame(step)
+
+  // ── THE SWEEP, ON THE COMPOSITOR ─────────────────────────────────────────
+  //
+  // This used to be a rAF that called setAngle sixty times a second, which
+  // re-rendered this component and the whole dial on every single frame — the
+  // reconciler running flat out for the entire time the needle was up, which is
+  // most of why the dial phase dropped frames.
+  //
+  // The fishing screen does not do that and never did. It hands the rotation to
+  // the Web Animations API on the needle's own composited layer, so the needle
+  // spins on the compositor thread and main-thread work cannot make it skip.
+  // The angle is then DERIVED from the animation's own clock whenever anybody
+  // asks, rather than stored. Zero renders per frame.
+  const needleRef = useRef<HTMLDivElement | null>(null)
+  const spinRef = useRef<Animation | null>(null)
+  const spinStart = useRef<number | null>(null)
+  const spinFrom = useRef(0)
+
+  /** Where the needle is RIGHT NOW, off the same clock the animation runs on,
+   *  so what resolves is exactly what is on the glass. */
+  const angleNow = useCallback(() => {
+    if (spinRef.current && spinStart.current !== null) {
+      const tl = document.timeline?.currentTime
+      const t = typeof tl === 'number' ? tl : performance.now()
+      const a = spinFrom.current + sweepRef.current * (t - spinStart.current) / 1000
+      return ((a % 360) + 360) % 360
     }
-    raf = requestAnimationFrame(step)
-    return () => { runningRef.current = false; cancelAnimationFrame(raf) }
-  }, [phase])
+    return angleRef.current
+  }, [])
+
+  const startSpin = useCallback((from: number) => {
+    const el = needleRef.current
+    spinRef.current?.cancel()
+    spinRef.current = null
+    spinStart.current = null
+    spinFrom.current = from
+    if (!el || typeof el.animate !== 'function' || sweepRef.current <= 0) return
+    try {
+      const anim = el.animate(
+        [{ transform: `rotate(${from}deg)` }, { transform: `rotate(${from + 360}deg)` }],
+        { duration: 360_000 / sweepRef.current, iterations: Infinity },
+      )
+      // Pin the start time synchronously, or the animation begins "when ready"
+      // — up to a frame later — and the maths and the picture disagree by
+      // however long that took.
+      const t0 = document.timeline?.currentTime
+      if (typeof t0 === 'number') anim.startTime = t0
+      spinRef.current = anim
+      spinStart.current = typeof t0 === 'number' ? t0 : performance.now()
+    } catch {
+      spinRef.current = null
+      spinStart.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (phase !== 'hooked') {
+      if (phase !== 'reeling') { spinRef.current?.cancel(); spinRef.current = null; spinStart.current = null }
+      return
+    }
+    startSpin(angleRef.current)
+    return () => { spinRef.current?.cancel(); spinRef.current = null; spinStart.current = null }
+  }, [phase, startSpin])
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -335,8 +389,16 @@ export default function FishingHere({
     // FREEZE FIRST. The angle that resolves is the angle that was on screen when
     // the thumb landed — read once, then stop the sweep. Reading it after the
     // stop would judge a needle that had moved on.
-    runningRef.current = false
-    const at = angleRef.current
+    // FREEZE FIRST, and freeze at the angle the ANIMATION is showing rather
+    // than a number React last heard about. They are the same thing by
+    // construction now: angleNow derives from the compositor animation's own
+    // clock, so what resolves is exactly what is on the glass.
+    const at = angleNow()
+    angleRef.current = at
+    setAngle(at)
+    spinRef.current?.cancel()
+    spinRef.current = null
+    spinStart.current = null
     const hit = zones.find(z => at >= z.from && at < z.to)
     const raw = (hit?.type ?? 'miss') as 'perfect' | 'catch' | 'miss' | 'penalty'
     // SNAG IMMUNITY IS CLIENT-SIDE, on both screens. The server has no notion
@@ -358,7 +420,7 @@ export default function FishingHere({
       setTimeout(() => setRetryFlash(false), 1200)
       angleRef.current = Math.random() * 360
       setAngle(angleRef.current)
-      runningRef.current = true
+      startSpin(angleRef.current)
       setSnapKey(k => k + 1)
       vibrate([0, 20, 50, 20])
       return
@@ -464,7 +526,7 @@ export default function FishingHere({
       setErr(e instanceof Error ? e.message : 'Lost the fish on the way in.')
       setPhase('idle')
     })
-  }, [phase, hooked, zones, bait, zone, mods, onPose])
+  }, [phase, hooked, zones, bait, zone, mods, onPose, angleNow])
 
   // ── AUTO CASTER ─────────────────────────────────────────────────────────
   // Casts again a beat after each result, and stops the moment it has no
@@ -503,7 +565,7 @@ export default function FishingHere({
       // A grace beat so the dial visibly spins before the first auto-tap.
       // Without it the reel fires so fast it reads as a bug rather than a tool.
       if (performance.now() - startAt >= 420) {
-        const at = angleRef.current
+        const at = angleNow()
         const z = zonesRef.current.find(zz => at >= zz.from && at < zz.to)
         if (z?.type === 'catch') { done = true; strikeRef.current?.(); return }
       }
@@ -511,7 +573,7 @@ export default function FishingHere({
     }
     raf = requestAnimationFrame(tick)
     return () => { done = true; cancelAnimationFrame(raf) }
-  }, [phase, hooked, auto.tier, auto.maxRarity, autoOn])
+  }, [phase, hooked, auto.tier, auto.maxRarity, autoOn, angleNow])
 
   // ── TIDE TURNER ─────────────────────────────────────────────────────────
   const [skipsLeft, setSkipsLeft] = useState(tideTurner.left)
@@ -519,7 +581,7 @@ export default function FishingHere({
   const skip = useCallback(async () => {
     if (skipping || phase !== 'hooked' || skipsLeft <= 0) return
     setSkipping(true)
-    runningRef.current = false
+    spinRef.current?.cancel()
     const res = await useTideTurnerSkip().catch(() => ({ error: 'The tide would not turn.' }))
     setSkipping(false)
     if ('error' in res) { setErr(res.error); return }
@@ -672,7 +734,12 @@ export default function FishingHere({
                  it in a 260px box, which quietly made the map's dial a
                  different instrument to the one every player has learned. */
               style={{ pointerEvents: 'none', width: '100%', maxWidth: 300 }}>
+              {/* needleRef hands the needle's own composited layer to the
+                  WAAPI rotation above. `angle` is only the RESTING position
+                  now — it changes at a bite, at a retry and at the freeze, and
+                  never once per frame. */}
               <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1}
+                needleRef={needleRef}
                 snapKey={snapKey} perfectBurstKey={burstKey} />
             </motion.div>
           )}

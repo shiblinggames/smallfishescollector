@@ -613,6 +613,26 @@ export default function SeaMap({
   /** The sea's phase, for the banner and for respawning traders when night
    *  falls. Polled slowly — the cycle is 24 minutes, so a check every few
    *  seconds is already far finer than anything on screen needs. */
+  /**
+   * THE FREEZE.
+   *
+   * While the dial is up, everything on this map stops: the world transform,
+   * the painted wash, the boat's bob, the wake, the trader patrols, the clouds
+   * and the four-a-second proximity tick. The rAF returns immediately.
+   *
+   * The dial is a reaction test with a needle running at up to 650 degrees a
+   * second, and it is the only thing on screen the player is reading. Every
+   * frame the map spends moving water behind it is a frame the needle might not
+   * get, and a needle that skips is not a difficulty setting, it is a lie about
+   * where it was when you tapped.
+   *
+   * Nothing is lost by stopping. You are anchored to fish — the boat is not
+   * going anywhere, and the sea has no state that has to keep advancing.
+   */
+  const [dialUp, setDialUp] = useState(false)
+  const dialUpRef = useRef(false)
+  dialUpRef.current = dialUp
+
   const [phase, setPhase] = useState(() => seaClock().phase)
   /** Mirrored, because the rAF effect is built once with an empty dependency
    *  list — reading `phase` straight from the closure in there would read the
@@ -621,9 +641,10 @@ export default function SeaMap({
   const phaseRef = useRef(phase)
   phaseRef.current = phase
   useEffect(() => {
+    if (dialUp) return
     const id = setInterval(() => setPhase(seaClock().phase), 4000)
     return () => clearInterval(id)
-  }, [])
+  }, [dialUp])
 
   const [near, setNear] = useState<Place | null>(null)
   /** Who is on the water around us. Recomputed only when the boat crosses into
@@ -671,6 +692,8 @@ export default function SeaMap({
   /** One node per trader on screen, moved imperatively so a drifting boat costs
    *  a transform rather than a re-render. */
   const hullRefs = useRef(new Map<string, HTMLDivElement>())
+  /** The inner composite of each trader, found once rather than every frame. */
+  const hullCache = useRef(new Map<string, HTMLElement>())
   useEffect(() => { tradersRef.current = traders }, [traders])
   /** Wanderers AND residents, for proximity and for the patrol writes. */
   const allTradersRef = useRef<Trader[]>([])
@@ -837,6 +860,13 @@ export default function SeaMap({
     let lastHaze = ''
 
     const step = (now: number) => {
+      if (dialUpRef.current) {
+        // Keep the clock honest so nothing lurches when it resumes: the delta
+        // is measured from now, not from whenever the dial went up.
+        last = now
+        raf = requestAnimationFrame(step)
+        return
+      }
       // Clamped delta: a backgrounded tab returns with an enormous gap, and an
       // unclamped one would teleport the boat across the chart.
       const dt = Math.min(0.05, (now - last) / 1000)
@@ -964,7 +994,14 @@ export default function SeaMap({
           if (!el) continue
           const at = traderPos(t, ts)
           el.style.transform = `translate3d(${at.x - t.x}px, ${at.y - t.y}px, 0)`
-          const hull = el.querySelector<HTMLElement>('.trader-hull')
+          // CACHED. This was a querySelector per trader per frame — a DOM
+          // search sixty times a second for a node that never changes. Looked
+          // up once and kept on the element itself.
+          let hull = hullCache.current.get(t.key)
+          if (!hull) {
+            hull = el.querySelector<HTMLElement>('.trader-hull') ?? undefined
+            if (hull) hullCache.current.set(t.key, hull)
+          }
           if (hull) {
             hull.style.transform =
               `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78) scaleX(${at.facing})`
@@ -1137,7 +1174,7 @@ export default function SeaMap({
         // only the colour before the first frame lands.
         background: seaAt(HOME, seaClock().darkness).css,
       }}
-      className="sea-surface"
+      className={`sea-surface${dialUp ? ' sea-frozen' : ''}`}
     >
       {/* THE SURFACE, under everything. Two repeating-background layers that
           the loop only ever TRANSFORMS — see seaTiles for why this stopped
@@ -1178,7 +1215,7 @@ export default function SeaMap({
             isNear={nearTrader?.key === t.key}
             hullRef={el => {
               if (el) hullRefs.current.set(t.key, el)
-              else hullRefs.current.delete(t.key)
+              else { hullRefs.current.delete(t.key); hullCache.current.delete(t.key) }
             }} />
         ))}
 
@@ -1301,7 +1338,7 @@ export default function SeaMap({
           fontSize: '0.54rem', letterSpacing: '0.14em', color: 'rgba(214,232,240,0.8)',
         }}>{PHASE_LABEL[phase]}</span>
       </div>
-      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} />
+      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} />
 
       {fishingIn && (
         <FishingHere
@@ -1316,6 +1353,7 @@ export default function SeaMap({
           auto={auto}
           tideTurner={tideTurner}
           onPose={setFrame}
+          onBusy={setDialUp}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest') }}
         />
@@ -2201,7 +2239,8 @@ const COMPASS_MAX = 3
 /** How far apart two markers must sit on the perimeter before both are shown. */
 const COMPASS_SPACING = 96
 
-function Compass({ pos, zoom, wrapRef, locked }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen }: {
+  frozen: boolean
   pos: React.RefObject<Vec>
   zoom: React.RefObject<number>
   wrapRef: React.RefObject<HTMLDivElement | null>
@@ -2211,9 +2250,12 @@ function Compass({ pos, zoom, wrapRef, locked }: {
   useEffect(() => {
     // 200ms. An arrow that updates five times a second is indistinguishable
     // from one that updates eight times a second and costs nearly half as much.
+    // And nothing at all while the dial is up: the boat is not moving, so every
+    // one of these renders would redraw the same arrows in the same places.
+    if (frozen) return
     const id = setInterval(() => force(v => v + 1), 200)
     return () => clearInterval(id)
-  }, [])
+  }, [frozen])
 
   const here = pos.current ?? HOME
   const z = zoom.current ?? 1

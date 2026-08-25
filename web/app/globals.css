@@ -2567,6 +2567,16 @@ body.hardcore-gauntlet::after {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
+/* EVERYTHING STOPS WHILE THE DIAL IS UP.
+   The rAF loop halts itself, but CSS animations run on the compositor and
+   would carry on regardless — the clouds, the buoys, the wrecks, the ripples.
+   Individually cheap, and collectively still work being done on the one frame
+   budget the needle needs. Paused rather than removed, so they pick up exactly
+   where they were when the fish is landed. */
+.sea-frozen * {
+  animation-play-state: paused !important;
+}
+
 /* ── LANDMARKS THAT MOVE ─────────────────────────────────────────────────────
    Only the ones that would. A buoy is a float on a chain and never stops; a
    wreck is aground but the swell still works at it. Everything else out there
