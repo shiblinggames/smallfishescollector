@@ -395,6 +395,22 @@ export default function FishingHere({
     // clock, so what resolves is exactly what is on the glass.
     const at = angleNow()
     angleRef.current = at
+
+    // WRITE THE RESTING ANGLE BEFORE CANCELLING, and that order is the whole
+    // fix for the needle jumping backwards.
+    //
+    // A WAAPI animation outranks inline style, so while it is running this
+    // assignment is invisible. Cancel it and the element falls back to whatever
+    // style says — and `setAngle` is a React update that has not committed yet,
+    // so for a frame or two "whatever style says" was the angle from the LAST
+    // render, which is where the needle was when the fish bit. That is the
+    // bounce: not a wobble, a snap back to the start and then forward again.
+    //
+    // Putting the frozen angle into inline style first means there is no gap:
+    // the instant the animation lets go, the correct transform is already
+    // sitting underneath it.
+    const nEl = needleRef.current
+    if (nEl) nEl.style.transform = `rotate(${at}deg)`
     setAngle(at)
     spinRef.current?.cancel()
     spinRef.current = null
@@ -722,8 +738,17 @@ export default function FishingHere({
         maxWidth: 448, margin: '0 auto',
         padding: '0 1rem', gap: 10,
       }}>
-        <AnimatePresence>
-          {(phase === 'hooked' || phase === 'reeling') && (
+        {/* ONE AnimatePresence, mode="wait", around all three.
+            They were separate: the dial had its own AnimatePresence and the
+            result card was a plain sibling below it. In a column justified to
+            its BOTTOM edge, that means the card mounts underneath a dial that is
+            still playing its 140ms exit and shoves it upward — which is exactly
+            the dial appearing to flash in above where it was and then vanish.
+            mode="wait" holds the card back until the dial has finished leaving,
+            so nothing is ever in this area twice. Safe here in a way it is not
+            on the action row: this area is allowed to be empty for a beat. */}
+        <AnimatePresence mode="wait">
+          {(phase === 'hooked' || phase === 'reeling') ? (
             <motion.div key="dial"
               initial={{ opacity: 0, y: 30, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -742,12 +767,10 @@ export default function FishingHere({
                 needleRef={needleRef}
                 snapKey={snapKey} perfectBurstKey={burstKey} />
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        {phase === 'result' && caught && (
+          ) : phase === 'result' && caught ? (
           <motion.div key="result"
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8, transition: { duration: 0.12 } }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{ pointerEvents: 'auto', width: '100%', maxWidth: 380, minHeight: 0 }}>
             <div data-no-steer style={{
@@ -878,9 +901,7 @@ export default function FishingHere({
               </p>
             )}
           </motion.div>
-        )}
-
-        {phase === 'waiting' && (
+          ) : phase === 'waiting' ? (
           <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             {/* Three dots breathing out of phase. The wait is three to twelve
@@ -901,7 +922,8 @@ export default function FishingHere({
               Waiting on a bite
             </p>
           </motion.div>
-        )}
+          ) : null}
+        </AnimatePresence>
 
         {err && (
           <p className="font-karla font-600" style={{
