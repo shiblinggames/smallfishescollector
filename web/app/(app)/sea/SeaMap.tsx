@@ -460,7 +460,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -477,6 +477,7 @@ export default function SeaMap({
    *  hook, and the bait row lets that change mid-session. */
   baitQty: number
   baitBag: { type: string; quantity: number }[]
+  hold: { count: number; capacity: number }
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -1375,6 +1376,7 @@ export default function SeaMap({
           tideTurner={tideTurner}
           seaPhase={phase}
           baitBag={baitBag}
+          hold={hold}
           onBaitChange={t => {
             // Re-reads the remaining count off the bag. The catch-zone bonus is
             // re-read too, from getBait above, so the dial is built from the

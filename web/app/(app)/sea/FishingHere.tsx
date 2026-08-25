@@ -145,7 +145,7 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
-  seaPhase, baitBag, onBaitChange, onBaitSpent, onPose, onBusy, spritesReady, onClose,
+  seaPhase, baitBag, onBaitChange, hold, onBaitSpent, onPose, onBusy, spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -189,6 +189,9 @@ export default function FishingHere({
    *  readout of the one type the page happened to pick. */
   baitBag: { type: string; quantity: number }[]
   onBaitChange: (type: string) => void
+  /** What is aboard and what it can take. The hold is the reason a session
+   *  ends, so it belongs on screen while you are filling it. */
+  hold: { count: number; capacity: number }
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
   /** Told when the dial is up, so the map can stop moving entirely behind it.
    *  See the note on the freeze in SeaMap. */
@@ -261,6 +264,12 @@ export default function FishingHere({
   /** XP floated off the boat, where the boat is. */
   const [xpPop, setXpPop] = useState<{ id: number; value: number } | null>(null)
 
+  const [tackleOpen, setTackleOpen] = useState(false)
+  const activeBaitDef = getBait(bait)
+  /** Bait cannot change with a line already in the water: the fish has been
+   *  rolled, and swapping would move the odds of something already decided. */
+  const canSwapBait = phase === 'idle' || phase === 'result'
+  const holdFull = hold.count >= hold.capacity
   const [retryFlash, setRetryFlash] = useState(false)
   const [sigilPaid, setSigilPaid] = useState(0)
   /** A SHINY MUST BE RESOLVABLE WHERE IT WAS CAUGHT — sellGoldenTrophy and
@@ -707,9 +716,21 @@ export default function FishingHere({
       /* THE ROD IS NOT A RUDDER. Cast and Reel In stop `pointerdown`, but the
          map steers on `click` — and stopping pointerdown does nothing to the
          click that follows it, so every cast was also plotting a course to
-         wherever the button happened to be. Caught at the root: nothing in
-         here is ever a steering tap. */
-      onClick={e => e.stopPropagation()}
+         wherever the button happened to be. Caught at the root: a tap on a
+         CONTROL is never a steering tap.
+         But a tap on the open water around them is exactly that. With a result
+         on screen, clicking away used to do nothing at all: the rod stayed out,
+         the card stayed up, and the only way on was to find the small "Stow
+         rod" link. Sailing away IS stowing the rod — so it does both, and the
+         tap falls through to the map so the boat actually goes where you
+         pointed. Only from a settled phase: doing it mid-cast or mid-dial would
+         throw away a fish the server has already rolled. */
+      onClick={e => {
+        const onControl = (e.target as HTMLElement).closest('button, [data-no-steer]')
+        if (onControl) { e.stopPropagation(); return }
+        if (phase === 'idle' || phase === 'result') { onClose(); return }
+        e.stopPropagation()
+      }}
       style={{
         position: 'absolute', inset: 0, zIndex: 20,
         display: 'flex', flexDirection: 'column',
@@ -1112,6 +1133,72 @@ export default function FishingHere({
         )}
       </div>
 
+      {/* THE TACKLE BOX. Opens over the rod, closes when you have picked, and
+          is not on screen the rest of the time. */}
+      <AnimatePresence>
+        {tackleOpen && (
+          <motion.div key="tackle" data-no-steer
+            onClick={e => { e.stopPropagation(); setTackleOpen(false) }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 34, pointerEvents: 'auto',
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              padding: '1.25rem', background: 'rgba(2,8,14,0.62)', backdropFilter: 'blur(3px)',
+            }}>
+            <motion.div onClick={e => e.stopPropagation()}
+              initial={{ y: 26 }} animate={{ y: 0 }} exit={{ y: 20 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              style={{
+                width: '100%', maxWidth: 380, borderRadius: 18, padding: '1rem',
+                background: 'rgba(10,16,22,0.98)',
+                border: '1px solid rgba(180,214,232,0.28)',
+                boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+              }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f2ead8' }}>Tackle box</p>
+              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9fb4c2', marginTop: 3 }}>
+                A wider catch zone is an easier reel. Nothing else changes.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+                {baitBag.filter(b => b.quantity > 0).map(b => {
+                  const def = getBait(b.type)
+                  const on = b.type === bait
+                  return (
+                    <button key={b.type}
+                      onClick={e => {
+                        e.stopPropagation()
+                        if (!on) { vibrate(10); onBaitChange(b.type) }
+                        setTackleOpen(false)
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '0.55rem 0.7rem', borderRadius: 12, width: '100%',
+                        background: on ? 'rgba(103,212,232,0.14)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${on ? 'rgba(103,212,232,0.55)' : 'rgba(255,255,255,0.1)'}`,
+                        cursor: 'pointer', textAlign: 'left',
+                      }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {def?.imageUrl && <img src={def.imageUrl} alt="" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />}
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span className="font-cinzel font-700 block truncate" style={{ fontSize: '0.84rem', color: '#f2ead8' }}>
+                          {def?.name ?? b.type}
+                        </span>
+                        <span className="font-karla font-600 block" style={{ fontSize: '0.62rem', color: 'rgba(190,212,228,0.6)' }}>
+                          {(def?.catchZoneBonus ?? 0) > 0 ? `+${def!.catchZoneBonus}° catch zone` : 'No catch bonus'}
+                        </span>
+                      </span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0c040', flexShrink: 0 }}>
+                        {b.quantity}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── THE ACTION SLOT — the same position in every phase ─────────────
           88px square, always, whatever is in it. The fishing screen holds this
           rule and states why: the button must not move between phases or your
@@ -1223,51 +1310,66 @@ export default function FishingHere({
 
       </div>
 
-      {/* ── THE BAIT ROW ────────────────────────────────────────────────
-          This line used to read "Stow rod · The Shallows · 40 bait", which is
-          three unrelated facts crammed into one link and no way to act on any
-          of them. Bait is a choice you make every cast and the map gave you
-          whichever type you happened to have most of.
+      {/* ── THE TACKLE BAR ──────────────────────────────────────────────
+          One line: what is on the hook, and how full the hold is.
 
-          Now it is the tackle: every bait aboard, what it does, how many are
-          left, and one tap to switch. Disabled mid-cast, because changing bait
-          with a line already in the water would be changing the odds of a fish
-          that has already been rolled. */}
+          It was a row of every bait aboard, which is a whole inventory laid
+          permanently across the bottom of the screen for a choice you make once
+          in a while. A summary you can tap is the right shape — the numbers you
+          need at a glance stay visible, and the picking happens in a panel that
+          goes away again.
+
+          The hold belongs here because it is the reason a session ENDS. Without
+          it the map lets you fish happily until a catch silently stops being
+          banked, which is the one failure a hold exists to warn you about. */}
       <div data-no-steer style={{
-        height: 46, marginTop: 6, width: '100%', maxWidth: 448,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 6, padding: '0 0.6rem', overflowX: 'auto', overscrollBehavior: 'contain',
+        height: 34, marginTop: 6, width: '100%', maxWidth: 448,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        padding: '0 0.75rem',
       }}>
-        {baitBag.filter(b => b.quantity > 0).map(b => {
-          const def = getBait(b.type)
-          const on = b.type === bait
-          const locked = phase !== 'idle' && phase !== 'result'
-          return (
-            <button key={b.type}
-              onClick={e => { e.stopPropagation(); if (!locked && !on) { vibrate(8); onBaitChange(b.type) } }}
-              disabled={locked}
-              title={def?.name}
-              style={{
-                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
-                padding: '0.3rem 0.55rem', borderRadius: 10,
-                background: on ? 'rgba(103,212,232,0.16)' : 'rgba(6,14,22,0.8)',
-                border: `1px solid ${on ? 'rgba(103,212,232,0.6)' : 'rgba(255,255,255,0.14)'}`,
-                cursor: locked || on ? 'default' : 'pointer',
-                opacity: locked && !on ? 0.45 : 1,
-              }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {def?.imageUrl && <img src={def.imageUrl} alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />}
-              <span className="font-karla font-700" style={{
-                fontSize: '0.62rem', color: on ? '#bfeaf4' : 'rgba(214,232,240,0.8)', whiteSpace: 'nowrap',
-              }}>{b.quantity}</span>
-              {(def?.catchZoneBonus ?? 0) > 0 && (
-                <span className="font-karla font-700" style={{
-                  fontSize: '0.5rem', color: on ? '#7fd6a0' : 'rgba(127,214,160,0.6)', whiteSpace: 'nowrap',
-                }}>+{def!.catchZoneBonus}°</span>
-              )}
-            </button>
-          )
-        })}
+        <button
+          onClick={e => { e.stopPropagation(); if (canSwapBait) { vibrate(8); setTackleOpen(true) } }}
+          disabled={!canSwapBait}
+          style={{
+            flex: 1, minWidth: 0, height: 30,
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '0 0.6rem', borderRadius: 10,
+            background: 'rgba(6,14,22,0.86)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            cursor: canSwapBait ? 'pointer' : 'default',
+            opacity: canSwapBait ? 1 : 0.55,
+          }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {activeBaitDef?.imageUrl && (
+            <img src={activeBaitDef.imageUrl} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
+          )}
+          <span className="font-karla font-700 truncate" style={{ fontSize: '0.66rem', color: '#dfeaf2' }}>
+            {activeBaitDef?.name ?? 'Bait'}
+          </span>
+          <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#f0c040', flexShrink: 0 }}>
+            {baitLeft}
+          </span>
+          {canSwapBait && (
+            <span className="font-karla font-700" style={{
+              fontSize: '0.52rem', color: 'rgba(190,212,228,0.5)', marginLeft: 'auto', flexShrink: 0,
+            }}>SWAP</span>
+          )}
+        </button>
+
+        {/* THE HOLD, and it goes red before it bites rather than after. */}
+        <div style={{
+          flexShrink: 0, height: 30, display: 'flex', alignItems: 'center', gap: 6,
+          padding: '0 0.65rem', borderRadius: 10,
+          background: 'rgba(6,14,22,0.86)',
+          border: `1px solid ${holdFull ? 'rgba(248,113,113,0.55)' : 'rgba(255,255,255,0.16)'}`,
+        }}>
+          <span className="font-karla font-700 uppercase" style={{
+            fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
+          }}>Hold</span>
+          <span className="font-karla font-700" style={{
+            fontSize: '0.66rem', color: holdFull ? '#f87171' : '#dfeaf2', fontVariantNumeric: 'tabular-nums',
+          }}>{hold.count}/{hold.capacity}</span>
+        </div>
       </div>
 
       <div style={{ height: 20, marginTop: 6, display: 'flex', alignItems: 'center' }}>

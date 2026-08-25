@@ -17,6 +17,7 @@ import { getReel } from '@/lib/reels'
 import { getHook } from '@/lib/hooks'
 import { PETS } from '@/lib/pets'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getFishHold } from '@/lib/fishHold'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -68,6 +69,16 @@ export default async function SeaPage() {
   const todayStr = new Date().toISOString().slice(0, 10)
   const ttUsed = profile?.tide_turner_date === todayStr ? Number(profile?.tide_turner_used ?? 0) : 0
 
+  // THE HOLD. Same two numbers the fishing screen shows: what is aboard and
+  // what it can take. Without them the map lets you fish until a catch silently
+  // stops being banked, which is the one failure a hold is supposed to warn you
+  // about before it happens.
+  const { data: holdRows } = await admin
+    .from('fish_inventory').select('quantity').eq('user_id', user.id)
+  const holdCount = ((holdRows ?? []) as { quantity: number }[])
+    .reduce((n, r) => n + (r.quantity ?? 0), 0)
+  const holdCapacity = getFishHold(Number(profile?.fish_hold_tier ?? 0)).capacity
+
   const equippedPet = (profile?.equipped_pet as string | null) ?? null
   const pet = PETS.find(p => p.id === equippedPet) ?? null
 
@@ -98,6 +109,7 @@ export default async function SeaPage() {
       bait={baitType}
       // THE WHOLE BAG, not just the one type the page picked. The bait row lets
       // you switch mid-session, so it needs everything aboard.
+      hold={{ count: holdCount, capacity: holdCapacity }}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))
