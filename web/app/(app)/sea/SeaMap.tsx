@@ -31,7 +31,7 @@ import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import { seaClock, PHASE_LABEL } from '@/lib/seaClock'
-import { tradersAround, traderPos, seaDay, plainRodFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
+import { tradersAround, traderPos, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
@@ -137,6 +137,8 @@ const THROW = 9000
 const HOLD_MS = 220
 /** Tap within this of the hull to drop anchor. */
 const STOP_RADIUS = 190
+/** The helm's radius. */
+const HELM_R = 56
 /** How far a press has to travel before it counts as a drag. Generous enough
  *  that a thumb resting on glass does not become a course change. */
 const DRAG_SLOP = 12
@@ -534,32 +536,27 @@ export default function SeaMap({
   // a tap and still runs onTap, so entering a port and starting a cast work
   // exactly as before; only a press that MOVES becomes a heading.
   /**
-   * THE MOVE BOX — a strip of screen under the boat that means DIRECTION.
+   * THE HELM.
    *
-   * Tap-to-move across the whole screen has a flaw on a phone that no tuning
-   * fixes: to steer you have to touch the water you are trying to look at, and
-   * the further you want to go the more of the view your hand covers. A corner
-   * joystick solves that and introduces its own problem — it is a widget bolted
-   * onto the world rather than part of it.
+   * Steering by tapping the sea has one flaw on a phone that no tuning fixes:
+   * to steer you must touch the water you are trying to look at, and the
+   * further you want to go the more of the view your hand covers.
    *
-   * This is the middle: one rectangle, directly under the boat, and where you
-   * touch inside it IS the bearing. Its centre is neutral, so touching the top
-   * edge sends you due north, the right edge due east, and a point up and to
-   * the right sends you north-east. Distance from the centre sets the speed.
-   *
-   * It sits under the boat rather than around it so your thumb never covers the
-   * boat or the water ahead, which is the whole reason it exists.
-   *
-   * It is DRAWN NOWHERE. No background, no border, no marks. A visible box made
-   * the sea look like a console with a control panel bolted to the bottom of
-   * it, and what it does is self-evident the first time you touch it — you
-   * press below the boat and the boat goes that way.
+   * So the bearing comes from a fixed control instead, dead centre and just
+   * above the action buttons — under the thumb that is already there for Hail
+   * and Fish, and never over the boat or the water ahead. Where you touch
+   * inside it IS the bearing: centre neutral, top edge north, right edge east.
+   * Distance from the centre sets the speed, because a direction-only control
+   * makes every touch full sail and easing alongside a trader impossible.
    */
   const boxRef = useRef<HTMLDivElement | null>(null)
   /** The live touch inside the box, in client coordinates. */
   const boxHeld = useRef<Vec | null>(null)
+  const knobRef = useRef<HTMLDivElement | null>(null)
+  const [helmOn, setHelmOn] = useState(false)
 
-  /** Client point to a world bearing, or null inside the deadzone. */
+  /** Client point to a world bearing, or null inside the deadzone. Normalised
+   *  to the helm's half-extents, so the rim is reachable in every direction. */
   const boxVec = useCallback((p: Vec): { x: number; y: number; mag: number } | null => {
     const el = boxRef.current
     if (!el) return null
@@ -737,6 +734,7 @@ export default function SeaMap({
         // were missing a piece. They are captains on a fishing sea; they have a
         // rod aboard whether or not they are using it.
         rodSlug: plainRodFor(seed),
+        hook: plainHookFor(seed),
       },
       deal: 'resident' as const, zoneId: p.id, rate: r.rate,
     }]
@@ -1339,55 +1337,81 @@ export default function SeaMap({
           on top of the thing it is pointing at. Hidden while the rod is out —
           you are anchored to fish, and a steering control that does nothing is
           worse than no control. */}
-      {/* ── THE MOVE BOX ────────────────────────────────────────────────
-          Where you touch inside it is the bearing. Drawn faintly enough to be
-          furniture rather than UI, and it brightens under a thumb so you can
-          see it is listening. Hidden while the rod is out: you are anchored to
-          fish, and a steering control that does nothing is worse than none. */}
+      {/* ── THE HELM ─────────────────────────────────────────────────────
+          Dead centre, above the action buttons — so it is under the thumb of
+          whichever hand is already there for Hail and Fish, and it never covers
+          the boat or the water ahead, which is what tap-and-hold steering does
+          on a phone.
+
+          Where you touch inside it IS the bearing: the centre is neutral, the
+          top edge is due north, the right edge due east. How far out you press
+          sets the speed. Touch only, and hidden while the rod is out, because
+          you are anchored to fish and a control that does nothing is worse than
+          no control. */}
       {!fishingIn && (
         <div
           ref={boxRef}
+          className="sea-helm"
           onPointerDown={e => {
             e.stopPropagation()
             try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* fine */ }
             boxHeld.current = { x: e.clientX, y: e.clientY }
+            setHelmOn(true)
             vibrate(6)
           }}
           onPointerMove={e => {
             if (!boxHeld.current) return
             e.stopPropagation()
             boxHeld.current = { x: e.clientX, y: e.clientY }
+            const v = boxVec(boxHeld.current)
+            if (knobRef.current) {
+              knobRef.current.style.transform = v
+                ? `translate3d(${v.x * v.mag * (HELM_R - 22)}px, ${v.y * v.mag * (HELM_R - 22)}px, 0)`
+                : 'translate3d(0,0,0)'
+            }
           }}
           onPointerUp={e => {
             e.stopPropagation()
-            // LET GO AND IT RUNS OUT. Cutting the course dead the instant your
-            // thumb leaves the glass reads as the boat hitting something.
+            // Let go and it runs out rather than stopping dead, which reads as
+            // the boat hitting something.
             const v = vel.current
             const sp = Math.hypot(v.x, v.y)
             target.current = sp > 1
               ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.5, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.5 }
               : { ...pos.current }
             boxHeld.current = null
+            setHelmOn(false)
+            if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
             try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
           }}
-          onPointerCancel={() => { boxHeld.current = null }}
+          onPointerCancel={() => {
+            boxHeld.current = null
+            setHelmOn(false)
+            if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
+          }}
           onClick={e => e.stopPropagation()}
           style={{
             position: 'absolute', zIndex: 14,
-            // Under the boat, which is pinned to the centre of the screen.
-            left: '50%', top: 'calc(50% + 96px)',
-            transform: 'translateX(-50%)',
-            width: 'min(86vw, 460px)', height: 'min(26vh, 168px)',
-            // INVISIBLE. It is a hit area and nothing else — no background, no
-            // border, no marks, no label. Drawing it made the sea look like a
-            // console with a control panel bolted to the bottom of it, and the
-            // thing it was labelling is obvious the moment you touch it: you
-            // press below the boat and the boat goes that way.
-            //
-            // touchAction stays: without it a drag inside this region is a
-            // scroll gesture and the browser stops sending pointermove.
+            left: '50%', bottom: 92, transform: 'translateX(-50%)',
+            width: HELM_R * 2, height: HELM_R * 2, borderRadius: '50%',
             touchAction: 'none',
+            background: helmOn
+              ? 'radial-gradient(circle at 50% 45%, rgba(12,26,38,0.72), rgba(6,14,22,0.46))'
+              : 'radial-gradient(circle at 50% 45%, rgba(10,22,32,0.48), rgba(6,14,22,0.28))',
+            border: `1px solid rgba(180,214,232,${helmOn ? 0.46 : 0.22})`,
+            boxShadow: helmOn ? '0 0 22px rgba(120,180,210,0.2)' : 'none',
+            transition: 'background 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out',
+          }}>
+          <div ref={knobRef} aria-hidden style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: 42, height: 42, marginLeft: -21, marginTop: -21,
+            borderRadius: '50%', pointerEvents: 'none',
+            background: 'radial-gradient(circle at 42% 36%, rgba(214,232,240,0.92), rgba(150,186,206,0.6))',
+            border: '1px solid rgba(226,242,250,0.6)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.45)',
+            willChange: 'transform',
           }} />
+        </div>
       )}
 
       {/* THE HORIZON. Screen space, above the world so islands haze into it as
@@ -1818,6 +1842,17 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
           width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
         }} />
       )}
+      {look.hook && (
+        /* THE HOOK, on the end of the rod. A rod with nothing tied to it is a
+           stick. Same coordinates the player's hook uses, and the rest frame is
+           the one where it is out of the water. */
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={look.hook} alt="" draggable={false} style={{
+          position: 'absolute', top: `${HOOK_AT.rest.top}%`, left: `${HOOK_AT.rest.left}%`,
+          width: `${HOOK_AT.rest.width}%`, maxWidth: 'none',
+          transform: `rotate(${HOOK_AT.rest.rotate}deg)`,
+        }} />
+      )}
       {look.rodSlug && (
         /* A ROD, because they are captains on a fishing sea and a boat with
            nobody holding anything reads as a prop. The rest frame only, at the
@@ -1881,23 +1916,33 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
           face, and it was answering a question the boat itself already answers.
           A person you can see is a person who is there. */}
       {isNear && !done && (
-        <div aria-hidden className="sea-hail" style={{
-          // HEAD_TOP is +8, measured off the sheet by the widest run per row so
-          // the thin fishing line never counts as the character. The mark is
-          // counter-squashed and scales about its own centre, so this places
-          // its bottom a few pixels clear of the hat.
-          position: 'absolute', left: 0, top: HEAD_TOP - 46,
+        /* TWO WRAPPERS, and it needs them for the same reason the swaying
+           landmarks do. The outer one carries the placement — the horizontal
+           centring and the counter-squash. The inner one carries the bob.
+           One element cannot do both: a CSS animation's `transform` REPLACES
+           the inline one outright, so while the bob was running the mark had no
+           translateX(-50%) and no counter-squash at all. It was landing at the
+           wrapper's left edge, squashed flat, on the captain's face. */
+        <div aria-hidden style={{
+          // HEAD_TOP is +8, measured off the sheet. The mark hangs just above
+          // it, anchored by its BOTTOM so the counter-squash grows it upward
+          // and away from the hat rather than down into it.
+          position: 'absolute', left: 0, top: HEAD_TOP - 32,
           transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+          transformOrigin: 'bottom center',
           pointerEvents: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 26, height: 26, marginLeft: -13, borderRadius: '50%',
-          background: 'rgba(24,18,10,0.92)',
-          border: '1px solid rgba(255,206,138,0.85)',
-          boxShadow: '0 0 16px rgba(255,196,110,0.55)',
         }}>
-          <span className="font-cinzel font-700" style={{
-            fontSize: '0.86rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
-          }}>!</span>
+          <div className="sea-hail" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 26, height: 26, borderRadius: '50%',
+            background: 'rgba(24,18,10,0.92)',
+            border: '1px solid rgba(255,206,138,0.85)',
+            boxShadow: '0 0 16px rgba(255,196,110,0.55)',
+          }}>
+            <span className="font-cinzel font-700" style={{
+              fontSize: '0.86rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
+            }}>!</span>
+          </div>
         </div>
       )}
 

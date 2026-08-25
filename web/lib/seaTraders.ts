@@ -38,6 +38,7 @@ import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { RODS, TRADER_ONLY_RODS } from '@/lib/rods'
+import { HOOKS } from '@/lib/hooks'
 import { seaClock } from '@/lib/seaClock'
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
@@ -63,6 +64,11 @@ export type TraderLook = {
    *  a rarity signal with them — an ordinary trader out shifting worms with a
    *  Lightsaber on their knee reads as a bug, and it cheapens the rod. */
   rodSlug: string | null
+  /** A hook on the end of it. A rod with nothing tied to it is a stick, and a
+   *  boat full of captains holding sticks reads as unfinished art rather than
+   *  as a stylistic choice. Plain hooks only, for the same reason as the rods:
+   *  the glowing ones are things players earned. */
+  hook: string | null
 }
 
 export type Trader = {
@@ -306,6 +312,7 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
     boatId: pick(BOAT_IDS, rnd),
     hatId: rnd() < 0.75 ? pick(HAT_IDS, rnd) : null,
     rodSlug: pick(ROD_SLUGS, rnd),
+    hook: pick(HOOK_ART, rnd),
   }
 
   // A patrol well inside the cell: 90-280px across, one turn every 50-140
@@ -408,6 +415,7 @@ function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
       boatId: pick(BOAT_IDS, rnd),
       hatId: pick(HAT_IDS, rnd),
       rodSlug: rod.slug ?? null,
+      hook: pick(HOOK_ART, rnd),
     },
     line: pick(RUNNER_LINES, rnd),
     driftR: 70 + rnd() * 120,
@@ -486,6 +494,12 @@ export function plainRodFor(seed: number): string {
   return ROD_SLUGS[Math.abs(seed) % ROD_SLUGS.length]
 }
 
+/** The matching plain hook, so a chart-defined resident is kitted out the same
+ *  way a hashed wanderer is. */
+export function plainHookFor(seed: number): string {
+  return HOOK_ART[Math.abs(seed) % HOOK_ART.length]
+}
+
 export const KIND_LABEL: Record<TraderKind, string> = {
   peddler: 'Bait peddler',
   salter: 'Salter',
@@ -509,6 +523,9 @@ export const KIND_LABEL: Record<TraderKind, string> = {
 const BOAT_IDS = BOATS.filter(b => !b.glow && !b.crateOnly).map(b => b.id)
 const HAT_IDS = HATS.filter(h => !h.crateOnly).map(h => h.id)
 const CHAR_COLORS = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
+/** Every hook with art and NO glow, filtered off the real table so a new plain
+ *  hook joins the pool the day it ships and one that gains a glow leaves. */
+const HOOK_ART = HOOKS.filter(h => !h.glow && !h.glowType && h.imageUrl).map(h => h.imageUrl as string)
 /** Every rod with per-frame sprites and NO glow. Filtered off the real table
  *  rather than listed here, so a new plain rod joins the pool the day it ships
  *  and a rod that gains a glow leaves it. */
@@ -527,6 +544,6 @@ for (const types of Object.values(STOCK)) {
     }
   }
 }
-if (!BOAT_IDS.length || !HAT_IDS.length || !CHAR_COLORS.length || !ROD_SLUGS.length) {
+if (!BOAT_IDS.length || !HAT_IDS.length || !CHAR_COLORS.length || !ROD_SLUGS.length || !HOOK_ART.length) {
   throw new Error('seaTraders: a cosmetic pool came out empty')
 }
