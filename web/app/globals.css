@@ -2473,85 +2473,6 @@ body.hardcore-gauntlet::after {
    Between them they are the difference between a boat sitting on a colour and
    a boat floating in water. */
 
-/* Caustics — light coming through a moving surface.
-
-   The first pass at this used repeating-linear-gradient, which is a STRIPE
-   generator: hard stops, screen-blended over a smooth sea, and the result was
-   diagonal lines across the whole chart. Water does not have edges in it.
-
-   So: soft radial pools instead, two tiled sheets at different sizes drifting
-   in different directions, every stop fading to transparent so there is no line
-   anywhere to catch the eye. Each sheet translates by exactly one tile, which
-   makes the loop seamless, and the softness is in the gradient stops rather
-   than a blur filter, which keeps two full-screen layers cheap on a phone. */
-.sea-caustics {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.85;
-}
-.sea-caustics::before,
-.sea-caustics::after {
-  content: '';
-  position: absolute;
-  inset: -40%;
-  background-repeat: repeat;
-  will-change: transform;
-}
-.sea-caustics::before {
-  background-image:
-    radial-gradient(38% 26% at 22% 30%, rgba(198,230,242,0.085), transparent 72%),
-    radial-gradient(30% 20% at 68% 18%, rgba(198,230,242,0.06), transparent 72%),
-    radial-gradient(26% 30% at 46% 72%, rgba(198,230,242,0.075), transparent 72%),
-    radial-gradient(22% 18% at 84% 62%, rgba(198,230,242,0.05), transparent 72%);
-  background-size: 560px 400px;
-  animation: seaCausticsA 38s linear infinite;
-}
-.sea-caustics::after {
-  background-image:
-    radial-gradient(34% 24% at 12% 62%, rgba(206,238,248,0.06), transparent 72%),
-    radial-gradient(28% 20% at 58% 44%, rgba(206,238,248,0.05), transparent 72%),
-    radial-gradient(24% 28% at 88% 22%, rgba(206,238,248,0.055), transparent 72%);
-  background-size: 720px 520px;
-  animation: seaCausticsB 52s linear infinite;
-}
-@keyframes seaCausticsA {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-560px, 400px, 0); }
-}
-@keyframes seaCausticsB {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(720px, 520px, 0); }
-}
-
-/* A slow sun shaft across the water. One, wide, barely there — it reads as the
-   sky doing something rather than as a light source in the scene. */
-.sea-shaft {
-  position: absolute;
-  top: -30%;
-  left: -20%;
-  width: 55%;
-  height: 170%;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  transform: rotate(14deg);
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(198,226,238,0.05) 38%,
-    rgba(214,238,248,0.085) 52%,
-    rgba(198,226,238,0.04) 66%,
-    transparent 100%);
-  filter: blur(22px);
-  animation: seaShaft 26s ease-in-out infinite alternate;
-  will-change: transform, opacity;
-}
-@keyframes seaShaft {
-  from { transform: rotate(14deg) translateX(-6%); opacity: 0.6; }
-  to   { transform: rotate(18deg) translateX(10%); opacity: 1; }
-}
-
 /* The hull settling in the water while at anchor. Rings shed from under the
    boat and spread, because something floating displaces water even when it is
    going nowhere. Three, out of phase, so it never pulses like a beacon. */
@@ -2593,8 +2514,7 @@ body.hardcore-gauntlet::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sea-caustics::before, .sea-caustics::after,
-  .sea-shaft, .sea-ripple { animation: none; }
+  .sea-ripple { animation: none; }
   .sea-ripple { opacity: 0; }
   .sea-wake { display: none; }
 }

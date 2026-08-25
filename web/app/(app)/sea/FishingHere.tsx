@@ -306,7 +306,13 @@ export default function FishingHere({
                 onto it — and this overlay is anchored to the bottom of the sea,
                 not to a page that scrolls. Cap it and let the card scroll inside
                 itself, so Cast Again never ends up off the top of the screen. */}
-            <div style={{ width: '100%', maxHeight: '58vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+            <div data-no-steer style={{
+              width: '100%', maxHeight: '58vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              // The map sets touch-action: none so a drag steers instead of
+              // scrolling the page. This card is the one thing inside it that
+              // genuinely wants a vertical drag, so it takes that back.
+              touchAction: 'pan-y',
+            }}>
             {caught.kind === 'fish' ? (
               /* THE SAME CARD. Not a summary of it — the component the fishing
                  screen renders, handed the same payload. See

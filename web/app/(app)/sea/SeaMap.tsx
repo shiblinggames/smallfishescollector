@@ -41,6 +41,19 @@ const ACCEL = 2.6
 const SLOW = 240
 const ARRIVE = 26
 
+/** WHERE THE WATERLINE ACTUALLY IS, in pixels below the centre of the screen.
+ *
+ *  Not a taste value — measured. The composite is 210px wide and the character
+ *  sheet is 900x800, so it renders 186.7px tall; the boat overlay sits at
+ *  top 77%, width 55%, on art that is 493x146, which puts the hull between
+ *  y=143.7 and y=177.9 in composite space. The box is centred on the screen and
+ *  then shifted up 26% (48.5px) by Skipper, so the hull's waterline lands about
+ *  24px BELOW screen centre.
+ *
+ *  The wake and the ripples were being drawn at screen centre, which is the
+ *  middle of the character's chest. Hence rings floating above the boat. */
+const WATERLINE_Y = 24
+
 /** Marks in the wake. Enough to trail a couple of seconds at speed; more just
  *  costs nodes nobody can see. */
 const WAKE_MARKS = 16
@@ -106,6 +119,125 @@ function seaAt(p: Vec): string {
   )
 }
 
+/**
+ * THE SEA, DRAWN.
+ *
+ * The first attempt at making the ocean feel alive stacked CSS gradients on top
+ * of it — striped caustics and a sun shaft. That was the wrong instrument
+ * twice over: gradients with stops make LINES, and a sheet of light laid over
+ * a flat colour is still a flat colour with a sheet over it. What was missing
+ * was not light. It was that the water had no SURFACE.
+ *
+ * So it is drawn instead, in the loop that was already running, in world space:
+ *
+ *  · SWELL — long crests that roll across the chart. Each is two sine waves at
+ *    different wavelengths summed, so the line never repeats visibly, and each
+ *    is drawn twice: a dark trough under a pale crest, which is what actually
+ *    makes water read as having a near side and a far side.
+ *  · The rows are laid out in WORLD coordinates and wrapped, so the swell slides
+ *    past as you sail and the ocean has extent rather than being a texture stuck
+ *    to the camera.
+ *  · GLINTS — short highlights that sit on crests and blink out, scattered by a
+ *    hash of their own position so they never march in step.
+ *
+ * All of it is additive at very low alpha. Individually nothing here is visible;
+ * together they are the difference between a colour and a sea.
+ */
+const SWELL_SPACING = 96   // world px between crest lines
+const SWELL_STEP = 14      // px between sampled points along a crest
+
+/** Scratch buffer for one crest — x,y pairs. Module-level and reused every
+ *  frame for every row, because allocating a few hundred floats sixty times a
+ *  second is how a smooth map starts stuttering on a phone. */
+const crest = new Float32Array(512)
+
+function strokeCrest(
+  ctx: CanvasRenderingContext2D,
+  pts: Float32Array, n: number, dy: number,
+  color: string, width: number,
+) {
+  if (n < 4) return
+  ctx.beginPath()
+  ctx.moveTo(pts[0], pts[1] + dy)
+  for (let i = 2; i < n; i += 2) ctx.lineTo(pts[i], pts[i + 1] + dy)
+  ctx.strokeStyle = color
+  ctx.lineWidth = width
+  ctx.stroke()
+}
+
+function drawSea(
+  ctx: CanvasRenderingContext2D,
+  w: number, h: number,
+  camX: number, camY: number,
+  t: number,
+) {
+  ctx.clearRect(0, 0, w, h)
+
+  // Rows are placed on a world grid, so they slide with the camera instead of
+  // being painted onto it. `first` is the world Y of the topmost crest that can
+  // reach the screen.
+  const top = camY - h / 2 - SWELL_SPACING
+  const first = Math.floor(top / SWELL_SPACING) * SWELL_SPACING
+  const rows = Math.ceil(h / SWELL_SPACING) + 3
+
+  for (let r = 0; r < rows; r++) {
+    const worldY = first + r * SWELL_SPACING
+    // A per-row seed, so no two crests share a phase or an amplitude and the
+    // whole field never lines up into a plaid.
+    const seed = ((worldY * 0.017) % 1 + 1) % 1
+    const amp = 4.5 + seed * 4
+    const drift = t * (0.16 + seed * 0.12)
+
+    // Sample the crest once into the scratch buffer, then stroke it twice at
+    // two offsets. It has to be re-walked rather than re-stroked under a
+    // translate: canvas bakes path points into device space the moment they are
+    // added, so moving the transform afterwards moves nothing at all.
+    let n = 0
+    for (let sx = -SWELL_STEP; sx <= w + SWELL_STEP; sx += SWELL_STEP) {
+      const worldX = sx + camX - w / 2
+      crest[n++] = sx
+      crest[n++] =
+        worldY - camY + h / 2 +
+        Math.sin(worldX / 190 + drift + seed * 9) * amp +
+        Math.sin(worldX / 71 - drift * 1.7 + seed * 3) * amp * 0.42
+      if (n >= crest.length) break
+    }
+    // The trough first, sitting under the crest, then the pale crest on top.
+    // One line is a squiggle; a light edge over a dark one is a wave.
+    strokeCrest(ctx, crest, n, 3.5, 'rgba(2,14,26,0.13)', 2.4)
+    strokeCrest(ctx, crest, n, 0, `rgba(206,236,248,${0.075 + seed * 0.05})`, 1.5)
+  }
+
+  // GLINTS. Sparse, on a coarse world grid so they stay put on the water, each
+  // blinking on its own clock. The hash is cheap and deterministic — the same
+  // patch of sea always glints the same way, which is what stops it reading as
+  // static noise.
+  ctx.fillStyle = 'rgba(236,250,255,0.55)'
+  const G = 110
+  const gx0 = Math.floor((camX - w / 2) / G) - 1
+  const gy0 = Math.floor((camY - h / 2) / G) - 1
+  for (let i = 0; i <= Math.ceil(w / G) + 2; i++) {
+    for (let j = 0; j <= Math.ceil(h / G) + 2; j++) {
+      const cx = gx0 + i, cy = gy0 + j
+      const hash = Math.abs(Math.sin(cx * 127.1 + cy * 311.7) * 43758.5453) % 1
+      const hash2 = Math.abs(Math.sin(cx * 269.5 + cy * 183.3) * 43758.5453) % 1
+      // Each glint breathes on a 3–5s cycle, offset by its own hash, and is
+      // only lit for the top sliver of it.
+      const period = 3 + hash2 * 2
+      const phase = ((t * 0.5 + hash * period) % period) / period
+      if (phase > 0.22) continue
+      const a = Math.sin((phase / 0.22) * Math.PI)
+      const wx = cx * G + hash * G
+      const wy = cy * G + hash2 * G
+      const sx = wx - camX + w / 2
+      const sy = wy - camY + h / 2
+      ctx.globalAlpha = a * 0.5
+      ctx.fillRect(sx, sy, 9 + hash * 7, 1.4)
+    }
+  }
+  ctx.globalAlpha = 1
+}
+
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitBonus, baitQty,
 }: {
@@ -138,6 +270,9 @@ export default function SeaMap({
    *  knots is not sitting in its own rings. */
   const rippleRef = useRef<HTMLDivElement | null>(null)
 
+  /** THE WATER ITSELF. Drawn, not stacked out of CSS gradients — see drawSea. */
+  const seaCanvasRef = useRef<HTMLCanvasElement | null>(null)
+
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const worldRef = useRef<HTMLDivElement | null>(null)
   const boatRef = useRef<HTMLDivElement | null>(null)
@@ -149,6 +284,21 @@ export default function SeaMap({
   const vel = useRef<Vec>({ x: 0, y: 0 })
   const target = useRef<Vec>({ ...HOME })
   const facing = useRef<1 | -1>(1)
+
+  // ── STEERING BY THUMB ───────────────────────────────────────────────────
+  // Tap-to-course is fine with a mouse and miserable on a phone: crossing the
+  // chart meant tapping, watching, tapping again. Holding is the fix — press
+  // and the boat heads for your thumb, keep holding and drag and it follows,
+  // which is one continuous gesture instead of twenty discrete ones.
+  //
+  // The tap survives untouched. A press that never travels far enough is still
+  // a tap and still runs onTap, so entering a port and starting a cast work
+  // exactly as before; only a press that MOVES becomes a helm.
+  const dragFrom = useRef<Vec | null>(null)
+  const dragging = useRef(false)
+  /** Set on release after a drag, so the click the browser fires at the end of
+   *  the gesture does not also re-plot a course. */
+  const swallowTap = useRef(false)
 
   // Only what the UI actually needs to re-render for.
   const [near, setNear] = useState<Place | null>(null)
@@ -188,6 +338,7 @@ export default function SeaMap({
   }, [router])
 
   const onTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (swallowTap.current) return
     const pt = 'touches' in e
       ? { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }
       : { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY }
@@ -219,6 +370,69 @@ export default function SeaMap({
     }
     target.current = w
   }, [toWorld, near, locked, enter])
+
+  // The canvas has to match the wrapper in CSS pixels and the DEVICE in real
+  // ones, or the swell draws soft on a phone. Re-measured on resize and on
+  // orientation change; the loop reads the backing store size off the element.
+  useEffect(() => {
+    const cvs = seaCanvasRef.current
+    const wrap = wrapRef.current
+    if (!cvs || !wrap) return
+    const fit = () => {
+      const r = wrap.getBoundingClientRect()
+      // Capped at 2: a 3x phone screen triples the fill cost of every crest for
+      // a difference nobody can see on a 1.5px line.
+      const dpr = Math.min(2, window.devicePixelRatio || 1)
+      cvs.width = Math.max(1, Math.round(r.width * dpr))
+      cvs.height = Math.max(1, Math.round(r.height * dpr))
+      cvs.style.width = `${r.width}px`
+      cvs.style.height = `${r.height}px`
+      const ctx = cvs.getContext('2d')
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [])
+
+  /** How far a press has to travel before it stops being a tap. Generous
+   *  enough that a thumb resting on glass does not become a course change. */
+  const DRAG_SLOP = 12
+
+  const onDown = useCallback((e: React.PointerEvent) => {
+    // Anything with a button in it is a control, not the sea. Cast, Reel In,
+    // the prompt and the leaving dialog all live inside this element.
+    if ((e.target as HTMLElement).closest('button, [data-no-steer]')) return
+    dragFrom.current = { x: e.clientX, y: e.clientY }
+    dragging.current = false
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* fine */ }
+  }, [])
+
+  const onMove = useCallback((e: React.PointerEvent) => {
+    const from = dragFrom.current
+    if (!from) return
+    if (!dragging.current) {
+      if (Math.hypot(e.clientX - from.x, e.clientY - from.y) < DRAG_SLOP) return
+      dragging.current = true
+      vibrate(8)
+    }
+    const w = toWorld(e.clientX, e.clientY)
+    if (w) target.current = w
+  }, [toWorld])
+
+  const onUp = useCallback((e: React.PointerEvent) => {
+    if (dragging.current) {
+      // Let go and the boat coasts to where the thumb left it rather than
+      // stopping dead — a hull has mass, and cutting the target to the current
+      // position would read as hitting a wall.
+      swallowTap.current = true
+      setTimeout(() => { swallowTap.current = false }, 60)
+    }
+    dragFrom.current = null
+    dragging.current = false
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
+  }, [])
 
   // ── THE ONE LOOP ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -272,7 +486,7 @@ export default function SeaMap({
         wakeNext.current = (i + 1) % WAKE_MARKS
         wakeAt.current[i] = {
           x: pos.current.x - (vel.current.x / speed) * 46,
-          y: pos.current.y - (vel.current.y / speed) * 46,
+          y: pos.current.y - (vel.current.y / speed) * 46 + WATERLINE_Y,
           born: now,
         }
       }
@@ -297,6 +511,14 @@ export default function SeaMap({
       // reason there are no zone edges anywhere on the chart.
       const wrap = wrapRef.current
       if (wrap) wrap.style.background = seaAt(pos.current)
+      // The surface, over that colour. Same camera, so the swell belongs to the
+      // ocean rather than to the screen.
+      const cvs = seaCanvasRef.current
+      const ctx = cvs?.getContext('2d')
+      if (cvs && ctx) {
+        const dpr = cvs.width / Math.max(1, parseFloat(cvs.style.width) || 1)
+        drawSea(ctx, cvs.width / dpr, cvs.height / dpr, pos.current.x, pos.current.y, now / 1000)
+      }
       const boat = boatRef.current
       if (boat) {
         // Screen-space only: the bob, the heel and which way it faces. Position
@@ -336,16 +558,28 @@ export default function SeaMap({
     <div
       ref={wrapRef}
       onClick={onTap}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
       style={{
         cursor: 'pointer',
+        // Without this a drag on a touchscreen is a scroll gesture and the
+        // pointermove events stop coming the moment the browser claims it.
+        touchAction: 'none',
         // Background is written every frame by the loop — see seaAt. This is
         // only the colour before the first frame lands.
         background: seaAt(HOME),
       }}
       className="sea-surface"
     >
+      {/* THE SURFACE, under everything. Drawn in the loop — see drawSea. */}
+      <canvas ref={seaCanvasRef} aria-hidden style={{
+        position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+      }} />
+
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
-      <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', willChange: 'transform' }}>
+      <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: 1, willChange: 'transform' }}>
         {PLACES.map(p => (
           <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
         ))}
@@ -357,15 +591,13 @@ export default function SeaMap({
         ))}
       </div>
 
-      {/* THE SURFACE, in screen space. Light on the water does not sail with
-          you, so none of this belongs in the world layer. */}
-      <div aria-hidden className="sea-caustics" />
-      <div aria-hidden className="sea-shaft" />
-
       {/* The hull settling at anchor. Three rings out of phase so it reads as
-          water moving rather than something blinking. */}
+          water moving rather than something blinking. Pushed down to the
+          WATERLINE: at plain screen centre these sat around the captain's
+          chest, which is where they were floating above the boat. */}
       <div ref={rippleRef} aria-hidden style={{
         position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
+        transform: `translateY(${WATERLINE_Y}px)`,
       }}>
         <div className="sea-ripple" />
         <div className="sea-ripple" style={{ animationDelay: '1.5s' }} />
