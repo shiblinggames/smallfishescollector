@@ -67,6 +67,9 @@ art-source/badgebatch*.png
 public/badgebatch*.png
 .git-commit-msg.tmp
 
-# Godot web export for /sea. A build artifact, not source: rebuild it with
-# Project > Export > Web from godot/sea (Thread Support OFF).
-/public/sea/
+# public/sea/ USED to be the Godot web export for the /sea page — a build
+# artifact, hence the ignore. That experiment is parked (the ocean hub is
+# painted 2D now, see app/(app)/sea), and the directory holds the chart's
+# building art instead, which absolutely must ship. The rule stayed behind after
+# the pivot and silently swallowed the first five plates dropped into it.
+# If the Godot export ever comes back it needs its own path.

@@ -1510,9 +1510,16 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
             filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'brightness(0.94) saturate(0.92)',
             boxShadow: 'inset 0 0 40px rgba(0,0,0,0.55)',
           }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={place.art} alt="" draggable={false}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            {/* PAINTED LAND, not a page screenshot.
+                This used to crop `place.art` into the coastline, and that art is
+                a photo of the TAVERN'S INTERIOR — a room, seen from above, at
+                island scale. It read as a brown smear because that is what it
+                was. The land is land now, and the buildings standing on it are
+                what say which port this is. */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'radial-gradient(ellipse 120% 110% at 42% 22%, #7d6a4a 0%, #5f5137 42%, #43391f 78%, #2c2614 100%)',
+            }} />
             {/* A rim of light along the top edge, where the sky hits the land
                 and the cliff below it does not. */}
             <div aria-hidden style={{
@@ -1520,6 +1527,28 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
               background: 'linear-gradient(180deg, rgba(226,238,242,0.30) 0%, rgba(226,238,242,0) 22%)',
             }} />
           </div>
+
+          {/* ── WHAT IS BUILT HERE ──────────────────────────────────────
+              Counter-squashed and anchored at the BOTTOM, so each building
+              stands up out of the plane and grows from where it meets the
+              ground rather than from its middle. Ordered back to front in the
+              chart, so the ones further down the island overlap the ones
+              behind them the way a hillside town does. */}
+          {place.buildings?.map((b, i) => (
+            <div key={i} style={{
+              position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
+              width: d * b.scale,
+              transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+              transformOrigin: 'bottom center',
+              filter: locked
+                ? 'grayscale(0.9) brightness(0.5)'
+                : 'drop-shadow(0 6px 10px rgba(0,0,0,0.55))',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={b.art} alt="" draggable={false}
+                style={{ width: '100%', display: 'block' }} />
+            </div>
+          ))}
 
           {/* ── THE JETTY, standing on the plane ────────────────────────
               Counter-squashed like everything else that has height, and

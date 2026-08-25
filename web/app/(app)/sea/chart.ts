@@ -37,6 +37,20 @@ export type Place = {
    *  at all any more — see `sea`. */
   art: string
   /**
+   * WHAT IS BUILT ON IT.
+   *
+   * A port used to be a coastline with a page screenshot cropped inside it,
+   * which is why the Mainland read as a brown smear: the plate was a photo of
+   * the tavern's INTERIOR, seen from above, at island scale. A place you go
+   * ashore at should look like somewhere people live.
+   *
+   * So ports carry buildings, painted in the same idiom as the Crew Hall's, and
+   * they STAND UP off the plane rather than lying on it. Coordinates are
+   * percentages of the island box so a building keeps its spot whatever radius
+   * the port is given, and `scale` is a fraction of the island's diameter.
+   */
+  buildings?: { art: string; x: number; y: number; scale: number }[]
+  /**
    * WHAT THIS WATER LOOKS LIKE.
    *
    * A water does not get a shape, it gets a COLOUR, and the sea blends toward
@@ -80,11 +94,25 @@ export const PLACES: Place[] = [
     id: 'mainland', name: 'The Mainland', blurb: 'Tavern, market and shops',
     href: '/tavern', x: 0, y: 0, r: 250, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
+    // A little settlement rather than one hall: the Mainland IS the tavern, the
+    // market and the shops, and it should look like all three from the water.
+    // Ordered back to front so the ones lower on the island overlap correctly.
+    buildings: [
+      { art: '/sea/tackle.png', x: 24, y: 34, scale: 0.40 },
+      { art: '/sea/market.png', x: 70, y: 40, scale: 0.42 },
+      { art: '/sea/tavern.png', x: 46, y: 58, scale: 0.52 },
+    ],
   },
   {
     id: 'expeditions', name: 'The Harbour', blurb: 'Voyages and raids',
     href: '/expeditions', x: -780, y: -380, r: 210, art: '/raid-harbor-fleet.jpg',
     kind: 'port', minLevel: 0,
+    // The lighthouse sits high and back, which is what makes the Harbour
+    // readable from a long way off — it is the tallest thing on the chart.
+    buildings: [
+      { art: '/sea/lighthouse.png', x: 68, y: 28, scale: 0.46 },
+      { art: '/sea/harbour.png', x: 40, y: 54, scale: 0.52 },
+    ],
   },
   {
     // Comes right up to the Mainland shore, so you step off the beach into it.
