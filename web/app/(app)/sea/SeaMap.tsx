@@ -136,32 +136,67 @@ const WATER_RGB: { x: number; y: number; r: number; c: [number, number, number][
  * and by about twice its radius it contributes nearly nothing. Linear was far
  * too muddy — everything ended up the average of everything.
  */
-function seaAt(p: Vec): string {
-  let wSum = 0.55 // the open ocean always has a vote, so nothing goes pure
+/** The blend, and the two things the rest of the frame needs out of it: the CSS
+ *  for the backdrop, and how DARK that water is. The wash and the sky both read
+ *  the darkness so the whole frame agrees about how deep you are. */
+type SeaLook = { css: string; lum: number; haze: string }
+
+function seaAt(p: Vec): SeaLook {
+  // THE OPEN OCEAN GETS A SMALL VOTE, NOT A BIG ONE.
+  //
+  // It used to get 0.55, which meant that even sitting dead in the middle of
+  // the Abyss more than a third of the colour was ordinary blue — the deep
+  // zones never actually arrived at their own palette. And the falloff was
+  // gentle enough that being inside a zone barely counted for more than being
+  // near it. Now the vote is 0.18 and the falloff is a fourth power, so the
+  // water reaches the colour it is supposed to be and reaches it well before
+  // the middle, which is what "deep" is supposed to feel like.
+  let wSum = 0.18
   const acc: [number, number, number][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
   for (let k = 0; k < 3; k++) {
-    for (let ch = 0; ch < 3; ch++) acc[k][ch] = OPEN_RGB[k][ch] * 0.55
+    for (let ch = 0; ch < 3; ch++) acc[k][ch] = OPEN_RGB[k][ch] * 0.18
   }
   for (const w of WATER_RGB) {
     const d = Math.hypot(p.x - w.x, p.y - w.y) / w.r
-    const weight = 1 / (1 + d * d * d)
+    const d2 = d * d
+    const weight = 1 / (1 + d2 * d2)
     wSum += weight
     for (let k = 0; k < 3; k++) {
       for (let ch = 0; ch < 3; ch++) acc[k][ch] += w.c[k][ch] * weight
     }
   }
   const out = acc.map(c => c.map(v => Math.round(v / wSum)))
-  // Painted three ways from the same blend: light on the horizon, mid through
-  // the body, dark toward the viewer, which is how open water actually reads
-  // from above.
-  return (
-    `radial-gradient(ellipse 130% 100% at 50% -6%, ` +
-    `rgb(${out[2].join(',')}) 0%, ` +
-    `rgb(${out[1].join(',')}) 38%, ` +
-    `rgb(${out[0].join(',')}) 78%, ` +
-    `rgb(${out[0].map(v => Math.max(0, v - 14)).join(',')}) 100%)`
-  )
+
+  // Perceived brightness of the DEEP stop, 0..1. Drives how much light the
+  // painted wash is allowed to add and how bright the horizon haze is.
+  // Divided by 55, not 120. The deep stops on this chart run from about 39 down
+  // to 16, so a 120 divisor squashed every zone into the bottom quarter of the
+  // range and the Abyss came out barely darker than the Shallows.
+  const lum = Math.min(1, (out[0][0] * 0.21 + out[0][1] * 0.72 + out[0][2] * 0.07) / 55)
+
+  // THE HAZE the sky has to meet. It is this water, lifted toward white — so
+  // wherever the sea and the sky touch they are the same colour, which is the
+  // only thing that stops the join reading as a cut.
+  // Lifted toward white by an amount that itself depends on the depth, so the
+  // Abyss gets a low grey murk on the horizon and the Shallows get a bright one.
+  const lift = 0.28 + lum * 0.5
+  const h = out[2].map(v => Math.round(v + (232 - v) * lift))
+
+  return {
+    lum,
+    haze: `rgb(${h.join(',')})`,
+    // Painted three ways from the same blend, and weighted DOWN toward the
+    // deep end: the pale stop used to own the top 38% of the screen, which is
+    // a lot of light to be showing in water that is meant to be black.
+    css:
+      `radial-gradient(ellipse 130% 104% at 50% -10%, ` +
+      `rgb(${out[2].join(',')}) 0%, ` +
+      `rgb(${out[1].join(',')}) 24%, ` +
+      `rgb(${out[0].join(',')}) 60%, ` +
+      `rgb(${out[0].map(v => Math.max(0, Math.round(v * 0.62))).join(',')}) 100%)`,
+  }
 }
+
 
 /**
  * THE SEA, DRAWN.
@@ -263,6 +298,9 @@ function drawSea(
   w: number, h: number,
   camX: number, camY: number,
   t: number,
+  /** 0..1 brightness of the water here. Scales the pale layer only — the dark
+   *  pooling stays, because deep water still has structure in it. */
+  lum: number,
 ) {
   ctx.clearRect(0, 0, w, h)
   seaPatterns(ctx)
@@ -270,9 +308,10 @@ function drawSea(
   // Both layers move WITH the camera, because they are the water and the water
   // stays where it is. On top of that each has its own slow drift, so the sea
   // is still moving when you are not — a becalmed ocean is not a still one.
-  const layer = (pat: CanvasPattern | null, size: number, px: number, py: number) => {
+  const layer = (pat: CanvasPattern | null, size: number, px: number, py: number, alpha: number) => {
     if (!pat) return
     ctx.save()
+    ctx.globalAlpha = alpha
     // THE SAME PLANE THE WORLD IS ON. The wash is water, the water is the
     // ground, and the ground is foreshortened — so the mottle compresses
     // vertically by exactly the amount the island layer does. Drawn taller by
@@ -285,8 +324,8 @@ function drawSea(
     ctx.fillRect(0, 0, w + size, h / GROUND + size)
     ctx.restore()
   }
-  layer(patDeep, DEEP_TILE, camX + t * 5.5, camY + t * 2.5)
-  layer(patPale, PALE_TILE, camX + t * -3.5, camY + t * 6.5)
+  layer(patDeep, DEEP_TILE, camX + t * 5.5, camY + t * 2.5, 1)
+  layer(patPale, PALE_TILE, camX + t * -3.5, camY + t * 6.5, 0.25 + lum * 0.75)
 }
 
 export default function SeaMap({
@@ -323,6 +362,8 @@ export default function SeaMap({
 
   /** The cloud bank, which parallaxes at a fraction of the camera. */
   const cloudRef = useRef<HTMLDivElement | null>(null)
+  /** The sky, recoloured every frame to match the water under it. */
+  const skyRef = useRef<HTMLDivElement | null>(null)
 
   /** THE WATER ITSELF. Drawn, not stacked out of CSS gradients — see drawSea. */
   const seaCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -449,22 +490,28 @@ export default function SeaMap({
     const w = toWorld(pt.x, pt.y)
     if (!w) return
 
-    // Tapping the place you are already at is the second half of the trip.
-    // Checked first, or the tap would just re-issue a course to where you are.
+    // A TAP IS A HELM ORDER. It goes exactly where your thumb went, and the
+    // only thing that overrides that is land.
+    //
+    // It used to course to a WATER'S CENTRE whenever the tap landed inside one,
+    // which was defensible when the zones were small discs you were trying to
+    // get into. Now that they are enormous overlapping regions you sail around
+    // INSIDE, almost every tap on screen lands in one — so every tap dragged
+    // you back toward the middle of the zone regardless of where you pressed,
+    // and the boat felt stuck. Navigating TO a place is what the compass and
+    // the prompt are for; the sea itself is steering.
     const here = near
-    if (here && !locked(here) && dist(w, here) < here.r) {
-      // Ports only. A water is fished from the prompt, in one press — tapping
-      // the water a second time to confirm was a gate on a decision already
-      // made, and it meant every tap inside a zone you were sitting in did
-      // something you did not ask for.
-      if (here.kind === 'port') { enter(here); return }
+    if (here && !locked(here) && here.kind === 'port' && dist(w, here) < here.r) {
+      // Tapping the port you are already moored at is the second half of the
+      // trip: it takes you ashore.
+      enter(here)
+      return
     }
 
-    // Tapping ON a place courses for its edge, so you pull alongside a port
-    // rather than trying to sail into it. A water you go into properly.
+    // Land is the exception, because you cannot sail onto it. Tapping a port
+    // courses for its edge so you pull alongside rather than into it.
     for (const p of PLACES) {
-      if (dist(w, p) < p.r) {
-        if (p.kind === 'water') { target.current = { x: p.x, y: p.y }; return }
+      if (p.kind === 'port' && dist(w, p) < p.r) {
         const dx = pos.current.x - p.x
         const dy = pos.current.y - p.y
         const m = Math.hypot(dx, dy) || 1
@@ -472,6 +519,7 @@ export default function SeaMap({
         return
       }
     }
+
     target.current = w
   }, [toWorld, near, locked, enter])
 
@@ -630,14 +678,32 @@ export default function SeaMap({
       // The sea recoloured under the boat. One style write per frame, and the
       // reason there are no zone edges anywhere on the chart.
       const wrap = wrapRef.current
-      if (wrap) wrap.style.background = seaAt(pos.current)
+      const look = seaAt(pos.current)
+      if (wrap) wrap.style.background = look.css
+      // THE SKY TAKES ITS COLOUR FROM THE WATER IT MEETS.
+      //
+      // This is the whole fix for the horizon reading as a cut. It was a fixed
+      // pale blue sitting on top of near-black water, so there was a hard value
+      // break across the join and sailing north looked like the sea and the sky
+      // chopping each other off. Now the bottom of the sky IS this water lifted
+      // toward white, so wherever they touch they are the same colour and the
+      // one dissolves into the other. Over the Abyss the horizon goes grey and
+      // low; over the Shallows it comes up bright.
+      const sky = skyRef.current
+      if (sky) {
+        sky.style.setProperty('--sea-haze', look.haze)
+        sky.style.opacity = String(0.34 + look.lum * 0.66)
+      }
       // The surface, over that colour. Same camera, so the swell belongs to the
       // ocean rather than to the screen.
       const cvs = seaCanvasRef.current
       const ctx = cvs?.getContext('2d')
       if (cvs && ctx) {
         const dpr = cvs.width / Math.max(1, parseFloat(cvs.style.width) || 1)
-        drawSea(ctx, cvs.width / dpr, cvs.height / dpr, pos.current.x, pos.current.y, now / 1000)
+        // The pale layer is light on water, so there has to be less of it in
+        // water that is not catching any. The Abyss was getting exactly as much
+        // sparkle as the Shallows, which is most of why it never read as deep.
+        drawSea(ctx, cvs.width / dpr, cvs.height / dpr, pos.current.x, pos.current.y, now / 1000, look.lum)
       }
       const boat = boatRef.current
       if (boat) {
@@ -689,7 +755,7 @@ export default function SeaMap({
         touchAction: 'none',
         // Background is written every frame by the loop — see seaAt. This is
         // only the colour before the first frame lands.
-        background: seaAt(HOME),
+        background: seaAt(HOME).css,
       }}
       className="sea-surface"
     >
@@ -714,7 +780,7 @@ export default function SeaMap({
       {/* THE HORIZON. Screen space, above the world so islands haze into it as
           they sail toward the top, below the boat so nothing occludes the
           captain. See globals.css for why it earns the one line on this page. */}
-      <div aria-hidden className="sea-sky">
+      <div ref={skyRef} aria-hidden className="sea-sky">
         <div ref={cloudRef} className="sea-clouds">
           {CLOUDS.map((c, i) => (
             <div key={i} className="sea-cloud" style={{
@@ -722,7 +788,6 @@ export default function SeaMap({
             }} />
           ))}
         </div>
-        <div className="sea-horizon" />
       </div>
 
       {/* The hull settling at anchor. Three rings out of phase so it reads as
