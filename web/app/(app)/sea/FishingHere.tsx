@@ -145,7 +145,7 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
-  seaPhase, baitBag, onBaitChange, hold, onBaitSpent, onPose, onBusy, spritesReady, onClose,
+  seaPhase, baitBag, onBaitChange, hold, onCaught, onBaitSpent, onPose, onBusy, spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -192,6 +192,9 @@ export default function FishingHere({
   /** What is aboard and what it can take. The hold is the reason a session
    *  ends, so it belongs on screen while you are filling it. */
   hold: { count: number; capacity: number }
+  /** How many fish this catch actually banked, so the hold ticks up as you
+   *  fill it rather than sitting at whatever it was when the page loaded. */
+  onCaught: (qty: number) => void
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
   /** Told when the dial is up, so the map can stop moving entirely behind it.
    *  See the note on the freeze in SeaMap. */
@@ -270,6 +273,13 @@ export default function FishingHere({
    *  rolled, and swapping would move the odds of something already decided. */
   const canSwapBait = phase === 'idle' || phase === 'result'
   const holdFull = hold.count >= hold.capacity
+  const outOfBait = baitLeft <= 0
+  /** A CAST THAT CANNOT BANK ANYTHING IS NOT A CAST. reelIn clamps catchQty to
+   *  the space actually left, so with a full hold you would play the whole loop
+   *  — bait spent, dial spun, fish landed — and bank nothing, with nothing on
+   *  screen saying why. The fishing screen refuses the cast outright and so does
+   *  this. */
+  const canCast = spritesReady && !holdFull && !outOfBait
   const [retryFlash, setRetryFlash] = useState(false)
   const [sigilPaid, setSigilPaid] = useState(0)
   /** A SHINY MUST BE RESOLVABLE WHERE IT WAS CAUGHT — sellGoldenTrophy and
@@ -380,7 +390,7 @@ export default function FishingHere({
   }, [])
 
   const cast = useCallback(() => {
-    if (phase !== 'idle' || !spritesReady) return
+    if (phase !== 'idle' || !canCast) return
     setErr('')
     setCaught(null)
     // THE DIAL FLASHING AFTER REEL IN. `hooked` used to be cleared the instant
@@ -455,7 +465,7 @@ export default function FishingHere({
       setPhase('idle')
       onPose('rest')
     })
-  }, [phase, spritesReady, bait, zone, mods.reelSpeedMult, onBaitSpent, onPose])
+  }, [phase, canCast, bait, zone, mods.reelSpeedMult, onBaitSpent, onPose])
 
   const strike = useCallback(() => {
     if (phase !== 'hooked' || !hooked) return
@@ -586,6 +596,9 @@ export default function FishingHere({
         // is server authoritative and reelIn owns it.
         setStreak(res.perfectStreak ?? 0)
         setXpPop({ id: Date.now(), value: res.xpGained })
+        // The server clamps catchQty to the space actually left, so this is the
+        // number that went in rather than the number that was rolled.
+        onCaught(res.catchQty ?? 1)
         setCaught({
           kind: 'fish',
           card: {
@@ -1126,6 +1139,21 @@ export default function FishingHere({
           ) : null}
         </AnimatePresence>
 
+        {(holdFull || outOfBait) && (phase === 'idle' || phase === 'result') && (
+          // Not just "you cannot" — where the fix is. A zone buyer is sitting in
+          // this water and will take the lot, which is the whole reason they
+          // exist, and nobody is going to guess that from a greyed-out button.
+          <p className="font-karla font-600" style={{
+            fontSize: '0.74rem', color: holdFull ? '#f8a2a2' : '#e8c98a',
+            textAlign: 'center', lineHeight: 1.5,
+            textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+          }}>
+            {holdFull
+              ? 'Your hold is full. Sell it to the buyer in this water, or sail it home to the market.'
+              : 'Out of bait. There are peddlers out here, and the shop ashore.'}
+          </p>
+        )}
+
         {err && (
           <p className="font-karla font-600" style={{
             fontSize: '0.78rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
@@ -1227,16 +1255,19 @@ export default function FishingHere({
                 background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
                 border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
                 fontSize: '0.72rem', touchAction: 'manipulation', lineHeight: 1.15,
-                color: spritesReady ? '#67d4e8' : 'rgba(103,212,232,0.45)',
+                color: canCast ? '#67d4e8' : 'rgba(103,212,232,0.4)',
                 boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
               }}
               initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-              whileTap={spritesReady ? { scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' } : undefined}
+              whileTap={canCast ? { scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' } : undefined}
               transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
               {/* "Rigging" is only ever seen on a cold load: the frames are
                   fetched the moment the map mounts, and you have to sail to a
                   zone before this button exists at all. */}
-              {!spritesReady ? 'Rigging' : phase === 'result' ? <>Cast<br />Again</> : 'Cast'}
+              {!spritesReady ? 'Rigging'
+                : holdFull ? <>Hold<br />Full</>
+                  : outOfBait ? <>No<br />Bait</>
+                    : phase === 'result' ? <>Cast<br />Again</> : 'Cast'}
             </motion.button>
           )}
           {phase === 'hooked' && (

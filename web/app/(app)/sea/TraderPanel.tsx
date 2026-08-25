@@ -19,12 +19,15 @@ import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
 
 export default function TraderPanel({
-  trader, alreadyDealt, dealsLeft, onDealt, onClose,
+  trader, alreadyDealt, dealsLeft, onDealt, onHoldEmptied, onClose,
 }: {
   trader: Trader
   alreadyDealt: boolean
   dealsLeft: number
   onDealt: (key: string) => void
+  /** Both sell paths clear the hold outright, so the map's counter has to hear
+   *  about it or it keeps showing a boat full of fish you no longer have. */
+  onHoldEmptied: () => void
   onClose: () => void
 }) {
   const [busy, setBusy] = useState(false)
@@ -79,6 +82,7 @@ export default function TraderPanel({
       const res = await sellToResident(trader.zoneId)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
       announce(res.doubloons)
+      onHoldEmptied()
       setDone(`${res.earned.toLocaleString()} ⟡ for the lot. Hold's empty.`)
       vibrate([0, 30, 40, 60])
     } catch {
@@ -96,6 +100,7 @@ export default function TraderPanel({
       const res = await strikeDeal(trader.key)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
       announce(res.doubloons)
+      if (res.earned != null) onHoldEmptied()
       onDealt(trader.key)
       setDone(
         res.earned != null

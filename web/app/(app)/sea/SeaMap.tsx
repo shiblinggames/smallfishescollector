@@ -780,6 +780,12 @@ export default function SeaMap({
   /** WHICH BAIT IS ON THE HOOK. Fixed for the whole session before, at whatever
    *  the page happened to pick; the bait row can change it now. */
   const [activeBait, setActiveBait] = useState(bait)
+  /** WHAT IS IN THE HOLD, live. Seeded from the server on load and then kept in
+   *  step here: it climbs as you catch and empties the moment you sell to a
+   *  buyer. Read once and never updated, it would sit at its load-time value
+   *  while you filled the boat — and the hold is the one number that decides
+   *  when a session has to end. */
+  const [holdCount, setHoldCount] = useState(hold.count)
   /** Which pose the captain is in. The game already draws three — rod up,
    *  line in the water, mid-cast — so the map uses the same ones rather than
    *  inventing a fourth. `wait` during the bite wait is most of the missing
@@ -1502,7 +1508,8 @@ export default function SeaMap({
           tideTurner={tideTurner}
           seaPhase={phase}
           baitBag={baitBag}
-          hold={hold}
+          hold={{ count: holdCount, capacity: hold.capacity }}
+          onCaught={qty => setHoldCount(n => Math.min(hold.capacity, n + qty))}
           onBaitChange={t => {
             // Re-reads the remaining count off the bag. The catch-zone bonus is
             // re-read too, from getBait above, so the dial is built from the
@@ -1524,6 +1531,7 @@ export default function SeaMap({
           alreadyDealt={dealt.includes(hailing.key)}
           dealsLeft={DEALS_PER_DAY - dealt.length}
           onDealt={key => setDealt(prev => (prev.includes(key) ? prev : [...prev, key]))}
+          onHoldEmptied={() => setHoldCount(0)}
           onClose={() => setHailing(null)}
         />
       )}
