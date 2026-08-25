@@ -69,6 +69,23 @@ function rollSweep(catchDifficulty: number, reelMult: number): number {
  *  instrument was simply gone, which is why hitting a perfect felt like hitting
  *  nothing. Now the dial stays up, frozen on the angle that resolved, long
  *  enough to show the snap and the gold burst, and the card comes after. */
+/** The elapsed-wait readout. Isolated so its interval re-renders a single <p>
+ *  and not the dial, the bait row or anything else on screen. */
+function WaitTimer() {
+  const [ms, setMs] = useState(0)
+  useEffect(() => {
+    const startedAt = Date.now()
+    const id = window.setInterval(() => setMs(Date.now() - startedAt), 100)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <p className="font-karla font-700" style={{
+      fontSize: '0.68rem', color: 'rgba(190,212,228,0.55)', marginTop: 2,
+      fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+    }}>{(ms / 1000).toFixed(1)}s</p>
+  )
+}
+
 type Phase = 'idle' | 'waiting' | 'hooked' | 'reeling' | 'result'
 
 /** How long the frozen dial holds before the card. A perfect earns longer:
@@ -269,7 +286,29 @@ export default function FishingHere({
   // spins on the compositor thread and main-thread work cannot make it skip.
   // The angle is then DERIVED from the animation's own clock whenever anybody
   // asks, rather than stored. Zero renders per frame.
-  const needleRef = useRef<HTMLDivElement | null>(null)
+  /**
+   * A CALLBACK REF, not a plain one, and this is what fixes the needle sitting
+   * still after a cast.
+   *
+   * The spin used to start in an effect keyed on `phase`. That worked until the
+   * content area became one AnimatePresence with mode="wait" — which is the
+   * whole point of mode="wait": the previous child finishes leaving BEFORE the
+   * next one mounts. So when the phase turned to 'hooked', the effect ran while
+   * the waiting-dots were still exiting and the dial did not exist yet.
+   * needleRef.current was null, startSpin bailed out, and nothing ever started
+   * it again.
+   *
+   * Hooking the node itself means the spin begins the moment the needle is
+   * actually in the document, whenever that turns out to be.
+   */
+  const needleEl = useRef<HTMLDivElement | null>(null)
+  const needleRef = useCallback((el: HTMLDivElement | null) => {
+    needleEl.current = el
+    if (el && phaseRef.current === 'hooked') startSpinRef.current?.(angleRef.current)
+  }, [])
+  /** Both mirrored, because the callback ref above is created once. */
+  const phaseRef = useRef<Phase>('idle')
+  const startSpinRef = useRef<((from: number) => void) | null>(null)
   const spinRef = useRef<Animation | null>(null)
   const spinStart = useRef<number | null>(null)
   const spinFrom = useRef(0)
@@ -287,7 +326,7 @@ export default function FishingHere({
   }, [])
 
   const startSpin = useCallback((from: number) => {
-    const el = needleRef.current
+    const el = needleEl.current
     spinRef.current?.cancel()
     spinRef.current = null
     spinStart.current = null
@@ -311,12 +350,17 @@ export default function FishingHere({
     }
   }, [])
 
+  phaseRef.current = phase
+  startSpinRef.current = startSpin
   useEffect(() => {
     if (phase !== 'hooked') {
       if (phase !== 'reeling') { spinRef.current?.cancel(); spinRef.current = null; spinStart.current = null }
       return
     }
-    startSpin(angleRef.current)
+    // Covers the case where the node is ALREADY mounted when the phase turns —
+    // a retry re-spins without the dial ever leaving. The callback ref covers
+    // the other case, where the node arrives after.
+    if (needleEl.current) startSpin(angleRef.current)
     return () => { spinRef.current?.cancel(); spinRef.current = null; spinStart.current = null }
   }, [phase, startSpin])
 
@@ -429,7 +473,7 @@ export default function FishingHere({
     // Putting the frozen angle into inline style first means there is no gap:
     // the instant the animation lets go, the correct transform is already
     // sitting underneath it.
-    const nEl = needleRef.current
+    const nEl = needleEl.current
     if (nEl) nEl.style.transform = `rotate(${at}deg)`
     setAngle(at)
     spinRef.current?.cancel()
@@ -1050,6 +1094,13 @@ export default function FishingHere({
             }}>
               Waiting on a bite
             </p>
+            {/* THE TIMER, as the fishing screen has it. The wait is three to
+                twelve seconds and it is not a fixed number — bait, rod and
+                level all move it — so a running count is the only way anybody
+                can tell that their tackle is doing something. Its own component
+                so a 100ms tick re-renders this one line rather than the whole
+                overlay. */}
+            <WaitTimer />
           </motion.div>
           ) : null}
         </AnimatePresence>

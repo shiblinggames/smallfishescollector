@@ -1634,8 +1634,8 @@ const ISLAND_LIFT = 15
  *  The character art reserves its upper half for the rod and the line, so the
  *  hull is nowhere near the middle and anything positioned against the BOX ends
  *  up a hundred pixels away from anything you can see. */
-const BOAT_TOP = 13
-const WATER_AT = 119
+const HEAD_TOP = 8
+const HULL_BOTTOM = 119
 
 const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
   const char = getCharacterSprites(look.characterColor)
@@ -1714,80 +1714,33 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
       {/* Contact shadow, ON the plane and therefore squashed with it. */}
       {/* Same correction as the landmarks: a pale disturbance ON the
           waterline rather than a dark shadow cast below it. */}
-      {/* AT THE WATERLINE, which is not where this was.
-          The composite is centred on this origin and stands 250px tall, but the
-          character sheet reserves its whole upper half for the rod and the
-          line — the actual boat only occupies y +13 to +119 of that box. The
-          contact wash was at y 0, which is the captain's HEAD. It has been
-          sitting a hundred pixels above the water this whole time, which is a
-          large part of why the boats looked like they were hovering. */}
-      <div aria-hidden style={{
-        position: 'absolute', left: -74, top: WATER_AT - 13, width: 148, height: 26,
-        borderRadius: '50%',
-        background: 'radial-gradient(ellipse at center, rgba(214,238,246,0.34), rgba(206,232,242,0) 72%)',
-        filter: 'blur(5px)',
-      }} />
-      <div aria-hidden style={{
-        position: 'absolute', left: -104, top: WATER_AT - 20, width: 208, height: 40,
-        borderRadius: '50%',
-        border: '1px solid rgba(206,232,242,0.16)', filter: 'blur(4px)',
-      }} />
-      <div className="trader-hull" style={{
-        // scaleX comes from the patrol rather than a coin flip, so a trader
-        // always looks the way they are actually drifting. Written by the loop,
-        // which finds this node by THIS CLASS — it was missing, so the lookup
-        // returned null every frame and every NPC stayed facing left for ever.
-        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78)`,
-        // Someone you have already dealt with today is still there — they do
-        // not vanish, because a person vanishing when you are done with them is
-        // the sort of thing that makes a world feel like a vending machine.
-        // They just stop calling out.
-        opacity: done ? 0.62 : 1,
-      }}>
-        <TraderSkiff look={trader.look} />
-      </div>
-
       {/* ── THE HAIL MARK ────────────────────────────────────────────
-          Whether you are close enough to talk to somebody was only ever stated
-          by a button appearing at the bottom of the screen, a long way from the
-          person it referred to. Now it is said ON them: a mark that rises and
-          brightens when you come into range, so the thing you are looking at is
-          the thing that tells you.
+          Just the mark, just above the head, just when you can talk to them.
+          There used to be a small dot when they were out of range, which was
+          meant to say "somebody is here" — but it sat right on the captain's
+          face, and it was answering a question the boat itself already answers.
+          A person you can see is a person who is there. */}
+      {isNear && !done && (
+        <div aria-hidden className="sea-hail" style={{
+          // HEAD_TOP is +8, measured off the sheet by the widest run per row so
+          // the thin fishing line never counts as the character. The mark is
+          // counter-squashed and scales about its own centre, so this places
+          // its bottom a few pixels clear of the hat.
+          position: 'absolute', left: 0, top: HEAD_TOP - 46,
+          transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+          pointerEvents: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 26, height: 26, marginLeft: -13, borderRadius: '50%',
+          background: 'rgba(24,18,10,0.92)',
+          border: '1px solid rgba(255,206,138,0.85)',
+          boxShadow: '0 0 16px rgba(255,196,110,0.55)',
+        }}>
+          <span className="font-cinzel font-700" style={{
+            fontSize: '0.86rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
+          }}>!</span>
+        </div>
+      )}
 
-          Out of range it is a small dot — they are there, they are a person,
-          they are not shouting. In range it is a full mark and it bobs. */}
-      <div aria-hidden style={{
-        // Just above the captain's head. Measured, not guessed: the visible
-        // boat occupies y +13 to +119 of a box that runs -125 to +125, because
-        // the sheet's whole upper half is empty rod-and-line space. Anchoring
-        // to the BOX put this 165px above anything you can see.
-        position: 'absolute', left: 0, top: BOAT_TOP - 47,
-        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center',
-        pointerEvents: 'none',
-      }}>
-        {done ? null : isNear ? (
-          <div className="sea-hail" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 26, height: 26, marginLeft: -13, borderRadius: '50%',
-            background: 'rgba(24,18,10,0.92)',
-            border: '1px solid rgba(255,206,138,0.85)',
-            boxShadow: '0 0 16px rgba(255,196,110,0.55)',
-          }}>
-            <span className="font-cinzel font-700" style={{
-              fontSize: '0.86rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
-            }}>!</span>
-          </div>
-        ) : (
-          <div style={{
-            width: 7, height: 7, marginLeft: -3.5, borderRadius: '50%',
-            background: 'rgba(255,206,138,0.5)',
-            boxShadow: '0 0 6px rgba(255,196,110,0.4)',
-          }} />
-        )}
-      </div>
-
-      {/* Name and trade, counter-squashed — a label was never on the plane. */}
       {/* THE NAME PLATE, above the boat and on a solid base.
           It used to sit at +30 — which is ON the hull — as bare text over
           painted timber, so it was unreadable against exactly the thing it was
@@ -1799,7 +1752,9 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
         // tall — it spans -125 to +125 from this origin. A plate at -62 was
         // sitting squarely on the captain's head. Anchored by its TOP so the
         // counter-squash grows it downward, away from the boat.
-        position: 'absolute', left: 0, top: WATER_AT + 4,
+        // Right under the hull. The gap that made this look adrift was the
+        // pale wash that used to sit between the two.
+        position: 'absolute', left: 0, top: HULL_BOTTOM + 2,
         transform: `translateX(-50%) scaleY(${1 / GROUND})`,
         transformOrigin: 'top center',
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
@@ -1882,38 +1837,16 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
               position: 'absolute', left: place.r + m.x, top: place.r + m.y,
               pointerEvents: 'none',
             }}>
-              {/* WHERE IT MEETS THE WATER — not a shadow under it.
-                  A dark ellipse offset below an object is the language of a
-                  thing casting a shadow onto a floor, which is why these read
-                  as hovering. What actually happens at a waterline is the
-                  opposite: the surface goes PALE where it is disturbed, and
-                  darker only in the object's immediate contact ring.
-
-                  So it is a wide pale wash centred exactly ON the base, with a
-                  small dark contact directly beneath it and no offset at all —
-                  nothing is being cast anywhere. */}
-              <div aria-hidden style={{
-                position: 'absolute', left: -m.size * 0.5, top: -m.size * 0.075,
-                width: m.size, height: m.size * 0.15,
-                borderRadius: '50%',
-                background: 'radial-gradient(ellipse at center, rgba(214,238,246,0.46), rgba(206,232,242,0) 72%)',
-                filter: `blur(${Math.round(m.size * 0.025)}px)`,
-              }} />
-              {/* A SECOND, WIDER RING, and nothing dark anywhere.
-                  The dark contact ellipse that used to be here was still the
-                  shadow problem in miniature: ANY dark shape under an object
-                  reads as that object casting onto a surface, however small it
-                  is, and a surface under it is the one thing there is not.
-                  Water disturbed by something standing in it goes PALE, so the
-                  whole contact is pale — a tight collar at the base and a wider
-                  ring spreading off it. */}
-              <div aria-hidden style={{
-                position: 'absolute', left: -m.size * 0.78, top: -m.size * 0.1,
-                width: m.size * 1.56, height: m.size * 0.2,
-                borderRadius: '50%',
-                border: `1px solid rgba(206,232,242,0.18)`,
-                filter: `blur(${Math.round(m.size * 0.02)}px)`,
-              }} />
+              {/* NOTHING UNDER THEM AT ALL.
+                  Two attempts at a waterline lived here: a dark ellipse, which
+                  read as a shadow cast onto a floor, and then a pale one, which
+                  read as a white glow — and both said the same wrong thing,
+                  that there is a surface beneath the object catching something.
+                  There is not. There is water, and the art is already drawn cut
+                  off at its own waterline.
+                  Anything I put here is a shape the artwork does not have, and
+                  a shape under a floating object is what "floating" looks like.
+                  So: nothing. The water meets the art where the art ends. */}
               {/* TWO WRAPPERS, because they carry different transforms. The
                   outer one stands the landmark up off the plane; the inner one
                   is free to sway without clobbering that. One element trying to
