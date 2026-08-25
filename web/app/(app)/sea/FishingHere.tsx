@@ -318,6 +318,19 @@ export default function FishingHere({
     return () => { window.clearTimeout(t); cancelAnimationFrame(raf); ro?.disconnect() }
   }, [phase, caught])
 
+  /** THE CAST IS A BEAT, and the wait does not start until it is over.
+   *
+   *  The rod comes over, the line goes out, and only THEN are you waiting on a
+   *  fish. Showing the dots, the words and a running clock from the instant the
+   *  button is pressed narrates a wait that has not begun — and starts the
+   *  timer while the rod is still in the air, which makes it wrong as well as
+   *  early. 1500ms, matching the fishing screen's own castAnimDone.
+   *
+   *  An instant bite lands before this and the wait UI never appears at all,
+   *  which is correct: there was no wait. */
+  const [castAnimDone, setCastAnimDone] = useState(false)
+  const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [tackleOpen, setTackleOpen] = useState(false)
   const activeBaitDef = getBait(bait)
   /** Bait cannot change with a line already in the water: the fish has been
@@ -467,6 +480,7 @@ export default function FishingHere({
     if (timerRef.current) clearTimeout(timerRef.current)
     if (poseRef.current) clearTimeout(poseRef.current)
     if (sfxRef.current) clearTimeout(sfxRef.current)
+    if (animRef.current) clearTimeout(animRef.current)
   }, [])
 
   const cast = useCallback(() => {
@@ -480,6 +494,9 @@ export default function FishingHere({
     // instead, at the start of the next cast, by which point nothing is
     // looking at it.
     setHooked(null)
+    setCastAnimDone(false)
+    if (animRef.current) clearTimeout(animRef.current)
+    animRef.current = setTimeout(() => setCastAnimDone(true), 1500)
     setShiny(null)
     setWormhole(false)
     setChoiceNote('')
@@ -1220,7 +1237,7 @@ export default function FishingHere({
               </p>
             )}
           </motion.div>
-          ) : phase === 'waiting' ? (
+          ) : phase === 'waiting' && castAnimDone ? (
           <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             {/* Three dots breathing out of phase. The wait is three to twelve
