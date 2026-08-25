@@ -40,7 +40,12 @@ import { CHARACTER_COLORS } from '@/lib/characters'
 import { RODS, TRADER_ONLY_RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { seaClock } from '@/lib/seaClock'
-import { NORTH_WALL } from '@/app/(app)/sea/chart'
+
+/** The Mainland's mooring ring plus a boat length, so the nearest wanderer is
+ *  always outside the water the harbour prompt owns. */
+const MAINLAND_DOORSTEP =
+  (PLACES.find(p => p.id === 'mainland')?.r ?? 250) + 420 + 120
+import { NORTH_WALL, PLACES } from '@/app/(app)/sea/chart'
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
  *  close together two of them can ever be.
@@ -287,7 +292,12 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
 
   // Nobody sets up shop on the doorstep. The Mainland and the Harbour are
   // already places you can buy things.
-  if (Math.hypot(x, y) < 620) return null
+  //
+  // Derived, not a number. It was 620, tuned when the Mainland had a radius of
+  // 250 and a mooring ring of 670; the island is 440 now and its ring reaches
+  // 860, so the old constant left traders bobbing inside the harbour approach
+  // where the go-ashore prompt is already up.
+  if (Math.hypot(x, y) < MAINLAND_DOORSTEP) return null
 
   // A fifth of everyone out here is not selling anything. They are the reason
   // the sea has voices in it, and they are common enough that stopping for a

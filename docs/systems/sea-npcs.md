@@ -101,3 +101,29 @@ window for exactly this reason: the build should be an exploration problem, not 
 Mixed evenly between a hint you can act on and a fragment of the arc. No reward, ever — the
 moment a talker pays out, everybody sails the row of them every night and it becomes a
 chore, which is the failure this game refuses everywhere else.
+
+
+## How many people are actually out there
+
+There is no spawn table — everyone is derived from `(cell, day)` by a hash — so the only
+honest way to answer this is to walk every cell the hull can reach. `web/scripts/count-sea-npcs.mts`
+does that (`npx tsx scripts/count-sea-npcs.mts`). Re-run it after any change to `occupancy`,
+`CELL`, the chart's radius or the north wall.
+
+Measured over 60 days, chart radius 14400, south of `NORTH_WALL`:
+
+| | |
+|---|---|
+| Wanderers by daylight | 10–29, **average 19** |
+| Wanderers after dark | 23–49, **average 37** |
+| Night adds | **17**, all of them blockade runners carrying a trader-only rod |
+| Talkers | ~4 a day, **21%** of the daytime sea (the `isTalker` roll is 0.22) |
+| Resident buyers | **5** — permanent, one per band, not part of the roll |
+
+So roughly **24 people on the water by day and 42 after dark**, of whom 5 are always in the
+same place. Nobody is repeated: the hash makes a cell's occupant unique to that cell and day.
+
+**The doorstep exclusion is derived, not a constant.** `MAINLAND_DOORSTEP` is the Mainland's
+mooring ring plus a boat length. It was hard-coded at 620, tuned when the island had a radius
+of 250; when the island grew to 440 its ring reached 860 and the old number left wanderers
+bobbing inside the harbour approach with the go-ashore prompt already up.
