@@ -114,19 +114,37 @@ the fishing economy drifting apart. `ShipyardClient` holds the same set of `useS
 fishing page holds and calls the same server actions. When `/fishing` retires, nothing goes
 with it.
 
-Page order, which is the order you would actually do it in:
+Page order:
 
 1. **The hero** — `FisherPose` at full width with glow ON, on a solid plate with a band of
-   water under the hull, and the rod, reel, hook and pet named beneath it. (The small
-   preview inside the gear grid keeps `noGlow`: it is a thumbnail, not the shot.)
-2. **Three cards: Rod Rack, Hull, Hold.** What makes this a shipyard rather than a wardrobe.
-   Each card is the whole upgrade — what you have, what is next, the price.
-3. **`LoadoutStats`** — extracted from GearScreen's Stats tab into `components/` so both
-   screens show the same five numbers from the same derivation. It takes TIERS, never
-   computed values, or the derivation is back in two places. The Shipyard passes
-   `showStats={false}` to GearScreen so the panel is not on the page twice; that tab then
-   holds preferences only and relabels itself Settings.
-4. **The rack**, then **the locker** (GearScreen itself).
+   water under the hull. No title, no blurb, no pills naming the gear: the picture says all
+   of that, and a page you sail to does not need to introduce itself.
+2. **The rack, drawn on the boat** — one tile per berth, inside the hero card. Berth 0 is
+   the rod in your hands and cannot be emptied; the rest open a picker. If a berth is still
+   for sale the next tile IS the purchase, priced, and adds itself to the boat when tapped.
+   These tiles are exactly what you can switch between at sea, which is why they live on the
+   hull rather than in a list further down.
+3. **`LoadoutStats`**, directly under the picture it is the sum of.
+4. **Two tabs: Locker and Upgrades.** Locker is `GearScreen variant="locker"`; Upgrades
+   holds the three `BoatCard`s (rack, hull, hold).
+
+### `GearScreen variant`
+
+`'drawer'` is the fishing page's bottom sheet: three tabs, because it is the only place any
+of that lives on that screen. `'locker'` is the Shipyard's, and strips the tab strip, the
+Shop tab, the Stats panel and the fisher preview — on that page each of them is a second
+copy of something four inches higher up. The eleven remaining slots reflow from the wide
+three-column grid (whose middle column existed to hold the fisher) into an even
+`repeat(3, 1fr)`, with Badges spanning the odd column out.
+
+Both grids are written out separately rather than one grid with conditional placement. The
+drawer's explicit `gridColumn`/`gridRow` is load-bearing — `repeat(4, 1fr)` is what equalises
+the card heights — and making it conditional would have meant one grid that is correct in
+neither mode.
+
+**The item sheet caps at 560px and centres with auto margins**, not `translateX`: it is a
+`motion.div` and framer owns `transform` for the slide-in, so a transform there is silently
+clobbered. Full-bleed on a desktop monitor put eight words on a line two feet wide.
 
 ### The rack, and the hull
 

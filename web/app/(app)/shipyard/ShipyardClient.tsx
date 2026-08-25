@@ -19,9 +19,10 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { RODS, getEffectiveRod, rodGlowClass } from '@/lib/rods'
-import { REELS, getReel } from '@/lib/reels'
-import { HOOKS, getHook } from '@/lib/hooks'
+import { REELS } from '@/lib/reels'
+import { HOOKS } from '@/lib/hooks'
 import { getPet, petSlot } from '@/lib/pets'
+import PopupShell from '@/components/PopupShell'
 import { FISH_HOLD_TIERS, getFishHold } from '@/lib/fishHold'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import { vibrate } from '@/lib/haptics'
@@ -127,6 +128,10 @@ export default function ShipyardClient(p: {
   const [autoCaster, setAutoCaster] = useState(p.hasAutoCaster)
   const [waitTimer, setWaitTimer] = useState(p.showWaitTimer)
 
+  const [tab, setTab] = useState<'locker' | 'upgrades'>('locker')
+  /** Which berth's picker is open. 0 is the rod in your hands and never
+   *  opens one — that swap is the locker's Rod slot. */
+  const [berth, setBerth] = useState<number | null>(null)
   const [busy, setBusy] = useState('')
   const [err, setErr] = useState('')
 
@@ -170,18 +175,29 @@ export default function ShipyardClient(p: {
     void setRodsAboard(aboard.filter(t => t !== tier))
   }
 
-  async function toggleAboard(tier: number) {
-    if (busy || tier === equipped) return
-    const has = aboard.includes(tier)
-    if (!has && aboard.length >= spareSlots) {
-      setErr(spareSlots === 0
-        ? 'You have no spare berths. Buy one above to carry a second rod.'
-        : 'The rack is full. Take one off first.')
-      return
+  /**
+   * PUT A ROD IN A BERTH, or take one out.
+   *
+   * Indexed by BERTH, not by rod, because that is what you tapped. Berth 0 is
+   * the rod in your hands and never reaches here.
+   *
+   * A rod can only be in one berth, so seating it anywhere clears it from
+   * everywhere else first — otherwise a three-berth rack could carry the same
+   * rod three times, which is not a loadout, it is a rounding error.
+   */
+  async function loadBerth(slotIdx: number, tier: number | null) {
+    if (busy || slotIdx < 1) return
+    const padded: (number | undefined)[] = Array.from({ length: spareSlots }, (_, k) => aboard[k])
+    if (tier != null) {
+      for (let k = 0; k < padded.length; k++) if (padded[k] === tier) padded[k] = undefined
     }
-    const next = has ? aboard.filter(t => t !== tier) : [...aboard, tier].slice(0, spareSlots)
-    setErr(''); vibrate(8); setAboard(next)
-    const r = await setRodsAboard(next).catch(() => null)
+    padded[slotIdx - 1] = tier ?? undefined
+    // Collapsed on save. A hole in the middle of a rack is not a thing a rack
+    // has, and the display reads straight off this list.
+    const clean = padded.filter((t): t is number => t !== undefined && t !== equipped)
+    setErr(''); setBerth(null); vibrate(8)
+    setAboard(clean)
+    const r = await setRodsAboard(clean).catch(() => null)
     // The server clamps and validates; trust its answer over the optimistic one.
     if (r && 'aboard' in r) setAboard(r.aboard)
   }
@@ -210,18 +226,17 @@ export default function ShipyardClient(p: {
     setBusy('')
   }
 
-  const rods = RODS.filter(r => ownedRods.includes(r.tier)).sort((a, b) => a.tier - b.tier)
   const rodDef = getEffectiveRod(equipped, effects)
-  const petDef = pet ? getPet(pet) : null
 
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0 overflow-y-auto"
       style={{ background: '#08121c' }}>
       <div className="w-full max-w-md mx-auto" style={{ padding: '0 1rem 2rem' }}>
 
-        {/* ── THE HERO ────────────────────────────────────────────────────
-            The boat on its own, big, before any tile or price. You came here to
-            look at your rig, so the page opens with it.
+        {/* ── THE HERO ────────────────────────────────
+            The boat, and then what it is carrying. No title, no blurb, no strip
+            of pills naming the gear — the picture says all of that, and a page
+            you sail to does not need to introduce itself.
 
             Glow is ON here, unlike the small preview inside the gear grid: at
             this size the halo on a legendary rod is the whole point of the shot,
@@ -241,8 +256,8 @@ export default function ShipyardClient(p: {
         }}>
           {/* A low band of water under the hull, so the boat is ON something. */}
           <div aria-hidden style={{
-            position: 'absolute', left: 0, right: 0, bottom: 0, height: '34%',
-            background: 'linear-gradient(180deg, rgba(24,66,88,0) 0%, rgba(20,58,80,0.55) 45%, rgba(12,36,52,0.85) 100%)',
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%',
+            background: 'linear-gradient(180deg, rgba(24,66,88,0) 0%, rgba(20,58,80,0.5) 40%, rgba(10,30,44,0.9) 100%)',
           }} />
           <div style={{ position: 'relative', padding: '0.6rem 0.5rem 0' }}>
             {/* The sprite is 900x800 with the figure in the bottom 55.5%, so the
@@ -257,22 +272,84 @@ export default function ShipyardClient(p: {
               />
             </div>
           </div>
-          <div style={{ position: 'relative', padding: '0 0.9rem 0.85rem' }}>
-            <h1 className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f2ead8', lineHeight: 1.1 }}>
-              The Shipyard
-            </h1>
-            <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(190,214,228,0.66)', marginTop: 3, lineHeight: 1.5 }}>
-              What you sail with is decided here. Out at sea you can only change
-              to a rod you brought with you.
-            </p>
-            {/* What is actually in the picture, named. The composite is small on
-                a phone and a legendary hook is four pixels of it. */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 9 }}>
-              <Tag label={rodDef.name} color={rodDef.color} />
-              <Tag label={getReel(reelTier).name} color={getReel(reelTier).color} />
-              <Tag label={getHook(hookTier).name} color={getHook(hookTier).color} />
-              {petDef && <Tag label={petDef.name} color={petDef.accentColor} />}
-            </div>
+
+          {/* ── THE RACK, ON THE BOAT ────────────────────────
+              Berths as slots under the hull rather than a list further down the
+              page, because a rack is a thing bolted to a boat and this is the
+              boat. One tile per berth you own: the first is the rod in your
+              hands and cannot be emptied, the rest are yours to load. If there
+              is a berth left to buy, the next tile is it — an open zone that
+              says what it costs and adds itself to the boat when you tap it.
+
+              These are exactly what you can switch between AT SEA. Nothing else
+              you own is out there with you. */}
+          <div style={{
+            position: 'relative', display: 'flex', gap: 6,
+            padding: '0.5rem 0.55rem 0.6rem',
+          }}>
+            {Array.from({ length: slots }, (_, i) => {
+              const tier = i === 0 ? equipped : aboard[i - 1]
+              const filled = tier !== undefined
+              const def = filled ? getEffectiveRod(tier, effects) : null
+              return (
+                <button key={i} type="button" className="tap"
+                  onClick={() => { if (i > 0) { setErr(''); setBerth(i) } }}
+                  disabled={i === 0 || !!busy}
+                  style={{
+                    flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', gap: 3, padding: '0.45rem 0.25rem 0.4rem',
+                    borderRadius: 12,
+                    background: filled ? 'rgba(4,12,20,0.72)' : 'rgba(4,12,20,0.44)',
+                    border: filled
+                      ? `1px solid ${(def?.color ?? '#9fc9e8')}66`
+                      : '1px dashed rgba(160,200,222,0.42)',
+                    cursor: i === 0 ? 'default' : 'pointer',
+                  }}>
+                  {def?.slug ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/${def.slug}_thumb.png`} alt=""
+                      className={def.glow ? rodGlowClass(def) : undefined}
+                      style={{ width: 26, height: 26, objectFit: 'contain' }} />
+                  ) : (
+                    <span aria-hidden style={{
+                      width: 26, height: 26, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', color: 'rgba(160,200,222,0.6)', fontSize: '1.1rem',
+                    }}>+</span>
+                  )}
+                  <span className="font-karla font-700 truncate" style={{
+                    maxWidth: '100%', fontSize: '0.5rem', letterSpacing: '0.04em',
+                    color: filled ? 'rgba(226,240,248,0.86)' : 'rgba(160,200,222,0.7)',
+                  }}>
+                    {i === 0 ? 'In hand' : def ? def.name : 'Empty berth'}
+                  </span>
+                </button>
+              )
+            })}
+
+            {rack < MAX_RACK_TIER && rackCost != null && (
+              <button type="button" className="tap"
+                onClick={() => void buy('rack')}
+                disabled={!!busy || doubloons < rackCost}
+                style={{
+                  flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', gap: 3, padding: '0.45rem 0.25rem 0.4rem',
+                  borderRadius: 12,
+                  background: 'rgba(240,192,64,0.09)',
+                  border: '1px dashed rgba(240,192,64,0.5)',
+                  cursor: doubloons < rackCost ? 'default' : 'pointer',
+                  opacity: doubloons < rackCost ? 0.55 : 1,
+                }}>
+                <span aria-hidden style={{
+                  width: 26, height: 26, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', color: '#f0c040', fontSize: '1.1rem',
+                }}>{busy === 'rack' ? '…' : '+'}</span>
+                <span className="font-karla font-700 truncate" style={{
+                  maxWidth: '100%', fontSize: '0.5rem', letterSpacing: '0.04em', color: '#f0c040',
+                }}>
+                  {rackCost.toLocaleString()} ⟡
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -282,38 +359,8 @@ export default function ShipyardClient(p: {
           </p>
         )}
 
-        {/* ── THE BOAT'S THREE NUMBERS ───────────────────────────────────
-            Rack, hull and hold, side by side and above everything else, because
-            they are what makes this a shipyard rather than a wardrobe. Each
-            card is the whole upgrade: what you have, what is next, the price. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 12 }}>
-          <BoatCard
-            name="Rod Rack" accent="#67d4e8"
-            now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
-            next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
-            cost={rackCost}
-            busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
-            onBuy={() => void buy('rack')}
-          />
-          <BoatCard
-            name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
-            now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="of top speed"
-            next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}% speed`}
-            cost={hullCost}
-            busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
-            onBuy={() => void buy('hull')}
-          />
-          <BoatCard
-            name={getFishHold(hold).name} accent="#f0c040"
-            now={String(cap)} unit="fish in the hold"
-            next={holdNext ? `${holdNext.capacity} fish` : null}
-            cost={holdNext?.cost ?? null}
-            busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
-            onBuy={() => void buy('hold')}
-          />
-        </div>
-
-        {/* ── WHAT THE RIG ADDS UP TO ──────────────────────────────────── */}
+        {/* ── WHAT THE RIG ADDS UP TO ── directly under the picture it is the
+            sum of, so the numbers and the thing they describe read as one. */}
         <div style={{ marginTop: 12 }}>
           <LoadoutStats
             rodTier={equipped} reelTier={reelTier} hookTier={hookTier} lineTier={p.lineTier}
@@ -323,71 +370,69 @@ export default function ShipyardClient(p: {
           />
         </div>
 
-        {/* ── THE RACK ─────────────────────────────────────────────────── */}
-        <Section title="The rack" sub={`${aboard.length + 1} of ${slots} berths used`}>
-          {rods.map(rod => {
-            const eff = getEffectiveRod(rod.tier, effects)
-            const isEquipped = rod.tier === equipped
-            const isAboard = aboard.includes(rod.tier)
-            const locked = p.fishingLevel < fishingGearLevelReq(rod)
+        {/* ── TWO TABS ── what is on the boat, and what the boat is.
+            The locker's OWN tab strip is off (variant="locker"): its Shop tab
+            and its Stats tab would each be a second copy of something already
+            on this page. */}
+        <div style={{
+          display: 'flex', gap: 3, marginTop: 16,
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 12, padding: 3,
+        }}>
+          {([['locker', 'Locker'], ['upgrades', 'Upgrades']] as const).map(([key, label]) => {
+            const on = tab === key
             return (
-              <div key={rod.tier} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '0.6rem 0.7rem', borderRadius: 12, marginBottom: 6,
-                background: isEquipped ? `${rod.color}12` : 'rgba(255,255,255,0.035)',
-                border: `1px solid ${isEquipped ? rod.color + '55' : isAboard ? 'rgba(103,212,232,0.4)' : 'rgba(255,255,255,0.09)'}`,
-                opacity: locked ? 0.5 : 1,
-              }}>
-                {rod.slug && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/${rod.slug}_thumb.png`} alt="" className={eff.glow ? rodGlowClass(eff) : undefined}
-                    style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
-                )}
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span className="font-cinzel font-700 block truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
-                    {rod.name}
-                  </span>
-                  <span className="font-karla font-600 block" style={{ fontSize: '0.6rem', color: 'rgba(190,212,228,0.55)' }}>
-                    {locked ? `Fishing ${fishingGearLevelReq(rod)} needed`
-                      : isEquipped ? 'In your hands'
-                        : isAboard ? 'In the rack' : 'Ashore'}
-                  </span>
-                </span>
-                {!locked && !isEquipped && (
-                  <button onClick={() => void toggleAboard(rod.tier)} disabled={!!busy}
-                    className="font-karla font-700"
-                    style={{
-                      flexShrink: 0, padding: '0.3rem 0.6rem', borderRadius: 9, fontSize: '0.6rem',
-                      color: isAboard ? '#67d4e8' : 'rgba(190,212,228,0.75)',
-                      background: isAboard ? 'rgba(103,212,232,0.14)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${isAboard ? 'rgba(103,212,232,0.5)' : 'rgba(255,255,255,0.14)'}`,
-                      cursor: busy ? 'default' : 'pointer',
-                    }}>
-                    {isAboard ? 'Aboard' : 'Load'}
-                  </button>
-                )}
-                {!locked && !isEquipped && (
-                  <button onClick={() => void pickRod(rod.tier)} disabled={!!busy}
-                    className="font-karla font-700"
-                    style={{
-                      flexShrink: 0, padding: '0.3rem 0.6rem', borderRadius: 9, fontSize: '0.6rem',
-                      color: '#f2ead8', background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.16)', cursor: busy ? 'default' : 'pointer',
-                    }}>
-                    Equip
-                  </button>
-                )}
-              </div>
+              <button key={key} type="button" onClick={() => setTab(key)}
+                className="font-karla font-800 uppercase tracking-[0.1em] tap"
+                style={{
+                  flex: 1, padding: '0.72rem 0', borderRadius: 10, fontSize: '0.76rem', cursor: 'pointer',
+                  border: on ? '1px solid rgba(240,192,64,0.55)' : '1px solid transparent',
+                  color: on ? '#f5d98a' : 'rgba(255,255,255,0.6)',
+                  background: on ? 'linear-gradient(180deg, rgba(240,192,64,0.22), rgba(224,168,46,0.10))' : 'transparent',
+                  boxShadow: on ? 'inset 0 0 14px rgba(240,192,64,0.12)' : 'none',
+                }}>
+                {label}
+              </button>
             )
           })}
-          <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: 'rgba(190,212,228,0.45)', marginTop: 8, lineHeight: 1.6 }}>
-            The rod in your hands always sails with you. Berths carry the spares.
-          </p>
-        </Section>
+        </div>
 
-        {/* ── THE LOCKER ───────────────────────────────────────────────── */}
-        <Section title="The locker" sub="Every slot on the boat">
+        {/* ── UPGRADES ── what the boat IS, rather than what is on it. */}
+        {tab === 'upgrades' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 12 }}>
+            <BoatCard
+              name="Rod Rack" accent="#67d4e8"
+              now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
+              next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
+              cost={rackCost}
+              busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
+              onBuy={() => void buy('rack')}
+            />
+            <BoatCard
+              name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
+              now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="of top speed"
+              next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}% speed`}
+              cost={hullCost}
+              busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
+              onBuy={() => void buy('hull')}
+            />
+            <BoatCard
+              name={getFishHold(hold).name} accent="#f0c040"
+              now={String(cap)} unit="fish in the hold"
+              next={holdNext ? `${holdNext.capacity} fish` : null}
+              cost={holdNext?.cost ?? null}
+              busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
+              onBuy={() => void buy('hold')}
+            />
+          </div>
+        )}
+
+        {/* ── THE LOCKER ── every slot on the boat and nothing else: no tab
+            strip, no shop, no stats panel, no fisher preview. See `variant`. */}
+        {tab === 'locker' && (
+          <div style={{ marginTop: 12 }}>
           <GearScreen
+            variant="locker"
             baitInventory={p.baitInventory}
             selectedBait={selectedBait}
             onSelectBait={setSelectedBait}
@@ -544,14 +589,14 @@ export default function ShipyardClient(p: {
             gems={gems}
             fishingLevel={p.fishingLevel}
             isPremium={p.isPremium}
-            showStats={false}
             showWaitTimer={waitTimer}
             onToggleShowWaitTimer={(next) => { setWaitTimer(next); void persistShowWaitTimer(next) }}
             // Nothing to close: this is a page, not a drawer. The pickers close
             // themselves; only the drawer's own dismiss ever used this.
             onClose={() => {}}
           />
-        </Section>
+          </div>
+        )}
 
         <Link href="/sea" className="font-cinzel font-700 block text-center"
           style={{
@@ -562,31 +607,100 @@ export default function ShipyardClient(p: {
           Back to the water
         </Link>
       </div>
+
+      {/* ── WHAT GOES IN THIS BERTH ────────────────────────────────────
+          Only rods you actually own and can actually use. The rod in your hands
+          is not listed: it is not in the rack, it is in your hands, and putting
+          it here would eat a berth for nothing. */}
+      <PopupShell open={berth !== null} onClose={() => setBerth(null)}>
+        <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.96, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 6 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+          style={{
+            margin: 'auto', width: '100%', maxWidth: 400,
+            background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 18, padding: '1rem 0.95rem 1.1rem',
+          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: 'rgba(103,212,232,0.9)' }}>
+                Berth {berth}
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8' }}>
+                What sails with you
+              </p>
+            </div>
+            <button type="button" onClick={() => setBerth(null)} aria-label="Close"
+              style={{
+                width: 28, height: 28, borderRadius: '50%', padding: 0,
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          <div style={{ maxHeight: '52vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+            {berth != null && aboard[berth - 1] !== undefined && (
+              <button type="button" onClick={() => void loadBerth(berth, null)}
+                className="font-karla font-700 tap"
+                style={{
+                  width: '100%', textAlign: 'left', padding: '0.6rem 0.7rem', borderRadius: 12,
+                  marginBottom: 6, fontSize: '0.74rem', color: 'rgba(226,240,248,0.7)',
+                  background: 'rgba(255,255,255,0.035)', border: '1px dashed rgba(255,255,255,0.18)',
+                  cursor: 'pointer',
+                }}>
+                Leave this berth empty
+              </button>
+            )}
+            {RODS.filter(r => ownedRods.includes(r.tier) && r.tier !== equipped)
+              .sort((a, b) => a.tier - b.tier)
+              .map(rod => {
+                const eff = getEffectiveRod(rod.tier, effects)
+                const locked = p.fishingLevel < fishingGearLevelReq(rod)
+                const seated = berth != null && aboard[berth - 1] === rod.tier
+                const elsewhere = aboard.includes(rod.tier) && !seated
+                return (
+                  <button key={rod.tier} type="button" disabled={locked || !!busy}
+                    onClick={() => { if (berth != null) void loadBerth(berth, rod.tier) }}
+                    className="tap"
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                      padding: '0.6rem 0.7rem', borderRadius: 12, marginBottom: 6,
+                      background: seated ? `${rod.color}14` : 'rgba(255,255,255,0.035)',
+                      border: `1px solid ${seated ? rod.color + '66' : 'rgba(255,255,255,0.09)'}`,
+                      opacity: locked ? 0.45 : 1,
+                      cursor: locked ? 'default' : 'pointer',
+                    }}>
+                    {rod.slug && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/${rod.slug}_thumb.png`} alt=""
+                        className={eff.glow ? rodGlowClass(eff) : undefined}
+                        style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
+                    )}
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span className="font-cinzel font-700 block truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+                        {rod.name}
+                      </span>
+                      <span className="font-karla font-600 block" style={{ fontSize: '0.6rem', color: 'rgba(190,212,228,0.55)' }}>
+                        {locked ? `Fishing ${fishingGearLevelReq(rod)} needed`
+                          : seated ? 'In this berth'
+                            : elsewhere ? 'In another berth' : 'Ashore'}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+          </div>
+        </motion.div>
+      </PopupShell>
     </div>
   )
 }
 
-function Tag({ label, color }: { label: string; color: string }) {
-  return (
-    <span className="font-karla font-600 truncate" style={{
-      fontSize: '0.6rem', maxWidth: '100%',
-      color: `${color}dd`, background: `${color}18`,
-      border: `1px solid ${color}45`, padding: '0.14rem 0.5rem', borderRadius: '2rem',
-    }}>{label}</span>
-  )
-}
 
-function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginTop: 20 }}>
-      <div className="flex items-baseline justify-between" style={{ marginBottom: 8, gap: 8 }}>
-        <h2 className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#dfeaf2' }}>{title}</h2>
-        {sub && <span className="font-karla font-600 truncate" style={{ fontSize: '0.66rem', color: 'rgba(190,212,228,0.55)' }}>{sub}</span>}
-      </div>
-      {children}
-    </div>
-  )
-}
 
 /** One of the boat's three numbers. Deliberately narrow — three across on a
  *  phone — so the VALUE is what you read and the price is what you tap. */

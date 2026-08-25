@@ -770,7 +770,7 @@ export default function GearScreen({
   isPremium,
   showWaitTimer,
   onToggleShowWaitTimer,
-  showStats = true,
+  variant = 'drawer',
   onClose,
   autoOpenAppearance = false,
   onAppearanceAutoOpened,
@@ -849,10 +849,18 @@ export default function GearScreen({
   isPremium: boolean
   showWaitTimer: boolean
   onToggleShowWaitTimer: (next: boolean) => void
-  /** Hide the loadout-stats panel from the third tab. The Shipyard shows the
-   *  same panel up beside the boat, and two of them on one page is one too
-   *  many; the tab then holds preferences only and says so. */
-  showStats?: boolean
+  /**
+   * WHICH OF THE TWO SCREENS THIS IS.
+   *
+   * 'drawer' is the fishing page's bottom sheet: three tabs, because it is the
+   * only place any of that lives on that screen.
+   *
+   * 'locker' is the Shipyard's. There the page already IS the shop, the stats
+   * sit beside the boat and the boat is a hero at the top, so the tabs, the
+   * shop, the stats panel and the fisher preview are all a second copy of
+   * something four inches higher up. Stripped to the slot grid alone.
+   */
+  variant?: 'drawer' | 'locker'
   onClose: () => void
   /** When true (e.g. arriving via a /fishing?gear=appearance deep link), open
    *  straight to the Appearance picker on mount. */
@@ -861,6 +869,7 @@ export default function GearScreen({
    *  flag and not re-trigger on a later drawer re-open. */
   onAppearanceAutoOpened?: () => void
 }) {
+  const locker = variant === 'locker'
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
   // Deep-link (mail CTA): open straight to the Appearance picker, then tell the
   // parent to drop the flag so re-opening the drawer later doesn't force it again.
@@ -1064,9 +1073,10 @@ export default function GearScreen({
     // never scroll horizontally, whatever is inside it.
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', overflowX: 'hidden' }}>
 
-      {/* ── TABS ── one job per screen. */}
-      <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 3 }}>
-        {([['loadout', 'Loadout'], ['shop', 'Shop'], ['stats', showStats ? 'Stats' : 'Settings']] as const).map(([key, label]) => {
+      {/* ── TABS ── one job per screen. The Shipyard has no use for them: see
+          the `variant` prop. */}
+      {locker ? null : <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 3 }}>
+        {([['loadout', 'Loadout'], ['shop', 'Shop'], ['stats', 'Stats']] as const).map(([key, label]) => {
           const on = tab === key
           return (
             <button key={key} type="button" onClick={() => setTab(key)}
@@ -1082,7 +1092,7 @@ export default function GearScreen({
             </button>
           )
         })}
-      </div>
+      </div>}
 
       {tab === 'loadout' && (<>
       {/* ── The loadout grid ──
@@ -1096,21 +1106,171 @@ export default function GearScreen({
           auto-height grid, fr rows all resolve to the tallest row's content,
           so every card on the screen is the size of the tallest one, and gap
           handles every space between them identically. */}
+      {locker ? (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 6,
+      }}>
+        <div>
+          <GearSlot label="Rod" accent={SLOT_FAMILY.gear} image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
+        </div>
+        <div>
+          <GearSlot label="Reel" accent={SLOT_FAMILY.gear} image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} pulseKey={pulseKeys.reel} onClick={() => setOpenSlot('reel')} />
+        </div>
+        <div>
+          <GearSlot label="Hook" accent={SLOT_FAMILY.gear} image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
+        </div>
+        <div>
+          <GearSlot label="Line" accent={SLOT_FAMILY.gear} image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
+        </div>
+        <div>
+          {(() => {
+          const equippedDef = effectiveSpecialDef(equippedSpecial, hasAutoCatcher ? ['auto_catcher'] : [])
+          return (
+            <GearSlot
+              label="Special" accent={SLOT_FAMILY.special}
+              image={equippedDef?.image ?? null}
+              icon={<SpecialIcon color={equippedDef ? equippedDef.color : '#5a4a7a'} />}
+              itemName={equippedDef ? equippedDef.name : 'None'}
+              color={equippedDef ? equippedDef.color : '#5a4a7a'}
+              pulseKey={pulseKeys.special}
+              onClick={() => setOpenSlot('special')}
+              empty={!equippedDef}
+            />
+          )})()}
+        </div>
+        <div>
+          {(() => {
+          const seated = equippedSpecial2 ? SPECIAL_ITEMS.find(s => s.id === equippedSpecial2) : undefined
+          const REEL = '#e0455a'   // ancient crimson, matching the hull mount + the rarity
+          return (
+            <GearSlot
+              label="Special" accent={SLOT_FAMILY.special}
+              image={seated?.image ?? null}
+              icon={hasDeepReel
+                ? <SpecialIcon color={seated ? seated.color : REEL} />
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a4742" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>}
+              itemName={hasDeepReel ? (seated ? seated.name : 'None') : 'Locked'}
+              color={hasDeepReel ? (seated ? seated.color : REEL) : '#4a4742'}
+              onClick={() => setOpenSlot('special2')}
+              empty={!seated}
+              primeval
+            />
+          )})()}
+        </div>
+        <div>
+          {(() => {
+            const c = CHARACTER_COLORS.find(x => x.id === characterColor)
+            return (
+              <GearSlot
+                label="Skin" accent={SLOT_FAMILY.cosmetic}
+                // Full-figure sprite, so it needs the same head crop the skin
+                // picker uses; GearSlot's `image` would letterbox the whole
+                // body into a thumbnail and read as a smudge.
+                icon={
+                  <div style={{
+                    width: 34, height: 34, borderRadius: '50%',
+                    backgroundImage: `url(${getCharacterSprites(characterColor).rest})`,
+                    backgroundSize: '420% auto', backgroundPosition: '60% 68%',
+                    backgroundRepeat: 'no-repeat',
+                    border: '2px solid rgba(96,165,250,0.5)',
+                  }} />
+                }
+                itemName={c?.name ?? characterColor}
+                color="#60a5fa"
+                pulseKey={pulseKeys.skin}
+                onClick={() => setOpenSlot('skin')}
+              />
+            )
+          })()}
+        </div>
+        <div>
+          {(() => {
+          const h = equippedHat ? HATS.find(x => x.id === equippedHat) : null
+          return (
+            <GearSlot
+              label="Hat" accent={SLOT_FAMILY.cosmetic}
+              image={h?.restImageUrl ?? null}
+              itemName={h?.name ?? 'None'}
+              color={h ? '#f0c040' : '#5a5750'}
+              empty={!h}
+              pulseKey={pulseKeys.hat}
+              onClick={() => setOpenSlot('hat')}
+            />
+          )})()}
+        </div>
+        <div>
+          {(() => {
+          const b = equippedBoat ? BOATS.find(x => x.id === equippedBoat) : null
+          return (
+            <GearSlot
+              label="Boat" accent={SLOT_FAMILY.cosmetic}
+              image={b?.restImageUrl ?? null}
+              itemName={b?.name ?? 'Default'}
+              color="#7dd3fc"
+              pulseKey={pulseKeys.boat}
+              onClick={() => setOpenSlot('boat')}
+            />
+          )})()}
+        </div>
+        <div>
+          {(() => {
+          const pet = equippedPet ? getPet(equippedPet) : null
+          return (
+            <GearSlot
+              label="Pet" accent={SLOT_FAMILY.cosmetic}
+              image={pet?.restImageUrl ?? null}
+              itemName={pet?.name ?? 'None'}
+              color={pet ? pet.accentColor : '#5a5750'}
+              empty={!pet}
+              pulseKey={pulseKeys.pet}
+              onClick={() => setOpenSlot('pet')}
+            />
+          )})()}
+        </div>
+        <div style={{ gridColumn: 'span 2' }}>
+          {(() => {
+          const equipped = equippedBadges.filter(Boolean)
+          const itemName = equipped.length === 0 ? 'None' : `${equipped.length} equipped`
+          return (
+            <GearSlot
+              label="Badges" accent={SLOT_FAMILY.badge}
+              color="#f0c040"
+              itemName={itemName}
+              onClick={() => setOpenSlot('badge')}
+              empty={equipped.length === 0}
+              icon={
+                equipped.length === 0
+                  ? <span style={{ fontSize: '1.1rem', color: '#3a3835' }}>—</span>
+                  : (
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
+                      {equipped.slice(0, 3).map((id, i) => {
+                        const badge = BADGE_MAP[id!]
+                        return badge ? (
+                          <img key={i} src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 11, height: 11, objectFit: 'contain' }} />
+                        ) : null
+                      })}
+                    </div>
+                  )
+              }
+            />
+          )})()}
+        </div>
+      </div>
+      ) : (
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1.6fr 1fr',
         gridTemplateRows: 'repeat(4, 1fr)',
         gap: 6,
       }}>
-
         <div style={{ gridColumn: '1', gridRow: '1' }}>
           <GearSlot label="Rod" accent={SLOT_FAMILY.gear} image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
           <GearSlot label="Hook" accent={SLOT_FAMILY.gear} image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
         </div>
-
-        {/* Center column, top: the fisher themselves. */}
         <div style={{ gridColumn: '2', gridRow: '1' }}>
           <FisherPreview
             characterColor={characterColor}
@@ -1123,10 +1283,6 @@ export default function GearScreen({
             hookTier={hook.tier}
           />
         </div>
-
-        {/* Center column, bottom: Skin. It shares the centre with the fisher
-            rather than owning a full row of its own, which is a whole row
-            saved and puts the figure directly above the thing that changes it. */}
         <div style={{ gridColumn: '2', gridRow: '2' }}>
           {(() => {
             const c = CHARACTER_COLORS.find(x => x.id === characterColor)
@@ -1153,15 +1309,12 @@ export default function GearScreen({
             )
           })()}
         </div>
-
         <div style={{ gridColumn: '3', gridRow: '1' }}>
           <GearSlot label="Reel" accent={SLOT_FAMILY.gear} image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} pulseKey={pulseKeys.reel} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
           <GearSlot label="Line" accent={SLOT_FAMILY.gear} image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
         </div>
-
-        {/* Row 3: the things you wear or carry. */}
         <div style={{ gridColumn: '1', gridRow: '3' }}>
           {(() => {
           const h = equippedHat ? HATS.find(x => x.id === equippedHat) : null
@@ -1206,8 +1359,6 @@ export default function GearScreen({
             />
           )})()}
         </div>
-
-        {/* Row 4: the two Special slots either side of Badges. */}
         <div style={{ gridColumn: '1', gridRow: '4' }}>
           {(() => {
           const equippedDef = effectiveSpecialDef(equippedSpecial, hasAutoCatcher ? ['auto_catcher'] : [])
@@ -1224,7 +1375,6 @@ export default function GearScreen({
             />
           )})()}
         </div>
-        {/* Badges */}
         <div style={{ gridColumn: '2', gridRow: '4' }}>
           {(() => {
           const equipped = equippedBadges.filter(Boolean)
@@ -1253,10 +1403,6 @@ export default function GearScreen({
             />
           )})()}
         </div>
-        {/* THE SECOND SPECIAL. Mirrors the first, on the far side of Badges, so
-            the pair reads as two slots of one kind rather than a slot and a
-            bolt-on. Locked until Finn's spoil opens it; the panel behind it
-            says what it accepts. */}
         <div style={{ gridColumn: '3', gridRow: '4' }}>
           {(() => {
           const seated = equippedSpecial2 ? SPECIAL_ITEMS.find(s => s.id === equippedSpecial2) : undefined
@@ -1277,13 +1423,14 @@ export default function GearScreen({
           )})()}
         </div>
       </div>
+      )}
       </>)}
 
       {/* ── SHOP TAB ── upgrade-focused: which gear can I buy right now, and the door
           to the full catalogue. The actual buy/equip UI lives in each slot's detail
           modal (correct gating, costs, level reqs already there), so each row just
           opens it and flags whether an upgrade is affordable. */}
-      {tab === 'shop' && (
+      {!locker && tab === 'shop' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* The full catalogue leads. It was a footnote under four rows that
               each open a single slot, when it is the bigger destination. */}
@@ -1349,16 +1496,16 @@ export default function GearScreen({
         </div>
       )}
 
-      {tab === 'stats' && (<>
+      {!locker && tab === 'stats' && (<>
       {/* ── Loadout stats ── shared with the Shipyard, which shows the same
           five numbers. See components/LoadoutStats. */}
-      {showStats && <LoadoutStats
+      <LoadoutStats
         rodTier={rod.tier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier}
         completionistEffects={completionistEffects}
         selectedBait={selectedBait}
         fishingLevel={fishingLevel}
         zoneGoldenBoostPct={zoneGoldenBoostPct}
-      />}
+      />
 
       {/* ── Preferences ── single-row toggle for the cast→bite count-up
           shown in the waiting pill. Persists to profiles.show_wait_timer
@@ -1439,7 +1586,13 @@ export default function GearScreen({
               transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
-                background: 'rgba(6,12,22,0.99)', borderTop: '1px solid rgba(255,255,255,0.12)',
+                // CAPPED, and centred with auto margins rather than a
+                // translateX — this is a motion.div and framer owns `transform`
+                // for the slide-in, so a transform here is silently clobbered.
+                // A full-bleed sheet on a desktop monitor puts eight words on a
+                // line two feet wide, which is unreadable in the literal sense.
+                maxWidth: 560, marginLeft: 'auto', marginRight: 'auto',
+                background: 'rgba(6,12,22,0.99)', border: '1px solid rgba(255,255,255,0.12)', borderBottom: 'none',
                 borderRadius: '20px 20px 0 0', padding: '0 0.9rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem)',
                 // Now portaled to <body> and unclipped, so it can use the full height —
                 // 85vh from the bottom, leaving a strip of dimmed backdrop up top to tap
