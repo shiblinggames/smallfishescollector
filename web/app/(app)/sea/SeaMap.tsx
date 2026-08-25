@@ -17,7 +17,7 @@
 // animates on its own timer, because that is how a scene ends up feeling like
 // several things happening near each other.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, HOME, OPEN_SEA, type Place } from './chart'
@@ -29,7 +29,7 @@ import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
-import { tradersAround, seaDay, KIND_LABEL, DEALS_PER_DAY, type Trader } from '@/lib/seaTraders'
+import { tradersAround, seaDay, KIND_LABEL, DEALS_PER_DAY, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
@@ -64,6 +64,30 @@ const ARRIVE = 26
  * hit-test on the map for a cue that atmospheric haze gives you for free.
  */
 const GROUND = 0.58
+
+/**
+ * HOW FAR OUT THE CAMERA SITS, by screen width.
+ *
+ * The chart was drawn at desktop scale and then shown unchanged on a phone,
+ * where a 390px-wide viewport sees 390 world pixels across. The zones are 1400
+ * to 2300 across. So a portrait phone was showing about a sixth of one zone at
+ * a time, with a 210px boat sitting in the middle of it taking up half the
+ * width — which is why it felt cramped and why steering felt like nudging a
+ * large object around a small box.
+ *
+ * Pulling back to ~0.5 on a phone doubles the water on screen in each direction
+ * — four times the area — and takes the boat from over half the screen width
+ * down to about a quarter of it. Capped at 1 so a desktop is unchanged, and
+ * floored at 0.45 so the boat never becomes a speck.
+ *
+ * Everything that converts between screen and world has to know about this:
+ * the tap handler divides it back out, the wake and the ripples are screen
+ * measurements and scale with it, and the wash translates at the scaled rate or
+ * the water parallaxes against the islands.
+ */
+function zoomFor(width: number): number {
+  return Math.max(0.45, Math.min(1, width / 780))
+}
 
 /** The cloud bank. Written down rather than random so the sky is the same sky
  *  every session, and spread wide because the layer is 60% wider than the
@@ -287,51 +311,31 @@ function makeMottle(
   return c
 }
 
-let patDeep: CanvasPattern | null = null
-let patPale: CanvasPattern | null = null
+/**
+ * THE WASH, AS TWO COMPOSITED LAYERS.
+ *
+ * This used to be a canvas filled twice a frame, and it was by far the most
+ * expensive thing on the page. The fill had to cover the viewport PLUS a whole
+ * tile in each direction (because the pattern offset can be anything up to one
+ * tile), and then the vertical squash meant filling h/GROUND rather than h. On
+ * a 420x800 phone that came to 4.1M pixels a frame — twelve times the screen,
+ * sixty times a second, about 245M pixels a second of pure overdraw.
+ *
+ * None of that work was ever necessary. The pattern does not change; only where
+ * it sits does. So each layer is now an ordinary div with the tile as a
+ * repeating background-image, and moving the sea is one transform write that
+ * the compositor handles on the GPU. Zero painting per frame.
+ *
+ * The tiles are rasterised once at mount and handed over as data URLs.
+ */
+let deepURL: string | null = null
+let paleURL: string | null = null
 
-function seaPatterns(ctx: CanvasRenderingContext2D) {
-  if (patDeep && patPale) return
-  // Deep: coarse and dark, the wash pooling. Pale: finer and lighter, the
-  // surface catching the sky. Different counts and radii so they never beat
-  // against each other at a visible frequency.
-  patDeep = ctx.createPattern(makeMottle(DEEP_TILE, 48, '2,16,30', 90, 220, 0.18, 0x5eed1), 'repeat')
-  patPale = ctx.createPattern(makeMottle(PALE_TILE, 52, '198,232,246', 40, 105, 0.07, 0xa17c3), 'repeat')
-}
-
-function drawSea(
-  ctx: CanvasRenderingContext2D,
-  w: number, h: number,
-  camX: number, camY: number,
-  t: number,
-  /** 0..1 brightness of the water here. Scales the pale layer only — the dark
-   *  pooling stays, because deep water still has structure in it. */
-  lum: number,
-) {
-  ctx.clearRect(0, 0, w, h)
-  seaPatterns(ctx)
-
-  // Both layers move WITH the camera, because they are the water and the water
-  // stays where it is. On top of that each has its own slow drift, so the sea
-  // is still moving when you are not — a becalmed ocean is not a still one.
-  const layer = (pat: CanvasPattern | null, size: number, px: number, py: number, alpha: number) => {
-    if (!pat) return
-    ctx.save()
-    ctx.globalAlpha = alpha
-    // THE SAME PLANE THE WORLD IS ON. The wash is water, the water is the
-    // ground, and the ground is foreshortened — so the mottle compresses
-    // vertically by exactly the amount the island layer does. Drawn taller by
-    // the same factor so it still covers the screen after the squash.
-    ctx.scale(1, GROUND)
-    // Wrapped to the tile so the offsets never grow large enough to lose
-    // precision on a long voyage.
-    ctx.translate(-(((px % size) + size) % size), -(((py % size) + size) % size))
-    ctx.fillStyle = pat
-    ctx.fillRect(0, 0, w + size, h / GROUND + size)
-    ctx.restore()
-  }
-  layer(patDeep, DEEP_TILE, camX + t * 5.5, camY + t * 2.5, 1)
-  layer(patPale, PALE_TILE, camX + t * -3.5, camY + t * 6.5, 0.25 + lum * 0.75)
+function seaTiles(): { deep: string; pale: string } | null {
+  if (typeof document === 'undefined') return null
+  if (!deepURL) deepURL = makeMottle(DEEP_TILE, 48, '2,16,30', 90, 220, 0.18, 0x5eed1).toDataURL()
+  if (!paleURL) paleURL = makeMottle(PALE_TILE, 52, '198,232,246', 40, 105, 0.07, 0xa17c3).toDataURL()
+  return { deep: deepURL, pale: paleURL }
 }
 
 export default function SeaMap({
@@ -379,8 +383,10 @@ export default function SeaMap({
   /** The sky, recoloured every frame to match the water under it. */
   const skyRef = useRef<HTMLDivElement | null>(null)
 
-  /** THE WATER ITSELF. Drawn, not stacked out of CSS gradients — see drawSea. */
-  const seaCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  /** THE WATER ITSELF — two composited layers, moved not repainted. */
+  const deepRef = useRef<HTMLDivElement | null>(null)
+  const paleRef = useRef<HTMLDivElement | null>(null)
+  const tiles = useMemo(() => seaTiles(), [])
 
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const worldRef = useRef<HTMLDivElement | null>(null)
@@ -457,6 +463,23 @@ export default function SeaMap({
   }, [characterColor, boatId, hatId, gear.rodSlug, gear.rod, gear.reel, gear.hook, gear.petArt])
 
   // Only what the UI actually needs to re-render for.
+  // A ref, not state: the loop is the only reader, and re-rendering the map on
+  // a resize would buy nothing.
+  const zoomRef = useRef(1)
+  useEffect(() => {
+    const fit = () => {
+      const z = zoomFor(wrapRef.current?.getBoundingClientRect().width ?? window.innerWidth)
+      zoomRef.current = z
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    window.addEventListener('orientationchange', fit)
+    return () => {
+      window.removeEventListener('resize', fit)
+      window.removeEventListener('orientationchange', fit)
+    }
+  }, [])
+
   const [near, setNear] = useState<Place | null>(null)
   /** Who is on the water around us. Recomputed only when the boat crosses into
    *  a new cell, because the answer cannot change until it does. */
@@ -497,12 +520,13 @@ export default function SeaMap({
     const wrap = wrapRef.current
     if (!wrap) return null
     const r = wrap.getBoundingClientRect()
+    const z = zoomRef.current
     return {
-      x: clientX - r.left - r.width / 2 + pos.current.x,
+      x: (clientX - r.left - r.width / 2) / z + pos.current.x,
       // Undo the plane's squash. Without this every tap in the top or bottom of
       // the screen courses to somewhere nearer than where the thumb landed, and
       // the further from centre the worse it gets.
-      y: (clientY - r.top - r.height / 2) / GROUND + pos.current.y,
+      y: (clientY - r.top - r.height / 2) / (GROUND * z) + pos.current.y,
     }
   }, [])
 
@@ -552,31 +576,6 @@ export default function SeaMap({
     target.current = w
   }, [toWorld, near, locked, enter])
 
-  // The canvas has to match the wrapper in CSS pixels and the DEVICE in real
-  // ones, or the swell draws soft on a phone. Re-measured on resize and on
-  // orientation change; the loop reads the backing store size off the element.
-  useEffect(() => {
-    const cvs = seaCanvasRef.current
-    const wrap = wrapRef.current
-    if (!cvs || !wrap) return
-    const fit = () => {
-      const r = wrap.getBoundingClientRect()
-      // Capped at 2: a 3x phone screen triples the fill cost of the whole wash
-      // for a difference nobody can see in a soft blotch.
-      const dpr = Math.min(2, window.devicePixelRatio || 1)
-      cvs.width = Math.max(1, Math.round(r.width * dpr))
-      cvs.height = Math.max(1, Math.round(r.height * dpr))
-      cvs.style.width = `${r.width}px`
-      cvs.style.height = `${r.height}px`
-      const ctx = cvs.getContext('2d')
-      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    }
-    fit()
-    const ro = new ResizeObserver(fit)
-    ro.observe(wrap)
-    return () => ro.disconnect()
-  }, [])
-
   /** How far a press has to travel before it stops being a tap. Generous
    *  enough that a thumb resting on glass does not become a course change. */
   const DRAG_SLOP = 12
@@ -620,6 +619,10 @@ export default function SeaMap({
     let raf = 0
     let last = performance.now()
     let sinceState = 0
+    // Last painted backdrop, so an unchanged one costs a string compare rather
+    // than a repaint of the whole screen.
+    let lastCss = ''
+    let lastHaze = ''
 
     const step = (now: number) => {
       // Clamped delta: a backgrounded tab returns with an enormous gap, and an
@@ -638,7 +641,14 @@ export default function SeaMap({
       }
       const wx = d > 0.001 ? (dx / d) * want : 0
       const wy = d > 0.001 ? (dy / d) * want : 0
-      const k = Math.min(1, ACCEL * dt)
+      // EXPONENTIAL, not linear. `min(1, ACCEL * dt)` makes the boat accelerate
+      // at a rate that depends on the frame rate: a phone dropping to 30fps
+      // reaches speed differently to one holding 60, so the same course feels
+      // different on different hardware and any hitch shows up as a lurch.
+      // 1 - e^(-k·dt) is the same curve sampled correctly, so the boat moves
+      // identically at any frame rate and a dropped frame is invisible rather
+      // than a shove.
+      const k = 1 - Math.exp(-ACCEL * dt)
       vel.current.x += (wx - vel.current.x) * k
       vel.current.y += (wy - vel.current.y) * k
       pos.current.x += vel.current.x * dt
@@ -666,10 +676,12 @@ export default function SeaMap({
         const i = wakeNext.current
         wakeNext.current = (i + 1) % WAKE_MARKS
         wakeAt.current[i] = {
-          x: pos.current.x - (vel.current.x / speed) * 46 + WATERLINE_X,
+          x: pos.current.x - (vel.current.x / speed) * 46 + WATERLINE_X / zoomRef.current,
           // WATERLINE_Y is a SCREEN measurement and this is a world coordinate
           // inside the squashed layer, so it has to be divided back out.
-          y: pos.current.y - (vel.current.y / speed) * 46 + WATERLINE_Y / GROUND,
+          // WATERLINE_Y is a SCREEN measurement and this is a world coordinate
+          // inside the squashed, zoomed layer, so both have to be divided out.
+          y: pos.current.y - (vel.current.y / speed) * 46 + WATERLINE_Y / (GROUND * zoomRef.current),
           born: now,
         }
       }
@@ -678,14 +690,27 @@ export default function SeaMap({
         if (!el) continue
         const m = wakeAt.current[i]
         const age = (now - m.born) / WAKE_LIFE
-        if (age >= 1 || age < 0) { el.style.opacity = '0'; continue }
+        if (age >= 1 || age < 0) {
+          // Write the zero ONCE rather than sixteen times a frame forever. At
+          // anchor every mark is dead, so this was thirty-two style writes a
+          // frame to keep things invisible.
+          if (el.style.opacity !== '0') el.style.opacity = '0'
+          continue
+        }
         // Spreads as it fades, the way disturbed water settles.
         el.style.opacity = String((1 - age) * 0.32)
         el.style.transform =
           `translate3d(${m.x}px, ${m.y}px, 0) translate(-50%, -50%) scale(${0.5 + age * 2.0})`
       }
       const ripples = rippleRef.current
-      if (ripples) ripples.style.opacity = String(Math.max(0, 1 - speed / 190))
+      if (ripples) {
+        ripples.style.opacity = String(Math.max(0, 1 - speed / 190))
+        // The waterline is a measurement off the sprite, so it moves with the
+        // sprite when the sprite is scaled.
+        const z = zoomRef.current
+        ripples.style.transform =
+          `translate(${WATERLINE_X * z}px, ${WATERLINE_Y * z}px) scale(${z})`
+      }
 
       // PARALLAX. The clouds are miles off, so they slide at a twelfth of the
       // camera and drift a little on their own besides. This one number is what
@@ -702,13 +727,26 @@ export default function SeaMap({
       // world units and only then meets the plane's foreshortening.
       if (world) {
         world.style.transform =
-          `scaleY(${GROUND}) translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
+          `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
       }
       // The sea recoloured under the boat. One style write per frame, and the
       // reason there are no zone edges anywhere on the chart.
+      // THE BACKDROP, RECOLOURED ONLY WHEN IT CHANGES.
+      //
+      // Assigning a radial-gradient string to `background` makes the browser
+      // re-parse the gradient and repaint the entire viewport. Doing that every
+      // frame was a full-screen repaint at 60fps for a colour that drifts over
+      // seconds — the blend is a smooth function of position and the boat
+      // covers 470px a second at most, so a rebuild is only worth it when the
+      // string actually differs. `seaAt` rounds to whole channels, so equal
+      // strings mean genuinely identical pixels and this is exact, not
+      // approximate.
       const wrap = wrapRef.current
       const look = seaAt(pos.current)
-      if (wrap) wrap.style.background = look.css
+      if (wrap && look.css !== lastCss) {
+        lastCss = look.css
+        wrap.style.background = look.css
+      }
       // THE SKY TAKES ITS COLOUR FROM THE WATER IT MEETS.
       //
       // This is the whole fix for the horizon reading as a cut. It was a fixed
@@ -719,20 +757,35 @@ export default function SeaMap({
       // one dissolves into the other. Over the Abyss the horizon goes grey and
       // low; over the Shallows it comes up bright.
       const sky = skyRef.current
-      if (sky) {
+      if (sky && look.haze !== lastHaze) {
+        // Same reasoning: the sky's gradient is built from this custom property,
+        // so writing it re-parses a second full-width gradient.
+        lastHaze = look.haze
         sky.style.setProperty('--sea-haze', look.haze)
         sky.style.opacity = String(0.34 + look.lum * 0.66)
       }
-      // The surface, over that colour. Same camera, so the swell belongs to the
-      // ocean rather than to the screen.
-      const cvs = seaCanvasRef.current
-      const ctx = cvs?.getContext('2d')
-      if (cvs && ctx) {
-        const dpr = cvs.width / Math.max(1, parseFloat(cvs.style.width) || 1)
-        // The pale layer is light on water, so there has to be less of it in
-        // water that is not catching any. The Abyss was getting exactly as much
-        // sparkle as the Shallows, which is most of why it never read as deep.
-        drawSea(ctx, cvs.width / dpr, cvs.height / dpr, pos.current.x, pos.current.y, now / 1000, look.lum)
+      // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
+      // own tile so the offsets stay small however far you sail, and the two
+      // tiles are different sizes so the combination never visibly repeats.
+      const deep = deepRef.current
+      if (deep) {
+        // Times the zoom: the tile stays screen-sized (mottle has no natural
+        // scale) but it has to TRAVEL at the same rate the islands do, or the
+        // water visibly slides against the land as you sail.
+        const zx = zoomRef.current
+        const ox = (((pos.current.x + now / 1000 * 5.5) * zx) % DEEP_TILE + DEEP_TILE) % DEEP_TILE
+        const oy = (((pos.current.y + now / 1000 * 2.5) * zx * GROUND) % DEEP_TILE + DEEP_TILE) % DEEP_TILE
+        deep.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
+      }
+      const pale = paleRef.current
+      if (pale) {
+        const zx = zoomRef.current
+        const ox = (((pos.current.x - now / 1000 * 3.5) * zx) % PALE_TILE + PALE_TILE) % PALE_TILE
+        const oy = (((pos.current.y + now / 1000 * 6.5) * zx * GROUND) % PALE_TILE + PALE_TILE) % PALE_TILE
+        pale.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
+        // The pale layer is light ON water, so there has to be less of it in
+        // water that is not catching any. One opacity write, no repaint.
+        pale.style.opacity = String(0.25 + look.lum * 0.75)
       }
       const boat = boatRef.current
       if (boat) {
@@ -742,7 +795,7 @@ export default function SeaMap({
         const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
         const heel = Math.max(-7, Math.min(7, (vel.current.x / SPEED) * 7))
         boat.style.transform =
-          `translate(-50%, -50%) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
+          `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
       }
 
       // Proximity drives React, but only a few times a second. Nothing on screen
@@ -805,10 +858,30 @@ export default function SeaMap({
       }}
       className="sea-surface"
     >
-      {/* THE SURFACE, under everything. Drawn in the loop — see drawSea. */}
-      <canvas ref={seaCanvasRef} aria-hidden style={{
-        position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-      }} />
+      {/* THE SURFACE, under everything. Two repeating-background layers that
+          the loop only ever TRANSFORMS — see seaTiles for why this stopped
+          being a canvas. Oversized by a tile in each direction so a wrapped
+          offset never exposes an edge. */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {tiles && (
+          <>
+            <div ref={deepRef} style={{
+              position: 'absolute', left: 0, top: 0,
+              width: `calc(100% + ${DEEP_TILE}px)`,
+              height: `calc(100% + ${DEEP_TILE}px)`,
+              backgroundImage: `url(${tiles.deep})`, backgroundRepeat: 'repeat',
+              transformOrigin: '0 0', willChange: 'transform',
+            }} />
+            <div ref={paleRef} style={{
+              position: 'absolute', left: 0, top: 0,
+              width: `calc(100% + ${PALE_TILE}px)`,
+              height: `calc(100% + ${PALE_TILE}px)`,
+              backgroundImage: `url(${tiles.pale})`, backgroundRepeat: 'repeat',
+              transformOrigin: '0 0', willChange: 'transform, opacity',
+            }} />
+          </>
+        )}
+      </div>
 
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: 1, willChange: 'transform' }}>
@@ -1212,12 +1285,53 @@ const DRIFT = [
  *  units, so the lift stays the same on screen however the plane is tilted. */
 const ISLAND_LIFT = 15
 
-/** A trader has no rod, reel, hook or pet — they are working, not fishing, and
- *  an NPC wearing the player's tackle reads as a mirror rather than a stranger. */
-const TRADER_GEAR: Gear = {
-  rodSlug: null, rod: null, rodGlow: null, rodColor: null,
-  reel: null, hook: null, pet: null, petArt: null,
-}
+/**
+ * A TRADER'S BOAT — three images, not twenty-one.
+ *
+ * The first version rendered <Skipper>, which is the right LOOK and completely
+ * the wrong cost. Skipper mounts every frame of every layer at once and
+ * switches them with visibility, which is exactly correct for the player's
+ * captain — it is the only way the cast pose swaps atomically — and pure waste
+ * for an NPC, who never changes pose. That was up to 21 <img> per trader, so a
+ * busy stretch of water put well over a hundred image elements on the page for
+ * six people who just sit there.
+ *
+ * A trader also carries no rod, reel, hook or pet: they are working, not
+ * fishing, and an NPC wearing your tackle reads as a mirror rather than a
+ * stranger. So it is the rest pose only, at the same coordinates Skipper uses.
+ */
+const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
+  const char = getCharacterSprites(look.characterColor)
+  const boat = BOATS.find(b => b.id === look.boatId) ?? null
+  const hat = HATS.find(h => h.id === look.hatId) ?? null
+  const bp = boat?.positions.rest
+  const hp = hat?.positions.rest
+  return (
+    <div style={{
+      position: 'relative', width: 210,
+      transform: 'translate(-8%, -26%)',
+      filter: 'drop-shadow(0 10px 14px rgba(0,0,0,0.5))',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={char.rest} alt="" draggable={false} loading="lazy"
+        style={{ width: '100%', display: 'block' }} />
+      {hat && hp && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={hat.restImageUrl} alt="" draggable={false} loading="lazy" style={{
+          position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
+          width: `${hp.width}%`, transform: `rotate(${hp.rotate}deg)`,
+        }} />
+      )}
+      {boat && bp && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={boat.restImageUrl} alt="" draggable={false} loading="lazy" style={{
+          position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+          width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
+        }} />
+      )}
+    </div>
+  )
+})
 
 /**
  * ANOTHER CAPTAIN, ON THE WATER.
@@ -1231,7 +1345,7 @@ const TRADER_GEAR: Gear = {
  * Counter-squashed like everything else with height. A boat stands ON the
  * plane; it is not painted onto it.
  */
-function TraderBoat({ trader, done, isNear }: { trader: Trader; done: boolean; isNear: boolean }) {
+const TraderBoat = memo(function TraderBoat({ trader, done, isNear }: { trader: Trader; done: boolean; isNear: boolean }) {
   return (
     <div style={{
       position: 'absolute', left: trader.x, top: trader.y,
@@ -1250,13 +1364,7 @@ function TraderBoat({ trader, done, isNear }: { trader: Trader; done: boolean; i
         // They just stop calling out.
         opacity: done ? 0.62 : 1,
       }}>
-        <Skipper
-          characterColor={trader.look.characterColor}
-          boatId={trader.look.boatId}
-          hatId={trader.look.hatId}
-          gear={TRADER_GEAR}
-          frame="rest"
-        />
+        <TraderSkiff look={trader.look} />
       </div>
 
       {/* Name and trade, counter-squashed — a label was never on the plane. */}
@@ -1279,9 +1387,13 @@ function TraderBoat({ trader, done, isNear }: { trader: Trader; done: boolean; i
       </div>
     </div>
   )
-}
+})
 
-function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
+/** MEMOISED. The loop pokes React four times a second to update proximity and
+ *  the compass, and without this every island rebuilt its whole subtree —
+ *  coastline clip, drift blobs, cliff, jetty and all — on each of those ticks
+ *  for a result that had not changed. */
+const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
   const isWater = place.kind === 'water'
   const d = place.r * 2
 
@@ -1478,7 +1590,7 @@ function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean;
       )}
     </div>
   )
-}
+})
 
 /** The dock prompt. Says what to do, or why you cannot. */
 function Prompt({ place, locked, level, onEnter, tick }: {
@@ -1589,7 +1701,10 @@ function WaterBanner({ place, locked }: { place: Place | null; locked: boolean }
 function Compass({ pos, locked }: { pos: React.RefObject<Vec>; locked: (p: Place) => boolean }) {
   const [, force] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => force(v => v + 1), 120)
+    // 200ms, not 120. This forces a re-render of every arrow on screen, and an
+    // arrow that updates five times a second is indistinguishable from one that
+    // updates eight times a second while costing nearly half as much.
+    const id = setInterval(() => force(v => v + 1), 200)
     return () => clearInterval(id)
   }, [])
   const here = pos.current ?? HOME
