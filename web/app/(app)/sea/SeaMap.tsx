@@ -122,47 +122,96 @@ function seaAt(p: Vec): string {
 /**
  * THE SEA, DRAWN.
  *
- * The first attempt at making the ocean feel alive stacked CSS gradients on top
- * of it — striped caustics and a sun shaft. That was the wrong instrument
- * twice over: gradients with stops make LINES, and a sheet of light laid over
- * a flat colour is still a flat colour with a sheet over it. What was missing
- * was not light. It was that the water had no SURFACE.
+ * Third attempt, and the first two are worth recording because they were both
+ * the same mistake in different clothes.
  *
- * So it is drawn instead, in the loop that was already running, in world space:
+ *   1. CSS light sheets — striped caustics and a sun shaft. Gradients with hard
+ *      stops make LINES, and a sheet of light over a flat colour is still a
+ *      flat colour with a sheet over it.
+ *   2. Drawn swell crests. Better physics, still wrong: a top-down ocean
+ *      rendered as long wavy strokes reads as contour lines on a map, and the
+ *      glints came out as little dashes of debris.
  *
- *  · SWELL — long crests that roll across the chart. Each is two sine waves at
- *    different wavelengths summed, so the line never repeats visibly, and each
- *    is drawn twice: a dark trough under a pale crest, which is what actually
- *    makes water read as having a near side and a far side.
- *  · The rows are laid out in WORLD coordinates and wrapped, so the swell slides
- *    past as you sail and the ocean has extent rather than being a texture stuck
- *    to the camera.
- *  · GLINTS — short highlights that sit on crests and blink out, scattered by a
- *    hash of their own position so they never march in step.
+ * Both were trying to draw the ocean's SHAPE. But every other pixel in this
+ * game is hand-painted watercolour, and watercolour does not describe water
+ * with outlines — it describes it with pigment settling unevenly. Mottling,
+ * granulation, blooms of darker wash pooling against lighter.
  *
- * All of it is additive at very low alpha. Individually nothing here is visible;
- * together they are the difference between a colour and a sea.
+ * So that is what this is. Two seamless tiles of soft irregular blotches, one
+ * darker and coarse, one lighter and finer, tiled across the chart and drifting
+ * over each other at different speeds. Where they cross you get a shifting
+ * depth that never resolves into a pattern, and never has an edge in it
+ * anywhere. Nothing is stroked. Nothing blinks.
+ *
+ * It is cheap, too: the tiles are painted once into offscreen canvases and then
+ * only ever blitted as repeating patterns, so a frame is two fills regardless
+ * of how much ocean is on screen.
  */
-const SWELL_SPACING = 96   // world px between crest lines
-const SWELL_STEP = 14      // px between sampled points along a crest
+/** THE TWO TILES ARE DIFFERENT SIZES ON PURPOSE.
+ *
+ *  A tiled texture is seamless but it still repeats, and at one size you can
+ *  see the same patch of sea go by twice on a wide screen. Two coprime-ish
+ *  sizes only line back up at their lowest common multiple — 640 and 576 give
+ *  5760px, which is wider than the whole chart — so the combination never
+ *  visibly repeats even though each layer does. */
+const DEEP_TILE = 640
+const PALE_TILE = 576
 
-/** Scratch buffer for one crest — x,y pairs. Module-level and reused every
- *  frame for every row, because allocating a few hundred floats sixty times a
- *  second is how a smooth map starts stuttering on a phone. */
-const crest = new Float32Array(512)
+/** One seamless tile of soft blotches. Each blob is drawn nine times, at every
+ *  wrap offset, so a blob crossing an edge continues correctly on the far side
+ *  and the tiling has no seam to spot. */
+function makeMottle(
+  TILE: number, count: number, rgb: string, rMin: number, rMax: number, alpha: number, seed: number,
+): HTMLCanvasElement {
+  const c = document.createElement('canvas')
+  c.width = c.height = TILE
+  const g = c.getContext('2d')
+  if (!g) return c
+  // A plain LCG rather than Math.random: the same sea every session means a
+  // stretch of water always looks like itself, which is what stops it reading
+  // as static noise.
+  let st = seed >>> 0
+  const rnd = () => (st = (st * 1664525 + 1013904223) >>> 0) / 4294967296
+  for (let i = 0; i < count; i++) {
+    const x = rnd() * TILE, y = rnd() * TILE
+    const r = rMin + rnd() * (rMax - rMin)
+    const a = alpha * (0.45 + rnd() * 0.55)
+    // Squashed, so the pigment pools along the current instead of in circles.
+    const squash = 0.42 + rnd() * 0.3
+    const tilt = rnd() * Math.PI
+    for (let ox = -1; ox <= 1; ox++) {
+      for (let oy = -1; oy <= 1; oy++) {
+        const cx = x + ox * TILE, cy = y + oy * TILE
+        if (cx < -r || cx > TILE + r || cy < -r || cy > TILE + r) continue
+        g.save()
+        g.translate(cx, cy)
+        g.rotate(tilt)
+        g.scale(1, squash)
+        const grad = g.createRadialGradient(0, 0, 0, 0, 0, r)
+        grad.addColorStop(0, `rgba(${rgb},${a})`)
+        grad.addColorStop(0.55, `rgba(${rgb},${a * 0.45})`)
+        grad.addColorStop(1, `rgba(${rgb},0)`)
+        g.fillStyle = grad
+        g.beginPath()
+        g.arc(0, 0, r, 0, Math.PI * 2)
+        g.fill()
+        g.restore()
+      }
+    }
+  }
+  return c
+}
 
-function strokeCrest(
-  ctx: CanvasRenderingContext2D,
-  pts: Float32Array, n: number, dy: number,
-  color: string, width: number,
-) {
-  if (n < 4) return
-  ctx.beginPath()
-  ctx.moveTo(pts[0], pts[1] + dy)
-  for (let i = 2; i < n; i += 2) ctx.lineTo(pts[i], pts[i + 1] + dy)
-  ctx.strokeStyle = color
-  ctx.lineWidth = width
-  ctx.stroke()
+let patDeep: CanvasPattern | null = null
+let patPale: CanvasPattern | null = null
+
+function seaPatterns(ctx: CanvasRenderingContext2D) {
+  if (patDeep && patPale) return
+  // Deep: coarse and dark, the wash pooling. Pale: finer and lighter, the
+  // surface catching the sky. Different counts and radii so they never beat
+  // against each other at a visible frequency.
+  patDeep = ctx.createPattern(makeMottle(DEEP_TILE, 48, '2,16,30', 90, 220, 0.18, 0x5eed1), 'repeat')
+  patPale = ctx.createPattern(makeMottle(PALE_TILE, 52, '198,232,246', 40, 105, 0.07, 0xa17c3), 'repeat')
 }
 
 function drawSea(
@@ -172,70 +221,23 @@ function drawSea(
   t: number,
 ) {
   ctx.clearRect(0, 0, w, h)
+  seaPatterns(ctx)
 
-  // Rows are placed on a world grid, so they slide with the camera instead of
-  // being painted onto it. `first` is the world Y of the topmost crest that can
-  // reach the screen.
-  const top = camY - h / 2 - SWELL_SPACING
-  const first = Math.floor(top / SWELL_SPACING) * SWELL_SPACING
-  const rows = Math.ceil(h / SWELL_SPACING) + 3
-
-  for (let r = 0; r < rows; r++) {
-    const worldY = first + r * SWELL_SPACING
-    // A per-row seed, so no two crests share a phase or an amplitude and the
-    // whole field never lines up into a plaid.
-    const seed = ((worldY * 0.017) % 1 + 1) % 1
-    const amp = 4.5 + seed * 4
-    const drift = t * (0.16 + seed * 0.12)
-
-    // Sample the crest once into the scratch buffer, then stroke it twice at
-    // two offsets. It has to be re-walked rather than re-stroked under a
-    // translate: canvas bakes path points into device space the moment they are
-    // added, so moving the transform afterwards moves nothing at all.
-    let n = 0
-    for (let sx = -SWELL_STEP; sx <= w + SWELL_STEP; sx += SWELL_STEP) {
-      const worldX = sx + camX - w / 2
-      crest[n++] = sx
-      crest[n++] =
-        worldY - camY + h / 2 +
-        Math.sin(worldX / 190 + drift + seed * 9) * amp +
-        Math.sin(worldX / 71 - drift * 1.7 + seed * 3) * amp * 0.42
-      if (n >= crest.length) break
-    }
-    // The trough first, sitting under the crest, then the pale crest on top.
-    // One line is a squiggle; a light edge over a dark one is a wave.
-    strokeCrest(ctx, crest, n, 3.5, 'rgba(2,14,26,0.13)', 2.4)
-    strokeCrest(ctx, crest, n, 0, `rgba(206,236,248,${0.075 + seed * 0.05})`, 1.5)
+  // Both layers move WITH the camera, because they are the water and the water
+  // stays where it is. On top of that each has its own slow drift, so the sea
+  // is still moving when you are not — a becalmed ocean is not a still one.
+  const layer = (pat: CanvasPattern | null, size: number, px: number, py: number) => {
+    if (!pat) return
+    ctx.save()
+    // Wrapped to the tile so the offsets never grow large enough to lose
+    // precision on a long voyage.
+    ctx.translate(-(((px % size) + size) % size), -(((py % size) + size) % size))
+    ctx.fillStyle = pat
+    ctx.fillRect(0, 0, w + size, h + size)
+    ctx.restore()
   }
-
-  // GLINTS. Sparse, on a coarse world grid so they stay put on the water, each
-  // blinking on its own clock. The hash is cheap and deterministic — the same
-  // patch of sea always glints the same way, which is what stops it reading as
-  // static noise.
-  ctx.fillStyle = 'rgba(236,250,255,0.55)'
-  const G = 110
-  const gx0 = Math.floor((camX - w / 2) / G) - 1
-  const gy0 = Math.floor((camY - h / 2) / G) - 1
-  for (let i = 0; i <= Math.ceil(w / G) + 2; i++) {
-    for (let j = 0; j <= Math.ceil(h / G) + 2; j++) {
-      const cx = gx0 + i, cy = gy0 + j
-      const hash = Math.abs(Math.sin(cx * 127.1 + cy * 311.7) * 43758.5453) % 1
-      const hash2 = Math.abs(Math.sin(cx * 269.5 + cy * 183.3) * 43758.5453) % 1
-      // Each glint breathes on a 3–5s cycle, offset by its own hash, and is
-      // only lit for the top sliver of it.
-      const period = 3 + hash2 * 2
-      const phase = ((t * 0.5 + hash * period) % period) / period
-      if (phase > 0.22) continue
-      const a = Math.sin((phase / 0.22) * Math.PI)
-      const wx = cx * G + hash * G
-      const wy = cy * G + hash2 * G
-      const sx = wx - camX + w / 2
-      const sy = wy - camY + h / 2
-      ctx.globalAlpha = a * 0.5
-      ctx.fillRect(sx, sy, 9 + hash * 7, 1.4)
-    }
-  }
-  ctx.globalAlpha = 1
+  layer(patDeep, DEEP_TILE, camX + t * 5.5, camY + t * 2.5)
+  layer(patPale, PALE_TILE, camX + t * -3.5, camY + t * 6.5)
 }
 
 export default function SeaMap({
@@ -427,8 +429,8 @@ export default function SeaMap({
     if (!cvs || !wrap) return
     const fit = () => {
       const r = wrap.getBoundingClientRect()
-      // Capped at 2: a 3x phone screen triples the fill cost of every crest for
-      // a difference nobody can see on a 1.5px line.
+      // Capped at 2: a 3x phone screen triples the fill cost of the whole wash
+      // for a difference nobody can see in a soft blotch.
       const dpr = Math.min(2, window.devicePixelRatio || 1)
       cvs.width = Math.max(1, Math.round(r.width * dpr))
       cvs.height = Math.max(1, Math.round(r.height * dpr))
@@ -808,19 +810,74 @@ const HOOK_AT = {
   cast: { top: 40.5, left: -73, width: 204.5, rotate: 66.5, hidden: false },
 } as const
 
+type CharFrame = 'rest' | 'wait' | 'cast'
+const FRAMES: CharFrame[] = ['rest', 'wait', 'cast']
+
+/**
+ * ONE COSMETIC LAYER — drawn once per frame, switched with `visibility`.
+ *
+ * It must not be a single <img> whose src changes, and the reason is in the
+ * base art: the character sheet has a plain wooden hull and a red bandana
+ * PAINTED INTO IT. An equipped boat and hat are drawn over the top and cover
+ * them exactly — but only while every layer agrees on which frame it is in.
+ *
+ * Swapping src cannot guarantee that. React writes all the src attributes in
+ * one commit, but each <img> paints when its own bitmap is ready, so the base
+ * would flip to the cast pose a frame or two before the boat did and the
+ * painted-in default underneath was suddenly visible. Preloading and decoding
+ * every frame up front makes that rare; it does not make it impossible, which
+ * is why it did not fix it.
+ *
+ * So every frame of every layer is mounted at once, already loaded and already
+ * rasterised, and the pose change is a `visibility` flip on all of them in a
+ * single style recalculation. There is no decode in the path any more, so there
+ * is nothing left to arrive late.
+ */
+function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
+  frame: CharFrame
+  src: (f: CharFrame) => string
+  at: (f: CharFrame) => { top: number; left: number; width: number; rotate: number } | null
+  hiddenOn?: (f: CharFrame) => boolean
+  origin?: string
+  className?: string
+  style?: React.CSSProperties
+}) {
+  return (
+    <>
+      {FRAMES.map(f => {
+        const p = at(f)
+        if (!p) return null
+        const on = f === frame && !hiddenOn?.(f)
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={f} src={src(f)} alt="" draggable={false}
+            // The glow animations go on the VISIBLE copy only. Three sets of
+            // keyframes running behind a hidden layer is work nobody sees.
+            className={on ? className : undefined}
+            style={{
+              position: 'absolute',
+              top: `${p.top}%`, left: `${p.left}%`, width: `${p.width}%`, maxWidth: 'none',
+              transform: `rotate(${p.rotate}deg)`,
+              transformOrigin: origin ?? 'center center',
+              visibility: on ? 'visible' : 'hidden',
+              ...style,
+            }} />
+        )
+      })}
+    </>
+  )
+}
+
 function Skipper({ characterColor, boatId, hatId, gear, frame }: {
   characterColor: string
   boatId: string | null
   hatId: string | null
   gear: Gear
-  frame: 'rest' | 'wait' | 'cast'
+  frame: CharFrame
 }) {
   const char = useMemo(() => getCharacterSprites(characterColor), [characterColor])
   const boat = useMemo(() => BOATS.find(b => b.id === boatId) ?? null, [boatId])
   const hat = useMemo(() => HATS.find(h => h.id === hatId) ?? null, [hatId])
-  const rc = ROD_AT[frame]
-  const rec = REEL_AT[frame]
-  const hc = HOOK_AT[frame]
 
   return (
     <div style={{
@@ -832,77 +889,56 @@ function Skipper({ characterColor, boatId, hatId, gear, frame }: {
       transform: 'translate(-8%, -26%)',
       filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.55))',
     }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={char[frame]} alt="" draggable={false} style={{ width: '100%', display: 'block' }} />
-      {hat && (
-        /* PER FRAME, like everything else on the character. It was pinned to
-           `rest`, so the moment the cast pose played the bandana stayed where
-           the head had been and floated off the captain. */
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={frame === 'cast' ? hat.castImageUrl : hat.restImageUrl} alt="" draggable={false} style={{
-          position: 'absolute',
-          top: `${hat.positions[frame].top}%`,
-          left: `${hat.positions[frame].left}%`,
-          width: `${hat.positions[frame].width}%`,
-          transform: `rotate(${hat.positions[frame].rotate}deg)`,
-          transformOrigin: 'center center',
+      {/* THE BASE, all three poses. `rest` stays in the flow so it is what
+          gives the container its height — visibility keeps a layout box, so it
+          holds the box open whichever pose is actually showing, and all three
+          sheets are the same size anyway. */}
+      {FRAMES.map(f => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={f} src={char[f]} alt="" draggable={false} style={{
+          width: '100%', display: 'block',
+          ...(f === 'rest' ? {} : { position: 'absolute', top: 0, left: 0 }),
+          visibility: f === frame ? 'visible' : 'hidden',
         }} />
+      ))}
+
+      {hat && (
+        <Layer frame={frame}
+          src={f => (f === 'cast' ? hat.castImageUrl : hat.restImageUrl)}
+          at={f => hat.positions[f]} />
       )}
       {boat && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={frame === 'cast' ? boat.castImageUrl : boat.restImageUrl} alt="" draggable={false}
-          className={boat.glow ? 'boat-glow' : undefined}
-          style={{
-            position: 'absolute',
-            top: `${boat.positions[frame].top}%`,
-            left: `${boat.positions[frame].left}%`,
-            width: `${boat.positions[frame].width}%`,
-            transform: `rotate(${boat.positions[frame].rotate}deg)`,
-            transformOrigin: 'center center',
-          }} />
+        <Layer frame={frame}
+          src={f => (f === 'cast' ? boat.castImageUrl : boat.restImageUrl)}
+          at={f => boat.positions[f]}
+          className={boat.glow ? 'boat-glow' : undefined} />
       )}
       {(gear.rodSlug || gear.rod) && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={gear.rodSlug ? `/${gear.rodSlug}_${frame}.png` : (gear.rod as string)} alt="" draggable={false}
+        <Layer frame={frame}
+          // A slug rod has three per-frame sprites; a single-image rod reuses
+          // one file at three different angles.
+          src={f => (gear.rodSlug ? `/${gear.rodSlug}_${f}.png` : (gear.rod as string))}
+          at={f => ROD_AT[f]}
+          origin="bottom right"
           className={gear.rodGlow ? rodGlowClass({ glow: true, glowType: gear.rodGlow } as never) : undefined}
-          style={{
-            position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
-            width: `${rc.width}%`, maxWidth: 'none',
-            transform: `rotate(${rc.rotate}deg)`, transformOrigin: 'bottom right',
-            ...(gear.rodColor ? { ['--rod-glow-color' as string]: gear.rodColor } : {}),
-          } as React.CSSProperties} />
+          style={gear.rodColor ? ({ ['--rod-glow-color' as string]: gear.rodColor } as React.CSSProperties) : undefined} />
       )}
       {gear.reel && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={gear.reel} alt="" draggable={false} style={{
-          position: 'absolute', top: `${rec.top}%`, left: `${rec.left}%`,
-          width: `${rec.width}%`, maxWidth: 'none',
-          transform: `rotate(${rec.rotate}deg)`, transformOrigin: 'center center',
-        }} />
+        <Layer frame={frame} src={() => gear.reel as string} at={f => REEL_AT[f]} />
       )}
-      {gear.pet && gear.petArt && (() => {
-        const pc = PET_OVERLAYS[gear.pet as PetSpecies]?.[frame]
-        if (!pc) return null
-        return (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={gear.petArt} alt="" draggable={false} style={{
-            position: 'absolute', top: `${pc.top}%`, left: `${pc.left}%`,
-            width: `${pc.width}%`, maxWidth: 'none',
-            transform: `rotate(${pc.rotate}deg)`, transformOrigin: 'center center',
-          }} />
-        )
-      })()}
-      {gear.hook && !hc.hidden && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={gear.hook} alt="" draggable={false} style={{
-          position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
-          width: `${hc.width}%`, maxWidth: 'none',
-          transform: `rotate(${hc.rotate}deg)`, transformOrigin: 'center center',
-        }} />
+      {gear.pet && gear.petArt && (
+        <Layer frame={frame} src={() => gear.petArt as string}
+          at={f => PET_OVERLAYS[gear.pet as PetSpecies]?.[f] ?? null} />
+      )}
+      {gear.hook && (
+        <Layer frame={frame} src={() => gear.hook as string} at={f => HOOK_AT[f]}
+          // The hook is in the water during the bite, so it is not on the rod.
+          hiddenOn={f => HOOK_AT[f].hidden} />
       )}
     </div>
   )
 }
+
 
 /**
  * A PLACE ON THE WATER.
