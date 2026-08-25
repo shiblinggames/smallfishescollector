@@ -145,8 +145,18 @@ export default function SeaMap({
       pos.current.x += vel.current.x * dt
       pos.current.y += vel.current.y * dt
 
-      const speed = Math.hypot(vel.current.x, vel.current.y)
-      if (speed > 40) facing.current = vel.current.x >= 0 ? 1 : -1
+      // WHICH WAY THE CAPTAIN FACES.
+      //
+      // The sprite is drawn facing LEFT — that is the pose, rod out to port —
+      // so sailing left is the un-mirrored image and sailing right flips it.
+      // It was the other way round.
+      //
+      // And the test is on the X component alone with a real deadband, not on
+      // total speed. Sailing nearly straight up or down leaves vx hovering
+      // around zero, and reading its sign every frame had the boat flipping
+      // several times a second, which is the "no pattern" of it. Below the
+      // deadband it simply keeps whatever it was facing.
+      if (Math.abs(vel.current.x) > 70) facing.current = vel.current.x < 0 ? 1 : -1
 
       // Imperative writes. The whole reason this holds 60fps on a phone.
       const world = worldRef.current
@@ -250,7 +260,15 @@ function Skipper({ characterColor, boatId, hatId }: {
   const hat = useMemo(() => HATS.find(h => h.id === hatId) ?? null, [hatId])
 
   return (
-    <div style={{ position: 'relative', width: 190, filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.55))' }}>
+    <div style={{
+      position: 'relative', width: 210,
+      // The sprite sheet reserves a large empty region up and to the left for
+      // the rod and line, so the hull sits low and right of the image centre.
+      // This offset puts the BOAT in the middle of the screen rather than the
+      // bounding box, which is what the camera is actually following.
+      transform: 'translate(-8%, -26%)',
+      filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.55))',
+    }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={char.rest} alt="" draggable={false} style={{ width: '100%', display: 'block' }} />
       {hat && (
