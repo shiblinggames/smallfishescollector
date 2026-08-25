@@ -175,11 +175,11 @@ export default function SeaMap({
     // Checked first, or the tap would just re-issue a course to where you are.
     const here = near
     if (here && !locked(here) && dist(w, here) < here.r) {
-      // A WATER DOES NOT TAKE YOU ANYWHERE. You are already in it; the rod
-      // comes out and you fish where you are floating. Only a port is a door.
-      if (here.kind === 'water') { setFishingIn(here); vibrate(14); return }
-      enter(here)
-      return
+      // Ports only. A water is fished from the prompt, in one press — tapping
+      // the water a second time to confirm was a gate on a decision already
+      // made, and it meant every tap inside a zone you were sitting in did
+      // something you did not ask for.
+      if (here.kind === 'port') { enter(here); return }
     }
 
     // Tapping ON a place courses for its edge, so you pull alongside a port
@@ -320,7 +320,15 @@ export default function SeaMap({
       {/* The prompt steps aside while the rod is out — the cast button is the
           only thing that should be asking for a thumb down there. */}
       {!fishingIn && (
-        <Prompt place={near} locked={near ? locked(near) : false} level={level} onEnter={enter} tick={tick} />
+        <Prompt
+          place={near}
+          locked={near ? locked(near) : false}
+          level={level}
+          // A water does not navigate. Pressing "Fish The Shallows" puts the rod
+          // in your hands where you are floating; only a port is a door.
+          onEnter={p => { if (p.kind === 'water') { setFishingIn(p); vibrate(14) } else enter(p) }}
+          tick={tick}
+        />
       )}
       <Compass pos={pos} locked={locked} />
 

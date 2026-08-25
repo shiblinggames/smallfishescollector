@@ -196,28 +196,20 @@ export default function FishingHere({
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
       alignItems: 'center', paddingBottom: 26, pointerEvents: 'none',
     }}>
-      {/* THE DIAL, over the water. It rises rather than cutting in, because the
-          fish arriving is the moment and a hard cut throws it away. */}
+      {/* THE DIAL AND ITS BUTTON, exactly as the fishing screen has them.
+          The dial reads, the BUTTON acts — I had made the dial itself the tap
+          target, which is a different instrument to the one every player has
+          already learned. Both are lifted from FishingGame: the same 88px
+          circle, the same gold, the same chunky press, the same ripples. */}
       <AnimatePresence>
         {phase === 'hooked' && (
           <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.9 }}
+            initial={{ opacity: 0, y: 30, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
             transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-            onClick={e => { e.stopPropagation(); strike() }}
-            style={{
-              pointerEvents: 'auto', cursor: 'pointer', marginBottom: 14,
-              filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.6))',
-            }}>
-            {/* DIRECTLY. DialSVG returns a <div>, not an <svg> — it owns its own
-                markup and its own needle layer. Wrapping it in an <svg> put HTML
-                inside SVG, which needs a foreignObject to be legal, so the
-                browser silently rendered NOTHING. That is why the dial never
-                appeared: it was mounting perfectly and drawing into a void. */}
-            <div style={{ width: 260 }}>
-              <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1} />
-            </div>
+            style={{ pointerEvents: 'none', marginBottom: 12, width: 260 }}>
+            <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -245,35 +237,53 @@ export default function FishingHere({
         {phase === 'idle' && (
           <motion.div key="idle" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            {err && <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#e6a0a0' }}>{err}</p>}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={e => { e.stopPropagation(); cast() }}
-                className="font-cinzel font-800 uppercase"
-                style={{
-                  padding: '0.85rem 2rem', borderRadius: 999, fontSize: '0.95rem', letterSpacing: '0.08em',
-                  color: '#0d1a12', background: 'linear-gradient(180deg,#8fdcae,#5bb587)',
-                  border: 'none', cursor: 'pointer', boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
-                }}>
-                Cast
-              </button>
-              <button onClick={e => { e.stopPropagation(); onClose() }}
-                className="font-karla font-700"
-                style={{
-                  padding: '0.85rem 1.2rem', borderRadius: 999, fontSize: '0.82rem',
-                  color: '#cfe0ec', background: 'rgba(8,16,24,0.86)',
-                  border: '1px solid rgba(180,214,232,0.35)', cursor: 'pointer',
-                }}>
-                Stow rod
-              </button>
-            </div>
-            <p className="font-karla font-600" style={{
-              fontSize: '0.68rem', color: 'rgba(190,210,224,0.72)',
-              textShadow: '0 1px 8px rgba(0,0,0,0.85)',
-            }}>
-              {zoneName} · {baitLeft} bait left
-            </p>
+            style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            {err && <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{err}</p>}
+            <motion.button
+              onPointerDown={e => { e.preventDefault(); e.stopPropagation(); cast() }}
+              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+              style={{
+                width: 88, height: 88, borderRadius: '50%',
+                background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
+                border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
+                fontSize: '0.72rem', color: '#67d4e8', touchAction: 'manipulation',
+                boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+              }}
+              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' }}
+              transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
+              Cast
+            </motion.button>
+            <button onClick={e => { e.stopPropagation(); onClose() }}
+              className="font-karla font-700"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: '0.72rem', color: 'rgba(190,212,228,0.8)',
+                textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+                borderBottom: '1px solid rgba(190,212,228,0.32)', paddingBottom: 1,
+              }}>
+              Stow rod · {zoneName} · {baitLeft} bait
+            </button>
           </motion.div>
+        )}
+
+        {phase === 'hooked' && (
+          <motion.button key="reel"
+            onPointerDown={e => { e.preventDefault(); e.stopPropagation(); strike() }}
+            className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+            style={{
+              pointerEvents: 'auto',
+              width: 88, height: 88, borderRadius: '50%',
+              background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+              border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+              fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+              boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+            }}
+            initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+            whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+            transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
+            Reel In
+          </motion.button>
         )}
 
         {phase === 'waiting' && (
