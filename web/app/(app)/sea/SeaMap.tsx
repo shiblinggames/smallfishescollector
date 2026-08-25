@@ -30,7 +30,7 @@ import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import { seaClock, PHASE_LABEL } from '@/lib/seaClock'
-import { tradersAround, traderPos, seaDay, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
+import { tradersAround, traderPos, seaDay, plainRodFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
@@ -681,7 +681,12 @@ export default function SeaMap({
         characterColor: ['default', 'gray', 'blue', 'pink'][seed % 4],
         boatId: ['oak', 'mahogany', 'taupe', 'desert', 'charcoal'][seed % 5],
         hatId: ['brown', 'olive', 'midnight', 'offwhite'][seed % 4],
-        rodSlug: null,
+        // A ROD, like everyone else out here. These were the only NPCs without
+        // one — the reasoning was that a buyer is working rather than fishing,
+        // which is true and also means five boats on the chart looked like they
+        // were missing a piece. They are captains on a fishing sea; they have a
+        // rod aboard whether or not they are using it.
+        rodSlug: plainRodFor(seed),
       },
       deal: 'resident' as const, zoneId: p.id, rate: r.rate,
     }]
@@ -1646,6 +1651,13 @@ const ISLAND_LIFT = 15
  * fishing, and an NPC wearing your tackle reads as a mirror rather than a
  * stranger. So it is the rest pose only, at the same coordinates Skipper uses.
  */
+/** WHERE THE BOAT ACTUALLY IS inside its 250px box, measured off the sheet.
+ *  The character art reserves its upper half for the rod and the line, so the
+ *  hull is nowhere near the middle and anything positioned against the BOX ends
+ *  up a hundred pixels away from anything you can see. */
+const BOAT_TOP = 13
+const WATER_AT = 119
+
 const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
   const char = getCharacterSprites(look.characterColor)
   const boat = BOATS.find(b => b.id === look.boatId) ?? null
@@ -1723,15 +1735,23 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
       {/* Contact shadow, ON the plane and therefore squashed with it. */}
       {/* Same correction as the landmarks: a pale disturbance ON the
           waterline rather than a dark shadow cast below it. */}
+      {/* AT THE WATERLINE, which is not where this was.
+          The composite is centred on this origin and stands 250px tall, but the
+          character sheet reserves its whole upper half for the rod and the
+          line — the actual boat only occupies y +13 to +119 of that box. The
+          contact wash was at y 0, which is the captain's HEAD. It has been
+          sitting a hundred pixels above the water this whole time, which is a
+          large part of why the boats looked like they were hovering. */}
       <div aria-hidden style={{
-        position: 'absolute', left: -70, top: -6, width: 140, height: 26,
+        position: 'absolute', left: -74, top: WATER_AT - 13, width: 148, height: 26,
         borderRadius: '50%',
-        background: 'radial-gradient(ellipse at center, rgba(206,232,242,0.26), rgba(206,232,242,0) 70%)',
+        background: 'radial-gradient(ellipse at center, rgba(214,238,246,0.34), rgba(206,232,242,0) 72%)',
         filter: 'blur(5px)',
       }} />
       <div aria-hidden style={{
-        position: 'absolute', left: -30, top: 0, width: 60, height: 12,
-        borderRadius: '50%', background: 'rgba(4,14,22,0.3)', filter: 'blur(4px)',
+        position: 'absolute', left: -104, top: WATER_AT - 20, width: 208, height: 40,
+        borderRadius: '50%',
+        border: '1px solid rgba(206,232,242,0.16)', filter: 'blur(4px)',
       }} />
       <div className="trader-hull" style={{
         // scaleX comes from the patrol rather than a coin flip, so a trader
@@ -1758,8 +1778,11 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
           Out of range it is a small dot — they are there, they are a person,
           they are not shouting. In range it is a full mark and it bobs. */}
       <div aria-hidden style={{
-        // Above the composite's top edge, which is at -125.
-        position: 'absolute', left: 0, top: -152,
+        // Just above the captain's head. Measured, not guessed: the visible
+        // boat occupies y +13 to +119 of a box that runs -125 to +125, because
+        // the sheet's whole upper half is empty rod-and-line space. Anchoring
+        // to the BOX put this 165px above anything you can see.
+        position: 'absolute', left: 0, top: BOAT_TOP - 47,
         transform: `translateX(-50%) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
         pointerEvents: 'none',
@@ -1797,7 +1820,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
         // tall — it spans -125 to +125 from this origin. A plate at -62 was
         // sitting squarely on the captain's head. Anchored by its TOP so the
         // counter-squash grows it downward, away from the boat.
-        position: 'absolute', left: 0, top: 132,
+        position: 'absolute', left: 0, top: WATER_AT + 4,
         transform: `translateX(-50%) scaleY(${1 / GROUND})`,
         transformOrigin: 'top center',
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
@@ -1894,14 +1917,23 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
                 position: 'absolute', left: -m.size * 0.5, top: -m.size * 0.075,
                 width: m.size, height: m.size * 0.15,
                 borderRadius: '50%',
-                background: 'radial-gradient(ellipse at center, rgba(206,232,242,0.30), rgba(206,232,242,0) 70%)',
-                filter: `blur(${Math.round(m.size * 0.03)}px)`,
+                background: 'radial-gradient(ellipse at center, rgba(214,238,246,0.46), rgba(206,232,242,0) 72%)',
+                filter: `blur(${Math.round(m.size * 0.025)}px)`,
               }} />
+              {/* A SECOND, WIDER RING, and nothing dark anywhere.
+                  The dark contact ellipse that used to be here was still the
+                  shadow problem in miniature: ANY dark shape under an object
+                  reads as that object casting onto a surface, however small it
+                  is, and a surface under it is the one thing there is not.
+                  Water disturbed by something standing in it goes PALE, so the
+                  whole contact is pale — a tight collar at the base and a wider
+                  ring spreading off it. */}
               <div aria-hidden style={{
-                position: 'absolute', left: -m.size * 0.19, top: -m.size * 0.026,
-                width: m.size * 0.38, height: m.size * 0.052,
+                position: 'absolute', left: -m.size * 0.78, top: -m.size * 0.1,
+                width: m.size * 1.56, height: m.size * 0.2,
                 borderRadius: '50%',
-                background: 'rgba(4,14,22,0.34)', filter: `blur(${Math.round(m.size * 0.018)}px)`,
+                border: `1px solid rgba(206,232,242,0.18)`,
+                filter: `blur(${Math.round(m.size * 0.02)}px)`,
               }} />
               {/* TWO WRAPPERS, because they carry different transforms. The
                   outer one stands the landmark up off the plane; the inner one

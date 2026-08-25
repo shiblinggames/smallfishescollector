@@ -480,6 +480,12 @@ export const DEALS_PER_DAY = 6
 
 /** Names for the UI, kept next to the definitions rather than in a component,
  *  so a new kind cannot ship half-labelled. */
+/** The plain-rod pool, exposed so the chart's resident buyers can draw from the
+ *  same one rather than keeping a list of their own. */
+export function plainRodFor(seed: number): string {
+  return ROD_SLUGS[Math.abs(seed) % ROD_SLUGS.length]
+}
+
 export const KIND_LABEL: Record<TraderKind, string> = {
   peddler: 'Bait peddler',
   salter: 'Salter',
