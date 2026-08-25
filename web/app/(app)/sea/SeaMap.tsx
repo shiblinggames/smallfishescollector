@@ -985,7 +985,7 @@ export default function SeaMap({
         />
       )}
       <WaterBanner place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} />
-      <Compass pos={pos} locked={locked} />
+      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} />
 
       {fishingIn && (
         <FishingHere
@@ -1698,63 +1698,128 @@ function WaterBanner({ place, locked }: { place: Place | null; locked: boolean }
 /** Off-screen pointers. Not decoration: open water with nothing in view is the
  *  classic hub failure — you cannot tell whether there is anything out there or
  *  which way, so you stop exploring. Distance matters as much as direction. */
-function Compass({ pos, locked }: { pos: React.RefObject<Vec>; locked: (p: Place) => boolean }) {
+/**
+ * THE COMPASS — markers for what you cannot see, pinned to the edge nearest it.
+ *
+ * The first version put every marker on the SAME CIRCLE around the boat, which
+ * is what made it unreadable. Two places twenty degrees apart landed on top of
+ * each other, and this chart is a line running east — so the Deep, the Abyss
+ * and the Ancient Deep are all in nearly the same direction from almost
+ * anywhere, and all three stacked in the same spot with their names and
+ * distances overlapping into mush.
+ *
+ * Three changes, and each one removes a different cause of clutter:
+ *
+ *   ONLY WHAT IS OFF SCREEN. The old test was world distance, so a zone whose
+ *   water you were sitting in still got an arrow if its centre happened to be
+ *   far enough away. An arrow pointing at something you can already see is pure
+ *   noise. Now a place is projected to the screen, and it only gets a marker if
+ *   it is actually outside the viewport.
+ *
+ *   THE EDGE, NOT A RING. Markers clamp to the screen border along the line to
+ *   the place, so direction maps onto the whole perimeter instead of onto one
+ *   small circle. Two things in similar directions now separate by however far
+ *   apart they truly are.
+ *
+ *   THREE AT MOST, NEAREST FIRST, AND NEVER TOUCHING. Anything still landing
+ *   within a marker's width of one already placed is dropped — the nearer one
+ *   wins, because it is the one you are more likely to be going to. The rest is
+ *   discoverable by sailing, which is the point of a chart you sail on.
+ */
+const COMPASS_MAX = 3
+/** How far apart two markers must sit on the perimeter before both are shown. */
+const COMPASS_SPACING = 96
+
+function Compass({ pos, zoom, wrapRef, locked }: {
+  pos: React.RefObject<Vec>
+  zoom: React.RefObject<number>
+  wrapRef: React.RefObject<HTMLDivElement | null>
+  locked: (p: Place) => boolean
+}) {
   const [, force] = useState(0)
   useEffect(() => {
-    // 200ms, not 120. This forces a re-render of every arrow on screen, and an
-    // arrow that updates five times a second is indistinguishable from one that
-    // updates eight times a second while costing nearly half as much.
+    // 200ms. An arrow that updates five times a second is indistinguishable
+    // from one that updates eight times a second and costs nearly half as much.
     const id = setInterval(() => force(v => v + 1), 200)
     return () => clearInterval(id)
   }, [])
+
   const here = pos.current ?? HOME
+  const z = zoom.current ?? 1
+  const rect = wrapRef.current?.getBoundingClientRect()
+  if (!rect || rect.width < 2) return null
+  const hw = rect.width / 2
+  const hh = rect.height / 2
+  // Inset far enough that a marker and its label sit fully on screen.
+  const mx = Math.min(64, hw * 0.22)
+  const my = Math.min(74, hh * 0.22)
+
+  const marks = PLACES
+    .map(p => {
+      // Screen offset from the boat, through the same projection the world
+      // layer uses — squashed and zoomed, or every bearing points somewhere
+      // the place is not.
+      const sx = (p.x - here.x) * z
+      const sy = (p.y - here.y) * GROUND * z
+      return { p, sx, sy, world: Math.hypot(p.x - here.x, p.y - here.y) }
+    })
+    // On screen already? Then you can see it, and an arrow is noise.
+    .filter(m => Math.abs(m.sx) > hw - mx || Math.abs(m.sy) > hh - my)
+    .sort((a, b) => a.world - b.world)
+
+  const placed: { x: number; y: number }[] = []
+  const shown: { p: Place; x: number; y: number; a: number; world: number }[] = []
+  for (const m of marks) {
+    if (shown.length >= COMPASS_MAX) break
+    // Ray from the centre to the place, clamped to the inset rectangle.
+    const ax = Math.abs(m.sx), ay = Math.abs(m.sy)
+    const t = Math.min(ax > 0.001 ? (hw - mx) / ax : Infinity, ay > 0.001 ? (hh - my) / ay : Infinity)
+    const x = m.sx * t
+    const y = m.sy * t
+    if (placed.some(q => Math.hypot(q.x - x, q.y - y) < COMPASS_SPACING)) continue
+    placed.push({ x, y })
+    shown.push({ p: m.p, x, y, a: Math.atan2(m.sy, m.sx), world: m.world })
+  }
+
   return (
     <>
-      {PLACES.map(p => {
-        const dx = p.x - here.x
-        const dy = p.y - here.y
-        const d = Math.hypot(dx, dy)
-        // FROM THE EDGE, not the centre. The zones are big now — the Ancient
-        // Deep is 1150 across — so a centre-distance test put an arrow on screen
-        // pointing back into the water you were already sitting in.
-        if (d - p.r < 700) return null
-        // AIMED IN SCREEN SPACE. The compass is drawn on the screen but the
-        // bearing comes from world coordinates, and the world is squashed onto
-        // a tilted plane — so north-south has to be foreshortened here too or
-        // every arrow points somewhere the place is not.
-        const a = Math.atan2(dy * GROUND, dx)
+      {shown.map((m, i) => {
+        const dim = locked(m.p)
+        // Only the nearest carries a distance. Three numbers on screen is a
+        // readout; one is a heading.
+        const lead = i === 0
         return (
-          <div key={p.id} aria-hidden style={{
+          <div key={m.p.id} aria-hidden style={{
             position: 'absolute', left: '50%', top: '50%',
-            transform: `rotate(${a}rad) translateX(min(38vw, 190px))`,
+            transform: `translate(${m.x}px, ${m.y}px) translate(-50%, -50%)`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             pointerEvents: 'none',
           }}>
-            <div style={{
-              transform: `rotate(${-a}rad) translate(-50%, -50%)`,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            }}>
-              <span style={{
-                width: 0, height: 0, transform: `rotate(${a + Math.PI / 2}rad)`,
-                borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
-                borderBottom: `9px solid rgba(190,214,228,${locked(p) ? 0.3 : 0.62})`,
-              }} />
-              {/* NAME FIRST, then distance. An arrow with only a number on it
-                  tells you something is 340m away and leaves you to sail there
-                  to find out what — which is not navigation, it is a guess. */}
-              <span className="font-cinzel font-700" style={{
-                fontSize: '0.6rem', whiteSpace: 'nowrap',
-                color: `rgba(214,232,240,${locked(p) ? 0.42 : 0.88})`,
-                textShadow: '0 1px 6px rgba(0,0,0,0.9)',
-              }}>{p.name}</span>
+            <span style={{
+              width: 0, height: 0,
+              transform: `rotate(${m.a + Math.PI / 2}rad)`,
+              borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+              borderBottom: `9px solid rgba(190,214,228,${dim ? 0.28 : lead ? 0.75 : 0.5})`,
+            }} />
+            {/* NAME FIRST, then distance. An arrow with only a number on it
+                tells you something is 340m away and leaves you to sail there to
+                find out what, which is not navigation, it is a guess. */}
+            <span className="font-cinzel font-700" style={{
+              fontSize: lead ? '0.6rem' : '0.54rem', whiteSpace: 'nowrap',
+              color: `rgba(214,232,240,${dim ? 0.4 : lead ? 0.9 : 0.62})`,
+              textShadow: '0 1px 6px rgba(0,0,0,0.9)',
+            }}>{m.p.name}</span>
+            {lead && (
               <span className="font-karla font-700" style={{
                 fontSize: '0.54rem', marginTop: -1,
-                color: `rgba(190,214,228,${locked(p) ? 0.3 : 0.6})`,
+                color: `rgba(190,214,228,${dim ? 0.3 : 0.6})`,
                 textShadow: '0 1px 6px rgba(0,0,0,0.9)',
-              }}>{Math.round(d / 10)}m</span>
-            </div>
+              }}>{Math.round(m.world / 10)}m</span>
+            )}
           </div>
         )
       })}
     </>
   )
 }
+
