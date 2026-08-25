@@ -98,9 +98,14 @@ export const PLACES: Place[] = [
     // market and the shops, and it should look like all three from the water.
     // Ordered back to front so the ones lower on the island overlap correctly.
     buildings: [
-      { art: '/sea/tackle.png', x: 24, y: 34, scale: 0.40 },
-      { art: '/sea/market.png', x: 70, y: 40, scale: 0.42 },
-      { art: '/sea/tavern.png', x: 46, y: 58, scale: 0.52 },
+      // Positions are the BOTTOM CENTRE of each building and the land is only
+      // a 46% disc inside the island box, so these are tighter than they look:
+      // the first pass put the tackle shop and the market up to 50px out into
+      // open water. Checked by laying the island out and measuring each
+      // building's base corners against the coastline.
+      { art: '/sea/tackle.png', x: 31, y: 46, scale: 0.24 },
+      { art: '/sea/market.png', x: 69, y: 49, scale: 0.25 },
+      { art: '/sea/tavern.png', x: 50, y: 65, scale: 0.32 },
     ],
   },
   {
@@ -110,8 +115,8 @@ export const PLACES: Place[] = [
     // The lighthouse sits high and back, which is what makes the Harbour
     // readable from a long way off — it is the tallest thing on the chart.
     buildings: [
-      { art: '/sea/lighthouse.png', x: 68, y: 28, scale: 0.46 },
-      { art: '/sea/harbour.png', x: 40, y: 54, scale: 0.52 },
+      { art: '/sea/lighthouse.png', x: 62, y: 32, scale: 0.34 },
+      { art: '/sea/harbour.png', x: 44, y: 58, scale: 0.40 },
     ],
   },
   {
