@@ -191,7 +191,14 @@ export default function FishingHere({
   const dismiss = useCallback(() => { setCaught(null); setPhase('idle') }, [])
 
   return (
-    <div style={{
+    <div
+      /* THE ROD IS NOT A RUDDER. Cast and Reel In stop `pointerdown`, but the
+         map steers on `click` — and stopping pointerdown does nothing to the
+         click that follows it, so every cast was also plotting a course to
+         wherever the button happened to be. Caught at the root: nothing in
+         here is ever a steering tap. */
+      onClick={e => e.stopPropagation()}
+      style={{
       position: 'absolute', inset: 0, zIndex: 20,
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
       alignItems: 'center', paddingBottom: 26, pointerEvents: 'none',

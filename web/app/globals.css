@@ -2465,3 +2465,103 @@ body.hardcore-gauntlet::after {
 @media (min-width: 640px) {
   .sea-surface { top: 60px; bottom: 0; }
 }
+
+/* ── THE SEA: light and water ────────────────────────────────────────────────
+   Everything here is atmosphere for the ocean hub. All of it is deliberately
+   near-invisible on its own: the house rule is that juice stays subtle and
+   local, and a painted sea is ruined faster by one loud effect than by none.
+   Between them they are the difference between a boat sitting on a colour and
+   a boat floating in water. */
+
+/* Caustics — light coming through a moving surface. Two very low-contrast
+   sheets drifting at different rates and angles, so the pattern never repeats
+   visibly and never resolves into a texture you can name. Screen blend so it
+   only ever ADDS light, which is what water does. */
+.sea-caustics {
+  position: absolute;
+  inset: -25%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  background:
+    repeating-linear-gradient(102deg, rgba(190,224,236,0.055) 0 3px, transparent 3px 46px),
+    repeating-linear-gradient(-64deg, rgba(190,224,236,0.04) 0 2px, transparent 2px 62px);
+  animation: seaCaustics 34s linear infinite;
+  will-change: transform;
+}
+@keyframes seaCaustics {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-140px, 96px, 0); }
+}
+
+/* A slow sun shaft across the water. One, wide, barely there — it reads as the
+   sky doing something rather than as a light source in the scene. */
+.sea-shaft {
+  position: absolute;
+  top: -30%;
+  left: -20%;
+  width: 55%;
+  height: 170%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transform: rotate(14deg);
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(198,226,238,0.05) 38%,
+    rgba(214,238,248,0.085) 52%,
+    rgba(198,226,238,0.04) 66%,
+    transparent 100%);
+  filter: blur(22px);
+  animation: seaShaft 26s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+@keyframes seaShaft {
+  from { transform: rotate(14deg) translateX(-6%); opacity: 0.6; }
+  to   { transform: rotate(18deg) translateX(10%); opacity: 1; }
+}
+
+/* The hull settling in the water while at anchor. Rings shed from under the
+   boat and spread, because something floating displaces water even when it is
+   going nowhere. Three, out of phase, so it never pulses like a beacon. */
+.sea-ripple {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 96px;
+  height: 30px;
+  margin: -15px 0 0 -48px;
+  border-radius: 50%;
+  border: 1px solid rgba(206,230,240,0.5);
+  pointer-events: none;
+  opacity: 0;
+  animation: seaRipple 4.6s ease-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes seaRipple {
+  0%   { transform: scale(0.35); opacity: 0; }
+  14%  { opacity: 0.34; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* THE WAKE. One mark, laid in world space by the rAF loop and left behind. No
+   animation here on purpose: position, scale and opacity are all written by the
+   loop, because a mark has to age from the moment the hull dropped it, and a CSS
+   animation would restart every time the pool recycled the node. */
+.sea-wake {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 54px;
+  height: 16px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(226,244,250,0.55), rgba(226,244,250,0) 70%);
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sea-caustics, .sea-shaft, .sea-ripple { animation: none; }
+  .sea-ripple { opacity: 0; }
+  .sea-wake { display: none; }
+}

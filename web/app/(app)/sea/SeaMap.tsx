@@ -41,6 +41,15 @@ const ACCEL = 2.6
 const SLOW = 240
 const ARRIVE = 26
 
+/** Marks in the wake. Enough to trail a couple of seconds at speed; more just
+ *  costs nodes nobody can see. */
+const WAKE_MARKS = 16
+/** Milliseconds between marks. Shorter reads as a solid smear, longer as a
+ *  dotted line. */
+const WAKE_EVERY = 85
+/** How long a mark takes to dissolve. */
+const WAKE_LIFE = 2100
+
 type Vec = { x: number; y: number }
 
 /** '#rrggbb' → [r,g,b]. */
@@ -115,6 +124,19 @@ export default function SeaMap({
 }) {
   const router = useRouter()
   const level = useMemo(() => getLevelFromXP(fishingXP), [fishingXP])
+
+  /** THE WAKE. A fixed pool of marks laid in WORLD space and left behind, which
+   *  is what makes it a wake rather than a tail: each stays exactly where the
+   *  hull dropped it while the boat sails on. Recycled oldest-first, so there is
+   *  no allocation in the loop and no garbage at 60fps. */
+  const wakeRefs = useRef<(HTMLDivElement | null)[]>([])
+  const wakeAt = useRef(Array.from({ length: WAKE_MARKS }, () => ({ x: 0, y: 0, born: -9999 })))
+  const wakeNext = useRef(0)
+  const wakeLast = useRef(0)
+
+  /** The at-anchor ripples, dimmed as you get under way — a boat making six
+   *  knots is not sitting in its own rings. */
+  const rippleRef = useRef<HTMLDivElement | null>(null)
 
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const worldRef = useRef<HTMLDivElement | null>(null)
@@ -240,6 +262,34 @@ export default function SeaMap({
       // deadband it simply keeps whatever it was facing.
       if (Math.abs(vel.current.x) > 70) facing.current = vel.current.x < 0 ? 1 : -1
 
+      // THE WAKE. Lay a mark behind the hull while making way, then age every
+      // mark in the pool. Marks live in world coordinates inside the world
+      // layer, so they stay put on the sea while the boat leaves them behind.
+      const speed = Math.hypot(vel.current.x, vel.current.y)
+      if (speed > 55 && now - wakeLast.current > WAKE_EVERY) {
+        wakeLast.current = now
+        const i = wakeNext.current
+        wakeNext.current = (i + 1) % WAKE_MARKS
+        wakeAt.current[i] = {
+          x: pos.current.x - (vel.current.x / speed) * 46,
+          y: pos.current.y - (vel.current.y / speed) * 46,
+          born: now,
+        }
+      }
+      for (let i = 0; i < WAKE_MARKS; i++) {
+        const el = wakeRefs.current[i]
+        if (!el) continue
+        const m = wakeAt.current[i]
+        const age = (now - m.born) / WAKE_LIFE
+        if (age >= 1 || age < 0) { el.style.opacity = '0'; continue }
+        // Spreads as it fades, the way disturbed water settles.
+        el.style.opacity = String((1 - age) * 0.32)
+        el.style.transform =
+          `translate3d(${m.x}px, ${m.y}px, 0) translate(-50%, -50%) scale(${0.5 + age * 2.0})`
+      }
+      const ripples = rippleRef.current
+      if (ripples) ripples.style.opacity = String(Math.max(0, 1 - speed / 190))
+
       // Imperative writes. The whole reason this holds 60fps on a phone.
       const world = worldRef.current
       if (world) world.style.transform = `translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
@@ -299,6 +349,27 @@ export default function SeaMap({
         {PLACES.map(p => (
           <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
         ))}
+        {/* The wake, in the world layer so each mark stays on the water where
+            the hull left it. Every one of these is positioned by the loop. */}
+        {Array.from({ length: WAKE_MARKS }, (_, i) => (
+          <div key={i} aria-hidden className="sea-wake"
+            ref={el => { wakeRefs.current[i] = el }} />
+        ))}
+      </div>
+
+      {/* THE SURFACE, in screen space. Light on the water does not sail with
+          you, so none of this belongs in the world layer. */}
+      <div aria-hidden className="sea-caustics" />
+      <div aria-hidden className="sea-shaft" />
+
+      {/* The hull settling at anchor. Three rings out of phase so it reads as
+          water moving rather than something blinking. */}
+      <div ref={rippleRef} aria-hidden style={{
+        position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
+      }}>
+        <div className="sea-ripple" />
+        <div className="sea-ripple" style={{ animationDelay: '1.5s' }} />
+        <div className="sea-ripple" style={{ animationDelay: '3s' }} />
       </div>
 
       {/* THE BOAT SITS AT THE CENTRE OF THE SCREEN AND STAYS THERE.
