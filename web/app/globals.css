@@ -2580,7 +2580,10 @@ body.hardcore-gauntlet::after {
   left: 0;
   top: 0;
   width: 54px;
-  height: 16px;
+  /* Drawn round-ish because it lives on the ground plane and gets squashed to
+     58% by the world layer. At the old 16px it came out nine pixels tall and
+     read as a scratch rather than displaced water. */
+  height: 28px;
   border-radius: 50%;
   pointer-events: none;
   opacity: 0;

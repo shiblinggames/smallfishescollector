@@ -41,6 +41,28 @@ const ACCEL = 2.6
 const SLOW = 240
 const ARRIVE = 26
 
+/**
+ * THE GROUND PLANE.
+ *
+ * A horizon at the top of the screen says the camera is tilted. Nothing else on
+ * the chart was saying it: the world was a pure top-down translate, so the sky
+ * was making a promise the water never kept, and every island read as a sticker
+ * lying flat on a wall of blue.
+ *
+ * This is the promise kept. The whole world layer is squashed vertically, which
+ * is what a flat plane does when you look across it instead of down at it —
+ * every zone becomes an ellipse, every distance north-south foreshortens, and
+ * sailing "up" the chart covers less screen than sailing sideways, exactly as
+ * it should.
+ *
+ * It is an orthographic tilt, not true perspective: the squash is uniform
+ * rather than tightening toward the horizon, so nothing gets smaller with
+ * distance. That is deliberate. Real perspective on a scrolling top-down chart
+ * means the scale under the boat changes as you sail, which breaks every
+ * hit-test on the map for a cue that atmospheric haze gives you for free.
+ */
+const GROUND = 0.58
+
 /** The cloud bank. Written down rather than random so the sky is the same sky
  *  every session, and spread wide because the layer is 60% wider than the
  *  screen to give the parallax somewhere to travel. Sizes are percentages of
@@ -251,11 +273,16 @@ function drawSea(
   const layer = (pat: CanvasPattern | null, size: number, px: number, py: number) => {
     if (!pat) return
     ctx.save()
+    // THE SAME PLANE THE WORLD IS ON. The wash is water, the water is the
+    // ground, and the ground is foreshortened — so the mottle compresses
+    // vertically by exactly the amount the island layer does. Drawn taller by
+    // the same factor so it still covers the screen after the squash.
+    ctx.scale(1, GROUND)
     // Wrapped to the tile so the offsets never grow large enough to lose
     // precision on a long voyage.
     ctx.translate(-(((px % size) + size) % size), -(((py % size) + size) % size))
     ctx.fillStyle = pat
-    ctx.fillRect(0, 0, w + size, h + size)
+    ctx.fillRect(0, 0, w + size, h / GROUND + size)
     ctx.restore()
   }
   layer(patDeep, DEEP_TILE, camX + t * 5.5, camY + t * 2.5)
@@ -402,7 +429,10 @@ export default function SeaMap({
     const r = wrap.getBoundingClientRect()
     return {
       x: clientX - r.left - r.width / 2 + pos.current.x,
-      y: clientY - r.top - r.height / 2 + pos.current.y,
+      // Undo the plane's squash. Without this every tap in the top or bottom of
+      // the screen courses to somewhere nearer than where the thumb landed, and
+      // the further from centre the worse it gets.
+      y: (clientY - r.top - r.height / 2) / GROUND + pos.current.y,
     }
   }, [])
 
@@ -560,7 +590,9 @@ export default function SeaMap({
         wakeNext.current = (i + 1) % WAKE_MARKS
         wakeAt.current[i] = {
           x: pos.current.x - (vel.current.x / speed) * 46 + WATERLINE_X,
-          y: pos.current.y - (vel.current.y / speed) * 46 + WATERLINE_Y,
+          // WATERLINE_Y is a SCREEN measurement and this is a world coordinate
+          // inside the squashed layer, so it has to be divided back out.
+          y: pos.current.y - (vel.current.y / speed) * 46 + WATERLINE_Y / GROUND,
           born: now,
         }
       }
@@ -589,7 +621,12 @@ export default function SeaMap({
 
       // Imperative writes. The whole reason this holds 60fps on a phone.
       const world = worldRef.current
-      if (world) world.style.transform = `translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
+      // scaleY LAST (CSS applies right to left), so the camera pan happens in
+      // world units and only then meets the plane's foreshortening.
+      if (world) {
+        world.style.transform =
+          `scaleY(${GROUND}) translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
+      }
       // The sea recoloured under the boat. One style write per frame, and the
       // reason there are no zone edges anywhere on the chart.
       const wrap = wrapRef.current
@@ -1015,6 +1052,11 @@ const DRIFT = [
   { w: 30, h: 6, a: 0.14, blur: 3 }, { w: 56, h: 10, a: 0.11, blur: 6 },
 ]
 
+/** How far an island stands out of the water, in SCREEN pixels. Everything
+ *  with height divides by GROUND to convert that into the squashed layer's own
+ *  units, so the lift stays the same on screen however the plane is tilted. */
+const ISLAND_LIFT = 15
+
 function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
   const isWater = place.kind === 'water'
   const d = place.r * 2
@@ -1088,8 +1130,10 @@ function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean;
         </>
       ) : (
         <>
-          {/* SHOALS, then SHORE, then LAND. Three rings so the island meets the
-              sea through shallow water rather than on a cut line. */}
+          {/* ── THE FOOTPRINT, flat on the water ──────────────────────
+              Shoals and a wet shore ring, which live INSIDE the squashed world
+              layer and so come out as ellipses. This is the island's shadow on
+              the sea and the only part of it that is genuinely lying down. */}
           <div aria-hidden style={{
             position: 'absolute', inset: '2%', clipPath: clip,
             background: 'rgba(150,190,205,0.16)', filter: 'blur(6px)',
@@ -1098,38 +1142,82 @@ function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean;
             position: 'absolute', inset: '10%', clipPath: clip,
             background: 'rgba(196,214,222,0.34)',
           }} />
+          {/* Contact shadow, thrown away from the light. Nothing says "this
+              object is ABOVE the water" faster than a shadow that is not
+              directly under it. */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: '11%', clipPath: clip,
+            transform: `translate(${ISLAND_LIFT * 0.34}px, ${ISLAND_LIFT * 0.5}px)`,
+            background: 'rgba(2,10,18,0.42)', filter: 'blur(9px)',
+          }} />
+
+          {/* ── THE CLIFF, the extrusion ────────────────────────────────
+              The same coastline again, dropped by the island's height and
+              filled with wet rock. Drawn UNDER the top face, so all you ever
+              see of it is the band along the near edge — which is exactly what
+              you see of a real island's side from a low angle, and is the whole
+              trick of an extrusion. */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: '13%', clipPath: clip,
+            transform: `translateY(${ISLAND_LIFT / GROUND}px)`,
+            background: 'linear-gradient(180deg, #3b3226 0%, #2a2419 55%, #191509 100%)',
+            filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
+          }} />
+
+          {/* ── THE TOP FACE, lifted clear of the water ─────────────────
+              Counter-squashed so the land itself is NOT foreshortened — an
+              island is a solid standing on the plane, not a decal printed on
+              it — then raised by the same lift the cliff was dropped by. */}
           <div style={{
             position: 'absolute', inset: '13%', clipPath: clip, overflow: 'hidden',
+            transform: `translateY(${-ISLAND_LIFT / GROUND}px)`,
             filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'brightness(0.94) saturate(0.92)',
             boxShadow: 'inset 0 0 40px rgba(0,0,0,0.55)',
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={place.art} alt="" draggable={false}
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            {/* A rim of light along the top edge, where the sky hits the land
+                and the cliff below it does not. */}
+            <div aria-hidden style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(226,238,242,0.30) 0%, rgba(226,238,242,0) 22%)',
+            }} />
           </div>
 
-          {/* THE JETTY. What makes it a port rather than a rock: somewhere to
-              tie up, running out from the shore into open water. */}
+          {/* ── THE JETTY, standing on the plane ────────────────────────
+              Counter-squashed like everything else that has height, and
+              anchored at its landward end so it runs OUT from the shore
+              rather than floating beside it. */}
           <div aria-hidden style={{
-            position: 'absolute', left: '50%', top: '78%', width: place.r * 0.62, height: 11,
-            transform: 'translateX(-6%) rotate(9deg)',
-            background: 'linear-gradient(180deg, #6d5636, #3d2f1d)',
-            borderRadius: 2,
-            boxShadow: '0 3px 10px rgba(0,0,0,0.55)',
-            opacity: locked ? 0.4 : 1,
-          }} />
-          {[0.34, 0.58, 0.82].map(f => (
-            <div key={f} aria-hidden style={{
-              position: 'absolute', left: `calc(50% + ${place.r * 0.62 * f - 6}px)`, top: '80%',
-              width: 5, height: 15, background: '#2e2416', borderRadius: 1,
-              transform: 'rotate(9deg)', opacity: locked ? 0.4 : 0.9,
+            position: 'absolute', left: '50%', top: '78%',
+            transform: `translateY(${-ISLAND_LIFT / GROUND}px) scaleY(${1 / GROUND})`,
+            transformOrigin: 'left center',
+            width: place.r * 0.62, height: 11,
+          }}>
+            <div style={{
+              position: 'absolute', inset: 0,
+              transform: 'translateX(-6%) rotate(9deg)',
+              background: 'linear-gradient(180deg, #6d5636, #3d2f1d)',
+              borderRadius: 2,
+              boxShadow: '0 3px 10px rgba(0,0,0,0.55)',
+              opacity: locked ? 0.4 : 1,
             }} />
-          ))}
+            {[0.34, 0.58, 0.82].map(f => (
+              <div key={f} style={{
+                position: 'absolute', left: `${f * 100}%`, top: 6,
+                width: 5, height: 15, background: '#2e2416', borderRadius: 1,
+                transform: 'rotate(9deg)', opacity: locked ? 0.4 : 0.9,
+              }} />
+            ))}
+          </div>
 
           {/* A lantern on the end of the jetty. The thing you steer toward at
-              distance, and the only warm colour on the whole chart. */}
+              distance, and the only warm colour on the whole chart. It sits
+              highest of anything here, so it gets the most lift. */}
           <div aria-hidden style={{
             position: 'absolute', left: `calc(50% + ${place.r * 0.56}px)`, top: '72%',
+            transform: `translateY(${-(ISLAND_LIFT + 10) / GROUND}px)`,
             width: 13, height: 13, borderRadius: '50%',
             background: locked ? 'rgba(150,160,170,0.5)' : '#ffd986',
             boxShadow: locked ? 'none' : `0 0 ${isNear ? 26 : 15}px 6px rgba(255,196,110,${isNear ? 0.5 : 0.3})`,
@@ -1145,7 +1233,12 @@ function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean;
           says it in words when you cross. */}
       {!isWater && (
         <div style={{
-          position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 8px)',
+          position: 'absolute', left: '50%', top: '100%',
+          // COUNTER-SQUASHED. It sits inside the world layer so it travels with
+          // its island, but it is a label, not a thing lying on the water —
+          // left on the plane it renders 58% tall and unreadable.
+          transform: `translate(-50%, 8px) scaleY(${1 / GROUND})`,
+          transformOrigin: 'top center',
           textAlign: 'center', whiteSpace: 'nowrap',
         }}>
           <p className="font-cinzel font-700" style={{
@@ -1282,8 +1375,15 @@ function Compass({ pos, locked }: { pos: React.RefObject<Vec>; locked: (p: Place
         const dx = p.x - here.x
         const dy = p.y - here.y
         const d = Math.hypot(dx, dy)
-        if (d < 620) return null
-        const a = Math.atan2(dy, dx)
+        // FROM THE EDGE, not the centre. The zones are big now — the Ancient
+        // Deep is 1150 across — so a centre-distance test put an arrow on screen
+        // pointing back into the water you were already sitting in.
+        if (d - p.r < 700) return null
+        // AIMED IN SCREEN SPACE. The compass is drawn on the screen but the
+        // bearing comes from world coordinates, and the world is squashed onto
+        // a tilted plane — so north-south has to be foreshortened here too or
+        // every arrow points somewhere the place is not.
+        const a = Math.atan2(dy * GROUND, dx)
         return (
           <div key={p.id} aria-hidden style={{
             position: 'absolute', left: '50%', top: '50%',

@@ -315,8 +315,13 @@ export default function FishingHere({
           map without it meant the XP went somewhere invisible, and the map's
           fishing stopped reading as the same activity as the fishing screen's. */}
       <div style={{
-        pointerEvents: 'auto', width: '100%', maxWidth: 440,
-        padding: '0.5rem 0.75rem 0', flexShrink: 0,
+        pointerEvents: 'auto', width: '100%', flexShrink: 0,
+        // THE FISHING SCREEN'S OWN NUMBERS. It centres a max-w-md column and
+        // pads it 1rem, and its XP bar carries 0.6rem beneath. I had 0.5rem of
+        // top padding and no column, so the bar sat hard against the nav with
+        // half the breathing room it has on the page it came from.
+        maxWidth: 448, margin: '0 auto',
+        padding: '1rem 1rem 0.6rem',
       }}>
         <XPBarDisplay xp={fishingXP} />
       </div>
@@ -329,7 +334,10 @@ export default function FishingHere({
         flex: 1, minHeight: 0, width: '100%',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'flex-end',
-        padding: '0 0.75rem', gap: 10,
+        // Same column as the bar above it, so the dial and the card line up
+        // with it rather than with the whole screen.
+        maxWidth: 448, margin: '0 auto',
+        padding: '0 1rem', gap: 10,
       }}>
         <AnimatePresence>
           {(phase === 'hooked' || phase === 'reeling') && (
