@@ -194,8 +194,7 @@ export default function SeaMap({
       ref={wrapRef}
       onClick={onTap}
       style={{
-        position: 'fixed', top: 44, bottom: 60, left: 0, right: 0,
-        overflow: 'hidden', cursor: 'pointer',
+        cursor: 'pointer',
         // The open sea, in the game's own palette: desaturated blue-greys with
         // depth carried by value. Replaced by a painted plate the moment one
         // exists — this is the only invented art on the screen.

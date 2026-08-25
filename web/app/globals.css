@@ -2448,3 +2448,20 @@ body.hardcore-gauntlet::after {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* THE SEA fills the space between the app's chrome. Inline styles would win
+   over Tailwind's responsive classes, so the breakpoint lives here: the mobile
+   header is 44px with a 60px tab bar under it, and the desktop header is 60px
+   with no bar at all. Hardcoding the mobile pair left a 60px dead strip along
+   the bottom of every desktop view. */
+.sea-surface {
+  position: fixed;
+  top: 44px;
+  right: 0;
+  bottom: 60px;
+  left: 0;
+  overflow: hidden;
+}
+@media (min-width: 640px) {
+  .sea-surface { top: 60px; bottom: 0; }
+}

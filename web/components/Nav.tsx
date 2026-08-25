@@ -362,6 +362,19 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
       )
     },
     // Admin-only — gated on profiles.is_admin (kingkong, mikel).
+    // The Sea is the painted ocean hub, still being felt out. It lives here
+    // rather than on the tab bar because five tabs is already the width of a
+    // phone, and a sixth would shrink every label to test one prototype.
+    ...(isAdmin ? [{ href: '/sea', label: 'The Sea', badge: false,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 17c2.2 0 2.2-1.5 4.5-1.5S8.7 17 11 17s2.2-1.5 4.5-1.5S17.8 17 20 17"/>
+          <path d="M2 21c2.2 0 2.2-1.5 4.5-1.5S8.7 21 11 21s2.2-1.5 4.5-1.5S17.8 21 20 21"/>
+          <path d="M5 13h13l-1.6-4.5a2 2 0 0 0-1.9-1.3H8.5a2 2 0 0 0-1.9 1.3L5 13z"/>
+          <path d="M11.5 7V3l4 2-4 1.4"/>
+        </svg>
+      )
+    }] : []),
     ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin Stats', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
