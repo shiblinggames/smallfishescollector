@@ -2473,25 +2473,57 @@ body.hardcore-gauntlet::after {
    Between them they are the difference between a boat sitting on a colour and
    a boat floating in water. */
 
-/* Caustics — light coming through a moving surface. Two very low-contrast
-   sheets drifting at different rates and angles, so the pattern never repeats
-   visibly and never resolves into a texture you can name. Screen blend so it
-   only ever ADDS light, which is what water does. */
+/* Caustics — light coming through a moving surface.
+
+   The first pass at this used repeating-linear-gradient, which is a STRIPE
+   generator: hard stops, screen-blended over a smooth sea, and the result was
+   diagonal lines across the whole chart. Water does not have edges in it.
+
+   So: soft radial pools instead, two tiled sheets at different sizes drifting
+   in different directions, every stop fading to transparent so there is no line
+   anywhere to catch the eye. Each sheet translates by exactly one tile, which
+   makes the loop seamless, and the softness is in the gradient stops rather
+   than a blur filter, which keeps two full-screen layers cheap on a phone. */
 .sea-caustics {
   position: absolute;
-  inset: -25%;
+  inset: 0;
+  overflow: hidden;
   pointer-events: none;
   mix-blend-mode: screen;
-  opacity: 0.5;
-  background:
-    repeating-linear-gradient(102deg, rgba(190,224,236,0.055) 0 3px, transparent 3px 46px),
-    repeating-linear-gradient(-64deg, rgba(190,224,236,0.04) 0 2px, transparent 2px 62px);
-  animation: seaCaustics 34s linear infinite;
+  opacity: 0.85;
+}
+.sea-caustics::before,
+.sea-caustics::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background-repeat: repeat;
   will-change: transform;
 }
-@keyframes seaCaustics {
+.sea-caustics::before {
+  background-image:
+    radial-gradient(38% 26% at 22% 30%, rgba(198,230,242,0.085), transparent 72%),
+    radial-gradient(30% 20% at 68% 18%, rgba(198,230,242,0.06), transparent 72%),
+    radial-gradient(26% 30% at 46% 72%, rgba(198,230,242,0.075), transparent 72%),
+    radial-gradient(22% 18% at 84% 62%, rgba(198,230,242,0.05), transparent 72%);
+  background-size: 560px 400px;
+  animation: seaCausticsA 38s linear infinite;
+}
+.sea-caustics::after {
+  background-image:
+    radial-gradient(34% 24% at 12% 62%, rgba(206,238,248,0.06), transparent 72%),
+    radial-gradient(28% 20% at 58% 44%, rgba(206,238,248,0.05), transparent 72%),
+    radial-gradient(24% 28% at 88% 22%, rgba(206,238,248,0.055), transparent 72%);
+  background-size: 720px 520px;
+  animation: seaCausticsB 52s linear infinite;
+}
+@keyframes seaCausticsA {
   from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-140px, 96px, 0); }
+  to   { transform: translate3d(-560px, 400px, 0); }
+}
+@keyframes seaCausticsB {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(720px, 520px, 0); }
 }
 
 /* A slow sun shaft across the water. One, wide, barely there — it reads as the
@@ -2561,7 +2593,8 @@ body.hardcore-gauntlet::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sea-caustics, .sea-shaft, .sea-ripple { animation: none; }
+  .sea-caustics::before, .sea-caustics::after,
+  .sea-shaft, .sea-ripple { animation: none; }
   .sea-ripple { opacity: 0; }
   .sea-wake { display: none; }
 }
