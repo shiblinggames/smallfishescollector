@@ -7,6 +7,42 @@ the tavern, and docking navigates the web app to that screen.
 Lives **outside `web/`** on purpose so nothing here is ever bundled into the
 Next.js app. The only thing that crosses over is the exported build.
 
+## The map's shape
+
+Two kinds of thing, and they are not the same kind.
+
+**Ports** are land you sail to and dock at. **The Mainland** carries the tavern,
+the market and the shops as one landmass, because that is what it is — you do not
+sail between the tavern and the shop. **Expeditions** is its own port, well clear
+of it.
+
+**Waters** are regions you sail INTO. A fishing zone is not a dot you tap, it is
+a stretch of sea with a boundary: cross into the Deep and the water changes under
+you. That is the difference between a map and a menu with waves on it, and it is
+what lets a level gate be something you SEE — a locked region is walled off by
+weather you cannot push through, rather than by a message.
+
+Both live in `scripts/destinations.gd`, in metres on the XZ plane. The zones run
+outward from the mainland in unlock order, so sailing further and fishing deeper
+end up meaning the same thing.
+
+## 2.5D
+
+A 3D scene with a tilted camera, not a top-down 2D one. The boat still moves on a
+flat plane at y = 0, so all the steering maths is two numbers wearing a third —
+what 3D buys is perspective: waves compressing toward a horizon, land with
+height, a camera that looks ACROSS the sea rather than down at it.
+
+**The pitch is the most important number in the scene.** It comes out of
+`cam_offset` in `sea.gd`, and the rule is that the top of the frame has to sit
+above horizontal or there is no horizon and therefore no 2.5D read at all — just
+an expensive top-down map. At `(0, 58, 108)` with a 64° lens it clears by a few
+degrees. Change one, check the other.
+
+**No vertex displacement in the water.** Real geometry waves need a densely
+subdivided plane and this has to survive WKWebView on a phone. It is all fragment
+work on a flat plane, which at this angle is indistinguishable.
+
 ## What phase 1 is, and what it deliberately is not
 
 **Is:** a boat, open water, a camera, tap-to-sail.

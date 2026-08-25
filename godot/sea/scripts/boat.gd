@@ -1,71 +1,92 @@
 class_name Boat
-extends Node2D
+extends Node3D
 
-## THE BOAT.
+## THE BOAT, now on a water plane rather than a screen.
 ##
-## Tap where you want to go and it sails there. Not drag-to-steer, which is the
-## other obvious choice and is worse on touch: steering wants a stick, a stick
-## wants a thumb parked on the glass, and a thumb parked on the glass covers a
-## third of a phone screen. Tap-to-move keeps the hand off the map.
+## Same feel as the 2D version and the same five numbers, moved from pixels to
+## metres and from Vector2 to the XZ plane. Y is up and the boat never leaves
+## y = 0, so all the steering maths stays two-dimensional; only the rendering
+## became 3D.
 ##
-## The feel lives in three numbers below. A boat is heavy, so it should take a
-## moment to get going, lean as it turns, and coast when you let it arrive. If
-## it stops dead on the target it reads as a cursor rather than a hull.
+## Tap where you want to go and it sails there. Not drag-to-steer: steering
+## wants a stick, a stick wants a thumb parked on the glass, and a thumb parked
+## on the glass covers a third of a phone screen.
 
-## Top speed, px/sec. Sets how big the map is allowed to be more than any other
-## number here: the longest crossing anyone tolerates is roughly ten seconds.
-@export var max_speed: float = 520.0
+## Top speed, metres/sec. Sets how big the map may be more than any other number
+## here: the longest crossing anyone tolerates is about ten seconds.
+@export var max_speed: float = 30.0
 ## How hard it accelerates toward top speed. Low is heavy.
 @export var accel: float = 2.2
 ## Radians/sec the hull can turn through. Deliberately slow: a boat that spins
 ## instantly to face a tap feels like a mouse pointer.
 @export var turn_rate: float = 2.6
 ## Inside this, it is arrived. Bigger than you would think, or the boat fidgets
-## on the spot hunting an exact pixel.
-@export var arrive_radius: float = 26.0
+## on the spot hunting an exact point.
+@export var arrive_radius: float = 1.6
 ## Where it starts easing off. The gap between this and arrive_radius is the
 ## whole feeling of a boat coasting into a berth.
-@export var slow_radius: float = 180.0
+@export var slow_radius: float = 11.0
+## How far the hull rides on the swell. Cosmetic, and the cheapest thing in the
+## scene that makes the water read as having a surface.
+@export var bob_height: float = 0.16
 
-var target: Vector2
-var velocity: Vector2 = Vector2.ZERO
+var target: Vector3 = Vector3.ZERO
+var velocity: Vector3 = Vector3.ZERO
 var _heading: float = 0.0
+var _t: float = 0.0
 
-signal arrived(where: Vector2)
+signal arrived(where: Vector3)
 
 func _ready() -> void:
 	target = global_position
-	_heading = rotation
+	_heading = rotation.y
 
-func sail_to(point: Vector2) -> void:
-	target = point
+func sail_to(point: Vector3) -> void:
+	# Flattened: a tap resolves against the water plane, and the boat has no
+	# business anywhere but on it.
+	target = Vector3(point.x, 0.0, point.z)
 
 func _physics_process(delta: float) -> void:
-	var to_target := target - global_position
+	_t += delta
+	var here := Vector3(global_position.x, 0.0, global_position.z)
+	var to_target := target - here
 	var dist := to_target.length()
 
-	# DESIRED SPEED, eased down inside the slow radius. Squared falloff rather
-	# than linear so the last stretch is a long glide instead of a ramp.
+	# Desired speed, eased down inside the slow radius. Smoothstep rather than
+	# linear so the last stretch is a long glide instead of a ramp.
 	var want := 0.0
 	if dist > arrive_radius:
-		var t: float = clamp((dist - arrive_radius) / (slow_radius - arrive_radius), 0.0, 1.0)
-		want = max_speed * (t * t * (3.0 - 2.0 * t))
+		var tt: float = clamp((dist - arrive_radius) / (slow_radius - arrive_radius), 0.0, 1.0)
+		want = max_speed * (tt * tt * (3.0 - 2.0 * tt))
 
-	var desired := to_target.normalized() * want if dist > 0.001 else Vector2.ZERO
+	var desired: Vector3 = to_target.normalized() * want if dist > 0.001 else Vector3.ZERO
 	# Momentum. The boat does not get the velocity it wants, it gets closer to it.
 	velocity = velocity.lerp(desired, clamp(accel * delta, 0.0, 1.0))
-	global_position += velocity * delta
+	var next := here + velocity * delta
 
 	# HEADING follows the velocity, not the target, so a boat still carrying way
-	# from the last leg swings round properly instead of snapping to the new tap.
-	if velocity.length() > 12.0:
-		var want_heading := velocity.angle()
+	# from the last leg swings round properly instead of snapping to a new tap.
+	if velocity.length() > 0.7:
+		# atan2(x, z) rather than the usual (z, x): Godot forward is -Z, so this
+		# is the angle that puts the bow along the direction of travel.
+		var want_heading := atan2(velocity.x, velocity.z)
 		_heading = rotate_toward(_heading, want_heading, turn_rate * delta)
-		rotation = _heading
 
-	# Lean into the turn. Small: it is a boat, not a motorbike.
-	var turn_delta := angle_difference(rotation, velocity.angle()) if velocity.length() > 12.0 else 0.0
-	skew = lerp(skew, clamp(-turn_delta * 0.16, -0.08, 0.08), clamp(6.0 * delta, 0.0, 1.0))
+	# Two out-of-phase waves so the bob never reads as a metronome, plus a roll.
+	var bob := sin(_t * 1.7) * 0.6 + sin(_t * 2.6 + 1.1) * 0.4
+	global_position = Vector3(next.x, bob * bob_height, next.z)
+	rotation = Vector3(
+		sin(_t * 2.1) * 0.02,
+		_heading,
+		sin(_t * 1.4 + 0.7) * 0.035 - clamp(_turn_error() * 0.35, -0.16, 0.16),
+	)
 
-	if dist <= arrive_radius and velocity.length() < 24.0:
+	if dist <= arrive_radius and velocity.length() < 1.4:
 		arrived.emit(global_position)
+
+## How far the hull is off the way it is actually moving. Drives the heel into a
+## turn, so lean is a consequence of turning rather than an animation played at it.
+func _turn_error() -> float:
+	if velocity.length() < 0.7:
+		return 0.0
+	return angle_difference(_heading, atan2(velocity.x, velocity.z))

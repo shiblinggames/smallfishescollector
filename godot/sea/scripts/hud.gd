@@ -12,7 +12,7 @@ extends Control
 ## derived from world state; a tree of Controls would be state to keep in sync
 ## for no gain.
 
-@onready var sea: Node2D = get_parent().get_parent()
+@onready var sea: Node3D = get_parent().get_parent()
 
 var _font: Font
 
@@ -53,6 +53,10 @@ func _draw_label(p: Dictionary, _vp: Vector2) -> void:
 ## whether that glow is a short hop or the other side of the map.
 func _draw_pointer(p: Dictionary, centre: Vector2, vp: Vector2) -> void:
 	var dir: Vector2 = (Vector2(p["screen"]) - centre)
+	# BEHIND THE CAMERA, unproject_position gives a mirrored point rather than
+	# nothing, so an arrow for a place astern would point dead ahead. Flip it.
+	if p.get("behind", false):
+		dir = -dir
 	if dir.length() < 0.001:
 		return
 	dir = dir.normalized()
@@ -93,7 +97,7 @@ func _draw_prompt(st: Dictionary, vp: Vector2) -> void:
 	var txt: String
 	var col: Color
 	if st["can_enter"]:
-		txt = "Tap again to enter %s" % String(st["near"])
+		txt = "Tap again to %s %s" % [String(st["verb"]), String(st["near"])]
 		col = Color(0.95, 0.90, 0.78)
 	else:
 		txt = "%s  ·  needs Fishing %d" % [String(st["near"]), int(st["near_level"])]

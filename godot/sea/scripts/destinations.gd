@@ -1,64 +1,65 @@
 class_name Destinations
 extends RefCounted
 
-## WHERE THINGS ARE.
+## WHERE THINGS ARE, in metres on the XZ plane.
 ##
-## The whole map in one table, so moving a place is editing a number rather than
-## dragging a node and hoping the scene file is right.
+## Two kinds of thing, and they are not the same kind.
 ##
-## DISTANCE IS PROGRESSION. The fishing zones run outward from home in the order
-## they unlock: the Shallows are a short hop, the Ancient Deep is right out on
-## the edge. Nothing enforces that, it just makes the map say what the level
-## gates say. Sailing further and fishing deeper end up meaning the same thing.
+## PORTS are land you sail to and dock at. The Mainland carries the tavern, the
+## market and the shops as ONE landmass, because that is what it is — you do not
+## sail between the tavern and the shop. Expeditions is its own port, well clear
+## of it, because it is its own thing.
+##
+## WATERS are regions you sail INTO. A fishing zone is not a dot you tap, it is
+## a stretch of sea with a boundary: cross into the Deep and the water changes
+## under you. That is the difference between a map and a menu with waves on it,
+## and it is what lets a level gate be something you can see rather than
+## something you are told.
 ##
 ## `min_level` mirrors ZONE_MIN_LEVEL in web/app/(app)/fishing/zoneData.ts
-## (1 / 15 / 30 / 50 / 75). It is duplicated here on purpose for now: phase 3
-## feeds the real numbers in from the app at load, and these become the fallback
-## for running the project standalone in the editor.
-##
-## Only PLACES belong here. Badges, leaderboards, social and profile are menus,
-## and putting a menu on a map only makes it slower to reach.
+## (1 / 15 / 30 / 50 / 75). Duplicated here for standalone editor runs; the app
+## passes the real numbers in at load.
 
-## `route` is what gets posted to the web app on docking. SeaFrame.tsx maps it.
-const LIST: Array[Dictionary] = [
+const PORTS: Array[Dictionary] = [
 	{
-		"id": "tavern", "name": "The Tavern", "route": "tavern",
-		"pos": Vector2(0, 0), "min_level": 0,
-		"tint": Color(0.94, 0.72, 0.36),
-	},
-	{
-		"id": "market", "name": "The Market", "route": "market",
-		"pos": Vector2(620, -380), "min_level": 0,
-		"tint": Color(0.62, 0.82, 0.55),
+		"id": "mainland", "name": "The Mainland", "route": "tavern",
+		"pos": Vector3(0, 0, 0), "radius": 46.0, "min_level": 0,
+		"tint": Color(0.94, 0.76, 0.42),
 	},
 	{
 		"id": "expeditions", "name": "Expeditions", "route": "expeditions",
-		"pos": Vector2(-780, -520), "min_level": 0,
+		"pos": Vector3(-118, 0, -96), "radius": 30.0, "min_level": 0,
 		"tint": Color(0.85, 0.45, 0.40),
 	},
+]
+
+## `radius` here is the WATER, not a marker: how far the region actually
+## reaches. They run outward from the mainland in unlock order, so sailing
+## further and fishing deeper end up meaning the same thing.
+const WATERS: Array[Dictionary] = [
 	{
 		"id": "shallows", "name": "The Shallows", "route": "fishing:shallows",
-		"pos": Vector2(760, 620), "min_level": 1,
-		"tint": Color(0.56, 0.86, 0.88),
+		"pos": Vector3(96, 0, 78), "radius": 62.0, "min_level": 1,
+		"tint": Color(0.42, 0.80, 0.82),
 	},
 	{
 		"id": "open_waters", "name": "Open Waters", "route": "fishing:open_waters",
-		"pos": Vector2(1650, 1150), "min_level": 15,
-		"tint": Color(0.44, 0.74, 0.90),
+		"pos": Vector3(206, 0, 148), "radius": 70.0, "min_level": 15,
+		"tint": Color(0.32, 0.62, 0.86),
 	},
 	{
 		"id": "deep", "name": "The Deep", "route": "fishing:deep",
-		"pos": Vector2(2500, 700), "min_level": 30,
-		"tint": Color(0.36, 0.56, 0.88),
+		"pos": Vector3(322, 0, 92), "radius": 76.0, "min_level": 30,
+		"tint": Color(0.24, 0.42, 0.80),
 	},
 	{
 		"id": "abyss", "name": "The Abyss", "route": "fishing:abyss",
-		"pos": Vector2(3150, 1750), "min_level": 50,
-		"tint": Color(0.52, 0.42, 0.86),
+		"pos": Vector3(404, 0, 224), "radius": 82.0, "min_level": 50,
+		"tint": Color(0.44, 0.32, 0.78),
 	},
 	{
 		"id": "ancient_deep", "name": "The Ancient Deep", "route": "fishing:ancient_deep",
-		"pos": Vector2(3900, 900), "min_level": 75,
-		"tint": Color(0.80, 0.60, 0.30),
+		"pos": Vector3(506, 0, 118), "radius": 88.0, "min_level": 75,
+		"tint": Color(0.74, 0.52, 0.24),
 	},
 ]
