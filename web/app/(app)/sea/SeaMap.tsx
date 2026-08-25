@@ -20,6 +20,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import PopupShell from '@/components/PopupShell'
 import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, type Place } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
@@ -705,6 +706,8 @@ export default function SeaMap({
    * going anywhere, and the sea has no state that has to keep advancing.
    */
   const [dialUp, setDialUp] = useState(false)
+  /** The Mainland's landing chooser — tavern, market or tackle shop. */
+  const [ashore, setAshore] = useState(false)
   /** True when the rod is out but nothing is in flight, so a tap on the water
    *  can simply stow it. */
   const [canLeaveFishing, setCanLeaveFishing] = useState(false)
@@ -829,8 +832,20 @@ export default function SeaMap({
 
   toWorldRef.current = toWorld
 
+  /**
+   * THE MAINLAND IS THREE PLACES, NOT ONE.
+   *
+   * Every other port on the chart goes exactly one place, so going ashore is
+   * the whole decision. The Mainland holds the tavern, the market and the
+   * tackle shop, and sending you to `/tavern` and leaving you to find the other
+   * two through the nav is not going ashore, it is being dropped at a door.
+   *
+   * So it lands on a chooser, the same shape the Gauntlets card uses: three
+   * art-forward cards on the backdrop, pick where you are actually going.
+   */
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
+    if (p.id === 'mainland') { setAshore(true); return }
     router.push(p.href)
   }, [router])
 
@@ -1551,6 +1566,15 @@ export default function SeaMap({
           }}>{PHASE_LABEL[phase]}</span>
         </div>
       )}
+
+      {/* THE COMPASS. Its mount was deleted in an over-broad slice edit and the
+          component sat unreferenced for a dozen commits, which is why the
+          arrows "disappeared" — nothing was wrong with them, nothing was
+          drawing them. Frozen while the dial is up: the boat is not moving, so
+          every tick would redraw identical arrows in identical places. */}
+      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} />
+
+      <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
 
       {fishingIn && (
         <FishingHere
@@ -2598,3 +2622,117 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
   )
 }
 
+
+/**
+ * GOING ASHORE AT THE MAINLAND.
+ *
+ * Three cards on the backdrop, no modal container behind them — the same shape
+ * as the Gauntlets chooser on the expeditions hub, because it is the same
+ * question: one door on the chart, three rooms behind it.
+ *
+ * The art is the building plates already standing on the island, so the card
+ * you tap is visibly the building you sailed past. That is the whole reason
+ * this is a chooser rather than a list of links.
+ */
+const ASHORE: { href: string; art: string; name: string; blurb: string; cta: string; accent: string }[] = [
+  { href: '/tavern', art: '/sea/tavern.png', name: 'The Tavern',
+    blurb: 'Cards, dice and the day\u2019s takings', cta: 'Enter', accent: '#e0a545' },
+  { href: '/tavern/market', art: '/sea/market.png', name: 'The Market',
+    blurb: 'Sell the hold at full price', cta: 'Trade', accent: '#7fd6a0' },
+  { href: '/marketplace/tackle-shop', art: '/sea/tackle.png', name: 'Tackle Shop',
+    blurb: 'Rods, hooks, reels and bait', cta: 'Browse', accent: '#67d4e8' },
+]
+
+function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const router = useRouter()
+  return (
+    // PopupShell does NOT portal, so it is a DOM child of the map — and the map
+    // steers on click and starts a heading on pointerdown. Without this, a tap
+    // on the backdrop to dismiss the chooser also puts the helm over, and you
+    // close the modal to find the boat sailing off. The wrapper takes no space:
+    // everything inside it is position: fixed.
+    <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+    <PopupShell open={open} onClose={onClose}>
+      <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 6 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+        style={{ margin: 'auto', width: '100%', maxWidth: 440 }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{
+              fontSize: '0.5rem', color: 'rgba(190,214,228,0.85)', textShadow: '0 1px 5px rgba(0,0,0,0.85)',
+            }}>Ashore at the Mainland</p>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1.05rem', color: '#f4ecd8', textShadow: '0 2px 8px rgba(0,0,0,0.85)',
+            }}>Where to?</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close"
+            style={{
+              width: 30, height: 30, borderRadius: '50%', padding: 0,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+              color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Three across. They stay three across on the narrowest phone: this is
+            one choice between three things and stacking it turns it into a
+            list you scroll, which is what the nav already is. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {ASHORE.map((d, i) => (
+            <motion.button key={d.href} type="button" className="tap"
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + i * 0.06, type: 'spring', stiffness: 380, damping: 28 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { vibrate([0, 16]); onClose(); router.push(d.href) }}
+              style={{
+                position: 'relative', overflow: 'hidden',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                padding: '0.8rem 0.45rem 0.75rem', borderRadius: 16, cursor: 'pointer',
+                // A SOLID base under the tint. These float on the backdrop with
+                // the painted chart still visible behind it, and a translucent
+                // card over moving water reads as a smear.
+                background: `linear-gradient(180deg, ${d.accent}24 0%, rgba(4,10,18,0.72) 48%, rgba(3,8,14,0.94) 100%), #06101a`,
+                border: `1px solid ${d.accent}5c`,
+                boxShadow: `0 0 22px ${d.accent}14`,
+              }}>
+              <div style={{
+                position: 'relative', width: '100%', height: 84,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+              }}>
+                <div aria-hidden style={{
+                  position: 'absolute', width: 96, height: 96, borderRadius: '50%',
+                  background: `radial-gradient(circle, ${d.accent}44, transparent 68%)`, filter: 'blur(3px)',
+                }} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={d.art} alt="" loading="eager" decoding="async" style={{
+                  position: 'relative', maxWidth: '92%', maxHeight: 82, objectFit: 'contain',
+                  filter: `drop-shadow(0 8px 18px ${d.accent}4d) drop-shadow(0 4px 10px rgba(0,0,0,0.6))`,
+                }} />
+              </div>
+              <p className="font-cinzel font-800" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.12 }}>
+                {d.name}
+              </p>
+              <p className="font-karla font-600" style={{
+                fontSize: '0.55rem', color: `${d.accent}dd`, marginTop: 3, lineHeight: 1.32,
+              }}>{d.blurb}</p>
+              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{
+                marginTop: 'auto', paddingTop: 9,
+                display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.54rem',
+                color: d.accent,
+              }}>
+                {d.cta}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
+              </span>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+    </PopupShell>
+    </div>
+  )
+}

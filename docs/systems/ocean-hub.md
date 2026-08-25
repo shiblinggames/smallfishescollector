@@ -141,7 +141,25 @@ Page order, which is the order you would actually do it in:
   stock hull makes 62% of it. Same spread, but the upgrade now buys back speed you can feel
   the absence of.
 
+## Going ashore
+
+Every port on the chart goes exactly one place, so tapping ashore is the whole decision —
+except the **Mainland**, which holds the tavern, the market and the tackle shop. Dropping
+you at `/tavern` and leaving the other two to the nav is not going ashore, it is being left
+at a door. So it lands on a **three-card chooser** (`MainlandAshore`), the same shape the
+Gauntlets card uses on the expeditions hub: cards on the backdrop, no container behind them.
+The art is the building plates already standing on the island, so the card you tap is
+visibly the building you sailed past.
+
+`PopupShell` does **not** portal, so it is a DOM child of the map — and the map steers on
+click and starts a heading on pointerdown. The chooser is wrapped in a
+`stopPropagation` div or dismissing it also puts the helm over.
+
 ## The compass
+
+**Its mount was deleted in an over-broad slice edit** and the component sat unreferenced for
+a dozen commits. Nothing was wrong with the arrows; nothing was drawing them. If they are
+missing again, check the mount before the maths.
 
 Slots are assigned **by role, not won by distance**. Ranking by distance broke the instant
 the zones became rings: from the Deep, the nearest edge of all five rings is a few thousand
