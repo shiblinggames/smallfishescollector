@@ -852,7 +852,14 @@ export default function FishingHere({
           cast button" report. Plain conditionals always render something. */}
       <div style={{
         flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 8, paddingTop: 8, paddingBottom: 22, pointerEvents: 'auto',
+        // NO `gap`, and every band below has a FIXED height, so this row is
+        // exactly as tall in one phase as in every other. That is what keeps
+        // the dial still: the content area above is flex:1 justified to its
+        // bottom edge, so anything that changes the height of THIS row moves
+        // the dial. The 88px slot was already fixed — what shifted was the
+        // Tide Turner disappearing when the phase left 'hooked', which took 34
+        // pixels out of the row and slid the dial down with it.
+        paddingTop: 8, paddingBottom: 22, pointerEvents: 'auto',
       }}>
         <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {(phase === 'idle' || phase === 'result') && (
@@ -900,9 +907,14 @@ export default function FishingHere({
           )}
         </div>
 
-        {/* THE TIDE TURNER, beside the action slot rather than in it. The slot
-            is 88px and holds still in every phase; putting a second button
-            inside it would break the one rule the row exists to keep. */}
+      {/* THE SECONDARY BAND — always present, never empty of SPACE.
+          The Tide Turner and the auto toggle are mutually exclusive by phase
+          (one is a hooked-fish action, the other an idle one), so one reserved
+          band holds whichever applies and the row does not change height when
+          they swap or when neither is there. */}
+      <div style={{
+        height: 26, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
         {tideTurner.has && phase === 'hooked' && skipsLeft > 0 && (
           <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
             className="font-karla font-700"
@@ -940,6 +952,9 @@ export default function FishingHere({
           </button>
         )}
 
+      </div>
+
+      <div style={{ height: 20, marginTop: 6, display: 'flex', alignItems: 'center' }}>
         <button onClick={e => { e.stopPropagation(); onClose() }}
           className="font-karla font-700"
           style={{
@@ -950,6 +965,7 @@ export default function FishingHere({
           }}>
           Stow rod · {zoneName} · {baitLeft} bait
         </button>
+      </div>
       </div>
     </div>
   )
