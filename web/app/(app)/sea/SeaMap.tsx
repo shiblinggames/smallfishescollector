@@ -1086,6 +1086,15 @@ export default function SeaMap({
           if (!el) continue
           const at = traderPos(t, ts)
           el.style.transform = `translate3d(${at.x - t.x}px, ${at.y - t.y}px, 0)`
+          // The wake lies along the heading. One rotation write per trader; the
+          // marks inside it never change.
+          let wake = wakeCache.current.get(t.key)
+          if (!wake) {
+            wake = el.querySelector<HTMLElement>('.trader-wake') ?? undefined
+            if (wake) wakeCache.current.set(t.key, wake)
+          }
+          if (wake) wake.style.transform = `rotate(${at.headingDeg}deg)`
+
           // CACHED. This was a querySelector per trader per frame — a DOM
           // search sixty times a second for a node that never changes. Looked
           // up once and kept on the element itself.

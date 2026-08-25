@@ -355,14 +355,24 @@ function pick<T>(arr: readonly T[], rnd: () => number): T {
  * to price it and never asks where they are, so this can be as fluid as it
  * likes without anything needing to agree about it.
  */
-export function traderPos(t: Trader, nowSec: number): { x: number; y: number; facing: 1 | -1 } {
+export function traderPos(t: Trader, nowSec: number): {
+  x: number; y: number; facing: 1 | -1
+  /** Heading in SCREEN degrees, for the wake to lie along. */
+  headingDeg: number
+} {
   const a = t.driftPhase + nowSec * t.driftRate
   const x = t.x + Math.cos(a) * t.driftR
   const y = t.y + Math.sin(a) * t.driftR * 0.6
-  // Facing comes from which way the patrol is carrying them, so a trader always
-  // looks where they are going. The sprite is drawn facing LEFT.
+  // The tangent of the patrol circle — which way they are actually travelling.
   const vx = -Math.sin(a) * t.driftRate
-  return { x, y, facing: vx < 0 ? 1 : -1 }
+  const vy = Math.cos(a) * t.driftRate * 0.6
+  return {
+    x, y,
+    // Facing comes from the heading, so a trader always looks where they are
+    // going. The sprite is drawn facing LEFT.
+    facing: vx < 0 ? 1 : -1,
+    headingDeg: Math.atan2(vy, vx) * 180 / Math.PI,
+  }
 }
 
 /**
