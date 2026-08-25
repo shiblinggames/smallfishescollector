@@ -18,6 +18,8 @@ import { getHook } from '@/lib/hooks'
 import { PETS } from '@/lib/pets'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getFishHold } from '@/lib/fishHold'
+import { rodsAboard, hullSpeed } from '@/lib/shipyard'
+import { RODS } from '@/lib/rods'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -79,6 +81,34 @@ export default async function SeaPage() {
     .reduce((n, r) => n + (r.quantity ?? 0), 0)
   const holdCapacity = getFishHold(Number(profile?.fish_hold_tier ?? 0)).capacity
 
+  // ── WHAT IS ON THE BOAT ───────────────────────────────────────────────
+  // The rack, resolved. Only these rods can be swapped to at sea — that is the
+  // whole point of the Shipyard, and it is enforced here rather than trusted
+  // from the client. Every entry is a rod the player owns; the equipped one is
+  // always first because it is in their hands rather than in a berth.
+  const rodTierNow = Number(profile?.rod_tier ?? 0)
+  const aboardTiers = rodsAboard(
+    rodTierNow,
+    (profile?.rods_aboard as number[] | null) ?? null,
+    Number(profile?.rod_rack_tier ?? 0),
+  )
+  const rack = aboardTiers.map(t => {
+    const r = getEffectiveRod(t, (profile?.completionist_effects as number[] | null) ?? null)
+    return {
+      tier: t,
+      name: RODS.find(x => x.tier === t)?.name ?? 'Rod',
+      slug: r.slug ?? null,
+      image: r.imageUrl ?? null,
+      glow: r.glow ? (r.glowType ?? 'default') : null,
+      color: r.color ?? null,
+      catchZoneBonus: r.catchZoneBonus ?? 0,
+      perfectZoneBonus: r.perfectZoneBonus ?? 0,
+      retryOnMiss: r.retryOnMissChance ?? 0,
+      snagImmune: r.snagImmune === true,
+      perfectXpMult: r.perfectXpMult ?? 1,
+    }
+  })
+
   const equippedPet = (profile?.equipped_pet as string | null) ?? null
   const pet = PETS.find(p => p.id === equippedPet) ?? null
 
@@ -110,6 +140,9 @@ export default async function SeaPage() {
       // THE WHOLE BAG, not just the one type the page picked. The bait row lets
       // you switch mid-session, so it needs everything aboard.
       hold={{ count: holdCount, capacity: holdCapacity }}
+      rack={rack}
+      // The hull tier only ever changes how fast you cross the chart.
+      hullSpeed={hullSpeed(Number(profile?.hull_speed_tier ?? 0))}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))

@@ -145,7 +145,8 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
-  seaPhase, baitBag, onBaitChange, hold, onCaught, onBaitSpent, onPose, onBusy, onCanLeave,
+  seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, onCaught,
+  onBaitSpent, onPose, onBusy, onCanLeave,
   spritesReady, onClose,
 }: {
   zone: string
@@ -193,6 +194,11 @@ export default function FishingHere({
   /** What is aboard and what it can take. The hold is the reason a session
    *  ends, so it belongs on screen while you are filling it. */
   hold: { count: number; capacity: number }
+  /** THE RACK — the rods you brought. Swapping is limited to these, which is
+   *  the entire mechanic: your loadout is a decision made ashore. */
+  rack: { tier: number; name: string; slug: string | null; image: string | null; catchZoneBonus: number }[]
+  activeRod: number
+  onRodChange: (tier: number) => void
   /** How many fish this catch actually banked, so the hold ticks up as you
    *  fill it rather than sitting at whatever it was when the page loaded. */
   onCaught: (qty: number) => void
@@ -1316,7 +1322,69 @@ export default function FishingHere({
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9fb4c2', marginTop: 3 }}>
                 A wider catch zone is an easier reel. Nothing else changes.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+              {/* ── THE RACK ─────────────────────────────────────────
+                  Only what you brought. One rod is not a choice, so the whole
+                  section stays out of the way until there is something to
+                  choose between — and says where the choice comes from, because
+                  "why can I only see one rod" is otherwise a mystery solved
+                  three islands away. */}
+              {rack.length > 1 ? (
+                <>
+                  <p className="font-karla font-700 uppercase" style={{
+                    fontSize: '0.54rem', letterSpacing: '0.14em',
+                    color: 'rgba(190,212,228,0.5)', marginTop: 14,
+                  }}>In the rack</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                    {rack.map(r => {
+                      const on = r.tier === activeRod
+                      const locked = phase !== 'idle' && phase !== 'result'
+                      return (
+                        <button key={r.tier}
+                          onClick={e => {
+                            e.stopPropagation()
+                            if (!locked && !on) { vibrate(10); onRodChange(r.tier) }
+                            if (!locked) setTackleOpen(false)
+                          }}
+                          disabled={locked}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '0.5rem 0.7rem', borderRadius: 12, width: '100%',
+                            background: on ? 'rgba(240,192,64,0.14)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${on ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                            cursor: locked ? 'default' : 'pointer', textAlign: 'left',
+                            opacity: locked && !on ? 0.45 : 1,
+                          }}>
+                          {r.slug && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={`/${r.slug}_thumb.png`} alt="" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
+                          )}
+                          <span className="font-cinzel font-700 truncate" style={{ flex: 1, fontSize: '0.8rem', color: '#f2ead8' }}>
+                            {r.name}
+                          </span>
+                          {r.catchZoneBonus > 0 && (
+                            <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#7fd6a0', flexShrink: 0 }}>
+                              +{r.catchZoneBonus}°
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <p className="font-karla font-600" style={{
+                  fontSize: '0.66rem', color: 'rgba(190,212,228,0.45)', marginTop: 12, lineHeight: 1.6,
+                }}>
+                  You sailed with one rod. Load a rack at the Shipyard to carry
+                  spares and swap them out here.
+                </p>
+              )}
+
+              <p className="font-karla font-700 uppercase" style={{
+                fontSize: '0.54rem', letterSpacing: '0.14em',
+                color: 'rgba(190,212,228,0.5)', marginTop: 14,
+              }}>Bait</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
                 {baitBag.filter(b => b.quantity > 0).map(b => {
                   const def = getBait(b.type)
                   const on = b.type === bait

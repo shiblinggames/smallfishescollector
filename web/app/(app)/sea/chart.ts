@@ -177,6 +177,19 @@ export const PLACES: Place[] = [
     ],
   },
   {
+    // THE SHIPYARD. Its own island rather than a corner of the Mainland,
+    // because what happens here is a decision you sail to make: the loadout is
+    // committed ashore now, and only what is ON the boat can be swapped at sea.
+    // Sitting it between the Mainland and the Shallows puts it on the way out
+    // rather than as a detour, which is what a pre-departure stop should be.
+    id: 'shipyard', name: 'The Shipyard', blurb: 'Loadout, rack and upgrades',
+    href: '/shipyard', x: 760, y: -520, r: 200, art: '/sea/shipyard.png',
+    kind: 'port', minLevel: 0,
+    buildings: [
+      { art: '/sea/shipyard.png', x: 50, y: 62, scale: 0.40 },
+    ],
+  },
+  {
     // Comes right up to the Mainland shore, so you step off the beach into it.
     id: 'shallows', name: 'The Shallows', blurb: 'Calm water, common fish',
     href: '/fishing?zone=shallows', x: 2000, y: 600, r: 1750, art: '/shallows.jpg',

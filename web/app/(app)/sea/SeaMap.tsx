@@ -462,7 +462,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -480,6 +480,17 @@ export default function SeaMap({
   baitQty: number
   baitBag: { type: string; quantity: number }[]
   hold: { count: number; capacity: number }
+  /** THE RACK — the only rods that can be changed to at sea. Resolved on the
+   *  server from what the Shipyard loaded, so a client cannot fish with a rod
+   *  it did not bring. */
+  rack: {
+    tier: number; name: string; slug: string | null; image: string | null
+    glow: string | null; color: string | null
+    catchZoneBonus: number; perfectZoneBonus: number
+    retryOnMiss: number; snagImmune: boolean; perfectXpMult: number
+  }[]
+  /** Multiplier on sailing speed. Nothing else. */
+  hullSpeed: number
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -760,6 +771,14 @@ export default function SeaMap({
   /** WHICH BAIT IS ON THE HOOK. Fixed for the whole session before, at whatever
    *  the page happened to pick; the bait row can change it now. */
   const [activeBait, setActiveBait] = useState(bait)
+  /** WHICH ROD IS IN HAND, out of the rack. Purely a sea-side choice — it does
+   *  not change what is equipped ashore, because the rack is what you brought
+   *  and swapping between them is the whole point of having brought them. */
+  const [activeRod, setActiveRod] = useState(rack[0]?.tier ?? 0)
+  const rodNow = useMemo(
+    () => rack.find(r => r.tier === activeRod) ?? rack[0] ?? null,
+    [rack, activeRod],
+  )
   /** WHAT IS IN THE HOLD, live. Seeded from the server on load and then kept in
    *  step here: it climbs as you catch and empties the moment you sell to a
    *  buyer. Read once and never updated, it would sit at its load-time value
@@ -973,7 +992,7 @@ export default function SeaMap({
       let want = 0
       if (d > ARRIVE) {
         const t = Math.min(1, (d - ARRIVE) / (SLOW - ARRIVE))
-        want = SPEED * (t * t * (3 - 2 * t))
+        want = SPEED * hullSpeed * (t * t * (3 - 2 * t))
       }
       // A HALF-PUSHED STICK IS HALF SPEED. Without this the stick is a
       // direction-only control and every nudge is full sail, which makes
@@ -1469,7 +1488,16 @@ export default function SeaMap({
           position: 'absolute', left: '50%', top: '50%', zIndex: 5,
           willChange: 'transform', pointerEvents: 'none',
         }}>
-        <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId} gear={gear} frame={frame} />
+        <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
+          gear={{
+            ...gear,
+            // The rod in your hands is the rod you are holding.
+            rodSlug: rodNow?.slug ?? gear.rodSlug,
+            rod: rodNow?.image ?? gear.rod,
+            rodGlow: rodNow?.glow ?? gear.rodGlow,
+            rodColor: rodNow?.color ?? gear.rodColor,
+          }}
+          frame={frame} />
       </div>
 
       {/* The prompt steps aside while the rod is out — the cast button is the
@@ -1549,13 +1577,25 @@ export default function SeaMap({
           bait={activeBait}
           baitBonus={getBait(activeBait).catchZoneBonus}
           baitLeft={baitLeft}
-          mods={mods}
+          mods={{
+            ...mods,
+            // FROM THE ROD IN HAND, not the one equipped ashore. Swapping rods
+            // at sea has to move the dial or the rack is decoration.
+            rodCatchBonus: rodNow?.catchZoneBonus ?? mods.rodCatchBonus,
+            rodPerfectBonus: rodNow?.perfectZoneBonus ?? mods.rodPerfectBonus,
+            rodRetryOnMiss: rodNow?.retryOnMiss ?? mods.rodRetryOnMiss,
+            rodSnagImmune: rodNow?.snagImmune ?? mods.rodSnagImmune,
+            rodPerfectXpMult: rodNow?.perfectXpMult ?? mods.rodPerfectXpMult,
+          }}
           onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
           fishingXP={fishingXP}
           auto={auto}
           tideTurner={tideTurner}
           seaPhase={phase}
           baitBag={baitBag}
+          rack={rack}
+          activeRod={activeRod}
+          onRodChange={setActiveRod}
           hold={{ count: holdCount, capacity: hold.capacity }}
           onCaught={qty => setHoldCount(n => Math.min(hold.capacity, n + qty))}
           onBaitChange={t => {
