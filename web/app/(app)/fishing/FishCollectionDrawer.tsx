@@ -125,8 +125,18 @@ export default function FishCollectionDrawer({
       {...drag.motionProps}
       style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+        // CAPPED, and centred with auto margins rather than a translateX: this
+        // is a motion.div, framer owns `transform` for the slide-in AND for the
+        // drag-to-dismiss, and a transform written here is silently clobbered
+        // by both. Same reasoning as the gear sheet.
+        //
+        // A species grid stretched across a desktop monitor puts four fish on a
+        // row two feet apart with the zone header a foot above them, which is
+        // not a collection, it is a spreadsheet.
+        maxWidth: 560, marginLeft: 'auto', marginRight: 'auto',
         background: 'rgba(6,12,20,0.98)',
-        borderTop: '1px solid rgba(255,255,255,0.09)',
+        border: '1px solid rgba(255,255,255,0.09)',
+        borderBottom: 'none',
         borderRadius: '18px 18px 0 0',
         maxHeight: '80vh',
         display: 'flex', flexDirection: 'column',

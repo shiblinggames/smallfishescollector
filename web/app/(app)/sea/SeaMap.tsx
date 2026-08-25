@@ -324,7 +324,28 @@ export function inBand(p: Vec, place: Place): boolean {
  *  the darkness so the whole frame agrees about how deep you are. */
 type SeaLook = { css: string; lum: number }
 
-function seaAt(p: Vec, darkness = 0): SeaLook {
+/**
+ * HOW OFTEN THE BACKDROP IS ALLOWED TO CHANGE, in world pixels.
+ *
+ * The palette is a full-viewport gradient written to `wrap.style.background`,
+ * which repaints the entire screen. `darkness` was quantized to 24 steps for
+ * exactly this reason and the fix stopped there — but the blend also depends on
+ * WHERE THE BOAT IS, and that is continuous, so the moment you were under way
+ * it went back to rebuilding the whole backdrop on nearly every frame. That is
+ * the flicker.
+ *
+ * Snapped to a 64px grid the colour changes about seven times a second at full
+ * speed instead of sixty. A band is two to three thousand pixels across and its
+ * palette moves maybe twenty units over that, so 64px is well under one unit of
+ * 255 — a step nobody can see, in place of a repaint everybody can.
+ */
+const SEA_STEP = 64
+
+function seaAt(raw: Vec, darkness = 0): SeaLook {
+  const p: Vec = {
+    x: Math.round(raw.x / SEA_STEP) * SEA_STEP,
+    y: Math.round(raw.y / SEA_STEP) * SEA_STEP,
+  }
   // THE OPEN OCEAN GETS A SMALL VOTE, NOT A BIG ONE.
   //
   // It used to get 0.55, which meant that even sitting dead in the middle of
@@ -588,11 +609,17 @@ export default function SeaMap({
   //
   // Clamped north, because the wall can move: a position saved before the
   // Harbour became a border could otherwise strand you outside the world.
-  const pos = useRef<Vec>(start
+  const startAt: Vec = start
     ? { x: start.x, y: Math.max(NORTH_WALL, start.y) }
-    : { ...HOME })
+    : { ...HOME }
+  const pos = useRef<Vec>({ ...startAt })
   const vel = useRef<Vec>({ x: 0, y: 0 })
-  const target = useRef<Vec>({ ...HOME })
+  // THE HELM STARTS WHERE THE BOAT IS, which is only worth saying because it
+  // used to start at HOME. Once the boat could open the page somewhere other
+  // than the dock, that made the target a course — so a refit in the Abyss came
+  // back to a boat already under way, sailing itself to the Mainland, with
+  // nobody touching the helm. A target you did not set is not a destination.
+  const target = useRef<Vec>({ ...startAt })
   const facing = useRef<1 | -1>(1)
 
   // ── STEERING BY THUMB ───────────────────────────────────────────────────
@@ -1626,6 +1653,11 @@ export default function SeaMap({
       )}
       <WaterBanner place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} lowered={!!fishingIn} />
 
+      {/* THE CROSSING ITSELF. The small banner up top is a readout — it says
+          where you are, quietly, for as long as you are there. This is the
+          moment you arrive, and it is gone before you have finished reading it. */}
+      <ZoneCrossing place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} />
+
       {/* THE LIGHT lives on the level bar's row while fishing — see
           FishingHere — and only sits on its own up here when the rod is stowed,
           because there is no bar to share a row with. */}
@@ -2430,6 +2462,123 @@ function Prompt({ place, locked, level, onEnter, tick }: {
  * you go looking but never notice otherwise. Two jobs, one element: "you have
  * entered somewhere new" and "what am I in".
  */
+/**
+ * ENTERING THE ABYSS.
+ *
+ * Crossing from one band into the next used to be a small word changing at the
+ * top of the screen, which is the right amount of noise for "where am I" and
+ * completely the wrong amount for "you have arrived somewhere new". The bands
+ * are the game's whole progression — deeper water is better fish and worse
+ * odds — and the moment you enter one should land.
+ *
+ * Deliberately NOT a modal, a pause or a card. It is one line of type across
+ * the middle of the chart that swells, holds for a beat and dissolves, over a
+ * boat that never stops sailing. You can steer straight through it and it costs
+ * you nothing; that is the difference between a flourish and an interruption.
+ *
+ * `pointer-events: none` on the root, because it sits over the water and the
+ * helm has to keep working underneath it — the house rule for anything
+ * non-blocking that covers the screen.
+ */
+function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean }) {
+  const [crossing, setCrossing] = useState<Place | null>(null)
+  // OPENING THE PAGE SOMEWHERE IS NOT ARRIVING THERE. The boat starts where you
+  // left it, so a returning player would otherwise be greeted with a banner for
+  // water they have been fishing all afternoon.
+  //
+  // Guarded on a TIME WINDOW rather than on "is this the first change". The
+  // first change is not reliably the one that means "you started here":
+  // proximity resolves on a 120ms tick, so the effect first runs with no place
+  // at all and the real answer lands a tick later — and if you happen to start
+  // in open water, the genuine first crossing IS the first change and must not
+  // be swallowed. Anything past the window is somewhere you sailed to.
+  const seen = useRef<string | null>(null)
+  const mounted = useRef(0)
+  useEffect(() => { mounted.current = performance.now() }, [])
+
+  useEffect(() => {
+    const id = place?.id ?? null
+    if (id === seen.current) return
+    seen.current = id
+    if (!place) return
+    if (performance.now() - mounted.current < 900) return
+    setCrossing(place)
+    const t = setTimeout(() => setCrossing(null), 2200)
+    return () => clearTimeout(t)
+  }, [place])
+
+  return (
+    <AnimatePresence>
+      {crossing && (
+        <motion.div key={crossing.id} aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.75, ease: 'easeOut' } }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 6,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            // NEVER eats a tap. The boat sails on underneath this.
+            pointerEvents: 'none',
+          }}>
+          <motion.p className="font-karla font-700 uppercase"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 0.72, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              fontSize: '0.62rem', letterSpacing: '0.42em', marginBottom: 10,
+              color: locked ? 'rgba(226,180,180,0.9)' : 'rgba(214,232,240,0.85)',
+              textShadow: '0 2px 16px rgba(0,0,0,0.95)',
+            }}>
+            Entering
+          </motion.p>
+
+          {/* The name swells rather than sliding: you are moving into it, not
+              past it. Letter-spacing opens with the scale so it reads as the
+              water widening rather than as type being zoomed. */}
+          <motion.p className="font-cinzel font-700"
+            initial={{ opacity: 0, scale: 0.86, letterSpacing: '0.02em' }}
+            animate={{ opacity: 1, scale: 1, letterSpacing: '0.1em' }}
+            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              fontSize: 'clamp(1.6rem, 8vw, 2.9rem)', textAlign: 'center',
+              lineHeight: 1.05, padding: '0 1.5rem',
+              color: locked ? '#e8b4b4' : '#f2ead8',
+              textShadow: '0 3px 26px rgba(0,0,0,0.98), 0 0 44px rgba(0,0,0,0.75)',
+            }}>
+            {crossing.name}
+          </motion.p>
+
+          {/* A rule that draws itself open under the name, the way a horizon
+              does when you come over a swell. */}
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 190, opacity: 0.55 }}
+            transition={{ duration: 0.9, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              height: 1, marginTop: 13, maxWidth: '60%',
+              background: locked
+                ? 'linear-gradient(90deg, transparent, rgba(226,180,180,0.95), transparent)'
+                : 'linear-gradient(90deg, transparent, rgba(226,240,248,0.95), transparent)',
+            }} />
+
+          <motion.p className="font-karla font-600"
+            initial={{ opacity: 0 }} animate={{ opacity: 0.62 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            style={{
+              fontSize: '0.74rem', marginTop: 11, textAlign: 'center', padding: '0 2rem',
+              color: locked ? 'rgba(226,180,180,0.9)' : 'rgba(200,222,236,0.9)',
+              textShadow: '0 2px 14px rgba(0,0,0,0.95)',
+            }}>
+            {locked ? `Fishing ${crossing.minLevel} to work this water` : crossing.blurb}
+          </motion.p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 function WaterBanner({ place, locked, lowered }: {
   place: Place | null; locked: boolean
   /** Drop below the level bar while the rod is out. The bar owns the top of the
