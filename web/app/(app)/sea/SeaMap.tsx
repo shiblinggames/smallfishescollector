@@ -25,6 +25,7 @@ import { getCharacterSprites } from '@/lib/characters'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { vibrate } from '@/lib/haptics'
+import FishingHere, { type FishingMods } from './FishingHere'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
@@ -40,7 +41,7 @@ const ARRIVE = 26
 type Vec = { x: number; y: number }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId,
+  fishingXP, characterColor, boatId, hatId, mods, bait, baitBonus, baitQty,
 }: {
   fishingXP: number
   /** The player's own loadout, so the thing crossing the ocean is the captain
@@ -48,6 +49,11 @@ export default function SeaMap({
   characterColor: string
   boatId: string | null
   hatId: string | null
+  /** Everything the dial needs to be the REAL dial. See FishingHere. */
+  mods: FishingMods
+  bait: string
+  baitBonus: number
+  baitQty: number
 }) {
   const router = useRouter()
   const level = useMemo(() => getLevelFromXP(fishingXP), [fishingXP])
@@ -67,6 +73,16 @@ export default function SeaMap({
   // Only what the UI actually needs to re-render for.
   const [near, setNear] = useState<Place | null>(null)
   const [tick, setTick] = useState(0)
+  /** The water we have the rod out in. Null means sailing. */
+  const [fishingIn, setFishingIn] = useState<Place | null>(null)
+  /** A zone we have drifted out of with the rod still out, held for a warning
+   *  rather than acted on silently. */
+  const [leaving, setLeaving] = useState<Place | null>(null)
+  const [baitLeft, setBaitLeft] = useState(baitQty)
+  // Mirrored so the rAF loop can read it without being re-created every time it
+  // changes, which would restart the sweep.
+  const fishingRef = useRef<Place | null>(null)
+  useEffect(() => { fishingRef.current = fishingIn }, [fishingIn])
 
   const locked = useCallback((p: Place) => level < p.minLevel, [level])
 
@@ -97,6 +113,9 @@ export default function SeaMap({
     // Checked first, or the tap would just re-issue a course to where you are.
     const here = near
     if (here && !locked(here) && dist(w, here) < here.r) {
+      // A WATER DOES NOT TAKE YOU ANYWHERE. You are already in it; the rod
+      // comes out and you fish where you are floating. Only a port is a door.
+      if (here.kind === 'water') { setFishingIn(here); vibrate(14); return }
       enter(here)
       return
     }
@@ -180,6 +199,13 @@ export default function SeaMap({
         let found: Place | null = null
         for (const p of PLACES) if (dist(pos.current, p) < p.r) found = p
         setNear(prev => (prev?.id === found?.id ? prev : found))
+        // LEAVING WITH THE ROD OUT. Caught here rather than in the tap handler
+        // because you can sail out of a zone by tapping open water far away,
+        // and the moment that matters is crossing the boundary, not the tap.
+        const fishing = fishingRef.current
+        if (fishing && (!found || found.id !== fishing.id)) {
+          setLeaving(prev => prev ?? fishing)
+        }
         setTick(v => (v + 1) % 1000)
       }
 
@@ -227,8 +253,79 @@ export default function SeaMap({
         <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId} />
       </div>
 
-      <Prompt place={near} locked={near ? locked(near) : false} level={level} onEnter={enter} tick={tick} />
+      {/* The prompt steps aside while the rod is out — the cast button is the
+          only thing that should be asking for a thumb down there. */}
+      {!fishingIn && (
+        <Prompt place={near} locked={near ? locked(near) : false} level={level} onEnter={enter} tick={tick} />
+      )}
       <Compass pos={pos} locked={locked} />
+
+      {fishingIn && (
+        <FishingHere
+          zone={fishingIn.id}
+          zoneName={fishingIn.name}
+          bait={bait}
+          baitBonus={baitBonus}
+          baitLeft={baitLeft}
+          mods={mods}
+          onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
+          onClose={() => setFishingIn(null)}
+        />
+      )}
+
+      {/* LEAVING THE WATER. Sailing out with the rod out is a decision, so it
+          is asked rather than done. The wording is exact on purpose: sailing
+          away does NOT break a perfect streak in this game — only casting in a
+          different zone does, and returning to the same water keeps it. Saying
+          "you will lose your streak" here would be a lie that costs people
+          casts they did not need to spend. */}
+      {leaving && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'absolute', inset: 0, zIndex: 40, display: 'flex',
+          alignItems: 'center', justifyContent: 'center', padding: '1.5rem',
+          background: 'rgba(2,8,14,0.72)', backdropFilter: 'blur(3px)',
+        }}>
+          <div style={{
+            width: '100%', maxWidth: 340, borderRadius: 16, padding: '1.2rem',
+            textAlign: 'center', background: 'rgba(8,16,24,0.98)',
+            border: '1px solid rgba(180,214,232,0.35)',
+          }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#e8f0f6' }}>
+              Leaving {leaving.name}
+            </p>
+            <p className="font-karla" style={{ fontSize: '0.84rem', color: '#9fb4c2', marginTop: 8, lineHeight: 1.5 }}>
+              Your line comes in. The streak you have built here holds while you sail
+              and only breaks if you cast in different water.
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button onClick={() => { setLeaving(null); setFishingIn(null) }}
+                className="font-cinzel font-700"
+                style={{
+                  flex: 1, padding: '0.7rem', borderRadius: 11, fontSize: '0.86rem',
+                  color: '#f2ead8', background: 'rgba(180,214,232,0.16)',
+                  border: '1px solid rgba(180,214,232,0.45)', cursor: 'pointer',
+                }}>
+                Sail on
+              </button>
+              <button onClick={() => {
+                // Back to where the rod is. Cancelling has to actually return
+                // you, or the boat keeps drifting and asks again immediately.
+                const back = leaving
+                target.current = { x: back.x, y: back.y }
+                setLeaving(null)
+              }}
+                className="font-karla font-700"
+                style={{
+                  flex: 1, padding: '0.7rem', borderRadius: 11, fontSize: '0.86rem',
+                  color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
+                }}>
+                Stay here
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -9,7 +9,12 @@
 // the landing page yet and should not become one until it has been lived with.
 
 import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { getEffectiveRod } from '@/lib/rods'
+import { getLine } from '@/lib/lines'
+import { getBait } from '@/lib/bait'
+import { getLevelFromXP } from '@/lib/fishingLevel'
 import SeaMap from './SeaMap'
 
 export const metadata = { title: 'The Sea' }
@@ -20,16 +25,41 @@ export default async function SeaPage() {
   const profile = await getCurrentProfile()
   if (profile?.is_admin !== true) redirect('/tavern')
 
-  // THE PLAYER, not a marker. The same three pieces the fishing screen stacks —
-  // character sprite, boat overlay, hat overlay — so the thing crossing the
-  // ocean is recognisably the captain they dressed, in the boat they bought.
-  // That is most of why this should read as THEIR sea.
+  // EVERYTHING THE DIAL NEEDS TO BE THE REAL DIAL. buildFishZones takes the
+  // same modifiers on the map as it does on the fishing screen, because a fish
+  // must not be easier or harder depending on which surface you cast from.
+  const rod = getEffectiveRod(
+    Number(profile?.rod_tier ?? 0),
+    (profile?.completionist_effects as number[] | null) ?? null,
+  )
+  const line = getLine(Number(profile?.line_tier ?? 0))
+
+  // Bait: whatever they have most of, which is almost always what they would
+  // have picked anyway. Choosing it properly is the full screen's job.
+  const admin = createAdminClient()
+  const { data: baitRows } = await admin
+    .from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id)
+  const best = ((baitRows ?? []) as { bait_type: string; quantity: number }[])
+    .filter(b => b.quantity > 0)
+    .sort((a, b) => b.quantity - a.quantity)[0]
+  const baitType = best?.bait_type ?? 'worm'
+
   return (
     <SeaMap
       fishingXP={Number(profile?.fishing_xp ?? 0)}
       characterColor={(profile?.character_color as string | null) ?? 'default'}
       boatId={(profile?.equipped_boat as string | null) ?? null}
       hatId={(profile?.equipped_hat as string | null) ?? null}
+      bait={baitType}
+      baitBonus={getBait(baitType).catchZoneBonus}
+      baitQty={best?.quantity ?? 0}
+      mods={{
+        hookTier: Number(profile?.hook_tier ?? 0),
+        linePenalty: line.penaltyMultiplier,
+        rodCatchBonus: rod.catchZoneBonus ?? 0,
+        rodPerfectBonus: rod.perfectZoneBonus ?? 0,
+        fishingLevel: getLevelFromXP(Number(profile?.fishing_xp ?? 0)),
+      }}
     />
   )
 }
