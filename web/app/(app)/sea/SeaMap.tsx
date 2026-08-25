@@ -29,7 +29,7 @@ import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
-import { tradersAround, seaDay, KIND_LABEL, DEALS_PER_DAY, type Trader, type TraderLook } from '@/lib/seaTraders'
+import { tradersAround, seaDay, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
@@ -945,7 +945,9 @@ export default function SeaMap({
         // so writing it re-parses a second full-width gradient.
         lastHaze = look.haze
         sky.style.setProperty('--sea-haze', look.haze)
-        sky.style.opacity = String(0.34 + look.lum * 0.66)
+        // Capped below full. At 1.0 over bright water the horizon read as a
+        // wall of white rather than distance.
+        sky.style.opacity = String(0.32 + look.lum * 0.53)
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
@@ -994,7 +996,11 @@ export default function SeaMap({
         // boundary, and until it does the answer is identical — so this is a
         // string compare four times a second rather than a hash of two dozen
         // cells sixty times a second.
-        const ck = `${Math.floor(pos.current.x / 900)}:${Math.floor(pos.current.y / 900)}`
+        // CELL, not a hard-coded 900. This was a copy of the constant rather
+        // than the constant, so widening the grid in lib/seaTraders would have
+        // left the map recomputing on the wrong boundary and traders would have
+        // popped in and out as you sailed.
+        const ck = `${Math.floor(pos.current.x / CELL)}:${Math.floor(pos.current.y / CELL)}`
         if (ck !== cellRef.current) {
           cellRef.current = ck
           setTraders(tradersAround(pos.current.x, pos.current.y, 2400, day))
@@ -1522,6 +1528,18 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
           width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
         }} />
       )}
+      {look.rodSlug && (
+        /* A ROD, because they are captains on a fishing sea and a boat with
+           nobody holding anything reads as a prop. The rest frame only, at the
+           same coordinates the player's rod uses, and NEVER a glowing one —
+           see TraderLook for why. */
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`/${look.rodSlug}_rest.png`} alt="" draggable={false} loading="lazy" style={{
+          position: 'absolute', top: `${ROD_AT.rest.top}%`, left: `${ROD_AT.rest.left}%`,
+          width: `${ROD_AT.rest.width}%`, maxWidth: 'none',
+          transform: `rotate(${ROD_AT.rest.rotate}deg)`, transformOrigin: 'bottom right',
+        }} />
+      )}
     </div>
   )
 })
@@ -1550,7 +1568,10 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear }: { trader: 
         borderRadius: '50%', background: 'rgba(2,10,18,0.34)', filter: 'blur(7px)',
       }} />
       <div style={{
-        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78)`,
+        // scaleX LAST so it mirrors the finished composite rather than fighting
+        // the counter-squash. The sprite is drawn facing left, so half of them
+        // get flipped and a stretch of water stops looking like a parade.
+        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78) scaleX(${trader.look.flip ? -1 : 1})`,
         // Someone you have already dealt with today is still there — they do
         // not vanish, because a person vanishing when you are done with them is
         // the sort of thing that makes a world feel like a vending machine.
@@ -1699,16 +1720,29 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
                 borderRadius: '50%',
                 background: 'rgba(6,18,28,0.4)', filter: `blur(${Math.round(m.size * 0.035)}px)`,
               }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={m.art} alt="" draggable={false} loading="lazy" style={{
-                position: 'absolute', left: 0, top: 0, width: m.size, maxWidth: 'none',
+              {/* TWO WRAPPERS, because they carry different transforms. The
+                  outer one stands the landmark up off the plane; the inner one
+                  is free to sway without clobbering that. One element trying to
+                  do both means the animation overwrites the counter-squash and
+                  the landmark lies flat the moment it starts moving. */}
+              <div style={{
+                position: 'absolute', left: 0, top: 0, width: m.size,
                 transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
                 transformOrigin: 'bottom center',
-                display: 'block',
-                filter: locked
-                  ? 'grayscale(0.85) brightness(0.55)'
-                  : 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
-              }} />
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={m.art} alt="" draggable={false} loading="lazy"
+                  className={m.sway ? `mark-${m.sway}` : undefined}
+                  style={{
+                    width: '100%', maxWidth: 'none', display: 'block',
+                    // Offset so neighbours never move in step, which is what
+                    // makes a row of buoys read as machinery.
+                    animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
+                    filter: locked
+                      ? 'grayscale(0.85) brightness(0.55)'
+                      : 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
+                  }} />
+              </div>
             </div>
           ))}
 

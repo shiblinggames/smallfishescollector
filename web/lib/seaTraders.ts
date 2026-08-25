@@ -37,10 +37,17 @@ import { BAITS, getBait } from '@/lib/bait'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { CHARACTER_COLORS } from '@/lib/characters'
+import { RODS } from '@/lib/rods'
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
- *  close together two of them can ever be. Roughly a third of a big zone. */
-export const CELL = 900
+ *  close together two of them can ever be.
+ *
+ *  Widened from 900. At that size the sea was busy in a way an ocean should not
+ *  be: cells that small put people within sight of each other constantly, and a
+ *  wandering trader stops reading as a find when there is always another one
+ *  over your shoulder. 1500 is nearly three times the area per cell, so meeting
+ *  somebody out here is an event again. */
+export const CELL = 1500
 
 export type TraderKind = 'peddler' | 'salter' | 'tinker'
 
@@ -51,7 +58,14 @@ export type TraderLook = {
   characterColor: string
   boatId: string
   hatId: string | null
+  /** A PLAIN rod, always. Glowing rods are things players earn and they carry
+   *  a rarity signal with them — an ordinary trader out shifting worms with a
+   *  Lightsaber on their knee reads as a bug, and it cheapens the rod. */
   rodSlug: string | null
+  /** Half of them face the other way. The sprite is drawn facing left, so every
+   *  NPC built from it looked left, and a stretch of water with four traders in
+   *  it read as a rank rather than as people who happened to be there. */
+  flip: boolean
 }
 
 export type Trader = {
@@ -233,7 +247,8 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
     characterColor: pick(CHAR_COLORS, rnd),
     boatId: pick(BOAT_IDS, rnd),
     hatId: rnd() < 0.75 ? pick(HAT_IDS, rnd) : null,
-    rodSlug: null,
+    rodSlug: pick(ROD_SLUGS, rnd),
+    flip: rnd() < 0.5,
   }
 
   return {
@@ -313,6 +328,12 @@ export const KIND_LABEL: Record<TraderKind, string> = {
 const BOAT_IDS = BOATS.filter(b => !b.glow && !b.crateOnly).map(b => b.id)
 const HAT_IDS = HATS.filter(h => !h.crateOnly).map(h => h.id)
 const CHAR_COLORS = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
+/** Every rod with per-frame sprites and NO glow. Filtered off the real table
+ *  rather than listed here, so a new plain rod joins the pool the day it ships
+ *  and a rod that gains a glow leaves it. */
+const ROD_SLUGS = RODS
+  .filter(r => !r.glow && !r.glowType && r.slug && !r.imageUrl)
+  .map(r => r.slug as string)
 
 /** Every bait this module names, checked at module load. lib/bait keys on
  *  `type` rather than `id`, which is exactly the kind of detail that produces a
@@ -325,6 +346,6 @@ for (const types of Object.values(STOCK)) {
     }
   }
 }
-if (!BOAT_IDS.length || !HAT_IDS.length || !CHAR_COLORS.length) {
+if (!BOAT_IDS.length || !HAT_IDS.length || !CHAR_COLORS.length || !ROD_SLUGS.length) {
   throw new Error('seaTraders: a cosmetic pool came out empty')
 }

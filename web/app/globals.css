@@ -2497,22 +2497,26 @@ body.hardcore-gauntlet::after {
   top: 0;
   left: 0;
   right: 0;
-  /* Deep. The dissolve needs room to be a dissolve rather than a fade, and a
-     third of a phone screen is about where it stops reading as a band. */
-  height: clamp(150px, 34vh, 340px);
+  /* SHORTER. At a third of the screen the dissolve stopped reading as distance
+     and started reading as weather — a bank of fog rolled down over water you
+     were trying to look at. A fifth is enough for the sea to go hazy and become
+     sky without the haze owning the frame. */
+  height: clamp(84px, 19vh, 200px);
   z-index: 3;
   pointer-events: none;
   overflow: hidden;
   /* Fallback for the very first frame, before the loop has written one. */
   --sea-haze: #b8d4e2;
+  /* And the fade FINISHES inside the band. The old stops still had 40% of the
+     haze left at 84% of the way down, so it carried on past the sky and sat on
+     the sea. */
   background: linear-gradient(
     180deg,
     #cfe1ea 0%,
-    color-mix(in srgb, var(--sea-haze) 70%, #dfeaf0) 26%,
-    var(--sea-haze) 52%,
-    color-mix(in srgb, var(--sea-haze) 78%, transparent) 70%,
-    color-mix(in srgb, var(--sea-haze) 40%, transparent) 84%,
-    transparent 100%
+    color-mix(in srgb, var(--sea-haze) 72%, #dfeaf0) 30%,
+    var(--sea-haze) 56%,
+    color-mix(in srgb, var(--sea-haze) 52%, transparent) 76%,
+    transparent 97%
   );
 }
 
@@ -2561,6 +2565,40 @@ body.hardcore-gauntlet::after {
   0%   { transform: scale(0.42); opacity: 0; }
   14%  { opacity: 0.34; }
   100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ── LANDMARKS THAT MOVE ─────────────────────────────────────────────────────
+   Only the ones that would. A buoy is a float on a chain and never stops; a
+   wreck is aground but the swell still works at it. Everything else out there
+   is fixed to the bottom and a wobble would say the opposite of what it is.
+
+   Both pivot near their WATERLINE rather than their middle, because that is
+   where the thing is actually held. Rotating a buoy about its centre makes it
+   look like it is being waved rather than floating. */
+.mark-bob {
+  transform-origin: 50% 92%;
+  animation: markBob 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes markBob {
+  0%, 100% { transform: translateY(0) rotate(-3.2deg); }
+  50%      { transform: translateY(-5px) rotate(3.2deg); }
+}
+
+/* Much slower and much smaller. A wreck is thousands of tons of waterlogged
+   timber; it should look like it is being nudged, not bobbing. */
+.mark-rock {
+  transform-origin: 50% 96%;
+  animation: markRock 8.5s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes markRock {
+  0%, 100% { transform: rotate(-0.8deg); }
+  50%      { transform: rotate(0.8deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark-bob, .mark-rock { animation: none; }
 }
 
 /* The hail mark over a trader you are close enough to talk to. It bobs rather

@@ -67,6 +67,15 @@ export type Place = {
    */
   landmarks?: {
     art: string; x: number; y: number; size: number
+    /**
+     * DOES IT MOVE, AND HOW.
+     *
+     * Only what would. A buoy is a float on a chain and it never stops moving;
+     * a wreck is aground but the swell still works at it. An islet, a rig on
+     * legs, a rib cage and a carved stone are all fixed to the bottom, and
+     * giving them a wobble would say the opposite of what they are.
+     */
+    sway?: 'bob' | 'rock'
     /** Solid landmarks turn the hull. A wreck or a monolith the size of your
      *  ship that you glide straight through undoes the solidity the islands
      *  have; a buoy is a float on a chain and bumping past one is fine. */
@@ -147,55 +156,55 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=shallows', x: 900, y: 300, r: 700, art: '/shallows.jpg',
     sea: ['#123038', '#2b5a5e', '#6f9a95'] as [string, string, string],
     landmarks: [
-      { art: '/sea/buoy.png',  x: -260, y: -180, size: 130 },
-      { art: '/sea/islet.png', x:  300, y:  120, size: 210, solid: true },
-      { art: '/sea/buoy.png',  x:  110, y:  420, size: 120 },
+      { art: '/sea/buoy.png', x:   393, y:   183, size: 130, sway: 'bob' },
+      { art: '/sea/islet.png', x:  -444, y:   207, size: 210, solid: true },
+      { art: '/sea/buoy.png', x:    13, y:  -385, size: 120, sway: 'bob' },
     ],
-    kind: 'water', minLevel: 1,
+        kind: 'water', minLevel: 1,
   },
   {
     id: 'open_waters', name: 'Open Waters', blurb: 'Further out, better catches',
     href: '/fishing?zone=open_waters', x: 2150, y: 620, r: 820, art: '/openwaters.jpg',
     sea: ['#0e2836', '#234c60', '#5a8298'] as [string, string, string],
     landmarks: [
-      { art: '/sea/islet.png', x: -380, y:  260, size: 190, solid: true },
-      { art: '/sea/buoy.png',  x:  340, y: -240, size: 130 },
-      { art: '/sea/wreck.png', x:  120, y:  480, size: 280, solid: true },
+      { art: '/sea/islet.png', x:   185, y:   509, size: 190, solid: true },
+      { art: '/sea/buoy.png', x:  -577, y:  -188, size: 130, sway: 'bob' },
+      { art: '/sea/wreck.png', x:   342, y:  -330, size: 280, solid: true, sway: 'rock' },
     ],
-    kind: 'water', minLevel: 15,
+        kind: 'water', minLevel: 15,
   },
   {
     id: 'deep', name: 'The Deep', blurb: 'Long waits, real weight',
     href: '/fishing?zone=deep', x: 3600, y: 340, r: 950, art: '/deep.jpg',
     sea: ['#0a1d2c', '#173a52', '#3f6480'] as [string, string, string],
     landmarks: [
-      { art: '/sea/wreck.png', x: -420, y: -200, size: 330, solid: true },
-      { art: '/sea/buoy.png',  x:  380, y:  300, size: 120 },
-      { art: '/sea/rig.png',   x:  180, y: -520, size: 300, solid: true },
+      { art: '/sea/wreck.png', x:  -303, y:   570, size: 330, solid: true, sway: 'rock' },
+      { art: '/sea/buoy.png', x:  -241, y:  -517, size: 120, sway: 'bob' },
+      { art: '/sea/rig.png', x:   706, y:   150, size: 300, solid: true },
     ],
-    kind: 'water', minLevel: 30,
+        kind: 'water', minLevel: 30,
   },
   {
     id: 'abyss', name: 'The Abyss', blurb: 'Where the dark begins',
     href: '/fishing?zone=abyss', x: 5300, y: 900, r: 1050, art: '/abyss.jpg',
     sea: ['#060f1a', '#0f2438', '#274257'] as [string, string, string],
     landmarks: [
-      { art: '/sea/rig.png',   x: -300, y:  240, size: 350, solid: true },
-      { art: '/sea/bones.png', x:  420, y: -260, size: 360, solid: true },
-      { art: '/sea/wreck.png', x: -560, y: -480, size: 300, solid: true },
+      { art: '/sea/rig.png', x:  -609, y:  -284, size: 350, solid: true },
+      { art: '/sea/bones.png', x:   506, y:   562, size: 360, solid: true },
+      { art: '/sea/wreck.png', x:   442, y:  -371, size: 300, solid: true, sway: 'rock' },
     ],
-    kind: 'water', minLevel: 50,
+        kind: 'water', minLevel: 50,
   },
   {
     id: 'ancient_deep', name: 'The Ancient Deep', blurb: 'Giants, and worse',
     href: '/fishing?zone=ancient_deep', x: 7200, y: 400, r: 1150, art: '/ancient.jpg',
     sea: ['#07101a', '#16202f', '#31363f'] as [string, string, string],
     landmarks: [
-      { art: '/sea/monolith.png', x: -240, y: -260, size: 320, solid: true },
-      { art: '/sea/bones.png',    x:  400, y:  300, size: 400, solid: true },
-      { art: '/sea/monolith.png', x:  560, y: -420, size: 280, solid: true },
+      { art: '/sea/monolith.png', x:  -529, y:   444, size: 320, solid: true },
+      { art: '/sea/bones.png', x:   800, y:   291, size: 400, solid: true },
+      { art: '/sea/monolith.png', x:  -109, y:  -774, size: 280, solid: true },
     ],
-    kind: 'water', minLevel: 75,
+        kind: 'water', minLevel: 75,
   },
 ]
 
