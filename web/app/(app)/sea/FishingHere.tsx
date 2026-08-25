@@ -280,6 +280,35 @@ export default function FishingHere({
   /** XP floated off the boat, where the boat is. */
   const [xpPop, setXpPop] = useState<{ id: number; value: number } | null>(null)
 
+  /** Does the result card actually need to scroll? Measured, and only after it
+   *  has finished arriving — see the note on the container. */
+  const cardScrollRef = useRef<HTMLDivElement | null>(null)
+  const [cardScrolls, setCardScrolls] = useState(false)
+  useEffect(() => {
+    if (phase !== 'result') { setCardScrolls(false); return }
+    let raf = 0
+    const measure = () => {
+      const el = cardScrollRef.current
+      if (!el) return
+      // A pixel of slack: sub-pixel layout rounding should not be a scrollbar.
+      setCardScrolls(el.scrollHeight > el.clientHeight + 1)
+    }
+    // Settled is a real flag, not the timer id — the observer fires during the
+    // entrance too, and gating on a truthy timeout id would have let every one
+    // of those measurements through, which is the flash all over again.
+    let settled = false
+    const t = window.setTimeout(() => {
+      settled = true
+      raf = requestAnimationFrame(measure)
+    }, 420)
+    // Re-measured if anything inside changes size AFTER that — a late image, a
+    // wormhole reroll, the shiny choice resolving into a smaller card.
+    const el = cardScrollRef.current
+    const ro = el ? new ResizeObserver(() => { if (settled) measure() }) : null
+    if (el && ro) ro.observe(el)
+    return () => { window.clearTimeout(t); cancelAnimationFrame(raf); ro?.disconnect() }
+  }, [phase, caught])
+
   const [tackleOpen, setTackleOpen] = useState(false)
   const activeBaitDef = getBait(bait)
   /** Bait cannot change with a line already in the water: the fish has been
@@ -1026,11 +1055,23 @@ export default function FishingHere({
             exit={{ opacity: 0, y: 8, transition: { duration: 0.12 } }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{ pointerEvents: 'auto', width: '100%', maxWidth: 380, minHeight: 0 }}>
-            <div data-no-steer style={{
-              // Only scrolls when it genuinely cannot fit. The cap used to be a
-              // flat 52vh, which on a tall screen invented a scrollbar for a
-              // card with room to spare.
-              width: '100%', maxHeight: '100%', overflowY: 'auto', overscrollBehavior: 'contain',
+            <div data-no-steer ref={cardScrollRef} style={{
+              // SCROLLING IS OFF UNTIL THE CARD HAS SETTLED, then on only if it
+              // is genuinely needed.
+              //
+              // `overflow: auto` shows a scrollbar the instant content
+              // overflows, including transiently — and this card overflows
+              // transiently on almost every catch. It springs in, its rows
+              // stagger, and the fish image arrives from the network and
+              // changes the height when it does. So for a couple of hundred
+              // milliseconds the content is taller than the box, a scrollbar
+              // flashes, the content settles and it vanishes again.
+              //
+              // Measured after the entrance instead. Nothing scrolls during the
+              // animation, and afterwards it scrolls only if it actually has to.
+              width: '100%', maxHeight: '100%',
+              overflowY: cardScrolls ? 'auto' : 'hidden',
+              overscrollBehavior: 'contain',
               // The map sets touch-action: none so a drag steers instead of
               // scrolling the page. This card is the one thing inside it that
               // genuinely wants a vertical drag, so it takes that back.
