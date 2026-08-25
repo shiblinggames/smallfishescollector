@@ -21,7 +21,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, type Place } from './chart'
+import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
+import type { VigilState } from '@/lib/ancientVigil'
+import { saveSeaPosition } from './traderActions'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, type Place } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS } from '@/lib/boats'
@@ -66,6 +69,26 @@ const ARRIVE = 26
  * means the scale under the boat changes as you sail, which breaks every
  * hit-test, and buys very little on a chart you read from directly above.
  */
+/**
+ * WHAT THE COLLECTION LOG NEEDS.
+ *
+ * One object rather than a dozen loose props, because it is one feature and
+ * every field in it comes from the same read. The map does not look inside it;
+ * it hands the whole thing to the drawer.
+ */
+export type SeaLog = {
+  allFishSpecies: FishSpeciesBasic[]
+  caughtFishIds: number[]
+  mountedFishIds: number[]
+  personalBests: Record<number, number>
+  prestigeLevels: Record<string, number>
+  goldenBoosts: Record<string, number>
+  ancientCatches: number[]
+  ancientVigil: VigilState
+  vigilUnlocked: boolean
+  zoneRewardsClaimed: Record<string, boolean>
+}
+
 const GROUND = 0.58
 
 /**
@@ -486,7 +509,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -515,6 +538,10 @@ export default function SeaMap({
   }[]
   /** Multiplier on sailing speed. Nothing else. */
   hullSpeed: number
+  /** Where the boat was when you last left. Null = never sailed. */
+  start: Vec | null
+  /** Everything the collection log reads. See SeaLog. */
+  log: SeaLog
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -555,7 +582,15 @@ export default function SeaMap({
   // Position, velocity and target live in refs, not state: they change every
   // frame and re-rendering React sixty times a second to move one sprite is how
   // a map like this ends up dropping frames on a phone.
-  const pos = useRef<Vec>({ ...HOME })
+  // START WHERE YOU LEFT OFF, not at the dock. Read ONCE into a ref rather
+  // than tracked as state: this is a starting point, and re-seeding it when the
+  // prop happens to change would teleport a boat that is under way.
+  //
+  // Clamped north, because the wall can move: a position saved before the
+  // Harbour became a border could otherwise strand you outside the world.
+  const pos = useRef<Vec>(start
+    ? { x: start.x, y: Math.max(NORTH_WALL, start.y) }
+    : { ...HOME })
   const vel = useRef<Vec>({ x: 0, y: 0 })
   const target = useRef<Vec>({ ...HOME })
   const facing = useRef<1 | -1>(1)
@@ -843,6 +878,42 @@ export default function SeaMap({
    * So it lands on a chooser, the same shape the Gauntlets card uses: three
    * art-forward cards on the backdrop, pick where you are actually going.
    */
+  /**
+   * WRITE THE POSITION BACK, rarely.
+   *
+   * Two triggers, because neither is sufficient alone. `visibilitychange` and
+   * `pagehide` catch the deliberate exits — tapping the nav, going ashore,
+   * closing the tab — and are the ones that matter for the sail home. But a
+   * hard reload, a crash or a killed mobile tab fire neither reliably, so a
+   * slow heartbeat backstops them.
+   *
+   * Twenty seconds, and only when the boat has actually moved a meaningful
+   * distance since the last write. At full speed that is a worst case of one
+   * screen's worth of sailing lost to a crash, and an idle boat writes nothing
+   * at all rather than pushing an identical row every twenty seconds forever.
+   */
+  useEffect(() => {
+    let last = { ...pos.current }
+    const flush = () => {
+      const p = pos.current
+      if (Math.hypot(p.x - last.x, p.y - last.y) < 60) return
+      last = { ...p }
+      void saveSeaPosition(p.x, p.y)
+    }
+    const onHide = () => { if (document.visibilityState === 'hidden') flush() }
+    const id = setInterval(flush, 20_000)
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', flush)
+      // The unmount IS a navigation — going ashore, or the nav bar. This is the
+      // one that closes the cheese, so it ignores the moved-far-enough test.
+      void saveSeaPosition(pos.current.x, pos.current.y)
+    }
+  }, [])
+
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
     if (p.id === 'mainland') { setAshore(true); return }
@@ -1046,6 +1117,16 @@ export default function SeaMap({
       vel.current.y += (wy - vel.current.y) * k
       pos.current.x += vel.current.x * dt
       pos.current.y += vel.current.y * dt
+
+      // AND YOU CANNOT SAIL PAST THE HARBOUR. Everything north of it belongs
+      // to expeditions, and this screen has nothing up there to find. Handled
+      // exactly like a shoreline — position clamped, northward velocity killed,
+      // eastings untouched — so running into it slides you along the line
+      // rather than stopping you dead against an invisible pane of glass.
+      if (pos.current.y < NORTH_WALL) {
+        pos.current.y = NORTH_WALL
+        if (vel.current.y < 0) vel.current.y = 0
+      }
 
       // YOU CANNOT SAIL THROUGH AN ISLAND. Clamping the target is not enough on
       // its own: a boat carrying way can cross a shoreline the course never
@@ -1603,6 +1684,7 @@ export default function SeaMap({
           activeRod={activeRod}
           onRodChange={setActiveRod}
           hold={{ count: holdCount, capacity: hold.capacity }}
+          log={log}
           onCaught={qty => setHoldCount(n => Math.min(hold.capacity, n + qty))}
           onBaitChange={t => {
             // Re-reads the remaining count off the bag. The catch-zone bonus is
@@ -2507,7 +2589,12 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
     world: Math.hypot(tx - here.x, ty - here.y),
   })
 
-  type Mark = { id: string; name: string; dim: boolean; dist: boolean; sx: number; sy: number; world: number }
+  type Mark = {
+    id: string; name: string; dim: boolean; dist: boolean
+    /** Somebody, not somewhere. Drawn as a mark, never as a name — see below. */
+    mystery?: boolean
+    sx: number; sy: number; world: number
+  }
   const marks: Mark[] = []
 
   const ports = PLACES.filter(p => p.kind === 'port')
@@ -2527,7 +2614,17 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
 
   const buyer = inIdx >= 0 ? RESIDENTS.find(r => r.zoneId === waters[inIdx].id) : undefined
   if (buyer) {
-    marks.push({ id: `buyer:${buyer.zoneId}`, name: buyer.name, dim: false, dist: true, ...project(buyer.x, buyer.y) })
+    // NO NAME ON THE ARROW.
+    //
+    // Everyone on this sea is meant to be FOUND. Printing "Meg Corrin" on the
+    // horizon tells you who is out there, what they are, and that there is
+    // exactly one of them, before you have laid eyes on the boat — which is
+    // three quarters of the discovery spent on a label. The arrow says
+    // "somebody, that way, this far"; the rest you get by sailing over.
+    marks.push({
+      id: `buyer:${buyer.zoneId}`, name: '', dim: false, dist: true, mystery: true,
+      ...project(buyer.x, buyer.y),
+    })
   }
 
   // The bearing out from the Mainland, which is the only direction a ring has.
@@ -2603,11 +2700,25 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
             {/* NAME FIRST, then distance. An arrow with only a number on it
                 tells you something is 340m away and leaves you to sail there to
                 find out what, which is not navigation, it is a guess. */}
-            <span className="font-cinzel font-700" style={{
-              fontSize: lead ? '0.6rem' : '0.54rem', whiteSpace: 'nowrap',
-              color: `rgba(214,232,240,${dim ? 0.4 : lead ? 0.9 : 0.62})`,
-              textShadow: '0 1px 6px rgba(0,0,0,0.9)',
-            }}>{m.name}</span>
+            {m.mystery ? (
+              // A mark, not a name. Circled so it reads as a pin on the chart
+              // rather than as punctuation that lost its sentence.
+              <span className="font-cinzel font-800" aria-hidden style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 15, height: 15, borderRadius: '50%',
+                fontSize: '0.56rem', lineHeight: 1,
+                color: '#f2d99a',
+                background: 'rgba(240,192,64,0.16)',
+                border: '1px solid rgba(240,192,64,0.6)',
+                textShadow: '0 1px 5px rgba(0,0,0,0.9)',
+              }}>!</span>
+            ) : (
+              <span className="font-cinzel font-700" style={{
+                fontSize: lead ? '0.6rem' : '0.54rem', whiteSpace: 'nowrap',
+                color: `rgba(214,232,240,${dim ? 0.4 : lead ? 0.9 : 0.62})`,
+                textShadow: '0 1px 6px rgba(0,0,0,0.9)',
+              }}>{m.name}</span>
+            )}
             {lead && (
               <span className="font-karla font-700" style={{
                 fontSize: '0.54rem', marginTop: -1,

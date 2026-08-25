@@ -40,6 +40,7 @@ import { CHARACTER_COLORS } from '@/lib/characters'
 import { RODS, TRADER_ONLY_RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { seaClock } from '@/lib/seaClock'
+import { NORTH_WALL } from '@/app/(app)/sea/chart'
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
  *  close together two of them can ever be.
@@ -448,6 +449,12 @@ export function tradersAround(x: number, y: number, radius: number, day: number,
   const c1y = Math.floor((y + radius) / CELL)
   for (let cx = c0x; cx <= c1x; cx++) {
     for (let cy = c0y; cy <= c1y; cy++) {
+      // NOBODY IS OUT HERE NORTH OF THE HARBOUR. That water belongs to
+      // expeditions and the hull cannot reach it anyway, so a trader spawned up
+      // there is a name on the compass pointing at somewhere you cannot go.
+      // Tested on the cell's SOUTH edge: a cell straddling the line still has
+      // fishable water in it.
+      if ((cy + 1) * CELL <= NORTH_WALL) continue
       const t = traderAt(cx, cy, day)
       if (t) out.push(t)
       // AND THE NIGHT'S OWN. A runner shares the cell with whoever is there by

@@ -2592,3 +2592,39 @@ body.hardcore-gauntlet::after {
   .sea-ripple { opacity: 0; }
   .sea-wake { display: none; }
 }
+
+
+/* ── THE SHIPYARD'S TYPE SCALE ───────────────────────────────────────────────
+   Every size on that page is an inline style, and an inline style cannot carry
+   a media query. So the sizes are custom properties set here and referenced
+   there, which puts the whole phone-to-desktop step in one place.
+
+   The page was built at phone width and then shown unchanged on a monitor: a
+   448px column of half-rem labels in the middle of a 27-inch screen, which is
+   legible in the sense that the pixels are present. Wider column, larger type,
+   same layout. */
+.sea-shipyard {
+  --sy-1: 0.5rem;
+  --sy-2: 0.58rem;
+  --sy-3: 0.75rem;
+  --sy-4: 0.84rem;
+  --sy-5: 0.95rem;
+  --sy-6: 1.08rem;
+  --sy-7: 1.2rem;
+}
+.sea-shipyard-col { max-width: 28rem; }
+
+@media (min-width: 768px) {
+  .sea-shipyard {
+    --sy-1: 0.68rem;
+    --sy-2: 0.78rem;
+    --sy-3: 0.92rem;
+    --sy-4: 1rem;
+    --sy-5: 1.12rem;
+    --sy-6: 1.3rem;
+    --sy-7: 1.55rem;
+  }
+  /* The column grows with the type rather than staying at phone width and
+     letting the bigger text wrap harder than it used to. */
+  .sea-shipyard-col { max-width: 40rem; }
+}

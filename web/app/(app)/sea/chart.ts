@@ -262,6 +262,21 @@ export const RESIDENTS: {
     x: -9208, y: 8892, rate: 0.86 },
 ]
 
+/**
+ * THE LATITUDE OF THE HARBOUR, and the edge of the world.
+ *
+ * The Harbour divides the chart: expeditions to the north, fishing to the
+ * south. That was a statement about layout and nothing enforced it, so you
+ * could sail north forever into blank water that belongs to a system this
+ * screen does not implement — an empty grey nothing with no zones, no traders
+ * and no reason to be there, which reads as a bug rather than as a border.
+ *
+ * Now it is a wall. The hull stops here and no fishing NPC spawns beyond it.
+ * You can still moor at the Harbour: it sits ON the line, and its approach ring
+ * opens to the south.
+ */
+export const NORTH_WALL = -1500
+
 /** The open sea, away from any named water. What everything blends back toward,
  *  and the only invented palette on the chart. */
 export const OPEN_SEA: [string, string, string] = ['#0b1a24', '#1c3a48', '#4a6f7d']

@@ -23,6 +23,8 @@ import { RODS } from '@/lib/rods'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
+import { getCachedFishSpecies } from '@/lib/fishSpecies'
+import { vigilFor } from '@/lib/ancientVigil'
 
 export const metadata = { title: 'The Sea' }
 
@@ -51,9 +53,32 @@ export default async function SeaPage() {
     .sort((a, b) => b.quantity - a.quantity)[0]
   const baitType = best?.bait_type ?? 'worm'
 
+  // ── THE COLLECTION LOG ────────────────────────────────────────────────
+  // The same drawer the fishing page shows, so it needs the same reference
+  // data. Species come from the long-TTL cross-request cache, not a per-view
+  // query — this page is as hot as the fishing screen.
+  const [allSpecies, { data: collectionRows }, { data: pbRows }] = await Promise.all([
+    getCachedFishSpecies(),
+    admin.from('fish_collection').select('fish_id, is_golden').eq('user_id', user.id),
+    admin.from('fish_personal_bests').select('fish_id, best_length_in').eq('user_id', user.id),
+  ])
+  const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
+  const mountedFishIds = (collectionRows ?? [])
+    .filter((r: { is_golden: boolean }) => r.is_golden)
+    .map((r: { fish_id: number }) => r.fish_id)
+  const personalBests: Record<number, number> = {}
+  for (const r of (pbRows ?? []) as { fish_id: number; best_length_in: number }[]) {
+    personalBests[r.fish_id] = Number(r.best_length_in)
+  }
+
   // Read on the server so the day's deal count survives a page reload — a cap
   // the client remembers is not a cap.
   const dealt = await dealtToday()
+
+  // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
+  const { data: finaleRow } = await admin
+    .from('raid_completions')
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle()
 
   // ── THE SPECIALS THE CLIENT DRIVES ────────────────────────────────────
   // Phantom Hook, Perfected Sigil and the Primeval Eye need nothing here: the
@@ -143,6 +168,29 @@ export default async function SeaPage() {
       rack={rack}
       // The hull tier only ever changes how fast you cross the chart.
       hullSpeed={hullSpeed(Number(profile?.hull_speed_tier ?? 0))}
+      // WHERE YOU LEFT OFF. Null on a profile that has never sailed, and the
+      // map falls back to HOME — which is also what happens if either half is
+      // missing, because half a position is not one.
+      log={{
+        allFishSpecies: allSpecies ?? [],
+        caughtFishIds, mountedFishIds, personalBests,
+        prestigeLevels: (profile?.prestige_levels as Record<string, number> | null) ?? {},
+        goldenBoosts: (profile?.zone_golden_boost as Record<string, number> | null) ?? {},
+        ancientCatches: (profile?.ancient_catches as number[] | null) ?? [],
+        ancientVigil: vigilFor(profile?.ancient_vigil, (profile?.ancient_catches as number[] | null)),
+        // Self-enforcing, same as the fishing page: One Last Ride carries
+        // requiresAncients: 6, so clearing it means the wall was full.
+        vigilUnlocked: !!finaleRow,
+        zoneRewardsClaimed: {
+          shallows:    profile?.zone_shallows_rewarded    ?? false,
+          open_waters: profile?.zone_open_waters_rewarded ?? false,
+          deep:        profile?.zone_deep_rewarded        ?? false,
+          abyss:       profile?.zone_abyss_rewarded       ?? false,
+        },
+      }}
+      start={profile?.sea_x != null && profile?.sea_y != null
+        ? { x: Number(profile.sea_x), y: Number(profile.sea_y) }
+        : null}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))

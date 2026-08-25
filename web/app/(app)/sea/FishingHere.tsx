@@ -41,6 +41,10 @@ import { vibrate } from '@/lib/haptics'
 import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
 import type { FishSizeTier } from '@/lib/fishSize'
 import { getBait } from '@/lib/bait'
+import FishCollectionDrawer from '@/app/(app)/fishing/FishCollectionDrawer'
+import { claimZoneReward, prestigeZone } from '@/app/(app)/fishing/actions'
+import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
+import type { SeaLog } from './SeaMap'
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 
 /**
@@ -145,7 +149,7 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
-  seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, onCaught,
+  seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, onCaught,
   onBaitSpent, onPose, onBusy, onCanLeave,
   spritesReady, onClose,
 }: {
@@ -194,6 +198,8 @@ export default function FishingHere({
   /** What is aboard and what it can take. The hold is the reason a session
    *  ends, so it belongs on screen while you are filling it. */
   hold: { count: number; capacity: number }
+  /** Everything the collection log reads. */
+  log: SeaLog
   /** THE RACK — the rods you brought. Swapping is limited to these, which is
    *  the entire mechanic: your loadout is a decision made ashore. */
   rack: { tier: number; name: string; slug: string | null; image: string | null; catchZoneBonus: number }[]
@@ -338,6 +344,59 @@ export default function FishingHere({
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [tackleOpen, setTackleOpen] = useState(false)
+
+  // ── THE COLLECTION LOG ─────────────────────────────────────────────────
+  // The drawer is the fishing page's own, extracted. Everything it mutates is
+  // held here, seeded from the server read, so a claim or a prestige lands on
+  // the screen without a round trip through the page.
+  const [logOpen, setLogOpen] = useState(false)
+  const [caughtIds, setCaughtIds] = useState(() => new Set(log.caughtFishIds))
+  const [expandedZone, setExpandedZone] = useState<string | null>(null)
+  const [uncheckedNew, setUncheckedNew] = useState<Set<number>>(new Set())
+  const [claimedZones, setClaimedZones] = useState(log.zoneRewardsClaimed)
+  const [claimingZone, setClaimingZone] = useState<string | null>(null)
+  const mountedSet = useMemo(() => new Set(log.mountedFishIds), [log.mountedFishIds])
+  const ancientSet = useMemo(() => new Set(log.ancientCatches), [log.ancientCatches])
+  const [prestigeLevels, setPrestigeLevels] = useState(log.prestigeLevels)
+  const [goldenBoosts, setGoldenBoosts] = useState(log.goldenBoosts)
+  const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
+  const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
+
+  /** A fish you have just landed is a fish you have logged. Without this the
+   *  drawer disagrees with the result card you are still looking at. */
+  const logCatch = useCallback((fishId: number) => {
+    setCaughtIds(prev => (prev.has(fishId) ? prev : new Set(prev).add(fishId)))
+    setUncheckedNew(prev => (prev.has(fishId) ? prev : new Set(prev).add(fishId)))
+  }, [])
+
+  async function claimZone(zone: string) {
+    if (claimingZone) return
+    setClaimingZone(zone)
+    const res = await claimZoneReward(zone).catch(() => null)
+    if (res && !('error' in res)) {
+      setClaimedZones(prev => ({ ...prev, [zone]: true }))
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    }
+    setClaimingZone(null)
+  }
+
+  async function doPrestige(zone: string) {
+    if (prestigingZone) return
+    setPrestigingZone(zone); setConfirmPrestigeZone(null)
+    const res = await prestigeZone(zone).catch(() => null)
+    if (res && !('error' in res)) {
+      setPrestigeLevels(prev => ({ ...prev, [zone]: res.prestigeLevel }))
+      if (res.goldenBoost != null) setGoldenBoosts(prev => ({ ...prev, [zone]: res.goldenBoost as number }))
+      // A prestige WIPES the zone's collection, so the drawer has to forget it
+      // or every species in that zone still reads as logged.
+      const wiped = new Set(caughtIds)
+      for (const f of log.allFishSpecies) if (f.habitat === zone) wiped.delete(f.id)
+      setCaughtIds(wiped)
+      setClaimedZones(prev => ({ ...prev, [zone]: false }))
+    }
+    setPrestigingZone(null)
+  }
+
   const activeBaitDef = getBait(bait)
   /** Bait cannot change with a line already in the water: the fish has been
    *  rolled, and swapping would move the odds of something already decided. */
@@ -723,6 +782,10 @@ export default function FishingHere({
         // The server clamps catchQty to the space actually left, so this is the
         // number that went in rather than the number that was rolled.
         onCaught(res.catchQty ?? 1)
+        // Into the log immediately. Without this the drawer disagrees with the
+        // result card still on screen: the card says NEW SPECIES and the log
+        // has never heard of it.
+        if (res.fish?.id != null) logCatch(Number(res.fish.id))
         setCaught({
           kind: 'fish',
           card: {
@@ -1299,6 +1362,38 @@ export default function FishingHere({
       {/* THE TACKLE BOX. Opens over the rod, closes when you have picked, and
           is not on screen the rest of the time. */}
       <AnimatePresence>
+        {logOpen && (
+          <FishCollectionDrawer
+            allFishSpecies={log.allFishSpecies}
+            fishingXP={fishingXP}
+            caughtFishIds={caughtIds}
+            mountedFishIds={mountedSet}
+            personalBests={log.personalBests}
+            ancientCatches={ancientSet}
+            ancientVigil={log.ancientVigil}
+            vigilUnlocked={log.vigilUnlocked}
+            prestigeLevels={prestigeLevels}
+            goldenBoosts={goldenBoosts}
+            claimedZones={claimedZones}
+            claimingZone={claimingZone}
+            prestigingZone={prestigingZone}
+            expandedZone={expandedZone}
+            setExpandedZone={setExpandedZone}
+            setTappedFishId={() => {}}
+            uncheckedNewFishIds={uncheckedNew}
+            setUncheckedNewFishIds={setUncheckedNew}
+            confirmPrestigeZone={confirmPrestigeZone}
+            setConfirmPrestigeZone={setConfirmPrestigeZone}
+            handleClaimZoneReward={z => void claimZone(z)}
+            handlePrestige={z => void doPrestige(z)}
+            // Releasing an ancient is its own scene, and it belongs to the
+            // fishing page's trophy wall rather than to a cast at sea. The
+            // drawer still SHOWS the trophies; letting one go happens ashore.
+            setReleasingAncient={() => {}}
+            onClose={() => setLogOpen(false)}
+          />
+        )}
+
         {tackleOpen && (
           <motion.div key="tackle" data-no-steer
             onClick={e => { e.stopPropagation(); setTackleOpen(false) }}
@@ -1581,6 +1676,40 @@ export default function FishingHere({
             <span className="font-karla font-700" style={{
               fontSize: '0.52rem', color: 'rgba(190,212,228,0.5)', marginLeft: 'auto', flexShrink: 0,
             }}>SWAP</span>
+          )}
+        </button>
+
+        {/* THE LOG. Third on the bar because it is the one you open least, and
+            on the bar at all because on the fishing screen it is — a species
+            you have never landed before is the reason to care about a catch,
+            and finding that out means leaving the water otherwise.
+
+            It carries a dot rather than a count: the number of unlogged fish in
+            a zone is a thing you go and read, not a thing you glance at. */}
+        <button
+          onClick={e => { e.stopPropagation(); vibrate(8); setLogOpen(true) }}
+          style={{
+            flexShrink: 0, height: 30, position: 'relative',
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '0 0.65rem', borderRadius: 10,
+            background: 'rgba(6,14,22,0.86)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            cursor: 'pointer',
+          }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(190,212,228,0.75)"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" />
+            <path d="M8 4v16" />
+          </svg>
+          <span className="font-karla font-700 uppercase" style={{
+            fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
+          }}>Log</span>
+          {uncheckedNew.size > 0 && (
+            <span aria-hidden style={{
+              position: 'absolute', top: 4, right: 4,
+              width: 6, height: 6, borderRadius: '50%',
+              background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.8)',
+            }} />
           )}
         </button>
 

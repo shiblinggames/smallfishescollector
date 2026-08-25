@@ -146,6 +146,36 @@ neither mode.
 `motion.div` and framer owns `transform` for the slide-in, so a transform there is silently
 clobbered. Full-bleed on a desktop monitor put eight words on a line two feet wide.
 
+### The collection log
+
+`FishCollectionDrawer` is the fishing page's own drawer, **extracted, not copied** — zone
+completion pays doubloons and spends a prestige, so two implementations would be two
+implementations of a payout. `/fishing` mounts it too. It sits third on the tackle bar, after
+bait and hold, and carries a dot when there are unlogged species rather than a count.
+
+Both mounts hold the state and hand it down; the drawer owns only its drag-to-dismiss, which
+is chrome on that element and was the wrong thing to make every caller build. A fresh catch
+calls into the log immediately, or the drawer contradicts the result card still on screen.
+
+Releasing an ancient is stubbed at sea: the drawer still shows the trophies, but letting one
+go is the trophy wall's scene and happens ashore.
+
+The extraction also gave one home to things that had been declared twice: `ZONES`,
+`HABITAT_COLOR/LABEL/TAGLINE` and `FishSpeciesBasic` now live in `fishing/constants.ts`, and
+`DrawerHandle`/`DrawerClose` in `components/DrawerChrome.tsx`.
+
+### Buying an upgrade
+
+**Every Shipyard purchase double-confirms.** They are permanent, four to six figures, and sit
+under a finger next to the tile you meant to press. The modal says what the upgrade does,
+what it explicitly does NOT do (the hull changes no fishing maths), now-versus-after side by
+side, the price, and your balance. `EXPLAIN` and `DETAIL` are read by both the card and the
+modal so the two cannot describe the same purchase differently.
+
+**The type scale is seven custom properties** (`--sy-1`..`--sy-7`) on the page root, bumped
+in one media query in globals.css. Every size on that page is an inline style and an inline
+style cannot carry a media query; the phone layout was being served to a monitor unchanged.
+
 ### The rack, and the hull
 
 - **Rods aboard** — `lib/shipyard.ts`. By default you carry ONE rod: the one in your hands.
@@ -158,6 +188,40 @@ clobbered. Full-bleed on a desktop monitor put eight words on a line two feet wi
   faster than that tuning assumed. Inverted, 470 px/s is what a Clipper Hull does and a
   stock hull makes 62% of it. Same spread, but the upgrade now buys back speed you can feel
   the absence of.
+
+## The edges of the world
+
+- **`NORTH_WALL = -1500`**, the Harbour's own latitude. The hull clamps at it and northward
+  velocity is killed, so you slide along the line rather than stopping dead against an
+  invisible pane. All three ports sit on or south of it and stay moorable.
+- **No trader spawns north of it either.** `tradersAround` skips a cell whose SOUTH edge is
+  at or above the wall, so a cell straddling the line still populates its fishable half.
+  Verified: no surviving cell lies entirely north.
+- Everything beyond is expeditions' business, and this screen has nothing up there — sailing
+  into blank grey reads as a bug, not as a border.
+
+## Where the boat starts
+
+**`profiles.sea_x` / `sea_y`.** /sea used to drop you at `HOME` every time, which quietly
+made the sail home optional: fill the hold in the Ancient Deep, tap the nav to the market,
+sell at full price, and you reappear at the Mainland — exactly where the trip home would
+have put you, for free. Leaving the page no longer moves the boat.
+
+Written on `visibilitychange`, `pagehide` and on unmount (the unmount is the one that closes
+the cheese — it is every in-app navigation), plus a 20s heartbeat for crashes and killed
+tabs. The heartbeat skips a write when the boat has not moved 60px. Read ONCE into a ref, and
+clamped to `NORTH_WALL` so a position saved before the wall existed cannot strand you.
+
+Deliberately unvalidated: a forged position only moves your own boat, and there is nothing on
+this chart reachable by starting somewhere that is not reachable by sailing there. The sell
+lanes are guarded on their own terms.
+
+## NPCs are found, not listed
+
+The compass shows the buyer of the water you are in as a **circled `!`, never a name**.
+Printing "Meg Corrin" on the horizon tells you who is out there, what they are and that there
+is exactly one, before you have laid eyes on the boat — which is most of the discovery spent
+on a label. The arrow says *somebody, that way, this far*; the rest you get by sailing over.
 
 ## Going ashore
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { FishSpeciesBasic } from './constants'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
@@ -61,7 +62,6 @@ type InventoryItem = {
   fish_species: FishSpecies
 }
 
-type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number; length_min_in?: number | null; length_max_in?: number | null }
 
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,

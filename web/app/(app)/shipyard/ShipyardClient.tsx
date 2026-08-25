@@ -48,6 +48,40 @@ import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 
 type BaitItem = { bait_type: string; quantity: number }
 
+type Buyable = 'rack' | 'hull' | 'hold'
+
+/**
+ * WHAT YOU ARE ABOUT TO BUY, in plain words.
+ *
+ * The cards had a name, a number and a price, which tells you what changes but
+ * not what it MEANS — "3 rods" and "86% speed" are only legible if you already
+ * know how the rack and the hull work. These are the explanations, and they are
+ * written here rather than inside the confirm modal so the card and the modal
+ * cannot end up describing the upgrade differently.
+ *
+ * Per the house rule: the mechanic is stated literally, the flavour stays out
+ * of it. You are spending real money-equivalent on a permanent change and the
+ * copy's only job is to make sure you meant to.
+ */
+const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
+  rack: {
+    does: 'Adds one berth to the rod rack, so the boat carries one more rod.',
+    why: 'Out at sea you can only switch to a rod you brought with you. Every '
+       + 'other rod you own stays ashore until you come back.',
+  },
+  hull: {
+    does: 'Refits the hull, so the boat sails faster across the whole chart.',
+    why: 'It changes nothing about fishing. Bites, catch zones and rarity are '
+       + 'untouched. It only shortens the sail to the deep water and back.',
+  },
+  hold: {
+    does: 'Enlarges the fish hold, so you can land more before it is full.',
+    why: 'A full hold stops you casting. Selling to a zone buyer or at the '
+       + 'market ashore is what empties it.',
+  },
+}
+
+
 export default function ShipyardClient(p: {
   doubloons: number
   gems: number
@@ -132,6 +166,15 @@ export default function ShipyardClient(p: {
   /** Which berth's picker is open. 0 is the rod in your hands and never
    *  opens one — that swap is the locker's Rod slot. */
   const [berth, setBerth] = useState<number | null>(null)
+  /**
+   * NOTHING IS BOUGHT ON ONE TAP.
+   *
+   * Every one of these is permanent, four to six figures, and sits under a
+   * finger on a phone next to the tile you actually meant to press. A confirm
+   * step on a purchase you cannot undo is not friction, it is the difference
+   * between an upgrade and an accident.
+   */
+  const [confirm, setConfirm] = useState<Buyable | null>(null)
   const [busy, setBusy] = useState('')
   const [err, setErr] = useState('')
 
@@ -202,7 +245,7 @@ export default function ShipyardClient(p: {
     if (r && 'aboard' in r) setAboard(r.aboard)
   }
 
-  async function buy(what: 'rack' | 'hull' | 'hold') {
+  async function buy(what: Buyable) {
     if (busy) return
     setBusy(what); setErr('')
     try {
@@ -224,14 +267,47 @@ export default function ShipyardClient(p: {
       }
     } catch { setErr('That did not go through. Try again.') }
     setBusy('')
+    setConfirm(null)
   }
 
   const rodDef = getEffectiveRod(equipped, effects)
 
+  /** The three upgrades' current and next state, derived once. The cards and
+   *  the confirm modal both read this, so they cannot disagree about what you
+   *  are buying or what it costs. */
+  const DETAIL: Record<Buyable, {
+    title: string; accent: string; now: string; unit: string; next: string | null; cost: number | null
+  }> = {
+    rack: {
+      title: 'Rod Rack', accent: '#67d4e8',
+      now: `${slots} rod${slots === 1 ? '' : 's'}`, unit: slots === 1 ? 'rod aboard' : 'rods aboard',
+      next: rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`,
+      cost: rackCost,
+    },
+    hull: {
+      title: HULL_NAMES[Math.min(hull + 1, MAX_HULL_TIER)], accent: '#9fc9e8',
+      now: `${Math.round(hullSpeed(hull) * 100)}%`, unit: 'of top speed',
+      next: hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`,
+      cost: hullCost,
+    },
+    hold: {
+      title: holdNext?.name ?? getFishHold(hold).name, accent: '#f0c040',
+      now: `${cap} fish`, unit: 'fish in the hold',
+      next: holdNext ? `${holdNext.capacity} fish` : null,
+      cost: holdNext?.cost ?? null,
+    },
+  }
+
   return (
-    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0 overflow-y-auto"
+    // THE TYPE SCALE LIVES ON THE ROOT, as custom properties, because inline
+    // styles cannot carry a media query and every size on this page is inline.
+    // globals.css bumps all seven steps at once on a wide screen and widens the
+    // column to match — the phone layout was being served to a desktop monitor
+    // at phone sizes, which is a column of six-point type down the middle of a
+    // 27-inch screen.
+    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0 overflow-y-auto sea-shipyard"
       style={{ background: '#08121c' }}>
-      <div className="w-full max-w-md mx-auto" style={{ padding: '0 1rem 2rem' }}>
+      <div className="w-full mx-auto sea-shipyard-col" style={{ padding: '0 1rem 2rem' }}>
 
         {/* ── THE HERO ────────────────────────────────
             The boat, and then what it is carrying. No title, no blurb, no strip
@@ -313,11 +389,11 @@ export default function ShipyardClient(p: {
                   ) : (
                     <span aria-hidden style={{
                       width: 26, height: 26, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', color: 'rgba(160,200,222,0.6)', fontSize: '1.1rem',
+                      justifyContent: 'center', color: 'rgba(160,200,222,0.6)', fontSize: 'var(--sy-6)',
                     }}>+</span>
                   )}
                   <span className="font-karla font-700 truncate" style={{
-                    maxWidth: '100%', fontSize: '0.5rem', letterSpacing: '0.04em',
+                    maxWidth: '100%', fontSize: 'var(--sy-1)', letterSpacing: '0.04em',
                     color: filled ? 'rgba(226,240,248,0.86)' : 'rgba(160,200,222,0.7)',
                   }}>
                     {i === 0 ? 'In hand' : def ? def.name : 'Empty berth'}
@@ -328,7 +404,7 @@ export default function ShipyardClient(p: {
 
             {rack < MAX_RACK_TIER && rackCost != null && (
               <button type="button" className="tap"
-                onClick={() => void buy('rack')}
+                onClick={() => { setErr(''); setConfirm('rack') }}
                 disabled={!!busy || doubloons < rackCost}
                 style={{
                   flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
@@ -341,10 +417,10 @@ export default function ShipyardClient(p: {
                 }}>
                 <span aria-hidden style={{
                   width: 26, height: 26, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', color: '#f0c040', fontSize: '1.1rem',
+                  justifyContent: 'center', color: '#f0c040', fontSize: 'var(--sy-6)',
                 }}>{busy === 'rack' ? '…' : '+'}</span>
                 <span className="font-karla font-700 truncate" style={{
-                  maxWidth: '100%', fontSize: '0.5rem', letterSpacing: '0.04em', color: '#f0c040',
+                  maxWidth: '100%', fontSize: 'var(--sy-1)', letterSpacing: '0.04em', color: '#f0c040',
                 }}>
                   {rackCost.toLocaleString()} ⟡
                 </span>
@@ -354,7 +430,7 @@ export default function ShipyardClient(p: {
         </div>
 
         {err && (
-          <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#e6a0a0', marginTop: 10, lineHeight: 1.5 }}>
+          <p className="font-karla font-600" style={{ fontSize: 'var(--sy-4)', color: '#e6a0a0', marginTop: 10, lineHeight: 1.5 }}>
             {err}
           </p>
         )}
@@ -385,7 +461,7 @@ export default function ShipyardClient(p: {
               <button key={key} type="button" onClick={() => setTab(key)}
                 className="font-karla font-800 uppercase tracking-[0.1em] tap"
                 style={{
-                  flex: 1, padding: '0.72rem 0', borderRadius: 10, fontSize: '0.76rem', cursor: 'pointer',
+                  flex: 1, padding: '0.72rem 0', borderRadius: 10, fontSize: 'var(--sy-3)', cursor: 'pointer',
                   border: on ? '1px solid rgba(240,192,64,0.55)' : '1px solid transparent',
                   color: on ? '#f5d98a' : 'rgba(255,255,255,0.6)',
                   background: on ? 'linear-gradient(180deg, rgba(240,192,64,0.22), rgba(224,168,46,0.10))' : 'transparent',
@@ -406,7 +482,7 @@ export default function ShipyardClient(p: {
               next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
               cost={rackCost}
               busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
-              onBuy={() => void buy('rack')}
+              onBuy={() => { setErr(''); setConfirm('rack') }}
             />
             <BoatCard
               name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
@@ -414,7 +490,7 @@ export default function ShipyardClient(p: {
               next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}% speed`}
               cost={hullCost}
               busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
-              onBuy={() => void buy('hull')}
+              onBuy={() => { setErr(''); setConfirm('hull') }}
             />
             <BoatCard
               name={getFishHold(hold).name} accent="#f0c040"
@@ -422,7 +498,7 @@ export default function ShipyardClient(p: {
               next={holdNext ? `${holdNext.capacity} fish` : null}
               cost={holdNext?.cost ?? null}
               busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
-              onBuy={() => void buy('hold')}
+              onBuy={() => { setErr(''); setConfirm('hold') }}
             />
           </div>
         )}
@@ -600,13 +676,111 @@ export default function ShipyardClient(p: {
 
         <Link href="/sea" className="font-cinzel font-700 block text-center"
           style={{
-            marginTop: 18, padding: '0.75rem', borderRadius: 12, fontSize: '0.9rem',
+            marginTop: 18, padding: '0.75rem', borderRadius: 12, fontSize: 'var(--sy-5)',
             color: '#f2ead8', background: 'rgba(180,214,232,0.14)',
             border: '1px solid rgba(180,214,232,0.4)',
           }}>
           Back to the water
         </Link>
       </div>
+
+      {/* ── CONFIRM THE PURCHASE ────────────────────────────────────────
+          Says what it does, what it does not do, what you have now, what you
+          will have, and what it costs. Everything that made the card's two-word
+          label ambiguous, spelled out, on the one screen where being wrong
+          costs money you cannot get back. */}
+      <PopupShell open={confirm !== null} onClose={() => { if (!busy) setConfirm(null) }}>
+        {confirm && (() => {
+          const d = DETAIL[confirm]
+          const e = EXPLAIN[confirm]
+          return (
+            <motion.div role="dialog" aria-modal onClick={ev => ev.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              style={{
+                margin: 'auto', width: '100%', maxWidth: 420,
+                background: 'rgba(8,14,24,0.98)', border: `1px solid ${d.accent}44`,
+                borderRadius: 18, padding: '1.1rem 1rem 1.15rem',
+              }}>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]"
+                style={{ fontSize: 'var(--sy-1)', color: `${d.accent}cc` }}>Confirm refit</p>
+              <h2 className="font-cinzel font-700"
+                style={{ fontSize: 'var(--sy-7)', color: '#f4ecd8', marginTop: 3, marginBottom: 10 }}>
+                {d.title}
+              </h2>
+
+              <p className="font-karla" style={{
+                fontSize: 'var(--sy-4)', color: '#dfeaf2', lineHeight: 1.55, marginBottom: 7,
+              }}>{e.does}</p>
+              <p className="font-karla" style={{
+                fontSize: 'var(--sy-4)', color: 'rgba(190,212,228,0.7)', lineHeight: 1.55,
+              }}>{e.why}</p>
+
+              {/* NOW versus AFTER, side by side, because the difference is the
+                  thing you are actually paying for. */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10,
+                margin: '13px 0 4px', padding: '0.75rem 0.85rem', borderRadius: 12,
+                background: 'rgba(0,0,0,0.32)', border: '1px solid rgba(255,255,255,0.08)',
+              }}>
+                <div>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{ fontSize: 'var(--sy-1)', color: 'rgba(255,255,255,0.45)' }}>Now</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-6)', color: '#b9c9d6', marginTop: 3 }}>
+                    {d.now}
+                  </p>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={d.accent}
+                  strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+                <div>
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{ fontSize: 'var(--sy-1)', color: `${d.accent}aa` }}>After</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-6)', color: '#f2ead8', marginTop: 3 }}>
+                    {d.next ?? '—'}
+                  </p>
+                </div>
+              </div>
+
+              <p className="font-karla font-600" style={{
+                fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.62)', marginTop: 10, lineHeight: 1.5,
+              }}>
+                This costs <span style={{ color: '#f0c040' }}>{(d.cost ?? 0).toLocaleString()} ⟡</span> and
+                cannot be undone or refunded. You have {doubloons.toLocaleString()} ⟡.
+              </p>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button type="button" onClick={() => setConfirm(null)} disabled={!!busy}
+                  className="font-karla font-700"
+                  style={{
+                    flex: 1, padding: '0.7rem', borderRadius: 12, fontSize: 'var(--sy-4)',
+                    color: 'rgba(226,240,248,0.8)', background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
+                  }}>
+                  Not yet
+                </button>
+                <button type="button" onClick={() => void buy(confirm)}
+                  disabled={!!busy || doubloons < (d.cost ?? Infinity)}
+                  className="font-karla font-700"
+                  style={{
+                    flex: 1.3, padding: '0.7rem', borderRadius: 12, fontSize: 'var(--sy-4)',
+                    color: doubloons < (d.cost ?? Infinity) ? 'rgba(242,234,216,0.4)' : '#f2ead8',
+                    background: 'rgba(240,192,64,0.16)',
+                    border: '1px solid rgba(240,192,64,0.45)',
+                    cursor: doubloons < (d.cost ?? Infinity) ? 'default' : 'pointer',
+                  }}>
+                  {busy ? 'Working…'
+                    : doubloons < (d.cost ?? Infinity) ? 'Not enough ⟡'
+                      : `Pay ${(d.cost ?? 0).toLocaleString()} ⟡`}
+                </button>
+              </div>
+            </motion.div>
+          )
+        })()}
+      </PopupShell>
 
       {/* ── WHAT GOES IN THIS BERTH ────────────────────────────────────
           Only rods you actually own and can actually use. The rod in your hands
@@ -625,10 +799,10 @@ export default function ShipyardClient(p: {
           }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div>
-              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: 'rgba(103,212,232,0.9)' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: 'var(--sy-1)', color: 'rgba(103,212,232,0.9)' }}>
                 Berth {berth}
               </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-5)', color: '#f4ecd8' }}>
                 What sails with you
               </p>
             </div>
@@ -648,7 +822,7 @@ export default function ShipyardClient(p: {
                 className="font-karla font-700 tap"
                 style={{
                   width: '100%', textAlign: 'left', padding: '0.6rem 0.7rem', borderRadius: 12,
-                  marginBottom: 6, fontSize: '0.74rem', color: 'rgba(226,240,248,0.7)',
+                  marginBottom: 6, fontSize: 'var(--sy-3)', color: 'rgba(226,240,248,0.7)',
                   background: 'rgba(255,255,255,0.035)', border: '1px dashed rgba(255,255,255,0.18)',
                   cursor: 'pointer',
                 }}>
@@ -681,10 +855,10 @@ export default function ShipyardClient(p: {
                         style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
                     )}
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span className="font-cinzel font-700 block truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>
+                      <span className="font-cinzel font-700 block truncate" style={{ fontSize: 'var(--sy-4)', color: '#f0ede8' }}>
                         {rod.name}
                       </span>
-                      <span className="font-karla font-600 block" style={{ fontSize: '0.6rem', color: 'rgba(190,212,228,0.55)' }}>
+                      <span className="font-karla font-600 block" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.55)' }}>
                         {locked ? `Fishing ${fishingGearLevelReq(rod)} needed`
                           : seated ? 'In this berth'
                             : elsewhere ? 'In another berth' : 'Ashore'}
@@ -719,23 +893,23 @@ function BoatCard({ name, accent, now, unit, next, cost, busy, disabled, onBuy }
         border: `1px solid ${accent}38`,
       }}>
       <p className="font-karla font-700 uppercase truncate" style={{
-        fontSize: '0.54rem', letterSpacing: '0.1em', color: `${accent}b0`,
+        fontSize: 'var(--sy-1)', letterSpacing: '0.1em', color: `${accent}b0`,
       }}>{name}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f2ead8', lineHeight: 1.05, marginTop: 3 }}>
+      <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-7)', color: '#f2ead8', lineHeight: 1.05, marginTop: 3 }}>
         {now}
       </p>
-      <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: 'rgba(190,212,228,0.5)', marginTop: 1, lineHeight: 1.3 }}>
+      <p className="font-karla font-600" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.5)', marginTop: 1, lineHeight: 1.3 }}>
         {unit}
       </p>
       {maxed ? (
-        <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#7fd6a0', marginTop: 'auto', paddingTop: 10 }}>
+        <p className="font-karla font-700" style={{ fontSize: 'var(--sy-2)', color: '#7fd6a0', marginTop: 'auto', paddingTop: 10 }}>
           Fully upgraded
         </p>
       ) : (
         <button onClick={onBuy} disabled={disabled} className="font-karla font-700"
           style={{
             marginTop: 'auto', width: '100%', padding: '0.35rem 0.2rem', borderRadius: 9,
-            fontSize: '0.58rem', lineHeight: 1.35,
+            fontSize: 'var(--sy-2)', lineHeight: 1.35,
             color: disabled ? 'rgba(242,234,216,0.38)' : '#f2ead8',
             background: 'rgba(240,192,64,0.13)',
             border: '1px solid rgba(240,192,64,0.38)',

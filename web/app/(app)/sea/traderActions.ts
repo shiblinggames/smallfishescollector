@@ -332,3 +332,34 @@ export async function buyRunnerRod(traderKey: string): Promise<
 
   return { ok: true, rodTier: trader.rodTier, spent: trader.cost, doubloons: Number(newBalance) }
 }
+
+
+/**
+ * WHERE THE BOAT IS, remembered across a navigation.
+ *
+ * /sea used to drop you at HOME every time you opened it, which quietly made
+ * the sail home optional: fill the hold in the Ancient Deep, tap the nav to the
+ * market, sell at full price, and you reappear at the Mainland — exactly where
+ * the trip home would have put you, for nothing. Leaving the page no longer
+ * moves the boat.
+ *
+ * Deliberately NOT validated against anything. A forged position buys you
+ * nothing: the only thing it changes is where your own boat starts, and there
+ * is nothing on this chart you can reach by starting somewhere that you could
+ * not reach by sailing there. The sell lanes are all guarded on their own terms
+ * — the residents by rate, the wanderers by the daily deal cap — so position is
+ * a convenience, not a permission.
+ *
+ * Clamped only to keep a NaN or an Infinity out of a numeric column.
+ */
+export async function saveSeaPosition(x: number, y: number): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return
+  const admin = createAdminClient()
+  await admin.from('profiles').update({
+    sea_x: Math.max(-1e6, Math.min(1e6, x)),
+    sea_y: Math.max(-1e6, Math.min(1e6, y)),
+  }).eq('id', user.id)
+}
