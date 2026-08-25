@@ -105,24 +105,49 @@ function zoomFor(width: number): number {
 const SHORE = 0.72
 
 /**
- * A TAP IS A HEADING, NOT A DESTINATION.
+ * TWO GESTURES, AND THEY MEAN DIFFERENT THINGS.
  *
- * It used to course to the exact point you touched, and out here that is the
- * wrong instrument. On a phone the visible sea is a few hundred world pixels
- * across and the zones are thousands, so tapping "over there" meant sailing a
- * short hop and stopping, then tapping again, and again — the boat kept
- * arriving at places you had not asked to arrive at.
+ *   A TAP is a short hop toward where you touched. Not the exact point — out
+ *   here the visible sea is a few hundred world pixels on a phone and the zones
+ *   are thousands, so "sail exactly there and stop" made crossing anything a
+ *   rally of taps. And not an endless heading either: a tap is a nudge, it
+ *   should feel like a flick of the tiller and then you are done.
  *
- * So the point you tap gives a DIRECTION, and the course is thrown far enough
- * along it that you keep sailing until you say otherwise. Re-aim by tapping
- * again, stop by tapping your own boat.
+ *   A HOLD is a heading you keep. Press and stay pressed and the boat runs the
+ *   bearing under your thumb for as long as you hold it, re-aimed every frame,
+ *   so crossing the chart is one continuous gesture. Let go and it runs out
+ *   gently rather than stopping dead.
  *
- * Two things stay exact, because for them the arrival IS the point: a port,
- * which you pull alongside, and a trader, who you are meeting.
+ * Two things ignore both and go exactly where they say, because for them the
+ * arrival IS the point: a port, which you pull alongside, and a trader, who you
+ * are meeting.
  */
+/** How far a single tap moves you. Capped, not scaled — a tap near the hull
+ *  goes where you tapped, a tap at the edge of the screen goes this far in that
+ *  direction and no further. */
+const TAP_HOP = 460
+/** Held bearings are thrown far enough to be a direction rather than a place.
+ *  Re-set every frame while the thumb is down, so the distance only has to be
+ *  further than the boat can travel in one frame. */
 const THROW = 9000
+/** Press-and-hold this long without moving and it becomes a heading. Below it,
+ *  the gesture is still a tap. */
+const HOLD_MS = 220
 /** Tap within this of the hull to drop anchor. */
 const STOP_RADIUS = 190
+/** How far a press has to travel before it counts as a drag. Generous enough
+ *  that a thumb resting on glass does not become a course change. */
+const DRAG_SLOP = 12
+
+/** A short hop toward a point: the direction you asked for, the distance capped
+ *  so one tap is one nudge. */
+function hopToward(from: Vec, toward: Vec): Vec {
+  const dx = toward.x - from.x, dy = toward.y - from.y
+  const d = Math.hypot(dx, dy)
+  if (d < 0.001) return { ...from }
+  const reach = Math.min(d, TAP_HOP)
+  return clearOfLand({ x: from.x + (dx / d) * reach, y: from.y + (dy / d) * reach })
+}
 
 function headingFrom(from: Vec, toward: Vec): Vec {
   const dx = toward.x - from.x, dy = toward.y - from.y
@@ -495,6 +520,16 @@ export default function SeaMap({
   // exactly as before; only a press that MOVES becomes a helm.
   const dragFrom = useRef<Vec | null>(null)
   const dragging = useRef(false)
+  /** True once the press has become a HEADING — either by being held still long
+   *  enough, or by travelling far enough to be a drag. */
+  const holding = useRef(false)
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** The thumb, in SCREEN coordinates. It has to be re-projected every frame
+   *  rather than stored as a world point: the finger is still, but the world is
+   *  moving under it, so the bearing changes even when nothing is dragged. */
+  const holdAt = useRef<Vec | null>(null)
+  /** So the loop can convert without being rebuilt when toWorld changes. */
+  const toWorldRef = useRef<((x: number, y: number) => Vec | null) | null>(null)
   /** Set on release after a drag, so the click the browser fires at the end of
    *  the gesture does not also re-plot a course. */
   const swallowTap = useRef(false)
@@ -614,6 +649,8 @@ export default function SeaMap({
     }
   }, [])
 
+  toWorldRef.current = toWorld
+
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
     router.push(p.href)
@@ -673,46 +710,59 @@ export default function SeaMap({
       return
     }
 
-    target.current = headingFrom(pos.current, w)
+    target.current = hopToward(pos.current, w)
   }, [toWorld, near, locked, enter])
-
-  /** How far a press has to travel before it stops being a tap. Generous
-   *  enough that a thumb resting on glass does not become a course change. */
-  const DRAG_SLOP = 12
 
   const onDown = useCallback((e: React.PointerEvent) => {
     // Anything with a button in it is a control, not the sea. Cast, Reel In,
     // the prompt and the leaving dialog all live inside this element.
     if ((e.target as HTMLElement).closest('button, [data-no-steer]')) return
     dragFrom.current = { x: e.clientX, y: e.clientY }
+    holdAt.current = { x: e.clientX, y: e.clientY }
     dragging.current = false
+    holding.current = false
+    // A press that simply STAYS becomes a heading. Without this, holding still
+    // in a direction does nothing at all — only dragging would steer, which is
+    // an odd thing to have to discover.
+    if (holdTimer.current) clearTimeout(holdTimer.current)
+    holdTimer.current = setTimeout(() => { holding.current = true; vibrate(8) }, HOLD_MS)
     try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* fine */ }
   }, [])
 
   const onMove = useCallback((e: React.PointerEvent) => {
     const from = dragFrom.current
     if (!from) return
-    if (!dragging.current) {
-      if (Math.hypot(e.clientX - from.x, e.clientY - from.y) < DRAG_SLOP) return
+    holdAt.current = { x: e.clientX, y: e.clientY }
+    // Travelling far enough is a hold too, without waiting out the timer — a
+    // deliberate drag should steer the moment it is recognisable as one.
+    if (!holding.current && Math.hypot(e.clientX - from.x, e.clientY - from.y) >= DRAG_SLOP) {
+      holding.current = true
       dragging.current = true
       vibrate(8)
     }
-    const w = toWorld(e.clientX, e.clientY)
-    // A drag is a heading held under the thumb: the boat runs the bearing you
-    // are pointing at rather than creeping to the exact pixel and stopping.
-    if (w) target.current = headingFrom(pos.current, w)
-  }, [toWorld])
+  }, [])
 
   const onUp = useCallback((e: React.PointerEvent) => {
-    if (dragging.current) {
-      // Let go and the boat coasts to where the thumb left it rather than
-      // stopping dead — a hull has mass, and cutting the target to the current
-      // position would read as hitting a wall.
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null }
+    if (holding.current) {
+      // LET GO AND IT RUNS OUT. Cutting the course to the current position
+      // would stop the hull dead the instant your thumb left the glass, which
+      // reads as the boat hitting something. A short run-on along the bearing
+      // lets it ease off the way a hull actually does.
+      const v = vel.current
+      const sp = Math.hypot(v.x, v.y)
+      target.current = sp > 1
+        ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.55, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.55 }
+        : { ...pos.current }
+      // The browser fires a click after the gesture; it must not also be read
+      // as a tap and re-aim what you have just finished steering.
       swallowTap.current = true
       setTimeout(() => { swallowTap.current = false }, 60)
     }
     dragFrom.current = null
+    holdAt.current = null
     dragging.current = false
+    holding.current = false
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
   }, [])
 
@@ -731,6 +781,15 @@ export default function SeaMap({
       // unclamped one would teleport the boat across the chart.
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
+
+      // HELD BEARING. Re-aimed every frame from the thumb's SCREEN position,
+      // because the finger is still but the sea is moving under it — a bearing
+      // stored once as a world point would slowly stop pointing where the thumb
+      // is pointing.
+      if (holding.current && holdAt.current && toWorldRef.current) {
+        const w = toWorldRef.current(holdAt.current.x, holdAt.current.y)
+        if (w) target.current = headingFrom(pos.current, w)
+      }
 
       const dx = target.current.x - pos.current.x
       const dy = target.current.y - pos.current.y
