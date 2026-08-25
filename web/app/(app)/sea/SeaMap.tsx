@@ -1857,9 +1857,23 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
       position: 'absolute', left: trader.x, top: trader.y,
       pointerEvents: 'none', zIndex: 2, willChange: 'transform',
     }}>
-      {/* Contact shadow, ON the plane and therefore squashed with it. */}
-      {/* Same correction as the landmarks: a pale disturbance ON the
-          waterline rather than a dark shadow cast below it. */}
+      {/* THE BOAT ITSELF. Nothing is drawn under it: two attempts at a
+          waterline lived here, a dark ellipse and then a pale one, and both
+          read as the boat hovering over a surface. There is no surface. */}
+      <div className="trader-hull" style={{
+        // scaleX comes from the patrol rather than a coin flip, so a trader
+        // always looks the way they are actually drifting. Written every frame
+        // by the loop, which finds this node by THIS CLASS.
+        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78)`,
+        // Somebody you have already dealt with today is still there — they do
+        // not vanish, because a person disappearing once you are done with them
+        // is what makes a world feel like a vending machine. They just stop
+        // calling out.
+        opacity: done ? 0.62 : 1,
+      }}>
+        <TraderSkiff look={trader.look} />
+      </div>
+
       {/* ── THE HAIL MARK ────────────────────────────────────────────
           Just the mark, just above the head, just when you can talk to them.
           There used to be a small dot when they were out of range, which was
