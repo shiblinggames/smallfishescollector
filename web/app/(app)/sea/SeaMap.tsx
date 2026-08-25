@@ -29,6 +29,7 @@ import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
+import { seaClock, PHASE_LABEL } from '@/lib/seaClock'
 import { tradersAround, traderPos, seaDay, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
@@ -280,7 +281,7 @@ const WATER_RGB: { x: number; y: number; r: number; c: [number, number, number][
  *  the darkness so the whole frame agrees about how deep you are. */
 type SeaLook = { css: string; lum: number; haze: string }
 
-function seaAt(p: Vec): SeaLook {
+function seaAt(p: Vec, darkness = 0): SeaLook {
   // THE OPEN OCEAN GETS A SMALL VOTE, NOT A BIG ONE.
   //
   // It used to get 0.55, which meant that even sitting dead in the middle of
@@ -304,7 +305,17 @@ function seaAt(p: Vec): SeaLook {
       for (let ch = 0; ch < 3; ch++) acc[k][ch] += w.c[k][ch] * weight
     }
   }
-  const out = acc.map(c => c.map(v => Math.round(v / wSum)))
+  let out = acc.map(c => c.map(v => Math.round(v / wSum)))
+
+  // NIGHT, applied to the blend rather than as a sheet over the top. A dark
+  // overlay flattens everything underneath it into one grey; pulling the
+  // palette itself down toward a cold blue-black keeps the Shallows lighter
+  // than the Abyss after dark, exactly as they are before it.
+  if (darkness > 0) {
+    const NIGHT: [number, number, number] = [6, 11, 22]
+    const k = darkness * 0.78
+    out = out.map(c => c.map((v, i) => Math.round(v * (1 - k) + NIGHT[i] * k)))
+  }
 
   // Perceived brightness of the DEEP stop, 0..1. Drives how much light the
   // painted wash is allowed to add and how bright the horizon haze is.
@@ -597,6 +608,21 @@ export default function SeaMap({
       window.removeEventListener('resize', fit)
       window.removeEventListener('orientationchange', fit)
     }
+  }, [])
+
+  /** The sea's phase, for the banner and for respawning traders when night
+   *  falls. Polled slowly — the cycle is 24 minutes, so a check every few
+   *  seconds is already far finer than anything on screen needs. */
+  const [phase, setPhase] = useState(() => seaClock().phase)
+  /** Mirrored, because the rAF effect is built once with an empty dependency
+   *  list — reading `phase` straight from the closure in there would read the
+   *  value it had at mount and never change, so night would never respawn the
+   *  sea. */
+  const phaseRef = useRef(phase)
+  phaseRef.current = phase
+  useEffect(() => {
+    const id = setInterval(() => setPhase(seaClock().phase), 4000)
+    return () => clearInterval(id)
   }, [])
 
   const [near, setNear] = useState<Place | null>(null)
@@ -976,7 +1002,12 @@ export default function SeaMap({
       // strings mean genuinely identical pixels and this is exact, not
       // approximate.
       const wrap = wrapRef.current
-      const look = seaAt(pos.current)
+      // The sea's own clock — a 24 minute day for everybody on the same tick,
+      // so night comes round about three times an hour wherever you are. See
+      // lib/seaClock for why the game keeps its own time rather than reading
+      // the player's.
+      const clk = seaClock(Date.now())
+      const look = seaAt(pos.current, clk.darkness)
       if (wrap && look.css !== lastCss) {
         lastCss = look.css
         wrap.style.background = look.css
@@ -998,7 +1029,10 @@ export default function SeaMap({
         sky.style.setProperty('--sea-haze', look.haze)
         // Capped below full. At 1.0 over bright water the horizon read as a
         // wall of white rather than distance.
-        sky.style.opacity = String(0.32 + look.lum * 0.53)
+        // And the sky goes out with the water. At full dark it is a fifth of
+        // its daylight strength, which leaves a horizon rather than removing
+        // one — a night sea with no sky at all is just a black rectangle.
+        sky.style.opacity = String((0.32 + look.lum * 0.53) * (1 - clk.darkness * 0.8))
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
@@ -1052,8 +1086,11 @@ export default function SeaMap({
         // left the map recomputing on the wrong boundary and traders would have
         // popped in and out as you sailed.
         const ck = `${Math.floor(pos.current.x / CELL)}:${Math.floor(pos.current.y / CELL)}`
-        if (ck !== cellRef.current) {
-          cellRef.current = ck
+        // The phase is in the key as well as the cell: when night falls the sea
+        // gains blockade runners, and without this they would not appear until
+        // you happened to cross a cell boundary.
+        if (`${ck}|${phaseRef.current}` !== cellRef.current) {
+          cellRef.current = `${ck}|${phaseRef.current}`
           setTraders(tradersAround(pos.current.x, pos.current.y, 2400, day))
         }
         // Alongside is close: a trader is a person, not a region, and you
@@ -1098,7 +1135,7 @@ export default function SeaMap({
         touchAction: 'none',
         // Background is written every frame by the loop — see seaAt. This is
         // only the colour before the first frame lands.
-        background: seaAt(HOME).css,
+        background: seaAt(HOME, seaClock().darkness).css,
       }}
       className="sea-surface"
     >
@@ -1243,6 +1280,27 @@ export default function SeaMap({
         />
       )}
       <WaterBanner place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} />
+
+      {/* THE LIGHT. Small, top-left, and only there to answer "is it night" —
+          which matters because three rods in this game are only sold after
+          dark. Not a countdown: the cycle is short enough that waiting is never
+          the instruction. */}
+      <div aria-hidden style={{
+        position: 'absolute', top: 10, left: 12, zIndex: 12, pointerEvents: 'none',
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '0.24rem 0.6rem', borderRadius: 999,
+        background: 'rgba(6,12,18,0.7)',
+        border: '1px solid rgba(180,214,232,0.22)',
+      }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%',
+          background: phase === 'night' || phase === 'dusk' ? '#9fb6ff' : '#ffd986',
+          boxShadow: `0 0 8px ${phase === 'night' || phase === 'dusk' ? 'rgba(159,182,255,0.7)' : 'rgba(255,217,134,0.7)'}`,
+        }} />
+        <span className="font-karla font-700 uppercase" style={{
+          fontSize: '0.54rem', letterSpacing: '0.14em', color: 'rgba(214,232,240,0.8)',
+        }}>{PHASE_LABEL[phase]}</span>
+      </div>
       <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} />
 
       {fishingIn && (

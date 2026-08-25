@@ -78,6 +78,9 @@ export async function purchaseRod(
   const rod = RODS.find(r => r.tier === rodTier)
   if (!rod) return { error: 'Invalid rod' }
   if (rod.cost === 0 || rod.earnedOnly) return { error: 'This rod cannot be purchased' }
+  // NOT SOLD ASHORE. Enforced here as well as hidden from the list, because a
+  // hidden row is a UI decision and this is a rule.
+  if (rod.traderOnly) return { error: 'No chandler ashore carries that. You will have to find one who does.' }
 
   const admin = createAdminClient()
 

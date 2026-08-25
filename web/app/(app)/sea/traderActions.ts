@@ -26,6 +26,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
 import { PLACES } from '@/app/(app)/sea/chart'
 import { getBait } from '@/lib/bait'
+import { RODS } from '@/lib/rods'
 
 export type DealResult =
   | { ok: true; spent?: number; earned?: number; baitType?: string; qty?: number; doubloons: number }
@@ -79,6 +80,12 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
   // ── CLAIM FIRST, PAY SECOND ─────────────────────────────────────────────
   // The insert IS the lock. Everything below it happens exactly once because
   // only one caller can have got past this line.
+  // The union has more arms than this action handles — talkers want nothing and
+  // residents have their own uncapped path — so narrow explicitly rather than
+  // letting an `else` quietly stand for "must be a salter".
+  if (trader.deal !== 'bait' && trader.deal !== 'buy') {
+    return { error: 'They have nothing to trade.' }
+  }
   const detail = trader.deal === 'bait'
     ? { deal: 'bait', baitType: trader.baitType, qty: trader.qty, cost: trader.cost }
     : { deal: 'buy', rate: trader.rate }
@@ -163,7 +170,8 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
   const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
 
   let earned = 0
-  for (const r of rows) earned += (value.get(r.fish_id) ?? 0) * r.quantity * trader.rate
+  const rate = trader.deal === 'buy' ? trader.rate : 0
+  for (const r of rows) earned += (value.get(r.fish_id) ?? 0) * r.quantity * rate
   earned = Math.floor(earned)
   if (earned <= 0) {
     await admin.from('sea_trader_deals')
@@ -241,4 +249,79 @@ export async function sellToResident(zoneId: string): Promise<
   const { data: profile } = await admin
     .from('profiles').select('doubloons').eq('id', user.id).single()
   return { ok: true, earned, rate, doubloons: Number(profile?.doubloons ?? 0) }
+}
+
+/**
+ * BUY A ROD FROM A BLOCKADE RUNNER.
+ *
+ * The only way three of the rods in this game change hands. The shop refuses
+ * them and the shop's list hides them, so this is it.
+ *
+ * Rebuilt from the key like every other deal, which here does two jobs: it
+ * fixes the price, and because a runner's key carries the NIGHT it belongs to,
+ * it also enforces that it is still that night. A key saved from an earlier
+ * cycle rebuilds to nothing.
+ *
+ * Counts against the daily deal cap and against the once-per-trader key, the
+ * same as any other encounter — a rod is emphatically a reward.
+ */
+export async function buyRunnerRod(traderKey: string): Promise<
+  { ok: true; rodTier: number; spent: number; doubloons: number } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const trader = traderFromKey(traderKey)
+  if (!trader || trader.deal !== 'rod') {
+    return { error: 'They have gone. The dark does not keep anyone in one place.' }
+  }
+  const rod = RODS.find(r => r.tier === trader.rodTier)
+  if (!rod) return { error: 'The deal fell through.' }
+
+  const admin = createAdminClient()
+  const today = seaDay()
+
+  const { count } = await admin
+    .from('sea_trader_deals')
+    .select('trader_key', { count: 'exact', head: true })
+    .eq('user_id', user.id).eq('sea_day', today)
+  if ((count ?? 0) >= DEALS_PER_DAY) {
+    return { error: 'Word travels. Nobody else out here will deal with you today.' }
+  }
+
+  // Already own it? Say so before taking the claim, or a captain burns one of
+  // six daily deals discovering they have one.
+  const { data: had } = await admin
+    .from('rod_inventory').select('rod_tier')
+    .eq('user_id', user.id).eq('rod_tier', trader.rodTier).maybeSingle()
+  if (had) return { error: `You already carry the ${rod.name}.` }
+
+  const { error: claimErr } = await admin.from('sea_trader_deals').insert({
+    user_id: user.id, trader_key: traderKey, sea_day: today, kind: 'runner',
+    detail: { deal: 'rod', rodTier: trader.rodTier, cost: trader.cost },
+  })
+  if (claimErr) {
+    if (claimErr.code === '23505') return { error: 'You have already dealt with them.' }
+    return { error: 'The deal fell through.' }
+  }
+
+  // The RESULT is the guard, not the error — deduct_doubloons checks the
+  // balance inside its own WHERE and returns NULL rather than raising.
+  const { data: newBalance, error: spendErr } = await admin.rpc('deduct_doubloons', {
+    uid: user.id, amount: trader.cost,
+  })
+  if (spendErr || newBalance == null) {
+    await admin.from('sea_trader_deals')
+      .delete().eq('user_id', user.id).eq('trader_key', traderKey)
+    return { error: `They want ${trader.cost.toLocaleString()} and you have not got it.` }
+  }
+
+  await admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: trader.rodTier })
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -trader.cost,
+    reason: `Bought the ${rod.name} from ${trader.name} at sea`,
+  })
+
+  return { ok: true, rodTier: trader.rodTier, spent: trader.cost, doubloons: Number(newBalance) }
 }

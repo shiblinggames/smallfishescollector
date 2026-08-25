@@ -9,6 +9,18 @@ export interface RodDef {
    *  fall back to the bracket. Ignored for earnedOnly rods. */
   minLevel?: number
   earnedOnly?: boolean       // if true, cannot be purchased — claimed via special action
+  /**
+   * NOT SOLD ASHORE. The tackle shop will not list it and buyRod refuses it;
+   * the only place it changes hands is a rare trader out on the chart, at
+   * night, in deep water.
+   *
+   * Chosen from the prestige end on purpose. These are still Completionist
+   * donors, so the build is now partly an exploration problem rather than
+   * purely a saving one — which is the point of them being rare, but it does
+   * mean anything moved here has to stay genuinely findable. The rare traders
+   * appear every night, not once a week.
+   */
+  traderOnly?: boolean
   description: string
   color: string
   rarityBonus: number      // shifts rarity distribution toward rares (0 = no effect)
@@ -171,7 +183,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_millionaires', glow: true, glowType: 'sparkle',
   },
   {
-    tier: 15, name: 'YOLO Rod', cost: 1000000, minLevel: 80,
+    tier: 15, name: 'YOLO Rod', cost: 1000000, minLevel: 80, traderOnly: true,
     description: 'Roll the dice every cast for a 100-fish haul — and the odds climb the shallower you fish. The rest of the time? Just a regular catch.',
     color: '#60d9ff', rarityBonus: 0, biteIntervalMs: 2850, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -206,7 +218,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_perfect', glow: true, glowType: 'moon',
   },
   {
-    tier: 18, name: 'Galaxy Rod', cost: 300000, minLevel: 72,
+    tier: 18, name: 'Galaxy Rod', cost: 300000, minLevel: 72, traderOnly: true,
     description: 'Spun from cosmic thread. After any catch, open a wormhole and reroll it into a different fish from the same waters — fortune or folly, you take what surfaces.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 2660, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -214,7 +226,7 @@ export const RODS: RodDef[] = [
     slug: 'rod_galaxy', glow: true, glowType: 'galaxy',
   },
   {
-    tier: 19, name: 'Lightsaber Rod', cost: 300000, minLevel: 76,
+    tier: 19, name: 'Lightsaber Rod', cost: 300000, minLevel: 76, traderOnly: true,
     description: 'A blade of pure energy. Fish are drawn to the light — most casts bite almost the instant your line touches the water.',
     color: '#ff3b47', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
@@ -299,7 +311,11 @@ export function rodSpeedPct(rod: RodDef): number {
 /** Tiers of every rod that can be BOUGHT — excludes the free Bamboo starter
  *  (cost 0) and the earned-only Completionist. Drives the "own every rod"
  *  badge; auto-grows as new purchasable rods ship. */
-export const BUYABLE_ROD_TIERS: number[] = RODS.filter(r => !r.earnedOnly && r.cost > 0).map(r => r.tier)
+export const BUYABLE_ROD_TIERS: number[] = RODS.filter(r => !r.earnedOnly && !r.traderOnly && r.cost > 0).map(r => r.tier)
+
+/** Rods the shop will not sell. The rare traders read this rather than a list
+ *  of their own, so moving a rod on or off the shelf is one flag in one place. */
+export const TRADER_ONLY_RODS = RODS.filter(r => r.traderOnly)
 
 // ── Completionist Rod forge ───────────────────────────────────────────────────
 // The Completionist (the 100%-completion reward) is a plain master-tool base;

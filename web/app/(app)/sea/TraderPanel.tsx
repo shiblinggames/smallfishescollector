@@ -15,7 +15,8 @@ import { motion } from 'framer-motion'
 import { getBait } from '@/lib/bait'
 import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
-import { strikeDeal, sellToResident } from './traderActions'
+import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
+import { RODS } from '@/lib/rods'
 
 export default function TraderPanel({
   trader, alreadyDealt, dealsLeft, onDealt, onClose,
@@ -36,6 +37,23 @@ export default function TraderPanel({
     : 0
 
   const isResident = trader.deal === 'resident'
+  const isTalk = trader.deal === 'talk'
+  const rod = trader.deal === 'rod' ? RODS.find(r => r.tier === trader.rodTier) : null
+
+  async function buyRod() {
+    if (busy || trader.deal !== 'rod') return
+    setBusy(true); setErr(''); vibrate(14)
+    try {
+      const res = await buyRunnerRod(trader.key)
+      if ('error' in res) { setErr(res.error); setBusy(false); return }
+      onDealt(trader.key)
+      setDone(`The ${rod?.name ?? 'rod'} is yours. Equip it from the tackle shop.`)
+      vibrate([0, 40, 60, 80])
+    } catch {
+      setErr('The deal fell through. Try again.')
+    }
+    setBusy(false)
+  }
 
   async function sellHold() {
     if (busy || trader.deal !== 'resident') return
@@ -119,7 +137,33 @@ export default function TraderPanel({
           background: 'rgba(255,255,255,0.045)',
           border: '1px solid rgba(255,255,255,0.09)',
         }}>
-          {trader.deal === 'resident' ? (
+          {trader.deal === 'rod' ? (
+            <>
+              <p className="font-karla font-700 uppercase" style={{
+                fontSize: '0.54rem', letterSpacing: '0.16em', color: '#c4b5fd',
+              }}>Not sold ashore</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f6ecd6', marginTop: 3 }}>
+                {rod?.name ?? 'A rod'}
+              </p>
+              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f0c040', marginTop: 4 }}>
+                {trader.cost.toLocaleString()} ⟡
+              </p>
+              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
+                No chandler ashore stocks this one. He will be gone when the
+                light comes back, but there is always another night and always
+                another runner.
+              </p>
+            </>
+          ) : trader.deal === 'talk' ? (
+            // A talker's whole offer IS the line above. Repeating it here, or
+            // dressing it as a transaction, would make a conversation look like
+            // a vending machine that failed.
+            <p className="font-karla font-600" style={{
+              fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 1.5,
+            }}>
+              {trader.topic === 'hint' ? 'Worth remembering.' : 'Something they heard.'}
+            </p>
+          ) : trader.deal === 'resident' ? (
             <>
               <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>
                 Sell the whole hold
@@ -152,7 +196,7 @@ export default function TraderPanel({
                 {saving}% under the shop
               </p>
             </>
-          ) : (
+          ) : trader.deal === 'buy' ? (
             <>
               <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>
                 Sell the whole hold
@@ -165,7 +209,7 @@ export default function TraderPanel({
                 worse than working the market yourself.
               </p>
             </>
-          )}
+          ) : null}
         </div>
 
         {done && (
@@ -178,7 +222,7 @@ export default function TraderPanel({
             {err}
           </p>
         )}
-        {!spent && !err && !isResident && (
+        {!spent && !err && !isResident && !isTalk && (
           <p className="font-karla font-600" style={{
             fontSize: '0.66rem', color: 'rgba(255,255,255,0.35)', marginTop: 10, textAlign: 'center',
           }}>
@@ -187,8 +231,8 @@ export default function TraderPanel({
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          {!spent && (
-            <button onClick={isResident ? sellHold : strike}
+          {!spent && !isTalk && (
+            <button onClick={isResident ? sellHold : trader.deal === 'rod' ? buyRod : strike}
               disabled={busy || (!isResident && dealsLeft <= 0)}
               className="font-cinzel font-700"
               style={{
@@ -199,7 +243,10 @@ export default function TraderPanel({
                 cursor: busy || dealsLeft <= 0 ? 'default' : 'pointer',
                 opacity: busy ? 0.6 : 1,
               }}>
-              {busy ? '…' : trader.deal === 'bait' ? 'Buy' : 'Sell the hold'}
+              {busy ? '…'
+                : trader.deal === 'bait' ? 'Buy'
+                  : trader.deal === 'rod' ? 'Buy the rod'
+                    : 'Sell the hold'}
             </button>
           )}
           <button onClick={onClose}
@@ -209,7 +256,7 @@ export default function TraderPanel({
               color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
             }}>
-            {spent ? 'Sail on' : 'No thanks'}
+            {isTalk ? 'Thank them' : spent ? 'Sail on' : 'No thanks'}
           </button>
         </div>
       </motion.div>

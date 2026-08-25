@@ -286,13 +286,16 @@ export default function TackleShopClient({
   // cheapest "unowned" rod (a 0⟡ "ready to buy"). Treat any zero-cost, non-earned
   // rod as always owned, matching the grid's owned rule (line ~744).
   const ownedRodSet = new Set(ownedRods)
-  for (const r of RODS) if (r.cost === 0 && !r.earnedOnly) ownedRodSet.add(r.tier)
+  for (const r of RODS) if (r.cost === 0 && !r.earnedOnly && !r.traderOnly) ownedRodSet.add(r.tier)
 
   const summaries: CategorySummary[] = [
     // RODS — a collection. Next buy = cheapest unowned, non-captain-locked rod.
     (() => {
       const buyable = RODS
-        .filter(r => !ownedRodSet.has(r.tier) && !isCaptainRod(r) && r.tier !== COMPLETIONIST_TIER)
+        // traderOnly excluded: this line tells you what to save for, and
+        // pointing at something the shop refuses to sell is worse than silence.
+        .filter(r => !ownedRodSet.has(r.tier) && !isCaptainRod(r)
+          && !r.traderOnly && r.tier !== COMPLETIONIST_TIER)
         .sort((a, b) => a.cost - b.cost)
       const next = buyable.find(r => fishingLevel >= gearReq(r) && doubloons >= r.cost)
         ?? buyable.find(r => fishingLevel >= gearReq(r))
@@ -723,7 +726,11 @@ export default function TackleShopClient({
 
         // The browsable rod ladder (Completionist is its own capstone card below),
         // narrowed by the active ownership + mechanic filters.
-        const baseRods = [...RODS].filter(r => !r.earnedOnly).sort((a, b) => a.cost - b.cost)
+        // traderOnly rods are not stocked ashore — they change hands only out
+        // on the chart. Hidden rather than greyed out: a locked row invites
+        // "how do I unlock it", and the answer is not something this screen can
+        // tell you.
+        const baseRods = [...RODS].filter(r => !r.earnedOnly && !r.traderOnly).sort((a, b) => a.cost - b.cost)
         const ownedCount = baseRods.filter(r => ownedRodSet.has(r.tier)).length
         const availableMechanics = ROD_MECHANICS.filter(m => baseRods.some(m.match))
         const activeMech = ROD_MECHANICS.find(m => m.key === rodMechanic) ?? null

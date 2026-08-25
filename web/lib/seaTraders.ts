@@ -37,7 +37,8 @@ import { BAITS, getBait } from '@/lib/bait'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { CHARACTER_COLORS } from '@/lib/characters'
-import { RODS } from '@/lib/rods'
+import { RODS, TRADER_ONLY_RODS } from '@/lib/rods'
+import { seaClock } from '@/lib/seaClock'
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
  *  close together two of them can ever be.
@@ -49,7 +50,7 @@ import { RODS } from '@/lib/rods'
  *  somebody out here is an event again. */
 export const CELL = 1500
 
-export type TraderKind = 'peddler' | 'salter' | 'tinker' | 'resident'
+export type TraderKind = 'peddler' | 'salter' | 'tinker' | 'resident' | 'talker' | 'runner'
 
 export type TraderLook = {
   /** A player character colour id, so an NPC captain is built exactly the way
@@ -82,6 +83,12 @@ export type Trader = {
 } & TraderOffer
 
 export type TraderOffer =
+  /** Says one thing and wants nothing. See TALK. */
+  | { deal: 'talk'; topic: 'hint' | 'story' }
+  /** THE RARE ONE. Carries a rod the shops ashore will not stock, and only
+   *  exists at night in deep water. Keyed on the NIGHT rather than the day, so
+   *  the offer cannot be redeemed a cycle after it has gone. */
+  | { deal: 'rod'; rodTier: number; cost: number }
   /** A ZONE'S RESIDENT BUYER. Permanent, always in the same water, and not
    *  subject to the daily deal cap — see the `resident` note in chart.ts. */
   | { deal: 'resident'; zoneId: string; rate: number }
@@ -155,9 +162,13 @@ const NAMES_LAST = [
   'Sorrel', 'Rud', 'Nance', 'Thole', 'Garrick', 'Wick',
 ]
 
+/** Kinds that are hashed into the sea by the daily grid. Residents live on the
+ *  chart, and talkers and runners have their own tables below, so the shared
+ *  LINES and STOCK maps only cover the three ordinary traders. */
+type TradeKind = 'peddler' | 'salter' | 'tinker'
 type WanderKind = Exclude<TraderKind, 'resident'>
 
-const LINES: Record<WanderKind, string[]> = {
+const LINES: Record<TradeKind, string[]> = {
   peddler: [
     'Shop prices are a shore thing. Out here I set them.',
     'Bought too much, rowed too far. Your luck, not mine.',
@@ -178,10 +189,44 @@ const LINES: Record<WanderKind, string[]> = {
   ],
 }
 
+/**
+ * WHAT THE TALKERS SAY.
+ *
+ * Two pools, mixed, because never knowing which you are getting is what makes
+ * stopping worth it. A hint is something a stuck player can act on today; a
+ * story line is a fragment of the arc that pays nothing and is the reason the
+ * ocean feels inhabited.
+ *
+ * Deliberately no rewards attached to either. The moment a talker pays out,
+ * everybody sails the row of them every night and it becomes a chore — which is
+ * the exact failure mode this game refuses everywhere else.
+ */
+const HINTS = [
+  "Chum's wasted in the shallows. Save it for water that's got something worth calling up.",
+  "A perfect reel pays more than a good one, and the second perfect in a row pays more again. Nobody tells you that.",
+  "Every stretch of water out here wants a different level off you. If it won't bite, you're early, not unlucky.",
+  "Your reel decides how fast the dial runs. Cheap reel, fast needle, and a hard fish is a coin toss.",
+  "The bigger your hold the longer you can stay out. That's the whole of it.",
+  "Sell to a buyer out here and you take less. Sail it home and you take all of it, and you take a while.",
+  "A snag costs you bait on top of the fish. Some rods don't care. Worth knowing which.",
+  "If you're chasing size, keep casting the same water. Every species has a monster in it somewhere.",
+]
+
+const STORIES = [
+  "There were six of them, they say. Big as ships and older than ships. Five accounted for.",
+  "My father worked the Deep forty years and never went past it. Said the water changes temper out there.",
+  "Ask about the Sunken Hand in a tavern and watch who leaves.",
+  "Someone's been buying up charts. All of them. Paying stupid money and asking no questions.",
+  "The carvings on those stones aren't writing. I've shown them to people who'd know.",
+  "A man I knew went out past the Abyss on a bet. Came back. Wouldn't fish again.",
+  "You'll hear it said the deep ones are dead. Landed isn't dead.",
+  "Whatever counts to six down there, don't answer it.",
+]
+
 /** Bait a kind will carry, worst to best. The tinker deals only in the top of
  *  the shop's range, which is the reward for the sail rather than a new item
  *  nobody could get otherwise — nothing out here is exclusive. */
-const STOCK: Record<WanderKind, string[]> = {
+const STOCK: Record<TradeKind, string[]> = {
   peddler: ['worm', 'minnow', 'night_crawler'],
   salter: [],
   tinker: ['chum', 'anglers_formula'],
@@ -191,7 +236,7 @@ const STOCK: Record<WanderKind, string[]> = {
  *  65% quick sell and below the market lane on purpose: quick-sell convenience
  *  at a better number, without moving either of the two lanes the economy is
  *  actually built on. */
-function offerFor(kind: WanderKind, depth: number, rnd: () => number): TraderOffer | null {
+function offerFor(kind: TradeKind, depth: number, rnd: () => number): TraderOffer | null {
   if (kind === 'salter') {
     // 74% at the beach, 86% out in the black.
     return { deal: 'buy', rate: Math.round((0.74 + depth * 0.12) * 100) / 100 }
@@ -237,15 +282,23 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
   // already places you can buy things.
   if (Math.hypot(x, y) < 620) return null
 
+  // A fifth of everyone out here is not selling anything. They are the reason
+  // the sea has voices in it, and they are common enough that stopping for a
+  // stranger is usually worth it.
+  const isTalker = rnd() < 0.22
+
   // The deeper the water the likelier they are something other than a worm
   // salesman. The tinker only exists past the halfway mark.
   const roll = rnd()
-  const kind: WanderKind =
+  const kind: TradeKind =
     depth > 0.5 && roll < 0.34 ? 'tinker'
       : roll < 0.62 ? 'peddler'
         : 'salter'
 
-  const offer = offerFor(kind, depth, rnd)
+  const talkRoll = rnd()
+  const offer: TraderOffer | null = isTalker
+    ? { deal: 'talk', topic: talkRoll < 0.5 ? 'hint' : 'story' }
+    : offerFor(kind, depth, rnd)
   if (!offer) return null
 
   const look: TraderLook = {
@@ -263,10 +316,12 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
 
   return {
     key: `${day}:${cx}:${cy}`,
-    kind,
+    kind: isTalker ? 'talker' : kind,
     name: `${pick(NAMES_FIRST, rnd)} ${pick(NAMES_LAST, rnd)}`,
     x, y, look,
-    line: pick(LINES[kind], rnd),
+    line: isTalker
+      ? pick(offer.deal === 'talk' && offer.topic === 'hint' ? HINTS : STORIES, rnd)
+      : pick(LINES[kind], rnd),
     driftR, driftRate, driftPhase,
     ...offer,
   }
@@ -303,10 +358,72 @@ export function traderPos(t: Trader, nowSec: number): { x: number; y: number; fa
   return { x, y, facing: vx < 0 ? 1 : -1 }
 }
 
+/**
+ * THE BLOCKADE RUNNERS — the rare ones, and the only place three rods change
+ * hands.
+ *
+ * Night only, deep water only, and one at most per cell. They are keyed on the
+ * NIGHT rather than the day, so an offer cannot be redeemed a cycle after it
+ * has gone and the sea has a genuinely different population after dark.
+ *
+ * Findable on purpose. The rods they carry are Completionist donors, so making
+ * these a once-a-week event would turn a build into a lottery. Night comes
+ * round about three times an hour and there are several of them out there each
+ * time — the difficulty is the SAILING, not the waiting.
+ */
+const RUNNER_LINES = [
+  "Shops ashore won't touch what I carry. That's rather the point of me.",
+  "I only come out when the water's black. Look for me in daylight and you'll look a long while.",
+  "No paperwork, no chandler, no questions. Just the rod and the coin.",
+  "You've come a long way out in the dark. So have I. Let's not waste it.",
+]
+
+function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
+  const seed = hash(cx, cy, nightIndex * 7919 + 3)
+  const rnd = stream(seed)
+
+  const x = cx * CELL + rnd() * CELL
+  const y = cy * CELL + rnd() * CELL
+  const depth = depthRamp(x, y)
+
+  // DEEP WATER ONLY. Past the halfway mark of the chart, which in practice is
+  // the far side of the Deep.
+  if (depth < 0.45) return null
+  // Uncommon even there: about one cell in nine.
+  if (rnd() > 0.11) return null
+  if (!TRADER_ONLY_RODS.length) return null
+
+  const rod = TRADER_ONLY_RODS[Math.floor(rnd() * TRADER_ONLY_RODS.length)]
+  // They charge a premium over what a shop would have wanted, because no shop
+  // wants it and they know exactly how far you sailed.
+  const cost = Math.round(rod.cost * (1.15 + rnd() * 0.25) / 1000) * 1000
+
+  return {
+    key: `night:${nightIndex}:${cx}:${cy}`,
+    kind: 'runner',
+    name: `${pick(NAMES_FIRST, rnd)} ${pick(NAMES_LAST, rnd)}`,
+    x, y,
+    look: {
+      characterColor: pick(CHAR_COLORS, rnd),
+      boatId: pick(BOAT_IDS, rnd),
+      hatId: pick(HAT_IDS, rnd),
+      rodSlug: rod.slug ?? null,
+    },
+    line: pick(RUNNER_LINES, rnd),
+    driftR: 70 + rnd() * 120,
+    driftRate: (rnd() < 0.5 ? 1 : -1) * (Math.PI * 2) / (60 + rnd() * 70),
+    driftPhase: rnd() * Math.PI * 2,
+    deal: 'rod',
+    rodTier: rod.tier,
+    cost,
+  }
+}
+
 /** Every cell whose trader could be on screen, plus a ring of margin so one
  *  never pops into existence at the edge of the viewport. */
-export function tradersAround(x: number, y: number, radius: number, day: number): Trader[] {
+export function tradersAround(x: number, y: number, radius: number, day: number, now: number = Date.now()): Trader[] {
   const out: Trader[] = []
+  const clock = seaClock(now)
   const c0x = Math.floor((x - radius) / CELL)
   const c1x = Math.floor((x + radius) / CELL)
   const c0y = Math.floor((y - radius) / CELL)
@@ -315,6 +432,13 @@ export function tradersAround(x: number, y: number, radius: number, day: number)
     for (let cy = c0y; cy <= c1y; cy++) {
       const t = traderAt(cx, cy, day)
       if (t) out.push(t)
+      // AND THE NIGHT'S OWN. A runner shares the cell with whoever is there by
+      // day rather than displacing them, so after dark the sea has more in it
+      // rather than different things in it.
+      if (clock.isNight) {
+        const r = runnerAt(cx, cy, clock.nightIndex)
+        if (r) out.push(r)
+      }
     }
   }
   return out
@@ -323,7 +447,17 @@ export function tradersAround(x: number, y: number, radius: number, day: number)
 /** Parse a claim key back into the numbers that produced it, so the server can
  *  rebuild the trader from a key the client sent WITHOUT trusting anything else
  *  the client said about them. */
-export function traderFromKey(key: string): Trader | null {
+export function traderFromKey(key: string, now: number = Date.now()): Trader | null {
+  // A RUNNER'S KEY carries the night it belongs to. Rebuilt only while that
+  // night is still running, so a key kept from an earlier cycle buys nothing.
+  if (key.startsWith('night:')) {
+    const [, ni, cx, cy] = key.split(':').map(Number)
+    if (![ni, cx, cy].every(n => Number.isInteger(n))) return null
+    const clock = seaClock(now)
+    if (!clock.isNight || clock.nightIndex !== ni) return null
+    const r = runnerAt(cx, cy, ni)
+    return r && r.key === key ? r : null
+  }
   const parts = key.split(':')
   if (parts.length !== 3) return null
   const [day, cx, cy] = parts.map(Number)
@@ -351,6 +485,8 @@ export const KIND_LABEL: Record<TraderKind, string> = {
   salter: 'Salter',
   tinker: 'Deep tinker',
   resident: 'Buyer',
+  talker: 'An old hand',
+  runner: 'Blockade runner',
 }
 
 // ── WHAT AN NPC CAPTAIN IS MADE OF ──────────────────────────────────────────
