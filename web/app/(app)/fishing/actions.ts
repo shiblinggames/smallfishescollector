@@ -209,7 +209,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, current_streak_zone, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels')
     .eq('id', user.id)
     .single()
 
@@ -353,20 +353,24 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const rod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
 
-  // A perfect streak is bound to the ZONE it was built in — fishing a different
-  // zone breaks it, so you can't farm a cheap streak in the Shallows and cash the
-  // bonuses (streak XP, the Locked-In Rod) in a hard zone. Returning to the SAME
-  // zone keeps it (the intended no-FOMO behaviour). current_streak_zone is stamped
-  // each cast below; on the first cast the streak is 0 so there's nothing to break.
+  // A PERFECT STREAK IS NO LONGER BOUND TO A ZONE.
+  //
+  // It used to break the moment you cast in different water, so a streak could
+  // not be farmed cheaply in the Shallows and cashed in a hard zone. That was a
+  // fair worry when fishing meant picking one zone from a menu and staying in
+  // it. It is the wrong rule for a sea you SAIL: the ocean hub lays the zones
+  // out as one continuous shelf you cross, and a streak that dies for crossing
+  // a boundary punishes the exact thing the chart is built to encourage.
+  //
+  // The streak is yours wherever you fish now. It still breaks on a miss, a
+  // snag and an abandoned cast — the things that are actually about skill.
   const prevStreak = (profile as { current_perfect_streak?: number }).current_perfect_streak ?? 0
-  const streakZone = (profile as { current_streak_zone?: string | null }).current_streak_zone
-  const zoneChanged = prevStreak > 0 && !!streakZone && streakZone !== habitat
 
   // Locked-In Rod: this cast's power scales with the streak the player has BUILT.
   // If the previous cast was abandoned (catch_pending) OR the zone changed, the
   // streak is reset to 0 below — so this cast sees 0 too. Cheat-proof: the streak
   // is the server's own current_perfect_streak, never a client value.
-  const castStreak = (profile.catch_pending || zoneChanged) ? 0 : prevStreak
+  const castStreak = profile.catch_pending ? 0 : prevStreak
   const locked = lockedInState(rod, castStreak)
   // THE ANGLER'S PATIENCE. Its strength is its CHARGE, not a fixed bonus: it
   // levels on NAVIGATION xp while seated, so a fresh one barely helps and a
@@ -409,8 +413,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   // and it is also what catches a crate MISS: a fumbled crate never calls back
   // to the server, so the flag stays set and the next cast zeroes the streak
   // through the same path an abandoned fish takes.
-  const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: true, current_streak_zone: habitat }
-  if (profile.catch_pending || zoneChanged) castUpdate.current_perfect_streak = 0
+  const castUpdate: Record<string, unknown> = { last_used_bait: baitType, catch_pending: true }
+  if (profile.catch_pending) castUpdate.current_perfect_streak = 0
   void admin.from('profiles').update(castUpdate).eq('id', user.id).then(() => {}, () => {})
 
   // Lifetime "Lines Cast" career stat — bump once per committed cast (covers

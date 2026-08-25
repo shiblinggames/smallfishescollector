@@ -709,9 +709,6 @@ export default function SeaMap({
   const [tick, setTick] = useState(0)
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
-  /** A zone we have drifted out of with the rod still out, held for a warning
-   *  rather than acted on silently. */
-  const [leaving, setLeaving] = useState<Place | null>(null)
   const [baitLeft, setBaitLeft] = useState(baitQty)
   /** WHICH BAIT IS ON THE HOOK. Fixed for the whole session before, at whatever
    *  the page happened to pick; the bait row can change it now. */
@@ -809,7 +806,7 @@ export default function SeaMap({
 
   const onDown = useCallback((e: React.PointerEvent) => {
     // Anything with a button in it is a control, not the sea. Cast, Reel In,
-    // the prompt and the leaving dialog all live inside this element.
+    // the prompt and the trader panel all live inside this element.
     if ((e.target as HTMLElement).closest('button, [data-no-steer]')) return
     dragFrom.current = { x: e.clientX, y: e.clientY }
     holdAt.current = { x: e.clientX, y: e.clientY }
@@ -1166,13 +1163,12 @@ export default function SeaMap({
           if (Math.hypot(pos.current.x - at.x, pos.current.y - at.y) < HAIL_RANGE) { hit = t; break }
         }
         setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
-        // LEAVING WITH THE ROD OUT. Caught here rather than in the tap handler
-        // because you can sail out of a zone by tapping open water far away,
-        // and the moment that matters is crossing the boundary, not the tap.
+        // SAIL OUT WITH THE ROD OUT AND IT FOLLOWS YOU. This used to raise the
+        // leaving-the-water prompt; the streak survives crossing water now, so
+        // there is nothing to stop you for. The zone you are fishing simply
+        // becomes the zone you are in.
         const fishing = fishingRef.current
-        if (fishing && (!found || found.id !== fishing.id)) {
-          setLeaving(prev => prev ?? fishing)
-        }
+        if (fishing && found && found.id !== fishing.id) setFishingIn(found)
         setTick(v => (v + 1) % 1000)
       }
 
@@ -1331,8 +1327,8 @@ export default function SeaMap({
             if (p.kind === 'water') {
               // ALL STOP. A tap is a heading now, so without this you would cast
               // at a full six knots and sail out of the zone you had just chosen
-              // to fish — which fires the leaving-the-water warning about three
-              // seconds after you asked to stay.
+              // to fish, and be several hundred pixels away by the time the
+              // dial came up.
               target.current = { ...pos.current }
               setFishingIn(p)
               vibrate(14)
@@ -1404,59 +1400,12 @@ export default function SeaMap({
         />
       )}
 
-      {/* LEAVING THE WATER. Sailing out with the rod out is a decision, so it
-          is asked rather than done. The wording is exact on purpose: sailing
-          away does NOT break a perfect streak in this game — only casting in a
-          different zone does, and returning to the same water keeps it. Saying
-          "you will lose your streak" here would be a lie that costs people
-          casts they did not need to spend. */}
-      {leaving && (
-        <div onClick={e => e.stopPropagation()} style={{
-          position: 'absolute', inset: 0, zIndex: 40, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', padding: '1.5rem',
-          background: 'rgba(2,8,14,0.72)', backdropFilter: 'blur(3px)',
-        }}>
-          <div style={{
-            width: '100%', maxWidth: 340, borderRadius: 16, padding: '1.2rem',
-            textAlign: 'center', background: 'rgba(8,16,24,0.98)',
-            border: '1px solid rgba(180,214,232,0.35)',
-          }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#e8f0f6' }}>
-              Leaving {leaving.name}
-            </p>
-            <p className="font-karla" style={{ fontSize: '0.84rem', color: '#9fb4c2', marginTop: 8, lineHeight: 1.5 }}>
-              Your line comes in. The streak you have built here holds while you sail
-              and only breaks if you cast in different water.
-            </p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button onClick={() => { setLeaving(null); setFishingIn(null) }}
-                className="font-cinzel font-700"
-                style={{
-                  flex: 1, padding: '0.7rem', borderRadius: 11, fontSize: '0.86rem',
-                  color: '#f2ead8', background: 'rgba(180,214,232,0.16)',
-                  border: '1px solid rgba(180,214,232,0.45)', cursor: 'pointer',
-                }}>
-                Sail on
-              </button>
-              <button onClick={() => {
-                // Back to where the rod is. Cancelling has to actually return
-                // you, or the boat keeps drifting and asks again immediately.
-                const back = leaving
-                target.current = { x: back.x, y: back.y }
-                setLeaving(null)
-              }}
-                className="font-karla font-700"
-                style={{
-                  flex: 1, padding: '0.7rem', borderRadius: 11, fontSize: '0.86rem',
-                  color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
-                }}>
-                Stay here
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
+          It asked you to confirm before sailing out of water you had the rod
+          out in, because a streak used to be bound to its zone. Streaks now
+          survive crossing water, so there is nothing to warn about and the
+          prompt was pure friction on the one action the chart most wants you
+          to take. */}
     </div>
   )
 }

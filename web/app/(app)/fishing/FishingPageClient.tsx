@@ -406,7 +406,9 @@ export default function FishingPageClient({
       initialPersonalBests={initialPersonalBests}
       initialCatchCounts={initialCatchCounts}
       initialHighestPerfectStreak={initialHighestPerfectStreak}
-      initialPerfectStreak={initialStreakZone && initialStreakZone !== selectedZone ? 0 : initialPerfectStreak}
+      // Passed through as-is: the streak no longer dies for changing water, so
+      // it is no longer zeroed when the zone does not match where it was built.
+      initialPerfectStreak={initialPerfectStreak}
       hasSeenFishingTour={hasSeenFishingTour}
       hasSeenFishingCatchTour={hasSeenFishingCatchTour}
       hasSeenFirstCatchCelebration={hasSeenFirstCatchCelebration}
