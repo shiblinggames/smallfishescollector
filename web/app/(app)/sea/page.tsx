@@ -16,7 +16,6 @@ import { getLine } from '@/lib/lines'
 import { getReel } from '@/lib/reels'
 import { getHook } from '@/lib/hooks'
 import { PETS } from '@/lib/pets'
-import { getBait } from '@/lib/bait'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
@@ -97,7 +96,12 @@ export default async function SeaPage() {
         petArt: pet?.restImageUrl ?? null,
       }}
       bait={baitType}
-      baitBonus={getBait(baitType).catchZoneBonus}
+      // THE WHOLE BAG, not just the one type the page picked. The bait row lets
+      // you switch mid-session, so it needs everything aboard.
+      baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
+        .filter(b => b.quantity > 0)
+        .map(b => ({ type: b.bait_type, quantity: b.quantity }))
+        .sort((a, b) => b.quantity - a.quantity)}
       baitQty={best?.quantity ?? 0}
       dealtToday={dealt}
       auto={{

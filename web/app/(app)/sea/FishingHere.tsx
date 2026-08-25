@@ -40,6 +40,8 @@ import { levelCatchBonus } from '@/lib/fishingLevel'
 import { vibrate } from '@/lib/haptics'
 import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
 import type { FishSizeTier } from '@/lib/fishSize'
+import { getBait } from '@/lib/bait'
+import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 
 /**
  * HOW FAST THE NEEDLE SWEEPS, and this was WRONG in a way that mattered.
@@ -126,7 +128,7 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
-  onBaitSpent, onPose, onBusy, spritesReady, onClose,
+  seaPhase, baitBag, onBaitChange, onBaitSpent, onPose, onBusy, spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -162,6 +164,14 @@ export default function FishingHere({
     maxRarity: number
   }
   tideTurner: { has: boolean; left: number }
+  /** The sea's light, shown on the bar's row rather than in its own corner.
+   *  Named seaPhase, not phase: this component already has a `phase` and it
+   *  means something completely different. */
+  seaPhase: SeaPhase
+  /** Everything aboard, so the bait row is a real inventory rather than a
+   *  readout of the one type the page happened to pick. */
+  baitBag: { type: string; quantity: number }[]
+  onBaitChange: (type: string) => void
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
   /** Told when the dial is up, so the map can stop moving entirely behind it.
    *  See the note on the freeze in SeaMap. */
@@ -223,6 +233,16 @@ export default function FishingHere({
     onBusy(busy)
     return () => onBusy(false)
   }, [phase, onBusy])
+
+  /** THE PERFECT. The fishing screen throws a gold wash, two expanding rings
+   *  and the word across the screen. The map fired the sound and the haptic and
+   *  then said nothing at all, which makes the best outcome in the game look
+   *  identical to an ordinary one. */
+  const [perfectFlash, setPerfectFlash] = useState(false)
+  /** The running streak, straight off the server's own count, for the bar. */
+  const [streak, setStreak] = useState(0)
+  /** XP floated off the boat, where the boat is. */
+  const [xpPop, setXpPop] = useState<{ id: number; value: number } | null>(null)
 
   const [retryFlash, setRetryFlash] = useState(false)
   const [sigilPaid, setSigilPaid] = useState(0)
@@ -449,7 +469,11 @@ export default function FishingHere({
     // perfect is a distinct three-pulse buzz and everything else is a single
     // short tick that only says "registered". Two different signals is the
     // whole point, and the map had been giving three vague ones.
-    if (perfect) { playPerfectSfx(); vibrate([40, 60, 80]); setBurstKey(k => k + 1) }
+    if (perfect) {
+      playPerfectSfx(); vibrate([40, 60, 80]); setBurstKey(k => k + 1)
+      setPerfectFlash(true)
+      setTimeout(() => setPerfectFlash(false), 1400)
+    }
     else vibrate(6)
     setSnapKey(k => k + 1)
     setPhase('reeling')
@@ -505,6 +529,10 @@ export default function FishingHere({
           setShiny({ id: res.shinyId, alreadyMounted: res.alreadyMounted === true })
         }
         setWormhole(res.wormhole === true && !res.isShiny)
+        // Displaying what the server said, never counting it here — the streak
+        // is server authoritative and reelIn owns it.
+        setStreak(res.perfectStreak ?? 0)
+        setXpPop({ id: Date.now(), value: res.xpGained })
         setCaught({
           kind: 'fish',
           card: {
@@ -535,6 +563,7 @@ export default function FishingHere({
         })
       } else {
         setCaught({ kind: 'miss', result: result === 'penalty' ? 'penalty' : 'miss' })
+        setStreak(0)
       }
       setPhase('result')
     }).catch(async (e: unknown) => {
@@ -661,6 +690,69 @@ export default function FishingHere({
         )}
       </AnimatePresence>
 
+      {/* THE PERFECT. Lifted from the fishing screen: a gold wash across the
+          whole frame, two rings expanding out of the middle, and the word.
+          Landing one out here fired the sound and the haptic and then looked
+          exactly like landing an ordinary fish. */}
+      <AnimatePresence>
+        {perfectFlash && (
+          <motion.div key="perfect-flash"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              pointerEvents: 'none',
+              background: 'radial-gradient(ellipse 90% 60% at 50% 50%, rgba(245,158,11,0.32) 0%, transparent 70%)',
+            }}>
+            <motion.div
+              initial={{ scale: 0.2, opacity: 0.9 }} animate={{ scale: 3.2, opacity: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              style={{
+                position: 'absolute', width: 140, height: 140, borderRadius: '50%',
+                border: '2px solid rgba(245,158,11,0.7)',
+                left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+              }} />
+            <motion.div
+              initial={{ scale: 0.2, opacity: 0.6 }} animate={{ scale: 2.4, opacity: 0 }}
+              transition={{ duration: 0.65, ease: 'easeOut', delay: 0.1 }}
+              style={{
+                position: 'absolute', width: 140, height: 140, borderRadius: '50%',
+                border: '1px solid rgba(253,230,138,0.5)',
+                left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+              }} />
+            <motion.p className="font-cinzel font-700 uppercase"
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+              style={{
+                fontSize: '1.6rem', letterSpacing: '0.1em', color: '#fde68a',
+                textShadow: '0 0 24px rgba(245,158,11,0.9), 0 2px 12px rgba(0,0,0,0.8)',
+              }}>Perfect</motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* XP, off the captain rather than off a corner. The boat is pinned to
+          the centre of the screen, so that is where the number comes from. */}
+      <AnimatePresence>
+        {xpPop && (
+          <motion.p key={xpPop.id}
+            initial={{ opacity: 0, y: 0, x: '-50%' }}
+            animate={{ opacity: [0, 1, 1, 0], y: -46, x: '-50%' }}
+            transition={{ duration: 2.0, times: [0, 0.1, 0.6, 1], ease: 'easeOut' }}
+            onAnimationComplete={() => setXpPop(null)}
+            className="font-karla font-700"
+            style={{
+              position: 'absolute', left: '50%', top: '46%', zIndex: 31, pointerEvents: 'none',
+              fontSize: '1rem', color: '#4ade80',
+              textShadow: '0 0 10px rgba(74,222,128,0.7), 0 2px 8px rgba(0,0,0,0.9)',
+            }}>
+            +{xpPop.value} XP
+          </motion.p>
+        )}
+      </AnimatePresence>
+
       {/* SECOND WIND. The rod handed the dial back. Without a cue this reads as
           the reel button simply not working. */}
       <AnimatePresence>
@@ -722,7 +814,32 @@ export default function FishingHere({
         maxWidth: 448, margin: '0 auto',
         padding: '1rem 1rem 0.6rem',
       }}>
-        <XPBarDisplay xp={fishingXP} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* THE LIGHT, on the bar's row. It used to float in the top-left
+              corner on its own, which is a second thing in the same region of
+              screen doing the same job as the bar: telling you the state of
+              the world. One row. */}
+          <div aria-hidden style={{
+            flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
+            padding: '0.3rem 0.55rem', borderRadius: 999,
+            background: 'rgba(4,10,18,0.72)',
+            border: '1px solid rgba(180,214,232,0.22)',
+          }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: seaPhase === 'night' || seaPhase === 'dusk' ? '#9fb6ff' : '#ffd986',
+              boxShadow: `0 0 7px ${seaPhase === 'night' || seaPhase === 'dusk' ? 'rgba(159,182,255,0.7)' : 'rgba(255,217,134,0.7)'}`,
+            }} />
+            <span className="font-karla font-700 uppercase" style={{
+              fontSize: '0.5rem', letterSpacing: '0.12em', color: 'rgba(214,232,240,0.75)', whiteSpace: 'nowrap',
+            }}>{PHASE_LABEL[seaPhase]}</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* bestStreak was never passed, which is why the flame and the
+                count the fishing screen shows have been missing out here. */}
+            <XPBarDisplay xp={fishingXP} bestStreak={streak} />
+          </div>
+        </div>
       </div>
 
       {/* ── CONTENT ───────────────────────────────────────────────────────
@@ -732,9 +849,12 @@ export default function FishingHere({
       <div style={{
         flex: 1, minHeight: 0, width: '100%',
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'flex-end',
-        // Same column as the bar above it, so the dial and the card line up
-        // with it rather than with the whole screen.
+        // CENTRED, not crammed against the bottom. flex-end made sense when
+        // this was a phone overlay with a fixed action row under it; on a
+        // desktop it pushed the dial and a tall result card into the last
+        // couple of hundred pixels of a very large screen and then asked you to
+        // scroll a container that had a screenful of empty space above it.
+        alignItems: 'center', justifyContent: 'center',
         maxWidth: 448, margin: '0 auto',
         padding: '0 1rem', gap: 10,
       }}>
@@ -774,7 +894,10 @@ export default function FishingHere({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{ pointerEvents: 'auto', width: '100%', maxWidth: 380, minHeight: 0 }}>
             <div data-no-steer style={{
-              width: '100%', maxHeight: '52vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              // Only scrolls when it genuinely cannot fit. The cap used to be a
+              // flat 52vh, which on a tall screen invented a scrollbar for a
+              // card with room to spare.
+              width: '100%', maxHeight: '100%', overflowY: 'auto', overscrollBehavior: 'contain',
               // The map sets touch-action: none so a drag steers instead of
               // scrolling the page. This card is the one thing inside it that
               // genuinely wants a vertical drag, so it takes that back.
@@ -1049,6 +1172,53 @@ export default function FishingHere({
 
       </div>
 
+      {/* ── THE BAIT ROW ────────────────────────────────────────────────
+          This line used to read "Stow rod · The Shallows · 40 bait", which is
+          three unrelated facts crammed into one link and no way to act on any
+          of them. Bait is a choice you make every cast and the map gave you
+          whichever type you happened to have most of.
+
+          Now it is the tackle: every bait aboard, what it does, how many are
+          left, and one tap to switch. Disabled mid-cast, because changing bait
+          with a line already in the water would be changing the odds of a fish
+          that has already been rolled. */}
+      <div data-no-steer style={{
+        height: 46, marginTop: 6, width: '100%', maxWidth: 448,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 6, padding: '0 0.6rem', overflowX: 'auto', overscrollBehavior: 'contain',
+      }}>
+        {baitBag.filter(b => b.quantity > 0).map(b => {
+          const def = getBait(b.type)
+          const on = b.type === bait
+          const locked = phase !== 'idle' && phase !== 'result'
+          return (
+            <button key={b.type}
+              onClick={e => { e.stopPropagation(); if (!locked && !on) { vibrate(8); onBaitChange(b.type) } }}
+              disabled={locked}
+              title={def?.name}
+              style={{
+                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
+                padding: '0.3rem 0.55rem', borderRadius: 10,
+                background: on ? 'rgba(103,212,232,0.16)' : 'rgba(6,14,22,0.8)',
+                border: `1px solid ${on ? 'rgba(103,212,232,0.6)' : 'rgba(255,255,255,0.14)'}`,
+                cursor: locked || on ? 'default' : 'pointer',
+                opacity: locked && !on ? 0.45 : 1,
+              }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {def?.imageUrl && <img src={def.imageUrl} alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />}
+              <span className="font-karla font-700" style={{
+                fontSize: '0.62rem', color: on ? '#bfeaf4' : 'rgba(214,232,240,0.8)', whiteSpace: 'nowrap',
+              }}>{b.quantity}</span>
+              {(def?.catchZoneBonus ?? 0) > 0 && (
+                <span className="font-karla font-700" style={{
+                  fontSize: '0.5rem', color: on ? '#7fd6a0' : 'rgba(127,214,160,0.6)', whiteSpace: 'nowrap',
+                }}>+{def!.catchZoneBonus}°</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
       <div style={{ height: 20, marginTop: 6, display: 'flex', alignItems: 'center' }}>
         <button onClick={e => { e.stopPropagation(); onClose() }}
           className="font-karla font-700"
@@ -1058,7 +1228,7 @@ export default function FishingHere({
             textShadow: '0 1px 8px rgba(0,0,0,0.9)',
             borderBottom: '1px solid rgba(190,212,228,0.32)', paddingBottom: 1,
           }}>
-          Stow rod · {zoneName} · {baitLeft} bait
+          Stow rod · {zoneName}
         </button>
       </div>
       </div>

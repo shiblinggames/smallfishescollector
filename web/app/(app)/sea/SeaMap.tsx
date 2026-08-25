@@ -26,6 +26,7 @@ import { getCharacterSprites } from '@/lib/characters'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
+import { getBait } from '@/lib/bait'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
@@ -459,7 +460,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitBonus, baitQty, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -472,8 +473,10 @@ export default function SeaMap({
   mods: FishingMods
   gear: Gear
   bait: string
-  baitBonus: number
+  /** No baitBonus prop any more: it is derived from whichever bait is on the
+   *  hook, and the bait row lets that change mid-session. */
   baitQty: number
+  baitBag: { type: string; quantity: number }[]
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -710,6 +713,9 @@ export default function SeaMap({
    *  rather than acted on silently. */
   const [leaving, setLeaving] = useState<Place | null>(null)
   const [baitLeft, setBaitLeft] = useState(baitQty)
+  /** WHICH BAIT IS ON THE HOOK. Fixed for the whole session before, at whatever
+   *  the page happened to pick; the bait row can change it now. */
+  const [activeBait, setActiveBait] = useState(bait)
   /** Which pose the captain is in. The game already draws three — rod up,
    *  line in the water, mid-cast — so the map uses the same ones rather than
    *  inventing a fourth. `wait` during the bite wait is most of the missing
@@ -1049,7 +1055,21 @@ export default function SeaMap({
       // lib/seaClock for why the game keeps its own time rather than reading
       // the player's.
       const clk = seaClock(Date.now())
-      const look = seaAt(pos.current, clk.darkness)
+      // QUANTISED, and this is the whole fix for the screen strobing at dusk.
+      //
+      // The backdrop is only repainted when its gradient STRING changes, which
+      // costs nothing while the light is steady. But darkness ramps continuously
+      // through dusk and dawn, so every single frame produced a slightly
+      // different string — a full-viewport gradient re-parse and repaint sixty
+      // times a second, for the two minutes the light takes to go. That is the
+      // flashing.
+      //
+      // Rounded to 24 steps, the whole fade rebuilds the backdrop 24 times
+      // instead of about seven thousand. Each step moves the palette by two or
+      // three units out of 255, which is not visible; a strobing screen very
+      // much is.
+      const dark = Math.round(clk.darkness * 24) / 24
+      const look = seaAt(pos.current, dark)
       if (wrap && look.css !== lastCss) {
         lastCss = look.css
         wrap.style.background = look.css
@@ -1074,7 +1094,7 @@ export default function SeaMap({
         // And the sky goes out with the water. At full dark it is a fifth of
         // its daylight strength, which leaves a horizon rather than removing
         // one — a night sea with no sky at all is just a black rectangle.
-        sky.style.opacity = String((0.32 + look.lum * 0.53) * (1 - clk.darkness * 0.8))
+        sky.style.opacity = String((0.32 + look.lum * 0.53) * (1 - dark * 0.8))
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
@@ -1321,42 +1341,52 @@ export default function SeaMap({
           tick={tick}
         />
       )}
-      <WaterBanner place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} />
+      <WaterBanner place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} lowered={!!fishingIn} />
 
-      {/* THE LIGHT. Small, top-left, and only there to answer "is it night" —
-          which matters because three rods in this game are only sold after
-          dark. Not a countdown: the cycle is short enough that waiting is never
-          the instruction. */}
-      <div aria-hidden style={{
-        position: 'absolute', top: 10, left: 12, zIndex: 12, pointerEvents: 'none',
-        display: 'flex', alignItems: 'center', gap: 6,
-        padding: '0.24rem 0.6rem', borderRadius: 999,
-        background: 'rgba(6,12,18,0.7)',
-        border: '1px solid rgba(180,214,232,0.22)',
-      }}>
-        <span style={{
-          width: 8, height: 8, borderRadius: '50%',
-          background: phase === 'night' || phase === 'dusk' ? '#9fb6ff' : '#ffd986',
-          boxShadow: `0 0 8px ${phase === 'night' || phase === 'dusk' ? 'rgba(159,182,255,0.7)' : 'rgba(255,217,134,0.7)'}`,
-        }} />
-        <span className="font-karla font-700 uppercase" style={{
-          fontSize: '0.54rem', letterSpacing: '0.14em', color: 'rgba(214,232,240,0.8)',
-        }}>{PHASE_LABEL[phase]}</span>
-      </div>
-      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} />
+      {/* THE LIGHT lives on the level bar's row while fishing — see
+          FishingHere — and only sits on its own up here when the rod is stowed,
+          because there is no bar to share a row with. */}
+      {!fishingIn && (
+        <div aria-hidden style={{
+          position: 'absolute', top: 10, left: 12, zIndex: 12, pointerEvents: 'none',
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '0.24rem 0.6rem', borderRadius: 999,
+          background: 'rgba(6,12,18,0.7)',
+          border: '1px solid rgba(180,214,232,0.22)',
+        }}>
+          <span style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: phase === 'night' || phase === 'dusk' ? '#9fb6ff' : '#ffd986',
+            boxShadow: `0 0 8px ${phase === 'night' || phase === 'dusk' ? 'rgba(159,182,255,0.7)' : 'rgba(255,217,134,0.7)'}`,
+          }} />
+          <span className="font-karla font-700 uppercase" style={{
+            fontSize: '0.54rem', letterSpacing: '0.14em', color: 'rgba(214,232,240,0.8)',
+          }}>{PHASE_LABEL[phase]}</span>
+        </div>
+      )}
 
       {fishingIn && (
         <FishingHere
           zone={fishingIn.id}
           zoneName={fishingIn.name}
-          bait={bait}
-          baitBonus={baitBonus}
+          bait={activeBait}
+          baitBonus={getBait(activeBait).catchZoneBonus}
           baitLeft={baitLeft}
           mods={mods}
           onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
           fishingXP={fishingXP}
           auto={auto}
           tideTurner={tideTurner}
+          seaPhase={phase}
+          baitBag={baitBag}
+          onBaitChange={t => {
+            // Re-reads the remaining count off the bag. The catch-zone bonus is
+            // re-read too, from getBait above, so the dial is built from the
+            // bait actually on the hook rather than the one the page picked at
+            // load and never revisited.
+            setActiveBait(t)
+            setBaitLeft(baitBag.find(b => b.type === t)?.quantity ?? 0)
+          }}
           onPose={setFrame}
           onBusy={setDialUp}
           spritesReady={spritesReady}
@@ -2178,7 +2208,12 @@ function Prompt({ place, locked, level, onEnter, tick }: {
  * you go looking but never notice otherwise. Two jobs, one element: "you have
  * entered somewhere new" and "what am I in".
  */
-function WaterBanner({ place, locked }: { place: Place | null; locked: boolean }) {
+function WaterBanner({ place, locked, lowered }: {
+  place: Place | null; locked: boolean
+  /** Drop below the level bar while the rod is out. The bar owns the top of the
+   *  screen then, and the banner was landing straight on top of it. */
+  lowered: boolean
+}) {
   const [shown, setShown] = useState<Place | null>(null)
   const [fresh, setFresh] = useState(false)
 
@@ -2202,7 +2237,7 @@ function WaterBanner({ place, locked }: { place: Place | null; locked: boolean }
           exit={{ opacity: 0, y: -10, transition: { duration: 0.35 } }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: 'absolute', left: 0, right: 0, top: 18,
+            position: 'absolute', left: 0, right: 0, top: lowered ? 76 : 18,
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             pointerEvents: 'none',
           }}>
