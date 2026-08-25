@@ -24,6 +24,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
+import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
@@ -411,11 +412,15 @@ function dist(a: Vec, p: { x: number; y: number }): number {
  * open water.
  */
 export type Gear = {
+  /** Null on the low tiers — those rods are drawn into the character sprite
+   *  itself and have no overlay of their own, which is not a missing file. */
   rod: string | null
   rodGlow: string | null
   rodColor: string | null
   reel: string | null
   hook: string | null
+  pet: string | null
+  petArt: string | null
 }
 
 /** Overlay coordinates, lifted verbatim from FishingGame. Every rod, reel and
@@ -465,13 +470,16 @@ function Skipper({ characterColor, boatId, hatId, gear, frame }: {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={char[frame]} alt="" draggable={false} style={{ width: '100%', display: 'block' }} />
       {hat && (
+        /* PER FRAME, like everything else on the character. It was pinned to
+           `rest`, so the moment the cast pose played the bandana stayed where
+           the head had been and floated off the captain. */
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={hat.restImageUrl} alt="" draggable={false} style={{
+        <img src={frame === 'cast' ? hat.castImageUrl : hat.restImageUrl} alt="" draggable={false} style={{
           position: 'absolute',
-          top: `${hat.positions.rest.top}%`,
-          left: `${hat.positions.rest.left}%`,
-          width: `${hat.positions.rest.width}%`,
-          transform: `rotate(${hat.positions.rest.rotate}deg)`,
+          top: `${hat.positions[frame].top}%`,
+          left: `${hat.positions[frame].left}%`,
+          width: `${hat.positions[frame].width}%`,
+          transform: `rotate(${hat.positions[frame].rotate}deg)`,
           transformOrigin: 'center center',
         }} />
       )}
@@ -507,6 +515,18 @@ function Skipper({ characterColor, boatId, hatId, gear, frame }: {
           transform: `rotate(${rec.rotate}deg)`, transformOrigin: 'center center',
         }} />
       )}
+      {gear.pet && gear.petArt && (() => {
+        const pc = PET_OVERLAYS[gear.pet as PetSpecies]?.[frame]
+        if (!pc) return null
+        return (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={gear.petArt} alt="" draggable={false} style={{
+            position: 'absolute', top: `${pc.top}%`, left: `${pc.left}%`,
+            width: `${pc.width}%`, maxWidth: 'none',
+            transform: `rotate(${pc.rotate}deg)`, transformOrigin: 'center center',
+          }} />
+        )
+      })()}
       {gear.hook && !hc.hidden && (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img src={gear.hook} alt="" draggable={false} style={{

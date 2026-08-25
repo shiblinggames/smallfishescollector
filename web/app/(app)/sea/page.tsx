@@ -15,6 +15,7 @@ import { getEffectiveRod } from '@/lib/rods'
 import { getLine } from '@/lib/lines'
 import { getReel } from '@/lib/reels'
 import { getHook } from '@/lib/hooks'
+import { PETS } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import SeaMap from './SeaMap'
@@ -46,6 +47,9 @@ export default async function SeaPage() {
     .sort((a, b) => b.quantity - a.quantity)[0]
   const baitType = best?.bait_type ?? 'worm'
 
+  const equippedPet = (profile?.equipped_pet as string | null) ?? null
+  const pet = PETS.find(p => p.id === equippedPet) ?? null
+
   return (
     <SeaMap
       fishingXP={Number(profile?.fishing_xp ?? 0)}
@@ -61,6 +65,8 @@ export default async function SeaPage() {
         rodColor: rod.color ?? null,
         reel: getReel(Number(profile?.reel_tier ?? 0)).imageUrl ?? null,
         hook: getHook(Number(profile?.hook_tier ?? 0)).imageUrl ?? null,
+        pet: pet?.species ?? null,
+        petArt: pet?.restImageUrl ?? null,
       }}
       bait={baitType}
       baitBonus={getBait(baitType).catchZoneBonus}

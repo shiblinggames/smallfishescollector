@@ -147,8 +147,16 @@ export default function FishingHere({
         setPhase('hooked')
         vibrate([0, 26, 40, 18])
       }, wait)
+    }).catch((e: unknown) => {
+      // NO CATCH HERE MEANT NOTHING EVER HAPPENED. A server action that rejects
+      // rather than returning { error } skipped the whole .then, so the line
+      // stayed out, the pose stayed in the water, and the dial never came —
+      // silently, forever. Anything that can leave the loop stuck has to say so.
+      setErr(e instanceof Error ? e.message : 'The line came back empty. Try again.')
+      setPhase('idle')
+      onPose('rest')
     })
-  }, [phase, bait, zone, onBaitSpent])
+  }, [phase, bait, zone, onBaitSpent, onPose])
 
   const strike = useCallback(() => {
     if (phase !== 'hooked' || !hooked) return
@@ -173,8 +181,12 @@ export default function FishingHere({
         setCaught({ name: '', xp: 0, result, perfect: false })
       }
       setHooked(null)
+    }).catch((e: unknown) => {
+      setErr(e instanceof Error ? e.message : 'Lost the fish on the way in.')
+      setHooked(null)
+      setPhase('idle')
     })
-  }, [phase, hooked, zones, bait])
+  }, [phase, hooked, zones, bait, onPose])
 
   const dismiss = useCallback(() => { setCaught(null); setPhase('idle') }, [])
 
@@ -260,14 +272,26 @@ export default function FishingHere({
         )}
 
         {phase === 'waiting' && (
-          <motion.p key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="font-karla font-700 uppercase"
-            style={{
-              fontSize: '0.72rem', letterSpacing: '0.18em', color: 'rgba(200,220,232,0.85)',
-              textShadow: '0 1px 10px rgba(0,0,0,0.9)', paddingBottom: 10,
+          <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingBottom: 10 }}>
+            {/* Three dots breathing out of phase. The wait is three to twelve
+                seconds and the only feedback used to be six small words, which
+                is indistinguishable from a hang. Something has to be moving. */}
+            <div style={{ display: 'flex', gap: 7 }}>
+              {[0, 1, 2].map(i => (
+                <motion.span key={i}
+                  animate={{ opacity: [0.25, 1, 0.25], y: [0, -4, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.22, ease: 'easeInOut' }}
+                  style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(214,232,240,0.9)' }} />
+              ))}
+            </div>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.7rem', letterSpacing: '0.18em', color: 'rgba(200,220,232,0.8)',
+              textShadow: '0 1px 10px rgba(0,0,0,0.9)',
             }}>
-            Line out&hellip;
-          </motion.p>
+              Waiting on a bite
+            </p>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
