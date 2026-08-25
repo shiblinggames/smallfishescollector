@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, HOME, OPEN_SEA, type Place } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
@@ -330,6 +331,7 @@ export default function SeaMap({
           tick={tick}
         />
       )}
+      <WaterBanner place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} />
       <Compass pos={pos} locked={locked} />
 
       {fishingIn && (
@@ -700,28 +702,27 @@ function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean;
         </>
       )}
 
-      <div style={{
-        position: 'absolute', left: '50%',
-        top: isWater ? '50%' : '100%',
-        transform: isWater ? 'translate(-50%, -50%)' : 'translate(-50%, 8px)',
-        textAlign: 'center', whiteSpace: 'nowrap',
-      }}>
-        <p className="font-cinzel font-700" style={{
-          fontSize: isWater ? '1.05rem' : '0.96rem',
-          letterSpacing: isWater ? '0.14em' : '0',
-          color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
-          // A water's name IS its landmark now it has no shape, so it comes up
-          // as you sail into it rather than sitting at one weight forever.
-          opacity: isWater ? (isNear ? 1 : 0.42) : 1,
-          transition: 'opacity 600ms ease-out',
-          textShadow: '0 2px 12px rgba(0,0,0,0.9)',
-        }}>{place.name}</p>
-        <p className="font-karla font-600" style={{
-          fontSize: '0.7rem', marginTop: 1,
-          color: locked ? 'rgba(206,152,152,0.8)' : 'rgba(184,204,218,0.72)',
-          textShadow: '0 1px 9px rgba(0,0,0,0.9)',
-        }}>{locked ? `Fishing ${place.minLevel}` : place.blurb}</p>
-      </div>
+      {/* PORTS ONLY. A port is a thing with a name board on it. A water is not:
+          its name used to hang in the middle of the sea like a label on a map,
+          which is exactly the map-not-place feeling the blend was undoing. The
+          water tells you where you are by its colour, and the banner at the top
+          says it in words when you cross. */}
+      {!isWater && (
+        <div style={{
+          position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 8px)',
+          textAlign: 'center', whiteSpace: 'nowrap',
+        }}>
+          <p className="font-cinzel font-700" style={{
+            fontSize: '0.96rem', color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
+            textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+          }}>{place.name}</p>
+          <p className="font-karla font-600" style={{
+            fontSize: '0.7rem', marginTop: 1,
+            color: locked ? 'rgba(206,152,152,0.8)' : 'rgba(184,204,218,0.72)',
+            textShadow: '0 1px 9px rgba(0,0,0,0.9)',
+          }}>{locked ? `Fishing ${place.minLevel}` : place.blurb}</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -759,6 +760,76 @@ function Prompt({ place, locked, level, onEnter, tick }: {
   )
 }
 
+/**
+ * WHERE YOU ARE, along the top.
+ *
+ * Replaces the zone names that used to hang in the middle of the sea like
+ * labels on a map — which was the map-not-place feeling the colour blend exists
+ * to undo. The water already tells you where you are; this says it in words
+ * only when it changes, then gets out of the way.
+ *
+ * It brightens on the crossing and then settles to something you can read if
+ * you go looking but never notice otherwise. Two jobs, one element: "you have
+ * entered somewhere new" and "what am I in".
+ */
+function WaterBanner({ place, locked }: { place: Place | null; locked: boolean }) {
+  const [shown, setShown] = useState<Place | null>(null)
+  const [fresh, setFresh] = useState(false)
+
+  useEffect(() => {
+    if (place?.id === shown?.id) return
+    setShown(place)
+    if (!place) return
+    // The flare is the crossing. It decays on its own; nothing else needs to
+    // know it happened.
+    setFresh(true)
+    const t = setTimeout(() => setFresh(false), 2600)
+    return () => clearTimeout(t)
+  }, [place, shown])
+
+  return (
+    <AnimatePresence>
+      {shown && (
+        <motion.div key={shown.id}
+          initial={{ opacity: 0, y: -14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10, transition: { duration: 0.35 } }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: 'absolute', left: 0, right: 0, top: 18,
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            pointerEvents: 'none',
+          }}>
+          <motion.p className="font-cinzel font-700"
+            animate={{ opacity: fresh ? 1 : 0.42 }}
+            transition={{ duration: 1.1, ease: 'easeOut' }}
+            style={{
+              fontSize: '0.92rem', letterSpacing: '0.22em', textTransform: 'uppercase',
+              color: locked ? 'rgba(214,176,176,0.95)' : '#dfeaf2',
+              textShadow: '0 2px 14px rgba(0,0,0,0.95)',
+            }}>
+            {shown.name}
+          </motion.p>
+          <motion.div aria-hidden
+            animate={{ opacity: fresh ? 0.5 : 0.12, width: fresh ? 96 : 46 }}
+            transition={{ duration: 1.1, ease: 'easeOut' }}
+            style={{ height: 1, marginTop: 5, background: 'rgba(214,232,240,0.9)' }} />
+          {locked && fresh && (
+            <motion.p className="font-karla font-600"
+              initial={{ opacity: 0 }} animate={{ opacity: 0.9 }}
+              style={{
+                fontSize: '0.68rem', marginTop: 6, color: 'rgba(214,166,166,0.95)',
+                textShadow: '0 1px 10px rgba(0,0,0,0.95)',
+              }}>
+              Fishing {shown.minLevel} to work this water
+            </motion.p>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 /** Off-screen pointers. Not decoration: open water with nothing in view is the
  *  classic hub failure — you cannot tell whether there is anything out there or
  *  which way, so you stop exploring. Distance matters as much as direction. */
@@ -792,9 +863,18 @@ function Compass({ pos, locked }: { pos: React.RefObject<Vec>; locked: (p: Place
                 borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
                 borderBottom: `9px solid rgba(190,214,228,${locked(p) ? 0.3 : 0.62})`,
               }} />
+              {/* NAME FIRST, then distance. An arrow with only a number on it
+                  tells you something is 340m away and leaves you to sail there
+                  to find out what — which is not navigation, it is a guess. */}
+              <span className="font-cinzel font-700" style={{
+                fontSize: '0.6rem', whiteSpace: 'nowrap',
+                color: `rgba(214,232,240,${locked(p) ? 0.42 : 0.88})`,
+                textShadow: '0 1px 6px rgba(0,0,0,0.9)',
+              }}>{p.name}</span>
               <span className="font-karla font-700" style={{
-                fontSize: '0.56rem', color: `rgba(190,214,228,${locked(p) ? 0.35 : 0.7})`,
-                textShadow: '0 1px 6px rgba(0,0,0,0.8)',
+                fontSize: '0.54rem', marginTop: -1,
+                color: `rgba(190,214,228,${locked(p) ? 0.3 : 0.6})`,
+                textShadow: '0 1px 6px rgba(0,0,0,0.9)',
               }}>{Math.round(d / 10)}m</span>
             </div>
           </div>
