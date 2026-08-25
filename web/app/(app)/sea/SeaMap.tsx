@@ -29,6 +29,8 @@ import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
+import { tradersAround, seaDay, KIND_LABEL, DEALS_PER_DAY, type Trader } from '@/lib/seaTraders'
+import TraderPanel from './TraderPanel'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
@@ -100,6 +102,10 @@ const WATERLINE_Y = 34
 
 /** Marks in the wake. Enough to trail a couple of seconds at speed; more just
  *  costs nodes nobody can see. */
+/** How close you have to be to hail someone. A trader is a person, not a
+ *  region — you pull alongside them, you do not "enter" them. */
+const HAIL_RANGE = 190
+
 const WAKE_MARKS = 16
 /** Milliseconds between marks. Shorter reads as a solid smear, longer as a
  *  dotted line. */
@@ -329,7 +335,7 @@ function drawSea(
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitBonus, baitQty,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitBonus, baitQty, dealtToday,
 }: {
   fishingXP: number
   /** The player's own loadout, so the thing crossing the ocean is the captain
@@ -343,6 +349,9 @@ export default function SeaMap({
   bait: string
   baitBonus: number
   baitQty: number
+  /** Trader keys already dealt with today, read on the server so the count
+   *  cannot be reset by reloading the page. */
+  dealtToday: string[]
 }) {
   const router = useRouter()
   const level = useMemo(() => getLevelFromXP(fishingXP), [fishingXP])
@@ -444,6 +453,21 @@ export default function SeaMap({
 
   // Only what the UI actually needs to re-render for.
   const [near, setNear] = useState<Place | null>(null)
+  /** Who is on the water around us. Recomputed only when the boat crosses into
+   *  a new cell, because the answer cannot change until it does. */
+  const [traders, setTraders] = useState<Trader[]>([])
+  const cellRef = useRef('')
+  /** The one we have pulled alongside, and the one we are talking to. */
+  const [nearTrader, setNearTrader] = useState<Trader | null>(null)
+  const [hailing, setHailing] = useState<Trader | null>(null)
+  /** Keys dealt with today, so a trader you have already traded with stops
+   *  offering. Seeded from the server on mount and appended to on a deal. */
+  const [dealt, setDealt] = useState<string[]>(dealtToday)
+  const day = useMemo(() => seaDay(), [])
+  // Mirrored for the loop, which must not be re-created every time the list
+  // changes or the whole sail restarts.
+  const tradersRef = useRef<Trader[]>([])
+  useEffect(() => { tradersRef.current = traders }, [traders])
   const [tick, setTick] = useState(0)
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
@@ -724,6 +748,23 @@ export default function SeaMap({
         let found: Place | null = null
         for (const p of PLACES) if (dist(pos.current, p) < p.r) found = p
         setNear(prev => (prev?.id === found?.id ? prev : found))
+
+        // WHO IS OUT HERE. The cell key changes only when you cross a cell
+        // boundary, and until it does the answer is identical — so this is a
+        // string compare four times a second rather than a hash of two dozen
+        // cells sixty times a second.
+        const ck = `${Math.floor(pos.current.x / 900)}:${Math.floor(pos.current.y / 900)}`
+        if (ck !== cellRef.current) {
+          cellRef.current = ck
+          setTraders(tradersAround(pos.current.x, pos.current.y, 2400, day))
+        }
+        // Alongside is close: a trader is a person, not a region, and you
+        // should have to actually pull up to them.
+        let hit: Trader | null = null
+        for (const t of tradersRef.current) {
+          if (Math.hypot(pos.current.x - t.x, pos.current.y - t.y) < HAIL_RANGE) { hit = t; break }
+        }
+        setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
         // LEAVING WITH THE ROD OUT. Caught here rather than in the tap handler
         // because you can sail out of a zone by tapping open water far away,
         // and the moment that matters is crossing the boundary, not the tap.
@@ -769,6 +810,15 @@ export default function SeaMap({
         {PLACES.map(p => (
           <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
         ))}
+        {/* THE SALT ROAD. Other captains, out working. They are drawn from the
+            same parts the player's own captain is, so they are house-style by
+            construction rather than by anyone remembering to match it. */}
+        {traders.map(t => (
+          <TraderBoat key={t.key} trader={t}
+            done={dealt.includes(t.key)}
+            isNear={nearTrader?.key === t.key} />
+        ))}
+
         {/* The wake, in the world layer so each mark stays on the water where
             the hull left it. Every one of these is positioned by the loop. */}
         {Array.from({ length: WAKE_MARKS }, (_, i) => (
@@ -822,7 +872,30 @@ export default function SeaMap({
 
       {/* The prompt steps aside while the rod is out — the cast button is the
           only thing that should be asking for a thumb down there. */}
-      {!fishingIn && (
+      {/* HAILING SOMEONE OUTRANKS THE ZONE PROMPT. You have pulled alongside a
+          person; what water you happen to be floating in can wait. */}
+      {!fishingIn && nearTrader && !hailing && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: 12,
+          display: 'flex', justifyContent: 'center', padding: '0 1rem',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); vibrate(14); setHailing(nearTrader) }}
+            className="font-cinzel font-700"
+            style={{
+              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '0.94rem',
+              color: '#f6e6c6', background: 'rgba(24,18,10,0.9)',
+              border: '1px solid rgba(255,206,138,0.5)',
+              boxShadow: '0 6px 22px rgba(0,0,0,0.5)', cursor: 'pointer',
+            }}>
+            {dealt.includes(nearTrader.key)
+              ? `Speak to ${nearTrader.name}`
+              : `Hail ${nearTrader.name}`}
+          </button>
+        </div>
+      )}
+
+      {!fishingIn && !nearTrader && (
         <Prompt
           place={near}
           locked={near ? locked(near) : false}
@@ -849,6 +922,16 @@ export default function SeaMap({
           onPose={setFrame}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest') }}
+        />
+      )}
+
+      {hailing && (
+        <TraderPanel
+          trader={hailing}
+          alreadyDealt={dealt.includes(hailing.key)}
+          dealsLeft={DEALS_PER_DAY - dealt.length}
+          onDealt={key => setDealt(prev => (prev.includes(key) ? prev : [...prev, key]))}
+          onClose={() => setHailing(null)}
         />
       )}
 
@@ -1121,6 +1204,75 @@ const DRIFT = [
  *  with height divides by GROUND to convert that into the squashed layer's own
  *  units, so the lift stays the same on screen however the plane is tilted. */
 const ISLAND_LIFT = 15
+
+/** A trader has no rod, reel, hook or pet — they are working, not fishing, and
+ *  an NPC wearing the player's tackle reads as a mirror rather than a stranger. */
+const TRADER_GEAR: Gear = {
+  rodSlug: null, rod: null, rodGlow: null, rodColor: null,
+  reel: null, hook: null, pet: null, petArt: null,
+}
+
+/**
+ * ANOTHER CAPTAIN, ON THE WATER.
+ *
+ * Built out of Skipper — the same component that draws the player — because the
+ * answer to "what should an NPC look like" is "like a person who plays this
+ * game". Hull, bandana and colour come off the cosmetic tables, so a stranger
+ * out here is wearing things you could be wearing, and anything that ships for
+ * players turns up on the Salt Road the same day.
+ *
+ * Counter-squashed like everything else with height. A boat stands ON the
+ * plane; it is not painted onto it.
+ */
+function TraderBoat({ trader, done, isNear }: { trader: Trader; done: boolean; isNear: boolean }) {
+  return (
+    <div style={{
+      position: 'absolute', left: trader.x, top: trader.y,
+      pointerEvents: 'none', zIndex: 2,
+    }}>
+      {/* Contact shadow, ON the plane and therefore squashed with it. */}
+      <div aria-hidden style={{
+        position: 'absolute', left: -66, top: 6, width: 132, height: 46,
+        borderRadius: '50%', background: 'rgba(2,10,18,0.34)', filter: 'blur(7px)',
+      }} />
+      <div style={{
+        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78)`,
+        // Someone you have already dealt with today is still there — they do
+        // not vanish, because a person vanishing when you are done with them is
+        // the sort of thing that makes a world feel like a vending machine.
+        // They just stop calling out.
+        opacity: done ? 0.62 : 1,
+      }}>
+        <Skipper
+          characterColor={trader.look.characterColor}
+          boatId={trader.look.boatId}
+          hatId={trader.look.hatId}
+          gear={TRADER_GEAR}
+          frame="rest"
+        />
+      </div>
+
+      {/* Name and trade, counter-squashed — a label was never on the plane. */}
+      <div style={{
+        position: 'absolute', left: 0, top: 30,
+        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'top center',
+        textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
+        opacity: isNear ? 1 : 0.72, transition: 'opacity 220ms ease-out',
+      }}>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '0.74rem', color: done ? 'rgba(180,192,200,0.6)' : '#e6eef4',
+          textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+        }}>{trader.name}</p>
+        <p className="font-karla font-600" style={{
+          fontSize: '0.58rem', marginTop: 1,
+          color: done ? 'rgba(160,176,186,0.55)' : 'rgba(255,214,150,0.85)',
+          textShadow: '0 1px 9px rgba(0,0,0,0.9)',
+        }}>{done ? 'Traded today' : KIND_LABEL[trader.kind]}</p>
+      </div>
+    </div>
+  )
+}
 
 function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
   const isWater = place.kind === 'water'

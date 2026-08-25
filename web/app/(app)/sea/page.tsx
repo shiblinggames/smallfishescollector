@@ -19,6 +19,7 @@ import { PETS } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import SeaMap from './SeaMap'
+import { dealtToday } from './traderActions'
 
 export const metadata = { title: 'The Sea' }
 
@@ -46,6 +47,10 @@ export default async function SeaPage() {
     .filter(b => b.quantity > 0)
     .sort((a, b) => b.quantity - a.quantity)[0]
   const baitType = best?.bait_type ?? 'worm'
+
+  // Read on the server so the day's deal count survives a page reload — a cap
+  // the client remembers is not a cap.
+  const dealt = await dealtToday()
 
   const equippedPet = (profile?.equipped_pet as string | null) ?? null
   const pet = PETS.find(p => p.id === equippedPet) ?? null
@@ -77,6 +82,7 @@ export default async function SeaPage() {
       bait={baitType}
       baitBonus={getBait(baitType).catchZoneBonus}
       baitQty={best?.quantity ?? 0}
+      dealtToday={dealt}
       mods={{
         hookTier: Number(profile?.hook_tier ?? 0),
         linePenalty: line.penaltyMultiplier,
