@@ -57,6 +57,68 @@ target live in refs, never state — this loop runs at 60fps.
 - Acceleration is `1 - e^(-k·dt)`, not `min(1, k·dt)` — frame-rate independent, so a hitch
   is invisible rather than a lurch.
 
+## The shape of the chart
+
+**The Mainland is the origin, and the fishing zones are concentric semicircular bands
+fanning SOUTH from it.** The Harbour is the divide: expeditions live north of the Mainland,
+everything to do with fishing lives south. Depth is simply how far out you have sailed.
+
+| band | inner | outer | Fishing level |
+|---|---|---|---|
+| The Shallows | 1400 | 3400 | 1 |
+| Open Waters | 3400 | 5800 | 15 |
+| The Deep | 5800 | 8400 | 30 |
+| The Abyss | 8400 | 11200 | 50 |
+| The Ancient Deep | 11200 | 14400 | 75 |
+
+This replaced five discs scattered along an east-west line. With discs, "deeper" was a
+direction you had to memorise, only the corridor the discs happened to lie on was fishable,
+and the three deep zones sat in nearly the same bearing from anywhere — which is what made
+the first compass unreadable. With rings, every southern heading is a valid way out, and
+the answer to "where am I" is one number: `Math.hypot(x, y)`.
+
+- `inBand(pos, place)` is the membership test: `y > 0 && inner <= R < outer`. Bands do not
+  overlap, so the first match is the only match.
+- **`LANDMARKS` and `RESIDENTS` are module-level lists in ABSOLUTE world coordinates.** They
+  used to hang off each zone as offsets from its centre; a ring has no centre for an offset
+  to be relative to.
+- `seaAt()` blends the palettes by distance from each band's midline, with a fourth-power
+  falloff, faded out over 700px north of the equator so there is no seam. **R is clamped at
+  the outermost edge** — without that the falloff runs both ways and the water past the
+  Ancient Deep brightens back toward ordinary blue, so sailing off the end of the chart
+  looks like sailing into the shallows.
+
+### The harbour approach
+
+Ports are approachable from a **generous ring all the way around** — `moorR(p) = p.r + MOOR`
+(420). It used to be the island's own radius, which was very nearly unusable: the hull stops
+at `r * SHORE + HULL` (235 off the Mainland) and the go-ashore test was `r` (250). Fifteen
+pixels of water on one heading is not a window.
+
+**The Shallows start at 1400, well outside every moor ring**, so the hub and the first zone
+never argue over which prompt you get: you are moored, or you are fishing, never both. That
+gap is the harbour approach, and `HOME` sits in it at R=617 — close enough to go ashore from
+a standing start, a short sail short of the water.
+
+## The compass
+
+Slots are assigned **by role, not won by distance**. Ranking by distance broke the instant
+the zones became rings: from the Deep, the nearest edge of all five rings is a few thousand
+pixels away and the Mainland is six thousand, so bands took every slot and the way home was
+never shown.
+
+1. **The nearest port, always.** The one heading you cannot afford to lose, and on a ring
+   chart the least guessable — home is inward, and inward has no landmark.
+2. **The buyer of the water you are in.** A band is thousands of pixels round and he is one
+   moored boat on it; without an arrow he is findable only by luck.
+3. **The next band out and the next band in**, aimed at their nearest EDGE. Neighbours only:
+   the Ancient Deep is not a heading you follow from the Shallows, it is four crossings away.
+   A band you are already in gets nothing.
+4. **The other ports**, nearest first, with whatever room is left. Cap is four.
+
+Anything already on screen is dropped — an arrow to something you can see is noise. Only the
+two marks you ACT on (the port and the buyer) carry a distance readout.
+
 ## Controls
 
 - **A tap is a short hop** toward where you touched, distance capped (`TAP_HOP`).

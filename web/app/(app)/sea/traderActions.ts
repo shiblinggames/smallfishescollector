@@ -24,7 +24,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
-import { PLACES } from '@/app/(app)/sea/chart'
+import { PLACES, RESIDENTS } from '@/app/(app)/sea/chart'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 
@@ -215,8 +215,9 @@ export async function sellToResident(zoneId: string): Promise<
   if (!user) return { error: 'Unauthorized' }
 
   const zone = PLACES.find(p => p.id === zoneId && p.kind === 'water')
-  if (!zone?.resident) return { error: 'There is nobody buying here.' }
-  const rate = zone.resident.rate
+  const res = RESIDENTS.find(r => r.zoneId === zoneId)
+  if (!zone || !res) return { error: 'There is nobody buying here.' }
+  const rate = res.rate
 
   const admin = createAdminClient()
   const { data: hold } = await admin
@@ -249,7 +250,7 @@ export async function sellToResident(zoneId: string): Promise<
   await admin.rpc('bump_profile_stat', { uid: user.id, col: 'doubloons', n: earned })
   await admin.from('doubloon_transactions').insert({
     user_id: user.id, amount: earned,
-    reason: `Sold the hold to ${zone.resident.name} in ${zone.name}`,
+    reason: `Sold the hold to ${res.name} in ${zone.name}`,
   })
 
   const { data: profile } = await admin

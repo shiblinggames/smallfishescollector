@@ -20,7 +20,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PLACES, HOME, OPEN_SEA, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, type Place } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS } from '@/lib/boats'
@@ -179,11 +179,25 @@ const HULL = 55
  * the art is mostly superstructure — a rig is legs and a shed, and its
  * FOOTPRINT in the water is much narrower than the picture.
  */
+/**
+ * HOW CLOSE IS CLOSE ENOUGH TO GO ASHORE.
+ *
+ * It used to be the island's own radius, which was very nearly unusable: the
+ * hull stops at `r * SHORE + HULL` — 235 world pixels off the Mainland — and
+ * the go-ashore test was `r`, 250. Fifteen pixels of water, on one heading, is
+ * not a window, it is a bug you have to fight.
+ *
+ * Now a port is approachable from a generous ring all the way around it. Pull
+ * up anywhere in the vicinity, from any bearing, and the prompt is there. The
+ * fishing bands start well outside this ring so the two never argue over which
+ * prompt you get — see the Shallows' inner radius in chart.ts.
+ */
+const MOOR = 420
+function moorR(p: Place): number { return p.r + MOOR }
+
 const OBSTACLES: { x: number; y: number; r: number }[] = [
   ...PLACES.filter(p => p.kind === 'port').map(p => ({ x: p.x, y: p.y, r: p.r * SHORE + HULL })),
-  ...PLACES.flatMap(p => (p.landmarks ?? [])
-    .filter(m => m.solid)
-    .map(m => ({ x: p.x + m.x, y: p.y + m.y, r: m.size * 0.3 + HULL }))),
+  ...LANDMARKS.filter(m => m.solid).map(m => ({ x: m.x, y: m.y, r: m.size * 0.3 + HULL })),
 ]
 
 /** Nudge a point out to clear water if it has been asked for inside something
@@ -258,9 +272,26 @@ function rgb(hex: string): [number, number, number] {
 }
 
 const OPEN_RGB = OPEN_SEA.map(rgb) as [number, number, number][]
-const WATER_RGB: { x: number; y: number; r: number; c: [number, number, number][] }[] =
+/** Each band as the radius of its middle and its half-width, which is all the
+ *  blend needs to know about a ring. */
+/** The outer edge of the outermost band — where the chart's water stops. */
+const LAST_OUTER = Math.max(...PLACES.map(p => p.outer ?? 0))
+
+const WATER_RGB: { mid: number; half: number; c: [number, number, number][] }[] =
   PLACES.filter(p => p.kind === 'water' && p.sea)
-    .map(p => ({ x: p.x, y: p.y, r: p.r, c: (p.sea as [string, string, string]).map(rgb) as [number, number, number][] }))
+    .map(p => ({
+      mid: ((p.inner ?? 0) + (p.outer ?? 0)) / 2,
+      half: Math.max(1, ((p.outer ?? 0) - (p.inner ?? 0)) / 2),
+      c: (p.sea as [string, string, string]).map(rgb) as [number, number, number][],
+    }))
+
+/** Are we in this water? A band is a ring around the Mainland, south only. */
+export function inBand(p: Vec, place: Place): boolean {
+  if (place.kind !== 'water' || place.inner == null || place.outer == null) return false
+  if (p.y <= 0) return false
+  const R = Math.hypot(p.x, p.y)
+  return R >= place.inner && R < place.outer
+}
 
 /**
  * THE COLOUR OF THE SEA WHERE YOU ARE.
@@ -299,10 +330,25 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
   for (let k = 0; k < 3; k++) {
     for (let ch = 0; ch < 3; ch++) acc[k][ch] = OPEN_RGB[k][ch] * 0.18
   }
+  // HOW FAR OUT ARE WE, from the Mainland. Every fishing band is a ring around
+  // the origin, so one radius answers all five of them.
+  //
+  // CLAMPED at the outer edge of the last band. Without it the falloff runs
+  // both ways and the water beyond the Ancient Deep brightens back toward
+  // ordinary blue, so sailing off the end of the chart into nothing looks like
+  // sailing into shallower water. Held at the edge colour, it just keeps being
+  // the deepest water there is.
+  const R = Math.min(Math.hypot(p.x, p.y), LAST_OUTER)
+  // The bands only exist to the SOUTH. North of the Mainland this fades to
+  // nothing over a few hundred pixels rather than stopping on a line, or the
+  // equator would be a visible seam straight across the chart.
+  const south = p.y > 0 ? 1 : Math.max(0, 1 + p.y / 700)
+
   for (const w of WATER_RGB) {
-    const d = Math.hypot(p.x - w.x, p.y - w.y) / w.r
+    // Distance from the MIDDLE of the band, as a fraction of its half-width.
+    const d = Math.abs(R - w.mid) / w.half
     const d2 = d * d
-    const weight = 1 / (1 + d2 * d2)
+    const weight = south / (1 + d2 * d2)
     wSum += weight
     for (let k = 0; k < 3; k++) {
       for (let ch = 0; ch < 3; ch++) acc[k][ch] += w.c[k][ch] * weight
@@ -720,17 +766,15 @@ export default function SeaMap({
   /** THE RESIDENT BUYERS. Not hashed and not daily — they live here. Built into
    *  the same shape a wandering trader has so everything downstream (the hail
    *  mark, the name plate, the panel) works on them without a second path. */
-  const residents = useMemo<Trader[]>(() => PLACES.flatMap(p => {
-    if (!p.resident) return []
-    const r = p.resident
+  const residents = useMemo<Trader[]>(() => RESIDENTS.map(r => {
     // A stable, deterministic look, so a zone's buyer is the same person every
     // time you sail out to them.
-    const seed = p.id.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
-    return [{
-      key: `resident:${p.id}`,
+    const seed = r.zoneId.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+    return {
+      key: `resident:${r.zoneId}`,
       kind: 'resident' as const,
       name: r.name,
-      x: p.x + r.x, y: p.y + r.y,
+      x: r.x, y: r.y,
       line: r.line,
       // A moored buyer swings on his anchor rather than patrolling: he is
       // waiting for trade, not looking for it.
@@ -739,16 +783,11 @@ export default function SeaMap({
         characterColor: ['default', 'gray', 'blue', 'pink'][seed % 4],
         boatId: ['oak', 'mahogany', 'taupe', 'desert', 'charcoal'][seed % 5],
         hatId: ['brown', 'olive', 'midnight', 'offwhite'][seed % 4],
-        // A ROD, like everyone else out here. These were the only NPCs without
-        // one — the reasoning was that a buyer is working rather than fishing,
-        // which is true and also means five boats on the chart looked like they
-        // were missing a piece. They are captains on a fishing sea; they have a
-        // rod aboard whether or not they are using it.
         rodSlug: plainRodFor(seed),
         hook: plainHookFor(seed),
       },
-      deal: 'resident' as const, zoneId: p.id, rate: r.rate,
-    }]
+      deal: 'resident' as const, zoneId: r.zoneId, rate: r.rate,
+    }
   }), [])
   // Mirrored for the loop, which must not be re-created every time the list
   // changes or the whole sail restarts.
@@ -1247,7 +1286,11 @@ export default function SeaMap({
       if (sinceState > 0.12) {
         sinceState = 0
         let found: Place | null = null
-        for (const p of PLACES) if (dist(pos.current, p) < p.r) found = p
+        // Ports are discs; waters are rings. inBand answers the ring case, and
+        // the bands do not overlap, so the first match is the only match.
+        for (const p of PLACES) {
+          if (p.kind === 'port' ? dist(pos.current, p) < moorR(p) : inBand(pos.current, p)) { found = p; break }
+        }
         setNear(prev => (prev?.id === found?.id ? prev : found))
 
         // WHO IS OUT HERE. The cell key changes only when you cross a cell
@@ -1341,6 +1384,14 @@ export default function SeaMap({
         {PLACES.map(p => (
           <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
         ))}
+        {/* WHAT BREAKS THE SURFACE. A flat list in absolute world coordinates
+            now that the waters are bands — a ring has no box for an offset to
+            be relative to. Rendered here rather than inside a place, which also
+            means one pass over one array instead of five nested ones. */}
+        {LANDMARKS.map((m, i) => (
+          <SeaMark key={i} m={m} i={i} />
+        ))}
+
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
             construction rather than by anyone remembering to match it. */}
@@ -2037,6 +2088,43 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
   )
 })
 
+
+/** One thing standing out of the water. Absolute world position: the bands have
+ *  no box for an offset to be relative to. */
+const SeaMark = memo(function SeaMark({ m, i }: {
+  m: { art: string; x: number; y: number; size: number; sway?: 'bob' | 'rock' }
+  i: number
+}) {
+  return (
+    <div style={{ position: 'absolute', left: m.x, top: m.y, pointerEvents: 'none' }}>
+      {/* NOTHING UNDER IT. Two attempts at a waterline lived here, a dark
+          ellipse and then a pale one, and both read as the object hovering over
+          a surface. There is no surface; the art is already cut off where it
+          meets the water. */}
+      {/* TWO WRAPPERS, because they carry different transforms. The outer one
+          stands the landmark up off the plane; the inner one is free to sway
+          without clobbering that. One element trying to do both means the
+          animation overwrites the counter-squash and it lies flat the moment it
+          starts moving. */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0, width: m.size,
+        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center',
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={m.art} alt="" draggable={false} loading="lazy"
+          className={m.sway ? `mark-${m.sway}` : undefined}
+          style={{
+            width: '100%', maxWidth: 'none', display: 'block',
+            // Offset so neighbours never move in step, which is what makes a
+            // row of buoys read as machinery.
+            animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
+          }} />
+      </div>
+    </div>
+  )
+})
+
 /** MEMOISED. The loop pokes React four times a second to update proximity and
  *  the compass, and without this every island rebuilt its whole subtree —
  *  coastline clip, drift blobs, cliff, jetty and all — on each of those ticks
@@ -2092,51 +2180,6 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
               one gets a soft ellipse at its foot: it is sitting IN water, and
               without something where it meets the surface it reads as pasted
               on rather than floating in. */}
-          {place.landmarks?.map((m, i) => (
-            <div key={i} style={{
-              position: 'absolute', left: place.r + m.x, top: place.r + m.y,
-              pointerEvents: 'none',
-            }}>
-              {/* NOTHING UNDER THEM AT ALL.
-                  Two attempts at a waterline lived here: a dark ellipse, which
-                  read as a shadow cast onto a floor, and then a pale one, which
-                  read as a white glow — and both said the same wrong thing,
-                  that there is a surface beneath the object catching something.
-                  There is not. There is water, and the art is already drawn cut
-                  off at its own waterline.
-                  Anything I put here is a shape the artwork does not have, and
-                  a shape under a floating object is what "floating" looks like.
-                  So: nothing. The water meets the art where the art ends. */}
-              {/* TWO WRAPPERS, because they carry different transforms. The
-                  outer one stands the landmark up off the plane; the inner one
-                  is free to sway without clobbering that. One element trying to
-                  do both means the animation overwrites the counter-squash and
-                  the landmark lies flat the moment it starts moving. */}
-              <div style={{
-                position: 'absolute', left: 0, top: 0, width: m.size,
-                transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-                transformOrigin: 'bottom center',
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.art} alt="" draggable={false} loading="lazy"
-                  className={m.sway ? `mark-${m.sway}` : undefined}
-                  style={{
-                    width: '100%', maxWidth: 'none', display: 'block',
-                    // Offset so neighbours never move in step, which is what
-                    // makes a row of buoys read as machinery.
-                    animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
-                    filter: locked
-                      ? 'grayscale(0.85) brightness(0.55)'
-                      // NO drop-shadow. A drop shadow offset downward is the
-                      // same lie in a different form: it says there is a
-                      // surface below this object catching light. There is not,
-                      // there is water, and the wash above is what says so.
-                      : undefined,
-                  }} />
-              </div>
-            </div>
-          ))}
-
           {locked && (
             /* Weather, not a wall. A locked water is one you can SEE is bad:
                squall streaks that fade out with no boundary anywhere. */
@@ -2444,7 +2487,7 @@ function WaterBanner({ place, locked, lowered }: {
  *   wins, because it is the one you are more likely to be going to. The rest is
  *   discoverable by sailing, which is the point of a chart you sail on.
  */
-const COMPASS_MAX = 3
+const COMPASS_MAX = 4
 /** How far apart two markers must sit on the perimeter before both are shown. */
 const COMPASS_SPACING = 96
 
@@ -2476,22 +2519,100 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
   const mx = Math.min(64, hw * 0.22)
   const my = Math.min(74, hh * 0.22)
 
-  const marks = PLACES
-    .map(p => {
-      // Screen offset from the boat, through the same projection the world
-      // layer uses — squashed and zoomed, or every bearing points somewhere
-      // the place is not.
-      const sx = (p.x - here.x) * z
-      const sy = (p.y - here.y) * GROUND * z
-      return { p, sx, sy, world: Math.hypot(p.x - here.x, p.y - here.y) }
-    })
-    // On screen already? Then you can see it, and an arrow is noise.
-    .filter(m => Math.abs(m.sx) > hw - mx || Math.abs(m.sy) > hh - my)
+  /**
+   * WHAT DESERVES AN ARROW, once the zones became rings.
+   *
+   * Ranking every place by distance stopped working the moment the waters
+   * became concentric bands. From anywhere in the Deep the nearest edge of all
+   * five rings is a few thousand pixels away and the Mainland is six thousand,
+   * so the three slots filled with bands every single time and the way home was
+   * never on screen. That is the exact opposite of what a compass is for.
+   *
+   * So the slots are assigned by ROLE rather than won by distance:
+   *
+   *   THE NEAREST PORT, always first. Getting back is the one heading you can
+   *   never afford to lose, and on a ring chart it is also the least guessable:
+   *   home is inward, and inward has no landmark.
+   *
+   *   THE BUYER OF THE WATER YOU ARE IN. A band is thousands of pixels round
+   *   and he is one moored boat on it. Without this he is not findable by
+   *   sailing, only by luck.
+   *
+   *   THE NEXT BAND OUT, AND THE NEXT BAND IN, aimed at their nearest EDGE.
+   *   Only the neighbours: the Ancient Deep is not a heading you follow from
+   *   the Shallows, it is four crossings away, and an arrow saying otherwise is
+   *   a lie about how far you have to go. A band you are already IN gets
+   *   nothing — you are in it.
+   *
+   *   THEN THE OTHER PORTS, nearest first, with whatever room is left.
+   */
+  const project = (tx: number, ty: number) => ({
+    sx: (tx - here.x) * z,
+    sy: (ty - here.y) * GROUND * z,
+    world: Math.hypot(tx - here.x, ty - here.y),
+  })
+
+  type Mark = { id: string; name: string; dim: boolean; dist: boolean; sx: number; sy: number; world: number }
+  const marks: Mark[] = []
+
+  const ports = PLACES.filter(p => p.kind === 'port')
+    .map(p => ({ p, ...project(p.x, p.y) }))
     .sort((a, b) => a.world - b.world)
+  const nearestPort = ports[0]
+  if (nearestPort) {
+    marks.push({
+      id: nearestPort.p.id, name: nearestPort.p.name, dim: locked(nearestPort.p),
+      dist: true, sx: nearestPort.sx, sy: nearestPort.sy, world: nearestPort.world,
+    })
+  }
+
+  const waters = PLACES.filter(p => p.kind === 'water' && p.inner != null && p.outer != null)
+  const R = Math.hypot(here.x, here.y)
+  const inIdx = waters.findIndex(w => inBand(here, w))
+
+  const buyer = inIdx >= 0 ? RESIDENTS.find(r => r.zoneId === waters[inIdx].id) : undefined
+  if (buyer) {
+    marks.push({ id: `buyer:${buyer.zoneId}`, name: buyer.name, dim: false, dist: true, ...project(buyer.x, buyer.y) })
+  }
+
+  // The bearing out from the Mainland, which is the only direction a ring has.
+  // Sitting on the origin there is none, so use due south; and never aim north,
+  // because there is no fishing water up there to aim at.
+  const uy = R < 1 ? 1 : Math.max(0.08, here.y / R)
+  const ux = R < 1 ? 0 : here.x / R
+  const un = Math.hypot(ux, uy) || 1
+  const edgeAt = (radius: number) => project((ux / un) * radius, (uy / un) * radius)
+
+  // Neighbours: the first band whose inner edge is beyond us, and the last band
+  // whose outer edge is behind us. When you are inside one those are simply the
+  // band above and the band below.
+  const outIdx = inIdx >= 0 ? inIdx + 1 : waters.findIndex(w => R < (w.inner ?? 0))
+  const backIdx = inIdx >= 0 ? inIdx - 1 : (() => {
+    let last = -1
+    waters.forEach((w, i) => { if (R >= (w.outer ?? 0)) last = i })
+    return last
+  })()
+  for (const [idx, edge] of [[outIdx, 'inner'], [backIdx, 'outer']] as const) {
+    const w = idx >= 0 ? waters[idx] : undefined
+    if (!w) continue
+    marks.push({
+      id: w.id, name: w.name, dim: locked(w), dist: false,
+      ...edgeAt((edge === 'inner' ? w.inner : w.outer) as number),
+    })
+  }
+
+  for (const q of ports.slice(1)) {
+    marks.push({ id: q.p.id, name: q.p.name, dim: locked(q.p), dist: false, sx: q.sx, sy: q.sy, world: q.world })
+  }
+
+  // On screen already? Then you can see it, and an arrow is noise. Applied
+  // after the ranking so everything obeys the same rule — a port you are moored
+  // at, or a band edge two hundred pixels off the bow, needs no arrow.
+  const visible = marks.filter(m => Math.abs(m.sx) > hw - mx || Math.abs(m.sy) > hh - my)
 
   const placed: { x: number; y: number }[] = []
-  const shown: { p: Place; x: number; y: number; a: number; world: number }[] = []
-  for (const m of marks) {
+  const shown: { m: typeof visible[number]; x: number; y: number; a: number }[] = []
+  for (const m of visible) {
     if (shown.length >= COMPASS_MAX) break
     // Ray from the centre to the place, clamped to the inset rectangle.
     const ax = Math.abs(m.sx), ay = Math.abs(m.sy)
@@ -2500,26 +2621,27 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
     const y = m.sy * t
     if (placed.some(q => Math.hypot(q.x - x, q.y - y) < COMPASS_SPACING)) continue
     placed.push({ x, y })
-    shown.push({ p: m.p, x, y, a: Math.atan2(m.sy, m.sx), world: m.world })
+    shown.push({ m, x, y, a: Math.atan2(m.sy, m.sx) })
   }
 
   return (
     <>
-      {shown.map((m, i) => {
-        const dim = locked(m.p)
-        // Only the nearest carries a distance. Three numbers on screen is a
-        // readout; one is a heading.
-        const lead = i === 0
+      {shown.map(({ m, x, y, a }) => {
+        const dim = m.dim
+        // The two headings you ACT on carry a distance — the way home and the
+        // buyer. The band edges do not: "the Deep, 180m" invites you to read it
+        // as a place at a distance when it is a boundary you cross.
+        const lead = m.dist
         return (
-          <div key={m.p.id} aria-hidden style={{
+          <div key={m.id} aria-hidden style={{
             position: 'absolute', left: '50%', top: '50%',
-            transform: `translate(${m.x}px, ${m.y}px) translate(-50%, -50%)`,
+            transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             pointerEvents: 'none',
           }}>
             <span style={{
               width: 0, height: 0,
-              transform: `rotate(${m.a + Math.PI / 2}rad)`,
+              transform: `rotate(${a + Math.PI / 2}rad)`,
               borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
               borderBottom: `9px solid rgba(190,214,228,${dim ? 0.28 : lead ? 0.75 : 0.5})`,
             }} />
@@ -2530,7 +2652,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
               fontSize: lead ? '0.6rem' : '0.54rem', whiteSpace: 'nowrap',
               color: `rgba(214,232,240,${dim ? 0.4 : lead ? 0.9 : 0.62})`,
               textShadow: '0 1px 6px rgba(0,0,0,0.9)',
-            }}>{m.p.name}</span>
+            }}>{m.name}</span>
             {lead && (
               <span className="font-karla font-700" style={{
                 fontSize: '0.54rem', marginTop: -1,
