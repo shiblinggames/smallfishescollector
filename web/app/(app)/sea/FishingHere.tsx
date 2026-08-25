@@ -283,15 +283,24 @@ export default function FishingHere({
   /** Does the result card actually need to scroll? Measured, and only after it
    *  has finished arriving — see the note on the container. */
   const cardScrollRef = useRef<HTMLDivElement | null>(null)
+  /** The flexible area the card lives in, measured so the cap is a real number
+   *  of pixels. `maxHeight: 100%` was never doing anything: the percentage
+   *  resolves against a parent whose own height is auto, which makes it
+   *  indefinite, which makes max-height compute to `none`. */
+  const contentRef = useRef<HTMLDivElement | null>(null)
+  const [cardCap, setCardCap] = useState<number | null>(null)
   const [cardScrolls, setCardScrolls] = useState(false)
   useEffect(() => {
     if (phase !== 'result') { setCardScrolls(false); return }
     let raf = 0
     const measure = () => {
       const el = cardScrollRef.current
-      if (!el) return
+      const area = contentRef.current
+      if (!el || !area) return
+      const avail = area.clientHeight
+      setCardCap(avail)
       // A pixel of slack: sub-pixel layout rounding should not be a scrollbar.
-      setCardScrolls(el.scrollHeight > el.clientHeight + 1)
+      setCardScrolls(el.scrollHeight > avail + 1)
     }
     // Settled is a real flag, not the timer id — the observer fires during the
     // entrance too, and gating on a truthy timeout id would have let every one
@@ -1008,7 +1017,7 @@ export default function FishingHere({
           Dial, result card or the wait, all in one flexible area that grows and
           shrinks around whatever is in it. The action row below is a fixed slot
           and never moves, which is the entire point of splitting them. */}
-      <div style={{
+      <div ref={contentRef} style={{
         flex: 1, minHeight: 0, width: '100%',
         display: 'flex', flexDirection: 'column',
         // CENTRED, not crammed against the bottom. flex-end made sense when
@@ -1069,8 +1078,15 @@ export default function FishingHere({
               //
               // Measured after the entrance instead. Nothing scrolls during the
               // animation, and afterwards it scrolls only if it actually has to.
-              width: '100%', maxHeight: '100%',
-              overflowY: cardScrolls ? 'auto' : 'hidden',
+              // AND `overflow`, NOT `overflowY`. Setting one axis to anything
+              // other than `visible` forces the OTHER axis to compute to
+              // `auto` — that is the spec, not a quirk — so `overflowY: hidden`
+              // was quietly turning on horizontal scrolling and putting a bar
+              // along the bottom of a card that is exactly as wide as its box.
+              // The shorthand keeps both axes agreeing.
+              width: '100%',
+              maxHeight: cardCap != null ? cardCap : undefined,
+              overflow: cardScrolls ? 'auto' : 'visible',
               overscrollBehavior: 'contain',
               // The map sets touch-action: none so a drag steers instead of
               // scrolling the page. This card is the one thing inside it that
