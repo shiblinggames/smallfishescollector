@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { PLACES, HOME, type Place } from './chart'
+import { PLACES, HOME, OPEN_SEA, type Place } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS } from '@/lib/boats'
@@ -40,6 +40,60 @@ const SLOW = 240
 const ARRIVE = 26
 
 type Vec = { x: number; y: number }
+
+/** '#rrggbb' → [r,g,b]. */
+function rgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+}
+
+const OPEN_RGB = OPEN_SEA.map(rgb) as [number, number, number][]
+const WATER_RGB: { x: number; y: number; r: number; c: [number, number, number][] }[] =
+  PLACES.filter(p => p.kind === 'water' && p.sea)
+    .map(p => ({ x: p.x, y: p.y, r: p.r, c: (p.sea as [string, string, string]).map(rgb) as [number, number, number][] }))
+
+/**
+ * THE COLOUR OF THE SEA WHERE YOU ARE.
+ *
+ * Regions used to be drawn as discs, which gave every zone a visible circular
+ * edge you crossed like a doorway — the exact opposite of sailing out of one
+ * stretch of water into another. There are no shapes now. Each water is a
+ * COLOUR, and the sea is an inverse-distance blend of all of them plus the open
+ * ocean, evaluated at the boat every frame.
+ *
+ * So the Shallows shade into open blue over a few hundred metres, and open blue
+ * shades into the near-black of the Abyss, the way a real shelf does. Nothing
+ * has an edge, and yet the water genuinely tells you where you are.
+ *
+ * The falloff is cubic on d/r: inside a water it dominates almost completely,
+ * and by about twice its radius it contributes nearly nothing. Linear was far
+ * too muddy — everything ended up the average of everything.
+ */
+function seaAt(p: Vec): string {
+  let wSum = 0.55 // the open ocean always has a vote, so nothing goes pure
+  const acc: [number, number, number][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+  for (let k = 0; k < 3; k++) {
+    for (let ch = 0; ch < 3; ch++) acc[k][ch] = OPEN_RGB[k][ch] * 0.55
+  }
+  for (const w of WATER_RGB) {
+    const d = Math.hypot(p.x - w.x, p.y - w.y) / w.r
+    const weight = 1 / (1 + d * d * d)
+    wSum += weight
+    for (let k = 0; k < 3; k++) {
+      for (let ch = 0; ch < 3; ch++) acc[k][ch] += w.c[k][ch] * weight
+    }
+  }
+  const out = acc.map(c => c.map(v => Math.round(v / wSum)))
+  // Painted three ways from the same blend: light on the horizon, mid through
+  // the body, dark toward the viewer, which is how open water actually reads
+  // from above.
+  return (
+    `radial-gradient(ellipse 130% 100% at 50% -6%, ` +
+    `rgb(${out[2].join(',')}) 0%, ` +
+    `rgb(${out[1].join(',')}) 38%, ` +
+    `rgb(${out[0].join(',')}) 78%, ` +
+    `rgb(${out[0].map(v => Math.max(0, v - 14)).join(',')}) 100%)`
+  )
+}
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitBonus, baitQty,
@@ -187,6 +241,10 @@ export default function SeaMap({
       // Imperative writes. The whole reason this holds 60fps on a phone.
       const world = worldRef.current
       if (world) world.style.transform = `translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
+      // The sea recoloured under the boat. One style write per frame, and the
+      // reason there are no zone edges anywhere on the chart.
+      const wrap = wrapRef.current
+      if (wrap) wrap.style.background = seaAt(pos.current)
       const boat = boatRef.current
       if (boat) {
         // Screen-space only: the bob, the heel and which way it faces. Position
@@ -228,11 +286,9 @@ export default function SeaMap({
       onClick={onTap}
       style={{
         cursor: 'pointer',
-        // The open sea, in the game's own palette: desaturated blue-greys with
-        // depth carried by value. Replaced by a painted plate the moment one
-        // exists — this is the only invented art on the screen.
-        background:
-          'radial-gradient(ellipse 120% 90% at 50% 8%, #4a5f68 0%, #2b3f49 34%, #16242c 72%, #0b141a 100%)',
+        // Background is written every frame by the loop — see seaAt. This is
+        // only the colour before the first frame lands.
+        background: seaAt(HOME),
       }}
       className="sea-surface"
     >
@@ -479,6 +535,16 @@ function Skipper({ characterColor, boatId, hatId, gear, frame }: {
  * a scene painting doing duty as terrain; a purpose-painted island or dock plate
  * drops straight into `art` and this shape logic keeps working under it.
  */
+/** Foam and weed sizes for the drift scatter. Hand-picked rather than random so
+ *  a zone always looks the same, and varied enough that it never tiles. */
+const DRIFT = [
+  { w: 46, h: 9, a: 0.16, blur: 5 }, { w: 28, h: 6, a: 0.13, blur: 4 },
+  { w: 62, h: 11, a: 0.10, blur: 7 }, { w: 34, h: 7, a: 0.18, blur: 3 },
+  { w: 52, h: 8, a: 0.12, blur: 6 }, { w: 24, h: 5, a: 0.20, blur: 2 },
+  { w: 70, h: 12, a: 0.09, blur: 8 }, { w: 38, h: 7, a: 0.15, blur: 4 },
+  { w: 30, h: 6, a: 0.14, blur: 3 }, { w: 56, h: 10, a: 0.11, blur: 6 },
+]
+
 function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
   const isWater = place.kind === 'water'
   const d = place.r * 2
@@ -509,29 +575,44 @@ function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean;
       pointerEvents: 'none',
     }}>
       {isWater ? (
+        /* NO SHAPE AT ALL. The water itself is already telling you where you
+           are — seaAt blends the whole background toward this zone's colour as
+           you approach, so the Shallows shade into open blue and open blue
+           shades into the near-black of the Abyss the way a real shelf does.
+           Drawing anything with an edge on top of that would put back the
+           doorway the blend exists to remove.
+
+           What is left is DRIFT: a scatter of foam and weed, thicker toward the
+           middle, so open water still has something in it to read at speed.
+           Positions come off the id, so a zone's drift is its own and never
+           moves between renders. */
         <>
-          {/* THE WATER ITSELF, changed. No edge, because a region has no
-              coastline — it feathers away into the open sea. */}
-          <div style={{
-            position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden',
-            maskImage: 'radial-gradient(circle, #000 26%, rgba(0,0,0,0.5) 58%, transparent 80%)',
-            WebkitMaskImage: 'radial-gradient(circle, #000 26%, rgba(0,0,0,0.5) 58%, transparent 80%)',
-            opacity: locked ? 0.3 : isNear ? 0.62 : 0.48,
-            filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'saturate(0.85)',
-            transition: 'opacity 300ms ease-out',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={place.art} alt="" draggable={false}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          </div>
+          {DRIFT.map((f, i) => {
+            const seed = (place.id.charCodeAt(i % place.id.length) * (i + 7)) % 97
+            const ang = (seed / 97) * Math.PI * 2
+            const rad = (0.22 + ((seed % 11) / 11) * 0.66) * place.r
+            return (
+              <div key={i} aria-hidden style={{
+                position: 'absolute',
+                left: place.r + Math.cos(ang) * rad,
+                top: place.r + Math.sin(ang) * rad,
+                width: f.w, height: f.h,
+                marginLeft: -f.w / 2, marginTop: -f.h / 2,
+                borderRadius: '50%',
+                background: locked ? 'rgba(150,164,178,0.10)' : `rgba(214,232,238,${f.a})`,
+                filter: `blur(${f.blur}px)`,
+                transform: `rotate(${seed * 3.7}deg) scaleX(${1.4 + (seed % 5) * 0.5})`,
+              }} />
+            )
+          })}
           {locked && (
-            /* A squall sitting over it. The gate is weather you can see rather
-               than a message telling you no. */
+            /* Weather, not a wall. A locked water is one you can SEE is bad:
+               squall streaks that fade out with no boundary anywhere. */
             <div aria-hidden style={{
-              position: 'absolute', inset: '8%', borderRadius: '50%',
-              background: 'repeating-linear-gradient(58deg, rgba(150,164,178,0.16) 0 7px, transparent 7px 19px)',
-              maskImage: 'radial-gradient(circle, #000 40%, transparent 78%)',
-              WebkitMaskImage: 'radial-gradient(circle, #000 40%, transparent 78%)',
+              position: 'absolute', inset: '4%',
+              background: 'repeating-linear-gradient(58deg, rgba(150,164,178,0.13) 0 8px, transparent 8px 22px)',
+              maskImage: 'radial-gradient(circle, #000 20%, transparent 72%)',
+              WebkitMaskImage: 'radial-gradient(circle, #000 20%, transparent 72%)',
             }} />
           )}
         </>
@@ -588,11 +669,19 @@ function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean;
       )}
 
       <div style={{
-        position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 8px)',
+        position: 'absolute', left: '50%',
+        top: isWater ? '50%' : '100%',
+        transform: isWater ? 'translate(-50%, -50%)' : 'translate(-50%, 8px)',
         textAlign: 'center', whiteSpace: 'nowrap',
       }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.96rem', color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
+          fontSize: isWater ? '1.05rem' : '0.96rem',
+          letterSpacing: isWater ? '0.14em' : '0',
+          color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
+          // A water's name IS its landmark now it has no shape, so it comes up
+          // as you sail into it rather than sitting at one weight forever.
+          opacity: isWater ? (isNear ? 1 : 0.42) : 1,
+          transition: 'opacity 600ms ease-out',
           textShadow: '0 2px 12px rgba(0,0,0,0.9)',
         }}>{place.name}</p>
         <p className="font-karla font-600" style={{

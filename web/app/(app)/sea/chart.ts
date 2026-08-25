@@ -33,8 +33,22 @@ export type Place = {
   /** How far the place reaches. For a port this is the shore you moor off; for
    *  a water it is the region itself. */
   r: number
-  /** Painted plate, cropped into the medallion. */
+  /** Painted plate. Ports use it as the island's surface. Waters do not use it
+   *  at all any more — see `sea`. */
   art: string
+  /**
+   * WHAT THIS WATER LOOKS LIKE.
+   *
+   * A water does not get a shape, it gets a COLOUR, and the sea blends toward
+   * it as you approach. Drawing regions as discs gave every zone a visible
+   * circular edge you crossed like a doorway, which is the opposite of sailing
+   * from one stretch of sea into another. Now the Shallows are pale green-blue,
+   * the Abyss is near-black, and somewhere between them is genuinely between
+   * them.
+   *
+   * Three stops, deep to pale, matching how the game's own water art is built.
+   */
+  sea?: [string, string, string]
   /** Ports are land, waters are sea. Drives how it draws and what the prompt
    *  says: you dock at a port, you fish a water. */
   kind: 'port' | 'water'
@@ -58,29 +72,38 @@ export const PLACES: Place[] = [
   {
     id: 'shallows', name: 'The Shallows', blurb: 'Calm water, common fish',
     href: '/fishing?zone=shallows', x: 640, y: 430, r: 260, art: '/shallows.jpg',
+    sea: ['#123038', '#2b5a5e', '#6f9a95'] as [string, string, string],
     kind: 'water', minLevel: 1,
   },
   {
     id: 'open_waters', name: 'Open Waters', blurb: 'Further out, better catches',
     href: '/fishing?zone=open_waters', x: 1420, y: 800, r: 280, art: '/openwaters.jpg',
+    sea: ['#0e2836', '#234c60', '#5a8298'] as [string, string, string],
     kind: 'water', minLevel: 15,
   },
   {
     id: 'deep', name: 'The Deep', blurb: 'Long waits, real weight',
     href: '/fishing?zone=deep', x: 2180, y: 380, r: 300, art: '/deep.jpg',
+    sea: ['#0a1d2c', '#173a52', '#3f6480'] as [string, string, string],
     kind: 'water', minLevel: 30,
   },
   {
     id: 'abyss', name: 'The Abyss', blurb: 'Where the dark begins',
     href: '/fishing?zone=abyss', x: 2760, y: 1180, r: 320, art: '/abyss.jpg',
+    sea: ['#060f1a', '#0f2438', '#274257'] as [string, string, string],
     kind: 'water', minLevel: 50,
   },
   {
     id: 'ancient_deep', name: 'The Ancient Deep', blurb: 'Giants, and worse',
     href: '/fishing?zone=ancient_deep', x: 3520, y: 620, r: 340, art: '/ancient.jpg',
+    sea: ['#07101a', '#16202f', '#31363f'] as [string, string, string],
     kind: 'water', minLevel: 75,
   },
 ]
+
+/** The open sea, away from any named water. What everything blends back toward,
+ *  and the only invented palette on the chart. */
+export const OPEN_SEA: [string, string, string] = ['#0b1a24', '#1c3a48', '#4a6f7d']
 
 /** Where the boat starts, and where it returns to. Just off the Mainland shore,
  *  so the first thing you ever see is home on your left and open water ahead. */
