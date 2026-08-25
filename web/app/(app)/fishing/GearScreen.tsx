@@ -25,6 +25,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS, getSpecialItem, effectiveSpecialDef } from '@/lib/specialItems'
 import { PETS, getPet, getPetOverlay, PET_SPECIES_ORDER, PET_SPECIES_LABEL } from '@/lib/pets'
 import FisherPose from '@/components/FisherPose'
+import LoadoutStats from '@/components/LoadoutStats'
 
 type BaitItem = { bait_type: string; quantity: number }
 type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'badge' | 'skin' | 'hat' | 'boat' | 'pet'
@@ -769,6 +770,7 @@ export default function GearScreen({
   isPremium,
   showWaitTimer,
   onToggleShowWaitTimer,
+  showStats = true,
   onClose,
   autoOpenAppearance = false,
   onAppearanceAutoOpened,
@@ -847,6 +849,10 @@ export default function GearScreen({
   isPremium: boolean
   showWaitTimer: boolean
   onToggleShowWaitTimer: (next: boolean) => void
+  /** Hide the loadout-stats panel from the third tab. The Shipyard shows the
+   *  same panel up beside the boat, and two of them on one page is one too
+   *  many; the tab then holds preferences only and says so. */
+  showStats?: boolean
   onClose: () => void
   /** When true (e.g. arriving via a /fishing?gear=appearance deep link), open
    *  straight to the Appearance picker on mount. */
@@ -1060,7 +1066,7 @@ export default function GearScreen({
 
       {/* ── TABS ── one job per screen. */}
       <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 3 }}>
-        {([['loadout', 'Loadout'], ['shop', 'Shop'], ['stats', 'Stats']] as const).map(([key, label]) => {
+        {([['loadout', 'Loadout'], ['shop', 'Shop'], ['stats', showStats ? 'Stats' : 'Settings']] as const).map(([key, label]) => {
           const on = tab === key
           return (
             <button key={key} type="button" onClick={() => setTab(key)}
@@ -1344,57 +1350,15 @@ export default function GearScreen({
       )}
 
       {tab === 'stats' && (<>
-      {/* ── Loadout stats ── */}
-      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '0.9rem' }}>
-        <div style={{ marginBottom: 8 }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#c4a96a', letterSpacing: '0.04em' }}>
-            Loadout Stats
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(230,215,180,0.48)', fontStyle: 'italic', marginTop: 2 }}>
-            What your rig adds up to, piece by piece.
-          </p>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <StatCell
-            label="Catch Zone"
-            value={catchZoneBonus > 0 ? `+${catchZoneBonus}°` : '—'}
-            color="#60a5fa"
-            muted={catchZoneBonus === 0}
-          />
-          <StatCell
-            label="Bite Speed"
-            value={totalBiteEffect > 0 ? `+${totalBiteEffect}%` : totalBiteEffect < 0 ? `${totalBiteEffect}%` : '—'}
-            color={totalBiteEffect < 0 ? '#f87171' : '#4ade80'}
-            muted={totalBiteEffect === 0}
-          />
-          <StatCell
-            label="Reel Drag"
-            value={dragPct > 0 ? `${dragPct}%` : 'None'}
-            color={reel.color}
-            muted={dragPct === 0}
-          />
-          {zoneGoldenBoostPct > 0 && (
-            <StatCell
-              label="Golden Boost"
-              value={`+${zoneGoldenBoostPct}%`}
-              color="#f0c040"
-            />
-          )}
-          <StatCell
-            label="Snag Zone"
-            value={snagRedPct > 0 ? `−${snagRedPct}%` : 'Normal'}
-            color={line.color}
-            muted={snagRedPct === 0}
-          />
-        </div>
-        {specialBonuses.length > 0 && (
-          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {specialBonuses.map((b, i) => (
-              <Pill key={i} label={b.label} color={b.color} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ── Loadout stats ── shared with the Shipyard, which shows the same
+          five numbers. See components/LoadoutStats. */}
+      {showStats && <LoadoutStats
+        rodTier={rod.tier} reelTier={reelTier} hookTier={hookTier} lineTier={lineTier}
+        completionistEffects={completionistEffects}
+        selectedBait={selectedBait}
+        fishingLevel={fishingLevel}
+        zoneGoldenBoostPct={zoneGoldenBoostPct}
+      />}
 
       {/* ── Preferences ── single-row toggle for the cast→bite count-up
           shown in the waiting pill. Persists to profiles.show_wait_timer

@@ -30,9 +30,11 @@ The world is one transformed layer. `transform: scale(zoom) scaleY(GROUND) trans
   ACROSS rather than down at. Zones become ellipses; north-south distances foreshorten.
 - It is an **orthographic tilt, not perspective**. The plane never converges. That is
   deliberate: real perspective changes the scale under the boat as you sail, which breaks
-  every hit-test for a cue atmospheric haze gives free. It also means **there is no
-  geometric horizon** — the sky band is haze, and drawing a hard horizon line into it makes
-  a curtain the world visibly slides under.
+  every hit-test. It also means **there is no geometric horizon**.
+- **There is no sky.** A haze band with a cloud parallax was built and removed: on a plane
+  that never converges it read as weather rolling over the water rather than distance, and
+  no amount of tuning the dissolve fixed what the projection was saying. The chart is looked
+  at from above; it does not need a horizon to be one.
 - **`zoomFor(width)`** pulls the camera back on small screens (~0.5 on a phone, 1.0 at
   desktop). The chart was drawn at desktop scale; unzoomed, a phone saw a sixth of one zone
   with the boat taking half the width.
@@ -99,6 +101,45 @@ pixels of water on one heading is not a window.
 never argue over which prompt you get: you are moored, or you are fishing, never both. That
 gap is the harbour approach, and `HOME` sits in it at R=617 — close enough to go ashore from
 a standing start, a short sail short of the water.
+
+## The Shipyard (`/shipyard`)
+
+Its own island on the chart, north-east of the Mainland, and **the successor to the fishing
+page's Gear & Shop drawer**. Everything that drawer's Loadout and Stats tabs did happens
+here, on a page, with the boat above it.
+
+`GearScreen` is **mounted, not reimplemented**. It is 3,500 lines of pickers, buy flows,
+gating and the forge bench, all of it already correct; a second copy would be two copies of
+the fishing economy drifting apart. `ShipyardClient` holds the same set of `useState`s the
+fishing page holds and calls the same server actions. When `/fishing` retires, nothing goes
+with it.
+
+Page order, which is the order you would actually do it in:
+
+1. **The hero** — `FisherPose` at full width with glow ON, on a solid plate with a band of
+   water under the hull, and the rod, reel, hook and pet named beneath it. (The small
+   preview inside the gear grid keeps `noGlow`: it is a thumbnail, not the shot.)
+2. **Three cards: Rod Rack, Hull, Hold.** What makes this a shipyard rather than a wardrobe.
+   Each card is the whole upgrade — what you have, what is next, the price.
+3. **`LoadoutStats`** — extracted from GearScreen's Stats tab into `components/` so both
+   screens show the same five numbers from the same derivation. It takes TIERS, never
+   computed values, or the derivation is back in two places. The Shipyard passes
+   `showStats={false}` to GearScreen so the panel is not on the page twice; that tab then
+   holds preferences only and relabels itself Settings.
+4. **The rack**, then **the locker** (GearScreen itself).
+
+### The rack, and the hull
+
+- **Rods aboard** — `lib/shipyard.ts`. By default you carry ONE rod: the one in your hands.
+  Berths cost 40k / 140k / 450k and cap at four, because past four you are carrying most of
+  your collection again and the decision stops existing. At sea you can only swap to a rod
+  you brought.
+- **`HULL_SPEED` is a FRACTION OF TOP SPEED**, `[0.62, 0.74, 0.86, 1]`. It used to run
+  1.0 → 1.6, which made `SeaMap`'s `SPEED` the *slow* speed — the chart is tuned so a fully
+  refitted boat crosses it comfortably, and every player without the refit was sailing
+  faster than that tuning assumed. Inverted, 470 px/s is what a Clipper Hull does and a
+  stock hull makes 62% of it. Same spread, but the upgrade now buys back speed you can feel
+  the absence of.
 
 ## The compass
 

@@ -63,7 +63,7 @@ const ARRIVE = 26
  * rather than tightening toward the horizon, so nothing gets smaller with
  * distance. That is deliberate. Real perspective on a scrolling top-down chart
  * means the scale under the boat changes as you sail, which breaks every
- * hit-test on the map for a cue that atmospheric haze gives you for free.
+ * hit-test, and buys very little on a chart you read from directly above.
  */
 const GROUND = 0.58
 
@@ -216,21 +216,6 @@ function clearOfLand(w: Vec): Vec {
   return w
 }
 
-/** The cloud bank. Written down rather than random so the sky is the same sky
- *  every session, and spread wide because the layer is 60% wider than the
- *  screen to give the parallax somewhere to travel. Sizes are percentages of
- *  the sky band, so it thins out sensibly on a phone. */
-const CLOUDS = [
-  { x: 2,  y: 8,  w: 26, h: 34 },
-  { x: 15, y: 26, w: 18, h: 22 },
-  { x: 29, y: 4,  w: 21, h: 30 },
-  { x: 44, y: 22, w: 27, h: 26 },
-  { x: 58, y: 6,  w: 17, h: 26 },
-  { x: 69, y: 28, w: 24, h: 20 },
-  { x: 84, y: 10, w: 22, h: 32 },
-  { x: 95, y: 30, w: 16, h: 20 },
-]
-
 /** WHERE THE WATERLINE ACTUALLY IS, relative to the centre of the screen.
  *
  *  Measured off the art, not guessed at, and measured at the RIGHT ROW — the
@@ -313,7 +298,7 @@ export function inBand(p: Vec, place: Place): boolean {
 /** The blend, and the two things the rest of the frame needs out of it: the CSS
  *  for the backdrop, and how DARK that water is. The wash and the sky both read
  *  the darkness so the whole frame agrees about how deep you are. */
-type SeaLook = { css: string; lum: number; haze: string }
+type SeaLook = { css: string; lum: number }
 
 function seaAt(p: Vec, darkness = 0): SeaLook {
   // THE OPEN OCEAN GETS A SMALL VOTE, NOT A BIG ONE.
@@ -367,23 +352,15 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
   }
 
   // Perceived brightness of the DEEP stop, 0..1. Drives how much light the
-  // painted wash is allowed to add and how bright the horizon haze is.
+  // painted wash is allowed to add.
   // Divided by 55, not 120. The deep stops on this chart run from about 39 down
   // to 16, so a 120 divisor squashed every zone into the bottom quarter of the
   // range and the Abyss came out barely darker than the Shallows.
   const lum = Math.min(1, (out[0][0] * 0.21 + out[0][1] * 0.72 + out[0][2] * 0.07) / 55)
 
-  // THE HAZE the sky has to meet. It is this water, lifted toward white — so
-  // wherever the sea and the sky touch they are the same colour, which is the
-  // only thing that stops the join reading as a cut.
-  // Lifted toward white by an amount that itself depends on the depth, so the
-  // Abyss gets a low grey murk on the horizon and the Shallows get a bright one.
-  const lift = 0.28 + lum * 0.5
-  const h = out[2].map(v => Math.round(v + (232 - v) * lift))
 
   return {
     lum,
-    haze: `rgb(${h.join(',')})`,
     // Painted three ways from the same blend, and weighted DOWN toward the
     // deep end: the pale stop used to own the top 38% of the screen, which is
     // a lot of light to be showing in water that is meant to be black.
@@ -562,7 +539,6 @@ export default function SeaMap({
   const rippleRef = useRef<HTMLDivElement | null>(null)
 
   /** The cloud bank, which parallaxes at a fraction of the camera. */
-  const cloudRef = useRef<HTMLDivElement | null>(null)
   /** The sky, recoloured every frame to match the water under it. */
   const skyRef = useRef<HTMLDivElement | null>(null)
 
@@ -985,7 +961,6 @@ export default function SeaMap({
     // Last painted backdrop, so an unchanged one costs a string compare rather
     // than a repaint of the whole screen.
     let lastCss = ''
-    let lastHaze = ''
 
     const step = (now: number) => {
       if (dialUpRef.current) {
@@ -1170,15 +1145,6 @@ export default function SeaMap({
         }
       }
 
-      // PARALLAX. The clouds are miles off, so they slide at a twelfth of the
-      // camera and drift a little on their own besides. This one number is what
-      // turns a flat chart into something with a distance in it.
-      const clouds = cloudRef.current
-      if (clouds) {
-        clouds.style.transform =
-          `translate3d(${-pos.current.x * 0.085 - (now / 1000) * 3.2}px, ${-pos.current.y * 0.02}px, 0)`
-      }
-
       // Imperative writes. The whole reason this holds 60fps on a phone.
       const world = worldRef.current
       // scaleY LAST (CSS applies right to left), so the camera pan happens in
@@ -1223,28 +1189,6 @@ export default function SeaMap({
       if (wrap && look.css !== lastCss) {
         lastCss = look.css
         wrap.style.background = look.css
-      }
-      // THE SKY TAKES ITS COLOUR FROM THE WATER IT MEETS.
-      //
-      // This is the whole fix for the horizon reading as a cut. It was a fixed
-      // pale blue sitting on top of near-black water, so there was a hard value
-      // break across the join and sailing north looked like the sea and the sky
-      // chopping each other off. Now the bottom of the sky IS this water lifted
-      // toward white, so wherever they touch they are the same colour and the
-      // one dissolves into the other. Over the Abyss the horizon goes grey and
-      // low; over the Shallows it comes up bright.
-      const sky = skyRef.current
-      if (sky && look.haze !== lastHaze) {
-        // Same reasoning: the sky's gradient is built from this custom property,
-        // so writing it re-parses a second full-width gradient.
-        lastHaze = look.haze
-        sky.style.setProperty('--sea-haze', look.haze)
-        // Capped below full. At 1.0 over bright water the horizon read as a
-        // wall of white rather than distance.
-        // And the sky goes out with the water. At full dark it is a fifth of
-        // its daylight strength, which leaves a horizon rather than removing
-        // one — a night sea with no sky at all is just a black rectangle.
-        sky.style.opacity = String((0.32 + look.lum * 0.53) * (1 - dark * 0.8))
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
@@ -1498,19 +1442,6 @@ export default function SeaMap({
           }} />
         </div>
       )}
-
-      {/* THE HORIZON. Screen space, above the world so islands haze into it as
-          they sail toward the top, below the boat so nothing occludes the
-          captain. See globals.css for why it earns the one line on this page. */}
-      <div ref={skyRef} aria-hidden className="sea-sky">
-        <div ref={cloudRef} className="sea-clouds">
-          {CLOUDS.map((c, i) => (
-            <div key={i} className="sea-cloud" style={{
-              left: `${c.x}%`, top: `${c.y}%`, width: `${c.w}%`, height: `${c.h}%`,
-            }} />
-          ))}
-        </div>
-      </div>
 
       {/* The hull settling at anchor. Three rings out of phase so it reads as
           water moving rather than something blinking. Pushed down to the

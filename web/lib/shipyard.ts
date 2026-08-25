@@ -51,14 +51,26 @@ export function nextRackCost(tier: number): number | null {
  * Deliberately not tied to anything in the fishing loop. Bite speed is already
  * moved by the rod, the bait and your level, and a fourth multiplier on it
  * would make that maths impossible to reason about. This upgrade solves the
- * problem it looks like it solves: the Ancient Deep is twenty-seven seconds
- * from home at base speed, and that is a long time to hold a helm.
+ * problem it looks like it solves: the Ancient Deep is a long haul, and a long
+ * haul is a long time to hold a helm.
  */
 export const HULL_NAMES = ['Stock Hull', 'Trimmed Hull', 'Raked Hull', 'Clipper Hull'] as const
 export const HULL_COSTS = [0, 25_000, 90_000, 260_000] as const
-/** Multiplier on SPEED. Tops out at +60%, which turns that twenty-seven second
- *  haul into about seventeen. */
-export const HULL_SPEED = [1, 1.18, 1.36, 1.6] as const
+/**
+ * FRACTION OF TOP SPEED, not a multiplier on a base.
+ *
+ * These used to run 1.0 → 1.6, so a stock hull sailed at the map's `SPEED` and
+ * upgrades made you faster than it. That made the number in `SeaMap` the SLOW
+ * speed, which is the wrong thing for it to be: the chart was tuned so a fully
+ * refitted boat crosses it comfortably, and every player without the refit was
+ * sailing faster than any of that tuning assumed.
+ *
+ * Inverted, `SPEED` is now the TOP speed — what the Clipper Hull does — and a
+ * stock hull makes 62% of it. The spread is identical (top is 1.61× stock), but
+ * the upgrade now buys back speed you can feel the absence of rather than
+ * adding speed on top of an already-fast boat.
+ */
+export const HULL_SPEED = [0.62, 0.74, 0.86, 1] as const
 
 export const MAX_HULL_TIER = HULL_COSTS.length - 1
 
