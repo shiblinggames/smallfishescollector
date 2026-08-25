@@ -1530,14 +1530,6 @@ function Skipper({ characterColor, boatId, hatId, gear, frame }: {
  */
 /** Foam and weed sizes for the drift scatter. Hand-picked rather than random so
  *  a zone always looks the same, and varied enough that it never tiles. */
-const DRIFT = [
-  { w: 46, h: 9, a: 0.16, blur: 5 }, { w: 28, h: 6, a: 0.13, blur: 4 },
-  { w: 62, h: 11, a: 0.10, blur: 7 }, { w: 34, h: 7, a: 0.18, blur: 3 },
-  { w: 52, h: 8, a: 0.12, blur: 6 }, { w: 24, h: 5, a: 0.20, blur: 2 },
-  { w: 70, h: 12, a: 0.09, blur: 8 }, { w: 38, h: 7, a: 0.15, blur: 4 },
-  { w: 30, h: 6, a: 0.14, blur: 3 }, { w: 56, h: 10, a: 0.11, blur: 6 },
-]
-
 /** How far an island stands out of the water, in SCREEN pixels. Everything
  *  with height divides by GROUND to convert that into the squashed layer's own
  *  units, so the lift stays the same on screen however the plane is tilted. */
@@ -1565,24 +1557,30 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
   const bp = boat?.positions.rest
   const hp = hat?.positions.rest
   return (
+    /* NO loading="lazy" anywhere in here. The rod hangs outside its own
+       container by design (left: -12%) and the whole composite lives inside a
+       scaled, translated world layer — which is precisely the situation where
+       the intersection test that drives lazy loading gets the wrong answer and
+       simply never fetches the image. There are only ever a handful of these on
+       screen and they are small; eager is the right call. */
     <div style={{
       position: 'relative', width: 210,
       transform: 'translate(-8%, -26%)',
       filter: 'drop-shadow(0 10px 14px rgba(0,0,0,0.5))',
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={char.rest} alt="" draggable={false} loading="lazy"
+      <img src={char.rest} alt="" draggable={false}
         style={{ width: '100%', display: 'block' }} />
       {hat && hp && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={hat.restImageUrl} alt="" draggable={false} loading="lazy" style={{
+        <img src={hat.restImageUrl} alt="" draggable={false} style={{
           position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
           width: `${hp.width}%`, transform: `rotate(${hp.rotate}deg)`,
         }} />
       )}
       {boat && bp && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={boat.restImageUrl} alt="" draggable={false} loading="lazy" style={{
+        <img src={boat.restImageUrl} alt="" draggable={false} style={{
           position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
           width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
         }} />
@@ -1593,7 +1591,7 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
            same coordinates the player's rod uses, and NEVER a glowing one —
            see TraderLook for why. */
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/${look.rodSlug}_rest.png`} alt="" draggable={false} loading="lazy" style={{
+        <img src={`/${look.rodSlug}_rest.png`} alt="" draggable={false} style={{
           position: 'absolute', top: `${ROD_AT.rest.top}%`, left: `${ROD_AT.rest.left}%`,
           width: `${ROD_AT.rest.width}%`, maxWidth: 'none',
           transform: `rotate(${ROD_AT.rest.rotate}deg)`, transformOrigin: 'bottom right',
@@ -1627,13 +1625,23 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
       pointerEvents: 'none', zIndex: 2, willChange: 'transform',
     }}>
       {/* Contact shadow, ON the plane and therefore squashed with it. */}
+      {/* Same correction as the landmarks: a pale disturbance ON the
+          waterline rather than a dark shadow cast below it. */}
       <div aria-hidden style={{
-        position: 'absolute', left: -66, top: 6, width: 132, height: 46,
-        borderRadius: '50%', background: 'rgba(2,10,18,0.34)', filter: 'blur(7px)',
+        position: 'absolute', left: -70, top: -6, width: 140, height: 26,
+        borderRadius: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(206,232,242,0.26), rgba(206,232,242,0) 70%)',
+        filter: 'blur(5px)',
       }} />
-      <div style={{
-        // scaleX comes from the patrol now rather than a coin flip, so a trader
-        // always looks the way they are actually drifting. Written by the loop.
+      <div aria-hidden style={{
+        position: 'absolute', left: -30, top: 0, width: 60, height: 12,
+        borderRadius: '50%', background: 'rgba(4,14,22,0.3)', filter: 'blur(4px)',
+      }} />
+      <div className="trader-hull" style={{
+        // scaleX comes from the patrol rather than a coin flip, so a trader
+        // always looks the way they are actually drifting. Written by the loop,
+        // which finds this node by THIS CLASS — it was missing, so the lookup
+        // returned null every frame and every NPC stayed facing left for ever.
         transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78)`,
         // Someone you have already dealt with today is still there — they do
         // not vanish, because a person vanishing when you are done with them is
@@ -1654,7 +1662,8 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
           Out of range it is a small dot — they are there, they are a person,
           they are not shouting. In range it is a full mark and it bobs. */}
       <div aria-hidden style={{
-        position: 'absolute', left: 0, top: -86,
+        // Above the composite's top edge, which is at -125.
+        position: 'absolute', left: 0, top: -152,
         transform: `translateX(-50%) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
         pointerEvents: 'none',
@@ -1687,9 +1696,14 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
           labelling. House rule: anything written over art gets an opaque base
           under it. */}
       <div style={{
-        position: 'absolute', left: 0, top: -62,
+        // BELOW THE HULL, and clear of it. The composite is 210x187 scaled by
+        // 0.78 and then counter-squashed by 1/GROUND, which works out at 250px
+        // tall — it spans -125 to +125 from this origin. A plate at -62 was
+        // sitting squarely on the captain's head. Anchored by its TOP so the
+        // counter-squash grows it downward, away from the boat.
+        position: 'absolute', left: 0, top: 132,
         transform: `translateX(-50%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center',
+        transformOrigin: 'top center',
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
         padding: '3px 9px 4px', borderRadius: 9,
         background: 'rgba(6,12,18,0.86)',
@@ -1744,36 +1758,21 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
       pointerEvents: 'none',
     }}>
       {isWater ? (
-        /* NO SHAPE AT ALL. The water itself is already telling you where you
-           are — seaAt blends the whole background toward this zone's colour as
-           you approach, so the Shallows shade into open blue and open blue
+        /* NO SHAPE AT ALL, AND NO DRIFT EITHER.
+           seaAt already blends the whole background toward this zone's colour
+           as you approach, so the Shallows shade into open blue and open blue
            shades into the near-black of the Abyss the way a real shelf does.
-           Drawing anything with an edge on top of that would put back the
-           doorway the blend exists to remove.
+           Anything with an edge drawn on top of that puts back the doorway the
+           blend exists to remove.
 
-           What is left is DRIFT: a scatter of foam and weed, thicker toward the
-           middle, so open water still has something in it to read at speed.
-           Positions come off the id, so a zone's drift is its own and never
-           moves between renders. */
+           The DRIFT used to go here: a ring of pale foam scattered between 22%
+           and 88% of the radius. It was solving "open water has nothing in it
+           to read at speed", which was true when this was empty colour — but a
+           pale scatter arranged in a ring around a zone centre IS an outline,
+           and it was drawing the boundary the whole design is built to hide.
+           There are landmarks and traders out here now, so it is not needed and
+           it was never harmless. */
         <>
-          {DRIFT.map((f, i) => {
-            const seed = (place.id.charCodeAt(i % place.id.length) * (i + 7)) % 97
-            const ang = (seed / 97) * Math.PI * 2
-            const rad = (0.22 + ((seed % 11) / 11) * 0.66) * place.r
-            return (
-              <div key={i} aria-hidden style={{
-                position: 'absolute',
-                left: place.r + Math.cos(ang) * rad,
-                top: place.r + Math.sin(ang) * rad,
-                width: f.w, height: f.h,
-                marginLeft: -f.w / 2, marginTop: -f.h / 2,
-                borderRadius: '50%',
-                background: locked ? 'rgba(150,164,178,0.10)' : `rgba(214,232,238,${f.a})`,
-                filter: `blur(${f.blur}px)`,
-                transform: `rotate(${seed * 3.7}deg) scaleX(${1.4 + (seed % 5) * 0.5})`,
-              }} />
-            )
-          })}
           {/* ── WHAT BREAKS THE SURFACE ─────────────────────────────────
               Placed in world offsets from the zone centre and standing UP off
               the plane, counter-squashed like everything else with height. Each
@@ -1785,11 +1784,28 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
               position: 'absolute', left: place.r + m.x, top: place.r + m.y,
               pointerEvents: 'none',
             }}>
+              {/* WHERE IT MEETS THE WATER — not a shadow under it.
+                  A dark ellipse offset below an object is the language of a
+                  thing casting a shadow onto a floor, which is why these read
+                  as hovering. What actually happens at a waterline is the
+                  opposite: the surface goes PALE where it is disturbed, and
+                  darker only in the object's immediate contact ring.
+
+                  So it is a wide pale wash centred exactly ON the base, with a
+                  small dark contact directly beneath it and no offset at all —
+                  nothing is being cast anywhere. */}
               <div aria-hidden style={{
-                position: 'absolute', left: -m.size * 0.32, top: -m.size * 0.07,
-                width: m.size * 0.64, height: m.size * 0.2,
+                position: 'absolute', left: -m.size * 0.5, top: -m.size * 0.075,
+                width: m.size, height: m.size * 0.15,
                 borderRadius: '50%',
-                background: 'rgba(6,18,28,0.4)', filter: `blur(${Math.round(m.size * 0.035)}px)`,
+                background: 'radial-gradient(ellipse at center, rgba(206,232,242,0.30), rgba(206,232,242,0) 70%)',
+                filter: `blur(${Math.round(m.size * 0.03)}px)`,
+              }} />
+              <div aria-hidden style={{
+                position: 'absolute', left: -m.size * 0.19, top: -m.size * 0.026,
+                width: m.size * 0.38, height: m.size * 0.052,
+                borderRadius: '50%',
+                background: 'rgba(4,14,22,0.34)', filter: `blur(${Math.round(m.size * 0.018)}px)`,
               }} />
               {/* TWO WRAPPERS, because they carry different transforms. The
                   outer one stands the landmark up off the plane; the inner one
@@ -1811,7 +1827,11 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
                     animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
                     filter: locked
                       ? 'grayscale(0.85) brightness(0.55)'
-                      : 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
+                      // NO drop-shadow. A drop shadow offset downward is the
+                      // same lie in a different form: it says there is a
+                      // surface below this object catching light. There is not,
+                      // there is water, and the wash above is what says so.
+                      : undefined,
                   }} />
               </div>
             </div>
