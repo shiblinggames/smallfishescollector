@@ -32,16 +32,34 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { DialSVG } from '@/components/FishingDial'
 import { ResultCard } from '@/components/CatchResultCard'
 import { XPBarDisplay } from '@/components/FishingXPBar'
-import { buildFishZones, ZONE_DIFFICULTY, type ZoneDef } from '../fishing/depths'
-import { castLine, reelIn, type FishSpecies } from '../fishing/actions'
+import CrateOpening, { type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
+import { buildFishZones, ZONE_DIFFICULTY, FISH_DIFFICULTY_SPEED, type ZoneDef } from '../fishing/depths'
+import { castLine, reelIn, reelCrate, type FishSpecies } from '../fishing/actions'
 import { levelCatchBonus } from '@/lib/fishingLevel'
 import { vibrate } from '@/lib/haptics'
 import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
 import type { FishSizeTier } from '@/lib/fishSize'
 
-/** How fast the needle sweeps, degrees/sec. Matches the fishing screen's feel
- *  closely enough to be the same skill; it is not a different minigame. */
-const SWEEP = 210
+/**
+ * HOW FAST THE NEEDLE SWEEPS, and this was WRONG in a way that mattered.
+ *
+ * It was a flat 210 degrees a second for every fish and every reel. The fishing
+ * screen rolls it per bite from FISH_DIFFICULTY_SPEED — 120-185 for a common,
+ * 490-650 for the hardest — scaled by the equipped reel's own multiplier.
+ *
+ * So the map was making easy fish slightly HARDER than they should be and hard
+ * fish about three times EASIER, and your reel did nothing at all out here.
+ * That is not a presentation difference, it is a different game with the same
+ * arithmetic behind it, and it is the sort of gap somebody eventually notices
+ * is the cheapest place to farm legendaries.
+ *
+ * Rolled once per bite and held for the whole spin, exactly as the fishing
+ * screen does — a mid-spin change reads as a stutter.
+ */
+function rollSweep(catchDifficulty: number, reelMult: number): number {
+  const d = FISH_DIFFICULTY_SPEED[Math.max(0, Math.min(4, catchDifficulty - 1))]
+  return (d.speedMin + Math.random() * (d.speedMax - d.speedMin)) * reelMult
+}
 
 /** `reeling` is the beat that was missing. The dial used to vanish on the same
  *  tick as the tap, so the needle never visibly LANDED — you tapped and the
@@ -55,15 +73,35 @@ type Phase = 'idle' | 'waiting' | 'hooked' | 'reeling' | 'result'
 const HOLD_MS = 620
 const HOLD_PERFECT_MS = 900
 
-type Hooked = { fishId: number; catchDifficulty: number }
+/** EVERYTHING THE CAST ROLLED, carried through to the result.
+ *
+ *  castLine returns the jackpot multiplier, the double catch, the Locked-In
+ *  haul and the crate tier, and the map was dropping all of them on the floor.
+ *  The server still applied them — it rebinds every one of these off its own
+ *  pending_cast token and ignores whatever the client claims — so the player
+ *  was being PAID correctly and simply never told. */
+type Hooked = {
+  fishId: number
+  catchDifficulty: number
+  sweep: number
+  crateTier?: string
+  jackpotMult?: number
+  doubleCatch?: boolean
+  catchQty?: number
+  lockedStage?: number
+}
 
 /** Everything the shared ResultCard needs. `reelIn` already returns all of it —
  *  the map was throwing it away and printing a name and an XP number. */
 type Caught =
   | { kind: 'fish'; card: React.ComponentProps<typeof ResultCard> }
+  | { kind: 'crate'; tier: string; loot: CrateLootView }
   | { kind: 'miss'; result: 'miss' | 'penalty' }
 
 export type FishingMods = {
+  /** The equipped reel's needle-speed multiplier. Lower is slower is easier,
+   *  and leaving it out meant every reel tier was identical on the map. */
+  reelSpeedMult: number
   hookTier: number
   linePenalty: number
   rodCatchBonus: number
@@ -108,7 +146,13 @@ export default function FishingHere({
   const [burstKey, setBurstKey] = useState(0)
 
   const angleRef = useRef(0)
+  /** The speed rolled for THIS bite. In a ref so the rAF reads it without the
+   *  sweep effect being rebuilt when it changes. */
+  const sweepRef = useRef(210)
   const runningRef = useRef(false)
+  /** The Lightsaber's Lightspeed cue. The rod flashed the fish onto the line
+   *  and the map was saying nothing about it. */
+  const [instantBite, setInstantBite] = useState(false)
   // THREE overlapping timers, three refs. The cast splash, the pose flip and
   // the bite all run at once, and sharing a handle means the second assignment
   // orphans the first — which is how unmounting mid-cast could still fire a
@@ -143,7 +187,7 @@ export default function FishingHere({
       // silently swept a full revolution while nobody was looking.
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
-      angleRef.current = (angleRef.current + SWEEP * dt) % 360
+      angleRef.current = (angleRef.current + sweepRef.current * dt) % 360
       setAngle(angleRef.current)
       raf = requestAnimationFrame(step)
     }
@@ -161,6 +205,13 @@ export default function FishingHere({
     if (phase !== 'idle' || !spritesReady) return
     setErr('')
     setCaught(null)
+    // THE DIAL FLASHING AFTER REEL IN. `hooked` used to be cleared the instant
+    // the server answered, which emptied `zones` while the dial was still
+    // playing its 140ms exit — so every arc vanished a frame before the dial
+    // did and the whole instrument appeared to blink. It is cleared HERE
+    // instead, at the start of the next cast, by which point nothing is
+    // looking at it.
+    setHooked(null)
     setPhase('waiting')
     vibrate(12)
     // The first Cast is the user gesture the AudioContext needs, so the unlock
@@ -193,10 +244,26 @@ export default function FishingHere({
       timerRef.current = setTimeout(() => {
         angleRef.current = 0
         setAngle(0)
-        setHooked({ fishId: res.fishId, catchDifficulty: res.catchDifficulty })
+        sweepRef.current = rollSweep(res.catchDifficulty, mods.reelSpeedMult)
+        setHooked({
+          fishId: res.fishId,
+          catchDifficulty: res.catchDifficulty,
+          sweep: sweepRef.current,
+          crateTier: res.crateTier,
+          jackpotMult: res.jackpotMult,
+          doubleCatch: res.doubleCatch,
+          catchQty: res.catchQty,
+          lockedStage: res.lockedStage,
+        })
         setPhase('hooked')
         vibrate([0, 26, 40, 18])
       }, wait)
+      // Lightsaber Lightspeed cue, fired at the CAST rather than the bite —
+      // the whole point of it is that the wait did not happen.
+      if (res.instantBite) {
+        setInstantBite(true)
+        setTimeout(() => setInstantBite(false), 1100)
+      }
     }).catch((e: unknown) => {
       // NO CATCH HERE MEANT NOTHING EVER HAPPENED. A server action that rejects
       // rather than returning { error } skipped the whole .then, so the line
@@ -206,7 +273,7 @@ export default function FishingHere({
       setPhase('idle')
       onPose('rest')
     })
-  }, [phase, spritesReady, bait, zone, onBaitSpent, onPose])
+  }, [phase, spritesReady, bait, zone, mods.reelSpeedMult, onBaitSpent, onPose])
 
   const strike = useCallback(() => {
     if (phase !== 'hooked' || !hooked) return
@@ -237,6 +304,34 @@ export default function FishingHere({
     // stopped is exactly the "no response" the reel had.
     const held = new Promise<void>(r => setTimeout(r, perfect ? HOLD_PERFECT_MS : HOLD_MS))
 
+    // ── A CRATE IS NOT A FISH, and the map was destroying them ──────────
+    //
+    // castLine can hand back a CRATE instead of a fish, and a crate has to be
+    // reeled with reelCrate. Passing one to reelIn does not fail loudly: reelIn
+    // sees CRATE_FISH_ID on its own pending_cast token, returns { caught:
+    // false } — and the token is ALREADY consumed by the atomic claim above
+    // that line. So the crate was spent, nothing was granted, and the player
+    // was shown "it got away". Every crate anyone pulled up on this map was
+    // quietly thrown overboard.
+    if (hooked.crateTier) {
+      const tier = hooked.crateTier as CrateTierId
+      const isCatch = result === 'perfect' || result === 'catch'
+      if (!isCatch) {
+        held.then(() => { setCaught({ kind: 'miss', result: result === 'penalty' ? 'penalty' : 'miss' }); setPhase('result') })
+        return
+      }
+      reelCrate(zone, tier, result as 'perfect' | 'catch').then(async loot => {
+        await held
+        if ('error' in loot) { setErr(loot.error); setPhase('idle'); return }
+        setCaught({ kind: 'crate', tier, loot })
+        setPhase('result')
+      }).catch(() => {
+        setErr('The crate slipped the line.')
+        setPhase('idle')
+      })
+      return
+    }
+
     reelIn(hooked.fishId, result, bait).then(async res => {
       await held
       if ('error' in res) { setErr(res.error); setPhase('idle'); setHooked(null); return }
@@ -252,7 +347,12 @@ export default function FishingHere({
             isNewSpecies: res.isNewSpecies,
             isPerfect: perfect,
             xpGained: res.xpGained,
-            doubleCatch: false,
+            // FROM THE CAST, not invented. All three were hard-coded to
+            // nothing, so a jackpot or a double catch paid out silently and
+            // the card said you had landed one ordinary fish.
+            doubleCatch: hooked.doubleCatch ?? false,
+            jackpotMultiplier: hooked.jackpotMult,
+            lockedStage: hooked.lockedStage ?? 0,
             perfectStreak: res.perfectStreak ?? 1,
             streakBonusXP: res.streakBonusXP ?? 0,
             catchQty: res.catchQty ?? 1,
@@ -270,14 +370,12 @@ export default function FishingHere({
         setCaught({ kind: 'miss', result: result === 'penalty' ? 'penalty' : 'miss' })
       }
       setPhase('result')
-      setHooked(null)
     }).catch(async (e: unknown) => {
       await held
       setErr(e instanceof Error ? e.message : 'Lost the fish on the way in.')
-      setHooked(null)
       setPhase('idle')
     })
-  }, [phase, hooked, zones, bait, onPose])
+  }, [phase, hooked, zones, bait, zone, onPose])
 
   /** `castAgain` needs the current `cast`, but `cast` is declared above it and
    *  is rebuilt whenever phase changes. Mirroring it to a ref keeps them in
@@ -309,6 +407,33 @@ export default function FishingHere({
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', pointerEvents: 'none',
       }}>
+
+      {/* LIGHTSPEED. The Lightsaber and its kin roll an instant bite, and the
+          whole experience of that effect is the wait NOT happening — which is
+          invisible unless something says so. Lifted from the fishing screen,
+          same red bolt, same 1100ms. */}
+      <AnimatePresence>
+        {instantBite && (
+          <motion.div key="instant-bite"
+            initial={{ opacity: 0, scale: 0.7, x: '-50%' }}
+            animate={{ opacity: 1, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+            style={{
+              position: 'absolute', top: 60, left: '50%', zIndex: 30, pointerEvents: 'none',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '0.32rem 0.72rem', borderRadius: 999,
+              background: 'linear-gradient(180deg, rgba(255,59,71,0.32) 0%, rgba(224,0,34,0.18) 100%)',
+              border: '1px solid rgba(255,90,100,0.7)',
+              boxShadow: '0 0 18px rgba(255,40,60,0.5), inset 0 0 8px rgba(255,255,255,0.22)',
+            }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden style={{ filter: 'drop-shadow(0 0 4px #ff3344)' }}>
+              <path d="M13 2L3 14h7l-1 8 11-13h-7z" />
+            </svg>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#fff', textShadow: '0 0 8px rgba(255,60,70,0.85)' }}>Instant Bite</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── THE BAR, along the top ────────────────────────────────────────
           The fishing screen's own component, not a copy of it. Casting on the
@@ -369,7 +494,24 @@ export default function FishingHere({
               // genuinely wants a vertical drag, so it takes that back.
               touchAction: 'pan-y',
             }}>
-              {caught.kind === 'fish' ? (
+              {caught.kind === 'crate' ? (
+                /* THE crate moment, the shared one. components/CrateOpening is
+                   deliberately the only implementation of this in the app and
+                   the map is not going to become the second. It opens itself
+                   here rather than borrowing the action slot, because out on
+                   the water that slot has a boat to steer back to. */
+                <div style={{
+                  borderRadius: 20, padding: '1.15rem 1.25rem 1.05rem', textAlign: 'center',
+                  background: 'rgba(6,14,22,0.96)', border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  <CrateOpening
+                    tier={caught.tier as CrateTierId}
+                    loot={caught.loot}
+                    headline="You reeled up a"
+                    autoOpenMs={700}
+                  />
+                </div>
+              ) : caught.kind === 'fish' ? (
                 /* THE SAME CARD. Not a summary of it — the component the
                    fishing screen renders, handed the same payload. See
                    components/CatchResultCard for why it left FishingGame. */

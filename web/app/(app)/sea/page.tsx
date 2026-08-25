@@ -84,6 +84,9 @@ export default async function SeaPage() {
       baitQty={best?.quantity ?? 0}
       dealtToday={dealt}
       mods={{
+        // The reel's needle-speed multiplier. Without it every reel tier was
+        // identical out here and the dial ran at a flat speed for every fish.
+        reelSpeedMult: getReel(Number(profile?.reel_tier ?? 0)).needleSpeedMultiplier,
         hookTier: Number(profile?.hook_tier ?? 0),
         linePenalty: line.penaltyMultiplier,
         rodCatchBonus: rod.catchZoneBonus ?? 0,
