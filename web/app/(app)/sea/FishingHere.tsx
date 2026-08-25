@@ -31,6 +31,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DialSVG } from '@/components/FishingDial'
 import { ResultCard } from '@/components/CatchResultCard'
+import { XPBarDisplay } from '@/components/FishingXPBar'
 import { buildFishZones, ZONE_DIFFICULTY, type ZoneDef } from '../fishing/depths'
 import { castLine, reelIn, type FishSpecies } from '../fishing/actions'
 import { levelCatchBonus } from '@/lib/fishingLevel'
@@ -71,7 +72,7 @@ export type FishingMods = {
 }
 
 export default function FishingHere({
-  zone, zoneName, bait, baitBonus, baitLeft, mods, onBaitSpent, onPose, spritesReady, onClose,
+  zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, onBaitSpent, onPose, spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -83,6 +84,9 @@ export default function FishingHere({
   /** Which pose the captain should be in. The game already draws three — rod
    *  up, mid-cast, line in the water — so the map plays those rather than
    *  inventing a fourth. */
+  /** For the level bar along the top. The map casts into the same XP pool, so
+   *  it shows the same bar. */
+  fishingXP: number
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
   /** False until every frame of the loadout has been fetched AND decoded. The
    *  cast waits on it, because the pose swaps four images at once and an
@@ -275,7 +279,22 @@ export default function FishingHere({
     })
   }, [phase, hooked, zones, bait, onPose])
 
-  const dismiss = useCallback(() => { setCaught(null); setPhase('idle') }, [])
+  /** `castAgain` needs the current `cast`, but `cast` is declared above it and
+   *  is rebuilt whenever phase changes. Mirroring it to a ref keeps them in
+   *  step without either depending on the other. */
+  const castRef = useRef<(() => void) | null>(null)
+  castRef.current = cast
+
+  /** Cast straight out of the result, exactly as the fishing screen does: the
+   *  card stays in the content area and the action slot goes back to Cast, so
+   *  there is never a separate dismiss step to hunt for. */
+  const castAgain = useCallback(() => {
+    setCaught(null)
+    setPhase('idle')
+    // `cast` reads phase from its closure, so it cannot be called in the same
+    // tick as the setState that unblocks it. A microtask is after the commit.
+    queueMicrotask(() => castRef.current?.())
+  }, [])
 
   return (
     <div
@@ -286,144 +305,90 @@ export default function FishingHere({
          here is ever a steering tap. */
       onClick={e => e.stopPropagation()}
       style={{
-      position: 'absolute', inset: 0, zIndex: 20,
-      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-      alignItems: 'center', paddingBottom: 26, pointerEvents: 'none',
-    }}>
-      {/* THE DIAL AND ITS BUTTON, exactly as the fishing screen has them.
-          The dial reads, the BUTTON acts — I had made the dial itself the tap
-          target, which is a different instrument to the one every player has
-          already learned. Both are lifted from FishingGame: the same 88px
-          circle, the same gold, the same chunky press, the same ripples. */}
-      <AnimatePresence>
-        {(phase === 'hooked' || phase === 'reeling') && (
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
-            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-            style={{ pointerEvents: 'none', marginBottom: 12, width: 260 }}>
-            <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1}
-              snapKey={snapKey} perfectBurstKey={burstKey} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+        position: 'absolute', inset: 0, zIndex: 20,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', pointerEvents: 'none',
+      }}>
 
-      <AnimatePresence mode="wait">
+      {/* ── THE BAR, along the top ────────────────────────────────────────
+          The fishing screen's own component, not a copy of it. Casting on the
+          map without it meant the XP went somewhere invisible, and the map's
+          fishing stopped reading as the same activity as the fishing screen's. */}
+      <div style={{
+        pointerEvents: 'auto', width: '100%', maxWidth: 440,
+        padding: '0.5rem 0.75rem 0', flexShrink: 0,
+      }}>
+        <XPBarDisplay xp={fishingXP} />
+      </div>
+
+      {/* ── CONTENT ───────────────────────────────────────────────────────
+          Dial, result card or the wait, all in one flexible area that grows and
+          shrinks around whatever is in it. The action row below is a fixed slot
+          and never moves, which is the entire point of splitting them. */}
+      <div style={{
+        flex: 1, minHeight: 0, width: '100%',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'flex-end',
+        padding: '0 0.75rem', gap: 10,
+      }}>
+        <AnimatePresence>
+          {(phase === 'hooked' || phase === 'reeling') && (
+            <motion.div key="dial"
+              initial={{ opacity: 0, y: 30, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+              transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+              /* SAME SIZE AS THE FISHING SCREEN. DialSVG is width:100% capped
+                 at 300 and has to be given the room to reach that cap — I had
+                 it in a 260px box, which quietly made the map's dial a
+                 different instrument to the one every player has learned. */
+              style={{ pointerEvents: 'none', width: '100%', maxWidth: 300 }}>
+              <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1}
+                snapKey={snapKey} perfectBurstKey={burstKey} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {phase === 'result' && caught && (
-          <motion.div key="result" onClick={e => e.stopPropagation()}
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+          <motion.div key="result"
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              pointerEvents: 'auto', width: '100%', maxWidth: 380,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-            }}>
-            {/* The card is tall — new species, a PB and a streak all stack rows
-                onto it — and this overlay is anchored to the bottom of the sea,
-                not to a page that scrolls. Cap it and let the card scroll inside
-                itself, so Cast Again never ends up off the top of the screen. */}
+            style={{ pointerEvents: 'auto', width: '100%', maxWidth: 380, minHeight: 0 }}>
             <div data-no-steer style={{
-              width: '100%', maxHeight: '58vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              width: '100%', maxHeight: '52vh', overflowY: 'auto', overscrollBehavior: 'contain',
               // The map sets touch-action: none so a drag steers instead of
               // scrolling the page. This card is the one thing inside it that
               // genuinely wants a vertical drag, so it takes that back.
               touchAction: 'pan-y',
             }}>
-            {caught.kind === 'fish' ? (
-              /* THE SAME CARD. Not a summary of it — the component the fishing
-                 screen renders, handed the same payload. See
-                 components/CatchResultCard for why it moved out of FishingGame. */
-              <ResultCard {...caught.card} />
-            ) : (
-              <div style={{
-                width: '100%', borderRadius: 16, padding: '1rem 1.15rem', textAlign: 'center',
-                background: 'rgba(8,16,24,0.94)',
-                border: '1px solid rgba(180,214,232,0.28)',
-              }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#d9b7b7' }}>
-                  {caught.result === 'penalty' ? 'Snagged' : 'It got away'}
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.8rem', color: '#9fb4c2', marginTop: 6 }}>
-                  {caught.result === 'penalty'
-                    ? 'The line fouled and took a bait with it.'
-                    : 'The line went slack. Cast again.'}
-                </p>
-              </div>
-            )}
+              {caught.kind === 'fish' ? (
+                /* THE SAME CARD. Not a summary of it — the component the
+                   fishing screen renders, handed the same payload. See
+                   components/CatchResultCard for why it left FishingGame. */
+                <ResultCard {...caught.card} />
+              ) : (
+                <div style={{
+                  width: '100%', borderRadius: 16, padding: '1rem 1.15rem', textAlign: 'center',
+                  background: 'rgba(8,16,24,0.94)',
+                  border: '1px solid rgba(180,214,232,0.28)',
+                }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#d9b7b7' }}>
+                    {caught.result === 'penalty' ? 'Snagged' : 'It got away'}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.8rem', color: '#9fb4c2', marginTop: 6 }}>
+                    {caught.result === 'penalty'
+                      ? 'The line fouled and took a bait with it.'
+                      : 'The line went slack. Cast again.'}
+                  </p>
+                </div>
+              )}
             </div>
-            <button onClick={e => { e.stopPropagation(); dismiss() }}
-              className="font-cinzel font-700"
-              style={{
-                cursor: 'pointer', padding: '0.7rem 1.6rem', borderRadius: 12,
-                fontSize: '0.88rem', color: '#f2ead8',
-                background: 'rgba(10,20,28,0.9)',
-                border: '1px solid rgba(180,214,232,0.45)',
-                boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
-              }}>
-              Cast Again
-            </button>
           </motion.div>
-        )}
-
-        {phase === 'idle' && (
-          <motion.div key="idle" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            {err && <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{err}</p>}
-            <motion.button
-              onPointerDown={e => { e.preventDefault(); e.stopPropagation(); cast() }}
-              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-              style={{
-                width: 88, height: 88, borderRadius: '50%',
-                background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
-                border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
-                fontSize: '0.72rem', touchAction: 'manipulation',
-                color: spritesReady ? '#67d4e8' : 'rgba(103,212,232,0.45)',
-                boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
-              }}
-              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
-              whileTap={spritesReady ? { scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' } : undefined}
-              transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
-              {/* Only ever seen on a cold load: the frames are fetched the
-                  moment the map mounts, and you have to sail to a zone before
-                  this button exists at all. */}
-              {spritesReady ? 'Cast' : 'Rigging'}
-            </motion.button>
-            <button onClick={e => { e.stopPropagation(); onClose() }}
-              className="font-karla font-700"
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '0.72rem', color: 'rgba(190,212,228,0.8)',
-                textShadow: '0 1px 8px rgba(0,0,0,0.9)',
-                borderBottom: '1px solid rgba(190,212,228,0.32)', paddingBottom: 1,
-              }}>
-              Stow rod · {zoneName} · {baitLeft} bait
-            </button>
-          </motion.div>
-        )}
-
-        {phase === 'hooked' && (
-          <motion.button key="reel"
-            onPointerDown={e => { e.preventDefault(); e.stopPropagation(); strike() }}
-            className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-            style={{
-              pointerEvents: 'auto',
-              width: 88, height: 88, borderRadius: '50%',
-              background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
-              border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
-              fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
-              boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
-            }}
-            initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
-            whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-            transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
-            Reel In
-          </motion.button>
         )}
 
         {phase === 'waiting' && (
           <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingBottom: 10 }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             {/* Three dots breathing out of phase. The wait is three to twelve
                 seconds and the only feedback used to be six small words, which
                 is indistinguishable from a hang. Something has to be moving. */}
@@ -443,7 +408,82 @@ export default function FishingHere({
             </p>
           </motion.div>
         )}
-      </AnimatePresence>
+
+        {err && (
+          <p className="font-karla font-600" style={{
+            fontSize: '0.78rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+          }}>{err}</p>
+        )}
+      </div>
+
+      {/* ── THE ACTION SLOT — the same position in every phase ─────────────
+          88px square, always, whatever is in it. The fishing screen holds this
+          rule and states why: the button must not move between phases or your
+          thumb goes looking for it mid-reel. No AnimatePresence around it
+          either, for the reason FishingGame dropped one — a mode="wait" that
+          gets stuck leaves the slot EMPTY, which is the recurring "there is no
+          cast button" report. Plain conditionals always render something. */}
+      <div style={{
+        flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 8, paddingTop: 8, paddingBottom: 22, pointerEvents: 'auto',
+      }}>
+        <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {(phase === 'idle' || phase === 'result') && (
+            <motion.button key="cast"
+              onPointerDown={e => { e.preventDefault(); if (phase === 'result') castAgain(); else cast() }}
+              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+              style={{
+                width: 88, height: 88, borderRadius: '50%',
+                background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
+                border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
+                fontSize: '0.72rem', touchAction: 'manipulation', lineHeight: 1.15,
+                color: spritesReady ? '#67d4e8' : 'rgba(103,212,232,0.45)',
+                boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+              }}
+              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+              whileTap={spritesReady ? { scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' } : undefined}
+              transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
+              {/* "Rigging" is only ever seen on a cold load: the frames are
+                  fetched the moment the map mounts, and you have to sail to a
+                  zone before this button exists at all. */}
+              {!spritesReady ? 'Rigging' : phase === 'result' ? <>Cast<br />Again</> : 'Cast'}
+            </motion.button>
+          )}
+          {phase === 'hooked' && (
+            <motion.button key="reel"
+              onPointerDown={e => { e.preventDefault(); strike() }}
+              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+              style={{
+                width: 88, height: 88, borderRadius: '50%',
+                background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
+                border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+                fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+                boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+              }}
+              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+              whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+              transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
+              Reel In
+            </motion.button>
+          )}
+          {(phase === 'waiting' || phase === 'reeling') && (
+            // The slot holds itself open rather than collapsing — the same
+            // ellipsis the fishing screen shows while a reel resolves.
+            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(190,212,228,0.5)' }}>…</p>
+          )}
+        </div>
+
+        <button onClick={e => { e.stopPropagation(); onClose() }}
+          className="font-karla font-700"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: '0.72rem', color: 'rgba(190,212,228,0.8)',
+            textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+            borderBottom: '1px solid rgba(190,212,228,0.32)', paddingBottom: 1,
+          }}>
+          Stow rod · {zoneName} · {baitLeft} bait
+        </button>
+      </div>
     </div>
   )
 }

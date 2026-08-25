@@ -41,18 +41,40 @@ const ACCEL = 2.6
 const SLOW = 240
 const ARRIVE = 26
 
-/** WHERE THE WATERLINE ACTUALLY IS, in pixels below the centre of the screen.
+/** The cloud bank. Written down rather than random so the sky is the same sky
+ *  every session, and spread wide because the layer is 60% wider than the
+ *  screen to give the parallax somewhere to travel. Sizes are percentages of
+ *  the sky band, so it thins out sensibly on a phone. */
+const CLOUDS = [
+  { x: 2,  y: 8,  w: 26, h: 34 },
+  { x: 15, y: 26, w: 18, h: 22 },
+  { x: 29, y: 4,  w: 21, h: 30 },
+  { x: 44, y: 22, w: 27, h: 26 },
+  { x: 58, y: 6,  w: 17, h: 26 },
+  { x: 69, y: 28, w: 24, h: 20 },
+  { x: 84, y: 10, w: 22, h: 32 },
+  { x: 95, y: 30, w: 16, h: 20 },
+]
+
+/** WHERE THE WATERLINE ACTUALLY IS, relative to the centre of the screen.
  *
- *  Not a taste value — measured. The composite is 210px wide and the character
- *  sheet is 900x800, so it renders 186.7px tall; the boat overlay sits at
- *  top 77%, width 55%, on art that is 493x146, which puts the hull between
- *  y=143.7 and y=177.9 in composite space. The box is centred on the screen and
- *  then shifted up 26% (48.5px) by Skipper, so the hull's waterline lands about
- *  24px BELOW screen centre.
+ *  Measured off the art, not guessed at, and measured at the RIGHT ROW — the
+ *  first version took the hull's mid-height and put the rings through the
+ *  middle of the boat, which is why they read as sitting off to one side: the
+ *  hull is not symmetric about its middle, so a ring at the wrong height looks
+ *  like a ring at the wrong place.
  *
- *  The wake and the ripples were being drawn at screen centre, which is the
- *  middle of the character's chest. Hence rings floating above the boat. */
-const WATERLINE_Y = 24
+ *  The numbers: the composite is 210px wide and the 900x800 character sheet
+ *  renders 186.7px tall. The hull overlay sits at top 77%, width 55%, on art
+ *  that is 493x146, so it renders 115.5 x 34.2 and its bottom edge lands at
+ *  y=177.9 in composite space. Along that bottom row the opaque hull spans art
+ *  x 80..394, centring it at composite x=120.6 — LEFT of the box centre, not
+ *  right. Skipper then shifts the whole composite by (-8%, -26%).
+ *
+ *  Which puts the point where this boat actually touches water at 1px left of
+ *  centre and 34px below it. */
+const WATERLINE_X = -1
+const WATERLINE_Y = 34
 
 /** Marks in the wake. Enough to trail a couple of seconds at speed; more just
  *  costs nodes nobody can see. */
@@ -271,6 +293,9 @@ export default function SeaMap({
   /** The at-anchor ripples, dimmed as you get under way — a boat making six
    *  knots is not sitting in its own rings. */
   const rippleRef = useRef<HTMLDivElement | null>(null)
+
+  /** The cloud bank, which parallaxes at a fraction of the camera. */
+  const cloudRef = useRef<HTMLDivElement | null>(null)
 
   /** THE WATER ITSELF. Drawn, not stacked out of CSS gradients — see drawSea. */
   const seaCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -534,7 +559,7 @@ export default function SeaMap({
         const i = wakeNext.current
         wakeNext.current = (i + 1) % WAKE_MARKS
         wakeAt.current[i] = {
-          x: pos.current.x - (vel.current.x / speed) * 46,
+          x: pos.current.x - (vel.current.x / speed) * 46 + WATERLINE_X,
           y: pos.current.y - (vel.current.y / speed) * 46 + WATERLINE_Y,
           born: now,
         }
@@ -552,6 +577,15 @@ export default function SeaMap({
       }
       const ripples = rippleRef.current
       if (ripples) ripples.style.opacity = String(Math.max(0, 1 - speed / 190))
+
+      // PARALLAX. The clouds are miles off, so they slide at a twelfth of the
+      // camera and drift a little on their own besides. This one number is what
+      // turns a flat chart into something with a distance in it.
+      const clouds = cloudRef.current
+      if (clouds) {
+        clouds.style.transform =
+          `translate3d(${-pos.current.x * 0.085 - (now / 1000) * 3.2}px, ${-pos.current.y * 0.02}px, 0)`
+      }
 
       // Imperative writes. The whole reason this holds 60fps on a phone.
       const world = worldRef.current
@@ -640,13 +674,27 @@ export default function SeaMap({
         ))}
       </div>
 
+      {/* THE HORIZON. Screen space, above the world so islands haze into it as
+          they sail toward the top, below the boat so nothing occludes the
+          captain. See globals.css for why it earns the one line on this page. */}
+      <div aria-hidden className="sea-sky">
+        <div ref={cloudRef} className="sea-clouds">
+          {CLOUDS.map((c, i) => (
+            <div key={i} className="sea-cloud" style={{
+              left: `${c.x}%`, top: `${c.y}%`, width: `${c.w}%`, height: `${c.h}%`,
+            }} />
+          ))}
+        </div>
+        <div className="sea-horizon" />
+      </div>
+
       {/* The hull settling at anchor. Three rings out of phase so it reads as
           water moving rather than something blinking. Pushed down to the
           WATERLINE: at plain screen centre these sat around the captain's
           chest, which is where they were floating above the boat. */}
       <div ref={rippleRef} aria-hidden style={{
         position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
-        transform: `translateY(${WATERLINE_Y}px)`,
+        transform: `translate(${WATERLINE_X}px, ${WATERLINE_Y}px)`,
       }}>
         <div className="sea-ripple" />
         <div className="sea-ripple" style={{ animationDelay: '1.5s' }} />
@@ -695,6 +743,7 @@ export default function SeaMap({
           baitLeft={baitLeft}
           mods={mods}
           onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
+          fishingXP={fishingXP}
           onPose={setFrame}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest') }}
