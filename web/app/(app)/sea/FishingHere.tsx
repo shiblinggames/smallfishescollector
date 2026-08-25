@@ -29,7 +29,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DialSVG, CX, CY } from '@/components/FishingDial'
+import { DialSVG } from '@/components/FishingDial'
 import { buildFishZones, ZONE_DIFFICULTY, type ZoneDef } from '../fishing/depths'
 import { castLine, reelIn } from '../fishing/actions'
 import { levelCatchBonus } from '@/lib/fishingLevel'
@@ -210,9 +210,14 @@ export default function FishingHere({
               pointerEvents: 'auto', cursor: 'pointer', marginBottom: 14,
               filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.6))',
             }}>
-            <svg width={CX * 2} height={CY * 2} viewBox={`0 0 ${CX * 2} ${CY * 2}`}>
+            {/* DIRECTLY. DialSVG returns a <div>, not an <svg> — it owns its own
+                markup and its own needle layer. Wrapping it in an <svg> put HTML
+                inside SVG, which needs a foreignObject to be legal, so the
+                browser silently rendered NOTHING. That is why the dial never
+                appeared: it was mounting perfectly and drawing into a void. */}
+            <div style={{ width: 260 }}>
               <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1} />
-            </svg>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

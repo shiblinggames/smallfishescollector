@@ -412,8 +412,12 @@ function dist(a: Vec, p: { x: number; y: number }): number {
  * open water.
  */
 export type Gear = {
-  /** Null on the low tiers — those rods are drawn into the character sprite
-   *  itself and have no overlay of their own, which is not a missing file. */
+  /** A slug rod has three per-frame sprites at `/${slug}_${frame}.png`. Every
+   *  high tier is one of these. */
+  rodSlug: string | null
+  /** A single-image rod, reused across frames. Null on the low tiers, whose
+   *  rods are painted into the character sprite and have no overlay at all —
+   *  that null is correct rather than missing. */
   rod: string | null
   rodGlow: string | null
   rodColor: string | null
@@ -496,9 +500,9 @@ function Skipper({ characterColor, boatId, hatId, gear, frame }: {
             transformOrigin: 'center center',
           }} />
       )}
-      {gear.rod && (
+      {(gear.rodSlug || gear.rod) && (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={gear.rod} alt="" draggable={false}
+        <img src={gear.rodSlug ? `/${gear.rodSlug}_${frame}.png` : (gear.rod as string)} alt="" draggable={false}
           className={gear.rodGlow ? rodGlowClass({ glow: true, glowType: gear.rodGlow } as never) : undefined}
           style={{
             position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,

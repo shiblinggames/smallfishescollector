@@ -60,6 +60,12 @@ export default async function SeaPage() {
       // what you actually own — the same rod, reel and hook the fishing screen
       // draws, at the same overlay coordinates.
       gear={{
+        // RODS COME IN TWO FLAVOURS and I only handled one, which is why the
+        // Lightsaber never appeared. A `slug` rod has three per-frame files
+        // (rod_lightsaber_rest/wait/cast.png); an `imageUrl` rod has a single
+        // image reused across frames. Every high tier is a slug rod, so the
+        // players most likely to notice were the only ones seeing nothing.
+        rodSlug: rod.slug ?? null,
         rod: rod.imageUrl ?? null,
         rodGlow: rod.glow ? (rod.glowType ?? 'default') : null,
         rodColor: rod.color ?? null,
