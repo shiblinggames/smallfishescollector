@@ -104,19 +104,70 @@ function zoomFor(width: number): number {
  */
 const SHORE = 0.72
 
-/** Nudge a point out to the shoreline if it has been asked for inside an
- *  island. The helm should not be able to ORDER a course into rock, which is
+/**
+ * A TAP IS A HEADING, NOT A DESTINATION.
+ *
+ * It used to course to the exact point you touched, and out here that is the
+ * wrong instrument. On a phone the visible sea is a few hundred world pixels
+ * across and the zones are thousands, so tapping "over there" meant sailing a
+ * short hop and stopping, then tapping again, and again — the boat kept
+ * arriving at places you had not asked to arrive at.
+ *
+ * So the point you tap gives a DIRECTION, and the course is thrown far enough
+ * along it that you keep sailing until you say otherwise. Re-aim by tapping
+ * again, stop by tapping your own boat.
+ *
+ * Two things stay exact, because for them the arrival IS the point: a port,
+ * which you pull alongside, and a trader, who you are meeting.
+ */
+const THROW = 9000
+/** Tap within this of the hull to drop anchor. */
+const STOP_RADIUS = 190
+
+function headingFrom(from: Vec, toward: Vec): Vec {
+  const dx = toward.x - from.x, dy = toward.y - from.y
+  const d = Math.hypot(dx, dy)
+  if (d < 0.001) return { ...from }
+  // Deliberately NOT cleared of land: this is a bearing, and bending it around
+  // an island nine thousand pixels away would quietly turn the boat. The hull
+  // collision is what stops you actually reaching the rock.
+  return { x: from.x + (dx / d) * THROW, y: from.y + (dy / d) * THROW }
+}
+
+/** Half the beam of the boat, near enough. Baked into every obstacle radius so
+ *  the hull stops when it TOUCHES a thing rather than when its centre reaches
+ *  it, which is the difference between mooring alongside and parking inside. */
+const HULL = 55
+
+/**
+ * EVERYTHING THAT TURNS THE HULL, as circles, worked out once.
+ *
+ * Islands, and any landmark marked solid. A wreck the size of your ship that
+ * you glide straight through undoes the solidity the islands have; a buoy is a
+ * float on a chain and bumping past one is fine, so buoys are not in here.
+ *
+ * The collision radius of a landmark is a fraction of its drawn width, because
+ * the art is mostly superstructure — a rig is legs and a shed, and its
+ * FOOTPRINT in the water is much narrower than the picture.
+ */
+const OBSTACLES: { x: number; y: number; r: number }[] = [
+  ...PLACES.filter(p => p.kind === 'port').map(p => ({ x: p.x, y: p.y, r: p.r * SHORE + HULL })),
+  ...PLACES.flatMap(p => (p.landmarks ?? [])
+    .filter(m => m.solid)
+    .map(m => ({ x: p.x + m.x, y: p.y + m.y, r: m.size * 0.3 + HULL }))),
+]
+
+/** Nudge a point out to clear water if it has been asked for inside something
+ *  solid. The helm should not be able to ORDER a course into rock, which is
  *  half the fix; the other half is that momentum cannot carry you in either. */
 function clearOfLand(w: Vec): Vec {
-  for (const p of PLACES) {
-    if (p.kind !== 'port') continue
-    const dx = w.x - p.x, dy = w.y - p.y
+  for (const o of OBSTACLES) {
+    const dx = w.x - o.x, dy = w.y - o.y
     const d = Math.hypot(dx, dy)
-    const R = p.r * SHORE
-    if (d < R) {
+    if (d < o.r) {
       // Dead centre has no direction to be pushed in, so pick one.
-      if (d < 0.001) return { x: p.x + R, y: p.y }
-      return { x: p.x + (dx / d) * R, y: p.y + (dy / d) * R }
+      if (d < 0.001) return { x: o.x + o.r, y: o.y }
+      return { x: o.x + (dx / d) * o.r, y: o.y + (dy / d) * o.r }
     }
   }
   return w
@@ -606,7 +657,23 @@ export default function SeaMap({
       }
     }
 
-    target.current = clearOfLand(w)
+    // Tapping a trader courses to THEM. They are a person you are pulling
+    // alongside, and a heading would sail you straight past.
+    for (const t of tradersRef.current) {
+      if (Math.hypot(w.x - t.x, w.y - t.y) < HAIL_RANGE * 1.6) {
+        target.current = clearOfLand({ x: t.x, y: t.y })
+        return
+      }
+    }
+
+    // ALL STOP. Tapping your own boat drops anchor, which is the only way to
+    // stop once a tap is a heading rather than a destination.
+    if (Math.hypot(w.x - pos.current.x, w.y - pos.current.y) < STOP_RADIUS) {
+      target.current = { ...pos.current }
+      return
+    }
+
+    target.current = headingFrom(pos.current, w)
   }, [toWorld, near, locked, enter])
 
   /** How far a press has to travel before it stops being a tap. Generous
@@ -631,7 +698,9 @@ export default function SeaMap({
       vibrate(8)
     }
     const w = toWorld(e.clientX, e.clientY)
-    if (w) target.current = clearOfLand(w)
+    // A drag is a heading held under the thumb: the boat runs the bearing you
+    // are pointing at rather than creeping to the exact pixel and stopping.
+    if (w) target.current = headingFrom(pos.current, w)
   }, [toWorld])
 
   const onUp = useCallback((e: React.PointerEvent) => {
@@ -696,17 +765,15 @@ export default function SeaMap({
       // you scrape along the coast and round it instead of stopping dead
       // against it. A hull that halts the instant it touches land feels like a
       // wall; one that slides feels like a shore.
-      for (const p of PLACES) {
-        if (p.kind !== 'port') continue
-        const dx = pos.current.x - p.x
-        const dy = pos.current.y - p.y
+      for (const o of OBSTACLES) {
+        const dx = pos.current.x - o.x
+        const dy = pos.current.y - o.y
         const dd = Math.hypot(dx, dy)
-        const R = p.r * SHORE
-        if (dd >= R) continue
+        if (dd >= o.r) continue
         const nx = dd < 0.001 ? 1 : dx / dd
         const ny = dd < 0.001 ? 0 : dy / dd
-        pos.current.x = p.x + nx * R
-        pos.current.y = p.y + ny * R
+        pos.current.x = o.x + nx * o.r
+        pos.current.y = o.y + ny * o.r
         const vn = vel.current.x * nx + vel.current.y * ny
         if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
       }
@@ -1037,7 +1104,17 @@ export default function SeaMap({
           level={level}
           // A water does not navigate. Pressing "Fish The Shallows" puts the rod
           // in your hands where you are floating; only a port is a door.
-          onEnter={p => { if (p.kind === 'water') { setFishingIn(p); vibrate(14) } else enter(p) }}
+          onEnter={p => {
+            if (p.kind === 'water') {
+              // ALL STOP. A tap is a heading now, so without this you would cast
+              // at a full six knots and sail out of the zone you had just chosen
+              // to fish — which fires the leaving-the-water warning about three
+              // seconds after you asked to stay.
+              target.current = { ...pos.current }
+              setFishingIn(p)
+              vibrate(14)
+            } else enter(p)
+          }}
           tick={tick}
         />
       )}
@@ -1422,6 +1499,42 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear }: { trader: 
         opacity: done ? 0.62 : 1,
       }}>
         <TraderSkiff look={trader.look} />
+      </div>
+
+      {/* ── THE HAIL MARK ────────────────────────────────────────────
+          Whether you are close enough to talk to somebody was only ever stated
+          by a button appearing at the bottom of the screen, a long way from the
+          person it referred to. Now it is said ON them: a mark that rises and
+          brightens when you come into range, so the thing you are looking at is
+          the thing that tells you.
+
+          Out of range it is a small dot — they are there, they are a person,
+          they are not shouting. In range it is a full mark and it bobs. */}
+      <div aria-hidden style={{
+        position: 'absolute', left: 0, top: -18,
+        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center',
+        pointerEvents: 'none',
+      }}>
+        {done ? null : isNear ? (
+          <div className="sea-hail" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 26, height: 26, marginLeft: -13, borderRadius: '50%',
+            background: 'rgba(24,18,10,0.92)',
+            border: '1px solid rgba(255,206,138,0.85)',
+            boxShadow: '0 0 16px rgba(255,196,110,0.55)',
+          }}>
+            <span className="font-cinzel font-700" style={{
+              fontSize: '0.86rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
+            }}>!</span>
+          </div>
+        ) : (
+          <div style={{
+            width: 7, height: 7, marginLeft: -3.5, borderRadius: '50%',
+            background: 'rgba(255,206,138,0.5)',
+            boxShadow: '0 0 6px rgba(255,196,110,0.4)',
+          }} />
+        )}
       </div>
 
       {/* Name and trade, counter-squashed — a label was never on the plane. */}

@@ -65,7 +65,13 @@ export type Place = {
    * percentage would make the same wreck twice the size in the Abyss as in the
    * Deep. The boat is 210 world pixels wide, for scale.
    */
-  landmarks?: { art: string; x: number; y: number; size: number }[]
+  landmarks?: {
+    art: string; x: number; y: number; size: number
+    /** Solid landmarks turn the hull. A wreck or a monolith the size of your
+     *  ship that you glide straight through undoes the solidity the islands
+     *  have; a buoy is a float on a chain and bumping past one is fine. */
+    solid?: boolean
+  }[]
   /**
    * WHAT THIS WATER LOOKS LIKE.
    *
@@ -142,7 +148,7 @@ export const PLACES: Place[] = [
     sea: ['#123038', '#2b5a5e', '#6f9a95'] as [string, string, string],
     landmarks: [
       { art: '/sea/buoy.png',  x: -260, y: -180, size: 130 },
-      { art: '/sea/islet.png', x:  300, y:  120, size: 210 },
+      { art: '/sea/islet.png', x:  300, y:  120, size: 210, solid: true },
       { art: '/sea/buoy.png',  x:  110, y:  420, size: 120 },
     ],
     kind: 'water', minLevel: 1,
@@ -152,9 +158,9 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=open_waters', x: 2150, y: 620, r: 820, art: '/openwaters.jpg',
     sea: ['#0e2836', '#234c60', '#5a8298'] as [string, string, string],
     landmarks: [
-      { art: '/sea/islet.png', x: -380, y:  260, size: 190 },
+      { art: '/sea/islet.png', x: -380, y:  260, size: 190, solid: true },
       { art: '/sea/buoy.png',  x:  340, y: -240, size: 130 },
-      { art: '/sea/wreck.png', x:  120, y:  480, size: 280 },
+      { art: '/sea/wreck.png', x:  120, y:  480, size: 280, solid: true },
     ],
     kind: 'water', minLevel: 15,
   },
@@ -163,9 +169,9 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=deep', x: 3600, y: 340, r: 950, art: '/deep.jpg',
     sea: ['#0a1d2c', '#173a52', '#3f6480'] as [string, string, string],
     landmarks: [
-      { art: '/sea/wreck.png', x: -420, y: -200, size: 330 },
+      { art: '/sea/wreck.png', x: -420, y: -200, size: 330, solid: true },
       { art: '/sea/buoy.png',  x:  380, y:  300, size: 120 },
-      { art: '/sea/rig.png',   x:  180, y: -520, size: 300 },
+      { art: '/sea/rig.png',   x:  180, y: -520, size: 300, solid: true },
     ],
     kind: 'water', minLevel: 30,
   },
@@ -174,9 +180,9 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=abyss', x: 5300, y: 900, r: 1050, art: '/abyss.jpg',
     sea: ['#060f1a', '#0f2438', '#274257'] as [string, string, string],
     landmarks: [
-      { art: '/sea/rig.png',   x: -300, y:  240, size: 350 },
-      { art: '/sea/bones.png', x:  420, y: -260, size: 360 },
-      { art: '/sea/wreck.png', x: -560, y: -480, size: 300 },
+      { art: '/sea/rig.png',   x: -300, y:  240, size: 350, solid: true },
+      { art: '/sea/bones.png', x:  420, y: -260, size: 360, solid: true },
+      { art: '/sea/wreck.png', x: -560, y: -480, size: 300, solid: true },
     ],
     kind: 'water', minLevel: 50,
   },
@@ -185,9 +191,9 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=ancient_deep', x: 7200, y: 400, r: 1150, art: '/ancient.jpg',
     sea: ['#07101a', '#16202f', '#31363f'] as [string, string, string],
     landmarks: [
-      { art: '/sea/monolith.png', x: -240, y: -260, size: 320 },
-      { art: '/sea/bones.png',    x:  400, y:  300, size: 400 },
-      { art: '/sea/monolith.png', x:  560, y: -420, size: 280 },
+      { art: '/sea/monolith.png', x: -240, y: -260, size: 320, solid: true },
+      { art: '/sea/bones.png',    x:  400, y:  300, size: 400, solid: true },
+      { art: '/sea/monolith.png', x:  560, y: -420, size: 280, solid: true },
     ],
     kind: 'water', minLevel: 75,
   },

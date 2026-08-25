@@ -2563,6 +2563,21 @@ body.hardcore-gauntlet::after {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
+/* The hail mark over a trader you are close enough to talk to. It bobs rather
+   than pulses, because everything else out here is floating and a mark that
+   throbs reads as an alert rather than as somebody waiting. */
+.sea-hail {
+  animation: seaHail 1.9s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes seaHail {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sea-hail { animation: none; }
+}
+
 /* THE WAKE. One mark, laid in world space by the rAF loop and left behind. No
    animation here on purpose: position, scale and opacity are all written by the
    loop, because a mark has to age from the moment the hull dropped it, and a CSS
