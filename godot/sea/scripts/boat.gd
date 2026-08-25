@@ -65,7 +65,7 @@ func _physics_process(delta: float) -> void:
 
 	# Lean into the turn. Small: it is a boat, not a motorbike.
 	var turn_delta := angle_difference(rotation, velocity.angle()) if velocity.length() > 12.0 else 0.0
-	skew = lerp(skew, clamp(-turn_delta * 0.35, -0.22, 0.22), clamp(6.0 * delta, 0.0, 1.0))
+	skew = lerp(skew, clamp(-turn_delta * 0.16, -0.08, 0.08), clamp(6.0 * delta, 0.0, 1.0))
 
 	if dist <= arrive_radius and velocity.length() < 24.0:
 		arrived.emit(global_position)
