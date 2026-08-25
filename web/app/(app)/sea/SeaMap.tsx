@@ -549,11 +549,15 @@ export default function SeaMap({
    *
    * It sits under the boat rather than around it so your thumb never covers the
    * boat or the water ahead, which is the whole reason it exists.
+   *
+   * It is DRAWN NOWHERE. No background, no border, no marks. A visible box made
+   * the sea look like a console with a control panel bolted to the bottom of
+   * it, and what it does is self-evident the first time you touch it — you
+   * press below the boat and the boat goes that way.
    */
   const boxRef = useRef<HTMLDivElement | null>(null)
   /** The live touch inside the box, in client coordinates. */
   const boxHeld = useRef<Vec | null>(null)
-  const [boxOn, setBoxOn] = useState(false)
 
   /** Client point to a world bearing, or null inside the deadzone. */
   const boxVec = useCallback((p: Vec): { x: number; y: number; mag: number } | null => {
@@ -1347,7 +1351,6 @@ export default function SeaMap({
             e.stopPropagation()
             try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* fine */ }
             boxHeld.current = { x: e.clientX, y: e.clientY }
-            setBoxOn(true)
             vibrate(6)
           }}
           onPointerMove={e => {
@@ -1365,10 +1368,9 @@ export default function SeaMap({
               ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.5, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.5 }
               : { ...pos.current }
             boxHeld.current = null
-            setBoxOn(false)
             try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
           }}
-          onPointerCancel={() => { boxHeld.current = null; setBoxOn(false) }}
+          onPointerCancel={() => { boxHeld.current = null }}
           onClick={e => e.stopPropagation()}
           style={{
             position: 'absolute', zIndex: 14,
@@ -1376,27 +1378,16 @@ export default function SeaMap({
             left: '50%', top: 'calc(50% + 96px)',
             transform: 'translateX(-50%)',
             width: 'min(86vw, 460px)', height: 'min(26vh, 168px)',
-            borderRadius: 18, touchAction: 'none',
-            background: boxOn
-              ? 'radial-gradient(ellipse at center, rgba(120,180,210,0.14), rgba(6,14,22,0.30))'
-              : 'rgba(6,14,22,0.20)',
-            border: `1px solid rgba(180,214,232,${boxOn ? 0.42 : 0.18})`,
-            transition: 'background 160ms ease-out, border-color 160ms ease-out',
-          }}>
-          {/* The neutral point, so it is obvious the centre means "stop" and
-              which way each edge is. */}
-          <div aria-hidden style={{
-            position: 'absolute', left: '50%', top: '50%',
-            width: 26, height: 26, marginLeft: -13, marginTop: -13,
-            borderRadius: '50%',
-            border: `1px solid rgba(180,214,232,${boxOn ? 0.4 : 0.22})`,
+            // INVISIBLE. It is a hit area and nothing else — no background, no
+            // border, no marks, no label. Drawing it made the sea look like a
+            // console with a control panel bolted to the bottom of it, and the
+            // thing it was labelling is obvious the moment you touch it: you
+            // press below the boat and the boat goes that way.
+            //
+            // touchAction stays: without it a drag inside this region is a
+            // scroll gesture and the browser stops sending pointermove.
+            touchAction: 'none',
           }} />
-          <span aria-hidden className="font-karla font-700 uppercase" style={{
-            position: 'absolute', left: 0, right: 0, bottom: 6, textAlign: 'center',
-            fontSize: '0.46rem', letterSpacing: '0.18em',
-            color: `rgba(190,212,228,${boxOn ? 0.35 : 0.22})`,
-          }}>helm</span>
-        </div>
       )}
 
       {/* THE HORIZON. Screen space, above the world so islands haze into it as
