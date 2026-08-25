@@ -145,7 +145,8 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
-  seaPhase, baitBag, onBaitChange, hold, onCaught, onBaitSpent, onPose, onBusy, spritesReady, onClose,
+  seaPhase, baitBag, onBaitChange, hold, onCaught, onBaitSpent, onPose, onBusy, onCanLeave,
+  spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -199,6 +200,10 @@ export default function FishingHere({
   /** Told when the dial is up, so the map can stop moving entirely behind it.
    *  See the note on the freeze in SeaMap. */
   onBusy: (busy: boolean) => void
+  /** Whether the rod can simply be stowed right now. The map uses it to let a
+   *  tap on open water end the session — which it has to do rather than this
+   *  component, because this component cannot receive that tap. */
+  onCanLeave: (can: boolean) => void
   /** False until every frame of the loadout has been fetched AND decoded. The
    *  cast waits on it, because the pose swaps four images at once and an
    *  undecoded one paints a frame or two late — which is the base sprite
@@ -256,6 +261,14 @@ export default function FishingHere({
     onBusy(busy)
     return () => onBusy(false)
   }, [phase, onBusy])
+
+  useEffect(() => {
+    // Settled means idle or result. NOT during the wait — a cast is already
+    // paid for and in the water by then, and walking away from it costs the
+    // bait and the streak.
+    onCanLeave(phase === 'idle' || phase === 'result')
+    return () => onCanLeave(false)
+  }, [phase, onCanLeave])
 
   /** THE PERFECT. The fishing screen throws a gold wash, two expanding rings
    *  and the word across the screen. The map fired the sound and the haptic and
@@ -779,21 +792,13 @@ export default function FishingHere({
       /* THE ROD IS NOT A RUDDER. Cast and Reel In stop `pointerdown`, but the
          map steers on `click` — and stopping pointerdown does nothing to the
          click that follows it, so every cast was also plotting a course to
-         wherever the button happened to be. Caught at the root: a tap on a
-         CONTROL is never a steering tap.
-         But a tap on the open water around them is exactly that. With a result
-         on screen, clicking away used to do nothing at all: the rod stayed out,
-         the card stayed up, and the only way on was to find the small "Stow
-         rod" link. Sailing away IS stowing the rod — so it does both, and the
-         tap falls through to the map so the boat actually goes where you
-         pointed. Only from a settled phase: doing it mid-cast or mid-dial would
-         throw away a fish the server has already rolled. */
-      onClick={e => {
-        const onControl = (e.target as HTMLElement).closest('button, [data-no-steer]')
-        if (onControl) { e.stopPropagation(); return }
-        if (phase === 'idle' || phase === 'result') { onClose(); return }
-        e.stopPropagation()
-      }}
+         wherever the button happened to be. Caught at the root.
+
+         Dismissing by tapping away is NOT handled here, and cannot be: this
+         element is pointer-events:none, so a tap on the open water around the
+         card never reaches it — it falls straight through to the map. The map
+         owns that, and is told when it is safe to do it. */
+      onClick={e => e.stopPropagation()}
       style={{
         position: 'absolute', inset: 0, zIndex: 20,
         display: 'flex', flexDirection: 'column',

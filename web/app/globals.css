@@ -2567,15 +2567,6 @@ body.hardcore-gauntlet::after {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* THE HELM is a thumb control. A mouse has the whole window to point at and
-   does not sit on top of the thing it is pointing at, so on anything with a
-   fine pointer it is only clutter. Hidden by capability rather than by width:
-   a small window on a laptop still has a mouse, and a large tablet still has a
-   thumb. */
-@media (pointer: fine) {
-  .sea-helm { display: none; }
-}
-
 /* EVERYTHING STOPS WHILE THE DIAL IS UP.
    The rAF loop halts itself, but CSS animations run on the compositor and
    would carry on regardless — the clouds, the buoys, the wrecks, the ripples.

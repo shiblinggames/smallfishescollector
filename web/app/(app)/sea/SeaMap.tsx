@@ -137,9 +137,6 @@ const THROW = 9000
 const HOLD_MS = 220
 /** Tap within this of the hull to drop anchor. */
 const STOP_RADIUS = 190
-/** The helm's radius, and the dead patch in the middle of it. */
-const HELM_R = 54
-const HELM_DEAD = 9
 /** How far a press has to travel before it counts as a drag. Generous enough
  *  that a thumb resting on glass does not become a course change. */
 const DRAG_SLOP = 12
@@ -535,68 +532,42 @@ export default function SeaMap({
   //
   // The tap survives untouched. A press that never travels far enough is still
   // a tap and still runs onTap, so entering a port and starting a cast work
-  // exactly as before; only a press that MOVES becomes a helm.
+  // exactly as before; only a press that MOVES becomes a heading.
   /**
-   * THE HELM — a thumb stick, for phones.
+   * THE MOVE BOX — a strip of screen under the boat that means DIRECTION.
    *
-   * Tap-and-hold steering works, but it has one flaw on a small screen that no
-   * amount of tuning fixes: your thumb is ON the sea you are trying to look at.
-   * Holding a bearing means covering the water ahead of you with your own hand,
-   * and the further you want to go the more of the screen you lose.
+   * Tap-to-move across the whole screen has a flaw on a phone that no tuning
+   * fixes: to steer you have to touch the water you are trying to look at, and
+   * the further you want to go the more of the view your hand covers. A corner
+   * joystick solves that and introduces its own problem — it is a widget bolted
+   * onto the world rather than part of it.
    *
-   * The stick moves that decision into a corner. It is a DIRECTION, not a
-   * position: the boat runs the bearing the knob is pushed toward, at a speed
-   * set by how far it is pushed, and both stop the instant you let go. Sitting
-   * bottom-left keeps it clear of the action slot, which is bottom-centre, and
-   * of the trader panels, which come up on the right.
+   * This is the middle: one rectangle, directly under the boat, and where you
+   * touch inside it IS the bearing. Its centre is neutral, so touching the top
+   * edge sends you due north, the right edge due east, and a point up and to
+   * the right sends you north-east. Distance from the centre sets the speed.
    *
-   * Tapping and holding the open sea still works exactly as before. This is an
-   * addition, not a replacement — a stick is better for crossing water and a
-   * tap is better for going to a specific thing you can see.
+   * It sits under the boat rather than around it so your thumb never covers the
+   * boat or the water ahead, which is the whole reason it exists.
    */
-  const stickRef = useRef<HTMLDivElement | null>(null)
-  const stickKnob = useRef<HTMLDivElement | null>(null)
-  /** Unit vector plus magnitude, or null when nobody is holding it. */
-  const stickVec = useRef<{ x: number; y: number; mag: number } | null>(null)
-  const [stickOn, setStickOn] = useState(false)
+  const boxRef = useRef<HTMLDivElement | null>(null)
+  /** The live touch inside the box, in client coordinates. */
+  const boxHeld = useRef<Vec | null>(null)
+  const [boxOn, setBoxOn] = useState(false)
 
-  /** Point the helm at a screen position, and move the knob to match. */
-  const aimStick = useCallback((cx: number, cy: number) => {
-    const el = stickRef.current
-    if (!el) return
+  /** Client point to a world bearing, or null inside the deadzone. */
+  const boxVec = useCallback((p: Vec): { x: number; y: number; mag: number } | null => {
+    const el = boxRef.current
+    if (!el) return null
     const r = el.getBoundingClientRect()
-    const dx = cx - (r.left + r.width / 2)
-    const dy = cy - (r.top + r.height / 2)
-    const d = Math.hypot(dx, dy)
-    // A DEADZONE, so resting a thumb on the stick is not a course. Below it the
-    // helm is centred and the boat holds whatever it was doing.
-    if (d < HELM_DEAD) {
-      stickVec.current = null
-      if (stickKnob.current) stickKnob.current.style.transform = 'translate3d(0,0,0)'
-      return
-    }
-    const nx = dx / d, ny = dy / d
-    const mag = Math.min(1, (d - HELM_DEAD) / (HELM_R - HELM_DEAD))
-    stickVec.current = { x: nx, y: ny, mag }
-    const knobD = Math.min(d, HELM_R - 10)
-    if (stickKnob.current) {
-      stickKnob.current.style.transform = `translate3d(${nx * knobD}px, ${ny * knobD}px, 0)`
-    }
-  }, [])
-
-  const releaseStick = useCallback((pointerId?: number) => {
-    stickVec.current = null
-    setStickOn(false)
-    if (stickKnob.current) stickKnob.current.style.transform = 'translate3d(0,0,0)'
-    // LET GO AND IT RUNS OUT, the same as releasing a held bearing — cutting
-    // the course dead reads as hitting something.
-    const v = vel.current
-    const sp = Math.hypot(v.x, v.y)
-    target.current = sp > 1
-      ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.5, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.5 }
-      : { ...pos.current }
-    const el = stickRef.current
-    if (el && pointerId != null) { try { el.releasePointerCapture(pointerId) } catch { /* fine */ } }
+    // Normalised to the box's half-extents, so the CORNERS are reachable — the
+    // box is much wider than it is tall, and using raw pixels would make east
+    // several times harder to ask for than north.
+    const nx = (p.x - (r.left + r.width / 2)) / (r.width / 2)
+    const ny = (p.y - (r.top + r.height / 2)) / (r.height / 2)
+    const d = Math.hypot(nx, ny)
+    if (d < 0.12) return null
+    return { x: nx / d, y: ny / d, mag: Math.min(1, d) }
   }, [])
 
   const dragFrom = useRef<Vec | null>(null)
@@ -700,6 +671,11 @@ export default function SeaMap({
    * going anywhere, and the sea has no state that has to keep advancing.
    */
   const [dialUp, setDialUp] = useState(false)
+  /** True when the rod is out but nothing is in flight, so a tap on the water
+   *  can simply stow it. */
+  const [canLeaveFishing, setCanLeaveFishing] = useState(false)
+  const canLeaveRef = useRef(false)
+  canLeaveRef.current = canLeaveFishing
   const dialUpRef = useRef(false)
   dialUpRef.current = dialUp
 
@@ -881,6 +857,15 @@ export default function SeaMap({
     // Anything with a button in it is a control, not the sea. Cast, Reel In,
     // the prompt and the trader panel all live inside this element.
     if ((e.target as HTMLElement).closest('button, [data-no-steer]')) return
+    // SAILING AWAY IS STOWING THE ROD. The fishing overlay is pointer-events
+    // none, so a tap on the water around the result card never reaches it —
+    // which is why clicking away appeared to do nothing at all. Handled here
+    // instead, on the first touch, so it works for the move box as well as for
+    // open water.
+    if (fishingRef.current && canLeaveRef.current) {
+      setFishingIn(null)
+      setFrame('rest')
+    }
     dragFrom.current = { x: e.clientX, y: e.clientY }
     holdAt.current = { x: e.clientX, y: e.clientY }
     dragging.current = false
@@ -956,14 +941,15 @@ export default function SeaMap({
       // THE STICK OUTRANKS EVERYTHING. While it is held the boat runs its
       // bearing directly rather than chasing a target point, so the course is
       // whatever direction the thumb is pushing and nothing else.
-      if (stickVec.current) {
-        const v = stickVec.current
-        // Screen bearing to world bearing: the plane is squashed, so pushing
-        // straight up has to travel further in world Y than pushing sideways
-        // does in X or the stick steers somewhere other than where it points.
-        target.current = {
-          x: pos.current.x + v.x * THROW,
-          y: pos.current.y + (v.y / GROUND) * THROW,
+      // A HELD BOX BEARING OUTRANKS EVERYTHING, and is re-read every frame so
+      // sliding your thumb around inside the box turns the boat under it.
+      if (boxHeld.current) {
+        const v = boxVec(boxHeld.current)
+        if (v) {
+          target.current = {
+            x: pos.current.x + v.x * THROW,
+            y: pos.current.y + (v.y / GROUND) * THROW,
+          }
         }
       }
 
@@ -988,7 +974,12 @@ export default function SeaMap({
       // A HALF-PUSHED STICK IS HALF SPEED. Without this the stick is a
       // direction-only control and every nudge is full sail, which makes
       // pulling alongside a trader or easing along a coast impossible.
-      if (stickVec.current) want *= stickVec.current.mag
+      // HOW FAR OUT YOU PUSH IS HOW FAST YOU GO. Without it every touch is full
+      // sail and easing alongside a trader is impossible.
+      if (boxHeld.current) {
+        const v = boxVec(boxHeld.current)
+        if (v) want *= v.mag
+      }
       const wx = d > 0.001 ? (dx / d) * want : 0
       const wy = d > 0.001 ? (dy / d) * want : 0
       // EXPONENTIAL, not linear. `min(1, ACCEL * dt)` makes the boat accelerate
@@ -1344,40 +1335,67 @@ export default function SeaMap({
           on top of the thing it is pointing at. Hidden while the rod is out —
           you are anchored to fish, and a steering control that does nothing is
           worse than no control. */}
+      {/* ── THE MOVE BOX ────────────────────────────────────────────────
+          Where you touch inside it is the bearing. Drawn faintly enough to be
+          furniture rather than UI, and it brightens under a thumb so you can
+          see it is listening. Hidden while the rod is out: you are anchored to
+          fish, and a steering control that does nothing is worse than none. */}
       {!fishingIn && (
         <div
-          ref={stickRef}
+          ref={boxRef}
           onPointerDown={e => {
             e.stopPropagation()
-            const el = stickRef.current
-            if (!el) return
-            try { el.setPointerCapture(e.pointerId) } catch { /* fine */ }
-            setStickOn(true)
-            aimStick(e.clientX, e.clientY)
+            try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* fine */ }
+            boxHeld.current = { x: e.clientX, y: e.clientY }
+            setBoxOn(true)
+            vibrate(6)
           }}
-          onPointerMove={e => { if (stickVec.current) { e.stopPropagation(); aimStick(e.clientX, e.clientY) } }}
-          onPointerUp={e => { e.stopPropagation(); releaseStick(e.pointerId) }}
-          onPointerCancel={e => { e.stopPropagation(); releaseStick(e.pointerId) }}
+          onPointerMove={e => {
+            if (!boxHeld.current) return
+            e.stopPropagation()
+            boxHeld.current = { x: e.clientX, y: e.clientY }
+          }}
+          onPointerUp={e => {
+            e.stopPropagation()
+            // LET GO AND IT RUNS OUT. Cutting the course dead the instant your
+            // thumb leaves the glass reads as the boat hitting something.
+            const v = vel.current
+            const sp = Math.hypot(v.x, v.y)
+            target.current = sp > 1
+              ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.5, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.5 }
+              : { ...pos.current }
+            boxHeld.current = null
+            setBoxOn(false)
+            try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
+          }}
+          onPointerCancel={() => { boxHeld.current = null; setBoxOn(false) }}
           onClick={e => e.stopPropagation()}
-          className="sea-helm"
           style={{
-            position: 'absolute', left: 18, bottom: 22, zIndex: 14,
-            width: HELM_R * 2, height: HELM_R * 2, borderRadius: '50%',
-            touchAction: 'none',
-            background: 'radial-gradient(circle at 50% 45%, rgba(10,22,32,0.72), rgba(6,14,22,0.5))',
-            border: `1px solid rgba(180,214,232,${stickOn ? 0.5 : 0.26})`,
-            boxShadow: stickOn ? '0 0 20px rgba(120,180,210,0.22)' : 'none',
-            transition: 'border-color 160ms ease-out, box-shadow 160ms ease-out',
+            position: 'absolute', zIndex: 14,
+            // Under the boat, which is pinned to the centre of the screen.
+            left: '50%', top: 'calc(50% + 96px)',
+            transform: 'translateX(-50%)',
+            width: 'min(86vw, 460px)', height: 'min(26vh, 168px)',
+            borderRadius: 18, touchAction: 'none',
+            background: boxOn
+              ? 'radial-gradient(ellipse at center, rgba(120,180,210,0.14), rgba(6,14,22,0.30))'
+              : 'rgba(6,14,22,0.20)',
+            border: `1px solid rgba(180,214,232,${boxOn ? 0.42 : 0.18})`,
+            transition: 'background 160ms ease-out, border-color 160ms ease-out',
           }}>
-          <div ref={stickKnob} aria-hidden style={{
+          {/* The neutral point, so it is obvious the centre means "stop" and
+              which way each edge is. */}
+          <div aria-hidden style={{
             position: 'absolute', left: '50%', top: '50%',
-            width: 44, height: 44, marginLeft: -22, marginTop: -22,
-            borderRadius: '50%', pointerEvents: 'none',
-            background: 'radial-gradient(circle at 42% 36%, rgba(214,232,240,0.9), rgba(150,186,206,0.55))',
-            border: '1px solid rgba(226,242,250,0.6)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.45)',
-            willChange: 'transform',
+            width: 26, height: 26, marginLeft: -13, marginTop: -13,
+            borderRadius: '50%',
+            border: `1px solid rgba(180,214,232,${boxOn ? 0.4 : 0.22})`,
           }} />
+          <span aria-hidden className="font-karla font-700 uppercase" style={{
+            position: 'absolute', left: 0, right: 0, bottom: 6, textAlign: 'center',
+            fontSize: '0.46rem', letterSpacing: '0.18em',
+            color: `rgba(190,212,228,${boxOn ? 0.35 : 0.22})`,
+          }}>helm</span>
         </div>
       )}
 
@@ -1520,6 +1538,7 @@ export default function SeaMap({
           }}
           onPose={setFrame}
           onBusy={setDialUp}
+          onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest') }}
         />
