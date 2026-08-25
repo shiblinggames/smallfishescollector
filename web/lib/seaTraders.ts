@@ -49,7 +49,7 @@ import { RODS } from '@/lib/rods'
  *  somebody out here is an event again. */
 export const CELL = 1500
 
-export type TraderKind = 'peddler' | 'salter' | 'tinker'
+export type TraderKind = 'peddler' | 'salter' | 'tinker' | 'resident'
 
 export type TraderLook = {
   /** A player character colour id, so an NPC captain is built exactly the way
@@ -82,6 +82,9 @@ export type Trader = {
 } & TraderOffer
 
 export type TraderOffer =
+  /** A ZONE'S RESIDENT BUYER. Permanent, always in the same water, and not
+   *  subject to the daily deal cap — see the `resident` note in chart.ts. */
+  | { deal: 'resident'; zoneId: string; rate: number }
   /** Sells a bundle of one bait at a discount off the shop price. */
   | { deal: 'bait'; baitType: string; qty: number; cost: number; shopCost: number }
   /** Buys the whole hold, right now, at a better rate than a quick sell. */
@@ -152,7 +155,9 @@ const NAMES_LAST = [
   'Sorrel', 'Rud', 'Nance', 'Thole', 'Garrick', 'Wick',
 ]
 
-const LINES: Record<TraderKind, string[]> = {
+type WanderKind = Exclude<TraderKind, 'resident'>
+
+const LINES: Record<WanderKind, string[]> = {
   peddler: [
     'Shop prices are a shore thing. Out here I set them.',
     'Bought too much, rowed too far. Your luck, not mine.',
@@ -176,7 +181,7 @@ const LINES: Record<TraderKind, string[]> = {
 /** Bait a kind will carry, worst to best. The tinker deals only in the top of
  *  the shop's range, which is the reward for the sail rather than a new item
  *  nobody could get otherwise — nothing out here is exclusive. */
-const STOCK: Record<TraderKind, string[]> = {
+const STOCK: Record<WanderKind, string[]> = {
   peddler: ['worm', 'minnow', 'night_crawler'],
   salter: [],
   tinker: ['chum', 'anglers_formula'],
@@ -186,7 +191,7 @@ const STOCK: Record<TraderKind, string[]> = {
  *  65% quick sell and below the market lane on purpose: quick-sell convenience
  *  at a better number, without moving either of the two lanes the economy is
  *  actually built on. */
-function offerFor(kind: TraderKind, depth: number, rnd: () => number): TraderOffer | null {
+function offerFor(kind: WanderKind, depth: number, rnd: () => number): TraderOffer | null {
   if (kind === 'salter') {
     // 74% at the beach, 86% out in the black.
     return { deal: 'buy', rate: Math.round((0.74 + depth * 0.12) * 100) / 100 }
@@ -235,7 +240,7 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
   // The deeper the water the likelier they are something other than a worm
   // salesman. The tinker only exists past the halfway mark.
   const roll = rnd()
-  const kind: TraderKind =
+  const kind: WanderKind =
     depth > 0.5 && roll < 0.34 ? 'tinker'
       : roll < 0.62 ? 'peddler'
         : 'salter'
@@ -345,6 +350,7 @@ export const KIND_LABEL: Record<TraderKind, string> = {
   peddler: 'Bait peddler',
   salter: 'Salter',
   tinker: 'Deep tinker',
+  resident: 'Buyer',
 }
 
 // ── WHAT AN NPC CAPTAIN IS MADE OF ──────────────────────────────────────────

@@ -65,6 +65,32 @@ export type Place = {
    * percentage would make the same wreck twice the size in the Abyss as in the
    * Deep. The boat is 210 world pixels wide, for scale.
    */
+  /**
+   * THE ZONE'S BUYER — a resident, not a wanderer.
+   *
+   * A THIRD SELL LANE, and the one the game is built around from here: the
+   * market ashore pays full price but you have to sail home and wait for it to
+   * settle; this one pays less and pays it now, right where you are fishing.
+   * The 65% quick sell stays exactly where it is for when you cannot be
+   * bothered to sail even this far.
+   *
+   * Unlike the Salt Road's wanderers these are permanent, always in the same
+   * water, and NOT subject to the daily deal cap. Selling your own catch is not
+   * a reward you can farm, it is the same conversion the quick sell already
+   * does without limit — capping it would only ever strand somebody with a full
+   * hold and nowhere to put it.
+   */
+  resident?: {
+    name: string
+    line: string
+    /** World offset from the zone centre. */
+    x: number
+    y: number
+    /** Fraction of market value paid, instantly. Climbs with depth: further
+     *  out, the sail home is longer, so the convenience is worth more. */
+    rate: number
+  }
+
   landmarks?: {
     art: string; x: number; y: number; size: number
     /**
@@ -155,6 +181,11 @@ export const PLACES: Place[] = [
     id: 'shallows', name: 'The Shallows', blurb: 'Calm water, common fish',
     href: '/fishing?zone=shallows', x: 900, y: 300, r: 700, art: '/shallows.jpg',
     sea: ['#123038', '#2b5a5e', '#6f9a95'] as [string, string, string],
+    resident: {
+      name: 'Meg Corrin',
+      line: "Bring it here and I'll weigh it here. Ashore they'll give you more and a week to wait for it.",
+      x: 0, y: 525, rate: 0.78,
+    },
     landmarks: [
       { art: '/sea/buoy.png', x:   393, y:   183, size: 130, sway: 'bob' },
       { art: '/sea/islet.png', x:  -444, y:   207, size: 210, solid: true },
@@ -166,6 +197,11 @@ export const PLACES: Place[] = [
     id: 'open_waters', name: 'Open Waters', blurb: 'Further out, better catches',
     href: '/fishing?zone=open_waters', x: 2150, y: 620, r: 820, art: '/openwaters.jpg',
     sea: ['#0e2836', '#234c60', '#5a8298'] as [string, string, string],
+    resident: {
+      name: 'Bent Pell',
+      line: "Fish don't keep and neither does my patience. Coin now, or row it home yourself.",
+      x: -435, y: 435, rate: 0.8,
+    },
     landmarks: [
       { art: '/sea/islet.png', x:   185, y:   509, size: 190, solid: true },
       { art: '/sea/buoy.png', x:  -577, y:  -188, size: 130, sway: 'bob' },
@@ -177,6 +213,11 @@ export const PLACES: Place[] = [
     id: 'deep', name: 'The Deep', blurb: 'Long waits, real weight',
     href: '/fishing?zone=deep', x: 3600, y: 340, r: 950, art: '/deep.jpg',
     sea: ['#0a1d2c', '#173a52', '#3f6480'] as [string, string, string],
+    resident: {
+      name: 'Old Marlow',
+      line: "Long way back to the dock from here. I've made a living out of exactly that.",
+      x: 409, y: -584, rate: 0.82,
+    },
     landmarks: [
       { art: '/sea/wreck.png', x:  -303, y:   570, size: 330, solid: true, sway: 'rock' },
       { art: '/sea/buoy.png', x:  -241, y:  -517, size: 120, sway: 'bob' },
@@ -188,6 +229,11 @@ export const PLACES: Place[] = [
     id: 'abyss', name: 'The Abyss', blurb: 'Where the dark begins',
     href: '/fishing?zone=abyss', x: 5300, y: 900, r: 1050, art: '/abyss.jpg',
     sea: ['#060f1a', '#0f2438', '#274257'] as [string, string, string],
+    resident: {
+      name: 'Quiet Fitch',
+      line: "Not many bring me anything this deep. I pay for that, not for the fish.",
+      x: -452, y: 645, rate: 0.84,
+    },
     landmarks: [
       { art: '/sea/rig.png', x:  -609, y:  -284, size: 350, solid: true },
       { art: '/sea/bones.png', x:   506, y:   562, size: 360, solid: true },
@@ -199,6 +245,11 @@ export const PLACES: Place[] = [
     id: 'ancient_deep', name: 'The Ancient Deep', blurb: 'Giants, and worse',
     href: '/fishing?zone=ancient_deep', x: 7200, y: 400, r: 1150, art: '/ancient.jpg',
     sea: ['#07101a', '#16202f', '#31363f'] as [string, string, string],
+    resident: {
+      name: 'Grey Nance',
+      line: "You went down there and came back up. Whatever's in your hold, I'll take it and ask nothing.",
+      x: 661, y: -554, rate: 0.86,
+    },
     landmarks: [
       { art: '/sea/monolith.png', x:  -529, y:   444, size: 320, solid: true },
       { art: '/sea/bones.png', x:   800, y:   291, size: 400, solid: true },

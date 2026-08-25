@@ -611,6 +611,34 @@ export default function SeaMap({
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
   const day = useMemo(() => seaDay(), [])
+
+  /** THE RESIDENT BUYERS. Not hashed and not daily — they live here. Built into
+   *  the same shape a wandering trader has so everything downstream (the hail
+   *  mark, the name plate, the panel) works on them without a second path. */
+  const residents = useMemo<Trader[]>(() => PLACES.flatMap(p => {
+    if (!p.resident) return []
+    const r = p.resident
+    // A stable, deterministic look, so a zone's buyer is the same person every
+    // time you sail out to them.
+    const seed = p.id.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+    return [{
+      key: `resident:${p.id}`,
+      kind: 'resident' as const,
+      name: r.name,
+      x: p.x + r.x, y: p.y + r.y,
+      line: r.line,
+      // A moored buyer swings on his anchor rather than patrolling: he is
+      // waiting for trade, not looking for it.
+      driftR: 34, driftRate: (Math.PI * 2) / 74, driftPhase: (seed % 100) / 16,
+      look: {
+        characterColor: ['default', 'gray', 'blue', 'pink'][seed % 4],
+        boatId: ['oak', 'mahogany', 'taupe', 'desert', 'charcoal'][seed % 5],
+        hatId: ['brown', 'olive', 'midnight', 'offwhite'][seed % 4],
+        rodSlug: null,
+      },
+      deal: 'resident' as const, zoneId: p.id, rate: r.rate,
+    }]
+  }), [])
   // Mirrored for the loop, which must not be re-created every time the list
   // changes or the whole sail restarts.
   const tradersRef = useRef<Trader[]>([])
@@ -618,6 +646,9 @@ export default function SeaMap({
    *  a transform rather than a re-render. */
   const hullRefs = useRef(new Map<string, HTMLDivElement>())
   useEffect(() => { tradersRef.current = traders }, [traders])
+  /** Wanderers AND residents, for proximity and for the patrol writes. */
+  const allTradersRef = useRef<Trader[]>([])
+  useEffect(() => { allTradersRef.current = [...residents, ...traders] }, [residents, traders])
   const [tick, setTick] = useState(0)
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
@@ -902,7 +933,7 @@ export default function SeaMap({
       // and turned to face the way it is going.
       if (hullRefs.current.size) {
         const ts = now / 1000
-        for (const t of tradersRef.current) {
+        for (const t of allTradersRef.current) {
           const el = hullRefs.current.get(t.key)
           if (!el) continue
           const at = traderPos(t, ts)
@@ -1028,7 +1059,7 @@ export default function SeaMap({
         // Alongside is close: a trader is a person, not a region, and you
         // should have to actually pull up to them.
         let hit: Trader | null = null
-        for (const t of tradersRef.current) {
+        for (const t of allTradersRef.current) {
           // Against the DRIFTED position, not the anchor. Testing the anchor
           // would let you hail somebody who had drifted a couple of hundred
           // pixels away, and refuse one floating right beside you.
@@ -1104,7 +1135,7 @@ export default function SeaMap({
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
             construction rather than by anyone remembering to match it. */}
-        {traders.map(t => (
+        {[...residents, ...traders].map(t => (
           <TraderBoat key={t.key} trader={t}
             done={dealt.includes(t.key)}
             isNear={nearTrader?.key === t.key}

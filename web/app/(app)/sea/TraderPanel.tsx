@@ -15,7 +15,7 @@ import { motion } from 'framer-motion'
 import { getBait } from '@/lib/bait'
 import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
-import { strikeDeal } from './traderActions'
+import { strikeDeal, sellToResident } from './traderActions'
 
 export default function TraderPanel({
   trader, alreadyDealt, dealsLeft, onDealt, onClose,
@@ -34,6 +34,22 @@ export default function TraderPanel({
   const saving = trader.deal === 'bait'
     ? Math.round((1 - trader.cost / trader.shopCost) * 100)
     : 0
+
+  const isResident = trader.deal === 'resident'
+
+  async function sellHold() {
+    if (busy || trader.deal !== 'resident') return
+    setBusy(true); setErr(''); vibrate(14)
+    try {
+      const res = await sellToResident(trader.zoneId)
+      if ('error' in res) { setErr(res.error); setBusy(false); return }
+      setDone(`${res.earned.toLocaleString()} ⟡ for the lot. Hold's empty.`)
+      vibrate([0, 30, 40, 60])
+    } catch {
+      setErr('The sale fell through. Try again.')
+    }
+    setBusy(false)
+  }
 
   async function strike() {
     if (busy) return
@@ -58,7 +74,9 @@ export default function TraderPanel({
     setBusy(false)
   }
 
-  const spent = alreadyDealt || done !== null
+  // A resident is a shop, not an encounter: you can sell to them as often as
+  // you have fish, and they are outside the daily deal cap entirely.
+  const spent = !isResident && (alreadyDealt || done !== null)
 
   return (
     <div
@@ -101,7 +119,24 @@ export default function TraderPanel({
           background: 'rgba(255,255,255,0.045)',
           border: '1px solid rgba(255,255,255,0.09)',
         }}>
-          {trader.deal === 'bait' ? (
+          {trader.deal === 'resident' ? (
+            <>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>
+                Sell the whole hold
+              </p>
+              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f0c040', marginTop: 4 }}>
+                {Math.round(trader.rate * 100)}% of market value
+              </p>
+              {/* THE WHOLE POINT, said plainly. A player deciding whether to
+                  sail home needs the comparison in front of them, not the
+                  memory of a number from another screen. */}
+              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
+                Paid now, right here.<br />
+                The market ashore pays full price, but you have to sail back for
+                it and wait for it to settle.
+              </p>
+            </>
+          ) : trader.deal === 'bait' ? (
             <>
               <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>
                 {trader.qty} {bait?.name ?? 'bait'}
@@ -143,7 +178,7 @@ export default function TraderPanel({
             {err}
           </p>
         )}
-        {!spent && !err && (
+        {!spent && !err && !isResident && (
           <p className="font-karla font-600" style={{
             fontSize: '0.66rem', color: 'rgba(255,255,255,0.35)', marginTop: 10, textAlign: 'center',
           }}>
@@ -153,7 +188,8 @@ export default function TraderPanel({
 
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           {!spent && (
-            <button onClick={strike} disabled={busy || dealsLeft <= 0}
+            <button onClick={isResident ? sellHold : strike}
+              disabled={busy || (!isResident && dealsLeft <= 0)}
               className="font-cinzel font-700"
               style={{
                 flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.88rem',
@@ -163,7 +199,7 @@ export default function TraderPanel({
                 cursor: busy || dealsLeft <= 0 ? 'default' : 'pointer',
                 opacity: busy ? 0.6 : 1,
               }}>
-              {busy ? '…' : trader.deal === 'bait' ? 'Buy' : 'Sell'}
+              {busy ? '…' : trader.deal === 'bait' ? 'Buy' : 'Sell the hold'}
             </button>
           )}
           <button onClick={onClose}

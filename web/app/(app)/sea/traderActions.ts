@@ -24,6 +24,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
+import { PLACES } from '@/app/(app)/sea/chart'
 import { getBait } from '@/lib/bait'
 
 export type DealResult =
@@ -177,4 +178,67 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
   })
 
   return { ok: true, earned, doubloons: doubloons + earned }
+}
+
+/**
+ * SELL THE HOLD TO A ZONE'S RESIDENT BUYER.
+ *
+ * Deliberately NOT the wandering-trader path, and deliberately NOT capped. The
+ * six-a-day limit exists because a wanderer's discount is a reward you could
+ * otherwise farm by skipping the sailing. This is not a reward — it is the same
+ * conversion the 65% quick sell already does without limit, at a better rate,
+ * in exchange for having sailed out here at all. Capping it would only ever
+ * strand somebody with a full hold and nowhere to put it.
+ *
+ * The rate comes off the chart, server side. The client sends a zone id and
+ * nothing else.
+ */
+export async function sellToResident(zoneId: string): Promise<
+  { ok: true; earned: number; doubloons: number; rate: number } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const zone = PLACES.find(p => p.id === zoneId && p.kind === 'water')
+  if (!zone?.resident) return { error: 'There is nobody buying here.' }
+  const rate = zone.resident.rate
+
+  const admin = createAdminClient()
+  const { data: hold } = await admin
+    .from('fish_inventory')
+    .select('fish_id, quantity')
+    .eq('user_id', user.id)
+  const rows = (hold ?? []) as { fish_id: number; quantity: number }[]
+  if (!rows.length) return { error: 'Your hold is empty.' }
+
+  // Prices come from the species table, server side. The rate is the only thing
+  // the buyer contributes and it came off the chart, not off the request.
+  const ids = [...new Set(rows.map(r => r.fish_id))]
+  const { data: species } = await admin
+    .from('fish_species').select('id, sell_value').in('id', ids)
+  const value = new Map((species ?? []).map(f => [f.id as number, Number(f.sell_value ?? 0)]))
+
+  let earned = 0
+  for (const r of rows) earned += (value.get(r.fish_id) ?? 0) * r.quantity * rate
+  earned = Math.floor(earned)
+  if (earned <= 0) return { error: 'Nothing in your hold is worth anything to them.' }
+
+  // CLEAR THE HOLD FIRST. If the grant failed after the delete the player would
+  // lose the fish for nothing; if the delete fails after the grant they would
+  // be paid for a hold they still have, which is worse. Deleting first and
+  // checking the result means the only failure left is being paid late.
+  const { error: delErr } = await admin
+    .from('fish_inventory').delete().eq('user_id', user.id)
+  if (delErr) return { error: 'The sale fell through.' }
+
+  await admin.rpc('bump_profile_stat', { uid: user.id, col: 'doubloons', n: earned })
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: earned,
+    reason: `Sold the hold to ${zone.resident.name} in ${zone.name}`,
+  })
+
+  const { data: profile } = await admin
+    .from('profiles').select('doubloons').eq('id', user.id).single()
+  return { ok: true, earned, rate, doubloons: Number(profile?.doubloons ?? 0) }
 }
