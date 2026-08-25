@@ -336,6 +336,7 @@ function drawSea(
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitBonus, baitQty, dealtToday,
+  auto, tideTurner,
 }: {
   fishingXP: number
   /** The player's own loadout, so the thing crossing the ocean is the captain
@@ -352,6 +353,10 @@ export default function SeaMap({
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
+  /** The specials the CLIENT has to drive. See FishingHere for why these three
+   *  are the only ones that needed carrying out here. */
+  auto: { tier: 0 | 1 | 2; maxRarity: number }
+  tideTurner: { has: boolean; left: number }
 }) {
   const router = useRouter()
   const level = useMemo(() => getLevelFromXP(fishingXP), [fishingXP])
@@ -919,6 +924,8 @@ export default function SeaMap({
           mods={mods}
           onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
           fishingXP={fishingXP}
+          auto={auto}
+          tideTurner={tideTurner}
           onPose={setFrame}
           spritesReady={spritesReady}
           onClose={() => { setFishingIn(null); setFrame('rest') }}

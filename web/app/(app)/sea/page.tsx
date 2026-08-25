@@ -20,6 +20,7 @@ import { getBait } from '@/lib/bait'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
+import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 
 export const metadata = { title: 'The Sea' }
 
@@ -52,6 +53,22 @@ export default async function SeaPage() {
   // the client remembers is not a cap.
   const dealt = await dealtToday()
 
+  // ── THE SPECIALS THE CLIENT DRIVES ────────────────────────────────────
+  // Phantom Hook, Perfected Sigil and the Primeval Eye need nothing here: the
+  // server reads them off the profile inside castLine and reelIn, so they have
+  // been applying out here all along. These three are behaviour rather than
+  // effect, so they have to be carried.
+  const equippedSpecial = (profile?.equipped_special as string | null) ?? null
+  const hasCatcher = profile?.has_auto_catcher === true
+  const hasCaster = profile?.has_auto_caster === true
+  const autoTier: 0 | 1 | 2 =
+    (equippedSpecial === 'auto_catcher' && hasCatcher) ? 2
+      : (equippedSpecial === 'auto_caster' && hasCaster) ? 1
+        : 0
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const ttUsed = profile?.tide_turner_date === todayStr ? Number(profile?.tide_turner_used ?? 0) : 0
+
   const equippedPet = (profile?.equipped_pet as string | null) ?? null
   const pet = PETS.find(p => p.id === equippedPet) ?? null
 
@@ -83,6 +100,17 @@ export default async function SeaPage() {
       baitBonus={getBait(baitType).catchZoneBonus}
       baitQty={best?.quantity ?? 0}
       dealtToday={dealt}
+      auto={{
+        tier: autoTier,
+        maxRarity: gauntletAutoCatchMaxRarity(profile?.gauntlet_upgrades as string[] | null),
+      }}
+      tideTurner={{
+        has: profile?.has_tide_turner === true,
+        // 3/day, matching useTideTurnerSkip's own guard. The date string is
+        // built the same way the server builds it (UTC ISO date), or the count
+        // shown here would disagree with the one enforced there.
+        left: Math.max(0, 3 - ttUsed),
+      }}
       mods={{
         // The reel's needle-speed multiplier. Without it every reel tier was
         // identical out here and the dial ran at a flat speed for every fish.
@@ -90,6 +118,11 @@ export default async function SeaPage() {
         hookTier: Number(profile?.hook_tier ?? 0),
         linePenalty: line.penaltyMultiplier,
         rodCatchBonus: rod.catchZoneBonus ?? 0,
+        // Three rod effects the fishing screen implements CLIENT-side, which is
+        // why the map silently did not have them.
+        rodRetryOnMiss: rod.retryOnMissChance ?? 0,
+        rodSnagImmune: rod.snagImmune === true,
+        rodPerfectXpMult: rod.perfectXpMult ?? 1,
         rodPerfectBonus: rod.perfectZoneBonus ?? 0,
         fishingLevel: getLevelFromXP(Number(profile?.fishing_xp ?? 0)),
       }}

@@ -34,7 +34,8 @@ import { ResultCard } from '@/components/CatchResultCard'
 import { XPBarDisplay } from '@/components/FishingXPBar'
 import CrateOpening, { type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
 import { buildFishZones, ZONE_DIFFICULTY, FISH_DIFFICULTY_SPEED, type ZoneDef } from '../fishing/depths'
-import { castLine, reelIn, reelCrate, type FishSpecies } from '../fishing/actions'
+import { castLine, reelIn, reelCrate, useTideTurnerSkip, rerollWormhole, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from '../fishing/actions'
+import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { levelCatchBonus } from '@/lib/fishingLevel'
 import { vibrate } from '@/lib/haptics'
 import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
@@ -83,6 +84,7 @@ const HOLD_PERFECT_MS = 900
 type Hooked = {
   fishId: number
   catchDifficulty: number
+  biteRarity: number
   sweep: number
   crateTier?: string
   jackpotMult?: number
@@ -102,6 +104,19 @@ export type FishingMods = {
   /** The equipped reel's needle-speed multiplier. Lower is slower is easier,
    *  and leaving it out meant every reel tier was identical on the map. */
   reelSpeedMult: number
+  /** Second Wind and its kin: chance to re-spin the dial after a miss or a
+   *  snag instead of losing the fish. Purely client-side on the fishing screen
+   *  too — the server never hears about a retry — so the map has to implement
+   *  it or the effect simply does not exist out here. */
+  rodRetryOnMiss: number
+  /** Snag-immune rods turn a penalty into an ordinary miss BEFORE the result
+   *  is sent, which is how the extra bait stops being taken. The server has no
+   *  snagImmune handling at all, so sending it the raw 'penalty' means a
+   *  snag-immune rod still pays the snag. */
+  rodSnagImmune: boolean
+  /** Multiplied XP on a perfect. The XP itself is server-computed either way;
+   *  this is what lets the result card explain where it came from. */
+  rodPerfectXpMult: number
   hookTier: number
   linePenalty: number
   rodCatchBonus: number
@@ -110,7 +125,8 @@ export type FishingMods = {
 }
 
 export default function FishingHere({
-  zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, onBaitSpent, onPose, spritesReady, onClose,
+  zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
+  onBaitSpent, onPose, spritesReady, onClose,
 }: {
   zone: string
   zoneName: string
@@ -125,6 +141,27 @@ export default function FishingHere({
   /** For the level bar along the top. The map casts into the same XP pool, so
    *  it shows the same bar. */
   fishingXP: number
+  /**
+   * THE EQUIPPED KIT THAT THE CLIENT HAS TO DRIVE.
+   *
+   * Most specials need nothing here because the SERVER owns them: the Phantom
+   * Hook's bait save, the Perfected Sigil's payout and the Primeval Eye's tiers
+   * are all read off the profile inside castLine and reelIn, so they have been
+   * working out here since the first cast whether or not anything said so.
+   *
+   * These three are different. They are not effects, they are BEHAVIOUR — a
+   * loop that casts for you, a hand that reels for you, a button that throws a
+   * fish back. Behaviour lives on the client, which is exactly why the map did
+   * not have it.
+   */
+  auto: {
+    /** 0 none, 1 Auto Caster, 2 Auto Catcher. */
+    tier: 0 | 1 | 2
+    /** Highest bite rarity the Catcher will reel unaided. Gauntlet upgrades
+     *  push this from uncommons up to epics; legendaries always need a hand. */
+    maxRarity: number
+  }
+  tideTurner: { has: boolean; left: number }
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
   /** False until every frame of the loadout has been fetched AND decoded. The
    *  cast waits on it, because the pose swaps four images at once and an
@@ -176,6 +213,20 @@ export default function FishingHere({
   }, [hooked, zone, mods, baitBonus])
 
   // ── The sweep ────────────────────────────────────────────────────────────
+  const [retryFlash, setRetryFlash] = useState(false)
+  const [sigilPaid, setSigilPaid] = useState(0)
+  /** A SHINY MUST BE RESOLVABLE WHERE IT WAS CAUGHT.
+   *
+   *  sellGoldenTrophy and mountGoldenTrophy live only on the fishing screen, so
+   *  a shiny landed out here was written into shiny_catches with no surface
+   *  anywhere in the app to sell or mount it. Shinies only roll on a PERFECT,
+   *  and the map allows perfects, so this was not hypothetical. */
+  const [shiny, setShiny] = useState<{ id: number; alreadyMounted: boolean } | null>(null)
+  /** The Galaxy Rod's one-shot reroll, offered by the server on eligible
+   *  catches and simply never surfaced out here. */
+  const [wormhole, setWormhole] = useState(false)
+  const [busyChoice, setBusyChoice] = useState(false)
+  const [choiceNote, setChoiceNote] = useState('')
   useEffect(() => {
     if (phase !== 'hooked') { runningRef.current = false; return }
     runningRef.current = true
@@ -212,6 +263,9 @@ export default function FishingHere({
     // instead, at the start of the next cast, by which point nothing is
     // looking at it.
     setHooked(null)
+    setShiny(null)
+    setWormhole(false)
+    setChoiceNote('')
     setPhase('waiting')
     vibrate(12)
     // The first Cast is the user gesture the AudioContext needs, so the unlock
@@ -248,6 +302,7 @@ export default function FishingHere({
         setHooked({
           fishId: res.fishId,
           catchDifficulty: res.catchDifficulty,
+          biteRarity: res.biteRarity,
           sweep: sweepRef.current,
           crateTier: res.crateTier,
           jackpotMult: res.jackpotMult,
@@ -283,8 +338,31 @@ export default function FishingHere({
     runningRef.current = false
     const at = angleRef.current
     const hit = zones.find(z => at >= z.from && at < z.to)
-    const result = (hit?.type ?? 'miss') as 'perfect' | 'catch' | 'miss' | 'penalty'
+    const raw = (hit?.type ?? 'miss') as 'perfect' | 'catch' | 'miss' | 'penalty'
+    // SNAG IMMUNITY IS CLIENT-SIDE, on both screens. The server has no notion
+    // of it — the fishing screen turns a penalty into a plain miss before it
+    // sends the result, and that is the only reason the extra bait is not
+    // taken. Sending the raw penalty from here meant a snag-immune rod still
+    // paid the snag every time.
+    const result = (raw === 'penalty' && mods.rodSnagImmune) ? 'miss' : raw
     const perfect = result === 'perfect'
+    const isCatch = result === 'perfect' || result === 'catch'
+
+    // SECOND WIND. Another effect the server never hears about: on a miss or a
+    // snag the rod may simply hand the dial back, with the zones rotated and
+    // the needle re-seated so it is a fresh attempt rather than the same one.
+    // No reelIn call at all, which is what leaves the cast token alive for the
+    // retry to resolve against.
+    if (!isCatch && mods.rodRetryOnMiss > 0 && Math.random() < mods.rodRetryOnMiss) {
+      setRetryFlash(true)
+      setTimeout(() => setRetryFlash(false), 1200)
+      angleRef.current = Math.random() * 360
+      setAngle(angleRef.current)
+      runningRef.current = true
+      setSnapKey(k => k + 1)
+      vibrate([0, 20, 50, 20])
+      return
+    }
 
     // THE HIT, in the tap's own JS tick — same order the fishing screen uses.
     // Sound and haptic go first because they are the ones you FEEL as
@@ -339,6 +417,16 @@ export default function FishingHere({
         // Straight through to the shared card. Everything here comes off the
         // same payload the fishing screen reads, so a personal best or a shiny
         // landed from the map gets the identical moment.
+        // THE PERFECTED SIGIL pays the moment you reel it in, server-side, and
+        // the map was banking the coin without ever mentioning it.
+        if ((res.sigilBonus ?? 0) > 0) {
+          setSigilPaid(res.sigilBonus ?? 0)
+          setTimeout(() => setSigilPaid(0), 2600)
+        }
+        if (res.isShiny && res.shinyId != null) {
+          setShiny({ id: res.shinyId, alreadyMounted: res.alreadyMounted === true })
+        }
+        setWormhole(res.wormhole === true && !res.isShiny)
         setCaught({
           kind: 'fish',
           card: {
@@ -353,6 +441,7 @@ export default function FishingHere({
             doubleCatch: hooked.doubleCatch ?? false,
             jackpotMultiplier: hooked.jackpotMult,
             lockedStage: hooked.lockedStage ?? 0,
+            perfectXpMult: perfect ? mods.rodPerfectXpMult : 1,
             perfectStreak: res.perfectStreak ?? 1,
             streakBonusXP: res.streakBonusXP ?? 0,
             catchQty: res.catchQty ?? 1,
@@ -375,13 +464,81 @@ export default function FishingHere({
       setErr(e instanceof Error ? e.message : 'Lost the fish on the way in.')
       setPhase('idle')
     })
-  }, [phase, hooked, zones, bait, zone, onPose])
+  }, [phase, hooked, zones, bait, zone, mods, onPose])
+
+  // ── AUTO CASTER ─────────────────────────────────────────────────────────
+  // Casts again a beat after each result, and stops the moment it has no
+  // business continuing. The stop conditions matter more than the loop: it
+  // must never keep spending bait you did not mean to spend, and out here
+  // there is one the fishing screen does not have — SAILING AWAY. Pull the rod
+  // out of the water and the loop is done, or a boat left drifting would fish
+  // a zone the captain has already left.
+  const [autoOn, setAutoOn] = useState(true)
+  useEffect(() => {
+    if (auto.tier === 0 || !autoOn) return
+    if (phase !== 'result') return
+    if (baitLeft <= 0) return
+    const t = setTimeout(() => { castRef.current?.() }, 900)
+    return () => clearTimeout(t)
+  }, [phase, auto.tier, autoOn, baitLeft])
+
+  // ── AUTO CATCHER ────────────────────────────────────────────────────────
+  // Watches the needle and taps the instant it is about to enter a green catch
+  // band — the same thing a player does, done on time. It deliberately never
+  // takes the gold: a Perfect is the skill, and a machine that farmed perfect
+  // streaks would hollow out the one number this game asks you to earn.
+  //
+  // Only up to the rarity the Gauntlet upgrades allow. Anything rarer is left
+  // on the dial for your own hand, which is the whole bargain of the item.
+  useEffect(() => {
+    if (auto.tier !== 2 || !autoOn) return
+    if (phase !== 'hooked' || !hooked) return
+    if (hooked.crateTier) return
+    if ((hooked.biteRarity ?? 1) > auto.maxRarity) return
+    let raf = 0
+    let done = false
+    const startAt = performance.now()
+    const tick = () => {
+      if (done) return
+      // A grace beat so the dial visibly spins before the first auto-tap.
+      // Without it the reel fires so fast it reads as a bug rather than a tool.
+      if (performance.now() - startAt >= 420) {
+        const at = angleRef.current
+        const z = zonesRef.current.find(zz => at >= zz.from && at < zz.to)
+        if (z?.type === 'catch') { done = true; strikeRef.current?.(); return }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => { done = true; cancelAnimationFrame(raf) }
+  }, [phase, hooked, auto.tier, auto.maxRarity, autoOn])
+
+  // ── TIDE TURNER ─────────────────────────────────────────────────────────
+  const [skipsLeft, setSkipsLeft] = useState(tideTurner.left)
+  const [skipping, setSkipping] = useState(false)
+  const skip = useCallback(async () => {
+    if (skipping || phase !== 'hooked' || skipsLeft <= 0) return
+    setSkipping(true)
+    runningRef.current = false
+    const res = await useTideTurnerSkip().catch(() => ({ error: 'The tide would not turn.' }))
+    setSkipping(false)
+    if ('error' in res) { setErr(res.error); return }
+    // Throwing one back does NOT break the streak — that is the entire item.
+    setSkipsLeft(n => Math.max(0, n - 1))
+    onPose('rest')
+    setPhase('idle')
+    vibrate(10)
+  }, [skipping, phase, skipsLeft, onPose])
 
   /** `castAgain` needs the current `cast`, but `cast` is declared above it and
    *  is rebuilt whenever phase changes. Mirroring it to a ref keeps them in
    *  step without either depending on the other. */
   const castRef = useRef<(() => void) | null>(null)
   castRef.current = cast
+  const strikeRef = useRef<(() => void) | null>(null)
+  strikeRef.current = strike
+  const zonesRef = useRef<ZoneDef[]>([])
+  zonesRef.current = zones
 
   /** Cast straight out of the result, exactly as the fishing screen does: the
    *  card stays in the content area and the action slot goes back to Cast, so
@@ -407,6 +564,45 @@ export default function FishingHere({
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', pointerEvents: 'none',
       }}>
+
+      {/* THE PERFECTED SIGIL's payout. Paid by the server on every perfect; the
+          only thing missing out here was anybody saying so. */}
+      <AnimatePresence>
+        {sigilPaid > 0 && (
+          <motion.p key="sigil"
+            initial={{ opacity: 0, y: 0, x: '-50%' }}
+            animate={{ opacity: [0, 1, 1, 0], y: -26, x: '-50%' }}
+            transition={{ duration: 2.4, times: [0, 0.12, 0.66, 1], ease: 'easeOut' }}
+            className="font-cinzel font-700"
+            style={{
+              position: 'absolute', top: 96, left: '50%', zIndex: 30, pointerEvents: 'none',
+              fontSize: '0.9rem', color: '#f0c040', textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+            }}>
+            +{sigilPaid} ⟡
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      {/* SECOND WIND. The rod handed the dial back. Without a cue this reads as
+          the reel button simply not working. */}
+      <AnimatePresence>
+        {retryFlash && (
+          <motion.div key="retry"
+            initial={{ opacity: 0, scale: 0.7, x: '-50%' }}
+            animate={{ opacity: 1, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+            style={{
+              position: 'absolute', top: 60, left: '50%', zIndex: 30, pointerEvents: 'none',
+              padding: '0.32rem 0.72rem', borderRadius: 999,
+              background: 'rgba(56,189,178,0.22)',
+              border: '1px solid rgba(94,234,212,0.7)',
+              boxShadow: '0 0 18px rgba(45,212,191,0.4)',
+            }}>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#ccfbf1' }}>Second Wind</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* LIGHTSPEED. The Lightsaber and its kin roll an instant bite, and the
           whole experience of that effect is the wait NOT happening — which is
@@ -533,6 +729,87 @@ export default function FishingHere({
                 </div>
               )}
             </div>
+
+            {/* ── DECISIONS THE CATCH CAN HAND YOU ──────────────────────
+                Both of these are server-offered and were being dropped. A
+                shiny in particular MUST be resolvable here: it is already
+                written into shiny_catches by the time you see it, and the
+                sell/mount actions exist nowhere else in the app. */}
+            {shiny && (
+              <div style={{
+                marginTop: 10, padding: '0.8rem', borderRadius: 12, textAlign: 'center',
+                background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.4)',
+              }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0c040' }}>
+                  A golden one
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#c8b590', marginTop: 4, lineHeight: 1.5 }}>
+                  {shiny.alreadyMounted
+                    ? 'You have one of these on the wall already. This one can only be sold.'
+                    : 'Sell it, or mount it in your Logbook. One of each species only.'}
+                </p>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button disabled={busyChoice}
+                    onClick={async e => {
+                      e.stopPropagation(); setBusyChoice(true)
+                      const r = await sellGoldenTrophy(shiny.id).catch(() => ({ error: 'It slipped away.' }))
+                      setBusyChoice(false)
+                      if ('error' in r) { setChoiceNote(r.error); return }
+                      setChoiceNote(`Sold for ${r.earned.toLocaleString()} ⟡`)
+                      setShiny(null)
+                    }}
+                    className="font-cinzel font-700"
+                    style={{
+                      flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.8rem',
+                      color: '#f2ead8', background: 'rgba(240,192,64,0.18)',
+                      border: '1px solid rgba(240,192,64,0.5)', cursor: 'pointer',
+                    }}>Sell</button>
+                  {!shiny.alreadyMounted && (
+                    <button disabled={busyChoice}
+                      onClick={async e => {
+                        e.stopPropagation(); setBusyChoice(true)
+                        const r = await mountGoldenTrophy(shiny.id).catch(() => ({ error: 'It slipped away.' }))
+                        setBusyChoice(false)
+                        if ('error' in r) { setChoiceNote(r.error); return }
+                        setChoiceNote('Mounted in your Logbook')
+                        setShiny(null)
+                      }}
+                      className="font-karla font-700"
+                      style={{
+                        flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.8rem',
+                        color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer',
+                      }}>Mount</button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {wormhole && (
+              <button disabled={busyChoice}
+                onClick={async e => {
+                  e.stopPropagation(); setBusyChoice(true)
+                  const r = await rerollWormhole().catch(() => ({ error: 'The wormhole closed.' }))
+                  setBusyChoice(false)
+                  setWormhole(false)
+                  if ('error' in r) { setChoiceNote(r.error); return }
+                  setChoiceNote(`Rerolled into ${r.fish.name}`)
+                }}
+                className="font-cinzel font-700"
+                style={{
+                  marginTop: 10, width: '100%', padding: '0.6rem', borderRadius: 10,
+                  fontSize: '0.8rem', color: '#d8b4fe',
+                  background: 'rgba(192,132,252,0.14)',
+                  border: '1px solid rgba(192,132,252,0.45)', cursor: 'pointer',
+                }}>
+                Wormhole · reroll this catch
+              </button>
+            )}
+            {choiceNote && (
+              <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#7fd6a0', marginTop: 8, textAlign: 'center' }}>
+                {choiceNote}
+              </p>
+            )}
           </motion.div>
         )}
 
@@ -622,6 +899,46 @@ export default function FishingHere({
             <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(190,212,228,0.5)' }}>…</p>
           )}
         </div>
+
+        {/* THE TIDE TURNER, beside the action slot rather than in it. The slot
+            is 88px and holds still in every phase; putting a second button
+            inside it would break the one rule the row exists to keep. */}
+        {tideTurner.has && phase === 'hooked' && skipsLeft > 0 && (
+          <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
+            className="font-karla font-700"
+            style={{
+              padding: '0.3rem 0.7rem', borderRadius: 999, fontSize: '0.62rem',
+              color: '#c4b5fd', background: 'rgba(167,139,250,0.14)',
+              border: '1px solid rgba(167,139,250,0.45)', cursor: skipping ? 'default' : 'pointer',
+              opacity: skipping ? 0.6 : 1,
+            }}>
+            {skipping ? '…' : `Throw it back · ${skipsLeft} left`}
+          </button>
+        )}
+
+        {/* The auto toggle. Shown only when the item is actually equipped, and
+            it is a toggle rather than always-on because handing your rod to a
+            machine should stay a choice you can take back mid-session. */}
+        {auto.tier > 0 && (phase === 'idle' || phase === 'result') && (
+          <button onClick={e => { e.stopPropagation(); setAutoOn(v => !v) }}
+            className="font-karla font-700 uppercase tracking-[0.1em]"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '0.28rem 0.66rem', borderRadius: 999, fontSize: '0.58rem',
+              color: autoOn ? '#f0ede8' : '#9a9488',
+              background: autoOn ? 'rgba(70,224,192,0.13)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${autoOn ? 'rgba(70,224,192,0.5)' : 'rgba(255,255,255,0.16)'}`,
+              cursor: 'pointer',
+            }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/autocaster.png" alt="" style={{
+              width: 15, height: 15, objectFit: 'contain',
+              opacity: autoOn ? 1 : 0.45,
+              filter: autoOn ? 'drop-shadow(0 0 4px rgba(70,224,192,0.5))' : 'grayscale(1)',
+            }} />
+            {auto.tier === 2 ? 'Auto Catcher' : 'Auto Caster'} · {autoOn ? 'On' : 'Off'}
+          </button>
+        )}
 
         <button onClick={e => { e.stopPropagation(); onClose() }}
           className="font-karla font-700"
