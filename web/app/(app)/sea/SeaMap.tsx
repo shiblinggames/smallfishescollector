@@ -1510,6 +1510,36 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
               }} />
             )
           })}
+          {/* ── WHAT BREAKS THE SURFACE ─────────────────────────────────
+              Placed in world offsets from the zone centre and standing UP off
+              the plane, counter-squashed like everything else with height. Each
+              one gets a soft ellipse at its foot: it is sitting IN water, and
+              without something where it meets the surface it reads as pasted
+              on rather than floating in. */}
+          {place.landmarks?.map((m, i) => (
+            <div key={i} style={{
+              position: 'absolute', left: place.r + m.x, top: place.r + m.y,
+              pointerEvents: 'none',
+            }}>
+              <div aria-hidden style={{
+                position: 'absolute', left: -m.size * 0.32, top: -m.size * 0.07,
+                width: m.size * 0.64, height: m.size * 0.2,
+                borderRadius: '50%',
+                background: 'rgba(6,18,28,0.4)', filter: `blur(${Math.round(m.size * 0.035)}px)`,
+              }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={m.art} alt="" draggable={false} loading="lazy" style={{
+                position: 'absolute', left: 0, top: 0, width: m.size, maxWidth: 'none',
+                transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+                transformOrigin: 'bottom center',
+                display: 'block',
+                filter: locked
+                  ? 'grayscale(0.85) brightness(0.55)'
+                  : 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
+              }} />
+            </div>
+          ))}
+
           {locked && (
             /* Weather, not a wall. A locked water is one you can SEE is bad:
                squall streaks that fade out with no boundary anywhere. */

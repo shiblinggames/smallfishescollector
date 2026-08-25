@@ -51,6 +51,22 @@ export type Place = {
    */
   buildings?: { art: string; x: number; y: number; scale: number }[]
   /**
+   * WHAT BREAKS THE SURFACE OUT HERE.
+   *
+   * Waters had nothing in them but drift, so a five-thousand-pixel sail was
+   * five thousand pixels of empty colour with a banner at the top telling you
+   * the name of it. Landmarks give the crossing something to aim at, and they
+   * say what kind of water this is faster than any label: buoys and rocks in
+   * the Shallows, wrecks in the Deep, a dead rig in the Abyss, and something
+   * carved and lit in the Ancient Deep.
+   *
+   * Unlike buildings these are placed in WORLD offsets from the zone centre and
+   * sized in world pixels, because a zone is thousands of pixels across and a
+   * percentage would make the same wreck twice the size in the Abyss as in the
+   * Deep. The boat is 210 world pixels wide, for scale.
+   */
+  landmarks?: { art: string; x: number; y: number; size: number }[]
+  /**
    * WHAT THIS WATER LOOKS LIKE.
    *
    * A water does not get a shape, it gets a COLOUR, and the sea blends toward
@@ -124,30 +140,55 @@ export const PLACES: Place[] = [
     id: 'shallows', name: 'The Shallows', blurb: 'Calm water, common fish',
     href: '/fishing?zone=shallows', x: 900, y: 300, r: 700, art: '/shallows.jpg',
     sea: ['#123038', '#2b5a5e', '#6f9a95'] as [string, string, string],
+    landmarks: [
+      { art: '/sea/buoy.png',  x: -260, y: -180, size: 130 },
+      { art: '/sea/islet.png', x:  300, y:  120, size: 210 },
+      { art: '/sea/buoy.png',  x:  110, y:  420, size: 120 },
+    ],
     kind: 'water', minLevel: 1,
   },
   {
     id: 'open_waters', name: 'Open Waters', blurb: 'Further out, better catches',
     href: '/fishing?zone=open_waters', x: 2150, y: 620, r: 820, art: '/openwaters.jpg',
     sea: ['#0e2836', '#234c60', '#5a8298'] as [string, string, string],
+    landmarks: [
+      { art: '/sea/islet.png', x: -380, y:  260, size: 190 },
+      { art: '/sea/buoy.png',  x:  340, y: -240, size: 130 },
+      { art: '/sea/wreck.png', x:  120, y:  480, size: 280 },
+    ],
     kind: 'water', minLevel: 15,
   },
   {
     id: 'deep', name: 'The Deep', blurb: 'Long waits, real weight',
     href: '/fishing?zone=deep', x: 3600, y: 340, r: 950, art: '/deep.jpg',
     sea: ['#0a1d2c', '#173a52', '#3f6480'] as [string, string, string],
+    landmarks: [
+      { art: '/sea/wreck.png', x: -420, y: -200, size: 330 },
+      { art: '/sea/buoy.png',  x:  380, y:  300, size: 120 },
+      { art: '/sea/rig.png',   x:  180, y: -520, size: 300 },
+    ],
     kind: 'water', minLevel: 30,
   },
   {
     id: 'abyss', name: 'The Abyss', blurb: 'Where the dark begins',
     href: '/fishing?zone=abyss', x: 5300, y: 900, r: 1050, art: '/abyss.jpg',
     sea: ['#060f1a', '#0f2438', '#274257'] as [string, string, string],
+    landmarks: [
+      { art: '/sea/rig.png',   x: -300, y:  240, size: 350 },
+      { art: '/sea/bones.png', x:  420, y: -260, size: 360 },
+      { art: '/sea/wreck.png', x: -560, y: -480, size: 300 },
+    ],
     kind: 'water', minLevel: 50,
   },
   {
     id: 'ancient_deep', name: 'The Ancient Deep', blurb: 'Giants, and worse',
     href: '/fishing?zone=ancient_deep', x: 7200, y: 400, r: 1150, art: '/ancient.jpg',
     sea: ['#07101a', '#16202f', '#31363f'] as [string, string, string],
+    landmarks: [
+      { art: '/sea/monolith.png', x: -240, y: -260, size: 320 },
+      { art: '/sea/bones.png',    x:  400, y:  300, size: 400 },
+      { art: '/sea/monolith.png', x:  560, y: -420, size: 280 },
+    ],
     kind: 'water', minLevel: 75,
   },
 ]
