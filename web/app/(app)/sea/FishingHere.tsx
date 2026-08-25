@@ -30,19 +30,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DialSVG } from '@/components/FishingDial'
+import { ResultCard } from '@/components/CatchResultCard'
 import { buildFishZones, ZONE_DIFFICULTY, type ZoneDef } from '../fishing/depths'
-import { castLine, reelIn } from '../fishing/actions'
+import { castLine, reelIn, type FishSpecies } from '../fishing/actions'
 import { levelCatchBonus } from '@/lib/fishingLevel'
 import { vibrate } from '@/lib/haptics'
+import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
+import type { FishSizeTier } from '@/lib/fishSize'
 
 /** How fast the needle sweeps, degrees/sec. Matches the fishing screen's feel
  *  closely enough to be the same skill; it is not a different minigame. */
 const SWEEP = 210
 
-type Phase = 'idle' | 'waiting' | 'hooked' | 'result'
+/** `reeling` is the beat that was missing. The dial used to vanish on the same
+ *  tick as the tap, so the needle never visibly LANDED — you tapped and the
+ *  instrument was simply gone, which is why hitting a perfect felt like hitting
+ *  nothing. Now the dial stays up, frozen on the angle that resolved, long
+ *  enough to show the snap and the gold burst, and the card comes after. */
+type Phase = 'idle' | 'waiting' | 'hooked' | 'reeling' | 'result'
+
+/** How long the frozen dial holds before the card. A perfect earns longer:
+ *  the burst ring runs 450ms and cutting it off is the whole complaint. */
+const HOLD_MS = 620
+const HOLD_PERFECT_MS = 900
 
 type Hooked = { fishId: number; catchDifficulty: number }
-type Caught = { name: string; xp: number; result: string; perfect: boolean }
+
+/** Everything the shared ResultCard needs. `reelIn` already returns all of it —
+ *  the map was throwing it away and printing a name and an XP number. */
+type Caught =
+  | { kind: 'fish'; card: React.ComponentProps<typeof ResultCard> }
+  | { kind: 'miss'; result: 'miss' | 'penalty' }
 
 export type FishingMods = {
   hookTier: number
@@ -73,6 +91,12 @@ export default function FishingHere({
   const [hooked, setHooked] = useState<Hooked | null>(null)
   const [caught, setCaught] = useState<Caught | null>(null)
   const [angle, setAngle] = useState(0)
+  // THE TACTILE HIT, and it was here the whole time. DialSVG already draws the
+  // snap-and-ripple on reel and the gold burst on a perfect — it just needs to
+  // be TOLD, via these two counters. The map was rendering the dial without
+  // them, so the instrument was correct and completely mute.
+  const [snapKey, setSnapKey] = useState(0)
+  const [burstKey, setBurstKey] = useState(0)
 
   const angleRef = useRef(0)
   const runningRef = useRef(false)
@@ -127,13 +151,19 @@ export default function FishingHere({
     setCaught(null)
     setPhase('waiting')
     vibrate(12)
+    // The first Cast is the user gesture the AudioContext needs, so the unlock
+    // rides on it. This wires the graph and decodes the SFX buffers WITHOUT
+    // starting the soundtrack — the map is not the fishing screen and should
+    // not seize the music. Every call after the first is a no-op.
+    unlockFishingAudio()
+    playCastSfx()
     // THE CAST IS A BEAT, not a state change. Rod comes over, and only once it
     // has does the line settle into the water. Skipping it was most of why
     // pressing Cast looked like nothing had happened: the pose never changed
     // and the only feedback was six small words for the several seconds the
     // server makes you wait for a bite.
     onPose('cast')
-    poseRef.current = setTimeout(() => onPose('wait'), 460)
+    poseRef.current = setTimeout(() => { onPose('wait'); playCast2Sfx() }, 460)
     castLine(bait, zone).then(res => {
       if ('error' in res) { setErr(res.error); setPhase('idle'); onPose('rest'); return }
       onBaitSpent(res.baitRemaining)
@@ -167,21 +197,62 @@ export default function FishingHere({
     const at = angleRef.current
     const hit = zones.find(z => at >= z.from && at < z.to)
     const result = (hit?.type ?? 'miss') as 'perfect' | 'catch' | 'miss' | 'penalty'
-    vibrate(result === 'perfect' ? [0, 30, 40, 60] : result === 'catch' ? 18 : 10)
-    setPhase('result')
+    const perfect = result === 'perfect'
+
+    // THE HIT, in the tap's own JS tick — same order the fishing screen uses.
+    // Sound and haptic go first because they are the ones you FEEL as
+    // simultaneous; the dial's snap and burst paint on the commit that follows.
+    // The haptic patterns are lifted from FishingGame rather than invented: a
+    // perfect is a distinct three-pulse buzz and everything else is a single
+    // short tick that only says "registered". Two different signals is the
+    // whole point, and the map had been giving three vague ones.
+    if (perfect) { playPerfectSfx(); vibrate([40, 60, 80]); setBurstKey(k => k + 1) }
+    else vibrate(6)
+    setSnapKey(k => k + 1)
+    setPhase('reeling')
     onPose('rest')
-    reelIn(hooked.fishId, result, bait).then(res => {
-      if ('error' in res) { setErr(res.error); setPhase('idle'); return }
+
+    // The dial holds, frozen, while the server resolves. Both have to finish
+    // before the card: landing on the answer before the needle has visibly
+    // stopped is exactly the "no response" the reel had.
+    const held = new Promise<void>(r => setTimeout(r, perfect ? HOLD_PERFECT_MS : HOLD_MS))
+
+    reelIn(hooked.fishId, result, bait).then(async res => {
+      await held
+      if ('error' in res) { setErr(res.error); setPhase('idle'); setHooked(null); return }
       if ('caught' in res && res.caught) {
+        // Straight through to the shared card. Everything here comes off the
+        // same payload the fishing screen reads, so a personal best or a shiny
+        // landed from the map gets the identical moment.
         setCaught({
-          name: res.fish.name, xp: res.xpGained,
-          result, perfect: result === 'perfect',
+          kind: 'fish',
+          card: {
+            fish: res.fish as FishSpecies,
+            baitSaved: res.baitSaved,
+            isNewSpecies: res.isNewSpecies,
+            isPerfect: perfect,
+            xpGained: res.xpGained,
+            doubleCatch: false,
+            perfectStreak: res.perfectStreak ?? 1,
+            streakBonusXP: res.streakBonusXP ?? 0,
+            catchQty: res.catchQty ?? 1,
+            sizeIn: res.sizeIn,
+            sizeMin: res.sizeMin,
+            sizeMax: res.sizeMax,
+            sizeTier: res.sizeTier as FishSizeTier | undefined,
+            isPB: res.isPB,
+            previousBest: res.previousBest,
+            isShiny: res.isShiny,
+            vigilRankUp: res.vigilRankUp ?? null,
+          },
         })
       } else {
-        setCaught({ name: '', xp: 0, result, perfect: false })
+        setCaught({ kind: 'miss', result: result === 'penalty' ? 'penalty' : 'miss' })
       }
+      setPhase('result')
       setHooked(null)
-    }).catch((e: unknown) => {
+    }).catch(async (e: unknown) => {
+      await held
       setErr(e instanceof Error ? e.message : 'Lost the fish on the way in.')
       setHooked(null)
       setPhase('idle')
@@ -209,36 +280,67 @@ export default function FishingHere({
           already learned. Both are lifted from FishingGame: the same 88px
           circle, the same gold, the same chunky press, the same ripples. */}
       <AnimatePresence>
-        {phase === 'hooked' && (
+        {(phase === 'hooked' || phase === 'reeling') && (
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
             transition={{ type: 'spring', stiffness: 300, damping: 24 }}
             style={{ pointerEvents: 'none', marginBottom: 12, width: 260 }}>
-            <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1} />
+            <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1}
+              snapKey={snapKey} perfectBurstKey={burstKey} />
           </motion.div>
         )}
       </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {phase === 'result' && caught && (
-          <motion.button key="result" onClick={e => { e.stopPropagation(); dismiss() }}
+          <motion.div key="result" onClick={e => e.stopPropagation()}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="font-cinzel font-700"
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              pointerEvents: 'auto', cursor: 'pointer',
-              padding: '0.8rem 1.5rem', borderRadius: 14, fontSize: '0.95rem',
-              color: caught.name ? '#f6ecd6' : '#d9b7b7',
-              background: 'rgba(8,16,24,0.9)',
-              border: `1px solid ${caught.perfect ? 'rgba(253,230,138,0.65)' : 'rgba(180,214,232,0.4)'}`,
-              boxShadow: caught.perfect ? '0 0 30px rgba(253,230,138,0.25)' : '0 6px 22px rgba(0,0,0,0.5)',
+              pointerEvents: 'auto', width: '100%', maxWidth: 380,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
             }}>
-            {caught.name
-              ? `${caught.perfect ? 'Perfect! ' : ''}${caught.name}  ·  +${caught.xp} XP`
-              : caught.result === 'penalty' ? 'Snagged. Line lost.' : 'It got away.'}
-          </motion.button>
+            {/* The card is tall — new species, a PB and a streak all stack rows
+                onto it — and this overlay is anchored to the bottom of the sea,
+                not to a page that scrolls. Cap it and let the card scroll inside
+                itself, so Cast Again never ends up off the top of the screen. */}
+            <div style={{ width: '100%', maxHeight: '58vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+            {caught.kind === 'fish' ? (
+              /* THE SAME CARD. Not a summary of it — the component the fishing
+                 screen renders, handed the same payload. See
+                 components/CatchResultCard for why it moved out of FishingGame. */
+              <ResultCard {...caught.card} />
+            ) : (
+              <div style={{
+                width: '100%', borderRadius: 16, padding: '1rem 1.15rem', textAlign: 'center',
+                background: 'rgba(8,16,24,0.94)',
+                border: '1px solid rgba(180,214,232,0.28)',
+              }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#d9b7b7' }}>
+                  {caught.result === 'penalty' ? 'Snagged' : 'It got away'}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.8rem', color: '#9fb4c2', marginTop: 6 }}>
+                  {caught.result === 'penalty'
+                    ? 'The line fouled and took a bait with it.'
+                    : 'The line went slack. Cast again.'}
+                </p>
+              </div>
+            )}
+            </div>
+            <button onClick={e => { e.stopPropagation(); dismiss() }}
+              className="font-cinzel font-700"
+              style={{
+                cursor: 'pointer', padding: '0.7rem 1.6rem', borderRadius: 12,
+                fontSize: '0.88rem', color: '#f2ead8',
+                background: 'rgba(10,20,28,0.9)',
+                border: '1px solid rgba(180,214,232,0.45)',
+                boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
+              }}>
+              Cast Again
+            </button>
+          </motion.div>
         )}
 
         {phase === 'idle' && (
