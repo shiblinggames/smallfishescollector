@@ -845,6 +845,12 @@ export default function FishingHere({
                       const r = await sellGoldenTrophy(shiny.id).catch(() => ({ error: 'It slipped away.' }))
                       setBusyChoice(false)
                       if ('error' in r) { setChoiceNote(r.error); return }
+                      // Same as the traders: the coin is already banked, but
+                      // the header reads its balance once at render and never
+                      // asks again unless it is told.
+                      if (typeof r.doubloons === 'number') {
+                        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.doubloons }))
+                      }
                       setChoiceNote(`Sold for ${r.earned.toLocaleString()} ⟡`)
                       setShiny(null)
                     }}

@@ -185,7 +185,13 @@ export async function strikeDeal(traderKey: string): Promise<DealResult> {
     user_id: user.id, amount: earned, reason: `Sold the hold to ${trader.name} at sea`,
   })
 
-  return { ok: true, earned, doubloons: doubloons + earned }
+  // Re-read rather than predict. This number is now DISPLAYED in the nav, and
+  // `doubloons + earned` is the balance this request expected rather than the
+  // one the database landed on — a concurrent sale elsewhere would leave the
+  // header showing a total that was never true.
+  const { data: after } = await admin
+    .from('profiles').select('doubloons').eq('id', user.id).single()
+  return { ok: true, earned, doubloons: Number(after?.doubloons ?? doubloons + earned) }
 }
 
 /**

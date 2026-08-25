@@ -36,6 +36,22 @@ export default function TraderPanel({
     ? Math.round((1 - trader.cost / trader.shopCost) * 100)
     : 0
 
+  /**
+   * TELL THE NAV. The coin is already in the account — every one of these
+   * actions grants it server-side and hands back the new total — but the
+   * balance in the header is read once when the page renders and never asked
+   * again, so a sale out here looked like it had done nothing.
+   *
+   * `doubloons-changed` is the house convention for exactly this. The detail
+   * MUST be a number: Nav renders displayDoubloons.toLocaleString(), so a
+   * dispatch with no detail sets it to null and takes the whole page to Next's
+   * error screen.
+   */
+  function announce(total: number | undefined) {
+    if (typeof total !== 'number') return
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: total }))
+  }
+
   const isResident = trader.deal === 'resident'
   const isTalk = trader.deal === 'talk'
   const rod = trader.deal === 'rod' ? RODS.find(r => r.tier === trader.rodTier) : null
@@ -46,6 +62,7 @@ export default function TraderPanel({
     try {
       const res = await buyRunnerRod(trader.key)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
+      announce(res.doubloons)
       onDealt(trader.key)
       setDone(`The ${rod?.name ?? 'rod'} is yours. Equip it from the tackle shop.`)
       vibrate([0, 40, 60, 80])
@@ -61,6 +78,7 @@ export default function TraderPanel({
     try {
       const res = await sellToResident(trader.zoneId)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
+      announce(res.doubloons)
       setDone(`${res.earned.toLocaleString()} ⟡ for the lot. Hold's empty.`)
       vibrate([0, 30, 40, 60])
     } catch {
@@ -77,6 +95,7 @@ export default function TraderPanel({
     try {
       const res = await strikeDeal(trader.key)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
+      announce(res.doubloons)
       onDealt(trader.key)
       setDone(
         res.earned != null
