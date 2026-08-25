@@ -745,6 +745,8 @@ export default function SeaMap({
   /** One node per trader on screen, moved imperatively so a drifting boat costs
    *  a transform rather than a re-render. */
   const hullRefs = useRef(new Map<string, HTMLDivElement>())
+  /** The wake node of each trader, found once rather than every frame. */
+  const wakeCache = useRef(new Map<string, HTMLElement>())
   /** The inner composite of each trader, found once rather than every frame. */
   const hullCache = useRef(new Map<string, HTMLElement>())
   useEffect(() => { tradersRef.current = traders }, [traders])
@@ -1329,7 +1331,11 @@ export default function SeaMap({
             isNear={nearTrader?.key === t.key}
             hullRef={el => {
               if (el) hullRefs.current.set(t.key, el)
-              else { hullRefs.current.delete(t.key); hullCache.current.delete(t.key) }
+              else {
+                hullRefs.current.delete(t.key)
+                hullCache.current.delete(t.key)
+                wakeCache.current.delete(t.key)
+              }
             }} />
         ))}
 
