@@ -149,14 +149,13 @@ export default function SeaMap({
       if (world) world.style.transform = `translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
       const boat = boatRef.current
       if (boat) {
-        // Two out-of-phase waves so the bob never reads as a metronome, and a
-        // list into the direction of travel.
+        // Screen-space only: the bob, the heel and which way it faces. Position
+        // is not this element's business any more.
         const t = now / 1000
         const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
         const heel = Math.max(-7, Math.min(7, (vel.current.x / SPEED) * 7))
         boat.style.transform =
-          `translate3d(${pos.current.x}px, ${pos.current.y + bob}px, 0) ` +
-          `translate(-50%, -50%) scaleX(${facing.current}) rotate(${heel}deg)`
+          `translate(-50%, -50%) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
       }
 
       // Proximity drives React, but only a few times a second. Nothing on screen
@@ -194,16 +193,27 @@ export default function SeaMap({
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', willChange: 'transform' }}>
         {PLACES.map(p => (
-          <PlaceMedallion key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
+          <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
         ))}
+      </div>
 
-        {/* The boat rides in the world layer so it sits between places rather
-            than over them, and so one transform moves everything together. */}
-        <div ref={boatRef} style={{ position: 'absolute', left: 0, top: 0, willChange: 'transform', zIndex: 5 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={boatArt} alt="" draggable={false}
-            style={{ display: 'block', width: 132, filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))' }} />
-        </div>
+      {/* THE BOAT SITS AT THE CENTRE OF THE SCREEN AND STAYS THERE.
+          It used to live inside the world layer at its world position, with the
+          world translated by the negative of that — which composes to dead
+          centre, and is a needlessly clever way of saying "the middle". It also
+          made the boat invisible for reasons I could not reproduce by reading,
+          which is reason enough on its own.
+          The camera follows the boat, so relative to the screen the boat never
+          moves. Only the sea does. That is both simpler and what a camera-follow
+          actually means. */}
+      <div ref={boatRef}
+        style={{
+          position: 'absolute', left: '50%', top: '50%', zIndex: 5,
+          willChange: 'transform', pointerEvents: 'none',
+        }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={boatArt} alt="" draggable={false}
+          style={{ display: 'block', width: 150, filter: 'drop-shadow(0 10px 16px rgba(0,0,0,0.55))' }} />
       </div>
 
       <Prompt place={near} locked={near ? locked(near) : false} level={level} onEnter={enter} tick={tick} />
@@ -216,58 +226,142 @@ function dist(a: Vec, p: { x: number; y: number }): number {
   return Math.hypot(a.x - p.x, a.y - p.y)
 }
 
-/** A place on the chart: the painted plate, soft-edged so it sits IN the water
- *  rather than on top of it. Ports get land colour and a hard rim; waters get a
- *  wide feathered edge, because a region has no coastline. */
-function PlaceMedallion({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
+/**
+ * A PLACE ON THE WATER.
+ *
+ * Not a picture floating on a background. A port is LAND — an island silhouette
+ * with the painted plate showing through it as its surface, a shoreline, and a
+ * jetty running out into the water where you tie up. A water is a REGION, drawn
+ * as a stretch of sea that has changed colour, with no coastline at all because
+ * it does not have one.
+ *
+ * The island shape is generated per place from its id, so no two are the same
+ * outline and a row of them never reads as a row of buttons.
+ *
+ * This is scaffolding for real art, not a substitute for it. Every plate here is
+ * a scene painting doing duty as terrain; a purpose-painted island or dock plate
+ * drops straight into `art` and this shape logic keeps working under it.
+ */
+function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
   const isWater = place.kind === 'water'
   const d = place.r * 2
+
+  // An irregular coastline, seeded off the id so it is stable across renders and
+  // different for every island.
+  const clip = useMemo(() => {
+    let h = 0
+    for (let i = 0; i < place.id.length; i++) h = (h * 31 + place.id.charCodeAt(i)) >>> 0
+    const pts: string[] = []
+    const N = 26
+    for (let i = 0; i < N; i++) {
+      const a = (Math.PI * 2 * i) / N
+      const wobble =
+        0.085 * Math.sin(a * 3 + (h % 100) / 12) +
+        0.05 * Math.cos(a * 5 - (h % 70) / 9) +
+        0.028 * Math.sin(a * 8 + (h % 40) / 5)
+      const r = 46 + wobble * 100
+      pts.push(`${(50 + Math.cos(a) * r).toFixed(2)}% ${(50 + Math.sin(a) * r).toFixed(2)}%`)
+    }
+    return `polygon(${pts.join(', ')})`
+  }, [place.id])
+
   return (
     <div style={{
       position: 'absolute', left: place.x, top: place.y,
       width: d, height: d, marginLeft: -place.r, marginTop: -place.r,
       pointerEvents: 'none',
     }}>
-      <div style={{
-        position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden',
-        // Feathered into the sea. A hard circle is the single thing that would
-        // make these read as buttons pasted on a background.
-        maskImage: isWater
-          ? 'radial-gradient(circle, #000 34%, rgba(0,0,0,0.55) 62%, transparent 82%)'
-          : 'radial-gradient(circle, #000 62%, rgba(0,0,0,0.75) 78%, transparent 92%)',
-        WebkitMaskImage: isWater
-          ? 'radial-gradient(circle, #000 34%, rgba(0,0,0,0.55) 62%, transparent 82%)'
-          : 'radial-gradient(circle, #000 62%, rgba(0,0,0,0.75) 78%, transparent 92%)',
-        opacity: locked ? 0.4 : isWater ? 0.72 : 0.95,
-        filter: locked ? 'grayscale(0.85) brightness(0.6)' : 'none',
-        transition: 'opacity 260ms ease-out',
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={place.art} alt="" draggable={false}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-      </div>
+      {isWater ? (
+        <>
+          {/* THE WATER ITSELF, changed. No edge, because a region has no
+              coastline — it feathers away into the open sea. */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden',
+            maskImage: 'radial-gradient(circle, #000 26%, rgba(0,0,0,0.5) 58%, transparent 80%)',
+            WebkitMaskImage: 'radial-gradient(circle, #000 26%, rgba(0,0,0,0.5) 58%, transparent 80%)',
+            opacity: locked ? 0.3 : isNear ? 0.62 : 0.48,
+            filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'saturate(0.85)',
+            transition: 'opacity 300ms ease-out',
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={place.art} alt="" draggable={false}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+          {locked && (
+            /* A squall sitting over it. The gate is weather you can see rather
+               than a message telling you no. */
+            <div aria-hidden style={{
+              position: 'absolute', inset: '8%', borderRadius: '50%',
+              background: 'repeating-linear-gradient(58deg, rgba(150,164,178,0.16) 0 7px, transparent 7px 19px)',
+              maskImage: 'radial-gradient(circle, #000 40%, transparent 78%)',
+              WebkitMaskImage: 'radial-gradient(circle, #000 40%, transparent 78%)',
+            }} />
+          )}
+        </>
+      ) : (
+        <>
+          {/* SHOALS, then SHORE, then LAND. Three rings so the island meets the
+              sea through shallow water rather than on a cut line. */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: '2%', clipPath: clip,
+            background: 'rgba(150,190,205,0.16)', filter: 'blur(6px)',
+          }} />
+          <div aria-hidden style={{
+            position: 'absolute', inset: '10%', clipPath: clip,
+            background: 'rgba(196,214,222,0.34)',
+          }} />
+          <div style={{
+            position: 'absolute', inset: '13%', clipPath: clip, overflow: 'hidden',
+            filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'brightness(0.94) saturate(0.92)',
+            boxShadow: 'inset 0 0 40px rgba(0,0,0,0.55)',
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={place.art} alt="" draggable={false}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
 
-      {/* A quiet ring, brighter when you are in it. Enough to say "this is a
-          place" without drawing a button around a painting. */}
-      <div aria-hidden style={{
-        position: 'absolute', inset: isWater ? '18%' : '6%', borderRadius: '50%',
-        border: `1px solid rgba(190,214,228,${isNear ? 0.5 : 0.18})`,
-        boxShadow: isNear ? '0 0 26px rgba(160,200,225,0.22)' : 'none',
-        transition: 'border-color 260ms ease-out, box-shadow 260ms ease-out',
-      }} />
+          {/* THE JETTY. What makes it a port rather than a rock: somewhere to
+              tie up, running out from the shore into open water. */}
+          <div aria-hidden style={{
+            position: 'absolute', left: '50%', top: '78%', width: place.r * 0.62, height: 11,
+            transform: 'translateX(-6%) rotate(9deg)',
+            background: 'linear-gradient(180deg, #6d5636, #3d2f1d)',
+            borderRadius: 2,
+            boxShadow: '0 3px 10px rgba(0,0,0,0.55)',
+            opacity: locked ? 0.4 : 1,
+          }} />
+          {[0.34, 0.58, 0.82].map(f => (
+            <div key={f} aria-hidden style={{
+              position: 'absolute', left: `calc(50% + ${place.r * 0.62 * f - 6}px)`, top: '80%',
+              width: 5, height: 15, background: '#2e2416', borderRadius: 1,
+              transform: 'rotate(9deg)', opacity: locked ? 0.4 : 0.9,
+            }} />
+          ))}
+
+          {/* A lantern on the end of the jetty. The thing you steer toward at
+              distance, and the only warm colour on the whole chart. */}
+          <div aria-hidden style={{
+            position: 'absolute', left: `calc(50% + ${place.r * 0.56}px)`, top: '72%',
+            width: 13, height: 13, borderRadius: '50%',
+            background: locked ? 'rgba(150,160,170,0.5)' : '#ffd986',
+            boxShadow: locked ? 'none' : `0 0 ${isNear ? 26 : 15}px 6px rgba(255,196,110,${isNear ? 0.5 : 0.3})`,
+            transition: 'box-shadow 300ms ease-out',
+          }} />
+        </>
+      )}
 
       <div style={{
-        position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 6px)',
+        position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 8px)',
         textAlign: 'center', whiteSpace: 'nowrap',
       }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.92rem', color: locked ? 'rgba(180,192,200,0.55)' : '#dfe9f0',
-          textShadow: '0 2px 10px rgba(0,0,0,0.85)',
+          fontSize: '0.96rem', color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
+          textShadow: '0 2px 12px rgba(0,0,0,0.9)',
         }}>{place.name}</p>
         <p className="font-karla font-600" style={{
-          fontSize: '0.68rem', marginTop: 1,
-          color: locked ? 'rgba(200,150,150,0.75)' : 'rgba(180,200,214,0.7)',
-          textShadow: '0 1px 8px rgba(0,0,0,0.85)',
+          fontSize: '0.7rem', marginTop: 1,
+          color: locked ? 'rgba(206,152,152,0.8)' : 'rgba(184,204,218,0.72)',
+          textShadow: '0 1px 9px rgba(0,0,0,0.9)',
         }}>{locked ? `Fishing ${place.minLevel}` : place.blurb}</p>
       </div>
     </div>
