@@ -21,6 +21,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PLACES, HOME, type Place } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getCharacterSprites } from '@/lib/characters'
+import { BOATS } from '@/lib/boats'
+import { HATS } from '@/lib/hats'
 import { vibrate } from '@/lib/haptics'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
@@ -37,13 +40,14 @@ const ARRIVE = 26
 type Vec = { x: number; y: number }
 
 export default function SeaMap({
-  fishingXP, boatArt, characterName,
+  fishingXP, characterColor, boatId, hatId,
 }: {
   fishingXP: number
-  /** The player's EQUIPPED boat. Their cosmetic is the thing on the chart, which
-   *  is most of why this reads as your ocean rather than a map screen. */
-  boatArt: string
-  characterName: string
+  /** The player's own loadout, so the thing crossing the ocean is the captain
+   *  they dressed in the boat they bought — not a marker. */
+  characterColor: string
+  boatId: string | null
+  hatId: string | null
 }) {
   const router = useRouter()
   const level = useMemo(() => getLevelFromXP(fishingXP), [fishingXP])
@@ -211,9 +215,7 @@ export default function SeaMap({
           position: 'absolute', left: '50%', top: '50%', zIndex: 5,
           willChange: 'transform', pointerEvents: 'none',
         }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={boatArt} alt="" draggable={false}
-          style={{ display: 'block', width: 150, filter: 'drop-shadow(0 10px 16px rgba(0,0,0,0.55))' }} />
+        <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId} />
       </div>
 
       <Prompt place={near} locked={near ? locked(near) : false} level={level} onEnter={enter} tick={tick} />
@@ -224,6 +226,59 @@ export default function SeaMap({
 
 function dist(a: Vec, p: { x: number; y: number }): number {
   return Math.hypot(a.x - p.x, a.y - p.y)
+}
+
+/**
+ * THE CAPTAIN, in their boat.
+ *
+ * Exactly the stack the fishing screen uses: the character sprite is the BASE
+ * (it already contains a plain hull), and the bought boat and hat are overlays
+ * positioned on top of it as percentages of the character box. Reusing that
+ * composition rather than inventing one means a new hat or hull shows up out
+ * here the day it ships, with no second set of coordinates to keep in step.
+ *
+ * The `rest` frame throughout. `cast` is a fishing pose and has no business on
+ * open water.
+ */
+function Skipper({ characterColor, boatId, hatId }: {
+  characterColor: string
+  boatId: string | null
+  hatId: string | null
+}) {
+  const char = useMemo(() => getCharacterSprites(characterColor), [characterColor])
+  const boat = useMemo(() => BOATS.find(b => b.id === boatId) ?? null, [boatId])
+  const hat = useMemo(() => HATS.find(h => h.id === hatId) ?? null, [hatId])
+
+  return (
+    <div style={{ position: 'relative', width: 190, filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.55))' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={char.rest} alt="" draggable={false} style={{ width: '100%', display: 'block' }} />
+      {hat && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={hat.restImageUrl} alt="" draggable={false} style={{
+          position: 'absolute',
+          top: `${hat.positions.rest.top}%`,
+          left: `${hat.positions.rest.left}%`,
+          width: `${hat.positions.rest.width}%`,
+          transform: `rotate(${hat.positions.rest.rotate}deg)`,
+          transformOrigin: 'center center',
+        }} />
+      )}
+      {boat && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={boat.restImageUrl} alt="" draggable={false}
+          className={boat.glow ? 'boat-glow' : undefined}
+          style={{
+            position: 'absolute',
+            top: `${boat.positions.rest.top}%`,
+            left: `${boat.positions.rest.left}%`,
+            width: `${boat.positions.rest.width}%`,
+            transform: `rotate(${boat.positions.rest.rotate}deg)`,
+            transformOrigin: 'center center',
+          }} />
+      )}
+    </div>
+  )
 }
 
 /**

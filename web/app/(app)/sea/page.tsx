@@ -10,7 +10,6 @@
 
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { BOATS } from '@/lib/boats'
 import SeaMap from './SeaMap'
 
 export const metadata = { title: 'The Sea' }
@@ -21,17 +20,16 @@ export default async function SeaPage() {
   const profile = await getCurrentProfile()
   if (profile?.is_admin !== true) redirect('/tavern')
 
-  // The player's EQUIPPED boat is the thing on the chart. Reusing a cosmetic
-  // they already own is most of why this reads as THEIR ocean rather than as a
-  // map screen with a generic marker on it.
-  const equipped = (profile?.equipped_boat as string | null) ?? null
-  const boat = BOATS.find(b => b.id === equipped) ?? BOATS[0]
-
+  // THE PLAYER, not a marker. The same three pieces the fishing screen stacks —
+  // character sprite, boat overlay, hat overlay — so the thing crossing the
+  // ocean is recognisably the captain they dressed, in the boat they bought.
+  // That is most of why this should read as THEIR sea.
   return (
     <SeaMap
       fishingXP={Number(profile?.fishing_xp ?? 0)}
-      boatArt={boat.restImageUrl}
-      characterName={(profile?.username as string | null) ?? 'Captain'}
+      characterColor={(profile?.character_color as string | null) ?? 'default'}
+      boatId={(profile?.equipped_boat as string | null) ?? null}
+      hatId={(profile?.equipped_hat as string | null) ?? null}
     />
   )
 }
