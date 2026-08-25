@@ -62,10 +62,6 @@ export type TraderLook = {
    *  a rarity signal with them — an ordinary trader out shifting worms with a
    *  Lightsaber on their knee reads as a bug, and it cheapens the rod. */
   rodSlug: string | null
-  /** Half of them face the other way. The sprite is drawn facing left, so every
-   *  NPC built from it looked left, and a stretch of water with four traders in
-   *  it read as a rank rather than as people who happened to be there. */
-  flip: boolean
 }
 
 export type Trader = {
@@ -79,6 +75,10 @@ export type Trader = {
   look: TraderLook
   /** One line, said when you pull alongside. */
   line: string
+  /** The slow patrol they keep around (x, y). See traderPos. */
+  driftR: number
+  driftRate: number
+  driftPhase: number
 } & TraderOffer
 
 export type TraderOffer =
@@ -248,8 +248,13 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
     boatId: pick(BOAT_IDS, rnd),
     hatId: rnd() < 0.75 ? pick(HAT_IDS, rnd) : null,
     rodSlug: pick(ROD_SLUGS, rnd),
-    flip: rnd() < 0.5,
   }
+
+  // A patrol well inside the cell: 90-280px across, one turn every 50-140
+  // seconds, starting anywhere on it.
+  const driftR = 90 + rnd() * 190
+  const driftRate = (rnd() < 0.5 ? 1 : -1) * (Math.PI * 2) / (50 + rnd() * 90)
+  const driftPhase = rnd() * Math.PI * 2
 
   return {
     key: `${day}:${cx}:${cy}`,
@@ -257,12 +262,40 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
     name: `${pick(NAMES_FIRST, rnd)} ${pick(NAMES_LAST, rnd)}`,
     x, y, look,
     line: pick(LINES[kind], rnd),
+    driftR, driftRate, driftPhase,
     ...offer,
   }
 }
 
 function pick<T>(arr: readonly T[], rnd: () => number): T {
   return arr[Math.floor(rnd() * arr.length)]
+}
+
+/**
+ * WHERE A TRADER IS RIGHT NOW.
+ *
+ * They were pinned to the spot they were hashed into, which made them
+ * furniture: an ocean where every other boat is nailed to the water reads as a
+ * diorama. Each one keeps a slow circular patrol around its anchor point —
+ * different radius, different period, different phase, all off the same seed —
+ * so they are always drifting and never in step.
+ *
+ * The patrol radius is deliberately well inside a cell, so a trader never
+ * wanders out of the cell that spawned them and starts flickering as the map
+ * recomputes which cells are near.
+ *
+ * Position is NOT part of the deal. The server rebuilds a trader from the key
+ * to price it and never asks where they are, so this can be as fluid as it
+ * likes without anything needing to agree about it.
+ */
+export function traderPos(t: Trader, nowSec: number): { x: number; y: number; facing: 1 | -1 } {
+  const a = t.driftPhase + nowSec * t.driftRate
+  const x = t.x + Math.cos(a) * t.driftR
+  const y = t.y + Math.sin(a) * t.driftR * 0.6
+  // Facing comes from which way the patrol is carrying them, so a trader always
+  // looks where they are going. The sprite is drawn facing LEFT.
+  const vx = -Math.sin(a) * t.driftRate
+  return { x, y, facing: vx < 0 ? 1 : -1 }
 }
 
 /** Every cell whose trader could be on screen, plus a ring of margin so one

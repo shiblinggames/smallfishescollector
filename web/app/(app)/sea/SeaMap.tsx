@@ -29,7 +29,7 @@ import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
-import { tradersAround, seaDay, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
+import { tradersAround, traderPos, seaDay, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
@@ -614,6 +614,9 @@ export default function SeaMap({
   // Mirrored for the loop, which must not be re-created every time the list
   // changes or the whole sail restarts.
   const tradersRef = useRef<Trader[]>([])
+  /** One node per trader on screen, moved imperatively so a drifting boat costs
+   *  a transform rather than a re-render. */
+  const hullRefs = useRef(new Map<string, HTMLDivElement>())
   useEffect(() => { tradersRef.current = traders }, [traders])
   const [tick, setTick] = useState(0)
   /** The water we have the rod out in. Null means sailing. */
@@ -895,6 +898,23 @@ export default function SeaMap({
           `translate(${WATERLINE_X * z}px, ${WATERLINE_Y * z}px) scale(${z})`
       }
 
+      // THE PATROLS. Every trader on screen nudged along its own slow circle,
+      // and turned to face the way it is going.
+      if (hullRefs.current.size) {
+        const ts = now / 1000
+        for (const t of tradersRef.current) {
+          const el = hullRefs.current.get(t.key)
+          if (!el) continue
+          const at = traderPos(t, ts)
+          el.style.transform = `translate3d(${at.x - t.x}px, ${at.y - t.y}px, 0)`
+          const hull = el.querySelector<HTMLElement>('.trader-hull')
+          if (hull) {
+            hull.style.transform =
+              `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78) scaleX(${at.facing})`
+          }
+        }
+      }
+
       // PARALLAX. The clouds are miles off, so they slide at a twelfth of the
       // camera and drift a little on their own besides. This one number is what
       // turns a flat chart into something with a distance in it.
@@ -1009,7 +1029,11 @@ export default function SeaMap({
         // should have to actually pull up to them.
         let hit: Trader | null = null
         for (const t of tradersRef.current) {
-          if (Math.hypot(pos.current.x - t.x, pos.current.y - t.y) < HAIL_RANGE) { hit = t; break }
+          // Against the DRIFTED position, not the anchor. Testing the anchor
+          // would let you hail somebody who had drifted a couple of hundred
+          // pixels away, and refuse one floating right beside you.
+          const at = traderPos(t, now / 1000)
+          if (Math.hypot(pos.current.x - at.x, pos.current.y - at.y) < HAIL_RANGE) { hit = t; break }
         }
         setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
         // LEAVING WITH THE ROD OUT. Caught here rather than in the tap handler
@@ -1083,7 +1107,11 @@ export default function SeaMap({
         {traders.map(t => (
           <TraderBoat key={t.key} trader={t}
             done={dealt.includes(t.key)}
-            isNear={nearTrader?.key === t.key} />
+            isNear={nearTrader?.key === t.key}
+            hullRef={el => {
+              if (el) hullRefs.current.set(t.key, el)
+              else hullRefs.current.delete(t.key)
+            }} />
         ))}
 
         {/* The wake, in the world layer so each mark stays on the water where
@@ -1556,11 +1584,16 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
  * Counter-squashed like everything else with height. A boat stands ON the
  * plane; it is not painted onto it.
  */
-const TraderBoat = memo(function TraderBoat({ trader, done, isNear }: { trader: Trader; done: boolean; isNear: boolean }) {
+const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
+  trader: Trader; done: boolean; isNear: boolean
+  /** Moved every frame by the loop — see traderPos. Positioned by TRANSFORM
+   *  rather than left/top so it composites instead of relaying out. */
+  hullRef: (el: HTMLDivElement | null) => void
+}) {
   return (
-    <div style={{
+    <div ref={hullRef} style={{
       position: 'absolute', left: trader.x, top: trader.y,
-      pointerEvents: 'none', zIndex: 2,
+      pointerEvents: 'none', zIndex: 2, willChange: 'transform',
     }}>
       {/* Contact shadow, ON the plane and therefore squashed with it. */}
       <div aria-hidden style={{
@@ -1568,10 +1601,9 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear }: { trader: 
         borderRadius: '50%', background: 'rgba(2,10,18,0.34)', filter: 'blur(7px)',
       }} />
       <div style={{
-        // scaleX LAST so it mirrors the finished composite rather than fighting
-        // the counter-squash. The sprite is drawn facing left, so half of them
-        // get flipped and a stretch of water stops looking like a parade.
-        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78) scaleX(${trader.look.flip ? -1 : 1})`,
+        // scaleX comes from the patrol now rather than a coin flip, so a trader
+        // always looks the way they are actually drifting. Written by the loop.
+        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78)`,
         // Someone you have already dealt with today is still there — they do
         // not vanish, because a person vanishing when you are done with them is
         // the sort of thing that makes a world feel like a vending machine.
@@ -1591,7 +1623,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear }: { trader: 
           Out of range it is a small dot — they are there, they are a person,
           they are not shouting. In range it is a full mark and it bobs. */}
       <div aria-hidden style={{
-        position: 'absolute', left: 0, top: -18,
+        position: 'absolute', left: 0, top: -86,
         transform: `translateX(-50%) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
         pointerEvents: 'none',
@@ -1618,12 +1650,20 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear }: { trader: 
       </div>
 
       {/* Name and trade, counter-squashed — a label was never on the plane. */}
+      {/* THE NAME PLATE, above the boat and on a solid base.
+          It used to sit at +30 — which is ON the hull — as bare text over
+          painted timber, so it was unreadable against exactly the thing it was
+          labelling. House rule: anything written over art gets an opaque base
+          under it. */}
       <div style={{
-        position: 'absolute', left: 0, top: 30,
+        position: 'absolute', left: 0, top: -62,
         transform: `translateX(-50%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'top center',
+        transformOrigin: 'bottom center',
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
-        opacity: isNear ? 1 : 0.72, transition: 'opacity 220ms ease-out',
+        padding: '3px 9px 4px', borderRadius: 9,
+        background: 'rgba(6,12,18,0.86)',
+        border: `1px solid ${done ? 'rgba(150,166,178,0.3)' : 'rgba(255,206,138,0.34)'}`,
+        opacity: isNear ? 1 : 0.8, transition: 'opacity 220ms ease-out',
       }}>
         <p className="font-cinzel font-700" style={{
           fontSize: '0.74rem', color: done ? 'rgba(180,192,200,0.6)' : '#e6eef4',
