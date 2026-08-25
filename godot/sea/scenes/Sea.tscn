@@ -8,19 +8,23 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_water"]
 shader = ExtResource("3_water")
 shader_parameter/scale = 0.10
-shader_parameter/deep_color = Color(0.012, 0.045, 0.082, 1)
-shader_parameter/shallow_color = Color(0.045, 0.145, 0.208, 1)
-shader_parameter/crest_color = Color(0.62, 0.84, 0.9, 1)
-shader_parameter/crest_strength = 0.5
+shader_parameter/deep_color = Color(0.086, 0.137, 0.169, 1)
+shader_parameter/mid_color = Color(0.243, 0.361, 0.404, 1)
+shader_parameter/pale_color = Color(0.549, 0.647, 0.671, 1)
+shader_parameter/crest_color = Color(0.82, 0.871, 0.871, 1)
+shader_parameter/bands = 6.0
+shader_parameter/stroke = 6.0
+shader_parameter/crest_strength = 0.85
+shader_parameter/grain = 0.055
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_sea"]
 size = Vector2(4000, 4000)
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dusk"]
-sky_top_color = Color(0.09, 0.17, 0.29, 1)
-sky_horizon_color = Color(0.35, 0.42, 0.47, 1)
-ground_bottom_color = Color(0.05, 0.09, 0.13, 1)
-ground_horizon_color = Color(0.35, 0.42, 0.47, 1)
+sky_top_color = Color(0.361, 0.451, 0.478, 1)
+sky_horizon_color = Color(0.706, 0.761, 0.769, 1)
+ground_bottom_color = Color(0.129, 0.196, 0.235, 1)
+ground_horizon_color = Color(0.706, 0.761, 0.769, 1)
 
 [sub_resource type="Sky" id="Sky_1"]
 sky_material = SubResource("Sky_dusk")
@@ -33,18 +37,17 @@ ambient_light_color = Color(0.55, 0.68, 0.8, 1)
 ambient_light_sky_contribution = 0.5
 ambient_light_energy = 0.55
 fog_enabled = true
-fog_light_color = Color(0.33, 0.41, 0.47, 1)
-fog_density = 0.0042
+fog_light_color = Color(0.678, 0.737, 0.749, 1)
+fog_density = 0.0019
 fog_sky_affect = 0.35
-tonemap_mode = 2
-tonemap_white = 3.0
+tonemap_mode = 0
 
 [sub_resource type="BoxMesh" id="BoxMesh_hull"]
 size = Vector3(3.2, 1.5, 8.0)
 
 [sub_resource type="StandardMaterial3D" id="Mat_hull"]
-albedo_color = Color(0.44, 0.31, 0.18, 1)
-roughness = 0.85
+shading_mode = 0
+albedo_color = Color(0.106, 0.153, 0.184, 1)
 
 [sub_resource type="CylinderMesh" id="Cyl_mast"]
 top_radius = 0.14
@@ -52,8 +55,8 @@ bottom_radius = 0.2
 height = 9.0
 
 [sub_resource type="StandardMaterial3D" id="Mat_sail"]
-albedo_color = Color(0.93, 0.91, 0.85, 1)
-roughness = 0.9
+shading_mode = 0
+albedo_color = Color(0.741, 0.796, 0.804, 1)
 cull_mode = 2
 
 [node name="Sea" type="Node3D"]

@@ -45,8 +45,10 @@ func setup(d: Dictionary, is_locked: bool) -> void:
 	cyl.radial_segments = 28
 	land.mesh = cyl
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.26, 0.23, 0.18) if locked else Color(0.40, 0.33, 0.23)
-	mat.roughness = 0.95
+	# Unshaded, like every solid form in the game's art. A lit hillside among
+	# painted washes is what would give the whole scene away as a 3D render.
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.118, 0.169, 0.200) if locked else Color(0.153, 0.208, 0.239)
 	land.material_override = mat
 	land.position.y = 1.4
 	add_child(land)
@@ -61,9 +63,10 @@ func setup(d: Dictionary, is_locked: bool) -> void:
 	ring.radial_segments = 28
 	shoal.mesh = ring
 	var smat := StandardMaterial3D.new()
-	smat.albedo_color = Color(tint.r, tint.g, tint.b, 0.20)
+	var shoal_tone := Color(0.549, 0.647, 0.671).lerp(tint, 0.18)
+	smat.albedo_color = Color(shoal_tone.r, shoal_tone.g, shoal_tone.b, 0.28)
 	smat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	smat.roughness = 0.4
+	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	shoal.mesh = ring
 	shoal.material_override = smat
 	shoal.position.y = 0.18
@@ -78,7 +81,8 @@ func setup(d: Dictionary, is_locked: bool) -> void:
 	pm.height = 14.0
 	post.mesh = pm
 	var pmat := StandardMaterial3D.new()
-	pmat.albedo_color = Color(0.30, 0.26, 0.21)
+	pmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	pmat.albedo_color = Color(0.106, 0.153, 0.184)
 	post.material_override = pmat
 	post.position.y = 11.0
 	add_child(post)

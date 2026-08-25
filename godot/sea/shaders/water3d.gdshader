@@ -1,28 +1,32 @@
 shader_type spatial;
-render_mode cull_disabled, specular_schlick_ggx;
+// UNSHADED, and this is the single most important line in the file.
+//
+// The house style is hand-painted: look at fishing-zones-bg.jpg and there is not
+// one specular highlight in it. Nothing is shiny, nothing is lit — the whole
+// image is flat washes of value. A PBR water surface with roughness and
+// specular is the exact opposite of that and reads as "3D render" no matter what
+// colours you feed it. Taking the lighting out is what makes this a painting.
+render_mode unshaded, cull_disabled;
 
-// OPEN WATER, as a surface rather than a wallpaper.
-//
-// The 2D version shaded a screen-sized rect. This shades a plane lying in the
-// world, so the same noise now has perspective: waves compress toward the
-// horizon on their own, which is most of what sells 2.5D before anything else
-// is done.
-//
-// NO VERTEX DISPLACEMENT, deliberately. Real geometry waves need a densely
-// subdivided plane, and this has to survive WKWebView on a phone — the platform
-// already flagged as the weakest target for the web export. Everything here is
-// fragment work on a flat plane, which at this camera angle is indistinguishable
-// and costs a fraction.
-//
-// The noise itself is carried over from the 2D shader along with the three fixes
-// that made it stop showing its lattice: octaves each turned to their own angle,
-// a quintic fade, and a domain warp.
-
+// THE PALETTE IS SAMPLED FROM THE PAINTING, not invented. Desaturated
+// blue-greys in a narrow band, with depth carried almost entirely by VALUE.
+// The earlier teal was far more saturated than anything in the game's art.
 uniform float scale : hint_range(0.002, 0.5) = 0.10;
-uniform vec4 deep_color : source_color = vec4(0.012, 0.045, 0.082, 1.0);
-uniform vec4 shallow_color : source_color = vec4(0.045, 0.145, 0.208, 1.0);
-uniform vec4 crest_color : source_color = vec4(0.62, 0.84, 0.90, 1.0);
-uniform float crest_strength : hint_range(0.0, 1.0) = 0.5;
+uniform vec4 deep_color : source_color = vec4(0.086, 0.137, 0.169, 1.0);
+uniform vec4 mid_color : source_color = vec4(0.243, 0.361, 0.404, 1.0);
+uniform vec4 pale_color : source_color = vec4(0.549, 0.647, 0.671, 1.0);
+uniform vec4 crest_color : source_color = vec4(0.820, 0.871, 0.871, 1.0);
+/// How many flat washes the water is quantised into. Watercolour and gouache do
+/// not blend smoothly — they pool into steps with edges. Raise for smoother,
+/// lower for more graphic.
+uniform float bands : hint_range(2.0, 16.0) = 6.0;
+/// How elongated the strokes are. The painting's surface is long horizontal
+/// brush marks, not round blobs.
+uniform float stroke : hint_range(1.0, 12.0) = 6.0;
+uniform float crest_strength : hint_range(0.0, 1.0) = 0.85;
+/// Paper tooth. Small, but it is a large part of why watercolour reads as paint
+/// rather than as gradient.
+uniform float grain : hint_range(0.0, 0.5) = 0.055;
 
 varying vec3 world_pos;
 
@@ -54,30 +58,42 @@ void vertex() {
 }
 
 void fragment() {
-	// World XZ, so the pattern is anchored to the sea and not to the camera.
-	// Sail across it and the water stays put, which is the whole difference
-	// between moving through a place and scrolling a texture.
 	vec2 w = world_pos.xz * scale;
 	float t = TIME;
 
-	float warp = noise(w * 0.6 + vec2(t * 0.02, -t * 0.015));
-	w += vec2(warp - 0.5) * 1.6;
+	// Long horizontal strokes rather than round patches. The painting's surface
+	// is brush marks travelling across the frame, so the sample is squashed far
+	// harder than a naturalistic ocean would want.
+	vec2 s = w * vec2(1.0, stroke);
 
-	float swell = noise(rot(0.00) * w * 1.00 + vec2(t * 0.050, t * 0.020));
-	float chop  = noise(rot(0.87) * w * 2.30 + vec2(-t * 0.110, t * 0.050));
-	float fine  = noise(rot(1.94) * w * 5.10 + vec2(t * 0.190, -t * 0.080));
-	float tiny  = noise(rot(2.71) * w * 11.0 + vec2(-t * 0.300, t * 0.140));
+	float warp = noise(s * 0.6 + vec2(t * 0.02, -t * 0.015));
+	s += vec2(warp - 0.5) * 1.6;
 
-	float h = swell * 0.45 + chop * 0.28 + fine * 0.18 + tiny * 0.09;
-	h = clamp((h - 0.5) * 1.55 + 0.5, 0.0, 1.0);
+	float swell = noise(rot(0.00) * s * 1.00 + vec2(t * 0.050, t * 0.020));
+	float chop  = noise(rot(0.87) * s * 2.30 + vec2(-t * 0.110, t * 0.050));
+	float fine  = noise(rot(1.94) * s * 5.10 + vec2(t * 0.190, -t * 0.080));
 
-	vec3 col = mix(deep_color.rgb, shallow_color.rgb, h);
-	col = mix(col, crest_color.rgb, smoothstep(0.82, 0.99, h) * crest_strength);
+	float h = swell * 0.52 + chop * 0.31 + fine * 0.17;
+	h = clamp((h - 0.5) * 1.6 + 0.5, 0.0, 1.0);
+
+	// POOL IT INTO FLAT WASHES. Paint does not ramp smoothly from one value to
+	// the next, it settles into steps with edges where the pigment stops. The
+	// tiny smoothstep keeps those edges soft rather than aliased.
+	float q = floor(h * bands) / bands;
+	float frac_h = fract(h * bands);
+	q += smoothstep(0.42, 0.58, frac_h) / bands;
+
+	// Three stops rather than two, because the painting's depth runs
+	// dark -> mid -> pale before it ever reaches foam.
+	vec3 col = mix(deep_color.rgb, mid_color.rgb, smoothstep(0.0, 0.55, q));
+	col = mix(col, pale_color.rgb, smoothstep(0.5, 0.92, q));
+	col = mix(col, crest_color.rgb, smoothstep(0.90, 1.0, q) * crest_strength);
+
+	// PAPER TOOTH. High-frequency, low-amplitude, and anchored to the world so
+	// it does not crawl when the camera moves. Barely visible on its own and
+	// most of the reason the result reads as pigment on a surface.
+	float paper = noise(world_pos.xz * 9.0) * 0.6 + noise(world_pos.xz * 31.0) * 0.4;
+	col *= 1.0 + (paper - 0.5) * grain;
 
 	ALBEDO = col;
-	// Water is a mirror at grazing angles and nearly matte overhead. Cheap
-	// approximation, but it is what stops a flat plane reading as painted lino.
-	METALLIC = 0.0;
-	ROUGHNESS = mix(0.06, 0.42, h);
-	SPECULAR = 0.55;
 }

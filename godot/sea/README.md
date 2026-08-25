@@ -43,6 +43,36 @@ degrees. Change one, check the other.
 subdivided plane and this has to survive WKWebView on a phone. It is all fragment
 work on a flat plane, which at this angle is indistinguishable.
 
+## The house style, in a 3D scene
+
+The game is hand-painted, and `web/public/fishing-zones-bg.jpg` is the reference
+to keep open while touching any of this. Four rules carry it across:
+
+**Nothing is lit.** There is not one specular highlight in the game's art. The
+water shader is `render_mode unshaded` and every material is
+`SHADING_MODE_UNSHADED`. This is the single most important decision here: a PBR
+surface reads as a 3D render whatever colours you feed it, and taking the
+lighting out is what makes the scene a painting instead.
+
+**Solid things are silhouettes.** The boat in the reference is a flat dark shape.
+So is ours, so is the land. A shaded hull among painted washes is the thing that
+would give the whole scene away.
+
+**Colour is quantised into flat washes.** Paint pools into steps with edges; it
+does not ramp smoothly. `bands` in the water shader controls how many. Filmic
+tonemapping is off for the same reason — it smooths the steps back into the
+gradient they exist to avoid.
+
+**The palette is sampled, not invented.** Desaturated blue-greys in a narrow
+band, depth carried by VALUE rather than hue. Anything saturated reads as
+foreign immediately, which is why a port's tint survives only in its beacon and
+its shoal ring is pulled 80% back toward the water's own pale.
+
+Also: strokes are stretched long on one axis (`stroke`), because the reference's
+surface is horizontal brush marks; and a faint world-anchored paper grain sits
+over everything, which is barely visible alone and does much of the work of
+making it read as pigment.
+
 ## What phase 1 is, and what it deliberately is not
 
 **Is:** a boat, open water, a camera, tap-to-sail.
