@@ -331,6 +331,35 @@ export default function FishingHere({
   const spinRef = useRef<Animation | null>(null)
   const spinStart = useRef<number | null>(null)
   const spinFrom = useRef(0)
+  /**
+   * MEASURED FRAME DURATION, an EMA of real rAF deltas.
+   *
+   * Needed for the forward-predictive freeze below, and it has to be MEASURED
+   * rather than assumed: a 120Hz phone projects ~8ms and a struggling one ~33ms,
+   * and using the wrong number is the difference between the freeze landing
+   * where you tapped and landing a zone away.
+   *
+   * This is the only rAF left in this component and it deliberately does
+   * nothing else — no state, no DOM writes, no reads. It exists to time frames
+   * while the dial is up and stops the moment it is not.
+   */
+  const frameDur = useRef(16.7)
+  useEffect(() => {
+    if (phase !== 'hooked') return
+    let raf = 0
+    let last = 0
+    const tick = (t: number) => {
+      if (last) {
+        const d = t - last
+        // Ignore degenerate deltas: first frame, tab refocus, GC stalls.
+        if (d >= 4 && d <= 40) frameDur.current = frameDur.current * 0.8 + d * 0.2
+      }
+      last = t
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [phase])
 
   /** Where the needle is RIGHT NOW, off the same clock the animation runs on,
    *  so what resolves is exactly what is on the glass. */
@@ -476,7 +505,28 @@ export default function FishingHere({
     // than a number React last heard about. They are the same thing by
     // construction now: angleNow derives from the compositor animation's own
     // clock, so what resolves is exactly what is on the glass.
-    const at = angleNow()
+    // ── THE FORWARD-PREDICTIVE FREEZE ───────────────────────────────────
+    //
+    // Freezing at angleNow() is what made the needle snap BACKWARDS on a phone,
+    // and no amount of ordering fixes it, because the problem is not ordering.
+    // The needle runs on the COMPOSITOR. The main thread samples
+    // document.timeline, which is one to two commits behind what is actually on
+    // the glass — so the angle we can read is genuinely behind the angle you
+    // can see, and freezing at it moves the needle back to where it was a frame
+    // or two ago.
+    //
+    // So the freeze resolves at where the needle WILL be, one measured frame
+    // ahead. Forward-only, by construction: any prediction error is a tiny skip
+    // in the direction the needle was already travelling, which is invisible at
+    // spin speed, and never a back-step, which is not.
+    //
+    // This is the protocol the fishing screen settled on after a rejected
+    // alternative (an eased settle back to the tap angle read as "it moves back
+    // into position", and was worse). REEL_LOOKAHEAD there is 1 frame — 2 read
+    // aggressive. Capped at 20ms so a stalled frame cannot balloon the
+    // prediction and overshoot a tight perfect.
+    const lookaheadMs = Math.min(frameDur.current, 20)
+    const at = (angleNow() + sweepRef.current * lookaheadMs / 1000) % 360
     angleRef.current = at
 
     // WRITE THE RESTING ANGLE BEFORE CANCELLING, and that order is the whole
