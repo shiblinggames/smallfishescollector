@@ -1,5 +1,12 @@
 # Fishing
 
+> **This page is being retired.** The ocean hub (`docs/systems/ocean-hub.md`) is the
+> intended home of the fishing loop — you sail to water and cast where you are, instead of
+> picking a zone from a menu. `FishingGame.tsx` is still the reference implementation and
+> still the only place several things exist, so read it before changing the hub's version.
+> When the two disagree about a RULE, the hub is wrong until proven otherwise; when they
+> disagree about a SURFACE, the hub is where the direction is going.
+
 The first of the two core loops (with expeditions). Everything else in the game feeds off
 it or gates behind its level. Player-paced, evergreen: no timers that punish absence.
 
@@ -17,6 +24,13 @@ fish. Streaks of perfect catches build "on fire" state with escalating rewards.
 
 ## Rules that differ from what you'd assume
 
+- **A perfect streak is NOT bound to a zone.** It used to break the moment you cast in
+  different water, so a cheap streak could not be farmed in the Shallows and cashed in a
+  hard zone. That was right when fishing meant picking one zone and staying in it, and it is
+  wrong for a sea you sail across — a streak that dies for crossing a boundary punishes the
+  thing the chart exists to encourage. It now breaks only on a miss, a snag or an abandoned
+  cast. `profiles.current_streak_zone` is dead (left in place for its history), and
+  `leaderboard_perfect_streak` no longer ranks by where.
 - **The perfect streak is server-authoritative.** `reelIn` owns it. The client renders the
   streak; it never decides it. Don't "fix" a streak bug client-side.
 - **Needle lock-in feel is CONFIRMED design** — on Reel In the needle locks and settles

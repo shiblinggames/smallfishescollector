@@ -14,6 +14,8 @@ routes; read the matching doc BEFORE working in a system. Do not inline these as
 
 ## Systems (trigger → doc → when)
 - fishing, dial, zones, streak, reel → docs/systems/fishing.md — any FishingGame work
+- sea map, ocean hub, sailing, /sea → docs/systems/ocean-hub.md — THE SUCCESSOR to /fishing
+- sea traders, NPCs, day/night, sell lanes → docs/systems/sea-npcs.md — anyone on the chart
 - rods/hooks/reels/lines/bait, tackle shop → docs/systems/gear.md — gear tiers or gating
 - selling fish, market, Exchange, contracts → docs/systems/fish-economy.md — pricing/lanes
 - trawls → docs/systems/trawls.md — crew passive fishing
