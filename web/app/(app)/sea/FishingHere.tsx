@@ -53,7 +53,7 @@ export type FishingMods = {
 }
 
 export default function FishingHere({
-  zone, zoneName, bait, baitBonus, baitLeft, mods, onBaitSpent, onClose,
+  zone, zoneName, bait, baitBonus, baitLeft, mods, onBaitSpent, onPose, onClose,
 }: {
   zone: string
   zoneName: string
@@ -62,6 +62,10 @@ export default function FishingHere({
   baitLeft: number
   mods: FishingMods
   onBaitSpent: (left: number | undefined) => void
+  /** Which pose the captain should be in. The game already draws three — rod
+   *  up, mid-cast, line in the water — so the map plays those rather than
+   *  inventing a fourth. */
+  onPose: (pose: 'rest' | 'wait' | 'cast') => void
   onClose: () => void
 }) {
   const [phase, setPhase] = useState<Phase>('idle')
@@ -72,6 +76,11 @@ export default function FishingHere({
 
   const angleRef = useRef(0)
   const runningRef = useRef(false)
+  // TWO timers, two refs. The cast-pose timer and the bite timer overlap by
+  // design, and sharing one handle meant the second assignment orphaned the
+  // first — so unmounting mid-cast could still fire a pose change at a
+  // component that no longer exists.
+  const poseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const zones: ZoneDef[] = useMemo(() => {
@@ -107,7 +116,10 @@ export default function FishingHere({
     return () => { runningRef.current = false; cancelAnimationFrame(raf) }
   }, [phase])
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (poseRef.current) clearTimeout(poseRef.current)
+  }, [])
 
   const cast = useCallback(() => {
     if (phase !== 'idle') return
@@ -115,12 +127,19 @@ export default function FishingHere({
     setCaught(null)
     setPhase('waiting')
     vibrate(12)
+    // THE CAST IS A BEAT, not a state change. Rod comes over, and only once it
+    // has does the line settle into the water. Skipping it was most of why
+    // pressing Cast looked like nothing had happened: the pose never changed
+    // and the only feedback was six small words for the several seconds the
+    // server makes you wait for a bite.
+    onPose('cast')
+    poseRef.current = setTimeout(() => onPose('wait'), 460)
     castLine(bait, zone).then(res => {
-      if ('error' in res) { setErr(res.error); setPhase('idle'); return }
+      if ('error' in res) { setErr(res.error); setPhase('idle'); onPose('rest'); return }
       onBaitSpent(res.baitRemaining)
       // The server decides how long the fish takes to come. Honoured rather
       // than hurried: the wait is the tension.
-      const wait = res.instantBite ? 220 : Math.max(220, res.waitMs)
+      const wait = Math.max(560, res.instantBite ? 620 : res.waitMs)
       timerRef.current = setTimeout(() => {
         angleRef.current = 0
         setAngle(0)
@@ -142,6 +161,7 @@ export default function FishingHere({
     const result = (hit?.type ?? 'miss') as 'perfect' | 'catch' | 'miss' | 'penalty'
     vibrate(result === 'perfect' ? [0, 30, 40, 60] : result === 'catch' ? 18 : 10)
     setPhase('result')
+    onPose('rest')
     reelIn(hooked.fishId, result, bait).then(res => {
       if ('error' in res) { setErr(res.error); setPhase('idle'); return }
       if ('caught' in res && res.caught) {

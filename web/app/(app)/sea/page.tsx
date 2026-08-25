@@ -13,6 +13,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getEffectiveRod } from '@/lib/rods'
 import { getLine } from '@/lib/lines'
+import { getReel } from '@/lib/reels'
+import { getHook } from '@/lib/hooks'
 import { getBait } from '@/lib/bait'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import SeaMap from './SeaMap'
@@ -50,6 +52,16 @@ export default async function SeaPage() {
       characterColor={(profile?.character_color as string | null) ?? 'default'}
       boatId={(profile?.equipped_boat as string | null) ?? null}
       hatId={(profile?.equipped_hat as string | null) ?? null}
+      // THE WHOLE RIG. You are fishing here, so what is in your hands should be
+      // what you actually own — the same rod, reel and hook the fishing screen
+      // draws, at the same overlay coordinates.
+      gear={{
+        rod: rod.imageUrl ?? null,
+        rodGlow: rod.glow ? (rod.glowType ?? 'default') : null,
+        rodColor: rod.color ?? null,
+        reel: getReel(Number(profile?.reel_tier ?? 0)).imageUrl ?? null,
+        hook: getHook(Number(profile?.hook_tier ?? 0)).imageUrl ?? null,
+      }}
       bait={baitType}
       baitBonus={getBait(baitType).catchZoneBonus}
       baitQty={best?.quantity ?? 0}

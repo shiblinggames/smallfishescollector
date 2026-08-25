@@ -24,6 +24,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
+import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 
@@ -41,7 +42,7 @@ const ARRIVE = 26
 type Vec = { x: number; y: number }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, bait, baitBonus, baitQty,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitBonus, baitQty,
 }: {
   fishingXP: number
   /** The player's own loadout, so the thing crossing the ocean is the captain
@@ -51,6 +52,7 @@ export default function SeaMap({
   hatId: string | null
   /** Everything the dial needs to be the REAL dial. See FishingHere. */
   mods: FishingMods
+  gear: Gear
   bait: string
   baitBonus: number
   baitQty: number
@@ -79,6 +81,11 @@ export default function SeaMap({
    *  rather than acted on silently. */
   const [leaving, setLeaving] = useState<Place | null>(null)
   const [baitLeft, setBaitLeft] = useState(baitQty)
+  /** Which pose the captain is in. The game already draws three — rod up,
+   *  line in the water, mid-cast — so the map uses the same ones rather than
+   *  inventing a fourth. `wait` during the bite wait is most of the missing
+   *  feedback: the line is visibly IN the water. */
+  const [frame, setFrame] = useState<'rest' | 'wait' | 'cast'>('rest')
   // Mirrored so the rAF loop can read it without being re-created every time it
   // changes, which would restart the sweep.
   const fishingRef = useRef<Place | null>(null)
@@ -250,7 +257,7 @@ export default function SeaMap({
           position: 'absolute', left: '50%', top: '50%', zIndex: 5,
           willChange: 'transform', pointerEvents: 'none',
         }}>
-        <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId} />
+        <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId} gear={gear} frame={frame} />
       </div>
 
       {/* The prompt steps aside while the rod is out — the cast button is the
@@ -269,7 +276,8 @@ export default function SeaMap({
           baitLeft={baitLeft}
           mods={mods}
           onBaitSpent={left => { if (typeof left === 'number') setBaitLeft(left) }}
-          onClose={() => setFishingIn(null)}
+          onPose={setFrame}
+          onClose={() => { setFishingIn(null); setFrame('rest') }}
         />
       )}
 
@@ -346,14 +354,47 @@ function dist(a: Vec, p: { x: number; y: number }): number {
  * The `rest` frame throughout. `cast` is a fishing pose and has no business on
  * open water.
  */
-function Skipper({ characterColor, boatId, hatId }: {
+export type Gear = {
+  rod: string | null
+  rodGlow: string | null
+  rodColor: string | null
+  reel: string | null
+  hook: string | null
+}
+
+/** Overlay coordinates, lifted verbatim from FishingGame. Every rod, reel and
+ *  hook tier is uploaded on the same canvas, so one set of numbers lines up all
+ *  of them — which is also why copying the table is safe rather than fragile. */
+const ROD_AT = {
+  rest: { top: 37, left: -12, width: 107.5, rotate: 0 },
+  wait: { top: 37.5, left: -8, width: 107.5, rotate: 0 },
+  cast: { top: -8.5, left: 3.5, width: 100.5, rotate: 0 },
+} as const
+const REEL_AT = {
+  rest: { top: 15, left: -10.3, width: 222, rotate: -18 },
+  wait: { top: -5.2, left: -3.1, width: 222, rotate: -36.5 },
+  cast: { top: 38.9, left: -42, width: 219.5, rotate: 46.5 },
+} as const
+const HOOK_AT = {
+  rest: { top: 39.5, left: -10.5, width: 204.5, rotate: 0, hidden: false },
+  // Hidden on the wait frame because the hook is in the water during the bite.
+  wait: { top: 39.5, left: -10.5, width: 222, rotate: 0, hidden: true },
+  cast: { top: 40.5, left: -73, width: 204.5, rotate: 66.5, hidden: false },
+} as const
+
+function Skipper({ characterColor, boatId, hatId, gear, frame }: {
   characterColor: string
   boatId: string | null
   hatId: string | null
+  gear: Gear
+  frame: 'rest' | 'wait' | 'cast'
 }) {
   const char = useMemo(() => getCharacterSprites(characterColor), [characterColor])
   const boat = useMemo(() => BOATS.find(b => b.id === boatId) ?? null, [boatId])
   const hat = useMemo(() => HATS.find(h => h.id === hatId) ?? null, [hatId])
+  const rc = ROD_AT[frame]
+  const rec = REEL_AT[frame]
+  const hc = HOOK_AT[frame]
 
   return (
     <div style={{
@@ -366,7 +407,7 @@ function Skipper({ characterColor, boatId, hatId }: {
       filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.55))',
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={char.rest} alt="" draggable={false} style={{ width: '100%', display: 'block' }} />
+      <img src={char[frame]} alt="" draggable={false} style={{ width: '100%', display: 'block' }} />
       {hat && (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img src={hat.restImageUrl} alt="" draggable={false} style={{
@@ -380,16 +421,43 @@ function Skipper({ characterColor, boatId, hatId }: {
       )}
       {boat && (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={boat.restImageUrl} alt="" draggable={false}
+        <img src={frame === 'cast' ? boat.castImageUrl : boat.restImageUrl} alt="" draggable={false}
           className={boat.glow ? 'boat-glow' : undefined}
           style={{
             position: 'absolute',
-            top: `${boat.positions.rest.top}%`,
-            left: `${boat.positions.rest.left}%`,
-            width: `${boat.positions.rest.width}%`,
-            transform: `rotate(${boat.positions.rest.rotate}deg)`,
+            top: `${boat.positions[frame].top}%`,
+            left: `${boat.positions[frame].left}%`,
+            width: `${boat.positions[frame].width}%`,
+            transform: `rotate(${boat.positions[frame].rotate}deg)`,
             transformOrigin: 'center center',
           }} />
+      )}
+      {gear.rod && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={gear.rod} alt="" draggable={false}
+          className={gear.rodGlow ? rodGlowClass({ glow: true, glowType: gear.rodGlow } as never) : undefined}
+          style={{
+            position: 'absolute', top: `${rc.top}%`, left: `${rc.left}%`,
+            width: `${rc.width}%`, maxWidth: 'none',
+            transform: `rotate(${rc.rotate}deg)`, transformOrigin: 'bottom right',
+            ...(gear.rodColor ? { ['--rod-glow-color' as string]: gear.rodColor } : {}),
+          } as React.CSSProperties} />
+      )}
+      {gear.reel && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={gear.reel} alt="" draggable={false} style={{
+          position: 'absolute', top: `${rec.top}%`, left: `${rec.left}%`,
+          width: `${rec.width}%`, maxWidth: 'none',
+          transform: `rotate(${rec.rotate}deg)`, transformOrigin: 'center center',
+        }} />
+      )}
+      {gear.hook && !hc.hidden && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={gear.hook} alt="" draggable={false} style={{
+          position: 'absolute', top: `${hc.top}%`, left: `${hc.left}%`,
+          width: `${hc.width}%`, maxWidth: 'none',
+          transform: `rotate(${hc.rotate}deg)`, transformOrigin: 'center center',
+        }} />
       )}
     </div>
   )
