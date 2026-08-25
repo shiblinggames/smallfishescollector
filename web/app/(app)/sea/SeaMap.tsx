@@ -89,6 +89,39 @@ function zoomFor(width: number): number {
   return Math.max(0.45, Math.min(1, width / 780))
 }
 
+/**
+ * WHERE THE LAND STARTS, as a fraction of a port's radius.
+ *
+ * A port's `r` covers the shoals and the shore ring as well as the island, and
+ * the painted land inside it works out at about 0.68r. So the shoreline a hull
+ * can actually reach is a shade outside that — close enough to moor alongside,
+ * far enough that the bow is not in somebody's tavern.
+ *
+ * The coastline is a wobbly polygon rather than a circle, so this is an average
+ * of it. A per-vertex collision against the clip path would be exact and would
+ * also let the boat wedge into a cove, which is a worse problem than the one it
+ * solves.
+ */
+const SHORE = 0.72
+
+/** Nudge a point out to the shoreline if it has been asked for inside an
+ *  island. The helm should not be able to ORDER a course into rock, which is
+ *  half the fix; the other half is that momentum cannot carry you in either. */
+function clearOfLand(w: Vec): Vec {
+  for (const p of PLACES) {
+    if (p.kind !== 'port') continue
+    const dx = w.x - p.x, dy = w.y - p.y
+    const d = Math.hypot(dx, dy)
+    const R = p.r * SHORE
+    if (d < R) {
+      // Dead centre has no direction to be pushed in, so pick one.
+      if (d < 0.001) return { x: p.x + R, y: p.y }
+      return { x: p.x + (dx / d) * R, y: p.y + (dy / d) * R }
+    }
+  }
+  return w
+}
+
 /** The cloud bank. Written down rather than random so the sky is the same sky
  *  every session, and spread wide because the layer is 60% wider than the
  *  screen to give the parallax somewhere to travel. Sizes are percentages of
@@ -573,7 +606,7 @@ export default function SeaMap({
       }
     }
 
-    target.current = w
+    target.current = clearOfLand(w)
   }, [toWorld, near, locked, enter])
 
   /** How far a press has to travel before it stops being a tap. Generous
@@ -598,7 +631,7 @@ export default function SeaMap({
       vibrate(8)
     }
     const w = toWorld(e.clientX, e.clientY)
-    if (w) target.current = w
+    if (w) target.current = clearOfLand(w)
   }, [toWorld])
 
   const onUp = useCallback((e: React.PointerEvent) => {
@@ -653,6 +686,30 @@ export default function SeaMap({
       vel.current.y += (wy - vel.current.y) * k
       pos.current.x += vel.current.x * dt
       pos.current.y += vel.current.y * dt
+
+      // YOU CANNOT SAIL THROUGH AN ISLAND. Clamping the target is not enough on
+      // its own: a boat carrying way can cross a shoreline the course never
+      // asked it to, and drag-steering hands the helm a new point every frame.
+      //
+      // Pushed back out along the normal, and only the INWARD part of the
+      // velocity is removed — whatever was carrying you sideways survives, so
+      // you scrape along the coast and round it instead of stopping dead
+      // against it. A hull that halts the instant it touches land feels like a
+      // wall; one that slides feels like a shore.
+      for (const p of PLACES) {
+        if (p.kind !== 'port') continue
+        const dx = pos.current.x - p.x
+        const dy = pos.current.y - p.y
+        const dd = Math.hypot(dx, dy)
+        const R = p.r * SHORE
+        if (dd >= R) continue
+        const nx = dd < 0.001 ? 1 : dx / dd
+        const ny = dd < 0.001 ? 0 : dy / dd
+        pos.current.x = p.x + nx * R
+        pos.current.y = p.y + ny * R
+        const vn = vel.current.x * nx + vel.current.y * ny
+        if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
+      }
 
       // WHICH WAY THE CAPTAIN FACES.
       //
