@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE } from './chart'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
+import { REGIONS, regionLabelAt } from '@/lib/seaRegions'
 import {
   FOG_CELL, FOG_W, FOG_H, FOG_X0, FOG_Y0, FOG_CELLS,
   fogCentre, fogHas, fogProgress,
@@ -120,6 +121,30 @@ export default function Minimap({
     ctx.arc(tx(0), ty(0), OUTER_EDGE * s, -lift, Math.PI + lift)
     ctx.stroke()
     ctx.setLineDash([])
+
+    // ── THE REGIONS ──────────────────────────────────────────────────────
+    //
+    // Faint, and under everything else. These are the chart's longitude: the
+    // bands say how far out, the regions say which way, and the pair is the
+    // first time a position on this sea can be described rather than pointed
+    // at. Drawn whatever the fog says, because a region is not a discovery —
+    // it is the name of a direction, and the sea has always had directions.
+    //
+    // Small caps and wide tracking, the way a real chart letters an area
+    // rather than a place. Nothing is drawn round them: an area label with a
+    // box on it reads as a pin.
+    ctx.save()
+    ctx.font = '600 8px ui-sans-serif, system-ui'
+    ctx.textAlign = 'center'
+    ctx.fillStyle = 'rgba(186,208,222,0.34)'
+    for (const r of REGIONS) {
+      const at = regionLabelAt(r, OUTER_EDGE)
+      const label = r.name.replace(/^The /, '').toUpperCase()
+      // Letter-spaced by hand: canvas has no tracking.
+      const spaced = label.split('').join(' ')
+      ctx.fillText(spaced, tx(at.x), ty(at.y))
+    }
+    ctx.restore()
 
     // ── THE PORTS, always ────────────────────────────────────────────────
     // Never fogged. A chart whose own harbours are hidden until you have been

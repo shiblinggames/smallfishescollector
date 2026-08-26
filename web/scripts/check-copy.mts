@@ -33,6 +33,7 @@ import { ALL_DAILY_CHALLENGES } from '../lib/dailyChallenges'
 import { ISLES } from '../lib/seaIsles'
 import { DIG_SITES } from '../lib/seaDigs'
 import { FRAGMENTS } from '../lib/seaBottles'
+import { REGIONS } from '../lib/seaRegions'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -63,6 +64,7 @@ const SOURCES: Src[] = [
   // Sixteen logs the sea hands out in bottles. The longest free prose in the
   // game and the likeliest place for a stray dash to survive a rewrite.
   { label: 'bottle', strings: FRAGMENTS },
+  { label: 'sea region', strings: REGIONS.flatMap(r => [r.name, r.blurb]) },
 ]
 
 for (const src of SOURCES) {
