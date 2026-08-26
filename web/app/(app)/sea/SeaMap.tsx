@@ -28,7 +28,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place } from './chart'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -1035,6 +1035,10 @@ export default function SeaMap({
   // both of which are render-time questions, and `isleNear` does not care.
   const [found, setFound] = useState<Set<string>>(() => new Set(discovered))
   const [nearIsle, setNearIsle] = useState<Isle | null>(null)
+  /** Pressed up against the edge of the surveyed chart. Ref for the loop, state
+   *  for the one line it puts on screen. */
+  const [atEdge, setAtEdge] = useState(false)
+  const edgeRef = useRef(false)
   /** The isle whose landing panel is open, and what it gave up. `landed`, not
    *  `ashore` — that name is already the Mainland's three-card chooser. */
   const [landed, setLanded] = useState<{ isle: Isle; result: AshoreResult } | null>(null)
@@ -1523,6 +1527,37 @@ export default function SeaMap({
         // prompt flickering for anyone sitting exactly on the line.
         gateRef.current = false
         setAtGate(false)
+      }
+
+      // ── THE EDGE OF THE CHART ──────────────────────────────────────
+      //
+      // There was no boundary here at all. The north wall was the only clamp on
+      // the whole sea, so south, east and west you could sail out of the last
+      // band and keep going into blank water forever: no zone, no landmarks,
+      // and past the fog grid entirely, so the chart stopped filling in.
+      //
+      // ONE RADIUS covers all three, because the bands are concentric. Past the
+      // Ancient Deep in any direction is past the Ancient Deep.
+      //
+      // It SLIDES rather than stops. Only the outward component of the velocity
+      // is removed, so running into the edge lets you coast along it instead of
+      // pinning you — which matters because the last band is 6,600 wide and its
+      // rim is somewhere you might want to follow round.
+      const R = Math.hypot(pos.current.x, pos.current.y)
+      if (R > OUTER_EDGE) {
+        const nx2 = pos.current.x / R, ny2 = pos.current.y / R
+        pos.current.x = nx2 * OUTER_EDGE
+        pos.current.y = ny2 * OUTER_EDGE
+        const outward = vel.current.x * nx2 + vel.current.y * ny2
+        if (outward > 0) {
+          vel.current.x -= nx2 * outward
+          vel.current.y -= ny2 * outward
+        }
+        if (!edgeRef.current) { edgeRef.current = true; setAtEdge(true) }
+      } else if (edgeRef.current && R < OUTER_EDGE - 400) {
+        // Hysteresis, so following the rim does not strobe the line.
+        edgeRef.current = false
+        setAtEdge(false)
       }
 
       // YOU CANNOT SAIL THROUGH AN ISLAND. Clamping the target is not enough on
@@ -2110,7 +2145,12 @@ hullRef={hullRefFor(t.key)} />
           The Deep" while you are standing on a rock with a chest on it. */}
       {!fishingIn && !nearTrader && nearIsle && (
         <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.4rem)',
+          // THE SAME ROW AS "FISH THE DEEP" — bottom 22, which is what `Prompt`
+          // and the trader hail both use. This was lifted to 5.4rem off the
+          // bottom, which on a phone is exactly where the joystick lives, so
+          // the one button that opens a chest sat on top of the control you
+          // steer with. Every offer on this chart belongs on one line.
+          position: 'absolute', left: 0, right: 0, bottom: 22,
           zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
         }}>
           <button
@@ -2152,6 +2192,8 @@ hullRef={hullRefFor(t.key)} />
       {/* AND THE WATER'S NAME IS ALREADY ON SCREEN while the rod is out — the
           stow line at the bottom of the fishing UI reads "Stow rod · Open
           Waters". Two of them, one of them enormous, is the same fact twice. */}
+      <EdgeOfChart at={atEdge} />
+
       <AshorePanel state={landed} onClose={() => setLanded(null)} />
 
       <WaterBanner
@@ -3371,6 +3413,45 @@ const Landmass = memo(function Landmass({ id, locked = false }: {
         }} />
       </div>
     </>
+  )
+})
+
+/**
+ * THE END OF THE SURVEYED CHART.
+ *
+ * Says why you stopped, once, and gets out of the way. It has to say something:
+ * a boat that simply refuses to go further with no explanation is the invisible
+ * wall the north edge used to be, and that read as the edge of a LEVEL rather
+ * than the edge of a world.
+ *
+ * No art, on purpose. The north is walled with rock because there is land up
+ * there; out here there is nothing to build a wall out of that would not be
+ * inventing geology. What stops you is the map, so what says so is a line.
+ *
+ * Never eats a tap — you are usually still holding the stick when it appears.
+ */
+const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
+  return (
+    <AnimatePresence>
+      {at && (
+        <motion.div aria-hidden
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, transition: { duration: 0.5, ease: 'easeOut' } }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: 0, right: 0, bottom: 96,
+            zIndex: Z.crossing, display: 'flex', justifyContent: 'center',
+            pointerEvents: 'none', padding: '0 1rem',
+          }}>
+          <p className="font-karla font-700 uppercase" style={{
+            fontSize: '0.72rem', letterSpacing: '0.34em', margin: 0,
+            color: 'rgba(214,232,240,0.82)',
+            textShadow: '0 2px 16px rgba(0,0,0,0.95)',
+          }}>The chart ends here</p>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 })
 

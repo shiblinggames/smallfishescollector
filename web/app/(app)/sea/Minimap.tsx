@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PLACES, YOON, RESIDENTS, NORTH_WALL } from './chart'
+import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE } from './chart'
 import { ISLES } from '@/lib/seaIsles'
 import {
   FOG_CELL, FOG_W, FOG_H, FOG_X0, FOG_Y0, FOG_CELLS,
@@ -76,6 +76,13 @@ export default function Minimap({
     const cs = FOG_CELL * s + 1
     for (let i = 0; i < FOG_CELLS; i++) {
       const c = fogCentre(i)
+      // OFF THE CHART ENTIRELY. The fog grid is a RECTANGLE and the sea is a
+      // half-disc inside it, so about a fifth of these cells are corners no
+      // boat can reach. Painting them as fog advertises water that is not
+      // there, and somebody would spend a long evening trying to sail into it.
+      // Left as bare canvas, which also has the happy effect of making the
+      // minimap show the shape the chart actually is.
+      if (Math.hypot(c.x, c.y) > OUTER_EDGE) continue
       const x = tx(c.x - FOG_CELL / 2)
       const y = ty(c.y - FOG_CELL / 2)
       if (fogHas(fog, i)) {
@@ -98,6 +105,14 @@ export default function Minimap({
     ctx.beginPath()
     ctx.moveTo(tx(FOG_X0), ty(NORTH_WALL))
     ctx.lineTo(tx(FOG_X0 + worldW), ty(NORTH_WALL))
+    ctx.stroke()
+
+    // And the far edge, in the same dashes, because it is the same kind of
+    // thing: not a wall, just where the survey stops. Drawn only across the
+    // south, since north of the wall is somebody else's chart.
+    ctx.beginPath()
+    const lift = Math.asin(Math.min(1, Math.abs(NORTH_WALL) / OUTER_EDGE))
+    ctx.arc(tx(0), ty(0), OUTER_EDGE * s, -lift, Math.PI + lift)
     ctx.stroke()
     ctx.setLineDash([])
 

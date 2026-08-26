@@ -350,6 +350,22 @@ export const RESIDENTS: {
  * You can still moor at the Harbour: it sits ON the line, and its approach ring
  * opens to the south.
  */
+/**
+ * THE EDGE OF THE CHART, as a radius from the Mainland.
+ *
+ * The north is walled by rock because there is LAND up there — the Harbour, and
+ * the way through to expeditions. Everywhere else the boundary is not a physical
+ * thing and should not pretend to be one: a reef in the middle of the deepest
+ * water would be geology nobody can explain. This is simply where the surveyed
+ * chart stops, which is the honest reason a boat with no map turns back.
+ *
+ * It is the outer radius of the outermost band, so the last water you can reach
+ * is the last water anyone drew. One radius covers south, east and west at once,
+ * because the bands are concentric: past the Ancient Deep in ANY direction is
+ * past the Ancient Deep.
+ */
+export const OUTER_EDGE = 22600
+
 export const NORTH_WALL = -1500
 
 /**
