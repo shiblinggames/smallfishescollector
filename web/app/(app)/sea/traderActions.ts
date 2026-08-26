@@ -376,6 +376,10 @@ export async function saveSeaPosition(
   const patch: Record<string, unknown> = {
     sea_x: Math.max(-1e6, Math.min(1e6, x)),
     sea_y: Math.max(-1e6, Math.min(1e6, y)),
+    // WHEN, not just where. A position with no timestamp could be from thirty
+    // seconds ago or from last March, and the compass cannot honestly point a
+    // friend at a boat without knowing which. This is the only writer.
+    sea_seen_at: new Date().toISOString(),
   }
 
   // ── THE FOG ───────────────────────────────────────────────────────────

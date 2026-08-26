@@ -33,9 +33,18 @@ type Room = 'island' | 'inside' | 'gallery' | 'stones'
 const GOLD = '#f0c464'
 
 export default function HomeClient({
-  homestead: initial, destinations, doubloons: initialCoin, unlocked, stamps,
+  homestead: initial, destinations, doubloons: initialCoin, unlocked, stamps, guest = null,
 }: {
   homestead: Homestead
+  /**
+   * WHOSE HOMESTEAD THIS IS, when it is not yours.
+   *
+   * Set means READ ONLY, and read only means the controls are ABSENT rather
+   * than disabled. A row of greyed-out Build buttons on somebody else's island
+   * is a page inviting you to do something it will refuse, and every one of
+   * those buttons would need its own server-side no anyway.
+   */
+  guest?: string | null
   destinations: Destination[]
   doubloons: number
   unlocked: string[]
@@ -108,7 +117,7 @@ export default function HomeClient({
           <div style={{ minWidth: 0 }}>
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.62rem', letterSpacing: '0.16em', color: 'rgba(180,214,232,0.7)', margin: 0,
-            }}>The Homestead</p>
+            }}>{guest ? `${guest}'s Homestead` : 'The Homestead'}</p>
             <p className="font-cinzel font-700" style={{
               fontSize: '1.6rem', color: '#f2ead8', margin: '0.1rem 0 0',
             }}>{builtAt(home, 'house').name}</p>
@@ -117,9 +126,20 @@ export default function HomeClient({
             }}>{builtAt(home, 'house').blurb}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: GOLD, margin: 0 }}>
-              ⟡ {coin.toLocaleString()}
-            </p>
+            {!guest && (
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: GOLD, margin: 0 }}>
+                ⟡ {coin.toLocaleString()}
+              </p>
+            )}
+            {guest && (
+              <button type="button" onClick={() => router.push('/home')}
+                className="font-karla font-700"
+                style={{
+                  padding: '0.38rem 0.8rem', borderRadius: 999, fontSize: '0.8rem',
+                  color: 'rgba(226,238,246,0.9)', background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer', flexShrink: 0,
+                }}>Yours</button>
+            )}
             {/* OUT, in the same corner every surface reached from the sea puts it. */}
             <button type="button" onClick={() => router.push('/sea')} aria-label="Back to the water" title="Back to the water"
               style={{
@@ -166,13 +186,15 @@ export default function HomeClient({
             <p className="font-karla" style={{
               position: 'absolute', left: 0, right: 0, bottom: 8, textAlign: 'center',
               fontSize: '0.74rem', color: 'rgba(226,238,246,0.7)', margin: 0,
-            }}>Six places to build on. Most of them are still rock.</p>
+            }}>{guest ? 'Not much on it yet.' : 'Six places to build on. Most of them are still rock.'}</p>
           )}
         </div>
 
         {/* ── THE ROOMS ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>
-          {([['island', 'The island'], ['inside', 'Inside'], ['gallery', 'The gallery'], ['stones', 'The stones']] as const)
+          {(guest
+            ? ([['island', 'The island'], ['inside', 'Inside'], ['gallery', 'The gallery']] as const)
+            : ([['island', 'The island'], ['inside', 'Inside'], ['gallery', 'The gallery'], ['stones', 'The stones']] as const))
             .map(([id, label]) => (
               <button key={id} type="button" onClick={() => { vibrate(6); setRoom(id) }}
                 className="font-karla font-700"
@@ -183,13 +205,13 @@ export default function HomeClient({
                   border: `1px solid ${room === id ? GOLD : 'rgba(255,255,255,0.14)'}`,
                 }}>{label}</button>
             ))}
-          <button type="button" onClick={() => { vibrate(6); setAlmanac(true) }}
+          {!guest && <button type="button" onClick={() => { vibrate(6); setAlmanac(true) }}
             className="font-karla font-700"
             style={{
               padding: '0.44rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer',
               color: 'rgba(214,232,240,0.82)', background: 'rgba(167,139,250,0.14)',
               border: '1px solid rgba(167,139,250,0.4)',
-            }}>The Almanac</button>
+            }}>The Almanac</button>}
         </div>
 
         {/* ── THE ISLAND ROOM ───────────────────────────────────────── */}
@@ -219,7 +241,7 @@ export default function HomeClient({
                     fontSize: '0.82rem', color: 'rgba(196,214,228,0.66)', margin: '0.12rem 0 0',
                   }}>{now.blurb}</p>
 
-                  {next ? (
+                  {guest ? null : next ? (
                     <div style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       gap: 10, marginTop: 10, flexWrap: 'wrap',
@@ -264,8 +286,9 @@ export default function HomeClient({
           <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
             <TheRoom home={home} />
             <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(196,214,228,0.7)', margin: 0 }}>
-              {builtAt(home, 'house').name} has room for {slots.length} of {FURNITURE.length}.
-              Build the house up for the rest. Nothing in here does anything.
+              {guest
+                ? `${builtAt(home, 'house').name}, with ${slots.length} of ${FURNITURE.length} slots in use.`
+                : `${builtAt(home, 'house').name} has room for ${slots.length} of ${FURNITURE.length}. Build the house up for the rest. Nothing in here does anything.`}
             </p>
             {FURNITURE.map(f => {
               const open = slots.includes(f.slot)
@@ -285,6 +308,12 @@ export default function HomeClient({
                       No room yet
                     </p>}
                   </div>
+                  {guest ? (
+                    // What is actually in the slot, and nothing to press.
+                    <p className="font-karla" style={{
+                      fontSize: '0.86rem', color: 'rgba(226,238,246,0.86)', margin: '0.3rem 0 0',
+                    }}>{here.name}</p>
+                  ) : (
                   <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                     {f.options.map(o => {
                       const on = here.id === o.id
@@ -321,6 +350,7 @@ export default function HomeClient({
                       )
                     })}
                   </div>
+                  )}
                 </div>
               )
             })}

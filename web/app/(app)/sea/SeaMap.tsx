@@ -34,7 +34,8 @@ import { goAshore, type AshoreResult } from './isleActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
-import { homeBuildings, type Homestead } from '@/lib/homestead'
+import { homeBuildings, builtAt, type Homestead } from '@/lib/homestead'
+import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
@@ -1195,6 +1196,24 @@ export default function SeaMap({
   const [find, setFind] = useState<
     { kind: 'bottle'; result: BottleResult } | { kind: 'dig'; result: DigResult } | null>(null)
 
+  // ── WHO ELSE IS OUT HERE ──────────────────────────────────────────────
+  //
+  // Polled, not pushed. Every boat already writes its position every twenty
+  // seconds for its own sake, so this is one query on a timer rather than a
+  // socket — and twenty seconds of sailing is about a screen, which is close
+  // enough to steer by and closes every time either of you flushes.
+  const [friends, setFriends] = useState<FriendAtSea[]>([])
+
+  // ── WHOSE HOMESTEAD THE ISLAND IS SHOWING ─────────────────────────────
+  //
+  // The island sits at one place on the chart and every captain's is at those
+  // same coordinates, so visiting cannot be a matter of sailing somewhere else.
+  // You sail to the island and choose whose it is; the buildings, the name and
+  // the door all follow.
+  const [guests, setGuests] = useState<Visitable[]>([])
+  const [visiting, setVisiting] = useState<{ username: string; homestead: Homestead } | null>(null)
+  const [picking, setPicking] = useState(false)
+
   /** Pressed up against the edge of the surveyed chart. Ref for the loop, state
    *  for the one line it puts on screen. */
   const [atEdge, setAtEdge] = useState(false)
@@ -1423,6 +1442,31 @@ export default function SeaMap({
   }, [])
 
   /**
+   * WHO IS SAILING, every twenty seconds.
+   *
+   * Matched to the flush cadence on purpose: asking faster cannot return
+   * anything newer, because nobody's position is written more often than that.
+   * Paused when the tab is hidden — a chart nobody is looking at does not need
+   * to know where anyone is, and this runs for as long as the page is open.
+   */
+  useEffect(() => {
+    let alive = true
+    const pull = () => {
+      if (document.visibilityState === 'hidden') return
+      void friendsAtSea().then(f => { if (alive) setFriends(f) }, () => {})
+    }
+    pull()
+    const id = setInterval(pull, 20_000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
+
+  /** Who you could call on. Read once; the guard is re-checked server-side on
+   *  the visit itself, so a stale list cannot open a door. */
+  useEffect(() => {
+    void visitableHomesteads().then(setGuests, () => {})
+  }, [])
+
+  /**
    * BUILD ALL FIVE SURFACE TILES ONCE, off the critical path.
    *
    * `surfaceTile` is lazy and is called from the frame loop, so the first time
@@ -1449,13 +1493,20 @@ export default function SeaMap({
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
     if (p.id === 'mainland') { setAshore(true); return }
+    // WHOSE DOOR. The Homestead is one island showing one of several
+    // homesteads, so the route has to carry whose you are standing on.
+    if (p.id === 'home' && visiting) {
+      try { sessionStorage.setItem('sea:came-from-chart', '1') } catch { /* private mode */ }
+      router.push(`/home?visiting=${encodeURIComponent(visiting.username)}`)
+      return
+    }
     // A BREADCRUMB, so the place we send them to can come BACK rather than
     // pushing a second /sea on top of this one. A pushed return remounts the
     // whole chart from cold — re-reading the boat's position, rebuilding every
     // island — which is a visible reload of a screen nobody actually left.
     try { sessionStorage.setItem('sea:came-from-chart', '1') } catch { /* private mode */ }
     router.push(p.href)
-  }, [router])
+  }, [router, visiting])
 
   const onTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (swallowTap.current) return
@@ -2278,7 +2329,7 @@ export default function SeaMap({
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: Z.world, willChange: 'transform' }}>
         {PLACES.map(p => (
-          <PlaceIsland key={p.id} place={homeFor(p, homestead)} locked={locked(p)} isNear={near?.id === p.id}
+          <PlaceIsland key={p.id} place={homeFor(p, visiting?.homestead ?? homestead, visiting?.username)} locked={locked(p)} isNear={near?.id === p.id}
             // CREW WAITING ON THE DOCK. The island says so itself rather than a
             // banner saying it for them: it is a fact about a PLACE, and the
             // chart is where facts about places belong. Nothing moves, nothing
@@ -2494,6 +2545,29 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
+      {/* CALLING ON SOMEBODY. Only within reach of the Homestead, and only
+          when there is anybody to call on: an empty picker is a button that
+          teaches you nothing. Sits above the ashore prompt rather than
+          replacing it, because going to your own is still the common case. */}
+      {!fishingIn && near?.id === 'home' && guests.length > 0 && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 74,
+          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); vibrate(8); setPicking(true) }}
+            data-no-steer
+            className="font-karla font-700"
+            style={{
+              padding: '0.42rem 0.9rem', borderRadius: 999, fontSize: '0.86rem',
+              color: '#dfe8f2', background: 'rgba(12,20,30,0.88)',
+              border: '1px solid rgba(180,214,232,0.34)', cursor: 'pointer',
+            }}>
+            {visiting ? `Visiting ${visiting.username} · change` : 'Call on a friend'}
+          </button>
+        </div>
+      )}
+
       {/* DIGGING BEATS EVERYTHING. You are inside a band and possibly beside a
           bottle when you are stood over one, and a buried haul is the rarest
           thing on this chart — it goes to the front of the queue. */}
@@ -2592,6 +2666,20 @@ hullRef={hullRefFor(t.key)} />
       {/* AND THE WATER'S NAME IS ALREADY ON SCREEN while the rod is out — the
           stow line at the bottom of the fishing UI reads "Stow rod · Open
           Waters". Two of them, one of them enormous, is the same fact twice. */}
+      <VisitPicker
+        open={picking} guests={guests} visiting={visiting?.username ?? null}
+        onClose={() => setPicking(false)}
+        onPick={async name => {
+          setPicking(false)
+          if (!name) { setVisiting(null); return }
+          // The server checks the friendship again here. The list this came
+          // from could be minutes old, and an unfollow has to shut the door
+          // now rather than at the next page load.
+          const v = await homesteadOf(name)
+          if (v) { vibrate(12); setVisiting({ username: v.username, homestead: v.homestead }) }
+        }}
+      />
+
       <FindPanel state={find} onClose={() => setFind(null)} />
 
       <EdgeOfChart at={atEdge} />
@@ -2677,7 +2765,7 @@ hullRef={hullRefFor(t.key)} />
           and distances on them are the single largest thing on this screen that
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!fishingIn && (
-        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp}
+        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
           waitingAt={id => (id === 'trawl_docks' ? trawlsReady : 0)} />
       )}
 
@@ -3933,6 +4021,86 @@ const GateSign = memo(function GateSign() {
 })
 
 /**
+ * WHOSE HOMESTEAD TO LOOK AT.
+ *
+ * Every captain's island is at the same coordinates, so visiting cannot be a
+ * matter of sailing somewhere else — you sail to the island and choose whose it
+ * is. Picking one re-renders the island under you: their lighthouse, their
+ * gallery, their gardens, seen from the water before you ever go ashore.
+ *
+ * Mutual crew only, and the list is built server-side. The pick is checked
+ * again when it is made, because this list can be minutes old.
+ */
+const VisitPicker = memo(function VisitPicker({ open, guests, visiting, onClose, onPick }: {
+  open: boolean
+  guests: Visitable[]
+  visiting: string | null
+  onClose: () => void
+  onPick: (username: string | null) => void
+}) {
+  if (!open) return null
+  return (
+    <div onClick={e => { e.stopPropagation(); onClose() }} data-no-steer
+      style={{
+        position: 'fixed', inset: 0, zIndex: Z.helm,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem', background: 'rgba(2,8,14,0.72)',
+      }}>
+      <div onClick={e => e.stopPropagation()} data-no-steer
+        style={{
+          width: '100%', maxWidth: 380, borderRadius: 18, padding: '1.15rem',
+          background: 'rgba(10,16,22,0.98)',
+          border: '1px solid rgba(180,214,232,0.28)',
+          boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+        }}>
+        <p className="font-karla font-700 uppercase" style={{
+          fontSize: '0.62rem', letterSpacing: '0.16em', margin: 0,
+          color: 'rgba(180,214,232,0.7)',
+        }}>Call on</p>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '1.3rem', color: '#f2ead8', margin: '0.15rem 0 0.2rem',
+        }}>Whose island is this?</p>
+        <p className="font-karla" style={{
+          fontSize: '0.8rem', color: 'rgba(196,214,228,0.62)', margin: '0 0 0.8rem',
+        }}>Anyone you both follow, who has built something.</p>
+
+        <div style={{ display: 'grid', gap: 6, maxHeight: '46vh', overflowY: 'auto' }}>
+          <button type="button" onClick={() => onPick(null)}
+            className="font-karla font-700"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 10, padding: '0.6rem 0.8rem', borderRadius: 12, textAlign: 'left',
+              color: visiting === null ? '#0d1520' : 'rgba(226,238,246,0.9)',
+              background: visiting === null ? '#f0c464' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${visiting === null ? '#f0c464' : 'rgba(255,255,255,0.14)'}`,
+              cursor: 'pointer', fontSize: '0.9rem',
+            }}>
+            Yours
+          </button>
+          {guests.map(g => (
+            <button key={g.username} type="button" onClick={() => onPick(g.username)}
+              className="font-karla font-700"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 10, padding: '0.6rem 0.8rem', borderRadius: 12, textAlign: 'left',
+                color: visiting === g.username ? '#0d1520' : 'rgba(226,238,246,0.9)',
+                background: visiting === g.username ? '#f0c464' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${visiting === g.username ? '#f0c464' : 'rgba(255,255,255,0.14)'}`,
+                cursor: 'pointer', fontSize: '0.9rem',
+              }}>
+              <span>{g.username}</span>
+              <span style={{ fontWeight: 400, fontSize: '0.76rem', opacity: 0.75 }}>
+                {g.house} · {g.built}/6 built
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+})
+
+/**
  * A BOTTLE, DRIFTING.
  *
  * Registers its node in the map's ref table and then never re-renders: the frame
@@ -4431,8 +4599,17 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
  * shape `PLACES.buildings` already has, at the same percent coordinates, so
  * PlaceIsland never learns that one of its islands is special.
  */
-function homeFor(p: Place, h: Homestead): Place {
-  return p.id === 'home' ? { ...p, buildings: homeBuildings(h) } : p
+function homeFor(p: Place, h: Homestead, guest?: string): Place {
+  if (p.id !== 'home') return p
+  return {
+    ...p,
+    buildings: homeBuildings(h),
+    // WHOSE IT IS, on the island's own label. Visiting has to be legible from
+    // the water or you are standing on somebody else's lighthouse wondering
+    // when you built it.
+    name: guest ? `${guest}'s Homestead` : p.name,
+    blurb: guest ? builtAt(h, 'house').name : p.blurb,
+  }
 }
 
 const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting = 0 }: {
@@ -5055,7 +5232,7 @@ const COMPASS_MAX = 4
 /** How far apart two markers must sit on the perimeter before both are shown. */
 const COMPASS_SPACING = 96
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
   frozen: boolean
   /** Crew waiting at a given port, so a dock with a haul on it can jump the
    *  queue. Zero for everywhere else. */
@@ -5064,6 +5241,10 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt }: {
   zoom: React.RefObject<number>
   wrapRef: React.RefObject<HTMLDivElement | null>
   locked: (p: Place) => boolean
+  /** Mutual crew currently on the water. Never fogged and never hidden:
+   *  the whole point is finding each other, and a mark you have to earn is a
+   *  mark that does not help you meet. */
+  friends: FriendAtSea[]
 }) {
   const [, force] = useState(0)
   useEffect(() => {
@@ -5138,6 +5319,24 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt }: {
     marks.push({
       id: nearestPort.p.id, name: nearestPort.p.name, dim: locked(nearestPort.p),
       dist: true, sx: nearestPort.sx, sy: nearestPort.sy, world: nearestPort.world,
+    })
+  }
+
+  // ── WHO ELSE IS OUT HERE ─────────────────────────────────────────────
+  //
+  // Drawn like a person rather than a place: `mystery` is off, because the
+  // whole value is knowing WHO, and a nameless mark is one you have to sail to
+  // in order to identify.
+  //
+  // Their position is up to twenty seconds old, which the mark does not try to
+  // hide — a friend who has just gone quiet keeps their arrow for a couple of
+  // minutes and it simply stops moving. An arrow that vanished the instant a
+  // flush was missed would blink every time somebody hit a tunnel.
+  for (const f of friends) {
+    const at = project(f.x, f.y)
+    marks.push({
+      id: `friend:${f.username}`, name: f.username, dim: false, dist: true,
+      sx: at.sx, sy: at.sy, world: at.world,
     })
   }
 
