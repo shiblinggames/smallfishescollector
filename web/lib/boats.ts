@@ -34,16 +34,21 @@ export interface BoatDef {
    *  Mirrors the achievement-gated character skins. */
   achievementPoints?: number
   /**
-   * HOW SHE HANDLES, on the ocean hub. See TRIM below.
+   * WHICH WAY SHE IS RIGGED, on the ocean hub. See TRIM below.
    *
-   * A number from -1 (as nimble as they come, and slow with it) to +1 (all top
-   * speed, turns like a barge). Absent means dead in the middle.
-   *
-   * This is the ONLY stat a boat carries and it is deliberately a trade-off
-   * rather than a rating. A boat is still a thing you pick because you like
-   * looking at it.
+   * Negative is nimble and slow with it; positive is all top speed and turns
+   * like a barge. Absent means dead in the middle. This is a DIRECTION, never a
+   * rating — it moves speed and agility in opposite amounts.
    */
   trim?: number
+  /**
+   * HOW GOOD A HULL SHE IS, regardless of direction. See GRADE below.
+   *
+   * A multiplier on BOTH numbers at once, so a better boat is better at
+   * everything without deciding which way you sail. 1 is a working hull and the
+   * default; the fleet tops out at 1.07.
+   */
+  grade?: number
 }
 
 /**
@@ -67,31 +72,58 @@ export interface BoatDef {
  *
  * ── WHAT KEEPS THIS OUT OF PAY-TO-WIN ────────────────────────────────────
  *
- * MONEY BUYS YOU NOTHING AT EITHER END.
+ * ── AND `grade`, WHICH IS THE PART YOU EARN ─────────────────────────────
  *
- * The fastest hull in the game and the nimblest are both 5,000-doubloon boats
- * (Desert and Pistachio) — pocket change, and available from the first hour.
- * The free hulls sit one step in at +/-0.08. The 500,000 and 1,000,000 boats,
- * and both achievement boats, top out at +/-0.10, which is LESS than the cheap
- * pair. They are prestige art with a good hull, not the correct answer.
+ * Trim alone made every hull equal, which is right for keeping seventeen boats
+ * alive and wrong for a 1,000,000-doubloon boat and a 420-achievement-point
+ * boat: those are supposed to be worth something. So the budget itself has a
+ * size. `grade` scales BOTH numbers at once, so a fine hull is better at
+ * everything without telling you which way to sail.
  *
- * THE THREE GEM BOATS — Fire, Ice and Jet Black, via `gemPrice` — sit at
- * exactly 0 and must stay there. A gem-bought hull that sails better than a
- * free one would be bought precisely because it sails better, which is the one
- * thing this game does not do. There is no script enforcing it; it is a
- * decision made per boat, so make it deliberately when adding one.
+ * The two axes do different jobs and neither can do the other's:
+ *
+ *   trim  is a CHOICE. Free, available at every price, and no amount of money
+ *         buys a better answer because there is no better answer.
+ *   grade is a REWARD. Earned, monotonic, and it never decides your direction.
+ *
+ * A Chromium at 1.07 genuinely out-sails a Desert at 1.00, which is the point of
+ * spending a million doubloons. It does not out-sail it in a direction the
+ * Desert's owner did not choose.
+ *
+ * ── WHAT STAYS OUT OF PAY-TO-WIN ────────────────────────────────────────
+ *
+ * GEMS ARE BOUGHT WITH REAL MONEY (see the Stripe webhook: metadata.kind
+ * 'gems'). So the three `gemPrice` hulls — Fire, Ice and Jet Black — are grade
+ * 1 and trim 0, and must stay that way. Doubloons and achievement points are
+ * both earned by playing, so a premium on those is progression; a premium on
+ * gems is a sale.
+ *
+ * The DIRECTIONS remain free at every budget:
+ *
+ * the hardest trim in the fleet, either way, is on a 5,000-doubloon boat. A
+ * new captain who wants a nimble hull gets the nimblest RIG in the game for
+ * pocket change; what the endgame boat buys them later is a better hull to hang
+ * that rig on, not a rig they could not have had.
  */
 export const TRIM_RANGE = 0.12
 
-/** Multiplier on TOP SPEED. Ranges 0.88 .. 1.12 across the fleet. */
+/** Multiplier on TOP SPEED. */
 export function boatSpeed(id: string | null | undefined): number {
-  return 1 + (getBoat(id)?.trim ?? 0)
+  const b = getBoat(id)
+  return (b?.grade ?? 1) * (1 + (b?.trim ?? 0))
 }
 
-/** Multiplier on ACCELERATION and turn response. The mirror of boatSpeed, so a
- *  boat's two numbers always sum to 2 and no hull is strictly better. */
+/** Multiplier on ACCELERATION and turn response. The mirror of boatSpeed about
+ *  the hull's own grade, so trim never adds anything — it only decides which of
+ *  the two a given hull spends its budget on. */
 export function boatAgility(id: string | null | undefined): number {
-  return 1 - (getBoat(id)?.trim ?? 0)
+  const b = getBoat(id)
+  return (b?.grade ?? 1) * (1 - (b?.trim ?? 0))
+}
+
+/** The hull's overall quality, for a readout. 100 is a working boat. */
+export function boatGrade(id: string | null | undefined): number {
+  return getBoat(id)?.grade ?? 1
 }
 
 /** What to call it on a card. Plain, per the copy rule — the flavour is in the
@@ -203,6 +235,7 @@ export const BOATS: BoatDef[] = [
   {
     id: 'golden',
     trim: 0.06,
+    grade: 1.03,
     name: 'Golden',
     color: '#f0c040',
     cost: 50000,
@@ -235,6 +268,7 @@ export const BOATS: BoatDef[] = [
   {
     id: 'ethereal',
     trim: -0.1,
+    grade: 1.05,
     name: 'Ethereal',
     color: '#dde8ff',
     cost: 500000,
@@ -279,6 +313,7 @@ export const BOATS: BoatDef[] = [
   {
     id: 'chromium',
     trim: 0.1,
+    grade: 1.07,
     name: 'Chromium',
     color: '#c4c8cc',
     cost: 1_000_000,
@@ -289,6 +324,7 @@ export const BOATS: BoatDef[] = [
   {
     id: 'celestial',
     trim: -0.1,
+    grade: 1.05,
     name: 'Celestial',
     color: '#b0a8e0',
     cost: 0,
@@ -300,6 +336,7 @@ export const BOATS: BoatDef[] = [
   {
     id: 'abyssal',
     trim: 0.06,
+    grade: 1.04,
     name: 'Abyssal',
     color: '#3a2f5a',
     cost: 0,

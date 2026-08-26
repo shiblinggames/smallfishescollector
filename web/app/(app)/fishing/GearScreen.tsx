@@ -18,7 +18,7 @@ import { vibrate } from '@/lib/haptics'
 import ForgeRodEmblem from './ForgeRodEmblem'
 import { IconAnchor } from '@/components/GameIcons'
 import { BAITS } from '@/lib/bait'
-import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat, trimLabel } from '@/lib/boats'
+import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat, trimLabel, boatSpeed, boatAgility } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -2984,7 +2984,18 @@ export default function GearScreen({
                     const driftEquipped = !equippedBoat
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
+                        <div>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>The Hull</p>
+                          {/* It stopped being about the paint the moment the
+                              hull started deciding how the boat sails. Said
+                              here because the row of thumbnails cannot say it
+                              and a player picking on looks alone should at
+                              least know there is something else to weigh. */}
+                          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: 'rgba(230,215,180,0.5)', marginTop: 3, lineHeight: 1.45 }}>
+                            Out on the water, the hull you sail decides how she
+                            handles. Tap one to see what it does.
+                          </p>
+                        </div>
                         <CosmeticLegend />
 
                         <p className="font-karla font-600 uppercase" style={groupLabel}>Starter</p>
@@ -3498,7 +3509,63 @@ export default function GearScreen({
                     <img src={i.itemImg} alt="" style={{ maxWidth: '78%', maxHeight: '78%', objectFit: 'contain', filter: `drop-shadow(0 0 12px ${i.accent}55)` }} />
                   </div>
                 )}
-                <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: i.accent, lineHeight: 1.1, marginBottom: '1rem' }}>{i.name}</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: i.accent, lineHeight: 1.1, marginBottom: i.kind === 'boat' ? '0.7rem' : '1rem' }}>{i.name}</p>
+
+                {/* ── WHAT THIS HULL DOES ─────────────────────────────────
+                    Only boats have numbers, and they are shown before the buy
+                    button rather than after it: this is the information the
+                    decision is made on.
+
+                    Read as a COMPARISON against the hull you are sailing now,
+                    because that is the actual question — not "is 104% good"
+                    but "is this better than what I have". Absolute percentages
+                    sit underneath for anyone who wants them. */}
+                {i.kind === 'boat' && (() => {
+                  const id = i.id === 'driftwood' ? null : i.id
+                  const now = equippedBoat
+                  const sp = boatSpeed(id), ag = boatAgility(id)
+                  const dSp = sp - boatSpeed(now), dAg = ag - boatAgility(now)
+                  const Cell = ({ label, val, delta }: { label: string; val: number; delta: number }) => {
+                    const pp = Math.round(delta * 100)
+                    return (
+                      <div style={{ flex: 1, background: 'rgba(0,0,0,0.32)', borderRadius: 10, padding: '0.55rem 0.4rem' }}>
+                        <p className="font-karla font-700 uppercase" style={{
+                          fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.45)',
+                        }}>{label}</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1, marginTop: 3 }}>
+                          {Math.round(val * 100)}%
+                        </p>
+                        {!i.equipped && pp !== 0 && (
+                          <p className="font-karla font-700" style={{
+                            fontSize: '0.6rem', marginTop: 1,
+                            color: pp > 0 ? '#7fd6a0' : '#e08a8a',
+                          }}>{pp > 0 ? '+' : ''}{pp}pp</p>
+                        )}
+                        {!i.equipped && pp === 0 && (
+                          <p className="font-karla font-700" style={{ fontSize: '0.6rem', marginTop: 1, color: 'rgba(255,255,255,0.3)' }}>same</p>
+                        )}
+                      </div>
+                    )
+                  }
+                  return (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <Cell label="Speed" val={sp} delta={dSp} />
+                        <Cell label="Agility" val={ag} delta={dAg} />
+                      </div>
+                      <p className="font-karla font-600" style={{
+                        fontSize: '0.66rem', color: 'rgba(255,255,255,0.42)', marginTop: 7, lineHeight: 1.45,
+                      }}>
+                        {trimLabel(getBoat(i.id)?.trim)} rig.{' '}
+                        {/* Say what the two numbers are FOR. A percentage with no
+                            job attached is a number, not information. */}
+                        Speed is the long haul out; agility is getting under way
+                        and answering the helm in tight water.
+                        {!i.equipped && ' Compared with the hull you sail now.'}
+                      </p>
+                    </div>
+                  )
+                })()}
 
                 {i.equipped ? (
                   <div className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#4ade80', padding: '0.7rem', borderRadius: 12, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.35)' }}>✓ Equipped</div>
