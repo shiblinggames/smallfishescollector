@@ -73,7 +73,7 @@ it did nothing. The detail must be a number or Nav crashes on `null.toLocaleStri
 
 ## The sea's own day
 
-`CYCLE_MS = 24 minutes` for everybody, on the same tick worldwide — night comes round about
+`CYCLE_MS = 48 minutes` for everybody, on the same tick worldwide — night comes round about
 three times an hour. Terraria's instinct (gate the rarest merchants on darkness) is right,
 but gating on the PLAYER'S clock means a wrong timezone never sees half the content, which
 this game does not do.
@@ -151,3 +151,35 @@ runs short of four, all 44 lines reachable.
 mooring ring plus a boat length. It was hard-coded at 620, tuned when the island had a radius
 of 250; when the island grew its ring reached further and the old number left wanderers
 bobbing inside the harbour approach with the go-ashore prompt already up.
+
+
+## The sea's day (`lib/seaClock.ts`)
+
+**A full cycle is 48 minutes**, derived from the wall clock so every player worldwide is in
+the same phase at the same instant. Four phases:
+
+| phase | glyph | length | share |
+|---|---|---|---|
+| day | sun | 11.7m per run, twice | 49% |
+| dusk | setting sun | 4.3m | 9% |
+| night | crescent | 16.0m unbroken | 33% |
+| dawn | rising sun | 4.3m | 9% |
+
+**It ran at 24 and the light was never still** — a run of daylight lasted under six minutes,
+so the sky was changing colour for most of any session and dusk arrived while you were still
+deciding what to do about the last one. A day you notice turning is atmosphere; a day that
+turns while you cross one band is a strobe with a long period. Doubled, night is a condition
+you fish *in* rather than a state that keeps interrupting, and the worst wait for one is
+still under twelve minutes.
+
+The rare-trader window is `isNight`, which counts **dusk as well as night** — 20.3m of the
+48, or 42% — because somebody arriving as the light goes should not be told to come back in
+ninety seconds. Night sits in the middle of the cycle rather than across the wrap, so
+`nightIndex` cannot tick over mid-night and strand you talking to a runner who no longer
+exists.
+
+**The chart shows a SYMBOL, not the name.** A name in the corner is a label on a map, and the
+sky already says what time it is in colour — the corner only confirms it at a glance.
+`PHASE_GLYPH` lives beside the phases so a new one cannot be added without a shape; the label
+survives as `title` and `aria-label`. Dusk and dawn are the same half-disc mirrored, one
+sinking and one climbing, because that is the only pair colour alone could not separate.

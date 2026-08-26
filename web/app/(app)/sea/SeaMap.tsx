@@ -34,7 +34,7 @@ import { getBait } from '@/lib/bait'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
-import { seaClock, PHASE_LABEL } from '@/lib/seaClock'
+import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaClock'
 import { hotspotsAt, hotspotAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
@@ -1837,21 +1837,18 @@ export default function SeaMap({
           FishingHere — and only sits on its own up here when the rod is stowed,
           because there is no bar to share a row with. */}
       {!fishingIn && (
-        <div aria-hidden style={{
+        // A SYMBOL, NOT A NAME. The words were a label on a map, and the sky
+        // already says what time it is in colour — the corner only has to
+        // confirm it at a glance. `title` keeps the name for anyone who wants
+        // it, and the aria-label keeps it for anyone who cannot see the shape.
+        <div title={PHASE_LABEL[phase]} aria-label={PHASE_LABEL[phase]} role="img" style={{
           position: 'absolute', top: 10, left: 12, zIndex: Z.hud, pointerEvents: 'none',
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '0.24rem 0.6rem', borderRadius: 999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 30, height: 30, borderRadius: '50%',
           background: 'rgba(6,12,18,0.7)',
           border: '1px solid rgba(180,214,232,0.22)',
         }}>
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: phase === 'night' || phase === 'dusk' ? '#9fb6ff' : '#ffd986',
-            boxShadow: `0 0 8px ${phase === 'night' || phase === 'dusk' ? 'rgba(159,182,255,0.7)' : 'rgba(255,217,134,0.7)'}`,
-          }} />
-          <span className="font-karla font-700 uppercase" style={{
-            fontSize: '0.66rem', letterSpacing: '0.14em', color: 'rgba(214,232,240,0.8)',
-          }}>{PHASE_LABEL[phase]}</span>
+          <PhaseGlyph phase={phase} />
         </div>
       )}
 
@@ -2792,6 +2789,50 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+/**
+ * THE SKY, AS ONE SHAPE.
+ *
+ * Four glyphs, warm for light and cold for dark, so the corner reads without
+ * being read. Dusk and dawn are the same half-disc on a horizon line mirrored
+ * about the vertical — one sinking, one climbing — which is the only pair that
+ * genuinely needs telling apart and the only pair a colour alone could not.
+ */
+function PhaseGlyph({ phase }: { phase: SeaPhase }) {
+  const g = PHASE_GLYPH[phase]
+  const warm = g === 'sun' || g === 'setting' || g === 'rising'
+  const c = warm ? '#ffd986' : '#9fb6ff'
+  const glow = warm ? 'rgba(255,217,134,0.55)' : 'rgba(159,182,255,0.55)'
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden
+      style={{ filter: `drop-shadow(0 0 5px ${glow})` }}>
+      {g === 'sun' && (
+        <>
+          <circle cx="12" cy="12" r="4.4" fill={c} />
+          {[0, 45, 90, 135, 180, 225, 270, 315].map(a => (
+            <line key={a} x1="12" y1="3.4" x2="12" y2="5.6"
+              stroke={c} strokeWidth="1.9" strokeLinecap="round"
+              transform={`rotate(${a} 12 12)`} />
+          ))}
+        </>
+      )}
+      {g === 'moon' && (
+        // A crescent cut from one disc by another, so it needs no mask and
+        // stays a crescent at 16px where a thin arc would grey out.
+        <path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z" fill={c} />
+      )}
+      {(g === 'setting' || g === 'rising') && (
+        <g transform={g === 'rising' ? 'scale(-1 1) translate(-24 0)' : undefined}>
+          {/* Half a disc above the waterline, with the arrow of its travel. */}
+          <path d="M6.5 15a5.5 5.5 0 0 1 11 0z" fill={c} />
+          <line x1="3.5" y1="18.4" x2="20.5" y2="18.4" stroke={c} strokeWidth="1.9" strokeLinecap="round" />
+          <path d={g === 'setting' ? 'M12 4.2v4.2M10.1 6.6 12 8.6l1.9-2' : 'M12 8.4V4.2M10.1 6 12 4l1.9 2'}
+            stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      )}
+    </svg>
   )
 }
 

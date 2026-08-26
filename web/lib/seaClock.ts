@@ -13,10 +13,23 @@
 // mean somebody in the wrong timezone, or somebody who plays on their lunch
 // break, simply never sees half the content. This game does not do that.
 //
-// So the sea runs its own day. A full cycle is 24 minutes for everybody, on the
-// same tick worldwide, which means night comes round about three times an hour
+// So the sea runs its own day. A full cycle is 48 minutes for everybody, on the
+// same tick worldwide, which means night comes round better than once an hour
 // no matter who or where you are. Nothing is ever missed for good and nothing
 // has to be waited out overnight.
+//
+// ── WHY 48 AND NOT 24 ───────────────────────────────────────────────────────
+//
+// It ran at 24 and the light was never still: a run of daylight lasted under
+// six minutes, so the sky was changing colour for most of any session and dusk
+// arrived while you were still deciding what to do about the last one. A day
+// you notice turning is atmosphere; a day that turns while you cross one band
+// is a strobe with a long period.
+//
+// Doubled, a stretch of daylight is eleven and a half minutes and night is
+// sixteen — long enough to be a condition you are fishing IN rather than a
+// state that keeps interrupting, and still short enough that a player who wants
+// a blockade runner never waits more than about half an hour for one.
 //
 // ── WHY IT IS DERIVED, NOT STORED ───────────────────────────────────────────
 //
@@ -25,7 +38,7 @@
 // migrate, and a rare trader cannot be conjured by a client claiming it is dark.
 
 /** One full turn of the sea's day, in milliseconds. */
-export const CYCLE_MS = 24 * 60 * 1000
+export const CYCLE_MS = 48 * 60 * 1000
 
 /** How much of the cycle is night. A third — long enough to sail out and find
  *  somebody, short enough that missing one is never a wait worth resenting. */
@@ -74,6 +87,22 @@ export function seaClock(now: number = Date.now()): SeaClock {
     darkness,
     nightIndex: Math.floor(now / CYCLE_MS),
   }
+}
+
+/**
+ * THE PHASE AS A SHAPE.
+ *
+ * The chart shows a symbol rather than the words. A name in the corner is a
+ * label on a map; the sky itself already says what time it is, in colour, and
+ * the corner only has to confirm it at a glance.
+ *
+ * Kept here beside the phases so a new phase cannot be added without one.
+ */
+export const PHASE_GLYPH: Record<SeaPhase, 'sun' | 'moon' | 'setting' | 'rising'> = {
+  day: 'sun',
+  dusk: 'setting',
+  night: 'moon',
+  dawn: 'rising',
 }
 
 /** What the banner says. Short — this sits on a chart, not a page. */
