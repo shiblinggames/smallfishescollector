@@ -1842,9 +1842,21 @@ export default function SeaMap({
         // confirm it at a glance. `title` keeps the name for anyone who wants
         // it, and the aria-label keeps it for anyone who cannot see the shape.
         <div title={PHASE_LABEL[phase]} aria-label={PHASE_LABEL[phase]} role="img" style={{
-          position: 'absolute', top: 10, left: 12, zIndex: Z.hud, pointerEvents: 'none',
+          // ON THE ZONE TITLE'S ROW.
+          //
+          // Same `top: 18` the WaterBanner uses, and a 26px disc against a
+          // 1.35rem line that boxes at about 26px — so the two sit on one line
+          // across the top of the chart rather than stacking into two bands of
+          // furniture. Left edge, because the name is centred and a symbol
+          // beside it would drag the name off centre every time the phase
+          // changed width.
+          //
+          // NOT rendered inside the banner, even though it shares its row: the
+          // banner only exists while you are in a named water, and what time it
+          // is has to be readable in open sea and off a dock too.
+          position: 'absolute', top: 18, left: 12, zIndex: Z.hud, pointerEvents: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 30, height: 30, borderRadius: '50%',
+          width: 26, height: 26, borderRadius: '50%',
           background: 'rgba(6,12,18,0.7)',
           border: '1px solid rgba(180,214,232,0.22)',
         }}>
