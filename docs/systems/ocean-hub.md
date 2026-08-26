@@ -508,19 +508,27 @@ Two traps worth keeping in mind:
 
 ## Performance
 
-The map **freezes entirely** while the dial is up — rAF returns immediately, CSS animations
-pause, intervals stop. The dial is a reaction test at up to 650°/sec and every frame spent
-moving water behind it is a frame the needle might not get.
+The 60fps loop writes `style.transform` imperatively and React never sees it — see the
+backdrop note for what happens when both try to own a property. React is here only for things
+that CHANGE: which water you are in, who you are alongside, which hotspot you are standing in.
 
-Standing rules, each learned the hard way:
-- **Never repaint a full-screen gradient per frame.** The backdrop and the sky are rebuilt
-  only when their colour STRING changes, and `darkness` is quantised to 24 steps — the dusk
-  ramp was otherwise ~7,800 full-viewport repaints per fade, which strobes.
-- **The wash is two composited layers, not a canvas.** Filling it was 12× screen overdraw
-  per frame; the pattern never changes, only where it sits, so it is transform-only.
-- **NPCs use a 3-image composite, not `Skipper`.** Skipper mounts every frame of every layer
-  and switches with `visibility` — correct for the player (the cast pose must swap
-  atomically), 21 images each for a background boat.
+**Three things were undoing that, all found by reading the tick rather than guessing:**
+
+1. **`setTick` fired 8×/sec and its only consumer was `key={tick > -1 ? place.id : place.id}`
+   — both branches identical.** Dead state re-rendering the entire map 500 times a minute to
+   produce the same tree: every island, every landmark, every trader, ~103 memo'd children a
+   render, 51,500 reconciliations a minute. Deleted outright.
+2. **`hullRef={el => …}` was an inline arrow**, so every render handed each `TraderBoat` a new
+   function — a changed prop, so `memo` never once matched and all forty boats re-rendered
+   anyway. A memo that always misses is worse than none: it pays for the comparison and
+   re-renders regardless. Now cached by key in a ref.
+3. **`hotspotAt()` re-derives all three patches from the clock on every call** — filter the
+   bands, hash, build the objects — and it ran on every proximity tick. The in-a-hotspot test
+   now does three distance checks against the already-memoized `spots` array.
+
+What remains that can re-render the map: a band crossing, an encounter, entering or leaving a
+patch, the 15s hotspot refresh, and the 5s trawl-ready count (which no-ops when unchanged).
+Sailing across open water now reconciles **nothing**.
 
 ## Art
 

@@ -35,7 +35,7 @@ import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaClock'
-import { hotspotsAt, hotspotAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
+import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
@@ -854,6 +854,10 @@ export default function SeaMap({
 
   const [spots, setSpots] = useState<Hotspot[]>(() => hotspotsAt())
   const [inSpot, setInSpot] = useState<Hotspot | null>(null)
+  /** Mirrored so the 60fps loop can read the live set without the effect below
+   *  needing `spots` in its dependencies — see the stale-closure rule. */
+  const spotsRef = useRef<Hotspot[]>(spots)
+  spotsRef.current = spots
   useEffect(() => {
     const id = setInterval(() => setSpots(hotspotsAt()), 15_000)
     return () => clearInterval(id)
@@ -938,9 +942,36 @@ export default function SeaMap({
   const allTradersRef = useRef<Trader[]>([])
   /** YOON. Written down rather than rolled, permanent, and the only person on
    *  this sea who sells the rod with his name on it. See chart.ts. */
+  /**
+   * ONE CALLBACK PER TRADER, CACHED BY KEY.
+   *
+   * This was an inline arrow, so every render handed each TraderBoat a brand
+   * new function — which is a changed prop, which means `memo` never once
+   * matched and all forty-odd boats reconciled on every render of this
+   * component. A memo that always misses is worse than no memo: it pays for the
+   * comparison and re-renders anyway.
+   *
+   * Cached by key, and keys are stable for as long as a trader exists.
+   */
+  const hullCbs = useRef(new Map<string, (el: HTMLDivElement | null) => void>())
+  const hullRefFor = useCallback((key: string) => {
+    const hit = hullCbs.current.get(key)
+    if (hit) return hit
+    const cb = (el: HTMLDivElement | null) => {
+      if (el) { hullRefs.current.set(key, el); return }
+      // Unmounted: drop every cache keyed on this trader, or a trader who
+      // sails out of the cell leaves three entries behind forever.
+      hullRefs.current.delete(key)
+      hullCache.current.delete(key)
+      wakeCache.current.delete(key)
+      hullCbs.current.delete(key)
+    }
+    hullCbs.current.set(key, cb)
+    return cb
+  }, [])
+
   const yoon = useMemo(() => yoonTrader(), [])
   useEffect(() => { allTradersRef.current = [yoon, ...residents, ...traders] }, [yoon, residents, traders])
-  const [tick, setTick] = useState(0)
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
   const [baitLeft, setBaitLeft] = useState(baitQty)
@@ -1511,7 +1542,12 @@ export default function SeaMap({
         // Standing in a hotspot. Compared by KEY, not by identity: the object
         // is rebuilt every fifteen seconds and comparing references would
         // re-render four times a minute for no reason.
-        const spotNow = hotspotAt(pos.current.x, pos.current.y)
+        // FROM THE LIST WE ALREADY HAVE. `hotspotAt` re-derives the whole set
+        // from the clock on every call — filtering the bands, hashing, building
+        // three objects — and this runs eight times a second. `spots` is the
+        // same set, already computed, refreshed on its own 15s timer.
+        const spotNow = spotsRef.current.find(
+          h => Math.hypot(pos.current.x - h.x, pos.current.y - h.y) <= h.r) ?? null
         setInSpot(prev => (prev?.key === spotNow?.key ? prev : spotNow))
 
         // WHO IS OUT HERE. The cell key changes only when you cross a cell
@@ -1547,7 +1583,18 @@ export default function SeaMap({
         // becomes the zone you are in.
         const fishing = fishingRef.current
         if (fishing && found && found.id !== fishing.id) setFishingIn(found)
-        setTick(v => (v + 1) % 1000)
+        // NOTHING ELSE. There used to be a `setTick(v => v + 1)` here, firing
+        // eight times a second, and its ONLY consumer was
+        // `key={tick > -1 ? place.id : place.id}` — both branches identical, so
+        // it changed nothing and re-rendered the whole map for it: every island,
+        // every landmark, every trader, reconciled 480 times a minute to produce
+        // the same tree.
+        //
+        // Everything on this screen that has to move already moves imperatively
+        // in the loop above. React is here for things that CHANGE — which water
+        // you are in, who you are alongside, which hotspot you are standing in —
+        // and every one of those has its own setState that no-ops when the
+        // answer is the same.
       }
 
       raf = requestAnimationFrame(step)
@@ -1647,14 +1694,7 @@ export default function SeaMap({
             quiet={!!fishingIn}
             done={dealt.includes(t.key)}
             isNear={nearTrader?.key === t.key}
-            hullRef={el => {
-              if (el) hullRefs.current.set(t.key, el)
-              else {
-                hullRefs.current.delete(t.key)
-                hullCache.current.delete(t.key)
-                wakeCache.current.delete(t.key)
-              }
-            }} />
+hullRef={hullRefFor(t.key)} />
         ))}
 
         {/* The wake, in the world layer so each mark stays on the water where
@@ -1830,7 +1870,6 @@ export default function SeaMap({
               vibrate(14)
             } else enter(p)
           }}
-          tick={tick}
         />
       )}
       {/* AND THE WATER'S NAME IS ALREADY ON SCREEN while the rod is out — the
@@ -2667,14 +2706,14 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
 })
 
 /** The dock prompt. Says what to do, or why you cannot. */
-function Prompt({ place, locked, level, onEnter, tick }: {
+function Prompt({ place, locked, level, onEnter }: {
   place: Place | null; locked: boolean; level: number
-  onEnter: (p: Place) => void; tick: number
+  onEnter: (p: Place) => void
 }) {
   if (!place) return null
   const verb = place.kind === 'port' ? 'Go ashore at' : 'Fish'
   return (
-    <div key={tick > -1 ? place.id : place.id}
+    <div key={place.id}
       style={{
         // NOTHING COVERS THIS. It had no z-index, which is `auto`, which
         // paints below the world layer — so the one button that gets you into
