@@ -418,6 +418,29 @@ has no trustworthy notion of where the boat is (`profiles.sea_x/sea_y` is client
 documented as unvalidated), and a forged deploy buys nothing a player could not have had by
 sailing there.
 
+## With the rod out, the chart steps back
+
+On a phone the catch moment had the water's name set enormous, a three-line hotspot
+explanation, four compass arrows with names and distances, and every NPC's name plate — all
+on top of the result card, the jackpot pill and the reroll button. The jackpot pill and the
+hotspot badge were landing on each other.
+
+The rule: **while the rod is out, the chart is scenery.** Anything that is about deciding
+where to GO is not about what you are doing.
+
+| gone while fishing | why |
+|---|---|
+| The compass | You are standing still on purpose. Four arrows with distances is the largest thing on screen with nothing to do with fishing. |
+| The water's name banner | The stow line already reads "Stow rod · Open Waters". The same fact twice, one of them enormous. |
+| NPC name plates and hail marks | You cannot hail anyone with a line in the water, so a label you cannot act on is furniture. The **boats stay** — they are the sea. |
+| The hotspot's eyebrow, effect line and timer | An explanation is for the moment you sail IN. By the time the line is wet you have read it. |
+
+The hotspot badge keeps its name and pips, shrinks to one line, and moves to **top-left under
+the phase glyph** — out of the centre column, which the catch card, the jackpot pill and the
+reroll button all share and where there was never room for it.
+
+Everything comes back the instant you stow.
+
 ## The compass
 
 **Its mount was deleted in an over-broad slice edit** and the component sat unreferenced for

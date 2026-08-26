@@ -1638,6 +1638,10 @@ export default function SeaMap({
             construction rather than by anyone remembering to match it. */}
         {[...residents, ...traders].map(t => (
           <TraderBoat key={t.key} trader={t}
+            // The boats stay — they are part of the sea and the sea is the
+            // backdrop. Their NAME PLATES go: you cannot hail anyone with a
+            // line in the water, so a label you cannot act on is furniture.
+            quiet={!!fishingIn}
             done={dealt.includes(t.key)}
             isNear={nearTrader?.key === t.key}
             hullRef={el => {
@@ -1826,7 +1830,13 @@ export default function SeaMap({
           tick={tick}
         />
       )}
-      <WaterBanner place={near && near.kind === 'water' ? near : null} locked={near ? locked(near) : false} lowered={!!fishingIn} />
+      {/* AND THE WATER'S NAME IS ALREADY ON SCREEN while the rod is out — the
+          stow line at the bottom of the fishing UI reads "Stow rod · Open
+          Waters". Two of them, one of them enormous, is the same fact twice. */}
+      <WaterBanner
+        place={!fishingIn && near && near.kind === 'water' ? near : null}
+        locked={near ? locked(near) : false}
+        lowered={false} />
 
       {/* THE CROSSING ITSELF. The small banner up top is a readout — it says
           where you are, quietly, for as long as you are there. This is the
@@ -1869,14 +1879,26 @@ export default function SeaMap({
           arrows "disappeared" — nothing was wrong with them, nothing was
           drawing them. Frozen while the dial is up: the boat is not moving, so
           every tick would redraw identical arrows in identical places. */}
-      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp}
-        waitingAt={id => (id === 'trawl_docks' ? trawlsReady : 0)} />
+      {/* THE COMPASS IS NAVIGATION, and with the rod out you are not
+          navigating — you are standing still on purpose. Four arrows with names
+          and distances on them are the single largest thing on this screen that
+          has nothing to do with what you are doing. Back the moment you stow. */}
+      {!fishingIn && (
+        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp}
+          waitingAt={id => (id === 'trawl_docks' ? trawlsReady : 0)} />
+      )}
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
 
       {/* WHAT THIS WATER IS DOING FOR YOU. Only while you are in it, and it
           says the effect in full rather than an icon you have to learn. */}
-      <HotspotBadge spot={inSpot} lowered={!!fishingIn} />
+      {/* THE HOTSPOT BADGE SHRINKS while the rod is out. It is a three-line
+          explanation, and an explanation is for the moment you sail INTO a
+          patch — by the time the line is in the water you have read it, and
+          all it has to do is keep saying "still here". Full size on the chart,
+          one line while fishing, and out of the row the catch card's jackpot
+          and double-catch pills use. */}
+      <HotspotBadge spot={inSpot} compact={!!fishingIn} />
 
       {fishingIn && (
         <FishingHere
@@ -2246,8 +2268,11 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
  * Counter-squashed like everything else with height. A boat stands ON the
  * plane; it is not painted onto it.
  */
-const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
+const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = false, hullRef }: {
   trader: Trader; done: boolean; isNear: boolean
+  /** Drop the name plate and the hail mark, keep the boat. Set while the rod is
+   *  out — see the note at the mount. */
+  quiet?: boolean
   /** Moved every frame by the loop — see traderPos. Positioned by TRANSFORM
    *  rather than left/top so it composites instead of relaying out. */
   hullRef: (el: HTMLDivElement | null) => void
@@ -2280,7 +2305,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
           meant to say "somebody is here" — but it sat right on the captain's
           face, and it was answering a question the boat itself already answers.
           A person you can see is a person who is there. */}
-      {isNear && !done && (
+      {isNear && !done && !quiet && (
         /* TWO WRAPPERS, and it needs them for the same reason the swaying
            landmarks do. The outer one carries the placement — the horizontal
            centring and the counter-squash. The inner one carries the bob.
@@ -2316,7 +2341,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
           painted timber, so it was unreadable against exactly the thing it was
           labelling. House rule: anything written over art gets an opaque base
           under it. */}
-      <div style={{
+      {!quiet && <div style={{
         // BELOW THE HULL, and clear of it. The composite is 210x187 scaled by
         // 0.78 and then counter-squashed by 1/GROUND, which works out at 250px
         // tall — it spans -125 to +125 from this origin. A plate at -62 was
@@ -2342,7 +2367,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
           color: done ? 'rgba(160,176,186,0.55)' : 'rgba(255,214,150,0.85)',
           textShadow: '0 1px 9px rgba(0,0,0,0.9)',
         }}>{done ? 'Traded today' : KIND_LABEL[trader.kind]}</p>
-      </div>
+      </div>}
     </div>
   )
 })
@@ -2888,7 +2913,7 @@ const HotspotRing = memo(function HotspotRing({ h }: { h: Hotspot }) {
 })
 
 /** The badge that says what you are standing in. */
-function HotspotBadge({ spot, lowered }: { spot: Hotspot | null; lowered: boolean }) {
+function HotspotBadge({ spot, compact }: { spot: Hotspot | null; compact: boolean }) {
   const [left, setLeft] = useState('')
   useEffect(() => {
     if (!spot) return
@@ -2912,13 +2937,18 @@ function HotspotBadge({ spot, lowered }: { spot: Hotspot | null; lowered: boolea
           exit={{ opacity: 0, y: -8, scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 340, damping: 28 }}
           style={{
-            position: 'absolute', left: 0, right: 0, top: lowered ? 116 : 62,
-            zIndex: Z.hud, display: 'flex', justifyContent: 'center',
-            padding: '0 1rem', pointerEvents: 'none',
+            position: 'absolute', zIndex: Z.hud, pointerEvents: 'none',
+            // COMPACT sits top-LEFT under the phase glyph, out of the centre
+            // column entirely — the catch card, the jackpot pill and the reroll
+            // button all live down the middle and there is no room there.
+            // Full size is centred under the water's name, where you meet it.
+            ...(compact
+              ? { top: 52, left: 12, display: 'flex' }
+              : { top: 62, left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 1rem' }),
           }}>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: '0.5rem 0.85rem', borderRadius: 999,
+            display: 'flex', alignItems: 'center', gap: compact ? 7 : 9,
+            padding: compact ? '0.3rem 0.6rem' : '0.5rem 0.85rem', borderRadius: 999,
             // A SOLID base. This sits over painted water and the one moment it
             // has something to say is the moment it must be readable.
             background: 'rgba(6,14,22,0.9)',
@@ -2930,7 +2960,8 @@ function HotspotBadge({ spot, lowered }: { spot: Hotspot | null; lowered: boolea
                 is a strength, and it matches the brightness of the water you
                 are floating in. */}
             <span aria-hidden style={{
-              display: 'flex', flexDirection: 'column', gap: 2.5, flexShrink: 0,
+              display: 'flex', flexDirection: compact ? 'row' : 'column',
+              gap: 2.5, flexShrink: 0,
             }}>
               {[3, 2, 1].map(t => (
                 <span key={t} className={t <= spot.tier ? 'sea-hotspot-dot' : undefined} style={{
@@ -2941,25 +2972,36 @@ function HotspotBadge({ spot, lowered }: { spot: Hotspot | null; lowered: boolea
               ))}
             </span>
             <span style={{ minWidth: 0 }}>
-              <span className="font-karla font-700 uppercase block" style={{
-                fontSize: '0.66rem', letterSpacing: '0.12em',
-                color: `${HOTSPOT_DEFS[spot.kind].color}99`,
-              }}>{HOTSPOT_DEFS[spot.kind].family}</span>
+              {/* The eyebrow and the full effect are the EXPLANATION, and an
+                  explanation is for arriving. Compact keeps only the name — the
+                  one thing that still has a job, which is saying you are still
+                  in it. */}
+              {!compact && (
+                <span className="font-karla font-700 uppercase block" style={{
+                  fontSize: '0.66rem', letterSpacing: '0.12em',
+                  color: `${HOTSPOT_DEFS[spot.kind].color}99`,
+                }}>{HOTSPOT_DEFS[spot.kind].family}</span>
+              )}
               <span className="font-cinzel font-700 block" style={{
-                fontSize: '0.9rem', color: HOTSPOT_DEFS[spot.kind].color, lineHeight: 1.15,
+                fontSize: compact ? '0.8rem' : '0.9rem',
+                color: HOTSPOT_DEFS[spot.kind].color, lineHeight: 1.15,
               }}>{HOTSPOT_DEFS[spot.kind].tiers[spot.tier].name}</span>
               {/* THE EFFECT, IN FULL, WITH ITS REAL NUMBER. An icon you have to
                   learn is not an explanation, and the house rule is that
                   mechanics are stated literally even where the flavour is
                   allowed its charm. */}
-              <span className="font-karla font-600 block" style={{
-                fontSize: '0.74rem', color: 'rgba(222,238,246,0.82)', lineHeight: 1.35, marginTop: 1,
-              }}>{HOTSPOT_DEFS[spot.kind].tiers[spot.tier].effect}</span>
+              {!compact && (
+                <span className="font-karla font-600 block" style={{
+                  fontSize: '0.74rem', color: 'rgba(222,238,246,0.82)', lineHeight: 1.35, marginTop: 1,
+                }}>{HOTSPOT_DEFS[spot.kind].tiers[spot.tier].effect}</span>
+              )}
             </span>
-            <span className="font-karla font-700" style={{
-              flexShrink: 0, fontSize: '0.66rem', color: 'rgba(190,212,228,0.55)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>{left}</span>
+            {!compact && (
+              <span className="font-karla font-700" style={{
+                flexShrink: 0, fontSize: '0.66rem', color: 'rgba(190,212,228,0.55)',
+                fontVariantNumeric: 'tabular-nums',
+              }}>{left}</span>
+            )}
           </div>
         </motion.div>
       )}
