@@ -371,7 +371,10 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     // The Sea is the painted ocean hub, still being felt out. It lives here
     // rather than on the tab bar because five tabs is already the width of a
     // phone, and a sixth would shrink every label to test one prototype.
-    ...(isAdmin ? [{ href: '/sea', label: 'The Sea', badge: false,
+    // THE ONLY DOOR ON A PHONE. The bottom bar has five slots and every one
+    // is spoken for, so this menu is how a phone reaches the sea at all —
+    // which is why it stopped being admin-only the moment the beta opened.
+    ...(canSail ? [{ href: '/sea', label: 'Seas', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 17c2.2 0 2.2-1.5 4.5-1.5S8.7 17 11 17s2.2-1.5 4.5-1.5S17.8 17 20 17"/>

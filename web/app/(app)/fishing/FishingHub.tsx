@@ -14,6 +14,7 @@
 // so the two pages cannot drift into being lookalikes.
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import HubTile, { HUB_GRID } from '@/components/HubTile'
@@ -126,6 +127,39 @@ export default function FishingHub({
       <div className="surface-in" style={{ position: 'relative', zIndex: 1 }}>
         <main className="min-h-screen pb-24 sm:pb-0">
           <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
+
+            {/* THE WAY OUT TO THE SEA.
+                The ocean hub is the successor to this screen and is now open to
+                everyone, but the only doors to it are a desktop tab and an item
+                in the phone menu — neither of which anybody standing HERE is
+                looking at. This is the on-ramp, on the screen the people who
+                would want it are already on. */}
+            <Link href="/sea"
+              className="block"
+              style={{
+                marginBottom: '0.9rem', borderRadius: 14, padding: '0.7rem 0.9rem',
+                background: 'linear-gradient(100deg, rgba(28,58,72,0.9), rgba(18,40,54,0.85))',
+                border: '1px solid rgba(150,196,222,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+              }}>
+              <span style={{ minWidth: 0 }}>
+                <span className="font-karla font-700 uppercase" style={{
+                  display: 'block', fontSize: '0.56rem', letterSpacing: '0.16em',
+                  color: 'rgba(150,196,222,0.85)',
+                }}>Open beta</span>
+                <span className="font-cinzel font-700" style={{
+                  display: 'block', fontSize: '1.06rem', color: '#e8f2f8', lineHeight: 1.2,
+                }}>Take her out to the Seas</span>
+                <span className="font-karla" style={{
+                  display: 'block', fontSize: '0.78rem', color: 'rgba(198,218,232,0.72)',
+                }}>Sail the whole chart. Same rod, same hold, same fish.</span>
+              </span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(150,196,222,0.9)"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                style={{ flexShrink: 0 }}>
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
 
             {/* Fishing level + Renown, the counterpart to Navigation on the
                 Expeditions hub. Same 1.1rem/1rem block the Ship Hero wraps its

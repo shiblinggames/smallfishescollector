@@ -20,10 +20,20 @@
 // marked adminOnly, and none of that has anything to do with wanting a look at
 // the water. A username here grants exactly one thing: the sea.
 //
-// This is a BETA list, not a permanent tier. When the hub replaces /fishing the
-// gate comes out altogether rather than growing.
+// The gate is OPEN as of the beta. It stays in the code as one switch rather
+// than four scattered checks, so shutting the sea again is one line if the beta
+// turns up something that needs it.
 
-/** Captains let in early, by username. Lower case; the check is too. */
+/**
+ * OPEN BETA. Everybody.
+ *
+ * The list is kept rather than deleted because it is the re-gating switch: set
+ * OPEN to false and the sea shuts to everyone except admins and the names here,
+ * without having to remember which four routes were involved.
+ */
+const OPEN = true
+
+/** Captains who keep access if OPEN is ever turned back off. */
 const CREW: string[] = [
   'dkmuppy',
 ]
@@ -38,6 +48,7 @@ export type SeaProfile = { is_admin?: boolean | null; username?: string | null }
  */
 export function canSail(profile: SeaProfile): boolean {
   if (!profile) return false
+  if (OPEN) return true
   if (profile.is_admin === true) return true
   const name = (profile.username ?? '').trim().toLowerCase()
   return name.length > 0 && CREW.includes(name)
