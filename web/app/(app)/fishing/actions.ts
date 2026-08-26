@@ -1590,12 +1590,14 @@ export async function sellFish(
 
   const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
   const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult * eyeFromProfile(profile).sellMult
-  // Quick-sell at 75% (was 65%) — gives new players a softer floor so
-  // one bad early sell doesn't lock them out of their next rod tier.
-  // The two-lane design is unchanged: market still pays full price,
-  // delayed liquidate still pays 87% after fees, this just narrows
-  // the gap between "convenient" and "punishing." See review notes
-  // on economy: quick-sell was the largest self-inflicted-wound state.
+  // Quick-sell at 75% (was 65%) — gives new players a softer floor so one bad
+  // early sell doesn't lock them out of their next rod tier.
+  //
+  // THIS LANE IS THE ONE THAT NEVER MOVES. The ladder is priced on DISTANCE
+  // now: 75% wherever you happen to be floating, 78-86% from a zone buyer you
+  // sail over to, 100% at the market ashore. The delayed 87% lane in between
+  // is gone — it was charging an hour to stand in for a journey the chart did
+  // not used to make you take, and now does. See sellEntireHold.
   const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.75) * renownSellMult) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 

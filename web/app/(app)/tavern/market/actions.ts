@@ -88,14 +88,45 @@ export async function getPendingSales(): Promise<{
   return { pending, justSettled, doubloons: (profile?.doubloons as number | null) ?? 0 }
 }
 
-export async function liquidateAllFish(): Promise<
-  { earned: number; pendingId: string; settlesAt: string; fishSold: number; doubloons: number } | { error: string }
+/**
+ * SELL THE WHOLE HOLD, HERE, NOW, AT THE MARKET PRICE.
+ *
+ * This used to be "liquidate": 90% of market, minus the fee, paid an hour
+ * later. The hour was standing in for a cost — the market lane was supposed to
+ * be the one you had to work for, and holding the money back was the only way
+ * to charge for it on a screen you could open from anywhere.
+ *
+ * The ocean hub charges that cost properly now. The market is a building on an
+ * island; getting to it means sailing home with a full hold, which is a real
+ * trip with real time in it and a decision about whether it is worth making
+ * yet. Once you have made it, taking another hour off the player is charging
+ * twice for the same thing.
+ *
+ * So the wait is gone and so is the 10% haircut: the whole hold sells for
+ * exactly what the per-species market pays, because it IS the per-species
+ * market, in one tap instead of thirty.
+ *
+ * The three lanes still ladder cleanly, and they ladder on DISTANCE now rather
+ * than on time:
+ *   65-75%  quick sell   — from anywhere, without moving
+ *   78-86%  a zone buyer — where you are fishing, if you sail to them
+ *   100%    the market   — ashore, which is the whole way home
+ *
+ * `settlePendingSales` stays and still runs: there are pending rows in the wild
+ * with an hour on them and they have to be honoured. Nothing new is written to
+ * that table.
+ */
+export async function sellEntireHold(): Promise<
+  { earned: number; fishSold: number; doubloons: number } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+  // Drain anything still owed from the old delayed lane before reading the
+  // balance, so the number handed back is the one the player will see.
+  await settlePendingSales(user.id, admin)
 
   const [inventoryRes, marketRes, { data: profile }] = await Promise.all([
     admin.from('fish_inventory')
@@ -110,57 +141,52 @@ export async function liquidateAllFish(): Promise<
 
   type InvRow = { fish_id: number; quantity: number; fish_species: { sell_value: number } | null }
   const inventory = (inventoryRes.data ?? []) as unknown as InvRow[]
-  if (inventory.length === 0) return { error: 'Nothing to liquidate' }
+  if (inventory.length === 0) return { error: 'The hold is empty' }
 
   const multiplierMap = new Map<number, number>()
   for (const row of marketRes.data ?? []) {
     multiplierMap.set(row.fish_id, Number(row.multiplier))
   }
 
-  const isPremium = isPremiumActive(profile)
-  const fee = isPremium ? 1.0 : 0.97
+  // The Captain's 3% is a membership perk and stays. It was never the thing
+  // that made this lane slow, and it is the same fee the per-species market
+  // charges — selling one at a time to dodge it would be thirty taps for
+  // nothing.
+  const fee = isPremiumActive(profile) ? 1.0 : 0.97
 
   let totalEarned = 0
   let totalFishSold = 0
-
   for (const item of inventory) {
     const sellValue = item.fish_species?.sell_value ?? 0
     const multiplier = multiplierMap.get(item.fish_id) ?? 1.0
-    const priceEach = Math.floor(sellValue * multiplier * 0.90 * fee)
-    totalEarned += priceEach * item.quantity
+    totalEarned += Math.floor(sellValue * multiplier * fee) * item.quantity
     totalFishSold += item.quantity
   }
+  if (totalEarned <= 0) return { error: 'The hold is empty' }
 
-  if (totalEarned <= 0) return { error: 'Nothing to liquidate' }
+  // Re-read the balance AFTER the settle above rather than trusting the one
+  // fetched alongside the inventory: a pending row maturing in between would
+  // otherwise be overwritten by this write.
+  const { data: fresh } = await admin
+    .from('profiles').select('doubloons').eq('id', user.id).single()
+  const newDoubloons = Number(fresh?.doubloons ?? profile.doubloons ?? 0) + totalEarned
 
-  const settlesAt = new Date(Date.now() + PENDING_SALE_DELAY_MS).toISOString()
-
-  const [, , pendingRes] = await Promise.all([
+  await Promise.all([
     ...inventory.map(item =>
       admin.from('fish_inventory')
         .update({ quantity: 0 })
         .eq('user_id', user.id)
         .eq('fish_id', item.fish_id)
     ),
-    Promise.resolve(null),
-    admin.from('pending_sales').insert({
-      user_id: user.id,
-      amount: totalEarned,
-      fish_count: totalFishSold,
-      reason: `Liquidated ${totalFishSold} fish`,
-      settles_at: settlesAt,
-    }).select('id').single(),
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: totalEarned,
+      reason: `Sold ${totalFishSold} fish (market)`,
+    }),
+    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: totalEarned }),
   ])
 
-  const pendingId = (pendingRes?.data?.id as string | undefined) ?? ''
-
-  return {
-    earned: totalEarned,
-    pendingId,
-    settlesAt,
-    fishSold: totalFishSold,
-    doubloons: profile.doubloons ?? 0,
-  }
+  return { earned: totalEarned, fishSold: totalFishSold, doubloons: newDoubloons }
 }
 
 export async function marketSellFish(

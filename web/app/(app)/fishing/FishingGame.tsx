@@ -45,7 +45,6 @@ import {
   findNextEncounterBeat, findNextWinBeat, finnAncientBeat,
   type FinnChallengeType, type FinnAncientBeat, type FinnSceneLine,
 } from '@/lib/finn'
-import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
@@ -538,7 +537,7 @@ const SKIN_TIPS = [
 const GENERAL_TIPS = [
   "Tip: prestige a zone for +10% catch XP per level there, up to +50% at Prestige 5.",
   "Tip: a zone's completion reward grows each time you prestige it, up to double at Prestige 5.",
-  "Tip: quick-sell pays 75%. Liquidate your whole hold for 87% an hour later, or work the market for the best price.",
+  "Tip: quick-sell pays 75% wherever you are. The market ashore pays full price for the whole hold, but you have to sail to it.",
   "Tip: each hook tier widens your catch zone by 3°. It adds up fast.",
   "Tip: a better reel slows the needle — the single biggest skill upgrade.",
   "Tip: the Twin-Strike rod has a 25% chance to land two fish at once.",
@@ -2405,7 +2404,6 @@ export default function FishingGame({
   const [sessionPerfects, setSessionPerfects] = useState(0)
   const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
   const [sellingAll, setSellingAll] = useState(false)
-  const [liquidating, setLiquidating] = useState(false)
   const [holdUpgradeConfirm, setHoldUpgradeConfirm] = useState(false)
   const [holdUpgrading, setHoldUpgrading] = useState(false)
   // Which sell-lane row is currently expanded for confirm. Only one
@@ -4500,18 +4498,6 @@ export default function FishingGame({
     setExpandedSellLane(null)
   }
 
-  async function handleLiquidate() {
-    if (liquidating) return
-    setLiquidating(true)
-    const res = await liquidateAllFish()
-    setLiquidating(false)
-    setExpandedSellLane(null)
-    if ('error' in res) return
-    setInventory([])
-    window.dispatchEvent(new Event('pending-sales-may-have-changed'))
-    setHoldOpen(false)
-  }
-
   // Auto Caster: handle the whole post-catch flow when equipped.
   //   • Regular catch → recast 1000ms after the result lands.
   //   • Crate appears (closed) → auto-tap Open ~700ms in (player sees
@@ -5043,11 +5029,6 @@ export default function FishingGame({
   const isFullMoon = activeEvent?.type === 'fullmoon'
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.75)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
-  const liquidateFee     = isPremium ? 1.0 : 0.97
-  const holdLiquidateValue = inventory.reduce((s, i) => {
-    const mult = marketMultipliers[i.fish_id] ?? 1.0
-    return s + Math.floor(i.fish_species.sell_value * mult * 0.90 * liquidateFee) * i.quantity
-  }, 0)
 
   // Active bobbing — calm casting wait + hooked-fish struggle. The world
   // bob (painted scene shake) is gated to phase==='hooked' AND this flag.
@@ -9211,7 +9192,7 @@ export default function FishingGame({
                       dark background for every row, payout right-
                       aligned in gold, trade-off below in muted text.
                       Tap a row to commit (Fish Market navigates, Quick
-                      Sell and Liquidate expand inline for a Cancel /
+                      Quick Sell expands inline for a Cancel /
                       Confirm pair).
                       Order is fast→slow / cheap→best so the trade-off
                       reads left-to-right as you scan down. */}
@@ -9222,7 +9203,7 @@ export default function FishingGame({
                     overflow: 'hidden',
                   }}>
                     {(() => {
-                      type LaneKey = 'quick' | 'liquidate' | 'market'
+                      type LaneKey = 'quick' | 'market'
                       const sellingNow = sellingAll
                       const quickLossText = isFullMoon
                         ? 'Full price — Full Moon Rising'
@@ -9249,22 +9230,17 @@ export default function FishingGame({
                           run: () => quickSellAll(),
                           pending: sellingNow,
                         },
-                        {
-                          key: 'liquidate',
-                          name: 'Liquidate',
-                          payout: `${holdLiquidateValue.toLocaleString()} ⟡`,
-                          tradeoff: `Locks 90% market${isPremium ? '' : ' · 3% fee'} · settles in 1 hour`,
-                          action: 'confirm',
-                          confirmLabel: liquidating ? 'Submitting…' : 'Lock In Price',
-                          run: () => handleLiquidate(),
-                          pending: liquidating,
-                        },
+                        // THE DELAYED LANE IS GONE. It paid 90% an hour later,
+                        // and the hour was standing in for a cost the map now
+                        // charges properly: the market is a building you sail
+                        // to. Two lanes left, and they ladder on distance —
+                        // sell here for 75%, or take it ashore for all of it.
                         {
                           key: 'market',
                           name: 'Fish Market',
                           payout: `~${holdBaseValue.toLocaleString()} ⟡`,
                           payoutMuted: true,
-                          tradeoff: 'Set per-species prices — live market updates hourly',
+                          tradeoff: 'Full price, paid on the spot — but you have to go there',
                           action: 'navigate',
                           href: '/tavern/market',
                         },

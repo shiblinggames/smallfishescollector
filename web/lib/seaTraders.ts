@@ -244,7 +244,7 @@ const HINTS = [
   "Every stretch of water out here wants a different level off you. If it won't bite, you're early, not unlucky.",
   "Your reel decides how fast the dial runs. Cheap reel, fast needle, and a hard fish is a coin toss.",
   "The bigger your hold the longer you can stay out. That's the whole of it.",
-  "Sell to a buyer out here and you take less. Sail it home and you take all of it, and you take a while.",
+  "Sell to a buyer out here and you take less. Sail it home and the market pays every coin of it, on the spot.",
   "A snag costs you bait on top of the fish. Some rods don't care. Worth knowing which.",
   "If you're chasing size, keep casting the same water. Every species has a monster in it somewhere.",
 
@@ -262,7 +262,7 @@ const HINTS = [
   "A telescoping rod pulls the rare ones up where you can reach them.",
 
   // ── Where the money is ──
-  "Quick sell if you must, but the market ashore pays best and pays late. Both lanes are there for a reason.",
+  "Quick sell if you must. The market ashore pays every coin, and the only thing it costs you is the sail home.",
   "Finish every fish in a stretch of water and there's a purse waiting for it. Once only.",
   "Prestige a stretch and everything you land there earns better. Five times over, if you've the patience.",
   "Prestige the same water again and the completion purse grows with it.",

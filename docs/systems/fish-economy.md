@@ -42,3 +42,28 @@ The rebuilt free-floating-index board is live: `web/app/(app)/tavern/market/`
 
 - [fishing.md](fishing.md) — supply side. [tavern.md](tavern.md) — the Exchange lives in
   the tavern's market corner. [economy-membership.md](economy-membership.md) — ledgers.
+
+
+## The sell lanes ladder on DISTANCE (2026-08-26)
+
+| lane | pays | where | wait |
+|---|---|---|---|
+| Quick-sell | 75% (100% on Full Moon) | anywhere, without moving | none |
+| Zone buyer | 78–86%, deeper pays more | where you are fishing, if you sail to them | none |
+| The market | **100%**, less the 3% non-Captain fee | ashore at the Mainland | none |
+
+**The 1-hour delayed liquidate at ~87% is retired.** `liquidateAllFish` became
+`sellEntireHold`: instant, full market price, no `pending_sales` row, and the lane is gone
+from the fishing screen entirely.
+
+The hour was standing in for a cost. The market lane was meant to be the one you work for,
+and holding the money back was the only way to charge for that on a screen openable from
+anywhere. The ocean hub charges it properly now — the market is a building on an island and
+reaching it means sailing home with a full hold, which is a real trip with a real decision in
+it. Taking another hour on top is charging twice for the same thing.
+
+**Selling the lot pays exactly what selling one at a time pays**, so the one-tap button can
+never be the worse choice — it *is* the per-species market, in one tap instead of thirty.
+
+`settlePendingSales` and the `pending_sales` table **stay and still run**: there are rows in
+the wild with an hour left on them and they have to be honoured. Nothing new is written there.

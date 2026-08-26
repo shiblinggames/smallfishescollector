@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ShopHeader from '@/components/ShopHeader'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { marketSellFish, liquidateAllFish } from './actions'
+import { marketSellFish, sellEntireHold } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
 import { MOOD_CONFIG } from '@/lib/fishMarket'
 import BoardClient from './BoardClient'
@@ -608,18 +608,24 @@ export default function MarketClient({
   const [browseExpanded, setBrowseExpanded] = useState(false)
   const [liquidateConfirm, setLiquidateConfirm] = useState(false)
   const [liquidating, setLiquidating] = useState(false)
-  const liquidateValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.90 * fee) * e.quantity, 0)
+  // FULL MARKET PRICE. No 90% haircut and no hour: getting to this building is
+  // the cost now — see sellEntireHold. Same rate the per-species rows pay, so
+  // selling one at a time can never beat selling the lot.
+  const liquidateValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * e.multiplier * fee) * e.quantity, 0)
 
   function handleLiquidate() {
     if (liquidating) return
     setLiquidating(true)
     setLiquidateConfirm(false)
     startTransition(async () => {
-      const res = await liquidateAllFish()
+      const res = await sellEntireHold()
       setLiquidating(false)
       if ('error' in res) { showToast(res.error); return }
+      setDoubloons(res.doubloons)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       window.dispatchEvent(new Event('pending-sales-may-have-changed'))
-      showToast(`+${res.earned.toLocaleString()} ⟡ pending · settles in 1h`)
+      hapticReward()
+      showToast(`+${res.earned.toLocaleString()} ⟡`)
       setPortfolio([])
     })
   }
@@ -813,8 +819,8 @@ export default function MarketClient({
               {!liquidateConfirm ? (
                 <button onClick={() => setLiquidateConfirm(true)} disabled={liquidating}
                   className="font-karla font-700 uppercase tracking-[0.08em]"
-                  style={{ fontSize: '0.56rem', padding: '0.4rem 0.7rem', borderRadius: 999, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', color: DOWN, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  Liquidate all · 90%
+                  style={{ fontSize: '0.56rem', padding: '0.4rem 0.7rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.35)', color: '#f0c040', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Sell all · full price
                 </button>
               ) : null}
             </div>
@@ -822,7 +828,7 @@ export default function MarketClient({
             {liquidateConfirm && (
               <div style={{ marginTop: '0.7rem', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.7rem' }}>
                 <p className="font-karla font-400 mb-2" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
-                  Sell all {totalCount} fish for <span className="font-700" style={{ color: DOWN, ...TNUM }}>{liquidateValue.toLocaleString()} ⟡</span> (90% of market, 3% fee)? Doubloons arrive in 1 hour.
+                  Sell all {totalCount} fish for <span className="font-700" style={{ color: '#f0c040', ...TNUM }}>{liquidateValue.toLocaleString()} ⟡</span>{isPremium ? '' : ' (3% fee)'}? Paid straight away.
                 </p>
                 <div className="flex gap-2">
                   <button onClick={() => setLiquidateConfirm(false)} className="font-karla font-600 flex-1"
@@ -830,8 +836,8 @@ export default function MarketClient({
                     Keep fishing
                   </button>
                   <button onClick={handleLiquidate} disabled={liquidating} className="font-karla font-700 uppercase tracking-[0.08em] flex-1"
-                    style={{ fontSize: '0.66rem', padding: '0.55rem', borderRadius: 9, background: 'rgba(239,68,68,0.15)', border: `1px solid rgba(239,68,68,0.4)`, color: DOWN, opacity: liquidating ? 0.5 : 1, cursor: liquidating ? 'default' : 'pointer', ...TNUM }}>
-                    {liquidating ? 'Selling…' : `Liquidate · ${liquidateValue.toLocaleString()} ⟡`}
+                    style={{ fontSize: '0.66rem', padding: '0.55rem', borderRadius: 9, background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.45)', color: '#f0c040', opacity: liquidating ? 0.5 : 1, cursor: liquidating ? 'default' : 'pointer', ...TNUM }}>
+                    {liquidating ? 'Selling…' : `Sell · ${liquidateValue.toLocaleString()} ⟡`}
                   </button>
                 </div>
               </div>
