@@ -9,16 +9,16 @@
 // ragged 160-point outline with headlands and bays, nothing like an ellipse.
 //
 // So the island is drawn the way the chart draws it — the same `coastClip` from
-// lib/islandShape, on the same nested boxes — and the grass, which is the part
-// you may build on, is the ring that is actually lit. What you drag onto here
-// is what your building stands on out on the water.
+// lib/islandShape, on the same nested boxes — and the SCRUB, which is the part
+// you may build on, is the ring that gets the rim. What you drag onto here is
+// what your building stands on out on the water.
 //
 // THE SERVER STILL DECIDES. `moveBuilding` re-checks every drop against the
 // same geometry; this is the part that makes the rule visible, not the part
 // that enforces it.
 
 import { useCallback, useRef, useState } from 'react'
-import { coastClip, coastline, standsOnGrass } from '@/lib/islandShape'
+import { coastClip, coastline, standsOnLand, BUILDABLE, GRASS } from '@/lib/islandShape'
 import { HOTSPOTS, homeBuildings, type Homestead, type HotspotId } from '@/lib/homestead'
 import { vibrate } from '@/lib/haptics'
 
@@ -78,7 +78,7 @@ export default function IslandPlan({
         if (!drag) return
         const p = at(e)
         if (!p) return
-        setDrag({ ...drag, x: p.x, y: p.y, ok: standsOnGrass(RS, p.x, p.y, WIDEST[drag.id]) })
+        setDrag({ ...drag, x: p.x, y: p.y, ok: standsOnLand(RS, p.x, p.y, WIDEST[drag.id]) })
       }}
       onPointerUp={async e => {
         if (!drag) return
@@ -113,13 +113,19 @@ export default function IslandPlan({
         position: 'absolute', inset: '13%', clipPath: CLIP,
         background: 'linear-gradient(165deg, #d8c49f 0%, #c2a97e 100%)',
       }} />
+      {/* THE SCRUB, which is where you may build. Outlined while arranging,
+          because the rule is "on the land" and this band IS the rule — if the
+          rim marked the green instead, every legal drop onto scrub would look
+          like a mistake the game had let through. */}
       <div aria-hidden style={{
-        position: 'absolute', inset: `${13 + 0.74 * 15}%`, clipPath: CLIP,
-        background: 'linear-gradient(165deg, #6f8a4e 0%, #55703c 62%, #466032 100%)',
-        // While arranging, the buildable ground is what the screen is ABOUT, so
-        // it gets a rim. The rest of the time it is just the island.
-        outline: arranging ? '1px dashed rgba(226,244,200,0.55)' : 'none',
+        position: 'absolute', inset: `${(1 - BUILDABLE) * 50}%`, clipPath: CLIP,
+        background: 'linear-gradient(165deg, #9aa269 0%, #7d8850 100%)',
+        outline: arranging ? '1px dashed rgba(226,244,200,0.6)' : 'none',
         outlineOffset: -1,
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', inset: `${(1 - GRASS) * 50}%`, clipPath: CLIP,
+        background: 'linear-gradient(165deg, #6f8a4e 0%, #55703c 62%, #466032 100%)',
       }} />
 
       {/* ── WHAT IS BUILT ───────────────────────────────────────────── */}
@@ -143,7 +149,7 @@ export default function IslandPlan({
               const p = at(e)
               if (!p) return
               vibrate(8)
-              setDrag({ id, x: p.x, y: p.y, ok: standsOnGrass(RS, p.x, p.y, WIDEST[id]) })
+              setDrag({ id, x: p.x, y: p.y, ok: standsOnLand(RS, p.x, p.y, WIDEST[id]) })
             }}
             style={{
               position: 'absolute', left: `${x}%`, top: `${y}%`,

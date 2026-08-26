@@ -45,7 +45,12 @@ import { seaClock } from '@/lib/seaClock'
  *  always outside the water the harbour prompt owns. */
 const MAINLAND_DOORSTEP =
   (PLACES.find(p => p.id === 'mainland')?.r ?? 250) + 420 + 120
-import { NORTH_WALL, PLACES, YOON } from '@/app/(app)/sea/chart'
+import { NORTH_WALL, OUTER_EDGE, PLACES, YOON } from '@/app/(app)/sea/chart'
+
+/** The furthest a trader's patrol can carry them from their anchor. Must match
+ *  the `driftR` roll in traderAt, and it is the margin the outer-edge guard
+ *  keeps so a drifting trader never wanders out of reach. */
+const MAX_DRIFT = 90 + 190
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
  *  close together two of them can ever be.
@@ -476,6 +481,28 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
 
   if (rnd() > occupancy(depth)) return null
 
+  // ── NOBODY MOORS WHERE YOU CANNOT SAIL ───────────────────────────────
+  //
+  // The hull is clamped to a RADIUS of OUTER_EDGE from the origin, and this
+  // grid is square, so its outer cells run off the end of the world. Measured
+  // over a sweep of the whole chart: 22% of everyone generated was outside it —
+  // one person in five that you could see on the compass and could never reach.
+  // A captain reported exactly that, unable to get to a trader sitting past the
+  // boundary.
+  //
+  // `tradersAround` already refused the cells north of the reef for the same
+  // reason. It only ever guarded that one edge, because the north wall is a
+  // straight line and easy to think about, and the outer edge is a circle.
+  //
+  // MAX_DRIFT because they do not sit still: they swing on an anchor of up to
+  // 90 + 190 pixels, so the anchor has to be inside the ring by at least that
+  // or the patrol carries them out of it.
+  if (Math.hypot(x, y) > OUTER_EDGE - MAX_DRIFT) return null
+  // And the reef, tested on the ANCHOR rather than the cell. tradersAround
+  // already drops whole cells north of the wall, but a trader anchored just
+  // south of it can still swing across on their patrol.
+  if (y < NORTH_WALL + MAX_DRIFT) return null
+
   // Nobody sets up shop on the doorstep. The Mainland and the Harbour are
   // already places you can buy things.
   //
@@ -662,6 +689,17 @@ function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
   const x = cx * CELL + rnd() * CELL
   const y = cy * CELL + rnd() * CELL
   const depth = depthRamp(x, y)
+
+  // SAME EDGE, SAME REASON. Runners are placed by their own roll rather than
+  // through traderAt, so the outer-edge guard there does not cover them — and
+  // because they are deep-water only, EVERY one of them is generated near the
+  // rim where it matters. They were the whole of the remainder when traderAt
+  // was fixed: eleven of the twelve people still out of reach.
+  if (Math.hypot(x, y) > OUTER_EDGE - MAX_DRIFT) return null
+  // And the reef, tested on the ANCHOR rather than the cell. tradersAround
+  // already drops whole cells north of the wall, but a trader anchored just
+  // south of it can still swing across on their patrol.
+  if (y < NORTH_WALL + MAX_DRIFT) return null
 
   // DEEP WATER ONLY. Past the halfway mark of the chart, which in practice is
   // the far side of the Deep.

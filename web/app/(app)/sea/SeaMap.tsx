@@ -1423,6 +1423,30 @@ export default function SeaMap({
   const [guests, setGuests] = useState<Visitable[]>([])
   const [visiting, setVisiting] = useState<{ username: string; homestead: Homestead } | null>(null)
   const [picking, setPicking] = useState(false)
+
+  /**
+   * HOW BIG THE CORNER READOUTS ARE.
+   *
+   * 26px was picked on a phone, where it is a comfortable thumb target and a
+   * fair share of a 390px-wide screen. On a 1400px monitor the same disc is a
+   * speck in the corner — the sea's light and the way to the chart, both barely
+   * legible, on the surface with the most room of anything in the game.
+   *
+   * Scaled off the WRAPPER rather than a media query so it tracks the space the
+   * chart actually has, which is what the zoom does too (see zoomFor).
+   */
+  const [hudSize, setHudSize] = useState(26)
+  useEffect(() => {
+    const fit = () => {
+      const w = wrapRef.current?.getBoundingClientRect().width ?? window.innerWidth
+      setHudSize(w >= 1100 ? 40 : w >= 760 ? 34 : 26)
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
+  /** Where each disc sits, so the row stays evenly spaced as they grow. */
+  const hudAt = (i: number) => 12 + i * (hudSize + 10)
   /** The who-is-out list, open or shut. */
   const [crewOpen, setCrewOpen] = useState(false)
 
@@ -3232,13 +3256,13 @@ hullRef={hullRefFor(t.key)} />
           // NOT rendered inside the banner, even though it shares its row: the
           // banner only exists while you are in a named water, and what time it
           // is has to be readable in open sea and off a dock too.
-          position: 'absolute', top: 18, left: 12, zIndex: Z.hud, pointerEvents: 'none',
+          position: 'absolute', top: 18, left: hudAt(0), zIndex: Z.hud, pointerEvents: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 26, height: 26, borderRadius: '50%',
+          width: hudSize, height: hudSize, borderRadius: '50%',
           background: 'rgba(6,12,18,0.7)',
           border: '1px solid rgba(180,214,232,0.22)',
         }}>
-          <PhaseGlyph phase={phase} />
+          <PhaseGlyph phase={phase} size={Math.round(hudSize * 0.62)} />
         </div>
       )}
 
@@ -3259,16 +3283,17 @@ hullRef={hullRefFor(t.key)} />
           aria-label="Open the chart"
           title="The chart"
           style={{
-            position: 'absolute', top: 18, left: 48, zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt(1), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 26, height: 26, borderRadius: '50%', padding: 0,
+            width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
             background: 'rgba(6,12,18,0.7)',
             border: '1px solid rgba(180,214,232,0.22)',
             color: 'rgba(214,232,240,0.85)', cursor: 'pointer',
           }}>
           {/* A folded chart. Not a compass — there is already a compass on this
               screen and it means something else. */}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          <svg width={Math.round(hudSize * 0.55)} height={Math.round(hudSize * 0.55)}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" />
             <path d="M9 4v14M15 6v14" />
@@ -3383,17 +3408,20 @@ hullRef={hullRefFor(t.key)} />
           onClick={e => { e.stopPropagation(); vibrate(8); setCrewOpen(v => !v) }}
           data-no-steer
           style={{
-            position: 'absolute', top: 18, left: 84, zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt(2), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', gap: 5,
-            height: 26, padding: '0 9px', borderRadius: 999, cursor: 'pointer',
+            height: hudSize, padding: `0 ${Math.round(hudSize * 0.35)}px`, borderRadius: 999, cursor: 'pointer',
             background: 'rgba(10,22,18,0.82)', border: '1px solid rgba(150,206,172,0.45)',
           }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9fdcb6"
+          <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
+            viewBox="0 0 24 24" fill="none" stroke="#9fdcb6"
             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M3 18c2 3 16 3 18 0" /><path d="M5 18l1.6-4h10.8L19 18" />
             <path d="M12 14V7" /><path d="M12 7l4.5 2.2L12 11.4" />
           </svg>
-          <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#dff0e6' }}>
+          <span className="font-karla font-700" style={{
+            fontSize: `${(hudSize / 26 * 0.76).toFixed(2)}rem`, color: '#dff0e6',
+          }}>
             {friends.length}
           </span>
         </div>
@@ -3402,7 +3430,7 @@ hullRef={hullRefFor(t.key)} />
       {crewOpen && friends.length > 0 && (
         <div data-no-steer onClick={e => e.stopPropagation()}
           style={{
-            position: 'absolute', top: 50, left: 84, zIndex: Z.hud,
+            position: 'absolute', top: 18 + hudSize + 6, left: hudAt(2), zIndex: Z.hud,
             minWidth: 168, maxWidth: 240, padding: '0.5rem 0.6rem', borderRadius: 12,
             background: 'rgba(8,16,14,0.95)', border: '1px solid rgba(150,206,172,0.32)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
@@ -5828,13 +5856,13 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
  * about the vertical — one sinking, one climbing — which is the only pair that
  * genuinely needs telling apart and the only pair a colour alone could not.
  */
-function PhaseGlyph({ phase }: { phase: SeaPhase }) {
+function PhaseGlyph({ phase, size = 16 }: { phase: SeaPhase; size?: number }) {
   const g = PHASE_GLYPH[phase]
   const warm = g === 'sun' || g === 'setting' || g === 'rising'
   const c = warm ? '#ffd986' : '#9fb6ff'
   const glow = warm ? 'rgba(255,217,134,0.55)' : 'rgba(159,182,255,0.55)'
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden
       style={{ filter: `drop-shadow(0 0 5px ${glow})` }}>
       {g === 'sun' && (
         <>

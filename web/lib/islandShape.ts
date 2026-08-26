@@ -24,13 +24,38 @@
 // build check, and by the server that validates where a captain drags a
 // building. If the layers ever change, this file is the one that changes.
 
+/** The top face — the land itself — is `inset: 13%` of the island box. Every
+ *  band below is inset again from THIS, which is the compounding that the old
+ *  checker missed. */
+const TOP = 1 - 0.13 * 2
+
 /**
- * How far the grass reaches, as a fraction of a coastline radius.
+ * How far the GREEN reaches, as a fraction of a coastline radius.
  *
- * `0.7 * 0.74` and not `0.7`, written as the product so the two insets it comes
- * from stay visible. See the note above.
+ * The grass layer is `inset: 15%` of the top face, so `0.70 * 0.74`. Written as
+ * the product so the two insets it comes from stay visible.
  */
-export const GRASS = 0.7 * 0.74
+export const GRASS = 0.70 * TOP
+
+/**
+ * HOW FAR YOU MAY BUILD.
+ *
+ * The scrub band, `inset: 9.5%` of the top face. One band further out than the
+ * green, and still unambiguously land — scrub is the dry stuff that grows above
+ * the tideline, and a cottage standing on it looks like a cottage standing on
+ * an island.
+ *
+ * IT USED TO BE THE GRASS, and that was too tight to size the buildings
+ * honestly. The green is only 51.8% of a coastline radius, so six buildings on
+ * it meant six small buildings — and the Estate came out at 48% of the island's
+ * height against a lean-to's 24%, which is barely a doubling for four upgrades
+ * and several million doubloons. It stopped reading as an upgrade at all.
+ *
+ * At 59.9% the whole ladder can be steep enough to see. Measured: every one of
+ * the six spots fits its largest build at the new sizes here, and the portal is
+ * the one that does not fit on the green.
+ */
+export const BUILDABLE = (1 - 0.095 * 2) * TOP
 
 /** How many points the outline is drawn with. 160, because at 26 the straight
  *  segments were visible on the big islands and read as a polygon. */
@@ -103,10 +128,14 @@ export function outBy(rs: number[], x: number, y: number): number {
  *
  * `scale` is the building's width as a fraction of the island box, so half its
  * width in the same units is `scale * 50`.
+ *
+ * Measured against BUILDABLE, not GRASS — see the note there.
  */
-export function standsOnGrass(
+export function standsOnLand(
   rs: number[], x: number, y: number, scale: number, margin = 1.5,
 ): boolean {
   const hw = scale * 50
-  return Math.max(outBy(rs, x, y), outBy(rs, x - hw, y), outBy(rs, x + hw, y)) < -margin
+  const o = (px: number, py: number) =>
+    Math.hypot(px - 50, py - 50) - grassAt(rs, Math.atan2(py - 50, px - 50)) * (BUILDABLE / GRASS)
+  return Math.max(o(x, y), o(x - hw, y), o(x + hw, y)) < -margin
 }

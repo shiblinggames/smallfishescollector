@@ -12,7 +12,7 @@
  * stands on is inside the grass, corners included.
  */
 import { PLACES } from '../app/(app)/sea/chart'
-import { coastline, grassAt, outBy, GRASS } from '../lib/islandShape'
+import { coastline, grassAt, outBy, GRASS, BUILDABLE } from '../lib/islandShape'
 import { HOTSPOTS } from '../lib/homestead'
 
 /* The coastline and the grass both come from lib/islandShape now — the same
@@ -21,10 +21,16 @@ import { HOTSPOTS } from '../lib/homestead'
 
 type Item = { label: string; x: number; y: number; scale: number }
 
+/** How far outside the BUILDABLE band a point is. outBy measures against the
+ *  green; the scrub is one band further out, so it is the same number scaled. */
+const K = BUILDABLE / GRASS
+const outByLand = (rs: number[], x: number, y: number) =>
+  Math.hypot(x - 50, y - 50) - grassAt(rs, Math.atan2(y - 50, x - 50)) * K
+
 function check(id: string, name: string, items: Item[]) {
   const rs = coastline(id)
-  const lo = Math.min(...rs) * GRASS, hi = Math.max(...rs) * GRASS
-  console.log(`\n  ${name}  (grass reaches ${lo.toFixed(1)}%..${hi.toFixed(1)}% from centre)`)
+  const lo = Math.min(...rs) * BUILDABLE, hi = Math.max(...rs) * BUILDABLE
+  console.log(`\n  ${name}  (buildable land reaches ${lo.toFixed(1)}%..${hi.toFixed(1)}% from centre)`)
   let bad = 0
   for (const it of items) {
     const hw = it.scale * 50            // half the sprite's width, in box-percent
@@ -35,7 +41,7 @@ function check(id: string, name: string, items: Item[]) {
       ['right', it.x + hw, it.y],
     ]
     const worst = pts.reduce((w, [tag, px, py]) => {
-      const d = outBy(rs, px, py)
+      const d = outByLand(rs, px, py)
       return d > w.d ? { tag, d } : w
     }, { tag: '', d: -Infinity })
     const ok = worst.d < -1.5           // 1.5% of margin, so nothing sits on the surf
@@ -63,7 +69,7 @@ for (const p of PLACES) {
     })))
   }
 }
-console.log(`\n  ${bad} building${bad === 1 ? '' : 's'} not standing wholly on the grass.`)
+console.log(`\n  ${bad} building${bad === 1 ? '' : 's'} not standing wholly on the land.`)
 if (bad) process.exitCode = 1
 
 // ── SALVAGE: the two halves of one fact ──────────────────────────────────

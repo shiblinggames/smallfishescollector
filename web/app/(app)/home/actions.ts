@@ -38,7 +38,7 @@ import {
 } from '@/lib/homestead'
 import { PLACES } from '../sea/chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
-import { coastline, standsOnGrass } from '@/lib/islandShape'
+import { coastline, standsOnLand } from '@/lib/islandShape'
 import { ISLES } from '@/lib/seaIsles'
 
 export type BuildResult =
@@ -395,7 +395,7 @@ export async function moveBuilding(spotId: string, x: number, y: number): Promis
   const ny = Math.round(Math.max(0, Math.min(100, y)))
 
   const widest = Math.max(...spot.builds.map(b => b.scale))
-  if (!standsOnGrass(coastline('home'), nx, ny, widest)) {
+  if (!standsOnLand(coastline('home'), nx, ny, widest)) {
     return { ok: false, error: 'It would not stand there.' }
   }
 
