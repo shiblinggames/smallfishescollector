@@ -290,6 +290,27 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     .single()
   if (!isPremiumActive(meRow)) return []
 
+  // ── AND AN ACCEPTED PACT ────────────────────────────────────────────
+  //
+  // Being mutual crew is not consent to be tracked. It says "I want to see what
+  // you are up to"; it does not say "I am happy for you to know where I am,
+  // live, whenever I am playing". This game was handing out the second on the
+  // strength of the first.
+  //
+  // So the follow is the floor and the pact is the permission — asked for by
+  // one captain, accepted by the other, endable by either. Narrowed to the
+  // pacted set here, and enforced for real by the RLS policy on
+  // realtime.messages, because this filter only binds an honest client.
+  const { data: pacts } = await admin
+    .from('sea_pacts')
+    .select('requester_id, addressee_id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${session.user.id},addressee_id.eq.${session.user.id}`)
+  const pacted = new Set(((pacts ?? []) as { requester_id: string; addressee_id: string }[])
+    .map(p => (p.requester_id === session.user.id ? p.addressee_id : p.requester_id)))
+  const canSee = ids.filter(id => pacted.has(id))
+  if (!canSee.length) return []
+
   const cutoff = new Date(Date.now() - AT_SEA_MS).toISOString()
   // Everything `Skipper` needs and nothing else. An explicit column list rather
   // than select('*'), because this is one captain reading another's row and the
@@ -301,7 +322,7 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     // expression it cannot read, and the whole result silently degrades to an
     // error type that only shows up as a confusing cast failure downstream.
     .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects, is_premium, premium_expires_at')
-    .in('id', ids)
+    .in('id', canSee)
     .gte('sea_seen_at', cutoff)
 
   type Row = {

@@ -52,6 +52,7 @@ import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaCloc
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
+import CrewPanel from './CrewPanel'
 import { coastClip } from '@/lib/islandShape'
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
@@ -3398,66 +3399,53 @@ hullRef={hullRefFor(t.key)} />
         </PopupShell>
       </div>
 
-      {/* WHO ELSE IS OUT. A compass arrow only helps if you happen to be
-          looking at the edge of the screen, and it says nothing at all when
-          somebody arrives while you are watching the dial. This is the standing
-          answer to "is anyone else on the water", in the corner with the other
-          readouts. */}
-      {!fishingIn && friends.length > 0 && (
-        <div
-          onClick={e => { e.stopPropagation(); vibrate(8); setCrewOpen(v => !v) }}
+      {/* WHO YOU SAIL WITH — always here, never conditional.
+          It used to appear only when somebody was already on the water, which
+          made it useless for the two things people actually want from it. You
+          could not learn that nobody was about, because the absence of a button
+          is an absence rather than an answer. And you could not DO anything
+          about it: the only way to arrange to sail with somebody was to already
+          be sailing with them.
+
+          Shows a count when there is one and sits quiet at zero. */}
+      {!fishingIn && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(8); setCrewOpen(true) }}
+          aria-label="Who you sail with"
+          title="Sailing crew"
           data-no-steer
           style={{
             position: 'absolute', top: 18, left: hudAt(2), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', gap: 5,
-            height: hudSize, padding: `0 ${Math.round(hudSize * 0.35)}px`, borderRadius: 999, cursor: 'pointer',
-            background: 'rgba(10,22,18,0.82)', border: '1px solid rgba(150,206,172,0.45)',
+            height: hudSize, padding: `0 ${Math.round(hudSize * 0.32)}px`,
+            borderRadius: 999, cursor: 'pointer',
+            background: friends.length > 0 ? 'rgba(10,22,18,0.86)' : 'rgba(6,12,18,0.7)',
+            border: `1px solid ${friends.length > 0 ? 'rgba(150,206,172,0.5)' : 'rgba(180,214,232,0.22)'}`,
           }}>
           <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
-            viewBox="0 0 24 24" fill="none" stroke="#9fdcb6"
+            viewBox="0 0 24 24" fill="none"
+            stroke={friends.length > 0 ? '#9fdcb6' : 'rgba(214,232,240,0.8)'}
             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M3 18c2 3 16 3 18 0" /><path d="M5 18l1.6-4h10.8L19 18" />
             <path d="M12 14V7" /><path d="M12 7l4.5 2.2L12 11.4" />
           </svg>
-          <span className="font-karla font-700" style={{
-            fontSize: `${(hudSize / 26 * 0.76).toFixed(2)}rem`, color: '#dff0e6',
-          }}>
-            {friends.length}
-          </span>
-        </div>
+          {friends.length > 0 && (
+            <span className="font-karla font-700" style={{
+              fontSize: `${(hudSize / 26 * 0.76).toFixed(2)}rem`, color: '#dff0e6',
+            }}>
+              {friends.length}
+            </span>
+          )}
+        </button>
       )}
 
-      {crewOpen && friends.length > 0 && (
-        <div data-no-steer onClick={e => e.stopPropagation()}
-          style={{
-            position: 'absolute', top: 18 + hudSize + 6, left: hudAt(2), zIndex: Z.hud,
-            minWidth: 168, maxWidth: 240, padding: '0.5rem 0.6rem', borderRadius: 12,
-            background: 'rgba(8,16,14,0.95)', border: '1px solid rgba(150,206,172,0.32)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          }}>
-          <p className="font-karla font-700 uppercase" style={{
-            fontSize: '0.54rem', letterSpacing: '0.16em', margin: '0 0 4px',
-            color: 'rgba(150,206,172,0.75)',
-          }}>On the water</p>
-          {friends
-            .map(f => ({ f, d: Math.hypot(f.x - pos.current.x, f.y - pos.current.y) }))
-            .sort((a, b) => a.d - b.d)
-            .map(({ f, d }) => (
-              <div key={f.username} style={{
-                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10,
-              }}>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#e8f2ea' }}>
-                  {f.username}
-                </span>
-                {/* The same metres the compass uses, so two readouts of the
-                    same fact never disagree. */}
-                <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(190,214,200,0.6)' }}>
-                  {Math.round(d / 10).toLocaleString()}m
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
+      <CrewPanel
+        open={crewOpen}
+        onClose={() => setCrewOpen(false)}
+        atSea={new Set(friends.map(f => f.username))}
+      />
+
 
       <CrewNews news={crewNews} onDone={() => setCrewNews(null)} />
 

@@ -528,6 +528,20 @@ Mutual crew — you both pressed Follow — appear on the water as their real bo
 named compass arrow and a mark on the chart. Two layers, and they answer different
 questions.
 
+**AND AN ACCEPTED PACT.** Following each other is *not* consent to be tracked. It says
+"I want to see what you are up to"; it does not say "I am happy for you to know where I am,
+live, whenever I am playing". The game used to hand out the second on the strength of the
+first. One captain asks, the other accepts, and either can end it at any time — a pact you
+cannot leave is a contract, not consent.
+
+The follow is the FLOOR (you cannot ask a stranger) and the pact is the permission. Both
+are re-checked at read time, so unfollowing removes somebody from your water at once
+without anyone having to hunt down and delete the pact.
+
+`sea_pacts` holds one row per pair with a unique index on the **unordered** pair — without
+`least`/`greatest` two captains asking at the same moment would end up with two pacts, and
+ending one would leave the other standing. That index is also the race guard.
+
 **BOTH captains must hold a Captain membership.** It grants no fish, no coin and no
 progress, so it is a social perk and the no-pay-to-win rule is intact. Deliberately *both*,
 not either: a Captain sailing with a non-Captain sees nothing, same as their friend.
@@ -586,7 +600,8 @@ stepping to 2s, and the poll stopped escalating too.
 not a secret. The `sea_presence_realtime_authorization` migration puts RLS on
 `realtime.messages`:
 
-- **SELECT** — you may listen to your own channel, or a mutual's.
+- **SELECT** — your own channel, or one belonging to a mutual you hold an accepted pact
+  with, where both of you are Captains.
 - **INSERT** — you may send **only** on your own. This is the half that stops one player
   dragging somebody else's boat across the chart in front of everyone watching.
 
@@ -1102,3 +1117,14 @@ free. It is *how you got it* that is different.
 deliberate — 4.45M of the old sink was the six pieces, and they are now earned by sailing
 instead. `ISLE_FURNISHING` in `lib/seaIsles.ts` and the `found` fields in
 `lib/homestead.ts` are two halves of one fact and a check asserts they agree.
+
+### is_captain lives outside the REST API
+
+`profiles` is **own-read only** — its single SELECT policy is `auth.uid() = id`, so nobody
+can see anyone else's membership. A `public.is_captain(uuid)` handed that back out one uuid
+at a time, because PostgREST serves `public` and RLS policies run as the connecting role,
+so it had to be EXECUTEable by `authenticated` and was therefore callable as
+`/rest/v1/rpc/is_captain`.
+
+It lives in `app_private` now, which PostgREST does not serve. The policies still call it;
+there is no HTTP route to it. Supabase's own security advisor is what surfaced this.
