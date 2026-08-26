@@ -110,8 +110,8 @@ export const HOTSPOTS: Hotspot[] = [
     note: 'Nothing grows fast enough out here to be worth eating. It is for looking at.',
     builds: [
       { name: 'Scrub', cost: 0, art: null, scale: 0, blurb: 'Whatever got here on its own.' },
-      { name: 'A kitchen garden', cost: 80_000, art: '/sea/home-kitchen.png', scale: 0.126, blurb: 'Four beds and a losing argument with the salt.' },
-      { name: 'A walled garden', cost: 450_000, art: '/sea/home-walled.png', scale: 0.129, blurb: 'Trees, at this latitude. People will ask.' },
+      { name: 'A kitchen garden', cost: 80_000, art: '/sea/home-kitchen.png', scale: 0.138, blurb: 'Four beds and a losing argument with the salt.' },
+      { name: 'A walled garden', cost: 450_000, art: '/sea/home-walled.png', scale: 0.14, blurb: 'Trees, at this latitude. People will ask.' },
     ],
   },
   {
@@ -135,8 +135,8 @@ export const HOTSPOTS: Hotspot[] = [
     note: 'Where you tie up. It does not make you faster.',
     builds: [
       { name: 'A shingle beach', cost: 0, art: null, scale: 0, blurb: 'Run her up and hope.' },
-      { name: 'A jetty', cost: 60_000, art: '/sea/home-jetty.png', scale: 0.104, blurb: 'Planks, posts, and dry feet.' },
-      { name: 'A stone pier', cost: 300_000, art: '/sea/home-pier.png', scale: 0.111, blurb: 'Cut stone and a crane. Built to outlast you.' },
+      { name: 'A jetty', cost: 60_000, art: '/sea/home-jetty.png', scale: 0.124, blurb: 'Planks, posts, and dry feet.' },
+      { name: 'A stone pier', cost: 300_000, art: '/sea/home-pier.png', scale: 0.121, blurb: 'Cut stone and a crane. Built to outlast you.' },
     ],
   },
 ]
