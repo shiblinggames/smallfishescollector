@@ -714,51 +714,68 @@ that will never change, and add its reward. Special items were asked for and the
 ready — extend `Isle` and the payout branch in `goAshore`, which is the only code that may
 believe a reward.
 
-## Regions: the chart's second axis
+## Each band has its own water
 
-`web/lib/seaRegions.ts`. The bands encode **how far out** and nothing else, so before this
-the east of a band looked exactly like the west and no part of 870M px² of water was
-anywhere in particular. Regions are **longitude**: five angular sectors fanning out from the
-Mainland, plus **The Approaches** for everything inside radius 3,800 (where the sectors
-converge and would flip every few seconds).
+`web/lib/seaSurface.ts`. One texture per fishing band, shallow to deep: **weed, chop,
+current, silt, glass**. The water settles and then stops as you sail out.
 
-East to west: **The Scatters** (chop), **The Kelp Reach** (weed), **The Long Run** (current),
-**The Glassing** (flat sheens), **The Silts** (veil).
+### Why this is keyed to the bands, not to sectors
+
+An earlier pass built **angular sectors** — a longitude axis, on the reasoning that the east
+of the Deep looks like the west of it. That was the wrong problem: **nothing in this game
+depends on which way you are.** Levels, fish tables and sell prices all key off the band. The
+sectors were a second set of names to learn laid over a system that already meant something
+and carried no texture. They were removed.
+
+### The problem this actually fixes
+
+Average per-channel distance between consecutive band palettes:
+
+| step | distance |
+|---|---|
+| Shallows → Open Waters | 9.6 |
+| Open Waters → The Deep | 16.7 |
+| The Deep → The Abyss | 21.2 |
+| **The Abyss → The Ancient Deep** | **7.6** |
+
+The weakest step on the chart is the one that should be strongest — both deepest bands are
+nearly black and nearly the same nearly black. **Colour cannot fix it**, because both are
+meant to be dark. Silt against glass reads at any brightness.
 
 ### Form, not colour — because day/night already owns colour
 
-Hue is spoken for twice: the band picks the water's palette via `seaAt`, and the 48-minute
-clock tints the whole frame. **A third system reaching for hue fights both and looks like a
-different place at dawn than at midnight**, which is the opposite of a landmark. So a region
-is a *texture* and a *drift rate*, which read the same at every hour.
+Hue is spoken for twice: the band picks the palette via `seaAt`, and the 48-minute clock
+tints the whole frame. A third system reaching for hue fights both and looks like a different
+place at dawn than at midnight. So a surface is a *texture* and a *drift rate*.
 
-The one place the two systems meet is `inkStrength`:
-
-- **light ink** is light ON water — dims with `lum`, like the pale wash already does
-- **dark ink** is a thing IN the water — softens but stays
-
-Without that split the kelp vanishes at midnight and the chop glows.
-
-### Five sectors, not four
-
-At 45° the boundaries land at 45/90/135, and **90° is due south — the most travelled line on
-the chart**. That put the busiest route on a seam where a few pixels of drift flip the region
-and churn the cross-fade. At 36° due south sits mid-region (verified across ±400px).
+The one place the two systems meet is `inkStrength`: **light ink** is light ON water and dims
+with `lum`; **dark ink** is a thing IN the water and stays. Without the split the kelp
+vanishes at midnight and the chop glows.
 
 ### Implementation notes
 
-- One extra tiled layer between the deep mottle and the pale wash, moved by transform like
-  the others. Never repainted.
-- Crossing **cross-fades over 0.75s each way** rather than swapping — the image only changes
-  while opacity is 0, so a hard pop is impossible.
-- `makeMottle` gained optional fixed `squash` and `tilt`. Fixed tilt is what turns a scatter
-  of blobs into a current: the marks stop being independent and agree with each other.
-- All five tiles are built on a 400ms idle timer after mount, so the first crossing does not
-  stop the loop to rasterise a canvas.
-- **A region you cannot see is not a region.** The Glassing and the Silts were first authored
-  faint, on the theory that "less than its neighbours" is an identity; on a test plate beside
-  the other four they were indistinguishable from open water. Render the comparison plate
-  before trusting these numbers.
+- One tiled layer between the deep mottle and the pale wash, moved by transform. Never
+  repainted.
+- Crossing **cross-fades over 0.75s each way**; the image only changes while opacity is 0.
+- `makeMottle` takes optional fixed `squash` and `tilt`. Fixed tilt is what turns a scatter of
+  blobs into a current: the marks stop being independent and agree with each other.
+- Tiles build on a 400ms idle timer after mount so the first crossing does not hitch.
+- **A surface you cannot see is not a surface.** Two were first authored faint and were
+  indistinguishable from open water on a comparison plate. Render the plate before trusting
+  these numbers.
+
+## The minimap
+
+Sized to the **chart's own aspect** (45,200 × 24,100, ≈1.88:1). It used to be drawn into a
+square and scaled to fit, so 47% of the canvas was blank by construction — the sea now covers
+**80% of the canvas instead of 43%**. That was the empty space, not the fog.
+
+Carries a **key** built from the same `INK` table the canvas draws with, as SVG at the
+canvas's own radii, so a swatch is the same size as the thing it stands for. Add a mark to the
+canvas and it needs a row in the key.
+
+The tally shows isles ashore and holes dug, where **dug counts bearings you hold, not sites
+that exist** — how many there are is not something the chart will tell you.
 
 ## Bottles, bearings and buried treasure
 
