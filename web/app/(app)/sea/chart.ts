@@ -146,8 +146,8 @@ export const PLACES: Place[] = [
     kind: 'port', minLevel: 0,
     buildings: [
       { art: '/sea/tackle.png', x: 24, y: 40, scale: 0.19 },
-      { art: '/sea/market.png', x: 76, y: 44, scale: 0.20 },
-      { art: '/sea/tavern.png', x: 50, y: 70, scale: 0.26 },
+      { art: '/sea/market.png', x: 69, y: 46, scale: 0.2 },
+      { art: '/sea/tavern.png', x: 50, y: 68, scale: 0.26 },
     ],
   },
   {
@@ -156,17 +156,24 @@ export const PLACES: Place[] = [
      *
      * East of the Mainland, in among the other ports rather than off on its own
      * somewhere: a home you have to make an expedition to visit is a home
-     * nobody visits. It is the second biggest island on the chart at 260, ahead
-     * of the single-purpose ports and well behind the Mainland — big enough to
-     * hold six build spots without them touching, small enough that it never
-     * competes with the place every band is measured from.
+     * nobody visits. Second biggest on the chart at 380, ahead of the
+     * single-purpose ports and behind the Mainland's 430.
+     *
+     * IT WAS 260, AND SIX BUILDINGS DID NOT FIT ON IT. Half of them hung out
+     * over the water. Note that growing the island ALONE fixes nothing: `scale`
+     * and the x,y percentages are both shares of the island box, so the land
+     * and the buildings grow together and the geometry is identical. The land
+     * only gains on the buildings if the scales come down by the same factor —
+     * 260/380, applied to every build on every spot, which leaves each building
+     * the size it always was in world pixels and gives it more ground to stand
+     * on. Spread went from 53-111px off centre to 115-204px.
      *
      * `buildings` is EMPTY here and filled in at render time from the captain's
      * own homestead row. It is the one island on this chart that is different
      * for everybody, which is the entire point of it.
      */
     id: 'home', name: 'The Homestead', blurb: 'Yours. Such as it is.',
-    href: '/home', x: 1900, y: -250, r: 260, art: '/sea/home-cottage.png',
+    href: '/home', x: 1900, y: -250, r: 380, art: '/sea/home-cottage.png',
     kind: 'port', minLevel: 0,
     buildings: [],
   },
@@ -183,7 +190,7 @@ export const PLACES: Place[] = [
     href: '/trawl-docks', x: -1500, y: -850, r: 210, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/harbour.png', x: 46, y: 60, scale: 0.42 },
+      { art: '/sea/harbour.png', x: 47, y: 58, scale: 0.42 },
     ],
   },
   {
@@ -192,7 +199,7 @@ export const PLACES: Place[] = [
     href: '/shipyard', x: 900, y: -900, r: 200, art: '/sea/shipyard.png',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/shipyard.png', x: 50, y: 62, scale: 0.40 },
+      { art: '/sea/shipyard.png', x: 50, y: 60, scale: 0.39 },
     ],
   },
   {
