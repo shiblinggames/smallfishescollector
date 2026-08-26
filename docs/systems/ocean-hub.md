@@ -336,38 +336,50 @@ is a composite rather than a repaint and wants every frame.
 
 `lib/seaHotspots.ts`. **Three patches of water at a time, one of each kind, each in a
 different band, all moving every 10 minutes.** The chart is 22,600 pixels deep and once you
-had picked a band every part of it was identical to every other part — you sailed to a depth
-and then stopped, because there was no reason to be anywhere in particular.
+had picked a band every part of it was identical to every other — you sailed to a depth and
+then stopped, because there was no reason to be anywhere in particular.
 
-| | does | measured |
-|---|---|---|
-| **Running Shoal** | fish bite 35% faster | a 20s wait becomes 13s |
-| **Cold Trench** | rare and legendary far likelier | legendary 2.0% → **5.7%**; commons 50% → 26% |
-| **Drifting Flotsam** | 3× sunken crates | a 2% zone rate becomes 6% |
+**Each kind has one colour; each of its three tiers has a different strength.**
 
-**Derived, never stored** — same trick as the Salt Road's traders. A hash of `(window, slot)`
-decides everything, so the client draws them and the server re-derives them and the two
-cannot disagree. No table, no cron, no rows to clean up, and a reload shows the same patches
-in the same places with the same time left.
+| kind | colour | tier 1 | tier 2 | tier 3 |
+|---|---|---|---|---|
+| Shoal — faster bites | green | Scattered, **12%** | Running, **22%** | Boiling, **35%** |
+| Trench — rarer fish | purple | Cold, legendary **×1.42** | Deep, **×2.05** | Black, **×2.84** |
+| Flotsam — more crates | gold | Drifting, **×1.6** | Heavy, **×2.2** | Wreck Field, **×3** |
 
-Verified across 400 windows: always three, never a missing kind, never two in one band, never
-a patch straddling a band edge. Each buff touches **exactly** the one roll its badge names —
-a test asserts that, because a hotspot that quietly does something it does not say is worse
-than one that does nothing.
+Tier weights are 60 / 28 / 12, so a tier 3 is about one patch in eight and **32% of windows
+hold one somewhere** — rare enough to be worth breaking off for, common enough that a session
+usually contains one. Measured over 4,000 windows: 59.2 / 28.7 / 12.1.
 
-**The trench does NOT touch the Ancient Deep trophy chance.** That roll shares the same
-`rarityBonus` variable but is multiplied by `(1 + bonus × 4)` and gates the six giants behind
-the finale; a hotspot has no business anywhere near it. Only the two `tierWeightedPick` calls
-get the bonus.
+**Colour says WHAT, brightness says HOW MUCH.** A Black Trench and a Cold Trench are the same
+purple; one of them is plainly worth crossing water for, and both read before any text does.
+`TIER_GLOW` scales the fill alpha, the rim and the bloom's falloff together, and each tier
+gets its own pulse — a tier 1 barely moves, a tier 3 breathes hard enough to catch the eye
+from the far side of a band, which is the job of a thing that is only there for ten minutes.
+
+### The tier 1s are the point
+
+They are deliberately small. The first pass shipped what are now the **tier 3** numbers as
+the *only* numbers, and at that strength a hotspot stops being a bonus and becomes the game —
+three places worth fishing and 22,600 pixels of chart that are the wrong answer. The tier 3s
+earn their size by being rare: a big effect you have to go and find, rather than a big effect
+that is always somewhere.
+
+### Verified, not eyeballed
+
+- Every tier's **stated effect matches its measured effect** — the badge's number is computed
+  from the same function the server rolls with. A test asserts it, and it is what caught the
+  shoal silently carrying a rarity bonus its description never mentioned.
+- Each buff touches **exactly one** roll, and strength **rises monotonically** with tier.
+- Across 400 windows: always three patches, never a missing kind, never two in one band,
+  never a patch straddling a band edge.
 
 ### Sized for a chart the server cannot see
 
 `castLine(bait, zone, at)` takes the position and **re-derives** the hotspot from the clock
-rather than being told which one applies. A forged position can claim a patch it is not
-standing in; it cannot invent one, choose its kind, or move it. Every number is set on that
-basis — a hotspot is a nudge worth steering for, never a multiplier worth lying for, and none
-of them touch payouts. The same reasoning as the Trawl Docks gate: the chart is client-side,
-so design gates are design gates.
+rather than being told which applies. A forged position can claim a patch it is not standing
+in; it cannot invent one, choose its kind or tier, or move it. Even a tier 3 is worth less
+than the effort of forging a position for, and none of them touch payouts.
 
 ## The Trawl Docks (`/trawl-docks`)
 

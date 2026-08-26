@@ -33,29 +33,79 @@ export const HOTSPOT_COUNT = 3
 
 export type HotspotKind = 'shoal' | 'trench' | 'flotsam'
 
+/** 1 common, 2 uncommon, 3 rare. Strength climbs with it. */
+export type HotspotTier = 1 | 2 | 3
+
+/**
+ * HOW OFTEN EACH TIER TURNS UP. Rolled per hotspot, so a window can hold three
+ * ones or — rarely — a three alongside two ones.
+ *
+ * A tier 3 is a roughly one-in-eight patch, which across three live hotspots
+ * means you see one about a third of the time you look. Rare enough that
+ * finding one is worth breaking off what you were doing for, common enough
+ * that a session usually contains one somewhere.
+ */
+export const TIER_WEIGHTS: Record<HotspotTier, number> = { 1: 0.6, 2: 0.28, 3: 0.12 }
+
+export type TierDef = {
+  /** The patch's own name at this strength. */
+  name: string
+  /** One line, literal, with the real number in it — this is a mechanic and
+   *  the house rule is that mechanics are explained plainly. */
+  effect: string
+}
+
 export type HotspotDef = {
   kind: HotspotKind
-  /** Shown on the badge when you are inside one. */
-  name: string
-  /** One line, literal, no flavour — this is a mechanic and the house rule is
-   *  that mechanics are explained plainly. */
-  effect: string
+  /** One colour per KIND, so what a patch does is legible from across the
+   *  chart before you are close enough to read anything. */
   color: string
+  /** What it is, in one word, for the badge's eyebrow. */
+  family: string
+  tiers: Record<HotspotTier, TierDef>
 }
 
 export const HOTSPOT_DEFS: Record<HotspotKind, HotspotDef> = {
   shoal: {
-    kind: 'shoal', name: 'Running Shoal', color: '#5fd4a0',
-    effect: 'Fish bite 35% faster here.',
+    kind: 'shoal', color: '#5fd4a0', family: 'Faster bites',
+    tiers: {
+      1: { name: 'Scattered Shoal', effect: 'Fish bite about 12% faster here.' },
+      2: { name: 'Running Shoal',   effect: 'Fish bite about 22% faster here.' },
+      3: { name: 'Boiling Shoal',   effect: 'Fish bite about 35% faster here.' },
+    },
   },
   trench: {
-    kind: 'trench', name: 'Cold Trench', color: '#a78bfa',
-    effect: 'Rare and legendary fish are far likelier here.',
+    kind: 'trench', color: '#a78bfa', family: 'Rarer fish',
+    tiers: {
+      1: { name: 'Cold Trench',  effect: 'Rare fish a little likelier — legendaries about 1.4x.' },
+      2: { name: 'Deep Trench',  effect: 'Rare fish notably likelier — legendaries about 2x.' },
+      3: { name: 'Black Trench', effect: 'Rare fish much likelier — legendaries nearly 3x.' },
+    },
   },
   flotsam: {
-    kind: 'flotsam', name: 'Drifting Flotsam', color: '#f0c040',
-    effect: 'Three times as many sunken crates here.',
+    kind: 'flotsam', color: '#f0c040', family: 'More crates',
+    tiers: {
+      1: { name: 'Drifting Flotsam', effect: 'About 60% more sunken crates here.' },
+      2: { name: 'Heavy Flotsam',    effect: 'Better than twice as many sunken crates here.' },
+      3: { name: 'Wreck Field',      effect: 'Three times as many sunken crates here.' },
+    },
   },
+}
+
+/**
+ * HOW BRIGHT A PATCH BURNS, by tier.
+ *
+ * The colour says WHAT it is and the strength says HOW MUCH, so a Black Trench
+ * and a Cold Trench are the same purple and one of them is plainly worth
+ * crossing water for. Read at a distance, before any text is legible.
+ *
+ * `fill` and `rim` are alpha on the kind's colour; `spread` widens the bloom's
+ * falloff so a tier 3 reads bigger than its radius as well as brighter.
+ */
+export const TIER_GLOW: Record<HotspotTier, { fill: number; rim: number; spread: number; pulse: string }> = {
+  1: { fill: 0.16, rim: 0.16, spread: 0.40, pulse: 'sea-hotspot-1' },
+  2: { fill: 0.26, rim: 0.30, spread: 0.55, pulse: 'sea-hotspot-2' },
+  3: { fill: 0.40, rim: 0.52, spread: 0.70, pulse: 'sea-hotspot-3' },
 }
 
 export type Hotspot = {
@@ -63,6 +113,7 @@ export type Hotspot = {
    *  a changed key is how the map knows the patch has moved. */
   key: string
   kind: HotspotKind
+  tier: HotspotTier
   x: number
   y: number
   /** World-pixel radius. Big enough to fish inside without station-keeping. */
@@ -140,9 +191,17 @@ export function hotspotsAt(now: number = Date.now()): Hotspot[] {
     // is a pinprick in the Ancient Deep, which is nearly three times as wide.
     const r = Math.round((outer - inner) * 0.16)
 
+    // The tier, from the same stream so it is as fixed as the position.
+    const roll = rnd()
+    const tier: HotspotTier =
+      roll < TIER_WEIGHTS[3] ? 3
+        : roll < TIER_WEIGHTS[3] + TIER_WEIGHTS[2] ? 2
+          : 1
+
     return {
       key: `${win}:${slot}`,
       kind: KINDS[slot % KINDS.length],
+      tier,
       x: Math.round(Math.cos(th) * R),
       y: Math.round(Math.sin(th) * R),
       r,
@@ -175,16 +234,38 @@ export type HotspotEffect = { waitMult: number; rarityBonus: number; crateChance
 
 export const NO_HOTSPOT: HotspotEffect = { waitMult: 1, rarityBonus: 0, crateChanceMult: 1 }
 
-export function hotspotEffect(kind: HotspotKind | null | undefined): HotspotEffect {
+/**
+ * WHAT BEING IN ONE DOES, by kind and by strength.
+ *
+ * THE TIER 1s ARE THE POINT. They are deliberately small — a nudge worth
+ * steering a few seconds for, never a reason to fish in only three places and
+ * treat the other 22,600 pixels of chart as the wrong answer. The first pass
+ * shipped what are now the tier 3 numbers as the ONLY numbers, and at that
+ * strength a hotspot stops being a bonus and starts being the game.
+ *
+ * The tier 3s earn their size by being rare: roughly one patch in eight. That
+ * is the trade — a big effect you have to go and find, rather than a big effect
+ * that is always somewhere.
+ *
+ * They also stay bounded because the server takes the position on trust (see
+ * the header). Even a tier 3 is worth less than the effort of forging a
+ * position for, and none of them touch payouts.
+ */
+export function hotspotEffect(
+  kind: HotspotKind | null | undefined,
+  tier: HotspotTier = 1,
+): HotspotEffect {
   switch (kind) {
-    // A third off the wait. Noticeable in the Abyss, where a bite is a real
-    // pause; barely felt in the Shallows, where it was seconds to start with.
-    case 'shoal': return { waitMult: 0.65, rarityBonus: 0, crateChanceMult: 1 }
+    case 'shoal':
+      return { waitMult: ({ 1: 0.88, 2: 0.78, 3: 0.65 } as const)[tier], rarityBonus: 0, crateChanceMult: 1 }
     // Fed through tierWeightedPick, which scales each tier by
-    // (1 + bonus * (rarity - 1)) — so this leaves commons alone and lifts the
-    // top of the table hardest, which is what "a trench" should mean.
-    case 'trench': return { waitMult: 1, rarityBonus: 1.1, crateChanceMult: 1 }
-    case 'flotsam': return { waitMult: 1, rarityBonus: 0, crateChanceMult: 3 }
+    // (1 + bonus * (rarity - 1)) — so commons are never boosted, only diluted,
+    // and the top of the table lifts hardest. That shape was always right; it
+    // was only ever the magnitude that was wrong.
+    case 'trench':
+      return { waitMult: 1, rarityBonus: ({ 1: 0.15, 2: 0.45, 3: 1.1 } as const)[tier], crateChanceMult: 1 }
+    case 'flotsam':
+      return { waitMult: 1, rarityBonus: 0, crateChanceMult: ({ 1: 1.6, 2: 2.2, 3: 3 } as const)[tier] }
     default: return NO_HOTSPOT
   }
 }

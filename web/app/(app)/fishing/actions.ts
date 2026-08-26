@@ -225,7 +225,7 @@ export async function castLine(
 
   // Which patch of water this is, if any. Derived, never trusted.
   const spot = at ? hotspotAt(at.x, at.y) : null
-  const hs = hotspotEffect(spot?.kind)
+  const hs = hotspotEffect(spot?.kind, spot?.tier)
 
   const { data: profile } = await admin
     .from('profiles')

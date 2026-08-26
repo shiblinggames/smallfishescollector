@@ -2639,13 +2639,27 @@ body.hardcore-gauntlet::after {
    Scale ONLY. The element lives in the squashed world layer, so animating its
    transform is a compositor job; animating its width or its gradient would
    repaint a several-hundred-pixel circle every frame. */
-.sea-hotspot {
-  animation: sea-hotspot-breathe 7s ease-in-out infinite;
-  will-change: transform, opacity;
+.sea-hotspot { will-change: transform, opacity; }
+
+/* One per tier. A tier 1 barely moves — it is a tint on the water you notice
+   once you are near it. A tier 3 breathes hard enough to catch your eye from
+   the far side of a band, which is the whole job of a rare one: it has to be
+   findable, because it is only there for ten minutes. */
+.sea-hotspot-1 { animation: sea-hotspot-1 9s ease-in-out infinite; }
+.sea-hotspot-2 { animation: sea-hotspot-2 7s ease-in-out infinite; }
+.sea-hotspot-3 { animation: sea-hotspot-3 5s ease-in-out infinite; }
+
+@keyframes sea-hotspot-1 {
+  0%, 100% { transform: scale(0.99); opacity: 0.80; }
+  50%      { transform: scale(1.01); opacity: 0.92; }
 }
-@keyframes sea-hotspot-breathe {
+@keyframes sea-hotspot-2 {
   0%, 100% { transform: scale(0.97); opacity: 0.82; }
   50%      { transform: scale(1.03); opacity: 1; }
+}
+@keyframes sea-hotspot-3 {
+  0%, 100% { transform: scale(0.94); opacity: 0.85; }
+  50%      { transform: scale(1.07); opacity: 1; }
 }
 
 .sea-hotspot-dot { animation: sea-hotspot-dot 2.4s ease-in-out infinite; }
@@ -2655,5 +2669,5 @@ body.hardcore-gauntlet::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sea-hotspot, .sea-hotspot-dot { animation: none; }
+  .sea-hotspot-1, .sea-hotspot-2, .sea-hotspot-3, .sea-hotspot-dot { animation: none; }
 }

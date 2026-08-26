@@ -35,7 +35,7 @@ import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import { seaClock, PHASE_LABEL } from '@/lib/seaClock'
-import { hotspotsAt, hotspotAt, HOTSPOT_DEFS, type Hotspot } from '@/lib/seaHotspots'
+import { hotspotsAt, hotspotAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
@@ -2747,16 +2747,25 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
  */
 const HotspotRing = memo(function HotspotRing({ h }: { h: Hotspot }) {
   const def = HOTSPOT_DEFS[h.kind]
+  const g = TIER_GLOW[h.tier]
+  const hex = (a: number) => Math.round(Math.max(0, Math.min(1, a)) * 255).toString(16).padStart(2, '0')
+  // COLOUR SAYS WHAT, BRIGHTNESS SAYS HOW MUCH. A Black Trench and a Cold
+  // Trench are the same purple; one of them is plainly worth crossing water
+  // for. Both readable before any text is.
+  const c = def.color
   return (
-    <div aria-hidden className="sea-hotspot" style={{
+    <div aria-hidden className={`sea-hotspot ${g.pulse}`} style={{
       position: 'absolute', left: h.x, top: h.y,
       width: h.r * 2, height: h.r * 2,
       marginLeft: -h.r, marginTop: -h.r,
       borderRadius: '50%',
       background:
-        `radial-gradient(circle, ${def.color}2e 0%, ${def.color}18 45%, ${def.color}09 70%, transparent 78%)`,
-      // The rim, kept faint. It is a hint at an edge, not the edge.
-      boxShadow: `inset 0 0 0 2px ${def.color}22`,
+        `radial-gradient(circle, ${c}${hex(g.fill)} 0%, ` +
+        `${c}${hex(g.fill * 0.55)} ${Math.round(30 + g.spread * 30)}%, ` +
+        `${c}${hex(g.fill * 0.2)} ${Math.round(58 + g.spread * 18)}%, transparent 80%)`,
+      // The rim is a hint at an edge, never the edge — the patch is hundreds of
+      // pixels across and a hard line would be a hitbox to line up with.
+      boxShadow: `inset 0 0 0 ${1 + h.tier}px ${c}${hex(g.rim)}`,
       pointerEvents: 'none',
     }} />
   )
@@ -2801,21 +2810,35 @@ function HotspotBadge({ spot, lowered }: { spot: Hotspot | null; lowered: boolea
             boxShadow: `0 4px 20px rgba(0,0,0,0.55), 0 0 22px ${HOTSPOT_DEFS[spot.kind].color}22`,
             maxWidth: 460,
           }}>
-            <span aria-hidden className="sea-hotspot-dot" style={{
-              width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-              background: HOTSPOT_DEFS[spot.kind].color,
-              boxShadow: `0 0 10px ${HOTSPOT_DEFS[spot.kind].color}`,
-            }} />
+            {/* PIPS, not a number. "Tier 2" is a stat; three dots with two lit
+                is a strength, and it matches the brightness of the water you
+                are floating in. */}
+            <span aria-hidden style={{
+              display: 'flex', flexDirection: 'column', gap: 2.5, flexShrink: 0,
+            }}>
+              {[3, 2, 1].map(t => (
+                <span key={t} className={t <= spot.tier ? 'sea-hotspot-dot' : undefined} style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: t <= spot.tier ? HOTSPOT_DEFS[spot.kind].color : 'rgba(255,255,255,0.14)',
+                  boxShadow: t <= spot.tier ? `0 0 8px ${HOTSPOT_DEFS[spot.kind].color}` : 'none',
+                }} />
+              ))}
+            </span>
             <span style={{ minWidth: 0 }}>
+              <span className="font-karla font-700 uppercase block" style={{
+                fontSize: '0.66rem', letterSpacing: '0.12em',
+                color: `${HOTSPOT_DEFS[spot.kind].color}99`,
+              }}>{HOTSPOT_DEFS[spot.kind].family}</span>
               <span className="font-cinzel font-700 block" style={{
-                fontSize: '0.84rem', color: HOTSPOT_DEFS[spot.kind].color, lineHeight: 1.15,
-              }}>{HOTSPOT_DEFS[spot.kind].name}</span>
-              {/* THE EFFECT, IN FULL. An icon you have to learn is not an
-                  explanation, and the house rule is that mechanics are stated
-                  literally even where the flavour is allowed its charm. */}
+                fontSize: '0.9rem', color: HOTSPOT_DEFS[spot.kind].color, lineHeight: 1.15,
+              }}>{HOTSPOT_DEFS[spot.kind].tiers[spot.tier].name}</span>
+              {/* THE EFFECT, IN FULL, WITH ITS REAL NUMBER. An icon you have to
+                  learn is not an explanation, and the house rule is that
+                  mechanics are stated literally even where the flavour is
+                  allowed its charm. */}
               <span className="font-karla font-600 block" style={{
                 fontSize: '0.74rem', color: 'rgba(222,238,246,0.82)', lineHeight: 1.35, marginTop: 1,
-              }}>{HOTSPOT_DEFS[spot.kind].effect}</span>
+              }}>{HOTSPOT_DEFS[spot.kind].tiers[spot.tier].effect}</span>
             </span>
             <span className="font-karla font-700" style={{
               flexShrink: 0, fontSize: '0.66rem', color: 'rgba(190,212,228,0.55)',
