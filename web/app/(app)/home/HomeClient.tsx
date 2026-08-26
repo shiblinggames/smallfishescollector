@@ -137,25 +137,36 @@ export default function HomeClient({
             A plan view of the six spots at the positions they actually occupy
             out on the chart, so the row you tap here is the building you see
             from the water. */}
+        {/* A SQUARE BOX, because that is what the buildings' numbers mean.
+            `scale` and the x,y percentages are shares of the ISLAND BOX out on
+            the chart, which is square. This preview was a 190px-tall strip the
+            full width of the page, so `scale * 150%` of its WIDTH came out at
+            568px for the Estate — four times the height of the box it was in,
+            and the top of every building was cut off.
+            Square box, `scale * 100%`, and the numbers mean here what they mean
+            out there. Room above the tallest anchor for the lighthouse, which
+            stands well up out of its own. */}
         <div style={{
-          position: 'relative', marginTop: 14, height: 190, borderRadius: 16,
+          position: 'relative', marginTop: 14,
+          width: 'min(100%, 340px)', aspectRatio: '1 / 1', marginInline: 'auto',
+          borderRadius: 16,
           background: 'radial-gradient(ellipse at 50% 62%, #6f8a4e 0%, #55703c 44%, #3d5730 62%, rgba(20,40,54,0) 74%)',
-          border: '1px solid rgba(180,214,232,0.16)', overflow: 'hidden',
+          border: '1px solid rgba(180,214,232,0.16)',
         }}>
           {standing.map((b, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={i} src={b.art} alt="" draggable={false} style={{
               position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
-              width: `${b.scale * 150}%`, maxWidth: 'none',
+              width: `${b.scale * 100}%`, maxWidth: 'none',
               transform: 'translate(-50%, -100%)',
               filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.45))',
             }} />
           ))}
-          {standing.length <= 1 && (
+          {standing.length <= 2 && (
             <p className="font-karla" style={{
-              position: 'absolute', left: 0, right: 0, bottom: 10, textAlign: 'center',
-              fontSize: '0.76rem', color: 'rgba(226,238,246,0.7)', margin: 0,
-            }}>Six places to build. Nothing on five of them yet.</p>
+              position: 'absolute', left: 0, right: 0, bottom: 8, textAlign: 'center',
+              fontSize: '0.74rem', color: 'rgba(226,238,246,0.7)', margin: 0,
+            }}>Six places to build on. Most of them are still rock.</p>
           )}
         </div>
 

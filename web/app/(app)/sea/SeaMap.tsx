@@ -1690,7 +1690,21 @@ export default function SeaMap({
         let diff = target - headRef.current
         while (diff > Math.PI) diff -= Math.PI * 2
         while (diff < -Math.PI) diff += Math.PI * 2
-        const maxTurn = TURN * handlingRef.current * dt
+
+        // ── SHE PIVOTS WHEN SHE IS NOT MOVING ────────────────────────
+        //
+        // The rudder's rate is what it costs to turn a hull that is ALREADY
+        // travelling: you are pushing water sideways to do it. A boat sitting
+        // still has none of that to fight and comes round on the oars in a
+        // fraction of the time.
+        //
+        // Without this, asking for west from a standstill while pointed east
+        // meant one and a third seconds of turning, and the whole time the
+        // helm was pointing the wrong way. Measured before the fix: 73px of
+        // travel EAST, which is what "it sails the opposite way first" was.
+        const speedNow = Math.hypot(vel.current.x, vel.current.y)
+        const stopped = 1 - Math.min(1, speedNow / (SPEED * 0.35))
+        const maxTurn = TURN * handlingRef.current * (1 + stopped * 2.5) * dt
         headRef.current += Math.max(-maxTurn, Math.min(maxTurn, diff))
       }
       const hx = Math.cos(headRef.current)
@@ -1700,10 +1714,33 @@ export default function SeaMap({
       let fwd = vel.current.x * hx + vel.current.y * hy
       let lat = -vel.current.x * hy + vel.current.y * hx
 
-      // 2. Forward speed chases the order. Exponential, so the boat behaves the
-      //    same at 30fps as at 60 — see the note this replaced.
+      // 2. Forward speed chases the order — but only as far as the bow is
+      //    actually pointing at it.
+      //
+      // ── WHY THE ORDER IS SCALED BY ALIGNMENT ─────────────────────────
+      //
+      // Thrust goes along the HEADING, and the heading takes time to come
+      // round. So a boat asked to reverse used to apply full power down its
+      // old bearing for the whole of the turn: you pushed the stick west and
+      // she gathered way east first, which is not a boat answering slowly, it
+      // is a boat doing the opposite of what it was told.
+      //
+      // `align` is cos²(diff/2): 1 when the bow is on the order, 0.5 across
+      // the beam, and exactly 0 when the order is dead astern. A normal turn
+      // keeps most of its way on, and a reversal makes no way at all until she
+      // has come round — which is the same thing a real hull does, and happens
+      // to be the thing that feels right.
+      //
+      // GUARDED ON want2. Letting go of the stick makes it exactly 0, and
+      // dividing by it gives NaN — which would go straight into the velocity
+      // and stay there, so releasing the helm once would break the boat for the
+      // rest of the session. The value is irrelevant when there is no order,
+      // because the target speed is zero either way.
+      const align = want2 > 0.001
+        ? Math.max(0, 0.5 + 0.5 * ((hx * wx + hy * wy) / want2))
+        : 1
       const kf = 1 - Math.exp(-ACCEL * accelRef.current * dt)
-      fwd += (want2 - fwd) * kf
+      fwd += (want2 * align - fwd) * kf
 
       // 3. THE SLIDE. Sideways speed decays toward nothing; how fast is GRIP.
       //    This is the only line that makes drifting possible, and turning it
