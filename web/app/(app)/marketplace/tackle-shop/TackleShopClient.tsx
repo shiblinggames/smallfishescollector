@@ -4,14 +4,14 @@ import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
-import { RODS, rodGlowClass, isCaptainRod, rodSpeedPct, COMPLETIONIST_TIER } from '@/lib/rods'
+import { RODS, rodGlowClass, isCaptainRod, rodSpeedPct, COMPLETIONIST_TIER, ROD_SELL_RATE } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { motion } from 'framer-motion'
 import { buyHook } from '@/app/(app)/hooks/actions'
-import { buyBait, purchaseRod, equipRod, buyReel, claimCompletionistRod } from './actions'
+import { buyBait, purchaseRod, sellRod, equipRod, buyReel, claimCompletionistRod } from './actions'
 import { getLevelFromXP, getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
@@ -188,6 +188,38 @@ export default function TackleShopClient({
         broadcastDoubloons(result.doubloons)
         setEquippedRod(rodTier)
       }
+    })
+  }
+
+  /**
+   * SELL A ROD BACK.
+   *
+   * The action has existed for a long time and the only door to it was the
+   * fishing page's gear sheet — so a shop with a wall of rods in it could take
+   * your money and not give it back, which is not a shop. Two taps: the card
+   * asks first, because this deletes a rod and refunds a fraction.
+   *
+   * The server allows selling the EQUIPPED rod and auto-equips the free Bamboo
+   * when it does, returning the tier it landed on. Mirrored here rather than
+   * assumed, or the card keeps a highlight on a rod that is gone.
+   */
+  const [sellConfirm, setSellConfirm] = useState<number | null>(null)
+  const [sellingRod, setSellingRod] = useState<number | null>(null)
+
+  function handleSellRod(rodTier: number) {
+    setError(null)
+    hapticTap()
+    setSellConfirm(null)
+    setSellingRod(rodTier)
+    startTransition(async () => {
+      const result = await sellRod(rodTier)
+      setSellingRod(null)
+      if ('error' in result) { setError(result.error); return }
+      hapticCommit()
+      setOwnedRods(result.ownedRods)
+      setEquippedRod(result.rodTier)
+      setDoubloons(result.doubloons)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.doubloons }))
     })
   }
 
@@ -963,6 +995,45 @@ export default function TackleShopClient({
                             }}>
                             {isEquipping ? '…' : 'Equip'}
                           </motion.button>
+                        )}
+                        {/* SELL IT BACK. Only for rods that cost something in
+                            the first place — the free starters and the earned
+                            rods refund nothing, and a button that deletes a rod
+                            for zero is a trap rather than an option. The server
+                            blocks them too; this only stops the button drawing. */}
+                        {owned && rod.cost > 0 && !rod.earnedOnly && (
+                          sellConfirm === rod.tier ? (
+                            <motion.button
+                              onClick={() => handleSellRod(rod.tier)}
+                              disabled={isPending}
+                              whileTap={!isPending ? { scale: 0.97 } : undefined}
+                              className="font-karla font-700 uppercase tracking-[0.08em]"
+                              style={{
+                                padding: '0.5rem 0.95rem', borderRadius: 9,
+                                background: 'rgba(239,68,68,0.16)', border: '1px solid rgba(239,68,68,0.5)',
+                                color: '#f0a0a0', fontSize: '0.66rem',
+                                cursor: isPending ? 'default' : 'pointer',
+                                opacity: sellingRod === rod.tier ? 0.5 : 1,
+                              }}>
+                              {sellingRod === rod.tier
+                                ? '…'
+                                : `Sure? +${Math.floor(rod.cost * ROD_SELL_RATE).toLocaleString()} ⟡`}
+                            </motion.button>
+                          ) : (
+                            <motion.button
+                              onClick={() => { hapticTap(); setSellConfirm(rod.tier) }}
+                              disabled={isPending}
+                              whileTap={!isPending ? { scale: 0.97 } : undefined}
+                              className="font-karla font-700 uppercase tracking-[0.08em]"
+                              style={{
+                                padding: '0.5rem 0.95rem', borderRadius: 9,
+                                background: 'transparent', border: '1px solid rgba(255,255,255,0.16)',
+                                color: '#9a9488', fontSize: '0.66rem',
+                                cursor: isPending ? 'default' : 'pointer',
+                              }}>
+                              Sell
+                            </motion.button>
+                          )
                         )}
                       </div>
                     </div>

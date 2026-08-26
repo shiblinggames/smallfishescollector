@@ -37,3 +37,23 @@ Shop UIs: `web/app/(app)/marketplace/tackle-shop/` and `marketplace/shipyard/`.
 - [progression.md](progression.md) — the level gates.
 - [ship.md](ship.md) — ships here are FISHING ships (crew seats, hold); the combat ship
   is a different system.
+
+
+## Selling rods back
+
+`sellRod` has existed for a long time and its only door was the fishing page's gear sheet —
+so the **tackle shop**, a wall of rods that takes your money, had no way to give any of it
+back. It is on the rod cards now, beside Equip: one tap to arm, a second to confirm, because
+it deletes a rod.
+
+`ROD_SELL_RATE` (0.65) moved from a private const inside the shop's `'use server'` actions
+file into `lib/rods.ts`. The UI needs it to print the refund on the button, and **a
+`'use server'` file silently drops every non-async export** — exporting it from there would
+have compiled and then been `undefined` at runtime.
+
+Free starters and earned rods are excluded from the button as well as blocked server-side:
+they refund nothing, so a button that deletes one for zero is a trap, not an option. 19 of
+the 21 rods are sellable.
+
+Selling the EQUIPPED rod is allowed; the server auto-equips the free Bamboo and returns the
+tier it landed on, which the client mirrors rather than assumes.

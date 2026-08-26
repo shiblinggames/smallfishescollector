@@ -45,7 +45,7 @@ import { seaClock } from '@/lib/seaClock'
  *  always outside the water the harbour prompt owns. */
 const MAINLAND_DOORSTEP =
   (PLACES.find(p => p.id === 'mainland')?.r ?? 250) + 420 + 120
-import { NORTH_WALL, PLACES } from '@/app/(app)/sea/chart'
+import { NORTH_WALL, PLACES, YOON } from '@/app/(app)/sea/chart'
 
 /** World pixels per cell. One trader at most per cell, so this also sets how
  *  close together two of them can ever be.
@@ -579,7 +579,42 @@ export function tradersAround(x: number, y: number, radius: number, day: number,
 /** Parse a claim key back into the numbers that produced it, so the server can
  *  rebuild the trader from a key the client sent WITHOUT trusting anything else
  *  the client said about them. */
+/**
+ * YOON, built the same way everywhere.
+ *
+ * One function, called by the map to draw him and by the server to price him,
+ * so there is no way for the two to disagree about what he is selling or what
+ * he wants for it. His look is written down rather than rolled: he is a person,
+ * not a slot in a table.
+ */
+export function yoonTrader(): Trader {
+  const rod = RODS.find(r => r.tier === YOON.rodTier)
+  return {
+    key: YOON.key,
+    kind: 'talker',
+    name: YOON.name,
+    x: YOON.x, y: YOON.y,
+    line: YOON.line,
+    // Barely moves. Everyone else out here is passing through; he is not.
+    driftR: 26, driftRate: (Math.PI * 2) / 96, driftPhase: 1.7,
+    look: {
+      characterColor: 'default',
+      boatId: 'charcoal',
+      hatId: 'midnight',
+      rodSlug: rod?.slug ?? null,
+      hook: null,
+    },
+    deal: 'rod',
+    rodTier: YOON.rodTier,
+    cost: rod?.cost ?? 350_000,
+  }
+}
+
 export function traderFromKey(key: string, now: number = Date.now()): Trader | null {
+  // HIM FIRST, and without a clock. A runner's key carries the night it belongs
+  // to and expires with it; Yoon is always there, so his key never goes stale.
+  if (key === YOON.key) return yoonTrader()
+
   // A RUNNER'S KEY carries the night it belongs to. Rebuilt only while that
   // night is still running, so a key kept from an earlier cycle buys nothing.
   if (key.startsWith('night:')) {

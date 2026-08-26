@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stampBadges } from '@/lib/badgeGrant'
 import { getBait } from '@/lib/bait'
-import { RODS, isCaptainRod } from '@/lib/rods'
+import { RODS, isCaptainRod, ROD_SELL_RATE } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -122,7 +122,6 @@ export async function purchaseRod(
 // — same casual-recovery mental model across the game ("you get 65% of
 // what you paid back, immediately"). See [[feedback_market_two_lanes]]
 // for why we never go full price-of-purchase on player-initiated sells.
-const ROD_SELL_RATE = 0.65
 
 export async function sellRod(
   rodTier: number,

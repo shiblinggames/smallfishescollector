@@ -36,7 +36,7 @@ import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaClock'
 import { hotspotsAt, hotspotAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
-import { tradersAround, traderPos, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
+import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
@@ -936,7 +936,10 @@ export default function SeaMap({
   useEffect(() => { tradersRef.current = traders }, [traders])
   /** Wanderers AND residents, for proximity and for the patrol writes. */
   const allTradersRef = useRef<Trader[]>([])
-  useEffect(() => { allTradersRef.current = [...residents, ...traders] }, [residents, traders])
+  /** YOON. Written down rather than rolled, permanent, and the only person on
+   *  this sea who sells the rod with his name on it. See chart.ts. */
+  const yoon = useMemo(() => yoonTrader(), [])
+  useEffect(() => { allTradersRef.current = [yoon, ...residents, ...traders] }, [yoon, residents, traders])
   const [tick, setTick] = useState(0)
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
@@ -1636,7 +1639,7 @@ export default function SeaMap({
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
             construction rather than by anyone remembering to match it. */}
-        {[...residents, ...traders].map(t => (
+        {[yoon, ...residents, ...traders].map(t => (
           <TraderBoat key={t.key} trader={t}
             // The boats stay — they are part of the sea and the sea is the
             // backdrop. Their NAME PLATES go: you cannot hail anyone with a

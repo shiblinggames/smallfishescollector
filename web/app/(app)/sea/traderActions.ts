@@ -24,7 +24,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
-import { PLACES, RESIDENTS } from '@/app/(app)/sea/chart'
+import { PLACES, RESIDENTS, YOON } from '@/app/(app)/sea/chart'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 
@@ -289,12 +289,21 @@ export async function buyRunnerRod(traderKey: string): Promise<
   const admin = createAdminClient()
   const today = seaDay()
 
-  const { count } = await admin
-    .from('sea_trader_deals')
-    .select('trader_key', { count: 'exact', head: true })
-    .eq('user_id', user.id).eq('sea_day', today)
-  if ((count ?? 0) >= DEALS_PER_DAY) {
-    return { error: 'Word travels. Nobody else out here will deal with you today.' }
+  // THE CAP DOES NOT APPLY TO YOON.
+  //
+  // It exists because the wanderers are a daily rotation and skipping the
+  // sailing should not get you the best six deals on the chart. Yoon sells one
+  // thing, once ever — you cannot own the rod twice — so a cap on him is not a
+  // bound on anything, it is a way to make somebody burn a day's trading to
+  // discover they were one deal short of a rod they sailed an hour for.
+  if (trader.key !== YOON.key) {
+    const { count } = await admin
+      .from('sea_trader_deals')
+      .select('trader_key', { count: 'exact', head: true })
+      .eq('user_id', user.id).eq('sea_day', today)
+    if ((count ?? 0) >= DEALS_PER_DAY) {
+      return { error: 'Word travels. Nobody else out here will deal with you today.' }
+    }
   }
 
   // Already own it? Say so before taking the claim, or a captain burns one of

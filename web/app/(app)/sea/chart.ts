@@ -287,6 +287,35 @@ export const LANDMARKS: {
   { art: '/sea/monolith.png', x: -17571, y:   8736, size: 310, solid: true },
 ]
 
+/**
+ * YOON, who is not generated.
+ *
+ * Everyone else on this sea comes out of a hash — a name, a boat and an offer
+ * derived from a cell and a day, which is the right way to fill an ocean and
+ * exactly the wrong way to make one person matter. Yoon is written down.
+ *
+ * He is moored in the Ancient Deep because that is the water his rod is for:
+ * tier 20 asks Fishing 75, and so does the band he sits in. Finding him is the
+ * whole errand — the chart is 22,600 pixels deep and he is one boat at the far
+ * end of it.
+ *
+ * PERMANENT, like the zone buyers and unlike the wanderers. A one-of-a-kind rod
+ * behind a trader who might not be there today is not a destination, it is a
+ * slot machine.
+ */
+export const YOON = {
+  key: 'yoon',
+  name: 'Yoon',
+  /** Far out in the Ancient Deep, off the eastern arc — away from the buyer
+   *  and away from the band's landmarks. Asserted, not eyeballed. */
+  x: 13820, y: 9880,
+  zoneId: 'ancient_deep',
+  /** The rod he carries, and what he wants for it. Both re-derived server-side
+   *  from the rod table; the number here is only for the panel. */
+  rodTier: 20,
+  line: "You've the streak for it, or you haven't. Rod won't teach you that. It just stops wasting it.",
+} as const
+
 /** The zone buyers, one per band, in absolute world coordinates. */
 export const RESIDENTS: {
   zoneId: string; name: string; line: string; x: number; y: number; rate: number

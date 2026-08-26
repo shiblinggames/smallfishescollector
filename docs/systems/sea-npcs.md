@@ -183,3 +183,28 @@ sky already says what time it is in colour — the corner only confirms it at a 
 `PHASE_GLYPH` lives beside the phases so a new one cannot be added without a shape; the label
 survives as `title` and `aria-label`. Dusk and dawn are the same half-disc mirrored, one
 sinking and one climbing, because that is the only pair colour alone could not separate.
+
+
+## Yoon — the one NPC who is not generated
+
+Everyone else on this sea comes out of a hash: a name, a boat and an offer derived from a
+cell and a day. That is the right way to fill an ocean and exactly the wrong way to make one
+person matter. **Yoon is written down** (`YOON` in `chart.ts`, built by `yoonTrader()`).
+
+- **Permanent**, like the zone buyers and unlike the wanderers. A one-of-a-kind rod behind a
+  trader who might not be there today is not a destination, it is a slot machine.
+- **Moored in the Ancient Deep** at (13820, 9880) — R=16,988, inside the 16,000–22,600 band,
+  986px clear of every solid landmark. That is the water his rod is for: tier 20 asks Fishing
+  75 and so does the band. About 55 seconds' sail from the dock on a stock hull.
+- **`Yoon's Locked-In Rod` is now `traderOnly`**, so it leaves the tackle shop catalogue
+  entirely. A rod named after somebody that you buy off a shelf is just a rod with a name on
+  it. The 350,000 is unchanged — the cost of that rod was never the money.
+- **Outside the daily deal cap.** The cap bounds a daily rotation of wanderers; Yoon sells one
+  thing, once ever, and you cannot own the rod twice. Capping him would only ever make
+  somebody burn a day's trading to discover they were one deal short of a rod they had just
+  sailed an hour for.
+- `traderFromKey('yoon')` returns him **without consulting the clock** — a runner's key
+  carries the night it belongs to and expires with it; his never goes stale.
+
+`yoonTrader()` is one function called by both the map (to draw him) and the server (to price
+him), so the two cannot disagree about what he is selling or what he wants for it.

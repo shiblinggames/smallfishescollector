@@ -241,6 +241,18 @@ export const RODS: RodDef[] = [
     color: '#c084fc', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     lockedIn: true,
+    /**
+     * YOON SELLS THIS. NOBODY ELSE DOES.
+     *
+     * `traderOnly` takes it out of the tackle shop's catalogue entirely: the
+     * rod is named after him, and a rod named after somebody that you buy off a
+     * shelf is just a rod with a name on it. He is moored in the Ancient Deep —
+     * the same Fishing 75 the rod itself asks for — so getting it means sailing
+     * the whole chart and finding him.
+     *
+     * The 350,000 is unchanged. The cost of this rod was never the money.
+     */
+    traderOnly: true,
     // Glow is dynamic (cyan→gold→prismatic by streak) and driven client-side; the
     // static glowType is the streak-0 baseline.
     slug: 'rod_yoons', glow: true, glowType: 'lockedin',
@@ -315,6 +327,18 @@ export const BUYABLE_ROD_TIERS: number[] = RODS.filter(r => !r.earnedOnly && !r.
 
 /** Rods the shop will not sell. The rare traders read this rather than a list
  *  of their own, so moving a rod on or off the shelf is one flag in one place. */
+/**
+ * WHAT A ROD FETCHES BACK, as a fraction of what it cost.
+ *
+ * Lived as a private const inside the tackle shop's `'use server'` actions
+ * file, which meant the shop's own UI could not read it to print the number on
+ * the button — and a 'use server' file SILENTLY DROPS every non-async export,
+ * so exporting it from there would have compiled and then been undefined at
+ * runtime. It is a constant, so it belongs in a plain module beside the rods it
+ * prices.
+ */
+export const ROD_SELL_RATE = 0.65
+
 export const TRADER_ONLY_RODS = RODS.filter(r => r.traderOnly)
 
 // ── Completionist Rod forge ───────────────────────────────────────────────────
