@@ -89,6 +89,41 @@ export type SeaLog = {
   zoneRewardsClaimed: Record<string, boolean>
 }
 
+/**
+ * THE STACK, in one place.
+ *
+ * These were scattered inline and three of the screen-space overlays had no
+ * z-index at all — which does not mean "on top", it means `auto`, and a
+ * positioned element with `auto` paints BELOW one with any positive value. The
+ * world layer is 1, so the action button, the water banner and the compass were
+ * all painting underneath it: fine over open water, and hidden the moment an
+ * island or a landmark happened to be in the same part of the screen.
+ *
+ * Anything the player can READ or PRESS belongs above the world. The world is
+ * scenery; the button that gets you into it is not.
+ */
+const Z = {
+  /** The water's colour, and the two moving surface layers over it. */
+  backdrop: 0,
+  /** Islands, landmarks, other boats. Everything in world coordinates. */
+  world: 1,
+  /** Off-screen direction markers. Above the world so an arrow is never behind
+   *  an island, below the boat so it never crosses the captain. */
+  compass: 3,
+  /** The at-anchor ripples, and the player's boat. */
+  ripples: 4,
+  boat: 5,
+  /** The full-screen "Entering the Abyss" flourish. */
+  crossing: 6,
+  /** Readouts: where you are, what time it is. */
+  hud: 12,
+  /** The action button — go ashore, fish here, hail. NOTHING covers this. */
+  action: 13,
+  /** The thumb helm, which sits under the action button and must stay on top
+   *  of everything else so a drag is never intercepted. */
+  helm: 14,
+} as const
+
 const GROUND = 0.58
 
 /**
@@ -325,27 +360,20 @@ export function inBand(p: Vec, place: Place): boolean {
 type SeaLook = { css: string; lum: number }
 
 /**
- * HOW OFTEN THE BACKDROP IS ALLOWED TO CHANGE, in world pixels.
+ * HOW FAR THE BOAT MUST MOVE before the backdrop is recomputed, in world pixels.
  *
- * The palette is a full-viewport gradient written to `wrap.style.background`,
- * which repaints the entire screen. `darkness` was quantized to 24 steps for
- * exactly this reason and the fix stopped there — but the blend also depends on
- * WHERE THE BOAT IS, and that is continuous, so the moment you were under way
- * it went back to rebuilding the whole backdrop on nearly every frame. That is
- * the flicker.
+ * The palette is a full-viewport gradient and rebuilding it is not free, so it
+ * is not rebuilt sixty times a second. A band is two to three thousand pixels
+ * across and its palette moves maybe twenty units over that, so 96px is well
+ * under one unit of 255 — a step nobody can see.
  *
- * Snapped to a 64px grid the colour changes about seven times a second at full
- * speed instead of sixty. A band is two to three thousand pixels across and its
- * palette moves maybe twenty units over that, so 64px is well under one unit of
- * 255 — a step nobody can see, in place of a repaint everybody can.
+ * Applied as a DEADBAND in the loop, not by rounding the position here. Rounding
+ * puts a boundary under a stationary boat and float noise flips it across that
+ * boundary every frame; see the loop.
  */
-const SEA_STEP = 64
+const SEA_STEP = 96
 
-function seaAt(raw: Vec, darkness = 0): SeaLook {
-  const p: Vec = {
-    x: Math.round(raw.x / SEA_STEP) * SEA_STEP,
-    y: Math.round(raw.y / SEA_STEP) * SEA_STEP,
-  }
+function seaAt(p: Vec, darkness = 0): SeaLook {
   // THE OPEN OCEAN GETS A SMALL VOTE, NOT A BIG ONE.
   //
   // It used to get 0.55, which meant that even sitting dead in the middle of
@@ -1074,6 +1102,14 @@ export default function SeaMap({
     // Last painted backdrop, so an unchanged one costs a string compare rather
     // than a repaint of the whole screen.
     let lastCss = ''
+    /** Where the backdrop was last computed, and at what darkness. The deadband
+     *  is measured against these, never against a rounded position. */
+    const lookAt = { x: Infinity, y: Infinity }
+    let lastDark = -1
+    /** How bright this water is, held between recomputes. The pale surface
+     *  layer's opacity reads it every frame — that write is a composite, not a
+     *  repaint, so it is free and does not want the deadband's coarseness. */
+    let lum = seaAt(HOME).lum
 
     const step = (now: number) => {
       if (dialUpRef.current) {
@@ -1308,10 +1344,28 @@ export default function SeaMap({
       // three units out of 255, which is not visible; a strobing screen very
       // much is.
       const dark = Math.round(clk.darkness * 24) / 24
-      const look = seaAt(pos.current, dark)
-      if (wrap && look.css !== lastCss) {
-        lastCss = look.css
-        wrap.style.background = look.css
+      // A DEADBAND, not a grid.
+      //
+      // Snapping the position to a 64px grid was the wrong shape of fix: a boat
+      // sitting on a cell boundary has its rounding flipped back and forth by
+      // float noise, so the backdrop alternated between two colours every frame
+      // — which is a far more visible flicker than the smooth drift it replaced.
+      //
+      // Measuring from the position the last look was TAKEN at cannot do that.
+      // Once computed at P nothing changes until you are a full step from P, so
+      // there is no boundary to sit on and no way back to the previous value
+      // without actually sailing there.
+      const movedFar = Math.hypot(pos.current.x - lookAt.x, pos.current.y - lookAt.y) >= SEA_STEP
+      if (movedFar || dark !== lastDark) {
+        lookAt.x = pos.current.x; lookAt.y = pos.current.y
+        lastDark = dark
+        const look = seaAt(pos.current, dark)
+        lum = look.lum
+        const sky = skyRef.current
+        if (sky && look.css !== lastCss) {
+          lastCss = look.css
+          sky.style.background = look.css
+        }
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
@@ -1334,7 +1388,7 @@ export default function SeaMap({
         pale.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
         // The pale layer is light ON water, so there has to be less of it in
         // water that is not catching any. One opacity write, no repaint.
-        pale.style.opacity = String(0.25 + look.lum * 0.75)
+        pale.style.opacity = String(0.25 + lum * 0.75)
       }
       const boat = boatRef.current
       if (boat) {
@@ -1415,17 +1469,29 @@ export default function SeaMap({
         // Without this a drag on a touchscreen is a scroll gesture and the
         // pointermove events stop coming the moment the browser claims it.
         touchAction: 'none',
-        // Background is written every frame by the loop — see seaAt. This is
-        // only the colour before the first frame lands.
-        background: seaAt(HOME, seaClock().darkness).css,
+        // A STATIC BASE, and nothing else. The moving gradient used to be
+        // written here — on the element that contains the world, the surface
+        // tiles, the boat and every overlay — so every recolour invalidated
+        // that entire subtree's raster. That is the flicker. It lives on its
+        // own layer now (see skyRef below); this is only here so there is never
+        // a frame of white before the first paint.
+        background: '#0b1a24',
       }}
       className={`sea-surface${dialUp ? ' sea-frozen' : ''}`}
     >
+      {/* THE WATER'S COLOUR, on a layer of its own.
+          Under everything and containing nothing, so repainting it repaints one
+          full-screen gradient and not the world sitting on top of it. */}
+      <div ref={skyRef} aria-hidden style={{
+        position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
+        background: seaAt(HOME, seaClock().darkness).css,
+      }} />
+
       {/* THE SURFACE, under everything. Two repeating-background layers that
           the loop only ever TRANSFORMS — see seaTiles for why this stopped
           being a canvas. Oversized by a tile in each direction so a wrapped
           offset never exposes an edge. */}
-      <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: Z.backdrop, overflow: 'hidden', pointerEvents: 'none' }}>
         {tiles && (
           <>
             <div ref={deepRef} style={{
@@ -1447,7 +1513,7 @@ export default function SeaMap({
       </div>
 
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
-      <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: 1, willChange: 'transform' }}>
+      <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: Z.world, willChange: 'transform' }}>
         {PLACES.map(p => (
           <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
         ))}
@@ -1543,7 +1609,7 @@ export default function SeaMap({
           }}
           onClick={e => e.stopPropagation()}
           style={{
-            position: 'absolute', zIndex: 14,
+            position: 'absolute', zIndex: Z.helm,
             left: '50%', bottom: 92, transform: 'translateX(-50%)',
             width: HELM_R * 2, height: HELM_R * 2, borderRadius: '50%',
             touchAction: 'none',
@@ -1571,7 +1637,7 @@ export default function SeaMap({
           WATERLINE: at plain screen centre these sat around the captain's
           chest, which is where they were floating above the boat. */}
       <div ref={rippleRef} aria-hidden style={{
-        position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
+        position: 'absolute', inset: 0, zIndex: Z.ripples, pointerEvents: 'none',
         transform: `translate(${WATERLINE_X}px, ${WATERLINE_Y}px)`,
       }}>
         <div className="sea-ripple" />
@@ -1590,7 +1656,7 @@ export default function SeaMap({
           actually means. */}
       <div ref={boatRef}
         style={{
-          position: 'absolute', left: '50%', top: '50%', zIndex: 5,
+          position: 'absolute', left: '50%', top: '50%', zIndex: Z.boat,
           willChange: 'transform', pointerEvents: 'none',
         }}>
         <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
@@ -1611,7 +1677,7 @@ export default function SeaMap({
           person; what water you happen to be floating in can wait. */}
       {!fishingIn && nearTrader && !hailing && (
         <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: 12,
+          position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: Z.action,
           display: 'flex', justifyContent: 'center', padding: '0 1rem',
         }}>
           <button
@@ -1663,7 +1729,7 @@ export default function SeaMap({
           because there is no bar to share a row with. */}
       {!fishingIn && (
         <div aria-hidden style={{
-          position: 'absolute', top: 10, left: 12, zIndex: 12, pointerEvents: 'none',
+          position: 'absolute', top: 10, left: 12, zIndex: Z.hud, pointerEvents: 'none',
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '0.24rem 0.6rem', borderRadius: 999,
           background: 'rgba(6,12,18,0.7)',
@@ -2427,7 +2493,11 @@ function Prompt({ place, locked, level, onEnter, tick }: {
   return (
     <div key={tick > -1 ? place.id : place.id}
       style={{
-        position: 'absolute', left: 0, right: 0, bottom: 22,
+        // NOTHING COVERS THIS. It had no z-index, which is `auto`, which
+        // paints below the world layer — so the one button that gets you into
+        // a zone was hidden behind any island or landmark that happened to be
+        // in the bottom of the screen.
+        position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: Z.action,
         display: 'flex', justifyContent: 'center', padding: '0 1rem',
       }}>
       <button
@@ -2516,7 +2586,7 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
           exit={{ opacity: 0, transition: { duration: 0.75, ease: 'easeOut' } }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
           style={{
-            position: 'absolute', inset: 0, zIndex: 6,
+            position: 'absolute', inset: 0, zIndex: Z.crossing,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
             // NEVER eats a tap. The boat sails on underneath this.
@@ -2609,6 +2679,7 @@ function WaterBanner({ place, locked, lowered }: {
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           style={{
             position: 'absolute', left: 0, right: 0, top: lowered ? 76 : 18,
+            zIndex: Z.hud,
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             pointerEvents: 'none',
           }}>
@@ -2835,7 +2906,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
         const lead = m.dist
         return (
           <div key={m.id} aria-hidden style={{
-            position: 'absolute', left: '50%', top: '50%',
+            position: 'absolute', left: '50%', top: '50%', zIndex: Z.compass,
             transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             pointerEvents: 'none',

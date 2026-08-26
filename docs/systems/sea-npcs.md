@@ -110,17 +110,17 @@ honest way to answer this is to walk every cell the hull can reach. `web/scripts
 does that (`npx tsx scripts/count-sea-npcs.mts`). Re-run it after any change to `occupancy`,
 `CELL`, the chart's radius or the north wall.
 
-Measured over 60 days, chart radius 14400, south of `NORTH_WALL`:
+Measured over 60 days, chart radius 22600, south of `NORTH_WALL`:
 
 | | |
 |---|---|
-| Wanderers by daylight | 10–29, **average 19** |
-| Wanderers after dark | 23–49, **average 37** |
-| Night adds | **17**, all of them blockade runners carrying a trader-only rod |
-| Talkers | ~6 a day, **33%** of the daytime sea (the `isTalker` roll is 0.4) |
+| Wanderers by daylight | 24–44, **average 34** |
+| Wanderers after dark | 58–89, **average 76** |
+| Night adds | **42**, all of them blockade runners carrying a trader-only rod |
+| Talkers | ~13 a day, **37%** of the daytime sea (the `isTalker` roll is 0.4) |
 | Resident buyers | **5** — permanent, one per band, not part of the roll |
 
-So roughly **24 people on the water by day and 42 after dark**, of whom 5 are always in the
+So roughly **39 people on the water by day and 81 after dark**, of whom 5 are always in the
 same place. Nobody is repeated: the hash makes a cell's occupant unique to that cell and day.
 
 ### Talkers carry the game's mechanics now

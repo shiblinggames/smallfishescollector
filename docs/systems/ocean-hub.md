@@ -65,13 +65,22 @@ target live in refs, never state — this loop runs at 60fps.
 fanning SOUTH from it.** The Harbour is the divide: expeditions live north of the Mainland,
 everything to do with fishing lives south. Depth is simply how far out you have sailed.
 
-| band | inner | outer | Fishing level |
-|---|---|---|---|
-| The Shallows | 1400 | 3400 | 1 |
-| Open Waters | 3400 | 5800 | 15 |
-| The Deep | 5800 | 8400 | 30 |
-| The Abyss | 8400 | 11200 | 50 |
-| The Ancient Deep | 11200 | 14400 | 75 |
+| band | inner | outer | width | Fishing level |
+|---|---|---|---|---|
+| The Shallows | 1400 | 3800 | 2400 | 1 |
+| Open Waters | 3800 | 6900 | 3100 | 15 |
+| The Deep | 6900 | 10900 | 4000 | 30 |
+| The Abyss | 10900 | 16000 | 5100 | 50 |
+| The Ancient Deep | 16000 | 22600 | 6600 | 75 |
+
+**Each band is ~29% wider than the one inside it.** They grew before too, but only from
+2,000 to 3,200 across all five, which is not a progression anyone can feel. The Ancient Deep
+is now nearly three times the Shallows. Crossing the Shallows is 5s at top speed; crossing
+the Ancient Deep is 14s. Reaching it from the dock is 33s at top speed, 53s on a stock hull —
+long, and deliberately: it needs Fishing 75, the hull refit exists to shorten it, and the
+boat now starts where you left it, so the haul is paid once per destination rather than once
+per session.
+
 
 This replaced five discs scattered along an east-west line. With discs, "deeper" was a
 direction you had to memorise, only the corridor the discs happened to lie on was fishable,
@@ -249,6 +258,40 @@ visibly the building you sailed past.
 `PopupShell` does **not** portal, so it is a DOM child of the map — and the map steers on
 click and starts a heading on pointerdown. The chooser is wrapped in a
 `stopPropagation` div or dismissing it also puts the helm over.
+
+## The stack
+
+`Z` in SeaMap, and it is written down because three screen-space overlays had **no z-index at
+all** — which is not "on top", it is `auto`, and a positioned element with `auto` paints
+*below* one with any positive value. The world layer is 1, so the action button, the water
+banner and the compass were all painting underneath it: invisible the moment an island or a
+landmark was in the same part of the screen.
+
+`backdrop 0 · world 1 · compass 3 · ripples 4 · boat 5 · crossing 6 · hud 12 · action 13 · helm 14`
+
+The rule: **anything the player can read or press belongs above the world.** The world is
+scenery; the button that gets you into it is not.
+
+## The backdrop, and why it is its own layer
+
+The water's colour is a full-viewport gradient, and it used to be written to `wrap.style.background`
+— the element that *contains* the world, the surface tiles, the boat and every overlay. Every
+recolour invalidated that whole subtree. It has its own empty layer under everything now, so
+repainting it repaints one gradient and nothing else.
+
+Two attempts at the rate before that landed:
+
+1. Quantizing `darkness` to 24 steps. Correct, and it fixed the dusk strobe — but the blend
+   also depends on **where the boat is**, which is continuous, so under way it was still
+   rebuilding on nearly every frame.
+2. Snapping the *position* to a 64px grid. **This made it worse.** A boat sitting on a cell
+   boundary has its rounding flipped by float noise every frame, so the colour alternated
+   between two values — a far more visible flicker than the smooth drift it replaced.
+
+The fix is a **deadband**, measured from the position the last look was taken at: once
+computed at P, nothing changes until the boat is a full `SEA_STEP` (96px) from P. There is no
+boundary to sit on. `lum` is held between recomputes because the pale surface layer reads it
+every frame — that write is a composite, not a repaint.
 
 ## The compass
 

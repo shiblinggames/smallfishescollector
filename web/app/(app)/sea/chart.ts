@@ -46,6 +46,17 @@ export type Place = {
    * have sailed, from anywhere along the coast. It also makes the whole south
    * fishable rather than only the corridor the discs happened to lie along.
    *
+   * EACH BAND IS WIDER THAN THE ONE INSIDE IT, by about 29% — 2,400 pixels
+   * across the Shallows and 6,600 across the Ancient Deep. Concentric rings
+   * make that nearly free to reason about and it does two things at once: the
+   * deep water is a longer haul to cross, which is what makes it feel deep, and
+   * the outer rings have the circumference to hold more without crowding.
+   *
+   * Sized so the crossing is a voyage rather than a hop. It matters less than
+   * it would have that the outermost is far out: the boat now starts where you
+   * left it, so a long haul is paid once for a destination rather than once per
+   * session, and the hull refit exists to shorten it.
+   *
    * The north belongs to expeditions. The Harbour divides the two.
    */
   inner?: number
@@ -160,8 +171,8 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=shallows',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
-    x: 0, y: 2400, r: 1000,
-    inner: 1400, outer: 3400,
+    x: 0, y: 2600, r: 1200,
+    inner: 1400, outer: 3800,
     art: '/shallows.jpg',
     sea: ['#123038', '#2b5a5e', '#6f9a95'] as [string, string, string],
     kind: 'water', minLevel: 1,
@@ -171,8 +182,8 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=open_waters',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
-    x: 0, y: 4600, r: 1200,
-    inner: 3400, outer: 5800,
+    x: 0, y: 5350, r: 1550,
+    inner: 3800, outer: 6900,
     art: '/openwaters.jpg',
     sea: ['#0e2836', '#234c60', '#5a8298'] as [string, string, string],
     kind: 'water', minLevel: 15,
@@ -182,8 +193,8 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=deep',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
-    x: 0, y: 7100, r: 1300,
-    inner: 5800, outer: 8400,
+    x: 0, y: 8900, r: 2000,
+    inner: 6900, outer: 10900,
     art: '/deep.jpg',
     sea: ['#0a1d2c', '#173a52', '#3f6480'] as [string, string, string],
     kind: 'water', minLevel: 30,
@@ -193,8 +204,8 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=abyss',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
-    x: 0, y: 9800, r: 1400,
-    inner: 8400, outer: 11200,
+    x: 0, y: 13450, r: 2550,
+    inner: 10900, outer: 16000,
     art: '/abyss.jpg',
     sea: ['#060f1a', '#0f2438', '#274257'] as [string, string, string],
     kind: 'water', minLevel: 50,
@@ -204,8 +215,8 @@ export const PLACES: Place[] = [
     href: '/fishing?zone=ancient_deep',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
-    x: 0, y: 12800, r: 1600,
-    inner: 11200, outer: 14400,
+    x: 0, y: 19300, r: 3300,
+    inner: 16000, outer: 22600,
     art: '/ancient.jpg',
     sea: ['#07101a', '#16202f', '#31363f'] as [string, string, string],
     kind: 'water', minLevel: 75,
@@ -223,35 +234,41 @@ export const LANDMARKS: {
   art: string; x: number; y: number; size: number
   solid?: boolean; sway?: 'bob' | 'rock'
 }[] = [
-  { art: '/sea/buoy.png', x:   2498, y:    631, size: 130, sway: 'bob' },
-  { art: '/sea/islet.png', x:   1440, y:   1652, size: 210, solid: true },
-  { art: '/sea/buoy.png', x:     73, y:   1856, size: 120, sway: 'bob' },
-  { art: '/sea/islet.png', x:  -1352, y:   1309, size: 190, solid: true },
-  { art: '/sea/buoy.png', x:  -2516, y:   1596, size: 130, sway: 'bob' },
-  { art: '/sea/islet.png', x:   4764, y:   1534, size: 190, solid: true },
-  { art: '/sea/buoy.png', x:   3135, y:   2829, size: 130, sway: 'bob' },
-  { art: '/sea/wreck.png', x:     74, y:   4824, size: 280, solid: true, sway: 'rock' },
-  { art: '/sea/buoy.png', x:  -1942, y:   4073, size: 120, sway: 'bob' },
-  { art: '/sea/islet.png', x:  -2710, y:   3353, size: 200, solid: true },
-  { art: '/sea/wreck.png', x:  -3918, y:   1888, size: 300, solid: true, sway: 'rock' },
-  { art: '/sea/wreck.png', x:   6823, y:   3865, size: 330, solid: true, sway: 'rock' },
-  { art: '/sea/buoy.png', x:   3438, y:   6354, size: 120, sway: 'bob' },
-  { art: '/sea/rig.png', x:    625, y:   6273, size: 300, solid: true },
-  { art: '/sea/wreck.png', x:  -2960, y:   6562, size: 300, solid: true, sway: 'rock' },
-  { art: '/sea/buoy.png', x:  -4181, y:   6440, size: 130, sway: 'bob' },
-  { art: '/sea/rig.png', x:  -6956, y:   2281, size: 320, solid: true },
-  { art: '/sea/rig.png', x:   9492, y:   3708, size: 350, solid: true },
-  { art: '/sea/bones.png', x:   6523, y:   6993, size: 360, solid: true },
-  { art: '/sea/wreck.png', x:   2266, y:   8971, size: 300, solid: true, sway: 'rock' },
-  { art: '/sea/rig.png', x:  -2321, y:   9440, size: 320, solid: true },
-  { art: '/sea/bones.png', x:  -7481, y:   6930, size: 340, solid: true },
-  { art: '/sea/wreck.png', x:  -9779, y:   2197, size: 310, solid: true, sway: 'rock' },
-  { art: '/sea/monolith.png', x:  12242, y:   5129, size: 320, solid: true },
-  { art: '/sea/bones.png', x:   9170, y:   9966, size: 400, solid: true },
-  { art: '/sea/monolith.png', x:   4010, y:  11935, size: 280, solid: true },
-  { art: '/sea/bones.png', x:  -3385, y:  12507, size: 360, solid: true },
-  { art: '/sea/monolith.png', x:  -9617, y:   8242, size: 300, solid: true },
-  { art: '/sea/bones.png', x: -12171, y:   3707, size: 380, solid: true },
+  { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
+  { art: '/sea/islet.png', x:   1003, y:   2620, size: 210, solid: true },
+  { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },
+  { art: '/sea/islet.png', x:   -625, y:   1793, size: 190, solid: true },
+  { art: '/sea/buoy.png', x:  -2466, y:   2056, size: 130, sway: 'bob' },
+  { art: '/sea/islet.png', x:   4282, y:   1354, size: 190, solid: true },
+  { art: '/sea/buoy.png', x:   4002, y:   3221, size: 130, sway: 'bob' },
+  { art: '/sea/wreck.png', x:   1553, y:   4276, size: 280, solid: true, sway: 'rock' },
+  { art: '/sea/buoy.png', x:  -2183, y:   5235, size: 120, sway: 'bob' },
+  { art: '/sea/islet.png', x:  -3850, y:   3714, size: 200, solid: true },
+  { art: '/sea/wreck.png', x:  -4955, y:   3446, size: 300, solid: true, sway: 'rock' },
+  { art: '/sea/wreck.png', x:   6724, y:   3748, size: 330, solid: true, sway: 'rock' },
+  { art: '/sea/buoy.png', x:   5913, y:   7457, size: 120, sway: 'bob' },
+  { art: '/sea/rig.png', x:   2884, y:   7715, size: 300, solid: true },
+  { art: '/sea/wreck.png', x:  -1816, y:   9425, size: 300, solid: true, sway: 'rock' },
+  { art: '/sea/buoy.png', x:  -3984, y:   7299, size: 130, sway: 'bob' },
+  { art: '/sea/rig.png', x:  -7216, y:   7113, size: 320, solid: true },
+  { art: '/sea/wreck.png', x:  -7509, y:   3960, size: 290, solid: true, sway: 'rock' },
+  { art: '/sea/rig.png', x:  12336, y:   5038, size: 350, solid: true },
+  { art: '/sea/bones.png', x:   9759, y:  10682, size: 360, solid: true },
+  { art: '/sea/wreck.png', x:   4725, y:  12320, size: 300, solid: true, sway: 'rock' },
+  { art: '/sea/rig.png', x:   1010, y:  12521, size: 320, solid: true },
+  { art: '/sea/bones.png', x:  -3642, y:  12420, size: 340, solid: true },
+  { art: '/sea/wreck.png', x:  -7585, y:   9424, size: 310, solid: true, sway: 'rock' },
+  { art: '/sea/rig.png', x:  -9967, y:   9418, size: 330, solid: true },
+  { art: '/sea/bones.png', x: -11330, y:   3934, size: 350, solid: true },
+  { art: '/sea/monolith.png', x:  19543, y:   4937, size: 320, solid: true },
+  { art: '/sea/bones.png', x:  14517, y:  10809, size: 400, solid: true },
+  { art: '/sea/monolith.png', x:   9890, y:  16479, size: 280, solid: true },
+  { art: '/sea/bones.png', x:   9004, y:  18786, size: 360, solid: true },
+  { art: '/sea/monolith.png', x:    164, y:  18391, size: 300, solid: true },
+  { art: '/sea/bones.png', x:  -7802, y:  19179, size: 380, solid: true },
+  { art: '/sea/monolith.png', x:  -9475, y:  17115, size: 340, solid: true },
+  { art: '/sea/bones.png', x: -15852, y:  10811, size: 370, solid: true },
+  { art: '/sea/monolith.png', x: -17571, y:   8736, size: 310, solid: true },
 ]
 
 /** The zone buyers, one per band, in absolute world coordinates. */
@@ -260,19 +277,19 @@ export const RESIDENTS: {
 }[] = [
   { zoneId: 'shallows', name: 'Meg Corrin',
     line: "Bring it here and I'll weigh it here. Ashore they'll give you more, and a week to wait for it.",
-    x: 1127, y: 2119, rate: 0.78 },
+    x: 1416, y: 2181, rate: 0.78 },
   { zoneId: 'open_waters', name: 'Bent Pell',
     line: "Fish don't keep and neither does my patience. Coin now, or row it home yourself.",
-    x: 640, y: 4555, rate: 0.8 },
+    x: 559, y: 5321, rate: 0.8 },
   { zoneId: 'deep', name: 'Old Marlow',
     line: "Long way back to the dock from here. I've made a living out of exactly that.",
-    x: -1233, y: 6992, rate: 0.82 },
+    x: -1545, y: 8765, rate: 0.82 },
   { zoneId: 'abyss', name: 'Quiet Fitch',
     line: "Not many bring me anything this deep. I pay for that, not for the fish.",
-    x: -4296, y: 8808, rate: 0.84 },
+    x: -5896, y: 12089, rate: 0.84 },
   { zoneId: 'ancient_deep', name: 'Grey Nance',
     line: "You went down there and came back up. Whatever's in your hold, I'll take it and ask nothing.",
-    x: -9208, y: 8892, rate: 0.86 },
+    x: -14343, y: 12914, rate: 0.86 },
 ]
 
 /**
