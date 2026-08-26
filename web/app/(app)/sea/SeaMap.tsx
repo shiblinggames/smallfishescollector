@@ -2681,19 +2681,24 @@ const SeaMark = memo(function SeaMark({ m, i }: {
   return (
     <div style={{ position: 'absolute', left: m.x, top: m.y, pointerEvents: 'none' }}>
       {/* ── WHERE IT MEETS THE WATER ──────────────────────────────────────
-          THIRD ATTEMPT, and a different mechanism from the two that failed.
-          Both of those drew something UNDERNEATH a sprite whose bottom edge was
-          still crisp — a dark ellipse, then a pale one — and a hard-edged object
-          with a smudge under it reads as hovering, every time. The smudge was
-          never the problem; the crisp edge was.
+          NOTHING IS DRAWN UNDER IT. FOURTH TIME OF ASKING.
 
-          So the sprite's own base fades out instead (see SUBMERGE), and this is
-          only the disturbance where it breaks through: pale, not dark, because
-          water piles up and catches light around something standing in it
-          rather than casting a shadow on itself. It lives in the OUTER wrapper,
-          which is still on the squashed plane, so it comes out an ellipse lying
-          flat the way a ring on the surface actually would. */}
-      {isLand ? (
+          A dark ellipse, then a pale one, then a pale one again dressed up as
+          foam and called a "wash". Every version reads the same way, because
+          the objection was never the colour: a discrete shape sitting beneath
+          another object says "this thing is ABOVE that thing", and it says it
+          whatever tint you give it. Foam that you have to argue is foam is a
+          shadow.
+
+          The fade IS the effect. The sprite's own base dissolves into the water
+          (see SUBMERGE below) and that is the whole of it — no ellipse, no ring,
+          no disturbance. If a landmark ever reads as floating again, the answer
+          is to take MORE of it under, not to put something back beneath it.
+
+          Islets are the exception and are not an exception to this rule: they
+          are LAND, they do not go under, and what they get is a shoal — shallow
+          water around a beach, which is a real thing that is genuinely there. */}
+      {isLand && (
         <>
           <div aria-hidden style={{
             position: 'absolute', left: 0, top: 0,
@@ -2711,16 +2716,6 @@ const SeaMark = memo(function SeaMark({ m, i }: {
             background: 'rgba(206,226,232,0.30)', filter: 'blur(2.5px)',
           }} />
         </>
-      ) : sub && (
-        <div aria-hidden className="mark-wash" style={{
-          position: 'absolute', left: 0, top: 0,
-          width: m.size * 1.05, height: m.size * 0.3,
-          marginLeft: -m.size * 0.525, marginTop: -m.size * 0.15,
-          borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(226,244,250,0.34) 0%, rgba(200,228,240,0.15) 52%, transparent 76%)',
-          filter: 'blur(3px)',
-          animationDelay: `${(i * 0.61) % 4}s`,
-        }} />
       )}
 
       {/* TWO WRAPPERS, because they carry different transforms. The outer one

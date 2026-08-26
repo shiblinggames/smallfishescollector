@@ -727,11 +727,18 @@ finds that straight edge immediately.
 under. A check asserts every art file on the chart is either submerged or land, because one
 that matches neither silently gets no waterline at all.
 
-The only thing still drawn beneath is the pale **wash** where an object breaks through: pale
-rather than dark, because water piles up and catches light around something standing in it
-rather than casting a shadow on itself. It sits in the un-counter-squashed wrapper so it comes
-out an ellipse lying flat, and it breathes on its own slow offset. Islands keep their offset
-contact shadow: they are extruded solids and that shadow is correct.
+**Nothing is drawn beneath a submerged landmark. Fourth time of asking.** A dark ellipse,
+then a pale one, then a pale one dressed as foam and called a "wash" — every version reads the
+same, because the objection was never the colour. A discrete shape sitting beneath another
+object says *this thing is above that thing*, whatever tint you give it. Foam you have to
+argue is foam is a shadow.
+
+The fade is the whole effect. If a landmark ever reads as floating again, take **more** of it
+under the water; do not put something back underneath it.
+
+Islets are not an exception to that rule — they are land, they do not go under, and a shoal
+is shallow water round a beach, which is genuinely there. Islands keep their offset contact
+shadow for the same reason: they are extruded solids and it is correct.
 
 Placement is **solved and asserted, never eyeballed** — buildings inside the coastline,
 landmarks inside their zone and clear of each other, resident buyers reachable. Four of
