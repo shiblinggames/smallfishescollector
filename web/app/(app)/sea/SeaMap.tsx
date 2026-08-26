@@ -1725,6 +1725,43 @@ export default function SeaMap({
    * they actually are rather than easing in from the last person's spot, and
    * somebody who has gone is dropped so their entry cannot leak.
    */
+  /**
+   * A BEAT OFF THE WIRE. Written straight into the easing targets the frame
+   * loop already reads, so a live position and a polled one are the same kind
+   * of fact and nothing downstream can tell them apart.
+   */
+  const onBeat = useCallback((id: string, b: { x: number; y: number; f: number }) => {
+    const name = crewNames.current.get(id)
+    if (!name) return
+    const at = friendAt.current.get(name)
+    if (!at) return
+    at.target.x = b.x
+    at.target.y = b.y
+    at.live = Date.now()
+    // FACING COMES OVER THE WIRE rather than being inferred here. The loop
+    // guesses it from the easing delta, which is fine at a 20s poll where every
+    // step is hundreds of pixels, and wrong at close quarters where the steps
+    // are small enough that a boat sitting still flickers.
+    at.face = b.f
+  }, [])
+
+  /**
+   * OPENED ONLY WHEN THERE IS SOMEBODY TO HEAR.
+   *
+   * The socket used to go up on mount for everybody who opened the chart. That
+   * is the wrong axis to be wasteful on: messages are billed by fan-out and
+   * cost nothing when nobody is near, but PEAK CONNECTIONS are billed per
+   * websocket and do not care whether anything ever travels over it. A captain
+   * with no mutual crew online would have held one all session and used it for
+   * precisely nothing — and on the live table only 10 of 81 players have a
+   * mutual follow at all, so most sockets were that captain.
+   *
+   * So the connection follows the poll: it comes up when a mutual is out there
+   * and comes down when the last one goes in. `presence.send` is a no-op while
+   * it is down, so nothing else on this screen has to know.
+   */
+  useEffect(() => () => { presence.current?.close(); presence.current = null }, [])
+
   useEffect(() => {
     const live = new Set(friends.map(f => f.username))
     for (const name of [...friendAt.current.keys()]) {
@@ -1734,7 +1771,14 @@ export default function SeaMap({
     // is silent until somebody actually broadcasts, and having the channel
     // already open is what makes meeting up instant rather than a poll away.
     crewNames.current = new Map(friends.map(f => [f.id, f.username]))
-    presence.current?.setCrew(friends.map(f => f.id))
+    if (friends.length === 0) {
+      // Nobody to hear and nobody to hear you. Drop the socket.
+      presence.current?.close()
+      presence.current = null
+    } else {
+      if (!presence.current) presence.current = openSeaPresence({ userId, onBeat })
+      presence.current.setCrew(friends.map(f => f.id))
+    }
 
     for (const f of friends) {
       const had = friendAt.current.get(f.username)
@@ -1756,7 +1800,7 @@ export default function SeaMap({
         bob: [...f.username].reduce((a, c) => a + c.charCodeAt(0), 0) % 628 / 100,
       })
     }
-  }, [friends])
+  }, [friends, userId, onBeat])
 
   /**
    * THE LIVE WATER.
@@ -1774,27 +1818,6 @@ export default function SeaMap({
    *  see seaPresence) and everything on this screen is keyed by name. */
   const crewNames = useRef<Map<string, string>>(new Map())
 
-  useEffect(() => {
-    const p = openSeaPresence({
-      userId,
-      onBeat: (id, b) => {
-        const name = crewNames.current.get(id)
-        if (!name) return
-        const at = friendAt.current.get(name)
-        if (!at) return
-        at.target.x = b.x
-        at.target.y = b.y
-        at.live = Date.now()
-        // FACING COMES OVER THE WIRE rather than being inferred here. The loop
-        // guesses it from the easing delta, which is fine at a 20s poll where
-        // every step is hundreds of pixels, and wrong at close quarters where
-        // the steps are small enough that a boat sitting still flickers.
-        at.face = b.f
-      },
-    })
-    presence.current = p
-    return () => { p.close(); presence.current = null }
-  }, [userId])
 
   /**
    * REPORT YOURSELF, but only while somebody can see you.
