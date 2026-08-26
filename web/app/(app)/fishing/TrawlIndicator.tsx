@@ -415,9 +415,46 @@ export default function TrawlIndicator({
     }
   }, [state, fireSlotUnlock])
 
+  /**
+   * CLOSING THE DOCK PLAYS THE EXIT FIRST.
+   *
+   * It used to call `onDismiss()` on the tap and leave `open` true, so the
+   * sheet never animated out at all: it sat fully open on a dark backdrop while
+   * Next tore the route down, and then vanished mid-navigation. The dismiss is
+   * a NAVIGATION, and a navigation takes longer than a fade — so the fade has
+   * to happen first, not race it.
+   *
+   * `onExitComplete` is the seam. Setting open false starts the slide-down and
+   * the backdrop fade; AnimatePresence tells us when the element is genuinely
+   * gone, and only then do we leave.
+   *
+   * ── AND IT LIVES ABOVE THE EARLY RETURNS ─────────────────────────────
+   *
+   * These two hooks were written down beside the panel JSX that uses them,
+   * which put them AFTER `if (!state) return null` — conditional hooks. The
+   * component rendered fine until trawl state actually arrived, and then React
+   * counted more hooks than the render before and threw, which took the whole
+   * Docks page down. It never reproduced unauthenticated, because the page
+   * redirects before the panel ever renders.
+   *
+   * Every hook goes above every early return. No exceptions, however local the
+   * state feels to the JSX that reads it.
+   */
+  const [leaving, setLeaving] = useState(false)
+  const closeDock = useCallback(() => {
+    if (leaving) return
+    setLeaving(true)
+    setPicking(null)
+    setOpen(false)
+  }, [leaving])
+
   if (!state) return null
   const hasSlots = state.unlockedSlots > 0
-  if (!hasSlots && activeTrawls.length === 0) return null // hidden until Fishing 25
+  // Hidden until Fishing 25 — but NEVER on the Docks. The island's sheet is the
+  // page, and it also carries the day's orders (`before`), so bailing here left
+  // a captain below the gate staring at an empty island with their challenges
+  // nowhere. On the dock the panel renders and says the slots are not open yet.
+  if (!dock && !hasSlots && activeTrawls.length === 0) return null
 
   const readyTrawls = activeTrawls.filter(t => new Date(t.endsAt).getTime() <= now)
   const anyReady = readyTrawls.length > 0
@@ -620,27 +657,6 @@ export default function TrawlIndicator({
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const ns = state.nextSlot
-  /**
-   * CLOSING THE DOCK PLAYS THE EXIT FIRST.
-   *
-   * It used to call `onDismiss()` on the tap and leave `open` true, so the
-   * sheet never animated out at all: it sat fully open on a dark backdrop while
-   * Next tore the route down, and then vanished mid-navigation. The dismiss is
-   * a NAVIGATION, and a navigation takes longer than a fade — so the fade has
-   * to happen first, not race it.
-   *
-   * `onExitComplete` is the seam. Setting open false starts the slide-down and
-   * the backdrop fade; AnimatePresence tells us when the element is genuinely
-   * gone, and only then do we leave.
-   */
-  const [leaving, setLeaving] = useState(false)
-  const closeDock = useCallback(() => {
-    if (leaving) return
-    setLeaving(true)
-    setPicking(null)
-    setOpen(false)
-  }, [leaving])
-
   const panel = (
     <AnimatePresence onExitComplete={() => { if (dock && leaving) onDismiss?.() }}>
       {open && (
