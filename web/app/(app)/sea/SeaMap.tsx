@@ -3106,6 +3106,10 @@ const SUBMERGE: Record<string, { line: number; keep: number }> = {
   bones:    { line: 74, keep: 0.24 },
   // Carved stone, standing in it.
   monolith: { line: 78, keep: 0.20 },
+  // A rock cluster breaking the surface. It used to be the one thing out here
+  // that did not submerge, on the grounds that it was land with a beach — and
+  // the pale shoal that came with that is what made it look like it was hovering.
+  islet:    { line: 76, keep: 0.24 },
 
   // ── THE REEF ALONG THE TOP ───────────────────────────────────────────
   //
@@ -3174,14 +3178,11 @@ const SeaMark = memo(function SeaMark({ m, i }: {
 }) {
   const kind = markKind(m.art)
   const sub = SUBMERGE[kind]
-  // An islet is LAND. It does not go under, it has a beach — the same shoal the
-  // islands get, at a size that suits a rock you could stand on.
-  const isLand = kind === 'islet'
 
   return (
     <div style={{ position: 'absolute', left: m.x, top: m.y, pointerEvents: 'none' }}>
       {/* ── WHERE IT MEETS THE WATER ──────────────────────────────────────
-          NOTHING IS DRAWN UNDER IT. FOURTH TIME OF ASKING.
+          NOTHING IS DRAWN UNDER IT. FIFTH TIME OF ASKING.
 
           A dark ellipse, then a pale one, then a pale one again dressed up as
           foam and called a "wash". Every version reads the same way, because
@@ -3195,29 +3196,18 @@ const SeaMark = memo(function SeaMark({ m, i }: {
           no disturbance. If a landmark ever reads as floating again, the answer
           is to take MORE of it under, not to put something back beneath it.
 
-          Islets are the exception and are not an exception to this rule: they
-          are LAND, they do not go under, and what they get is a shoal — shallow
-          water around a beach, which is a real thing that is genuinely there. */}
-      {isLand && (
-        <>
-          <div aria-hidden style={{
-            position: 'absolute', left: 0, top: 0,
-            width: m.size * 1.9, height: m.size * 0.62,
-            marginLeft: -m.size * 0.95, marginTop: -m.size * 0.31,
-            borderRadius: '50%',
-            background: 'radial-gradient(ellipse, rgba(168,204,216,0.26) 0%, rgba(150,190,206,0.12) 55%, transparent 78%)',
-            filter: 'blur(5px)',
-          }} />
-          <div aria-hidden style={{
-            position: 'absolute', left: 0, top: 0,
-            width: m.size * 1.15, height: m.size * 0.36,
-            marginLeft: -m.size * 0.575, marginTop: -m.size * 0.18,
-            borderRadius: '50%',
-            background: 'rgba(206,226,232,0.30)', filter: 'blur(2.5px)',
-          }} />
-        </>
-      )}
+          The fifth time was an EXCEPTION I wrote myself. Islets kept a pale
+          ellipse under them, and the comment right here argued it was fine
+          because an islet is land and what land gets is a shoal, which is a
+          real thing that is genuinely there. All true, and all beside the
+          point: on screen it was a pale ellipse under an object, which is the
+          exact shape that says "this is floating above that", and it read that
+          way whatever it was called. Islets submerge like everything else now.
 
+          There is no version of this that works. Not a darker one, not a paler
+          one, not one with a good reason. If a landmark ever reads as floating
+          again the answer is to take MORE of it under, never to put something
+          back beneath it. */}
       {/* TWO WRAPPERS, because they carry different transforms. The outer one
           stands the landmark up off the plane; the inner one is free to sway
           without clobbering that. One element trying to do both means the
@@ -3547,6 +3537,32 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
 })
 
 /**
+ * BEEN ASHORE.
+ *
+ * A drawn mark, not an emoji — emoji are never UI icons here, and a glyph would
+ * also be at the mercy of whatever the device decides ✓ looks like.
+ *
+ * On its own disc, because this sits over painted land: pale sand, dark grass
+ * and open water all pass underneath it as you sail, and a bare stroke would
+ * disappear against one of them. The disc is dark and the tick is light, which
+ * survives all three.
+ *
+ * Muted green rather than gold. Gold on this chart means "there is something
+ * here for you" — the unclaimed chests, the trader hails, the minimap rings —
+ * and a finished isle is the one thing that is explicitly NOT asking.
+ */
+const AshoreTick = memo(function AshoreTick() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" role="img" aria-label="Been ashore"
+      style={{ flexShrink: 0, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }}>
+      <circle cx="12" cy="12" r="11" fill="rgba(10,22,18,0.82)" stroke="rgba(150,206,172,0.75)" strokeWidth="1.6" />
+      <path d="M7 12.4l3.2 3.2L17 8.8" fill="none" stroke="#9fdcb6" strokeWidth="2.6"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+})
+
+/**
  * ONE DISCOVERABLE ISLE.
  *
  * The same `Landmass` the ports are painted with, at a fraction of the size,
@@ -3627,15 +3643,29 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
           transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center', whiteSpace: 'nowrap',
         }}>
-          <p className="font-cinzel font-700" style={{
-            fontSize: '1.02rem', color: '#f2ead8', margin: 0,
-            textShadow: '0 2px 12px rgba(0,0,0,0.95)',
-          }}>{isle.name}</p>
+          {/* THE TICK sits ON the name, which is the line you actually read
+              when you are deciding whether to steer over. It used to be a
+              second line saying "Been ashore", which meant the answer to "have
+              I done this one" was a word you had to stop and read, one rock at
+              a time. A mark you can take in without reading is the whole job.
+
+              With the tick carrying it, the line underneath goes back to the
+              band name in both states, so the label reads identically whether
+              or not you have landed and only the mark changes. */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            {found && <AshoreTick />}
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1.02rem', color: found ? 'rgba(226,232,224,0.82)' : '#f2ead8', margin: 0,
+              textShadow: '0 2px 12px rgba(0,0,0,0.95)',
+            }}>{isle.name}</p>
+          </div>
           <p className="font-karla" style={{
             fontSize: '0.78rem', margin: 0, textAlign: 'center',
-            color: found ? 'rgba(168,200,176,0.86)' : 'rgba(255,206,138,0.86)',
+            color: found ? 'rgba(168,200,176,0.7)' : 'rgba(255,206,138,0.86)',
             textShadow: '0 1px 9px rgba(0,0,0,0.95)',
-          }}>{found ? 'Been ashore' : bandName(isle.band)}</p>
+          }}>{bandName(isle.band)}</p>
         </div>
       )}
     </div>
