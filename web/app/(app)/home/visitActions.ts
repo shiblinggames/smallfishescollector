@@ -43,9 +43,10 @@ export type Visitable = {
 type Row = {
   house: number; portal: number; gallery: number; dock: number; garden: number; beacon: number
   furniture: unknown; owned: string[] | null; pinned: string[] | null
+  layout: unknown
 }
 
-const COLS = 'user_id, house, portal, gallery, dock, garden, beacon, furniture, owned, pinned'
+const COLS = 'user_id, house, portal, gallery, dock, garden, beacon, furniture, owned, pinned, layout'
 
 function toHomestead(row: Row | null): Homestead {
   if (!row) return EMPTY_HOMESTEAD
@@ -57,6 +58,9 @@ function toHomestead(row: Row | null): Homestead {
     furniture: (row.furniture ?? {}) as Partial<Record<FurnitureSlot, string>>,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),
+    // A VISITOR SEES THE ARRANGEMENT TOO. Half the point of being allowed to
+    // move things is that somebody else comes and sees where you put them.
+    layout: (row.layout ?? {}) as Homestead['layout'],
   }
 }
 

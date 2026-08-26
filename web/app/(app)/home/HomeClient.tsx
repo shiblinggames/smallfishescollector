@@ -26,7 +26,8 @@ import {
   builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, roomFor, HOUSE_SLOTS,
   type Homestead, type HotspotId, type FurnitureSlot, type Hotspot,
 } from '@/lib/homestead'
-import { build, furnish, stepThrough, type Destination } from './actions'
+import { build, furnish, moveBuilding, stepThrough, type Destination } from './actions'
+import IslandPlan from './IslandPlan'
 
 type Room = 'island' | 'inside' | 'gallery' | 'stones'
 
@@ -54,6 +55,9 @@ export default function HomeClient({
   const [home, setHome] = useState(initial)
   const [coin, setCoin] = useState(initialCoin)
   const [room, setRoom] = useState<Room>('island')
+  /** Drag mode for the island plan. Off by default: the common visit is to
+   *  look at the place, not to redecorate it. */
+  const [arranging, setArranging] = useState(false)
   const [almanac, setAlmanac] = useState(false)
   const [busy, startBusy] = useTransition()
   const [note, setNote] = useState<string | null>(null)
@@ -153,42 +157,45 @@ export default function HomeClient({
           </div>
         </div>
 
-        {/* ── THE ISLAND AS IT STANDS ───────────────────────────────────
+        {/* ── THE ISLAND AS IT STANDS ──────────────────────────────────
             A plan view of the six spots at the positions they actually occupy
-            out on the chart, so the row you tap here is the building you see
-            from the water. */}
-        {/* A SQUARE BOX, because that is what the buildings' numbers mean.
+            out on the chart, so the building you see here is the one you see
+            from the water — and, while arranging, the one you drag.
+
+            A SQUARE BOX, because that is what the buildings' numbers mean:
             `scale` and the x,y percentages are shares of the ISLAND BOX out on
-            the chart, which is square. This preview was a 190px-tall strip the
+            the chart, which is square. This was once a 190px-tall strip the
             full width of the page, so `scale * 150%` of its WIDTH came out at
             568px for the Estate — four times the height of the box it was in,
-            and the top of every building was cut off.
-            Square box, `scale * 100%`, and the numbers mean here what they mean
-            out there. Room above the tallest anchor for the lighthouse, which
-            stands well up out of its own. */}
-        <div style={{
-          position: 'relative', marginTop: 14,
-          width: 'min(100%, 340px)', aspectRatio: '1 / 1', marginInline: 'auto',
-          borderRadius: 16,
-          background: 'radial-gradient(ellipse at 50% 62%, #6f8a4e 0%, #55703c 44%, #3d5730 62%, rgba(20,40,54,0) 74%)',
-          border: '1px solid rgba(180,214,232,0.16)',
-        }}>
-          {standing.map((b, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={b.art} alt="" draggable={false} style={{
-              position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
-              width: `${b.scale * 100}%`, maxWidth: 'none',
-              transform: 'translate(-50%, -100%)',
-              filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.45))',
-            }} />
-          ))}
-          {standing.length <= 2 && (
-            <p className="font-karla" style={{
-              position: 'absolute', left: 0, right: 0, bottom: 8, textAlign: 'center',
-              fontSize: '0.74rem', color: 'rgba(226,238,246,0.7)', margin: 0,
-            }}>{guest ? 'Not much on it yet.' : 'Six places to build on. Most of them are still rock.'}</p>
-          )}
-        </div>
+            with the top of every building cut off. */}
+        <IslandPlan
+          home={home}
+          guest={!!guest}
+          arranging={arranging}
+          onMove={async (id, x, y) => {
+            const res = await moveBuilding(id, x, y)
+            if (!res.ok) { setNote(res.error); return false }
+            setHome(res.homestead)
+            return true
+          }}
+        />
+
+        {!guest && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+            <button type="button"
+              onClick={() => { vibrate(8); setArranging(v => !v) }}
+              className="font-karla font-700 uppercase"
+              style={{
+                padding: '0.4rem 0.95rem', borderRadius: 999, fontSize: '0.66rem',
+                letterSpacing: '0.14em', cursor: 'pointer',
+                color: arranging ? '#0d1a10' : 'rgba(226,238,246,0.8)',
+                background: arranging ? '#a8d98a' : 'rgba(255,255,255,0.06)',
+                border: `1px solid ${arranging ? 'rgba(168,217,138,0.9)' : 'rgba(180,214,232,0.24)'}`,
+              }}>
+              {arranging ? 'Done arranging' : 'Arrange the island'}
+            </button>
+          </div>
+        )}
 
         {/* ── THE ROOMS ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>

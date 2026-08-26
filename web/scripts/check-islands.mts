@@ -12,67 +12,12 @@
  * stands on is inside the grass, corners included.
  */
 import { PLACES } from '../app/(app)/sea/chart'
+import { coastline, grassAt, outBy, GRASS } from '../lib/islandShape'
 import { HOTSPOTS } from '../lib/homestead'
 
-/** The coastline from PlaceIsland, character for character. */
-function coastline(id: string): number[] {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  const rnd = (n: number) => (((h >>> (n * 3)) % 1000) / 1000)
-  const rug = 0.70 + rnd(1) * 0.35
-  const N = 160
-  const out: number[] = []
-  for (let i = 0; i < N; i++) {
-    const a = (Math.PI * 2 * i) / N
-    const wobble =
-      0.095 * Math.sin(a * (1 + Math.floor(rnd(2) * 2)) + rnd(3) * 6.28) +
-      0.055 * Math.sin(a * 3 + rnd(4) * 6.28) +
-      0.028 * Math.cos(a * 5 - rnd(5) * 6.28) +
-      0.012 * Math.sin(a * 9 + rnd(6) * 6.28) +
-      0.004 * Math.cos(a * 17 + rnd(7) * 6.28)
-    out.push(46 + wobble * rug * 100)
-  }
-  return out
-}
-
-/**
- * The grass radius at an angle, as a percentage of the island box from centre.
- *
- * ── THIS NUMBER WAS WRONG AND THE CHECK PASSED ANYWAY ──────────────────
- *
- * It used to be 0.7, reasoned as "the grass layer is `inset: 15%`, so its box
- * is 70% of the island's". The first half is right and the conclusion is not:
- * the grass div is not a child of the ISLAND, it is a child of the TOP FACE,
- * which is itself `inset: 13%`. The insets compound.
- *
- *     top face box   = 100% - 2*13%  = 74% of the island box
- *     grass box      = 74% * (100% - 2*15%) = 74% * 70% = 51.8%
- *
- * So the real grass reaches 0.518 of a coastline radius, not 0.7 — the check
- * was handing every building 35% more land than exists. It reported "0
- * buildings not standing wholly on the grass" while buildings were visibly
- * hanging over the water, which is the worst way for a checker to fail: it
- * does not just miss the bug, it certifies it.
- */
-const GRASS = 0.7 * 0.74
-
-function grassAt(rs: number[], angle: number): number {
-  const N = rs.length
-  let a = angle
-  while (a < 0) a += Math.PI * 2
-  while (a >= Math.PI * 2) a -= Math.PI * 2
-  const t = (a / (Math.PI * 2)) * N
-  const i = Math.floor(t) % N
-  const j = (i + 1) % N
-  const f = t - Math.floor(t)
-  return (rs[i] * (1 - f) + rs[j] * f) * GRASS
-}
-
-/** How far outside the grass a point is, in box-percent. Negative is inside. */
-function outBy(rs: number[], x: number, y: number): number {
-  const dx = x - 50, dy = y - 50
-  return Math.hypot(dx, dy) - grassAt(rs, Math.atan2(dy, dx))
-}
+/* The coastline and the grass both come from lib/islandShape now — the same
+   module PlaceIsland draws from, so this cannot drift from what is on screen
+   the way it did before. */
 
 type Item = { label: string; x: number; y: number; scale: number }
 

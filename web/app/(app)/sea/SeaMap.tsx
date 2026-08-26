@@ -52,6 +52,7 @@ import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaCloc
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
+import { coastClip } from '@/lib/islandShape'
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
 import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
@@ -4479,29 +4480,12 @@ const Landmass = memo(function Landmass({ id, locked = false }: {
    * on the big islands and read as a polygon — which is precisely the thing
    * that makes a shape look drawn rather than surveyed.
    */
-  const clip = useMemo(() => {
-    let h = 0
-    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-    const rnd = (n: number) => (((h >>> (n * 3)) % 1000) / 1000)
-    // How rugged THIS island is. 0.72 is a soft round one, 1.35 is all teeth.
-    const rug = 0.70 + rnd(1) * 0.35
-    const pts: string[] = []
-    const N = 160
-    for (let i = 0; i < N; i++) {
-      const a = (Math.PI * 2 * i) / N
-      const wobble =
-        // The lobes: one or two big pulls, which is what gives an island a
-        // shape you could describe rather than a diameter.
-        0.095 * Math.sin(a * (1 + Math.floor(rnd(2) * 2)) + rnd(3) * 6.28) +
-        0.055 * Math.sin(a * 3 + rnd(4) * 6.28) +
-        0.028 * Math.cos(a * 5 - rnd(5) * 6.28) +
-        0.012 * Math.sin(a * 9 + rnd(6) * 6.28) +
-        0.004 * Math.cos(a * 17 + rnd(7) * 6.28)
-      const r = 46 + wobble * rug * 100
-      pts.push(`${(50 + Math.cos(a) * r).toFixed(2)}% ${(50 + Math.sin(a) * r).toFixed(2)}%`)
-    }
-    return `polygon(${pts.join(', ')})`
-  }, [id])
+  // ONE DEFINITION, in lib/islandShape.ts. This used to be generated inline
+  // here and reproduced by hand in the build check, and the two drifted: the
+  // checker modelled the grass 35% too generous and spent months certifying
+  // buildings that were standing in the water. Shared now, so the thing that
+  // draws the coast and the thing that polices it cannot disagree.
+  const clip = useMemo(() => coastClip(id), [id])
 
   /**
    * TREE CLUMPS. Placed once per island off the same seed.

@@ -367,6 +367,14 @@ export type Homestead = {
   owned: string[]
   /** Badge ids hung large. Only read once the gallery is a hall or better. */
   pinned: string[]
+  /**
+   * WHERE THE CAPTAIN PUT THINGS, overriding the designed positions.
+   *
+   * Partial on purpose: a spot with no entry uses the default from HOTSPOTS, so
+   * an untouched homestead reads exactly as designed and adding a seventh
+   * hotspot later does not need every existing row migrating.
+   */
+  layout: Partial<Record<HotspotId, { x: number; y: number }>>
 }
 
 export const EMPTY_HOMESTEAD: Homestead = {
@@ -374,6 +382,7 @@ export const EMPTY_HOMESTEAD: Homestead = {
   furniture: {},
   owned: [],
   pinned: [],
+  layout: {},
 }
 
 /** How many badges the gallery lets you hang large. */
@@ -404,8 +413,20 @@ export function homeBuildings(h: Homestead): { art: string; x: number; y: number
   return HOTSPOTS
     .map(spot => ({ spot, build: builtAt(h, spot.id) }))
     .filter(({ build }) => build.art !== null)
-    .sort((a, b) => a.spot.y - b.spot.y)
-    .map(({ spot, build }) => ({ art: build.art as string, x: spot.x, y: spot.y, scale: build.scale }))
+    // Back to front by where the building ACTUALLY is. Sorting on the designed
+    // y would paint a dragged building in its old place in the stack, so a
+    // house moved to the front of the island would still be drawn behind the
+    // beacon it now stands in front of.
+    .sort((a, b) => ((h.layout?.[a.spot.id]?.y ?? a.spot.y) - (h.layout?.[b.spot.id]?.y ?? b.spot.y)))
+    .map(({ spot, build }) => {
+      const at = h.layout?.[spot.id]
+      return {
+        art: build.art as string,
+        x: at?.x ?? spot.x,
+        y: at?.y ?? spot.y,
+        scale: build.scale,
+      }
+    })
 }
 
 /** Slots the house is currently big enough to hold, in order. */

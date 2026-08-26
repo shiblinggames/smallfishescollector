@@ -38,6 +38,7 @@ import {
 } from '@/lib/homestead'
 import { PLACES } from '../sea/chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { coastline, standsOnGrass } from '@/lib/islandShape'
 
 export type BuildResult =
   | { ok: true; homestead: Homestead; spent: number; built: string }
@@ -47,6 +48,7 @@ export type BuildResult =
 function rowToHomestead(row: {
   house: number; portal: number; gallery: number; dock: number; garden: number; beacon: number
   furniture: unknown; owned: string[] | null; pinned: string[] | null
+  layout?: unknown
 } | null): Homestead {
   if (!row) return EMPTY_HOMESTEAD
   const furniture = (row.furniture ?? {}) as Partial<Record<FurnitureSlot, string>>
@@ -58,10 +60,14 @@ function rowToHomestead(row: {
     furniture,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),
+    layout: (row.layout ?? {}) as Homestead['layout'],
   }
 }
 
-const COLS = 'house, portal, gallery, dock, garden, beacon, furniture, owned, pinned'
+// ONE STRING LITERAL, never a concatenation — supabase-js infers the row type
+// from the literal text of this argument and a joined expression degrades the
+// whole result to an error type.
+const COLS = 'house, portal, gallery, dock, garden, beacon, furniture, owned, pinned, layout'
 
 /**
  * THE CAPTAIN'S HOMESTEAD, creating the row on first look.
@@ -333,4 +339,62 @@ export async function stepThrough(destId: string): Promise<{ ok: boolean; error?
   await admin.from('profiles')
     .update({ sea_x: target.x, sea_y: target.y }).eq('id', user.id)
   return { ok: true, x: target.x, y: target.y }
+}
+
+/**
+ * MOVE ONE OF YOUR BUILDINGS.
+ *
+ * The six spots ship with designed positions and those stay the default. This
+ * writes an override into `homesteads.layout`, so a homestead nobody has
+ * rearranged reads exactly the way it was laid out, and a spot with no override
+ * falls through to the default even after a seventh is added later.
+ *
+ * ── THE SERVER DECIDES WHAT IS ON THE LAND ──────────────────────────────
+ *
+ * The drag happens in a browser and a browser belongs to its player, so the
+ * position arriving here is a request rather than a fact. It is checked against
+ * `lib/islandShape` — the SAME module the chart draws the coastline from and
+ * the build check polices it with — so there is no second opinion about where
+ * the grass is. That mattered: for months there WAS a second opinion, the
+ * checker's, and it was 35% too generous.
+ *
+ * Checked against the WIDEST build on the spot, not the one standing there
+ * today. Otherwise a captain parks a lean-to on a headland it just fits, buys
+ * the Estate, and the Estate is in the sea with no way to move it back that the
+ * game ever offered them.
+ */
+export async function moveBuilding(spotId: string, x: number, y: number): Promise<
+  { ok: true; homestead: Homestead } | { ok: false; error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const spot = HOTSPOT_BY_ID[spotId as HotspotId]
+  if (!spot) return { ok: false, error: 'No such spot.' }
+
+  // Reject NaN and Infinity before they reach the geometry, where they would
+  // quietly pass every comparison and be written to the row.
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, error: 'Nowhere in particular.' }
+  const nx = Math.round(Math.max(0, Math.min(100, x)))
+  const ny = Math.round(Math.max(0, Math.min(100, y)))
+
+  const widest = Math.max(...spot.builds.map(b => b.scale))
+  if (!standsOnGrass(coastline('home'), nx, ny, widest)) {
+    return { ok: false, error: 'It would not stand there.' }
+  }
+
+  const admin = createAdminClient()
+  const { data: row, error } = await admin
+    .from('homesteads').select(COLS).eq('user_id', user.id).maybeSingle()
+  if (error) throw new Error(error.message)
+
+  const home = rowToHomestead(row as Parameters<typeof rowToHomestead>[0])
+  const layout = { ...home.layout, [spot.id]: { x: nx, y: ny } }
+
+  const { error: wErr } = await admin.from('homesteads')
+    .upsert({ user_id: user.id, layout }, { onConflict: 'user_id' })
+  if (wErr) throw new Error(wErr.message)
+
+  return { ok: true, homestead: { ...home, layout } }
 }
