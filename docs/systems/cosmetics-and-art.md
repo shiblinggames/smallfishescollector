@@ -48,32 +48,57 @@ background convention, keyed to transparent PNG in post.
 [badges.md](badges.md), [crew.md](crew.md), [ship.md](ship.md). Sprite-sheet uploads to
 Supabase Storage go via curl + service-role key ([platform.md](platform.md)).
 
+## Boat stats — the hull stops being only a costume
 
-## Boat trim — the hull stops being only a costume
+`lib/boats.ts`. Two axes, doing two different jobs, and neither can do the other's.
 
-`lib/boats.ts`. Every boat carries one number, `trim`, from -0.12 to +0.12, which splits a
-FIXED budget between top speed and agility (acceleration and how fast she answers the helm).
-`boatSpeed()` returns `1 + trim`, `boatAgility()` returns `1 - trim`, so the two always sum
-to 2 and **no boat is strictly better than another** — verified: zero dominant pairs.
+**`trim` is a CHOICE.** -0.12 to +0.12, splitting a hull's budget between top speed and
+agility (acceleration and how fast she answers the helm). Speed is the long haul out to the
+Ancient Deep; agility is everything you do once you are there — pulling alongside a drifting
+trader, threading a wreck field, getting under way after a cast. **The hardest rig in the
+fleet either way is on a 5,000-doubloon boat** (Desert, Pistachio), so no amount of money
+buys a better *answer* — there isn't one.
 
-It is a sidegrade on purpose. A cosmetic set with a best member is not a cosmetic set: one
-boat wins, everybody wears it, and the other sixteen become dead art. Both ends are genuinely
-useful and for different water — speed is the haul out to the Ancient Deep, agility is
-everything you do once you are there.
+**`grade` is a REWARD.** A multiplier on *both* numbers at once, so a fine hull is better at
+everything without telling you which way to sail. Working hulls are 1.00; the ladder runs
+50k → 1.03, 500k → 1.05, 1M → 1.07, with the achievement boats at 1.04–1.05.
 
-**Money buys nothing at either end.** The fastest hull in the game and the nimblest are both
-5,000-doubloon boats (Desert, Pistachio) — pocket change, available in the first hour. The
-free hulls sit one step in at ±0.08. The 500,000 and 1,000,000 boats and both achievement
-boats top out at ±0.10, *less* than the cheap pair: they are prestige art with a good hull,
-not the correct answer.
+| hull | acquired | speed | agility | rig |
+|---|---|---|---|---|
+| Pistachio | 5,000 ⟡ | 88% | 112% | Nimble |
+| Desert | 5,000 ⟡ | 112% | 88% | Long-haul |
+| Charcoal / Offwhite | free | 92% / 108% | 108% / 92% | — |
+| Fire, Ice, Jet Black | gems | 100% | 100% | Balanced |
+| Golden | 50,000 ⟡ | 109% | 97% | Fast |
+| Ethereal | 500,000 ⟡ | 95% | 116% | Nimble |
+| Chromium | 1,000,000 ⟡ | 118% | 96% | Long-haul |
 
-**The three gem boats — Fire, Ice, Jet Black (`gemPrice`) — sit at exactly 0 and must stay
-there.** A gem-bought hull that sails better than a free one would be bought precisely
-because it sails better. There is no script enforcing this; it is a per-boat decision, so
-make it deliberately. Note the field is `gemPrice`, not `gemCost` — grepping the wrong name
-returns nothing and reads as "no gem boats exist".
+A Chromium genuinely out-sails a Desert, which is the point of a million doubloons. It does
+not out-sail it in a direction the Desert's owner did not choose.
 
-Surfaced in two places: the Boat slot in the gear grid carries the trim label under the name
-(otherwise the trade-off is invisible until you are at sea in the wrong hull), and the
-Shipyard shows the equipped hull's two numbers under the boat. The hull TIER upgrade is
-unchanged and multiplies on top — that is the ladder, this is the choice.
+Verified monotonic along the doubloon ladder and the achievement ladder **separately**. They
+are different currencies and comparing them on one axis is meaningless — an early check did
+exactly that and reported a failure that was not there.
+
+### The gem hulls stay at baseline
+
+**Gems are bought with real money** (see the Stripe webhook, `metadata.kind === 'gems'`), so
+Fire, Ice and Jet Black are `grade 1, trim 0` and must stay there. Doubloons and achievement
+points are earned by playing, so a premium on those is progression; a premium on gems is a
+sale. No script enforces this — it is a per-boat decision, so make it deliberately.
+
+Note the field is **`gemPrice`, not `gemCost`**. Grepping the wrong name returns nothing and
+reads as "no gem boats exist", which is exactly the mistake that put stats on all three in
+the first pass.
+
+### Where it surfaces
+
+- The **Boat slot** in the gear grid carries the rig label under the name.
+- The picker is titled **"The Hull"**, not "Boat Colors", and says the hull decides how she
+  handles — a row of thumbnails cannot.
+- **Tapping a boat** shows Speed and Agility as a comparison *against the hull you sail now*
+  (`+6pp` / `-4pp`), because that is the actual question, with the absolutes above it.
+- The **Shipyard** shows the equipped hull's two numbers under the boat.
+
+The hull TIER upgrade (`lib/shipyard.ts`) is untouched and multiplies on top: that is the
+ladder everyone climbs, this is the boat you climb it in.
