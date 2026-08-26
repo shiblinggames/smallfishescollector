@@ -1383,7 +1383,7 @@ export default function SeaMap({
    * that teleports. `shown` chases `target` every frame instead, so what you
    * see is a boat under way rather than a boat blinking along a track.
    */
-  const friendAt = useRef<Map<string, { shown: Vec; target: Vec; face: number }>>(new Map())
+  const friendAt = useRef<Map<string, { shown: Vec; target: Vec; face: number; bob: number }>>(new Map())
   /** True while a friend is close enough to be worth drawing well. Drives the
    *  flush and the poll — see NEAR_ENOUGH. */
   const closeRef = useRef(false)
@@ -1720,6 +1720,12 @@ export default function SeaMap({
       if (had) { had.target.x = f.x; had.target.y = f.y }
       else friendAt.current.set(f.username, {
         shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1,
+        // A PHASE OFF THEIR NAME, so two friends riding the same swell are not
+        // pumping in lockstep — which reads as one animation on two sprites
+        // rather than two boats on water. Derived from the name so it is stable
+        // across a remount: a boat that changed its rhythm every poll would
+        // stutter.
+        bob: [...f.username].reduce((a, c) => a + c.charCodeAt(0), 0) % 628 / 100,
       })
     }
   }, [friends])
@@ -2238,7 +2244,29 @@ export default function SeaMap({
           if (Math.abs(dxf) > 12) at.face = dxf < 0 ? -1 : 1
           el.style.transform = `translate3d(${at.shown.x}px, ${at.shown.y}px, 0)`
           const hull = el.firstElementChild as HTMLElement | null
-          if (hull) hull.style.transform = `translate(-50%, -50%) scaleX(${at.face})`
+          if (hull) {
+            // COUNTER-SQUASHED, like the traders and like anything else out
+            // here with height. This line used to be `scaleX(face)` alone and
+            // friends were drawn at 58% of their proper height — a boat that
+            // had been stepped on.
+            //
+            // The reasoning that let it through is worth writing down. The
+            // PLAYER'S boat carries no counter-squash either, and that looked
+            // like a precedent. It is not: the player's hull lives on the
+            // SCREEN layer (the camera follows it, so it never moves relative
+            // to the viewport) and never passes through the world layer's
+            // scaleY(GROUND) at all. A friend's hull does. Same component, two
+            // completely different coordinate spaces.
+            //
+            // No `scale()` term, unlike the traders' 0.78. A trader is scenery
+            // and should not loom; a friend is a peer, and at scale 1 inside
+            // the zoomed world layer they come out exactly the size your own
+            // boat is on screen. You see them as you see yourself.
+            const bobF = Math.sin(now / 1000 * 1.7 + at.bob) * 3.4
+              + Math.sin(now / 1000 * 2.6 + at.bob + 1.1) * 2.1
+            hull.style.transform =
+              `translate(-50%, -50%) scaleY(${1 / GROUND}) scaleX(${at.face}) translateY(${bobF}px)`
+          }
         }
       }
 
@@ -4618,9 +4646,14 @@ const FriendBoat = memo(function FriendBoat({ friend, refs }: {
         position: 'absolute', left: 0, top: 0, zIndex: Z.boat,
         willChange: 'transform', pointerEvents: 'none',
       }}>
-      {/* The hull. Counter-squashed nowhere: the boat art is drawn for this
-          plane already, which is why the player's own is not either. */}
-      <div style={{ position: 'absolute', left: 0, top: 0, transform: 'translate(-50%, -50%)' }}>
+      {/* The hull, counter-squashed — it stands ON the plane, it is not painted
+          onto it. This is only the FIRST frame's value; the loop rewrites this
+          same property every frame and the two have to agree, or the boat
+          changes shape the moment it is handed over. */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0,
+        transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
+      }}>
         <Skipper
           characterColor={friend.characterColor}
           boatId={friend.boatId}

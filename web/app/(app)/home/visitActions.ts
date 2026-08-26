@@ -66,15 +66,48 @@ function toHomestead(row: Row | null): Homestead {
  * from both directions here and Postgrest cannot express the self-join without
  * a view. Both are indexed lookups on a handful of rows.
  */
+/**
+ * WHO YOUR MUTUALS ARE, REMEMBERED FOR A MINUTE.
+ *
+ * `friendsAtSea` is polled every two seconds while you are sailing alongside
+ * somebody, and two of its three queries were this pair — asked sixty times a
+ * minute, per player, to be told the same answer every time. The friend graph
+ * is 27 rows and changes when somebody presses Follow, which is not sixty times
+ * a minute.
+ *
+ * A minute of staleness costs a new mutual up to sixty seconds before their
+ * boat can appear. That is invisible next to the twenty-second position
+ * heartbeat it would then be waiting on anyway.
+ *
+ * Module-level, so it lives as long as the warm serverless instance and dies
+ * with it. That is the right shape for a cache whose worst failure is one extra
+ * pair of indexed lookups on a tiny table: a cold instance is simply correct
+ * and slightly slower, and there is nothing to invalidate across instances.
+ */
+const FRIEND_TTL_MS = 60_000
+const friendCache = new Map<string, { ids: string[]; at: number }>()
+
 async function friendIds(admin: ReturnType<typeof createAdminClient>, me: string): Promise<string[]> {
+  const hit = friendCache.get(me)
+  const now = Date.now()
+  if (hit && now - hit.at < FRIEND_TTL_MS) return hit.ids
+
   const [{ data: iFollow }, { data: followMe }] = await Promise.all([
     admin.from('crew').select('following_id').eq('follower_id', me),
     admin.from('crew').select('follower_id').eq('following_id', me),
   ])
   const mine = new Set(((iFollow ?? []) as { following_id: string }[]).map(r => r.following_id))
-  return ((followMe ?? []) as { follower_id: string }[])
+  const ids = ((followMe ?? []) as { follower_id: string }[])
     .map(r => r.follower_id)
     .filter(id => mine.has(id))
+
+  // BOUNDED. One entry per captain who has sailed on this instance, and nothing
+  // ever removed it — an instance that stayed warm for a week would hold every
+  // player who had ever polled it. Small, but it is the kind of thing that is
+  // only ever noticed as a slow leak, so it gets a ceiling.
+  if (friendCache.size > 500) friendCache.clear()
+  friendCache.set(me, { ids, at: now })
+  return ids
 }
 
 /**
