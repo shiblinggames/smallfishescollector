@@ -35,6 +35,10 @@ import { DialSVG } from '@/components/FishingDial'
 import { ResultCard } from '@/components/CatchResultCard'
 import { XPBarDisplay } from '@/components/FishingXPBar'
 import CrateOpening, { type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
+import dynamic from 'next/dynamic'
+
+/** Loaded on demand: most casts never open it, and it carries its own art. */
+const AncientRelease = dynamic(() => import('../fishing/AncientRelease'), { ssr: false })
 import { buildFishZones, ZONE_DIFFICULTY, FISH_DIFFICULTY_SPEED, type ZoneDef } from '../fishing/depths'
 import { castLine, reelIn, reelCrate, useTideTurnerSkip, rerollWormhole, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from '../fishing/actions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -44,7 +48,7 @@ import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@
 import type { FishSizeTier } from '@/lib/fishSize'
 import { getBait } from '@/lib/bait'
 import FishCollectionDrawer from '@/app/(app)/fishing/FishCollectionDrawer'
-import { claimZoneReward, prestigeZone } from '@/app/(app)/fishing/actions'
+import { claimZoneReward, prestigeZone, releaseAncient } from '@/app/(app)/fishing/actions'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { SeaLog } from './SeaMap'
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
@@ -381,6 +385,16 @@ export default function FishingHere({
   const [claimingZone, setClaimingZone] = useState<string | null>(null)
   const mountedSet = useMemo(() => new Set(log.mountedFishIds), [log.mountedFishIds])
   const ancientSet = useMemo(() => new Set(log.ancientCatches), [log.ancientCatches])
+  /**
+   * THE TROPHY WALL'S RANKS, held locally so a release lands immediately.
+   *
+   * Seeded from the server's copy, the same shape every other log slice on this
+   * screen uses — the prop is a snapshot from page load and cannot hear about a
+   * release that happens after it.
+   */
+  const [vigil, setVigil] = useState(log.ancientVigil)
+  /** The giant being let go, if any. */
+  const [releasing, setReleasing] = useState<FishSpeciesBasic | null>(null)
   const [prestigeLevels, setPrestigeLevels] = useState(log.prestigeLevels)
   const [goldenBoosts, setGoldenBoosts] = useState(log.goldenBoosts)
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
@@ -1409,7 +1423,7 @@ export default function FishingHere({
             mountedFishIds={mountedSet}
             personalBests={log.personalBests}
             ancientCatches={ancientSet}
-            ancientVigil={log.ancientVigil}
+            ancientVigil={vigil}
             vigilUnlocked={log.vigilUnlocked}
             prestigeLevels={prestigeLevels}
             goldenBoosts={goldenBoosts}
@@ -1425,10 +1439,14 @@ export default function FishingHere({
             setConfirmPrestigeZone={setConfirmPrestigeZone}
             handleClaimZoneReward={z => void claimZone(z)}
             handlePrestige={z => void doPrestige(z)}
-            // Releasing an ancient is its own scene, and it belongs to the
-            // fishing page's trophy wall rather than to a cast at sea. The
-            // drawer still SHOWS the trophies; letting one go happens ashore.
-            setReleasingAncient={() => {}}
+            // ── THIS WAS A DEAD BUTTON ────────────────────────────────
+            // It used to be `() => {}`, with a comment saying releasing an
+            // ancient belonged ashore on the fishing page. But the drawer
+            // renders "Release for Rank N" UNCONDITIONALLY — so out here the
+            // control was fully drawn, styled, focusable and tappable, and did
+            // nothing at all. Not a feature living elsewhere: a button that
+            // lies. The wall is here, so the act belongs here.
+            setReleasingAncient={setReleasing}
             onClose={() => setLogOpen(false)}
           />
         )}
@@ -1572,6 +1590,21 @@ export default function FishingHere({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* LETTING ONE GO. Its own scene, mounted here beside the drawer that
+          offers it — the wall is at sea, so the act is too. */}
+      {releasing && (
+        <AncientRelease
+          name={releasing.name}
+          fishId={releasing.id}
+          rank={vigil[String(releasing.id)]?.rank ?? 1}
+          onConfirm={async () => {
+            const res = await releaseAncient(releasing.id)
+            if ('ok' in res) setVigil(res.vigil)
+          }}
+          onClose={() => setReleasing(null)}
+        />
+      )}
 
       {/* ── THE ACTION SLOT — the same position in every phase ─────────────
           88px square, always, whatever is in it. The fishing screen holds this
