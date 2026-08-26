@@ -90,13 +90,16 @@ function Btn({ onClick, tone = 'quiet', children }: {
 }
 
 export default function CrewPanel({
-  open, onClose, atSea,
+  open, onClose, atSea, onChanged,
 }: {
   open: boolean
   onClose: () => void
   /** Usernames currently on the water, from the chart's own poll — so the
    *  panel and the boats never disagree about who is out. */
   atSea: Set<string>
+  /** A pact changed hands. The chart re-polls immediately so Accept puts the
+   *  boat on the water NOW, not at the next twenty-second tick. */
+  onChanged?: () => void
 }) {
   const [state, setState] = useState<PactState | null>(null)
   const [busy, setBusy] = useState(false)
@@ -108,7 +111,7 @@ export default function CrewPanel({
     if (busy) return
     setBusy(true)
     vibrate(8)
-    try { await fn(); load() } finally { setBusy(false) }
+    try { await fn(); load(); onChanged?.() } finally { setBusy(false) }
   }
 
   return (

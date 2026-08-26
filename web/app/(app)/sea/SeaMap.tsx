@@ -53,6 +53,7 @@ import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHots
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
+import { pendingPacts } from './pactActions'
 import { coastClip } from '@/lib/islandShape'
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
@@ -1450,6 +1451,20 @@ export default function SeaMap({
   const hudAt = (i: number) => 12 + i * (hudSize + 10)
   /** The who-is-out list, open or shut. */
   const [crewOpen, setCrewOpen] = useState(false)
+  /**
+   * CAPTAINS WAITING ON YOUR ANSWER, for the badge on the crew button.
+   *
+   * Without it a pact request is invisible until the addressee happens to open
+   * the panel — which for most captains is never, so the asker sits unanswered
+   * for days and reads the silence as the feature being broken. Fetched once on
+   * load and again whenever the panel closes, not polled: a request arriving
+   * mid-session is caught the next time the chart is opened, which is the same
+   * cadence every other social surface in the game runs at.
+   */
+  const [pendingAsk, setPendingAsk] = useState(0)
+  useEffect(() => { void pendingPacts().then(setPendingAsk, () => {}) }, [])
+  /** The poll, callable on demand — see the crew panel's onChanged. */
+  const pullNow = useRef<() => void>(() => {})
 
   /** Pressed up against the edge of the surveyed chart. Ref for the loop, state
    *  for the one line it puts on screen. */
@@ -1735,6 +1750,7 @@ export default function SeaMap({
     let alive = true
     let timer: ReturnType<typeof setTimeout>
     const pull = () => {
+      pullNow.current = pull
       if (document.visibilityState !== 'hidden') {
         void friendsAtSea().then(f => {
           if (!alive) return
@@ -3463,13 +3479,36 @@ hullRef={hullRefFor(t.key)} />
               {friends.length}
             </span>
           )}
+          {/* SOMEBODY IS WAITING ON AN ANSWER. Amber, not green: green here
+              means "on the water" and this means "there is a question for
+              you". Cleared the moment the panel closes, because opening it IS
+              seeing them. */}
+          {pendingAsk > 0 && (
+            <span aria-hidden style={{
+              position: 'absolute', top: -3, right: -3,
+              minWidth: 15, height: 15, borderRadius: 999, padding: '0 4px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#ffb84d', border: '1px solid rgba(20,14,4,0.8)',
+              color: '#241604', fontSize: '0.62rem', fontWeight: 700,
+              boxShadow: '0 0 10px rgba(255,184,77,0.5)',
+            }}>{pendingAsk}</span>
+          )}
         </button>
       )}
 
       <CrewPanel
         open={crewOpen}
-        onClose={() => setCrewOpen(false)}
+        onClose={() => {
+          setCrewOpen(false)
+          void pendingPacts().then(setPendingAsk, () => {})
+        }}
         atSea={new Set(friends.map(f => f.username))}
+        // A PACT CHANGED — ask the sea again NOW rather than at the next tick.
+        // Without this, Accept still means up to twenty seconds of empty water
+        // before the boat you just agreed to sail with appears, and twenty
+        // seconds is long enough to close the panel, see nothing, and conclude
+        // it did not work. (It was reported as exactly that.)
+        onChanged={() => pullNow.current()}
       />
 
 

@@ -201,3 +201,23 @@ export async function endPactWith(otherId: string): Promise<{ ok: boolean }> {
     .or(`and(requester_id.eq.${user.id},addressee_id.eq.${otherId}),and(requester_id.eq.${otherId},addressee_id.eq.${user.id})`)
   return { ok: true }
 }
+
+/**
+ * HOW MANY CAPTAINS ARE WAITING ON YOUR ANSWER.
+ *
+ * The one number the chart needs on load. A request used to be invisible until
+ * the addressee happened to open the crew panel, which for most captains is
+ * never — the asker sat unanswered for days and read it as the feature being
+ * broken rather than as silence. The crew button wears this as a badge.
+ */
+export async function pendingPacts(): Promise<number> {
+  const user = await me()
+  if (!user) return 0
+  const admin = createAdminClient()
+  const { count } = await admin
+    .from('sea_pacts')
+    .select('id', { count: 'exact', head: true })
+    .eq('addressee_id', user.id)
+    .eq('status', 'pending')
+  return count ?? 0
+}
