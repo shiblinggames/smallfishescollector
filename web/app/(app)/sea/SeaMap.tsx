@@ -2542,16 +2542,92 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
 
 /** One thing standing out of the water. Absolute world position: the bands have
  *  no box for an offset to be relative to. */
+/**
+ * HOW DEEP EACH THING SITS.
+ *
+ * `line` is where the water crosses the sprite, as a percentage of its height —
+ * so a buoy at 70 is three tenths under, and a rig at 84 is standing on legs
+ * with only its feet wet.
+ *
+ * `keep` is how much of the submerged part you can still make out through the
+ * water before it fades to nothing. Never 0: an object that vanishes at the
+ * waterline has been CUT, not submerged, and the eye reads the straight edge
+ * immediately. A little of the hull showing under the surface is the whole
+ * effect.
+ */
+const SUBMERGE: Record<string, { line: number; keep: number }> = {
+  // A float on a chain, riding low.
+  buoy:     { line: 66, keep: 0.30 },
+  // Aground and going nowhere. Half of it is under.
+  wreck:    { line: 62, keep: 0.26 },
+  // On legs, in deep water — you see the legs go down and lose them.
+  rig:      { line: 80, keep: 0.22 },
+  // A rib cage in the shallows, part buried.
+  bones:    { line: 74, keep: 0.24 },
+  // Carved stone, standing in it.
+  monolith: { line: 78, keep: 0.20 },
+}
+
+/** Which art file this is, from its path — `/sea/wreck.png` -> `wreck`. */
+function markKind(art: string): string {
+  return art.slice(art.lastIndexOf('/') + 1).replace('.png', '')
+}
+
 const SeaMark = memo(function SeaMark({ m, i }: {
   m: { art: string; x: number; y: number; size: number; sway?: 'bob' | 'rock' }
   i: number
 }) {
+  const kind = markKind(m.art)
+  const sub = SUBMERGE[kind]
+  // An islet is LAND. It does not go under, it has a beach — the same shoal the
+  // islands get, at a size that suits a rock you could stand on.
+  const isLand = kind === 'islet'
+
   return (
     <div style={{ position: 'absolute', left: m.x, top: m.y, pointerEvents: 'none' }}>
-      {/* NOTHING UNDER IT. Two attempts at a waterline lived here, a dark
-          ellipse and then a pale one, and both read as the object hovering over
-          a surface. There is no surface; the art is already cut off where it
-          meets the water. */}
+      {/* ── WHERE IT MEETS THE WATER ──────────────────────────────────────
+          THIRD ATTEMPT, and a different mechanism from the two that failed.
+          Both of those drew something UNDERNEATH a sprite whose bottom edge was
+          still crisp — a dark ellipse, then a pale one — and a hard-edged object
+          with a smudge under it reads as hovering, every time. The smudge was
+          never the problem; the crisp edge was.
+
+          So the sprite's own base fades out instead (see SUBMERGE), and this is
+          only the disturbance where it breaks through: pale, not dark, because
+          water piles up and catches light around something standing in it
+          rather than casting a shadow on itself. It lives in the OUTER wrapper,
+          which is still on the squashed plane, so it comes out an ellipse lying
+          flat the way a ring on the surface actually would. */}
+      {isLand ? (
+        <>
+          <div aria-hidden style={{
+            position: 'absolute', left: 0, top: 0,
+            width: m.size * 1.9, height: m.size * 0.62,
+            marginLeft: -m.size * 0.95, marginTop: -m.size * 0.31,
+            borderRadius: '50%',
+            background: 'radial-gradient(ellipse, rgba(168,204,216,0.26) 0%, rgba(150,190,206,0.12) 55%, transparent 78%)',
+            filter: 'blur(5px)',
+          }} />
+          <div aria-hidden style={{
+            position: 'absolute', left: 0, top: 0,
+            width: m.size * 1.15, height: m.size * 0.36,
+            marginLeft: -m.size * 0.575, marginTop: -m.size * 0.18,
+            borderRadius: '50%',
+            background: 'rgba(206,226,232,0.30)', filter: 'blur(2.5px)',
+          }} />
+        </>
+      ) : sub && (
+        <div aria-hidden className="mark-wash" style={{
+          position: 'absolute', left: 0, top: 0,
+          width: m.size * 1.05, height: m.size * 0.3,
+          marginLeft: -m.size * 0.525, marginTop: -m.size * 0.15,
+          borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(226,244,250,0.34) 0%, rgba(200,228,240,0.15) 52%, transparent 76%)',
+          filter: 'blur(3px)',
+          animationDelay: `${(i * 0.61) % 4}s`,
+        }} />
+      )}
+
       {/* TWO WRAPPERS, because they carry different transforms. The outer one
           stands the landmark up off the plane; the inner one is free to sway
           without clobbering that. One element trying to do both means the
@@ -2567,6 +2643,24 @@ const SeaMark = memo(function SeaMark({ m, i }: {
           className={m.sway ? `mark-${m.sway}` : undefined}
           style={{
             width: '100%', maxWidth: 'none', display: 'block',
+            // THE SUBMERGED PART. A mask on the sprite itself, so the thing goes
+            // INTO the water rather than sitting on it: solid down to the
+            // waterline, then a step down to a fraction of its opacity — what
+            // you can still make out through the surface — and out to nothing.
+            //
+            // The step is what sells it. A smooth fade from 1 to 0 reads as the
+            // object dissolving; a step to a low plateau reads as a change of
+            // MEDIUM, which is what a waterline is.
+            ...(sub ? {
+              maskImage:
+                `linear-gradient(to bottom, #000 ${sub.line}%, ` +
+                `rgba(0,0,0,${sub.keep}) ${sub.line + 3}%, ` +
+                `rgba(0,0,0,${sub.keep * 0.55}) ${(sub.line + 100) / 2}%, transparent 100%)`,
+              WebkitMaskImage:
+                `linear-gradient(to bottom, #000 ${sub.line}%, ` +
+                `rgba(0,0,0,${sub.keep}) ${sub.line + 3}%, ` +
+                `rgba(0,0,0,${sub.keep * 0.55}) ${(sub.line + 100) / 2}%, transparent 100%)`,
+            } : {}),
             // Offset so neighbours never move in step, which is what makes a
             // row of buoys read as machinery.
             animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,

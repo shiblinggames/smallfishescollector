@@ -658,10 +658,35 @@ in the `nano-banana-2` skill, painted on **flat magenta** and chroma-keyed
 (`m = min(r,b) - g`), because asking the model for a transparent background returns a
 painted checkerboard. Style is matched against `public/crew/hall_*.png`.
 
-**Nothing is drawn underneath a floating object.** Two attempts at a waterline — a dark
-ellipse, then a pale one — both read as an object hovering over a surface. There is no
-surface; the art is already cut off at its own waterline. Islands are the exception: they
-are extruded solids and their offset contact shadow is correct.
+**Landmarks are submerged, not floated.** Two earlier attempts drew something *underneath*
+the sprite — a dark ellipse, then a pale one — and both read as an object hovering over a
+surface. The smudge was never the problem; the **crisp bottom edge** was. A hard-edged object
+with a smudge under it hovers, every time.
+
+So the sprite's own base is masked away instead (`SUBMERGE` in SeaMap): solid down to the
+waterline, then a **step** to a fraction of its opacity — what you can still make out through
+the surface — and out to nothing. The step is what sells it: a smooth fade from 1 to 0 reads
+as the object dissolving, a step to a low plateau reads as a change of *medium*. `keep` is
+never 0, because something that vanishes exactly at the waterline has been cut, and the eye
+finds that straight edge immediately.
+
+| | waterline | still visible under |
+|---|---|---|
+| wreck | 62% | 26% |
+| buoy | 66% | 30% |
+| bones | 74% | 24% |
+| monolith | 78% | 20% |
+| rig | 80% | 22% |
+
+**Islets are land** and get the islands' shoal instead — they have a beach, they do not go
+under. A check asserts every art file on the chart is either submerged or land, because one
+that matches neither silently gets no waterline at all.
+
+The only thing still drawn beneath is the pale **wash** where an object breaks through: pale
+rather than dark, because water piles up and catches light around something standing in it
+rather than casting a shadow on itself. It sits in the un-counter-squashed wrapper so it comes
+out an ellipse lying flat, and it breathes on its own slow offset. Islands keep their offset
+contact shadow: they are extruded solids and that shadow is correct.
 
 Placement is **solved and asserted, never eyeballed** — buildings inside the coastline,
 landmarks inside their zone and clear of each other, resident buyers reachable. Four of

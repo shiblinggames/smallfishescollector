@@ -2715,3 +2715,17 @@ body.hardcore-gauntlet::after {
 @media (prefers-reduced-motion: reduce) {
   .sea-surf, .sea-surf-2 { animation: none; }
 }
+
+
+/* Water piling up around something standing in it. Slower and much fainter than
+   the island surf — a buoy disturbs a couple of feet of sea, an island disturbs
+   a bay — and offset per landmark so a row of them never pulses in step. */
+.mark-wash {
+  animation: mark-wash 5.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes mark-wash {
+  0%, 100% { transform: scale(0.94); opacity: 0.62; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .mark-wash { animation: none; } }
