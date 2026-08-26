@@ -208,24 +208,30 @@ style cannot carry a media query; the phone layout was being served to a monitor
   Berths cost 40k / 140k / 450k and cap at four, because past four you are carrying most of
   your collection again and the decision stops existing. At sea you can only swap to a rod
   you brought.
-- **`HULL_SPEED` multiplies a base, and the base is a whole boat.** `[1, 1.15, 1.32, 1.52,
-  1.75, 2]` — six tiers, stock at **100%**, topping out at double. It spent a while inverted
-  (SPEED as the ceiling, stock at 62%) on the reasoning that the chart was tuned for a
-  refitted boat; that was wrong for one plain reason, which is that a player opening the game
-  should not be told their boat is at 62%. A stock hull is not a broken hull.
-  Four tiers were sized for a chart half this width — the bands are 22,600 deep now, so the
-  ceiling moved with them. **Costs are the fish hold's, lifted whole** — `[0, 2k, 8k, 20k, 50k, 100k]`,
-  which is `FISH_HOLD_TIERS` 2 through 6. The two upgrades sit side by side on the same
-  screen and come out of the same purse, so a captain who can afford the next hold should be
-  able to afford the next hull. On its own curve the ladder ran to 2,875,000 for five refits
-  against 1,030,500 for the hold's entire nine — nearly three times the money for half the
-  ladder. Stacks with the boat's own trim and grade.
+- **`HULL_SPEED` multiplies a base, and the base is a whole boat.** `[1, 1.12, 1.25, 1.4,
+  1.56, 1.75]` — six tiers, stock at **100%**. It spent a while inverted (SPEED as the
+  ceiling, stock at 62%) on the reasoning that the chart was tuned for a refitted boat; that
+  was wrong for one plain reason, which is that a player opening the game should not be told
+  their boat is at 62%. A stock hull is not a broken hull.
+  **Costs are the fish hold's, lifted whole** — `[0, 2k, 8k, 20k, 50k, 100k]`, which is
+  `FISH_HOLD_TIERS` 2 through 6. The two upgrades sit side by side on the same screen and come
+  out of the same purse, so a captain who can afford the next hold should be able to afford
+  the next hull. Stacks with the boat's own trim and grade.
 
-| | stock | top hull | + Chromium |
-|---|---|---|---|
-| Dock → the Abyss | 34s | 17s | 15s |
-| Dock → the Ancient Deep | 51s | 26s | 22s |
-| Dock → the far edge | 73s | 37s | 31s |
+| | stock (300) | top hull (525) |
+|---|---|---|
+| Dock → the Abyss | 34s | 20s |
+| Dock → the Ancient Deep | 51s | 29s |
+| Dock → the far edge | 73s | 42s |
+
+**The ladder is pinned to a SPEED, not a round multiplier.** `SPEED` is 300 and the top tier
+is ×1.75 = **525 px/s**, because 525 is the number the chart is tuned against; it ran to ×2
+for a while, which is a tidier figure and forty pixels a second too much. Steps are evenly
+geometric at ~12%, so every refit is worth the same fraction as the last rather than the
+early ones being the only ones you feel.
+
+The boat multiplies on top of the ceiling: a Chromium reaches 618 px/s, a Pistachio 462. The
+525 is the hull's ladder, not an absolute cap.
 
 **`SPEED` is 300**, and the number has moved enough to be worth writing down: 470 as a base
 when the Shipyard shipped, then 470 as the *ceiling* with stock at 62% of it (291), then 470

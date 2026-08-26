@@ -72,10 +72,16 @@ export const HULL_COSTS = [0, 2_000, 8_000, 20_000, 50_000, 100_000] as const
  * be told their boat is at 62%. A stock hull is not a broken hull. It is 100%,
  * and everything above it is a refit.
  *
- * SIX TIERS, TOPPING OUT AT DOUBLE. Four was sized for a chart half this width.
- * The bands are now 22,600 pixels deep rather than 14,400, so the ceiling moved
- * with them: the Greyhound crosses the whole chart in about the time the old
- * Clipper took to reach the Abyss.
+ * SIX TIERS, 100% TO 175%. Four tiers were sized for a chart half this width;
+ * the bands are 22,600 pixels deep now rather than 14,400, so the ladder grew
+ * with them.
+ *
+ * The top is pinned to a SPEED, not to a round multiplier: 300 base x 1.75 is
+ * 525 px/s, which is the number the chart was tuned against. It ran to x2 for a
+ * while, which is a tidier figure and forty pixels a second too much.
+ *
+ * Roughly 12% a step, evenly geometric, so every refit is worth the same
+ * fraction as the last rather than the early ones being the only ones you feel.
  *
  * THE PRICES ARE THE FISH HOLD'S, LIFTED WHOLE — tiers 2 through 6 of
  * FISH_HOLD_TIERS: 2,000 / 8,000 / 20,000 / 50,000 / 100,000. The two upgrades
@@ -89,7 +95,7 @@ export const HULL_COSTS = [0, 2_000, 8_000, 20_000, 50_000, 100_000] as const
  * bottom that the first refit lands in the first session and steep enough at
  * the top that the last one is a real decision.
  */
-export const HULL_SPEED = [1, 1.15, 1.32, 1.52, 1.75, 2] as const
+export const HULL_SPEED = [1, 1.12, 1.25, 1.4, 1.56, 1.75] as const
 
 export const MAX_HULL_TIER = HULL_COSTS.length - 1
 
