@@ -209,8 +209,12 @@ style cannot carry a media query; the phone layout was being served to a monitor
   refitted boat; that was wrong for one plain reason, which is that a player opening the game
   should not be told their boat is at 62%. A stock hull is not a broken hull.
   Four tiers were sized for a chart half this width — the bands are 22,600 deep now, so the
-  ceiling moved with them. Costs `[0, 25k, 90k, 260k, 700k, 1.8M]`: shallow and felt early,
-  a steep sink late. Stacks with the boat's own trim and grade.
+  ceiling moved with them. **Costs are the fish hold's, lifted whole** — `[0, 2k, 8k, 20k, 50k, 100k]`,
+  which is `FISH_HOLD_TIERS` 2 through 6. The two upgrades sit side by side on the same
+  screen and come out of the same purse, so a captain who can afford the next hold should be
+  able to afford the next hull. On its own curve the ladder ran to 2,875,000 for five refits
+  against 1,030,500 for the hold's entire nine — nearly three times the money for half the
+  ladder. Stacks with the boat's own trim and grade.
 
 | | stock | top hull | + Chromium |
 |---|---|---|---|

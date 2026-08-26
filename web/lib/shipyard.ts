@@ -61,7 +61,7 @@ export const HULL_NAMES = [
   'Stock Hull', 'Trimmed Hull', 'Raked Hull',
   'Clipper Hull', 'Blackwall Hull', 'Greyhound Hull',
 ] as const
-export const HULL_COSTS = [0, 25_000, 90_000, 260_000, 700_000, 1_800_000] as const
+export const HULL_COSTS = [0, 2_000, 8_000, 20_000, 50_000, 100_000] as const
 /**
  * A MULTIPLIER ON THE BASE, and the base is a whole boat.
  *
@@ -77,10 +77,17 @@ export const HULL_COSTS = [0, 25_000, 90_000, 260_000, 700_000, 1_800_000] as co
  * with them: the Greyhound crosses the whole chart in about the time the old
  * Clipper took to reach the Abyss.
  *
- * The curve is deliberately shallow at the bottom and steep at the top. The
- * first refit is 25,000 and buys a noticeable 15%; the last is 1,800,000 and
- * buys 14%. Early ones are affordable and felt; late ones are a sink for a
- * player who has run out of things to want.
+ * THE PRICES ARE THE FISH HOLD'S, LIFTED WHOLE — tiers 2 through 6 of
+ * FISH_HOLD_TIERS: 2,000 / 8,000 / 20,000 / 50,000 / 100,000. The two upgrades
+ * sit side by side on the same screen and are bought by the same player out of
+ * the same purse, so a captain who can afford the next hold should be able to
+ * afford the next hull. They were on their own curve before and it ran to
+ * 2,875,000 for five refits, against 1,030,500 for the hold's entire nine
+ * tiers — nearly three times the money for half the ladder.
+ *
+ * Same shape as the hold's, too: roughly 2.5x a step, shallow enough at the
+ * bottom that the first refit lands in the first session and steep enough at
+ * the top that the last one is a real decision.
  */
 export const HULL_SPEED = [1, 1.15, 1.32, 1.52, 1.75, 2] as const
 
