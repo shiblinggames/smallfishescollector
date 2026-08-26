@@ -15,7 +15,8 @@
 // right; a second copy here would be two copies of the fishing economy drifting
 // apart. The handlers below are the same server actions the fishing page calls.
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { RODS, getEffectiveRod, rodGlowClass } from '@/lib/rods'
@@ -179,6 +180,28 @@ export default function ShipyardClient(p: {
   const [special2, setSpecial2] = useState(p.equippedSpecial2)
   const [autoCaster, setAutoCaster] = useState(p.hasAutoCaster)
   const [waitTimer, setWaitTimer] = useState(p.showWaitTimer)
+
+  const router = useRouter()
+  /**
+   * OUT. Same shape as the Trawl Docks' exit, and for the same reason: a push
+   * mounts a SECOND /sea on top of the one still in history, so the chart
+   * remounts from cold — re-reading the boat's position, rebuilding every
+   * island — which is a visible reload of a screen nobody left. Going back
+   * restores the one already there.
+   *
+   * Guarded on the breadcrumb the chart drops in `enter()`, not on
+   * `history.length`, which counts other origins and would walk somebody out of
+   * the site on a deep link.
+   */
+  const leave = useCallback(() => {
+    let cameFromChart = false
+    try {
+      cameFromChart = sessionStorage.getItem('sea:came-from-chart') === '1'
+      sessionStorage.removeItem('sea:came-from-chart')
+    } catch { /* private mode — fall through to the push */ }
+    if (cameFromChart) router.back()
+    else router.push('/sea')
+  }, [router])
 
   const [tab, setTab] = useState<'locker' | 'upgrades'>('locker')
   /** Which berth's picker is open. 0 is the rod in your hands and never
@@ -360,6 +383,23 @@ export default function ShipyardClient(p: {
             Glow is ON here, unlike the small preview inside the gear grid: at
             this size the halo on a legendary rod is the whole point of the shot,
             and there is exactly one of these on the page. */}
+        {/* OUT, and always in the same corner as every other close on this
+            chart. The page had only a "Back to the water" link at the very
+            bottom, which on a phone is a full scroll away from wherever you
+            happen to be reading — and every modal you can open from the sea
+            puts its X up here, so this is where a thumb goes looking. */}
+        <button type="button" onClick={leave} aria-label="Back to the water" title="Back to the water"
+          style={{
+            position: 'absolute', top: 22, right: 22, zIndex: 5,
+            width: 34, height: 34, borderRadius: '50%', padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(6,12,18,0.82)', border: '1px solid rgba(180,214,232,0.34)',
+            color: '#dfeaf2', cursor: 'pointer',
+          }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+
         <div style={{
           position: 'relative', marginTop: 12, borderRadius: 22,
           // MUST clip. FisherPose's overlays are positioned in percentages of

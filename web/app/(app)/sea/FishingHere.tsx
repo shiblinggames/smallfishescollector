@@ -1428,12 +1428,27 @@ export default function FishingHere({
               initial={{ y: 26 }} animate={{ y: 0 }} exit={{ y: 20 }}
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               style={{
+                position: 'relative',
                 width: '100%', maxWidth: 380, borderRadius: 18, padding: '1rem',
                 background: 'rgba(10,16,22,0.98)',
                 border: '1px solid rgba(180,214,232,0.28)',
                 boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
               }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f2ead8' }}>Tackle box</p>
+              {/* OUT. Tapping the backdrop closed it, which is invisible — a
+                  gesture nobody is told about is not a way out. */}
+              <button type="button" onClick={e => { e.stopPropagation(); setTackleOpen(false) }}
+                aria-label="Close" title="Close"
+                style={{
+                  position: 'absolute', top: 10, right: 10,
+                  width: 28, height: 28, borderRadius: '50%', padding: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                  color: '#cfcabf', cursor: 'pointer',
+                }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f2ead8', paddingRight: 34 }}>Tackle box</p>
               <p className="font-karla" style={{ fontSize: '0.888rem', color: '#9fb4c2', marginTop: 3 }}>
                 A wider catch zone is an easier reel. Nothing else changes.
               </p>

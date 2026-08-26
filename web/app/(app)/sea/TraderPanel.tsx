@@ -137,6 +137,7 @@ export default function TraderPanel({
         initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 28 }}
         style={{
+          position: 'relative',
           width: '100%', maxWidth: 380, borderRadius: 18, padding: '1.15rem',
           // Opaque base. This sits on painted water and a translucent panel over
           // art is unreadable at the exact moment it has something to say.
@@ -145,8 +146,25 @@ export default function TraderPanel({
           boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
         }}>
 
+        {/* OUT. The footer has "Sail on" and "No thanks", which are ANSWERS —
+            and somebody who opened this by accident, or who just wants the
+            panel gone, should not have to pick one. Every other overlay on this
+            chart closes from this corner. */}
+        <button type="button" onClick={onClose} aria-label="Close" title="Close"
+          style={{
+            position: 'absolute', top: 12, right: 12,
+            width: 28, height: 28, borderRadius: '50%', padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+            color: '#cfcabf', cursor: 'pointer',
+          }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+
         <p className="font-karla font-700 uppercase" style={{
           fontSize: '0.744rem', letterSpacing: '0.16em', color: 'rgba(255,206,138,0.75)',
+          paddingRight: 34,
         }}>
           {KIND_LABEL[trader.kind]}
           {/* WHICH KIND OF THING THEY ARE ABOUT TO SAY, folded into the label

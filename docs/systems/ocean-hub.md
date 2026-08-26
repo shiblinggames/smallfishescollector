@@ -653,6 +653,28 @@ ladder is what money buys; the trim is what you choose. `LoadoutStats` shows the
 because that is what the map actually steers with — quoting either half alone would be a
 number the water disagrees with.
 
+## Every surface has a way out, in the same corner
+
+Anything you can open from the chart closes from the **top right**, so a thumb always knows
+where to go. Audited, and three were missing one:
+
+- **The Shipyard** had only a "Back to the water" link at the very bottom of a long page —
+  on a phone that is a full scroll away from wherever you happen to be reading.
+- **The trader panel** had "Sail on" and "No thanks", which are *answers*. Somebody who opened
+  it by accident should not have to pick one.
+- **The tackle box** closed on a backdrop tap and nothing else. A gesture nobody is told about
+  is not a way out.
+
+Both *pages* (Shipyard, Trawl Docks) leave with `router.back()` when the chart's breadcrumb is
+present, falling back to a push — a push mounts a second `/sea` over the one still in history
+and remounts the whole chart from cold, which is a visible reload of a screen nobody left.
+Guarded on the breadcrumb rather than `history.length`, which counts other origins and would
+walk somebody out of the site on a deep link.
+
+`/sea` is in the nav for admins, so the Mainland's three destinations (tavern, market, tackle
+shop) already have a way back and are left alone — they are ordinary app pages reachable from
+the nav too, and a sea-specific X on them would be furniture everywhere else.
+
 ## Controls that are not the sea
 
 The map steers on **two** paths — `onDown` (pointerdown, for the thumb helm) and `onTap`
