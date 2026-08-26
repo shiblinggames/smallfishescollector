@@ -25,6 +25,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
 import { PLACES, RESIDENTS, YOON } from '@/app/(app)/sea/chart'
+import { decodeFog, encodeFog, fogSet } from '@/lib/seaExplore'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 
@@ -361,14 +362,39 @@ export async function buyRunnerRod(traderKey: string): Promise<
  *
  * Clamped only to keep a NaN or an Infinity out of a numeric column.
  */
-export async function saveSeaPosition(x: number, y: number): Promise<void> {
+export async function saveSeaPosition(
+  x: number, y: number,
+  /** Fog cells uncovered since the last flush. Merged with OR — see below. */
+  seen: number[] = [],
+): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   if (!Number.isFinite(x) || !Number.isFinite(y)) return
   const admin = createAdminClient()
-  await admin.from('profiles').update({
+
+  const patch: Record<string, unknown> = {
     sea_x: Math.max(-1e6, Math.min(1e6, x)),
     sea_y: Math.max(-1e6, Math.min(1e6, y)),
-  }).eq('id', user.id)
+  }
+
+  // ── THE FOG ───────────────────────────────────────────────────────────
+  //
+  // Read, OR, write. Not read-modify-write in the dangerous sense: OR is
+  // idempotent and commutative, so two tabs racing, or a flush that arrives
+  // out of order, can only ever ADD cells. The worst a lost update can do is
+  // leave a patch of sea foggy that the player has already sailed — and they
+  // will sail it again, because they cannot see what is in it.
+  //
+  // That is the whole reason this is a bitfield and not a list: a list would
+  // need dedup and ordering and could lose entries; a bitfield cannot.
+  if (seen.length) {
+    const { data: row } = await admin
+      .from('profiles').select('sea_explored').eq('id', user.id).single()
+    const bits = decodeFog(row?.sea_explored as string | null)
+    for (const i of seen) fogSet(bits, i)
+    patch.sea_explored = encodeFog(bits)
+  }
+
+  await admin.from('profiles').update(patch).eq('id', user.id)
 }

@@ -538,6 +538,41 @@ Two traps worth keeping in mind:
   from the animation's clock. Never drive it with per-frame state. Start it from a callback
   ref, not an effect: `mode="wait"` means the node does not exist when the phase changes.
 
+## The chart (minimap + fog of war)
+
+`lib/seaExplore.ts` + `sea/Minimap.tsx`. The chart button sits beside the phase glyph; the
+map you play on shows about 800 world pixels of a sea that is 45,200 across, so at any moment
+you can see roughly a three-thousandth of it. The compass says which way things are; it
+cannot say what SHAPE the sea is or how much of it you have never crossed.
+
+**Storage is a bitfield, not a list.** 700px cells over a 65 × 35 grid = 2,275 cells = **285
+bytes**, base64ing to **380 characters**, and it never grows however far anyone sails. A list
+of visited indices would run to kilobytes on a profile row read on every page load.
+
+It is also **idempotent under OR**, which is the property that matters: two tabs, or a flush
+arriving late, can only ever ADD cells. There is no ordering to get wrong and nothing to
+reconcile — the worst a lost update can do is leave a patch foggy that you will sail again
+anyway, because you cannot see what is in it. `saveSeaPosition(x, y, seen[])` reads, ORs and
+writes, piggybacking on the position flush that already runs on navigation and every 20s.
+
+**Reveal is a 3×3 of cells (2,100px) around the boat** — a little more than you can literally
+see, deliberately: fog that clears exactly to the edge of the viewport reads as a spotlight
+following you around rather than a chart you are filling in.
+
+**Ports are never fogged.** A chart whose own harbours are hidden until you have been to them
+is a puzzle, not a chart, and you cannot get lost looking for somewhere you already know the
+way to. The zone buyers and Yoon are marked **only** in water you have uncovered — finding
+them is the point.
+
+Measured: 100% is genuinely reachable (1,646 water cells, all of them coverable), a fresh
+captain starts at 0.4%, garbage decodes to empty rather than throwing, and every port plus
+Yoon lands on the grid.
+
+**`SeaLook` gained a `solid`** for this. The minimap paints 2,275 cells into a canvas and
+`ctx.fillStyle = 'radial-gradient(…)'` is not an error — it is a silent no-op that leaves
+every cell the previous colour. The five bands come out 47 apart from the fog on the widest
+channel, so water reads as water.
+
 ## The land
 
 Still no island art — this is all CSS, and it is scaffolding for real plates. But it stopped

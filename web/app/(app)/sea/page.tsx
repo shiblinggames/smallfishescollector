@@ -191,6 +191,9 @@ export default async function SeaPage() {
       // missing, because half a position is not one.
       trawlEndsAt={trawlEndsAt}
       renown={renown}
+      // The fog, as stored. Decoded on the client — the bitfield is the
+      // record and the map is the only thing that reads it.
+      exploredRaw={(profile?.sea_explored as string | null) ?? null}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,

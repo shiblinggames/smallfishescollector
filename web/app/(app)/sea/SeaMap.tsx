@@ -22,6 +22,8 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import RenownPanel from '@/components/RenownPanel'
+import Minimap from './Minimap'
+import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
@@ -375,7 +377,15 @@ export function inBand(p: Vec, place: Place): boolean {
 /** The blend, and the two things the rest of the frame needs out of it: the CSS
  *  for the backdrop, and how DARK that water is. The wash and the sky both read
  *  the darkness so the whole frame agrees about how deep you are. */
-type SeaLook = { css: string; lum: number }
+type SeaLook = {
+  css: string
+  lum: number
+  /** ONE SOLID COLOUR from the same blend, for anything that cannot take a
+   *  gradient — the minimap paints 2,275 cells into a canvas, and
+   *  `ctx.fillStyle = 'radial-gradient(…)'` is not an error, it is a silent
+   *  no-op that leaves every cell the previous colour. */
+  solid: string
+}
 
 /**
  * HOW FAR THE BOAT MUST MOVE before the backdrop is recomputed, in world pixels.
@@ -452,6 +462,8 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
 
   return {
     lum,
+    // The middle stop, which is the colour this water reads as overall.
+    solid: `rgb(${out[1].join(',')})`,
     // Painted three ways from the same blend, and weighted DOWN toward the
     // deep end: the pale stop used to own the top 38% of the screen, which is
     // a lot of light to be showing in water that is meant to be black.
@@ -576,7 +588,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, trawlEndsAt, renown, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, trawlEndsAt, renown, exploredRaw, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -613,6 +625,8 @@ export default function SeaMap({
   trawlEndsAt: string[]
   /** Fishing renown, for the level bar's chip. Null below the cap. */
   renown: RenownState | null
+  /** Base64 fog bitfield as stored. See lib/seaExplore. */
+  exploredRaw: string | null
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -871,6 +885,23 @@ export default function SeaMap({
 
   /** The Mainland's landing chooser — tavern, market or tackle shop. */
   const [ashore, setAshore] = useState(false)
+  /**
+   * THE FOG.
+   *
+   * Decoded ONCE into a ref, and mutated in place as the boat sails. A ref and
+   * not state because the 0.12s tick writes to it constantly and re-rendering
+   * the chart to record that a cell has been seen would undo the whole reason
+   * that tick stopped calling setState.
+   *
+   * `fogVersion` is the render signal, bumped only when a cell ACTUALLY flips —
+   * which is a handful of times per crossing, not eight times a second.
+   */
+  const fogRef = useRef<Uint8Array>(decodeFog(exploredRaw))
+  const [fogVersion, setFogVersion] = useState(0)
+  /** Cells uncovered since the last flush, sent with the next position save. */
+  const fogPending = useRef<Set<number>>(new Set())
+  const [mapOpen, setMapOpen] = useState(false)
+
   /** The renown panel, opened from the level bar's chip while the rod is out. */
   const [renownOpen, setRenownOpen] = useState(false)
   const [renownState, setRenownState] = useState(renown)
@@ -1061,9 +1092,13 @@ export default function SeaMap({
     let last = { ...pos.current }
     const flush = () => {
       const p = pos.current
-      if (Math.hypot(p.x - last.x, p.y - last.y) < 60) return
+      const fog = [...fogPending.current]
+      // Moved far enough, OR there is fog to bank. A boat sitting still in a
+      // patch it has just uncovered still has something worth saving.
+      if (fog.length === 0 && Math.hypot(p.x - last.x, p.y - last.y) < 60) return
       last = { ...p }
-      void saveSeaPosition(p.x, p.y)
+      fogPending.current.clear()
+      void saveSeaPosition(p.x, p.y, fog)
     }
     const onHide = () => { if (document.visibilityState === 'hidden') flush() }
     const id = setInterval(flush, 20_000)
@@ -1075,7 +1110,8 @@ export default function SeaMap({
       window.removeEventListener('pagehide', flush)
       // The unmount IS a navigation — going ashore, or the nav bar. This is the
       // one that closes the cheese, so it ignores the moved-far-enough test.
-      void saveSeaPosition(pos.current.x, pos.current.y)
+      void saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
+      fogPending.current.clear()
     }
   }, [])
 
@@ -1564,6 +1600,17 @@ export default function SeaMap({
         // Standing in a hotspot. Compared by KEY, not by identity: the object
         // is rebuilt every fifteen seconds and comparing references would
         // re-render four times a minute for no reason.
+        // UNCOVER THE CHART. Cheap: nine index computations and nine bit
+        // tests, and it only touches React when a cell genuinely flips.
+        let lit = false
+        for (const ci of fogReveal(pos.current.x, pos.current.y)) {
+          if (fogHas(fogRef.current, ci)) continue
+          fogSet(fogRef.current, ci)
+          fogPending.current.add(ci)
+          lit = true
+        }
+        if (lit) setFogVersion(v => v + 1)
+
         // FROM THE LIST WE ALREADY HAVE. `hotspotAt` re-derives the whole set
         // from the clock on every call — filtering the bands, hashing, building
         // three objects — and this runs eight times a second. `spots` is the
@@ -1938,6 +1985,34 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
+      {/* THE CHART BUTTON, beside the light and on the same row.
+          A real button, so the map's own `closest('button')` guard exempts it
+          from steering on both the pointer and the click path without needing
+          data-no-steer as well. */}
+      {!fishingIn && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(10); setMapOpen(true) }}
+          aria-label="Open the chart"
+          title="The chart"
+          style={{
+            position: 'absolute', top: 18, left: 48, zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 26, height: 26, borderRadius: '50%', padding: 0,
+            background: 'rgba(6,12,18,0.7)',
+            border: '1px solid rgba(180,214,232,0.22)',
+            color: 'rgba(214,232,240,0.85)', cursor: 'pointer',
+          }}>
+          {/* A folded chart. Not a compass — there is already a compass on this
+              screen and it means something else. */}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" />
+            <path d="M9 4v14M15 6v14" />
+          </svg>
+        </button>
+      )}
+
       {/* THE COMPASS. Its mount was deleted in an over-broad slice edit and the
           component sat unreferenced for a dozen commits, which is why the
           arrows "disappeared" — nothing was wrong with them, nothing was
@@ -1953,6 +2028,18 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
+
+      {/* THE CHART. `fogVersion` is in the key path so the canvas redraws when
+          a cell flips — the bitfield itself is a ref and mutating it is
+          invisible to React by design. */}
+      <Minimap
+        key={fogVersion}
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        fog={fogRef.current}
+        at={pos}
+        seaAt={p => seaAt(p, 0).solid}
+      />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
           map's own stacking and the fishing UI both. */}
