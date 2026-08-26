@@ -240,6 +240,51 @@ as a base again when stock went back to reading 100% — which quietly handed ev
 300 is close to the 291 that actually got played, so the feel is the one that was tuned
 rather than the one that fell out of a label change.
 
+## The cliffs, and the gate
+
+The north wall used to be an invisible clamp: you sailed into nothing and stopped, which
+reads as the edge of a *level* rather than the edge of a world. It is a headland now — a
+sheer wall the full 45,200px width of the chart with **one** gap in it, and the Harbour built
+at the foot of that gap. It always sat at exactly `(-900, NORTH_WALL)`, so it was already
+standing where the gate belonged.
+
+**Sailing into the arch is how you leave for expeditions.** The confirm meets you *under* it —
+that is the whole reason the wall became cliffs. Leaving the fishing grounds should be
+somewhere you sail to and a thing you feel yourself doing, not a button on a menu. Backing out
+(**Come about**) noses you south and costs nothing.
+
+`GATE_HALF = 430`, so the opening is 860px — about four boats wide, and **1.9% of the wall**.
+Wide enough to sail into without lining up, narrow enough to read as a gap in something rather
+than a missing section of it. `GATE_DEPTH = 300` is the throat: far enough in that you are
+plainly under the arch when it asks. The exit uses 90px of hysteresis so the prompt cannot
+flicker for a boat sitting on the line.
+
+### How it gets its scale
+
+Height alone does not make a thing enormous — a tall rectangle is a tall rectangle. What sells
+it is everything that agrees the air between you and it is deep:
+
+- **Two ranges.** A hazier, taller one behind the near one, offset so its headlands fall in the
+  near range's gaps. One wall is a wall; two with air between them is a coastline going on for
+  miles.
+- **Haze that grows with distance.** The far range is washed toward the sky and loses its
+  banding entirely — atmospheric perspective is the only depth cue this projection has, since
+  it is orthographic and nothing gets smaller.
+- **A green crown.** Cliffs of this kind are pasture that stops. The strip of grass along the
+  top is what makes the drop below it read as a drop.
+- **Surf at the foot**, which gives the eye a scale reference it already knows the size of.
+- **Sedimentary banding** on the near range only. Painting it on the far one too is what makes
+  a background read as a sticker.
+
+The arch is the tallest thing on the chart on purpose, and **warm** — everything else here is
+cold, and the one warm thing on a cold map is where you look. Its opening is a **mask**, not an
+outline: an ellipse cut from the bottom of the span, because an arch is the absence and not
+the shape. Light spills through it onto the water, so you can see the far side is lit
+differently before you commit.
+
+~103 static divs, all memoised. The world layer is transformed as a whole, so none of it costs
+anything per frame.
+
 ## The edges of the world
 
 - **`NORTH_WALL = -1500`**, the Harbour's own latitude. The hull clamps at it and northward

@@ -352,6 +352,31 @@ export const RESIDENTS: {
  */
 export const NORTH_WALL = -1500
 
+/**
+ * THE GATE.
+ *
+ * The wall is not a line on a map any more, it is a wall of cliffs, and there
+ * is one way through it: a natural arch with the Harbour built at its foot.
+ * Sailing into the arch is how you leave the fishing grounds for expeditions.
+ *
+ * Centred on the Harbour, because that is what a harbour AT a gate means — you
+ * pass the port on your way out, the way you would.
+ */
+export const GATE_X = -900
+/** Half the arch's opening, in world pixels. Wide enough to sail into without
+ *  lining up, narrow enough to read as a gap in something rather than a missing
+ *  section of it. The boat is 210 across. */
+export const GATE_HALF = 430
+
+/** Is this point in the arch's mouth? */
+export function inGate(x: number): boolean {
+  return Math.abs(x - GATE_X) < GATE_HALF
+}
+
+/** How far north the arch lets you go before the confirm stops you. A short
+ *  throat, so you are plainly INSIDE the arch when it asks. */
+export const GATE_DEPTH = 300
+
 /** The open sea, away from any named water. What everything blends back toward,
  *  and the only invented palette on the chart. */
 export const OPEN_SEA: [string, string, string] = ['#0b1a24', '#1c3a48', '#4a6f7d']
