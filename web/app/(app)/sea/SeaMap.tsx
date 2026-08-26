@@ -574,7 +574,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, trawlEndsAt, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -607,6 +607,8 @@ export default function SeaMap({
   start: Vec | null
   /** Everything the collection log reads. See SeaLog. */
   log: SeaLog
+  /** ISO moments each running trawl comes due. See the Docks mark. */
+  trawlEndsAt: string[]
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -827,6 +829,29 @@ export default function SeaMap({
    * INSIDE test is cheap (three distance checks) so it rides the same 0.12s
    * proximity tick everything else on this screen uses.
    */
+  /**
+   * HOW MANY CREW ARE STANDING ON THE DOCK.
+   *
+   * Worked out from the maturity timestamps the page handed down, so no polling
+   * and no server round-trip: a trawl that comes due while you are out in the
+   * Abyss lights the island up by itself.
+   *
+   * The ticker is 5s because the only thing it can change is a count that moves
+   * once an hour per crew — a second-accurate "ready" is a countdown, and this
+   * is not one.
+   */
+  const [trawlsReady, setTrawlsReady] = useState(
+    () => trawlEndsAt.filter(t => new Date(t).getTime() <= Date.now()).length)
+  useEffect(() => {
+    const tick = () => {
+      const n = trawlEndsAt.filter(t => new Date(t).getTime() <= Date.now()).length
+      setTrawlsReady(prev => (prev === n ? prev : n))
+    }
+    tick()
+    const id = setInterval(tick, 5_000)
+    return () => clearInterval(id)
+  }, [trawlEndsAt])
+
   const [spots, setSpots] = useState<Hotspot[]>(() => hotspotsAt())
   const [inSpot, setInSpot] = useState<Hotspot | null>(null)
   useEffect(() => {
@@ -1588,7 +1613,13 @@ export default function SeaMap({
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: Z.world, willChange: 'transform' }}>
         {PLACES.map(p => (
-          <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
+          <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id}
+            // CREW WAITING ON THE DOCK. The island says so itself rather than a
+            // banner saying it for them: it is a fact about a PLACE, and the
+            // chart is where facts about places belong. Nothing moves, nothing
+            // interrupts — you notice it the next time you look at the chart,
+            // which out here is constantly.
+            waiting={p.id === 'trawl_docks' ? trawlsReady : 0} />
         ))}
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -1829,7 +1860,8 @@ export default function SeaMap({
           arrows "disappeared" — nothing was wrong with them, nothing was
           drawing them. Frozen while the dial is up: the boat is not moving, so
           every tick would redraw identical arrows in identical places. */}
-      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} />
+      <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp}
+        waitingAt={id => (id === 'trawl_docks' ? trawlsReady : 0)} />
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
 
@@ -2347,7 +2379,12 @@ const SeaMark = memo(function SeaMark({ m, i }: {
  *  the compass, and without this every island rebuilt its whole subtree —
  *  coastline clip, drift blobs, cliff, jetty and all — on each of those ticks
  *  for a result that had not changed. */
-const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place: Place; locked: boolean; isNear: boolean }) {
+const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting = 0 }: {
+  place: Place; locked: boolean; isNear: boolean
+  /** Crew standing on this dock with a haul. Only the Trawl Docks ever pass a
+   *  non-zero value; every other island ignores it. */
+  waiting?: number
+}) {
   const isWater = place.kind === 'water'
   const d = place.r * 2
 
@@ -2541,6 +2578,21 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
           which is exactly the map-not-place feeling the blend was undoing. The
           water tells you where you are by its colour, and the banner at the top
           says it in words when you cross. */}
+      {/* SOMEBODY IS WAITING HERE.
+          A warm bloom on the island itself, so it reads at the distance you
+          actually see the chart from — long before the name plate is legible.
+          Inside the world layer and unsquashed on purpose: it is light lying on
+          a place, and it should foreshorten with the plane like the shore does. */}
+      {waiting > 0 && (
+        <div aria-hidden className="sea-dock-ready" style={{
+          position: 'absolute', left: '50%', top: '50%',
+          width: place.r * 3, height: place.r * 3,
+          marginLeft: -place.r * 1.5, marginTop: -place.r * 1.5,
+          borderRadius: '50%', pointerEvents: 'none',
+          background: 'radial-gradient(circle, rgba(240,192,64,0.30) 0%, rgba(240,192,64,0.13) 42%, rgba(240,192,64,0.04) 66%, transparent 76%)',
+        }} />
+      )}
+
       {!isWater && (
         <div style={{
           position: 'absolute', left: '50%', top: '100%',
@@ -2551,6 +2603,17 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
           transformOrigin: 'top center',
           textAlign: 'center', whiteSpace: 'nowrap',
         }}>
+          {/* THE COUNT, above the name. Plain words rather than a bare number
+              on a pip: "2 crew back" is a thing that happened, "2" is a badge
+              you have to remember the meaning of. */}
+          {waiting > 0 && (
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.84rem', letterSpacing: '0.1em', marginBottom: 3,
+              color: '#f0c040', textShadow: '0 1px 10px rgba(0,0,0,0.95)',
+            }}>
+              {waiting} crew back
+            </p>
+          )}
           <p className="font-cinzel font-700" style={{
             fontSize: '1.152rem', color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
             textShadow: '0 2px 12px rgba(0,0,0,0.9)',
@@ -2954,8 +3017,11 @@ const COMPASS_MAX = 4
 /** How far apart two markers must sit on the perimeter before both are shown. */
 const COMPASS_SPACING = 96
 
-function Compass({ pos, zoom, wrapRef, locked, frozen }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt }: {
   frozen: boolean
+  /** Crew waiting at a given port, so a dock with a haul on it can jump the
+   *  queue. Zero for everywhere else. */
+  waitingAt: (id: string) => number
   pos: React.RefObject<Vec>
   zoom: React.RefObject<number>
   wrapRef: React.RefObject<HTMLDivElement | null>
@@ -3025,7 +3091,10 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
 
   const ports = PLACES.filter(p => p.kind === 'port')
     .map(p => ({ p, ...project(p.x, p.y) }))
-    .sort((a, b) => a.world - b.world)
+    // CREW WAITING OUTRANKS PROXIMITY. The nearest port is the one you need to
+    // find your way home by; a dock with somebody standing on it is the one you
+    // need to be TOLD about, because nothing else on this screen would.
+    .sort((a, b) => (waitingAt(b.p.id) - waitingAt(a.p.id)) || (a.world - b.world))
   const nearestPort = ports[0]
   if (nearestPort) {
     marks.push({

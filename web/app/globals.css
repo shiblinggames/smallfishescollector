@@ -2671,3 +2671,17 @@ body.hardcore-gauntlet::after {
 @media (prefers-reduced-motion: reduce) {
   .sea-hotspot-1, .sea-hotspot-2, .sea-hotspot-3, .sea-hotspot-dot { animation: none; }
 }
+
+
+/* Crew standing on a dock with a haul. Slower and gentler than a hotspot: this
+   is a "whenever you get round to it", not a "come here now" — the haul does
+   not spoil and nothing is lost by finishing the run you are on first. */
+.sea-dock-ready {
+  animation: sea-dock-ready 4.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes sea-dock-ready {
+  0%, 100% { transform: scale(0.96); opacity: 0.72; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .sea-dock-ready { animation: none; } }

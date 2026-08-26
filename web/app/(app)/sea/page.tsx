@@ -25,6 +25,7 @@ import { dealtToday } from './traderActions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import { vigilFor } from '@/lib/ancientVigil'
+import { getTrawlState } from '../fishing/trawls/actions'
 
 export const metadata = { title: 'The Sea' }
 
@@ -74,6 +75,16 @@ export default async function SeaPage() {
   // Read on the server so the day's deal count survives a page reload — a cap
   // the client remembers is not a cap.
   const dealt = await dealtToday()
+
+  // ── WHEN THE CREW GET BACK ────────────────────────────────────────────
+  // TIMESTAMPS, not a count. A trawl matures on a clock, so handing the map
+  // the moments they come due lets it work out how many are waiting at any
+  // instant without polling the server once — a crew that finishes while you
+  // are halfway to the Abyss lights the Docks up on its own.
+  const trawlState = await getTrawlState()
+  const trawlEndsAt = 'error' in trawlState
+    ? []
+    : trawlState.zones.map(z => z.trawl?.endsAt).filter((v): v is string => !!v)
 
   // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
   const { data: finaleRow } = await admin
@@ -171,6 +182,7 @@ export default async function SeaPage() {
       // WHERE YOU LEFT OFF. Null on a profile that has never sailed, and the
       // map falls back to HOME — which is also what happens if either half is
       // missing, because half a position is not one.
+      trawlEndsAt={trawlEndsAt}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,

@@ -208,7 +208,7 @@ function BestTag({ color }: { color: string }) {
 }
 
 export default function TrawlIndicator({
-  hidden = false, variant = 'float', canDeploy = true, onDismiss,
+  hidden = false, variant = 'float', canDeploy = true, canCollect = true, onDismiss,
 }: {
   hidden?: boolean
   /**
@@ -235,6 +235,15 @@ export default function TrawlIndicator({
    * player could not have had by sailing.
    */
   canDeploy?: boolean
+  /**
+   * MAY A HAUL BE TAKEN FROM HERE.
+   *
+   * Also the Docks only. Sending and collecting are both crew business and
+   * splitting them across two screens would need explaining; one rule — the
+   * island is where the crew are — needs none. The chart lights the Docks up
+   * when somebody is waiting, so nothing is missed by it being over there.
+   */
+  canCollect?: boolean
   /** Dock variant only: what "close" means when there is no badge to shrink
    *  back into. */
   onDismiss?: () => void
@@ -657,9 +666,9 @@ export default function TrawlIndicator({
                 // and "not here" are different problems with different fixes.
                 const couldSend = z.unlocked && !t && freeSlots > 0
                 const sendable = couldSend && canDeploy
-                const actionable = ready || sendable
+                const actionable = (ready && canCollect) || sendable
                 const onTapCard = ready
-                  ? () => { if (settled()) doCollect(z.key) }
+                  ? () => { if (settled() && canCollect) doCollect(z.key) }
                   : sendable
                     ? () => { if (!settled()) return; haptic(10); setShowAllCrew(false); setPicking(z.key) }
                     : undefined
@@ -676,7 +685,7 @@ export default function TrawlIndicator({
                   // the standout Ready" and the flag said otherwise, so the one
                   // state meant to stand out was drawn like the four that are
                   // not: pale text on the same black plate.
-                  ready:    { c: '#ffd96a',     label: collectingZone === z.key ? 'Hauling In…' : 'Tap to Collect', filled: true,  dot: false },
+                  ready:    { c: '#ffd96a',     label: collectingZone === z.key ? 'Hauling In…' : canCollect ? 'Tap to Collect' : 'Waiting at the Docks', filled: true,  dot: false },
                   running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
                   sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
                   ashore:   { c: 'rgba(255,255,255,0.55)', label: 'Send from the Docks',   filled: false, dot: false },

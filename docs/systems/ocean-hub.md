@@ -398,8 +398,20 @@ afford. Two new props:
   the panel, which made a voyage into a menu you opened and left the chart with one fewer
   reason to sail anywhere. On `/fishing` a sendable zone now reads **"Send from the Docks"**.
 
-**Collecting is deliberately not gated.** Making a player sail back to claim a haul they have
-already earned is a toll, not a decision.
+**Both sending AND collecting happen here** (`canDeploy` / `canCollect`, true only at the
+Docks). Splitting them across two screens would need explaining; one rule — the island is
+where the crew are — needs none. On `/fishing` the panel is read-only: it shows the
+countdowns and says **"Waiting at the Docks"** on a ready card.
+
+That only works because the chart tells you. **The Docks island carries a warm bloom and a
+"2 crew back" line above its name plate whenever somebody is waiting**, and the compass
+promotes it over the nearest port — proximity is what you need to get home, but a dock with
+a haul on it is the thing nothing else on the screen would mention.
+
+It costs no polling: the page hands down the ISO moment each running trawl comes due, and the
+map counts how many have matured on a 5s tick. A crew finishing while you are halfway to the
+Abyss lights the island up on its own. The bloom is slower and gentler than a hotspot's on
+purpose — a haul does not spoil, so it is a "whenever you get round to it", not a summons.
 
 This is a **design gate, not a security one**, and it is client-side on purpose: the server
 has no trustworthy notion of where the boat is (`profiles.sea_x/sea_y` is client-written and

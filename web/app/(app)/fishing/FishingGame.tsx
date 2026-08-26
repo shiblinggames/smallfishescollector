@@ -5094,6 +5094,7 @@ export default function FishingGame({
           // Collect from here, but sail to the Docks to send anyone out. See
           // the `canDeploy` note on the component.
           canDeploy={false}
+          canCollect={false}
         />
 
         {/* Background soundtrack lives in lib/fishingMusic singleton —
