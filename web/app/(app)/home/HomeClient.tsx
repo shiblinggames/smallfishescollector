@@ -22,9 +22,9 @@ import Almanac from '../fishing/Almanac'
 import { BADGE_MAP } from '@/lib/badges'
 import { vibrate } from '@/lib/haptics'
 import {
-  HOTSPOTS, FURNITURE, PORTAL_REACH, PINNED_MAX,
-  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, roomFor,
-  type Homestead, type HotspotId, type FurnitureSlot,
+  HOTSPOTS, HOTSPOT_BY_ID, FURNITURE, PORTAL_REACH, PINNED_MAX,
+  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, roomFor, HOUSE_SLOTS,
+  type Homestead, type HotspotId, type FurnitureSlot, type Hotspot,
 } from '@/lib/homestead'
 import { build, furnish, stepThrough, type Destination } from './actions'
 
@@ -216,68 +216,30 @@ export default function HomeClient({
 
         {/* ── THE ISLAND ROOM ───────────────────────────────────────── */}
         {room === 'island' && (
-          <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-            {HOTSPOTS.map(spot => {
-              const now = builtAt(home, spot.id)
-              const next = nextBuild(home, spot.id)
-              return (
-                <div key={spot.id} style={{
-                  borderRadius: 14, padding: '0.85rem 0.95rem',
-                  background: 'rgba(255,255,255,0.035)',
-                  border: '1px solid rgba(180,214,232,0.14)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                    <p className="font-karla font-700 uppercase" style={{
-                      fontSize: '0.58rem', letterSpacing: '0.16em', color: 'rgba(180,214,232,0.62)', margin: 0,
-                    }}>{spot.label}</p>
-                    <p className="font-karla" style={{
-                      fontSize: '0.7rem', color: 'rgba(180,214,232,0.5)', margin: 0,
-                    }}>{home.spots[spot.id]} of {spot.builds.length - 1}</p>
-                  </div>
-                  <p className="font-cinzel font-700" style={{
-                    fontSize: '1.06rem', color: '#f2ead8', margin: '0.1rem 0 0',
-                  }}>{now.name}</p>
-                  <p className="font-karla" style={{
-                    fontSize: '0.82rem', color: 'rgba(196,214,228,0.66)', margin: '0.12rem 0 0',
-                  }}>{now.blurb}</p>
+          <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
+            {/* THE HOUSE FIRST, AND BIGGER THAN THE REST.
+                It was one of six identical rows in island order, so the thing
+                that opens furniture slots, changes the room you stand in and
+                holds the best art in the set was indistinguishable from a
+                garden. It is the headline now, and it says what it does. */}
+            <SpotCard
+              spot={HOTSPOT_BY_ID.house} home={home} coin={coin} busy={busy} guest={guest}
+              lead onBuy={() => setConfirm({ kind: 'build', spot: 'house' })}
+            />
 
-                  {guest ? null : next ? (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      gap: 10, marginTop: 10, flexWrap: 'wrap',
-                    }}>
-                      <div style={{ minWidth: 0 }}>
-                        <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#e8dec6', margin: 0 }}>
-                          Next: {next.name}
-                        </p>
-                        <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(196,214,228,0.6)', margin: 0 }}>
-                          {next.blurb}
-                        </p>
-                      </div>
-                      <button type="button" disabled={busy || coin < next.cost}
-                        onClick={() => { vibrate(8); setConfirm({ kind: 'build', spot: spot.id }) }}
-                        className="font-cinzel font-700"
-                        style={{
-                          padding: '0.5rem 0.95rem', borderRadius: 999, fontSize: '0.92rem', flexShrink: 0,
-                          color: coin < next.cost ? 'rgba(210,180,180,0.75)' : '#0d1520',
-                          background: coin < next.cost ? 'rgba(255,255,255,0.06)' : GOLD,
-                          border: `1px solid ${coin < next.cost ? 'rgba(255,255,255,0.14)' : GOLD}`,
-                          cursor: busy || coin < next.cost ? 'default' : 'pointer',
-                        }}>
-                        ⟡ {next.cost.toLocaleString()}
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="font-karla font-700" style={{
-                      fontSize: '0.8rem', color: 'rgba(150,206,172,0.8)', margin: '0.5rem 0 0',
-                    }}>Finished.</p>
-                  )}
-                  <p className="font-karla" style={{
-                    fontSize: '0.74rem', color: 'rgba(180,200,214,0.42)', margin: '0.5rem 0 0',
-                  }}>{spot.note}</p>
-                </div>
-              )
-            })}
+            {!guest && (
+              <p className="font-karla font-700 uppercase" style={{
+                fontSize: '0.58rem', letterSpacing: '0.16em', margin: '0.4rem 0 -0.2rem',
+                color: 'rgba(180,214,232,0.55)',
+              }}>The rest of the island</p>
+            )}
+
+            {HOTSPOTS.filter(h => h.id !== 'house').map(spot => (
+              <SpotCard
+                key={spot.id} spot={spot} home={home} coin={coin} busy={busy} guest={guest}
+                onBuy={() => setConfirm({ kind: 'build', spot: spot.id })}
+              />
+            ))}
           </div>
         )}
 
@@ -285,6 +247,14 @@ export default function HomeClient({
         {room === 'inside' && (
           <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
             <TheRoom home={home} />
+            {!guest && (
+              <p className="font-karla" style={{
+                fontSize: '0.8rem', color: 'rgba(196,214,228,0.66)', margin: 0,
+              }}>
+                Everything below goes in that room. Nothing in here does anything
+                except look like something.
+              </p>
+            )}
             <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(196,214,228,0.7)', margin: 0 }}>
               {guest
                 ? `${builtAt(home, 'house').name}, with ${slots.length} of ${FURNITURE.length} slots in use.`
@@ -324,28 +294,39 @@ export default function HomeClient({
                           onClick={() => { vibrate(6); paid ? doFurnish(o.id) : setConfirm({ kind: 'furnish', id: o.id }) }}
                           className="font-karla font-700"
                           style={{
-                            padding: '0.4rem 0.72rem', borderRadius: 10, fontSize: '0.78rem', textAlign: 'left',
+                            width: 104, padding: '0.45rem 0.4rem', borderRadius: 10,
+                            fontSize: '0.76rem', textAlign: 'center',
                             color: on ? '#0d1520' : 'rgba(226,238,246,0.86)',
                             background: on ? GOLD : 'rgba(255,255,255,0.05)',
                             border: `1px solid ${on ? GOLD : 'rgba(255,255,255,0.14)'}`,
                             cursor: !open || on ? 'default' : 'pointer',
                           }}>
-                          {/* THE THING ITSELF, above its name. Choosing a rug by
-                              reading the words "Kelp weave" is choosing blind,
-                              and every one of these is bought for how it looks. */}
-                          {o.art && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={o.art} alt="" draggable={false} style={{
-                              display: 'block', width: 54, height: 44,
-                              objectFit: 'contain', margin: '0 auto 3px',
-                            }} />
-                          )}
+                          {/* THE THING ITSELF, and big enough to judge. Choosing
+                              a rug by reading the words "Kelp weave" is choosing
+                              blind, and every one of these is bought for how it
+                              looks. */}
+                          <span style={{
+                            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                            height: 62, marginBottom: 4,
+                            background: on
+                              ? 'radial-gradient(ellipse at 50% 92%, rgba(13,21,32,0.22) 0%, transparent 72%)'
+                              : 'radial-gradient(ellipse at 50% 92%, rgba(255,255,255,0.06) 0%, transparent 72%)',
+                            borderRadius: 8,
+                          }}>
+                            {o.art ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={o.art} alt="" draggable={false} style={{
+                                maxHeight: 58, maxWidth: '100%', objectFit: 'contain',
+                                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))',
+                              }} />
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', opacity: 0.5, alignSelf: 'center' }}>nothing</span>
+                            )}
+                          </span>
                           {o.name}
-                          {!on && (
-                            <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.75 }}>
-                              {paid ? 'owned' : `⟡ ${o.cost.toLocaleString()}`}
-                            </span>
-                          )}
+                          <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.8 }}>
+                            {on ? 'in the room' : paid ? 'owned · place it' : `⟡ ${o.cost.toLocaleString()}`}
+                          </span>
                         </button>
                       )
                     })}
@@ -418,6 +399,148 @@ export default function HomeClient({
       </AnimatePresence>
 
       <Almanac open={almanac} onClose={() => setAlmanac(false)} />
+    </div>
+  )
+}
+
+/**
+ * ONE BUILD SPOT, AS A PICTURE.
+ *
+ * ── WHY THIS IS NOT A ROW OF TEXT ───────────────────────────────────────────
+ *
+ * It was: a name, a blurb, a name again, a price, a note. Five lines of prose
+ * for something whose entire value is what it LOOKS like, and no way to tell
+ * before paying whether "A gallery hall" was a shed or a colonnade. Everything
+ * on this island is bought for its appearance, so the appearance is the offer
+ * and the words are the caption.
+ *
+ * So: what stands there now, an arrow, and what would stand there instead —
+ * both drawn, at a size where you can see the difference. The price sits under
+ * the thing you are buying rather than at the end of a sentence.
+ *
+ * `lead` is the house. It gets a bigger frame and says out loud what upgrading
+ * actually does, because it is the only spot on the island that changes
+ * anything other than the view.
+ */
+const SpotCard = memo(function SpotCard({ spot, home, coin, busy, guest, lead, onBuy }: {
+  spot: Hotspot
+  home: Homestead
+  coin: number
+  busy: boolean
+  guest: string | null
+  lead?: boolean
+  onBuy: () => void
+}) {
+  const now = builtAt(home, spot.id)
+  const next = nextBuild(home, spot.id)
+  const afford = !!next && coin >= next.cost
+  const H = lead ? 132 : 92
+
+  return (
+    <div style={{
+      borderRadius: 16, padding: lead ? '1rem' : '0.8rem 0.9rem',
+      background: lead ? 'rgba(240,196,100,0.06)' : 'rgba(255,255,255,0.035)',
+      border: `1px solid ${lead ? 'rgba(240,196,100,0.3)' : 'rgba(180,214,232,0.14)'}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <p className="font-karla font-700 uppercase" style={{
+          fontSize: '0.58rem', letterSpacing: '0.16em', margin: 0,
+          color: lead ? 'rgba(240,196,100,0.85)' : 'rgba(180,214,232,0.6)',
+        }}>{spot.label}</p>
+        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(180,214,232,0.5)', margin: 0 }}>
+          {home.spots[spot.id]} of {spot.builds.length - 1}
+        </p>
+      </div>
+
+      {/* WHAT IS THERE -> WHAT WOULD BE. The whole offer in one line of
+          pictures, so the upgrade is a thing you can see rather than a name you
+          have to imagine. */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 8,
+      }}>
+        <Stand art={now.art} h={H} label={now.name} />
+        {next && !guest && (
+          <>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(240,196,100,0.7)"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ flexShrink: 0, marginBottom: H / 2 - 9 }} aria-hidden>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+            <Stand art={next.art} h={H} label={next.name} highlight />
+          </>
+        )}
+      </div>
+
+      <p className="font-karla" style={{
+        fontSize: lead ? '0.86rem' : '0.8rem', lineHeight: 1.45,
+        color: 'rgba(206,222,234,0.72)', margin: '0.6rem 0 0',
+      }}>{next && !guest ? next.blurb : now.blurb}</p>
+
+      {/* WHAT IT ACTUALLY DOES, for the two spots where that is not "look
+          nice". Said on the card rather than in a note underneath it. */}
+      {!guest && next && (spot.id === 'house' || spot.id === 'portal') && (
+        <p className="font-karla font-700" style={{
+          fontSize: '0.8rem', margin: '0.4rem 0 0',
+          color: spot.id === 'house' ? '#f0c464' : 'rgba(150,206,172,0.95)',
+        }}>
+          {spot.id === 'house'
+            ? `Opens furniture slot ${HOUSE_SLOTS[home.spots.house] + 1} of ${FURNITURE.length}, and a bigger room inside.`
+            : PORTAL_REACH[home.spots.portal + 1]}
+        </p>
+      )}
+
+      {guest ? null : next ? (
+        <button type="button" disabled={busy || !afford} onClick={() => { vibrate(8); onBuy() }}
+          className="font-cinzel font-700"
+          style={{
+            width: '100%', marginTop: '0.7rem',
+            padding: lead ? '0.66rem' : '0.52rem', borderRadius: 12,
+            fontSize: lead ? '1rem' : '0.92rem',
+            color: afford ? '#0d1520' : 'rgba(210,180,180,0.8)',
+            background: afford ? GOLD : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${afford ? GOLD : 'rgba(255,255,255,0.14)'}`,
+            cursor: busy || !afford ? 'default' : 'pointer',
+          }}>
+          {afford ? `Build ${next.name} · ⟡ ${next.cost.toLocaleString()}` : `Need ⟡ ${next.cost.toLocaleString()}`}
+        </button>
+      ) : (
+        <p className="font-karla font-700" style={{
+          fontSize: '0.8rem', color: 'rgba(150,206,172,0.8)', margin: '0.6rem 0 0',
+        }}>Finished.</p>
+      )}
+    </div>
+  )
+})
+
+/** One thing on its own patch of ground, with its name under it. */
+function Stand({ art, h, label, highlight }: {
+  art: string | null; h: number; label: string; highlight?: boolean
+}) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+      <div style={{
+        height: h, borderRadius: 12,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        background: highlight
+          ? 'radial-gradient(ellipse at 50% 92%, rgba(240,196,100,0.2) 0%, rgba(240,196,100,0.05) 55%, transparent 78%)'
+          : 'radial-gradient(ellipse at 50% 92%, rgba(110,140,90,0.22) 0%, rgba(80,110,70,0.08) 55%, transparent 78%)',
+      }}>
+        {art ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={art} alt="" draggable={false} style={{
+            maxHeight: h - 8, maxWidth: '92%', objectFit: 'contain',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
+          }} />
+        ) : (
+          <p className="font-karla" style={{
+            fontSize: '0.72rem', color: 'rgba(200,216,228,0.45)', margin: '0 0 0.6rem',
+          }}>empty</p>
+        )}
+      </div>
+      <p className="font-karla font-700" style={{
+        fontSize: '0.74rem', margin: '0.3rem 0 0', lineHeight: 1.25,
+        color: highlight ? '#f6e6c6' : 'rgba(206,222,234,0.72)',
+      }}>{label}</p>
     </div>
   )
 }

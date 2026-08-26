@@ -146,8 +146,13 @@ export async function homesteadOf(username: string): Promise<Visit | null> {
   const ids = await friendIds(admin, session.user.id)
   if (!ids.includes(host.id as string)) return null
 
-  const { data: row } = await admin
+  const { data: row, error } = await admin
     .from('homesteads').select(COLS).eq('user_id', host.id).maybeSingle()
+  // Same rule as the owner's loader: a broken read must not be dressed up as
+  // "they have not built anything". Visiting is read only so nothing is priced
+  // against it, but showing somebody a lean-to that is actually an Estate is
+  // still a lie, and a silent one.
+  if (error) throw new Error(`homestead visit: ${error.message}`)
   if (!row) return null
 
   return {

@@ -70,23 +70,45 @@ const COLS = 'house, portal, gallery, dock, garden, beacon, furniture, owned, pi
  * errors on absence — it returns the empty one and lets the first purchase
  * create the row.
  */
+/**
+ * A FAILED READ IS NOT AN EMPTY HOMESTEAD.
+ *
+ * This threw away the error and passed the null straight to `rowToHomestead`,
+ * which returns EMPTY_HOMESTEAD — indistinguishable from a captain who has
+ * never built anything. So when three columns turned out to be missing from the
+ * table, a finished house read back as a lean-to and every piece of furniture
+ * read back as unowned and had to be bought again. The writes had been landing
+ * the whole time; only the reads were lying.
+ *
+ * Throwing is the right answer for something people spend millions of doubloons
+ * on. A page that fails loudly gets fixed; a page that quietly says you own
+ * nothing gets you charged twice.
+ */
+function orThrow<T>(data: T, error: { message?: string } | null, where: string): T {
+  if (error) throw new Error(`homestead ${where}: ${error.message ?? 'read failed'}`)
+  return data
+}
+
 export async function getHomestead(): Promise<Homestead> {
   const supabase = await createClient()
   // getSession, not getUser: own-row read on a page load.
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) return EMPTY_HOMESTEAD
   const admin = createAdminClient()
-  const { data } = await admin
+  const { data, error } = await admin
     .from('homesteads').select(COLS).eq('user_id', session.user.id).maybeSingle()
-  return rowToHomestead(data as Parameters<typeof rowToHomestead>[0])
+  return rowToHomestead(orThrow(data, error, 'load') as Parameters<typeof rowToHomestead>[0])
 }
 
 /** Read for a write. Same shape, but with the id we are about to spend against. */
 async function loadFor(userId: string): Promise<Homestead> {
   const admin = createAdminClient()
-  const { data } = await admin
+  const { data, error } = await admin
     .from('homesteads').select(COLS).eq('user_id', userId).maybeSingle()
-  return rowToHomestead(data as Parameters<typeof rowToHomestead>[0])
+  // MUST NOT PROCEED ON A BAD READ. Everything downstream prices against this:
+  // an empty homestead means tier 0 everywhere and nothing owned, so a failed
+  // read would happily charge somebody to build what they already have.
+  return rowToHomestead(orThrow(data, error, 'load') as Parameters<typeof rowToHomestead>[0])
 }
 
 /**
