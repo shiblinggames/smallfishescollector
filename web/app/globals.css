@@ -2628,3 +2628,32 @@ body.hardcore-gauntlet::after {
      letting the bigger text wrap harder than it used to. */
   .sea-shipyard-col { max-width: 40rem; }
 }
+
+
+/* ── HOTSPOTS ────────────────────────────────────────────────────────────────
+   A patch of water worth being in. Slow, because it stands for ten minutes and
+   anything quicker turns into something you want to look away from — the house
+   rule that juice stays subtle and local applies hardest to the things that are
+   on screen the longest.
+
+   Scale ONLY. The element lives in the squashed world layer, so animating its
+   transform is a compositor job; animating its width or its gradient would
+   repaint a several-hundred-pixel circle every frame. */
+.sea-hotspot {
+  animation: sea-hotspot-breathe 7s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes sea-hotspot-breathe {
+  0%, 100% { transform: scale(0.97); opacity: 0.82; }
+  50%      { transform: scale(1.03); opacity: 1; }
+}
+
+.sea-hotspot-dot { animation: sea-hotspot-dot 2.4s ease-in-out infinite; }
+@keyframes sea-hotspot-dot {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sea-hotspot, .sea-hotspot-dot { animation: none; }
+}

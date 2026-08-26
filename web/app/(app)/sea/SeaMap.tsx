@@ -35,6 +35,7 @@ import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import { seaClock, PHASE_LABEL } from '@/lib/seaClock'
+import { hotspotsAt, hotspotAt, HOTSPOT_DEFS, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 
@@ -818,6 +819,23 @@ export default function SeaMap({
    * going anywhere, and the sea has no state that has to keep advancing.
    */
   const [dialUp, setDialUp] = useState(false)
+  /**
+   * THE HOTSPOTS, and whether the boat is in one.
+   *
+   * Re-derived on a slow timer rather than every frame: they only move on a
+   * ten-minute boundary, and `hotspotsAt` walks every band each call. The
+   * INSIDE test is cheap (three distance checks) so it rides the same 0.12s
+   * proximity tick everything else on this screen uses.
+   */
+  const [spots, setSpots] = useState<Hotspot[]>(() => hotspotsAt())
+  const [inSpot, setInSpot] = useState<Hotspot | null>(null)
+  useEffect(() => {
+    const id = setInterval(() => setSpots(hotspotsAt()), 15_000)
+    return () => clearInterval(id)
+  }, [])
+  const inSpotRef = useRef<Hotspot | null>(null)
+  inSpotRef.current = inSpot
+
   /** The Mainland's landing chooser — tavern, market or tackle shop. */
   const [ashore, setAshore] = useState(false)
   /** True when the rod is out but nothing is in flight, so a tap on the water
@@ -1462,6 +1480,12 @@ export default function SeaMap({
         }
         setNear(prev => (prev?.id === found?.id ? prev : found))
 
+        // Standing in a hotspot. Compared by KEY, not by identity: the object
+        // is rebuilt every fifteen seconds and comparing references would
+        // re-render four times a minute for no reason.
+        const spotNow = hotspotAt(pos.current.x, pos.current.y)
+        setInSpot(prev => (prev?.key === spotNow?.key ? prev : spotNow))
+
         // WHO IS OUT HERE. The cell key changes only when you cross a cell
         // boundary, and until it does the answer is identical — so this is a
         // string compare four times a second rather than a hash of two dozen
@@ -1566,6 +1590,10 @@ export default function SeaMap({
         {PLACES.map(p => (
           <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id} />
         ))}
+        {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
+            water — a patch of it that is worth being in. */}
+        {spots.map(h => <HotspotRing key={h.key} h={h} />)}
+
         {/* WHAT BREAKS THE SURFACE. A flat list in absolute world coordinates
             now that the waters are bands — a ring has no box for an offset to
             be relative to. Rendered here rather than inside a place, which also
@@ -1805,6 +1833,10 @@ export default function SeaMap({
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
 
+      {/* WHAT THIS WATER IS DOING FOR YOU. Only while you are in it, and it
+          says the effect in full rather than an icon you have to learn. */}
+      <HotspotBadge spot={inSpot} lowered={!!fishingIn} />
+
       {fishingIn && (
         <FishingHere
           zone={fishingIn.id}
@@ -1832,6 +1864,7 @@ export default function SeaMap({
           activeRod={activeRod}
           onRodChange={setActiveRod}
           hold={{ count: holdCount, capacity: hold.capacity }}
+          at={pos}
           log={log}
           onCaught={qty => setHoldCount(n => Math.min(hold.capacity, n + qty))}
           onBaitChange={t => {
@@ -2693,6 +2726,102 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
             }}>
             {locked ? `Fishing ${crossing.minLevel} to work this water` : crossing.blurb}
           </motion.p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+/**
+ * A HOTSPOT ON THE WATER.
+ *
+ * Drawn in the world layer, so it is squashed by the ground plane like
+ * everything else on the surface and reads as a patch of sea rather than a
+ * circle stuck to the screen.
+ *
+ * Deliberately soft-edged. A hard ring would be a hitbox you line up with; a
+ * bloom you can see from a distance is something you steer toward, and the
+ * exact boundary does not matter because the patch is hundreds of pixels
+ * across. The pulse is slow — this sits on screen for ten minutes and anything
+ * quicker becomes a thing you want to look away from.
+ */
+const HotspotRing = memo(function HotspotRing({ h }: { h: Hotspot }) {
+  const def = HOTSPOT_DEFS[h.kind]
+  return (
+    <div aria-hidden className="sea-hotspot" style={{
+      position: 'absolute', left: h.x, top: h.y,
+      width: h.r * 2, height: h.r * 2,
+      marginLeft: -h.r, marginTop: -h.r,
+      borderRadius: '50%',
+      background:
+        `radial-gradient(circle, ${def.color}2e 0%, ${def.color}18 45%, ${def.color}09 70%, transparent 78%)`,
+      // The rim, kept faint. It is a hint at an edge, not the edge.
+      boxShadow: `inset 0 0 0 2px ${def.color}22`,
+      pointerEvents: 'none',
+    }} />
+  )
+})
+
+/** The badge that says what you are standing in. */
+function HotspotBadge({ spot, lowered }: { spot: Hotspot | null; lowered: boolean }) {
+  const [left, setLeft] = useState('')
+  useEffect(() => {
+    if (!spot) return
+    const tick = () => {
+      const ms = spot.endsAt - Date.now()
+      if (ms <= 0) { setLeft('moving on'); return }
+      const m = Math.floor(ms / 60_000)
+      setLeft(m >= 1 ? `${m}m left` : `${Math.ceil(ms / 1000)}s left`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [spot])
+
+  return (
+    <AnimatePresence>
+      {spot && (
+        <motion.div key={spot.key}
+          initial={{ opacity: 0, y: -10, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+          style={{
+            position: 'absolute', left: 0, right: 0, top: lowered ? 116 : 62,
+            zIndex: Z.hud, display: 'flex', justifyContent: 'center',
+            padding: '0 1rem', pointerEvents: 'none',
+          }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 9,
+            padding: '0.5rem 0.85rem', borderRadius: 999,
+            // A SOLID base. This sits over painted water and the one moment it
+            // has something to say is the moment it must be readable.
+            background: 'rgba(6,14,22,0.9)',
+            border: `1px solid ${HOTSPOT_DEFS[spot.kind].color}70`,
+            boxShadow: `0 4px 20px rgba(0,0,0,0.55), 0 0 22px ${HOTSPOT_DEFS[spot.kind].color}22`,
+            maxWidth: 460,
+          }}>
+            <span aria-hidden className="sea-hotspot-dot" style={{
+              width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+              background: HOTSPOT_DEFS[spot.kind].color,
+              boxShadow: `0 0 10px ${HOTSPOT_DEFS[spot.kind].color}`,
+            }} />
+            <span style={{ minWidth: 0 }}>
+              <span className="font-cinzel font-700 block" style={{
+                fontSize: '0.84rem', color: HOTSPOT_DEFS[spot.kind].color, lineHeight: 1.15,
+              }}>{HOTSPOT_DEFS[spot.kind].name}</span>
+              {/* THE EFFECT, IN FULL. An icon you have to learn is not an
+                  explanation, and the house rule is that mechanics are stated
+                  literally even where the flavour is allowed its charm. */}
+              <span className="font-karla font-600 block" style={{
+                fontSize: '0.74rem', color: 'rgba(222,238,246,0.82)', lineHeight: 1.35, marginTop: 1,
+              }}>{HOTSPOT_DEFS[spot.kind].effect}</span>
+            </span>
+            <span className="font-karla font-700" style={{
+              flexShrink: 0, fontSize: '0.66rem', color: 'rgba(190,212,228,0.55)',
+              fontVariantNumeric: 'tabular-nums',
+            }}>{left}</span>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

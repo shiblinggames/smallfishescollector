@@ -332,6 +332,43 @@ the lot), and the recompute is on a **deadband** measured from where the last lo
 no boundary to sit on. `lum` is held between recomputes for the pale layer's opacity, which
 is a composite rather than a repaint and wants every frame.
 
+## Hotspots
+
+`lib/seaHotspots.ts`. **Three patches of water at a time, one of each kind, each in a
+different band, all moving every 10 minutes.** The chart is 22,600 pixels deep and once you
+had picked a band every part of it was identical to every other part — you sailed to a depth
+and then stopped, because there was no reason to be anywhere in particular.
+
+| | does | measured |
+|---|---|---|
+| **Running Shoal** | fish bite 35% faster | a 20s wait becomes 13s |
+| **Cold Trench** | rare and legendary far likelier | legendary 2.0% → **5.7%**; commons 50% → 26% |
+| **Drifting Flotsam** | 3× sunken crates | a 2% zone rate becomes 6% |
+
+**Derived, never stored** — same trick as the Salt Road's traders. A hash of `(window, slot)`
+decides everything, so the client draws them and the server re-derives them and the two
+cannot disagree. No table, no cron, no rows to clean up, and a reload shows the same patches
+in the same places with the same time left.
+
+Verified across 400 windows: always three, never a missing kind, never two in one band, never
+a patch straddling a band edge. Each buff touches **exactly** the one roll its badge names —
+a test asserts that, because a hotspot that quietly does something it does not say is worse
+than one that does nothing.
+
+**The trench does NOT touch the Ancient Deep trophy chance.** That roll shares the same
+`rarityBonus` variable but is multiplied by `(1 + bonus × 4)` and gates the six giants behind
+the finale; a hotspot has no business anywhere near it. Only the two `tierWeightedPick` calls
+get the bonus.
+
+### Sized for a chart the server cannot see
+
+`castLine(bait, zone, at)` takes the position and **re-derives** the hotspot from the clock
+rather than being told which one applies. A forged position can claim a patch it is not
+standing in; it cannot invent one, choose its kind, or move it. Every number is set on that
+basis — a hotspot is a nudge worth steering for, never a multiplier worth lying for, and none
+of them touch payouts. The same reasoning as the Trawl Docks gate: the chart is client-side,
+so design gates are design gates.
+
 ## The Trawl Docks (`/trawl-docks`)
 
 Its own island, west of the Mainland and north of the equator — on the fishing side of the

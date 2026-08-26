@@ -4,6 +4,7 @@ import { eyeFromProfile } from '@/lib/finnItems'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
+import { hotspotAt, hotspotEffect } from '@/lib/seaHotspots'
 import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect, jackpotChanceForZone, rodWaitMult, lockedInState } from '@/lib/rods'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
@@ -197,7 +198,22 @@ function rollCrateTier(habitat: string): CrateTier {
   return entries[entries.length - 1]?.[0] ?? 'wooden'
 }
 
-export async function castLine(baitType: string, habitat: string): Promise<
+export async function castLine(
+  baitType: string,
+  habitat: string,
+  /**
+   * WHERE THE LINE WENT IN, for hotspots. Optional: the fishing page has no
+   * chart and passes nothing, which resolves to no hotspot.
+   *
+   * The position is taken on trust — the map is client-side and there is no
+   * server-side notion of where the boat is — so the hotspot is RE-DERIVED
+   * here from the clock rather than sent. A forged position can claim a patch
+   * it is not in; it cannot invent a patch, choose which kind it is, or move
+   * one. See lib/seaHotspots for why the numbers are sized to make lying about
+   * it not worth the trouble.
+   */
+  at?: { x: number; y: number },
+): Promise<
   | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean; jackpotMult?: number; doubleCatch?: boolean; catchQty?: number; lockedStage?: number; vigilRank?: number }
   | { error: string }
 > {
@@ -206,6 +222,10 @@ export async function castLine(baitType: string, habitat: string): Promise<
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
+
+  // Which patch of water this is, if any. Derived, never trusted.
+  const spot = at ? hotspotAt(at.x, at.y) : null
+  const hs = hotspotEffect(spot?.kind)
 
   const { data: profile } = await admin
     .from('profiles')
@@ -400,7 +420,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const stale = (live?.shot && live.habitat !== habitat) ? live : null
   const isCrate = stale
     ? stale.fishId === CRATE_FISH_ID
-    : Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult
+    : Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult * hs.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
   // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
@@ -486,17 +506,17 @@ export async function castLine(baitType: string, habitat: string): Promise<
     } else if (firstHunt.length > 0 && Math.random() < trophyChance) {
       fish = firstHunt[Math.floor(Math.random() * firstHunt.length)]
     } else if (regularPool.length > 0) {
-      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
+      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + hs.rarityBonus)
     } else {
       // Regulars somehow exhausted — hand back a trophy so the cast still lands.
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     }
   } else {
-    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus)
+    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + hs.rarityBonus)
   }
   // Locked-In quickens bites at streak 3+ (−20%) / 10+ (−35%); take the faster of
   // the rod's base speed and the streak stage.
-  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult) * patienceWaitMult)
+  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult) * patienceWaitMult * hs.waitMult)
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
   // the only rod stat that actually changes the bite wait (biteIntervalMs is

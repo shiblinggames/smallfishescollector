@@ -10,7 +10,9 @@
 // middle of it, and it moves by CALLING THE SAME TWO SERVER ACTIONS rather than
 // by being extracted:
 //
-//   castLine(bait, zone) → fishId, catchDifficulty, waitMs
+//   castLine(bait, zone, at) → fishId, catchDifficulty, waitMs
+//   `at` is where the line went in, so the server can re-derive whether this
+//   cast is inside a hotspot. See lib/seaHotspots.
 //   reelIn(fishId, result, bait, …) → the catch
 //
 // Both take primitives and no session state, so the server neither knows nor
@@ -148,7 +150,7 @@ export type FishingMods = {
 }
 
 export default function FishingHere({
-  zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner,
+  zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
   seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, onCaught,
   onBaitSpent, onPose, onBusy, onCanLeave,
   spritesReady, onClose,
@@ -198,6 +200,10 @@ export default function FishingHere({
   /** What is aboard and what it can take. The hold is the reason a session
    *  ends, so it belongs on screen while you are filling it. */
   hold: { count: number; capacity: number }
+  /** Where the boat is, in world pixels — read fresh at every cast so a
+   *  hotspot is judged on where the line ACTUALLY went in rather than on
+   *  where you were when the rod came out. */
+  at: React.RefObject<{ x: number; y: number }>
   /** Everything the collection log reads. */
   log: SeaLog
   /** THE RACK — the rods you brought. Swapping is limited to these, which is
@@ -586,7 +592,7 @@ export default function FishingHere({
     // sound arriving after the line.
     sfxRef.current = setTimeout(() => playCast2Sfx(), 600)
     poseRef.current = setTimeout(() => onPose('wait'), 650)
-    castLine(bait, zone).then(res => {
+    castLine(bait, zone, at.current ? { x: at.current.x, y: at.current.y } : undefined).then(res => {
       if ('error' in res) { setErr(res.error); setPhase('idle'); onPose('rest'); return }
       onBaitSpent(res.baitRemaining)
       // The server decides how long the fish takes to come. Honoured rather
