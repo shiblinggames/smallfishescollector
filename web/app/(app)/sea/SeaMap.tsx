@@ -456,6 +456,20 @@ type SeaLook = {
  * puts a boundary under a stationary boat and float noise flips it across that
  * boundary every frame; see the loop.
  */
+/**
+ * HOW CLOSE COUNTS AS SAILING TOGETHER.
+ *
+ * 2,600 world pixels, which is about two and a half screens at desktop zoom.
+ * Wide enough that the rate steps up BEFORE a friend comes over the horizon, so
+ * their boat is already easing smoothly by the time you can see it, rather than
+ * snapping once and then settling.
+ */
+const NEAR_ENOUGH = 2600
+
+/** How often a position is written: alone, and with a friend in sight. */
+const FAR_MS = 20_000
+const NEAR_MS = 2_000
+
 const SEA_STEP = 96
 
 function seaAt(p: Vec, darkness = 0): SeaLook {
@@ -1203,6 +1217,21 @@ export default function SeaMap({
   // socket — and twenty seconds of sailing is about a screen, which is close
   // enough to steer by and closes every time either of you flushes.
   const [friends, setFriends] = useState<FriendAtSea[]>([])
+  /** One node per friend, moved by the frame loop. React is told when somebody
+   *  arrives or leaves, never that they moved. */
+  const friendRefs = useRef<Map<string, HTMLElement>>(new Map())
+  /**
+   * WHERE EACH FRIEND'S BOAT IS BEING DRAWN, versus where they said they were.
+   *
+   * A poll cannot be drawn raw. Even at the close cadence a boat moves six or
+   * seven hundred pixels between reports, and snapping to each one is a sprite
+   * that teleports. `shown` chases `target` every frame instead, so what you
+   * see is a boat under way rather than a boat blinking along a track.
+   */
+  const friendAt = useRef<Map<string, { shown: Vec; target: Vec; face: number }>>(new Map())
+  /** True while a friend is close enough to be worth drawing well. Drives the
+   *  flush and the poll — see NEAR_ENOUGH. */
+  const closeRef = useRef(false)
 
   // ── WHOSE HOMESTEAD THE ISLAND IS SHOWING ─────────────────────────────
   //
@@ -1375,6 +1404,7 @@ export default function SeaMap({
    * screen's worth of sailing lost to a crash, and an idle boat writes nothing
    * at all rather than pushing an identical row every twenty seconds forever.
    */
+  const lastRate = useRef(FAR_MS)
   useEffect(() => {
     let last = { ...pos.current }
     const flush = () => {
@@ -1390,11 +1420,30 @@ export default function SeaMap({
       void saveSeaPosition(p.x, p.y, fog)
     }
     const onHide = () => { if (document.visibilityState === 'hidden') flush() }
-    const id = setInterval(flush, 20_000)
+    // ── FASTER WHEN SOMEBODY IS WATCHING ──────────────────────────────
+    //
+    // Twenty seconds is the right heartbeat for a boat nobody can see: it is
+    // only there so a crash does not lose your position. It is useless for a
+    // boat somebody is sailing alongside, because a friend would jump most of a
+    // screen between reports.
+    //
+    // So the rate follows proximity. Alone, nothing changes. With a friend in
+    // sight both clients independently step up to two seconds, which is short
+    // enough to ease between and costs writes only in the one case where they
+    // buy something.
+    let id = setInterval(flush, FAR_MS)
+    const retime = setInterval(() => {
+      const want = closeRef.current ? NEAR_MS : FAR_MS
+      if (want === lastRate.current) return
+      lastRate.current = want
+      clearInterval(id)
+      id = setInterval(flush, want)
+    }, 2_000)
     document.addEventListener('visibilitychange', onHide)
     window.addEventListener('pagehide', flush)
     return () => {
       clearInterval(id)
+      clearInterval(retime)
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', flush)
       // The unmount IS a navigation — going ashore, or the nav bar. This is the
@@ -1451,14 +1500,46 @@ export default function SeaMap({
    */
   useEffect(() => {
     let alive = true
+    let timer: ReturnType<typeof setTimeout>
     const pull = () => {
-      if (document.visibilityState === 'hidden') return
-      void friendsAtSea().then(f => { if (alive) setFriends(f) }, () => {})
+      if (document.visibilityState !== 'hidden') {
+        void friendsAtSea().then(f => {
+          if (!alive) return
+          setFriends(f)
+          // ARE WE TOGETHER? Both boats work this out independently and agree,
+          // because being near each other is symmetric. Nothing is negotiated
+          // and there is no session to join.
+          const p = pos.current
+          closeRef.current = f.some(x => Math.hypot(x.x - p.x, x.y - p.y) < NEAR_ENOUGH)
+        }, () => {})
+      }
+      timer = setTimeout(pull, closeRef.current ? NEAR_MS : FAR_MS)
     }
     pull()
-    const id = setInterval(pull, 20_000)
-    return () => { alive = false; clearInterval(id) }
+    return () => { alive = false; clearTimeout(timer) }
   }, [])
+
+  /**
+   * NEW ARRIVALS AND DEPARTURES.
+   *
+   * The eased positions live in a ref the loop owns, so this is the one place
+   * React and the loop meet: somebody who has just appeared starts drawn where
+   * they actually are rather than easing in from the last person's spot, and
+   * somebody who has gone is dropped so their entry cannot leak.
+   */
+  useEffect(() => {
+    const live = new Set(friends.map(f => f.username))
+    for (const name of [...friendAt.current.keys()]) {
+      if (!live.has(name)) { friendAt.current.delete(name); friendRefs.current.delete(name) }
+    }
+    for (const f of friends) {
+      const had = friendAt.current.get(f.username)
+      if (had) { had.target.x = f.x; had.target.y = f.y }
+      else friendAt.current.set(f.username, {
+        shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1,
+      })
+    }
+  }, [friends])
 
   /** Who you could call on. Read once; the guard is re-checked server-side on
    *  the visit itself, so a stale list cannot open a door. */
@@ -1943,6 +2024,41 @@ export default function SeaMap({
           `translate(${WATERLINE_X * z}px, ${WATERLINE_Y * z}px) scale(${z})`
       }
 
+      // ── OTHER PEOPLE'S BOATS ──────────────────────────────────────
+      //
+      // Eased, never snapped. A report arrives every two seconds while you are
+      // together, and two seconds is six hundred pixels at cruising speed, so
+      // jumping to each one would be a sprite that stutters across the water.
+      //
+      // The same exponential the player's own hull uses, so a friend
+      // accelerates and settles the way a boat does rather than sliding
+      // linearly like a cursor. Frame-rate independent for the same reason.
+      if (friendRefs.current.size) {
+        const kf2 = 1 - Math.exp(-3.2 * dt)
+        for (const [name, at] of friendAt.current) {
+          const el = friendRefs.current.get(name)
+          if (!el) continue
+          const dxf = at.target.x - at.shown.x
+          const dyf = at.target.y - at.shown.y
+          // A LONG WAY OFF IS NOT A JOURNEY. Somebody who has just come back
+          // after an hour, or used the stones, is somewhere else entirely and
+          // easing them across the whole chart would draw a boat crossing water
+          // it never sailed. Past a screen or two, put them where they are.
+          if (Math.hypot(dxf, dyf) > 3200) {
+            at.shown.x = at.target.x
+            at.shown.y = at.target.y
+          } else {
+            at.shown.x += dxf * kf2
+            at.shown.y += dyf * kf2
+          }
+          // Face the way they are going, the same flip the player's boat uses.
+          if (Math.abs(dxf) > 12) at.face = dxf < 0 ? -1 : 1
+          el.style.transform = `translate3d(${at.shown.x}px, ${at.shown.y}px, 0)`
+          const hull = el.firstElementChild as HTMLElement | null
+          if (hull) hull.style.transform = `translate(-50%, -50%) scaleX(${at.face})`
+        }
+      }
+
       // THE DRIFT. Every bottle nudged along its own slow wander. Transform
       // only, like the patrols: React never hears about it.
       if (bottleRefs.current.size) {
@@ -2351,6 +2467,14 @@ export default function SeaMap({
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
         {hintDig && <DigWater site={hintDig} over={nearDig?.id === hintDig.id} done={dug.has(hintDig.id)} />}
+
+        {/* OTHER PEOPLE. Drawn with the SAME composite as your own boat, so a
+            friend arrives with their actual hull, hat, rod, reel, hook and pet
+            rather than a stand-in. The sea traders get a cut-down look because
+            they are scenery; somebody you sailed out to meet is not. */}
+        {friends.map(f => (
+          <FriendBoat key={f.username} friend={f} refs={friendRefs} />
+        ))}
 
         {/* WHAT THE TIDE BROUGHT. */}
         {bottles.filter(b => !taken.has(b.key)).map(b => (
@@ -4016,6 +4140,70 @@ const GateSign = memo(function GateSign() {
         color: 'rgba(196,216,230,0.66)', margin: '5px 0 0',
         textShadow: '0 1px 12px rgba(0,0,0,0.98)',
       }}>Sail through the gap</p>
+    </div>
+  )
+})
+
+/**
+ * SOMEBODY ELSE'S BOAT.
+ *
+ * The outer node is placed at the origin and MOVED BY TRANSFORM from the frame
+ * loop, exactly like the trader patrols and the drifting bottles: React is told
+ * when a friend arrives or leaves and never that they moved. Their position
+ * updates twice a second at most, and re-rendering a composite of eight sprites
+ * on every one of those would be visible.
+ *
+ * `Skipper` is the player's own boat component, unchanged. That is the whole
+ * point — you see what they see, so the hull they saved for and the hat they
+ * picked are the hull and hat you meet on the water.
+ */
+const FriendBoat = memo(function FriendBoat({ friend, refs }: {
+  friend: FriendAtSea
+  refs: React.RefObject<Map<string, HTMLElement>>
+}) {
+  return (
+    <div
+      ref={el => {
+        if (el) refs.current?.set(friend.username, el)
+        else refs.current?.delete(friend.username)
+      }}
+      style={{
+        position: 'absolute', left: 0, top: 0, zIndex: Z.boat,
+        willChange: 'transform', pointerEvents: 'none',
+      }}>
+      {/* The hull. Counter-squashed nowhere: the boat art is drawn for this
+          plane already, which is why the player's own is not either. */}
+      <div style={{ position: 'absolute', left: 0, top: 0, transform: 'translate(-50%, -50%)' }}>
+        <Skipper
+          characterColor={friend.characterColor}
+          boatId={friend.boatId}
+          hatId={friend.hatId}
+          gear={friend.gear}
+          frame="rest"
+        />
+      </div>
+
+      {/* THEIR NAME, over the boat and counter-squashed like every other label
+          on this chart. Without it two friends in the same water are two boats
+          and you have to guess. */}
+      <div style={{
+        position: 'absolute', left: 0, top: -96,
+        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center', whiteSpace: 'nowrap',
+      }}>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '0.98rem', color: '#dfeaf2', margin: 0,
+          textShadow: '0 2px 12px rgba(0,0,0,0.95)',
+        }}>{friend.username}</p>
+        {/* Only once they have gone quiet. A number that is always there reads
+            as a warning; one that appears after a minute reads as information. */}
+        {friend.ago > 60 && (
+          <p className="font-karla" style={{
+            fontSize: '0.72rem', margin: 0, textAlign: 'center',
+            color: 'rgba(198,216,230,0.6)', textShadow: '0 1px 9px rgba(0,0,0,0.95)',
+          }}>last seen {Math.round(friend.ago / 60)}m ago</p>
+        )}
+      </div>
     </div>
   )
 })

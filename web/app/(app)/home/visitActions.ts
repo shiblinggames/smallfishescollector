@@ -26,6 +26,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EMPTY_HOMESTEAD, builtAt, type Homestead, type HotspotId, type FurnitureSlot } from '@/lib/homestead'
 import { PINNED_MAX } from '@/lib/homestead'
+import { getEffectiveRod } from '@/lib/rods'
+import { getReel } from '@/lib/reels'
+import { getHook } from '@/lib/hooks'
+import { PETS } from '@/lib/pets'
 
 export type Visitable = {
   username: string
@@ -154,7 +158,15 @@ export async function homesteadOf(username: string): Promise<Visit | null> {
   }
 }
 
-/** A friend currently on the water, and where they were when last heard from. */
+/**
+ * A FRIEND CURRENTLY ON THE WATER, drawn the way they draw themselves.
+ *
+ * The whole look travels, not a simplified one. The sea traders get a cut-down
+ * `TraderLook` because they are scenery and nobody looks twice; a friend is
+ * somebody you sailed out to meet, and the first thing you want to know is
+ * whether they are on the good boat yet. Same hull, same hat, same rod, same
+ * pet, same character sprite — the exact props `Skipper` takes for you.
+ */
 export type FriendAtSea = {
   username: string
   x: number
@@ -163,6 +175,19 @@ export type FriendAtSea = {
    *  mark rather than to hide one: a friend who has just gone quiet is still
    *  worth steering toward for a little while. */
   ago: number
+  characterColor: string
+  boatId: string | null
+  hatId: string | null
+  gear: {
+    rodSlug: string | null
+    rod: string | null
+    rodGlow: string | null
+    rodColor: string | null
+    reel: string | null
+    hook: string | null
+    pet: string | null
+    petArt: string | null
+  }
 }
 
 /**
@@ -197,18 +222,53 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
   if (!ids.length) return []
 
   const cutoff = new Date(Date.now() - AT_SEA_MS).toISOString()
+  // Everything `Skipper` needs and nothing else. An explicit column list rather
+  // than select('*'), because this is one captain reading another's row and the
+  // list is the statement of exactly how much of them is visible.
   const { data } = await admin
     .from('profiles')
-    .select('username, sea_x, sea_y, sea_seen_at')
+    // ONE STRING LITERAL, not a concatenation. supabase-js infers the row type
+    // from the literal text of this argument; joining two strings gives it an
+    // expression it cannot read, and the whole result silently degrades to an
+    // error type that only shows up as a confusing cast failure downstream.
+    .select('username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects')
     .in('id', ids)
     .gte('sea_seen_at', cutoff)
 
+  type Row = {
+    username: string | null; sea_x: number | null; sea_y: number | null; sea_seen_at: string
+    character_color: string | null; equipped_boat: string | null; equipped_hat: string | null
+    rod_tier: number | null; reel_tier: number | null; hook_tier: number | null
+    equipped_pet: string | null; completionist_effects: number[] | null
+  }
+
   const now = Date.now()
-  return ((data ?? []) as { username: string | null; sea_x: number | null; sea_y: number | null; sea_seen_at: string }[])
+  return ((data ?? []) as Row[])
     .filter(r => r.username && Number.isFinite(Number(r.sea_x)) && Number.isFinite(Number(r.sea_y)))
-    .map(r => ({
-      username: r.username as string,
-      x: Number(r.sea_x), y: Number(r.sea_y),
-      ago: Math.max(0, Math.round((now - new Date(r.sea_seen_at).getTime()) / 1000)),
-    }))
+    .map(r => {
+      // Resolved HERE, not on the client. The rod alone needs the completionist
+      // effects folded in to know which sprite it is, and shipping tiers would
+      // mean every viewer re-deriving the same answer from tables they would
+      // then also have to be handed.
+      const rod = getEffectiveRod(Number(r.rod_tier ?? 0), r.completionist_effects ?? null)
+      const pet = r.equipped_pet ? PETS.find(x => x.species === r.equipped_pet) ?? null : null
+      return {
+        username: r.username as string,
+        x: Number(r.sea_x), y: Number(r.sea_y),
+        ago: Math.max(0, Math.round((now - new Date(r.sea_seen_at).getTime()) / 1000)),
+        characterColor: r.character_color ?? 'default',
+        boatId: r.equipped_boat ?? null,
+        hatId: r.equipped_hat ?? null,
+        gear: {
+          rodSlug: rod.slug ?? null,
+          rod: rod.imageUrl ?? null,
+          rodGlow: rod.glow ? (rod.glowType ?? 'default') : null,
+          rodColor: rod.color ?? null,
+          reel: getReel(Number(r.reel_tier ?? 0)).imageUrl ?? null,
+          hook: getHook(Number(r.hook_tier ?? 0)).imageUrl ?? null,
+          pet: pet?.species ?? null,
+          petArt: pet?.restImageUrl ?? null,
+        },
+      }
+    })
 }
