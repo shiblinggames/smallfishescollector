@@ -53,6 +53,8 @@ import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHots
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
+import SeaTour from './SeaTour'
+import SeaLandfallHint from './SeaLandfallHint'
 import { pendingPacts } from './pactActions'
 import { coastClip } from '@/lib/islandShape'
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
@@ -697,12 +699,15 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, digs, homestead, dealtToday,
-  auto, tideTurner, userId,
+  auto, tideTurner, userId, tour,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
    *  have: you broadcast on `sea:<userId>` and nowhere else. */
   userId: string
+  /** What the captain has already been taught. Both latch on profile columns,
+   *  so neither replays on another device or after a reinstall. */
+  tour: { seen: boolean; hints: string[] }
   /** The player's own loadout, so the thing crossing the ocean is the captain
    *  they dressed in the boat they bought — not a marker. */
   characterColor: string
@@ -3323,6 +3328,7 @@ hullRef={hullRefFor(t.key)} />
           onClick={e => { e.stopPropagation(); vibrate(10); setMapOpen(true) }}
           aria-label="Open the chart"
           title="The chart"
+          data-coach="chart"
           style={{
             position: 'absolute', top: 18, left: hudAt(1), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3628,6 +3634,13 @@ hullRef={hullRefFor(t.key)} />
         onPass={() => { void passFinnBet() }}
         onDismiss={() => setFinnTalk(null)}
       />
+
+      {/* TEACHING. The walkthrough runs once on the first arrival; the
+          landfall hints explain each port as you pull up to it, which is the
+          moment the knowledge is usable. Both sit above everything and neither
+          blocks the wheel. */}
+      {!fishingIn && <SeaTour hasSeen={tour.seen} />}
+      {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
           It asked you to confirm before sailing out of water you had the rod

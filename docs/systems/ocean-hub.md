@@ -1128,3 +1128,30 @@ so it had to be EXECUTEable by `authenticated` and was therefore callable as
 
 It lives in `app_private` now, which PostgREST does not serve. The policies still call it;
 there is no HTTP route to it. Supabase's own security advisor is what surfaced this.
+
+## Teaching the chart (first run)
+
+Two pieces, split by **when the knowledge is usable** rather than by topic.
+
+**The arrival walkthrough** (`SeaTour.tsx`) — five cards, 91 words, shown once and latched
+on `profiles.has_seen_sea_tour`. It covers only what you cannot use the chart at all
+without: steering, that Cast appears in open water, the chart button, that there are isles
+and bottles and buried things out there, and that the islands round about are places you
+can moor.
+
+**Landfall hints** (`SeaLandfallHint.tsx`) — one line the first time you come within
+mooring range of the Shipyard, the Trawl Docks or the Homestead, latched per-port in
+`profiles.sea_hints_seen`.
+
+**Why not one twelve-step tour.** Every one of those subjects deserves a sentence, and
+twelve sentences at minute zero is a manual, not a tour: the captain skips it and learns
+none of them. A line about the Trawl Docks lands when you are tied up at the Trawl Docks;
+the same line on arrival is about a building you have never seen, half a chart away.
+
+The hint fires on **approach**, not on entering, because "what is this place" is the
+question a captain has when a strange island's name comes up — before the decision to go
+in. It clears when you sail off, since leaving is an answer.
+
+`sea_hints_seen` is a `text[]` rather than three booleans: the list grows every time the
+chart gains somewhere to land, and a column per port is how a profiles table ends up with
+forty of them.
