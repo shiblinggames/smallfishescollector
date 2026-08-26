@@ -1079,6 +1079,11 @@ export default function SeaMap({
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
     if (p.id === 'mainland') { setAshore(true); return }
+    // A BREADCRUMB, so the place we send them to can come BACK rather than
+    // pushing a second /sea on top of this one. A pushed return remounts the
+    // whole chart from cold — re-reading the boat's position, rebuilding every
+    // island — which is a visible reload of a screen nobody actually left.
+    try { sessionStorage.setItem('sea:came-from-chart', '1') } catch { /* private mode */ }
     router.push(p.href)
   }, [router])
 

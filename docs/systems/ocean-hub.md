@@ -332,6 +332,26 @@ the lot), and the recompute is on a **deadband** measured from where the last lo
 no boundary to sit on. `lum` is held between recomputes for the pale layer's opacity, which
 is a composite rather than a repaint and wants every frame.
 
+### Leaving the Docks
+
+Three separate things made the close feel broken, and only the first was the one being
+looked at:
+
+1. **The exit never played.** The dock's close handlers called `onDismiss()` on the tap and
+   left `open` true, so the sheet sat fully open on a dark backdrop while Next tore the route
+   down, then vanished mid-navigation. A dismiss here is a NAVIGATION, and a navigation takes
+   longer than a fade — so the fade has to finish first, not race it. `AnimatePresence`'s
+   `onExitComplete` is the seam: `setOpen(false)` starts the slide-down, and only when the
+   element is genuinely gone does it leave.
+2. **`/sea` was fetched cold.** `router.push` does not prefetch the way a `<Link>` does, so
+   the first thing that happened on close was a cold route fetch — *after* the sheet had gone,
+   which is exactly the wrong order and reads as a hang. Prefetched on mount instead.
+3. **It pushed a second `/sea`** on top of the one still in history, remounting the chart from
+   cold: re-reading the boat's position from the server, rebuilding every island. A visible
+   reload of a screen the player never left. It goes `back()` now, guarded by a sessionStorage
+   breadcrumb the chart writes in `enter()` — **not** `history.length`, which counts entries
+   from other origins and would walk somebody out of the site on a deep link.
+
 ## Hotspots
 
 `lib/seaHotspots.ts`. **Three patches of water at a time, one of each kind, each in a

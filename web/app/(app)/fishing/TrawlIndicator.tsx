@@ -611,11 +611,32 @@ export default function TrawlIndicator({
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const ns = state.nextSlot
+  /**
+   * CLOSING THE DOCK PLAYS THE EXIT FIRST.
+   *
+   * It used to call `onDismiss()` on the tap and leave `open` true, so the
+   * sheet never animated out at all: it sat fully open on a dark backdrop while
+   * Next tore the route down, and then vanished mid-navigation. The dismiss is
+   * a NAVIGATION, and a navigation takes longer than a fade — so the fade has
+   * to happen first, not race it.
+   *
+   * `onExitComplete` is the seam. Setting open false starts the slide-down and
+   * the backdrop fade; AnimatePresence tells us when the element is genuinely
+   * gone, and only then do we leave.
+   */
+  const [leaving, setLeaving] = useState(false)
+  const closeDock = useCallback(() => {
+    if (leaving) return
+    setLeaving(true)
+    setPicking(null)
+    setOpen(false)
+  }, [leaving])
+
   const panel = (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={() => { if (dock && leaving) onDismiss?.() }}>
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={() => { if (dock) { onDismiss?.(); return } setOpen(false); setPicking(null) }}
+          onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }}
           style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(4,8,14,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
             onClick={e => e.stopPropagation()}
@@ -639,7 +660,7 @@ export default function TrawlIndicator({
                   </div>
                 </motion.button>
               </div>
-              <CloseBtn onClick={() => { if (dock) { onDismiss?.(); return } setOpen(false); setPicking(null) }} />
+              <CloseBtn onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }} />
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
               Crew fish a zone on their own — collect their XP and doubloon haul
