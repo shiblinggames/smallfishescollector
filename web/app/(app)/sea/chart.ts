@@ -113,16 +113,20 @@ export type Place = {
 export const PLACES: Place[] = [
   {
     id: 'mainland', name: 'The Mainland', blurb: 'Tavern, market and shops',
-    // BIGGEST ON THE CHART, ON PURPOSE. It holds the tavern, the market and
-    // the tackle shop, and it is the origin every fishing band is measured
-    // from. At 250 it was the same size as the two single-purpose ports and
-    // read as one stop of three; at 440 it is four and a half times their area
-    // and reads as the place the rest of the chart is arranged around.
+    // BIGGEST ON THE CHART, ON PURPOSE — but not by so much that it stops
+    // being an island. It holds the tavern, the market and the tackle shop, and
+    // it is the origin every fishing band is measured from.
+    //
+    // Landed on 340 from both directions: at 250 it was the same size as the
+    // two single-purpose ports and read as one stop of three, and at 440 it
+    // filled the screen off the dock and read as a coastline rather than
+    // somewhere you moor. 340 is 2.6x their area, which is plainly the biggest
+    // thing on the water without being the only thing on it.
     //
     // Everything scales off this one number: the island art, the buildings
     // (percentages of the island box), the shore the hull stops at
     // (r * SHORE + HULL) and the mooring ring (r + MOOR).
-    href: '/tavern', x: 0, y: 0, r: 440, art: '/page-tavern.jpg',
+    href: '/tavern', x: 0, y: 0, r: 340, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
       { art: '/sea/tackle.png', x: 31, y: 46, scale: 0.24 },

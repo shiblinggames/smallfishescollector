@@ -95,8 +95,17 @@ export type Trader = {
 } & TraderOffer
 
 export type TraderOffer =
-  /** Says one thing and wants nothing. See TALK. */
-  | { deal: 'talk'; topic: 'hint' | 'story' }
+  /**
+   * Says several things and wants nothing. See TALK.
+   *
+   * `lines` rather than one line, because a talker you meet twice should not
+   * greet you with the same sentence twice — and because these carry the
+   * game's mechanics now, so one stranger who knows one fact is a channel far
+   * too narrow to put them through. Distinct, in a fixed order, derived from
+   * the same stream as everything else about them: this person always knows
+   * these things and always says them in this order.
+   */
+  | { deal: 'talk'; topic: 'hint' | 'story'; lines: string[] }
   /** THE RARE ONE. Carries a rod the shops ashore will not stock, and only
    *  exists at night in deep water. Keyed on the NIGHT rather than the day, so
    *  the offer cannot be redeemed a cycle after it has gone. */
@@ -213,6 +222,22 @@ const LINES: Record<TradeKind, string[]> = {
  * everybody sails the row of them every night and it becomes a chore — which is
  * the exact failure mode this game refuses everywhere else.
  */
+/**
+ * WHAT THE WAIT USED TO TELL YOU.
+ *
+ * The fishing screen filled the seconds between cast and bite with tips, and it
+ * was doing real work: nearly everything in this game is discoverable only by
+ * being told, and that was where players were told. The map has no such gap —
+ * you are steering — so the knowledge had to go somewhere, and a stranger who
+ * fishes for a living is a better mouth for it than a caption.
+ *
+ * So these are those tips, rewritten as things a person would actually say.
+ * Never "Tip:", never a number the player cannot check, and never a sentence
+ * that reads like a caption with a name attached to it.
+ *
+ * VERIFY ANY FIGURE AGAINST THE SOURCE BEFORE ADDING ONE. A stale hint is worse
+ * than no hint, and out here it is also a person lying to you.
+ */
 const HINTS = [
   "Chum's wasted in the shallows. Save it for water that's got something worth calling up.",
   "A perfect reel pays more than a good one, and the second perfect in a row pays more again. Nobody tells you that.",
@@ -222,6 +247,42 @@ const HINTS = [
   "Sell to a buyer out here and you take less. Sail it home and you take all of it, and you take a while.",
   "A snag costs you bait on top of the fish. Some rods don't care. Worth knowing which.",
   "If you're chasing size, keep casting the same water. Every species has a monster in it somewhere.",
+
+  // ── The dial, and the hands that work it ──
+  "Every hook you buy widens the catch zone. Three degrees a tier. Doesn't sound like much until you've stacked five.",
+  "Bail on a fish you've already hooked and the streak dies with it. Stow the rod between casts and it keeps.",
+  "The Tide Turner lets you put a hooked fish back without the streak noticing. Comes off voyages, not out of a shop.",
+  "There's a hook out there that saves your bait a quarter of the time. Voyage reward. Worth the trip.",
+  "There's a rig that casts for you and opens what it finds. Ashore, in the tackle shop, for five thousand.",
+
+  // ── Rods worth knowing about ──
+  "The Twin-Strike lands two at once, one cast in four.",
+  "There's a rod that lands two every single time. Costs what you'd expect.",
+  "The YOLO. One cast in ten it comes up with a hundred fish on it. The other nine it's a stick.",
+  "A telescoping rod pulls the rare ones up where you can reach them.",
+
+  // ── Where the money is ──
+  "Quick sell if you must, but the market ashore pays best and pays late. Both lanes are there for a reason.",
+  "Finish every fish in a stretch of water and there's a purse waiting for it. Once only.",
+  "Prestige a stretch and everything you land there earns better. Five times over, if you've the patience.",
+  "Prestige the same water again and the completion purse grows with it.",
+
+  // ── The rest of the world, from out here ──
+  "Idle crew will trawl a zone for you while you're elsewhere. They come back with coin and knowledge both.",
+  "On a trawl it's Savvy that brings back the learning and Fortune that brings back the coin. Pick to suit.",
+  "You can have a trawl running in every water you've opened. All of them at once, all of them while you sleep.",
+  "Crates come up wooden, metal, gold and diamond. Something older comes up in the Ancient Deep.",
+  "The Ancient Deep's giants never see the inside of a hold. Straight to the wall.",
+  "Every fish you land gets measured. Your biggest of each is kept whether you ask or not.",
+  "Trivia in the Parlor of an evening pays in coin. Easiest gold on the island.",
+  "Solve the chart room's puzzles and the world chart opens a piece at a time. Gems under every landmark.",
+  "The Den takes chips at three tables and they all draw on the one purse.",
+  "Three catfish on the slot and the whole jackpot's yours. I've seen it happen. Once.",
+  "Past a hundred, everything you learn turns into Renown, and Renown buys things that stay bought.",
+  "Raid gear can be fused into better raid gear. There's a forge for it.",
+  "Daily challenges reset with the sun. Keep up with them and they add up to real money.",
+  "Watch for a lad called Finn. He'll want to make it a contest.",
+  "A bigger hold is more time on the water. That's the entire argument for it.",
 ]
 
 const STORIES = [
@@ -299,10 +360,17 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
   // where the go-ashore prompt is already up.
   if (Math.hypot(x, y) < MAINLAND_DOORSTEP) return null
 
-  // A fifth of everyone out here is not selling anything. They are the reason
-  // the sea has voices in it, and they are common enough that stopping for a
-  // stranger is usually worth it.
-  const isTalker = rnd() < 0.22
+  // TWO IN FIVE OF EVERYONE OUT HERE IS NOT SELLING ANYTHING.
+  //
+  // Raised from a fifth when the talkers took over a job the fishing screen
+  // used to do. That screen filled the wait between cast and bite with tips,
+  // and the map has no such gap to fill them into — so the knowledge moved out
+  // onto the water, into the mouths of people who are standing in it. At a
+  // fifth you could sail a whole band without meeting one, which is not a
+  // channel you can put the game's mechanics through.
+  //
+  // Still not most of them. A sea where nobody trades is not a Salt Road.
+  const isTalker = rnd() < 0.4
 
   // The deeper the water the likelier they are something other than a worm
   // salesman. The tinker only exists past the halfway mark.
@@ -313,8 +381,12 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
         : 'salter'
 
   const talkRoll = rnd()
+  const topic: 'hint' | 'story' = talkRoll < 0.62 ? 'hint' : 'story'
   const offer: TraderOffer | null = isTalker
-    ? { deal: 'talk', topic: talkRoll < 0.5 ? 'hint' : 'story' }
+    // Weighted toward hints, not even. Stories are the sea's atmosphere and
+    // there are only so many of them; hints are what the fishing screen's wait
+    // used to carry, and that is the load this feature actually took on.
+    ? { deal: 'talk', topic, lines: runOf(topic === 'hint' ? HINTS : STORIES, 4, rnd) }
     : offerFor(kind, depth, rnd)
   if (!offer) return null
 
@@ -337,9 +409,9 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
     kind: isTalker ? 'talker' : kind,
     name: `${pick(NAMES_FIRST, rnd)} ${pick(NAMES_LAST, rnd)}`,
     x, y, look,
-    line: isTalker
-      ? pick(offer.deal === 'talk' && offer.topic === 'hint' ? HINTS : STORIES, rnd)
-      : pick(LINES[kind], rnd),
+    // A talker's opener is the first of their run; everyone else has the one
+    // line they ever say.
+    line: offer.deal === 'talk' ? offer.lines[0] : pick(LINES[kind], rnd),
     driftR, driftRate, driftPhase,
     ...offer,
   }
@@ -347,6 +419,31 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
 
 function pick<T>(arr: readonly T[], rnd: () => number): T {
   return arr[Math.floor(rnd() * arr.length)]
+}
+
+/**
+ * N DISTINCT ITEMS, in a stable order, from one stream.
+ *
+ * Not `n` calls to pick(): that repeats, and a talker who says the same hint
+ * twice in one conversation is worse than a talker with one hint. Walks the
+ * pool from a stream-chosen offset by a stream-chosen stride that is coprime
+ * with the length, which visits every index before repeating any.
+ */
+function runOf(pool: readonly string[], n: number, rnd: () => number): string[] {
+  const len = pool.length
+  if (len === 0) return []
+  const take = Math.min(n, len)
+  let stride = 1 + Math.floor(rnd() * (len - 1))
+  while (gcd(stride, len) !== 1) stride = (stride % (len - 1)) + 1
+  const start = Math.floor(rnd() * len)
+  const out: string[] = []
+  for (let i = 0; i < take; i++) out.push(pool[(start + i * stride) % len])
+  return out
+}
+
+function gcd(a: number, b: number): number {
+  while (b) { const t = a % b; a = b; b = t }
+  return a
 }
 
 /**

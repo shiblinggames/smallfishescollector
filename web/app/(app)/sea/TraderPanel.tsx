@@ -55,6 +55,11 @@ export default function TraderPanel({
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: total }))
   }
 
+  /** How far through a talker's run we are. Resets when the panel closes,
+   *  because the run is theirs and hearing it again from the top is how a
+   *  person you already spoke to behaves. */
+  const [said, setSaid] = useState(0)
+
   const isResident = trader.deal === 'resident'
   const isTalk = trader.deal === 'talk'
   const rod = trader.deal === 'rod' ? RODS.find(r => r.tier === trader.rodTier) : null
@@ -150,7 +155,7 @@ export default function TraderPanel({
         <p className="font-karla" style={{
           fontSize: '0.86rem', color: '#b9cbd8', lineHeight: 1.55, marginTop: 10,
           fontStyle: 'italic',
-        }}>{trader.line}</p>
+        }}>{trader.deal === 'talk' ? trader.lines[said % trader.lines.length] : trader.line}</p>
 
         {/* ── THE OFFER ─────────────────────────────────────────────────
             Stated plainly. The flavour above is allowed its charm; the
@@ -182,11 +187,32 @@ export default function TraderPanel({
             // A talker's whole offer IS the line above. Repeating it here, or
             // dressing it as a transaction, would make a conversation look like
             // a vending machine that failed.
-            <p className="font-karla font-600" style={{
-              fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 1.5,
-            }}>
-              {trader.topic === 'hint' ? 'Worth remembering.' : 'Something they heard.'}
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}>
+              <p className="font-karla font-600" style={{
+                fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 1.5,
+              }}>
+                {trader.topic === 'hint' ? 'Worth remembering.' : 'Something they heard.'}
+              </p>
+              {/* KEEP THEM TALKING. A talker knows several things and there is
+                  no reason to make you sail away and find another one to hear
+                  the next. Wraps rather than running out: the run is short and
+                  a conversation that ends in a dead button is worse than one
+                  that goes round. */}
+              {trader.lines.length > 1 && (
+                <button type="button"
+                  onClick={() => { vibrate(8); setSaid(n => n + 1) }}
+                  className="font-karla font-700"
+                  style={{
+                    padding: '0.42rem 0.95rem', borderRadius: 999, fontSize: '0.72rem',
+                    color: 'rgba(226,240,248,0.85)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    cursor: 'pointer',
+                  }}>
+                  Go on
+                </button>
+              )}
+            </div>
           ) : trader.deal === 'resident' ? (
             <>
               <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>

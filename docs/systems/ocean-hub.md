@@ -92,14 +92,16 @@ the answer to "where am I" is one number: `Math.hypot(x, y)`.
 
 ### The Mainland is the biggest thing on the chart
 
-`r: 440`, against 210 for the Harbour and 200 for the Shipyard — four and a half times their
-area. It holds the tavern, the market and the tackle shop, and it is the origin every fishing
+`r: 340`, against 210 for the Harbour and 200 for the Shipyard — 2.6× their area. Landed on
+from both directions: 250 made it the same size as the two single-purpose ports and it read
+as one stop of three; 440 filled the screen off the dock and read as a coastline rather than
+somewhere you moor. It holds the tavern, the market and the tackle shop, and it is the origin every fishing
 band is measured from; at 250 it was the same size as the two single-purpose ports and read
 as one stop of three.
 
 One number drives all of it: the island art (`place.r * 2`), the buildings (percentages of
-that box), the shore the hull stops at (`r * SHORE + HULL` = 372) and the mooring ring
-(`r + MOOR` = 860). `MAINLAND_DOORSTEP` in seaTraders derives from it too.
+that box), the shore the hull stops at (`r * SHORE + HULL` = 300) and the mooring ring
+(`r + MOOR` = 760). `MAINLAND_DOORSTEP` in seaTraders derives from it too.
 
 ### The harbour approach
 

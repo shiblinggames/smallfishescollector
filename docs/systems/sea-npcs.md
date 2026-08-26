@@ -117,13 +117,37 @@ Measured over 60 days, chart radius 14400, south of `NORTH_WALL`:
 | Wanderers by daylight | 10–29, **average 19** |
 | Wanderers after dark | 23–49, **average 37** |
 | Night adds | **17**, all of them blockade runners carrying a trader-only rod |
-| Talkers | ~4 a day, **21%** of the daytime sea (the `isTalker` roll is 0.22) |
+| Talkers | ~6 a day, **33%** of the daytime sea (the `isTalker` roll is 0.4) |
 | Resident buyers | **5** — permanent, one per band, not part of the roll |
 
 So roughly **24 people on the water by day and 42 after dark**, of whom 5 are always in the
 same place. Nobody is repeated: the hash makes a cell's occupant unique to that cell and day.
 
+### Talkers carry the game's mechanics now
+
+The fishing screen filled the seconds between cast and bite with tips, and that was doing
+real work — nearly everything in this game is discoverable only by being told, and that is
+where players were told. The map has no such gap (you are steering), so the knowledge moved
+onto the water and into the mouths of people standing in it.
+
+- **`isTalker` is 0.4**, up from 0.22. At a fifth you could sail a whole band without meeting
+  one, which is far too narrow a channel to put the game's mechanics through. Still not most
+  of them — a sea where nobody trades is not a Salt Road.
+- **`HINTS` is 36 lines**, the fishing screen's tip pool rewritten as things a person would
+  say. Never "Tip:", never a figure the player cannot check. **Verify any number against the
+  source before adding one** — a stale hint is worse than none, and out here it is also a
+  person lying to you.
+- **A talker carries a RUN of 4 distinct lines, not one**, and the panel's "Go on" walks it.
+  `runOf()` steps the pool by a stride coprime with its length, so it visits every index
+  before repeating any — four calls to `pick()` would have repeated. The topic split is
+  weighted 62/38 toward hints over stories.
+- The run is derived from the same stream as everything else about them, so a given person
+  always knows the same things and always says them in the same order.
+
+Verified over 40 days: 283 talkers of 769 traders (37%), zero runs containing a repeat, zero
+runs short of four, all 44 lines reachable.
+
 **The doorstep exclusion is derived, not a constant.** `MAINLAND_DOORSTEP` is the Mainland's
 mooring ring plus a boat length. It was hard-coded at 620, tuned when the island had a radius
-of 250; when the island grew to 440 its ring reached 860 and the old number left wanderers
+of 250; when the island grew its ring reached further and the old number left wanderers
 bobbing inside the harbour approach with the go-ashore prompt already up.
