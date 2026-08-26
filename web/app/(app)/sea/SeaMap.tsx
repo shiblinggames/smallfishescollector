@@ -1232,6 +1232,18 @@ export default function SeaMap({
   /** True while a friend is close enough to be worth drawing well. Drives the
    *  flush and the poll — see NEAR_ENOUGH. */
   const closeRef = useRef(false)
+  /**
+   * WHO WAS OUT HERE LAST TIME WE ASKED.
+   *
+   * The poll only ever says who IS at sea, so arriving and leaving have to be
+   * worked out by comparing. Starts as null rather than empty, which is the
+   * difference between "nobody was out" and "we have not looked yet" — without
+   * it, opening the chart announces every friend already sailing as if they had
+   * just cast off in front of you.
+   */
+  const seenCrew = useRef<Set<string> | null>(null)
+  /** Names that have just come or gone, for the line that says so. */
+  const [crewNews, setCrewNews] = useState<{ name: string; joined: boolean } | null>(null)
 
   // ── WHOSE HOMESTEAD THE ISLAND IS SHOWING ─────────────────────────────
   //
@@ -1242,6 +1254,8 @@ export default function SeaMap({
   const [guests, setGuests] = useState<Visitable[]>([])
   const [visiting, setVisiting] = useState<{ username: string; homestead: Homestead } | null>(null)
   const [picking, setPicking] = useState(false)
+  /** The who-is-out list, open or shut. */
+  const [crewOpen, setCrewOpen] = useState(false)
 
   /** Pressed up against the edge of the surveyed chart. Ref for the loop, state
    *  for the one line it puts on screen. */
@@ -1506,6 +1520,20 @@ export default function SeaMap({
         void friendsAtSea().then(f => {
           if (!alive) return
           setFriends(f)
+
+          // ── ARRIVALS ──────────────────────────────────────────────
+          // One name at a time, and only ever the newest. Three friends
+          // logging on together should not be three lines stacking up over
+          // the water while you are trying to steer.
+          const now = new Set(f.map(x => x.username))
+          const before = seenCrew.current
+          if (before) {
+            const came = [...now].find(n => !before.has(n))
+            const went = came ? null : [...before].find(n => !now.has(n))
+            if (came) setCrewNews({ name: came, joined: true })
+            else if (went) setCrewNews({ name: went, joined: false })
+          }
+          seenCrew.current = now
           // ARE WE TOGETHER? Both boats work this out independently and agree,
           // because being near each other is symmetric. Nothing is negotiated
           // and there is no session to join.
@@ -2976,6 +3004,66 @@ hullRef={hullRefFor(t.key)} />
         </PopupShell>
       </div>
 
+      {/* WHO ELSE IS OUT. A compass arrow only helps if you happen to be
+          looking at the edge of the screen, and it says nothing at all when
+          somebody arrives while you are watching the dial. This is the standing
+          answer to "is anyone else on the water", in the corner with the other
+          readouts. */}
+      {!fishingIn && friends.length > 0 && (
+        <div
+          onClick={e => { e.stopPropagation(); vibrate(8); setCrewOpen(v => !v) }}
+          data-no-steer
+          style={{
+            position: 'absolute', top: 18, left: 84, zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', gap: 5,
+            height: 26, padding: '0 9px', borderRadius: 999, cursor: 'pointer',
+            background: 'rgba(10,22,18,0.82)', border: '1px solid rgba(150,206,172,0.45)',
+          }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9fdcb6"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 18c2 3 16 3 18 0" /><path d="M5 18l1.6-4h10.8L19 18" />
+            <path d="M12 14V7" /><path d="M12 7l4.5 2.2L12 11.4" />
+          </svg>
+          <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#dff0e6' }}>
+            {friends.length}
+          </span>
+        </div>
+      )}
+
+      {crewOpen && friends.length > 0 && (
+        <div data-no-steer onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', top: 50, left: 84, zIndex: Z.hud,
+            minWidth: 168, maxWidth: 240, padding: '0.5rem 0.6rem', borderRadius: 12,
+            background: 'rgba(8,16,14,0.95)', border: '1px solid rgba(150,206,172,0.32)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          }}>
+          <p className="font-karla font-700 uppercase" style={{
+            fontSize: '0.54rem', letterSpacing: '0.16em', margin: '0 0 4px',
+            color: 'rgba(150,206,172,0.75)',
+          }}>On the water</p>
+          {friends
+            .map(f => ({ f, d: Math.hypot(f.x - pos.current.x, f.y - pos.current.y) }))
+            .sort((a, b) => a.d - b.d)
+            .map(({ f, d }) => (
+              <div key={f.username} style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10,
+              }}>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#e8f2ea' }}>
+                  {f.username}
+                </span>
+                {/* The same metres the compass uses, so two readouts of the
+                    same fact never disagree. */}
+                <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(190,214,200,0.6)' }}>
+                  {Math.round(d / 10).toLocaleString()}m
+                </span>
+              </div>
+            ))}
+        </div>
+      )}
+
+      <CrewNews news={crewNews} onDone={() => setCrewNews(null)} />
+
       {/* THE CHART. `fogVersion` is in the key path so the canvas redraws when
           a cell flips — the bitfield itself is a ref and mutating it is
           invisible to React by design. */}
@@ -2989,6 +3077,7 @@ hullRef={hullRefFor(t.key)} />
         found={found}
         bearings={bearings}
         dug={dug}
+        friends={friends}
       />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
@@ -4205,6 +4294,54 @@ const FriendBoat = memo(function FriendBoat({ friend, refs }: {
         )}
       </div>
     </div>
+  )
+})
+
+/**
+ * SOMEBODY CAME OUT, OR WENT IN.
+ *
+ * A compass arrow is only useful if you are already looking at the edge of the
+ * screen, and it says nothing at the moment that matters — when a friend casts
+ * off while you are halfway to the Abyss. This is that moment, once, and then
+ * it is gone.
+ *
+ * Never eats a tap: you are usually steering when it appears.
+ */
+const CrewNews = memo(function CrewNews({ news, onDone }: {
+  news: { name: string; joined: boolean } | null
+  onDone: () => void
+}) {
+  useEffect(() => {
+    if (!news) return
+    const t = setTimeout(onDone, 3600)
+    return () => clearTimeout(t)
+  }, [news, onDone])
+
+  return (
+    <AnimatePresence>
+      {news && (
+        <motion.div
+          key={`${news.name}:${news.joined}`}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6, transition: { duration: 0.4 } }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: 0, right: 0, top: 92, zIndex: Z.hud,
+            display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 1rem',
+          }}>
+          <p className="font-karla font-700" style={{
+            margin: 0, padding: '0.42rem 0.9rem', borderRadius: 999, fontSize: '0.84rem',
+            color: news.joined ? '#dff0e6' : 'rgba(206,222,214,0.85)',
+            background: 'rgba(8,18,15,0.92)',
+            border: `1px solid ${news.joined ? 'rgba(150,206,172,0.5)' : 'rgba(150,206,172,0.22)'}`,
+            textShadow: '0 1px 10px rgba(0,0,0,0.9)',
+          }}>
+            {news.joined ? `${news.name} has put to sea` : `${news.name} has gone in`}
+          </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 })
 

@@ -49,13 +49,14 @@ const INK = {
   dig: '#f0c040',
   digDone: 'rgba(150,182,164,0.5)',
   trader: '#7fd6a0',
+  friend: '#5ee08a',
   yoon: '#c084fc',
   you: '#ffffff',
   fog: 'rgb(26,32,41)',
 } as const
 
 export default function Minimap({
-  open, onClose, fog, at, seaAt, found, bearings, dug,
+  open, onClose, fog, at, seaAt, found, bearings, dug, friends,
 }: {
   open: boolean
   onClose: () => void
@@ -73,6 +74,10 @@ export default function Minimap({
   bearings: Set<string>
   /** Of those, the ones already up. */
   dug: Set<string>
+  /** Mutual crew currently sailing. Never fogged: they are people, not
+   *  discoveries, and hiding a friend until you have swept their water would
+   *  defeat the only thing this mark is for. */
+  friends: { username: string; x: number; y: number }[]
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [w, setW] = useState(0)
@@ -227,6 +232,20 @@ export default function Minimap({
       ctx.stroke()
     }
 
+    // ── YOUR CREW ────────────────────────────────────────────────────────
+    // Drawn last but one, so a friend is never buried under an isle pin, and
+    // named, because the entire point of this mark is knowing WHICH friend.
+    ctx.textAlign = 'center'
+    for (const f of friends) {
+      const x = tx(f.x), y = ty(f.y)
+      ctx.fillStyle = INK.friend
+      ctx.beginPath(); ctx.arc(x, y, 3.6, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = 'rgba(6,12,18,0.9)'; ctx.lineWidth = 1.4; ctx.stroke()
+      ctx.fillStyle = 'rgba(214,244,226,0.92)'
+      ctx.font = '600 8px ui-sans-serif, system-ui'
+      ctx.fillText(f.username, x, y - 7)
+    }
+
     // ── YOU ──────────────────────────────────────────────────────────────
     const b = at.current
     if (b) {
@@ -237,7 +256,7 @@ export default function Minimap({
       ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, w, at, seaAt, found, bearings, dug])
+  }, [fog, w, at, seaAt, found, bearings, dug, friends])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 
@@ -330,6 +349,7 @@ export default function Minimap({
               <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
               <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
               <Key mark={<Dot c={INK.trader} r={2.8} />} label="Trader" />
+              <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="A friend" />
               <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
             </div>
           </motion.div>
