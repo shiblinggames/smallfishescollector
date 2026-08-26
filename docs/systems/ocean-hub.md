@@ -522,6 +522,75 @@ reroll button all share and where there was never room for it.
 
 Everything comes back the instant you stow.
 
+## Seeing each other (presence)
+
+Mutual crew — you both pressed Follow — appear on the water as their real boat, with a
+named compass arrow and a mark on the chart. Two layers, and they answer different
+questions.
+
+**The backbone is a 20-second poll.** `friendsAtSea()` (`home/visitActions.ts`) says who is
+out there and roughly where. It feeds the compass arrow, the crew list and the "so-and-so
+has put to sea" line. One indexed query; the mutual-follow graph behind it is cached for a
+minute because it is 27 rows and was being re-read thirty times a minute per player.
+
+**The close-up is Supabase Realtime** (`lib/seaPresence.ts`), and only the close-up.
+Positions go captain-to-captain at 2Hz while somebody is within `NEAR_ENOUGH` (2,600px),
+and nothing goes on the wire at all otherwise. This replaced a poll that stepped up to 2
+seconds when a friend was near — 600-1000px between samples, which no amount of easing
+makes look like a boat.
+
+### One channel per captain, never one big room
+
+Supabase bills fan-out. From their pricing docs, verbatim: *"Each broadcast message counts
+as one message sent plus one message per subscribed client that receives it."*
+
+So a single shared channel is **O(N²) on the invoice**, and most of those deliveries go to
+people on the far side of the chart who cannot see each other. Ten players at 2Hz in one
+room is 200 messages a second — the entire 2M free monthly quota in under three hours.
+
+Instead each captain owns `sea:<their uuid>` and broadcasts only there. Fan-out is your
+mutual crew who are online, which is bounded by the **social graph, not the playerbase**. A
+pair sailing together costs the same whether the game holds ten players or ten thousand.
+
+| Rate | Per pair-hour | Free (2M/mo) | Pro (5M/mo) |
+|---|---|---|---|
+| 4 Hz | 57,600 | 35 h | 87 h |
+| **2 Hz (shipped)** | **28,800** | **69 h** | **174 h** |
+| 1 Hz | 14,400 | 139 h | 347 h |
+
+Overage is $2.50/million, so ~35 more pair-hours per $2.50. Connections are a non-issue:
+one websocket per player (channels multiplex), against a 200/500 quota.
+
+Two further economies: a beat is skipped unless you have **moved** (`MOVE_MIN`), so two
+captains moored side by side fishing cost nothing, and hidden tabs stay silent. It also
+*reduces* database load — the position write went back to a flat 20s heartbeat instead of
+stepping to 2s, and the poll stopped escalating too.
+
+### The channels are private, and Postgres says who may join
+
+`sea:<uuid>` is handed to every mutual friend so they can subscribe, and a shared secret is
+not a secret. The `sea_presence_realtime_authorization` migration puts RLS on
+`realtime.messages`:
+
+- **SELECT** — you may listen to your own channel, or a mutual's.
+- **INSERT** — you may send **only** on your own. This is the half that stops one player
+  dragging somebody else's boat across the chart in front of everyone watching.
+
+The receiving client therefore takes a friend's identity from **which channel the message
+arrived on**, never from the payload — the channel is a fact the database enforced, the
+payload is another browser's claim.
+
+### Gotchas
+
+- **The poll must not stomp a live boat.** Its rows are up to 20s old; a beat is 500ms old.
+  `friendAt` carries a `live` stamp and the poll skips any boat heard from in the last 4s,
+  or a friend you are sailing beside rubber-bands twice a minute.
+- **Facing comes over the wire.** Inferring it from the easing delta is fine at 20s steps
+  and flickers at 500ms ones.
+- **"Are we together" is recomputed every beat**, against the freshest position held per
+  friend — not off the poll payload, which is stale enough to rule you "not near" somebody
+  filling your screen.
+
 ## The compass
 
 **Its mount was deleted in an over-broad slice edit** and the component sat unreferenced for

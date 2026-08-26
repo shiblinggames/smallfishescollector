@@ -52,6 +52,7 @@ import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaCloc
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
+import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
 import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
 import { FINN_NAME, type FinnSceneLine } from '@/lib/finn'
@@ -465,16 +466,20 @@ type SeaLook = {
 /**
  * HOW CLOSE COUNTS AS SAILING TOGETHER.
  *
- * 2,600 world pixels, which is about two and a half screens at desktop zoom.
- * Wide enough that the rate steps up BEFORE a friend comes over the horizon, so
- * their boat is already easing smoothly by the time you can see it, rather than
- * snapping once and then settling.
+ * 2,600 world pixels, about two and a half screens at desktop zoom. Wide enough
+ * that you start broadcasting BEFORE a friend comes over the horizon, so their
+ * boat is already easing smoothly by the time you can see it rather than
+ * snapping into place once and then settling.
+ *
+ * This is the switch that decides whether presence costs anything: outside it,
+ * nothing goes on the wire at all. See lib/seaPresence.ts.
  */
 const NEAR_ENOUGH = 2600
 
-/** How often a position is written: alone, and with a friend in sight. */
+/** How often a position is written to the database, and how often the poll asks
+ *  who is out there. One rate for both, and no longer adaptive — the close-up
+ *  moved to Realtime and this went back to being a plain heartbeat. */
 const FAR_MS = 20_000
-const NEAR_MS = 2_000
 
 const SEA_STEP = 96
 
@@ -689,9 +694,12 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, digs, homestead, dealtToday,
-  auto, tideTurner,
+  auto, tideTurner, userId,
 }: {
   fishingXP: number
+  /** Your own id. The one thing presence needs that the chart did not already
+   *  have: you broadcast on `sea:<userId>` and nowhere else. */
+  userId: string
   /** The player's own loadout, so the thing crossing the ocean is the captain
    *  they dressed in the boat they bought — not a marker. */
   characterColor: string
@@ -1383,7 +1391,12 @@ export default function SeaMap({
    * that teleports. `shown` chases `target` every frame instead, so what you
    * see is a boat under way rather than a boat blinking along a track.
    */
-  const friendAt = useRef<Map<string, { shown: Vec; target: Vec; face: number; bob: number }>>(new Map())
+  const friendAt = useRef<Map<string, {
+    shown: Vec; target: Vec; face: number; bob: number
+    /** When this boat was last heard from over the wire, 0 for never. Guards
+     *  the stale poll from stomping a live position. */
+    live: number
+  }>>(new Map())
   /** True while a friend is close enough to be worth drawing well. Drives the
    *  flush and the poll — see NEAR_ENOUGH. */
   const closeRef = useRef(false)
@@ -1573,7 +1586,6 @@ export default function SeaMap({
    * screen's worth of sailing lost to a crash, and an idle boat writes nothing
    * at all rather than pushing an identical row every twenty seconds forever.
    */
-  const lastRate = useRef(FAR_MS)
   useEffect(() => {
     let last = { ...pos.current }
     const flush = () => {
@@ -1600,19 +1612,19 @@ export default function SeaMap({
     // sight both clients independently step up to two seconds, which is short
     // enough to ease between and costs writes only in the one case where they
     // buy something.
-    let id = setInterval(flush, FAR_MS)
-    const retime = setInterval(() => {
-      const want = closeRef.current ? NEAR_MS : FAR_MS
-      if (want === lastRate.current) return
-      lastRate.current = want
-      clearInterval(id)
-      id = setInterval(flush, want)
-    }, 2_000)
+    // ── ONE RATE. ─────────────────────────────────────────────────────
+    // This used to step up to NEAR_MS whenever a friend was close, so their
+    // client's poll had something fresh to read. Realtime carries the close-up
+    // now, and it goes captain-to-captain without touching the database at all
+    // — so the write is back to being what it always should have been: a
+    // twenty-second heartbeat so a crash does not lose your position, plus the
+    // fog you have uncovered. Sailing alongside somebody costs the database
+    // nothing extra now, where it used to cost ten times the writes.
+    const id = setInterval(flush, FAR_MS)
     document.addEventListener('visibilitychange', onHide)
     window.addEventListener('pagehide', flush)
     return () => {
       clearInterval(id)
-      clearInterval(retime)
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', flush)
       // The unmount IS a navigation — going ashore, or the nav bar. This is the
@@ -1689,14 +1701,17 @@ export default function SeaMap({
             else if (went) setCrewNews({ name: went, joined: false })
           }
           seenCrew.current = now
-          // ARE WE TOGETHER? Both boats work this out independently and agree,
-          // because being near each other is symmetric. Nothing is negotiated
-          // and there is no session to join.
-          const p = pos.current
-          closeRef.current = f.some(x => Math.hypot(x.x - p.x, x.y - p.y) < NEAR_ENOUGH)
+          // Whether you are sailing together is NOT decided here any more. It
+          // is recomputed twice a second against the freshest position held for
+          // each friend — see the broadcast interval. Deciding it off this
+          // payload meant deciding it off rows up to twenty seconds old.
         }, () => {})
       }
-      timer = setTimeout(pull, closeRef.current ? NEAR_MS : FAR_MS)
+      // ALWAYS THE SLOW RATE NOW. This used to drop to NEAR_MS whenever a friend
+      // was close, because the poll was the only way to find out where they
+      // were. Realtime carries that now, so asking faster would buy nothing and
+      // cost a server action every two seconds.
+      timer = setTimeout(pull, FAR_MS)
     }
     pull()
     return () => { alive = false; clearTimeout(timer) }
@@ -1715,11 +1730,24 @@ export default function SeaMap({
     for (const name of [...friendAt.current.keys()]) {
       if (!live.has(name)) { friendAt.current.delete(name); friendRefs.current.delete(name) }
     }
+    // WHO TO LISTEN TO. Everyone online, not just whoever is close: subscribing
+    // is silent until somebody actually broadcasts, and having the channel
+    // already open is what makes meeting up instant rather than a poll away.
+    crewNames.current = new Map(friends.map(f => [f.id, f.username]))
+    presence.current?.setCrew(friends.map(f => f.id))
+
     for (const f of friends) {
       const had = friendAt.current.get(f.username)
-      if (had) { had.target.x = f.x; had.target.y = f.y }
+      // THE POLL DOES NOT OVERWRITE A LIVE BOAT. Its position is up to twenty
+      // seconds old; a beat is half a second old. Letting the poll land on top
+      // would drag a friend you are sailing beside back to where they were
+      // twenty seconds ago, twice a minute, which reads as rubber-banding.
+      if (had) {
+        const fresher = had.live && Date.now() - had.live < 4_000
+        if (!fresher) { had.target.x = f.x; had.target.y = f.y }
+      }
       else friendAt.current.set(f.username, {
-        shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1,
+        shown: { x: f.x, y: f.y }, target: { x: f.x, y: f.y }, face: 1, live: 0,
         // A PHASE OFF THEIR NAME, so two friends riding the same swell are not
         // pumping in lockstep — which reads as one animation on two sprites
         // rather than two boats on water. Derived from the name so it is stable
@@ -1729,6 +1757,90 @@ export default function SeaMap({
       })
     }
   }, [friends])
+
+  /**
+   * THE LIVE WATER.
+   *
+   * Opened once for the life of the chart and closed on the way out. Everything
+   * it receives goes straight into `friendAt` — the same easing targets the
+   * frame loop already reads — so a beat off the wire and a position off the
+   * poll are the same kind of fact and nothing downstream can tell them apart.
+   *
+   * React is never told a friend moved. It is told when one ARRIVES, which is
+   * the poll's job, and that is the only thing worth a render.
+   */
+  const presence = useRef<SeaPresence | null>(null)
+  /** uuid -> username. Beats are addressed by id (the channel is the identity —
+   *  see seaPresence) and everything on this screen is keyed by name. */
+  const crewNames = useRef<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    const p = openSeaPresence({
+      userId,
+      onBeat: (id, b) => {
+        const name = crewNames.current.get(id)
+        if (!name) return
+        const at = friendAt.current.get(name)
+        if (!at) return
+        at.target.x = b.x
+        at.target.y = b.y
+        at.live = Date.now()
+        // FACING COMES OVER THE WIRE rather than being inferred here. The loop
+        // guesses it from the easing delta, which is fine at a 20s poll where
+        // every step is hundreds of pixels, and wrong at close quarters where
+        // the steps are small enough that a boat sitting still flickers.
+        at.face = b.f
+      },
+    })
+    presence.current = p
+    return () => { p.close(); presence.current = null }
+  }, [userId])
+
+  /**
+   * REPORT YOURSELF, but only while somebody can see you.
+   *
+   * `closeRef` is the whole cost control: no friend within NEAR_ENOUGH means
+   * nobody is subscribed to you in any useful sense, and a beat sent into an
+   * empty room still bills a message. Hidden tabs say nothing either — the boat
+   * is not moving and nobody is watching this one.
+   *
+   * `send` gates on distance moved as well, so two captains moored side by side
+   * fishing cost nothing at all.
+   */
+  useEffect(() => {
+    const id = setInterval(() => {
+      // ── ARE WE TOGETHER? ──────────────────────────────────────────
+      //
+      // Worked out HERE, and only here, against the freshest position held for
+      // each friend — which is a beat if one is arriving and the poll's row
+      // otherwise. The first cut asked the poll's payload directly and that was
+      // wrong: those rows are up to twenty seconds old, which is thousands of
+      // pixels at cruising speed, so it could rule you "not near" somebody
+      // sitting on your screen and switch broadcasting off while you sailed
+      // beside them.
+      //
+      // Recomputed every beat, so it is never more stale than the boats are.
+      //
+      // It also makes the rendezvous symmetric for free. Only one of the two
+      // has to notice first: the moment they broadcast, their target moves in
+      // your map, this sees it, and you start broadcasting back. Neither side
+      // waits on its own poll.
+      let near = false
+      const me = pos.current
+      for (const at of friendAt.current.values()) {
+        if (Math.hypot(at.target.x - me.x, at.target.y - me.y) < NEAR_ENOUGH) { near = true; break }
+      }
+      closeRef.current = near
+
+      if (!near) return
+      // A tab nobody is looking at is a boat nobody is steering.
+      if (document.visibilityState === 'hidden') return
+      presence.current?.send({
+        x: Math.round(me.x), y: Math.round(me.y), f: facing.current,
+      })
+    }, BEAT_MS)
+    return () => clearInterval(id)
+  }, [])
 
   /** Who you could call on. Read once; the guard is re-checked server-side on
    *  the visit itself, so a stale list cannot open a door. */
@@ -2241,7 +2353,12 @@ export default function SeaMap({
             at.shown.y += dyf * kf2
           }
           // Face the way they are going, the same flip the player's boat uses.
-          if (Math.abs(dxf) > 12) at.face = dxf < 0 ? -1 : 1
+          // ONLY WHILE GUESSING. A live boat sends its real facing twice a
+          // second, and inferring one from a half-second easing delta would
+          // fight it — at these step sizes the guess flickers, which is exactly
+          // the case the wire value exists to fix.
+          const guessing = !at.live || now - at.live > 4_000
+          if (guessing && Math.abs(dxf) > 12) at.face = dxf < 0 ? -1 : 1
           el.style.transform = `translate3d(${at.shown.x}px, ${at.shown.y}px, 0)`
           const hull = el.firstElementChild as HTMLElement | null
           if (hull) {

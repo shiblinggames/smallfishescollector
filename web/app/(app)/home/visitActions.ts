@@ -206,6 +206,11 @@ export async function homesteadOf(username: string): Promise<Visit | null> {
  * pet, same character sprite — the exact props `Skipper` takes for you.
  */
 export type FriendAtSea = {
+  /** Their user id. The chart subscribes to `sea:<id>` for their live position
+   *  — see lib/seaPresence.ts. Only ever handed to somebody who follows them
+   *  back, and it opens nothing on its own: the Realtime policy re-checks the
+   *  mutual follow at join time, and every table is behind RLS. */
+  id: string
   username: string
   x: number
   y: number
@@ -269,11 +274,12 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     // from the literal text of this argument; joining two strings gives it an
     // expression it cannot read, and the whole result silently degrades to an
     // error type that only shows up as a confusing cast failure downstream.
-    .select('username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects')
+    .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects')
     .in('id', ids)
     .gte('sea_seen_at', cutoff)
 
   type Row = {
+    id: string
     username: string | null; sea_x: number | null; sea_y: number | null; sea_seen_at: string
     character_color: string | null; equipped_boat: string | null; equipped_hat: string | null
     rod_tier: number | null; reel_tier: number | null; hook_tier: number | null
@@ -291,6 +297,7 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
       const rod = getEffectiveRod(Number(r.rod_tier ?? 0), r.completionist_effects ?? null)
       const pet = r.equipped_pet ? PETS.find(x => x.species === r.equipped_pet) ?? null : null
       return {
+        id: r.id,
         username: r.username as string,
         x: Number(r.sea_x), y: Number(r.sea_y),
         ago: Math.max(0, Math.round((now - new Date(r.sea_seen_at).getTime()) / 1000)),

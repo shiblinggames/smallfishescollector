@@ -180,6 +180,7 @@ export default async function SeaPage() {
   return (
     <SeaMap
       fishingXP={Number(profile?.fishing_xp ?? 0)}
+      userId={user.id}
       characterColor={(profile?.character_color as string | null) ?? 'default'}
       boatId={(profile?.equipped_boat as string | null) ?? null}
       hatId={(profile?.equipped_hat as string | null) ?? null}
