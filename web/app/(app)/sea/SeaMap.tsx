@@ -2883,7 +2883,7 @@ export default function SeaMap({
             same SeaMark every other landmark goes through, so they get the
             submerged base and the shoal for free and cannot drift out of
             style. */}
-        {REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}
+        <ReefLine />
 
         {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
             through the opening is what takes you to expeditions, so the opening
@@ -2922,9 +2922,7 @@ export default function SeaMap({
             now that the waters are bands — a ring has no box for an offset to
             be relative to. Rendered here rather than inside a place, which also
             means one pass over one array instead of five nested ones. */}
-        {LANDMARKS.map((m, i) => (
-          <SeaMark key={i} m={m} i={i} />
-        ))}
+        <LandmarkField />
 
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
@@ -3733,7 +3731,7 @@ function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
         const on = f === frame && !hiddenOn?.(f)
         return (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={f} src={src(f)} alt="" draggable={false}
+          <img decoding="async" key={f} src={src(f)} alt="" draggable={false}
             // The glow animations go on the VISIBLE copy only. Three sets of
             // keyframes running behind a hidden layer is work nobody sees.
             className={on ? className : undefined}
@@ -3778,7 +3776,7 @@ function Skipper({ characterColor, boatId, hatId, gear, frame }: {
           sheets are the same size anyway. */}
       {FRAMES.map(f => (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={f} src={char[f]} alt="" draggable={false} style={{
+        <img decoding="async" key={f} src={char[f]} alt="" draggable={false} style={{
           width: '100%', display: 'block',
           ...(f === 'rest' ? {} : { position: 'absolute', top: 0, left: 0 }),
           visibility: f === frame ? 'visible' : 'hidden',
@@ -3887,18 +3885,18 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
       filter: 'drop-shadow(0 10px 14px rgba(0,0,0,0.5))',
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={char.rest} alt="" draggable={false}
+      <img decoding="async" src={char.rest} alt="" draggable={false}
         style={{ width: '100%', display: 'block' }} />
       {hat && hp && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={hat.restImageUrl} alt="" draggable={false} style={{
+        <img decoding="async" src={hat.restImageUrl} alt="" draggable={false} style={{
           position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
           width: `${hp.width}%`, transform: `rotate(${hp.rotate}deg)`,
         }} />
       )}
       {boat && bp && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={boat.restImageUrl} alt="" draggable={false} style={{
+        <img decoding="async" src={boat.restImageUrl} alt="" draggable={false} style={{
           position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
           width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
         }} />
@@ -3908,7 +3906,7 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
            stick. Same coordinates the player's hook uses, and the rest frame is
            the one where it is out of the water. */
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={look.hook} alt="" draggable={false} style={{
+        <img decoding="async" src={look.hook} alt="" draggable={false} style={{
           position: 'absolute', top: `${HOOK_AT.rest.top}%`, left: `${HOOK_AT.rest.left}%`,
           width: `${HOOK_AT.rest.width}%`, maxWidth: 'none',
           transform: `rotate(${HOOK_AT.rest.rotate}deg)`,
@@ -3920,7 +3918,7 @@ const TraderSkiff = memo(function TraderSkiff({ look }: { look: TraderLook }) {
            same coordinates the player's rod uses, and NEVER a glowing one —
            see TraderLook for why. */
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/${look.rodSlug}_rest.png`} alt="" draggable={false} style={{
+        <img decoding="async" src={`/${look.rodSlug}_rest.png`} alt="" draggable={false} style={{
           position: 'absolute', top: `${ROD_AT.rest.top}%`, left: `${ROD_AT.rest.left}%`,
           width: `${ROD_AT.rest.width}%`, maxWidth: 'none',
           transform: `rotate(${ROD_AT.rest.rotate}deg)`, transformOrigin: 'bottom right',
@@ -4206,6 +4204,27 @@ function reefRocks() {
 const REEF = reefRocks()
 
 /**
+ * THE SCENERY, AS ONE ELEMENT.
+ *
+ * The reef is ~320 rocks and pebbles and the landmark field is another 35.
+ * Every SeaMark is memo'd, so the DOM never churned — but the PARENT re-render
+ * still called createElement three hundred and fifty times and re-diffed the
+ * lot, on every proximity flip and every trader-cell crossing, forever. All of
+ * it to conclude nothing changed, because none of it CAN change: both lists
+ * are module constants.
+ *
+ * As memo components with no props they cost the parent exactly one element
+ * each, and React never descends into them again.
+ */
+const ReefLine = memo(function ReefLine() {
+  return <>{REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}</>
+})
+
+const LandmarkField = memo(function LandmarkField() {
+  return <>{LANDMARKS.map((m, i) => <SeaMark key={i} m={m} i={i} />)}</>
+})
+
+/**
  * HOW DEEP EACH THING SITS.
  *
  * `line` is where the water crosses the sprite, as a percentage of its height —
@@ -4480,7 +4499,7 @@ const SeaMark = memo(function SeaMark({ m, i }: {
         transformOrigin: 'bottom center',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={m.art} alt="" draggable={false} loading="lazy"
+        <img decoding="async" src={m.art} alt="" draggable={false} loading="lazy"
           className={m.sway ? `mark-${m.sway}` : undefined}
           style={{
             width: '100%', maxWidth: 'none', display: 'block',
@@ -5059,7 +5078,7 @@ const SeaBottle = memo(function SeaBottle({ bottle, refs }: {
         transformOrigin: 'bottom center',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/sea/sea-bottle.png" alt="" draggable={false} loading="lazy"
+        <img decoding="async" src="/sea/sea-bottle.png" alt="" draggable={false} loading="lazy"
           className="mark-bob"
           style={{
             width: '100%', maxWidth: 'none', display: 'block',
@@ -5177,7 +5196,7 @@ const FindPanel = memo(function FindPanel({ state, onClose }: {
               fontSize: '1.35rem', color: '#f2ead8', margin: '0.15rem 0 0.6rem', paddingRight: 34,
             }}>{haul.name}</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/sea/dig-box.png" alt="" draggable={false} style={{
+            <img decoding="async" src="/sea/dig-box.png" alt="" draggable={false} style={{
               display: 'block', width: 168, margin: '0 auto 0.5rem',
             }} />
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1.1rem', marginBottom: '0.9rem' }}>
@@ -5224,7 +5243,7 @@ const FindPanel = memo(function FindPanel({ state, onClose }: {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/sea/bearing-chart.png" alt="" draggable={false}
+                  <img decoding="async" src="/sea/bearing-chart.png" alt="" draggable={false}
                     style={{ width: 52, flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <p className="font-cinzel font-700" style={{
@@ -5342,7 +5361,7 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
         transformOrigin: 'bottom center',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={art} alt="" draggable={false} loading="lazy" style={{
+        <img decoding="async" src={art} alt="" draggable={false} loading="lazy" style={{
           width: '100%', maxWidth: 'none', display: 'block',
           filter: found ? 'saturate(0.86) brightness(0.94)' : 'none',
         }} />
@@ -5457,7 +5476,7 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
             {won && (won.gems > 0 || won.doubloons > 0) && (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/sea/isle-chest-open.png" alt="" draggable={false} style={{
+                <img decoding="async" src="/sea/isle-chest-open.png" alt="" draggable={false} style={{
                   display: 'block', width: 132, margin: '0 auto 0.5rem',
                 }} />
                 <div style={{
@@ -5633,7 +5652,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
                 : 'drop-shadow(0 6px 10px rgba(0,0,0,0.55))',
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={b.art} alt="" draggable={false}
+              <img decoding="async" src={b.art} alt="" draggable={false}
                 style={{ width: '100%', display: 'block' }} />
             </div>
           ))}
