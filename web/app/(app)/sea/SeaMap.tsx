@@ -1858,9 +1858,11 @@ export default function SeaMap({
             // which out here is constantly.
             waiting={p.id === 'trawl_docks' ? trawlsReady : 0} />
         ))}
-        {/* THE CLIFFS. See CliffWall — the northern edge of the world, and the
-            arch that is the only way out of it. */}
-        <CliffWall />
+        {/* THE TOP OF THE CHART. Rocks, not architecture — see reefRocks. The
+            same SeaMark every other landmark goes through, so they get the
+            submerged base and the shoal for free and cannot drift out of
+            style. */}
+        {REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -2754,207 +2756,132 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
  * SOUTH face, so the light is on top and the water-line is dark: that is the
  * one thing that stops a tall dark rectangle reading as a hole in the map.
  */
-const CLIFF_PANEL = 560
-/** How far the land runs north of the wall before it stops being drawn. It is
- *  off the chart either way; this is just enough that the top of the cliff
- *  reads as ground rather than as a stripe. */
-const CLIFF_DEPTH = 1500
-
 /**
- * THE CLIFFS, and the arch through them.
+ * THE ROCKS ALONG THE TOP OF THE CHART.
  *
- * ── IT IS AN ISLAND EDGE, NOT A NEW MATERIAL ────────────────────────────────
+ * Third version of this. The first two built cliff GEOMETRY — panels, faces,
+ * skylines, a whole material language — and both looked like something from
+ * another game bolted onto the top of ours. The second at least used the
+ * islands' colours, and still looked wrong, because the problem was never the
+ * palette: nothing else on this water is architecture. Everything else out here
+ * is an OBJECT sitting in the sea, drawn as a sprite, with its base going under.
  *
- * The first version of this invented its own language — grey rock, sedimentary
- * banding, two hazy ranges, atmospheric perspective — none of which appears
- * anywhere else on this chart. It looked like a screenshot from another game
- * pasted onto the top of ours, because that is effectively what it was.
+ * So the barrier is objects too. A run of the same rocks that are already
+ * scattered across the chart — monoliths and islets, at every size — packed
+ * tight enough to be impassable and jittered enough to read as a reef rather
+ * than a fence. They go through `SeaMark` like every other landmark, which
+ * means they get the submerged base and the shoal for free and they cannot
+ * drift out of style, because they ARE the style.
  *
- * The islands already answer "what does land look like here": a warm brown
- * extrusion under a top face of sand, scrub and grass, with wood clumps on it
- * and a shoal where it meets the water. A cliff is that same land, seen where
- * it stops. So every colour below is lifted from PlaceIsland unchanged — not
- * approximated, LIFTED — and if the islands are ever repainted this has to be
- * repainted with them.
- *
- * Built as: ground running north (on the plane, so it foreshortens like
- * ground), the cliff face standing up along its southern edge (counter-squashed
- * like every solid), and the islands' own shoal and surf at the foot.
+ * The gap is left at the Harbour. The hull clamp has not changed at all — the
+ * rocks are what that clamp has always looked like from the deck.
  */
+const REEF_STEP = 700
+/** The small rock goes in at four times the density. See "THE SHINGLE". */
+const PEBBLE_STEP = 175
 
-/** The islands' exact palette. One place, so the two cannot drift. */
-const LAND = {
-  face: 'linear-gradient(180deg, #3b3226 0%, #2a2419 55%, #191509 100%)',
-  sand: 'linear-gradient(165deg, #d8c49f 0%, #c2a97e 100%)',
-  scrub: 'linear-gradient(165deg, #9aa269 0%, #7d8850 100%)',
-  grass: 'linear-gradient(165deg, #6f8a4e 0%, #55703c 62%, #466032 100%)',
-  rim: 'linear-gradient(180deg, rgba(240,248,250,0.34) 0%, rgba(240,248,250,0) 20%)',
-} as const
-
-/** One deterministic run of cliff faces along the wall, with the arch left out. */
-function cliffRun(clearance: number) {
+function reefRocks() {
   const OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
-  const out: { x: number; w: number; h: number; k: number }[] = []
-  let seed = 0x9e3779b9
+  const out: { art: string; x: number; y: number; size: number }[] = []
+  let seed = 0x7f4a7c15
   const nx = () => {
     seed ^= seed << 13; seed >>>= 0
     seed ^= seed >>> 17
     seed ^= seed << 5; seed >>>= 0
     return seed / 0x100000000
   }
-  for (let x = -OUT - CLIFF_PANEL; x < OUT + CLIFF_PANEL; x += CLIFF_PANEL) {
-    const mid = x + CLIFF_PANEL / 2
-    if (Math.abs(mid - GATE_X) < GATE_HALF + clearance) continue
-    // Two octaves, so the skyline has headlands AND small steps rather than one
-    // uniform jitter. A flat-topped wall is a fence.
-    const lobe = Math.sin(mid / 5200) * 0.5 + Math.sin(mid / 1700 + 2.1) * 0.3
-    out.push({ x: mid, w: CLIFF_PANEL * 1.06, h: 150 + (0.5 + lobe * 0.5) * 130 + nx() * 60, k: nx() })
-  }
-  return out
-}
-
-const CliffWall = memo(function CliffWall() {
-  const faces = useMemo(() => cliffRun(CLIFF_PANEL * 0.5), [])
-  const OUT = useMemo(() => Math.max(...PLACES.map(p => p.outer ?? 0)), [])
-
-  /** Wood clumps along the clifftop, the same shape and colours the islands use. */
-  const woods = useMemo(() => {
-    let seed = 0x51ed270b
-    const nx = () => {
-      seed ^= seed << 13; seed >>>= 0
-      seed ^= seed >>> 17
-      seed ^= seed << 5; seed >>>= 0
-      return seed / 0x100000000
-    }
-    const out: { x: number; y: number; r: number; o: number }[] = []
-    for (let i = 0; i < 90; i++) {
-      const x = -OUT + nx() * OUT * 2
+  // TWO STAGGERED ROWS, offset by half a step. One row cannot be both jittered
+  // and gap-free: any x-jitter big enough to stop it reading as a fence is big
+  // enough to pull two neighbours apart and leave a hole you could sail
+  // through. Two rows cover each other's gaps, and the near/far split reads as
+  // a reef with depth rather than a line of stones.
+  for (const row of [0, 1]) {
+    const off = (row * REEF_STEP) / 2
+    for (let x = -OUT - REEF_STEP + off; x < OUT + REEF_STEP; x += REEF_STEP) {
+      // THE OPENING. The gate's mouth plus a rock's width either side, so the
+      // passage is actually clear rather than technically clear and visually
+      // blocked.
       if (Math.abs(x - GATE_X) < GATE_HALF + 420) continue
+      const big = nx()
       out.push({
-        x,
-        // Set back from the edge — nothing grows on the lip of a cliff.
-        y: NORTH_WALL - 260 - nx() * 900,
-        r: 200 + nx() * 340,
-        o: 0.20 + nx() * 0.24,
+        // Monoliths stand and go under; islets break the surface and get a
+        // shoal. Mixing them is what stops a long run of rock reading as a
+        // repeat.
+        art: big > 0.62 ? '/sea/islet.png' : '/sea/monolith.png',
+        x: x + (nx() - 0.5) * REEF_STEP * 0.22,
+        // The back row sits north of the line, the front row south of it.
+        y: NORTH_WALL + (row ? 1 : -1) * 110 + (nx() - 0.5) * 150,
+        size: 440 + big * 400,
       })
     }
-    return out
-  }, [OUT])
+  }
+  // ── THE SHOULDERS ────────────────────────────────────────────────────
+  //
+  // Placed, not rolled. Keeping the random rocks clear of the gate left a bare
+  // patch on each side of it, so the passage LOOKED about three times wider
+  // than it sails — 860px of clamp reading as 1,540px of gap. These close that,
+  // and in doing so give the opening two defined edges, which is most of what
+  // makes it a gate rather than a missing section of reef.
+  //
+  // Two per side at different depths, the near one smaller, so the mouth has
+  // some thickness to it rather than being a slot cut in a line.
+  //
+  // 265 puts the near shoulder's edge flush with the lip of the mouth, lapping
+  // it by about 4px. Set them further back and the last stone stops short,
+  // leaving a sliver of bare water at each lip that reads as a nick in the
+  // reef; the shingle cannot cover it, because the shingle has to stand off the
+  // mouth too. A few pixels of overlap is the cleaner side of that to land on,
+  // and it costs nothing — the clamp tests the boat's CENTRE.
+  for (const side of [-1, 1]) {
+    for (const row of [0, 1]) {
+      out.push({
+        art: row ? '/sea/islet.png' : '/sea/monolith.png',
+        x: GATE_X + side * (GATE_HALF + 265 + row * 210),
+        y: NORTH_WALL + (row ? 1 : -1) * 120,
+        size: 640 - row * 90,
+      })
+    }
+  }
 
-  return (
-    <>
-      {/* ── THE GROUND ABOVE, on the plane so it foreshortens like ground.
-          Bands running back from the edge in the islands' own order: the
-          grass inland, scrub before it, and the pale lip where the rock
-          shows through at the very edge. */}
-      <div aria-hidden style={{
-        position: 'absolute', left: -OUT - 2000, top: NORTH_WALL - CLIFF_DEPTH,
-        width: (OUT + 2000) * 2, height: CLIFF_DEPTH,
-        background: LAND.grass,
-      }} />
-      <div aria-hidden style={{
-        position: 'absolute', left: -OUT - 2000, top: NORTH_WALL - 620,
-        width: (OUT + 2000) * 2, height: 620,
-        background: LAND.scrub, opacity: 0.9,
-      }} />
-      <div aria-hidden style={{
-        position: 'absolute', left: -OUT - 2000, top: NORTH_WALL - 190,
-        width: (OUT + 2000) * 2, height: 190,
-        background: LAND.sand, opacity: 0.75,
-      }} />
+  // ── THE SHINGLE ──────────────────────────────────────────────────────
+  //
+  // Small stuff, packed in tight along the whole run. It does two jobs.
+  //
+  // Coverage: the big rocks are placed on a 700px stride and jittered, which
+  // leaves the odd bare patch that the eye reads as a way through even though
+  // the clamp says otherwise. Pebbles are cheap enough to scatter at four times
+  // the density and close all of it.
+  //
+  // Scale: a barrier of nothing but boulders has no size to it, because there
+  // is nothing small to measure the big ones against. Rock from 150 to 830px
+  // reads as a reef; rock from 460 to 830 reads as a row of props.
+  //
+  // They stop short of the mouth like everything else, so the opening stays a
+  // clean 860px of water rather than something you have to pick through.
+  for (let x = -OUT - PEBBLE_STEP; x < OUT + PEBBLE_STEP; x += PEBBLE_STEP) {
+    // 230, not 60. A pebble is placed on the stride and THEN jittered up to
+    // 70px and drawn up to 150px wide, so a setback that only clears the stride
+    // still puts stone in the mouth. This clears the worst case of both.
+    if (Math.abs(x - GATE_X) < GATE_HALF + 230) continue
+    const r = nx()
+    out.push({
+      art: '/sea/monolith.png',
+      x: x + (nx() - 0.5) * PEBBLE_STEP * 0.8,
+      // Spread wider north-to-south than the boulders. Shingle piles up around
+      // rock, it does not queue behind it.
+      y: NORTH_WALL + (nx() - 0.5) * 330,
+      size: 150 + r * r * 210,
+    })
+  }
 
-      {/* The woods, behind the edge. */}
-      {woods.map((w, i) => (
-        <div key={`w${i}`} aria-hidden style={{
-          position: 'absolute', left: w.x, top: w.y,
-          width: w.r, height: w.r * 0.6,
-          marginLeft: -w.r / 2, marginTop: -w.r * 0.3,
-          borderRadius: '50%',
-          background: `radial-gradient(ellipse at 42% 34%, rgba(74,102,52,${w.o + 0.18}) 0%, rgba(46,68,34,${w.o}) 55%, rgba(40,58,30,0) 78%)`,
-        }} />
-      ))}
+  // Painter's order: the ones further south are nearer, so they draw last and
+  // overlap what is behind them. Without this a big rock at the back sits on
+  // top of a small one in front and the whole run goes flat.
+  return out.sort((p, q) => p.y - q.y)
+}
 
-      {/* ── THE FACE. The islands' extrusion gradient, standing up along the
-          wall. Anchored at its base so every panel meets the water on the same
-          line however tall it is. */}
-      {faces.map((c, i) => (
-        <div key={`f${i}`} aria-hidden style={{
-          position: 'absolute', left: c.x, top: NORTH_WALL,
-          width: c.w, height: c.h,
-          marginLeft: -c.w / 2,
-          transform: `translateY(-100%) scaleY(${1 / GROUND})`,
-          transformOrigin: 'bottom center',
-          background: LAND.face,
-          // The grass lip on top, and the dark where the sea has been working at
-          // the foot of it. Same two shadows the islands carry.
-          boxShadow: 'inset 0 5px 0 rgba(110,138,78,0.55), inset 0 -14px 22px -12px rgba(0,6,14,0.85)',
-        }} />
-      ))}
-
-      {/* ── THE FOOT. The islands' own shoal and surf, run the length of the
-          wall. Same colours, same order, so the water meets this the way it
-          meets everything else. */}
-      <div aria-hidden style={{
-        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 210,
-        marginTop: -105, background: 'rgba(140,190,206,0.13)', filter: 'blur(16px)',
-      }} />
-      <div aria-hidden className="sea-surf" style={{
-        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 120,
-        marginTop: -60, background: 'rgba(226,244,250,0.30)', filter: 'blur(7px)',
-      }} />
-      <div aria-hidden className="sea-surf sea-surf-2" style={{
-        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 44,
-        marginTop: -22, background: 'rgba(240,250,255,0.55)', filter: 'blur(2.5px)',
-      }} />
-
-      {/* ── THE ARCH ──────────────────────────────────────────────────────
-          Two headlands and a span, out of the same rock as the face — a hole
-          worn THROUGH the cliffs rather than a doorway put into them, which is
-          what a sea arch is. Taller than the wall so it is visible from a long
-          way off: this is the one way out and sailing toward it should be a
-          decision rather than a gap you happen to find. */}
-      {[-1, 1].map(side => (
-        <div key={side} aria-hidden style={{
-          position: 'absolute', left: GATE_X + side * (GATE_HALF + 170), top: NORTH_WALL,
-          width: 340, height: 470,
-          marginLeft: -170,
-          transform: `translateY(-100%) scaleY(${1 / GROUND})`,
-          transformOrigin: 'bottom center',
-          background: LAND.face,
-          borderTopLeftRadius: side < 0 ? 14 : 140,
-          borderTopRightRadius: side < 0 ? 140 : 14,
-          boxShadow: 'inset 0 5px 0 rgba(110,138,78,0.55), inset 0 -14px 22px -12px rgba(0,6,14,0.85)',
-        }} />
-      ))}
-      {/* The span. THE HOLE IS A MASK, not an outline — an arch is the absence
-          and not the shape. */}
-      <div aria-hidden style={{
-        position: 'absolute', left: GATE_X, top: NORTH_WALL,
-        width: GATE_HALF * 2 + 340, height: 470,
-        marginLeft: -(GATE_HALF + 170),
-        transform: `translateY(-100%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center',
-        background: LAND.face,
-        maskImage: 'radial-gradient(ellipse 44% 60% at 50% 100%, transparent 0%, transparent 70%, #000 72%)',
-        WebkitMaskImage: 'radial-gradient(ellipse 44% 60% at 50% 100%, transparent 0%, transparent 70%, #000 72%)',
-        boxShadow: 'inset 0 5px 0 rgba(110,138,78,0.55)',
-      }} />
-
-      {/* Daylight through the opening, so you can see there is water on the far
-          side before you commit. Pale, not a portal — the arch is a gap in a
-          headland, and what is behind a headland is more sea. */}
-      <div aria-hidden style={{
-        position: 'absolute', left: GATE_X, top: NORTH_WALL,
-        width: GATE_HALF * 1.9, height: 300,
-        marginLeft: -GATE_HALF * 0.95,
-        transform: `translateY(-100%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center',
-        background: 'radial-gradient(ellipse 62% 80% at 50% 94%, rgba(214,238,246,0.42) 0%, rgba(190,222,234,0.18) 46%, transparent 78%)',
-        filter: 'blur(9px)',
-      }} />
-    </>
-  )
-})
+/** Computed once at module load. It depends on nothing but the chart. */
+const REEF = reefRocks()
 
 /**
  * HOW DEEP EACH THING SITS.
