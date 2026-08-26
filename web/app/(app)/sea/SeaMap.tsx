@@ -41,10 +41,22 @@ import TraderPanel from './TraderPanel'
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
  *  out. */
-/** BASE sailing speed, in world pixels per second: what a stock hull does with
- *  a plain boat under it. Every refit and every hull multiplies up from here,
- *  to double at the top of the ladder. */
-const SPEED = 470
+/**
+ * BASE sailing speed, in world pixels per second: what a stock hull does with a
+ * plain boat under it. Every refit and every hull multiplies up from here, to
+ * double at the top of the ladder.
+ *
+ * 300, and the number has moved around enough to be worth writing down. It was
+ * 470 as a BASE when the Shipyard shipped; then 470 as the CEILING with stock
+ * at 62% of it (291); then 470 as a base again when stock went back to reading
+ * 100%, which quietly handed every player a 1.61x speed-up nobody asked for —
+ * a stock hull was suddenly doing what a fully refitted Clipper used to.
+ *
+ * 300 is close to the 291 that actually got played, so the feel is the one that
+ * was tuned rather than the one that fell out of a label change, and the whole
+ * six-tier ladder still multiplies cleanly off it.
+ */
+const SPEED = 300
 /** Low is heavy. A boat should take a moment to get going. */
 const ACCEL = 2.6
 /** Starts easing off here. The gap to ARRIVE is the whole feeling of coasting

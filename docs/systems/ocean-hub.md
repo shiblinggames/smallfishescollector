@@ -223,9 +223,16 @@ style cannot carry a media query; the phone layout was being served to a monitor
 
 | | stock | top hull | + Chromium |
 |---|---|---|---|
-| Dock → the Abyss | 22s | 11s | 9s |
-| Dock → the Ancient Deep | 33s | 16s | 14s |
-| Dock → the far edge | 47s | 23s | 20s |
+| Dock → the Abyss | 34s | 17s | 15s |
+| Dock → the Ancient Deep | 51s | 26s | 22s |
+| Dock → the far edge | 73s | 37s | 31s |
+
+**`SPEED` is 300**, and the number has moved enough to be worth writing down: 470 as a base
+when the Shipyard shipped, then 470 as the *ceiling* with stock at 62% of it (291), then 470
+as a base again when stock went back to reading 100% — which quietly handed every player a
+1.61× speed-up nobody asked for, a stock hull suddenly doing what a refitted Clipper used to.
+300 is close to the 291 that actually got played, so the feel is the one that was tuned
+rather than the one that fell out of a label change.
 
 ## The edges of the world
 
