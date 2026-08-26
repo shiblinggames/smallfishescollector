@@ -2685,3 +2685,33 @@ body.hardcore-gauntlet::after {
   50%      { transform: scale(1.04); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .sea-dock-ready { animation: none; } }
+
+
+/* ── SURF ────────────────────────────────────────────────────────────────────
+   Water hitting a shore. Two collars around each island, breathing slowly and
+   OUT OF PHASE — in phase they read as one ring pulsing, which is a UI element;
+   out of phase they read as swell arriving, which is a coast.
+
+   Slow on purpose. These sit on screen for as long as the island is in view,
+   and the house rule is that juice stays subtle and local — the longer a thing
+   is visible the quieter it has to be. Scale and opacity only, so it composites
+   rather than repainting a blurred shape every frame. */
+.sea-surf {
+  animation: sea-surf 6.5s ease-in-out infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+.sea-surf-2 { animation: sea-surf-2 5.2s ease-in-out infinite; }
+
+@keyframes sea-surf {
+  0%, 100% { transform: scale(0.985); opacity: 0.55; }
+  50%      { transform: scale(1.02);  opacity: 0.9; }
+}
+@keyframes sea-surf-2 {
+  0%, 100% { transform: scale(1.008); opacity: 0.85; }
+  50%      { transform: scale(0.99);  opacity: 0.42; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sea-surf, .sea-surf-2 { animation: none; }
+}

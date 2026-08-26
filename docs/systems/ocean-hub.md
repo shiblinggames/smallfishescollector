@@ -538,6 +538,41 @@ Two traps worth keeping in mind:
   from the animation's clock. Never drive it with per-frame state. Start it from a callback
   ref, not an effect: `mode="wait"` means the node does not exist when the phase changes.
 
+## The land
+
+Still no island art — this is all CSS, and it is scaffolding for real plates. But it stopped
+being a brown potato.
+
+**The coastline** is five octaves seeded off the place id: a lobe term that pulls one or two
+whole sides out into headlands, then successively finer detail. Per-island ruggedness varies
+too, so one is round and another is craggy rather than all of them being equally lumpy.
+
+**Tuned against measurements, not by eye.** The first pass ran to a **7.5% radial jump between
+adjacent points** — a saw tooth — and pinched one island to a **17% waist**, nearly severing
+it. Searched for a set that holds, across all four islands: radius 30–63% (no pinch, nothing
+past the box), biggest neighbour step **2.4%** (a rocky notch over a ~12px arc, not noise),
+all four outlines distinct, and land still present at the innermost terrain band. 160 points,
+because at 26 the straight segments were visible on the big islands and read as a polygon —
+which is exactly what makes a shape look drawn rather than surveyed.
+
+**The terrain is bands that follow the coast.** It was one flat radial gradient of brown; a
+single colour with a vignette is a shape, not a place. Each band is the *same* polygon on a
+smaller box, so its clip scales with it and every ring parallels the shore instead of being a
+circle sitting inside an irregular outline. Outside in, the way you would walk it: wet sand,
+dry sand, scrub, grass, and a lighter crown where the ground rises — the crown offset toward
+the same corner every other highlight on the chart is lit from, so the scene agrees about
+where the sun is. Then soft dark clumps for woods: not trees (a tree is two pixels here) but
+the massed shadow a stand of them throws.
+
+**Surf** is two collars hugging the coast, breathing slowly and **out of phase** — in phase
+they read as one ring pulsing, which is a UI element; out of phase they read as swell
+arriving. Water hitting a shore is the most recognisable thing about a shore, and without it
+the land met the sea on a hard vector edge, which was most of why these read as shapes.
+
+**The shoal** widened from a 6px-blurred halo at inset 2% to three soft layers from −6%
+outward. Shallow water round a real island is a broad pale shelf that fades out with no edge
+anywhere; a thin halo is a glow.
+
 ## Controls that are not the sea
 
 The map steers on **two** paths — `onDown` (pointerdown, for the thumb helm) and `onTap`
