@@ -18,7 +18,7 @@ import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { boatSpeed, boatAgility, trimLabel, getBoat } from '@/lib/boats'
-import { hullSpeed } from '@/lib/shipyard'
+import { hullSpeed, handlingRate, accelRate } from '@/lib/shipyard'
 
 function StatCell({ label, value, color, muted }: { label: string; value: string; color?: string; muted?: boolean }) {
   return (
@@ -39,7 +39,7 @@ export default function LoadoutStats({
   rodTier, reelTier, hookTier, lineTier,
   completionistEffects = null, selectedBait, fishingLevel,
   zoneGoldenBoostPct = 0,
-  boatId, hullTier,
+  boatId, hullTier, handlingTier = 0, accelTier = 0,
   title = 'Loadout Stats',
   sub = 'What your rig adds up to, piece by piece.',
 }: {
@@ -64,6 +64,8 @@ export default function LoadoutStats({
    */
   boatId?: string | null
   hullTier?: number
+  handlingTier?: number
+  accelTier?: number
   title?: string
   sub?: string
 }) {
@@ -121,11 +123,18 @@ export default function LoadoutStats({
             value={`${Math.round(hullSpeed(hullTier) * boatSpeed(boatId) * 100)}%`}
             color="#9fc9e8"
           />
+          {/* HANDLING and PICK-UP, each the bought ladder times the boat's own
+              trim — the same product the map actually steers with, so the panel
+              cannot quote a number the water disagrees with. */}
           <StatCell
-            label="Agility"
-            value={`${Math.round(boatAgility(boatId) * 100)}%`}
+            label="Handling"
+            value={`${Math.round(handlingRate(handlingTier) * boatAgility(boatId) * 100)}%`}
             color="#7dd3fc"
-            muted={boatAgility(boatId) === 1}
+          />
+          <StatCell
+            label="Pick-up"
+            value={`${Math.round(accelRate(accelTier) * boatAgility(boatId) * 100)}%`}
+            color="#a7f3d0"
           />
         </>)}
       </div>

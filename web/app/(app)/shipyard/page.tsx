@@ -83,6 +83,8 @@ export default async function ShipyardPage() {
       rackTier={Number(profile?.rod_rack_tier ?? 0)}
       aboard={(profile?.rods_aboard as number[] | null) ?? []}
       hullTier={Number(profile?.hull_speed_tier ?? 0)}
+      handlingTier={Number(profile?.hull_handling_tier ?? 0)}
+      accelTier={Number(profile?.hull_accel_tier ?? 0)}
       holdTier={holdTier}
       holdCapacity={getFishHold(holdTier).capacity}
 

@@ -35,6 +35,7 @@ import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
+import { handlingRate, accelRate } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
@@ -64,6 +65,45 @@ import TraderPanel from './TraderPanel'
 const SPEED = 300
 /** Low is heavy. A boat should take a moment to get going. */
 const ACCEL = 2.6
+
+/**
+ * HOW FAST THE BOW COMES ROUND, in radians per second, before the rudder tier
+ * and the boat's own trim multiply it.
+ *
+ * 2.4 is about 137 degrees a second: a full reversal takes a beat and a quarter
+ * turn is near enough instant. Slower than that and holding a heading with a
+ * thumb feels like arguing with the boat.
+ */
+const TURN = 2.4
+
+/**
+ * HOW FAST SIDEWAYS VELOCITY BLEEDS OFF — the grip of the hull in the water,
+ * and the one number that decides whether there is drift at all.
+ *
+ * The whole model used to be a single lerp of the velocity VECTOR toward the
+ * target vector, which does two jobs at once: reaching top speed and changing
+ * direction. That is why there was no handling stat to tune and no way for the
+ * boat to slide — velocity had no memory of where the bow was pointing, so
+ * there was no such thing as sideways.
+ *
+ * Split into forward and lateral, handling becomes a real number and drift
+ * becomes the ABSENCE of full grip rather than a new system.
+ *
+ * 6 is deliberately high — lateral speed falls to a tenth of itself in 0.38s.
+ * Measured on a hard 90-degree turn at 300 px/s: the stern steps out to about
+ * 31% of forward speed and the boat is straight again inside 1.1s, most of
+ * which is the turn itself. Enough that she has mass; not enough that anyone
+ * has to learn to drive her.
+ *
+ * A LIVELIER RUDDER SLIDES MORE, which falls out of the maths rather than being
+ * designed in and is worth keeping: turning faster generates more lateral
+ * velocity, so the Spade Rudder peaks at 126 px/s of slide against the stock
+ * rudder's 94. The best rudder is sharper AND looser, which is what a good
+ * rudder actually feels like.
+ *
+ * Lower this number to make drift a mechanic. Nothing else has to change.
+ */
+const GRIP = 6
 /** Starts easing off here. The gap to ARRIVE is the whole feeling of coasting
  *  into a berth rather than stopping dead like a cursor. */
 const SLOW = 240
@@ -588,7 +628,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, trawlEndsAt, renown, exploredRaw, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -617,6 +657,9 @@ export default function SeaMap({
   }[]
   /** Multiplier on sailing speed. Nothing else. */
   hullSpeed: number
+  /** Rudder and rig tiers, from the Shipyard. */
+  handlingTier: number
+  accelTier: number
   /** Where the boat was when you last left. Null = never sailed. */
   start: Vec | null
   /** Everything the collection log reads. See SeaLog. */
@@ -688,9 +731,19 @@ export default function SeaMap({
   // The equipped hull's two numbers, mirrored into refs so the 60fps loop never
   // reads a prop and never needs re-creating when the boat changes.
   const speedRef = useRef(1)
-  const agilityRef = useRef(1)
   speedRef.current = boatSpeed(boatId)
-  agilityRef.current = boatAgility(boatId)
+  /**
+   * WHERE THE BOW POINTS, in radians. Not the same as where the boat is going —
+   * that is the entire point of splitting the two, and the gap between them is
+   * the drift.
+   */
+  const headRef = useRef(0)
+  // The two rates, each the bought ladder times the boat's own trim. The trim
+  // still trades speed for nimbleness; the ladders are what money buys.
+  const handlingRef = useRef(1)
+  const accelRef = useRef(1)
+  handlingRef.current = handlingRate(handlingTier) * boatAgility(boatId)
+  accelRef.current = accelRate(accelTier) * boatAgility(boatId)
   const facing = useRef<1 | -1>(1)
 
   // ── STEERING BY THUMB ───────────────────────────────────────────────────
@@ -1344,9 +1397,51 @@ export default function SeaMap({
       // this, so a nimble hull answers the helm faster and a long-haul one
       // takes its time — see lib/boats. Read from a ref rather than closed
       // over, because changing boats mid-session must not need a remount.
-      const k = 1 - Math.exp(-ACCEL * agilityRef.current * dt)
-      vel.current.x += (wx - vel.current.x) * k
-      vel.current.y += (wy - vel.current.y) * k
+      // ── FORWARD AND SIDEWAYS ARE DIFFERENT THINGS ────────────────────
+      //
+      // One lerp of the whole velocity vector used to do both jobs, which is
+      // why acceleration and handling were the same number and why nothing
+      // could slide. Now:
+      //
+      //   1. the bow turns toward where you asked, at a rate the rudder sets
+      //   2. forward speed chases the target speed, at a rate the rig sets
+      //   3. whatever sideways velocity is left over bleeds off at GRIP
+      //
+      // Everything downstream still reads `vel`, so the shoreline pushback and
+      // the north wall need no changes at all — they act on a velocity vector
+      // and this still produces one.
+      const want2 = Math.hypot(wx, wy)
+      if (want2 > 0.001) {
+        // 1. TURN. Shortest way round, capped at the rudder's rate — this is
+        //    the whole of "handling". Atan2 difference wrapped to [-pi, pi] so
+        //    a boat pointing north-west and asked for north-east turns 90
+        //    degrees the short way rather than 270 the long way.
+        const target = Math.atan2(wy, wx)
+        let diff = target - headRef.current
+        while (diff > Math.PI) diff -= Math.PI * 2
+        while (diff < -Math.PI) diff += Math.PI * 2
+        const maxTurn = TURN * handlingRef.current * dt
+        headRef.current += Math.max(-maxTurn, Math.min(maxTurn, diff))
+      }
+      const hx = Math.cos(headRef.current)
+      const hy = Math.sin(headRef.current)
+
+      // Decompose the CURRENT velocity about the NEW heading.
+      let fwd = vel.current.x * hx + vel.current.y * hy
+      let lat = -vel.current.x * hy + vel.current.y * hx
+
+      // 2. Forward speed chases the order. Exponential, so the boat behaves the
+      //    same at 30fps as at 60 — see the note this replaced.
+      const kf = 1 - Math.exp(-ACCEL * accelRef.current * dt)
+      fwd += (want2 - fwd) * kf
+
+      // 3. THE SLIDE. Sideways speed decays toward nothing; how fast is GRIP.
+      //    This is the only line that makes drifting possible, and turning it
+      //    off is setting GRIP high rather than deleting anything.
+      lat *= Math.exp(-GRIP * dt)
+
+      vel.current.x = hx * fwd - hy * lat
+      vel.current.y = hy * fwd + hx * lat
       pos.current.x += vel.current.x * dt
       pos.current.y += vel.current.y * dt
 

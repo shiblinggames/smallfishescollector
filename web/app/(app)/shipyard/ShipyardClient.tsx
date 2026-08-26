@@ -33,8 +33,10 @@ import GearScreen from '../fishing/GearScreen'
 import {
   rackSlots, nextRackCost, MAX_RACK_TIER,
   nextHullCost, MAX_HULL_TIER, hullSpeed, HULL_NAMES,
+  nextHandlingCost, MAX_HANDLING_TIER, handlingRate, HANDLING_NAMES,
+  nextAccelCost, MAX_ACCEL_TIER, accelRate, ACCEL_NAMES,
 } from '@/lib/shipyard'
-import { buyRackBerth, buyHullTier, setRodsAboard, equipRod as equipRodAction } from './actions'
+import { buyRackBerth, buyHullTier, buyHandlingTier, buyAccelTier, setRodsAboard, equipRod as equipRodAction } from './actions'
 import { upgradeFishHold } from '../fishing/holdActions'
 import {
   equipBoat, buyBoat, equipHat, buyHat, equipPet,
@@ -49,7 +51,7 @@ import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 
 type BaitItem = { bait_type: string; quantity: number }
 
-type Buyable = 'rack' | 'hull' | 'hold'
+type Buyable = 'rack' | 'hull' | 'handling' | 'accel' | 'hold'
 
 /**
  * WHAT YOU ARE ABOUT TO BUY, in plain words.
@@ -74,6 +76,17 @@ const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
     does: 'Refits the hull, so the boat sails faster across the whole chart.',
     why: 'It changes nothing about fishing. Bites, catch zones and rarity are '
        + 'untouched. It only shortens the sail to the deep water and back.',
+  },
+  handling: {
+    does: 'A better rudder, so the bow comes round faster when you turn.',
+    why: 'Top speed is the long haul out. This is everything you do once you '
+       + 'are there: pulling alongside a drifting trader, threading a wreck '
+       + 'field, holding a line through a hotspot.',
+  },
+  accel: {
+    does: 'A taller rig, so she picks up speed harder from a standstill.',
+    why: 'Every stop and start — after a cast, after a hail, coming off a dock. '
+       + 'It does not raise your top speed, only how quickly you reach it.',
   },
   hold: {
     does: 'Enlarges the fish hold, so you can land more before it is full.',
@@ -100,6 +113,8 @@ export default function ShipyardClient(p: {
   rackTier: number
   aboard: number[]
   hullTier: number
+  handlingTier: number
+  accelTier: number
   holdTier: number
   holdCapacity: number
 
@@ -145,6 +160,8 @@ export default function ShipyardClient(p: {
   const [rack, setRack] = useState(p.rackTier)
   const [aboard, setAboard] = useState<number[]>(p.aboard)
   const [hull, setHull] = useState(p.hullTier)
+  const [handling, setHandling] = useState(p.handlingTier)
+  const [accel, setAccel] = useState(p.accelTier)
   const [hold, setHold] = useState(p.holdTier)
   const [cap, setCap] = useState(p.holdCapacity)
 
@@ -196,6 +213,8 @@ export default function ShipyardClient(p: {
   const spareSlots = slots - 1
   const rackCost = nextRackCost(rack)
   const hullCost = nextHullCost(hull)
+  const handlingCost = nextHandlingCost(handling)
+  const accelCost = nextAccelCost(accel)
   const holdNext = hold < FISH_HOLD_TIERS.length - 1 ? FISH_HOLD_TIERS[hold + 1] : null
 
   // Shop dots: is there a better one of these, and can you pay for it right now.
@@ -258,6 +277,14 @@ export default function ShipyardClient(p: {
         const r = await buyHullTier()
         if ('error' in r) setErr(r.error)
         else { bank(r.doubloons); setHull(t => t + 1); vibrate([0, 30, 40, 60]) }
+      } else if (what === 'handling') {
+        const r = await buyHandlingTier()
+        if ('error' in r) setErr(r.error)
+        else { bank(r.doubloons); setHandling(t => t + 1); vibrate([0, 30, 40, 60]) }
+      } else if (what === 'accel') {
+        const r = await buyAccelTier()
+        if ('error' in r) setErr(r.error)
+        else { bank(r.doubloons); setAccel(t => t + 1); vibrate([0, 30, 40, 60]) }
       } else {
         const r = await upgradeFishHold()
         if ('error' in r) setErr(r.error)
@@ -293,6 +320,18 @@ export default function ShipyardClient(p: {
       now: `${Math.round(hullSpeed(hull) * 100)}%`, unit: 'sailing speed',
       next: hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`,
       cost: hullCost,
+    },
+    handling: {
+      title: HANDLING_NAMES[Math.min(handling + 1, MAX_HANDLING_TIER)], accent: '#7dd3fc',
+      now: `${Math.round(handlingRate(handling) * 100)}%`, unit: 'turn rate',
+      next: handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`,
+      cost: handlingCost,
+    },
+    accel: {
+      title: ACCEL_NAMES[Math.min(accel + 1, MAX_ACCEL_TIER)], accent: '#a7f3d0',
+      now: `${Math.round(accelRate(accel) * 100)}%`, unit: 'pick-up',
+      next: accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`,
+      cost: accelCost,
     },
     hold: {
       title: holdNext?.name ?? getFishHold(hold).name, accent: '#f0c040',
@@ -446,7 +485,7 @@ export default function ShipyardClient(p: {
             rodTier={equipped} reelTier={reelTier} hookTier={hookTier} lineTier={p.lineTier}
             completionistEffects={effects}
             fishingLevel={p.fishingLevel}
-            boatId={boat} hullTier={hull}
+            boatId={boat} hullTier={hull} handlingTier={handling} accelTier={accel}
             sub="Everything in the picture above, added up."
           />
         </div>
@@ -478,7 +517,9 @@ export default function ShipyardClient(p: {
           })}
         </div>
 
-        {/* ── UPGRADES ── what the boat IS, rather than what is on it. */}
+        {/* ── UPGRADES ── what the boat IS, rather than what is on it.
+            FIVE cards now, so the grid wraps to two rows rather than squeezing
+            five into three columns. */}
         {tab === 'upgrades' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 12 }}>
             <BoatCard
@@ -496,6 +537,22 @@ export default function ShipyardClient(p: {
               cost={hullCost}
               busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
               onBuy={() => { setErr(''); setConfirm('hull') }}
+            />
+            <BoatCard
+              name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
+              now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
+              next={handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`}
+              cost={handlingCost}
+              busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
+              onBuy={() => { setErr(''); setConfirm('handling') }}
+            />
+            <BoatCard
+              name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
+              now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
+              next={accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`}
+              cost={accelCost}
+              busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
+              onBuy={() => { setErr(''); setConfirm('accel') }}
             />
             <BoatCard
               name={getFishHold(hold).name} accent="#f0c040"

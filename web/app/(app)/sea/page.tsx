@@ -186,6 +186,11 @@ export default async function SeaPage() {
       rack={rack}
       // The hull tier only ever changes how fast you cross the chart.
       hullSpeed={hullSpeed(Number(profile?.hull_speed_tier ?? 0))}
+      // The two new movement ladders. Passed as TIERS rather than as computed
+      // rates: the map multiplies them by the boat's own trim, and doing half
+      // that sum here and half there is how the two drift apart.
+      handlingTier={Number(profile?.hull_handling_tier ?? 0)}
+      accelTier={Number(profile?.hull_accel_tier ?? 0)}
       // WHERE YOU LEFT OFF. Null on a profile that has never sailed, and the
       // map falls back to HOME — which is also what happens if either half is
       // missing, because half a position is not one.

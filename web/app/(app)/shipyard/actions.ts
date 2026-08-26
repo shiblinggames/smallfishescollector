@@ -10,6 +10,8 @@ import { RODS } from '@/lib/rods'
 import {
   rackSlots, nextRackCost, MAX_RACK_TIER,
   nextHullCost, MAX_HULL_TIER,
+  nextHandlingCost, MAX_HANDLING_TIER,
+  nextAccelCost, MAX_ACCEL_TIER,
 } from '@/lib/shipyard'
 
 type Ok = { ok: true; doubloons: number }
@@ -85,6 +87,55 @@ export async function buyHullTier(): Promise<Res> {
     .update({ hull_speed_tier: Math.min(MAX_HULL_TIER, Number(after?.hull_speed_tier ?? tier) + 1) })
     .eq('id', user.id)
   return { ok: true, doubloons: bal }
+}
+
+/**
+ * THE OTHER TWO MOVEMENT LADDERS.
+ *
+ * Identical in shape to buyHullTier and deliberately so — same re-read after
+ * the spend, same reason. Two taps landing together would both have read the
+ * same tier and both have paid; re-reading means the second lands on the tier
+ * the first produced instead of overwriting it.
+ *
+ * Written as one helper rather than copied twice: three near-identical ladders
+ * is exactly where a fix gets applied to two of them.
+ */
+async function buyTier(
+  col: 'hull_handling_tier' | 'hull_accel_tier',
+  maxTier: number,
+  cost: (t: number) => number | null,
+  label: string,
+  full: string,
+): Promise<Res> {
+  const user = await me()
+  if (!user) return { error: 'Unauthorized' }
+  const admin = createAdminClient()
+
+  const { data: p } = await admin.from('profiles').select(col).eq('id', user.id).single()
+  const tier = Number((p as Record<string, unknown> | null)?.[col] ?? 0)
+  if (tier >= maxTier) return { error: full }
+
+  const price = cost(tier)
+  if (price == null) return { error: full }
+
+  const bal = await spend(admin, user.id, price, `Shipyard: ${label} ${tier + 1}`)
+  if (bal == null) return { error: `That refit costs ${price.toLocaleString()} and you have not got it.` }
+
+  const { data: after } = await admin.from('profiles').select(col).eq('id', user.id).single()
+  await admin.from('profiles')
+    .update({ [col]: Math.min(maxTier, Number((after as Record<string, unknown> | null)?.[col] ?? tier) + 1) })
+    .eq('id', user.id)
+  return { ok: true, doubloons: bal }
+}
+
+export async function buyHandlingTier(): Promise<Res> {
+  return buyTier('hull_handling_tier', MAX_HANDLING_TIER, nextHandlingCost,
+    'rudder', 'Her rudder is as fine as it gets.')
+}
+
+export async function buyAccelTier(): Promise<Res> {
+  return buyTier('hull_accel_tier', MAX_ACCEL_TIER, nextAccelCost,
+    'rig', 'Her rig is as fine as it gets.')
 }
 
 /**

@@ -608,6 +608,51 @@ the land met the sea on a hard vector edge, which was most of why these read as 
 outward. Shallow water round a real island is a broad pale shelf that fades out with no edge
 anywhere; a thin halo is a glow.
 
+## Movement: forward and sideways are different things
+
+The whole model used to be **one lerp of the velocity vector** toward the target vector. That
+does two jobs at once — reaching top speed and changing direction — which is why acceleration
+and handling were the same number, why neither could be tuned separately, and why nothing
+could slide: velocity had no memory of where the bow pointed, so there was no such thing as
+sideways.
+
+Now, per frame:
+
+1. **The bow turns** toward the order, shortest way round, capped at `TURN × rudder × trim`.
+   That is handling, and it is now a real number.
+2. **Forward speed chases** the target at `ACCEL × rig × trim`.
+3. **Leftover sideways velocity bleeds off** at `GRIP`. That is the drift — the *absence* of
+   full grip, not a new system.
+
+Everything downstream still reads `vel`, so the shoreline pushback and the north wall needed
+no changes: they act on a velocity vector and this still produces one.
+
+**`GRIP = 6`, which is feel-only.** Measured on a hard 90° turn at 300 px/s: the stern steps
+out to ~31% of forward speed and she is straight again inside 1.1s, most of that being the
+turn. **Lower this one number to make drift a mechanic** — nothing else has to change.
+
+A nice emergent property, not designed in: **a livelier rudder slides more.** Turning faster
+generates more lateral velocity, so the Spade Rudder peaks at 126 px/s of slide against the
+stock rudder's 94. The best rudder is both sharper and looser, which is what a good rudder
+actually feels like.
+
+### The ladders
+
+| | | tiers | ladder cost |
+|---|---|---|---|
+| **Hull** — top speed | 100% → 175% | 6 | 180,000 ⟡ |
+| **Rudder** — turn rate | 100% → 155% | 4 | 78,000 ⟡ |
+| **Rig** — pick-up | 100% → 165% | 4 | 78,000 ⟡ |
+
+Stock rudder turns 90° in 0.65s, best in 0.42s. Stock rig reaches full speed in 1.15s, best
+in 0.70s. The two short ladders are deliberately shorter than the hull's: the hull is the
+headline upgrade, these are what make it pleasant.
+
+**They multiply on top of the boat's trim**, which still trades speed against nimbleness. The
+ladder is what money buys; the trim is what you choose. `LoadoutStats` shows the product,
+because that is what the map actually steers with — quoting either half alone would be a
+number the water disagrees with.
+
 ## Controls that are not the sea
 
 The map steers on **two** paths — `onDown` (pointerdown, for the thumb helm) and `onTap`

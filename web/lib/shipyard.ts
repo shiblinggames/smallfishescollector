@@ -125,3 +125,46 @@ export function rodsAboard(equippedTier: number, aboard: number[] | null, rackTi
   // no longer room for.
   return [equippedTier, ...rest].slice(0, slots)
 }
+
+
+// ── HANDLING AND ACCELERATION ───────────────────────────────────────────────
+//
+// Until now the only thing you could BUY for movement was top speed. There was
+// an acceleration number, but it came off the boat cosmetic's trim as a
+// sidegrade — so a captain who wanted a quicker boat could only get one by
+// giving up speed, and no amount of money made the hull any more responsive.
+//
+// Two more ladders, both shorter than the hull's six rungs on purpose: the hull
+// is the headline upgrade and these are the ones that make it pleasant. Four
+// rungs each, priced off the fish hold like everything else on that screen.
+//
+// They multiply ON TOP of the boat's trim, which still trades speed against
+// nimbleness. The ladder is what you buy; the trim is what you choose.
+
+/** Multiplier on how fast the bow comes round. */
+export const HANDLING_SPEED = [1, 1.16, 1.34, 1.55] as const
+export const HANDLING_NAMES = ['Fixed Rudder', 'Balanced Rudder', 'Deep Rudder', 'Spade Rudder'] as const
+export const HANDLING_COSTS = [0, 8_000, 20_000, 50_000] as const
+export const MAX_HANDLING_TIER = HANDLING_COSTS.length - 1
+
+export function handlingRate(tier: number): number {
+  return HANDLING_SPEED[Math.max(0, Math.min(MAX_HANDLING_TIER, tier))]
+}
+export function nextHandlingCost(tier: number): number | null {
+  const t = tier + 1
+  return t > MAX_HANDLING_TIER ? null : HANDLING_COSTS[t]
+}
+
+/** Multiplier on how hard she picks up from a standstill. */
+export const ACCEL_RATE = [1, 1.18, 1.4, 1.65] as const
+export const ACCEL_NAMES = ['Stock Rig', 'Trimmed Rig', 'Tall Rig', 'Racing Rig'] as const
+export const ACCEL_COSTS = [0, 8_000, 20_000, 50_000] as const
+export const MAX_ACCEL_TIER = ACCEL_COSTS.length - 1
+
+export function accelRate(tier: number): number {
+  return ACCEL_RATE[Math.max(0, Math.min(MAX_ACCEL_TIER, tier))]
+}
+export function nextAccelCost(tier: number): number | null {
+  const t = tier + 1
+  return t > MAX_ACCEL_TIER ? null : ACCEL_COSTS[t]
+}
