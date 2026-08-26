@@ -118,10 +118,16 @@ export const HOTSPOTS: Hotspot[] = [
     id: 'portal', label: 'The stones', x: 30, y: 70,
     note: 'THE ONE THING HERE THAT DOES SOMETHING. See PORTAL_REACH.',
     builds: [
-      { name: 'Fallen stones', cost: 0, art: null, scale: 0, blurb: 'Somebody stood these up once.' },
-      { name: 'The Way Home', cost: 150_000, art: '/sea/home-portal.png', scale: 0.20, blurb: 'Come home from anywhere on the water, as often as you like.' },
-      { name: 'The Wider Ways', cost: 175_000, art: '/sea/home-portal.png', scale: 0.23, blurb: 'And go back out to any port you have made.' },
-      { name: 'The Deep Ways', cost: 275_000, art: '/sea/home-portal.png', scale: 0.26, blurb: 'And out to any water your licence covers, however far.' },
+      // FOUR PICTURES, NOT ONE AT THREE SIZES. The first pass pointed all three
+      // paid tiers at the same arch and grew it 15% and 30%, which is 450,000 ⟡
+      // of upgrades you cannot see — and this is the one spot on the island
+      // where the upgrade actually does something, so it is the worst place to
+      // have nothing to show for it. The stones go up, then get flanked, then
+      // get a whole ring, and the light in the gate deepens each time.
+      { name: 'Fallen stones', cost: 0, art: '/sea/portal-fallen.png', scale: 0.16, blurb: 'Somebody stood these up once.' },
+      { name: 'The Way Home', cost: 150_000, art: '/sea/portal-way.png', scale: 0.19, blurb: 'Come home from anywhere on the water, as often as you like.' },
+      { name: 'The Wider Ways', cost: 175_000, art: '/sea/portal-wider.png', scale: 0.24, blurb: 'And go back out to any port you have made.' },
+      { name: 'The Deep Ways', cost: 275_000, art: '/sea/portal-deep.png', scale: 0.29, blurb: 'And out to any water your licence covers, however far.' },
     ],
   },
   {
@@ -172,65 +178,72 @@ export const HOUSE_SLOTS = [2, 3, 4, 5, 6] as const
  */
 export type FurnitureSlot = 'hearth' | 'floor' | 'mount' | 'table' | 'window' | 'corner'
 
-export type Furnishing = { id: string; name: string; cost: number }
+export type Furnishing = {
+  id: string
+  name: string
+  cost: number
+  /** What it looks like. Null only for the "nothing here" options, which are
+   *  genuinely nothing rather than a picture of nothing. */
+  art: string | null
+}
 
 export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishing[] }[] = [
   {
     slot: 'hearth', label: 'The fire',
     options: [
-      { id: 'hearth-stone', name: 'Stone hearth', cost: 0 },
-      { id: 'hearth-iron', name: 'Iron brazier', cost: 15_000 },
-      { id: 'hearth-copper', name: 'Copper hood', cost: 60_000 },
-      { id: 'hearth-whale', name: 'Whalebone mantel', cost: 250_000 },
-      { id: 'hearth-firestone', name: 'An abyssal firestone', cost: 900_000 },
+      { id: 'hearth-stone', name: 'Stone hearth', cost: 0 , art: '/sea/hearth-stone.png' },
+      { id: 'hearth-iron', name: 'Iron brazier', cost: 15_000 , art: '/sea/hearth-iron.png' },
+      { id: 'hearth-copper', name: 'Copper hood', cost: 60_000 , art: '/sea/hearth-copper.png' },
+      { id: 'hearth-whale', name: 'Whalebone mantel', cost: 250_000 , art: '/sea/hearth-whale.png' },
+      { id: 'hearth-firestone', name: 'An abyssal firestone', cost: 900_000 , art: '/sea/hearth-firestone.png' },
     ],
   },
   {
     slot: 'floor', label: 'Underfoot',
     options: [
-      { id: 'floor-board', name: 'Bare boards', cost: 0 },
-      { id: 'floor-kelp', name: 'Kelp weave', cost: 12_000 },
-      { id: 'floor-sail', name: 'Old sailcloth', cost: 45_000 },
-      { id: 'floor-deep', name: 'Deepwater rug', cost: 200_000 },
-      { id: 'floor-abyssal', name: 'An abyssal weave', cost: 700_000 },
+      { id: 'floor-board', name: 'Bare boards', cost: 0 , art: null },
+      { id: 'floor-kelp', name: 'Kelp weave', cost: 12_000 , art: '/sea/floor-kelp.png' },
+      { id: 'floor-sail', name: 'Old sailcloth', cost: 45_000 , art: '/sea/floor-sail.png' },
+      { id: 'floor-deep', name: 'Deepwater rug', cost: 200_000 , art: '/sea/floor-deep.png' },
+      { id: 'floor-abyssal', name: 'An abyssal weave', cost: 700_000 , art: '/sea/floor-abyssal.png' },
     ],
   },
   {
     slot: 'mount', label: 'Over the fire',
     options: [
-      { id: 'mount-none', name: 'Nothing yet', cost: 0 },
-      { id: 'mount-oar', name: 'Crossed oars', cost: 10_000 },
-      { id: 'mount-catch', name: 'Your biggest catch', cost: 70_000 },
-      { id: 'mount-golden', name: 'A golden, cased', cost: 300_000 },
-      { id: 'mount-giant', name: 'An Ancient Deep giant', cost: 1_100_000 },
+      { id: 'mount-none', name: 'Nothing yet', cost: 0 , art: null },
+      { id: 'mount-oar', name: 'Crossed oars', cost: 10_000 , art: '/sea/mount-oar.png' },
+      { id: 'mount-catch', name: 'Your biggest catch', cost: 70_000 , art: '/sea/mount-catch.png' },
+      { id: 'mount-golden', name: 'A golden, cased', cost: 300_000 , art: '/sea/mount-golden.png' },
+      { id: 'mount-giant', name: 'An Ancient Deep giant', cost: 1_100_000 , art: '/sea/mount-giant.png' },
     ],
   },
   {
     slot: 'table', label: 'The table',
     options: [
-      { id: 'table-plank', name: 'Plank and trestle', cost: 0 },
-      { id: 'table-chart', name: 'Chart table', cost: 18_000 },
-      { id: 'table-captain', name: "Captain's desk", cost: 80_000 },
-      { id: 'table-starglass', name: 'A star-glass table', cost: 350_000 },
+      { id: 'table-plank', name: 'Plank and trestle', cost: 0 , art: '/sea/table-plank.png' },
+      { id: 'table-chart', name: 'Chart table', cost: 18_000 , art: '/sea/table-chart.png' },
+      { id: 'table-captain', name: "Captain's desk", cost: 80_000 , art: '/sea/table-captain.png' },
+      { id: 'table-starglass', name: 'A star-glass table', cost: 350_000 , art: '/sea/table-starglass.png' },
     ],
   },
   {
     slot: 'window', label: 'The window',
     options: [
-      { id: 'window-shutter', name: 'Plain shutters', cost: 0 },
-      { id: 'window-lead', name: 'Leaded glass', cost: 16_000 },
-      { id: 'window-stained', name: 'Stained glass', cost: 90_000 },
-      { id: 'window-seaglass', name: 'A wall of sea-glass', cost: 400_000 },
+      { id: 'window-shutter', name: 'Plain shutters', cost: 0 , art: '/sea/window-shutter.png' },
+      { id: 'window-lead', name: 'Leaded glass', cost: 16_000 , art: '/sea/window-lead.png' },
+      { id: 'window-stained', name: 'Stained glass', cost: 90_000 , art: '/sea/window-stained.png' },
+      { id: 'window-seaglass', name: 'A wall of sea-glass', cost: 400_000 , art: '/sea/window-seaglass.png' },
     ],
   },
   {
     slot: 'corner', label: 'The corner',
     options: [
-      { id: 'corner-none', name: 'Empty', cost: 0 },
-      { id: 'corner-net', name: 'Nets and floats', cost: 8_000 },
-      { id: 'corner-figure', name: "A ship's figurehead", cost: 75_000 },
-      { id: 'corner-lamp', name: 'A drowned lamp, still lit', cost: 320_000 },
-      { id: 'corner-orrery', name: 'A tide orrery', cost: 1_000_000 },
+      { id: 'corner-none', name: 'Empty', cost: 0 , art: null },
+      { id: 'corner-net', name: 'Nets and floats', cost: 8_000 , art: '/sea/corner-net.png' },
+      { id: 'corner-figure', name: "A ship's figurehead", cost: 75_000 , art: '/sea/corner-figure.png' },
+      { id: 'corner-lamp', name: 'A drowned lamp, still lit', cost: 320_000 , art: '/sea/corner-lamp.png' },
+      { id: 'corner-orrery', name: 'A tide orrery', cost: 1_000_000 , art: '/sea/corner-orrery.png' },
     ],
   },
 ]
@@ -241,6 +254,101 @@ export const FURNITURE_BY_SLOT =
 /** Every furnishing by id, for pricing a purchase server-side. */
 export const FURNISHING_BY_ID: Record<string, { slot: FurnitureSlot; item: Furnishing }> =
   Object.fromEntries(FURNITURE.flatMap(f => f.options.map(o => [o.id, { slot: f.slot, item: o }])))
+
+/**
+ * WHERE A THING STANDS IN A ROOM.
+ *
+ * Percentages of the room image. `y` is the BOTTOM of the piece, not its
+ * middle, because everything in here sits on something: a table stands on the
+ * floor, a hearth sits in its recess, a trophy hangs off the chimney breast. An
+ * anchor at the middle would make every piece float when its art changed height.
+ */
+export type SlotSpot = { x: number; y: number; w: number }
+
+/**
+ * THE INSIDE, one shell per house tier.
+ *
+ * ── WHY THE COORDINATES ARE PER ROOM ────────────────────────────────────────
+ *
+ * The five shells were painted as one home growing, not as one room redressed,
+ * so the fireplace is far left in the lean-to, centre-right in the cottage and
+ * centre in the hall, and the floor line climbs as the rooms get taller. One
+ * shared set of slot positions would have put the fire on a wall in some of them
+ * and the table through the floor in others.
+ *
+ * So each shell carries its own. It is more numbers, and it is the only way the
+ * house tier can pay off INSIDE as well as out — which is the whole reason the
+ * shell changes with the house rather than staying one room forever.
+ */
+export const ROOMS: { art: string; spots: Record<FurnitureSlot, SlotSpot> }[] = [
+  {
+    // The lean-to. Fire crammed in the left corner, dirt floor, one window.
+    art: '/sea/room-leanto.jpg',
+    spots: {
+      floor: { x: 50, y: 99, w: 40 },
+      hearth: { x: 21, y: 88, w: 24 },
+      mount: { x: 21, y: 58, w: 16 },
+      table: { x: 62, y: 94, w: 26 },
+      window: { x: 88, y: 40, w: 15 },
+      corner: { x: 90, y: 94, w: 14 },
+    },
+  },
+  {
+    // The cottage. Fire centre-right, proper boards underfoot.
+    art: '/sea/room-cottage.jpg',
+    spots: {
+      floor: { x: 50, y: 99, w: 40 },
+      hearth: { x: 57, y: 77, w: 20 },
+      mount: { x: 57, y: 52, w: 15 },
+      table: { x: 26, y: 95, w: 28 },
+      window: { x: 87, y: 42, w: 15 },
+      corner: { x: 11, y: 95, w: 14 },
+    },
+  },
+  {
+    // The longhouse. Panelled, fire dead centre, room either side of it.
+    art: '/sea/room-longhouse.jpg',
+    spots: {
+      floor: { x: 50, y: 99, w: 42 },
+      hearth: { x: 48, y: 82, w: 22 },
+      mount: { x: 48, y: 52, w: 17 },
+      table: { x: 78, y: 95, w: 26 },
+      window: { x: 85, y: 45, w: 15 },
+      corner: { x: 13, y: 95, w: 14 },
+    },
+  },
+  {
+    // The great hall. Two storeys, so the chimney breast runs up past the
+    // gallery rail and the trophy hangs high.
+    art: '/sea/room-hall.jpg',
+    spots: {
+      floor: { x: 50, y: 99, w: 40 },
+      hearth: { x: 52, y: 88, w: 20 },
+      mount: { x: 52, y: 58, w: 15 },
+      table: { x: 22, y: 96, w: 26 },
+      window: { x: 88, y: 52, w: 12 },
+      corner: { x: 80, y: 96, w: 13 },
+    },
+  },
+  {
+    // The Estate. Carved panelling, stone floor, and a proper mantel to hang
+    // the best thing you own over.
+    art: '/sea/room-estate.jpg',
+    spots: {
+      floor: { x: 50, y: 99, w: 42 },
+      hearth: { x: 53, y: 90, w: 20 },
+      mount: { x: 53, y: 62, w: 15 },
+      table: { x: 76, y: 96, w: 26 },
+      window: { x: 86, y: 58, w: 12 },
+      corner: { x: 16, y: 96, w: 14 },
+    },
+  },
+]
+
+/** The room a captain is currently standing in. */
+export function roomFor(h: Homestead) {
+  return ROOMS[Math.max(0, Math.min(ROOMS.length - 1, h.spots.house ?? 0))]
+}
 
 /** What a captain's homestead currently is. Mirrors the `homesteads` row. */
 export type Homestead = {

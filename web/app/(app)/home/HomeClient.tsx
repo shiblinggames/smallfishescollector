@@ -15,7 +15,7 @@
 // mounted here unchanged — the plan is for /fishing to retire, and the bestiary
 // needs somewhere to live that is not a screen that is going away.
 
-import { useCallback, useState, useTransition } from 'react'
+import { memo, useCallback, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Almanac from '../fishing/Almanac'
@@ -23,7 +23,7 @@ import { BADGE_MAP } from '@/lib/badges'
 import { vibrate } from '@/lib/haptics'
 import {
   HOTSPOTS, FURNITURE, PORTAL_REACH, PINNED_MAX,
-  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings,
+  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, roomFor,
   type Homestead, type HotspotId, type FurnitureSlot,
 } from '@/lib/homestead'
 import { build, furnish, stepThrough, type Destination } from './actions'
@@ -251,6 +251,7 @@ export default function HomeClient({
         {/* ── INSIDE ────────────────────────────────────────────────── */}
         {room === 'inside' && (
           <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+            <TheRoom home={home} />
             <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(196,214,228,0.7)', margin: 0 }}>
               {builtAt(home, 'house').name} has room for {slots.length} of {FURNITURE.length}.
               Build the house up for the rest. Nothing in here does anything.
@@ -289,6 +290,16 @@ export default function HomeClient({
                             border: `1px solid ${on ? GOLD : 'rgba(255,255,255,0.14)'}`,
                             cursor: !open || on ? 'default' : 'pointer',
                           }}>
+                          {/* THE THING ITSELF, above its name. Choosing a rug by
+                              reading the words "Kelp weave" is choosing blind,
+                              and every one of these is bought for how it looks. */}
+                          {o.art && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={o.art} alt="" draggable={false} style={{
+                              display: 'block', width: 54, height: 44,
+                              objectFit: 'contain', margin: '0 auto 3px',
+                            }} />
+                          )}
                           {o.name}
                           {!on && (
                             <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.75 }}>
@@ -369,6 +380,66 @@ export default function HomeClient({
     </div>
   )
 }
+
+/**
+ * THE ROOM, AS IT ACTUALLY IS.
+ *
+ * The shell comes from the house tier and everything in it is a layer at a
+ * position that shell carries — see ROOMS, which is why the coordinates are per
+ * room rather than shared: the fire is in the left corner of a lean-to and dead
+ * centre in a hall, and one set of numbers would have put it on a wall.
+ *
+ * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────
+ *
+ * Inside used to be a list of buttons with prices on them. Six slots and 22
+ * furnishings, six million doubloons of them, and buying the 1.1M giant changed
+ * a label from "Nothing yet" to "An Ancient Deep giant". Everything in here is
+ * bought for how it looks, so not drawing it was not a gap in the art, it was
+ * the whole feature missing.
+ *
+ * Painted back to front: the rug goes under the fire, the fire in front of the
+ * wall, the trophy over the fire, and the table and the corner in front of all
+ * of it. That order is fixed and is the only thing here that is not data.
+ */
+const ROOM_ORDER: FurnitureSlot[] = ['floor', 'window', 'hearth', 'mount', 'table', 'corner']
+
+const TheRoom = memo(function TheRoom({ home }: { home: Homestead }) {
+  const shell = roomFor(home)
+  const open = openSlots(home)
+
+  return (
+    <div style={{
+      position: 'relative', width: '100%', aspectRatio: '1008 / 666',
+      borderRadius: 14, overflow: 'hidden',
+      border: '1px solid rgba(180,214,232,0.18)',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={shell.art} alt="" draggable={false} style={{
+        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+      }} />
+      {ROOM_ORDER.map(slot => {
+        // A slot the house has no room for yet shows nothing, even if a
+        // furnishing is recorded against it from a bigger house.
+        if (!open.includes(slot)) return null
+        const item = furnishingIn(home, slot)
+        if (!item.art) return null
+        const spot = shell.spots[slot]
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={slot} src={item.art} alt="" draggable={false} style={{
+            position: 'absolute',
+            left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.w}%`,
+            // Anchored at its BOTTOM CENTRE, because everything in a room sits
+            // on something. Anchoring the middle makes a piece float the moment
+            // its art is a different height from the last one.
+            transform: 'translate(-50%, -100%)',
+          }} />
+        )
+      })}
+    </div>
+  )
+})
 
 function PortalRow({ name, note, onGo, busy, here }: {
   name: string; note: string; onGo: () => void; busy: boolean; here?: boolean
