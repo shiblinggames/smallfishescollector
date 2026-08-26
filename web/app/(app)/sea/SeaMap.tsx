@@ -33,7 +33,7 @@ import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/l
 import { goAshore, type AshoreResult } from './isleActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
-import { REGIONS, regionAt, inkStrength, type Region } from '@/lib/seaRegions'
+import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
@@ -633,20 +633,20 @@ function makeMottle(
 let deepURL: string | null = null
 let paleURL: string | null = null
 /**
- * ONE TILE PER REGION, built on first use and kept forever.
+ * ONE TILE PER BAND, built on first use and kept forever.
  *
  * Five canvases at a few hundred pixels each. Built lazily because this needs a
  * DOM and the module is imported on the server too, and cached because the
- * whole point of a region is that the same water always looks like itself.
+ * whole point is that a stretch of water always looks like itself.
  */
-const regionURLs: Record<string, string> = {}
-function regionTile(r: Region): string {
-  if (!regionURLs[r.id]) {
-    const t = r.tile
-    regionURLs[r.id] = makeMottle(
+const surfaceURLs: Record<string, string> = {}
+function surfaceTile(v: Surface): string {
+  if (!surfaceURLs[v.band]) {
+    const t = v.tile
+    surfaceURLs[v.band] = makeMottle(
       t.size, t.count, t.rgb, t.rMin, t.rMax, t.alpha, t.seed, t.squash, t.tilt).toDataURL()
   }
-  return regionURLs[r.id]
+  return surfaceURLs[v.band]
 }
 
 function seaTiles(): { deep: string; pale: string } | null {
@@ -734,12 +734,12 @@ export default function SeaMap({
   /** THE WATER ITSELF — two composited layers, moved not repainted. */
   const deepRef = useRef<HTMLDivElement | null>(null)
   const paleRef = useRef<HTMLDivElement | null>(null)
-  /** The region wash. One element; its image is swapped when you cross. */
-  const regionRef = useRef<HTMLDivElement | null>(null)
-  /** Which region is currently painted, and how far through the cross-fade we
-   *  are. Refs, because all of this is written by the frame loop. */
-  const paintedRegion = useRef<string>('')
-  const regionFade = useRef(1)
+  /** The band's own surface. One element; its image swaps when you cross out. */
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
+  /** Which band's water is currently painted, and how far through the
+   *  cross-fade we are. Refs: all of this is written by the frame loop. */
+  const paintedBand = useRef<string>('')
+  const surfaceFade = useRef(1)
   const tiles = useMemo(() => seaTiles(), [])
 
   const wrapRef = useRef<HTMLDivElement | null>(null)
@@ -1163,9 +1163,6 @@ export default function SeaMap({
   const bottlesRef = useRef<Bottle[]>(bottles)
   bottlesRef.current = bottles
   const [nearBottle, setNearBottle] = useState<Bottle | null>(null)
-  /** WHICH WAY YOU ARE. State only so the banner can name it; the texture that
-   *  goes with it is written by the loop. */
-  const [region, setRegion] = useState<Region>(() => regionAt(startAt.x, startAt.y))
   /** Bottles fished out this session. They do not come back before the tide. */
   const [taken, setTaken] = useState<Set<string>>(() => new Set())
   /** The proximity check runs inside a closure built at mount, so it cannot
@@ -1414,10 +1411,10 @@ export default function SeaMap({
   }, [])
 
   /**
-   * BUILD ALL FIVE REGION TILES ONCE, off the critical path.
+   * BUILD ALL FIVE SURFACE TILES ONCE, off the critical path.
    *
-   * `regionTile` is lazy and is called from the frame loop, so the first time
-   * you cross into a region the loop would stop to rasterise a few hundred
+   * `surfaceTile` is lazy and is called from the frame loop, so the first time
+   * you cross into a band the loop would stop to rasterise a few hundred
    * canvas gradients. That is a hitch at exactly the moment you are looking at
    * the water change, which is the worst possible time for one.
    *
@@ -1425,7 +1422,7 @@ export default function SeaMap({
    * canvases, built once for the life of the tab.
    */
   useEffect(() => {
-    const id = setTimeout(() => { for (const r of REGIONS) regionTile(r) }, 400)
+    const id = setTimeout(() => { for (const v of SURFACES) surfaceTile(v) }, 400)
     return () => clearTimeout(id)
   }, [])
 
@@ -1981,42 +1978,42 @@ export default function SeaMap({
         const oy = (((pos.current.y + now / 1000 * 2.5) * zx * GROUND) % DEEP_TILE + DEEP_TILE) % DEEP_TILE
         deep.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
       }
-      // ── THE REGION WASH ──────────────────────────────────────────
+      // ── THE BAND'S OWN WATER ─────────────────────────────────────
       //
-      // Same treatment as the two washes above: moved, never repainted, and
-      // wrapped to its own tile so the offset stays small however far you sail.
-      // What differs is that the IMAGE changes when you cross a boundary, and a
-      // hard swap would be a visible pop across the whole screen.
+      // Same treatment as the two washes above: moved, never repainted, wrapped
+      // to its own tile so the offset stays small however far you sail. What
+      // differs is that the IMAGE changes when you cross into the next band,
+      // and a hard swap would be a visible pop across the whole screen.
       //
-      // So it fades. Down to nothing on the old texture, swap, back up on the
-      // new one — about a second and a half either way, which is slower than
-      // you can cross a boundary and back, and therefore never strobes at one.
-      const rg = regionRef.current
-      if (rg) {
-        const here = regionAt(pos.current.x, pos.current.y)
-        if (here.id !== paintedRegion.current) {
-          if (regionFade.current > 0) {
-            regionFade.current = Math.max(0, regionFade.current - dt / 0.75)
+      // So it fades. Out on the old texture, swap while nothing is showing,
+      // back in on the new one. Three quarters of a second each way, slower
+      // than anyone can cross a boundary and come back, so it cannot strobe on
+      // one. The colour blend runs over the same crossing, and the two arriving
+      // together is what makes a band feel like a place rather than a rule.
+      const sfEl = surfaceRef.current
+      if (sfEl) {
+        const here = surfaceAt(pos.current.x, pos.current.y)
+        if (here.band !== paintedBand.current) {
+          if (surfaceFade.current > 0) {
+            surfaceFade.current = Math.max(0, surfaceFade.current - dt / 0.75)
           } else {
-            // Fully out. Now it is safe to change what is underneath.
-            paintedRegion.current = here.id
-            rg.style.backgroundImage = `url(${regionTile(here)})`
-            setRegion(prev => (prev.id === here.id ? prev : here))
+            paintedBand.current = here.band
+            sfEl.style.backgroundImage = `url(${surfaceTile(here)})`
           }
-        } else if (regionFade.current < 1) {
-          regionFade.current = Math.min(1, regionFade.current + dt / 0.75)
+        } else if (surfaceFade.current < 1) {
+          surfaceFade.current = Math.min(1, surfaceFade.current + dt / 0.75)
         }
 
-        const cur = REGIONS.find(r => r.id === paintedRegion.current)
+        const cur = SURFACES.find(v => v.band === paintedBand.current)
         if (cur) {
           const zx = zoomRef.current
           const T = cur.tile.size
           const ox = (((pos.current.x + now / 1000 * cur.drift.x) * zx) % T + T) % T
           const oy = (((pos.current.y + now / 1000 * cur.drift.y) * zx * GROUND) % T + T) % T
-          rg.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
+          sfEl.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
           // THE ONE PLACE THIS MEETS THE CLOCK. Light marks dim when there is
           // no light to catch; dark marks stay. See inkStrength.
-          rg.style.opacity = String(regionFade.current * inkStrength(cur, lum))
+          sfEl.style.opacity = String(surfaceFade.current * inkStrength(cur, lum))
         }
       }
 
@@ -2208,10 +2205,10 @@ export default function SeaMap({
               backgroundImage: `url(${tiles.deep})`, backgroundRepeat: 'repeat',
               transformOrigin: '0 0', willChange: 'transform',
             }} />
-            {/* THE REGION. Over the deep mottle and under the pale wash, so
-                the water's own light still sits on top of whatever is floating
-                in it. Its image and opacity are the loop's to write. */}
-            <div ref={regionRef} style={{
+            {/* THE BAND'S SURFACE. Over the deep mottle and under the pale
+                wash, so the water's own light still sits on top of whatever is
+                floating in it. Image and opacity are the loop's to write. */}
+            <div ref={surfaceRef} style={{
               position: 'absolute', left: 0, top: 0,
               width: 'calc(100% + 660px)',
               height: 'calc(100% + 660px)',
@@ -2550,7 +2547,6 @@ hullRef={hullRefFor(t.key)} />
       <WaterBanner
         place={!fishingIn && near && near.kind === 'water' ? near : null}
         locked={near ? locked(near) : false}
-        region={region}
         lowered={false} />
 
       {/* THE CROSSING ITSELF. The small banner up top is a readout — it says
@@ -4836,13 +4832,8 @@ function HotspotBadge({ spot, compact }: { spot: Hotspot | null; compact: boolea
   )
 }
 
-function WaterBanner({ place, locked, lowered, region }: {
+function WaterBanner({ place, locked, lowered }: {
   place: Place | null; locked: boolean
-  /** WHICH WAY, under HOW FAR OUT. The band alone was only ever half a
-   *  position: it says how far from the Mainland and nothing about east or
-   *  west, so the two together are the first time this chart can tell you
-   *  where you are in a way you could repeat to somebody. */
-  region: Region
   /** Drop below the level bar while the rod is out. The bar owns the top of the
    *  screen then, and the banner was landing straight on top of it. */
   lowered: boolean
@@ -4893,19 +4884,6 @@ function WaterBanner({ place, locked, lowered, region }: {
             animate={{ opacity: fresh ? 0.5 : 0.12, width: fresh ? 96 : 46 }}
             transition={{ duration: 1.1, ease: 'easeOut' }}
             style={{ height: 1, marginTop: 5, background: 'rgba(214,232,240,0.9)' }} />
-          {/* Set well below the band's own name and never flared: this is a
-              standing readout, not an arrival. It fades with the title so the
-              corner does not carry two lines of permanent type. */}
-          <motion.p className="font-karla font-600"
-            animate={{ opacity: fresh ? 0.82 : 0.3 }}
-            transition={{ duration: 1.1, ease: 'easeOut' }}
-            style={{
-              fontSize: '0.78rem', letterSpacing: '0.1em', marginTop: 5,
-              color: 'rgba(198,220,232,0.95)',
-              textShadow: '0 1px 10px rgba(0,0,0,0.95)',
-            }}>
-            {region.name}
-          </motion.p>
           {locked && fresh && (
             <motion.p className="font-karla font-600"
               initial={{ opacity: 0 }} animate={{ opacity: 0.9 }}

@@ -17,16 +17,42 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE } from './chart'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
-import { REGIONS, regionLabelAt } from '@/lib/seaRegions'
 import {
-  FOG_CELL, FOG_W, FOG_H, FOG_X0, FOG_Y0, FOG_CELLS,
+  FOG_CELL, FOG_W, FOG_X0, FOG_Y0, FOG_CELLS,
   fogCentre, fogHas, fogProgress,
 } from '@/lib/seaExplore'
 import { vibrate } from '@/lib/haptics'
 
-/** Padding inside the canvas, in px, so the outermost band is not flush to the
- *  edge and the port pins have room for their labels. */
-const PAD = 10
+/** Padding inside the canvas, so the outermost band is not flush to the edge
+ *  and the port pins have room for their labels. */
+const PAD = 12
+
+/**
+ * THE SHAPE OF THE SEA, and therefore the shape of this canvas.
+ *
+ * The chart runs from the north wall down to the outer edge and the full width
+ * of the outer edge either side: 45,200 by 24,100, which is very nearly two to
+ * one. It used to be drawn into a SQUARE, scaled to fit — so about 47% of the
+ * canvas was permanently blank, above and below a chart that could never reach
+ * it. That is where the empty space came from; it was not the fog.
+ */
+const WORLD_W = OUTER_EDGE * 2
+const WORLD_H = OUTER_EDGE - NORTH_WALL
+const ASPECT = WORLD_W / WORLD_H
+
+/** Every colour the chart draws with, in one place, so the key cannot drift
+ *  from the map it is a key to. */
+const INK = {
+  port: '#f0c040',
+  isle: '#f0c040',
+  isleDone: 'rgba(150,182,164,0.75)',
+  dig: '#f0c040',
+  digDone: 'rgba(150,182,164,0.5)',
+  trader: '#7fd6a0',
+  yoon: '#c084fc',
+  you: '#ffffff',
+  fog: 'rgb(26,32,41)',
+} as const
 
 export default function Minimap({
   open, onClose, fog, at, seaAt, found, bearings, dug,
@@ -49,29 +75,28 @@ export default function Minimap({
   dug: Set<string>
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [size, setSize] = useState(0)
+  const [w, setW] = useState(0)
+  const h = Math.round(w / ASPECT)
   const prog = fogProgress(fog)
 
   const draw = useCallback(() => {
     const cv = canvasRef.current
-    if (!cv || !size) return
+    if (!cv || !w) return
     const ctx = cv.getContext('2d')
     if (!ctx) return
+    const H = Math.round(w / ASPECT)
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    cv.width = size * dpr
-    cv.height = size * dpr
+    cv.width = w * dpr
+    cv.height = H * dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, size, size)
+    ctx.clearRect(0, 0, w, H)
 
-    // World -> canvas. The grid is wider than it is tall, so one scale for both
-    // axes and the whole thing centred — squashing it to fill a square would
-    // make the bands ovals and lie about the shape of the sea.
-    const worldW = FOG_W * FOG_CELL
-    const worldH = FOG_H * FOG_CELL
-    const s = Math.min((size - PAD * 2) / worldW, (size - PAD * 2) / worldH)
-    const ox = (size - worldW * s) / 2 - FOG_X0 * s
-    const oy = (size - worldH * s) / 2 - FOG_Y0 * s
+    // World -> canvas. One scale for both axes: squashing it to fill the box
+    // would make the bands ovals and lie about the shape of the sea.
+    const s = Math.min((w - PAD * 2) / WORLD_W, (H - PAD * 2) / WORLD_H)
+    const ox = (w - WORLD_W * s) / 2 + OUTER_EDGE * s
+    const oy = (H - WORLD_H * s) / 2 - NORTH_WALL * s
     const tx = (x: number) => ox + x * s
     const ty = (y: number) => oy + y * s
 
@@ -83,11 +108,9 @@ export default function Minimap({
     for (let i = 0; i < FOG_CELLS; i++) {
       const c = fogCentre(i)
       // OFF THE CHART ENTIRELY. The fog grid is a RECTANGLE and the sea is a
-      // half-disc inside it, so about a fifth of these cells are corners no
-      // boat can reach. Painting them as fog advertises water that is not
-      // there, and somebody would spend a long evening trying to sail into it.
-      // Left as bare canvas, which also has the happy effect of making the
-      // minimap show the shape the chart actually is.
+      // half-disc inside it, so some of these cells are corners no boat can
+      // reach. Painting them as fog advertises water that is not there, and
+      // somebody would spend a long evening trying to sail into it.
       if (Math.hypot(c.x, c.y) > OUTER_EDGE) continue
       const x = tx(c.x - FOG_CELL / 2)
       const y = ty(c.y - FOG_CELL / 2)
@@ -104,47 +127,24 @@ export default function Minimap({
       }
     }
 
-    // The north wall, where the chart stops being ours.
-    ctx.strokeStyle = 'rgba(180,214,232,0.22)'
+    // ── WHERE THE SURVEY STOPS ───────────────────────────────────────────
+    // Both edges in the same dashes, because they are the same kind of thing:
+    // not walls, just the end of what anyone drew.
+    ctx.strokeStyle = 'rgba(180,214,232,0.26)'
     ctx.lineWidth = 1
     ctx.setLineDash([4, 5])
+    // The north wall, clipped to the chord the disc actually reaches at that
+    // latitude rather than run the full width of a box the sea does not fill.
+    const half = Math.sqrt(Math.max(0, OUTER_EDGE * OUTER_EDGE - NORTH_WALL * NORTH_WALL))
     ctx.beginPath()
-    ctx.moveTo(tx(FOG_X0), ty(NORTH_WALL))
-    ctx.lineTo(tx(FOG_X0 + worldW), ty(NORTH_WALL))
+    ctx.moveTo(tx(-half), ty(NORTH_WALL))
+    ctx.lineTo(tx(half), ty(NORTH_WALL))
     ctx.stroke()
-
-    // And the far edge, in the same dashes, because it is the same kind of
-    // thing: not a wall, just where the survey stops. Drawn only across the
-    // south, since north of the wall is somebody else's chart.
     ctx.beginPath()
     const lift = Math.asin(Math.min(1, Math.abs(NORTH_WALL) / OUTER_EDGE))
     ctx.arc(tx(0), ty(0), OUTER_EDGE * s, -lift, Math.PI + lift)
     ctx.stroke()
     ctx.setLineDash([])
-
-    // ── THE REGIONS ──────────────────────────────────────────────────────
-    //
-    // Faint, and under everything else. These are the chart's longitude: the
-    // bands say how far out, the regions say which way, and the pair is the
-    // first time a position on this sea can be described rather than pointed
-    // at. Drawn whatever the fog says, because a region is not a discovery —
-    // it is the name of a direction, and the sea has always had directions.
-    //
-    // Small caps and wide tracking, the way a real chart letters an area
-    // rather than a place. Nothing is drawn round them: an area label with a
-    // box on it reads as a pin.
-    ctx.save()
-    ctx.font = '600 8px ui-sans-serif, system-ui'
-    ctx.textAlign = 'center'
-    ctx.fillStyle = 'rgba(186,208,222,0.34)'
-    for (const r of REGIONS) {
-      const at = regionLabelAt(r, OUTER_EDGE)
-      const label = r.name.replace(/^The /, '').toUpperCase()
-      // Letter-spaced by hand: canvas has no tracking.
-      const spaced = label.split('').join(' ')
-      ctx.fillText(spaced, tx(at.x), ty(at.y))
-    }
-    ctx.restore()
 
     // ── THE PORTS, always ────────────────────────────────────────────────
     // Never fogged. A chart whose own harbours are hidden until you have been
@@ -153,7 +153,7 @@ export default function Minimap({
     for (const p of PLACES) {
       if (p.kind !== 'port') continue
       const x = tx(p.x), y = ty(p.y)
-      ctx.fillStyle = '#f0c040'
+      ctx.fillStyle = INK.port
       ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill()
       ctx.strokeStyle = 'rgba(6,12,18,0.9)'; ctx.lineWidth = 1.5; ctx.stroke()
       ctx.fillStyle = 'rgba(244,236,216,0.92)'
@@ -169,13 +169,13 @@ export default function Minimap({
     for (const r of RESIDENTS) {
       const i = Math.floor((r.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((r.x - FOG_X0) / FOG_CELL)
       if (!fogHas(fog, i)) continue
-      ctx.fillStyle = '#7fd6a0'
+      ctx.fillStyle = INK.trader
       ctx.beginPath(); ctx.arc(tx(r.x), ty(r.y), 2.6, 0, Math.PI * 2); ctx.fill()
     }
     {
       const i = Math.floor((YOON.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((YOON.x - FOG_X0) / FOG_CELL)
       if (fogHas(fog, i)) {
-        ctx.fillStyle = '#c084fc'
+        ctx.fillStyle = INK.yoon
         ctx.beginPath(); ctx.arc(tx(YOON.x), ty(YOON.y), 3.2, 0, Math.PI * 2); ctx.fill()
         ctx.fillStyle = 'rgba(226,214,250,0.9)'
         ctx.font = '600 8px ui-sans-serif, system-ui'
@@ -190,16 +190,12 @@ export default function Minimap({
     // finding is the feature. Once the water round it is uncovered the pin
     // stays, because remembering which rock you still owe a visit to across a
     // 45,000 pixel chart is not the interesting part.
-    //
-    // Two states, two colours. Gold is a rock you have seen and not landed at,
-    // which is the only thing on this map that is asking you for something.
-    // Grey-green is done, and deliberately quiet.
     for (const isle of ISLES) {
       const i = Math.floor((isle.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((isle.x - FOG_X0) / FOG_CELL)
       if (!fogHas(fog, i)) continue
       const done = found.has(isle.id)
       const x = tx(isle.x), y = ty(isle.y)
-      ctx.fillStyle = done ? 'rgba(150,182,164,0.75)' : '#f0c040'
+      ctx.fillStyle = done ? INK.isleDone : INK.isle
       ctx.beginPath(); ctx.arc(x, y, done ? 2.4 : 3.4, 0, Math.PI * 2); ctx.fill()
       if (!done) {
         // A ring, so an unclaimed isle reads at a glance on a busy chart.
@@ -222,7 +218,7 @@ export default function Minimap({
       if (!bearings.has(d.id)) continue
       const x = tx(d.x), y = ty(d.y)
       const done = dug.has(d.id)
-      ctx.strokeStyle = done ? 'rgba(150,182,164,0.5)' : '#f0c040'
+      ctx.strokeStyle = done ? INK.digDone : INK.dig
       ctx.lineWidth = done ? 1.4 : 2
       const a = done ? 3 : 4.5
       ctx.beginPath()
@@ -238,20 +234,29 @@ export default function Minimap({
       ctx.strokeStyle = 'rgba(240,250,255,0.55)'
       ctx.lineWidth = 1.5
       ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.stroke()
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, size, at, seaAt, found, bearings, dug])
+  }, [fog, w, at, seaAt, found, bearings, dug])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 
   useEffect(() => {
     if (!open) return
-    const fit = () => setSize(Math.min(window.innerWidth - 48, window.innerHeight - 240, 420))
+    // Width first, height derived. Capped against the viewport HEIGHT too, with
+    // room left for the header and the key, or on a short screen the chart runs
+    // off the bottom of its own panel.
+    const CHROME = 210
+    const fit = () => setW(Math.round(Math.min(
+      window.innerWidth - 40, 620, Math.max(220, (window.innerHeight - CHROME) * ASPECT))))
     fit()
     window.addEventListener('resize', fit)
     return () => window.removeEventListener('resize', fit)
   }, [open])
+
+  const islesFound = ISLES.filter(i => found.has(i.id)).length
+  const digsDone = DIG_SITES.filter(d => dug.has(d.id)).length
+  const digsKnown = DIG_SITES.filter(d => bearings.has(d.id)).length
 
   return (
     <AnimatePresence>
@@ -277,14 +282,20 @@ export default function Minimap({
               borderRadius: 18, padding: '0.95rem',
               boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
             }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-              <div>
-                <p className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.62rem', letterSpacing: '0.16em', color: 'rgba(180,214,232,0.7)',
-                }}>The chart</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f2ead8' }}>
-                  {Math.round(prog.pct * 100)}% sailed
-                </p>
+            {/* ── THE TALLY ──────────────────────────────────────────────
+                Three numbers, because "41% sailed" on its own says how much
+                water you have crossed and nothing about whether crossing it got
+                you anything. The dig count deliberately shows how many bearings
+                you HOLD rather than how many exist: the total is not something
+                the chart is willing to tell you. */}
+            <div style={{
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+              gap: 12, marginBottom: 9, width: w,
+            }}>
+              <div style={{ display: 'flex', gap: 20, minWidth: 0 }}>
+                <Stat label="Sailed" value={`${Math.round(prog.pct * 100)}%`} />
+                <Stat label="Isles" value={`${islesFound}/${ISLES.length}`} />
+                <Stat label="Dug" value={digsKnown ? `${digsDone}/${digsKnown}` : '0'} />
               </div>
               <button type="button" onClick={() => { vibrate(8); onClose() }} aria-label="Close"
                 style={{
@@ -297,17 +308,85 @@ export default function Minimap({
             </div>
 
             <canvas ref={canvasRef}
-              style={{ width: size, height: size, display: 'block', borderRadius: 12, background: '#0a1018' }} />
+              style={{
+                width: w, height: h, display: 'block', borderRadius: 12,
+                background: '#080d14', border: '1px solid rgba(180,214,232,0.12)',
+              }} />
 
-            <p className="font-karla font-600" style={{
-              fontSize: '0.7rem', color: 'rgba(190,212,228,0.5)', marginTop: 8, lineHeight: 1.5, maxWidth: size,
+            {/* ── THE KEY ────────────────────────────────────────────────
+                Every mark the canvas draws, drawn the same way at the same
+                size. A chart with eight kinds of dot on it and no key is a
+                puzzle about the chart rather than about the sea, and this one
+                has quietly grown from three marks to eight. */}
+            <div style={{
+              width: w, marginTop: 10,
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))',
+              gap: '6px 14px',
             }}>
-              Fog is water you have not sailed. Harbours are always marked; the
-              people out there are only marked once you have found them.
-            </p>
+              <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="You" />
+              <Key mark={<Dot c={INK.port} r={4.5} ring="rgba(6,12,18,0.9)" />} label="Harbour" />
+              <Key mark={<Dot c={INK.isle} r={3.4} ring="rgba(255,206,138,0.55)" ringR={6.5} />} label="Isle, not landed" />
+              <Key mark={<Dot c={INK.isleDone} r={2.6} />} label="Been ashore" />
+              <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
+              <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
+              <Key mark={<Dot c={INK.trader} r={2.8} />} label="Trader" />
+              <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
+            </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <p className="font-karla font-700 uppercase" style={{
+        fontSize: '0.56rem', letterSpacing: '0.16em', color: 'rgba(180,214,232,0.6)', margin: 0,
+      }}>{label}</p>
+      <p className="font-cinzel font-700" style={{
+        fontSize: '1.12rem', color: '#f2ead8', margin: 0, lineHeight: 1.15,
+      }}>{value}</p>
+    </div>
+  )
+}
+
+function Key({ mark, label }: { mark: React.ReactNode; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+      <span style={{ width: 16, height: 16, flexShrink: 0, display: 'block' }}>{mark}</span>
+      <span className="font-karla" style={{
+        fontSize: '0.68rem', color: 'rgba(196,214,228,0.72)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      }}>{label}</span>
+    </div>
+  )
+}
+
+/** The key's marks are SVG at the canvas's own radii, so the swatch and the
+ *  thing it stands for are genuinely the same size. */
+function Dot({ c, r, ring, ringR }: { c: string; r: number; ring?: string; ringR?: number }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      {ring && <circle cx="8" cy="8" r={ringR ?? r + 1.2} fill="none" stroke={ring} strokeWidth="1.2" />}
+      <circle cx="8" cy="8" r={r} fill={c} />
+    </svg>
+  )
+}
+
+function Cross({ c, thin }: { c: string; thin?: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke={c} strokeWidth={thin ? 1.4 : 2} strokeLinecap="round" fill="none" />
+    </svg>
+  )
+}
+
+function Swatch({ c }: { c: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill={c} stroke="rgba(180,214,232,0.2)" strokeWidth="1" />
+    </svg>
   )
 }
