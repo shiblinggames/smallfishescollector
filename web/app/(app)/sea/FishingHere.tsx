@@ -37,8 +37,24 @@ import { XPBarDisplay } from '@/components/FishingXPBar'
 import CrateOpening, { type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
 import dynamic from 'next/dynamic'
 
-/** Loaded on demand: most casts never open it, and it carries its own art. */
+/**
+ * THE ANCIENT CEREMONY, loaded on demand.
+ *
+ * Four overlays that fire at most six times in an account's life and carry
+ * their own art, so none of them belong in the cast bundle. They chain:
+ *
+ *   the giant goes down  ->  Finn reacts to THAT giant
+ *   the wall ranks up    ->  and at 30/30, the capstone and the pet
+ *
+ * All four already had their data — reelIn returns vigilRankUp,
+ * vigilPetGranted and the trophy flags, and this screen was receiving them and
+ * dropping them on the floor.
+ */
 const AncientRelease = dynamic(() => import('../fishing/AncientRelease'), { ssr: false })
+const AncientSlain = dynamic(() => import('../fishing/AncientSlainCinematic'), { ssr: false })
+const FinnScene = dynamic(() => import('../fishing/FinnScene'), { ssr: false })
+const AncientRankUp = dynamic(() => import('../fishing/AncientRankUp'), { ssr: false })
+const VigilCapstone = dynamic(() => import('../fishing/VigilCapstone'), { ssr: false })
 import { buildFishZones, ZONE_DIFFICULTY, FISH_DIFFICULTY_SPEED, type ZoneDef } from '../fishing/depths'
 import { castLine, reelIn, reelCrate, useTideTurnerSkip, rerollWormhole, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from '../fishing/actions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -49,6 +65,13 @@ import type { FishSizeTier } from '@/lib/fishSize'
 import { getBait } from '@/lib/bait'
 import FishCollectionDrawer from '@/app/(app)/fishing/FishCollectionDrawer'
 import { claimZoneReward, prestigeZone, releaseAncient } from '@/app/(app)/fishing/actions'
+import { markFinnRevealSeen } from '@/app/(app)/fishing/finnActions'
+import { finnAncientBeat, type FinnAncientBeat } from '@/lib/finn'
+import { ANCIENT_IDS } from '@/lib/ancientVigil'
+
+/** Always last — the server gates it behind the other five, so its cinematic
+ *  is the one that runs cold. Same literal FishingGame uses. */
+const MEGALODON_ID = 143
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { SeaLog } from './SeaMap'
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
@@ -395,6 +418,16 @@ export default function FishingHere({
   const [vigil, setVigil] = useState(log.ancientVigil)
   /** The giant being let go, if any. */
   const [releasing, setReleasing] = useState<FishSpeciesBasic | null>(null)
+  /** The landing ceremony, in the order it plays. */
+  const [slain, setSlain] = useState<{
+    fish: FishSpecies; count: number; total: number; isMegalodon: boolean
+    finnBeat: FinnAncientBeat | null
+  } | null>(null)
+  const [finnBeat, setFinnBeat] = useState<FinnAncientBeat | null>(null)
+  const [rankUp, setRankUp] = useState<{ name: string; from: number; to: number; petGranted: boolean } | null>(null)
+  const [capstone, setCapstone] = useState(false)
+  /** Trophies landed, local so the "N of 6" count is right on the sixth. */
+  const [trophies, setTrophies] = useState<Set<number>>(() => new Set(log.ancientCatches))
   const [prestigeLevels, setPrestigeLevels] = useState(log.prestigeLevels)
   const [goldenBoosts, setGoldenBoosts] = useState(log.goldenBoosts)
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
@@ -853,6 +886,48 @@ export default function FishingHere({
             vigilRankUp: res.vigilRankUp ?? null,
           },
         })
+
+        // ── THE GIANT GOES DOWN ───────────────────────────────────────
+        //
+        // Trophies only: an ancient_deep fish with a sell value of zero. The 12
+        // sellable regulars down there stack in the hold like anything else and
+        // must not count toward the six, which is the same test the server's
+        // ancient_catches column uses.
+        //
+        // `trophies` has not flushed this tick, so the one just landed is
+        // counted by hand.
+        const fishNow = res.fish as FishSpecies | undefined
+        if (fishNow && res.isNewSpecies
+            && fishNow.habitat === 'ancient_deep' && (fishNow.sell_value ?? 0) === 0) {
+          const total = log.allFishSpecies
+            .filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0).length || 6
+          const countAfter = new Set([...trophies, fishNow.id]).size
+          setTrophies(prev => new Set([...prev, fishNow.id]))
+          // Finn's reaction to THIS giant, played once the cinematic clears.
+          // The first trophy also stands in for his old reveal — flipping
+          // finn_revealed here is what stops the chart's FINN_REVEAL_BEAT
+          // firing later as though the mask had not already slipped.
+          if (countAfter === 1) void markFinnRevealSeen()
+          setSlain({
+            fish: fishNow, count: countAfter, total,
+            isMegalodon: fishNow.id === MEGALODON_ID,
+            finnBeat: finnAncientBeat(fishNow.id),
+          })
+        }
+
+        // ── THE WALL RANKS UP ─────────────────────────────────────────
+        // Held back so the catch card reads first, the same 1.5s the fishing
+        // screen uses. A granted pet with no rank-up opens the capstone on its
+        // own: the pet is granted on STATE, not on the crossing, so a captain
+        // already at 30/30 collects it on a landing that ranks nothing.
+        const ru = res.vigilRankUp ?? null
+        const petGranted = (res as { vigilPetGranted?: boolean }).vigilPetGranted === true
+        if (ru && fishNow) {
+          setVigil(prev => ({ ...prev, [String(fishNow.id)]: { rank: ru.to, released: false } }))
+          setTimeout(() => setRankUp({ name: fishNow.name, from: ru.from, to: ru.to, petGranted }), 1500)
+        } else if (petGranted) {
+          setTimeout(() => setCapstone(true), 1500)
+        }
       } else {
         setCaught({ kind: 'miss', result: result === 'penalty' ? 'penalty' : 'miss' })
         setStreak(0)
@@ -1590,6 +1665,51 @@ export default function FishingHere({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* THE CEREMONY, in the order it plays. Each hands off to the next on
+          close, so a Megalodon landing runs cinematic -> Finn -> rank -> pet
+          without any of them overlapping. */}
+      {slain && (
+        <AncientSlain
+          fish={slain.fish}
+          count={slain.count}
+          total={slain.total}
+          isMegalodon={slain.isMegalodon}
+          onDone={() => {
+            const beat = slain.finnBeat
+            setSlain(null)
+            if (beat) setFinnBeat(beat)
+          }}
+        />
+      )}
+
+      {finnBeat && <FinnScene beat={finnBeat} onComplete={() => setFinnBeat(null)} />}
+
+      {rankUp && (
+        <AncientRankUp
+          name={rankUp.name}
+          from={rankUp.from}
+          to={rankUp.to}
+          onClose={() => {
+            const finished = rankUp.petGranted
+            setRankUp(null)
+            // The capstone is chained off the rank-up rather than announced
+            // inside it, so the pet gets its own reveal instead of a paragraph
+            // in a Rank II-shaped card. AncientRankUp's own comment asks for
+            // exactly this.
+            if (finished) setCapstone(true)
+          }}
+        />
+      )}
+
+      {capstone && (
+        <VigilCapstone
+          names={ANCIENT_IDS
+            .map(id => log.allFishSpecies.find(f => f.id === id)?.name)
+            .filter((n): n is string => !!n)}
+          onClose={() => setCapstone(false)}
+        />
+      )}
 
       {/* LETTING ONE GO. Its own scene, mounted here beside the drawer that
           offers it — the wall is at sea, so the act is too. */}
