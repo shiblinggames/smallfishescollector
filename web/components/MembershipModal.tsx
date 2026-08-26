@@ -48,6 +48,7 @@ const PERKS = [
   ['2 Captain’s Board picks', 'a day'],
   ['A bigger Den purse', 'higher daily cap'],
   ['Captain-only games', 'the Rigging & more'],
+  ['Sail with your crew', 'see them on the Seas'],
 ]
 
 export default function MembershipModal() {

@@ -528,6 +528,20 @@ Mutual crew — you both pressed Follow — appear on the water as their real bo
 named compass arrow and a mark on the chart. Two layers, and they answer different
 questions.
 
+**BOTH captains must hold a Captain membership.** It grants no fish, no coin and no
+progress, so it is a social perk and the no-pay-to-win rule is intact. Deliberately *both*,
+not either: a Captain sailing with a non-Captain sees nothing, same as their friend.
+Asymmetric visibility was rejected outright — being visible to somebody you cannot see
+reads as surveillance, not as a perk they bought.
+
+The gate lives in TWO places and only one of them counts. `friendsAtSea()` filters both
+ends through `isPremiumActive`, which keeps a non-Captain's chart honest. But a client
+belongs to its player, so the enforcement that matters is the RLS policy on
+`realtime.messages` — without it anyone with a console could subscribe to `sea:<uuid>`
+directly. `public.is_captain(uuid)` mirrors `lib/premium.ts` exactly, **including that a
+null expiry means lifetime**; every current Captain is that shape, so a hand-rolled
+`premium_expires_at > now()` would have hidden all of them.
+
 **The backbone is a 20-second poll.** `friendsAtSea()` (`home/visitActions.ts`) says who is
 out there and roughly where. It feeds the compass arrow, the crew list and the "so-and-so
 has put to sea" line. One indexed query; the mutual-follow graph behind it is cached for a

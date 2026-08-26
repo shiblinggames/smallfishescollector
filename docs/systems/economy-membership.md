@@ -41,3 +41,13 @@ drop tables and pack odds describe a dead system. Don't extend it; if a feature 
 [progression.md](progression.md) (faucet cadence), [bounties.md](bounties.md),
 [tavern.md](tavern.md) (chip wallet is deliberately NOT one of these currencies),
 [platform.md](platform.md) (RPC security posture).
+
+## Sailing with your crew (Captain-only)
+
+Seeing mutual crew out on `/sea` — their boat, their compass arrow, their mark on the chart
+— needs **both** captains to hold a membership. Social perk, not a power one: no fish, no
+coin, no progress, so the no-pay-to-win rule is untouched.
+
+Enforced in RLS on `realtime.messages` via `public.is_captain(uuid)`, not just in the
+client. See [ocean-hub.md](ocean-hub.md) for the full presence architecture and what it
+costs to run.

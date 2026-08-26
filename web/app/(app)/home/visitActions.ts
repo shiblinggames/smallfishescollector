@@ -26,6 +26,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EMPTY_HOMESTEAD, builtAt, type Homestead, type HotspotId, type FurnitureSlot } from '@/lib/homestead'
 import { PINNED_MAX } from '@/lib/homestead'
+import { isPremiumActive } from '@/lib/premium'
 import { getEffectiveRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getHook } from '@/lib/hooks'
@@ -264,6 +265,27 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
   const ids = await friendIds(admin, session.user.id)
   if (!ids.length) return []
 
+  // ── SAILING TOGETHER IS A CAPTAIN'S PERK ────────────────────────────
+  //
+  // BOTH captains have to hold a membership — yours is checked here, theirs in
+  // the select below. A Captain sailing with a non-Captain sees nothing, the
+  // same as their friend does; the alternative was asymmetric visibility, and
+  // being visible to somebody you cannot see reads as surveillance rather than
+  // as a perk they bought.
+  //
+  // This is the CHEAP half of the gate, not the real one. It keeps a
+  // non-Captain's chart honest — no arrows, no marks, no arrival lines — but a
+  // client belongs to its player, so the enforcement that matters is the RLS
+  // policy on realtime.messages (the sea_presence_captains_only migration).
+  // Without that, anyone who opened a console could subscribe to `sea:<uuid>`
+  // directly and get the whole feature for nothing.
+  const { data: meRow } = await admin
+    .from('profiles')
+    .select('is_premium, premium_expires_at')
+    .eq('id', session.user.id)
+    .single()
+  if (!isPremiumActive(meRow)) return []
+
   const cutoff = new Date(Date.now() - AT_SEA_MS).toISOString()
   // Everything `Skipper` needs and nothing else. An explicit column list rather
   // than select('*'), because this is one captain reading another's row and the
@@ -274,12 +296,13 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
     // from the literal text of this argument; joining two strings gives it an
     // expression it cannot read, and the whole result silently degrades to an
     // error type that only shows up as a confusing cast failure downstream.
-    .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects')
+    .select('id, username, sea_x, sea_y, sea_seen_at, character_color, equipped_boat, equipped_hat, rod_tier, reel_tier, hook_tier, equipped_pet, completionist_effects, is_premium, premium_expires_at')
     .in('id', ids)
     .gte('sea_seen_at', cutoff)
 
   type Row = {
     id: string
+    is_premium: boolean | null; premium_expires_at: string | null
     username: string | null; sea_x: number | null; sea_y: number | null; sea_seen_at: string
     character_color: string | null; equipped_boat: string | null; equipped_hat: string | null
     rod_tier: number | null; reel_tier: number | null; hook_tier: number | null
@@ -289,6 +312,12 @@ export async function friendsAtSea(): Promise<FriendAtSea[]> {
   const now = Date.now()
   return ((data ?? []) as Row[])
     .filter(r => r.username && Number.isFinite(Number(r.sea_x)) && Number.isFinite(Number(r.sea_y)))
+    // AND THEIRS. Filtered in TypeScript through the same `isPremiumActive` the
+    // rest of the game uses, rather than as a second SQL predicate — a null
+    // expiry means LIFETIME here, and every one of the 20 current Captains is
+    // that shape, so a hand-rolled `premium_expires_at > now()` would have hid
+    // all of them.
+    .filter(r => isPremiumActive(r))
     .map(r => {
       // Resolved HERE, not on the client. The rod alone needs the completionist
       // effects folded in to know which sprite it is, and shipping tiers would
