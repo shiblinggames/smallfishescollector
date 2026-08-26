@@ -17,6 +17,8 @@ import { getEffectiveRod, LOCKED_IN } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
+import { boatSpeed, boatAgility, trimLabel, getBoat } from '@/lib/boats'
+import { hullSpeed } from '@/lib/shipyard'
 
 function StatCell({ label, value, color, muted }: { label: string; value: string; color?: string; muted?: boolean }) {
   return (
@@ -37,6 +39,7 @@ export default function LoadoutStats({
   rodTier, reelTier, hookTier, lineTier,
   completionistEffects = null, selectedBait, fishingLevel,
   zoneGoldenBoostPct = 0,
+  boatId, hullTier,
   title = 'Loadout Stats',
   sub = 'What your rig adds up to, piece by piece.',
 }: {
@@ -50,6 +53,17 @@ export default function LoadoutStats({
   selectedBait?: string | null
   fishingLevel: number
   zoneGoldenBoostPct?: number
+  /**
+   * THE BOAT UNDER YOU, when the caller has one to show.
+   *
+   * Only the Shipyard passes these — the fishing screen has no chart to sail
+   * across, so speed and agility mean nothing on it. They belong in this panel
+   * rather than in a box of their own, because "what my rig adds up to" is one
+   * question and the hull is part of the rig: it decides how long the trip out
+   * to the fish takes, which is as much a loadout stat as the catch zone.
+   */
+  boatId?: string | null
+  hullTier?: number
   title?: string
   sub?: string
 }) {
@@ -97,7 +111,32 @@ export default function LoadoutStats({
           <StatCell label="Golden Boost" value={`+${zoneGoldenBoostPct}%`} color="#f0c040" />
         )}
         <StatCell label="Snag Zone" value={snagRedPct > 0 ? `\u2212${snagRedPct}%` : 'Normal'} color={line.color} muted={snagRedPct === 0} />
+        {/* THE BOAT, in the same grid as everything else. The hull tier and the
+            boat's own trim are multiplied together here rather than shown as
+            two separate numbers, because what a player wants to know is how
+            fast they actually go — not which two things it came from. */}
+        {hullTier != null && (<>
+          <StatCell
+            label="Sailing Speed"
+            value={`${Math.round(hullSpeed(hullTier) * boatSpeed(boatId) * 100)}%`}
+            color="#9fc9e8"
+          />
+          <StatCell
+            label="Agility"
+            value={`${Math.round(boatAgility(boatId) * 100)}%`}
+            color="#7dd3fc"
+            muted={boatAgility(boatId) === 1}
+          />
+        </>)}
       </div>
+      {hullTier != null && (
+        <p className="font-karla font-600" style={{
+          fontSize: '0.66rem', color: 'rgba(230,215,180,0.42)', marginTop: 8, lineHeight: 1.5,
+        }}>
+          {getBoat(boatId)?.name ?? 'Driftwood'} · {trimLabel(getBoat(boatId)?.trim)}.
+          Speed is the haul out; agility is answering the helm in tight water.
+        </p>
+      )}
       {specialBonuses.length > 0 && (
         <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {specialBonuses.map((b, i) => <Pill key={i} label={b.label} color={b.color} />)}

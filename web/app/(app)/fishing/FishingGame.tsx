@@ -5108,7 +5108,12 @@ export default function FishingGame({
             it never floats over a modal. Also hidden on the result phase so it
             never sits in front of the catch result card. Its own panel/reveal
             portal to <body>. */}
-        <TrawlIndicator hidden={holdOpen || gearOpen || baitOpen || collectionOpen || phase === 'result'} />
+        <TrawlIndicator
+          hidden={holdOpen || gearOpen || baitOpen || collectionOpen || phase === 'result'}
+          // Collect from here, but sail to the Docks to send anyone out. See
+          // the `canDeploy` note on the component.
+          canDeploy={false}
+        />
 
         {/* Background soundtrack lives in lib/fishingMusic singleton —
             kept outside React's tree so unmount fade-out actually runs. */}

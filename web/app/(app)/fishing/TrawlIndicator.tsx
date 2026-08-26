@@ -207,9 +207,41 @@ function BestTag({ color }: { color: string }) {
   )
 }
 
-export default function TrawlIndicator({ hidden = false }: { hidden?: boolean }) {
+export default function TrawlIndicator({
+  hidden = false, variant = 'float', canDeploy = true, onDismiss,
+}: {
+  hidden?: boolean
+  /**
+   * WHERE THIS IS BEING SHOWN.
+   *
+   * 'float' is the fishing screen: a draggable portrait badge that opens the
+   * sheet. 'dock' is the Trawl Docks island, where the sheet IS the page — no
+   * badge, open on arrival, and closing it puts you back on the water.
+   */
+  variant?: 'float' | 'dock'
+  /**
+   * MAY A CREW BE SENT FROM HERE.
+   *
+   * False everywhere except the Docks. Sending used to be available from any
+   * screen that showed this panel, which made the trawl a menu you opened
+   * rather than somewhere you went — and left an island on the chart with
+   * nothing that had to happen on it. Collecting is deliberately NOT gated:
+   * making a player sail back to claim a haul they have already earned is a
+   * toll, not a decision.
+   *
+   * This is a design gate, not a security one. The server has no trustworthy
+   * notion of where the boat is (the position in `profiles` is written by the
+   * client and documented as unvalidated), and a forged deploy buys nothing a
+   * player could not have had by sailing.
+   */
+  canDeploy?: boolean
+  /** Dock variant only: what "close" means when there is no badge to shrink
+   *  back into. */
+  onDismiss?: () => void
+}) {
+  const dock = variant === 'dock'
   const [state, setState] = useState<TrawlState | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(dock)
   const [now, setNow] = useState(() => Date.now())
   const [picking, setPicking] = useState<TrawlZoneKey | null>(null)
   const [busy, setBusy] = useState(false)
@@ -574,7 +606,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     <AnimatePresence>
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={() => { setOpen(false); setPicking(null) }}
+          onClick={() => { if (dock) { onDismiss?.(); return } setOpen(false); setPicking(null) }}
           style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(4,8,14,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
             onClick={e => e.stopPropagation()}
@@ -598,10 +630,13 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   </div>
                 </motion.button>
               </div>
-              <CloseBtn onClick={() => { setOpen(false); setPicking(null) }} />
+              <CloseBtn onClick={() => { if (dock) { onDismiss?.(); return } setOpen(false); setPicking(null) }} />
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
-              Send a crew to passively fish a zone — collect their XP + doubloon haul when they return.
+              Crew fish a zone on their own — collect their XP and doubloon haul
+              when they come back. {canDeploy
+                ? 'Pick a zone to send someone.'
+                : 'Sending is done at the Trawl Docks; you can collect from anywhere.'}
             </p>
 
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#8a8068', margin: '16px 0 8px' }}>Fishing zones</p>
@@ -616,7 +651,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // Odd one out (5 zones / 2 cols) → the last (Ancient Deep) spans
                 // full width as a feature card.
                 const wide = i === state.zones.length - 1 && state.zones.length % 2 === 1
-                const sendable = z.unlocked && !t && freeSlots > 0
+                // A zone you COULD send to, if you were standing in the right
+                // place. Split from `sendable` so the card can say which of the
+                // two reasons it is not offering you a crew — "no slots free"
+                // and "not here" are different problems with different fixes.
+                const couldSend = z.unlocked && !t && freeSlots > 0
+                const sendable = couldSend && canDeploy
                 const actionable = ready || sendable
                 const onTapCard = ready
                   ? () => { if (settled()) doCollect(z.key) }
@@ -625,8 +665,9 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                     : undefined
                 const theme = DEPTH_THEMES[z.key]
                 const glow = ready ? GOLD : running ? theme.accent : flashing ? theme.accent : undefined
-                const cardState: 'locked' | 'ready' | 'running' | 'sendable' | 'noslot' =
-                  !z.unlocked ? 'locked' : ready ? 'ready' : running ? 'running' : sendable ? 'sendable' : 'noslot'
+                const cardState: 'locked' | 'ready' | 'running' | 'sendable' | 'noslot' | 'ashore' =
+                  !z.unlocked ? 'locked' : ready ? 'ready' : running ? 'running'
+                    : sendable ? 'sendable' : couldSend ? 'ashore' : 'noslot'
                 // State reads from a small status PILL in the card body (dark
                 // plate for legibility; filled gold for the standout Ready), not
                 // a full-width bordered header bar.
@@ -638,6 +679,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   ready:    { c: '#ffd96a',     label: collectingZone === z.key ? 'Hauling In…' : 'Tap to Collect', filled: true,  dot: false },
                   running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
                   sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
+                  ashore:   { c: 'rgba(255,255,255,0.55)', label: 'Send from the Docks',   filled: false, dot: false },
                   noslot:   { c: '#9a958c',    label: 'No free slot',                  filled: false, dot: false },
                   locked:   { c: '#8f877a',    label: z.key === 'ancient_deep' && state.fishingLevel >= z.minLevel ? 'Locked · Clear Chapter 3' : `Locked · Lv ${z.minLevel}`, filled: false, dot: false },
                 }[cardState]
@@ -1178,7 +1220,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
 
   return (
     <>
-      {indicatorButton}
+      {!dock && indicatorButton}
       {mounted && createPortal(<>{panel}{picker}{slotInfoOverlay}{collectReveal}{slotUnlockOverlay}{coinFx}</>, document.body)}
     </>
   )

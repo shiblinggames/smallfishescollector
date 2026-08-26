@@ -145,7 +145,12 @@ Page order:
    for sale the next tile IS the purchase, priced, and adds itself to the boat when tapped.
    These tiles are exactly what you can switch between at sea, which is why they live on the
    hull rather than in a list further down.
-3. **`LoadoutStats`**, directly under the picture it is the sum of.
+3. **`LoadoutStats`**, directly under the picture it is the sum of — and it carries the
+   boat's **Sailing Speed** and **Agility** too, rather than a panel of their own. "What my
+   rig adds up to" is one question, and the hull is part of the rig: it decides how long the
+   trip out to the fish takes, which is as much a loadout stat as the catch zone. Speed is
+   shown as hull tier × boat trim already multiplied, because what a player wants to know is
+   how fast they actually go, not which two things it came from.
 4. **Two tabs: Locker and Upgrades.** Locker is `GearScreen variant="locker"`; Upgrades
    holds the three `BoatCard`s (rack, hull, hold).
 
@@ -313,6 +318,31 @@ the lot), and the recompute is on a **deadband** measured from where the last lo
 — once computed at P nothing changes until the boat is a full `SEA_STEP` from P, so there is
 no boundary to sit on. `lum` is held between recomputes for the pale layer's opacity, which
 is a composite rather than a repaint and wants every frame.
+
+## The Trawl Docks (`/trawl-docks`)
+
+Its own island, west of the Mainland and north of the equator — on the fishing side of the
+Harbour without sitting in fishable water (verified: its mooring ring touches no band, and no
+port's ring does).
+
+`TrawlIndicator` is **mounted, not reimplemented** — same call as GearScreen and the
+collection drawer. It already owns the zone cards, the crew picker, the collect reveal and
+the slot ladder, and a second copy of a payout is the one duplication this codebase cannot
+afford. Two new props:
+
+- **`variant='dock'`** — no floating badge, the sheet opens on arrival, and closing it routes
+  back to `/sea`.
+- **`canDeploy`** — true only here. Sending used to be available from any screen that showed
+  the panel, which made a voyage into a menu you opened and left the chart with one fewer
+  reason to sail anywhere. On `/fishing` a sendable zone now reads **"Send from the Docks"**.
+
+**Collecting is deliberately not gated.** Making a player sail back to claim a haul they have
+already earned is a toll, not a decision.
+
+This is a **design gate, not a security one**, and it is client-side on purpose: the server
+has no trustworthy notion of where the boat is (`profiles.sea_x/sea_y` is client-written and
+documented as unvalidated), and a forged deploy buys nothing a player could not have had by
+sailing there.
 
 ## The compass
 

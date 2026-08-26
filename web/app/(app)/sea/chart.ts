@@ -158,6 +158,22 @@ export const PLACES: Place[] = [
     ],
   },
   {
+    // THE TRAWL DOCKS. West of the Mainland and north of the equator, so it is
+    // on the fishing side of the Harbour without sitting in fishable water.
+    //
+    // It exists because sending a crew out used to be a menu you could open
+    // from anywhere, which is a strange thing for a voyage to be. Now it is
+    // somewhere you go. Collecting is still available wherever you are — see
+    // the note on `canDeploy` in TrawlIndicator; making a player sail back for
+    // a haul they have already earned would be a toll, not a decision.
+    id: 'trawl_docks', name: 'The Trawl Docks', blurb: 'Send crew out to fish',
+    href: '/trawl-docks', x: -1500, y: -850, r: 210, art: '/page-tavern.jpg',
+    kind: 'port', minLevel: 0,
+    buildings: [
+      { art: '/sea/harbour.png', x: 46, y: 60, scale: 0.42 },
+    ],
+  },
+  {
     // On the way OUT rather than a detour, so you pass it heading for water.
     id: 'shipyard', name: 'The Shipyard', blurb: 'Loadout, rack and upgrades',
     href: '/shipyard', x: 900, y: -900, r: 200, art: '/sea/shipyard.png',
