@@ -9,7 +9,7 @@ import { BADGE_MAP } from '@/lib/badges'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
-  ['/fishing',     'rgba(14,116,144,0.10)'],
+  ['/sea',         'rgba(14,116,144,0.10)'],
   ['/expeditions', 'rgba(30,60,120,0.12)'],
 ]
 
@@ -22,7 +22,7 @@ const LINKS = [
   { href: '/tavern', label: 'Tavern',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 3h14l-1 9H6L5 3z"/><path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/><path d="M6 21h12M8 17v4M16 17v4"/><path d="M6 12c0 3 2 5 6 5s6-2 6-5"/></svg>,
   },
-  { href: '/fishing', label: 'Fishing',
+  { href: '/sea', label: 'Fishing',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l4 4"/><path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/><path d="M8 8L4 20"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/></svg>,
   },
   { href: '/expeditions', label: 'Expeditions',
@@ -105,7 +105,7 @@ export default function MobileTabBar() {
   }, [])
 
   useEffect(() => {
-    const inFishing = pathname.startsWith('/fishing')
+    const inFishing = pathname.startsWith('/sea')
     const needFetch = !trawlsFetchedRef.current || wasFishingRef.current || inFishing
     wasFishingRef.current = inFishing
     if (!needFetch) return
@@ -204,7 +204,7 @@ export default function MobileTabBar() {
         const badge = href === '/badges' && unclaimedBadges > 0 ? unclaimedBadges
                     : href === '/expeditions' && voyageBadge ? true
                     : null
-        const pulse = href === '/fishing' && trawlReady
+        const pulse = href === '/sea' && trawlReady
         return (
           <Link
             key={href}

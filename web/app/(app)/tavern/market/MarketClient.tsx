@@ -879,7 +879,7 @@ export default function MarketClient({
             <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#6a6764', marginBottom: '0.5rem' }}>No fish in hold</p>
               <p className="font-karla font-400" style={{ fontSize: '0.8rem', color: '#4a4845', marginBottom: '1.25rem' }}>Head to the docks to catch something worth selling.</p>
-              <Link href="/fishing" className="font-karla font-700 uppercase tracking-[0.1em]"
+              <Link href="/sea" className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{ fontSize: '0.7rem', padding: '0.6rem 1.4rem', borderRadius: '2rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', textDecoration: 'none' }}>
                 Go Fishing
               </Link>

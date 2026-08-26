@@ -56,7 +56,7 @@ export default function WelcomeModal() {
       // in the hold before /fishing reads the profile, and safe to fire blind
       // because has_seen_welcome gates the whole modal -- it can never redirect
       // a returning captain who chose to land here.
-      router.push('/fishing')
+      router.push('/sea')
     })
   }
 

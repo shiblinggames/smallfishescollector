@@ -16,6 +16,7 @@ import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { catchXP } from '@/lib/fishingLevel'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { canSail } from '@/lib/seaAccess'
 import { vigilFor } from '@/lib/ancientVigil'
 import { getCachedFishMarket } from '@/lib/fishMarket'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
@@ -24,6 +25,25 @@ import type { ZoneStat } from './ZoneLanding'
 export default async function FishingPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+
+  // ── FISHING IS THE SEA NOW ────────────────────────────────────────────
+  //
+  // Every tab, every badge goal and every deep link points at /sea. This
+  // catches the rest: bookmarks, the browser's history, and anything outside
+  // the app that still knows this address.
+  //
+  // GUARDED ON canSail RATHER THAN UNCONDITIONAL. If the chart is ever shut
+  // again (lib/seaAccess, one line), a bare redirect here would send everybody
+  // to a page they are not allowed on, and /sea would bounce them to the
+  // tavern — leaving the game with no fishing at all. This way, shutting the
+  // sea brings this screen straight back.
+  //
+  // AND THAT IS THE REVERT. If the chart turns out to have a problem, flipping
+  // OPEN to false in lib/seaAccess restores this page for everybody, without
+  // touching this file. The old screen is left standing rather than deleted
+  // for exactly that reason; it goes once the sea has been the front door long
+  // enough to trust.
+  if (canSail(await getCurrentProfile())) redirect('/sea')
 
   const admin = createAdminClient()
 

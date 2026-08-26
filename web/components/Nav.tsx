@@ -14,7 +14,7 @@ import TickingNumber from './TickingNumber'
 
 const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
-  ['/fishing',     'rgba(14,116,144,0.10)'],
+  ['/sea',         'rgba(14,116,144,0.10)'],
   ['/expeditions', 'rgba(30,60,120,0.12)'],
 ]
 
@@ -306,7 +306,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
         </svg>
       )
     },
-    { href: '/fishing', label: 'Fishing', badge: null,
+    { href: '/sea', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
@@ -374,16 +374,6 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     // THE ONLY DOOR ON A PHONE. The bottom bar has five slots and every one
     // is spoken for, so this menu is how a phone reaches the sea at all —
     // which is why it stopped being admin-only the moment the beta opened.
-    ...(canSail ? [{ href: '/sea', label: 'Seas', badge: false,
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M2 17c2.2 0 2.2-1.5 4.5-1.5S8.7 17 11 17s2.2-1.5 4.5-1.5S17.8 17 20 17"/>
-          <path d="M2 21c2.2 0 2.2-1.5 4.5-1.5S8.7 21 11 21s2.2-1.5 4.5-1.5S17.8 21 20 21"/>
-          <path d="M5 13h13l-1.6-4.5a2 2 0 0 0-1.9-1.3H8.5a2 2 0 0 0-1.9 1.3L5 13z"/>
-          <path d="M11.5 7V3l4 2-4 1.4"/>
-        </svg>
-      )
-    }] : []),
     ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin Stats', badge: false,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -415,7 +405,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
         </svg>
       )
     },
-    { href: '/fishing', label: 'Fishing', badge: null,
+    { href: '/sea', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
@@ -429,15 +419,6 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     // because that is what it is going to replace, which is also where anyone
     // looking for it will look. Filtered out below rather than rendered
     // disabled: a tab you cannot use is worse than no tab.
-    { href: '/sea', label: 'Seas', badge: null, seaOnly: true,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M2 16c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
-          <path d="M2 20c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
-          <path d="M12 11V4"/><path d="M12 4l6 3-6 3"/>
-        </svg>
-      )
-    },
     { href: '/expeditions', label: 'Expeditions', badge: voyageBadge || null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
