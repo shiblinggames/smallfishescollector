@@ -31,6 +31,8 @@ import { ROUTE_CONFIGS } from '../lib/voyageRoutes'
 import { REPAIR_KITS } from '../lib/repairKits'
 import { ALL_DAILY_CHALLENGES } from '../lib/dailyChallenges'
 import { ISLES } from '../lib/seaIsles'
+import { DIG_SITES } from '../lib/seaDigs'
+import { FRAGMENTS } from '../lib/seaBottles'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -57,6 +59,10 @@ const SOURCES: Src[] = [
   // Isle names and the notes left on them. The notes are the longest prose the
   // sea surfaces and the likeliest place for a stray dash to get in.
   { label: 'isle', strings: ISLES.flatMap(i => [i.name, i.note?.title, i.note?.body]) },
+  { label: 'dig site', strings: DIG_SITES.flatMap(d => [d.name, d.found]) },
+  // Sixteen logs the sea hands out in bottles. The longest free prose in the
+  // game and the likeliest place for a stray dash to survive a rewrite.
+  { label: 'bottle', strings: FRAGMENTS },
 ]
 
 for (const src of SOURCES) {

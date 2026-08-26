@@ -17,12 +17,19 @@ import { cutCell, gridCells } from './chroma-key.mjs'
 import sharp from 'sharp'
 
 const src = process.argv[2]
-if (!src) { console.error('usage: node slice-isle-props.mjs <props.png>'); process.exit(1) }
+const which = process.argv[3] ?? 'isle'
+if (!src) { console.error('usage: node slice-isle-props.mjs <sheet.png> [isle|drift]'); process.exit(1) }
 
-const NAMES = ['isle-chest', 'isle-chest-open', 'isle-chest-deep', 'isle-note']
+const SHEETS = {
+  isle: ['isle-chest', 'isle-chest-open', 'isle-chest-deep', 'isle-note'],
+  // The drift sheet: what the sea sends you and what you dig up.
+  drift: ['sea-bottle', 'dig-purse', 'dig-box', 'bearing-chart'],
+}
+const NAMES = SHEETS[which]
+if (!NAMES) { console.error(`unknown sheet "${which}"`); process.exit(1) }
 const m = await sharp(src).metadata()
 const cells = gridCells(m.width, m.height, 2, 2)
-console.log(`props ${m.width}x${m.height}`)
+console.log(`${which} sheet ${m.width}x${m.height}`)
 for (let i = 0; i < NAMES.length; i++) {
   // 320 not 512: a chest renders about 90 world pixels wide on an isle, so
   // half the rocks' budget is already twice what any screen will ask for.

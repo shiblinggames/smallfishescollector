@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE } from './chart'
 import { ISLES } from '@/lib/seaIsles'
+import { DIG_SITES } from '@/lib/seaDigs'
 import {
   FOG_CELL, FOG_W, FOG_H, FOG_X0, FOG_Y0, FOG_CELLS,
   fogCentre, fogHas, fogProgress,
@@ -27,7 +28,7 @@ import { vibrate } from '@/lib/haptics'
 const PAD = 10
 
 export default function Minimap({
-  open, onClose, fog, at, seaAt, found,
+  open, onClose, fog, at, seaAt, found, bearings, dug,
 }: {
   open: boolean
   onClose: () => void
@@ -41,6 +42,10 @@ export default function Minimap({
   seaAt: (p: { x: number; y: number }) => string
   /** Isle ids already gone ashore at, so a cleared rock reads as cleared. */
   found: Set<string>
+  /** Dig sites whose bearing you hold. The ONLY way one ever appears here. */
+  bearings: Set<string>
+  /** Of those, the ones already up. */
+  dug: Set<string>
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [size, setSize] = useState(0)
@@ -179,6 +184,28 @@ export default function Minimap({
       }
     }
 
+    // ── X MARKS THE SPOT ─────────────────────────────────────────────────
+    //
+    // NOT fogged, and not conditional on having sailed there — that is the
+    // whole point of a bearing. You were told where it is, so the chart knows
+    // where it is, whether or not you have ever been in that water.
+    //
+    // And nothing appears here without a bearing. A dig site you have not been
+    // told about is drawn nowhere, ever: it is the one thing on this sea that
+    // sweeping the fog will not hand you.
+    for (const d of DIG_SITES) {
+      if (!bearings.has(d.id)) continue
+      const x = tx(d.x), y = ty(d.y)
+      const done = dug.has(d.id)
+      ctx.strokeStyle = done ? 'rgba(150,182,164,0.5)' : '#f0c040'
+      ctx.lineWidth = done ? 1.4 : 2
+      const a = done ? 3 : 4.5
+      ctx.beginPath()
+      ctx.moveTo(x - a, y - a); ctx.lineTo(x + a, y + a)
+      ctx.moveTo(x + a, y - a); ctx.lineTo(x - a, y + a)
+      ctx.stroke()
+    }
+
     // ── YOU ──────────────────────────────────────────────────────────────
     const b = at.current
     if (b) {
@@ -189,7 +216,7 @@ export default function Minimap({
       ctx.fillStyle = '#ffffff'
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, size, at, seaAt, found])
+  }, [fog, size, at, seaAt, found, bearings, dug])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 

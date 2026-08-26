@@ -31,6 +31,9 @@ import { saveSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place } from './chart'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
+import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
+import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
+import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
@@ -630,7 +633,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, digs, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -674,6 +677,8 @@ export default function SeaMap({
   exploredRaw: string | null
   /** Isles this captain has already been ashore at. Ids from lib/seaIsles. */
   discovered: string[]
+  /** Dig bearings held, and which of those are already up. */
+  digs: DigState
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -951,6 +956,65 @@ export default function SeaMap({
    * tap for the LOOK of it — the real guard is the unique index behind
    * `goAshore`, which is why a second tap that gets through is harmless.
    */
+  /**
+   * FISH A BOTTLE OUT.
+   *
+   * Marked taken the moment the server answers, whatever it said: a bottle you
+   * have read is not one you want bobbing beside you offering itself again, and
+   * the ones that came up empty are exactly the ones you would keep re-tapping.
+   */
+  const take = useCallback(async (b: Bottle) => {
+    if (landingRef.current) return
+    landingRef.current = true
+    setLanding(true)
+    vibrate(14)
+    try {
+      try {
+        await saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
+        fogPending.current.clear()
+      } catch { /* the claim answers for itself */ }
+      const result = await openBottle(b.key)
+      setTaken(prev => new Set(prev).add(b.key))
+      if (result.ok && result.kind === 'bearing') {
+        // The X goes on the minimap immediately. Waiting for a refetch to show
+        // somebody where their treasure is would be a strange choice.
+        setBearings(prev => {
+          const next = new Set(prev)
+          for (const d of DIG_SITES) if (d.name === result.name) next.add(d.id)
+          return next
+        })
+      }
+      setFind({ kind: 'bottle', result })
+    } catch {
+      setFind({ kind: 'bottle', result: { ok: false, error: 'The tide took it.' } })
+    } finally {
+      landingRef.current = false
+      setLanding(false)
+    }
+  }, [])
+
+  /** DIG. Same shape: flush, claim, show. */
+  const dig = useCallback(async (site: DigSite) => {
+    if (landingRef.current) return
+    landingRef.current = true
+    setLanding(true)
+    vibrate(18)
+    try {
+      try {
+        await saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
+        fogPending.current.clear()
+      } catch { /* the claim answers for itself */ }
+      const result = await digHere(site.id)
+      if (result.ok) setDug(prev => new Set(prev).add(site.id))
+      setFind({ kind: 'dig', result })
+    } catch {
+      setFind({ kind: 'dig', result: { ok: false, error: 'The spade turned nothing up. Try again.' } })
+    } finally {
+      landingRef.current = false
+      setLanding(false)
+    }
+  }, [])
+
   const land = useCallback(async (isle: Isle) => {
     if (landingRef.current) return
     landingRef.current = true
@@ -1055,6 +1119,40 @@ export default function SeaMap({
   // both of which are render-time questions, and `isleNear` does not care.
   const [found, setFound] = useState<Set<string>>(() => new Set(discovered))
   const [nearIsle, setNearIsle] = useState<Isle | null>(null)
+  // ── WHAT THE SEA IS HANDING YOU ───────────────────────────────────────
+  //
+  // Bottles are derived, not fetched: the same cell hash the server runs, so
+  // the set on screen is the set it will believe. Recomputed only when the boat
+  // crosses a bottle cell or the window rolls — the same trick the traders use,
+  // and for the same reason, which is that this must not run at 60fps.
+  const [bottles, setBottles] = useState<Bottle[]>(
+    () => bottlesAround(startAt.x, startAt.y, 5200))
+  const bottleCell = useRef('')
+  /** One DOM node per bottle, nudged by the loop. Never re-rendered to drift. */
+  const bottleRefs = useRef<Map<string, HTMLElement>>(new Map())
+  const bottlesRef = useRef<Bottle[]>(bottles)
+  bottlesRef.current = bottles
+  const [nearBottle, setNearBottle] = useState<Bottle | null>(null)
+  /** Bottles fished out this session. They do not come back before the tide. */
+  const [taken, setTaken] = useState<Set<string>>(() => new Set())
+  /** The proximity check runs inside a closure built at mount, so it cannot
+   *  read the state directly — it would see the empty set forever and keep
+   *  offering a bottle that is not there any more. */
+  const takenRef = useRef(taken)
+  takenRef.current = taken
+
+  // ── WHAT IS BURIED ────────────────────────────────────────────────────
+  const [bearings, setBearings] = useState<Set<string>>(() => new Set(digs.bearings))
+  const [dug, setDug] = useState<Set<string>>(() => new Set(digs.dug))
+  /** Standing over one. */
+  const [nearDig, setNearDig] = useState<DigSite | null>(null)
+  /** Close enough that the water should look wrong. */
+  const [hintDig, setHintDig] = useState<DigSite | null>(null)
+
+  /** Whatever the last find turned up: a fragment, a bearing, or a haul. */
+  const [find, setFind] = useState<
+    { kind: 'bottle'; result: BottleResult } | { kind: 'dig'; result: DigResult } | null>(null)
+
   /** Pressed up against the edge of the surveyed chart. Ref for the loop, state
    *  for the one line it puts on screen. */
   const [atEdge, setAtEdge] = useState(false)
@@ -1699,6 +1797,18 @@ export default function SeaMap({
           `translate(${WATERLINE_X * z}px, ${WATERLINE_Y * z}px) scale(${z})`
       }
 
+      // THE DRIFT. Every bottle nudged along its own slow wander. Transform
+      // only, like the patrols: React never hears about it.
+      if (bottleRefs.current.size) {
+        const ts2 = now / 1000
+        for (const b of bottlesRef.current) {
+          const el = bottleRefs.current.get(b.key)
+          if (!el) continue
+          const at = bottlePos(b, ts2)
+          el.style.transform = `translate3d(${at.x - b.x}px, ${at.y - b.y}px, 0)`
+        }
+      }
+
       // THE PATROLS. Every trader on screen nudged along its own slow circle,
       // and turned to face the way it is going.
       if (hullRefs.current.size) {
@@ -1911,6 +2021,33 @@ export default function SeaMap({
         // ever becomes derived rather than a literal.
         const isl = isleNear(pos.current.x, pos.current.y)
         setNearIsle(prev => (prev?.id === isl?.id ? prev : isl))
+
+        // WHAT IS DRIFTING NEARBY. Against the drifted position, not the
+        // anchor — same reason the traders test theirs.
+        let bot: Bottle | null = null
+        for (const b of bottlesRef.current) {
+          if (takenRef.current.has(b.key)) continue
+          const at = bottlePos(b, now / 1000)
+          if (Math.hypot(pos.current.x - at.x, pos.current.y - at.y) < BOTTLE_REACH) { bot = b; break }
+        }
+        setNearBottle(prev => (prev?.key === bot?.key ? prev : bot))
+
+        // A NEW SET OF BOTTLES when the boat crosses a cell or the tide turns.
+        // Keyed on both, so a window rolling over while you sit still still
+        // brings you different water.
+        const bk = `${Math.floor(pos.current.x / BOTTLE_CELL)}:${Math.floor(pos.current.y / BOTTLE_CELL)}|${bottleWindow(now)}`
+        if (bk !== bottleCell.current) {
+          bottleCell.current = bk
+          setBottles(bottlesAround(pos.current.x, pos.current.y, 5200, now))
+        }
+
+        // OVER SOMETHING BURIED, and the wider ring where the water looks odd.
+        // Both are computed even when you hold no bearing: sailing across one by
+        // accident is a discovery this deliberately allows.
+        const dg = digAt(pos.current.x, pos.current.y)
+        setNearDig(prev => (prev?.id === dg?.id ? prev : dg))
+        const hint = dg ?? digHintAt(pos.current.x, pos.current.y)
+        setHintDig(prev => (prev?.id === hint?.id ? prev : hint))
         // SAIL OUT WITH THE ROD OUT AND IT FOLLOWS YOU. This used to raise the
         // leaving-the-water prompt; the streak survives crossing water now, so
         // there is nothing to stop you for. The zone you are fishing simply
@@ -2010,6 +2147,15 @@ export default function SeaMap({
             submerged base and the shoal for free and cannot drift out of
             style. */}
         {REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}
+
+        {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
+            standing near, and never on the minimap — see lib/seaDigs. */}
+        {hintDig && <DigWater site={hintDig} over={nearDig?.id === hintDig.id} done={dug.has(hintDig.id)} />}
+
+        {/* WHAT THE TIDE BROUGHT. */}
+        {bottles.filter(b => !taken.has(b.key)).map(b => (
+          <SeaBottle key={b.key} bottle={b} refs={bottleRefs} />
+        ))}
 
         {/* THE DISCOVERABLE ISLES. Drawn with the landmarks rather than with
             the ports, because that is what they are: something you come across,
@@ -2199,10 +2345,56 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
+      {/* DIGGING BEATS EVERYTHING. You are inside a band and possibly beside a
+          bottle when you are stood over one, and a buried haul is the rarest
+          thing on this chart — it goes to the front of the queue. */}
+      {!fishingIn && nearDig && !dug.has(nearDig.id) && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 22,
+          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); dig(nearDig) }}
+            disabled={landing}
+            className="font-cinzel font-700"
+            style={{
+              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
+              color: '#f6e6c6', background: 'rgba(28,20,8,0.92)',
+              border: '1px solid rgba(255,206,138,0.62)',
+              boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
+              cursor: landing ? 'default' : 'pointer', opacity: landing ? 0.6 : 1,
+            }}>
+            {bearings.has(nearDig.id) ? `Dig for ${nearDig.name}` : 'Something is buried here'}
+          </button>
+        </div>
+      )}
+
+      {/* THE BOTTLE, ahead of the zone prompt and behind a dig. */}
+      {!fishingIn && !nearTrader && !(nearDig && !dug.has(nearDig.id)) && nearBottle && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 22,
+          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); take(nearBottle) }}
+            disabled={landing}
+            className="font-cinzel font-700"
+            style={{
+              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
+              color: '#dff0e6', background: 'rgba(10,24,20,0.9)',
+              border: '1px solid rgba(150,206,172,0.5)',
+              boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
+              cursor: landing ? 'default' : 'pointer', opacity: landing ? 0.6 : 1,
+            }}>
+            Fish out the bottle
+          </button>
+        </div>
+      )}
+
       {/* GOING ASHORE BEATS FISHING. You are inside a band whenever you are
           on an isle, so without this the only offer on screen would be "Fish
           The Deep" while you are standing on a rock with a chest on it. */}
-      {!fishingIn && !nearTrader && nearIsle && (
+      {!fishingIn && !nearTrader && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && nearIsle && (
         <div style={{
           // THE SAME ROW AS "FISH THE DEEP" — bottom 22, which is what `Prompt`
           // and the trader hail both use. This was lifted to 5.4rem off the
@@ -2228,7 +2420,7 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
-      {!fishingIn && !nearTrader && !nearIsle && (
+      {!fishingIn && !nearTrader && !nearIsle && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && (
         <Prompt
           place={near}
           locked={near ? locked(near) : false}
@@ -2251,6 +2443,8 @@ hullRef={hullRefFor(t.key)} />
       {/* AND THE WATER'S NAME IS ALREADY ON SCREEN while the rod is out — the
           stow line at the bottom of the fishing UI reads "Stow rod · Open
           Waters". Two of them, one of them enormous, is the same fact twice. */}
+      <FindPanel state={find} onClose={() => setFind(null)} />
+
       <EdgeOfChart at={atEdge} />
 
       <AshorePanel state={landed} onClose={() => setLanded(null)} />
@@ -2423,6 +2617,8 @@ hullRef={hullRefFor(t.key)} />
         at={pos}
         seaAt={p => seaAt(p, 0).solid}
         found={found}
+        bearings={bearings}
+        dug={dug}
       />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
@@ -3533,6 +3729,228 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
         </motion.div>
       )}
     </AnimatePresence>
+  )
+})
+
+/**
+ * A BOTTLE, DRIFTING.
+ *
+ * Registers its node in the map's ref table and then never re-renders: the frame
+ * loop writes a transform on it, the same way the traders are moved. Anything
+ * that drifts on this chart drifts that way, because drifting through React at
+ * 60fps is how you turn a calm sea into a dropped frame.
+ *
+ * Small. It is 96 world pixels against a 210px boat, which is about right for a
+ * bottle and is also the point — you are meant to half-notice it and turn back,
+ * not have it announced.
+ */
+const SeaBottle = memo(function SeaBottle({ bottle, refs }: {
+  bottle: Bottle
+  refs: React.RefObject<Map<string, HTMLElement>>
+}) {
+  return (
+    <div
+      ref={el => {
+        if (el) refs.current?.set(bottle.key, el)
+        else refs.current?.delete(bottle.key)
+      }}
+      style={{
+        position: 'absolute', left: bottle.x, top: bottle.y,
+        willChange: 'transform', pointerEvents: 'none',
+      }}>
+      <div style={{
+        position: 'absolute', left: 0, top: 0, width: 96,
+        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center',
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/sea/sea-bottle.png" alt="" draggable={false} loading="lazy"
+          className="mark-bob"
+          style={{
+            width: '100%', maxWidth: 'none', display: 'block',
+            // Half under, like everything else that floats. A bottle rides low.
+            maskImage: 'linear-gradient(to bottom, #000 64%, rgba(0,0,0,0.28) 68%, rgba(0,0,0,0.14) 82%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, #000 64%, rgba(0,0,0,0.28) 68%, rgba(0,0,0,0.14) 82%, transparent 100%)',
+            animationDelay: `${(bottle.seed % 300) / 100}s`,
+          }} />
+      </div>
+    </div>
+  )
+})
+
+/**
+ * THE WATER OVER SOMETHING BURIED.
+ *
+ * The ONLY cue a dig site ever gets, and it exists so that sailing across one
+ * by accident is possible. Without it a site you hold no bearing for is
+ * genuinely invisible and might as well not have been placed.
+ *
+ * NOT a marker and not a ring. A discrete shape drawn on the water is the same
+ * mistake as a shadow under a rock: it says "an object is here" in a language
+ * the chart uses for objects. This is a patch of water that is the wrong
+ * colour, with no edge anywhere, which is what a shoal over a buried thing
+ * actually looks like from a deck.
+ *
+ * Flat on the plane, deliberately un-counter-squashed: it IS lying down.
+ */
+const DigWater = memo(function DigWater({ site, over, done }: {
+  site: DigSite
+  /** Close enough to dig. Firms up, so the last hundred metres reads. */
+  over: boolean
+  done: boolean
+}) {
+  const r = DIG_HINT_RANGE
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: site.x, top: site.y,
+      width: r * 2, height: r * 2 * GROUND,
+      marginLeft: -r, marginTop: -r * GROUND,
+      pointerEvents: 'none',
+      // Warmer and paler than the water round it, as though the bottom is
+      // closer here. Stronger once you are over it, and nearly gone once the
+      // hole has been dug — a worked site keeps a scar, not an invitation.
+      background: done
+        ? 'radial-gradient(ellipse, rgba(120,140,150,0.10) 0%, rgba(120,140,150,0.04) 42%, transparent 70%)'
+        : over
+          ? 'radial-gradient(ellipse, rgba(214,196,142,0.20) 0%, rgba(190,178,140,0.10) 40%, transparent 70%)'
+          : 'radial-gradient(ellipse, rgba(196,186,150,0.10) 0%, rgba(180,176,150,0.05) 44%, transparent 72%)',
+      filter: 'blur(26px)',
+      transition: 'background 600ms ease-out',
+    }} />
+  )
+})
+
+/**
+ * WHAT YOU FOUND.
+ *
+ * One panel for both, because from the deck they are the same moment: you
+ * stopped, you looked at something, here is what it was. Three faces —
+ * a fragment somebody wrote, a bearing to go and dig, and the haul itself.
+ */
+const FindPanel = memo(function FindPanel({ state, onClose }: {
+  state: { kind: 'bottle'; result: BottleResult } | { kind: 'dig'; result: DigResult } | null
+  onClose: () => void
+}) {
+  if (!state) return null
+  // Narrowed off `state.result` at every step rather than through a local
+  // alias. TypeScript does not track that `state.kind` and `state.result` move
+  // together, so aliasing the result first widens it back to the union and
+  // every field access below becomes an error.
+  const err = !state.result.ok ? state.result.error : null
+  const haul = state.kind === 'dig' && state.result.ok ? state.result : null
+  const note = state.kind === 'bottle' && state.result.ok ? state.result : null
+  const bearing = note && note.kind === 'bearing' ? note : null
+
+  return (
+    <div onClick={e => { e.stopPropagation(); onClose() }} data-no-steer
+      style={{
+        position: 'fixed', inset: 0, zIndex: Z.helm,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem', background: 'rgba(2,8,14,0.72)',
+      }}>
+      <div onClick={e => e.stopPropagation()} data-no-steer
+        style={{
+          position: 'relative', width: '100%', maxWidth: 420,
+          borderRadius: 18, padding: '1.15rem',
+          background: 'rgba(10,16,22,0.98)',
+          border: '1px solid rgba(180,214,232,0.28)',
+          boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+        }}>
+        <button type="button" onClick={onClose} aria-label="Close" title="Close"
+          style={{
+            position: 'absolute', top: 12, right: 12,
+            width: 28, height: 28, borderRadius: '50%', padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+            color: '#cfcabf', cursor: 'pointer',
+          }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+
+        {err ? (
+          <p className="font-karla" style={{ fontSize: '0.95rem', color: '#e6b9b9', margin: 0, paddingRight: 34 }}>
+            {err}
+          </p>
+        ) : haul ? (
+          <>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.62rem', letterSpacing: '0.16em', margin: 0,
+              color: 'rgba(255,206,138,0.75)', paddingRight: 34,
+            }}>Dug up</p>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1.35rem', color: '#f2ead8', margin: '0.15rem 0 0.6rem', paddingRight: 34,
+            }}>{haul.name}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/sea/dig-box.png" alt="" draggable={false} style={{
+              display: 'block', width: 168, margin: '0 auto 0.5rem',
+            }} />
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1.1rem', marginBottom: '0.9rem' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#c9a6ff', margin: 0 }}>
+                ◆ {haul.gems.toLocaleString()}
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f0c464', margin: 0 }}>
+                ⟡ {haul.doubloons.toLocaleString()}
+              </p>
+            </div>
+            <p className="font-karla" style={{
+              fontSize: '0.92rem', lineHeight: 1.55, margin: 0, textAlign: 'center',
+              color: 'rgba(206,216,224,0.78)',
+            }}>{haul.found}</p>
+          </>
+        ) : note ? (
+          <>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.62rem', letterSpacing: '0.16em', margin: 0,
+              color: 'rgba(150,206,172,0.8)', paddingRight: 34,
+            }}>A bottle, out of the water</p>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1.2rem', color: '#f2ead8', margin: '0.15rem 0 0.7rem', paddingRight: 34,
+            }}>{bearing ? 'There is a chart in it' : 'There is a note in it'}</p>
+
+            <div style={{
+              borderRadius: 12, padding: '0.85rem 0.95rem',
+              background: 'rgba(232,222,198,0.08)',
+              border: '1px solid rgba(232,222,198,0.18)',
+            }}>
+              {note.text.split('\n\n').map((para, i) => (
+                <p key={i} className="font-karla" style={{
+                  fontSize: '0.93rem', lineHeight: 1.55, margin: i ? '0.6rem 0 0' : 0,
+                  color: 'rgba(226,232,238,0.88)',
+                }}>{para}</p>
+              ))}
+            </div>
+
+            {bearing && (
+              <div style={{
+                marginTop: '0.85rem', borderRadius: 12, padding: '0.85rem 0.95rem',
+                background: 'rgba(255,206,138,0.09)',
+                border: '1px solid rgba(255,206,138,0.28)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/sea/bearing-chart.png" alt="" draggable={false}
+                    style={{ width: 52, flexShrink: 0 }} />
+                  <div style={{ minWidth: 0 }}>
+                    <p className="font-cinzel font-700" style={{
+                      fontSize: '1.02rem', color: '#f6e6c6', margin: 0,
+                    }}>{bearing.name}</p>
+                    <p className="font-karla" style={{
+                      fontSize: '0.88rem', lineHeight: 1.45, margin: '0.2rem 0 0',
+                      color: 'rgba(238,222,190,0.86)',
+                    }}>{bearing.bearing}</p>
+                  </div>
+                </div>
+                <p className="font-karla" style={{
+                  fontSize: '0.8rem', margin: '0.6rem 0 0',
+                  color: 'rgba(214,196,150,0.72)',
+                }}>Marked on your chart. Nothing is showing above the water out there, so go by the numbers.</p>
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+    </div>
   )
 })
 

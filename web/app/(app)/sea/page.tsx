@@ -23,6 +23,7 @@ import { RODS } from '@/lib/rods'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
 import { getDiscoveries } from './isleActions'
+import { getDigState } from './digActions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import { vigilFor } from '@/lib/ancientVigil'
@@ -83,6 +84,10 @@ export default async function SeaPage() {
   // open chest the first time it paints — a marker that arrives a moment late
   // is worse than no marker, because you have already reached for it.
   const discovered = await getDiscoveries()
+
+  // BEARINGS HELD AND HOLES ALREADY DUG. Same reasoning: an X that arrives a
+  // moment after the chart does is an X you have already gone looking for.
+  const digs = await getDigState()
 
   // RENOWN, for the level bar. Past 100 the bar becomes a tappable chip that
   // opens the panel, and it was mounted out here without either of the props
@@ -207,6 +212,7 @@ export default async function SeaPage() {
       // record and the map is the only thing that reads it.
       exploredRaw={(profile?.sea_explored as string | null) ?? null}
       discovered={discovered}
+      digs={digs}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,
