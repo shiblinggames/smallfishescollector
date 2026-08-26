@@ -714,6 +714,53 @@ that will never change, and add its reward. Special items were asked for and the
 ready — extend `Isle` and the payout branch in `goAshore`, which is the only code that may
 believe a reward.
 
+## Bottles, bearings and buried treasure
+
+The renewable half of discovery. The isles are finite — 27, one payout each — so after a
+fortnight the sea had nothing new. `web/lib/seaBottles.ts` and `web/lib/seaDigs.ts`.
+
+### Bottles carry words, never coin
+
+**This is the load-bearing rule.** Something infinite that pays out is something you farm,
+and the moment a bottle is worth money the correct way to play is to sail in circles
+harvesting them. Bottles hand out log fragments and BEARINGS; the coin lives in the finite
+dig sites, so the total on the chart is fixed however many bottles anyone opens.
+
+- Derived from the same cell hash as the traders (`bottleAt(cx, cy, win)`), so client and
+  server agree with no round trip and a forged key resolves to nothing.
+- `BOTTLE_CELL` 2,600 at an 18% rate; `BOTTLE_WINDOW_MS` 11 minutes — deliberately NOT the
+  hotspots' 10, so the whole sea never blinks at once.
+- They drift via `bottlePos` written by the frame loop onto a ref'd node, exactly like the
+  trader patrols. Never through React.
+- `bottleFromKey` refuses anything older than the previous window.
+
+### Bearings are chosen per captain, on the server
+
+About 34% of bottles carry one (measured over 1,177 bottles). Which site it names is decided
+in `openBottle`, not baked into the bottle: never one already held, never one in water the
+captain's level has shut, nearest first. Once they hold them all, every bottle is a fragment.
+
+Bearings are written in metres (`world / 10`), the same unit the compass readout uses.
+
+### Dig sites are the only unadvertised thing on the chart
+
+Everything else announces itself once the fog clears. **A dig site is never drawn and never
+pinned in any state** — the minimap shows an X only for a bearing you have been given. Two
+ways to end up on one:
+
+1. A bottle told you.
+2. You sailed across it. Deliberately possible: the water reads faintly wrong within
+   `DIG_HINT_RANGE` 900, which measures out at about **one part in 26 of the sea**.
+
+12 sites, **1,600 ◆ / 70,000 ⟡**, every dig out-paying the isle cache in its band, bands
+never overlapping. **With the isles that is 3,600 ◆ / 169,000 ⟡ for the whole chart** — the
+number to look at when retuning. Both tables are flat literals for that reason.
+
+The claim is a **conditional UPDATE** on `dug_at is null`, so a second tap returns no row and
+pays nothing. `sea_digs` holds both states in one row (`bearing_at` set, `dug_at` null = you
+know where it is; both set = done), because a dig row that could exist without its bearing is
+not a state the game has.
+
 ## Movement: forward and sideways are different things
 
 The whole model used to be **one lerp of the velocity vector** toward the target vector. That
