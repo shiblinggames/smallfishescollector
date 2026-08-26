@@ -2754,215 +2754,203 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
  * SOUTH face, so the light is on top and the water-line is dark: that is the
  * one thing that stops a tall dark rectangle reading as a hole in the map.
  */
-const CLIFF_PANEL = 760
-/** The range behind. Wider panels, because it is further away and detail you
- *  cannot resolve at that distance is detail that costs you a div. */
-const CLIFF_BACK = 1180
+const CLIFF_PANEL = 560
+/** How far the land runs north of the wall before it stops being drawn. It is
+ *  off the chart either way; this is just enough that the top of the cliff
+ *  reads as ground rather than as a stripe. */
+const CLIFF_DEPTH = 1500
 
-/** One deterministic run of panels along the wall, with the arch's mouth left
- *  out of it. Seeded, so the skyline is the same skyline every session. */
-function cliffRun(step: number, seed0: number, minH: number, varH: number, clearance: number) {
+/**
+ * THE CLIFFS, and the arch through them.
+ *
+ * ── IT IS AN ISLAND EDGE, NOT A NEW MATERIAL ────────────────────────────────
+ *
+ * The first version of this invented its own language — grey rock, sedimentary
+ * banding, two hazy ranges, atmospheric perspective — none of which appears
+ * anywhere else on this chart. It looked like a screenshot from another game
+ * pasted onto the top of ours, because that is effectively what it was.
+ *
+ * The islands already answer "what does land look like here": a warm brown
+ * extrusion under a top face of sand, scrub and grass, with wood clumps on it
+ * and a shoal where it meets the water. A cliff is that same land, seen where
+ * it stops. So every colour below is lifted from PlaceIsland unchanged — not
+ * approximated, LIFTED — and if the islands are ever repainted this has to be
+ * repainted with them.
+ *
+ * Built as: ground running north (on the plane, so it foreshortens like
+ * ground), the cliff face standing up along its southern edge (counter-squashed
+ * like every solid), and the islands' own shoal and surf at the foot.
+ */
+
+/** The islands' exact palette. One place, so the two cannot drift. */
+const LAND = {
+  face: 'linear-gradient(180deg, #3b3226 0%, #2a2419 55%, #191509 100%)',
+  sand: 'linear-gradient(165deg, #d8c49f 0%, #c2a97e 100%)',
+  scrub: 'linear-gradient(165deg, #9aa269 0%, #7d8850 100%)',
+  grass: 'linear-gradient(165deg, #6f8a4e 0%, #55703c 62%, #466032 100%)',
+  rim: 'linear-gradient(180deg, rgba(240,248,250,0.34) 0%, rgba(240,248,250,0) 20%)',
+} as const
+
+/** One deterministic run of cliff faces along the wall, with the arch left out. */
+function cliffRun(clearance: number) {
   const OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
   const out: { x: number; w: number; h: number; k: number }[] = []
-  let seed = seed0
+  let seed = 0x9e3779b9
   const nx = () => {
     seed ^= seed << 13; seed >>>= 0
     seed ^= seed >>> 17
     seed ^= seed << 5; seed >>>= 0
     return seed / 0x100000000
   }
-  for (let x = -OUT - step; x < OUT + step; x += step) {
-    const mid = x + step / 2
-    // The arch's mouth is a hole in the wall, not a thinner bit of it.
+  for (let x = -OUT - CLIFF_PANEL; x < OUT + CLIFF_PANEL; x += CLIFF_PANEL) {
+    const mid = x + CLIFF_PANEL / 2
     if (Math.abs(mid - GATE_X) < GATE_HALF + clearance) continue
-    // Two octaves on the height, so the skyline has both big headlands and
-    // small steps rather than one uniform jitter. A flat-topped wall is a
-    // fence; a varied one is a coast.
+    // Two octaves, so the skyline has headlands AND small steps rather than one
+    // uniform jitter. A flat-topped wall is a fence.
     const lobe = Math.sin(mid / 5200) * 0.5 + Math.sin(mid / 1700 + 2.1) * 0.3
-    out.push({
-      x: mid,
-      w: step * 1.05,                    // overlap, or hairlines show between
-      h: minH + (0.5 + lobe * 0.5) * varH * 0.7 + nx() * varH * 0.3,
-      k: nx(),
-    })
+    out.push({ x: mid, w: CLIFF_PANEL * 1.06, h: 150 + (0.5 + lobe * 0.5) * 130 + nx() * 60, k: nx() })
   }
   return out
 }
 
-/**
- * THE CLIFFS, and the arch through them.
- *
- * The north wall was an invisible clamp: you sailed into nothing and stopped,
- * which reads as the edge of a LEVEL rather than the edge of a world. It is a
- * headland now — a sheer wall running the whole width of the chart, with one
- * gap in it and the Harbour built at the foot of that gap.
- *
- * ── HOW IT GETS ITS SCALE ───────────────────────────────────────────────────
- *
- * Height alone does not make a thing enormous; a tall rectangle is a tall
- * rectangle. What sells it is everything that agrees the air between you and it
- * is deep:
- *
- *   TWO RANGES. A hazier, taller one behind the first, offset so its headlands
- *   fall in the near range's gaps. One wall is a wall; two walls with air
- *   between them is a coastline going on for miles.
- *
- *   HAZE THAT GROWS WITH DISTANCE. The back range is washed toward the sky and
- *   loses its banding entirely — atmospheric perspective is the only cue this
- *   projection has, since it is orthographic and nothing gets smaller.
- *
- *   A GREEN CROWN. Cliffs of this kind are pasture that stops. The strip of
- *   grass along the top is what makes the drop below it read as a drop.
- *
- *   SURF AT THE FOOT. A white line along the base, which gives the eye a scale
- *   reference it already knows the size of.
- *
- * Rendered as PANELS rather than one enormous element. The wall is 45,200 world
- * pixels across; a single div that long with a clip-path would be a polygon of
- * hundreds of points and one texture stretched across it would smear. Panels
- * also give the skyline its variation for free.
- *
- * All of it is static and memoised — the world layer is transformed as a whole,
- * so none of this costs anything per frame.
- */
 const CliffWall = memo(function CliffWall() {
-  const back = useMemo(() => cliffRun(CLIFF_BACK, 0x2545f491, 520, 320, GATE_HALF + 620), [])
-  const front = useMemo(() => cliffRun(CLIFF_PANEL, 0x9e3779b9, 300, 260, CLIFF_PANEL * 0.5), [])
+  const faces = useMemo(() => cliffRun(CLIFF_PANEL * 0.5), [])
   const OUT = useMemo(() => Math.max(...PLACES.map(p => p.outer ?? 0)), [])
 
-  const face = (k: number, lo: number) =>
-    'repeating-linear-gradient(180deg,' +
-    ' rgba(255,255,255,0.045) 0 3px, rgba(0,0,0,0.06) 3px 12px),' +
-    `linear-gradient(180deg,` +
-    ` rgb(${94 + k * 20},${92 + k * 18},${84 + k * 16}) 0%,` +
-    ` rgb(${58 + k * 14},${56 + k * 13},${50 + k * 12}) 34%,` +
-    ` rgb(${30 + k * 8},${30 + k * 8},${27 + k * 7}) 74%,` +
-    ` rgb(${lo},${lo + 2},${lo + 4}) 100%)`
+  /** Wood clumps along the clifftop, the same shape and colours the islands use. */
+  const woods = useMemo(() => {
+    let seed = 0x51ed270b
+    const nx = () => {
+      seed ^= seed << 13; seed >>>= 0
+      seed ^= seed >>> 17
+      seed ^= seed << 5; seed >>>= 0
+      return seed / 0x100000000
+    }
+    const out: { x: number; y: number; r: number; o: number }[] = []
+    for (let i = 0; i < 90; i++) {
+      const x = -OUT + nx() * OUT * 2
+      if (Math.abs(x - GATE_X) < GATE_HALF + 420) continue
+      out.push({
+        x,
+        // Set back from the edge — nothing grows on the lip of a cliff.
+        y: NORTH_WALL - 260 - nx() * 900,
+        r: 200 + nx() * 340,
+        o: 0.20 + nx() * 0.24,
+      })
+    }
+    return out
+  }, [OUT])
 
   return (
     <>
-      {/* ── THE FAR RANGE ────────────────────────────────────────────────
-          Taller, hazier, and offset from the near one so its headlands stand in
-          the gaps. Almost no banding: at that distance you would not see it,
-          and painting it anyway is what makes a background read as a sticker. */}
-      {back.map((c, i) => (
-        <div key={`b${i}`} aria-hidden style={{
-          position: 'absolute', left: c.x, top: NORTH_WALL - 120,
-          width: c.w, height: c.h,
-          marginLeft: -c.w / 2,
-          transform: `translateY(-100%) scaleY(${1 / GROUND})`,
-          transformOrigin: 'bottom center',
-          background:
-            `linear-gradient(180deg,` +
-            ` rgb(${104 + c.k * 14},${112 + c.k * 12},${118 + c.k * 10}) 0%,` +
-            ` rgb(${76 + c.k * 10},${84 + c.k * 9},${92 + c.k * 8}) 46%,` +
-            ` rgb(58,66,74) 100%)`,
-          opacity: 0.55,
-          boxShadow: 'inset 0 3px 0 rgba(150,190,140,0.16)',
+      {/* ── THE GROUND ABOVE, on the plane so it foreshortens like ground.
+          Bands running back from the edge in the islands' own order: the
+          grass inland, scrub before it, and the pale lip where the rock
+          shows through at the very edge. */}
+      <div aria-hidden style={{
+        position: 'absolute', left: -OUT - 2000, top: NORTH_WALL - CLIFF_DEPTH,
+        width: (OUT + 2000) * 2, height: CLIFF_DEPTH,
+        background: LAND.grass,
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', left: -OUT - 2000, top: NORTH_WALL - 620,
+        width: (OUT + 2000) * 2, height: 620,
+        background: LAND.scrub, opacity: 0.9,
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', left: -OUT - 2000, top: NORTH_WALL - 190,
+        width: (OUT + 2000) * 2, height: 190,
+        background: LAND.sand, opacity: 0.75,
+      }} />
+
+      {/* The woods, behind the edge. */}
+      {woods.map((w, i) => (
+        <div key={`w${i}`} aria-hidden style={{
+          position: 'absolute', left: w.x, top: w.y,
+          width: w.r, height: w.r * 0.6,
+          marginLeft: -w.r / 2, marginTop: -w.r * 0.3,
+          borderRadius: '50%',
+          background: `radial-gradient(ellipse at 42% 34%, rgba(74,102,52,${w.o + 0.18}) 0%, rgba(46,68,34,${w.o}) 55%, rgba(40,58,30,0) 78%)`,
         }} />
       ))}
 
-      {/* ── THE NEAR RANGE ───────────────────────────────────────────────── */}
-      {front.map((c, i) => (
+      {/* ── THE FACE. The islands' extrusion gradient, standing up along the
+          wall. Anchored at its base so every panel meets the water on the same
+          line however tall it is. */}
+      {faces.map((c, i) => (
         <div key={`f${i}`} aria-hidden style={{
           position: 'absolute', left: c.x, top: NORTH_WALL,
           width: c.w, height: c.h,
           marginLeft: -c.w / 2,
-          // Anchored at its BASE and grown upward, so every panel meets the
-          // water on the same line however tall it is.
           transform: `translateY(-100%) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center',
-          background: face(c.k, 13),
-          // The green crown, and the dark where the sea has been working at the
-          // foot of it for a very long time.
-          boxShadow: 'inset 0 5px 0 rgba(138,186,120,0.42), inset 0 -22px 30px -16px rgba(0,6,14,0.9)',
+          background: LAND.face,
+          // The grass lip on top, and the dark where the sea has been working at
+          // the foot of it. Same two shadows the islands carry.
+          boxShadow: 'inset 0 5px 0 rgba(110,138,78,0.55), inset 0 -14px 22px -12px rgba(0,6,14,0.85)',
         }} />
       ))}
 
-      {/* ── THE FOOT ──────────────────────────────────────────────────────
-          Surf along the whole base, and haze above it. The surf is a scale
-          reference the eye already knows the size of; the haze is the air
-          between you and something a long way off. Both run the full width in
-          one element each — they have no shape to get wrong. */}
+      {/* ── THE FOOT. The islands' own shoal and surf, run the length of the
+          wall. Same colours, same order, so the water meets this the way it
+          meets everything else. */}
       <div aria-hidden style={{
-        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 150,
-        marginTop: -75,
-        background: 'linear-gradient(180deg, rgba(226,244,250,0) 0%, rgba(226,244,250,0.34) 46%, rgba(210,236,246,0.16) 68%, transparent 100%)',
-        filter: 'blur(6px)',
+        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 210,
+        marginTop: -105, background: 'rgba(140,190,206,0.13)', filter: 'blur(16px)',
       }} />
-      <div aria-hidden style={{
-        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 330,
-        transform: `translateY(-100%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center',
-        background: 'linear-gradient(180deg, transparent 0%, rgba(196,214,226,0.10) 62%, rgba(210,228,238,0.26) 100%)',
-        filter: 'blur(10px)',
+      <div aria-hidden className="sea-surf" style={{
+        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 120,
+        marginTop: -60, background: 'rgba(226,244,250,0.30)', filter: 'blur(7px)',
+      }} />
+      <div aria-hidden className="sea-surf sea-surf-2" style={{
+        position: 'absolute', left: -OUT, top: NORTH_WALL, width: OUT * 2, height: 44,
+        marginTop: -22, background: 'rgba(240,250,255,0.55)', filter: 'blur(2.5px)',
       }} />
 
       {/* ── THE ARCH ──────────────────────────────────────────────────────
-          Two headlands and a span across the top, built from the same rock as
-          the wall so it reads as a hole worn THROUGH the cliffs rather than a
-          doorway put into them — which is what a sea arch is.
-
-          It is also the tallest thing on the chart, on purpose. This is the one
-          way out of the fishing grounds and it should be visible from a long
-          way off, so that sailing north toward it is a decision you make rather
-          than a wall you happen to find a gap in. */}
+          Two headlands and a span, out of the same rock as the face — a hole
+          worn THROUGH the cliffs rather than a doorway put into them, which is
+          what a sea arch is. Taller than the wall so it is visible from a long
+          way off: this is the one way out and sailing toward it should be a
+          decision rather than a gap you happen to find. */}
       {[-1, 1].map(side => (
         <div key={side} aria-hidden style={{
-          position: 'absolute', left: GATE_X + side * (GATE_HALF + 190), top: NORTH_WALL,
-          width: 380, height: 700,
-          marginLeft: -190,
+          position: 'absolute', left: GATE_X + side * (GATE_HALF + 170), top: NORTH_WALL,
+          width: 340, height: 470,
+          marginLeft: -170,
           transform: `translateY(-100%) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center',
-          background: face(0.55, 11),
-          // Rounded on the INNER face only, so the two read as the sides of a
-          // worn opening rather than as two towers with a gap between them.
-          borderTopLeftRadius: side < 0 ? 14 : 150,
-          borderTopRightRadius: side < 0 ? 150 : 14,
-          boxShadow: 'inset 0 5px 0 rgba(138,186,120,0.42), inset 0 -22px 30px -16px rgba(0,6,14,0.9)',
+          background: LAND.face,
+          borderTopLeftRadius: side < 0 ? 14 : 140,
+          borderTopRightRadius: side < 0 ? 140 : 14,
+          boxShadow: 'inset 0 5px 0 rgba(110,138,78,0.55), inset 0 -14px 22px -12px rgba(0,6,14,0.85)',
         }} />
       ))}
-
-      {/* The span, bridging the two headlands. THE HOLE IS A MASK, not an
-          outline: an ellipse cut out of the bottom edge, because an arch is the
-          absence and not the shape. */}
+      {/* The span. THE HOLE IS A MASK, not an outline — an arch is the absence
+          and not the shape. */}
       <div aria-hidden style={{
         position: 'absolute', left: GATE_X, top: NORTH_WALL,
-        width: GATE_HALF * 2 + 380, height: 700,
-        marginLeft: -(GATE_HALF + 190),
+        width: GATE_HALF * 2 + 340, height: 470,
+        marginLeft: -(GATE_HALF + 170),
         transform: `translateY(-100%) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
-        background: face(0.5, 16),
-        maskImage: 'radial-gradient(ellipse 44% 58% at 50% 100%, transparent 0%, transparent 70%, #000 72%)',
-        WebkitMaskImage: 'radial-gradient(ellipse 44% 58% at 50% 100%, transparent 0%, transparent 70%, #000 72%)',
-        boxShadow: 'inset 0 5px 0 rgba(138,186,120,0.42)',
+        background: LAND.face,
+        maskImage: 'radial-gradient(ellipse 44% 60% at 50% 100%, transparent 0%, transparent 70%, #000 72%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 44% 60% at 50% 100%, transparent 0%, transparent 70%, #000 72%)',
+        boxShadow: 'inset 0 5px 0 rgba(110,138,78,0.55)',
       }} />
 
-      {/* ── THE LIGHT ON THE OTHER SIDE ───────────────────────────────────
-          What makes the arch a door rather than a gap: you can SEE that the
-          water past it is lit differently. Warm, because everything on this
-          chart is cold — and the one warm thing on a cold map is where you look.
-
-          Under the span in the stack, so the rock occludes it and the glow only
-          shows in the opening. */}
-      <div aria-hidden className="sea-gate-glow" style={{
+      {/* Daylight through the opening, so you can see there is water on the far
+          side before you commit. Pale, not a portal — the arch is a gap in a
+          headland, and what is behind a headland is more sea. */}
+      <div aria-hidden style={{
         position: 'absolute', left: GATE_X, top: NORTH_WALL,
-        width: GATE_HALF * 2.1, height: 420,
-        marginLeft: -GATE_HALF * 1.05,
+        width: GATE_HALF * 1.9, height: 300,
+        marginLeft: -GATE_HALF * 0.95,
         transform: `translateY(-100%) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
-        background: 'radial-gradient(ellipse 62% 78% at 50% 92%, rgba(255,216,150,0.50) 0%, rgba(255,196,120,0.24) 42%, rgba(255,186,110,0.06) 70%, transparent 84%)',
-        filter: 'blur(8px)',
-      }} />
-
-      {/* And the light that falls out of it onto the water — flat on the plane,
-          because that is where it lands. */}
-      <div aria-hidden className="sea-gate-glow" style={{
-        position: 'absolute', left: GATE_X, top: NORTH_WALL,
-        width: GATE_HALF * 2.6, height: 1500,
-        marginLeft: -GATE_HALF * 1.3,
-        background: 'linear-gradient(180deg, rgba(255,208,140,0.30) 0%, rgba(255,198,126,0.12) 34%, rgba(255,190,120,0.03) 62%, transparent 88%)',
-        filter: 'blur(14px)',
+        background: 'radial-gradient(ellipse 62% 80% at 50% 94%, rgba(214,238,246,0.42) 0%, rgba(190,222,234,0.18) 46%, transparent 78%)',
+        filter: 'blur(9px)',
       }} />
     </>
   )

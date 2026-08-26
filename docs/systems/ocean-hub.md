@@ -259,31 +259,35 @@ than a missing section of it. `GATE_DEPTH = 300` is the throat: far enough in th
 plainly under the arch when it asks. The exit uses 90px of hysteresis so the prompt cannot
 flicker for a boat sitting on the line.
 
-### How it gets its scale
+### It is an island edge, not a new material
 
-Height alone does not make a thing enormous — a tall rectangle is a tall rectangle. What sells
-it is everything that agrees the air between you and it is deep:
+The first version of this invented its own language — grey rock, sedimentary banding, two
+hazy ranges, atmospheric perspective — none of which appears anywhere else on the chart. It
+looked like a screenshot from another game pasted onto the top of ours, because that is
+effectively what it was.
 
-- **Two ranges.** A hazier, taller one behind the near one, offset so its headlands fall in the
-  near range's gaps. One wall is a wall; two with air between them is a coastline going on for
-  miles.
-- **Haze that grows with distance.** The far range is washed toward the sky and loses its
-  banding entirely — atmospheric perspective is the only depth cue this projection has, since
-  it is orthographic and nothing gets smaller.
-- **A green crown.** Cliffs of this kind are pasture that stops. The strip of grass along the
-  top is what makes the drop below it read as a drop.
-- **Surf at the foot**, which gives the eye a scale reference it already knows the size of.
-- **Sedimentary banding** on the near range only. Painting it on the far one too is what makes
-  a background read as a sticker.
+The islands already answer *"what does land look like here"*: a warm brown extrusion under a
+top face of sand, scrub and grass, wood clumps on it, and a shoal where it meets the water. A
+cliff is that same land seen where it stops. So the wall is built from **exactly** those
+values — a `LAND` constant lifts the islands' gradients rather than approximating them, and a
+check confirms no colour exists in the wall that is not also in `PlaceIsland`. **If the
+islands are ever repainted, this has to be repainted with them.**
 
-The arch is the tallest thing on the chart on purpose, and **warm** — everything else here is
-cold, and the one warm thing on a cold map is where you look. Its opening is a **mask**, not an
-outline: an ellipse cut from the bottom of the span, because an arch is the absence and not
-the shape. Light spills through it onto the water, so you can see the far side is lit
-differently before you commit.
+Construction, matching the islands' own layering:
 
-~103 static divs, all memoised. The world layer is transformed as a whole, so none of it costs
-anything per frame.
+- **Ground running north**, on the plane so it foreshortens like ground: grass inland, scrub
+  before it, a pale sandy lip at the very edge.
+- **Wood clumps set back from the lip**, because nothing grows on the edge of a cliff.
+- **The face standing up** along the southern edge, counter-squashed like every solid, in the
+  islands' extrusion gradient, with their grass-lip and wet-foot shadows.
+- **The islands' own shoal and surf** at the base — same values, same `sea-surf` classes, so
+  the water meets this the way it meets everything else.
+
+The skyline gets two octaves of variation so it has headlands *and* small steps; a flat-topped
+wall is a fence.
+
+Light through the arch is **pale daylight, not a portal**. It is a gap in a headland, and what
+is behind a headland is more sea.
 
 ## The edges of the world
 

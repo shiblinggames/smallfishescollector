@@ -2719,16 +2719,3 @@ body.hardcore-gauntlet::after {
 
 
 
-/* The light past the arch. Very slow and very slight — this is meant to read as
-   a different sky on the other side of a headland, not as a portal humming.
-   Anything faster turns the one warm thing on a cold map into a notification. */
-.sea-gate-glow {
-  animation: sea-gate-glow 9s ease-in-out infinite;
-  will-change: opacity;
-  pointer-events: none;
-}
-@keyframes sea-gate-glow {
-  0%, 100% { opacity: 0.78; }
-  50%      { opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) { .sea-gate-glow { animation: none; } }
