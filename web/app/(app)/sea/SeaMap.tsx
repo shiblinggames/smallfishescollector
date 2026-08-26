@@ -2739,46 +2739,57 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
 /** One thing standing out of the water. Absolute world position: the bands have
  *  no box for an offset to be relative to. */
 /**
- * THE CLIFFS, and the arch through them.
- *
- * The north wall was an invisible clamp: you sailed into nothing and stopped,
- * which reads as the edge of a level rather than the edge of a world. It is a
- * headland now — a sheer wall running the whole width of the chart, with one
- * gap in it and the Harbour built at the foot of that gap.
- *
- * Rendered as PANELS rather than one enormous element. The wall is 45,200 world
- * pixels across; a single div with a clip-path that long would be a polygon
- * with hundreds of points, and one texture stretched across it would smear.
- * Panels also give the top edge its variation for free — each is a different
- * height, so the skyline is a skyline.
- *
- * Counter-squashed, like everything else with height. The face you see is the
- * SOUTH face, so the light is on top and the water-line is dark: that is the
- * one thing that stops a tall dark rectangle reading as a hole in the map.
- */
-/**
  * THE ROCKS ALONG THE TOP OF THE CHART.
  *
- * Third version of this. The first two built cliff GEOMETRY — panels, faces,
- * skylines, a whole material language — and both looked like something from
- * another game bolted onto the top of ours. The second at least used the
- * islands' colours, and still looked wrong, because the problem was never the
- * palette: nothing else on this water is architecture. Everything else out here
- * is an OBJECT sitting in the sea, drawn as a sprite, with its base going under.
+ * Fourth version. The first two built cliff GEOMETRY — panels, faces, skylines,
+ * a whole material language — and both looked like something from another game
+ * bolted onto the top of ours. The second at least used the islands' colours
+ * and still looked wrong, because the problem was never the palette: nothing
+ * else on this water is architecture. Everything else out here is an OBJECT
+ * sitting in the sea, drawn as a sprite, with its base going under.
  *
- * So the barrier is objects too. A run of the same rocks that are already
- * scattered across the chart — monoliths and islets, at every size — packed
- * tight enough to be impassable and jittered enough to read as a reef rather
- * than a fence. They go through `SeaMark` like every other landmark, which
- * means they get the submerged base and the shoal for free and they cannot
- * drift out of style, because they ARE the style.
+ * The third was objects, but the wrong ones. It reused `monolith` and `islet`,
+ * and both of those are LANDMARKS: the monolith is a carved standing stone
+ * covered in spirals, the islet has a rope-wrapped post driven into it. Fine
+ * once. Three hundred and eighty times along one edge, the carvings and the
+ * post are all you see, and the barrier reads as one prop stamped out.
  *
- * The gap is left at the Harbour. The hull clamp has not changed at all — the
- * rocks are what that clamp has always looked like from the deck.
+ * So these are painted rock and nothing else — six plain boulders and two
+ * headland stacks, no carvings, no rope, no props, every one of them lit from
+ * the upper left so they can stand together in a single run. `slice-rocks.mjs`
+ * cuts them off the two sheets.
+ *
+ * They still go through `SeaMark`, so they take the submerged base for free and
+ * cannot drift out of style. The gap is left at the Harbour, and the hull clamp
+ * has not changed at all — the rocks are what that clamp has always looked like
+ * from the deck.
  */
 const REEF_STEP = 700
 /** The small rock goes in at four times the density. See "THE SHINGLE". */
 const PEBBLE_STEP = 175
+
+/**
+ * WHAT SIZE EACH SHAPE WANTS TO BE.
+ *
+ * `SeaMark` treats `size` as WIDTH and lets the sprite set its own height, so
+ * one number means something different for every shape: the slab is two and a
+ * half times wider than it is tall, the spire is two thirds as wide as it is
+ * tall, and the same `size` therefore comes out nearly 4x taller on one than
+ * the other. Ranges are per shape so a spire and a slab can sit side by side
+ * and still look like the same coast.
+ */
+const BOULDERS = [
+  { art: '/sea/rock-crag.png', min: 420, max: 760 },   // jagged tilted slabs
+  { art: '/sea/rock-split.png', min: 400, max: 700 },  // cracked in two
+  { art: '/sea/rock-dome.png', min: 460, max: 820 },   // a whale's back
+  { art: '/sea/rock-spire.png', min: 260, max: 470 },  // tall and leaning
+] as const
+
+const SHINGLE_ART = [
+  { art: '/sea/rock-cobbles.png', min: 190, max: 340 },  // a loose handful
+  { art: '/sea/rock-slab.png', min: 250, max: 440 },     // wave-cut shelf
+  { art: '/sea/rock-dome.png', min: 175, max: 300 },     // the dome, small
+] as const
 
 function reefRocks() {
   const OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
@@ -2790,87 +2801,87 @@ function reefRocks() {
     seed ^= seed << 5; seed >>>= 0
     return seed / 0x100000000
   }
-  // TWO STAGGERED ROWS, offset by half a step. One row cannot be both jittered
-  // and gap-free: any x-jitter big enough to stop it reading as a fence is big
-  // enough to pull two neighbours apart and leave a hole you could sail
-  // through. Two rows cover each other's gaps, and the near/far split reads as
-  // a reef with depth rather than a line of stones.
+
+  // ── THE BOULDERS ─────────────────────────────────────────────────────
+  // Two staggered rows, so the run has some depth to it rather than being a
+  // line of rock. Set well clear of the gate: the widest boulder is 820
+  // across and jitters 77 either way, so anything under 520 of clearance can
+  // drop half a rock into the mouth.
   for (const row of [0, 1]) {
     const off = (row * REEF_STEP) / 2
     for (let x = -OUT - REEF_STEP + off; x < OUT + REEF_STEP; x += REEF_STEP) {
-      // THE OPENING. The gate's mouth plus a rock's width either side, so the
-      // passage is actually clear rather than technically clear and visually
-      // blocked.
-      if (Math.abs(x - GATE_X) < GATE_HALF + 420) continue
-      const big = nx()
+      if (Math.abs(x - GATE_X) < GATE_HALF + 520) continue
+      const b = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
       out.push({
-        // Monoliths stand and go under; islets break the surface and get a
-        // shoal. Mixing them is what stops a long run of rock reading as a
-        // repeat.
-        art: big > 0.62 ? '/sea/islet.png' : '/sea/monolith.png',
+        art: b.art,
         x: x + (nx() - 0.5) * REEF_STEP * 0.22,
-        // The back row sits north of the line, the front row south of it.
         y: NORTH_WALL + (row ? 1 : -1) * 110 + (nx() - 0.5) * 150,
-        size: 440 + big * 400,
+        size: b.min + nx() * (b.max - b.min),
       })
     }
   }
-  // ── THE SHOULDERS ────────────────────────────────────────────────────
+
+  // ── THE HEADLANDS ────────────────────────────────────────────────────
   //
-  // Placed, not rolled. Keeping the random rocks clear of the gate left a bare
-  // patch on each side of it, so the passage LOOKED about three times wider
-  // than it sails — 860px of clamp reading as 1,540px of gap. These close that,
-  // and in doing so give the opening two defined edges, which is most of what
-  // makes it a gate rather than a missing section of reef.
+  // The two big stacks, one either side of the mouth. Placed, not rolled:
+  // they are the only pair on the chart and framing the gate is the entire
+  // reason they exist, so they go exactly where they frame it.
   //
-  // Two per side at different depths, the near one smaller, so the mouth has
-  // some thickness to it rather than being a slot cut in a line.
+  // They are the biggest rock on the chart at 760 across, half again the
+  // largest boulder, because they are the sign as much as the barrier: the
+  // one gap in 45,000px of reef has to be findable from a long way off, and
+  // two stacks that tower over everything beside them is how you find it.
   //
-  // 265 puts the near shoulder's edge flush with the lip of the mouth, lapping
-  // it by about 4px. Set them further back and the last stone stops short,
-  // leaving a sliver of bare water at each lip that reads as a nick in the
-  // reef; the shingle cannot cover it, because the shingle has to stand off the
-  // mouth too. A few pixels of overlap is the cleaner side of that to land on,
-  // and it costs nothing — the clamp tests the boat's CENTRE.
+  // 370 puts each one's inner edge flush with the lip, lapping it by about
+  // 10px. Set them back further and the last stone stops short, leaving a
+  // sliver of bare water at each lip that reads as a nick in the reef — the
+  // shingle cannot cover that, because the shingle has to stand off the
+  // mouth too. A few pixels of overlap is the cleaner side to land on, and
+  // it costs nothing: the clamp tests the boat's CENTRE.
+  //
+  // They are NOT mirrored. The art is lit from the upper left, and flipping
+  // one to tidy up the silhouette would flip its light with it and break the
+  // whole run. Two headlands that do not match is what a real channel looks
+  // like anyway.
+  out.push({ art: '/sea/rock-gate-w.png', x: GATE_X - (GATE_HALF + 370), y: NORTH_WALL - 40, size: 760 })
+  out.push({ art: '/sea/rock-gate-e.png', x: GATE_X + (GATE_HALF + 370), y: NORTH_WALL - 40, size: 760 })
+  // One boulder tucked in behind each, so the headlands grow out of the reef
+  // instead of reading as two towers parked on the end of it.
   for (const side of [-1, 1]) {
-    for (const row of [0, 1]) {
-      out.push({
-        art: row ? '/sea/islet.png' : '/sea/monolith.png',
-        x: GATE_X + side * (GATE_HALF + 265 + row * 210),
-        y: NORTH_WALL + (row ? 1 : -1) * 120,
-        size: 640 - row * 90,
-      })
-    }
+    out.push({
+      art: '/sea/rock-crag.png',
+      x: GATE_X + side * (GATE_HALF + 640),
+      y: NORTH_WALL + 140,
+      size: 520,
+    })
   }
 
   // ── THE SHINGLE ──────────────────────────────────────────────────────
   //
   // Small stuff, packed in tight along the whole run. It does two jobs.
   //
-  // Coverage: the big rocks are placed on a 700px stride and jittered, which
-  // leaves the odd bare patch that the eye reads as a way through even though
-  // the clamp says otherwise. Pebbles are cheap enough to scatter at four times
-  // the density and close all of it.
+  // Coverage: the boulders are placed on a 700px stride and jittered, which
+  // leaves the odd bare patch that the eye reads as a way through even
+  // though the clamp says otherwise. Shingle is cheap enough to scatter at
+  // four times the density and close all of it.
   //
-  // Scale: a barrier of nothing but boulders has no size to it, because there
-  // is nothing small to measure the big ones against. Rock from 150 to 830px
-  // reads as a reef; rock from 460 to 830 reads as a row of props.
+  // Scale: a barrier of nothing but boulders has no size to it, because
+  // there is nothing small to measure the big ones against. Rock from 175 to
+  // 820 across reads as a reef; rock from 400 up reads as a row of props.
   //
-  // They stop short of the mouth like everything else, so the opening stays a
-  // clean 860px of water rather than something you have to pick through.
+  // Clearance is 300: the widest shingle is 440 across and jitters 70, so a
+  // setback that only clears the stride still puts stone in the mouth.
   for (let x = -OUT - PEBBLE_STEP; x < OUT + PEBBLE_STEP; x += PEBBLE_STEP) {
-    // 230, not 60. A pebble is placed on the stride and THEN jittered up to
-    // 70px and drawn up to 150px wide, so a setback that only clears the stride
-    // still puts stone in the mouth. This clears the worst case of both.
-    if (Math.abs(x - GATE_X) < GATE_HALF + 230) continue
+    if (Math.abs(x - GATE_X) < GATE_HALF + 300) continue
+    const p = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
     const r = nx()
     out.push({
-      art: '/sea/monolith.png',
+      art: p.art,
       x: x + (nx() - 0.5) * PEBBLE_STEP * 0.8,
-      // Spread wider north-to-south than the boulders. Shingle piles up around
-      // rock, it does not queue behind it.
+      // Spread wider north-to-south than the boulders. Shingle piles up
+      // around rock, it does not queue behind it.
       y: NORTH_WALL + (nx() - 0.5) * 330,
-      size: 150 + r * r * 210,
+      size: p.min + r * r * (p.max - p.min),
     })
   }
 
@@ -2907,6 +2918,29 @@ const SUBMERGE: Record<string, { line: number; keep: number }> = {
   bones:    { line: 74, keep: 0.24 },
   // Carved stone, standing in it.
   monolith: { line: 78, keep: 0.20 },
+
+  // ── THE REEF ALONG THE TOP ───────────────────────────────────────────
+  //
+  // `line` is where the water crosses the SPRITE, as a percentage of its own
+  // height — so it cannot be one shared number. Each of these is painted with
+  // a dark wet band at its foot, and the waterline is set just above where
+  // that band starts, which is what makes the paint and the mask agree.
+  //
+  // How much sits under is a property of the SHAPE, not the size. A flat
+  // wave-cut shelf is mostly awash whatever scale it is drawn at; a headland
+  // is a headland. Anything that goes deeper also keeps a little more of
+  // itself visible under the surface, or it just vanishes.
+  'rock-spire': { line: 82, keep: 0.20 },    // stands tall, barely in
+  'rock-dome': { line: 78, keep: 0.22 },     // rounded, settled low
+  'rock-split': { line: 80, keep: 0.20 },
+  'rock-slab': { line: 68, keep: 0.28 },     // a shelf. mostly awash
+  'rock-crag': { line: 80, keep: 0.21 },
+  'rock-cobbles': { line: 74, keep: 0.24 },  // small and low in the water
+  // The two headlands. Least submerged on the chart: they are the biggest
+  // rock out there and they should read as founded on the bottom, not
+  // floating at the mouth of the gate.
+  'rock-gate-w': { line: 86, keep: 0.18 },
+  'rock-gate-e': { line: 86, keep: 0.18 },
 }
 
 /** Which art file this is, from its path — `/sea/wreck.png` -> `wreck`. */
