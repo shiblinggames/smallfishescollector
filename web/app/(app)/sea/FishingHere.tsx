@@ -84,7 +84,7 @@ function WaitTimer() {
   }, [])
   return (
     <p className="font-karla font-700" style={{
-      fontSize: '0.68rem', color: 'rgba(190,212,228,0.55)', marginTop: 2,
+      fontSize: '0.816rem', color: 'rgba(190,212,228,0.55)', marginTop: 2,
       fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
     }}>{(ms / 1000).toFixed(1)}s</p>
   )
@@ -940,7 +940,7 @@ export default function FishingHere({
             className="font-cinzel font-700"
             style={{
               position: 'absolute', top: 96, left: '50%', zIndex: 30, pointerEvents: 'none',
-              fontSize: '0.9rem', color: '#f0c040', textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+              fontSize: '1.08rem', color: '#f0c040', textShadow: '0 2px 12px rgba(0,0,0,0.9)',
             }}>
             +{sigilPaid} ⟡
           </motion.p>
@@ -983,7 +983,7 @@ export default function FishingHere({
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 420, damping: 18 }}
               style={{
-                fontSize: '1.6rem', letterSpacing: '0.1em', color: '#fde68a',
+                fontSize: '1.92rem', letterSpacing: '0.1em', color: '#fde68a',
                 textShadow: '0 0 24px rgba(245,158,11,0.9), 0 2px 12px rgba(0,0,0,0.8)',
               }}>Perfect</motion.p>
           </motion.div>
@@ -1002,7 +1002,7 @@ export default function FishingHere({
             className="font-karla font-700"
             style={{
               position: 'absolute', left: '50%', top: '46%', zIndex: 31, pointerEvents: 'none',
-              fontSize: '1rem', color: '#4ade80',
+              fontSize: '1.2rem', color: '#4ade80',
               textShadow: '0 0 10px rgba(74,222,128,0.7), 0 2px 8px rgba(0,0,0,0.9)',
             }}>
             +{xpPop.value} XP
@@ -1026,7 +1026,7 @@ export default function FishingHere({
               border: '1px solid rgba(94,234,212,0.7)',
               boxShadow: '0 0 18px rgba(45,212,191,0.4)',
             }}>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#ccfbf1' }}>Second Wind</span>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.672rem', color: '#ccfbf1' }}>Second Wind</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1053,7 +1053,7 @@ export default function FishingHere({
             <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden style={{ filter: 'drop-shadow(0 0 4px #ff3344)' }}>
               <path d="M13 2L3 14h7l-1 8 11-13h-7z" />
             </svg>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#fff', textShadow: '0 0 8px rgba(255,60,70,0.85)' }}>Instant Bite</span>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.672rem', color: '#fff', textShadow: '0 0 8px rgba(255,60,70,0.85)' }}>Instant Bite</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1088,7 +1088,7 @@ export default function FishingHere({
               boxShadow: `0 0 7px ${seaPhase === 'night' || seaPhase === 'dusk' ? 'rgba(159,182,255,0.7)' : 'rgba(255,217,134,0.7)'}`,
             }} />
             <span className="font-karla font-700 uppercase" style={{
-              fontSize: '0.5rem', letterSpacing: '0.12em', color: 'rgba(214,232,240,0.75)', whiteSpace: 'nowrap',
+              fontSize: '0.66rem', letterSpacing: '0.12em', color: 'rgba(214,232,240,0.75)', whiteSpace: 'nowrap',
             }}>{PHASE_LABEL[seaPhase]}</span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -1207,10 +1207,10 @@ export default function FishingHere({
                   background: 'rgba(8,16,24,0.94)',
                   border: '1px solid rgba(180,214,232,0.28)',
                 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#d9b7b7' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#d9b7b7' }}>
                     {caught.result === 'penalty' ? 'Snagged' : 'It got away'}
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.8rem', color: '#9fb4c2', marginTop: 6 }}>
+                  <p className="font-karla" style={{ fontSize: '0.96rem', color: '#9fb4c2', marginTop: 6 }}>
                     {caught.result === 'penalty'
                       ? 'The line fouled and took a bait with it.'
                       : 'The line went slack. Cast again.'}
@@ -1229,10 +1229,10 @@ export default function FishingHere({
                 marginTop: 10, padding: '0.8rem', borderRadius: 12, textAlign: 'center',
                 background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.4)',
               }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0c040' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.032rem', color: '#f0c040' }}>
                   A golden one
                 </p>
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#c8b590', marginTop: 4, lineHeight: 1.5 }}>
+                <p className="font-karla" style={{ fontSize: '0.864rem', color: '#c8b590', marginTop: 4, lineHeight: 1.5 }}>
                   {shiny.alreadyMounted
                     ? 'You have one of these on the wall already. This one can only be sold.'
                     : 'Sell it, or mount it in your Logbook. One of each species only.'}
@@ -1255,7 +1255,7 @@ export default function FishingHere({
                     }}
                     className="font-cinzel font-700"
                     style={{
-                      flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.8rem',
+                      flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.96rem',
                       color: '#f2ead8', background: 'rgba(240,192,64,0.18)',
                       border: '1px solid rgba(240,192,64,0.5)', cursor: 'pointer',
                     }}>Sell</button>
@@ -1271,7 +1271,7 @@ export default function FishingHere({
                       }}
                       className="font-karla font-700"
                       style={{
-                        flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.8rem',
+                        flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.96rem',
                         color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
                         border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer',
                       }}>Mount</button>
@@ -1293,7 +1293,7 @@ export default function FishingHere({
                 className="font-cinzel font-700"
                 style={{
                   marginTop: 10, width: '100%', padding: '0.6rem', borderRadius: 10,
-                  fontSize: '0.8rem', color: '#d8b4fe',
+                  fontSize: '0.96rem', color: '#d8b4fe',
                   background: 'rgba(192,132,252,0.14)',
                   border: '1px solid rgba(192,132,252,0.45)', cursor: 'pointer',
                 }}>
@@ -1301,7 +1301,7 @@ export default function FishingHere({
               </button>
             )}
             {choiceNote && (
-              <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#7fd6a0', marginTop: 8, textAlign: 'center' }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.912rem', color: '#7fd6a0', marginTop: 8, textAlign: 'center' }}>
                 {choiceNote}
               </p>
             )}
@@ -1321,7 +1321,7 @@ export default function FishingHere({
               ))}
             </div>
             <p className="font-karla font-700 uppercase" style={{
-              fontSize: '0.7rem', letterSpacing: '0.18em', color: 'rgba(200,220,232,0.8)',
+              fontSize: '0.84rem', letterSpacing: '0.18em', color: 'rgba(200,220,232,0.8)',
               textShadow: '0 1px 10px rgba(0,0,0,0.9)',
             }}>
               Waiting on a bite
@@ -1342,7 +1342,7 @@ export default function FishingHere({
           // this water and will take the lot, which is the whole reason they
           // exist, and nobody is going to guess that from a greyed-out button.
           <p className="font-karla font-600" style={{
-            fontSize: '0.74rem', color: holdFull ? '#f8a2a2' : '#e8c98a',
+            fontSize: '0.888rem', color: holdFull ? '#f8a2a2' : '#e8c98a',
             textAlign: 'center', lineHeight: 1.5,
             textShadow: '0 1px 8px rgba(0,0,0,0.9)',
           }}>
@@ -1354,7 +1354,7 @@ export default function FishingHere({
 
         {err && (
           <p className="font-karla font-600" style={{
-            fontSize: '0.78rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+            fontSize: '0.936rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
           }}>{err}</p>
         )}
       </div>
@@ -1413,8 +1413,8 @@ export default function FishingHere({
                 border: '1px solid rgba(180,214,232,0.28)',
                 boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
               }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f2ead8' }}>Tackle box</p>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9fb4c2', marginTop: 3 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f2ead8' }}>Tackle box</p>
+              <p className="font-karla" style={{ fontSize: '0.888rem', color: '#9fb4c2', marginTop: 3 }}>
                 A wider catch zone is an easier reel. Nothing else changes.
               </p>
               {/* ── THE RACK ─────────────────────────────────────────
@@ -1426,7 +1426,7 @@ export default function FishingHere({
               {rack.length > 1 ? (
                 <>
                   <p className="font-karla font-700 uppercase" style={{
-                    fontSize: '0.54rem', letterSpacing: '0.14em',
+                    fontSize: '0.66rem', letterSpacing: '0.14em',
                     color: 'rgba(190,212,228,0.5)', marginTop: 14,
                   }}>In the rack</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
@@ -1453,11 +1453,11 @@ export default function FishingHere({
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={`/${r.slug}_thumb.png`} alt="" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
                           )}
-                          <span className="font-cinzel font-700 truncate" style={{ flex: 1, fontSize: '0.8rem', color: '#f2ead8' }}>
+                          <span className="font-cinzel font-700 truncate" style={{ flex: 1, fontSize: '0.96rem', color: '#f2ead8' }}>
                             {r.name}
                           </span>
                           {r.catchZoneBonus > 0 && (
-                            <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#7fd6a0', flexShrink: 0 }}>
+                            <span className="font-karla font-700" style={{ fontSize: '0.696rem', color: '#7fd6a0', flexShrink: 0 }}>
                               +{r.catchZoneBonus}°
                             </span>
                           )}
@@ -1468,7 +1468,7 @@ export default function FishingHere({
                 </>
               ) : (
                 <p className="font-karla font-600" style={{
-                  fontSize: '0.66rem', color: 'rgba(190,212,228,0.45)', marginTop: 12, lineHeight: 1.6,
+                  fontSize: '0.792rem', color: 'rgba(190,212,228,0.45)', marginTop: 12, lineHeight: 1.6,
                 }}>
                   You sailed with one rod. Load a rack at the Shipyard to carry
                   spares and swap them out here.
@@ -1476,7 +1476,7 @@ export default function FishingHere({
               )}
 
               <p className="font-karla font-700 uppercase" style={{
-                fontSize: '0.54rem', letterSpacing: '0.14em',
+                fontSize: '0.66rem', letterSpacing: '0.14em',
                 color: 'rgba(190,212,228,0.5)', marginTop: 14,
               }}>Bait</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
@@ -1500,14 +1500,14 @@ export default function FishingHere({
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {def?.imageUrl && <img src={def.imageUrl} alt="" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />}
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <span className="font-cinzel font-700 block truncate" style={{ fontSize: '0.84rem', color: '#f2ead8' }}>
+                        <span className="font-cinzel font-700 block truncate" style={{ fontSize: '1.008rem', color: '#f2ead8' }}>
                           {def?.name ?? b.type}
                         </span>
-                        <span className="font-karla font-600 block" style={{ fontSize: '0.62rem', color: 'rgba(190,212,228,0.6)' }}>
+                        <span className="font-karla font-600 block" style={{ fontSize: '0.744rem', color: 'rgba(190,212,228,0.6)' }}>
                           {(def?.catchZoneBonus ?? 0) > 0 ? `+${def!.catchZoneBonus}° catch zone` : 'No catch bonus'}
                         </span>
                       </span>
-                      <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0c040', flexShrink: 0 }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.96rem', color: '#f0c040', flexShrink: 0 }}>
                         {b.quantity}
                       </span>
                     </button>
@@ -1546,7 +1546,7 @@ export default function FishingHere({
                 width: 88, height: 88, borderRadius: '50%',
                 background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
                 border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
-                fontSize: '0.72rem', touchAction: 'manipulation', lineHeight: 1.15,
+                fontSize: '0.864rem', touchAction: 'manipulation', lineHeight: 1.15,
                 color: canCast ? '#67d4e8' : 'rgba(103,212,232,0.4)',
                 boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
               }}
@@ -1570,7 +1570,7 @@ export default function FishingHere({
                 width: 88, height: 88, borderRadius: '50%',
                 background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
                 border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
-                fontSize: '0.72rem', color: '#f0c040', touchAction: 'manipulation',
+                fontSize: '0.864rem', color: '#f0c040', touchAction: 'manipulation',
                 boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
               }}
               initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
@@ -1582,7 +1582,7 @@ export default function FishingHere({
           {(phase === 'waiting' || phase === 'reeling') && (
             // The slot holds itself open rather than collapsing — the same
             // ellipsis the fishing screen shows while a reel resolves.
-            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(190,212,228,0.5)' }}>…</p>
+            <p className="font-karla font-600" style={{ fontSize: '0.744rem', color: 'rgba(190,212,228,0.5)' }}>…</p>
           )}
         </div>
 
@@ -1598,7 +1598,7 @@ export default function FishingHere({
           <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
             className="font-karla font-700"
             style={{
-              padding: '0.3rem 0.7rem', borderRadius: 999, fontSize: '0.62rem',
+              padding: '0.3rem 0.7rem', borderRadius: 999, fontSize: '0.744rem',
               color: '#c4b5fd', background: 'rgba(167,139,250,0.14)',
               border: '1px solid rgba(167,139,250,0.45)', cursor: skipping ? 'default' : 'pointer',
               opacity: skipping ? 0.6 : 1,
@@ -1615,7 +1615,7 @@ export default function FishingHere({
             className="font-karla font-700 uppercase tracking-[0.1em]"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '0.28rem 0.66rem', borderRadius: 999, fontSize: '0.58rem',
+              padding: '0.28rem 0.66rem', borderRadius: 999, fontSize: '0.696rem',
               color: autoOn ? '#f0ede8' : '#9a9488',
               background: autoOn ? 'rgba(70,224,192,0.13)' : 'rgba(255,255,255,0.05)',
               border: `1px solid ${autoOn ? 'rgba(70,224,192,0.5)' : 'rgba(255,255,255,0.16)'}`,
@@ -1666,15 +1666,15 @@ export default function FishingHere({
           {activeBaitDef?.imageUrl && (
             <img src={activeBaitDef.imageUrl} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
           )}
-          <span className="font-karla font-700 truncate" style={{ fontSize: '0.66rem', color: '#dfeaf2' }}>
+          <span className="font-karla font-700 truncate" style={{ fontSize: '0.792rem', color: '#dfeaf2' }}>
             {activeBaitDef?.name ?? 'Bait'}
           </span>
-          <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#f0c040', flexShrink: 0 }}>
+          <span className="font-karla font-700" style={{ fontSize: '0.792rem', color: '#f0c040', flexShrink: 0 }}>
             {baitLeft}
           </span>
           {canSwapBait && (
             <span className="font-karla font-700" style={{
-              fontSize: '0.52rem', color: 'rgba(190,212,228,0.5)', marginLeft: 'auto', flexShrink: 0,
+              fontSize: '0.66rem', color: 'rgba(190,212,228,0.5)', marginLeft: 'auto', flexShrink: 0,
             }}>SWAP</span>
           )}
         </button>
@@ -1702,7 +1702,7 @@ export default function FishingHere({
             <path d="M8 4v16" />
           </svg>
           <span className="font-karla font-700 uppercase" style={{
-            fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
+            fontSize: '0.66rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
           }}>Log</span>
           {uncheckedNew.size > 0 && (
             <span aria-hidden style={{
@@ -1721,10 +1721,10 @@ export default function FishingHere({
           border: `1px solid ${holdFull ? 'rgba(248,113,113,0.55)' : 'rgba(255,255,255,0.16)'}`,
         }}>
           <span className="font-karla font-700 uppercase" style={{
-            fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
+            fontSize: '0.66rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
           }}>Hold</span>
           <span className="font-karla font-700" style={{
-            fontSize: '0.66rem', color: holdFull ? '#f87171' : '#dfeaf2', fontVariantNumeric: 'tabular-nums',
+            fontSize: '0.792rem', color: holdFull ? '#f87171' : '#dfeaf2', fontVariantNumeric: 'tabular-nums',
           }}>{hold.count}/{hold.capacity}</span>
         </div>
       </div>
@@ -1734,7 +1734,7 @@ export default function FishingHere({
           className="font-karla font-700"
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: '0.72rem', color: 'rgba(190,212,228,0.8)',
+            fontSize: '0.864rem', color: 'rgba(190,212,228,0.8)',
             textShadow: '0 1px 8px rgba(0,0,0,0.9)',
             borderBottom: '1px solid rgba(190,212,228,0.32)', paddingBottom: 1,
           }}>

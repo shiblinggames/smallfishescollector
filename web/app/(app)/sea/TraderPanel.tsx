@@ -146,22 +146,49 @@ export default function TraderPanel({
         }}>
 
         <p className="font-karla font-700 uppercase" style={{
-          fontSize: '0.58rem', letterSpacing: '0.16em', color: 'rgba(255,206,138,0.75)',
-        }}>{KIND_LABEL[trader.kind]}</p>
+          fontSize: '0.744rem', letterSpacing: '0.16em', color: 'rgba(255,206,138,0.75)',
+        }}>
+          {KIND_LABEL[trader.kind]}
+          {/* WHICH KIND OF THING THEY ARE ABOUT TO SAY, folded into the label
+              they already have rather than given a box of its own underneath
+              the line it describes. A hint is worth stopping for; a story is
+              worth hearing. Saying so before they speak is the useful order. */}
+          {trader.deal === 'talk' && (
+            <span style={{ color: 'rgba(255,206,138,0.45)' }}>
+              {' · '}{trader.topic === 'hint' ? 'Knows something useful' : 'Heard something'}
+            </span>
+          )}
+        </p>
         <p className="font-cinzel font-700" style={{
-          fontSize: '1.15rem', color: '#f2ead8', marginTop: 2,
+          fontSize: '1.56rem', color: '#f2ead8', marginTop: 2,
         }}>{trader.name}</p>
 
+        {/* WHAT THEY SAY.
+            For a talker this IS the content — the thing you sailed over for —
+            so it is set as a quote rather than as a caption: bigger, lighter,
+            with a rule down the side to mark it as speech. Everyone else gets
+            the same line as flavour above an offer, which is a smaller job. */}
         <p className="font-karla" style={{
-          fontSize: '0.86rem', color: '#b9cbd8', lineHeight: 1.55, marginTop: 10,
+          fontSize: isTalk ? '1rem' : '0.92rem',
+          color: isTalk ? '#dbe8f2' : '#b9cbd8',
+          lineHeight: 1.6, marginTop: isTalk ? 14 : 10,
           fontStyle: 'italic',
+          ...(isTalk ? {
+            paddingLeft: '0.85rem',
+            borderLeft: '2px solid rgba(255,206,138,0.45)',
+          } : {}),
         }}>{trader.deal === 'talk' ? trader.lines[said % trader.lines.length] : trader.line}</p>
 
         {/* ── THE OFFER ─────────────────────────────────────────────────
             Stated plainly. The flavour above is allowed its charm; the
             numbers are not, because a player deciding whether to spend
             needs to know exactly what happens. */}
-        <div style={{
+        {/* Nothing to show a talker here. The line above is the whole of it,
+            and a bordered box repeating "Worth remembering" under it was a
+            caption for something that had already been said — plus a pill
+            floating in the middle of it. Both are gone; "go on" is a real
+            button in the footer where the other actions live. */}
+        {!isTalk && <div style={{
           marginTop: 14, padding: '0.85rem 0.95rem', borderRadius: 12,
           background: 'rgba(255,255,255,0.045)',
           border: '1px solid rgba(255,255,255,0.09)',
@@ -169,62 +196,32 @@ export default function TraderPanel({
           {trader.deal === 'rod' ? (
             <>
               <p className="font-karla font-700 uppercase" style={{
-                fontSize: '0.54rem', letterSpacing: '0.16em', color: '#c4b5fd',
+                fontSize: '0.66rem', letterSpacing: '0.16em', color: '#c4b5fd',
               }}>Not sold ashore</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: '#f6ecd6', marginTop: 3 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.224rem', color: '#f6ecd6', marginTop: 3 }}>
                 {rod?.name ?? 'A rod'}
               </p>
-              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f0c040', marginTop: 4 }}>
+              <p className="font-karla font-700" style={{ fontSize: '1.104rem', color: '#f0c040', marginTop: 4 }}>
                 {trader.cost.toLocaleString()} ⟡
               </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
                 No chandler ashore stocks this one. He will be gone when the
                 light comes back, but there is always another night and always
                 another runner.
               </p>
             </>
-          ) : trader.deal === 'talk' ? (
-            // A talker's whole offer IS the line above. Repeating it here, or
-            // dressing it as a transaction, would make a conversation look like
-            // a vending machine that failed.
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}>
-              <p className="font-karla font-600" style={{
-                fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 1.5,
-              }}>
-                {trader.topic === 'hint' ? 'Worth remembering.' : 'Something they heard.'}
-              </p>
-              {/* KEEP THEM TALKING. A talker knows several things and there is
-                  no reason to make you sail away and find another one to hear
-                  the next. Wraps rather than running out: the run is short and
-                  a conversation that ends in a dead button is worse than one
-                  that goes round. */}
-              {trader.lines.length > 1 && (
-                <button type="button"
-                  onClick={() => { vibrate(8); setSaid(n => n + 1) }}
-                  className="font-karla font-700"
-                  style={{
-                    padding: '0.42rem 0.95rem', borderRadius: 999, fontSize: '0.72rem',
-                    color: 'rgba(226,240,248,0.85)',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.18)',
-                    cursor: 'pointer',
-                  }}>
-                  Go on
-                </button>
-              )}
-            </div>
           ) : trader.deal === 'resident' ? (
             <>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.176rem', color: '#f6ecd6' }}>
                 Sell the whole hold
               </p>
-              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f0c040', marginTop: 4 }}>
+              <p className="font-karla font-700" style={{ fontSize: '1.104rem', color: '#f0c040', marginTop: 4 }}>
                 {Math.round(trader.rate * 100)}% of market value
               </p>
               {/* THE WHOLE POINT, said plainly. A player deciding whether to
                   sail home needs the comparison in front of them, not the
                   memory of a number from another screen. */}
-              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
                 Paid now, right here.<br />
                 The market ashore pays full price, but you have to sail back for
                 it and wait for it to settle.
@@ -232,49 +229,65 @@ export default function TraderPanel({
             </>
           ) : trader.deal === 'bait' ? (
             <>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.176rem', color: '#f6ecd6' }}>
                 {trader.qty} {bait?.name ?? 'bait'}
               </p>
-              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f0c040', marginTop: 4 }}>
+              <p className="font-karla font-700" style={{ fontSize: '1.104rem', color: '#f0c040', marginTop: 4 }}>
                 {trader.cost.toLocaleString()} ⟡
                 <span className="font-karla font-600" style={{
-                  fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginLeft: 8,
+                  fontSize: '0.864rem', color: 'rgba(255,255,255,0.45)', marginLeft: 8,
                   textDecoration: 'line-through',
                 }}>{trader.shopCost.toLocaleString()} ⟡</span>
               </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#7fd6a0', marginTop: 4 }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: '#7fd6a0', marginTop: 4 }}>
                 {saving}% under the shop
               </p>
             </>
           ) : trader.deal === 'buy' ? (
             <>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f6ecd6' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.176rem', color: '#f6ecd6' }}>
                 Sell the whole hold
               </p>
-              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f0c040', marginTop: 4 }}>
+              <p className="font-karla font-700" style={{ fontSize: '1.104rem', color: '#f0c040', marginTop: 4 }}>
                 {Math.round(trader.rate * 100)}% of market value
               </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 4, lineHeight: 1.5 }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.5)', marginTop: 4, lineHeight: 1.5 }}>
                 Paid now, no settling. Better than a quick sell on the dock and
                 worse than working the market yourself.
               </p>
             </>
           ) : null}
-        </div>
+        </div>}
+
+        {/* HOW MUCH MORE THEY KNOW. Dots, not a fraction: it is a hint of how
+            long the conversation runs, not a counter to complete. Nothing is
+            gated on hearing all of them. */}
+        {isTalk && trader.lines.length > 1 && (
+          <div style={{ display: 'flex', gap: 5, marginTop: 14, justifyContent: 'center' }}>
+            {trader.lines.map((_, i) => (
+              <span key={i} aria-hidden style={{
+                width: 5, height: 5, borderRadius: '50%',
+                background: i === said % trader.lines.length
+                  ? 'rgba(255,206,138,0.9)' : 'rgba(255,255,255,0.18)',
+                transition: 'background 0.2s',
+              }} />
+            ))}
+          </div>
+        )}
 
         {done && (
-          <p className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#7fd6a0', marginTop: 12, textAlign: 'center' }}>
+          <p className="font-karla font-700" style={{ fontSize: '1.008rem', color: '#7fd6a0', marginTop: 12, textAlign: 'center' }}>
             {done}
           </p>
         )}
         {err && (
-          <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#e6a0a0', marginTop: 12, textAlign: 'center', lineHeight: 1.5 }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.96rem', color: '#e6a0a0', marginTop: 12, textAlign: 'center', lineHeight: 1.5 }}>
             {err}
           </p>
         )}
         {!spent && !err && !isResident && !isTalk && (
           <p className="font-karla font-600" style={{
-            fontSize: '0.66rem', color: 'rgba(255,255,255,0.35)', marginTop: 10, textAlign: 'center',
+            fontSize: '0.792rem', color: 'rgba(255,255,255,0.35)', marginTop: 10, textAlign: 'center',
           }}>
             {dealsLeft} {dealsLeft === 1 ? 'deal' : 'deals'} left today
           </p>
@@ -286,7 +299,7 @@ export default function TraderPanel({
               disabled={busy || (!isResident && dealsLeft <= 0)}
               className="font-cinzel font-700"
               style={{
-                flex: 1, padding: '0.72rem', borderRadius: 11, fontSize: '0.88rem',
+                flex: 1.2, padding: '0.8rem', borderRadius: 11, fontSize: '1.128rem',
                 color: dealsLeft <= 0 ? 'rgba(242,234,216,0.4)' : '#f2ead8',
                 background: 'rgba(255,206,138,0.16)',
                 border: '1px solid rgba(255,206,138,0.45)',
@@ -299,10 +312,27 @@ export default function TraderPanel({
                     : 'Sell the hold'}
             </button>
           )}
+          {/* KEEP THEM TALKING, as a real action in the footer rather than a
+              pill floating in the middle of a caption box. A talker with more
+              to say leads with it; the close button is the quieter of the two. */}
+          {isTalk && trader.lines.length > 1 && (
+            <button onClick={() => { vibrate(8); setSaid(n => n + 1) }}
+              className="font-karla font-700"
+              style={{
+                flex: 1, padding: '0.8rem', borderRadius: 11, fontSize: '1.128rem',
+                color: '#f2ead8', background: 'rgba(255,206,138,0.16)',
+                border: '1px solid rgba(255,206,138,0.45)', cursor: 'pointer',
+              }}>
+              Go on
+            </button>
+          )}
+          {/* flex: 1 ALWAYS. It was 0.8 when it stood alone, which on a phone
+              left it four fifths of the bar with a fifth of dead space beside
+              it and no reason for the gap. */}
           <button onClick={onClose}
             className="font-karla font-700"
             style={{
-              flex: spent ? 1 : 0.8, padding: '0.72rem', borderRadius: 11, fontSize: '0.86rem',
+              flex: 1, padding: '0.8rem', borderRadius: 11, fontSize: isTalk ? '0.94rem' : '0.9rem',
               color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
             }}>

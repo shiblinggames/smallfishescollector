@@ -41,6 +41,9 @@ import TraderPanel from './TraderPanel'
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
  *  out. */
+/** BASE sailing speed, in world pixels per second: what a stock hull does with
+ *  a plain boat under it. Every refit and every hull multiplies up from here,
+ *  to double at the top of the ladder. */
 const SPEED = 470
 /** Low is heavy. A boat should take a moment to get going. */
 const ACCEL = 2.6
@@ -1719,7 +1722,7 @@ export default function SeaMap({
             onClick={e => { e.stopPropagation(); vibrate(14); setHailing(nearTrader) }}
             className="font-cinzel font-700"
             style={{
-              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '0.94rem',
+              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
               color: '#f6e6c6', background: 'rgba(24,18,10,0.9)',
               border: '1px solid rgba(255,206,138,0.5)',
               boxShadow: '0 6px 22px rgba(0,0,0,0.5)', cursor: 'pointer',
@@ -1776,7 +1779,7 @@ export default function SeaMap({
             boxShadow: `0 0 8px ${phase === 'night' || phase === 'dusk' ? 'rgba(159,182,255,0.7)' : 'rgba(255,217,134,0.7)'}`,
           }} />
           <span className="font-karla font-700 uppercase" style={{
-            fontSize: '0.54rem', letterSpacing: '0.14em', color: 'rgba(214,232,240,0.8)',
+            fontSize: '0.66rem', letterSpacing: '0.14em', color: 'rgba(214,232,240,0.8)',
           }}>{PHASE_LABEL[phase]}</span>
         </div>
       )}
@@ -2216,7 +2219,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
             boxShadow: '0 0 16px rgba(255,196,110,0.55)',
           }}>
             <span className="font-cinzel font-700" style={{
-              fontSize: '0.86rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
+              fontSize: '1.032rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
             }}>!</span>
           </div>
         </div>
@@ -2245,11 +2248,11 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, hullRef }: {
         opacity: isNear ? 1 : 0.8, transition: 'opacity 220ms ease-out',
       }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.74rem', color: done ? 'rgba(180,192,200,0.6)' : '#e6eef4',
+          fontSize: '0.888rem', color: done ? 'rgba(180,192,200,0.6)' : '#e6eef4',
           textShadow: '0 2px 12px rgba(0,0,0,0.9)',
         }}>{trader.name}</p>
         <p className="font-karla font-600" style={{
-          fontSize: '0.58rem', marginTop: 1,
+          fontSize: '0.696rem', marginTop: 1,
           color: done ? 'rgba(160,176,186,0.55)' : 'rgba(255,214,150,0.85)',
           textShadow: '0 1px 9px rgba(0,0,0,0.9)',
         }}>{done ? 'Traded today' : KIND_LABEL[trader.kind]}</p>
@@ -2504,11 +2507,11 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear }: { place
           textAlign: 'center', whiteSpace: 'nowrap',
         }}>
           <p className="font-cinzel font-700" style={{
-            fontSize: '0.96rem', color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
+            fontSize: '1.152rem', color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
             textShadow: '0 2px 12px rgba(0,0,0,0.9)',
           }}>{place.name}</p>
           <p className="font-karla font-600" style={{
-            fontSize: '0.7rem', marginTop: 1,
+            fontSize: '0.84rem', marginTop: 1,
             color: locked ? 'rgba(206,152,152,0.8)' : 'rgba(184,204,218,0.72)',
             textShadow: '0 1px 9px rgba(0,0,0,0.9)',
           }}>{locked ? `Fishing ${place.minLevel}` : place.blurb}</p>
@@ -2540,7 +2543,7 @@ function Prompt({ place, locked, level, onEnter, tick }: {
         disabled={locked}
         className="font-cinzel font-700"
         style={{
-          padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '0.94rem',
+          padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
           color: locked ? 'rgba(210,170,170,0.9)' : '#f2ead8',
           background: locked ? 'rgba(12,10,14,0.82)' : 'rgba(10,20,28,0.86)',
           border: `1px solid ${locked ? 'rgba(200,130,130,0.4)' : 'rgba(180,214,232,0.45)'}`,
@@ -2632,7 +2635,7 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
             animate={{ opacity: 0.72, y: 0 }}
             transition={{ duration: 0.5, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              fontSize: '0.62rem', letterSpacing: '0.42em', marginBottom: 10,
+              fontSize: '0.744rem', letterSpacing: '0.42em', marginBottom: 10,
               color: locked ? 'rgba(226,180,180,0.9)' : 'rgba(214,232,240,0.85)',
               textShadow: '0 2px 16px rgba(0,0,0,0.95)',
             }}>
@@ -2647,7 +2650,7 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
             animate={{ opacity: 1, scale: 1, letterSpacing: '0.1em' }}
             transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              fontSize: 'clamp(1.6rem, 8vw, 2.9rem)', textAlign: 'center',
+              fontSize: 'clamp(2rem, 9.5vw, 3.4rem)', textAlign: 'center',
               lineHeight: 1.05, padding: '0 1.5rem',
               color: locked ? '#e8b4b4' : '#f2ead8',
               textShadow: '0 3px 26px rgba(0,0,0,0.98), 0 0 44px rgba(0,0,0,0.75)',
@@ -2672,7 +2675,7 @@ function ZoneCrossing({ place, locked }: { place: Place | null; locked: boolean 
             initial={{ opacity: 0 }} animate={{ opacity: 0.62 }}
             transition={{ duration: 0.6, delay: 0.3 }}
             style={{
-              fontSize: '0.74rem', marginTop: 11, textAlign: 'center', padding: '0 2rem',
+              fontSize: '0.888rem', marginTop: 11, textAlign: 'center', padding: '0 2rem',
               color: locked ? 'rgba(226,180,180,0.9)' : 'rgba(200,222,236,0.9)',
               textShadow: '0 2px 14px rgba(0,0,0,0.95)',
             }}>
@@ -2722,7 +2725,11 @@ function WaterBanner({ place, locked, lowered }: {
             animate={{ opacity: fresh ? 1 : 0.42 }}
             transition={{ duration: 1.1, ease: 'easeOut' }}
             style={{
-              fontSize: '0.92rem', letterSpacing: '0.22em', textTransform: 'uppercase',
+              // THE NAME OF THE PLACE, and the biggest thing on the chart
+              // that is made of type. It is the answer to "where am I", which
+              // is the question a map exists to answer — it should not be
+              // set smaller than the button underneath it.
+              fontSize: '1.35rem', letterSpacing: '0.2em', textTransform: 'uppercase',
               color: locked ? 'rgba(214,176,176,0.95)' : '#dfeaf2',
               textShadow: '0 2px 14px rgba(0,0,0,0.95)',
             }}>
@@ -2736,7 +2743,7 @@ function WaterBanner({ place, locked, lowered }: {
             <motion.p className="font-karla font-600"
               initial={{ opacity: 0 }} animate={{ opacity: 0.9 }}
               style={{
-                fontSize: '0.68rem', marginTop: 6, color: 'rgba(214,166,166,0.95)',
+                fontSize: '0.816rem', marginTop: 6, color: 'rgba(214,166,166,0.95)',
                 textShadow: '0 1px 10px rgba(0,0,0,0.95)',
               }}>
               Fishing {shown.minLevel} to work this water
@@ -2960,8 +2967,8 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
               // rather than as punctuation that lost its sentence.
               <span className="font-cinzel font-800" aria-hidden style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 15, height: 15, borderRadius: '50%',
-                fontSize: '0.56rem', lineHeight: 1,
+                width: 18, height: 18, borderRadius: '50%',
+                fontSize: '0.72rem', lineHeight: 1,
                 color: '#f2d99a',
                 background: 'rgba(240,192,64,0.16)',
                 border: '1px solid rgba(240,192,64,0.6)',
@@ -2976,7 +2983,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen }: {
             )}
             {lead && (
               <span className="font-karla font-700" style={{
-                fontSize: '0.54rem', marginTop: -1,
+                fontSize: '0.66rem', marginTop: -1,
                 color: `rgba(190,214,228,${dim ? 0.3 : 0.6})`,
                 textShadow: '0 1px 6px rgba(0,0,0,0.9)',
               }}>{Math.round(m.world / 10)}m</span>
@@ -3029,10 +3036,10 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{
-              fontSize: '0.5rem', color: 'rgba(190,214,228,0.85)', textShadow: '0 1px 5px rgba(0,0,0,0.85)',
+              fontSize: '0.66rem', color: 'rgba(190,214,228,0.85)', textShadow: '0 1px 5px rgba(0,0,0,0.85)',
             }}>Ashore at the Mainland</p>
             <p className="font-cinzel font-700" style={{
-              fontSize: '1.05rem', color: '#f4ecd8', textShadow: '0 2px 8px rgba(0,0,0,0.85)',
+              fontSize: '1.26rem', color: '#f4ecd8', textShadow: '0 2px 8px rgba(0,0,0,0.85)',
             }}>Where to?</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
@@ -3080,15 +3087,15 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
                   filter: `drop-shadow(0 8px 18px ${d.accent}4d) drop-shadow(0 4px 10px rgba(0,0,0,0.6))`,
                 }} />
               </div>
-              <p className="font-cinzel font-800" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.12 }}>
+              <p className="font-cinzel font-800" style={{ fontSize: '0.936rem', color: '#f0ede8', lineHeight: 1.12 }}>
                 {d.name}
               </p>
               <p className="font-karla font-600" style={{
-                fontSize: '0.55rem', color: `${d.accent}dd`, marginTop: 3, lineHeight: 1.32,
+                fontSize: '0.66rem', color: `${d.accent}dd`, marginTop: 3, lineHeight: 1.32,
               }}>{d.blurb}</p>
               <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{
                 marginTop: 'auto', paddingTop: 9,
-                display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.54rem',
+                display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.66rem',
                 color: d.accent,
               }}>
                 {d.cta}

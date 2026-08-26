@@ -76,8 +76,7 @@ everything to do with fishing lives south. Depth is simply how far out you have 
 **Each band is ~29% wider than the one inside it.** They grew before too, but only from
 2,000 to 3,200 across all five, which is not a progression anyone can feel. The Ancient Deep
 is now nearly three times the Shallows. Crossing the Shallows is 5s at top speed; crossing
-the Ancient Deep is 14s. Reaching it from the dock is 33s at top speed, 53s on a stock hull —
-long, and deliberately: it needs Fishing 75, the hull refit exists to shorten it, and the
+the Ancient Deep is 14s. Reaching it from the dock is 33s on a stock hull and 16s fully refitted — it needs Fishing 75, the hull refit exists to shorten it, and the
 boat now starts where you left it, so the haul is paid once per destination rather than once
 per session.
 
@@ -204,12 +203,20 @@ style cannot carry a media query; the phone layout was being served to a monitor
   Berths cost 40k / 140k / 450k and cap at four, because past four you are carrying most of
   your collection again and the decision stops existing. At sea you can only swap to a rod
   you brought.
-- **`HULL_SPEED` is a FRACTION OF TOP SPEED**, `[0.62, 0.74, 0.86, 1]`. It used to run
-  1.0 → 1.6, which made `SeaMap`'s `SPEED` the *slow* speed — the chart is tuned so a fully
-  refitted boat crosses it comfortably, and every player without the refit was sailing
-  faster than that tuning assumed. Inverted, 470 px/s is what a Clipper Hull does and a
-  stock hull makes 62% of it. Same spread, but the upgrade now buys back speed you can feel
-  the absence of.
+- **`HULL_SPEED` multiplies a base, and the base is a whole boat.** `[1, 1.15, 1.32, 1.52,
+  1.75, 2]` — six tiers, stock at **100%**, topping out at double. It spent a while inverted
+  (SPEED as the ceiling, stock at 62%) on the reasoning that the chart was tuned for a
+  refitted boat; that was wrong for one plain reason, which is that a player opening the game
+  should not be told their boat is at 62%. A stock hull is not a broken hull.
+  Four tiers were sized for a chart half this width — the bands are 22,600 deep now, so the
+  ceiling moved with them. Costs `[0, 25k, 90k, 260k, 700k, 1.8M]`: shallow and felt early,
+  a steep sink late. Stacks with the boat's own trim and grade.
+
+| | stock | top hull | + Chromium |
+|---|---|---|---|
+| Dock → the Abyss | 22s | 11s | 9s |
+| Dock → the Ancient Deep | 33s | 16s | 14s |
+| Dock → the far edge | 47s | 23s | 20s |
 
 ## The edges of the world
 

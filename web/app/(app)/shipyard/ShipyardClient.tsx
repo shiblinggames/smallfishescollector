@@ -290,7 +290,7 @@ export default function ShipyardClient(p: {
       // The HULL only. The boat's own trim multiplies this and is shown beside
       // it rather than folded in, because they are bought in different places
       // and one of them is a trade-off rather than an upgrade.
-      now: `${Math.round(hullSpeed(hull) * 100)}%`, unit: 'of top speed',
+      now: `${Math.round(hullSpeed(hull) * 100)}%`, unit: 'sailing speed',
       next: hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`,
       cost: hullCost,
     },
@@ -539,7 +539,7 @@ export default function ShipyardClient(p: {
             />
             <BoatCard
               name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
-              now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="of top speed"
+              now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
               next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}% speed`}
               cost={hullCost}
               busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}

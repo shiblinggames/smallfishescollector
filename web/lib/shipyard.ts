@@ -53,24 +53,36 @@ export function nextRackCost(tier: number): number | null {
  * would make that maths impossible to reason about. This upgrade solves the
  * problem it looks like it solves: the Ancient Deep is a long haul, and a long
  * haul is a long time to hold a helm.
+ *
+ * It stacks with the BOAT's own trim and grade (lib/boats) — the hull tier is
+ * the ladder everyone climbs, the boat is which one you climb it in.
  */
-export const HULL_NAMES = ['Stock Hull', 'Trimmed Hull', 'Raked Hull', 'Clipper Hull'] as const
-export const HULL_COSTS = [0, 25_000, 90_000, 260_000] as const
+export const HULL_NAMES = [
+  'Stock Hull', 'Trimmed Hull', 'Raked Hull',
+  'Clipper Hull', 'Blackwall Hull', 'Greyhound Hull',
+] as const
+export const HULL_COSTS = [0, 25_000, 90_000, 260_000, 700_000, 1_800_000] as const
 /**
- * FRACTION OF TOP SPEED, not a multiplier on a base.
+ * A MULTIPLIER ON THE BASE, and the base is a whole boat.
  *
- * These used to run 1.0 → 1.6, so a stock hull sailed at the map's `SPEED` and
- * upgrades made you faster than it. That made the number in `SeaMap` the SLOW
- * speed, which is the wrong thing for it to be: the chart was tuned so a fully
- * refitted boat crosses it comfortably, and every player without the refit was
- * sailing faster than any of that tuning assumed.
+ * This spent a while inverted — `SPEED` as the top speed and a stock hull at
+ * 62% of it — on the reasoning that the chart was tuned for a refitted boat and
+ * everyone else should be slower than that tuning. That was the wrong way round
+ * for one plain reason: a player opening the game for the first time should not
+ * be told their boat is at 62%. A stock hull is not a broken hull. It is 100%,
+ * and everything above it is a refit.
  *
- * Inverted, `SPEED` is now the TOP speed — what the Clipper Hull does — and a
- * stock hull makes 62% of it. The spread is identical (top is 1.61× stock), but
- * the upgrade now buys back speed you can feel the absence of rather than
- * adding speed on top of an already-fast boat.
+ * SIX TIERS, TOPPING OUT AT DOUBLE. Four was sized for a chart half this width.
+ * The bands are now 22,600 pixels deep rather than 14,400, so the ceiling moved
+ * with them: the Greyhound crosses the whole chart in about the time the old
+ * Clipper took to reach the Abyss.
+ *
+ * The curve is deliberately shallow at the bottom and steep at the top. The
+ * first refit is 25,000 and buys a noticeable 15%; the last is 1,800,000 and
+ * buys 14%. Early ones are affordable and felt; late ones are a sink for a
+ * player who has run out of things to want.
  */
-export const HULL_SPEED = [0.62, 0.74, 0.86, 1] as const
+export const HULL_SPEED = [1, 1.15, 1.32, 1.52, 1.75, 2] as const
 
 export const MAX_HULL_TIER = HULL_COSTS.length - 1
 
