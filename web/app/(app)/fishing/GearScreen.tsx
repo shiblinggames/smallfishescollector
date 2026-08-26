@@ -18,7 +18,7 @@ import { vibrate } from '@/lib/haptics'
 import ForgeRodEmblem from './ForgeRodEmblem'
 import { IconAnchor } from '@/components/GameIcons'
 import { BAITS } from '@/lib/bait'
-import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat } from '@/lib/boats'
+import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN, getBoat, trimLabel } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
@@ -539,12 +539,17 @@ const SLOT_FAMILY = {
 } as const
 
 function GearSlot({
-  label, image, icon, itemName, color, accent, onClick, small, empty, glowClass, notify, pulseKey, primeval,
+  label, image, icon, itemName, sub, color, accent, onClick, small, empty, glowClass, notify, pulseKey, primeval,
 }: {
   label: string
   image?: string | null
   icon?: React.ReactNode
   itemName: string
+  /** One word under the name, for a slot whose item carries a trait the tile
+   *  cannot otherwise show. Only the Boat uses it — its hull trim decides how
+   *  the boat sails, and that is invisible until you are at sea in the wrong
+   *  one. Rendered small and quiet; the name is still the headline. */
+  sub?: string
   /** The ITEM's colour — drives the thumbnail glow and drop-shadow only. */
   color: string
   /** The SLOT FAMILY's colour, for the outline. Falls back to the item colour
@@ -648,6 +653,13 @@ function GearSlot({
           fontSize: '0.72rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={itemName}>{itemName}</p>
+        {sub && (
+          <p className="font-karla font-700 uppercase" style={{
+            fontSize: '0.5rem', letterSpacing: '0.1em', marginTop: 1,
+            color: empty ? '#2e2c2a' : `${color}bb`,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }} title={sub}>{sub}</p>
+        )}
       </div>
     </motion.button>
   )
@@ -1208,6 +1220,10 @@ export default function GearScreen({
               label="Boat" accent={SLOT_FAMILY.cosmetic}
               image={b?.restImageUrl ?? null}
               itemName={b?.name ?? 'Default'}
+              // The hull is the one cosmetic that changes how the boat sails,
+              // so the slot has to say which way — otherwise the trade-off is
+              // invisible until you are already at sea in the wrong one.
+              sub={trimLabel(b?.trim)}
               color="#7dd3fc"
               pulseKey={pulseKeys.boat}
               onClick={() => setOpenSlot('boat')}
@@ -1338,6 +1354,10 @@ export default function GearScreen({
               label="Boat" accent={SLOT_FAMILY.cosmetic}
               image={b?.restImageUrl ?? null}
               itemName={b?.name ?? 'Default'}
+              // The hull is the one cosmetic that changes how the boat sails,
+              // so the slot has to say which way — otherwise the trade-off is
+              // invisible until you are already at sea in the wrong one.
+              sub={trimLabel(b?.trim)}
               color="#7dd3fc"
               pulseKey={pulseKeys.boat}
               onClick={() => setOpenSlot('boat')}

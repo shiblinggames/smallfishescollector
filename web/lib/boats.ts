@@ -33,6 +33,76 @@ export interface BoatDef {
   /** Earned (not bought) once the player reaches this Achievement Points total.
    *  Mirrors the achievement-gated character skins. */
   achievementPoints?: number
+  /**
+   * HOW SHE HANDLES, on the ocean hub. See TRIM below.
+   *
+   * A number from -1 (as nimble as they come, and slow with it) to +1 (all top
+   * speed, turns like a barge). Absent means dead in the middle.
+   *
+   * This is the ONLY stat a boat carries and it is deliberately a trade-off
+   * rather than a rating. A boat is still a thing you pick because you like
+   * looking at it.
+   */
+  trim?: number
+}
+
+/**
+ * TRIM — the boat stops being only a costume.
+ *
+ * A hull is the one cosmetic on the character that has an obvious business
+ * being a stat: it is the thing doing the sailing. But a cosmetic set with a
+ * BEST member is not a cosmetic set any more — everybody wears the winner and
+ * the other sixteen become dead art. So this is a SIDEGRADE, not a ladder.
+ *
+ * One number, `trim`, splits a fixed budget two ways:
+ *
+ *   +1  all top speed, sluggish off the mark and slow to answer the helm
+ *    0  balanced
+ *   -1  quick to get going and quick to turn, lower top speed
+ *
+ * Both ends are genuinely useful and for different water. Top speed is the long
+ * haul out to the Ancient Deep. Agility is everything you do once you are
+ * there: pulling alongside a trader who is drifting, threading a wreck field,
+ * getting back under way after a cast.
+ *
+ * ── WHAT KEEPS THIS OUT OF PAY-TO-WIN ────────────────────────────────────
+ *
+ * MONEY BUYS YOU NOTHING AT EITHER END.
+ *
+ * The fastest hull in the game and the nimblest are both 5,000-doubloon boats
+ * (Desert and Pistachio) — pocket change, and available from the first hour.
+ * The free hulls sit one step in at +/-0.08. The 500,000 and 1,000,000 boats,
+ * and both achievement boats, top out at +/-0.10, which is LESS than the cheap
+ * pair. They are prestige art with a good hull, not the correct answer.
+ *
+ * THE THREE GEM BOATS — Fire, Ice and Jet Black, via `gemPrice` — sit at
+ * exactly 0 and must stay there. A gem-bought hull that sails better than a
+ * free one would be bought precisely because it sails better, which is the one
+ * thing this game does not do. There is no script enforcing it; it is a
+ * decision made per boat, so make it deliberately when adding one.
+ */
+export const TRIM_RANGE = 0.12
+
+/** Multiplier on TOP SPEED. Ranges 0.88 .. 1.12 across the fleet. */
+export function boatSpeed(id: string | null | undefined): number {
+  return 1 + (getBoat(id)?.trim ?? 0)
+}
+
+/** Multiplier on ACCELERATION and turn response. The mirror of boatSpeed, so a
+ *  boat's two numbers always sum to 2 and no hull is strictly better. */
+export function boatAgility(id: string | null | undefined): number {
+  return 1 - (getBoat(id)?.trim ?? 0)
+}
+
+/** What to call it on a card. Plain, per the copy rule — the flavour is in the
+ *  art, not in the readout. */
+export function trimLabel(trim: number | undefined): string {
+  const t = trim ?? 0
+  if (t >= 0.08) return 'Long-haul'
+  if (t >= 0.03) return 'Fast'
+  if (t <= -0.08) return 'Nimble'
+  if (t <= -0.03) return 'Quick'
+  return 'Balanced'
 }
 
 /** Default "Driftwood" — no overlay; uses the base sprite's boat. */
@@ -60,6 +130,7 @@ const FIRE_POSITIONS: Record<BoatFrame, BoatPos> = {
 export const BOATS: BoatDef[] = [
   {
     id: 'oak',
+    trim: 0.04,
     name: 'Oak',
     color: '#bda05a',
     cost: 1000,
@@ -69,6 +140,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'cherry',
+    trim: -0.06,
     name: 'Cherry',
     color: '#c84a3a',
     cost: 2000,
@@ -78,6 +150,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'desert',
+    trim: 0.12,
     name: 'Desert',
     color: '#c8b378',
     cost: 5000,
@@ -87,6 +160,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'mahogany',
+    trim: 0.02,
     name: 'Mahogany',
     color: '#b5582f',
     cost: 5000,
@@ -96,6 +170,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'pistachio',
+    trim: -0.12,
     name: 'Pistachio',
     color: '#7d9170',
     cost: 5000,
@@ -105,6 +180,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'taupe',
+    trim: 0.0,
     name: 'Taupe',
     color: '#9a8a7e',
     cost: 5000,
@@ -114,6 +190,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'charcoal',
+    trim: -0.08,
     name: 'Charcoal',
     color: '#3a3a40',
     cost: 0,
@@ -125,6 +202,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'golden',
+    trim: 0.06,
     name: 'Golden',
     color: '#f0c040',
     cost: 50000,
@@ -135,6 +213,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'offwhite',
+    trim: 0.08,
     name: 'Offwhite',
     color: '#e8e2d0',
     cost: 0,
@@ -145,6 +224,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'periwinkle',
+    trim: -0.04,
     name: 'Periwinkle',
     color: '#8095c8',
     cost: 5000,
@@ -154,6 +234,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'ethereal',
+    trim: -0.1,
     name: 'Ethereal',
     color: '#dde8ff',
     cost: 500000,
@@ -164,6 +245,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'fire',
+    trim: 0.0,
     name: 'Fire',
     color: '#ff7a1a',
     cost: 0,
@@ -174,6 +256,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'ice',
+    trim: 0.0,
     name: 'Ice',
     color: '#a4dcf2',
     cost: 0,
@@ -184,6 +267,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'jetblack',
+    trim: 0.0,
     name: 'Jet Black',
     color: '#1b1b20',
     cost: 0,
@@ -194,6 +278,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'chromium',
+    trim: 0.1,
     name: 'Chromium',
     color: '#c4c8cc',
     cost: 1_000_000,
@@ -203,6 +288,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'celestial',
+    trim: -0.1,
     name: 'Celestial',
     color: '#b0a8e0',
     cost: 0,
@@ -213,6 +299,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'abyssal',
+    trim: 0.06,
     name: 'Abyssal',
     color: '#3a2f5a',
     cost: 0,

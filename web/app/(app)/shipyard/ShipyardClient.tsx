@@ -22,6 +22,7 @@ import { RODS, getEffectiveRod, rodGlowClass } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { HOOKS } from '@/lib/hooks'
 import { getPet, petSlot } from '@/lib/pets'
+import { getBoat, boatSpeed, boatAgility, trimLabel } from '@/lib/boats'
 import PopupShell from '@/components/PopupShell'
 import { FISH_HOLD_TIERS, getFishHold } from '@/lib/fishHold'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -286,6 +287,9 @@ export default function ShipyardClient(p: {
     },
     hull: {
       title: HULL_NAMES[Math.min(hull + 1, MAX_HULL_TIER)], accent: '#9fc9e8',
+      // The HULL only. The boat's own trim multiplies this and is shown beside
+      // it rather than folded in, because they are bought in different places
+      // and one of them is a trade-off rather than an upgrade.
       now: `${Math.round(hullSpeed(hull) * 100)}%`, unit: 'of top speed',
       next: hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`,
       cost: hullCost,
@@ -434,6 +438,55 @@ export default function ShipyardClient(p: {
             {err}
           </p>
         )}
+
+        {/* ── HOW SHE HANDLES ────────────────────────────────────────────
+            The equipped hull's trim, spelled out. It is a trade-off rather than
+            an upgrade, so it is shown as two numbers that move against each
+            other and never as a rating — there is no better boat here, only a
+            boat that suits what you are about to go and do. */}
+        {(() => {
+          const def = getBoat(boat)
+          const sp = Math.round(boatSpeed(boat) * 100)
+          const ag = Math.round(boatAgility(boat) * 100)
+          return (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
+              padding: '0.7rem 0.85rem', borderRadius: 14,
+              background: 'linear-gradient(180deg, rgba(125,211,252,0.09) 0%, rgba(255,255,255,0.02) 100%), #0b1620',
+              border: '1px solid rgba(125,211,252,0.28)',
+            }}>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="font-karla font-700 uppercase block" style={{
+                  fontSize: 'var(--sy-1)', letterSpacing: '0.1em', color: 'rgba(125,211,252,0.7)',
+                }}>{def?.name ?? 'Driftwood'} · {trimLabel(def?.trim)}</span>
+                <span className="font-karla font-600 block" style={{
+                  fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.6)', marginTop: 3, lineHeight: 1.4,
+                }}>
+                  The hull you sail decides how she handles. Change it in the
+                  locker below.
+                </span>
+              </span>
+              <span style={{ flexShrink: 0, display: 'flex', gap: 14, textAlign: 'right' }}>
+                <span>
+                  <span className="font-karla font-700 uppercase block" style={{
+                    fontSize: 'var(--sy-1)', letterSpacing: '0.08em', color: 'rgba(190,212,228,0.5)',
+                  }}>Speed</span>
+                  <span className="font-cinzel font-700 block" style={{
+                    fontSize: 'var(--sy-4)', color: sp >= 100 ? '#7fd6a0' : '#c8a0a0', marginTop: 2,
+                  }}>{sp}%</span>
+                </span>
+                <span>
+                  <span className="font-karla font-700 uppercase block" style={{
+                    fontSize: 'var(--sy-1)', letterSpacing: '0.08em', color: 'rgba(190,212,228,0.5)',
+                  }}>Agility</span>
+                  <span className="font-cinzel font-700 block" style={{
+                    fontSize: 'var(--sy-4)', color: ag >= 100 ? '#7fd6a0' : '#c8a0a0', marginTop: 2,
+                  }}>{ag}%</span>
+                </span>
+              </span>
+            </div>
+          )
+        })()}
 
         {/* ── WHAT THE RIG ADDS UP TO ── directly under the picture it is the
             sum of, so the numbers and the thing they describe read as one. */}

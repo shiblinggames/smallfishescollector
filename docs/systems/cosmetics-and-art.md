@@ -47,3 +47,33 @@ background convention, keyed to transparent PNG in post.
 
 [badges.md](badges.md), [crew.md](crew.md), [ship.md](ship.md). Sprite-sheet uploads to
 Supabase Storage go via curl + service-role key ([platform.md](platform.md)).
+
+
+## Boat trim — the hull stops being only a costume
+
+`lib/boats.ts`. Every boat carries one number, `trim`, from -0.12 to +0.12, which splits a
+FIXED budget between top speed and agility (acceleration and how fast she answers the helm).
+`boatSpeed()` returns `1 + trim`, `boatAgility()` returns `1 - trim`, so the two always sum
+to 2 and **no boat is strictly better than another** — verified: zero dominant pairs.
+
+It is a sidegrade on purpose. A cosmetic set with a best member is not a cosmetic set: one
+boat wins, everybody wears it, and the other sixteen become dead art. Both ends are genuinely
+useful and for different water — speed is the haul out to the Ancient Deep, agility is
+everything you do once you are there.
+
+**Money buys nothing at either end.** The fastest hull in the game and the nimblest are both
+5,000-doubloon boats (Desert, Pistachio) — pocket change, available in the first hour. The
+free hulls sit one step in at ±0.08. The 500,000 and 1,000,000 boats and both achievement
+boats top out at ±0.10, *less* than the cheap pair: they are prestige art with a good hull,
+not the correct answer.
+
+**The three gem boats — Fire, Ice, Jet Black (`gemPrice`) — sit at exactly 0 and must stay
+there.** A gem-bought hull that sails better than a free one would be bought precisely
+because it sails better. There is no script enforcing this; it is a per-boat decision, so
+make it deliberately. Note the field is `gemPrice`, not `gemCost` — grepping the wrong name
+returns nothing and reads as "no gem boats exist".
+
+Surfaced in two places: the Boat slot in the gear grid carries the trim label under the name
+(otherwise the trade-off is invisible until you are at sea in the wrong hull), and the
+Shipyard shows the equipped hull's two numbers under the boat. The hull TIER upgrade is
+unchanged and multiplies on top — that is the ladder, this is the choice.

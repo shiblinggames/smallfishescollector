@@ -27,7 +27,7 @@ import { saveSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, type Place } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
-import { BOATS } from '@/lib/boats'
+import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
@@ -648,6 +648,13 @@ export default function SeaMap({
   // back to a boat already under way, sailing itself to the Mainland, with
   // nobody touching the helm. A target you did not set is not a destination.
   const target = useRef<Vec>({ ...startAt })
+
+  // The equipped hull's two numbers, mirrored into refs so the 60fps loop never
+  // reads a prop and never needs re-creating when the boat changes.
+  const speedRef = useRef(1)
+  const agilityRef = useRef(1)
+  speedRef.current = boatSpeed(boatId)
+  agilityRef.current = boatAgility(boatId)
   const facing = useRef<1 | -1>(1)
 
   // ── STEERING BY THUMB ───────────────────────────────────────────────────
@@ -1155,7 +1162,7 @@ export default function SeaMap({
       let want = 0
       if (d > ARRIVE) {
         const t = Math.min(1, (d - ARRIVE) / (SLOW - ARRIVE))
-        want = SPEED * hullSpeed * (t * t * (3 - 2 * t))
+        want = SPEED * hullSpeed * speedRef.current * (t * t * (3 - 2 * t))
       }
       // A HALF-PUSHED STICK IS HALF SPEED. Without this the stick is a
       // direction-only control and every nudge is full sail, which makes
@@ -1175,7 +1182,11 @@ export default function SeaMap({
       // 1 - e^(-k·dt) is the same curve sampled correctly, so the boat moves
       // identically at any frame rate and a dropped frame is invisible rather
       // than a shove.
-      const k = 1 - Math.exp(-ACCEL * dt)
+      // THE BOAT'S OWN HANDLING. `trim` splits one budget between top speed and
+      // this, so a nimble hull answers the helm faster and a long-haul one
+      // takes its time — see lib/boats. Read from a ref rather than closed
+      // over, because changing boats mid-session must not need a remount.
+      const k = 1 - Math.exp(-ACCEL * agilityRef.current * dt)
       vel.current.x += (wx - vel.current.x) * k
       vel.current.y += (wy - vel.current.y) * k
       pos.current.x += vel.current.x * dt
