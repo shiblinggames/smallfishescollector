@@ -146,6 +146,26 @@ export const PLACES: Place[] = [
     ],
   },
   {
+    /**
+     * YOURS.
+     *
+     * East of the Mainland, in among the other ports rather than off on its own
+     * somewhere: a home you have to make an expedition to visit is a home
+     * nobody visits. It is the second biggest island on the chart at 260, ahead
+     * of the single-purpose ports and well behind the Mainland — big enough to
+     * hold six build spots without them touching, small enough that it never
+     * competes with the place every band is measured from.
+     *
+     * `buildings` is EMPTY here and filled in at render time from the captain's
+     * own homestead row. It is the one island on this chart that is different
+     * for everybody, which is the entire point of it.
+     */
+    id: 'home', name: 'The Homestead', blurb: 'Yours. Such as it is.',
+    href: '/home', x: 1900, y: -250, r: 260, art: '/sea/home-cottage.png',
+    kind: 'port', minLevel: 0,
+    buildings: [],
+  },
+  {
     // THE HARBOUR DIVIDES THE MAP. North of it is expeditions; everything south
     // of the Mainland is fishing. It sits well north so it is unmistakably on
     // the other side of the line from the fishing grounds.

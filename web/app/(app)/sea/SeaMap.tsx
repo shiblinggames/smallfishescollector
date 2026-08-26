@@ -34,6 +34,7 @@ import { goAshore, type AshoreResult } from './isleActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
+import { homeBuildings, type Homestead } from '@/lib/homestead'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
@@ -657,7 +658,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, digs, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, digs, homestead, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -703,6 +704,8 @@ export default function SeaMap({
   discovered: string[]
   /** Dig bearings held, and which of those are already up. */
   digs: DigState
+  /** The captain's own island, as it currently stands. */
+  homestead: Homestead
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -2229,7 +2232,7 @@ export default function SeaMap({
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: Z.world, willChange: 'transform' }}>
         {PLACES.map(p => (
-          <PlaceIsland key={p.id} place={p} locked={locked(p)} isNear={near?.id === p.id}
+          <PlaceIsland key={p.id} place={homeFor(p, homestead)} locked={locked(p)} isNear={near?.id === p.id}
             // CREW WAITING ON THE DOCK. The island says so itself rather than a
             // banner saying it for them: it is a fact about a PLACE, and the
             // chart is where facts about places belong. Nothing moves, nothing
@@ -4315,6 +4318,21 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
  *  the compass, and without this every island rebuilt its whole subtree —
  *  coastline clip, drift blobs, cliff, jetty and all — on each of those ticks
  *  for a result that had not changed. */
+/**
+ * THE ONE ISLAND THAT IS DIFFERENT FOR EVERYBODY.
+ *
+ * Every other place on this chart is the same for every captain, so its
+ * buildings are written down in chart.ts. The Homestead's are whatever that
+ * captain has actually built, so the Place is rebuilt here with them dropped in.
+ *
+ * A shallow swap rather than a new concept: `homeBuildings` returns exactly the
+ * shape `PLACES.buildings` already has, at the same percent coordinates, so
+ * PlaceIsland never learns that one of its islands is special.
+ */
+function homeFor(p: Place, h: Homestead): Place {
+  return p.id === 'home' ? { ...p, buildings: homeBuildings(h) } : p
+}
+
 const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting = 0 }: {
   place: Place; locked: boolean; isNear: boolean
   /** Crew standing on this dock with a haul. Only the Trawl Docks ever pass a

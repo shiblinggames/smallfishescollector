@@ -24,6 +24,7 @@ import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
 import { getDiscoveries } from './isleActions'
 import { getDigState } from './digActions'
+import { getHomestead } from '../home/actions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import { vigilFor } from '@/lib/ancientVigil'
@@ -88,6 +89,11 @@ export default async function SeaPage() {
   // BEARINGS HELD AND HOLES ALREADY DUG. Same reasoning: an X that arrives a
   // moment after the chart does is an X you have already gone looking for.
   const digs = await getDigState()
+
+  // WHAT THEY HAVE BUILT. The Homestead is the only island on the chart whose
+  // buildings are not written down in chart.ts, because it is the only one that
+  // is different for every captain.
+  const homestead = await getHomestead()
 
   // RENOWN, for the level bar. Past 100 the bar becomes a tappable chip that
   // opens the panel, and it was mounted out here without either of the props
@@ -213,6 +219,7 @@ export default async function SeaPage() {
       exploredRaw={(profile?.sea_explored as string | null) ?? null}
       discovered={discovered}
       digs={digs}
+      homestead={homestead}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,
