@@ -38,11 +38,23 @@ function coastline(id: string): number[] {
 /**
  * The grass radius at an angle, as a percentage of the island box from centre.
  *
- * The grass layer is `inset: 15%`, so its own box is 70% of the island's and
- * its polygon percentages are of THAT. A coastline point at 46 lands at
- * 50 + 0.7*46 of the outer box, so every radius is scaled by 0.7.
+ * ── THIS NUMBER WAS WRONG AND THE CHECK PASSED ANYWAY ──────────────────
+ *
+ * It used to be 0.7, reasoned as "the grass layer is `inset: 15%`, so its box
+ * is 70% of the island's". The first half is right and the conclusion is not:
+ * the grass div is not a child of the ISLAND, it is a child of the TOP FACE,
+ * which is itself `inset: 13%`. The insets compound.
+ *
+ *     top face box   = 100% - 2*13%  = 74% of the island box
+ *     grass box      = 74% * (100% - 2*15%) = 74% * 70% = 51.8%
+ *
+ * So the real grass reaches 0.518 of a coastline radius, not 0.7 — the check
+ * was handing every building 35% more land than exists. It reported "0
+ * buildings not standing wholly on the grass" while buildings were visibly
+ * hanging over the water, which is the worst way for a checker to fail: it
+ * does not just miss the bug, it certifies it.
  */
-const GRASS = 0.7
+const GRASS = 0.7 * 0.74
 
 function grassAt(rs: number[], angle: number): number {
   const N = rs.length

@@ -76,46 +76,46 @@ export type Hotspot = {
  */
 export const HOTSPOTS: Hotspot[] = [
   {
-    id: 'beacon', label: 'The point', x: 64, y: 33,
+    id: 'beacon', label: 'The point', x: 64, y: 32,
     note: 'Visible a long way off. That is the whole of it.',
     builds: [
       { name: 'Bare rock', cost: 0, art: null, scale: 0, blurb: 'Somewhere to stand and look out.' },
-      { name: 'A brazier', cost: 220_000, art: '/sea/home-brazier.png', scale: 0.089, blurb: 'A fire that somebody has to keep lit.' },
-      { name: 'A lighthouse', cost: 950_000, art: '/sea/home-lighthouse.png', scale: 0.205, blurb: 'They can see you coming from the Abyss.' },
+      { name: 'A brazier', cost: 220_000, art: '/sea/home-brazier.png', scale: 0.048, blurb: 'A fire that somebody has to keep lit.' },
+      { name: 'A lighthouse', cost: 950_000, art: '/sea/home-lighthouse.png', scale: 0.068, blurb: 'They can see you coming from the Abyss.' },
     ],
   },
   {
-    id: 'gallery', label: 'The gallery', x: 39, y: 44,
+    id: 'gallery', label: 'The gallery', x: 41, y: 45,
     note: 'Where the badges hang. A bare wall shows every one of them already.',
     builds: [
       { name: 'A bare wall', cost: 0, art: null, scale: 0, blurb: 'They are up, at least.' },
-      { name: 'A strongroom', cost: 90_000, art: '/sea/home-strongroom.png', scale: 0.116, blurb: 'Under glass, lit from below, and dusted.' },
-      { name: 'A gallery hall', cost: 420_000, art: '/sea/home-gallery.png', scale: 0.171, blurb: 'Room to hang your best six large.' },
-      { name: "The Captain's Wing", cost: 1_400_000, art: '/sea/home-wing.png', scale: 0.219, blurb: 'A whole wing of it, and a bench for whoever came to look.' },
+      { name: 'A strongroom', cost: 90_000, art: '/sea/home-strongroom.png', scale: 0.071, blurb: 'Under glass, lit from below, and dusted.' },
+      { name: 'A gallery hall', cost: 420_000, art: '/sea/home-gallery.png', scale: 0.107, blurb: 'Room to hang your best six large.' },
+      { name: "The Captain's Wing", cost: 1_400_000, art: '/sea/home-wing.png', scale: 0.176, blurb: 'A whole wing of it, and a bench for whoever came to look.' },
     ],
   },
   {
-    id: 'house', label: 'The house', x: 50, y: 63,
+    id: 'house', label: 'The house', x: 50, y: 64,
     note: 'How much room the inside has. Every step opens another furniture slot.',
     builds: [
-      { name: 'A lean-to', cost: 0, art: '/sea/home-leanto.png', scale: 0.137, blurb: 'Salvage, canvas and stubbornness.' },
-      { name: 'A cottage', cost: 40_000, art: '/sea/home-cottage.png', scale: 0.178, blurb: 'One room, one chimney, and a door that shuts.' },
-      { name: 'A longhouse', cost: 160_000, art: '/sea/home-longhouse.png', scale: 0.219, blurb: 'Long enough to hang the nets indoors.' },
-      { name: 'A great hall', cost: 500_000, art: '/sea/home-hall.png', scale: 0.26, blurb: 'Two storeys, and a fire that never quite goes out.' },
-      { name: 'The Estate', cost: 1_300_000, art: '/sea/home-estate.png', scale: 0.301, blurb: 'A tower with a light on it. Nobody mistakes it for anywhere else.' },
+      { name: 'A lean-to', cost: 0, art: '/sea/home-leanto.png', scale: 0.108, blurb: 'Salvage, canvas and stubbornness.' },
+      { name: 'A cottage', cost: 40_000, art: '/sea/home-cottage.png', scale: 0.103, blurb: 'One room, one chimney, and a door that shuts.' },
+      { name: 'A longhouse', cost: 160_000, art: '/sea/home-longhouse.png', scale: 0.17, blurb: 'Long enough to hang the nets indoors.' },
+      { name: 'A great hall', cost: 500_000, art: '/sea/home-hall.png', scale: 0.144, blurb: 'Two storeys, and a fire that never quite goes out.' },
+      { name: 'The Estate', cost: 1_300_000, art: '/sea/home-estate.png', scale: 0.17, blurb: 'A tower with a light on it. Nobody mistakes it for anywhere else.' },
     ],
   },
   {
-    id: 'garden', label: 'The plot', x: 70, y: 56,
+    id: 'garden', label: 'The plot', x: 68, y: 55,
     note: 'Nothing grows fast enough out here to be worth eating. It is for looking at.',
     builds: [
       { name: 'Scrub', cost: 0, art: null, scale: 0, blurb: 'Whatever got here on its own.' },
-      { name: 'A kitchen garden', cost: 80_000, art: '/sea/home-kitchen.png', scale: 0.109, blurb: 'Four beds and a losing argument with the salt.' },
-      { name: 'A walled garden', cost: 450_000, art: '/sea/home-walled.png', scale: 0.178, blurb: 'Trees, at this latitude. People will ask.' },
+      { name: 'A kitchen garden', cost: 80_000, art: '/sea/home-kitchen.png', scale: 0.12, blurb: 'Four beds and a losing argument with the salt.' },
+      { name: 'A walled garden', cost: 450_000, art: '/sea/home-walled.png', scale: 0.11, blurb: 'Trees, at this latitude. People will ask.' },
     ],
   },
   {
-    id: 'portal', label: 'The stones', x: 36, y: 54,
+    id: 'portal', label: 'The stones', x: 38, y: 53,
     note: 'THE ONE THING HERE THAT DOES SOMETHING. See PORTAL_REACH.',
     builds: [
       // FOUR PICTURES, NOT ONE AT THREE SIZES. The first pass pointed all three
@@ -124,10 +124,10 @@ export const HOTSPOTS: Hotspot[] = [
       // where the upgrade actually does something, so it is the worst place to
       // have nothing to show for it. The stones go up, then get flanked, then
       // get a whole ring, and the light in the gate deepens each time.
-      { name: 'Fallen stones', cost: 0, art: '/sea/portal-fallen.png', scale: 0.109, blurb: 'Somebody stood these up once.' },
-      { name: 'The Way Home', cost: 150_000, art: '/sea/portal-way.png', scale: 0.13, blurb: 'Come home from anywhere on the water, as often as you like.' },
-      { name: 'The Wider Ways', cost: 175_000, art: '/sea/portal-wider.png', scale: 0.164, blurb: 'And go back out to any port you have made.' },
-      { name: 'The Deep Ways', cost: 275_000, art: '/sea/portal-deep.png', scale: 0.198, blurb: 'And out to any water your licence covers, however far.' },
+      { name: 'Fallen stones', cost: 0, art: '/sea/portal-fallen.png', scale: 0.169, blurb: 'Somebody stood these up once.' },
+      { name: 'The Way Home', cost: 150_000, art: '/sea/portal-way.png', scale: 0.064, blurb: 'Come home from anywhere on the water, as often as you like.' },
+      { name: 'The Wider Ways', cost: 175_000, art: '/sea/portal-wider.png', scale: 0.131, blurb: 'And go back out to any port you have made.' },
+      { name: 'The Deep Ways', cost: 275_000, art: '/sea/portal-deep.png', scale: 0.17, blurb: 'And out to any water your licence covers, however far.' },
     ],
   },
   {
@@ -135,8 +135,8 @@ export const HOTSPOTS: Hotspot[] = [
     note: 'Where you tie up. It does not make you faster.',
     builds: [
       { name: 'A shingle beach', cost: 0, art: null, scale: 0, blurb: 'Run her up and hope.' },
-      { name: 'A jetty', cost: 60_000, art: '/sea/home-jetty.png', scale: 0.137, blurb: 'Planks, posts, and dry feet.' },
-      { name: 'A stone pier', cost: 300_000, art: '/sea/home-pier.png', scale: 0.192, blurb: 'Cut stone and a crane. Built to outlast you.' },
+      { name: 'A jetty', cost: 60_000, art: '/sea/home-jetty.png', scale: 0.094, blurb: 'Planks, posts, and dry feet.' },
+      { name: 'A stone pier', cost: 300_000, art: '/sea/home-pier.png', scale: 0.09, blurb: 'Cut stone and a crane. Built to outlast you.' },
     ],
   },
 ]

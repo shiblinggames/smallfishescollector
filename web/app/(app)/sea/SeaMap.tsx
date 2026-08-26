@@ -3286,7 +3286,6 @@ hullRef={hullRefFor(t.key)} />
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!fishingIn && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
-          finnAt={finn && !finnTalk ? finn.at : null}
           waitingAt={id => (id === 'trawl_docks' ? trawlsReady : 0)} />
       )}
 
@@ -3447,7 +3446,6 @@ hullRef={hullRefFor(t.key)} />
         bearings={bearings}
         dug={dug}
         friends={friends}
-        finnAt={finn ? finn.at : null}
       />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
@@ -4739,9 +4737,17 @@ const GateSign = memo(function GateSign() {
       transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
       transformOrigin: 'bottom center', whiteSpace: 'nowrap', pointerEvents: 'none',
     }}>
+      {/* CENTRED, and it needs saying because it was not.
+          Two things were pushing it left. The rule below is GATE_HALF * 1.5
+          wide, which is wider than the word, so the wrapper takes ITS width and
+          a `<p>` with no alignment sits flush left inside it. And letter-spacing
+          adds its gap AFTER the last letter too, so even once centred the word
+          hangs half a space right of true. `textAlign` fixes the first,
+          `marginRight` cancels the second. */}
       <p className="font-cinzel font-700" style={{
         fontSize: '1.5rem', letterSpacing: '0.24em', textTransform: 'uppercase',
         color: 'rgba(226,240,248,0.88)', margin: 0,
+        textAlign: 'center', marginRight: '-0.24em',
         textShadow: '0 2px 16px rgba(0,0,0,0.98), 0 0 34px rgba(0,0,0,0.8)',
       }}>Expeditions</p>
       {/* A rule under it, the width of the passage, so the word reads as
@@ -6088,10 +6094,8 @@ const COMPASS_MAX = 4
 /** How far apart two markers must sit on the perimeter before both are shown. */
 const COMPASS_SPACING = 96
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finnAt }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
   frozen: boolean
-  /** Where Finn is standing, or null while there is nothing to sail to. */
-  finnAt: { x: number; y: number } | null
   /** Crew waiting at a given port, so a dock with a haul on it can jump the
    *  queue. Zero for everywhere else. */
   waitingAt: (id: string) => number
@@ -6198,28 +6202,16 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finnA
     })
   }
 
-  // ── THE NEXT BEAT OF THE STORY ───────────────────────────────────────
+  // ── FINN IS NOT ON THIS COMPASS ──────────────────────────────────────
   //
-  // NAMED, unlike the zone buyer a few lines down, and the difference is worth
-  // stating because the buyer's comment argues the opposite case.
+  // He had an arrow here, named, and it was wrong. An arrow that says "Finn,
+  // 1,400m, that way" turns him into a waypoint: the finding is done the moment
+  // you open the screen and all that is left is holding a direction. He is
+  // supposed to be a man you come ACROSS.
   //
-  // The buyer is anonymous because discovering there is somebody out there IS
-  // the content — a label spends it before you have laid eyes on the boat. Finn
-  // is the other way round: you already know who he is by the second meeting,
-  // and what the arrow is actually answering is "do I want to spend the next
-  // ten minutes sailing?". That question cannot be answered by a mark that will
-  // not say what it is. An unnamed Finn arrow would just be a fourth anonymous
-  // heading competing with the buyer's.
-  //
-  // It is also the only pointer on this compass to something that MOVES when
-  // you use it, which is the whole shape of him.
-  if (finnAt) {
-    const f = project(finnAt.x, finnAt.y)
-    marks.push({
-      id: 'finn', name: FINN_NAME, dim: false, dist: true,
-      sx: f.sx, sy: f.sy, world: f.world,
-    })
-  }
+  // Nothing replaces it. The bands are the only lead he gets — he keeps to
+  // water you have unlocked and drifts deeper as the story does — and beyond
+  // that he is found by sailing, which is the whole point of a sea.
 
   // ── THE WAY OUT ──────────────────────────────────────────────────────
   //

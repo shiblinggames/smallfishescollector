@@ -142,12 +142,12 @@ export const PLACES: Place[] = [
     // Everything scales off this one number: the island art, the buildings
     // (percentages of the island box), the shore the hull stops at
     // (r * SHORE + HULL) and the mooring ring (r + MOOR).
-    href: '/tavern', x: 0, y: 0, r: 430, art: '/page-tavern.jpg',
+    href: '/tavern', x: 0, y: 0, r: 500, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/tackle.png', x: 24, y: 40, scale: 0.19 },
-      { art: '/sea/market.png', x: 69, y: 46, scale: 0.2 },
-      { art: '/sea/tavern.png', x: 50, y: 68, scale: 0.26 },
+      { art: '/sea/tackle.png', x: 31, y: 43, scale: 0.153 },
+      { art: '/sea/market.png', x: 63, y: 47, scale: 0.172 },
+      { art: '/sea/tavern.png', x: 50, y: 62, scale: 0.224 },
     ],
   },
   {
@@ -173,7 +173,7 @@ export const PLACES: Place[] = [
      * for everybody, which is the entire point of it.
      */
     id: 'home', name: 'The Homestead', blurb: 'Yours. Such as it is.',
-    href: '/home', x: 1900, y: -250, r: 380, art: '/sea/home-cottage.png',
+    href: '/home', x: 1900, y: -250, r: 460, art: '/sea/home-cottage.png',
     kind: 'port', minLevel: 0,
     buildings: [],
   },
@@ -187,19 +187,19 @@ export const PLACES: Place[] = [
     // the note on `canDeploy` in TrawlIndicator; making a player sail back for
     // a haul they have already earned would be a toll, not a decision.
     id: 'trawl_docks', name: 'The Trawl Docks', blurb: 'Crew, and the day’s orders',
-    href: '/trawl-docks', x: -1500, y: -850, r: 210, art: '/page-tavern.jpg',
+    href: '/trawl-docks', x: -1500, y: -850, r: 265, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/harbour.png', x: 47, y: 58, scale: 0.42 },
+      { art: '/sea/harbour.png', x: 48, y: 55, scale: 0.333 },
     ],
   },
   {
     // On the way OUT rather than a detour, so you pass it heading for water.
     id: 'shipyard', name: 'The Shipyard', blurb: 'Loadout, rack and upgrades',
-    href: '/shipyard', x: 900, y: -900, r: 200, art: '/sea/shipyard.png',
+    href: '/shipyard', x: 900, y: -900, r: 265, art: '/sea/shipyard.png',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/shipyard.png', x: 50, y: 60, scale: 0.39 },
+      { art: '/sea/shipyard.png', x: 50, y: 57, scale: 0.294 },
     ],
   },
   {

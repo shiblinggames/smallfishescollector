@@ -49,10 +49,6 @@ const INK = {
   dig: '#f0c040',
   digDone: 'rgba(150,182,164,0.5)',
   trader: '#7fd6a0',
-  // Warm amber — his accent everywhere else (FINN_AMBER, the hail mark, the
-  // plate under his boat), so the mark on the chart and the man on the water
-  // are obviously the same person.
-  finn: '#ffb84d',
   friend: '#5ee08a',
   yoon: '#c084fc',
   you: '#ffffff',
@@ -60,7 +56,7 @@ const INK = {
 } as const
 
 export default function Minimap({
-  open, onClose, fog, at, seaAt, found, bearings, dug, friends, finnAt,
+  open, onClose, fog, at, seaAt, found, bearings, dug, friends,
 }: {
   open: boolean
   onClose: () => void
@@ -82,8 +78,6 @@ export default function Minimap({
    *  discoveries, and hiding a friend until you have swept their water would
    *  defeat the only thing this mark is for. */
   friends: { username: string; x: number; y: number }[]
-  /** Where Finn is standing, or null if his state has not loaded. */
-  finnAt: { x: number; y: number } | null
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [w, setW] = useState(0)
@@ -238,19 +232,9 @@ export default function Minimap({
       ctx.stroke()
     }
 
-    // ── FINN ─────────────────────────────────────────────────────────────
-    // A ring rather than a dot, because he is the one mark on this chart that
-    // is a PERSON WHO MOVES WHEN YOU REACH HIM, and a dot would read as another
-    // pin. Drawn before the crew so a friend sailing over him still wins the
-    // top layer — you can catch up with a friend, and Finn will wait.
-    if (finnAt) {
-      const x = tx(finnAt.x), y = ty(finnAt.y)
-      ctx.strokeStyle = INK.finn
-      ctx.lineWidth = 2
-      ctx.beginPath(); ctx.arc(x, y, 5.5, 0, Math.PI * 2); ctx.stroke()
-      ctx.fillStyle = INK.finn
-      ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill()
-    }
+    // FINN IS DELIBERATELY NOT DRAWN. He had a ring here and it made the chart
+    // answer the one question the chart should never answer — a man you can
+    // look up is not a man you find. See the note on the compass.
 
     // ── YOUR CREW ────────────────────────────────────────────────────────
     // Drawn last but one, so a friend is never buried under an isle pin, and
@@ -276,7 +260,7 @@ export default function Minimap({
       ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, w, at, seaAt, found, bearings, dug, friends, finnAt])
+  }, [fog, w, at, seaAt, found, bearings, dug, friends])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 
@@ -370,7 +354,6 @@ export default function Minimap({
               <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
               <Key mark={<Dot c={INK.trader} r={2.8} />} label="Trader" />
               <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="A friend" />
-              <Key mark={<Dot c={INK.finn} r={2} ring={INK.finn} ringR={5.5} />} label="Finn" />
               <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
             </div>
           </motion.div>
