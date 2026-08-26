@@ -27,6 +27,7 @@
 import Nav from '@/components/Nav'
 import MembershipModal from '@/components/MembershipModal'
 import { getCurrentProfile } from '@/lib/userData'
+import { canSail } from '@/lib/seaAccess'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile()
@@ -36,6 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         packsAvailable={profile?.packs_available}
         doubloons={profile?.doubloons}
         gems={profile?.gems}
+        canSail={canSail(profile)}
       />
       {children}
       {/* Global membership purchase popup — opens on the `open-membership`

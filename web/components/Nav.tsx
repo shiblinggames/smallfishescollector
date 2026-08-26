@@ -81,7 +81,13 @@ function writeNavCache(key: string, value: string | null) {
 // packsAvailable is accepted (callers still pass it) but no longer shown —
 // packs were replaced by the Crew Hall.
 
-export default function Nav({ doubloons, gems }: { packsAvailable?: number; doubloons?: number; gems?: number }) {
+export default function Nav({ doubloons, gems, canSail = false }: {
+  packsAvailable?: number; doubloons?: number; gems?: number
+  /** Whether this captain can reach the ocean hub. Decided on the server by
+   *  lib/seaAccess and passed down, so the tab and the route it points at can
+   *  never disagree about who is allowed through. */
+  canSail?: boolean
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
@@ -416,6 +422,19 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
         </svg>
       )
     },
+    // THE OCEAN HUB, for captains who have it. Sits directly after Fishing
+    // because that is what it is going to replace, which is also where anyone
+    // looking for it will look. Filtered out below rather than rendered
+    // disabled: a tab you cannot use is worse than no tab.
+    { href: '/sea', label: 'Seas', badge: null, seaOnly: true,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 16c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
+          <path d="M2 20c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
+          <path d="M12 11V4"/><path d="M12 4l6 3-6 3"/>
+        </svg>
+      )
+    },
     { href: '/expeditions', label: 'Expeditions', badge: voyageBadge || null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -434,7 +453,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
         </svg>
       )
     },
-  ]
+  ].filter(l => !('seaOnly' in l) || canSail)
 
   return (
     <>

@@ -13,6 +13,7 @@
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { canSail } from '@/lib/seaAccess'
 import { isPremiumActive } from '@/lib/premium'
 import { RODS } from '@/lib/rods'
 import { getFishHold } from '@/lib/fishHold'
@@ -29,7 +30,10 @@ export default async function ShipyardPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
-  if (profile?.is_admin !== true) redirect('/tavern')
+  // ONE RULE FOR ALL FOUR SEA ROUTES. See lib/seaAccess: this used to be a
+  // copy of `is_admin !== true` in each of them, which is four chances to
+  // open three and forget the fourth.
+  if (!canSail(profile)) redirect('/tavern')
 
   const admin = createAdminClient()
   const [{ data: rodRows }, { data: baitRows }, achievementPoints] = await Promise.all([

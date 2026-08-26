@@ -9,6 +9,7 @@
 
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { canSail } from '@/lib/seaAccess'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import TrawlDocksClient from './TrawlDocksClient'
 
@@ -18,7 +19,10 @@ export default async function TrawlDocksPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
-  if (profile?.is_admin !== true) redirect('/tavern')
+  // ONE RULE FOR ALL FOUR SEA ROUTES. See lib/seaAccess: this used to be a
+  // copy of `is_admin !== true` in each of them, which is four chances to
+  // open three and forget the fourth.
+  if (!canSail(profile)) redirect('/tavern')
   // THE DAY'S ORDERS come with the page. They have always been ticking from
   // every cast — progress is written server-side inside reelIn — so the only
   // thing that was ever missing out here was somewhere to see and claim them.

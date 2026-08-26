@@ -11,6 +11,7 @@
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { canSail } from '@/lib/seaAccess'
 import { getEffectiveRod } from '@/lib/rods'
 import { getLine } from '@/lib/lines'
 import { getReel } from '@/lib/reels'
@@ -37,7 +38,10 @@ export default async function SeaPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
-  if (profile?.is_admin !== true) redirect('/tavern')
+  // ONE RULE FOR ALL FOUR SEA ROUTES. See lib/seaAccess: this used to be a
+  // copy of `is_admin !== true` in each of them, which is four chances to
+  // open three and forget the fourth.
+  if (!canSail(profile)) redirect('/tavern')
 
   // EVERYTHING THE DIAL NEEDS TO BE THE REAL DIAL. buildFishZones takes the
   // same modifiers on the map as it does on the fishing screen, because a fish
