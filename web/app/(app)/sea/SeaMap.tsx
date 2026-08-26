@@ -214,7 +214,16 @@ const GROUND = 0.58
  * the water parallaxes against the islands.
  */
 function zoomFor(width: number): number {
-  return Math.max(0.45, Math.min(1, width / 780))
+  // CAPPED AT 0.82, NOT 1.0.
+  //
+  // At 1.0 a desktop saw about 800 world pixels across, which is under two
+  // island widths and just enough of the sea to steer by. Pulling the cap back
+  // shows a bit under a thousand, which is the difference between sailing and
+  // sailing somewhere: you can see the next thing before you have left the last.
+  //
+  // The floor and the divisor are untouched, so phones are exactly where they
+  // were — a 390px screen was already at 0.5 and never reached the cap.
+  return Math.max(0.45, Math.min(0.82, width / 780))
 }
 
 /**
@@ -2246,6 +2255,11 @@ export default function SeaMap({
             style. */}
         {REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}
 
+        {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
+            through the opening is what takes you to expeditions, so the opening
+            is what has to say so. */}
+        <GateSign />
+
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
         {hintDig && <DigWater site={hintDig} over={nearDig?.id === hintDig.id} done={dug.has(hintDig.id)} />}
@@ -2663,9 +2677,9 @@ hullRef={hullRefFor(t.key)} />
             <p className="font-karla" style={{
               fontSize: '0.88rem', color: 'rgba(198,218,232,0.72)', marginTop: 8, lineHeight: 1.55,
             }}>
-              Past the cliffs the water belongs to the voyages and the raids, and
+              Past the reef the water belongs to the voyages and the raids, and
               you do not fish it. Your boat and everything in the hold stay
-              exactly where you left them; the arch is open whenever you want to
+              exactly where you left them; the gap is open whenever you want to
               come back.
             </p>
 
@@ -2690,7 +2704,16 @@ hullRef={hullRefFor(t.key)} />
                 Come about
               </button>
               <button type="button"
-                onClick={() => { vibrate([18, 40, 24]); enter(PLACES.find(p => p.id === 'expeditions')!) }}
+                onClick={() => {
+                  // STRAIGHT THERE. This used to `enter()` a Harbour island
+                  // that sat on the chart purely to be the thing this button
+                  // pointed at — a place nobody sailed to, because sailing
+                  // through the gap is what takes you to expeditions. The gap
+                  // is the door now, so this is the door's handle.
+                  vibrate([18, 40, 24])
+                  try { sessionStorage.setItem('sea:came-from-chart', '1') } catch { /* private mode */ }
+                  router.push('/expeditions')
+                }}
                 className="font-cinzel font-700"
                 style={{
                   flex: 1.3, padding: '0.8rem', borderRadius: 12, fontSize: '0.94rem',
@@ -3827,6 +3850,48 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
         </motion.div>
       )}
     </AnimatePresence>
+  )
+})
+
+/**
+ * THE SIGN OVER THE GAP.
+ *
+ * The reef used to have a Harbour island parked beside it whose only job was to
+ * be the thing labelled "expeditions". Nobody sailed there, because the way to
+ * expeditions was never the island, it was the hole in the rock. So the island
+ * is gone and the hole is labelled instead.
+ *
+ * Drawn in the WORLD rather than as a HUD element, so it sits over the actual
+ * opening and grows and shrinks with the camera the way the gap does. Anything
+ * pinned to the screen would be a caption about the gap; this is a sign on it.
+ *
+ * Counter-squashed and lifted clear, like every other label on this chart —
+ * a label was never lying on the water.
+ */
+const GateSign = memo(function GateSign() {
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: GATE_X, top: NORTH_WALL - 210,
+      transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+      transformOrigin: 'bottom center', whiteSpace: 'nowrap', pointerEvents: 'none',
+    }}>
+      <p className="font-cinzel font-700" style={{
+        fontSize: '1.5rem', letterSpacing: '0.24em', textTransform: 'uppercase',
+        color: 'rgba(226,240,248,0.88)', margin: 0,
+        textShadow: '0 2px 16px rgba(0,0,0,0.98), 0 0 34px rgba(0,0,0,0.8)',
+      }}>Expeditions</p>
+      {/* A rule under it, the width of the passage, so the word reads as
+          belonging to THAT gap and not to the reef in general. */}
+      <div style={{
+        height: 1, width: GATE_HALF * 1.5, margin: '7px auto 0',
+        background: 'linear-gradient(90deg, transparent, rgba(214,232,240,0.5), transparent)',
+      }} />
+      <p className="font-karla font-600" style={{
+        fontSize: '0.82rem', letterSpacing: '0.1em', textAlign: 'center',
+        color: 'rgba(196,216,230,0.66)', margin: '5px 0 0',
+        textShadow: '0 1px 12px rgba(0,0,0,0.98)',
+      }}>Sail through the gap</p>
+    </div>
   )
 })
 
@@ -5036,6 +5101,24 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt }: {
     marks.push({
       id: nearestPort.p.id, name: nearestPort.p.name, dim: locked(nearestPort.p),
       dist: true, sx: nearestPort.sx, sy: nearestPort.sy, world: nearestPort.world,
+    })
+  }
+
+  // ── THE WAY OUT ──────────────────────────────────────────────────────
+  //
+  // The Harbour used to be a port on this list, and removing it took the only
+  // northward pointer with it. The reef is 45,200px long with one 860px gap in
+  // it, and a gap that size is not something anyone finds by sweeping — so the
+  // compass points at the gap directly, which is what the Harbour pin was
+  // always really pointing at.
+  //
+  // Never dimmed and never hidden. Expeditions is not gated on anything the
+  // chart knows about, and a door you cannot find is a door that is shut.
+  {
+    const g = project(GATE_X, NORTH_WALL)
+    marks.push({
+      id: 'gate', name: 'Expeditions', dim: false, dist: true,
+      sx: g.sx, sy: g.sy, world: g.world,
     })
   }
 

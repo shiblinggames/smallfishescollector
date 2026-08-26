@@ -57,7 +57,7 @@ export type Place = {
    * left it, so a long haul is paid once for a destination rather than once per
    * session, and the hull refit exists to shorten it.
    *
-   * The north belongs to expeditions. The Harbour divides the two.
+   * The north belongs to expeditions. The reef divides the two.
    */
   inner?: number
   outer?: number
@@ -128,21 +128,26 @@ export const PLACES: Place[] = [
     // being an island. It holds the tavern, the market and the tackle shop, and
     // it is the origin every fishing band is measured from.
     //
-    // Landed on 340 from both directions: at 250 it was the same size as the
-    // two single-purpose ports and read as one stop of three, and at 440 it
-    // filled the screen off the dock and read as a coastline rather than
-    // somewhere you moor. 340 is 2.6x their area, which is plainly the biggest
-    // thing on the water without being the only thing on it.
+    // 430. It was 340, landed on when the desktop camera sat at zoom 1.0 and
+    // 440 "filled the screen off the dock". The camera pulls back to 0.82 now,
+    // which bought back more than the difference — so the island can be the
+    // size it always wanted to be, and at 4.6x a single-purpose port it is
+    // unmistakably the capital rather than the largest of four stops.
+    //
+    // The buildings did NOT grow with it. Their `scale` is a share of the
+    // island box, so leaving them alone would have made them 26% bigger along
+    // with everything else; they are scaled down by exactly that factor and
+    // pushed further apart instead, which is what turns a cluster into a town.
     //
     // Everything scales off this one number: the island art, the buildings
     // (percentages of the island box), the shore the hull stops at
     // (r * SHORE + HULL) and the mooring ring (r + MOOR).
-    href: '/tavern', x: 0, y: 0, r: 340, art: '/page-tavern.jpg',
+    href: '/tavern', x: 0, y: 0, r: 430, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/tackle.png', x: 31, y: 46, scale: 0.24 },
-      { art: '/sea/market.png', x: 69, y: 49, scale: 0.25 },
-      { art: '/sea/tavern.png', x: 50, y: 65, scale: 0.32 },
+      { art: '/sea/tackle.png', x: 24, y: 40, scale: 0.19 },
+      { art: '/sea/market.png', x: 76, y: 44, scale: 0.20 },
+      { art: '/sea/tavern.png', x: 50, y: 70, scale: 0.26 },
     ],
   },
   {
@@ -166,20 +171,8 @@ export const PLACES: Place[] = [
     buildings: [],
   },
   {
-    // THE HARBOUR DIVIDES THE MAP. North of it is expeditions; everything south
-    // of the Mainland is fishing. It sits well north so it is unmistakably on
-    // the other side of the line from the fishing grounds.
-    id: 'expeditions', name: 'The Harbour', blurb: 'Voyages and raids',
-    href: '/expeditions', x: -900, y: -1500, r: 210, art: '/raid-harbor-fleet.jpg',
-    kind: 'port', minLevel: 0,
-    buildings: [
-      { art: '/sea/lighthouse.png', x: 62, y: 32, scale: 0.34 },
-      { art: '/sea/harbour.png', x: 44, y: 58, scale: 0.40 },
-    ],
-  },
-  {
-    // THE TRAWL DOCKS. West of the Mainland and north of the equator, so it is
-    // on the fishing side of the Harbour without sitting in fishable water.
+    // THE TRAWL DOCKS. West of the Mainland and north of the coast, so it is
+    // out of fishable water without being out of the way.
     //
     // It exists because sending a crew out used to be a menu you could open
     // from anywhere, which is a strange thing for a voyage to be. Now it is
@@ -358,26 +351,31 @@ export const RESIDENTS: {
 ]
 
 /**
- * THE LATITUDE OF THE HARBOUR, and the edge of the world.
+ * THE NORTHERN EDGE OF THE FISHING GROUNDS.
  *
- * The Harbour divides the chart: expeditions to the north, fishing to the
- * south. That was a statement about layout and nothing enforced it, so you
- * could sail north forever into blank water that belongs to a system this
- * screen does not implement — an empty grey nothing with no zones, no traders
- * and no reason to be there, which reads as a bug rather than as a border.
+ * Expeditions to the north, fishing to the south. That used to be a statement
+ * about layout with nothing enforcing it, so you could sail north forever into
+ * blank water belonging to a system this screen does not implement — an empty
+ * grey nothing with no zones, no traders and no reason to be there, which reads
+ * as a bug rather than as a border.
  *
- * Now it is a wall. The hull stops here and no fishing NPC spawns beyond it.
- * You can still moor at the Harbour: it sits ON the line, and its approach ring
- * opens to the south.
+ * Now it is a reef. The hull stops at this latitude and no fishing NPC spawns
+ * beyond it, except in the one gap — see GATE_X.
+ *
+ * There used to be a Harbour island moored on this line whose only job was to
+ * be the thing labelled "expeditions". Nobody sailed to it, because the way to
+ * expeditions was never the island: it was the gap. The island is gone and the
+ * gap carries the sign.
  */
 /**
  * THE EDGE OF THE CHART, as a radius from the Mainland.
  *
- * The north is walled by rock because there is LAND up there — the Harbour, and
- * the way through to expeditions. Everywhere else the boundary is not a physical
- * thing and should not pretend to be one: a reef in the middle of the deepest
- * water would be geology nobody can explain. This is simply where the surveyed
- * chart stops, which is the honest reason a boat with no map turns back.
+ * The north is walled by rock because that edge is a SHORE — shallow enough for
+ * a reef, and with the way through to expeditions in it. Everywhere else the
+ * boundary is not a physical thing and should not pretend to be one: a reef in
+ * the middle of the deepest water would be geology nobody can explain. This is
+ * simply where the surveyed chart stops, which is the honest reason a boat with
+ * no map turns back.
  *
  * It is the outer radius of the outermost band, so the last water you can reach
  * is the last water anyone drew. One radius covers south, east and west at once,
@@ -391,12 +389,15 @@ export const NORTH_WALL = -1500
 /**
  * THE GATE.
  *
- * The wall is not a line on a map any more, it is a wall of cliffs, and there
- * is one way through it: a natural arch with the Harbour built at its foot.
- * Sailing into the arch is how you leave the fishing grounds for expeditions.
+ * The wall is a reef, and there is exactly one gap in it. Sailing through the
+ * gap is how you leave the fishing grounds for expeditions — there is no port
+ * to dock at and no button to press, only a hole in the rock and a sign over it.
  *
- * Centred on the Harbour, because that is what a harbour AT a gate means — you
- * pass the port on your way out, the way you would.
+ * It was not always this. There were cliffs here, then cliffs again in the
+ * islands' own palette, then a natural arch with a Harbour island moored at its
+ * foot. All of that is gone: the rock is rock the chart already draws
+ * everywhere else, and the island existed only to be the thing the label was
+ * attached to, which the gap can do by itself.
  */
 export const GATE_X = -900
 /** Half the arch's opening, in world pixels. Wide enough to sail into without
