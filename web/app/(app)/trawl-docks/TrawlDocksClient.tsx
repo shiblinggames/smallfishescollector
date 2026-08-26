@@ -9,12 +9,14 @@
 import { useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import TrawlIndicator from '../fishing/TrawlIndicator'
+import DailyOrders from './DailyOrders'
+import type { DailyChallengeState } from '@/lib/dailyChallenges'
 
 /** Written by the chart when it sends you here, so leaving can go BACK rather
  *  than pushing a second copy of /sea on top of the one you came from. */
 const FROM_SEA = 'sea:came-from-chart'
 
-export default function TrawlDocksClient() {
+export default function TrawlDocksClient({ daily }: { daily: DailyChallengeState | null }) {
   const router = useRouter()
 
   // WARM THE ROUTE WHILE YOU READ THE PANEL.
@@ -53,7 +55,8 @@ export default function TrawlDocksClient() {
         // backdrop would be a window onto the app shell.
         background: 'radial-gradient(ellipse 120% 90% at 50% 0%, #17303f 0%, #0b1a26 55%, #071119 100%)',
       }}>
-      <TrawlIndicator variant="dock" canDeploy onDismiss={leave} />
+      <TrawlIndicator variant="dock" canDeploy onDismiss={leave}
+        before={<DailyOrders initial={daily} />} />
     </div>
   )
 }

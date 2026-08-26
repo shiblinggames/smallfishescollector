@@ -166,7 +166,7 @@ export const PLACES: Place[] = [
     // somewhere you go. Collecting is still available wherever you are — see
     // the note on `canDeploy` in TrawlIndicator; making a player sail back for
     // a haul they have already earned would be a toll, not a decision.
-    id: 'trawl_docks', name: 'The Trawl Docks', blurb: 'Send crew out to fish',
+    id: 'trawl_docks', name: 'The Trawl Docks', blurb: 'Crew, and the day’s orders',
     href: '/trawl-docks', x: -1500, y: -850, r: 210, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [

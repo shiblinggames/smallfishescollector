@@ -208,7 +208,7 @@ function BestTag({ color }: { color: string }) {
 }
 
 export default function TrawlIndicator({
-  hidden = false, variant = 'float', canDeploy = true, canCollect = true, onDismiss,
+  hidden = false, variant = 'float', canDeploy = true, canCollect = true, onDismiss, before,
 }: {
   hidden?: boolean
   /**
@@ -247,6 +247,15 @@ export default function TrawlIndicator({
   /** Dock variant only: what "close" means when there is no badge to shrink
    *  back into. */
   onDismiss?: () => void
+  /**
+   * SOMETHING ELSE THE ISLAND DOES, rendered above the trawls.
+   *
+   * The dock sheet IS the page, so anything else that belongs at the Docks has
+   * to live inside it. Taken as a NODE rather than built in here: this file
+   * owns trawls, and a second feature growing inside it is how a component ends
+   * up owning two things badly. The Docks passes the day's orders.
+   */
+  before?: React.ReactNode
 }) {
   const dock = variant === 'dock'
   const [state, setState] = useState<TrawlState | null>(null)
@@ -646,6 +655,8 @@ export default function TrawlIndicator({
               borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)',
               padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))',
             }}>
+            {before}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>

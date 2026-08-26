@@ -9,6 +9,7 @@
 
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import TrawlDocksClient from './TrawlDocksClient'
 
 export const metadata = { title: 'The Trawl Docks' }
@@ -18,5 +19,10 @@ export default async function TrawlDocksPage() {
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
   if (profile?.is_admin !== true) redirect('/tavern')
-  return <TrawlDocksClient />
+  // THE DAY'S ORDERS come with the page. They have always been ticking from
+  // every cast — progress is written server-side inside reelIn — so the only
+  // thing that was ever missing out here was somewhere to see and claim them.
+  const daily = await getDailyChallenge()
+
+  return <TrawlDocksClient daily={daily} />
 }

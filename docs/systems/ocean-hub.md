@@ -418,6 +418,18 @@ afford. Two new props:
   the panel, which made a voyage into a menu you opened and left the chart with one fewer
   reason to sail anywhere. On `/fishing` a sendable zone now reads **"Send from the Docks"**.
 
+**The day's orders live here too.** The fishing daily challenges have always been ticking
+from the ocean hub — progress is written server-side inside `reelIn`, so every cast from the
+chart has counted since the day it shipped — but there was nowhere out here to SEE them, and
+a goal you cannot see is not a goal, it is a coincidence. They are at the Docks because this
+is already the island where work is handed out; a day's orders and a crew's orders are the
+same errand, and two islands would be two trips for one idea.
+
+`DailyOrders` is passed to `TrawlIndicator` as a **node**, via `before` — that file owns
+trawls, and a second feature growing inside it is how a component ends up owning two things
+badly. Claiming uses the fishing page's own `claimDailyReward` / `claimDailySweep`: two
+surfaces, one payout, the same rule as the collection drawer.
+
 **Both sending AND collecting happen here** (`canDeploy` / `canCollect`, true only at the
 Docks). Splitting them across two screens would need explaining; one rule — the island is
 where the crew are — needs none. On `/fishing` the panel is read-only: it shows the
