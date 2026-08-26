@@ -272,26 +272,36 @@ landmark was in the same part of the screen.
 The rule: **anything the player can read or press belongs above the world.** The world is
 scenery; the button that gets you into it is not.
 
-## The backdrop, and why it is its own layer
+## The backdrop, and the flicker
 
-The water's colour is a full-viewport gradient, and it used to be written to `wrap.style.background`
-— the element that *contains* the world, the surface tiles, the boat and every overlay. Every
-recolour invalidated that whole subtree. It has its own empty layer under everything now, so
-repainting it repaints one gradient and nothing else.
+**One writer per property.** The rAF loop writes `sky.style.background` imperatively, so
+React must not set `background` in that element's `style` prop — and the same goes for the
+ripples' `transform`. This is the whole bug, and it took three attempts to see because the
+first two read it as a cost problem:
 
-Two attempts at the rate before that landed:
+1. Quantized `darkness` to 24 steps. Correct on its own terms, and it did fix the dusk
+   strobe — but the blend also depends on where the boat is, which is continuous.
+2. Snapped the boat's position to a 64px grid. **Made it worse**: a boat resting on a cell
+   edge has its rounding flipped by float noise every frame, so the colour alternated rather
+   than drifted.
+3. The actual cause: `setTick` re-renders the map ~8×/sec to drive the proximity UI, and the
+   JSX style prop carried a `background` computed at `HOME`. Every render stamped the wrong
+   colour on, the loop's `!== lastCss` guard saw its own cached value unchanged and declined
+   to put the right one back, and the screen alternated at 8Hz.
 
-1. Quantizing `darkness` to 24 steps. Correct, and it fixed the dusk strobe — but the blend
-   also depends on **where the boat is**, which is continuous, so under way it was still
-   rebuilding on nearly every frame.
-2. Snapping the *position* to a 64px grid. **This made it worse.** A boat sitting on a cell
-   boundary has its rounding flipped by float noise every frame, so the colour alternated
-   between two values — a far more visible flicker than the smooth drift it replaced.
+A re-render re-applies the entire inline style object, so any property the loop owns gets
+silently reverted — and a "has it changed" guard in the loop turns that from a transient
+glitch into a stuck one.
 
-The fix is a **deadband**, measured from the position the last look was taken at: once
-computed at P, nothing changes until the boat is a full `SEA_STEP` (96px) from P. There is no
-boundary to sit on. `lum` is held between recomputes because the pale surface layer reads it
-every frame — that write is a composite, not a repaint.
+To check: grep the properties written as `.style.X =`, then grep those names inside each
+`ref={...}` element's `style={{ … }}`. Zero overlap, or it is a bug. Currently zero.
+
+The colour also lives on **its own empty layer** under everything (it used to be on the root
+that contains the world, the tiles, the boat and every overlay, so each recolour invalidated
+the lot), and the recompute is on a **deadband** measured from where the last look was taken
+— once computed at P nothing changes until the boat is a full `SEA_STEP` from P, so there is
+no boundary to sit on. `lum` is held between recomputes for the pale layer's opacity, which
+is a composite rather than a repaint and wants every frame.
 
 ## The compass
 

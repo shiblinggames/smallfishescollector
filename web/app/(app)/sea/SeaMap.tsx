@@ -17,7 +17,7 @@
 // animates on its own timer, because that is how a scene ends up feeling like
 // several things happening near each other.
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
@@ -976,6 +976,14 @@ export default function SeaMap({
     }
   }, [])
 
+  // Paint the backdrop once before the browser's first frame. The loop takes
+  // over from here; this only exists so the very first paint is the right
+  // colour rather than the wrap's bare base.
+  useLayoutEffect(() => {
+    const sky = skyRef.current
+    if (sky) sky.style.background = seaAt(pos.current, seaClock().darkness).css
+  }, [])
+
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
     if (p.id === 'mainland') { setAshore(true); return }
@@ -1355,6 +1363,20 @@ export default function SeaMap({
       // three units out of 255, which is not visible; a strobing screen very
       // much is.
       const dark = Math.round(clk.darkness * 24) / 24
+      // THIS ELEMENT'S BACKGROUND IS NOT REACT'S.
+      //
+      // The flicker was never repaint cost. `setTick` re-renders this component
+      // eight times a second to drive the proximity UI, and every one of those
+      // renders re-applied the JSX inline style — which carried a `background`
+      // computed at HOME. So React stamped the wrong colour on eight times a
+      // second, the guard below saw its own `lastCss` unchanged and declined to
+      // put the right one back, and the screen alternated between the two.
+      //
+      // Two rounds of tuning the repaint RATE could not fix an ownership bug,
+      // and the second round made it worse by removing the accidental rewrite
+      // that had been masking it. The property is gone from the style prop; the
+      // loop is the only writer.
+      //
       // A DEADBAND, not a grid.
       //
       // Snapping the position to a 64px grid was the wrong shape of fix: a boat
@@ -1493,9 +1515,10 @@ export default function SeaMap({
       {/* THE WATER'S COLOUR, on a layer of its own.
           Under everything and containing nothing, so repainting it repaints one
           full-screen gradient and not the world sitting on top of it. */}
+      {/* NO `background` IN THIS STYLE PROP. It is written by the loop and by
+          nothing else — see the flicker note on the frame loop. */}
       <div ref={skyRef} aria-hidden style={{
         position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
-        background: seaAt(HOME, seaClock().darkness).css,
       }} />
 
       {/* THE SURFACE, under everything. Two repeating-background layers that
@@ -1647,9 +1670,10 @@ export default function SeaMap({
           water moving rather than something blinking. Pushed down to the
           WATERLINE: at plain screen centre these sat around the captain's
           chest, which is where they were floating above the boat. */}
+      {/* NO `transform` HERE EITHER — the loop owns it, because it scales with
+          the zoom. Same reason as the sky above. */}
       <div ref={rippleRef} aria-hidden style={{
         position: 'absolute', inset: 0, zIndex: Z.ripples, pointerEvents: 'none',
-        transform: `translate(${WATERLINE_X}px, ${WATERLINE_Y}px)`,
       }}>
         <div className="sea-ripple" />
         <div className="sea-ripple" style={{ animationDelay: '1.5s' }} />
