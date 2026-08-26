@@ -957,6 +957,26 @@ export default function SeaMap({
     setLanding(true)
     vibrate(14)
     try {
+      // TELL THE SERVER WHERE WE ACTUALLY ARE, FIRST.
+      //
+      // `goAshore` sanity-checks the landing against `profiles.sea_x/sea_y`,
+      // and that row is only written every twenty seconds. At three hundred
+      // pixels a second and up to five twenty five refitted, the stored
+      // position can be most of a band away from the boat — so sailing
+      // straight to a rock and landing on it was getting refused for not being
+      // close enough, which is the opposite of what that check is for.
+      //
+      // Awaited, unlike every other flush on this screen. It has to be in
+      // before the claim reads it.
+      //
+      // Its own try, so a flush that fails does not eat the landing. The claim
+      // would then be judged against an older position and might be refused,
+      // which is a worse outcome than a stale row but a better one than
+      // swallowing a chest the captain actually sailed to.
+      try {
+        await saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
+        fogPending.current.clear()
+      } catch { /* fall through and let the claim answer for itself */ }
       const result = await goAshore(isle.id)
       if (result.ok) setFound(prev => new Set(prev).add(isle.id))
       setLanded({ isle, result })
@@ -1201,6 +1221,8 @@ export default function SeaMap({
     const flush = () => {
       const p = pos.current
       const fog = [...fogPending.current]
+      // THE TAB REMEMBERS TOO, and unconditionally. See `rememberPos`.
+      rememberPos(p)
       // Moved far enough, OR there is fog to bank. A boat sitting still in a
       // patch it has just uncovered still has something worth saving.
       if (fog.length === 0 && Math.hypot(p.x - last.x, p.y - last.y) < 60) return
@@ -1218,9 +1240,46 @@ export default function SeaMap({
       window.removeEventListener('pagehide', flush)
       // The unmount IS a navigation — going ashore, or the nav bar. This is the
       // one that closes the cheese, so it ignores the moved-far-enough test.
+      //
+      // The sessionStorage write is the one that actually matters here. The
+      // server write is fire-and-forget and the trip back can beat it home;
+      // this one is synchronous and cannot lose the race.
+      rememberPos(pos.current)
       void saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
       fogPending.current.clear()
     }
+  }, [])
+
+  /**
+   * WHERE THE BOAT REALLY WAS, restored before the first frame.
+   *
+   * The `start` prop is the SERVER's idea of where you are, and it can be stale
+   * in two ways that both showed up as "closing the Trawl Docks shoots you back
+   * somewhere else entirely":
+   *
+   *   1. The save on unmount is fire-and-forget. Coming back from a page you
+   *      were on for two seconds can easily beat that write home.
+   *   2. Coming back through `router.back()` can be served from the router
+   *      cache, in which case `start` is not merely stale — it is whatever the
+   *      server said when this tab FIRST loaded /sea, which is usually the
+   *      Mainland. That is why it teleported rather than drifting, and why it
+   *      only happened sometimes: it depended on whether the cache was still
+   *      warm.
+   *
+   * sessionStorage is written synchronously on the way out and is per tab, so
+   * it cannot lose that race and cannot disagree with another device. It is
+   * preferred over `start` whenever it is fresh.
+   *
+   * In a LAYOUT effect and first in the file, so it lands before the backdrop
+   * paints and before the loop reads a position — otherwise the first frame is
+   * drawn at the old spot and you see the jump you came here to prevent.
+   */
+  useLayoutEffect(() => {
+    const p = recallPos()
+    if (!p) return
+    pos.current = { x: p.x, y: Math.max(NORTH_WALL, p.y) }
+    target.current = { ...pos.current }
+    vel.current = { x: 0, y: 0 }
   }, [])
 
   // Paint the backdrop once before the browser's first frame. The loop takes
@@ -3075,6 +3134,38 @@ const SUBMERGE: Record<string, { line: number; keep: number }> = {
 /** Which art file this is, from its path — `/sea/wreck.png` -> `wreck`. */
 function markKind(art: string): string {
   return art.slice(art.lastIndexOf('/') + 1).replace('.png', '')
+}
+
+/**
+ * THE POSITION THIS TAB LAST SAW, independent of the server round trip.
+ *
+ * sessionStorage, not localStorage: this is "where I am in this session", and
+ * two tabs open on the same chart should not fight over one slot. It is also
+ * wiped when the tab closes, which is correct — a cold start should ask the
+ * server, since that is the copy another device would have updated.
+ *
+ * Stamped, and only trusted for half an hour. Not because a position rots, but
+ * because a tab restored by the browser days later should defer to whatever the
+ * account has been doing since.
+ */
+const POS_KEY = 'sea:pos'
+const POS_TTL = 30 * 60 * 1000
+
+function rememberPos(p: { x: number; y: number }) {
+  try {
+    sessionStorage.setItem(POS_KEY, JSON.stringify({ x: p.x, y: p.y, t: Date.now() }))
+  } catch { /* private mode. The server copy still works, just less precisely. */ }
+}
+
+function recallPos(): { x: number; y: number } | null {
+  try {
+    const raw = sessionStorage.getItem(POS_KEY)
+    if (!raw) return null
+    const p = JSON.parse(raw) as { x: number; y: number; t: number }
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return null
+    if (!(Date.now() - p.t < POS_TTL)) return null
+    return { x: p.x, y: p.y }
+  } catch { return null }
 }
 
 const SeaMark = memo(function SeaMark({ m, i }: {

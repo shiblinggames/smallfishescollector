@@ -666,11 +666,28 @@ export default function TrawlIndicator({
           <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
+              // RELATIVE, so the close button can pin itself to the panel.
+              position: 'relative',
               width: '100%', maxWidth: 470, maxHeight: '86vh', overflowY: 'auto',
               background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)',
               borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)',
               padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))',
             }}>
+            {/* OUT, and the FIRST thing in the panel.
+                It used to live in the "Trawls" header row, which sits BELOW
+                `before` — and at the Trawl Docks `before` is the whole daily
+                orders block, so the one control that closes this sheet was
+                halfway down it, under a pile of other content and nowhere near
+                where a thumb goes looking.
+                A real row rather than something floated over the corner: this
+                panel's first block is a prop and can be anything, and a
+                zero-height button pinned to the corner would sit on top of
+                whatever that turns out to be. Costs one row of height and
+                cannot cover a thing. */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+              <CloseBtn onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }} />
+            </div>
+
             {before}
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -687,7 +704,6 @@ export default function TrawlIndicator({
                   </div>
                 </motion.button>
               </div>
-              <CloseBtn onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }} />
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
               Crew fish a zone on their own — collect their XP and doubloon haul
