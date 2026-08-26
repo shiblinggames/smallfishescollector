@@ -167,13 +167,15 @@ export default function TraderPanel({
           paddingRight: 34,
         }}>
           {KIND_LABEL[trader.kind]}
-          {/* WHICH KIND OF THING THEY ARE ABOUT TO SAY, folded into the label
-              they already have rather than given a box of its own underneath
-              the line it describes. A hint is worth stopping for; a story is
-              worth hearing. Saying so before they speak is the useful order. */}
+          {/* WHO THEY ARE, not what they are about to hand you.
+              This used to read "Knows something useful" or "Heard something",
+              which labelled the CONTENT and quietly turned every stranger into
+              a category of loot. The persona's own mood says something about
+              the person instead, and you find out what they know by listening,
+              which is the right order for a conversation. */}
           {trader.deal === 'talk' && (
             <span style={{ color: 'rgba(255,206,138,0.45)' }}>
-              {' · '}{trader.topic === 'hint' ? 'Knows something useful' : 'Heard something'}
+              {' · '}{trader.mood}
             </span>
           )}
         </p>

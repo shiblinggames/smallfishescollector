@@ -33,6 +33,7 @@ import { ALL_DAILY_CHALLENGES } from '../lib/dailyChallenges'
 import { ISLES } from '../lib/seaIsles'
 import { DIG_SITES } from '../lib/seaDigs'
 import { FRAGMENTS } from '../lib/seaBottles'
+import { PERSONAS } from '../lib/seaTraders'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -63,6 +64,10 @@ const SOURCES: Src[] = [
   // Sixteen logs the sea hands out in bottles. The longest free prose in the
   // game and the likeliest place for a stray dash to survive a rewrite.
   { label: 'bottle', strings: FRAGMENTS },
+  // Everything the strangers out on the water say about themselves. The
+  // largest single body of prose in the game and the newest, so the likeliest
+  // place for a stray dash to get in.
+  { label: 'sea NPC', strings: PERSONAS.flatMap(p => [p.mood, ...p.lines]) },
 ]
 
 for (const src of SOURCES) {

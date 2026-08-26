@@ -105,7 +105,16 @@ export type TraderOffer =
    * the same stream as everything else about them: this person always knows
    * these things and always says them in this order.
    */
-  | { deal: 'talk'; topic: 'hint' | 'story'; lines: string[] }
+  | {
+    deal: 'talk'
+    /** What the RUN is mostly made of. Chat is the common case by a distance. */
+    topic: 'chat' | 'hint' | 'story'
+    /** The persona's own label, shown where the panel used to print a category.
+     *  "Been out a while" tells you who you have stopped for; "Knows something
+     *  useful" only told you what you were about to be handed. */
+    mood: string
+    lines: string[]
+  }
   /** THE RARE ONE. Carries a rod the shops ashore will not stock, and only
    *  exists at night in deep water. Keyed on the NIGHT rather than the day, so
    *  the offer cannot be redeemed a cycle after it has gone. */
@@ -238,6 +247,122 @@ const LINES: Record<TradeKind, string[]> = {
  * VERIFY ANY FIGURE AGAINST THE SOURCE BEFORE ADDING ONE. A stale hint is worse
  * than no hint, and out here it is also a person lying to you.
  */
+/**
+ * WHO IS OUT HERE.
+ *
+ * ── PEOPLE, NOT A LINE POOL ─────────────────────────────────────────────────
+ *
+ * The talkers used to draw four lines straight from one shared list, which made
+ * every one of them the same person wearing a different hat: four facts, no
+ * character, and nothing that made stopping for THIS one different from
+ * stopping for the last one.
+ *
+ * Each talker now has a PERSONA, and every line they say comes out of it. That
+ * is the entire difference between a stranger and a dispenser — a boaster
+ * boasts three times and you have met a boaster, where three unrelated tips
+ * mean you have met a menu.
+ *
+ * ── WHAT THESE ARE ALLOWED TO BE ────────────────────────────────────────────
+ *
+ * Small. Mundane. Specific. Nobody out here is delivering exposition or
+ * advertising a feature; they are passing the time with the first boat they
+ * have seen in days. The good ones are the ones you would repeat to somebody,
+ * and none of those are about mechanics.
+ *
+ * House rules apply: sea creatures, never "men" or land idioms, no em-dashes,
+ * and nothing that leaks the campaign. See story-universe.md.
+ */
+export const PERSONAS: { mood: string; lines: string[] }[] = [
+  {
+    mood: 'In no hurry to be modest',
+    lines: [
+      'I have been further out than this. Much further. Ask anyone who was there.',
+      'Landed one once that took three of us and most of an afternoon.',
+      'Every mark on this hull has a story and a good number of them are true.',
+      'I could sail this stretch with my eyes shut. I have not. But I could.',
+      'You are looking at the second finest captain in these waters. The finest is modest about it.',
+      'They say the far water is dangerous. It was dangerous. I have been.',
+    ],
+  },
+  {
+    mood: 'Watching the water',
+    lines: [
+      'It was flat like this the morning the Margate went down. Flat exactly like this.',
+      'I check the hull twice before I leave and twice more when I am back.',
+      'Did you hear that? No? Good. Neither did I. Probably.',
+      'I keep a second rope. And a third. You can laugh, I have heard laughing before.',
+      'Everyone says it is fine out here. Everyone said that last season as well.',
+      'I do not go past the shelf. Nobody raised me brave, they raised me old.',
+    ],
+  },
+  {
+    mood: 'A long way from the dock',
+    lines: [
+      'Three weeks out. My youngest will have grown and I will not know the face.',
+      'The tavern does a stew on the cold nights. I think about it more than is healthy.',
+      'You get used to the quiet. That is the part nobody warns you about.',
+      'I could turn for home. I say that at the start of every week.',
+      'There is a bunk ashore with my name on it and a mattress that remembers the shape of me.',
+      'Say something else. Anything. I am not fussy at this point.',
+    ],
+  },
+  {
+    mood: 'Full of opinions',
+    lines: [
+      'Boats these days. All paint and no timber.',
+      'In my day you went and found the fish. Now you wait for them and complain about waiting.',
+      'I have no complaints. I have observations. There are a great many of them.',
+      'Everybody out here is in a hurry and not one of them is getting anywhere sooner.',
+      'They have gone and changed the market again. They are always changing the market.',
+      'Nothing wrong with the old way. Nothing wrong with it at all.',
+    ],
+  },
+  {
+    mood: 'Somewhere else entirely',
+    lines: [
+      'One day I am going to sail until the chart runs out and see what happens next.',
+      'I like the hour the light goes. Everything looks like it might be something else.',
+      'If I had a bigger boat I do not think I would fish at all. I would just go.',
+      'There is water past the water. There has to be.',
+      'I gave names to all the rocks on my usual run. None of the names took.',
+      'Some nights the whole sea holds still and you can believe it is listening.',
+    ],
+  },
+  {
+    mood: 'Has heard things',
+    lines: [
+      'Two boats went out together last week and one came back. They are not saying which.',
+      'You did not hear it from me, but somebody has been buying charts. All of them.',
+      'The Harbourmaster has a new coat. Where does a Harbourmaster come by a coat like that.',
+      'Everyone is very interested in the deep water lately. Everyone.',
+      'I do not repeat things. I say them once, to everybody.',
+      'There is a name going round that nobody says twice. I will not be the second one.',
+    ],
+  },
+  {
+    mood: 'Still learning the water',
+    lines: [
+      'Second week. I have stopped being sick, which they tell me was the hard part.',
+      'I keep tying the knot wrong. It holds anyway. I have stopped asking why.',
+      'Everybody out here seems to know everybody. I am working on it.',
+      'I caught something yesterday and I do not know what it was. I put it back.',
+      'They said I would love it or be gone inside a month. I am still deciding.',
+      'How do you all know where you are? Everything looks the same to me out here.',
+    ],
+  },
+  {
+    mood: 'Been out a while',
+    lines: [
+      'I have not spoken to a soul in eleven days. You are doing very well so far.',
+      'The gulls have names now. I gave them the names. None of them objected.',
+      'What day is it. No. Do not tell me. I have come to like not knowing.',
+      'I talk to the boat. The boat is a marvellous listener and has never once interrupted.',
+      'You are the third real thing I have seen this week and the other two were weather.',
+      'I sang the whole way out. There was nobody to stop me and I checked.',
+    ],
+  },
+]
+
 const HINTS = [
   "Chum's wasted in the shallows. Save it for water that's got something worth calling up.",
   "A perfect reel pays more than a good one, and the second perfect in a row pays more again. Nobody tells you that.",
@@ -380,14 +505,7 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
       : roll < 0.62 ? 'peddler'
         : 'salter'
 
-  const talkRoll = rnd()
-  const topic: 'hint' | 'story' = talkRoll < 0.62 ? 'hint' : 'story'
-  const offer: TraderOffer | null = isTalker
-    // Weighted toward hints, not even. Stories are the sea's atmosphere and
-    // there are only so many of them; hints are what the fishing screen's wait
-    // used to carry, and that is the load this feature actually took on.
-    ? { deal: 'talk', topic, lines: runOf(topic === 'hint' ? HINTS : STORIES, 4, rnd) }
-    : offerFor(kind, depth, rnd)
+  const offer: TraderOffer | null = isTalker ? talkerOffer(rnd) : offerFor(kind, depth, rnd)
   if (!offer) return null
 
   const look: TraderLook = {
@@ -415,6 +533,40 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
     driftR, driftRate, driftPhase,
     ...offer,
   }
+}
+
+/**
+ * WHAT A TALKER SAYS, and in what proportion.
+ *
+ * Three lines from ONE persona, so the person coheres, and then at most one
+ * borrowed line spliced in among them.
+ *
+ * ── WHY THE MIX IS MOSTLY CHATTER ───────────────────────────────────────────
+ *
+ * These used to be four hints deep, because the talkers had inherited the job
+ * the fishing screen's cast-wait tips used to do. That made every stranger on
+ * the sea a tooltip with a hat on. The knowledge has somewhere better to live
+ * now: the note isles carry the mechanics, plainly and permanently, and a
+ * player can go back and re-read one.
+ *
+ * So a hint out here is a bonus rather than the point. Roughly two in five
+ * talkers carry ONE, about one in seven carries a story line instead, and the
+ * rest are purely somebody passing the time.
+ *
+ * The borrowed line is never FIRST. The opener is what makes you decide whether
+ * this person is worth another tap, and it should be them, not a fact.
+ */
+function talkerOffer(rnd: () => number): TraderOffer {
+  const persona = pick(PERSONAS, rnd)
+  const chat = runOf(persona.lines, 3, rnd)
+  const roll = rnd()
+  if (roll < 0.40) {
+    return { deal: 'talk', topic: 'hint', mood: persona.mood, lines: [chat[0], pick(HINTS, rnd), ...chat.slice(1)] }
+  }
+  if (roll < 0.55) {
+    return { deal: 'talk', topic: 'story', mood: persona.mood, lines: [chat[0], pick(STORIES, rnd), ...chat.slice(1)] }
+  }
+  return { deal: 'talk', topic: 'chat', mood: persona.mood, lines: chat }
 }
 
 function pick<T>(arr: readonly T[], rnd: () => number): T {
