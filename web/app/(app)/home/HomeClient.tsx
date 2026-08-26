@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Almanac from '../fishing/Almanac'
 import { BADGE_MAP } from '@/lib/badges'
+import { ISLES } from '@/lib/seaIsles'
 import { vibrate } from '@/lib/haptics'
 import {
   HOTSPOTS, HOTSPOT_BY_ID, FURNITURE, PORTAL_REACH, PINNED_MAX,
@@ -294,10 +295,18 @@ export default function HomeClient({
                   <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                     {f.options.map(o => {
                       const on = here.id === o.id
-                      const paid = home.owned.includes(o.id) || o.cost === 0
+                      // SALVAGE IS NOT "FREE". It costs 0 because it has no
+                      // price at all, so the plain `cost === 0` test would have
+                      // read the six best pieces in the game as gifts.
+                      const held = home.owned.includes(o.id)
+                      const locked = !!o.found && !held
+                      const paid = held || (o.cost === 0 && !o.found)
+                      const fromIsle = o.found
+                        ? ISLES.find(i => i.id === o.found!.isle)?.name ?? 'somewhere far out'
+                        : null
                       return (
                         <button key={o.id} type="button"
-                          disabled={!open || busy || on || (!paid && coin < o.cost)}
+                          disabled={!open || busy || on || locked || (!paid && coin < o.cost)}
                           onClick={() => { vibrate(6); paid ? doFurnish(o.id) : setConfirm({ kind: 'furnish', id: o.id }) }}
                           className="font-karla font-700"
                           style={{
@@ -305,8 +314,9 @@ export default function HomeClient({
                             fontSize: '0.76rem', textAlign: 'center',
                             color: on ? '#0d1520' : 'rgba(226,238,246,0.86)',
                             background: on ? GOLD : 'rgba(255,255,255,0.05)',
-                            border: `1px solid ${on ? GOLD : 'rgba(255,255,255,0.14)'}`,
-                            cursor: !open || on ? 'default' : 'pointer',
+                            border: `1px solid ${on ? GOLD : locked ? 'rgba(150,206,172,0.32)' : 'rgba(255,255,255,0.14)'}`,
+                            cursor: !open || on || locked ? 'default' : 'pointer',
+                            opacity: locked ? 0.72 : 1,
                           }}>
                           {/* THE THING ITSELF, and big enough to judge. Choosing
                               a rug by reading the words "Kelp weave" is choosing
@@ -324,15 +334,29 @@ export default function HomeClient({
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={o.art} alt="" draggable={false} style={{
                                 maxHeight: 58, maxWidth: '100%', objectFit: 'contain',
-                                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))',
+                                // SHOWN, not hidden behind a question mark. You
+                                // are meant to want it — a silhouette says
+                                // "locked", the thing itself says "go and get
+                                // it", and only one of those is a reason to
+                                // sail to the Ancient Deep.
+                                filter: locked
+                                  ? 'drop-shadow(0 3px 6px rgba(0,0,0,0.4)) grayscale(0.55) brightness(0.86)'
+                                  : 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))',
                               }} />
                             ) : (
                               <span style={{ fontSize: '0.7rem', opacity: 0.5, alignSelf: 'center' }}>nothing</span>
                             )}
                           </span>
                           {o.name}
-                          <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.8 }}>
-                            {on ? 'in the room' : paid ? 'owned · place it' : `⟡ ${o.cost.toLocaleString()}`}
+                          <span style={{
+                            display: 'block', fontSize: '0.7rem', opacity: 0.85,
+                            color: locked ? 'rgba(150,206,172,0.95)' : undefined,
+                          }}>
+                            {on ? 'in the room'
+                              : locked ? `found on ${fromIsle}`
+                              : held && o.found ? 'salvaged · place it'
+                              : paid ? 'owned · place it'
+                              : `⟡ ${o.cost.toLocaleString()}`}
                           </span>
                         </button>
                       )

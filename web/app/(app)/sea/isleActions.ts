@@ -21,11 +21,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ISLE_BY_ID, type IsleNote } from '@/lib/seaIsles'
+import { ISLE_FURNISHING } from '@/lib/seaIsles'
+import { FURNISHING_BY_ID } from '@/lib/homestead'
 import { PLACES } from './chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 
 export type AshoreResult =
-  | { ok: true; already: false; name: string; gems: number; doubloons: number; note: IsleNote | null }
+  | { ok: true; already: false; name: string; gems: number; doubloons: number; note: IsleNote | null
+      /** A furnishing that was in the chest. The only way to own one. */
+      salvage: { id: string; name: string } | null }
   | { ok: true; already: true; name: string; note: IsleNote | null }
   | { ok: false; error: string }
 
@@ -124,5 +128,28 @@ export async function goAshore(isleId: string): Promise<AshoreResult> {
       .insert({ user_id: user.id, amount: doubloons, reason: `Ashore: ${isle.name}` })
   }
 
-  return { ok: true, already: false, name: isle.name, gems, doubloons, note: isle.note ?? null }
+  // ── AND WHAT WAS ACTUALLY IN THE CHEST ────────────────────────────────
+  //
+  // Six isles hold the only copy of a homestead furnishing. Inside the same
+  // insert-took branch as the coin, so it is granted at most once per captain
+  // and the unique index is the guard rather than a read-then-write.
+  //
+  // Appended to `owned`, which is the list of everything ever acquired — so it
+  // behaves like a piece that was paid for from here on: put it out, take it
+  // down, put it back, at no cost. It is HOW you got it that is different.
+  let salvage: { id: string; name: string } | null = null
+  const fid = ISLE_FURNISHING[isle.id]
+  if (fid) {
+    const item = FURNISHING_BY_ID[fid]
+    const { data: row } = await admin
+      .from('homesteads').select('owned').eq('user_id', user.id).maybeSingle()
+    const owned = ((row?.owned as string[] | null) ?? [])
+    if (!owned.includes(fid)) {
+      await admin.from('homesteads')
+        .upsert({ user_id: user.id, owned: [...owned, fid] }, { onConflict: 'user_id' })
+    }
+    salvage = item ? { id: fid, name: item.item.name } : null
+  }
+
+  return { ok: true, already: false, name: isle.name, gems, doubloons, note: isle.note ?? null, salvage }
 }

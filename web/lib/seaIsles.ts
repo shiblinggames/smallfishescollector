@@ -139,6 +139,26 @@ const NOTES: Record<string, IsleNote> = {
  * somewhere you go ashore. They run 130 to 210 now, so the smallest is wider
  * than the boat and the largest matches a port's footprint. Landfall, not a town.
  */
+/**
+ * WHAT EACH ISLE IS HOLDING, beyond coin.
+ *
+ * Six caches hold the only copy of a homestead furnishing (lib/homestead.ts,
+ * `found`). Kept HERE rather than only on the furnishing so the isle table
+ * reads as a complete manifest of what is out there, and so the ashore code has
+ * one place to look.
+ *
+ * All six sit in the Abyss or the Ancient Deep. The point is that the finest
+ * things in a captain's house are things they sailed a long way for.
+ */
+export const ISLE_FURNISHING: Record<string, string> = {
+  'abyss-1': 'window-seaglass',
+  'abyss-2': 'floor-abyssal',
+  'ancient_deep-0': 'hearth-firestone',
+  'ancient_deep-2': 'mount-giant',
+  'ancient_deep-3': 'table-starglass',
+  'ancient_deep-4': 'corner-orrery',
+}
+
 export const ISLES: Isle[] = [
   // ── THE SHALLOWS ── 35 ◆ / 1,400 ⟡ ──────────────────────────────────
   { id: 'shallows-0', name: 'Cormorant Rock', band: 'shallows', x: 3080, y: 496, r: 131, kind: 'cache', gems: 35, doubloons: 1400 },

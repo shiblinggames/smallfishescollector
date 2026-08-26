@@ -39,6 +39,7 @@ import {
 import { PLACES } from '../sea/chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { coastline, standsOnGrass } from '@/lib/islandShape'
+import { ISLES } from '@/lib/seaIsles'
 
 export type BuildResult =
   | { ok: true; homestead: Homestead; spent: number; built: string }
@@ -203,6 +204,20 @@ export async function furnish(furnishingId: string): Promise<BuildResult> {
   }
   const prev = current.furniture[slot]
   if (prev === item.id) return { ok: false, error: 'That is already there.' }
+
+  // ── SALVAGE CANNOT BE BOUGHT ──────────────────────────────────────────
+  //
+  // A `found` piece carries `cost: 0`, because it genuinely has no price. The
+  // payment branch below is guarded on `item.cost > 0`, so without this check
+  // every one of them would have been free to anybody who tapped it — the six
+  // best pieces in the game, handed out for a click.
+  //
+  // Owning one means having stood on the isle that holds it. `owned` is the
+  // record of that, written by goAshore.
+  if (item.found && !(current.owned ?? []).includes(item.id)) {
+    const isle = ISLES.find(i => i.id === item.found!.isle)
+    return { ok: false, error: `Nobody sells that. There is one, on ${isle?.name ?? 'an isle a long way out'}.` }
+  }
 
   await admin.from('homesteads').upsert(
     { user_id: user.id }, { onConflict: 'user_id', ignoreDuplicates: true },

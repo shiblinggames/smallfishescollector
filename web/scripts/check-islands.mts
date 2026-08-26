@@ -65,3 +65,26 @@ for (const p of PLACES) {
 }
 console.log(`\n  ${bad} building${bad === 1 ? '' : 's'} not standing wholly on the grass.`)
 if (bad) process.exitCode = 1
+
+// ── SALVAGE: the two halves of one fact ──────────────────────────────────
+// A furnishing names the isle that holds it, and lib/seaIsles names the
+// furnishing each isle holds. Either can be edited without the other, and the
+// failure is silent both ways: a piece nobody can find, or an isle that grants
+// something that is not gated on it.
+{
+  const { FURNITURE } = await import('../lib/homestead')
+  const { ISLES, ISLE_FURNISHING } = await import('../lib/seaIsles')
+  const fromItems = new Map<string, string>()
+  for (const g of FURNITURE) for (const o of g.options) if (o.found) fromItems.set(o.found.isle, o.id)
+
+  let bad = 0
+  for (const [isle, id] of fromItems) {
+    if (!ISLES.some(i => i.id === isle)) { console.error(`  ✗ ${id} is found on '${isle}', which is not an isle`); bad++ }
+    if (ISLE_FURNISHING[isle] !== id) { console.error(`  ✗ ${id} says it is on ${isle}, but that isle grants ${ISLE_FURNISHING[isle] ?? 'nothing'}`); bad++ }
+  }
+  for (const [isle, id] of Object.entries(ISLE_FURNISHING)) {
+    if (fromItems.get(isle) !== id) { console.error(`  ✗ ${isle} grants ${id}, which is not marked as found there`); bad++ }
+  }
+  console.log(`\n  Salvage: ${fromItems.size} piece(s) findable, ${bad === 0 ? 'both tables agree' : `${bad} disagreement(s)`}.`)
+  if (bad) process.exit(1)
+}

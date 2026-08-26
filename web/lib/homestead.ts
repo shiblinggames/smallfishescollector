@@ -181,10 +181,28 @@ export type FurnitureSlot = 'hearth' | 'floor' | 'mount' | 'table' | 'window' | 
 export type Furnishing = {
   id: string
   name: string
+  /** Doubloons. Zero on the free default AND on anything `found` — see below. */
   cost: number
   /** What it looks like. Null only for the "nothing here" options, which are
    *  genuinely nothing rather than a picture of nothing. */
   art: string | null
+  /**
+   * SALVAGE. The isle you have to go ashore at to own this, and the only way to
+   * get it — no price, no alternative.
+   *
+   * ── WHY THE BEST THING IN EACH ROOM CANNOT BE BOUGHT ──────────────────
+   *
+   * The top rung of every one of these ladders used to be the most expensive
+   * rung, which made the finest room in the game a readout of how many
+   * doubloons its owner had. That is the shape of thing this game says it will
+   * not be. A captain who has stood on Worldsend Rock has something a richer
+   * captain cannot order, and the only way to catch up is to sail there too.
+   *
+   * It also gives the isles a reason to exist past the first visit. They paid
+   * gems and coin, which are the same gems and coin as everywhere else; now
+   * six of them pay the only copy of something.
+   */
+  found?: { isle: string }
 }
 
 export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishing[] }[] = [
@@ -195,7 +213,7 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
       { id: 'hearth-iron', name: 'Iron brazier', cost: 15_000 , art: '/sea/hearth-iron.png' },
       { id: 'hearth-copper', name: 'Copper hood', cost: 60_000 , art: '/sea/hearth-copper.png' },
       { id: 'hearth-whale', name: 'Whalebone mantel', cost: 250_000 , art: '/sea/hearth-whale.png' },
-      { id: 'hearth-firestone', name: 'An abyssal firestone', cost: 900_000 , art: '/sea/hearth-firestone.png' },
+      { id: 'hearth-firestone', name: 'An abyssal firestone', cost: 0 , art: '/sea/hearth-firestone.png', found: { isle: 'ancient_deep-0' } },
     ],
   },
   {
@@ -205,7 +223,7 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
       { id: 'floor-kelp', name: 'Kelp weave', cost: 12_000 , art: '/sea/floor-kelp.png' },
       { id: 'floor-sail', name: 'Old sailcloth', cost: 45_000 , art: '/sea/floor-sail.png' },
       { id: 'floor-deep', name: 'Deepwater rug', cost: 200_000 , art: '/sea/floor-deep.png' },
-      { id: 'floor-abyssal', name: 'An abyssal weave', cost: 700_000 , art: '/sea/floor-abyssal.png' },
+      { id: 'floor-abyssal', name: 'An abyssal weave', cost: 0 , art: '/sea/floor-abyssal.png', found: { isle: 'abyss-2' } },
     ],
   },
   {
@@ -215,7 +233,7 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
       { id: 'mount-oar', name: 'Crossed oars', cost: 10_000 , art: '/sea/mount-oar.png' },
       { id: 'mount-catch', name: 'Your biggest catch', cost: 70_000 , art: '/sea/mount-catch.png' },
       { id: 'mount-golden', name: 'A golden, cased', cost: 300_000 , art: '/sea/mount-golden.png' },
-      { id: 'mount-giant', name: 'An Ancient Deep giant', cost: 1_100_000 , art: '/sea/mount-giant.png' },
+      { id: 'mount-giant', name: 'An Ancient Deep giant', cost: 0 , art: '/sea/mount-giant.png', found: { isle: 'ancient_deep-2' } },
     ],
   },
   {
@@ -224,7 +242,7 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
       { id: 'table-plank', name: 'Plank and trestle', cost: 0 , art: '/sea/table-plank.png' },
       { id: 'table-chart', name: 'Chart table', cost: 18_000 , art: '/sea/table-chart.png' },
       { id: 'table-captain', name: "Captain's desk", cost: 80_000 , art: '/sea/table-captain.png' },
-      { id: 'table-starglass', name: 'A star-glass table', cost: 350_000 , art: '/sea/table-starglass.png' },
+      { id: 'table-starglass', name: 'A star-glass table', cost: 0 , art: '/sea/table-starglass.png', found: { isle: 'ancient_deep-3' } },
     ],
   },
   {
@@ -233,7 +251,7 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
       { id: 'window-shutter', name: 'Plain shutters', cost: 0 , art: '/sea/window-shutter.png' },
       { id: 'window-lead', name: 'Leaded glass', cost: 16_000 , art: '/sea/window-lead.png' },
       { id: 'window-stained', name: 'Stained glass', cost: 90_000 , art: '/sea/window-stained.png' },
-      { id: 'window-seaglass', name: 'A wall of sea-glass', cost: 400_000 , art: '/sea/window-seaglass.png' },
+      { id: 'window-seaglass', name: 'A wall of sea-glass', cost: 0 , art: '/sea/window-seaglass.png', found: { isle: 'abyss-1' } },
     ],
   },
   {
@@ -243,7 +261,7 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
       { id: 'corner-net', name: 'Nets and floats', cost: 8_000 , art: '/sea/corner-net.png' },
       { id: 'corner-figure', name: "A ship's figurehead", cost: 75_000 , art: '/sea/corner-figure.png' },
       { id: 'corner-lamp', name: 'A drowned lamp, still lit', cost: 320_000 , art: '/sea/corner-lamp.png' },
-      { id: 'corner-orrery', name: 'A tide orrery', cost: 1_000_000 , art: '/sea/corner-orrery.png' },
+      { id: 'corner-orrery', name: 'A tide orrery', cost: 0 , art: '/sea/corner-orrery.png', found: { isle: 'ancient_deep-4' } },
     ],
   },
 ]

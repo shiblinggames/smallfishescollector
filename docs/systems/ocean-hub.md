@@ -1065,3 +1065,40 @@ Placement is **solved and asserted, never eyeballed** — buildings inside the c
 landmarks inside their zone and clear of each other, resident buyers reachable. Four of
 five buyers were first placed inside solid landmarks, which would have made them literally
 unreachable.
+
+## Salvage — the best furniture cannot be bought
+
+The top rung of every interior ladder has **no price**. Six isles in the Abyss and the
+Ancient Deep hold the only copy of one piece each:
+
+| Isle | Piece | Band |
+|---|---|---|
+| Coldwater Cay | A wall of sea-glass | Abyss |
+| The Drowned Step | An abyssal weave | Abyss |
+| The First Stone | An abyssal firestone | Ancient Deep |
+| Worldsend Rock | An Ancient Deep giant | Ancient Deep |
+| Stillwater Isle | A star-glass table | Ancient Deep |
+| Nobody's Rock | A tide orrery | Ancient Deep |
+
+All six are 1,300–2,100m from home, so each is a real voyage.
+
+**Why.** The finest room in the game used to be a readout of how many doubloons its owner
+had. A captain who has stood on Worldsend Rock now owns something a richer captain cannot
+order, and the only way to catch up is to sail there too. It also gives the isles a reason
+to exist past the first visit — they paid gems and coin, which are the same gems and coin
+as everywhere else; now six of them pay the only copy of something.
+
+**Two traps this had.** A found piece carries `cost: 0` because it genuinely has no price,
+and `furnish()` guards payment on `item.cost > 0` — so without an explicit `item.found`
+check, the six best pieces in the game would have been free to anyone who tapped them.
+And the picker's `paid = cost === 0` test read them as gifts for the same reason.
+
+The grant sits inside `goAshore`'s insert-took branch, so the unique index on
+`sea_discoveries` is the guard and it cannot pay twice. It appends to `owned`, so from then
+on the piece behaves like one that was paid for — put it out, take it down, put it back,
+free. It is *how you got it* that is different.
+
+**Sink impact:** `HOMESTEAD_FLEX` fell from 8,420,000 to 5,210,000 doubloons. That is
+deliberate — 4.45M of the old sink was the six pieces, and they are now earned by sailing
+instead. `ISLE_FURNISHING` in `lib/seaIsles.ts` and the `found` fields in
+`lib/homestead.ts` are two halves of one fact and a check asserts they agree.

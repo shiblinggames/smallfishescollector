@@ -5397,6 +5397,31 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
               </>
             )}
 
+            {/* ── AND THE THING THAT IS NOT COIN ───────────────────────
+                Six isles hold the only copy of a homestead furnishing. Given
+                its own line and its own colour rather than sitting beside the
+                gems, because the gems are the same gems you get everywhere and
+                this is the only one of these in the world. */}
+            {won?.salvage && (
+              <div style={{
+                margin: '0 auto 0.9rem', maxWidth: 300,
+                padding: '0.6rem 0.8rem', borderRadius: 12,
+                background: 'rgba(18,42,32,0.9)',
+                border: '1px solid rgba(150,206,172,0.45)',
+              }}>
+                <p className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.54rem', letterSpacing: '0.18em', margin: '0 0 3px',
+                  color: 'rgba(150,206,172,0.85)',
+                }}>Salvaged</p>
+                <p className="font-cinzel font-700" style={{
+                  fontSize: '1.05rem', color: '#dff0e6', margin: 0,
+                }}>{won.salvage.name}</p>
+                <p className="font-karla" style={{
+                  fontSize: '0.74rem', color: 'rgba(196,222,206,0.8)', margin: '3px 0 0',
+                }}>Nobody sells one. It is waiting at the Homestead.</p>
+              </div>
+            )}
+
             {result.already && !note && (
               <p className="font-karla" style={{ fontSize: '0.95rem', color: 'rgba(196,214,226,0.8)', margin: 0 }}>
                 You have had this one already. The chest is where you left it.
