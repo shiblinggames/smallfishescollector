@@ -3487,10 +3487,20 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
     ? '/sea/isle-note.png'
     : found ? '/sea/isle-chest-open.png' : chestArt(isle)
 
-  // The prop's width, as a share of the island. A chest that scales with the
-  // rock keeps every isle reading at the same "distance" — a fixed size would
-  // make the small ones look like they had a shipping container on them.
-  const propW = isle.r * (isle.kind === 'note' ? 0.42 : 0.62)
+  // The prop's width, as a share of the island. Scaling with the rock keeps
+  // every isle reading at the same "distance" — a fixed size would make the
+  // small ones look like they had a shipping container on them.
+  //
+  // SIZED AGAINST THE BOAT, which is the only object out here whose scale
+  // anybody knows: 210px, and it is moored a few lengths away while you look at
+  // this. The first pass used 0.62, which put the chest at 123px on a big isle
+  // — more than half the length of the boat beside it, and a third of the
+  // island it was sitting on. 0.30 lands it around 1/3.5 of the boat, which is
+  // a box two crew could carry between them.
+  //
+  // The post takes a smaller share again because its art is TALL (0.55 wide as
+  // it is high), so the same factor buys nearly twice the height.
+  const propW = isle.r * (isle.kind === 'note' ? 0.24 : 0.30)
 
   return (
     <div style={{
