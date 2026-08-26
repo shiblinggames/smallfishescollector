@@ -26,6 +26,7 @@ import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import { vigilFor } from '@/lib/ancientVigil'
 import { getTrawlState } from '../fishing/trawls/actions'
+import { getRenownState } from '../actions/renown'
 
 export const metadata = { title: 'The Sea' }
 
@@ -75,6 +76,12 @@ export default async function SeaPage() {
   // Read on the server so the day's deal count survives a page reload — a cap
   // the client remembers is not a cap.
   const dealt = await dealtToday()
+
+  // RENOWN, for the level bar. Past 100 the bar becomes a tappable chip that
+  // opens the panel, and it was mounted out here without either of the props
+  // that make it do anything — so a captain at max level had a readout of a
+  // stat they could no longer reach.
+  const renown = await getRenownState('fishing')
 
   // ── WHEN THE CREW GET BACK ────────────────────────────────────────────
   // TIMESTAMPS, not a count. A trawl matures on a clock, so handing the map
@@ -183,6 +190,7 @@ export default async function SeaPage() {
       // map falls back to HOME — which is also what happens if either half is
       // missing, because half a position is not one.
       trawlEndsAt={trawlEndsAt}
+      renown={renown}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,

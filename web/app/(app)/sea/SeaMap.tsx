@@ -21,6 +21,8 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
+import RenownPanel from '@/components/RenownPanel'
+import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition } from './traderActions'
@@ -574,7 +576,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, trawlEndsAt, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, start, log, trawlEndsAt, renown, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -609,6 +611,8 @@ export default function SeaMap({
   log: SeaLog
   /** ISO moments each running trawl comes due. See the Docks mark. */
   trawlEndsAt: string[]
+  /** Fishing renown, for the level bar's chip. Null below the cap. */
+  renown: RenownState | null
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -867,6 +871,13 @@ export default function SeaMap({
 
   /** The Mainland's landing chooser — tavern, market or tackle shop. */
   const [ashore, setAshore] = useState(false)
+  /** The renown panel, opened from the level bar's chip while the rod is out. */
+  const [renownOpen, setRenownOpen] = useState(false)
+  const [renownState, setRenownState] = useState(renown)
+  // Straight off the state — `available` is computed server-side when it is
+  // read and again on every commit, so recomputing it here would be a second
+  // source of truth for a number the panel already owns.
+  const renownPoints = renownState?.available ?? 0
   /** True when the rod is out but nothing is in flight, so a tap on the water
    *  can simply stow it. */
   const [canLeaveFishing, setCanLeaveFishing] = useState(false)
@@ -1089,6 +1100,12 @@ export default function SeaMap({
 
   const onTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (swallowTap.current) return
+    // THE SAME GUARD onDown HAS. It was on the pointer path and not this one,
+    // so anything marked `data-no-steer` still put the helm over on the click
+    // that followed — the level bar being the one you actually notice, because
+    // it looks tappable and at max level genuinely is. A control is a control
+    // on every path that can reach it.
+    if ((e.target as HTMLElement).closest?.('button, [data-no-steer]')) return
     const pt = 'touches' in e
       ? { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }
       : { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY }
@@ -1937,6 +1954,20 @@ hullRef={hullRefFor(t.key)} />
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
 
+      {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
+          map's own stacking and the fishing UI both. */}
+      {renownState && (
+        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+          <RenownPanel
+            open={renownOpen}
+            onClose={() => setRenownOpen(false)}
+            skill="fishing"
+            initial={renownState}
+            onChange={st => setRenownState(st)}
+          />
+        </div>
+      )}
+
       {/* WHAT THIS WATER IS DOING FOR YOU. Only while you are in it, and it
           says the effect in full rather than an icon you have to learn. */}
       {/* THE HOTSPOT BADGE SHRINKS while the rod is out. It is a three-line
@@ -1976,6 +2007,8 @@ hullRef={hullRefFor(t.key)} />
           hold={{ count: holdCount, capacity: hold.capacity }}
           at={pos}
           log={log}
+          renownPoints={renownState ? renownPoints : undefined}
+          onOpenRenown={renownState ? () => setRenownOpen(true) : undefined}
           onCaught={qty => setHoldCount(n => Math.min(hold.capacity, n + qty))}
           onBaitChange={t => {
             // Re-reads the remaining count off the bag. The catch-zone bonus is

@@ -538,6 +538,24 @@ Two traps worth keeping in mind:
   from the animation's clock. Never drive it with per-frame state. Start it from a callback
   ref, not an effect: `mode="wait"` means the node does not exist when the phase changes.
 
+## Controls that are not the sea
+
+The map steers on **two** paths — `onDown` (pointerdown, for the thumb helm) and `onTap`
+(click, for a course order) — and a control has to be exempt from **both**. `onDown` bailed
+on `closest('button, [data-no-steer]')`; `onTap` did not, so anything marked `data-no-steer`
+still put the helm over on the click that followed. The level bar was the one anyone would
+notice, because it looks tappable and past Fishing 100 genuinely is.
+
+**A control is a control on every path that can reach it.** When adding a new steer path,
+copy the guard.
+
+The bar itself was also mounted without `renownAvailable` or `onOpenRenown` — `XPBarDisplay`
+only makes its MAX chip tappable when both are set — so a captain at 100 had a Renown readout
+they could not open. `/sea` reads `getRenownState('fishing')` on the page now and hosts
+`RenownPanel`, and the available count comes straight off the state rather than being
+recomputed (it is derived server-side on read and on every commit; a second computation would
+be a second source of truth).
+
 ## Performance
 
 The 60fps loop writes `style.transform` imperatively and React never sees it — see the

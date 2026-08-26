@@ -151,7 +151,7 @@ export type FishingMods = {
 
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
-  seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, onCaught,
+  seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onBaitSpent, onPose, onBusy, onCanLeave,
   spritesReady, onClose,
 }: {
@@ -204,6 +204,10 @@ export default function FishingHere({
    *  hotspot is judged on where the line ACTUALLY went in rather than on
    *  where you were when the rod came out. */
   at: React.RefObject<{ x: number; y: number }>
+  /** Banked renown points, past Fishing 100. Undefined below the cap,
+   *  which is what makes the bar's MAX chip inert rather than tappable. */
+  renownPoints?: number
+  onOpenRenown?: () => void
   /** Everything the collection log reads. */
   log: SeaLog
   /** THE RACK — the rods you brought. Swapping is limited to these, which is
@@ -1077,7 +1081,13 @@ export default function FishingHere({
         maxWidth: 448, margin: '0 auto',
         padding: '1rem 1rem 0.6rem',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* data-no-steer, because the bar is TAPPABLE at max level and the map
+            steers on any click that reaches it. Without this the renown chip
+            opened the panel and put the helm over at the same time — and below
+            max level, where the chip does nothing, a tap on the bar was simply
+            a course change nobody asked for. The map's tap handler bails on
+            `closest('button, [data-no-steer]')`. */}
+        <div data-no-steer style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* THE LIGHT, on the bar's row. It used to float in the top-left
               corner on its own, which is a second thing in the same region of
               screen doing the same job as the bar: telling you the state of
@@ -1100,7 +1110,11 @@ export default function FishingHere({
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* bestStreak was never passed, which is why the flame and the
                 count the fishing screen shows have been missing out here. */}
-            <XPBarDisplay xp={fishingXP} bestStreak={streak} />
+            {/* The chip only becomes tappable when both of these are set —
+                see XPBarDisplay. They were never passed, so a captain at 100
+                had a Renown readout they could not open. */}
+            <XPBarDisplay xp={fishingXP} bestStreak={streak}
+              renownAvailable={renownPoints} onOpenRenown={onOpenRenown} />
           </div>
         </div>
       </div>
