@@ -1614,19 +1614,40 @@ export default function SeaMap({
    */
   useEffect(() => {
     let last = { ...pos.current }
-    const flush = () => {
+    /**
+     * `leaving` is the tab going away, which is the one time a hidden page MUST
+     * still write: it is the last chance to bank the fog and remember where the
+     * boat was. The heartbeat below skips hidden tabs; this does not.
+     */
+    const flush = (leaving = false) => {
       const p = pos.current
       const fog = [...fogPending.current]
       // THE TAB REMEMBERS TOO, and unconditionally. See `rememberPos`.
       rememberPos(p)
-      // Moved far enough, OR there is fog to bank. A boat sitting still in a
-      // patch it has just uncovered still has something worth saving.
-      if (fog.length === 0 && Math.hypot(p.x - last.x, p.y - last.y) < 60) return
+
+      // ── IT IS A HEARTBEAT, NOT JUST A POSITION ────────────────────
+      //
+      // This used to skip the write unless the boat had moved 60px, on the
+      // reasoning that pushing an identical row every twenty seconds forever is
+      // waste. True of the position and false of the whole row: the same write
+      // sets `sea_seen_at`, and everyone else's chart drops you two minutes
+      // after that stops moving.
+      //
+      // So a captain who parked went invisible. Which is precisely what two
+      // people do when they finally find each other — pull alongside and stop —
+      // and it is asymmetric the moment one of them is still sailing, so it
+      // reads as "he can see me and I cannot see him" rather than as a timeout.
+      // Reported exactly that way.
+      //
+      // A hidden tab still says nothing. Not looking at the sea is a fair
+      // definition of not being on it, and it is what stops a forgotten tab
+      // sitting on somebody's chart all night.
+      if (!leaving && document.visibilityState === 'hidden') return
       last = { ...p }
       fogPending.current.clear()
       void saveSeaPosition(p.x, p.y, fog)
     }
-    const onHide = () => { if (document.visibilityState === 'hidden') flush() }
+    const onHide = () => { if (document.visibilityState === 'hidden') flush(true) }
     // ── FASTER WHEN SOMEBODY IS WATCHING ──────────────────────────────
     //
     // Twenty seconds is the right heartbeat for a boat nobody can see: it is
@@ -1646,13 +1667,18 @@ export default function SeaMap({
     // twenty-second heartbeat so a crash does not lose your position, plus the
     // fog you have uncovered. Sailing alongside somebody costs the database
     // nothing extra now, where it used to cost ten times the writes.
-    const id = setInterval(flush, FAR_MS)
+    // WRAPPED, not passed bare. setInterval hands its callback an argument in
+    // some runtimes, and `flush` now takes `leaving` first — a stray truthy
+    // value there would make every heartbeat behave like a page-close and write
+    // from hidden tabs, which is the exact thing the guard exists to stop.
+    const id = setInterval(() => flush(), FAR_MS)
     document.addEventListener('visibilitychange', onHide)
-    window.addEventListener('pagehide', flush)
+    const onGone = () => flush(true)
+    window.addEventListener('pagehide', onGone)
     return () => {
       clearInterval(id)
       document.removeEventListener('visibilitychange', onHide)
-      window.removeEventListener('pagehide', flush)
+      window.removeEventListener('pagehide', onGone)
       // The unmount IS a navigation — going ashore, or the nav bar. This is the
       // one that closes the cheese, so it ignores the moved-far-enough test.
       //

@@ -133,19 +133,63 @@ export function openSeaPresence(opts: {
   let closed = false
   /** The last beat actually put on the wire, for the move gate. */
   let sent: { x: number; y: number; f: number; at: number } | null = null
+  /** Who we have been told to listen to, whether or not the socket is up yet. */
+  let wanted = new Set<string>()
 
-  // Realtime Authorization. Without this the socket carries no JWT, every
-  // private channel refuses the join, and the failure looks like "presence just
-  // does not work" rather than like an auth error.
-  void supabase.realtime.setAuth()
+  /**
+   * REALTIME AUTHORIZATION, AND IT HAS TO FINISH FIRST.
+   *
+   * `setAuth()` returns a Promise. The first cut called it with `void` and
+   * subscribed on the next line, which is a RACE — a private channel's join is
+   * refused unless the socket already carries the JWT, and whether it does
+   * depends on whether an async call happened to have resolved.
+   *
+   * It shipped, and it failed exactly the way a race fails: two captains with a
+   * valid pact, one able to see the other and not the reverse. Both clients ran
+   * the same code and only one of them won. Nothing in the database was wrong
+   * and nothing was logged, because a refused join is a status on a callback
+   * this code was ignoring.
+   *
+   * So every channel now waits on this, and `subscribeAll` is the only place
+   * that opens one.
+   */
+  const ready = supabase.realtime.setAuth().catch(() => {})
 
-  // ── YOUR OWN CHANNEL, the only one you may speak on ──────────────────
-  // `self: false` because the one boat that never needs a position update over
-  // the network is your own; it is right there in `pos`.
-  mine = supabase.channel(`sea:${opts.userId}`, {
-    config: { private: true, broadcast: { self: false } },
+  /** Open your own channel and everything you have been asked to listen to.
+   *  Safe to call more than once; existing channels are left alone. */
+  function subscribeAll() {
+    if (closed) return
+    if (!mine) {
+      // YOUR OWN CHANNEL, the only one you may speak on. `self: false` because
+      // the one boat that never needs a position update over the network is
+      // your own; it is right there in `pos`.
+      mine = supabase.channel(`sea:${opts.userId}`, {
+        config: { private: true, broadcast: { self: false } },
+      })
+      mine.subscribe(status => {
+        mineReady = status === 'SUBSCRIBED'
+        // A refused join is the failure mode this whole comment is about. Say
+        // so, rather than going quiet and looking like "presence is broken".
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[sea] could not open your own channel:', status)
+        }
+      })
+    }
+    for (const id of wanted) if (!listening.has(id)) listen(id)
+  }
+
+  void ready.then(subscribeAll)
+
+  // AND AGAIN WHEN THE TOKEN ROLLS. Supabase refreshes the JWT on its own
+  // schedule, and the socket keeps using whatever it was handed at join time —
+  // so a chart left open long enough would quietly stop hearing anybody. This
+  // is cheap: setAuth on an unchanged token is a no-op.
+  const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
+    if (closed) return
+    if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+      void supabase.realtime.setAuth()
+    }
   })
-  mine.subscribe(status => { mineReady = status === 'SUBSCRIBED' })
 
   /**
    * LISTEN TO ONE CAPTAIN.
@@ -172,21 +216,27 @@ export function openSeaPresence(opts: {
       if (!Number.isFinite(x) || !Number.isFinite(y)) return
       opts.onBeat(id, { x, y, f: b.f === -1 ? -1 : 1 })
     })
-    ch.subscribe()
+    ch.subscribe(status => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[sea] could not listen to ${id}:`, status)
+      }
+    })
     listening.set(id, ch)
   }
 
   return {
     setCrew(ids: string[]) {
       if (closed) return
-      const want = new Set(ids.filter(id => id && id !== opts.userId))
+      wanted = new Set(ids.filter(id => id && id !== opts.userId))
       for (const [id, ch] of listening) {
-        if (!want.has(id)) {
+        if (!wanted.has(id)) {
           void supabase.removeChannel(ch)
           listening.delete(id)
         }
       }
-      for (const id of want) if (!listening.has(id)) listen(id)
+      // Only opens anything once the JWT is on the socket. Before that this
+      // records who to listen to and subscribeAll picks it up.
+      void ready.then(subscribeAll)
     },
 
     send(b: Beat) {
@@ -204,10 +254,13 @@ export function openSeaPresence(opts: {
 
     close() {
       closed = true
+      authSub?.subscription.unsubscribe()
       for (const ch of listening.values()) void supabase.removeChannel(ch)
       listening.clear()
+      wanted = new Set()
       if (mine) void supabase.removeChannel(mine)
       mine = null
+      mineReady = false
     },
   }
 }
