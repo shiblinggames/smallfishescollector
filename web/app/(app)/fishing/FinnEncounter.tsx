@@ -94,7 +94,12 @@ export default function FinnEncounter({
   function advance() {
     if (typing) { finishRef.current(); return }
     if (!isLast) { setIndex(i => i + 1); return }
-    if (mode === 'offer') return   // Accept/Pass owns the dismissal
+    // ACCEPT/PASS OWNS THE DISMISSAL, but only when there is something to
+    // accept. On the chart Finn often just talks — the bet comes "from time to
+    // time", not every meeting — and an offer with no challenge in it used to
+    // leave this returning early with no Accept button on screen to return TO,
+    // so the panel could not be closed at all.
+    if (mode === 'offer' && challenge) return
     onDismiss?.()
   }
 
@@ -285,7 +290,7 @@ export default function FinnEncounter({
 
             {/* Buttons */}
             <div style={{ display: 'flex', gap: 8 }}>
-              {mode === 'offer' && isLast && !typing ? (
+              {mode === 'offer' && isLast && !typing && challenge ? (
                 <>
                   <button
                     onClick={() => onPass?.()}

@@ -38,6 +38,62 @@ same day. Glowing rods are excluded: those are things people earned.
 | **Blockade runner** | Night + deep water only. Carries the three shop-banned rods. |
 | **Resident buyer** | Permanent, one per zone. See below. |
 
+## Finn is not on the Salt Road
+
+He is the campaign's rival (see [story-universe.md](story-universe.md), and read it before
+writing him a line — the whole arc hangs on what he does not say yet). Code:
+`web/lib/seaFinn.ts` for where he is, `web/app/(app)/sea/finnActions.ts` for everything
+that happens when you get there.
+
+**Found, not rolled.** He used to be a 2% chance on every cast. Now he stands on the chart
+and you sail to him. One meeting, one story beat, and the next one is somewhere else — his
+position is a pure function of `profiles.finn_encounters`, so "he disappears after you talk
+to him" needs no column and no cleanup. The count goes up and the old spot is empty water.
+
+Same derived law as the traders, with one difference: his haunt is per-CAPTAIN, not per-
+cell-per-day. He belongs to the story rather than the world, and two boats on the same wave
+are at different points in it.
+
+- **Where.** Low-discrepancy strides over the southern fan, capped to bands you have
+  unlocked and biased deep. Consecutive haunts are forced apart (shortest measured hop
+  2,485px, 1.6x the hail circle) and he never overlaps anything that owns a button.
+  `scripts/check-finn.mts` asserts both on every build — it exists because the first cut
+  gave landmarks too wide a keep-out and sealed the Shallows to **0.0% standing room**
+  without anything looking wrong.
+- **The Shallows is excluded** once you have any other water. It holds all four ports and
+  is 3.7% clear, and a rival loitering off the end of your own dock is not one you have to
+  go and find.
+- **Findable.** A named compass arrow and an amber ring on the minimap. The point was never
+  to hide him, it was to make you sail.
+
+### His bets are server-owned, and that is new
+
+The fishing-screen settlement took the verdict AND the payout as arguments:
+
+```
+settleFinnChallenge(won: boolean, rewardDoubloons: number, ...)
+newGold = doubloons + (won ? Math.floor(rewardDoubloons) : 0)
+```
+
+Anyone with a console could mint doubloons. Survivable while the sea was two admins on an
+allowlist; not survivable with the chart open. The bet now lives in
+`profiles.finn_challenge` (written only by the server, so the tier and multiplier are never
+in the client's gift) and is settled against counters `reelIn` already maintains:
+
+| Bet | Measured against |
+|---|---|
+| `perfect_streak` | `current_perfect_streak` **and** a `total_perfects` delta |
+| `speed_catch` | `sum(fish_lifetime.catches)`, snapshotted at accept, plus the deadline |
+
+No change to the cast path — those numbers were already being written and had nobody
+reading them. The `total_perfects` delta is not redundant: the streak survives taking the
+bet, so a captain sitting on a run of nine would otherwise win "three in a row" without
+casting.
+
+Offers come at ~45% of meetings, never stacked on a running bet, and an EXPIRED speed bet
+stops counting as running — otherwise closing the tab mid-bet would block every future
+offer for the life of the account.
+
 ## The three sell lanes
 
 This is the shape the economy is moving toward, and the resident buyers are the middle rung:

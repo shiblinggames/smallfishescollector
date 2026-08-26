@@ -152,6 +152,7 @@ export type FishingMods = {
 export default function FishingHere({
   zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
   seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
+  onReel,
   onBaitSpent, onPose, onBusy, onCanLeave,
   spritesReady, onClose,
 }: {
@@ -218,6 +219,19 @@ export default function FishingHere({
   /** How many fish this catch actually banked, so the hold ticks up as you
    *  fill it rather than sitting at whatever it was when the page loaded. */
   onCaught: (qty: number) => void
+  /**
+   * EVERY REEL, WON OR LOST, with the server's own numbers.
+   *
+   * Finn's bets are settled server-side against `current_perfect_streak` and
+   * the lifetime catch table, both of which reelIn already maintains — so this
+   * is not the source of truth for anything, it is the nudge that tells the
+   * chart it is worth ASKING. Without it a finished bet would sit unsettled
+   * until the player happened to close the rod.
+   *
+   * `caught` is fish that actually went into the hold, which is the same number
+   * the server's lifetime table gets, so the two cannot drift.
+   */
+  onReel?: (r: { perfectStreak: number; caught: number }) => void
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
   /** Told when the dial is up, so the map can stop moving entirely behind it.
    *  See the note on the freeze in SeaMap. */
@@ -792,6 +806,7 @@ export default function FishingHere({
         // The server clamps catchQty to the space actually left, so this is the
         // number that went in rather than the number that was rolled.
         onCaught(res.catchQty ?? 1)
+        onReel?.({ perfectStreak: res.perfectStreak ?? 0, caught: res.catchQty ?? 1 })
         // Into the log immediately. Without this the drawer disagrees with the
         // result card still on screen: the card says NEW SPECIES and the log
         // has never heard of it.
@@ -827,6 +842,10 @@ export default function FishingHere({
       } else {
         setCaught({ kind: 'miss', result: result === 'penalty' ? 'penalty' : 'miss' })
         setStreak(0)
+        // A MISS IS NEWS TOO. It breaks a perfect run, which is how a
+        // perfect-streak bet is lost, and the chart needs to hear about that
+        // rather than only hearing about successes.
+        onReel?.({ perfectStreak: 0, caught: 0 })
       }
       setPhase('result')
     }).catch(async (e: unknown) => {

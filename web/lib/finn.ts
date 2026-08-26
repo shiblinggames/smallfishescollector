@@ -28,9 +28,23 @@ export const FINN_AVATAR = {
 
 // ─── Encounter mechanics ─────────────────────────────────────────────────────
 
-/** 2% chance to fire on any Cast / Cast Again tap. Cast does not consume
- *  bait when an encounter triggers. */
-export const FINN_ENCOUNTER_RATE = 0.02
+/**
+ * HE DOES NOT AMBUSH CASTS ANY MORE. Zero, deliberately.
+ *
+ * Finn now stands out on the chart and you sail to him — lib/seaFinn.ts for
+ * where, app/(app)/sea/finnActions.ts for what happens when you get there. Both
+ * Finns read and write the same four columns (finn_encounters, finn_wins,
+ * finn_seen_beats, finn_revealed), so leaving the old 2% roll live would mean
+ * the story advancing in two places: sail three thousand pixels for the next
+ * beat, and find the fishing screen had already spent it on a cast.
+ *
+ * The roll sites in FishingGame are left standing rather than cut out, because
+ * that screen is being retired wholesale (its four catch-time moments still
+ * need porting first) and gutting a file on its way out is how you break the
+ * thing you were about to delete. `Math.random() < 0` is never true, so both
+ * sites are already dead; they go when the page does.
+ */
+export const FINN_ENCOUNTER_RATE = 0
 
 /** Weighted tier pick: 60% T1, 30% T2, 10% T3. */
 export const FINN_TIER_WEIGHTS = [0.6, 0.3, 0.1] as const
@@ -601,33 +615,50 @@ export function pickRandomLine(pool: readonly string[]): string {
   return pool[Math.floor(Math.random() * pool.length)] ?? ''
 }
 
-/** Returns the highest-milestone unseen encounter-track beat the player has
- *  unlocked, or null. Fires when an encounter triggers and we're picking what
- *  Finn says before the offer. */
+/**
+ * The next unseen encounter-track beat, or null once he has said them all.
+ *
+ * ── ONE MEETING, ONE BEAT ──────────────────────────────────────────────
+ *
+ * `milestone` no longer gates this track, and `encounters` is no longer read.
+ * It used to be both, because Finn arrived on a 2% roll per cast and the story
+ * had to be rationed against a firehose — thirteen beats spread over thirty-nine
+ * ambushes so he did not tell you his whole life in one session.
+ *
+ * On the chart he is somewhere you sail to (lib/seaFinn.ts). Finding him is now
+ * the cost, and it is a real one, so rationing on top of it would mean crossing
+ * the Abyss to be told "Same again?" — the trip earns the story, and the story
+ * is what should be waiting at the end of it.
+ *
+ * ── AND IT WALKS FORWARD NOW ───────────────────────────────────────────
+ *
+ * The old version searched BACKWARD for the highest unlocked unseen beat, which
+ * quietly meant a player who arrived at a milestone with earlier beats unseen
+ * would skip them permanently. That never bit, because encounters only ever go
+ * up by one and every beat was collected on the way past — verified against the
+ * live table: all 28 players who have met him have exactly the beats their
+ * high-water mark implies, no gaps. Walking forward is identical for them and
+ * repairs the case rather than skipping it.
+ */
 export function findNextEncounterBeat(
-  encounters: number,
   seenBeats: readonly string[],
 ): FinnBeat | null {
   const seen = new Set(seenBeats)
-  for (let i = FINN_ENCOUNTER_BEATS.length - 1; i >= 0; i--) {
-    const b = FINN_ENCOUNTER_BEATS[i]
-    if (encounters >= b.milestone && !seen.has(b.id)) return b
-  }
-  return null
+  return FINN_ENCOUNTER_BEATS.find(b => !seen.has(b.id)) ?? null
 }
 
-/** Returns the highest-milestone unseen win-track beat the player has
- *  unlocked, or null. Fires after the player wins a challenge — Finn's
- *  reaction is either this beat's lines, or a generic win line if no beat
- *  is due. */
+/** The next unseen win-track beat, or null. Fires when a challenge is won —
+ *  his reaction is either this beat's lines or a generic win line.
+ *
+ *  Same change as the encounter track above: one WIN, one beat, rather than a
+ *  milestone ladder up to 40. Winning a bet already costs a hunt for Finn plus
+ *  the challenge itself, and gating story behind a second counter on top of
+ *  that put the last win beat further away than any player has ever reached —
+ *  the high-water mark on the live table is 61 wins against a 40 milestone, and
+ *  two players out of 81 have ever reached the end of it. */
 export function findNextWinBeat(
-  wins: number,
   seenBeats: readonly string[],
 ): FinnBeat | null {
   const seen = new Set(seenBeats)
-  for (let i = FINN_WIN_BEATS.length - 1; i >= 0; i--) {
-    const b = FINN_WIN_BEATS[i]
-    if (wins >= b.milestone && !seen.has(b.id)) return b
-  }
-  return null
+  return FINN_WIN_BEATS.find(b => !seen.has(b.id)) ?? null
 }

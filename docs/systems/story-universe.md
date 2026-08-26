@@ -8,8 +8,14 @@ finale. The bible for who knows what and when.
 **Finn — the friendly guide fish — runs the Finndicate.** The reveal is seeded across
 chapters and must never be leaked early by incidental copy. Anything Finn says pre-reveal
 is written in innocent voice; re-read `web/lib/finn.ts` and `web/lib/finnItems.ts` before
-giving Finn new lines anywhere (including fishing-side encounters:
-`web/app/(app)/fishing/FinnEncounter.tsx`, `FinnScene.tsx`).
+giving Finn new lines anywhere (the encounter panel is
+`web/app/(app)/fishing/FinnEncounter.tsx`, the ancient-catch cutscenes are `FinnScene.tsx`).
+
+**Finn is found, not rolled.** He used to arrive on a 2% chance per cast on the fishing
+screen. He now stands out on the sea chart and you sail to him: one meeting, one beat, and
+he is somewhere else afterwards. `FINN_ENCOUNTER_RATE` is 0 and the old roll sites in
+`FishingGame.tsx` are dead — the story only advances on the water now. See
+[sea-npcs.md](sea-npcs.md) for the mechanics.
 
 - The six Ancient Deep giants gate a late raid — collecting them is a campaign key, not
   just an almanac flex.

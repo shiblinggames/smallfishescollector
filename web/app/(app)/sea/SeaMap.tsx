@@ -18,6 +18,7 @@
 // several things happening near each other.
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
@@ -51,6 +52,11 @@ import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaCloc
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
+import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
+import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
+import { FINN_NAME, type FinnSceneLine } from '@/lib/finn'
+
+const FinnEncounter = dynamic(() => import('../fishing/FinnEncounter'), { ssr: false })
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
@@ -1164,6 +1170,155 @@ export default function SeaMap({
   const cellRef = useRef('')
   /** The one we have pulled alongside, and the one we are talking to. */
   const [nearTrader, setNearTrader] = useState<Trader | null>(null)
+
+  // ── FINN ──────────────────────────────────────────────────────────────
+  //
+  // He is not part of the Salt Road and deliberately not built out of it: a
+  // trader is somebody the water happened to put in your way, and he is the
+  // story standing in one specific place waiting for you. See lib/seaFinn.ts.
+  //
+  // Everything about him — where he is, what he says next, whether he has a bet
+  // — is server state, because all of it is progression. The client's copy is
+  // for drawing him and nothing else.
+  const [finn, setFinn] = useState<FinnSeaState | null>(null)
+  const finnRef = useRef<FinnSeaState | null>(null)
+  finnRef.current = finn
+  const [nearFinn, setNearFinn] = useState(false)
+  /** The conversation, while it is open. */
+  const [finnTalk, setFinnTalk] = useState<{
+    lines: (string | FinnSceneLine)[]
+    mode: 'offer' | 'result' | 'reveal'
+    offer?: FinnOffer | null
+    resultKind?: 'won' | 'lost'
+    rewardText?: string
+  } | null>(null)
+  /** Stops a second tap on Hail while the first is still in flight. */
+  const [finnBusy, setFinnBusy] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    void finnState().then(f => { if (alive) setFinn(f) })
+    return () => { alive = false }
+  }, [])
+
+  /**
+   * PULL ALONGSIDE AND TALK.
+   *
+   * The encounter index goes with the request and lands in the WHERE of the
+   * server's update, so a double tap cannot spend two beats of the story on one
+   * meeting — the second call matches no row and comes back null.
+   *
+   * `setFinn` with the new position is what makes him VANISH: the marker, the
+   * compass arrow and the proximity test all read the same `finn.at`, and the
+   * server has already moved it somewhere else by the time this resolves. He is
+   * gone from this patch of water before the conversation has closed.
+   */
+  const hailFinn = useCallback(async () => {
+    const cur = finnRef.current
+    if (!cur || finnBusy) return
+    setFinnBusy(true)
+    try {
+      const talk = await speakToFinn(cur.encounters)
+      if (!talk) return
+      setFinn(prev => (prev ? {
+        ...prev,
+        encounters: talk.encounters,
+        seenBeats: talk.seenBeats,
+        revealed: talk.revealed,
+        at: talk.at,
+      } : prev))
+      setNearFinn(false)
+      setFinnTalk({ lines: talk.lines, mode: talk.mode, offer: talk.offer })
+    } finally {
+      setFinnBusy(false)
+    }
+  }, [finnBusy])
+
+  /** Take the bet. The clock starts server-side, not here. */
+  const takeFinnBet = useCallback(async () => {
+    const bet = await acceptFinnChallenge()
+    setFinnTalk(null)
+    setBetProgress(0)
+    if (bet) setFinn(prev => (prev ? { ...prev, challenge: bet } : prev))
+  }, [])
+
+  /** Walk away from it. Remembered, so he can needle you about it next time. */
+  const passFinnBet = useCallback(async () => {
+    setFinnTalk(null)
+    await declineFinnChallenge()
+  }, [])
+
+  /**
+   * HOW THE RUNNING BET IS GOING, for the chip and for knowing when to ask.
+   *
+   * Local and approximate ON PURPOSE. The server settles from its own counters
+   * and this number never reaches it — it exists so the player can watch a bet
+   * fill up, and so `settleFinnBet` is called at the moment it is worth calling
+   * rather than on a poll.
+   */
+  const [betProgress, setBetProgress] = useState(0)
+
+  /**
+   * A REEL LANDED. Decide whether the bet is worth settling.
+   *
+   * A perfect-streak bet reads the server's streak directly, which is the same
+   * value the settlement will read, so the two agree by construction. A speed
+   * bet counts fish landed since it was taken.
+   *
+   * Nothing is claimed early: `claimFinnChallenge` consumes the bet whatever it
+   * decides, so asking before the target is met would throw the bet away. The
+   * only two moments worth asking are "the target is met" and "the clock ran
+   * out", and both are below.
+   */
+  const onFinnReel = useCallback((r: { perfectStreak: number; caught: number }) => {
+    const bet = finnRef.current?.challenge
+    if (!bet) return
+    if (bet.type === 'perfect_streak') {
+      setBetProgress(r.perfectStreak)
+      if (r.perfectStreak >= (bet.perfects ?? Infinity)) void settleFinnBet()
+    } else {
+      setBetProgress(prev => {
+        const next = prev + r.caught
+        if (next >= (bet.fish ?? Infinity)) void settleFinnBet()
+        return next
+      })
+    }
+  }, [])
+
+  // THE CLOCK RUNNING OUT IS ALSO AN ANSWER. A speed bet nobody finishes would
+  // otherwise sit on the profile forever, blocking every future offer, and the
+  // player would never be told they had lost. Fires once, on the deadline.
+  useEffect(() => {
+    const bet = finn?.challenge
+    if (!bet?.endsAt) return
+    const ms = bet.endsAt - Date.now()
+    if (ms <= 0) { void settleFinnBet(); return }
+    const t = setTimeout(() => { void settleFinnBet() }, ms)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finn?.challenge?.endsAt])
+
+  /**
+   * SETTLE THE OUTSTANDING BET.
+   *
+   * Passes NOTHING. Whether it was won and what it pays are both worked out on
+   * the server from counters the cast path maintains — see the note at the top
+   * of finnActions.ts, and the doubloon faucet it replaced.
+   */
+  const settleFinnBet = useCallback(async () => {
+    const res = await claimFinnChallenge()
+    if (!res) return
+    setBetProgress(0)
+    setFinn(prev => (prev ? { ...prev, challenge: null, wins: res.wins, seenBeats: res.seenBeats } : prev))
+    if (res.won) {
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    }
+    setFinnTalk({
+      lines: res.lines, mode: 'result',
+      resultKind: res.won ? 'won' : 'lost',
+      rewardText: res.rewardText,
+    })
+  }, [])
 
   // ── THE ISLES ─────────────────────────────────────────────────────────
   //
@@ -2345,6 +2500,13 @@ export default function SeaMap({
         }
         setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
 
+        // FINN. He does not drift and he does not patrol — he is waiting — so
+        // this is a flat distance to a fixed point rather than a pass over a
+        // list. Nothing to do at all until the server has told us where he is.
+        const fn = finnRef.current
+        const finnHit = !!fn && Math.hypot(pos.current.x - fn.at.x, pos.current.y - fn.at.y) < FINN_REACH
+        setNearFinn(prev => (prev === finnHit ? prev : finnHit))
+
         // WITHIN REACH OF AN ISLE. Compared by id: `isleNear` returns the same
         // object every time, but comparing ids keeps this honest if the table
         // ever becomes derived rather than a literal.
@@ -2542,6 +2704,12 @@ export default function SeaMap({
 hullRef={hullRefFor(t.key)} />
         ))}
 
+        {/* FINN, WHEREVER HE IS TODAY. Drawn after the Salt Road so he is never
+            behind a trader who happens to be moored on the same wave, and given
+            his own component rather than a TraderBoat because the plate under
+            him has to say what he is, and what he is is not a kind of trade. */}
+        {finn && !fishingIn && <FinnBoat at={finn.at} isNear={nearFinn} />}
+
         {/* The wake, in the world layer so each mark stays on the water where
             the hull left it. Every one of these is positioned by the loop. */}
         {Array.from({ length: WAKE_MARKS }, (_, i) => (
@@ -2674,9 +2842,35 @@ hullRef={hullRefFor(t.key)} />
 
       {/* The prompt steps aside while the rod is out — the cast button is the
           only thing that should be asking for a thumb down there. */}
+      {/* FINN OUTRANKS EVERYONE. A trader is one of dozens and there will be
+          another; he is the next beat of the story and you sailed here for him.
+          The derivation keeps him off the moored buyers, but a WANDERING trader
+          can still drift onto his spot, and this is the ordering that settles
+          what happens when one does. */}
+      {!fishingIn && nearFinn && !finnTalk && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: Z.action,
+          display: 'flex', justifyContent: 'center', padding: '0 1rem',
+        }}>
+          <button
+            disabled={finnBusy}
+            onClick={e => { e.stopPropagation(); vibrate(14); void hailFinn() }}
+            className="font-cinzel font-700"
+            style={{
+              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
+              color: '#f6e6c6', background: 'rgba(30,20,8,0.92)',
+              border: '1px solid rgba(255,196,110,0.7)',
+              boxShadow: '0 6px 22px rgba(0,0,0,0.5), 0 0 24px rgba(255,178,80,0.22)',
+              cursor: finnBusy ? 'default' : 'pointer', opacity: finnBusy ? 0.6 : 1,
+            }}>
+            {finnBusy ? '...' : `Hail ${FINN_NAME}`}
+          </button>
+        </div>
+      )}
+
       {/* HAILING SOMEONE OUTRANKS THE ZONE PROMPT. You have pulled alongside a
           person; what water you happen to be floating in can wait. */}
-      {!fishingIn && nearTrader && !hailing && (
+      {!fishingIn && !nearFinn && nearTrader && !hailing && (
         <div style={{
           position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: Z.action,
           display: 'flex', justifyContent: 'center', padding: '0 1rem',
@@ -2745,7 +2939,7 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       {/* THE BOTTLE, ahead of the zone prompt and behind a dig. */}
-      {!fishingIn && !nearTrader && !(nearDig && !dug.has(nearDig.id)) && nearBottle && (
+      {!fishingIn && !nearFinn && !nearTrader && !(nearDig && !dug.has(nearDig.id)) && nearBottle && (
         <div style={{
           position: 'absolute', left: 0, right: 0, bottom: 22,
           zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
@@ -2769,7 +2963,7 @@ hullRef={hullRefFor(t.key)} />
       {/* GOING ASHORE BEATS FISHING. You are inside a band whenever you are
           on an isle, so without this the only offer on screen would be "Fish
           The Deep" while you are standing on a rock with a chest on it. */}
-      {!fishingIn && !nearTrader && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && nearIsle && (
+      {!fishingIn && !nearFinn && !nearTrader && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && nearIsle && (
         <div style={{
           // THE SAME ROW AS "FISH THE DEEP" — bottom 22, which is what `Prompt`
           // and the trader hail both use. This was lifted to 5.4rem off the
@@ -2795,7 +2989,7 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
-      {!fishingIn && !nearTrader && !nearIsle && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && (
+      {!fishingIn && !nearFinn && !nearTrader && !nearIsle && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && (
         <Prompt
           place={near}
           locked={near ? locked(near) : false}
@@ -2879,6 +3073,12 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
+      {/* FINN'S BET, WHILE YOU ARE CARRYING ONE.
+          Kept up during fishing as well as on the water — the bet is WON with
+          the rod out, so hiding it behind the dial would hide it for exactly
+          the part that counts. */}
+      <FinnBet bet={finn?.challenge ?? null} progress={betProgress} />
+
       {/* THE CHART BUTTON, beside the light and on the same row.
           A real button, so the map's own `closest('button')` guard exempts it
           from steering on both the pointer and the click path without needing
@@ -2918,6 +3118,7 @@ hullRef={hullRefFor(t.key)} />
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!fishingIn && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
+          finnAt={finn && !finnTalk ? finn.at : null}
           waitingAt={id => (id === 'trawl_docks' ? trawlsReady : 0)} />
       )}
 
@@ -3078,6 +3279,7 @@ hullRef={hullRefFor(t.key)} />
         bearings={bearings}
         dug={dug}
         friends={friends}
+        finnAt={finn ? finn.at : null}
       />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
@@ -3136,6 +3338,7 @@ hullRef={hullRefFor(t.key)} />
           renownPoints={renownState ? renownPoints : undefined}
           onOpenRenown={renownState ? () => setRenownOpen(true) : undefined}
           onCaught={qty => setHoldCount(n => Math.min(hold.capacity, n + qty))}
+          onReel={onFinnReel}
           onBaitChange={t => {
             // Re-reads the remaining count off the bag. The catch-zone bonus is
             // re-read too, from getBait above, so the dial is built from the
@@ -3162,6 +3365,23 @@ hullRef={hullRefFor(t.key)} />
           onClose={() => setHailing(null)}
         />
       )}
+
+      {/* TALKING TO FINN. Its own mount, not folded in with the trader panel
+          above it — they are two different conversations and only one of them
+          moves the story. Mounts whenever there is something to say, which
+          includes the settlement of a bet he is not standing next to: he gets
+          the last word on a wager wherever you happened to finish it. */}
+      <FinnEncounter
+        visible={!!finnTalk}
+        lines={finnTalk?.lines ?? []}
+        mode={finnTalk?.mode ?? 'offer'}
+        challenge={finnTalk?.offer ?? undefined}
+        resultKind={finnTalk?.resultKind}
+        rewardText={finnTalk?.rewardText}
+        onAccept={() => { void takeFinnBet() }}
+        onPass={() => { void passFinnBet() }}
+        onDismiss={() => setFinnTalk(null)}
+      />
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
           It asked you to confirm before sailing out of water you had the rod
@@ -3794,6 +4014,144 @@ const SUBMERGE: Record<string, { line: number; keep: number }> = {
 function markKind(art: string): string {
   return art.slice(art.lastIndexOf('/') + 1).replace('.png', '')
 }
+
+/**
+ * THE OUTSTANDING WAGER.
+ *
+ * A bet you cannot see is a bet you forget you took, and Finn's are won by
+ * doing something specific — three in a row, five before the sand runs out —
+ * which nobody can aim at from memory. So it states the target and how far
+ * along it is, and for a speed bet it counts down.
+ *
+ * THE NUMBERS HERE ARE NOT THE ONES THAT PAY. The settlement runs on the
+ * server against its own counters (finnActions.ts). This is a readout, and it
+ * is allowed to be a frame behind without anything being at stake.
+ *
+ * The clock only ticks while there is a clock to tick — a perfect-streak bet
+ * has no deadline and mounts no interval at all.
+ */
+const FinnBet = memo(function FinnBet({ bet, progress }: {
+  bet: FinnChallenge | null
+  progress: number
+}) {
+  const [, tick] = useState(0)
+  const timed = !!bet?.endsAt
+  useEffect(() => {
+    if (!timed) return
+    const id = setInterval(() => tick(v => v + 1), 250)
+    return () => clearInterval(id)
+  }, [timed])
+
+  if (!bet) return null
+
+  const target = bet.type === 'perfect_streak' ? (bet.perfects ?? 0) : (bet.fish ?? 0)
+  const done = Math.min(progress, target)
+  const left = bet.endsAt ? Math.max(0, bet.endsAt - Date.now()) : null
+  // Under ten seconds it goes red, because that is the point at which the
+  // decision changes from "keep fishing" to "this one has to land".
+  const urgent = left != null && left < 10_000
+
+  return (
+    <div data-no-steer style={{
+      position: 'absolute', top: 52, right: 12, zIndex: Z.hud,
+      pointerEvents: 'none',
+      padding: '0.34rem 0.62rem', borderRadius: 10,
+      background: 'rgba(26,16,4,0.92)',
+      border: `1px solid ${urgent ? 'rgba(255,132,96,0.75)' : 'rgba(255,190,96,0.42)'}`,
+      boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+      textAlign: 'right', maxWidth: 190,
+    }}>
+      <p className="font-karla font-700 uppercase" style={{
+        margin: 0, fontSize: '0.5rem', letterSpacing: '0.16em',
+        color: 'rgba(255,206,138,0.72)',
+      }}>{FINN_NAME}&rsquo;s bet</p>
+      <p className="font-karla font-600" style={{
+        margin: '1px 0 0', fontSize: '0.72rem', color: '#f0e2c8', lineHeight: 1.15,
+      }}>{bet.targetText}</p>
+      <p className="font-cinzel font-700" style={{
+        margin: '2px 0 0', fontSize: '0.84rem',
+        color: urgent ? '#ff9c78' : '#ffd07a',
+        fontVariantNumeric: 'tabular-nums',
+      }}>
+        {done}/{target}
+        {left != null && ` · ${Math.floor(left / 1000)}s`}
+      </p>
+    </div>
+  )
+})
+
+/**
+ * FINN, WAITING.
+ *
+ * Deliberately NOT a TraderBoat with different data in it. A trader's plate
+ * reads "Bait peddler" off KIND_LABEL, and there is no kind of trade that
+ * describes him — putting him through that component would have meant adding a
+ * sixth trader kind for a man who is not a trader, so the Salt Road's type would
+ * have grown a member to describe the one person on the sea who is not on it.
+ *
+ * He does not drift. Everyone else out here is passing through and their hulls
+ * are nudged every frame by the loop; he is somewhere on purpose, so his
+ * position is plain `left`/`top` and no ref, and nothing in the 60fps loop
+ * touches him at all.
+ *
+ * Counter-squashed like everything else with height — he stands ON the plane,
+ * he is not painted onto it.
+ */
+const FinnBoat = memo(function FinnBoat({ at, isNear }: {
+  at: { x: number; y: number }
+  isNear: boolean
+}) {
+  return (
+    <div style={{
+      position: 'absolute', left: at.x, top: at.y,
+      pointerEvents: 'none', zIndex: 3,
+    }}>
+      <div style={{ transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.82)` }}>
+        <TraderSkiff look={FINN_LOOK} />
+      </div>
+
+      {/* THE HAIL MARK. Same shape as a trader's and a warmer colour, which is
+          the whole visual claim being made: he is a person you can talk to,
+          and he is not one of the others. */}
+      {isNear && (
+        <div aria-hidden style={{
+          position: 'absolute', left: 0, top: HEAD_TOP - 32,
+          transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+          transformOrigin: 'bottom center', pointerEvents: 'none',
+        }}>
+          <div className="sea-hail" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 26, height: 26, borderRadius: '50%',
+            background: 'rgba(30,18,6,0.94)',
+            border: '1px solid rgba(255,190,96,0.95)',
+            boxShadow: '0 0 20px rgba(255,168,60,0.7)',
+          }}>
+            <span className="font-cinzel font-700" style={{
+              fontSize: '1.032rem', lineHeight: 1, color: '#ffd07a', marginTop: -1,
+            }}>!</span>
+          </div>
+        </div>
+      )}
+
+      {/* THE PLATE. Below the hull and on a solid base, per the house rule that
+          anything written over art gets an opaque base under it. */}
+      <div style={{
+        position: 'absolute', left: 0, top: HULL_BOTTOM + 2,
+        transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'top center',
+        textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
+        padding: '3px 9px 4px', borderRadius: 9,
+        background: 'rgba(14,8,2,0.9)',
+        border: '1px solid rgba(255,190,96,0.45)',
+      }}>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '0.888rem', color: '#f4e2c0',
+          textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+        }}>{FINN_NAME}</p>
+      </div>
+    </div>
+  )
+})
 
 /**
  * THE POSITION THIS TAB LAST SAW, independent of the server round trip.
@@ -5557,8 +5915,10 @@ const COMPASS_MAX = 4
 /** How far apart two markers must sit on the perimeter before both are shown. */
 const COMPASS_SPACING = 96
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finnAt }: {
   frozen: boolean
+  /** Where Finn is standing, or null while there is nothing to sail to. */
+  finnAt: { x: number; y: number } | null
   /** Crew waiting at a given port, so a dock with a haul on it can jump the
    *  queue. Zero for everywhere else. */
   waitingAt: (id: string) => number
@@ -5662,6 +6022,29 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
     marks.push({
       id: `friend:${f.username}`, name: f.username, dim: false, dist: true,
       sx: at.sx, sy: at.sy, world: at.world,
+    })
+  }
+
+  // ── THE NEXT BEAT OF THE STORY ───────────────────────────────────────
+  //
+  // NAMED, unlike the zone buyer a few lines down, and the difference is worth
+  // stating because the buyer's comment argues the opposite case.
+  //
+  // The buyer is anonymous because discovering there is somebody out there IS
+  // the content — a label spends it before you have laid eyes on the boat. Finn
+  // is the other way round: you already know who he is by the second meeting,
+  // and what the arrow is actually answering is "do I want to spend the next
+  // ten minutes sailing?". That question cannot be answered by a mark that will
+  // not say what it is. An unnamed Finn arrow would just be a fourth anonymous
+  // heading competing with the buyer's.
+  //
+  // It is also the only pointer on this compass to something that MOVES when
+  // you use it, which is the whole shape of him.
+  if (finnAt) {
+    const f = project(finnAt.x, finnAt.y)
+    marks.push({
+      id: 'finn', name: FINN_NAME, dim: false, dist: true,
+      sx: f.sx, sy: f.sy, world: f.world,
     })
   }
 

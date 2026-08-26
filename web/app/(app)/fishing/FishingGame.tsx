@@ -3598,7 +3598,7 @@ export default function FishingGame({
 
     // Normal encounter — bump counters, pick story beat (if any), pick challenge.
     const newEncounters = finnEncounters + 1
-    const beat = findNextEncounterBeat(newEncounters, finnSeenBeats)
+    const beat = findNextEncounterBeat(finnSeenBeats)
 
     // Pick challenge type. Speed challenges don't make sense in Ancient
     // Deep (boss-style multi-stage catches break the timer concept), so
@@ -3741,7 +3741,7 @@ export default function FishingGame({
 
     // Win-track beat takes priority over generic win lines.
     const newWins = won ? finnWins + 1 : finnWins
-    const winBeat = won ? findNextWinBeat(newWins, finnSeenBeats) : null
+    const winBeat = won ? findNextWinBeat(finnSeenBeats) : null
 
     let lines: (string | FinnSceneLine)[]
     if (won) {
