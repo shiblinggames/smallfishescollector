@@ -657,6 +657,63 @@ the land met the sea on a hard vector edge, which was most of why these read as 
 outward. Shallow water round a real island is a broad pale shelf that fades out with no edge
 anywhere; a thin halo is a glow.
 
+## The discoverable isles
+
+27 small islands ringed round the five bands, `web/lib/seaIsles.ts`. They exist because
+**the bands reward depth, which is one axis** — before these, the whole east and west of
+every band was scenery. They are the reason to sail sideways.
+
+- **Spread by BEARING, not scattered.** The placement pass (`web/scripts/place-isles.mts`)
+  slices each band's semicircle and puts one isle per slice, then rejection-samples against
+  every port, landmark, moored trader and each other. Re-run it if the chart's furniture
+  moves; its OUTPUT is baked into the table, because a discovery has to be in the same place
+  tomorrow.
+- **Ashore rings never overlap** (1,478px apart at the tightest). One landing offers exactly
+  one isle, so the action button is never ambiguous.
+- **`r` floors at 130.** The boat is 210px wide. An earlier pass placed isles at r 87, a
+  174px island narrower than the boat moored at it, which reads as a stone you would run
+  over rather than landfall.
+- Every isle sits **wholly inside its band**, which is what makes the level gate honest.
+
+### What they pay, and the rule the curve follows
+
+18 caches hold **2,000 ◆ and 99,000 ⟡ in total**, one payout each, ever. **The bands do not
+overlap**: the meanest cache in a band always beats the richest in the band inside it
+(Shallows 35 ◆ → Ancient Deep 175-200 ◆), so sailing further is never a downgrade. Values
+are written per isle rather than derived, so one rock can be tuned without moving a curve.
+
+Nine isles pay nothing and hold a **note** instead. Near water carries **chart hints** —
+plain and literal per the mechanics-copy rule, and each one asserts something true of the
+live game, so a note is part of the surface of whatever system it names and has to move when
+that system is retuned. Far water carries **logs** from crews who sailed too far. Notes stay
+on the rock; you can read them again.
+
+**Notes must not touch the campaign.** The Sunken Hand arc is delivered north of the Harbour
+and its reveal leaks through incidental copy — see [story-universe.md](story-universe.md).
+
+Isle names and note text are registered in `web/scripts/check-copy.mts`, so the no-em-dash
+rule enforces itself.
+
+### Once is enforced by the database
+
+`sea_discoveries` (user_id, isle_id) with a **unique index**, RLS select-own, writes via
+service role. `goAshore` **inserts before it grants** and treats 23505 as "you already have
+this one". It is deliberately NOT select-then-insert — that is a check and a write with a gap
+between them, which is the shape `collectTrawl` has and the reason it can double-grant.
+
+The real gate on reaching an isle is its band's `minLevel`, which the server knows and cannot
+be forged. The position check against `sea_x/sea_y` is **best effort and documented as such**:
+`saveSeaPosition` does not validate what it stores, so a forged position only means lying
+twice. Making this properly unforgeable would need server-side boat simulation.
+
+### Adding one later
+
+The type carries a warning worth repeating: **`id` is the primary key of a discovery row**, so
+renaming one un-finds it for everybody who found it. To add an isle, place it, give it an id
+that will never change, and add its reward. Special items were asked for and the shape is
+ready — extend `Isle` and the payout branch in `goAshore`, which is the only code that may
+believe a reward.
+
 ## Movement: forward and sideways are different things
 
 The whole model used to be **one lerp of the velocity vector** toward the target vector. That
