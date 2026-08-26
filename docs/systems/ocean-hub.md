@@ -714,6 +714,52 @@ that will never change, and add its reward. Special items were asked for and the
 ready — extend `Isle` and the payout branch in `goAshore`, which is the only code that may
 believe a reward.
 
+## Regions: the chart's second axis
+
+`web/lib/seaRegions.ts`. The bands encode **how far out** and nothing else, so before this
+the east of a band looked exactly like the west and no part of 870M px² of water was
+anywhere in particular. Regions are **longitude**: five angular sectors fanning out from the
+Mainland, plus **The Approaches** for everything inside radius 3,800 (where the sectors
+converge and would flip every few seconds).
+
+East to west: **The Scatters** (chop), **The Kelp Reach** (weed), **The Long Run** (current),
+**The Glassing** (flat sheens), **The Silts** (veil).
+
+### Form, not colour — because day/night already owns colour
+
+Hue is spoken for twice: the band picks the water's palette via `seaAt`, and the 48-minute
+clock tints the whole frame. **A third system reaching for hue fights both and looks like a
+different place at dawn than at midnight**, which is the opposite of a landmark. So a region
+is a *texture* and a *drift rate*, which read the same at every hour.
+
+The one place the two systems meet is `inkStrength`:
+
+- **light ink** is light ON water — dims with `lum`, like the pale wash already does
+- **dark ink** is a thing IN the water — softens but stays
+
+Without that split the kelp vanishes at midnight and the chop glows.
+
+### Five sectors, not four
+
+At 45° the boundaries land at 45/90/135, and **90° is due south — the most travelled line on
+the chart**. That put the busiest route on a seam where a few pixels of drift flip the region
+and churn the cross-fade. At 36° due south sits mid-region (verified across ±400px).
+
+### Implementation notes
+
+- One extra tiled layer between the deep mottle and the pale wash, moved by transform like
+  the others. Never repainted.
+- Crossing **cross-fades over 0.75s each way** rather than swapping — the image only changes
+  while opacity is 0, so a hard pop is impossible.
+- `makeMottle` gained optional fixed `squash` and `tilt`. Fixed tilt is what turns a scatter
+  of blobs into a current: the marks stop being independent and agree with each other.
+- All five tiles are built on a 400ms idle timer after mount, so the first crossing does not
+  stop the loop to rasterise a canvas.
+- **A region you cannot see is not a region.** The Glassing and the Silts were first authored
+  faint, on the theory that "less than its neighbours" is an identity; on a test plate beside
+  the other four they were indistinguishable from open water. Render the comparison plate
+  before trusting these numbers.
+
 ## Bottles, bearings and buried treasure
 
 The renewable half of discovery. The isles are finite — 27, one payout each — so after a
