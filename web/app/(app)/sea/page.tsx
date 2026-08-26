@@ -22,6 +22,7 @@ import { rodsAboard, hullSpeed } from '@/lib/shipyard'
 import { RODS } from '@/lib/rods'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
+import { getDiscoveries } from './isleActions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
 import { vigilFor } from '@/lib/ancientVigil'
@@ -76,6 +77,12 @@ export default async function SeaPage() {
   // Read on the server so the day's deal count survives a page reload — a cap
   // the client remembers is not a cap.
   const dealt = await dealtToday()
+
+  // WHICH ISLES THIS CAPTAIN HAS ALREADY WORKED. Read here rather than fetched
+  // by the chart on mount, so a rock cleared last week is already showing an
+  // open chest the first time it paints — a marker that arrives a moment late
+  // is worse than no marker, because you have already reached for it.
+  const discovered = await getDiscoveries()
 
   // RENOWN, for the level bar. Past 100 the bar becomes a tappable chip that
   // opens the panel, and it was mounted out here without either of the props
@@ -199,6 +206,7 @@ export default async function SeaPage() {
       // The fog, as stored. Decoded on the client — the bitfield is the
       // record and the map is the only thing that reads it.
       exploredRaw={(profile?.sea_explored as string | null) ?? null}
+      discovered={discovered}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,

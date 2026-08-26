@@ -30,6 +30,7 @@ import { CREW_EFFECTS } from '../lib/crewEffects'
 import { ROUTE_CONFIGS } from '../lib/voyageRoutes'
 import { REPAIR_KITS } from '../lib/repairKits'
 import { ALL_DAILY_CHALLENGES } from '../lib/dailyChallenges'
+import { ISLES } from '../lib/seaIsles'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -53,6 +54,9 @@ const SOURCES: Src[] = [
   { label: 'voyage route',    strings: Object.values(ROUTE_CONFIGS).flatMap(r => [r.name, r.tagline, r.riskLabel]) },
   { label: 'repair kit',      strings: REPAIR_KITS.flatMap(k => [k.name, (k as { description?: string }).description]) },
   { label: 'daily challenge', strings: ALL_DAILY_CHALLENGES.map(c => c.label) },
+  // Isle names and the notes left on them. The notes are the longest prose the
+  // sea surfaces and the likeliest place for a stray dash to get in.
+  { label: 'isle', strings: ISLES.flatMap(i => [i.name, i.note?.title, i.note?.body]) },
 ]
 
 for (const src of SOURCES) {

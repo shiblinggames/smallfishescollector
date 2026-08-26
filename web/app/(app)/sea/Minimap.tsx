@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, YOON, RESIDENTS, NORTH_WALL } from './chart'
+import { ISLES } from '@/lib/seaIsles'
 import {
   FOG_CELL, FOG_W, FOG_H, FOG_X0, FOG_Y0, FOG_CELLS,
   fogCentre, fogHas, fogProgress,
@@ -26,7 +27,7 @@ import { vibrate } from '@/lib/haptics'
 const PAD = 10
 
 export default function Minimap({
-  open, onClose, fog, at, seaAt,
+  open, onClose, fog, at, seaAt, found,
 }: {
   open: boolean
   onClose: () => void
@@ -38,6 +39,8 @@ export default function Minimap({
    *  here that it is out there. Passed in rather than imported, because it
    *  lives in SeaMap alongside the palettes it reads. */
   seaAt: (p: { x: number; y: number }) => string
+  /** Isle ids already gone ashore at, so a cleared rock reads as cleared. */
+  found: Set<string>
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [size, setSize] = useState(0)
@@ -135,6 +138,32 @@ export default function Minimap({
       }
     }
 
+    // ── THE ISLES ────────────────────────────────────────────────────────
+    //
+    // Fogged like the people, and for the same reason: pinning a rock you have
+    // never sailed past would turn 27 discoveries into 27 waypoints, and the
+    // finding is the feature. Once the water round it is uncovered the pin
+    // stays, because remembering which rock you still owe a visit to across a
+    // 45,000 pixel chart is not the interesting part.
+    //
+    // Two states, two colours. Gold is a rock you have seen and not landed at,
+    // which is the only thing on this map that is asking you for something.
+    // Grey-green is done, and deliberately quiet.
+    for (const isle of ISLES) {
+      const i = Math.floor((isle.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((isle.x - FOG_X0) / FOG_CELL)
+      if (!fogHas(fog, i)) continue
+      const done = found.has(isle.id)
+      const x = tx(isle.x), y = ty(isle.y)
+      ctx.fillStyle = done ? 'rgba(150,182,164,0.75)' : '#f0c040'
+      ctx.beginPath(); ctx.arc(x, y, done ? 2.4 : 3.4, 0, Math.PI * 2); ctx.fill()
+      if (!done) {
+        // A ring, so an unclaimed isle reads at a glance on a busy chart.
+        ctx.strokeStyle = 'rgba(255,206,138,0.55)'
+        ctx.lineWidth = 1
+        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.stroke()
+      }
+    }
+
     // ── YOU ──────────────────────────────────────────────────────────────
     const b = at.current
     if (b) {
@@ -145,7 +174,7 @@ export default function Minimap({
       ctx.fillStyle = '#ffffff'
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, size, at, seaAt])
+  }, [fog, size, at, seaAt, found])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 

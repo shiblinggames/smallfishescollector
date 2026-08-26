@@ -29,6 +29,8 @@ import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place } from './chart'
+import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
+import { goAshore, type AshoreResult } from './isleActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
@@ -628,7 +630,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, dealtToday,
   auto, tideTurner,
 }: {
   fishingXP: number
@@ -670,6 +672,8 @@ export default function SeaMap({
   renown: RenownState | null
   /** Base64 fog bitfield as stored. See lib/seaExplore. */
   exploredRaw: string | null
+  /** Isles this captain has already been ashore at. Ids from lib/seaIsles. */
+  discovered: string[]
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
   dealtToday: string[]
@@ -938,6 +942,31 @@ export default function SeaMap({
 
   /** The Mainland's landing chooser — tavern, market or tackle shop. */
   const [ashore, setAshore] = useState(false)
+
+  /**
+   * GO ASHORE AT AN ISLE.
+   *
+   * The server decides what is on it and whether this captain has already had
+   * it; all this does is ask and show the answer. `landing` guards the double
+   * tap for the LOOK of it — the real guard is the unique index behind
+   * `goAshore`, which is why a second tap that gets through is harmless.
+   */
+  const land = useCallback(async (isle: Isle) => {
+    if (landingRef.current) return
+    landingRef.current = true
+    setLanding(true)
+    vibrate(14)
+    try {
+      const result = await goAshore(isle.id)
+      if (result.ok) setFound(prev => new Set(prev).add(isle.id))
+      setLanded({ isle, result })
+    } catch {
+      setLanded({ isle, result: { ok: false, error: 'The sea took that one. Try again.' } })
+    } finally {
+      landingRef.current = false
+      setLanding(false)
+    }
+  }, [])
   /** Under the arch, being asked whether you mean it. The ref is what the 60fps
    *  loop reads and writes; the state is only so React can draw the prompt. */
   const [atGate, setAtGate] = useState(false)
@@ -994,6 +1023,24 @@ export default function SeaMap({
   const cellRef = useRef('')
   /** The one we have pulled alongside, and the one we are talking to. */
   const [nearTrader, setNearTrader] = useState<Trader | null>(null)
+
+  // ── THE ISLES ─────────────────────────────────────────────────────────
+  //
+  // `found` starts from the server's list and is added to locally the moment a
+  // landing succeeds, so the chest on the rock behind you is open before the
+  // page has any reason to refetch.
+  //
+  // No ref shadow: nothing in the 60fps loop reads it. Whether an isle is
+  // already claimed changes what the BUTTON says and which chest is painted,
+  // both of which are render-time questions, and `isleNear` does not care.
+  const [found, setFound] = useState<Set<string>>(() => new Set(discovered))
+  const [nearIsle, setNearIsle] = useState<Isle | null>(null)
+  /** The isle whose landing panel is open, and what it gave up. `landed`, not
+   *  `ashore` — that name is already the Mainland's three-card chooser. */
+  const [landed, setLanded] = useState<{ isle: Isle; result: AshoreResult } | null>(null)
+  const [landing, setLanding] = useState(false)
+  /** Mirrors `landing` for the callback, which is built once. */
+  const landingRef = useRef(false)
   const [hailing, setHailing] = useState<Trader | null>(null)
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
@@ -1764,6 +1811,12 @@ export default function SeaMap({
           if (Math.hypot(pos.current.x - at.x, pos.current.y - at.y) < HAIL_RANGE) { hit = t; break }
         }
         setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
+
+        // WITHIN REACH OF AN ISLE. Compared by id: `isleNear` returns the same
+        // object every time, but comparing ids keeps this honest if the table
+        // ever becomes derived rather than a literal.
+        const isl = isleNear(pos.current.x, pos.current.y)
+        setNearIsle(prev => (prev?.id === isl?.id ? prev : isl))
         // SAIL OUT WITH THE ROD OUT AND IT FOLLOWS YOU. This used to raise the
         // leaving-the-water prompt; the streak survives crossing water now, so
         // there is nothing to stop you for. The zone you are fishing simply
@@ -1863,6 +1916,13 @@ export default function SeaMap({
             submerged base and the shoal for free and cannot drift out of
             style. */}
         {REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}
+
+        {/* THE DISCOVERABLE ISLES. Drawn with the landmarks rather than with
+            the ports, because that is what they are: something you come across,
+            not somewhere you were routed to. */}
+        {ISLES.map(i => (
+          <IsleRock key={i.id} isle={i} found={found.has(i.id)} isNear={nearIsle?.id === i.id} />
+        ))}
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -2045,7 +2105,31 @@ hullRef={hullRefFor(t.key)} />
         </div>
       )}
 
-      {!fishingIn && !nearTrader && (
+      {/* GOING ASHORE BEATS FISHING. You are inside a band whenever you are
+          on an isle, so without this the only offer on screen would be "Fish
+          The Deep" while you are standing on a rock with a chest on it. */}
+      {!fishingIn && !nearTrader && nearIsle && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.4rem)',
+          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); land(nearIsle) }}
+            disabled={landing}
+            className="font-cinzel font-700"
+            style={{
+              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
+              color: '#f6e6c6', background: 'rgba(24,18,10,0.9)',
+              border: '1px solid rgba(255,206,138,0.5)',
+              boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
+              cursor: landing ? 'default' : 'pointer', opacity: landing ? 0.6 : 1,
+            }}>
+            {found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`}
+          </button>
+        </div>
+      )}
+
+      {!fishingIn && !nearTrader && !nearIsle && (
         <Prompt
           place={near}
           locked={near ? locked(near) : false}
@@ -2068,6 +2152,8 @@ hullRef={hullRefFor(t.key)} />
       {/* AND THE WATER'S NAME IS ALREADY ON SCREEN while the rod is out — the
           stow line at the bottom of the fishing UI reads "Stow rod · Open
           Waters". Two of them, one of them enormous, is the same fact twice. */}
+      <AshorePanel state={landed} onClose={() => setLanded(null)} />
+
       <WaterBanner
         place={!fishingIn && near && near.kind === 'water' ? near : null}
         locked={near ? locked(near) : false}
@@ -2235,6 +2321,7 @@ hullRef={hullRefFor(t.key)} />
         fog={fogRef.current}
         at={pos}
         seaAt={p => seaAt(p, 0).solid}
+        found={found}
       />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
@@ -3040,19 +3127,29 @@ const SeaMark = memo(function SeaMark({ m, i }: {
   )
 })
 
-/** MEMOISED. The loop pokes React four times a second to update proximity and
- *  the compass, and without this every island rebuilt its whole subtree —
- *  coastline clip, drift blobs, cliff, jetty and all — on each of those ticks
- *  for a result that had not changed. */
-const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting = 0 }: {
-  place: Place; locked: boolean; isNear: boolean
-  /** Crew standing on this dock with a haul. Only the Trawl Docks ever pass a
-   *  non-zero value; every other island ignores it. */
-  waiting?: number
+/**
+ * A PIECE OF LAND, painted.
+ *
+ * Everything that makes an island look like an island and nothing that makes it
+ * a PLACE: no buildings, no label, no dock. Sized entirely by its parent — every
+ * layer in here is an absolute inset in percent, so the caller decides how big
+ * the rock is and this decides what it looks like.
+ *
+ * Pulled out of `PlaceIsland` when the discoverable isles arrived. They are the
+ * same land: same coastline generator, same terrain bands, same surf, same
+ * extrusion. Copying 130 lines of tuned layers to a second component would have
+ * meant two islands that drift apart on the first edit, and this stack has been
+ * measured and re-measured (see THE COASTLINE) in a way that is not worth doing
+ * twice.
+ *
+ * `id` is the seed. Two things with the same id are the same rock, and every
+ * shape on this chart is therefore stable across renders and reloads.
+ */
+const Landmass = memo(function Landmass({ id, locked = false }: {
+  id: string
+  /** Greys the land out, for water a captain has not levelled into. */
+  locked?: boolean
 }) {
-  const isWater = place.kind === 'water'
-  const d = place.r * 2
-
   /**
    * THE COASTLINE.
    *
@@ -3082,7 +3179,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
    */
   const clip = useMemo(() => {
     let h = 0
-    for (let i = 0; i < place.id.length; i++) h = (h * 31 + place.id.charCodeAt(i)) >>> 0
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
     const rnd = (n: number) => (((h >>> (n * 3)) % 1000) / 1000)
     // How rugged THIS island is. 0.72 is a soft round one, 1.35 is all teeth.
     const rug = 0.70 + rnd(1) * 0.35
@@ -3102,7 +3199,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
       pts.push(`${(50 + Math.cos(a) * r).toFixed(2)}% ${(50 + Math.sin(a) * r).toFixed(2)}%`)
     }
     return `polygon(${pts.join(', ')})`
-  }, [place.id])
+  }, [id])
 
   /**
    * TREE CLUMPS. Placed once per island off the same seed.
@@ -3113,7 +3210,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
    */
   const canopy = useMemo(() => {
     let h = 0
-    for (let i = 0; i < place.id.length; i++) h = (h * 37 + place.id.charCodeAt(i)) >>> 0
+    for (let i = 0; i < id.length; i++) h = (h * 37 + id.charCodeAt(i)) >>> 0
     const out: { x: number; y: number; r: number; o: number }[] = []
     let st = h || 1
     const nx = () => { st ^= st << 13; st >>>= 0; st ^= st >>> 17; st ^= st << 5; st >>>= 0; return st / 0x100000000 }
@@ -3128,7 +3225,379 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
       })
     }
     return out
-  }, [place.id])
+  }, [id])
+
+  return (
+    <>
+      {/* ── THE FOOTPRINT, flat on the water ──────────────────────
+          Shoals and a wet shore ring, which live INSIDE the squashed world
+          layer and so come out as ellipses. This is the island's shadow on
+          the sea and the only part of it that is genuinely lying down. */}
+      {/* THE SHOAL — shallow water standing off the coast, and the reason
+          an island reads as sitting IN the sea rather than on top of it.
+          Widened and softened: at inset 2% with a 6px blur it was a thin
+          halo, which is a glow. Shallow water around a real island is a
+          broad pale shelf that fades out with no edge anywhere. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: '-6%', clipPath: clip,
+        background: 'rgba(140,190,206,0.13)', filter: 'blur(16px)',
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', inset: '1%', clipPath: clip,
+        background: 'rgba(168,204,216,0.22)', filter: 'blur(8px)',
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', inset: '7%', clipPath: clip,
+        background: 'rgba(200,222,230,0.30)', filter: 'blur(2px)',
+      }} />
+      {/* ── SURF ────────────────────────────────────────────────────
+          A soft white collar hugging the coast, just outside the land and
+          just inside the shoal. Water hitting a shore is the single most
+          recognisable thing about a shore — without it the land meets the
+          sea on a hard vector edge, which is most of why these read as
+          shapes rather than places.
+
+          Two rings so it has depth: a wide diffuse one for spray and a
+          tight bright one for the break itself. Both breathe, slowly and
+          out of phase, so the coast is never quite still. */}
+      <div aria-hidden className="sea-surf" style={{
+        position: 'absolute', inset: '9%', clipPath: clip,
+        background: 'rgba(226,244,250,0.30)', filter: 'blur(7px)',
+      }} />
+      <div aria-hidden className="sea-surf sea-surf-2" style={{
+        position: 'absolute', inset: '11.4%', clipPath: clip,
+        background: 'rgba(240,250,255,0.55)', filter: 'blur(2.5px)',
+      }} />
+
+      {/* Contact shadow, thrown away from the light. Nothing says "this
+          object is ABOVE the water" faster than a shadow that is not
+          directly under it. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: '11%', clipPath: clip,
+        transform: `translate(${ISLAND_LIFT * 0.34}px, ${ISLAND_LIFT * 0.5}px)`,
+        background: 'rgba(2,10,18,0.42)', filter: 'blur(9px)',
+      }} />
+
+      {/* ── THE CLIFF, the extrusion ────────────────────────────────
+          The same coastline again, dropped by the island's height and
+          filled with wet rock. Drawn UNDER the top face, so all you ever
+          see of it is the band along the near edge — which is exactly what
+          you see of a real island's side from a low angle, and is the whole
+          trick of an extrusion. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: '13%', clipPath: clip,
+        transform: `translateY(${ISLAND_LIFT / GROUND}px)`,
+        background: 'linear-gradient(180deg, #3b3226 0%, #2a2419 55%, #191509 100%)',
+        filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
+      }} />
+
+      {/* ── THE TOP FACE, lifted clear of the water ─────────────────
+          Counter-squashed so the land itself is NOT foreshortened — an
+          island is a solid standing on the plane, not a decal printed on
+          it — then raised by the same lift the cliff was dropped by. */}
+      <div style={{
+        position: 'absolute', inset: '13%', clipPath: clip, overflow: 'hidden',
+        transform: `translateY(${-ISLAND_LIFT / GROUND}px)`,
+        filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'brightness(0.94) saturate(0.92)',
+        boxShadow: 'inset 0 0 40px rgba(0,0,0,0.55)',
+      }}>
+        {/* ── TERRAIN, IN BANDS THAT FOLLOW THE COAST ───────────────
+            This was one flat radial gradient of brown. A single colour with
+            a soft vignette is a shape, not a place: no beach, nothing
+            growing, nothing to say where the water stops.
+
+            Each band is the SAME coastline polygon on a smaller box, so its
+            clip scales with it and every ring parallels the shore instead of
+            being a circle sitting inside an irregular outline. Outside in,
+            the way you would actually walk it: wet sand, dry sand, scrub,
+            grass, and a lighter crown where the ground rises.
+
+            Cheap, too — five absolutely-positioned divs per island, static
+            after mount, no filters on the bands themselves. */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(165deg, #b9a077 0%, #9c8259 55%, #7d6743 100%)',
+        }} />
+        {/* WET SAND — darker where the tide has just been. A beach with one
+            tone is a carpet; the damp strip at the edge is what makes it
+            read as sand at all. */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: '1.5%', clipPath: clip,
+          background: 'linear-gradient(165deg, #cbb590 0%, #b89c72 100%)',
+        }} />
+        <div aria-hidden style={{
+          position: 'absolute', inset: '5%', clipPath: clip,
+          background: 'linear-gradient(165deg, #d8c49f 0%, #c2a97e 100%)',
+        }} />
+        {/* SCRUB — the dry stuff that grows above the tideline. */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: '9.5%', clipPath: clip,
+          background: 'linear-gradient(165deg, #9aa269 0%, #7d8850 100%)',
+        }} />
+        {/* GRASS. */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: '15%', clipPath: clip,
+          background: 'linear-gradient(165deg, #6f8a4e 0%, #55703c 62%, #466032 100%)',
+        }} />
+        {/* THE CROWN — higher ground, catching more light. Offset toward the
+            same corner every other highlight on this chart comes from, so
+            the whole scene agrees about where the sun is. */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: '26%', clipPath: clip,
+          transform: 'translate(-3%, -4%)',
+          background: 'radial-gradient(ellipse 120% 120% at 40% 26%, rgba(190,206,140,0.55) 0%, rgba(150,176,105,0.22) 48%, transparent 78%)',
+        }} />
+
+        {/* ── WOODS ──────────────────────────────────────────────────
+            Soft dark clumps, seeded per island. Not trees — at this size a
+            tree is two pixels — but the massed shadow a stand of them
+            throws, which is what you actually see of a wood from off shore. */}
+        {canopy.map((c, i) => (
+          <div key={i} aria-hidden style={{
+            position: 'absolute',
+            left: `${c.x}%`, top: `${c.y}%`,
+            width: `${c.r}%`, height: `${c.r * 0.82}%`,
+            marginLeft: `${-c.r / 2}%`, marginTop: `${-c.r * 0.41}%`,
+            borderRadius: '50%',
+            background: `radial-gradient(ellipse at 42% 34%, rgba(74,102,52,${c.o + 0.18}) 0%, rgba(46,68,34,${c.o}) 55%, rgba(40,58,30,0) 78%)`,
+          }} />
+        ))}
+
+        {/* A rim of light along the top edge, where the sky hits the land
+            and the cliff below it does not. */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(180deg, rgba(240,248,250,0.34) 0%, rgba(240,248,250,0) 20%)',
+        }} />
+      </div>
+    </>
+  )
+})
+
+/**
+ * ONE DISCOVERABLE ISLE.
+ *
+ * The same `Landmass` the ports are painted with, at a fraction of the size,
+ * with one thing standing on it. That is the whole component — an isle is not a
+ * port and deliberately has none of a port's furniture: no dock, no buildings,
+ * no permanent label. What tells you it is worth crossing to is the chest.
+ *
+ * ── WHAT IT SHOWS, AND WHEN ─────────────────────────────────────────────────
+ *
+ * A cache you have not found shows a CLOSED chest, and which chest depends on
+ * how far out you are — the ornate barnacled one from the Deep outward. Once
+ * you have been ashore it shows the OPEN one, spilled and empty, which is the
+ * only marker of "done" on the chart and needs no words.
+ *
+ * A note isle shows the post either way. The note does not leave with you; the
+ * rock still has it, and you can read it again.
+ *
+ * The NAME is withheld until you are close, or until you have landed. A chart
+ * that labels every rock you have never visited has answered the question the
+ * isles exist to ask.
+ */
+const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
+  isle: Isle
+  found: boolean
+  isNear: boolean
+}) {
+  const d = isle.r * 2
+  const art = isle.kind === 'note'
+    ? '/sea/isle-note.png'
+    : found ? '/sea/isle-chest-open.png' : chestArt(isle)
+
+  // The prop's width, as a share of the island. A chest that scales with the
+  // rock keeps every isle reading at the same "distance" — a fixed size would
+  // make the small ones look like they had a shipping container on them.
+  const propW = isle.r * (isle.kind === 'note' ? 0.42 : 0.62)
+
+  return (
+    <div style={{
+      position: 'absolute', left: isle.x, top: isle.y,
+      width: d, height: d, marginLeft: -isle.r, marginTop: -isle.r,
+      pointerEvents: 'none',
+    }}>
+      <Landmass id={isle.id} />
+
+      {/* WHAT IS ON IT.
+          Counter-squashed and anchored at its BOTTOM, like every other solid on
+          this chart, then raised by the island's own lift so it stands on the
+          top face rather than floating at the waterline. Set slightly back from
+          centre: a thing sitting dead in the middle of a disc reads as placed,
+          and these are supposed to have been left. */}
+      <div style={{
+        position: 'absolute', left: '50%', top: '54%', width: propW,
+        transform: `translate(-50%, -100%) translateY(${-ISLAND_LIFT / GROUND}px) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center',
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={art} alt="" draggable={false} loading="lazy" style={{
+          width: '100%', maxWidth: 'none', display: 'block',
+          filter: found ? 'saturate(0.86) brightness(0.94)' : 'none',
+        }} />
+      </div>
+
+      {/* THE NAME. Counter-squashed and lifted clear, because a label was never
+          lying on the water. Only once you are near it, or have been. */}
+      {(isNear || found) && (
+        <div style={{
+          position: 'absolute', left: '50%', top: '-6%',
+          transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+          transformOrigin: 'bottom center', whiteSpace: 'nowrap',
+        }}>
+          <p className="font-cinzel font-700" style={{
+            fontSize: '1.02rem', color: '#f2ead8', margin: 0,
+            textShadow: '0 2px 12px rgba(0,0,0,0.95)',
+          }}>{isle.name}</p>
+          <p className="font-karla" style={{
+            fontSize: '0.78rem', margin: 0, textAlign: 'center',
+            color: found ? 'rgba(168,200,176,0.86)' : 'rgba(255,206,138,0.86)',
+            textShadow: '0 1px 9px rgba(0,0,0,0.95)',
+          }}>{found ? 'Been ashore' : bandName(isle.band)}</p>
+        </div>
+      )}
+    </div>
+  )
+})
+
+/**
+ * WHAT WAS ON THE ISLAND.
+ *
+ * Deliberately quiet. The crate-opening moment already exists elsewhere in this
+ * game and is a whole production; this is a rock with a box on it, and dressing
+ * it to the same level would make twenty seven of them exhausting.
+ *
+ * Three things it can be showing: a haul, a note, or "you have had this one".
+ * The last is not an error and is not styled as one — a captain who taps a rock
+ * they cleared last week should get the note back, not a scolding.
+ */
+const AshorePanel = memo(function AshorePanel({ state, onClose }: {
+  state: { isle: Isle; result: AshoreResult } | null
+  onClose: () => void
+}) {
+  if (!state) return null
+  const { isle, result } = state
+  const won = result.ok && !result.already ? result : null
+  const note = result.ok ? result.note : null
+
+  return (
+    <div
+      onClick={e => { e.stopPropagation(); onClose() }}
+      data-no-steer
+      style={{
+        position: 'fixed', inset: 0, zIndex: Z.helm,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem', background: 'rgba(2,8,14,0.72)',
+      }}>
+      <div
+        onClick={e => e.stopPropagation()}
+        data-no-steer
+        style={{
+          position: 'relative', width: '100%', maxWidth: 420,
+          borderRadius: 18, padding: '1.15rem',
+          // OPAQUE. This sits over painted water, and a translucent panel on
+          // art is unreadable however much you blur what is behind it.
+          background: 'rgba(10,16,22,0.98)',
+          border: '1px solid rgba(180,214,232,0.28)',
+          boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+        }}>
+        {/* OUT, in the same corner as every other close on this chart. */}
+        <button type="button" onClick={onClose} aria-label="Close" title="Close"
+          style={{
+            position: 'absolute', top: 12, right: 12,
+            width: 28, height: 28, borderRadius: '50%', padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+            color: '#cfcabf', cursor: 'pointer',
+          }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+
+        <p className="font-karla font-700 uppercase" style={{
+          fontSize: '0.62rem', letterSpacing: '0.16em', margin: 0,
+          color: 'rgba(255,206,138,0.75)', paddingRight: 34,
+        }}>{bandName(isle.band)}</p>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '1.35rem', color: '#f2ead8', margin: '0.15rem 0 0.7rem',
+          paddingRight: 34,
+        }}>{isle.name}</p>
+
+        {!result.ok ? (
+          <p className="font-karla" style={{ fontSize: '0.95rem', color: '#e6b9b9', margin: 0 }}>
+            {result.error}
+          </p>
+        ) : (
+          <>
+            {won && (won.gems > 0 || won.doubloons > 0) && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/sea/isle-chest-open.png" alt="" draggable={false} style={{
+                  display: 'block', width: 132, margin: '0 auto 0.5rem',
+                }} />
+                <div style={{
+                  display: 'flex', justifyContent: 'center', gap: '1.1rem',
+                  marginBottom: note ? '0.9rem' : '0.2rem',
+                }}>
+                  {won.gems > 0 && (
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#c9a6ff', margin: 0 }}>
+                      ◆ {won.gems.toLocaleString()}
+                    </p>
+                  )}
+                  {won.doubloons > 0 && (
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f0c464', margin: 0 }}>
+                      ⟡ {won.doubloons.toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {result.already && !note && (
+              <p className="font-karla" style={{ fontSize: '0.95rem', color: 'rgba(196,214,226,0.8)', margin: 0 }}>
+                You have had this one already. The chest is where you left it.
+              </p>
+            )}
+
+            {note && (
+              <div style={{
+                borderRadius: 12, padding: '0.85rem 0.95rem',
+                background: 'rgba(232,222,198,0.08)',
+                border: '1px solid rgba(232,222,198,0.18)',
+              }}>
+                <p className="font-cinzel font-700" style={{
+                  fontSize: '0.98rem', color: '#e8dec6', margin: '0 0 0.45rem',
+                }}>{note.title}</p>
+                {/* The body carries its own paragraph breaks. Split rather than
+                    white-space: pre-wrap, so the gap between paragraphs is a
+                    real margin and not a stray blank line. */}
+                {note.body.split('\n\n').map((para, i) => (
+                  <p key={i} className="font-karla" style={{
+                    fontSize: '0.93rem', lineHeight: 1.55, margin: i ? '0.6rem 0 0' : 0,
+                    color: 'rgba(226,232,238,0.88)',
+                  }}>{para}</p>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+})
+
+/** MEMOISED. The loop pokes React four times a second to update proximity and
+ *  the compass, and without this every island rebuilt its whole subtree —
+ *  coastline clip, drift blobs, cliff, jetty and all — on each of those ticks
+ *  for a result that had not changed. */
+const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting = 0 }: {
+  place: Place; locked: boolean; isNear: boolean
+  /** Crew standing on this dock with a haul. Only the Trawl Docks ever pass a
+   *  non-zero value; every other island ignores it. */
+  waiting?: number
+}) {
+  const isWater = place.kind === 'water'
+  const d = place.r * 2
 
   return (
     <div style={{
@@ -3171,147 +3640,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
         </>
       ) : (
         <>
-          {/* ── THE FOOTPRINT, flat on the water ──────────────────────
-              Shoals and a wet shore ring, which live INSIDE the squashed world
-              layer and so come out as ellipses. This is the island's shadow on
-              the sea and the only part of it that is genuinely lying down. */}
-          {/* THE SHOAL — shallow water standing off the coast, and the reason
-              an island reads as sitting IN the sea rather than on top of it.
-              Widened and softened: at inset 2% with a 6px blur it was a thin
-              halo, which is a glow. Shallow water around a real island is a
-              broad pale shelf that fades out with no edge anywhere. */}
-          <div aria-hidden style={{
-            position: 'absolute', inset: '-6%', clipPath: clip,
-            background: 'rgba(140,190,206,0.13)', filter: 'blur(16px)',
-          }} />
-          <div aria-hidden style={{
-            position: 'absolute', inset: '1%', clipPath: clip,
-            background: 'rgba(168,204,216,0.22)', filter: 'blur(8px)',
-          }} />
-          <div aria-hidden style={{
-            position: 'absolute', inset: '7%', clipPath: clip,
-            background: 'rgba(200,222,230,0.30)', filter: 'blur(2px)',
-          }} />
-          {/* ── SURF ────────────────────────────────────────────────────
-              A soft white collar hugging the coast, just outside the land and
-              just inside the shoal. Water hitting a shore is the single most
-              recognisable thing about a shore — without it the land meets the
-              sea on a hard vector edge, which is most of why these read as
-              shapes rather than places.
-
-              Two rings so it has depth: a wide diffuse one for spray and a
-              tight bright one for the break itself. Both breathe, slowly and
-              out of phase, so the coast is never quite still. */}
-          <div aria-hidden className="sea-surf" style={{
-            position: 'absolute', inset: '9%', clipPath: clip,
-            background: 'rgba(226,244,250,0.30)', filter: 'blur(7px)',
-          }} />
-          <div aria-hidden className="sea-surf sea-surf-2" style={{
-            position: 'absolute', inset: '11.4%', clipPath: clip,
-            background: 'rgba(240,250,255,0.55)', filter: 'blur(2.5px)',
-          }} />
-
-          {/* Contact shadow, thrown away from the light. Nothing says "this
-              object is ABOVE the water" faster than a shadow that is not
-              directly under it. */}
-          <div aria-hidden style={{
-            position: 'absolute', inset: '11%', clipPath: clip,
-            transform: `translate(${ISLAND_LIFT * 0.34}px, ${ISLAND_LIFT * 0.5}px)`,
-            background: 'rgba(2,10,18,0.42)', filter: 'blur(9px)',
-          }} />
-
-          {/* ── THE CLIFF, the extrusion ────────────────────────────────
-              The same coastline again, dropped by the island's height and
-              filled with wet rock. Drawn UNDER the top face, so all you ever
-              see of it is the band along the near edge — which is exactly what
-              you see of a real island's side from a low angle, and is the whole
-              trick of an extrusion. */}
-          <div aria-hidden style={{
-            position: 'absolute', inset: '13%', clipPath: clip,
-            transform: `translateY(${ISLAND_LIFT / GROUND}px)`,
-            background: 'linear-gradient(180deg, #3b3226 0%, #2a2419 55%, #191509 100%)',
-            filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
-          }} />
-
-          {/* ── THE TOP FACE, lifted clear of the water ─────────────────
-              Counter-squashed so the land itself is NOT foreshortened — an
-              island is a solid standing on the plane, not a decal printed on
-              it — then raised by the same lift the cliff was dropped by. */}
-          <div style={{
-            position: 'absolute', inset: '13%', clipPath: clip, overflow: 'hidden',
-            transform: `translateY(${-ISLAND_LIFT / GROUND}px)`,
-            filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'brightness(0.94) saturate(0.92)',
-            boxShadow: 'inset 0 0 40px rgba(0,0,0,0.55)',
-          }}>
-            {/* ── TERRAIN, IN BANDS THAT FOLLOW THE COAST ───────────────
-                This was one flat radial gradient of brown. A single colour with
-                a soft vignette is a shape, not a place: no beach, nothing
-                growing, nothing to say where the water stops.
-
-                Each band is the SAME coastline polygon on a smaller box, so its
-                clip scales with it and every ring parallels the shore instead of
-                being a circle sitting inside an irregular outline. Outside in,
-                the way you would actually walk it: wet sand, dry sand, scrub,
-                grass, and a lighter crown where the ground rises.
-
-                Cheap, too — five absolutely-positioned divs per island, static
-                after mount, no filters on the bands themselves. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(165deg, #b9a077 0%, #9c8259 55%, #7d6743 100%)',
-            }} />
-            {/* WET SAND — darker where the tide has just been. A beach with one
-                tone is a carpet; the damp strip at the edge is what makes it
-                read as sand at all. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: '1.5%', clipPath: clip,
-              background: 'linear-gradient(165deg, #cbb590 0%, #b89c72 100%)',
-            }} />
-            <div aria-hidden style={{
-              position: 'absolute', inset: '5%', clipPath: clip,
-              background: 'linear-gradient(165deg, #d8c49f 0%, #c2a97e 100%)',
-            }} />
-            {/* SCRUB — the dry stuff that grows above the tideline. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: '9.5%', clipPath: clip,
-              background: 'linear-gradient(165deg, #9aa269 0%, #7d8850 100%)',
-            }} />
-            {/* GRASS. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: '15%', clipPath: clip,
-              background: 'linear-gradient(165deg, #6f8a4e 0%, #55703c 62%, #466032 100%)',
-            }} />
-            {/* THE CROWN — higher ground, catching more light. Offset toward the
-                same corner every other highlight on this chart comes from, so
-                the whole scene agrees about where the sun is. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: '26%', clipPath: clip,
-              transform: 'translate(-3%, -4%)',
-              background: 'radial-gradient(ellipse 120% 120% at 40% 26%, rgba(190,206,140,0.55) 0%, rgba(150,176,105,0.22) 48%, transparent 78%)',
-            }} />
-
-            {/* ── WOODS ──────────────────────────────────────────────────
-                Soft dark clumps, seeded per island. Not trees — at this size a
-                tree is two pixels — but the massed shadow a stand of them
-                throws, which is what you actually see of a wood from off shore. */}
-            {canopy.map((c, i) => (
-              <div key={i} aria-hidden style={{
-                position: 'absolute',
-                left: `${c.x}%`, top: `${c.y}%`,
-                width: `${c.r}%`, height: `${c.r * 0.82}%`,
-                marginLeft: `${-c.r / 2}%`, marginTop: `${-c.r * 0.41}%`,
-                borderRadius: '50%',
-                background: `radial-gradient(ellipse at 42% 34%, rgba(74,102,52,${c.o + 0.18}) 0%, rgba(46,68,34,${c.o}) 55%, rgba(40,58,30,0) 78%)`,
-              }} />
-            ))}
-
-            {/* A rim of light along the top edge, where the sky hits the land
-                and the cliff below it does not. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(180deg, rgba(240,248,250,0.34) 0%, rgba(240,248,250,0) 20%)',
-            }} />
-          </div>
+          <Landmass id={place.id} locked={locked} />
 
           {/* ── WHAT IS BUILT HERE ──────────────────────────────────────
               Counter-squashed and anchored at the BOTTOM, so each building
