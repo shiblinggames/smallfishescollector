@@ -81,7 +81,7 @@ export const HOTSPOTS: Hotspot[] = [
     builds: [
       { name: 'Bare rock', cost: 0, art: null, scale: 0, blurb: 'Somewhere to stand and look out.' },
       { name: 'A brazier', cost: 220_000, art: '/sea/home-brazier.png', scale: 0.048, blurb: 'A fire that somebody has to keep lit.' },
-      { name: 'A lighthouse', cost: 950_000, art: '/sea/home-lighthouse.png', scale: 0.068, blurb: 'They can see you coming from the Abyss.' },
+      { name: 'A lighthouse', cost: 950_000, art: '/sea/home-lighthouse.png', scale: 0.066, blurb: 'They can see you coming from the Abyss.' },
     ],
   },
   {
