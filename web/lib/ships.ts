@@ -53,6 +53,14 @@ export interface ShipDef {
    * and y down, which makes them independent of the size it happens to be drawn
    * at and directly draggable on /sea/calibrate.
    *
+   * IT IS A POINT ON THE SPRITE, and it is read as one: the offset from the
+   * sprite's centre, mirrored along with the sprite when the boat turns. So it
+   * does not matter which way a given piece of art happens to face. The four
+   * middle hulls are painted bow-right and the Man-o-War bow-left, same as the
+   * fishing boat, and none of them needs to agree with the others — the ring
+   * goes on the prow that is actually drawn, and x lands either side of 0.5
+   * accordingly.
+   *
    * This used to be one formula for all five: a fixed reach forward, multiplied
    * by the hull's scale, which put every ship's origin at exactly 80% of the
    * way to its own prow. That is a reasonable guess and it is wrong in a
@@ -65,20 +73,18 @@ export interface ShipDef {
    */
   seaBow?: { x: number; y: number }
   /**
-   * THE ART IS DRAWN FACING THE WRONG WAY and has to be mirrored.
+   * HOW FAR OFF THE HEADING THE WAKE LEAVES HER, in degrees.
    *
-   * Every hull on the water is drawn bow-right and mirrored by the sailing loop
-   * when you steer west. Four of the five were painted that way; the Man-o-War
-   * came back with its bowsprit to the LEFT, so without this it sails stern
-   * first, and its cutwater would be placed on its transom.
+   * These are three-quarter views. A hull's drawn axis is not the direction it
+   * is travelling — the stem is turned a little toward the viewer — so a V laid
+   * square to the heading runs at a visible angle to the planking on some of
+   * them. This tilts the whole V, apex and both arms together, to sit along the
+   * hull the artist actually drew.
    *
-   * A flag rather than a corrected file, because the flag is the honest record:
-   * the art really is mirrored, a future sheet may well arrive the same way,
-   * and re-exporting the PNG hides the fact from whoever adds the next one.
-   * `seaBow` is measured on the CORRECTED image, so the two compose without
-   * anybody having to think about it.
+   * Mirrored with the sprite, so a boat that leans one way going east leans the
+   * other going west rather than snapping across when she turns.
    */
-  seaFlip?: boolean
+  seaBowTilt?: number
 }
 
 // ── WHY THE LADDER STARTS AT TIER 2 ───────────────────────────────────────
@@ -141,8 +147,11 @@ export const SHIPS: ShipDef[] = [
     description: 'The most feared ship on the water.',
     color: '#ff6b35', imageUrl: '/models/man-o-war_v2.png',
     seaImageUrl: '/ship-hero/man-o-war_v3.png',
-    seaFlip: true,
-    seaBow: { x: 0.886, y: 0.913 },
+    // MIRRORED FROM THE OTHERS, because she is. The four above are painted
+    // bow-right and land above 0.5; she looks left like the fishing boat, so
+    // her prow is the same point measured from the other side. Still a first
+    // guess — the bench is where it gets put properly.
+    seaBow: { x: 0.114, y: 0.913 },
     seaBeam: 0.97, seaKeel: 0.913,
   },
 ]

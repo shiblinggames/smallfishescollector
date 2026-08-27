@@ -445,14 +445,20 @@ const WAKE_SPREAD = 62
 /**
  * WHERE THE FISHING BOAT PARTS THE WATER, as a fraction of its 210px sprite.
  *
- * The warships carry the same pair as `seaBow` on their own defs. Both are
- * placed by eye on /sea/calibrate rather than derived, because a bounding box
+ * SHE LOOKS LEFT, so her prow is below 0.5. The warships carry the same pair as
+ * `seaBow` and four of them look the other way, which does not matter: the
+ * point is read as an offset from the sprite's CENTRE and mirrored along with
+ * the sprite, so each hull's ring simply sits on the prow that is drawn.
+ *
+ * Placed by eye on /sea/calibrate rather than derived, because a bounding box
  * does not know where a stem meets water: these are three-quarter views with
  * bowsprits of wildly different lengths, and the one formula that used to serve
  * all of them put the origin at 80% of the way to the prow on every hull, which
  * is wrong in a different direction each time.
  */
-const FISHING_BOW = { x: 0.719, y: 0.662 }
+const FISHING_BOW = { x: 0.281, y: 0.662 }
+/** And how far off the heading her wake leaves her. See `seaBowTilt`. */
+const FISHING_BOW_TILT = 0
 /** The Skipper sprite's width, which the fractions above are of. */
 const SKIPPER_W = 210
 
@@ -1492,8 +1498,9 @@ export default function SeaMap({
       scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0,
       // The cutwater as OFFSETS from the sprite's centre, resolved once here so
       // the frame loop never does this arithmetic sixty times a second.
-      bowFwd: (FISHING_BOW.x - 0.5) * SKIPPER_W,
+      bowX: (FISHING_BOW.x - 0.5) * SKIPPER_W,
       bowDown: (FISHING_BOW.y - 0.5) * SKIPPER_W,
+      bowTilt: (FISHING_BOW_TILT * Math.PI) / 180,
     }
     const d = getShip(shipTier)
     const beam = d.seaBeam ?? 0.6
@@ -1516,8 +1523,9 @@ export default function SeaMap({
       // BIGGER on a bigger ship, it should be slower and darker, and this is
       // the number that says how far along that ladder a hull sits.
       weight: Math.min(1, Math.max(0, (beam - 0.53) / (0.97 - 0.53))),
-      bowFwd: ((d.seaBow?.x ?? 0.8) - 0.5) * WARSHIP_W,
+      bowX: ((d.seaBow?.x ?? 0.8) - 0.5) * WARSHIP_W,
       bowDown: ((d.seaBow?.y ?? keel) - 0.5) * WARSHIP_W,
+      bowTilt: ((d.seaBowTilt ?? 0) * Math.PI) / 180,
     }
   }, [onSortie, shipTier])
   // Mirrored into a ref for the frame loop, which must not read a prop.
@@ -3161,13 +3169,26 @@ export default function SeaMap({
         // the V opens from the point of the bow.
         //
         // That is the whole difference between floating along and cutting.
-        // FORWARD along the heading, DOWN to the waterline. Both come off the
-        // hull's own cutwater now rather than one reach shared by every boat.
+        // ── THE ORIGIN FOLLOWS THE SPRITE, NOT THE HEADING ─────────────
+        //
+        // It used to be laid a reach along the direction of travel, which is
+        // only the same thing as the prow while the art all faces one way. It
+        // does not: the fishing boat and the Man-o-War look left, the four
+        // middle hulls look right, and each one has its ring placed on the
+        // prow that is actually drawn.
+        //
+        // So the offset is a SPRITE offset, multiplied by `facing` — the same
+        // ±1 the hull's own scaleX uses — which carries the cutwater through
+        // the mirror with the bow it belongs to. Whichever way a given piece of
+        // art happens to face, the foam comes off its stem.
+        //
         // The drop is divided by GROUND because it is a screen measurement off
-        // the sprite and the world layer is squashed; see the note below.
-        const sx = pos.current.x + ux * hull.bowFwd + WATERLINE_X
-        const sy = pos.current.y + uy * hull.bowFwd + hull.bowDown / GROUND
-        const ang = Math.atan2(uy, ux)
+        // the sprite and the world layer is squashed; see the note above.
+        const sx = pos.current.x + facing.current * hull.bowX + WATERLINE_X
+        const sy = pos.current.y + hull.bowDown / GROUND
+        // THE V FOLLOWS THE HEADING, because the water does — plus the hull's
+        // own lean, mirrored with it so she does not snap across when she turns.
+        const ang = Math.atan2(uy, ux) + hull.bowTilt * facing.current
         const force = Math.min(1, speed / (SPEED * 0.9))
         for (const side of [-1, 1] as const) {
           const i = wakeNext.current
@@ -5004,13 +5025,7 @@ const Warship = memo(function Warship({ tier }: { tier: number }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={hull.seaImageUrl} alt="" draggable={false}
         width={640} height={640} decoding="async"
-        style={{
-          width: '100%', display: 'block',
-          // Some art arrives bow-left. Composed with the loop's own scaleX,
-          // which is what turns the hull round when you steer west, so the two
-          // simply multiply and neither needs to know about the other.
-          ...(hull.seaFlip ? { transform: 'scaleX(-1)' } : null),
-        }} />
+        style={{ width: '100%', display: 'block' }} />
     </div>
   )
 })

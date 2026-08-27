@@ -31,16 +31,15 @@ const FISHING_HULL_W = 210 * 0.55
 
 /** Every boat the sea draws, in one list, because the fishing boat needs its
  *  cutwater placed too and it is the one that is not in SHIPS. */
-type Boat = { id: string; label: string; box: number; scale: number; art: string | null; flip: boolean }
+type Boat = { id: string; label: string; box: number; scale: number; art: string | null }
 const BOATS: Boat[] = [
-  { id: 'fishing', label: 'Fishing boat', box: SKIPPER_W, scale: 1, art: null, flip: false },
+  { id: 'fishing', label: 'Fishing boat', box: SKIPPER_W, scale: 1, art: null },
   ...SHIPS.map(s => ({
     id: String(s.tier),
     label: s.name,
     box: WARSHIP_W,
     scale: (WARSHIP_W * (s.seaBeam ?? 0.6)) / FISHING_HULL_W,
     art: s.seaImageUrl ?? null,
-    flip: s.seaFlip === true,
   })),
 ]
 
@@ -51,8 +50,12 @@ const BOATS: Boat[] = [
 const REACH = 0.6
 
 const DEFAULTS: Record<string, { x: number; y: number }> = {
-  fishing: { x: 0.719, y: 0.662 },
+  fishing: { x: 0.281, y: 0.662 },
   ...Object.fromEntries(SHIPS.map(s => [String(s.tier), { ...(s.seaBow ?? { x: 0.8, y: 0.75 }) }])),
+}
+const TILT_DEFAULTS: Record<string, number> = {
+  fishing: 0,
+  ...Object.fromEntries(SHIPS.map(s => [String(s.tier), s.seaBowTilt ?? 0])),
 }
 
 const round = (n: number) => Math.round(n * 1000) / 1000
@@ -64,8 +67,7 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
   equippedHat: string | null
 }) {
   const [bows, setBows] = useState<Record<string, { x: number; y: number }>>(DEFAULTS)
-  const [flips, setFlips] = useState<Record<string, boolean>>(
-    Object.fromEntries(BOATS.map(b => [b.id, b.flip])))
+  const [tilts, setTilts] = useState<Record<string, number>>(TILT_DEFAULTS)
   const [pick, setPick] = useState('6')
   const [speed, setSpeed] = useState(0.85)
   const [running, setRunning] = useState(true)
@@ -73,7 +75,11 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
 
   const boat = BOATS.find(b => b.id === pick) ?? BOATS[0]
   const bow = bows[pick] ?? { x: 0.8, y: 0.75 }
-  const flipped = flips[pick] ?? false
+  const tilt = tilts[pick] ?? 0
+  /** WHICH WAY SHE IS GOING, inferred from where the ring is. The ring is the
+   *  PROW, so a cutwater left of centre means a boat sailing left. That is why
+   *  the bench never needs to be told which way a given piece of art faces. */
+  const dir = bow.x < 0.5 ? -1 : 1
 
   const stage = useRef<HTMLDivElement | null>(null)
   const marks = useRef<HTMLDivElement[]>([])
@@ -81,8 +87,8 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
 
   // Live values for the loop, so dragging retunes the wake without restarting
   // it and without the loop depending on React state.
-  const live = useRef({ bow, scale: boat.scale, box: boat.box, speed, running })
-  live.current = { bow, scale: boat.scale, box: boat.box, speed, running }
+  const live = useRef({ bow, scale: boat.scale, box: boat.box, speed, running, tilt, dir })
+  live.current = { bow, scale: boat.scale, box: boat.box, speed, running, tilt, dir }
 
   /**
    * THE SAME LOOP THE SEA RUNS, with the boat standing still.
@@ -109,8 +115,9 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
       const L = live.current
       // SPEED IS IN SPRITE WIDTHS PER SECOND, so the drift reads the same on a
       // Sloop and a Man-o-War instead of the big hull looking becalmed.
-      const px = L.speed * L.box * (dt / 1000)
+      const px = L.speed * L.box * (dt / 1000) * L.dir
 
+      // The water goes the other way from the boat, which is standing still.
       for (const m of at) if (m.born > -9999) m.x -= px
 
       if (L.running) {
@@ -139,11 +146,17 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         el.style.opacity = String(Math.pow(1 - age, 1.7) * 0.42)
         const along = (0.55 + age * 0.7) * m.scale
         const across = (0.3 + age * 1.5) * m.scale
+        // THE TILT, applied exactly as the sea applies it: the V's angle is the
+        // heading plus the hull's own lean, apex and both arms together. Here
+        // the heading is due east or west, so it is the lean on its own.
+        const t = (L.tilt * Math.PI) / 180
+        const ox2 = -Math.sin(t) * m.side * out
+        const oy2 = Math.cos(t) * m.side * out
         // GROUND is the ground plane's squash. The sea gets it from the world
         // layer's scaleY; here it is applied to the mark's own offset.
         el.style.transform =
-          `translate3d(${m.x}px, ${(m.y + m.side * out) * GROUND}px, 0) translate(-50%, -50%) `
-          + `scale(${along}, ${across})`
+          `translate3d(${m.x + ox2}px, ${(m.y + oy2) * GROUND}px, 0) translate(-50%, -50%) `
+          + `rotate(${t}rad) scale(${along}, ${across})`
       }
     }
     raf = requestAnimationFrame(tick)
@@ -183,11 +196,13 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
     const f = bows.fishing
     const lines = SHIPS.map(s => {
       const b = bows[String(s.tier)]
-      return `  ${s.name.padEnd(11)} seaBow: { x: ${b.x}, y: ${b.y} },${flips[String(s.tier)] ? ' seaFlip: true,' : ''}`
+      const t = tilts[String(s.tier)]
+      return `  ${s.name.padEnd(11)} seaBow: { x: ${b.x}, y: ${b.y} },`
+        + (t ? ` seaBowTilt: ${t},` : '')
     }).join('\n')
     return `// lib/ships.ts — one seaBow per hull\n${lines}\n\n`
       + `// SeaMap.tsx\nconst FISHING_BOW = { x: ${f.x}, y: ${f.y} }\n`
-  }, [bows, flips])
+  }, [bows, tilts])
 
   const copy = async () => {
     try {
@@ -207,9 +222,12 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
       <p className="font-karla" style={{
         fontSize: '0.9rem', color: 'rgba(198,216,230,0.72)', lineHeight: 1.6, margin: '4px 0 14px',
       }}>
-        Drag the ring to where the hull actually parts the water. The wake runs live from
-        wherever you put it, so judge it moving rather than by the dot. Arrow keys nudge,
-        shift for a bigger step. Copy the table into <code>lib/ships.ts</code>.
+        Drag the ring to where the hull actually parts the water, and lean the wake until
+        it sits along her planking. It runs live from wherever you put it, so judge it
+        moving rather than by the dot. Which way she sails is taken from the ring: put it
+        on the prow and the water goes the other way, so it does not matter which
+        direction a given piece of art happens to face. Arrow keys nudge, shift for a
+        bigger step. Copy the table into <code>lib/ships.ts</code>.
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -267,12 +285,7 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
           {boat.art ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={boat.art} alt="" draggable={false} width={640} height={640}
-              style={{
-                width: '100%', height: '100%', display: 'block', pointerEvents: 'none',
-                // Shown exactly as the sea will draw her, so the ring is placed
-                // in the frame the game actually uses.
-                ...(flipped ? { transform: 'scaleX(-1)' } : null),
-              }} />
+              style={{ width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }} />
           ) : (
             // The fishing boat is a composite, so it is the real component. Its
             // sprite carries the same translate the sea gives it, or the hull
@@ -326,23 +339,37 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         </label>
         <input type="range" min={0.15} max={2} step={0.05} value={speed}
           onChange={e => setSpeed(Number(e.target.value))} style={{ flex: 1 }} />
-        <button type="button"
-          onClick={() => setFlips(f => ({ ...f, [pick]: !f[pick] }))}
-          className="tap font-karla font-700"
-          style={{
-            padding: '0.4rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', cursor: 'pointer',
-            background: flipped ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
-            border: `1px solid ${flipped ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.16)'}`,
-            color: flipped ? '#f6dfa0' : '#d8e2ea',
-          }}>
-          {flipped ? 'Mirrored' : 'Mirror art'}
-        </button>
         <button type="button" onClick={() => setRunning(r => !r)} className="tap font-karla font-700"
           style={{
             padding: '0.4rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', cursor: 'pointer',
             background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
           }}>
           {running ? 'Stop laying' : 'Lay wake'}
+        </button>
+      </div>
+
+      {/* THE LEAN. These are three-quarter views, so a hull's drawn axis is not
+          the way she is going — a V laid square to the heading runs at an angle
+          to her planking. This turns the whole V, apex and both arms, onto the
+          line the artist actually drew. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0' }}>
+        <label className="font-karla font-700" style={{ fontSize: '0.78rem', color: 'rgba(190,212,228,0.7)' }}>
+          Lean
+        </label>
+        <input type="range" min={-30} max={30} step={0.5} value={tilt}
+          onChange={e => setTilts(t => ({ ...t, [pick]: Number(e.target.value) }))}
+          style={{ flex: 1 }} />
+        <span className="font-karla font-700" style={{
+          fontSize: '0.78rem', color: '#cfe0ec', width: 56, textAlign: 'right',
+          fontVariantNumeric: 'tabular-nums',
+        }}>{tilt}°</span>
+        <button type="button" onClick={() => setTilts(t => ({ ...t, [pick]: 0 }))}
+          className="tap font-karla font-700"
+          style={{
+            padding: '0.35rem 0.6rem', borderRadius: 9, fontSize: '0.74rem', cursor: 'pointer',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
+          }}>
+          Level
         </button>
       </div>
 
@@ -355,10 +382,7 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
           {copied ? 'Copied' : 'Copy the table'}
         </button>
         <button type="button"
-          onClick={() => {
-            setBows(DEFAULTS)
-            setFlips(Object.fromEntries(BOATS.map(b => [b.id, b.flip])))
-          }} className="tap font-karla font-700"
+          onClick={() => { setBows(DEFAULTS); setTilts(TILT_DEFAULTS) }} className="tap font-karla font-700"
           style={{
             padding: '0.65rem 0.9rem', borderRadius: 12, fontSize: '0.88rem', cursor: 'pointer',
             background: 'rgba(6,14,22,0.6)', border: '1px solid rgba(180,214,232,0.26)', color: '#cfe0ec',
