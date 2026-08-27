@@ -523,24 +523,27 @@ export function inGate(x: number): boolean {
 }
 
 /**
- * THE EXPEDITION SEA — the same shape, mirrored.
+ * THE ANCHORAGE — the water immediately beyond the arch.
  *
- * The fishing grounds are a semicircle centred on the Mainland at (0,0), cut
- * off by the reef 1,500 north of it. Reflect that in the reef and you get this:
- * a semicircle centred 1,500 NORTH of the reef, opening away from it, with the
- * arch and its boulders along the bottom instead of the top.
+ * Not "the expedition sea" and not a second ocean. It is a short, enclosed
+ * stretch on the far side of the reef, reached by sailing through the gap on
+ * the boat you were already sailing, and it holds the places expeditions is run
+ * FROM: the crew hall, and in time the voyage board, the recruiter and the
+ * forge. Everything here is management — things you moor at, not things you
+ * fight.
  *
- * So the rock you have been looking at from the fishing side is the beach you
- * arrive on, and everything you can see from it is new water. Nothing about the
- * reef changes; you just stand on the other side of it.
+ * The same half-disc geometry as the fishing grounds, mirrored in the reef, so
+ * the arch and its boulders are its southern shore. Small on purpose: 5,200
+ * holds a handful of islands and can be crossed in under a minute, which is
+ * what makes it read as a harbour rather than as an empty sea somebody forgot
+ * to fill.
  *
- * EDGE is smaller than the fishing sea's 22,600 for now. That number is sized
- * for five bands and forty islands; this holds one, and a captain who sails for
- * three minutes into nothing has been told the wrong thing about the place.
- * It is one constant and it grows when the content does.
+ * WHAT IS BEYOND IT is raid water, and that is where the ship you actually own
+ * takes over from the fishing boat. That boundary does not exist yet. When it
+ * does it goes at this rim, which is why the rim is one constant.
  */
 export const EXP_ORIGIN = { x: 0, y: NORTH_WALL - 1500 }
-export const EXP_EDGE = 9000
+export const EXP_EDGE = 5200
 
 /** Is this point on the expedition side of the reef? */
 export function inExpeditions(y: number): boolean {

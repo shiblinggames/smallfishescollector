@@ -12,7 +12,6 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
-import { GATE_X, NORTH_WALL } from './chart'
 import { getEffectiveRod } from '@/lib/rods'
 import { getLine } from '@/lib/lines'
 import { getReel } from '@/lib/reels'
@@ -35,19 +34,7 @@ import { getRenownState } from '../actions/renown'
 
 export const metadata = { title: 'The Sea' }
 
-/**
- * ONE PAGE BODY, TWO ROUTES.
- *
- * /sea and /expeditions/sea load exactly the same things — the same captain,
- * the same chart, the same sailing loop — and differ in which half of the world
- * they drop you into and what you are sailing while you are there. Two copies
- * of three hundred lines of loading would be two copies that drift.
- */
-export async function SeaPageBody({ side, fromArch = false }: {
-  side: 'fishing' | 'expeditions'
-  /** Arrived by sailing through the reef rather than by opening the tab. */
-  fromArch?: boolean
-}) {
+export default async function SeaPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
@@ -260,21 +247,6 @@ export async function SeaPageBody({ side, fromArch = false }: {
       exploredRaw={(profile?.sea_explored as string | null) ?? null}
       discovered={discovered}
       digs={digs}
-      // A FRESH MOUNT PER SEA, and this is not a nicety.
-      //
-      // /sea and /expeditions/sea render the same component in the same slot of
-      // the tree, so React reconciles them as one element and UPDATES it rather
-      // than replacing it: the ship swapped in, the props changed, and the
-      // sailing loop, the camera, the fog and the boat's position all carried
-      // straight over. It looked like a glitch and a page that would not load,
-      // because nothing had actually loaded.
-      //
-      // The key makes the two seas different elements. Crossing the reef now
-      // tears the old one down and builds the new one, which is what "a
-      // different place" has to mean.
-      key={side}
-      side={side}
-      shipTier={Number(profile?.ship_tier ?? 0)}
       homestead={homestead}
       // WHAT STANDS ON THE CREW HALL'S ISLAND. Three tiers off the profile, and
       // the island renders whichever art the captain has paid for — the same
@@ -305,17 +277,9 @@ export async function SeaPageBody({ side, fromArch = false }: {
       // written as you sail the southern chart — so it means nothing on the far
       // side of the reef. Arriving there puts you just north of the arch you
       // came through, facing open water, which is also the way back.
-      start={side === 'expeditions'
-        ? { x: GATE_X, y: NORTH_WALL - 260 }
-        // COMING BACK THROUGH THE ARCH puts you just south of it, not wherever
-        // you were before you left. The saved position is where you last were
-        // on the FISHING side, which is the right answer when you open the tab
-        // and the wrong one when you have just sailed in from the north.
-        : fromArch
-          ? { x: GATE_X, y: NORTH_WALL + 260 }
-          : (profile?.sea_x != null && profile?.sea_y != null
-          ? { x: Number(profile.sea_x), y: Number(profile.sea_y) }
-            : null)}
+      start={profile?.sea_x != null && profile?.sea_y != null
+        ? { x: Number(profile.sea_x), y: Number(profile.sea_y) }
+        : null}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))
@@ -361,11 +325,4 @@ export async function SeaPageBody({ side, fromArch = false }: {
       }}
     />
   )
-}
-
-export default async function SeaPage({ searchParams }: {
-  searchParams: Promise<{ from?: string }>
-}) {
-  const { from } = await searchParams
-  return SeaPageBody({ side: 'fishing', fromArch: from === 'arch' })
 }
