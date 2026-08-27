@@ -2206,11 +2206,16 @@ export default function FishingHere({
               className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
               style={{
                 width: HELM_D, height: HELM_D, borderRadius: '50%',
-                background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
-                border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
+                // A FLOOR UNDER THE TINT. This was a teal wash over whatever
+                // happened to be behind it, so on pale water or a lit sprite
+                // the sea read straight through the one control you need to
+                // find without looking. The colour is still a translucent
+                // gradient; what changed is that it now sits on something.
+                background: 'radial-gradient(ellipse at 40% 35%, rgba(18,138,168,0.6), rgba(12,84,104,0.42)), rgba(5,13,20,0.97)',
+                border: '1px solid rgba(52,190,220,0.62)', cursor: 'pointer',
                 fontSize: '0.864rem', touchAction: 'manipulation', lineHeight: 1.15,
                 color: canCast ? '#67d4e8' : 'rgba(103,212,232,0.4)',
-                boxShadow: '0 6px 0 rgba(0,0,0,0.6), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+                boxShadow: '0 6px 0 rgba(0,0,0,0.7), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.14)',
               }}
               initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
               whileTap={canCast ? { scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' } : undefined}
@@ -2230,10 +2235,10 @@ export default function FishingHere({
               className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
               style={{
                 width: HELM_D, height: HELM_D, borderRadius: '50%',
-                background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
-                border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
+                background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.34), rgba(150,112,24,0.2)), rgba(9,10,14,0.97)',
+                border: '1px solid rgba(240,192,64,0.58)', cursor: 'pointer',
                 fontSize: '0.864rem', color: '#f0c040', touchAction: 'manipulation',
-                boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(240,192,64,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                boxShadow: '0 6px 0 rgba(0,0,0,0.7), 0 0 22px rgba(240,192,64,0.26), inset 0 1px 0 rgba(255,255,255,0.12)',
               }}
               initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
               whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
