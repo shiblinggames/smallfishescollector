@@ -87,12 +87,18 @@ import { HELM_D, HELM_BOTTOM } from './helm'
  * secondary band (the Tide Turner, the auto toggle) sits under it and pushes it
  * up by its own height plus its margin.
  *
- * Padding the row by HELM_BOTTOM alone left the button sixty pixels high — the
- * two bands that were below it. Written as the subtraction rather than as the
- * answer so that changing either band moves the button back into place instead
- * of silently off it.
+ * COUNT EVERY BAND, and the first pass did not. It subtracted the secondary
+ * band and stopped, missing the tackle bar under it, so the button sat exactly
+ * 40px above the wheel — small enough to look like a rounding problem and large
+ * enough that the thumb had to move. Both are listed separately below so that
+ * adding a third band is an obvious edit rather than a silent 40px again.
+ *
+ * Each entry is that band's own height PLUS the margin it puts above itself,
+ * because this column has no `gap` — every band owns its own spacing.
  */
-const BELOW_CAST_SLOT = 8 + 26          // the secondary band's margin + fixed height
+const SECONDARY_BAND = 8 + 26           // margin + fixed height (Tide Turner / auto)
+const TACKLE_BAR = 6 + 34               // margin + fixed height (bait + hold)
+const BELOW_CAST_SLOT = SECONDARY_BAND + TACKLE_BAR
 const ACTION_PAD_BOTTOM = HELM_BOTTOM - BELOW_CAST_SLOT
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 
@@ -1517,37 +1523,6 @@ export default function FishingHere({
               </div>
             )}
 
-            {wormhole && (
-              <button disabled={busyChoice}
-                onClick={async e => {
-                  e.stopPropagation(); setBusyChoice(true)
-                  const r = await rerollWormhole().catch(() => ({ error: 'The wormhole closed.' }))
-                  setBusyChoice(false)
-                  setWormhole(false)
-                  if ('error' in r) { setChoiceNote(r.error); return }
-                  setChoiceNote(`Rerolled into ${r.fish.name}`)
-                }}
-                className="font-cinzel font-700"
-                style={{
-                  // MATCHES THE CARD IT BELONGS TO. ResultCard caps itself at
-                  // 330 and centres; this was width:100% of a 448 column, so
-                  // it hung wider than the thing it is an action on.
-                  marginTop: 10, width: '100%', maxWidth: 330, marginInline: 'auto',
-                  display: 'block',
-                  padding: '0.6rem', borderRadius: 10,
-                  fontSize: '0.96rem', color: '#f0ddff',
-                  // AND IT HAS A FLOOR NOW. The fill was a 14% violet wash with
-                  // nothing behind it, so the sea and whatever art was under it
-                  // read straight through the label — the house rule is that
-                  // anything written over the world gets an opaque base.
-                  background: 'linear-gradient(180deg, rgba(120,70,170,0.5) 0%, rgba(60,32,92,0.62) 100%), rgba(10,8,18,0.96)',
-                  border: '1px solid rgba(192,132,252,0.6)',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
-                  cursor: 'pointer',
-                }}>
-                Wormhole · reroll this catch
-              </button>
-            )}
             {choiceNote && (
               <p className="font-karla font-700" style={{ fontSize: '0.912rem', color: '#7fd6a0', marginTop: 8, textAlign: 'center' }}>
                 {choiceNote}
@@ -1584,6 +1559,77 @@ export default function FishingHere({
           </motion.div>
           ) : null}
         </AnimatePresence>
+
+        {/* ── THE UNDER-DIAL ACTION ROW ────────────────────────────────────
+            Actions ON THE ENCOUNTER live here, directly beneath the dial (or
+            beneath the card it turns into), because that is the thing they act
+            upon. The Tide Turner used to sit in the band below the CAST button,
+            which put a decision about the fish on your hook down among the
+            rig controls, a whole screen away from the fish.
+
+            ONE row, deliberately outside the phase branches above, so the two
+            occupants cannot drift apart: the Tide Turner is a `hooked` action
+            and the wormhole is a `result` one, so today only one is ever up —
+            but if that ever changes they sit side by side, each taking half,
+            rather than one of them re-inventing a row somewhere else.
+
+            It renders nothing at all when neither applies. The content area is
+            flex:1 justified to its bottom edge, so a row that reserved space
+            unconditionally would push the dial up by its height for every
+            player who owns neither item. */}
+        {((tideTurner.has && phase === 'hooked' && skipsLeft > 0) || (wormhole && phase === 'result')) && (
+          <div data-no-steer style={{
+            display: 'flex', gap: 8, marginTop: 10, width: '100%', maxWidth: 330,
+            marginInline: 'auto', pointerEvents: 'auto',
+          }}>
+            {/* THE LABEL SAYS SKIP, NOT "throw it back". Both screens offer
+                this at the same moment — the dial is up and the fish is not
+                landed yet (this screen's `hooked` is the fishing screen's
+                `catching`) — but the port renamed it, and "throw it back"
+                describes putting a fish you have caught into the water.
+                Nothing has been caught. What the button does is drop the
+                encounter before it resolves. */}
+            {tideTurner.has && phase === 'hooked' && skipsLeft > 0 && (
+              <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
+                className="font-cinzel font-700"
+                style={{
+                  flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.96rem',
+                  color: '#cdbdf8',
+                  // AN OPAQUE FLOOR, like its neighbour. A translucent wash
+                  // over open water lets the sea read straight through the
+                  // label — the house rule for anything drawn on the world.
+                  background: 'linear-gradient(180deg, rgba(104,88,178,0.5) 0%, rgba(46,38,84,0.62) 100%), rgba(10,8,18,0.96)',
+                  border: '1px solid rgba(167,139,250,0.6)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+                  cursor: skipping ? 'default' : 'pointer', opacity: skipping ? 0.6 : 1,
+                }}>
+                {skipping ? '…' : <>Tide Turner · Skip <span style={{ opacity: 0.7 }}>· {skipsLeft} left</span></>}
+              </button>
+            )}
+            {wormhole && phase === 'result' && (
+              <button disabled={busyChoice}
+                onClick={async e => {
+                  e.stopPropagation(); setBusyChoice(true)
+                  const r = await rerollWormhole().catch(() => ({ error: 'The wormhole closed.' }))
+                  setBusyChoice(false)
+                  setWormhole(false)
+                  if ('error' in r) { setChoiceNote(r.error); return }
+                  setChoiceNote(`Rerolled into ${r.fish.name}`)
+                }}
+                className="font-cinzel font-700"
+                style={{
+                  flex: 1, padding: '0.6rem', borderRadius: 10,
+                  fontSize: '0.96rem', color: '#f0ddff',
+                  background: 'linear-gradient(180deg, rgba(120,70,170,0.5) 0%, rgba(60,32,92,0.62) 100%), rgba(10,8,18,0.96)',
+                  border: '1px solid rgba(192,132,252,0.6)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+                  cursor: 'pointer',
+                }}>
+                Wormhole · reroll this catch
+              </button>
+            )}
+          </div>
+        )}
 
         {(holdFull || outOfBait) && (phase === 'idle' || phase === 'result') && (
           // Not just "you cannot" — where the fix is. A zone buyer is sitting in
@@ -1931,33 +1977,14 @@ export default function FishingHere({
         </div>
 
       {/* THE SECONDARY BAND — always present, never empty of SPACE.
-          The Tide Turner and the auto toggle are mutually exclusive by phase
-          (one is a hooked-fish action, the other an idle one), so one reserved
-          band holds whichever applies and the row does not change height when
-          they swap or when neither is there. */}
+          Only the auto toggle lives here now; the Tide Turner moved up to the
+          under-dial row, where an action ON THE FISH belongs. The band still
+          reserves its height unconditionally, because the toggle appears only
+          in idle and result and the row must not change height when it does.
+          Its height is counted in BELOW_CAST_SLOT — see the note up there. */}
       <div style={{
         height: 26, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        {/* THE LABEL SAYS SKIP, NOT "throw it back". Both screens offer this
-            at the same moment — the dial is up and the fish is not landed yet
-            (this screen's `hooked` is the fishing screen's `catching`) — but
-            the port renamed it, and "throw it back" describes putting a fish
-            you have caught into the water. Nothing has been caught. What the
-            button does is drop the encounter before it resolves, which is what
-            the original's wording says. */}
-        {tideTurner.has && phase === 'hooked' && skipsLeft > 0 && (
-          <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
-            className="font-karla font-700"
-            style={{
-              padding: '0.3rem 0.7rem', borderRadius: 999, fontSize: '0.744rem',
-              color: '#c4b5fd', background: 'rgba(167,139,250,0.14)',
-              border: '1px solid rgba(167,139,250,0.45)', cursor: skipping ? 'default' : 'pointer',
-              opacity: skipping ? 0.6 : 1,
-            }}>
-            {skipping ? '…' : <>Tide Turner · Skip <span style={{ opacity: 0.7 }}>· {skipsLeft} left</span></>}
-          </button>
-        )}
-
         {/* The auto toggle. Shown only when the item is actually equipped, and
             it is a toggle rather than always-on because handing your rod to a
             machine should stay a choice you can take back mid-session. */}
