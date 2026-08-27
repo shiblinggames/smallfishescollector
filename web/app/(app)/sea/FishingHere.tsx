@@ -931,8 +931,23 @@ export default function FishingHere({
     if (animRef.current) clearTimeout(animRef.current)
   }, [])
 
-  const cast = useCallback(() => {
-    if (phase !== 'idle' || !canCast) return
+  /**
+   * PUT THE LINE IN.
+   *
+   * `fromResult` is how you cast straight out of a result card without an idle
+   * beat in between. It exists because the phase guard below was silently
+   * eating every automatic cast: the auto loop fires at phase 'result' and
+   * called this, which returned immediately because the phase was not 'idle'.
+   * Auto-casting never worked out here, for either tier of the item.
+   *
+   * It replaces a queueMicrotask dance that set phase to 'idle' and then hoped
+   * the re-render had committed before the microtask ran. That is a race with
+   * React's scheduler, and it was the same race whether a human or the loop
+   * pressed the button. Casting does not need to pass through idle: this sets
+   * the phase to 'waiting' itself, three lines down.
+   */
+  const cast = useCallback((fromResult = false) => {
+    if ((!fromResult && phase !== 'idle') || !canCast) return
     setErr('')
     setCaught(null)
     // THE DIAL FLASHING AFTER REEL IN. `hooked` used to be cleared the instant
@@ -1298,7 +1313,7 @@ export default function FishingHere({
     if (shiny) return
     // A crate opens itself over 700ms and then wants a beat to be read. At 900
     // the next cast landed on top of the reveal, which is the whole moment.
-    const t = setTimeout(() => { castRef.current?.() }, caught?.kind === 'crate' ? 2200 : 900)
+    const t = setTimeout(() => { castRef.current?.(true) }, caught?.kind === 'crate' ? 2200 : 900)
     return () => clearTimeout(t)
   }, [phase, auto.tier, autoOn, baitLeft, holdFull, shiny, caught?.kind])
 
@@ -1355,7 +1370,7 @@ export default function FishingHere({
   /** `castAgain` needs the current `cast`, but `cast` is declared above it and
    *  is rebuilt whenever phase changes. Mirroring it to a ref keeps them in
    *  step without either depending on the other. */
-  const castRef = useRef<(() => void) | null>(null)
+  const castRef = useRef<((fromResult?: boolean) => void) | null>(null)
   castRef.current = cast
   const strikeRef = useRef<(() => void) | null>(null)
   strikeRef.current = strike
@@ -1365,13 +1380,7 @@ export default function FishingHere({
   /** Cast straight out of the result, exactly as the fishing screen does: the
    *  card stays in the content area and the action slot goes back to Cast, so
    *  there is never a separate dismiss step to hunt for. */
-  const castAgain = useCallback(() => {
-    setCaught(null)
-    setPhase('idle')
-    // `cast` reads phase from its closure, so it cannot be called in the same
-    // tick as the setState that unblocks it. A microtask is after the commit.
-    queueMicrotask(() => castRef.current?.())
-  }, [])
+  const castAgain = useCallback(() => { castRef.current?.(true) }, [])
 
   return (
     <div
