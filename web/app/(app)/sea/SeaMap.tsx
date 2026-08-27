@@ -421,7 +421,6 @@ const OBSTACLES: { x: number; y: number; r: number }[] = [
  * the rocks, far enough that nothing overlaps.
  */
 const REEF_FACE = 200
-const STACK_R = 310
 
 /** Nudge a point out to clear water if it has been asked for inside something
  *  solid. The helm should not be able to ORDER a course into rock, which is
@@ -3760,8 +3759,19 @@ export default function SeaMap({
         for (let k = 0; k < OCCLUDERS.length; k++) {
           const o = OCCLUDERS[k]
           if (o.y <= pos.current.y + 8) continue
-          if (Math.abs(o.x - pos.current.x) > OCCLUDE_RANGE) continue
-          if (o.y - pos.current.y > OCCLUDE_RANGE) continue
+          // COULD IT ACTUALLY COVER HER? The first cut used a flat 1600 both
+          // ways, which is three times as wide as any overlap can be — a rock
+          // 1600 east cannot touch a 340px hull at screen centre. The cost was
+          // not the extra sprites, it was the RE-RENDERS: the set changed the
+          // whole time you sailed along the reef band, and every change
+          // re-renders this 8,000-line component. Bounded to the mark's own
+          // half-width (plus half a hull and lee-way), the set is empty except
+          // in the moment a rock genuinely stands in front of the boat.
+          if (Math.abs(o.x - pos.current.x) > o.size * 0.5 + 300) continue
+          // And no taller than the sprite can reach: counter-squashed art is
+          // about size/GROUND high, so a foot further south than that cannot
+          // overlap her whatever its width.
+          if (o.y - pos.current.y > o.size * 2 + 260) continue
           inFront.push(k)
         }
         setOccluding(prev =>
@@ -5636,7 +5646,7 @@ function reefRocks() {
   const OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
   /** `solid` marks the rock a hull has to go round. Shingle is left off: it is
    *  small, there are four times as many, and the wall is the real barrier. */
-  const out: { art: string; x: number; y: number; size: number; solid?: boolean; solidR?: number }[] = []
+  const out: { art: string; x: number; y: number; size: number }[] = []
   let seed = 0x7f4a7c15
   const nx = () => {
     seed ^= seed << 13; seed >>>= 0
@@ -5660,7 +5670,6 @@ function reefRocks() {
         x: x + (nx() - 0.5) * REEF_STEP * 0.22,
         y: NORTH_WALL + (row ? 1 : -1) * 110 + (nx() - 0.5) * 150,
         size: b.min + nx() * (b.max - b.min),
-        solid: true,
       })
     }
   }
@@ -5687,8 +5696,8 @@ function reefRocks() {
   // one to tidy up the silhouette would flip its light with it and break the
   // whole run. Two headlands that do not match is what a real channel looks
   // like anyway.
-  out.push({ art: '/sea/rock-gate-w.png', x: GATE_X - (GATE_HALF + 370), y: NORTH_WALL - 40, size: 760, solid: true, solidR: STACK_R })
-  out.push({ art: '/sea/rock-gate-e.png', x: GATE_X + (GATE_HALF + 370), y: NORTH_WALL - 40, size: 760, solid: true, solidR: STACK_R })
+  out.push({ art: '/sea/rock-gate-w.png', x: GATE_X - (GATE_HALF + 370), y: NORTH_WALL - 40, size: 760 })
+  out.push({ art: '/sea/rock-gate-e.png', x: GATE_X + (GATE_HALF + 370), y: NORTH_WALL - 40, size: 760 })
   // One boulder tucked in behind each, so the headlands grow out of the reef
   // instead of reading as two towers parked on the end of it.
   for (const side of [-1, 1]) {
@@ -5697,7 +5706,6 @@ function reefRocks() {
       x: GATE_X + side * (GATE_HALF + 640),
       y: NORTH_WALL + 140,
       size: 520,
-      solid: true,
     })
   }
 
@@ -5757,7 +5765,7 @@ const REEF = reefRocks()
  * world pixels along a curve would bunch the rock at the ends.
  */
 function anchorageRocks() {
-  const out: { art: string; x: number; y: number; size: number; solid?: boolean; solidR?: number }[] = []
+  const out: { art: string; x: number; y: number; size: number }[] = []
   let seed = 0x1f83d9ab
   const nx = () => {
     seed ^= seed << 13; seed >>>= 0
@@ -5789,7 +5797,7 @@ function anchorageRocks() {
       const b = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
       const p = at(th + (nx() - 0.5) * step * 0.22,
         (row ? 1 : -1) * 110 + (nx() - 0.5) * 150)
-      out.push({ art: b.art, x: p.x, y: p.y, size: b.min + nx() * (b.max - b.min), solid: true })
+      out.push({ art: b.art, x: p.x, y: p.y, size: b.min + nx() * (b.max - b.min) })
     }
   }
 
@@ -5803,13 +5811,13 @@ function anchorageRocks() {
   // light and break the run it stands in.
   const gate = ang(SORTIE_HALF + 370)
   const w = at(mid - gate, 40), e = at(mid + gate, 40)
-  out.push({ art: '/sea/rock-gate-w.png', x: w.x, y: w.y, size: 760, solid: true, solidR: STACK_R })
-  out.push({ art: '/sea/rock-gate-e.png', x: e.x, y: e.y, size: 760, solid: true, solidR: STACK_R })
+  out.push({ art: '/sea/rock-gate-w.png', x: w.x, y: w.y, size: 760 })
+  out.push({ art: '/sea/rock-gate-e.png', x: e.x, y: e.y, size: 760 })
   // One boulder behind each, so they grow out of the wall rather than reading
   // as two towers parked on the end of it.
   for (const side of [-1, 1]) {
     const p = at(mid + side * ang(SORTIE_HALF + 640), -140)
-    out.push({ art: '/sea/rock-crag.png', x: p.x, y: p.y, size: 520, solid: true })
+    out.push({ art: '/sea/rock-crag.png', x: p.x, y: p.y, size: 520 })
   }
 
   // ── THE SHINGLE ──────────────────────────────────────────────────────
@@ -5860,9 +5868,7 @@ const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
     .filter(m => m.size >= 300)
     .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size }))
 
-/** How far out to look. A screen and a half at the widest zoom, so something
- *  drifts in front of the hull before it could have been seen not to. */
-const OCCLUDE_RANGE = 1600
+
 
 /**
  * THE SCENERY, AS ONE ELEMENT.

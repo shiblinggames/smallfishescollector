@@ -53,21 +53,28 @@ export default async function SeaPage() {
   )
   const line = getLine(Number(profile?.line_tier ?? 0))
 
-  // Bait: whatever they have most of, which is almost always what they would
-  // have picked anyway. Choosing it properly is the full screen's job.
   const admin = createAdminClient()
-  const { data: baitRows } = await admin
-    .from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id)
-  const best = ((baitRows ?? []) as { bait_type: string; quantity: number }[])
-    .filter(b => b.quantity > 0)
-    .sort((a, b) => b.quantity - a.quantity)[0]
-  const baitType = best?.bait_type ?? 'worm'
 
   // ── THE COLLECTION LOG ────────────────────────────────────────────────
   // The same drawer the fishing page shows, so it needs the same reference
   // data. Species come from the long-TTL cross-request cache, not a per-view
   // query — this page is as hot as the fishing screen.
-  const [allSpecies, { data: collectionRows }, { data: pbRows }, { count: raidPartyCount }] = await Promise.all([
+  // ── EVERYTHING, AT ONCE ───────────────────────────────────────────────
+  //
+  // These were ten separate awaits, one under the other, each a full roundtrip
+  // to the database — the page could not start rendering until the last of a
+  // chain of eight-to-ten serial queries came home, none of which needed any
+  // other's answer. At 20-50ms a hop that was 200-500ms of TTFB spent on
+  // nothing but waiting in single file.
+  //
+  // Every read here is independent per-user state. The only ordering that
+  // exists at all is `trawlsOut`, which derives from trawlState SYNCHRONOUSLY
+  // after the batch lands.
+  const [
+    allSpecies, { data: collectionRows }, { data: pbRows }, { count: raidPartyCount },
+    { data: baitRows }, dealt, discovered, digs, homestead, renown, trawlState,
+    { data: finaleRow }, { data: holdRows },
+  ] = await Promise.all([
     getCachedFishSpecies(),
     admin.from('fish_collection').select('fish_id, is_golden').eq('user_id', user.id),
     admin.from('fish_personal_bests').select('fish_id, best_length_in').eq('user_id', user.id),
@@ -77,7 +84,24 @@ export default async function SeaPage() {
     // the party itself is the raid screen's business.
     admin.from('user_crew').select('id', { count: 'exact', head: true })
       .eq('user_id', user.id).is('died_at', null).not('raid_slot', 'is', null),
+    admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
+    dealtToday(),
+    getDiscoveries(),
+    getDigState(),
+    getHomestead(),
+    getRenownState('fishing'),
+    getTrawlState(),
+    // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
+    admin.from('raid_completions').select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle(),
+    admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
+
+  // Bait: whatever they have most of, which is almost always what they would
+  // have picked anyway. Choosing it properly is the full screen's job.
+  const best = ((baitRows ?? []) as { bait_type: string; quantity: number }[])
+    .filter(b => b.quantity > 0)
+    .sort((a, b) => b.quantity - a.quantity)[0]
+  const baitType = best?.bait_type ?? 'worm'
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
   const mountedFishIds = (collectionRows ?? [])
     .filter((r: { is_golden: boolean }) => r.is_golden)
@@ -87,37 +111,6 @@ export default async function SeaPage() {
     personalBests[r.fish_id] = Number(r.best_length_in)
   }
 
-  // Read on the server so the day's deal count survives a page reload — a cap
-  // the client remembers is not a cap.
-  const dealt = await dealtToday()
-
-  // WHICH ISLES THIS CAPTAIN HAS ALREADY WORKED. Read here rather than fetched
-  // by the chart on mount, so a rock cleared last week is already showing an
-  // open chest the first time it paints — a marker that arrives a moment late
-  // is worse than no marker, because you have already reached for it.
-  const discovered = await getDiscoveries()
-
-  // BEARINGS HELD AND HOLES ALREADY DUG. Same reasoning: an X that arrives a
-  // moment after the chart does is an X you have already gone looking for.
-  const digs = await getDigState()
-
-  // WHAT THEY HAVE BUILT. The Homestead is the only island on the chart whose
-  // buildings are not written down in chart.ts, because it is the only one that
-  // is different for every captain.
-  const homestead = await getHomestead()
-
-  // RENOWN, for the level bar. Past 100 the bar becomes a tappable chip that
-  // opens the panel, and it was mounted out here without either of the props
-  // that make it do anything — so a captain at max level had a readout of a
-  // stat they could no longer reach.
-  const renown = await getRenownState('fishing')
-
-  // ── WHEN THE CREW GET BACK ────────────────────────────────────────────
-  // TIMESTAMPS, not a count. A trawl matures on a clock, so handing the map
-  // the moments they come due lets it work out how many are waiting at any
-  // instant without polling the server once — a crew that finishes while you
-  // are halfway to the Abyss lights the Docks up on its own.
-  const trawlState = await getTrawlState()
   // WHO IS OUT, WHERE, AND WHEN THEY ARE DUE. This threw everything but the
   // clock away, which was enough to count how many are coming and nothing else
   // — so the chart could say "2 crew back" and not which two, or from where.
@@ -131,11 +124,6 @@ export default async function SeaPage() {
           crew: z.trawl!.crew.name,
           art: z.trawl!.crew.filename,
         }))
-
-  // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
-  const { data: finaleRow } = await admin
-    .from('raid_completions')
-    .select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle()
 
   // ── THE SPECIALS THE CLIENT DRIVES ────────────────────────────────────
   // Phantom Hook, Perfected Sigil and the Primeval Eye need nothing here: the
@@ -166,8 +154,6 @@ export default async function SeaPage() {
   // what it can take. Without them the map lets you fish until a catch silently
   // stops being banked, which is the one failure a hold is supposed to warn you
   // about before it happens.
-  const { data: holdRows } = await admin
-    .from('fish_inventory').select('quantity').eq('user_id', user.id)
   const holdCount = ((holdRows ?? []) as { quantity: number }[])
     .reduce((n, r) => n + (r.quantity ?? 0), 0)
   const holdCapacity = getFishHold(Number(profile?.fish_hold_tier ?? 0)).capacity
