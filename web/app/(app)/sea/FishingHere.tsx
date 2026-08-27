@@ -2064,11 +2064,11 @@ export default function FishingHere({
                   <p className="font-karla font-600" style={{
                     fontSize: '0.792rem', color: 'rgba(190,212,228,0.62)', marginTop: 6, lineHeight: 1.65,
                   }}>
-                    Salters are moored out here and buy the whole hold where you
-                    float, at a cut of the price above. Sail home to the Market
-                    and you keep more: a quick sell takes 75%, and the shipping
-                    lanes pay by how far you send the catch. Either way the hold
-                    empties and you can fish again.
+                    Three ways to sell, and they pay by how far you carry it.
+                    A quick sell from wherever you float gives you 75%. A buyer
+                    you sail over to pays 74% to 86%, and the deeper the water
+                    the better the rate. The Market ashore pays the full amount
+                    above, but you have to bring the catch home yourself.
                   </p>
                 </>
               )}
