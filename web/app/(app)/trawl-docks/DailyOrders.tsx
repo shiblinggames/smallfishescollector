@@ -23,7 +23,18 @@ import { vibrate } from '@/lib/haptics'
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 
-export default function DailyOrders({ initial }: { initial: DailyChallengeState | null }) {
+export default function DailyOrders({ initial, canClaim = true }: {
+  initial: DailyChallengeState | null
+  /**
+   * FALSE ON THE WATER.
+   *
+   * The chart shows these so you know what you are fishing FOR — a challenge
+   * you cannot see is one you meet by accident — but the payout is the Tally
+   * House's whole remaining job, and a reward you can take from anywhere makes
+   * the island a formality. So: read anywhere, settle up ashore.
+   */
+  canClaim?: boolean
+}) {
   const [state, setState] = useState(initial)
   const [busy, setBusy] = useState<number | 'sweep' | null>(null)
   const [err, setErr] = useState('')
@@ -118,7 +129,12 @@ export default function DailyOrders({ initial }: { initial: DailyChallengeState 
                     {c.crateReward ? 'a supply crate' : `${c.reward.toLocaleString()} ⟡`}
                   </span>
                 </span>
-                {isClaimed ? (
+                {!canClaim ? (
+                  <span className="font-karla font-700 uppercase" style={{
+                    fontSize: '0.66rem', letterSpacing: '0.1em', flexShrink: 0,
+                    color: isClaimed ? '#8a8578' : isDone ? GREEN : 'rgba(255,255,255,0.32)',
+                  }}>{isClaimed ? 'Claimed' : isDone ? 'Ready' : ''}</span>
+                ) : isClaimed ? (
                   <span className="font-karla font-700 uppercase" style={{
                     flexShrink: 0, fontSize: '0.66rem', letterSpacing: '0.1em',
                     color: 'rgba(255,255,255,0.3)',
@@ -147,7 +163,7 @@ export default function DailyOrders({ initial }: { initial: DailyChallengeState 
       </div>
 
       <AnimatePresence>
-        {canSweep && (
+        {canSweep && canClaim && (
           <motion.button
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             onClick={sweep} disabled={busy !== null}
@@ -169,6 +185,17 @@ export default function DailyOrders({ initial }: { initial: DailyChallengeState 
           fontSize: '0.74rem', color: GREEN, marginTop: 8, textAlign: 'center',
         }}>
           Every order filled. Back tomorrow.
+        </p>
+      )}
+
+      {/* WHERE TO COLLECT. Only said on the water, and only when there is
+          something waiting — a standing instruction on a page with nothing to
+          claim is just noise. */}
+      {!canClaim && (done.some((d, i) => d && !state.claimed[i]) || (allDone && claimedAll && !state.sweepClaimed)) && (
+        <p className="font-karla font-600" style={{
+          fontSize: '0.78rem', color: GOLD, marginTop: 10, textAlign: 'center', lineHeight: 1.5,
+        }}>
+          Sail to the Tally House to collect.
         </p>
       )}
 

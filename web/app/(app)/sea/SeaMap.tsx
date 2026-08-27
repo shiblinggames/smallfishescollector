@@ -49,6 +49,9 @@ import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import TrawlIndicator from '../fishing/TrawlIndicator'
+import DailyOrders from '../trawl-docks/DailyOrders'
+import { getDailyChallenge } from '../fishing/dailyChallengeActions'
+import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import LevelRewardsGrant, { type Granted } from './LevelRewardsGrant'
 import { claimFishingLevelRewards } from '../fishing/actions'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
@@ -1693,6 +1696,32 @@ export default function SeaMap({
   const hudAt = (i: number) => 12 + i * (hudSize + 10)
   /** The who-is-out list, open or shut. */
   const [crewOpen, setCrewOpen] = useState(false)
+
+  /**
+   * THE DAY'S ORDERS, READABLE FROM THE WATER.
+   *
+   * A challenge you cannot see is one you meet by accident. These have always
+   * been ticking from every cast — progress is written server-side inside
+   * reelIn — but the only place to READ them was an island, so most of a day's
+   * fishing happened without knowing what the day was asking for.
+   *
+   * Read here, claimed at the Tally House. The split is deliberate: a reward
+   * you can take from anywhere makes the island a formality, and the sail is
+   * what the payout is for.
+   *
+   * Fetched once on arrival rather than polled. Progress only moves when YOU
+   * catch something, and the panel re-reads when the rod is stowed.
+   */
+  const [orders, setOrders] = useState<DailyChallengeState | null>(null)
+  const [ordersOpen, setOrdersOpen] = useState(false)
+  const readOrders = useCallback(() => {
+    void getDailyChallenge().then(setOrders).catch(() => { /* the icon just stays quiet */ })
+  }, [])
+  useEffect(() => { readOrders() }, [readOrders])
+
+  /** Something finished and not yet collected — the dot on the icon. */
+  const ordersReady = !!orders && orders.challenges.some(
+    (c, i) => (orders.progress[i] ?? 0) >= c.target && orders.claimed[i] !== true)
   /**
    * CAPTAINS WAITING ON YOUR ANSWER, for the badge on the crew button.
    *
@@ -1734,6 +1763,7 @@ export default function SeaMap({
       if (find) { setFind(null); return }
       if (ashore) { setAshore(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
+      if (ordersOpen) { setOrdersOpen(false); return }
       if (finnTalk) { setFinnTalk(null); return }
       if (hailing) { setHailing(null); return }
       if (picking) { setPicking(false); return }
@@ -1742,7 +1772,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, trawlOpen, finnTalk, hailing, picking, crewOpen, mapOpen])
+  }, [find, ashore, trawlOpen, ordersOpen, finnTalk, hailing, picking, crewOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -4036,6 +4066,76 @@ hullRef={hullRefFor(t.key)} />
         return null
       })()}
 
+      {/* ── THE DAY'S ORDERS ────────────────────────────────────────────
+          Fourth in the HUD row. Nothing here claims anything: it is a readout,
+          and the dot is the only thing it ever asks of you. */}
+      {orders && orders.challenges.length > 0 && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(8); setOrdersOpen(true) }}
+          aria-label="Today's orders"
+          title="Today's orders"
+          data-no-steer
+          style={{
+            position: 'absolute', top: 18, left: hudAt(3), zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: hudSize, height: hudSize, padding: 0,
+            borderRadius: 999, cursor: 'pointer',
+            background: ordersReady ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
+            border: `1px solid ${ordersReady ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+          }}>
+          {/* A pinned sheet of orders. */}
+          <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
+            viewBox="0 0 24 24" fill="none"
+            stroke={ordersReady ? '#f0c040' : 'rgba(214,232,240,0.8)'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M6 3h9l3 3v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+            <path d="M9 9h6M9 13h6M9 17h3" />
+          </svg>
+          {ordersReady && (
+            <span aria-hidden style={{
+              position: 'absolute', top: 2, right: 2,
+              width: 9, height: 9, borderRadius: '50%',
+              background: '#f0c040', border: '2px solid rgba(4,10,18,1)',
+              boxShadow: '0 0 7px rgba(240,192,64,0.85)',
+            }} />
+          )}
+        </button>
+      )}
+
+      {/* THE ORDERS SHEET. Same stopPropagation wrapper as everything else that
+          floats over the chart: the map steers on click, so a tap on the
+          backdrop to dismiss would otherwise also put the helm over. */}
+      {ordersOpen && (
+        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+          <PopupShell open onClose={() => setOrdersOpen(false)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              margin: 'auto', width: '100%', maxWidth: 440,
+              borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
+              // An opaque floor: this sits over painted water.
+              background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
+              border: '1px solid rgba(196,169,106,0.34)',
+              boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+              maxHeight: '80vh', overflowY: 'auto',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                <button type="button" onClick={() => setOrdersOpen(false)} aria-label="Close"
+                  style={{
+                    width: 30, height: 30, borderRadius: '50%', padding: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                    color: '#cfcabf', cursor: 'pointer',
+                  }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <DailyOrders initial={orders} canClaim={false} />
+            </div>
+          </PopupShell>
+        </div>
+      )}
+
       {/* THE TRAWL PANEL, over the water it is sending crews into.
 
           The wrapper is not optional. This sheet is a DOM child of the map, and
@@ -4136,7 +4236,7 @@ hullRef={hullRefFor(t.key)} />
           onBusy={setDialUp}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
-          onClose={() => { setFishingIn(null); setFrame('rest'); collectLevelRewards() }}
+          onClose={() => { setFishingIn(null); setFrame('rest'); collectLevelRewards(); readOrders() }}
         />
       )}
 

@@ -277,7 +277,7 @@ export const PLACES: Place[] = [
  * three-boat raft rather than one hull: 190 from the centre would put you
  * inside the fleet before it noticed you.
  */
-export const TRAWL_FLEET = { x: 900, y: 1100, range: 300 }
+export const TRAWL_FLEET = { x: -1500, y: 200, range: 300 }
 
 export const LANDMARKS: {
   art: string; x: number; y: number; size: number
@@ -293,9 +293,19 @@ export const LANDMARKS: {
   // now it is a place on the water you steer to, and the boats you are sending
   // are the thing you are looking at when you do it.
   //
-  // Placed by measurement, not by eye: 1,421 from the origin so it sits inside
-  // the Shallows (inner 1,400), 921 clear of the Mainland's own mooring ring so
-  // its prompt cannot fight the go-ashore one, and 2,262 from the nearest isle.
+  // ON THE TALLY HOUSE'S SIDE, due south of it, so the fleet is what you pass
+  // on the way in. Crew work belongs together: you send them from the water and
+  // you settle up on the island a short sail north.
+  //
+  // Placed by measurement, not by eye. The number that decided the exact spot
+  // was not the distance to anything — it was whether the two PROMPTS can ever
+  // be up at once. The Tally House's go-ashore reaches y=-165; at y=100 the
+  // fleet's reached y=-200, so there was a 35px band where both were live and
+  // one of them had to lose. At y=200 they miss each other by 65px, so every
+  // approach offers exactly one thing.
+  //
+  // Also 1,050 from the Tally House, 1,014 clear of the Mainland, and 1,513
+  // from the origin so it still sits inside the Shallows (inner 1,400).
   // SOLID. You pull ALONGSIDE a raft of moored boats; sailing through them is
   // the one thing that would say they are a picture rather than a place. The
   // hull stops at size*0.3 + HULL = 139 from the centre, well inside the 300
