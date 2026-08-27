@@ -2324,6 +2324,20 @@ export default function SeaMap({
     return { act: null, hold: null }
   })()
 
+  /**
+   * THE TAP YOU FEEL when something comes into reach.
+   *
+   * The pill appearing is the eye's cue; this is the thumb's. Only on the
+   * transition from nothing to something — the pill CHANGING (bottle to isle
+   * as you drift along a shore) stays silent, or a sail past a busy coast
+   * becomes a pocket full of buzzing.
+   */
+  const hadAct = useRef(false)
+  useEffect(() => {
+    if (!!helmLabel.act && !hadAct.current) vibrate(8)
+    hadAct.current = !!helmLabel.act
+  }, [helmLabel.act])
+
   /** Screen point to world point, through the current camera translation. */
   const toWorld = useCallback((clientX: number, clientY: number): Vec | null => {
     const wrap = wrapRef.current
@@ -4111,7 +4125,14 @@ hullRef={hullRefFor(t.key)} />
         if (finePointer) {
           return (
             <div style={box}>
-              <button
+              {/* Keyed by its own text: a NEW action pops even when one was
+                  already showing, so drifting from the bottle to the isle is
+                  an event rather than a silent word-swap. */}
+              <motion.button
+                key={text ?? ''}
+                initial={{ opacity: 0, y: 6, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 480, damping: 26 }}
                 data-no-steer
                 onClick={e => { e.stopPropagation(); if (!helmActRef.current()) startFishing() }}
                 className="font-cinzel font-700"
@@ -4125,13 +4146,18 @@ hullRef={hullRefFor(t.key)} />
                 }}
                 disabled={warn}>
                 {text?.replace(/^Hold to fish /, 'Fish ')}
-              </button>
+              </motion.button>
             </div>
           )
         }
         return (
           <div aria-hidden style={{ ...box, pointerEvents: 'none' }}>
-            <p className="font-cinzel font-700" style={type}>{text}</p>
+            <motion.p
+              key={text ?? ''}
+              initial={{ opacity: 0, y: 6, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 480, damping: 26 }}
+              className="font-cinzel font-700" style={type}>{text}</motion.p>
           </div>
         )
       })()}
@@ -4239,9 +4265,23 @@ hullRef={hullRefFor(t.key)} />
             background: helmOn
               ? 'radial-gradient(circle at 50% 45%, rgba(12,26,38,0.72), rgba(6,14,22,0.46))'
               : 'radial-gradient(circle at 50% 45%, rgba(10,22,32,0.48), rgba(6,14,22,0.28))',
-            border: `1px solid rgba(180,214,232,${helmOn ? 0.46 : 0.22})`,
-            boxShadow: helmOn ? '0 0 22px rgba(120,180,210,0.2)' : 'none',
-            transition: 'background 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out',
+            // ── THE RING SAYS WHEN A TAP MEANS SOMETHING ───────────────
+            // The helm is both the wheel and the action button, and it looked
+            // identical either way — the only tell was a line of text floating
+            // above it. With something in reach the ring warms to the gold the
+            // rest of the game uses for "you can act on this", so the control
+            // itself is the cue and the text is the explanation.
+            //
+            // Gold, not the fishing teal: the hold-to-fish ring already owns
+            // teal, and one colour meaning two things on the same control is
+            // how a colour stops meaning anything.
+            border: `1px solid ${helmLabel.act
+              ? 'rgba(240,192,64,0.6)'
+              : `rgba(180,214,232,${helmOn ? 0.46 : 0.22})`}`,
+            boxShadow: helmLabel.act
+              ? '0 0 20px rgba(240,192,64,0.22), inset 0 0 14px rgba(240,192,64,0.08)'
+              : helmOn ? '0 0 22px rgba(120,180,210,0.2)' : 'none',
+            transition: 'background 160ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out',
           }}>
           {/* THE ROD COMING. A ring that fills round the helm while a still
               thumb rests, so the hold is something you WATCH arrive rather than
@@ -4265,13 +4305,23 @@ hullRef={hullRefFor(t.key)} />
             position: 'absolute', left: '50%', top: '50%',
             width: 42, height: 42, marginLeft: -21, marginTop: -21,
             borderRadius: '50%', pointerEvents: 'none',
+            // The knob follows the ring: warm while a tap acts, teal while a
+            // hold fishes, plain silver otherwise. The hold wins when both are
+            // live because it is the one in progress.
             background: helmHold > 0 && helmFishable
               ? 'radial-gradient(circle at 42% 36%, rgba(206,250,232,0.96), rgba(120,200,176,0.7))'
-              : 'radial-gradient(circle at 42% 36%, rgba(214,232,240,0.92), rgba(150,186,206,0.6))',
-            border: `1px solid ${helmHold > 0 && helmFishable ? 'rgba(180,246,222,0.85)' : 'rgba(226,242,250,0.6)'}`,
+              : helmLabel.act
+                ? 'radial-gradient(circle at 42% 36%, rgba(250,238,206,0.95), rgba(216,182,110,0.68))'
+                : 'radial-gradient(circle at 42% 36%, rgba(214,232,240,0.92), rgba(150,186,206,0.6))',
+            border: `1px solid ${helmHold > 0 && helmFishable
+              ? 'rgba(180,246,222,0.85)'
+              : helmLabel.act ? 'rgba(246,224,160,0.8)' : 'rgba(226,242,250,0.6)'}`,
             boxShadow: helmHold > 0 && helmFishable
               ? `0 4px 12px rgba(0,0,0,0.45), 0 0 ${8 + helmHold * 16}px rgba(120,220,190,${0.3 + helmHold * 0.5})`
               : '0 4px 12px rgba(0,0,0,0.45)',
+            // Colours only. `transform` is written by the pointer handlers and
+            // a transition on it would put the knob on rails behind the thumb.
+            transition: 'background 200ms ease-out, border-color 200ms ease-out',
             willChange: 'transform',
           }} />
         </div>
