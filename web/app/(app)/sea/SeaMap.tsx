@@ -48,6 +48,10 @@ import { handlingRate, accelRate } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
+// A LEAF, not SeaMap's own exports. The cast button is this same control in its
+// other role and needs these numbers — and FishingHere importing back from here
+// is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
+import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS } from './helm'
 import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
@@ -277,13 +281,6 @@ const SHORE = 0.72
  *  direction and no further. */
 const TAP_HOP = 460
 
-/** How far the thumb must travel before a press on the helm is a STEER rather
- *  than a tap. Below this it is still undecided. Generous, because a thumb
- *  resting on glass drifts a pixel or two and that must not read as a course. */
-const HELM_DEADZONE = 14
-/** How long a still thumb rests before the rod goes in. Long enough that a slow
- *  tap is never mistaken for it, short enough to be a gesture and not a wait. */
-const HELM_HOLD_MS = 480
 /** Held bearings are thrown far enough to be a direction rather than a place.
  *  Re-set every frame while the thumb is down, so the distance only has to be
  *  further than the boat can travel in one frame. */
@@ -293,17 +290,6 @@ const THROW = 9000
 const HOLD_MS = 220
 /** Tap within this of the hull to drop anchor. */
 const STOP_RADIUS = 190
-/** The helm's radius. */
-const HELM_R = 56
-/** The helm's diameter, exported because the fishing screen's action button is
- *  the SAME control in its other role — see the action slot in FishingHere.
- *  Two hardcoded numbers would drift the moment either is tuned. */
-export const HELM_D = HELM_R * 2
-/** How far the helm sits off the bottom. It used to be 92 so it could clear the
- *  action pill; the pills are gone and the wheel does their job, so this is now
- *  simply where the thumb wants it. Exported for the same reason HELM_D is: the
- *  fishing screen's cast button has to land on exactly this spot. */
-export const HELM_BOTTOM = 92
 /** How far a press has to travel before it counts as a drag. Generous enough
  *  that a thumb resting on glass does not become a course change. */
 const DRAG_SLOP = 12

@@ -73,7 +73,10 @@ import { ANCIENT_IDS } from '@/lib/ancientVigil'
  *  is the one that runs cold. Same literal FishingGame uses. */
 const MEGALODON_ID = 143
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
-import { HELM_D, HELM_BOTTOM, type SeaLog } from './SeaMap'
+// TYPE ONLY from SeaMap — a value import from there is a cycle, because SeaMap
+// imports this file. The numbers come from the leaf.
+import type { SeaLog } from './SeaMap'
+import { HELM_D, HELM_BOTTOM } from './helm'
 
 /**
  * WHERE THE CAST BUTTON SITS, so that it lands exactly on the helm.
