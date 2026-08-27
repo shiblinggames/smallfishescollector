@@ -111,9 +111,14 @@ export default async function SeaPage() {
   // instant without polling the server once — a crew that finishes while you
   // are halfway to the Abyss lights the Docks up on its own.
   const trawlState = await getTrawlState()
-  const trawlEndsAt = 'error' in trawlState
+  // WITH THE WATER THEY ARE IN. This threw the zone away and kept the clock,
+  // which was enough to count how many are due and nothing else — so the chart
+  // could say "2 crew back" and not which two.
+  const trawlsOut = 'error' in trawlState
     ? []
-    : trawlState.zones.map(z => z.trawl?.endsAt).filter((v): v is string => !!v)
+    : trawlState.zones
+        .filter(z => z.trawl?.endsAt)
+        .map(z => ({ zone: z.label, endsAt: z.trawl!.endsAt as string }))
 
   // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
   const { data: finaleRow } = await admin
@@ -230,7 +235,7 @@ export default async function SeaPage() {
       // WHERE YOU LEFT OFF. Null on a profile that has never sailed, and the
       // map falls back to HOME — which is also what happens if either half is
       // missing, because half a position is not one.
-      trawlEndsAt={trawlEndsAt}
+      trawlsOut={trawlsOut}
       renown={renown}
       // The fog, as stored. Decoded on the client — the bitfield is the
       // record and the map is the only thing that reads it.

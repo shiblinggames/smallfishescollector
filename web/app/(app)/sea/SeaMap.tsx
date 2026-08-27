@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place, TRAWL_FLEET } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place } from './chart'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
@@ -739,7 +739,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, digs, homestead, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, dealtToday,
   auto, tideTurner, userId, tour,
 }: {
   fishingXP: number
@@ -782,7 +782,12 @@ export default function SeaMap({
   /** Everything the collection log reads. See SeaLog. */
   log: SeaLog
   /** ISO moments each running trawl comes due. See the Docks mark. */
-  trawlEndsAt: string[]
+  /** Every crew currently out, with the water they are working and the moment
+   *  they are due back. Timestamps rather than a count, so the chart can work
+   *  out how many are waiting at any instant without asking the server again —
+   *  a crew that finishes while you are halfway to the Abyss lights the fleet
+   *  up on its own. */
+  trawlsOut: { zone: string; endsAt: string }[]
   /** Fishing renown, for the level bar's chip. Null below the cap. */
   renown: RenownState | null
   /** Base64 fog bitfield as stored. See lib/seaExplore. */
@@ -1231,16 +1236,16 @@ export default function SeaMap({
    * is not one.
    */
   const [trawlsReady, setTrawlsReady] = useState(
-    () => trawlEndsAt.filter(t => new Date(t).getTime() <= Date.now()).length)
+    () => trawlsOut.filter(t => new Date(t.endsAt).getTime() <= Date.now()).length)
   useEffect(() => {
     const tick = () => {
-      const n = trawlEndsAt.filter(t => new Date(t).getTime() <= Date.now()).length
+      const n = trawlsOut.filter(t => new Date(t.endsAt).getTime() <= Date.now()).length
       setTrawlsReady(prev => (prev === n ? prev : n))
     }
     tick()
     const id = setInterval(tick, 5_000)
     return () => clearInterval(id)
-  }, [trawlEndsAt])
+  }, [trawlsOut])
 
   const [spots, setSpots] = useState<Hotspot[]>(() => hotspotsAt())
   const [inSpot, setInSpot] = useState<Hotspot | null>(null)
@@ -1420,8 +1425,6 @@ export default function SeaMap({
   const cellRef = useRef('')
   /** The one we have pulled alongside, and the one we are talking to. */
   const [nearTrader, setNearTrader] = useState<Trader | null>(null)
-  /** Standing among the moored fleet, close enough to send a crew out. */
-  const [nearFleet, setNearFleet] = useState(false)
   /** The trawl panel, opened FROM the water. `variant="dock"` opens on mount
    *  and dismisses itself, which is exactly the shape wanted here — it is a
    *  sheet over the chart, not a page you sailed to. */
@@ -1958,12 +1961,15 @@ export default function SeaMap({
       return { act: dealt.includes(nearTrader.key) ? `Speak to ${nearTrader.name}` : `Hail ${nearTrader.name}`, hold: null }
     }
     if (nearDig && !dug.has(nearDig.id)) return { act: 'Dig here', hold: null }
-    if (nearFleet && !trawlOpen) return { act: 'Send a trawl out', hold: null }
     if (nearBottle) return { act: 'Take the bottle', hold: null }
     if (nearIsle) {
       return { act: found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`, hold: null }
     }
     if (near && near.kind === 'port') {
+      // ITS OWN VERB. Every other port is somewhere you go ashore; this one is
+      // a thing you DO from the deck, and "Go ashore at The Trawl Harbour"
+      // would promise a page that does not exist.
+      if (near.id === 'trawl_fleet') return { act: trawlOpen ? null : 'Send a trawl out', hold: null }
       return { act: locked(near) ? null : `Go ashore at ${near.name}`, hold: null }
     }
     // Open water. Nothing to tap, so the only thing worth saying is the hold —
@@ -2367,6 +2373,9 @@ export default function SeaMap({
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
     if (p.id === 'mainland') { setAshore(true); return }
+    // NOT A PAGE. The trawl panel opens over the water you are floating on,
+    // because the crews you are sending are going into it.
+    if (p.id === 'trawl_fleet') { setTrawlOpen(true); return }
     // WHOSE DOOR. The Homestead is one island showing one of several
     // homesteads, so the route has to carry whose you are standing on.
     if (p.id === 'home' && visiting) {
@@ -3233,9 +3242,6 @@ export default function SeaMap({
           if (Math.hypot(pos.current.x - at.x, pos.current.y - at.y) < HAIL_RANGE) { hit = t; break }
         }
         setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
-        // The fleet never moves, so this is a plain distance against a constant.
-        const inFleet = Math.hypot(pos.current.x - TRAWL_FLEET.x, pos.current.y - TRAWL_FLEET.y) < TRAWL_FLEET.range
-        setNearFleet(prev => (prev === inFleet ? prev : inFleet))
 
         // FINN. He does not drift and he does not patrol — he is waiting — so
         // this is a flat distance to a fixed point rather than a pass over a
@@ -3383,10 +3389,10 @@ export default function SeaMap({
             // chart is where facts about places belong. Nothing moves, nothing
             // interrupts — you notice it the next time you look at the chart,
             // which out here is constantly.
-            // NOT THE TALLY HOUSE ANY MORE. Crews come back to the FLEET,
-            // so a "2 crew back" badge on this island would walk somebody a
-            // thousand pixels the wrong way. The badge moved with the work.
-            waiting={0} />
+            // WHERE THE CREWS ACTUALLY LAND. Not the Tally House: that is the
+            // day's orders now, and a "2 crew back" badge there would walk
+            // somebody a thousand pixels the wrong way.
+            waiting={p.id === 'trawl_fleet' ? trawlsReady : 0} />
         ))}
         {/* THE TOP OF THE CHART. Rocks, not architecture — see reefRocks. The
             same SeaMark every other landmark goes through, so they get the
@@ -3431,7 +3437,7 @@ export default function SeaMap({
             now that the waters are bands — a ring has no box for an offset to
             be relative to. Rendered here rather than inside a place, which also
             means one pass over one array instead of five nested ones. */}
-        <LandmarkField waiting={trawlsReady} />
+        <LandmarkField />
 
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
@@ -3891,10 +3897,9 @@ hullRef={hullRefFor(t.key)} />
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!fishingIn && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
-          // The compass points at PLACES, and the fleet is not one — it is a
-          // landmark on open water. Nothing to raise here now: what tells you
-          // a crew is back is the icon at the top and the badge on the boats.
-          waitingAt={() => 0} />
+          // The harbour IS a place now, so the compass can raise it again when
+          // a crew is in — which is the whole reason the compass sorts by this.
+          waitingAt={id => (id === 'trawl_fleet' ? trawlsReady : 0)} />
       )}
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
@@ -4063,7 +4068,6 @@ hullRef={hullRefFor(t.key)} />
           if (nearFinn && !finnTalk) { vibrate(14); void hailFinn(); return true }
           if (nearTrader && !hailing) { vibrate(14); setHailing(nearTrader); return true }
           if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
-          if (nearFleet && !trawlOpen) { vibrate(14); setTrawlOpen(true); return true }
           if (nearBottle) { take(nearBottle); return true }
           if (nearIsle) { void land(nearIsle); return true }
           const here = nearRef.current
@@ -4081,7 +4085,7 @@ hullRef={hullRefFor(t.key)} />
           moving them onto the water was that a crew is a place you sail to.
           What this fixes is not knowing, from anywhere, whether it is worth
           the sail yet. */}
-      {(trawlEndsAt.length > 0 || trawlsReady > 0) && (
+      {(trawlsOut.length > 0 || trawlsReady > 0) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setTrawlsPeek(true) }}
@@ -4117,9 +4121,10 @@ hullRef={hullRefFor(t.key)} />
 
       {trawlsPeek && (() => {
         const now = Date.now()
-        const rows = trawlEndsAt
-          .map(t => new Date(t).getTime())
-          .sort((a, b) => a - b)
+        // Soonest back first, so the top of the list is the next reason to sail.
+        const rows = trawlsOut
+          .map(t => ({ zone: t.zone, end: new Date(t.endsAt).getTime() }))
+          .sort((a, b) => a.end - b.end)
         return (
           <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
             <PopupShell open onClose={() => setTrawlsPeek(false)}>
@@ -4149,8 +4154,8 @@ hullRef={hullRefFor(t.key)} />
                     <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(190,212,228,0.6)', lineHeight: 1.55 }}>
                       No crews out. Sail to the fleet to send one.
                     </p>
-                  ) : rows.map((end, i) => {
-                    const left = end - now
+                  ) : rows.map((r, i) => {
+                    const left = r.end - now
                     const back = left <= 0
                     const mins = Math.max(0, Math.ceil(left / 60_000))
                     return (
@@ -4158,9 +4163,14 @@ hullRef={hullRefFor(t.key)} />
                         display: 'flex', alignItems: 'baseline', gap: 10,
                         padding: '0.42rem 0', borderBottom: '1px solid rgba(255,255,255,0.07)',
                       }}>
-                        <span className="font-karla font-600" style={{ flex: 1, fontSize: '0.84rem', color: '#e6e2dc' }}>
-                          Crew {i + 1}
-                        </span>
+                        {/* THE WATER THEY ARE IN. "Crew 1" told you nothing you
+                            could act on; the zone is the whole reason you chose
+                            to send them there. */}
+                        <span className="font-cinzel font-700" style={{
+                          flex: 1, minWidth: 0, fontSize: '0.88rem',
+                          color: back ? '#f6e6bd' : '#e6e2dc',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>{r.zone}</span>
                         <span className="font-karla font-700" style={{
                           fontSize: '0.84rem', fontVariantNumeric: 'tabular-nums',
                           color: back ? '#f0c040' : 'rgba(190,212,228,0.6)',
@@ -4172,14 +4182,27 @@ hullRef={hullRefFor(t.key)} />
                   })}
                 </div>
 
-                <p className="font-karla font-600" style={{
-                  fontSize: '0.78rem', color: trawlsReady > 0 ? '#f0c040' : 'rgba(190,212,228,0.55)',
-                  marginTop: 10, textAlign: 'center', lineHeight: 1.5,
+                {/* WHERE THE WORK HAPPENS, said plainly and every time. This
+                    panel can do nothing but tell you things, and a readout that
+                    does not say where the buttons are is a dead end. */}
+                <div style={{
+                  marginTop: 12, padding: '0.7rem 0.8rem', borderRadius: 12,
+                  background: 'rgba(240,192,64,0.09)',
+                  border: '1px solid rgba(240,192,64,0.3)',
                 }}>
-                  {trawlsReady > 0
-                    ? 'Sail to the fleet to bring them in.'
-                    : 'Sending and collecting both happen at the fleet.'}
-                </p>
+                  <p className="font-cinzel font-700" style={{
+                    fontSize: '0.9rem', color: '#f0c040', textAlign: 'center', lineHeight: 1.35,
+                  }}>
+                    {trawlsReady > 0 ? 'Sail to the trawl fleet to bring them in' : 'Sail to the trawl fleet to send a crew'}
+                  </p>
+                  <p className="font-karla font-600" style={{
+                    fontSize: '0.75rem', color: 'rgba(190,212,228,0.6)', textAlign: 'center',
+                    marginTop: 3, lineHeight: 1.45,
+                  }}>
+                    The boats moored south of the Tally House. Sending and
+                    collecting both happen there.
+                  </p>
+                </div>
               </div>
             </PopupShell>
           </div>
@@ -4992,9 +5015,8 @@ const ReefLine = memo(function ReefLine() {
   return <>{REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}</>
 })
 
-const LandmarkField = memo(function LandmarkField({ waiting }: { waiting: number }) {
-  // Only the labelled mark can carry a count, and there is exactly one of those.
-  return <>{LANDMARKS.map((m, i) => <SeaMark key={i} m={m} i={i} waiting={m.label ? waiting : 0} />)}</>
+const LandmarkField = memo(function LandmarkField() {
+  return <>{LANDMARKS.map((m, i) => <SeaMark key={i} m={m} i={i} />)}</>
 })
 
 /**
@@ -5011,10 +5033,6 @@ const LandmarkField = memo(function LandmarkField({ waiting }: { waiting: number
  * effect.
  */
 const SUBMERGE: Record<string, { line: number; keep: number }> = {
-  // Moored boats. Barely under at all — a hull floats, it does not wade — but
-  // "barely" is not "not at all": with a hard edge at the waterline the raft
-  // read as sitting ON the sea rather than in it.
-  'trawl-fleet': { line: 88, keep: 0.26 },
   // A float on a chain, riding low.
   buoy:     { line: 66, keep: 0.30 },
   // Aground and going nowhere. Half of it is under.
@@ -5229,12 +5247,9 @@ function recallPos(): { x: number; y: number } | null {
   } catch { return null }
 }
 
-const SeaMark = memo(function SeaMark({ m, i, waiting }: {
-  m: { art: string; x: number; y: number; size: number; sway?: 'bob' | 'rock'; label?: string }
+const SeaMark = memo(function SeaMark({ m, i }: {
+  m: { art: string; x: number; y: number; size: number; sway?: 'bob' | 'rock' }
   i: number
-  /** Crews standing on the deck waiting to be collected. Only the fleet ever
-   *  has any; every other mark is passed 0. */
-  waiting?: number
 }) {
   const kind = markKind(m.art)
   const sub = SUBMERGE[kind]
@@ -5273,35 +5288,6 @@ const SeaMark = memo(function SeaMark({ m, i, waiting }: {
           without clobbering that. One element trying to do both means the
           animation overwrites the counter-squash and it lies flat the moment it
           starts moving. */}
-      {/* THE NAME, for the few marks that have one. Counter-squashed like the
-          islands' captions: it rides in the world layer so it travels with the
-          thing it names, but a label left on the plane renders 58% tall and
-          unreadable. A SIBLING of the sprite wrapper, never a child of it —
-          that wrapper already carries the counter-squash and nesting a second
-          one inside it doubles the correction. */}
-      {m.label && (
-        <div aria-hidden style={{
-          position: 'absolute', left: 0, top: 0,
-          transform: `translate(-50%, 10px) scaleY(${1 / GROUND})`,
-          transformOrigin: 'top center',
-          whiteSpace: 'nowrap', pointerEvents: 'none',
-        }}>
-          {/* THE COUNT, above the name, in the same words the islands use.
-              "2 crew back" is a thing that happened; "2" is a badge you have to
-              remember the meaning of. */}
-          {(waiting ?? 0) > 0 && (
-            <p className="font-karla font-700 uppercase" style={{
-              fontSize: '0.8rem', letterSpacing: '0.1em', marginBottom: 2,
-              color: '#f0c040', textShadow: '0 1px 10px rgba(0,0,0,0.95)',
-            }}>{waiting} crew back</p>
-          )}
-          <p className="font-cinzel font-700" style={{
-            fontSize: '1.02rem', color: (waiting ?? 0) > 0 ? '#f6e6bd' : '#dfeaf2',
-            textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 26px rgba(0,0,0,0.7)',
-          }}>{m.label}</p>
-        </div>
-      )}
-
       <div style={{
         position: 'absolute', left: 0, top: 0, width: m.size,
         transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,

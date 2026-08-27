@@ -198,6 +198,42 @@ export const PLACES: Place[] = [
     ],
   },
   {
+    // ── THE TRAWL HARBOUR ────────────────────────────────────────────────
+    //
+    // Where a crew is sent out and brought back in. It was three boats rafted
+    // together on open water, which read as scenery you happened to be able to
+    // use; an island reads as somewhere to go, and the chart already knows how
+    // to draw a place, label it, moor you at it and say when something is
+    // waiting there.
+    //
+    // POSITION IS TWO CONSTRAINTS AT ONCE, and they pull against each other.
+    //
+    // RINGS. Every port's go-ashore prompt reaches r + MOOR, so two islands
+    // need r1 + r2 + 840 between their centres or both prompts come up and one
+    // of them loses. Against the Tally House that is 1,315 minimum — there is
+    // no radius at all that lets this sit closer.
+    //
+    // FINN. His haunts are derived by rejecting everything inside a keep-out,
+    // and a new island adds one of 1,410. Dropped in the wrong water it eats
+    // the Shallows' standing room and his consecutive haunts collapse onto each
+    // other; scripts/check-finn caught exactly that at four of the positions
+    // tried here, including the one that read best on the rings alone.
+    //
+    // Due west of the Tally House satisfies both: 1,500 from it with 185 of
+    // ring clearance, 1,609 from the nearest isle, 3,118 from the origin so it
+    // is still Shallows water, and check-finn green.
+    //
+    // `href` is never followed — the chart intercepts this island by id and
+    // opens the trawl panel where you float. It is present because a Place has
+    // one, and /sea is the honest answer to "where does this go".
+    id: 'trawl_fleet', name: 'The Trawl Harbour', blurb: 'Send a crew, bring them in',
+    href: '/sea', x: -3000, y: -850, r: 210, art: '/sea/trawl-harbour.png',
+    kind: 'port', minLevel: 0,
+    buildings: [
+      { art: '/sea/trawl-harbour.png', x: 50, y: 55, scale: 0.42 },
+    ],
+  },
+  {
     // On the way OUT rather than a detour, so you pass it heading for water.
     id: 'shipyard', name: 'The Shipyard', blurb: 'Loadout, rack and upgrades',
     href: '/shipyard', x: 900, y: -900, r: 265, art: '/sea/shipyard.png',
@@ -270,48 +306,10 @@ export const PLACES: Place[] = [
  * box for an offset to be relative to, and one flat list is simpler to place, to
  * verify and to render than five nested ones.
  */
-/**
- * WHERE THE TRAWL FLEET LIES, and how close you have to be to hail it.
- *
- * `range` is wider than a trader's HAIL_RANGE of 190 because this is a
- * three-boat raft rather than one hull: 190 from the centre would put you
- * inside the fleet before it noticed you.
- */
-export const TRAWL_FLEET = { x: -1500, y: 200, range: 300 }
-
 export const LANDMARKS: {
   art: string; x: number; y: number; size: number
   solid?: boolean; sway?: 'bob' | 'rock'
-  /** Named on the chart. Almost nothing here is: a buoy is a buoy and a rock is
-   *  a rock. The fleet gets one because it is somewhere you GO, and a place you
-   *  are meant to steer to has to say what it is from across the water. */
-  label?: string
 }[] = [
-  // ── THE TRAWL FLEET ──────────────────────────────────────────────────
-  // Three smacks rafted together in the Shallows, a short sail south-east of
-  // the Mainland. Sending a crew out used to mean opening a page on an island;
-  // now it is a place on the water you steer to, and the boats you are sending
-  // are the thing you are looking at when you do it.
-  //
-  // ON THE TALLY HOUSE'S SIDE, due south of it, so the fleet is what you pass
-  // on the way in. Crew work belongs together: you send them from the water and
-  // you settle up on the island a short sail north.
-  //
-  // Placed by measurement, not by eye. The number that decided the exact spot
-  // was not the distance to anything — it was whether the two PROMPTS can ever
-  // be up at once. The Tally House's go-ashore reaches y=-165; at y=100 the
-  // fleet's reached y=-200, so there was a 35px band where both were live and
-  // one of them had to lose. At y=200 they miss each other by 65px, so every
-  // approach offers exactly one thing.
-  //
-  // Also 1,050 from the Tally House, 1,014 clear of the Mainland, and 1,513
-  // from the origin so it still sits inside the Shallows (inner 1,400).
-  // SOLID. You pull ALONGSIDE a raft of moored boats; sailing through them is
-  // the one thing that would say they are a picture rather than a place. The
-  // hull stops at size*0.3 + HULL = 139 from the centre, well inside the 300
-  // where the prompt is already up, so you are always offered the trawl before
-  // you are stopped by the boats.
-  { art: '/sea/trawl-fleet.png', x: TRAWL_FLEET.x, y: TRAWL_FLEET.y, size: 280, sway: 'bob', solid: true, label: 'Trawls' },
   { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
   { art: '/sea/islet.png', x:   1003, y:   2620, size: 210, solid: true },
   { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },
