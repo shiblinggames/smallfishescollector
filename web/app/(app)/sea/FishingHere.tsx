@@ -1353,6 +1353,9 @@ export default function FishingHere({
         alignItems: 'center', justifyContent: 'center',
         maxWidth: 448, margin: '0 auto',
         padding: '0 1rem', gap: 10,
+        // THE FRAME THE ACTION ROW PINS TO. Nothing else in here is positioned;
+        // this exists only so the row below can leave the flow entirely.
+        position: 'relative',
       }}>
         {/* ONE AnimatePresence, mode="wait", around all three.
             They were separate: the dial had its own AnimatePresence and the
@@ -1573,14 +1576,25 @@ export default function FishingHere({
             but if that ever changes they sit side by side, each taking half,
             rather than one of them re-inventing a row somewhere else.
 
-            It renders nothing at all when neither applies. The content area is
-            flex:1 justified to its bottom edge, so a row that reserved space
-            unconditionally would push the dial up by its height for every
-            player who owns neither item. */}
+            OUT OF THE FLOW, and that is the whole point. This area is a
+            centred column, so ANY child that appears re-centres the column and
+            drags the dial (or the card) with it — which is the reel visibly
+            jumping the moment a skip becomes available and jumping back when it
+            is used. Pinned to the bottom of the frame, the row costs zero
+            layout space, so what it does or does not contain cannot move the
+            instrument you are aiming with.
+
+            Compact on purpose too. These are offers, not the task: the dial is
+            the thing being looked at, and a pair of full-width slabs under it
+            competed with it for attention. */}
         {((tideTurner.has && phase === 'hooked' && skipsLeft > 0) || (wormhole && phase === 'result')) && (
           <div data-no-steer style={{
-            display: 'flex', gap: 8, marginTop: 10, width: '100%', maxWidth: 330,
-            marginInline: 'auto', pointerEvents: 'auto',
+            position: 'absolute', left: 0, right: 0, bottom: 0,
+            display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap',
+            // The row itself catches nothing; each pill opts back in. Otherwise
+            // an invisible full-width band sits over the water and every tap
+            // near the bottom of the dial stops steering the boat.
+            pointerEvents: 'none',
           }}>
             {/* THE LABEL SAYS SKIP, NOT "throw it back". Both screens offer
                 this at the same moment — the dial is up and the fish is not
@@ -1593,8 +1607,9 @@ export default function FishingHere({
               <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
                 className="font-cinzel font-700"
                 style={{
-                  flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.96rem',
-                  color: '#cdbdf8',
+                  pointerEvents: 'auto',
+                  padding: '0.4rem 0.85rem', borderRadius: 999, fontSize: '0.816rem',
+                  color: '#cdbdf8', whiteSpace: 'nowrap',
                   // AN OPAQUE FLOOR, like its neighbour. A translucent wash
                   // over open water lets the sea read straight through the
                   // label — the house rule for anything drawn on the world.
@@ -1618,14 +1633,15 @@ export default function FishingHere({
                 }}
                 className="font-cinzel font-700"
                 style={{
-                  flex: 1, padding: '0.6rem', borderRadius: 10,
-                  fontSize: '0.96rem', color: '#f0ddff',
+                  pointerEvents: 'auto',
+                  padding: '0.4rem 0.85rem', borderRadius: 999,
+                  fontSize: '0.816rem', color: '#f0ddff', whiteSpace: 'nowrap',
                   background: 'linear-gradient(180deg, rgba(120,70,170,0.5) 0%, rgba(60,32,92,0.62) 100%), rgba(10,8,18,0.96)',
                   border: '1px solid rgba(192,132,252,0.6)',
                   boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
                   cursor: 'pointer',
                 }}>
-                Wormhole · reroll this catch
+                Wormhole · Reroll
               </button>
             )}
           </div>
