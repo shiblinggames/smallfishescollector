@@ -21,9 +21,9 @@ export type Callout = {
 }
 
 export const CALLOUTS: Callout[] = [
-  { slot: 'rod',   label: 'Rod',   at: { x: 20, y: 25.5 }, chip: { x: 13, y: 80 } },
-  { slot: 'hat',   label: 'Hat',   at: { x: 50, y: 18 },   chip: { x: 40, y: 80 } },
-  { slot: 'skin',  label: 'Skin',  at: { x: 50, y: 34.5 }, chip: { x: 68, y: 80 } },
-  { slot: 'boat',  label: 'Boat',  at: { x: 48, y: 64.5 }, chip: { x: 26, y: 93 } },
-  { slot: 'pet',   label: 'Pet',   at: { x: 74, y: 52.5 }, chip: { x: 66, y: 93 } },
+  { slot: 'rod',   label: 'Rod',   at: { x: 37.8, y: 32.8 }, chip: { x: 44.2, y: 13 } },
+  { slot: 'hat',   label: 'Hat',   at: { x: 64.4, y: 24.5 }, chip: { x: 86.8, y: 14.1 } },
+  { slot: 'skin',  label: 'Skin',  at: { x: 68.5, y: 41.8 }, chip: { x: 47.8, y: 88 } },
+  { slot: 'boat',  label: 'Boat',  at: { x: 56.2, y: 64.9 }, chip: { x: 23.4, y: 81.2 } },
+  { slot: 'pet',   label: 'Pet',   at: { x: 81.4, y: 55.7 }, chip: { x: 74.1, y: 84.5 } },
 ]
