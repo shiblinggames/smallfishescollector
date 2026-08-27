@@ -14,11 +14,12 @@
 // Claiming uses the fishing page's own actions. Two surfaces, one payout — the
 // same rule as the collection drawer and the trawl panel.
 
-import { useState, useTransition } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useState, useTransition } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { claimDailyReward, claimDailySweep } from '../fishing/dailyChallengeActions'
 import { DAILY_SWEEP_GEMS, type DailyChallengeState } from '@/lib/dailyChallenges'
 import { vibrate } from '@/lib/haptics'
+import { flyCoinsToPurse } from '@/lib/coinFly'
 
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
@@ -37,6 +38,28 @@ export default function DailyOrders({ initial, canClaim = true }: {
 }) {
   const [state, setState] = useState(initial)
   const [busy, setBusy] = useState<number | 'sweep' | null>(null)
+  /**
+   * THE MOMENT A CLAIM LANDS.
+   *
+   * Claiming was a button that turned into the word "Claimed". The coin was
+   * real and the row went quiet, which makes finishing a day's work feel like
+   * dismissing a notification.
+   *
+   * `paid` is which row just paid and what it paid. It drives a light sweeping
+   * across the row, the amount rising off it, and coins actually travelling to
+   * the purse in the nav — the same flight every other payout in the game uses,
+   * so this reads as being paid rather than as a local animation.
+   */
+  const [paid, setPaid] = useState<{ i: number | 'sweep'; amount: number; gems?: boolean } | null>(null)
+  /**
+   * The global prefers-reduced-motion rule in globals.css only reaches CSS
+   * animations and transitions. Framer drives these from JS, so the one thing
+   * here that never stops on its own — the pulse on a button holding money —
+   * has to ask for itself. The payout flourishes still play: they are a single
+   * short response to something the captain just did, which is the kind of
+   * motion the preference is not asking anyone to remove.
+   */
+  const stillness = useReducedMotion()
   const [err, setErr] = useState('')
   const [, startTransition] = useTransition()
 
@@ -47,18 +70,37 @@ export default function DailyOrders({ initial, canClaim = true }: {
   const claimedAll = state.claimed.slice(0, state.challenges.length).every(Boolean)
   const canSweep = allDone && claimedAll && !state.sweepClaimed
 
-  function claim(i: number) {
+  function claim(i: number, from?: DOMRect) {
     if (busy !== null) return
+    const c = state?.challenges[i]
     setBusy(i); setErr(''); vibrate(10)
     startTransition(async () => {
       const res = await claimDailyReward(i as 0 | 1 | 2 | 3)
       setBusy(null)
       if ('error' in res) { setErr(res.error); return }
-      vibrate([0, 20, 40, 30])
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-      setState(s => (s ? { ...s, claimed: s.claimed.map((c, k) => (k === i ? true : c)) } : s))
+      // THE COIN LEAVES THE ROW AND ARRIVES IN THE PURSE. Fired from where the
+      // button actually was, so it starts under the thumb that pressed it.
+      // flyCoinsToPurse carries its own haptic and pops the nav pill on
+      // arrival, which is what makes the number at the top feel earned rather
+      // than merely different.
+      if (from && !c?.crateReward) {
+        flyCoinsToPurse({ x: from.left + from.width / 2, y: from.top + from.height / 2 }, c?.reward ?? 0)
+      } else {
+        vibrate([0, 20, 40, 30])
+      }
+      setPaid({ i, amount: c?.reward ?? 0 })
+      setState(s => (s ? { ...s, claimed: s.claimed.map((cl, k) => (k === i ? true : cl)) } : s))
     })
   }
+
+  /** Clears the payout flourish once it has played. One timer, replaced each
+   *  time, so claiming three in a row does not leave three of them running. */
+  useEffect(() => {
+    if (!paid) return
+    const t = setTimeout(() => setPaid(null), 1500)
+    return () => clearTimeout(t)
+  }, [paid])
 
   function sweep() {
     if (busy !== null) return
@@ -67,8 +109,9 @@ export default function DailyOrders({ initial, canClaim = true }: {
       const res = await claimDailySweep()
       setBusy(null)
       if ('error' in res) { setErr(res.error); return }
-      vibrate([0, 25, 45, 35])
+      vibrate([0, 25, 45, 35, 20, 60])
       window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
+      setPaid({ i: 'sweep', amount: DAILY_SWEEP_GEMS, gems: true })
       setState(s => (s ? { ...s, sweepClaimed: true } : s))
     })
   }
@@ -105,7 +148,12 @@ export default function DailyOrders({ initial, canClaim = true }: {
               padding: '0.7rem 0.8rem', borderRadius: 12,
               background: 'rgba(255,255,255,0.035)',
               border: `1px solid ${isDone && !isClaimed ? `${GREEN}55` : 'rgba(255,255,255,0.09)'}`,
-              opacity: isClaimed ? 0.55 : 1,
+              // A CLAIMED ROW IS SETTLED, NOT SWITCHED OFF. It used to drop to
+              // 55% opacity, which is how a DISABLED control looks — the row
+              // read as unavailable rather than as done. Finished work should
+              // look finished: the tint stays, the text stays legible, and the
+              // tick is what says it is behind you.
+              opacity: isClaimed ? 0.82 : 1,
             }}>
               {/* THE BAR IS THE BACKGROUND, not a separate track under the text.
                   A row that fills as you fish reads as progress at a glance;
@@ -117,6 +165,40 @@ export default function DailyOrders({ initial, canClaim = true }: {
                   : `linear-gradient(90deg, ${accent}1c, ${accent}0c)`,
                 transition: 'width 400ms ease-out',
               }} />
+              {/* ── THE PAYOUT, ACROSS THE ROW ──────────────────────────
+                  A band of light travelling left to right, once. It is the row
+                  itself acknowledging the claim rather than a badge appearing
+                  beside it, which is the difference between the game reacting
+                  and the game reporting. */}
+              <AnimatePresence>
+                {paid?.i === i && (
+                  <motion.div key="sweep" aria-hidden
+                    initial={{ x: '-110%' }} animate={{ x: '110%' }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.85, ease: [0.22, 0.61, 0.36, 1] }}
+                    style={{
+                      position: 'absolute', inset: 0, pointerEvents: 'none',
+                      background: `linear-gradient(105deg, transparent 0%, ${GOLD}00 30%, ${GOLD}3d 50%, ${GOLD}00 70%, transparent 100%)`,
+                    }} />
+                )}
+              </AnimatePresence>
+
+              {/* THE AMOUNT, LEAVING. It rises and fades from the right of the
+                  row, where the button was, so the eye follows it up and out
+                  toward the purse the coins are flying to. */}
+              <AnimatePresence>
+                {paid?.i === i && paid.amount > 0 && (
+                  <motion.span key="amt" aria-hidden className="font-cinzel font-700"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: [0, 1, 1, 0], y: -26 }}
+                    transition={{ duration: 1.3, times: [0, 0.12, 0.6, 1], ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute', right: 14, top: '50%', zIndex: 2,
+                      fontSize: '1.05rem', color: GOLD, pointerEvents: 'none',
+                      textShadow: `0 0 14px ${GOLD}99, 0 2px 8px rgba(0,0,0,0.9)`,
+                    }}>+{paid.amount.toLocaleString()} ⟡</motion.span>
+                )}
+              </AnimatePresence>
+
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="font-karla font-700 block" style={{
@@ -139,12 +221,36 @@ export default function DailyOrders({ initial, canClaim = true }: {
                     color: isClaimed ? '#8a8578' : isDone ? GREEN : 'rgba(255,255,255,0.32)',
                   }}>{isClaimed ? 'Claimed' : isDone ? 'Ready' : ''}</span>
                 ) : isClaimed ? (
-                  <span className="font-karla font-700 uppercase" style={{
-                    flexShrink: 0, fontSize: '0.66rem', letterSpacing: '0.1em',
-                    color: 'rgba(255,255,255,0.3)',
-                  }}>Claimed</span>
+                  // THE TICK, and it draws itself the first time. A row that
+                  // simply reads "Claimed" the instant you press is a receipt;
+                  // one that gets ticked in front of you is an acknowledgement.
+                  <motion.span
+                    initial={paid?.i === i ? { scale: 0.4, opacity: 0 } : false}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 18, delay: 0.1 }}
+                    style={{
+                      flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `${GREEN}1f`, border: `1px solid ${GREEN}66`,
+                    }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GREEN}
+                      strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-label="Claimed">
+                      <motion.path d="M4 12.5l5.5 5.5L20 7"
+                        initial={paid?.i === i ? { pathLength: 0 } : false}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 0.34, delay: 0.16, ease: 'easeOut' }} />
+                    </svg>
+                  </motion.span>
                 ) : isDone ? (
-                  <button onClick={() => claim(i)} disabled={busy !== null}
+                  // BREATHING WHILE IT WAITS. Subtle and slow — the house rule
+                  // is that juice stays local and quiet — but a button holding
+                  // money should not look identical to one that is not.
+                  <motion.button
+                    animate={busy === null && !stillness ? { scale: [1, 1.035, 1] } : { scale: 1 }}
+                    transition={busy === null && !stillness
+                      ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+                      : { duration: 0.15 }}
+                    onClick={e => claim(i, e.currentTarget.getBoundingClientRect())} disabled={busy !== null}
                     className="font-karla font-700 uppercase tracking-[0.08em]"
                     style={{
                       flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 9,
@@ -153,7 +259,7 @@ export default function DailyOrders({ initial, canClaim = true }: {
                       opacity: busy === i ? 0.5 : 1,
                     }}>
                     {busy === i ? '…' : 'Claim'}
-                  </button>
+                  </motion.button>
                 ) : (
                   <span className="font-karla font-700" style={{
                     flexShrink: 0, fontSize: '0.78rem', color: 'rgba(190,212,228,0.4)',
@@ -181,6 +287,28 @@ export default function DailyOrders({ initial, canClaim = true }: {
             }}>
             {busy === 'sweep' ? '…' : `Clean sweep · ${DAILY_SWEEP_GEMS} ◆`}
           </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* THE SWEEP'S OWN MOMENT. Gems are the rarer currency and the sweep is
+          the day's last beat, so it gets more than a line of text: the amount
+          rises out of the middle of the panel with a violet bloom behind it.
+          Once, then it is gone — the standing line below is what remains. */}
+      <AnimatePresence>
+        {paid?.i === 'sweep' && (
+          <motion.div key="sweepfx" aria-hidden
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: [0, 1, 1, 0], scale: 1.06, y: -22 }}
+            transition={{ duration: 1.4, times: [0, 0.12, 0.62, 1], ease: 'easeOut' }}
+            style={{
+              position: 'relative', height: 0, display: 'flex',
+              alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+            }}>
+            <span className="font-cinzel font-700" style={{
+              position: 'absolute', fontSize: '1.5rem', color: '#e9d5ff', whiteSpace: 'nowrap',
+              textShadow: '0 0 22px rgba(167,139,250,0.9), 0 2px 10px rgba(0,0,0,0.9)',
+            }}>+{DAILY_SWEEP_GEMS} ◆</span>
+          </motion.div>
         )}
       </AnimatePresence>
 
