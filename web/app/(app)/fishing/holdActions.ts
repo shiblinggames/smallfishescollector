@@ -37,3 +37,35 @@ export async function upgradeFishHold(): Promise<
 
   return { ok: true, newTier, doubloons: newDoubloons }
 }
+
+/**
+ * WHAT IS ACTUALLY IN THE HOLD.
+ *
+ * Only the quantities. The names, the artwork and the sell values are already
+ * on the client — every screen that shows fish has the species table — so
+ * sending them again would be paying twice for something already in memory.
+ *
+ * The VALUE is deliberately not computed here either. What a hold is worth
+ * depends on who is buying: a salter at sea pays a fraction, a quick-sell lane
+ * pays another, the market ashore pays full. A single number returned from the
+ * server would have to pick one of those and would then be wrong everywhere
+ * else, so the client shows the market value and names the rates beside it.
+ */
+export async function holdContents(): Promise<
+  { ok: true; rows: { fishId: number; qty: number }[] } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('fish_inventory')
+    .select('fish_id, quantity')
+    .eq('user_id', user.id)
+
+  const rows = ((data ?? []) as { fish_id: number; quantity: number }[])
+    .filter(r => r.quantity > 0)
+    .map(r => ({ fishId: r.fish_id, qty: r.quantity }))
+  return { ok: true, rows }
+}

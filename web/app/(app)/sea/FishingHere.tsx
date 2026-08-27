@@ -63,6 +63,10 @@ import { vibrate } from '@/lib/haptics'
 import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
 import type { FishSizeTier } from '@/lib/fishSize'
 import { getBait } from '@/lib/bait'
+import { getHook } from '@/lib/hooks'
+import { getReel } from '@/lib/reels'
+import { getLine } from '@/lib/lines'
+import { holdContents } from '../fishing/holdActions'
 import FishCollectionDrawer from '@/app/(app)/fishing/FishCollectionDrawer'
 import { claimZoneReward, prestigeZone, releaseAncient } from '@/app/(app)/fishing/actions'
 import { markFinnRevealSeen } from '@/app/(app)/fishing/finnActions'
@@ -97,7 +101,7 @@ import { HELM_D, HELM_BOTTOM } from './helm'
  * because this column has no `gap` — every band owns its own spacing.
  */
 const SECONDARY_BAND = 8 + 26           // margin + fixed height (Tide Turner / auto)
-const TACKLE_BAR = 6 + 34               // margin + fixed height (bait + hold)
+const TACKLE_BAR = 6 + 40               // margin + fixed height (the four menus)
 const BELOW_CAST_SLOT = SECONDARY_BAND + TACKLE_BAR
 const ACTION_PAD_BOTTOM = HELM_BOTTOM - BELOW_CAST_SLOT
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
@@ -197,9 +201,123 @@ export type FishingMods = {
   rodPerfectXpMult: number
   hookTier: number
   linePenalty: number
+  /** Carried so the Loadout sheet can NAME the reel and the line. The numbers
+   *  above drive the dial; a captain reading their kit wants "Bronze Reel", not
+   *  a needle multiplier of 0.92. */
+  reelTier: number
+  lineTier: number
   rodCatchBonus: number
   rodPerfectBonus: number
   fishingLevel: number
+}
+
+/**
+ * THE SHEET the bottom menus open into.
+ *
+ * Three of the four now open a panel, and the backdrop, the card, the spring,
+ * the close button and the title were about to exist in triplicate. One shell
+ * means they cannot drift into three slightly different modals, which is what
+ * always happens otherwise.
+ *
+ * It scrolls internally rather than growing: the Loadout can be a long read on
+ * a full rack and the hold can hold thirty species, and a sheet taller than the
+ * screen has no way out on a phone.
+ */
+function Sheet({ title, blurb, onClose, children }: {
+  title: string
+  blurb?: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <motion.div data-no-steer
+      onClick={e => { e.stopPropagation(); onClose() }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      style={{
+        position: 'absolute', inset: 0, zIndex: 34, pointerEvents: 'auto',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        padding: '1.25rem', background: 'rgba(2,8,14,0.62)', backdropFilter: 'blur(3px)',
+      }}>
+      <motion.div onClick={e => e.stopPropagation()}
+        initial={{ y: 26 }} animate={{ y: 0 }} exit={{ y: 20 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+        style={{
+          position: 'relative', width: '100%', maxWidth: 380,
+          maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
+          borderRadius: 18, padding: '1rem',
+          background: 'rgba(10,16,22,0.98)',
+          border: '1px solid rgba(180,214,232,0.28)',
+          boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+        }}>
+        {/* OUT. Tapping the backdrop closed it, which is invisible — a gesture
+            nobody is told about is not a way out. */}
+        <button type="button" onClick={e => { e.stopPropagation(); onClose() }}
+          aria-label="Close" title="Close"
+          style={{
+            position: 'absolute', top: 10, right: 10,
+            width: 28, height: 28, borderRadius: '50%', padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+            color: '#cfcabf', cursor: 'pointer', zIndex: 1,
+          }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f2ead8', paddingRight: 34 }}>{title}</p>
+        {blurb && (
+          <p className="font-karla" style={{ fontSize: '0.888rem', color: '#9fb4c2', marginTop: 3, lineHeight: 1.55 }}>{blurb}</p>
+        )}
+        {children}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+/** A section heading inside a sheet. */
+function SheetLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-karla font-700 uppercase" style={{
+      fontSize: '0.66rem', letterSpacing: '0.14em',
+      color: 'rgba(190,212,228,0.5)', marginTop: 14,
+    }}>{children}</p>
+  )
+}
+
+/** One line of the kit readout: what it is on the left, what it does on the
+ *  right. Right-aligned and tabular so the numbers form a column. */
+function StatRow({ k, v, tone }: { k: string; v: string; tone?: 'good' | 'warn' }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', gap: 10,
+      padding: '0.36rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)',
+    }}>
+      <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.816rem', color: 'rgba(190,212,228,0.72)' }}>{k}</span>
+      <span className="font-karla font-700" style={{
+        fontSize: '0.864rem', fontVariantNumeric: 'tabular-nums',
+        color: tone === 'good' ? '#7fd6a0' : tone === 'warn' ? '#e8c98a' : '#f2ead8',
+      }}>{v}</span>
+    </div>
+  )
+}
+
+/** One of the four menus along the bottom. Equal quarters on purpose: they are
+ *  peers, and a row where one is wider reads as one being more important. */
+const MENU_BTN: React.CSSProperties = {
+  flex: 1, minWidth: 0, height: 40,
+  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+  gap: 1, padding: '0 0.35rem', borderRadius: 10,
+  background: 'rgba(6,14,22,0.86)',
+  border: '1px solid rgba(255,255,255,0.16)',
+  cursor: 'pointer', position: 'relative',
+}
+const MENU_KEY: React.CSSProperties = {
+  fontSize: '0.57rem', letterSpacing: '0.12em',
+  color: 'rgba(190,212,228,0.5)', lineHeight: 1,
+}
+const MENU_VAL: React.CSSProperties = {
+  fontSize: '0.75rem', color: '#dfeaf2', lineHeight: 1.15,
+  maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 }
 
 export default function FishingHere({
@@ -435,6 +553,12 @@ export default function FishingHere({
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [tackleOpen, setTackleOpen] = useState(false)
+  const [loadoutOpen, setLoadoutOpen] = useState(false)
+  /** The hold's CONTENTS, fetched when the sheet opens rather than held live.
+   *  What is aboard changes once per catch and is read about once a session, so
+   *  polling it would be paying constantly for a number nobody is looking at. */
+  const [holdOpen, setHoldOpen] = useState(false)
+  const [holdRows, setHoldRows] = useState<{ fishId: number; qty: number }[] | null>(null)
 
   // ── THE COLLECTION LOG ─────────────────────────────────────────────────
   // The drawer is the fishing page's own, extracted. Everything it mutates is
@@ -1733,144 +1857,225 @@ export default function FishingHere({
           />
         )}
 
+        {/* ── BAIT ────────────────────────────────────────────────────
+            The rack used to live in here too, under a "Tackle box" title, which
+            made one sheet the answer to two different questions. Rods moved to
+            the Loadout, where the rest of the kit is. */}
         {tackleOpen && (
-          <motion.div key="tackle" data-no-steer
-            onClick={e => { e.stopPropagation(); setTackleOpen(false) }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: 'absolute', inset: 0, zIndex: 34, pointerEvents: 'auto',
-              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-              padding: '1.25rem', background: 'rgba(2,8,14,0.62)', backdropFilter: 'blur(3px)',
-            }}>
-            <motion.div onClick={e => e.stopPropagation()}
-              initial={{ y: 26 }} animate={{ y: 0 }} exit={{ y: 20 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-              style={{
-                position: 'relative',
-                width: '100%', maxWidth: 380, borderRadius: 18, padding: '1rem',
-                background: 'rgba(10,16,22,0.98)',
-                border: '1px solid rgba(180,214,232,0.28)',
-                boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
-              }}>
-              {/* OUT. Tapping the backdrop closed it, which is invisible — a
-                  gesture nobody is told about is not a way out. */}
-              <button type="button" onClick={e => { e.stopPropagation(); setTackleOpen(false) }}
-                aria-label="Close" title="Close"
-                style={{
-                  position: 'absolute', top: 10, right: 10,
-                  width: 28, height: 28, borderRadius: '50%', padding: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
-                  color: '#cfcabf', cursor: 'pointer',
-                }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f2ead8', paddingRight: 34 }}>Tackle box</p>
-              <p className="font-karla" style={{ fontSize: '0.888rem', color: '#9fb4c2', marginTop: 3 }}>
-                A wider catch zone is an easier reel. Nothing else changes.
-              </p>
-              {/* ── THE RACK ─────────────────────────────────────────
-                  Only what you brought. One rod is not a choice, so the whole
-                  section stays out of the way until there is something to
-                  choose between — and says where the choice comes from, because
-                  "why can I only see one rod" is otherwise a mystery solved
-                  three islands away. */}
-              {rack.length > 1 ? (
-                <>
-                  <p className="font-karla font-700 uppercase" style={{
-                    fontSize: '0.66rem', letterSpacing: '0.14em',
-                    color: 'rgba(190,212,228,0.5)', marginTop: 14,
-                  }}>In the rack</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
-                    {rack.map(r => {
-                      const on = r.tier === activeRod
-                      const locked = phase !== 'idle' && phase !== 'result'
-                      return (
-                        <button key={r.tier}
-                          onClick={e => {
-                            e.stopPropagation()
-                            if (!locked && !on) { vibrate(10); onRodChange(r.tier) }
-                            if (!locked) setTackleOpen(false)
-                          }}
-                          disabled={locked}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            padding: '0.5rem 0.7rem', borderRadius: 12, width: '100%',
-                            background: on ? 'rgba(240,192,64,0.14)' : 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${on ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                            cursor: locked ? 'default' : 'pointer', textAlign: 'left',
-                            opacity: locked && !on ? 0.45 : 1,
-                          }}>
-                          {r.slug && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={`/${r.slug}_thumb.png`} alt="" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
-                          )}
-                          <span className="font-cinzel font-700 truncate" style={{ flex: 1, fontSize: '0.96rem', color: '#f2ead8' }}>
-                            {r.name}
-                          </span>
-                          {r.catchZoneBonus > 0 && (
-                            <span className="font-karla font-700" style={{ fontSize: '0.696rem', color: '#7fd6a0', flexShrink: 0 }}>
-                              +{r.catchZoneBonus}°
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              ) : (
-                <p className="font-karla font-600" style={{
-                  fontSize: '0.792rem', color: 'rgba(190,212,228,0.45)', marginTop: 12, lineHeight: 1.6,
-                }}>
-                  You sailed with one rod. Load a rack at the Shipyard to carry
-                  spares and swap them out here.
-                </p>
-              )}
+          <Sheet key="tackle" title="Bait"
+            blurb="A wider catch zone is an easier reel. Nothing else changes."
+            onClose={() => setTackleOpen(false)}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+              {baitBag.filter(b => b.quantity > 0).map(b => {
+                const def = getBait(b.type)
+                const on = b.type === bait
+                return (
+                  <button key={b.type}
+                    onClick={e => {
+                      e.stopPropagation()
+                      if (!on) { vibrate(10); onBaitChange(b.type) }
+                      setTackleOpen(false)
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '0.55rem 0.7rem', borderRadius: 12, width: '100%',
+                      background: on ? 'rgba(103,212,232,0.14)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${on ? 'rgba(103,212,232,0.55)' : 'rgba(255,255,255,0.1)'}`,
+                      cursor: 'pointer', textAlign: 'left',
+                    }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {def?.imageUrl && <img src={def.imageUrl} alt="" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />}
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span className="font-cinzel font-700 block truncate" style={{ fontSize: '1.008rem', color: '#f2ead8' }}>
+                        {def?.name ?? b.type}
+                      </span>
+                      <span className="font-karla font-600 block" style={{ fontSize: '0.744rem', color: 'rgba(190,212,228,0.6)' }}>
+                        {(def?.catchZoneBonus ?? 0) > 0 ? `+${def!.catchZoneBonus}° catch zone` : 'No catch bonus'}
+                      </span>
+                    </span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.96rem', color: '#f0c040', flexShrink: 0 }}>
+                      {b.quantity}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </Sheet>
+        )}
 
-              <p className="font-karla font-700 uppercase" style={{
-                fontSize: '0.66rem', letterSpacing: '0.14em',
-                color: 'rgba(190,212,228,0.5)', marginTop: 14,
-              }}>Bait</p>
+        {/* ── LOADOUT ─────────────────────────────────────────────────
+            READ-ONLY, apart from the rack. Equipping happens at the Shipyard
+            now, so a locker out here would be a screenful of controls that all
+            say no. What is useful mid-session is knowing what you are actually
+            fishing with — and the one change you CAN make, which is reaching
+            for a different rod off your own deck. */}
+        {loadoutOpen && (() => {
+          const rod = rack.find(r => r.tier === activeRod) ?? null
+          const locked = phase !== 'idle' && phase !== 'result'
+          return (
+            <Sheet key="loadout" title="Loadout"
+              blurb="What you sailed with, and what it is doing to the dial."
+              onClose={() => setLoadoutOpen(false)}>
+
+              <SheetLabel>{rack.length > 1 ? 'Rods on deck' : 'Your rod'}</SheetLabel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
-                {baitBag.filter(b => b.quantity > 0).map(b => {
-                  const def = getBait(b.type)
-                  const on = b.type === bait
+                {rack.map(r => {
+                  const on = r.tier === activeRod
                   return (
-                    <button key={b.type}
+                    <button key={r.tier}
                       onClick={e => {
                         e.stopPropagation()
-                        if (!on) { vibrate(10); onBaitChange(b.type) }
-                        setTackleOpen(false)
+                        if (!locked && !on) { vibrate(10); onRodChange(r.tier); setLoadoutOpen(false) }
                       }}
+                      disabled={locked || on}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '0.55rem 0.7rem', borderRadius: 12, width: '100%',
-                        background: on ? 'rgba(103,212,232,0.14)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${on ? 'rgba(103,212,232,0.55)' : 'rgba(255,255,255,0.1)'}`,
-                        cursor: 'pointer', textAlign: 'left',
+                        padding: '0.5rem 0.7rem', borderRadius: 12, width: '100%',
+                        background: on ? 'rgba(240,192,64,0.14)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${on ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                        cursor: locked || on ? 'default' : 'pointer', textAlign: 'left',
+                        opacity: locked && !on ? 0.45 : 1,
                       }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {def?.imageUrl && <img src={def.imageUrl} alt="" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />}
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span className="font-cinzel font-700 block truncate" style={{ fontSize: '1.008rem', color: '#f2ead8' }}>
-                          {def?.name ?? b.type}
-                        </span>
-                        <span className="font-karla font-600 block" style={{ fontSize: '0.744rem', color: 'rgba(190,212,228,0.6)' }}>
-                          {(def?.catchZoneBonus ?? 0) > 0 ? `+${def!.catchZoneBonus}° catch zone` : 'No catch bonus'}
-                        </span>
+                      {r.slug && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={`/${r.slug}_thumb.png`} alt="" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
+                      )}
+                      <span className="font-cinzel font-700 truncate" style={{ flex: 1, fontSize: '0.96rem', color: '#f2ead8' }}>
+                        {r.name}
                       </span>
-                      <span className="font-karla font-700" style={{ fontSize: '0.96rem', color: '#f0c040', flexShrink: 0 }}>
-                        {b.quantity}
-                      </span>
+                      {on ? (
+                        <span className="font-karla font-700 uppercase" style={{
+                          fontSize: '0.63rem', letterSpacing: '0.1em', color: '#f0c040', flexShrink: 0,
+                        }}>In hand</span>
+                      ) : r.catchZoneBonus > 0 ? (
+                        <span className="font-karla font-700" style={{ fontSize: '0.696rem', color: '#7fd6a0', flexShrink: 0 }}>
+                          +{r.catchZoneBonus}°
+                        </span>
+                      ) : null}
                     </button>
                   )
                 })}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
+              {locked && rack.length > 1 && (
+                <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: 'rgba(232,201,138,0.85)', marginTop: 6 }}>
+                  Rods stay put while a line is in the water.
+                </p>
+              )}
+
+              <SheetLabel>The rest of your kit</SheetLabel>
+              <div style={{ marginTop: 4 }}>
+                <StatRow k="Reel" v={getReel(mods.reelTier).name} />
+                <StatRow k="Line" v={getLine(mods.lineTier).name} />
+                <StatRow k="Hook" v={getHook(mods.hookTier).name} />
+              </div>
+
+              <SheetLabel>On the dial</SheetLabel>
+              <div style={{ marginTop: 4 }}>
+                <StatRow k="Catch zone from the rod" v={`+${rod?.catchZoneBonus ?? mods.rodCatchBonus}°`} tone="good" />
+                <StatRow k="Catch zone from the bait" v={baitBonus > 0 ? `+${baitBonus}°` : 'None'} tone={baitBonus > 0 ? 'good' : undefined} />
+                <StatRow k="Perfect zone" v={mods.rodPerfectBonus > 0 ? `+${mods.rodPerfectBonus}°` : 'Standard'} tone={mods.rodPerfectBonus > 0 ? 'good' : undefined} />
+                {/* Lower is slower is easier, which is the opposite of what a
+                    bare multiplier reads as — so it says which way is good. */}
+                <StatRow k="Needle speed" v={`×${mods.reelSpeedMult.toFixed(2)}${mods.reelSpeedMult < 1 ? ' (slower)' : ''}`}
+                  tone={mods.reelSpeedMult < 1 ? 'good' : undefined} />
+                {mods.linePenalty !== 1 && (
+                  <StatRow k="Miss penalty" v={`×${mods.linePenalty.toFixed(2)}`} tone={mods.linePenalty < 1 ? 'good' : 'warn'} />
+                )}
+                {mods.rodRetryOnMiss > 0 && (
+                  <StatRow k="Second chance on a miss" v={`${Math.round(mods.rodRetryOnMiss * 100)}%`} tone="good" />
+                )}
+                {mods.rodSnagImmune && <StatRow k="Snags" v="Immune" tone="good" />}
+                {mods.rodPerfectXpMult !== 1 && (
+                  <StatRow k="XP on a perfect" v={`×${mods.rodPerfectXpMult}`} tone="good" />
+                )}
+              </div>
+
+              <p className="font-karla font-600" style={{
+                fontSize: '0.792rem', color: 'rgba(190,212,228,0.55)', marginTop: 14, lineHeight: 1.6,
+              }}>
+                {rack.length > 1
+                  ? 'Rods can be swapped out here because you brought them. Everything else, reels and lines and hooks and the rods that go in the rack, is equipped at the Shipyard before you sail.'
+                  : 'You sailed with one rod. Reels, lines, hooks and the rack you carry are all set at the Shipyard before you leave.'}
+              </p>
+            </Sheet>
+          )
+        })()}
+
+        {/* ── THE HOLD ────────────────────────────────────────────────
+            A hold that fills is the reason a session ends, and "12/40" says
+            when but not what — so the decision it forces (sell to whom, or sail
+            home) was being made blind. */}
+        {holdOpen && (() => {
+          const byId = new Map(log.allFishSpecies.map(f => [f.id, f]))
+          const rows = (holdRows ?? [])
+            .map(r => ({ ...r, sp: byId.get(r.fishId) }))
+            .filter(r => r.sp)
+            .sort((a, b) => (b.sp!.sell_value * b.qty) - (a.sp!.sell_value * a.qty))
+          const total = rows.reduce((n, r) => n + r.sp!.sell_value * r.qty, 0)
+          return (
+            <Sheet key="hold" title="The hold"
+              blurb={`${hold.count} of ${hold.capacity} aboard.`}
+              onClose={() => setHoldOpen(false)}>
+              {holdRows === null ? (
+                <p className="font-karla font-600" style={{ fontSize: '0.816rem', color: 'rgba(190,212,228,0.5)', marginTop: 16 }}>
+                  Counting the barrels…
+                </p>
+              ) : rows.length === 0 ? (
+                <p className="font-karla font-600" style={{ fontSize: '0.816rem', color: 'rgba(190,212,228,0.55)', marginTop: 16, lineHeight: 1.6 }}>
+                  Empty. Everything you land goes in here until you sell it.
+                </p>
+              ) : (
+                <>
+                  <div style={{ marginTop: 10 }}>
+                    {rows.map(r => (
+                      <div key={r.fishId} style={{
+                        display: 'flex', alignItems: 'baseline', gap: 8,
+                        padding: '0.38rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        <span className="font-karla font-700" style={{
+                          flexShrink: 0, fontSize: '0.792rem', color: 'rgba(190,212,228,0.6)',
+                          fontVariantNumeric: 'tabular-nums', minWidth: 26,
+                        }}>×{r.qty}</span>
+                        <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', color: '#f2ead8' }}>
+                          {r.sp!.name}
+                        </span>
+                        <span className="font-karla font-700" style={{
+                          flexShrink: 0, fontSize: '0.816rem', color: '#f0c040', fontVariantNumeric: 'tabular-nums',
+                        }}>⟡ {(r.sp!.sell_value * r.qty).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* MARKET value, and it says so. What the hold actually fetches
+                      depends on who buys it, so a single "worth" number would be
+                      wrong everywhere except one counter. */}
+                  <div style={{
+                    display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10,
+                    paddingTop: 10, borderTop: '1px solid rgba(240,192,64,0.28)',
+                  }}>
+                    <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.96rem', color: '#f2ead8' }}>
+                      At full market
+                    </span>
+                    <span className="font-cinzel font-700" style={{
+                      fontSize: '1.08rem', color: '#f0c040', fontVariantNumeric: 'tabular-nums',
+                    }}>⟡ {total.toLocaleString()}</span>
+                  </div>
+
+                  <SheetLabel>Where to sell it</SheetLabel>
+                  <p className="font-karla font-600" style={{
+                    fontSize: '0.792rem', color: 'rgba(190,212,228,0.62)', marginTop: 6, lineHeight: 1.65,
+                  }}>
+                    Salters are moored out here and buy the whole hold where you
+                    float, at a cut of the price above. Sail home to the Market
+                    and you keep more: a quick sell takes 75%, and the shipping
+                    lanes pay by how far you send the catch. Either way the hold
+                    empties and you can fish again.
+                  </p>
+                </>
+              )}
+            </Sheet>
+          )
+        })()}
+
       </AnimatePresence>
 
       {/* THE CEREMONY, in the order it plays. Each hands off to the next on
@@ -2052,100 +2257,71 @@ export default function FishingHere({
 
       </div>
 
-      {/* ── THE TACKLE BAR ──────────────────────────────────────────────
-          One line: what is on the hook, and how full the hold is.
+      {/* ── THE FOUR MENUS ─────────────────────────────────────────────
+          Loadout, Bait, Log, Hold. Equal quarters, two lines each: what the
+          menu is, and the one live number from behind it worth glancing at.
 
-          It was a row of every bait aboard, which is a whole inventory laid
-          permanently across the bottom of the screen for a choice you make once
-          in a while. A summary you can tap is the right shape — the numbers you
-          need at a glance stay visible, and the picking happens in a panel that
-          goes away again.
-
-          The hold belongs here because it is the reason a session ENDS. Without
-          it the map lets you fish happily until a catch silently stops being
-          banked, which is the one failure a hold exists to warn you about. */}
+          Three of the four are worth opening mid-session and the fourth, the
+          Log, is the one you open least — but it is on the bar for the same
+          reason it is on the fishing screen: a species you have never landed is
+          the reason to care about a catch, and finding that out otherwise means
+          leaving the water. */}
       <div data-no-steer style={{
-        height: 34, marginTop: 6, width: '100%', maxWidth: 448,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        height: 40, marginTop: 6, width: '100%', maxWidth: 448,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         padding: '0 0.75rem',
       }}>
+        {/* LOADOUT. Not a locker any more — gear is equipped at the Shipyard,
+            so out here this reads your kit and swaps between the rods you
+            actually brought. */}
+        <button
+          onClick={e => { e.stopPropagation(); vibrate(8); setLoadoutOpen(true) }}
+          style={MENU_BTN}>
+          <span className="font-karla font-700 uppercase" style={MENU_KEY}>Loadout</span>
+          <span className="font-karla font-700" style={MENU_VAL}>
+            {rack.find(r => r.tier === activeRod)?.name ?? 'Your kit'}
+          </span>
+        </button>
+
         <button
           onClick={e => { e.stopPropagation(); if (canSwapBait) { vibrate(8); setTackleOpen(true) } }}
           disabled={!canSwapBait}
-          style={{
-            flex: 1, minWidth: 0, height: 30,
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '0 0.6rem', borderRadius: 10,
-            background: 'rgba(6,14,22,0.86)',
-            border: '1px solid rgba(255,255,255,0.16)',
-            cursor: canSwapBait ? 'pointer' : 'default',
-            opacity: canSwapBait ? 1 : 0.55,
-          }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {activeBaitDef?.imageUrl && (
-            <img src={activeBaitDef.imageUrl} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
-          )}
-          <span className="font-karla font-700 truncate" style={{ fontSize: '0.792rem', color: '#dfeaf2' }}>
-            {activeBaitDef?.name ?? 'Bait'}
+          style={{ ...MENU_BTN, cursor: canSwapBait ? 'pointer' : 'default', opacity: canSwapBait ? 1 : 0.55 }}>
+          <span className="font-karla font-700 uppercase" style={MENU_KEY}>Bait</span>
+          <span className="font-karla font-700" style={MENU_VAL}>
+            {activeBaitDef?.name ?? 'None'} <span style={{ color: '#f0c040' }}>{baitLeft}</span>
           </span>
-          <span className="font-karla font-700" style={{ fontSize: '0.792rem', color: '#f0c040', flexShrink: 0 }}>
-            {baitLeft}
-          </span>
-          {canSwapBait && (
-            <span className="font-karla font-700" style={{
-              fontSize: '0.66rem', color: 'rgba(190,212,228,0.5)', marginLeft: 'auto', flexShrink: 0,
-            }}>SWAP</span>
-          )}
         </button>
 
-        {/* THE LOG. Third on the bar because it is the one you open least, and
-            on the bar at all because on the fishing screen it is — a species
-            you have never landed before is the reason to care about a catch,
-            and finding that out means leaving the water otherwise.
-
-            It carries a dot rather than a count: the number of unlogged fish in
-            a zone is a thing you go and read, not a thing you glance at. */}
         <button
           onClick={e => { e.stopPropagation(); vibrate(8); setLogOpen(true) }}
-          style={{
-            flexShrink: 0, height: 30, position: 'relative',
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '0 0.65rem', borderRadius: 10,
-            background: 'rgba(6,14,22,0.86)',
-            border: '1px solid rgba(255,255,255,0.16)',
-            cursor: 'pointer',
-          }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(190,212,228,0.75)"
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" />
-            <path d="M8 4v16" />
-          </svg>
-          <span className="font-karla font-700 uppercase" style={{
-            fontSize: '0.66rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
-          }}>Log</span>
-          {uncheckedNew.size > 0 && (
-            <span aria-hidden style={{
-              position: 'absolute', top: 4, right: 4,
-              width: 6, height: 6, borderRadius: '50%',
-              background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.8)',
-            }} />
-          )}
+          style={MENU_BTN}>
+          <span className="font-karla font-700 uppercase" style={MENU_KEY}>Log</span>
+          <span className="font-karla font-700" style={{
+            ...MENU_VAL, color: uncheckedNew.size > 0 ? '#4ade80' : '#dfeaf2',
+          }}>{uncheckedNew.size > 0 ? `${uncheckedNew.size} new` : 'Catches'}</span>
         </button>
 
-        {/* THE HOLD, and it goes red before it bites rather than after. */}
-        <div style={{
-          flexShrink: 0, height: 30, display: 'flex', alignItems: 'center', gap: 6,
-          padding: '0 0.65rem', borderRadius: 10,
-          background: 'rgba(6,14,22,0.86)',
-          border: `1px solid ${holdFull ? 'rgba(248,113,113,0.55)' : 'rgba(255,255,255,0.16)'}`,
-        }}>
-          <span className="font-karla font-700 uppercase" style={{
-            fontSize: '0.66rem', letterSpacing: '0.1em', color: 'rgba(190,212,228,0.5)',
-          }}>Hold</span>
+        {/* THE HOLD, and it goes red before it bites rather than after. It
+            opens now: "12/40" tells you to stop fishing but not what you are
+            carrying or what it is worth, which is the decision actually being
+            made when a hold fills. */}
+        <button
+          onClick={e => {
+            e.stopPropagation(); vibrate(8)
+            setHoldRows(null); setHoldOpen(true)
+            void holdContents().then(r => { if ('ok' in r) setHoldRows(r.rows); else setHoldRows([]) }).catch(() => setHoldRows([]))
+          }}
+          style={{
+            ...MENU_BTN,
+            border: `1px solid ${holdFull ? 'rgba(248,113,113,0.55)' : 'rgba(255,255,255,0.16)'}`,
+          }}>
+          <span className="font-karla font-700 uppercase" style={MENU_KEY}>Hold</span>
           <span className="font-karla font-700" style={{
-            fontSize: '0.792rem', color: holdFull ? '#f87171' : '#dfeaf2', fontVariantNumeric: 'tabular-nums',
+            ...MENU_VAL, fontVariantNumeric: 'tabular-nums',
+            color: holdFull ? '#f87171' : '#dfeaf2',
           }}>{hold.count}/{hold.capacity}</span>
-        </div>
+        </button>
       </div>
 
       {/* THE "STOW ROD" LINE IS GONE. Tapping the water stows the rod and

@@ -281,6 +281,8 @@ export default async function SeaPage() {
         reelSpeedMult: getReel(Number(profile?.reel_tier ?? 0)).needleSpeedMultiplier,
         hookTier: Number(profile?.hook_tier ?? 0),
         linePenalty: line.penaltyMultiplier,
+        reelTier: Number(profile?.reel_tier ?? 0),
+        lineTier: line.tier,
         rodCatchBonus: rod.catchZoneBonus ?? 0,
         // Three rod effects the fishing screen implements CLIENT-side, which is
         // why the map silently did not have them.
