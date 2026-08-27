@@ -1,14 +1,17 @@
 'use client'
 
-// The Docks are the trawl panel and nothing else, so the panel opens on arrival
-// and closing it puts you back on the water. TrawlIndicator is MOUNTED, not
-// reimplemented: it already owns the zone cards, the crew picker, the collect
-// reveal and the slot ladder, and a second copy of a payout is the one kind of
-// duplication this codebase cannot afford.
+// THE TALLY HOUSE. The day's orders, counted and paid.
+//
+// It was the Trawl Docks, and it was where you went to SEND a crew out. Sending
+// happens at the fleet moored off the Mainland now — a place on the water you
+// steer to, with the boats you are sending in front of you — so this island
+// kept the half that is genuinely paperwork.
+//
+// The page scrolls; nothing here opens as a sheet. A modal on a page you have
+// already navigated to is two arrivals for one destination.
 
 import { useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import TrawlIndicator from '../fishing/TrawlIndicator'
 import DailyOrders from './DailyOrders'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 
@@ -60,8 +63,26 @@ export default function TrawlDocksClient({ daily }: { daily: DailyChallengeState
         // backdrop would be a window onto the app shell.
         background: 'radial-gradient(ellipse 120% 90% at 50% 0%, #17303f 0%, #0b1a26 55%, #071119 100%)',
       }}>
-      <TrawlIndicator variant="dock" canDeploy onDismiss={leave}
-        before={<DailyOrders initial={daily} />} />
+      {/* THE DAY'S ORDERS, and nothing else. The trawl panel used to open on
+          arrival with the orders stacked above it; sending a crew out happens
+          at the fleet on the water now, so what is left here is the work you
+          came to read. It is laid onto the page rather than opened as a sheet,
+          which is also why this stopped feeling slower than the Shipyard. */}
+      <div style={{ width: '100%', maxWidth: 470, margin: '0 auto', padding: '1rem 1.1rem 2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+          <button type="button" onClick={leave} aria-label="Back to the water" title="Back to the water"
+            style={{
+              width: 30, height: 30, borderRadius: '50%', padding: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+              color: '#cfcabf', cursor: 'pointer',
+            }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <DailyOrders initial={daily} />
+      </div>
     </div>
   )
 }

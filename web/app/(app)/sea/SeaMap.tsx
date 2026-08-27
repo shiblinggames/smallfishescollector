@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place, TRAWL_FLEET } from './chart'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
@@ -48,6 +48,7 @@ import { handlingRate, accelRate } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
+import TrawlIndicator from '../fishing/TrawlIndicator'
 import LevelRewardsGrant, { type Granted } from './LevelRewardsGrant'
 import { claimFishingLevelRewards } from '../fishing/actions'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
@@ -1416,6 +1417,12 @@ export default function SeaMap({
   const cellRef = useRef('')
   /** The one we have pulled alongside, and the one we are talking to. */
   const [nearTrader, setNearTrader] = useState<Trader | null>(null)
+  /** Standing among the moored fleet, close enough to send a crew out. */
+  const [nearFleet, setNearFleet] = useState(false)
+  /** The trawl panel, opened FROM the water. `variant="dock"` opens on mount
+   *  and dismisses itself, which is exactly the shape wanted here — it is a
+   *  sheet over the chart, not a page you sailed to. */
+  const [trawlOpen, setTrawlOpen] = useState(false)
 
   // ── FINN ──────────────────────────────────────────────────────────────
   //
@@ -1726,6 +1733,7 @@ export default function SeaMap({
       if (e.key !== 'Escape') return
       if (find) { setFind(null); return }
       if (ashore) { setAshore(false); return }
+      if (trawlOpen) { setTrawlOpen(false); return }
       if (finnTalk) { setFinnTalk(null); return }
       if (hailing) { setHailing(null); return }
       if (picking) { setPicking(false); return }
@@ -1734,7 +1742,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, finnTalk, hailing, picking, crewOpen, mapOpen])
+  }, [find, ashore, trawlOpen, finnTalk, hailing, picking, crewOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -1917,6 +1925,7 @@ export default function SeaMap({
       return { act: dealt.includes(nearTrader.key) ? `Speak to ${nearTrader.name}` : `Hail ${nearTrader.name}`, hold: null }
     }
     if (nearDig && !dug.has(nearDig.id)) return { act: 'Dig here', hold: null }
+    if (nearFleet && !trawlOpen) return { act: 'Send a trawl out', hold: null }
     if (nearBottle) return { act: 'Take the bottle', hold: null }
     if (nearIsle) {
       return { act: found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`, hold: null }
@@ -3191,6 +3200,9 @@ export default function SeaMap({
           if (Math.hypot(pos.current.x - at.x, pos.current.y - at.y) < HAIL_RANGE) { hit = t; break }
         }
         setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
+        // The fleet never moves, so this is a plain distance against a constant.
+        const inFleet = Math.hypot(pos.current.x - TRAWL_FLEET.x, pos.current.y - TRAWL_FLEET.y) < TRAWL_FLEET.range
+        setNearFleet(prev => (prev === inFleet ? prev : inFleet))
 
         // FINN. He does not drift and he does not patrol — he is waiting — so
         // this is a flat distance to a fixed point rather than a pass over a
@@ -4012,6 +4024,7 @@ hullRef={hullRefFor(t.key)} />
           if (nearFinn && !finnTalk) { vibrate(14); void hailFinn(); return true }
           if (nearTrader && !hailing) { vibrate(14); setHailing(nearTrader); return true }
           if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
+          if (nearFleet && !trawlOpen) { vibrate(14); setTrawlOpen(true); return true }
           if (nearBottle) { take(nearBottle); return true }
           if (nearIsle) { void land(nearIsle); return true }
           const here = nearRef.current
@@ -4022,6 +4035,20 @@ hullRef={hullRefFor(t.key)} />
         }
         return null
       })()}
+
+      {/* THE TRAWL PANEL, over the water it is sending crews into.
+
+          The wrapper is not optional. This sheet is a DOM child of the map, and
+          the map STEERS on click and starts a heading on pointerdown — so
+          without it, tapping the backdrop to dismiss also puts the helm over and
+          you close the panel to find the boat sailing off. Exactly the trap the
+          Mainland's chooser documents a few hundred lines down. The wrapper
+          takes no space: everything inside it is position: fixed. */}
+      {trawlOpen && (
+        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+          <TrawlIndicator variant="dock" canDeploy onDismiss={() => setTrawlOpen(false)} />
+        </div>
+      )}
 
       <CrewNews news={crewNews} onDone={() => setCrewNews(null)} />
 

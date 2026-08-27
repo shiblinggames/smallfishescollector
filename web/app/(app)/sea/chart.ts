@@ -186,7 +186,11 @@ export const PLACES: Place[] = [
     // somewhere you go. Collecting is still available wherever you are — see
     // the note on `canDeploy` in TrawlIndicator; making a player sail back for
     // a haul they have already earned would be a toll, not a decision.
-    id: 'trawl_docks', name: 'The Trawl Docks', blurb: 'Crew, and the day’s orders',
+    // WAS 'The Trawl Docks', and it no longer sends anybody anywhere: sending a
+    // crew out happens at the fleet moored off the Mainland, which is a thing
+    // you sail up to rather than a page you open. What is left here is the
+    // day's work, counted and paid, which is what a tally house is for.
+    id: 'trawl_docks', name: 'The Tally House', blurb: 'The day’s orders, and what they pay',
     href: '/trawl-docks', x: -1500, y: -850, r: 265, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
@@ -266,10 +270,30 @@ export const PLACES: Place[] = [
  * box for an offset to be relative to, and one flat list is simpler to place, to
  * verify and to render than five nested ones.
  */
+/**
+ * WHERE THE TRAWL FLEET LIES, and how close you have to be to hail it.
+ *
+ * `range` is wider than a trader's HAIL_RANGE of 190 because this is a
+ * three-boat raft rather than one hull: 190 from the centre would put you
+ * inside the fleet before it noticed you.
+ */
+export const TRAWL_FLEET = { x: 900, y: 1100, range: 300 }
+
 export const LANDMARKS: {
   art: string; x: number; y: number; size: number
   solid?: boolean; sway?: 'bob' | 'rock'
 }[] = [
+  // ── THE TRAWL FLEET ──────────────────────────────────────────────────
+  // Three smacks rafted together in the Shallows, a short sail south-east of
+  // the Mainland. Sending a crew out used to mean opening a page on an island;
+  // now it is a place on the water you steer to, and the boats you are sending
+  // are the thing you are looking at when you do it.
+  //
+  // Placed by measurement, not by eye: 1,421 from the origin so it sits inside
+  // the Shallows (inner 1,400), 921 clear of the Mainland's own mooring ring so
+  // its prompt cannot fight the go-ashore one, and 2,262 from the nearest isle.
+  // NOT `solid` — you sail in among them, which is most of the appeal.
+  { art: '/sea/trawl-fleet.png', x: TRAWL_FLEET.x, y: TRAWL_FLEET.y, size: 280, sway: 'bob' },
   { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
   { art: '/sea/islet.png', x:   1003, y:   2620, size: 210, solid: true },
   { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },
