@@ -20,8 +20,9 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { RODS, getEffectiveRod, rodGlowClass } from '@/lib/rods'
-import { REELS } from '@/lib/reels'
-import { HOOKS } from '@/lib/hooks'
+import { REELS, getReel } from '@/lib/reels'
+import { HOOKS, getHook } from '@/lib/hooks'
+import { getLine } from '@/lib/lines'
 import { getPet, petSlot } from '@/lib/pets'
 import { getBoat, boatSpeed, boatAgility, trimLabel } from '@/lib/boats'
 import PopupShell from '@/components/PopupShell'
@@ -30,7 +31,8 @@ import { fishingGearLevelReq } from '@/lib/gearGating'
 import { vibrate } from '@/lib/haptics'
 import FisherPose from '@/components/FisherPose'
 import LoadoutStats from '@/components/LoadoutStats'
-import GearScreen from '../fishing/GearScreen'
+import GearScreen, { type SlotKey } from '../fishing/GearScreen'
+import { SPECIAL_ITEMS, effectiveSpecialDef } from '@/lib/specialItems'
 import {
   rackSlots, nextRackCost, MAX_RACK_TIER,
   nextHullCost, MAX_HULL_TIER, hullSpeed, HULL_NAMES,
@@ -228,6 +230,10 @@ export default function ShipyardClient(p: {
    */
   const [confirm, setConfirm] = useState<Buyable | null>(null)
   const [busy, setBusy] = useState('')
+  /** WHICH PICKER IS OPEN. Owned here rather than inside GearScreen, because
+   *  the things that open them are the boat in the picture and the rows under
+   *  it, and none of those are inside GearScreen any more. */
+  const [slot, setSlot] = useState<SlotKey | null>(null)
   const [err, setErr] = useState('')
 
   // The Nav bar's balance is read once at render and never asks again, so every
@@ -333,6 +339,11 @@ export default function ShipyardClient(p: {
   }
 
   const rodDef = getEffectiveRod(equipped, effects)
+  // The three that the row under the picture names. Derived here rather than
+  // inline so the row and anything else that wants them cannot disagree.
+  const reelDef = getReel(reelTier)
+  const hookDef = getHook(hookTier)
+  const lineDef = getLine(p.lineTier)
 
   /** The three upgrades' current and next state, derived once. The cards and
    *  the confirm modal both read this, so they cannot disagree about what you
@@ -433,26 +444,137 @@ export default function ShipyardClient(p: {
             {/* The sprite is 900x800 with the figure in the bottom 55.5%, so the
                 top third of the box is empty sky. Pulled in by measurement, the
                 same way the gear grid's small preview does it. */}
-            <div style={{ marginTop: '-30%', marginBottom: '-2%' }}>
+            {/* THE PICTURE IS THE RIG. Every labelled zone over it opens the
+                picker for the thing underneath, so changing your hat is
+                tapping your hat rather than hunting for a tile named Hat in a
+                grid somewhere below the fold.
+
+                `position: relative` and nothing else: the zones are
+                percentages of this box, and FisherPose's own overlays are
+                percentages of the same box, so the two coordinate systems are
+                already the same one. */}
+            <div style={{ position: 'relative', marginTop: '-30%', marginBottom: '-2%' }}>
               <FisherPose
                 characterColor={color}
                 equippedHat={hat} equippedBoat={boat}
                 equippedPet={pet} equippedPetBow={petBow}
                 rodTier={equipped} reelTier={reelTier} hookTier={hookTier}
               />
+              {RIG_ZONES.map(z => (
+                <RigZone key={z.slot} label={z.label} l={z.l} t={z.t} w={z.w} h={z.h}
+                  name={
+                    z.slot === 'rod' ? rodDef.name
+                      : z.slot === 'hat' ? (hat ?? 'None')
+                        : z.slot === 'skin' ? color
+                          : z.slot === 'pet' ? (pet ?? 'None')
+                            : (boat ?? 'None')
+                  }
+                  onClick={() => { vibrate(8); setSlot(z.slot) }} />
+              ))}
             </div>
           </div>
 
-          {/* ── THE RACK, ON THE BOAT ────────────────────────
-              Berths as slots under the hull rather than a list further down the
-              page, because a rack is a thing bolted to a boat and this is the
-              boat. One tile per berth you own: the first is the rod in your
-              hands and cannot be emptied, the rest are yours to load. If there
-              is a berth left to buy, the next tile is it — an open zone that
-              says what it costs and adds itself to the boat when you tap it.
+        </div>
 
-              These are exactly what you can switch between AT SEA. Nothing else
-              you own is out there with you. */}
+        {err && (
+          <p className="font-karla font-600" style={{ fontSize: 'var(--sy-4)', color: '#e6a0a0', marginTop: 10, lineHeight: 1.5 }}>
+            {err}
+          </p>
+        )}
+
+        {/* ── THE LINE OF KIT YOU CANNOT SEE ──────────────────────────
+            Reel, hook and line are drawn on the boat, but they are a few
+            pixels of tackle at the end of a rod: a zone over them would be a
+            label pointing at nothing. They get a row of their own directly
+            under the picture, which is still "tap the thing to change it",
+            just without pretending you could pick them out of the art. */}
+        <div className="sy-kit-row" style={{ marginTop: 10 }}>
+          {([
+            { slot: 'reel' as SlotKey, label: 'Reel', name: reelDef.name, color: reelDef.color },
+            { slot: 'hook' as SlotKey, label: 'Hook', name: hookDef.name, color: hookDef.color },
+            { slot: 'line' as SlotKey, label: 'Line', name: lineDef.name, color: lineDef.color },
+          ]).map(k => (
+            <button key={k.slot} type="button" className="tap"
+              onClick={() => { vibrate(8); setSlot(k.slot) }}
+              style={{
+                minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                gap: 1, padding: '0.5rem 0.6rem', borderRadius: 12, cursor: 'pointer',
+                background: 'rgba(4,12,20,0.72)',
+                border: `1px solid ${k.color}44`,
+              }}>
+              <span className="font-karla font-700 uppercase" style={{
+                fontSize: 'var(--sy-1)', letterSpacing: '0.14em', color: 'rgba(190,212,228,0.5)',
+              }}>{k.label}</span>
+              <span className="font-cinzel font-700 truncate" style={{
+                maxWidth: '100%', fontSize: 'var(--sy-3)', color: '#e6e2dc',
+              }}>{k.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ── YOUR BOAT ── what the boat IS, rather than what is on it.
+            OUT FROM BEHIND A TAB. These five were the back half of a two-tab
+            strip, so the things you come to a shipyard to buy were the things
+            you could not see. They are the first thing under the picture now. */}
+        <Band title="Your boat" />
+        <div className="sy-boat-grid">
+          <BoatTile
+            label="Rod rack" name={`${slots} berth${slots === 1 ? '' : 's'}`} accent="#67d4e8"
+            now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
+            does={TAG.rack}
+            next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
+            cost={rackCost}
+            busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('rack') }}
+          />
+          <BoatTile
+            label="Hull" name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
+            now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
+            does={TAG.hull}
+            next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`}
+            cost={hullCost}
+            busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('hull') }}
+          />
+          <BoatTile
+            label="Rudder" name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
+            now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
+            does={TAG.handling}
+            next={handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`}
+            cost={handlingCost}
+            busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('handling') }}
+          />
+          <BoatTile
+            label="Rig" name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
+            now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
+            does={TAG.accel}
+            next={accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`}
+            cost={accelCost}
+            busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('accel') }}
+          />
+          <BoatTile
+            label="Fish hold" name={getFishHold(hold).name} accent="#f0c040"
+            now={String(cap)} unit="fish aboard"
+            does={TAG.hold}
+            next={holdNext ? `${holdNext.capacity} fish` : null}
+            cost={holdNext?.cost ?? null}
+            busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('hold') }}
+          />
+        </div>
+
+        {/* ── THE ROD RACK ── the rod in your hands and the berths beside it.
+            These were tiles bolted under the hull in the hero, which is a nice
+            idea and the wrong place: the rack is a thing you BUY berths for,
+            and the berth you have not bought yet is an upgrade sitting in the
+            middle of a photograph. Here they sit with the upgrade that adds to
+            them.
+
+            These are exactly what you can switch between AT SEA. Nothing else
+            you own is out there with you. */}
+        <Band title="Rod rack" />
           <div style={{
             position: 'relative', display: 'flex', gap: 6,
             padding: '0.5rem 0.55rem 0.6rem',
@@ -521,73 +643,82 @@ export default function ShipyardClient(p: {
               </button>
             )}
           </div>
+
+        {/* ── CARRIED ── the kit with nothing to point at.
+            Specials and badges change what happens rather than what you look
+            like, so there is no part of the picture that could represent them.
+            That is exactly why they get a section instead of a zone. */}
+        <Band title="Carried" />
+        <div className="sy-rig-grid">
+          {([0, 1] as const).map(n => {
+            const id = n === 0 ? special : special2
+            const def = n === 0
+              ? effectiveSpecialDef(special, p.hasAutoCatcher ? ['auto_catcher'] : [])
+              : (special2 ? SPECIAL_ITEMS.find(x => x.id === special2) ?? null : null)
+            const locked = n === 1 && !p.hasDeepReel
+            return (
+              <button key={n} type="button" className="tap"
+                onClick={() => { vibrate(8); setSlot(n === 0 ? 'special' : 'special2') }}
+                style={{
+                  minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 4, padding: '0.7rem 0.6rem', borderRadius: 16, cursor: 'pointer',
+                  background: 'rgba(4,12,20,0.6)',
+                  border: `1px solid ${locked ? 'rgba(120,116,110,0.35)' : def ? `${def.color}55` : 'rgba(150,196,222,0.22)'}`,
+                }}>
+                <div style={{
+                  width: '100%', height: 'clamp(46px, 15vw, 74px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {def?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={def.image} alt="" style={{
+                      maxWidth: '80%', maxHeight: '80%', objectFit: 'contain',
+                      filter: `drop-shadow(0 3px 10px ${def.color}66)`,
+                    }} />
+                  ) : (
+                    <span aria-hidden className="font-cinzel" style={{
+                      fontSize: 'var(--sy-6)', color: locked ? 'rgba(120,116,110,0.6)' : 'rgba(150,196,222,0.35)',
+                    }}>{locked ? 'Locked' : 'Empty'}</span>
+                  )}
+                </div>
+                <span className="font-karla font-700 uppercase" style={{
+                  fontSize: 'var(--sy-1)', letterSpacing: '0.14em', color: 'rgba(190,212,228,0.45)',
+                }}>{n === 0 ? 'Special' : 'Sunken Hand'}</span>
+                <span className="font-cinzel font-700 truncate" style={{
+                  maxWidth: '100%', fontSize: 'var(--sy-3)', color: def ? '#e6e2dc' : '#4c4a47',
+                }}>{locked ? 'Locked' : def ? def.name : 'None'}</span>
+              </button>
+            )
+          })}
+
+          <button type="button" className="tap"
+            onClick={() => { vibrate(8); setSlot('badge') }}
+            style={{
+              gridColumn: '1 / -1', minWidth: 0,
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.7rem 0.8rem', borderRadius: 16, cursor: 'pointer',
+              background: 'rgba(4,12,20,0.6)', border: '1px solid rgba(240,192,64,0.3)',
+            }}>
+            <span className="font-karla font-700 uppercase" style={{
+              flex: 1, textAlign: 'left', fontSize: 'var(--sy-1)', letterSpacing: '0.14em',
+              color: 'rgba(190,212,228,0.5)',
+            }}>Badges</span>
+            <span className="font-cinzel font-700" style={{ fontSize: 'var(--sy-3)', color: '#e6e2dc' }}>
+              {badges.filter(Boolean).length} of 3 worn
+            </span>
+          </button>
         </div>
 
-        {err && (
-          <p className="font-karla font-600" style={{ fontSize: 'var(--sy-4)', color: '#e6a0a0', marginTop: 10, lineHeight: 1.5 }}>
-            {err}
-          </p>
-        )}
-
-        {/* ── YOUR BOAT ── what the boat IS, rather than what is on it.
-            OUT FROM BEHIND A TAB. These five were the back half of a two-tab
-            strip, so the things you come to a shipyard to buy were the things
-            you could not see. They are the first thing under the picture now. */}
-        <Band title="Your boat" />
-        <div className="sy-boat-grid">
-          <BoatTile
-            label="Rod rack" name={`${slots} berth${slots === 1 ? '' : 's'}`} accent="#67d4e8"
-            now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
-            does={TAG.rack}
-            next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
-            cost={rackCost}
-            busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('rack') }}
-          />
-          <BoatTile
-            label="Hull" name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
-            now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
-            does={TAG.hull}
-            next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`}
-            cost={hullCost}
-            busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('hull') }}
-          />
-          <BoatTile
-            label="Rudder" name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
-            now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
-            does={TAG.handling}
-            next={handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`}
-            cost={handlingCost}
-            busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('handling') }}
-          />
-          <BoatTile
-            label="Rig" name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
-            now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
-            does={TAG.accel}
-            next={accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`}
-            cost={accelCost}
-            busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('accel') }}
-          />
-          <BoatTile
-            label="Fish hold" name={getFishHold(hold).name} accent="#f0c040"
-            now={String(cap)} unit="fish aboard"
-            does={TAG.hold}
-            next={holdNext ? `${holdNext.capacity} fish` : null}
-            cost={holdNext?.cost ?? null}
-            busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('hold') }}
-          />
-        </div>
-
-        {/* ── YOUR RIG ── every slot on the boat. Unchanged in what it DOES;
-            what changed is that it now sits under a heading that says what it
-            is, instead of appearing when you pressed a tab. */}
-        <Band title="Your rig" />
           <GearScreen
             variant="locker"
+            // THE PICKERS, AND NOTHING ELSE. The tile grid that used to open
+            // them is gone: the boat in the picture opens them now, and the
+            // rows under it open the rest. GearScreen still owns every buy,
+            // sell, equip and forge flow, because those are the fishing economy
+            // and a second copy would be two of them drifting apart.
+            hideGrid
+            slot={slot}
+            onSlotChange={setSlot}
             baitInventory={p.baitInventory}
             selectedBait={selectedBait}
             onSelectBait={setSelectedBait}
@@ -970,6 +1101,57 @@ export default function ShipyardClient(p: {
  *  locker grid all began at the same left edge with nothing saying where one
  *  thing ended and the next started, which is most of why it read as one
  *  undifferentiated pile. */
+/**
+ * WHERE EACH PIECE OF KIT LIVES ON THE PICTURE.
+ *
+ * Percentages of FisherPose's own box, which is the 900x800 character sprite
+ * with the figure in the bottom 55.5% — so nothing worth tapping is above 34%.
+ *
+ * REGIONS, not points. A point would need the label to land exactly on a hat
+ * whose overlay coordinates differ for every hat in the game; a region only has
+ * to contain it. Tapping anywhere near the head opens the hat, which is the
+ * behaviour you want anyway on a phone.
+ *
+ * They do not overlap, and they are ordered so the label of one never sits on
+ * top of the art of another. Placed by eye against the rest pose: expect to
+ * nudge these when the sprite changes.
+ */
+const RIG_ZONES: { slot: SlotKey; label: string; l: number; t: number; w: number; h: number }[] = [
+  { slot: 'rod',  label: 'Rod',  l: 1,  t: 34, w: 34, h: 30 },
+  { slot: 'hat',  label: 'Hat',  l: 37, t: 38, w: 28, h: 19 },
+  { slot: 'skin', label: 'Skin', l: 37, t: 57, w: 28, h: 22 },
+  { slot: 'pet',  label: 'Pet',  l: 67, t: 60, w: 32, h: 26 },
+  { slot: 'boat', label: 'Boat', l: 12, t: 80, w: 76, h: 19 },
+]
+
+/** One tappable piece of the boat. The label is pinned to the top of its own
+ *  zone so it reads as naming the thing under it. */
+function RigZone({ label, name, l, t, w, h, onClick }: {
+  label: string; name: string; l: number; t: number; w: number; h: number; onClick: () => void
+}) {
+  return (
+    <button type="button" onClick={onClick} title={`${label}: ${name}`}
+      className="tap sy-rig-zone"
+      style={{
+        position: 'absolute', left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+        padding: 0, borderRadius: 12, cursor: 'pointer',
+        background: 'transparent', border: '1px solid transparent',
+      }}>
+      <span className="font-karla font-700 uppercase" style={{
+        fontSize: 'var(--sy-1)', letterSpacing: '0.14em', lineHeight: 1,
+        padding: '0.2rem 0.42rem', borderRadius: 999,
+        color: 'rgba(226,240,248,0.92)',
+        // An opaque floor: this sits on painted art, where a translucent chip
+        // reads as a smear. Same rule the panels on the chart follow.
+        background: 'rgba(6,14,22,0.82)',
+        border: '1px solid rgba(180,214,232,0.3)',
+        whiteSpace: 'nowrap',
+      }}>{label}</span>
+    </button>
+  )
+}
+
 function Band({ title }: { title: string }) {
   return (
     <div style={{ marginTop: 26, marginBottom: 10 }}>

@@ -2646,6 +2646,17 @@ body.hardcore-gauntlet::after {
    TWO columns on a phone, not three. Three put "Legendary Hook" into 115px,
    which is a truncated word under a picture. Two gives the art real room, which
    is the point of leading with it. */
+/* Reel, hook and line: three across, because they are three short names and a
+   column each is plenty. minmax(0,…) for the same reason as everything else on
+   this page — a bare 1fr floors at min-content and a nowrap name then refuses
+   to ellipsis. */
+.sy-kit-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+
+/* The tappable pieces of the boat. No resting outline: the picture should look
+   like a picture until you reach for it. */
+.sy-rig-zone:hover { background: rgba(180,214,232,0.07) !important; border-color: rgba(180,214,232,0.28) !important; }
+.sy-rig-zone:focus-visible { outline: 2px solid rgba(240,192,64,0.8); outline-offset: 2px; }
+
 .sy-rig-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .sy-rig-grid > * { min-width: 0; }
 @media (min-width: 768px) {

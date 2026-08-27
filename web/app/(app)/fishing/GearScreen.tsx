@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { primevalBorder } from '@/lib/prismatic'
 import FinnChargePanel from '@/components/FinnChargePanel'
 import { FINN_ITEMS } from '@/lib/finnItems'
@@ -28,7 +28,7 @@ import FisherPose from '@/components/FisherPose'
 import LoadoutStats from '@/components/LoadoutStats'
 
 type BaitItem = { bait_type: string; quantity: number }
-type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'badge' | 'skin' | 'hat' | 'boat' | 'pet'
+export type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'special2' | 'badge' | 'skin' | 'hat' | 'boat' | 'pet'
 
 function ShopLink({ href, label, sub, color, onClick }: { href: string; label: string; sub: string; color: string; onClick: () => void }) {
   return (
@@ -836,6 +836,9 @@ export default function GearScreen({
   showWaitTimer,
   onToggleShowWaitTimer,
   variant = 'drawer',
+  slot: slotProp,
+  onSlotChange,
+  hideGrid,
   onClose,
   autoOpenAppearance = false,
   onAppearanceAutoOpened,
@@ -926,6 +929,21 @@ export default function GearScreen({
    * something four inches higher up. Stripped to the slot grid alone.
    */
   variant?: 'drawer' | 'locker'
+  /**
+   * WHICH SLOT IS OPEN, when somebody else owns that decision.
+   *
+   * The shipyard's rig is the boat itself now: you tap the hat in the picture
+   * to change the hat. The tiles that used to open these pickers are gone, so
+   * the pickers need a way to be opened from outside — and the whole point of
+   * routing it here rather than reimplementing them is that these are the buy,
+   * sell, equip and forge flows for everything a captain owns.
+   *
+   * Uncontrolled when omitted, exactly as before.
+   */
+  slot?: SlotKey | null
+  onSlotChange?: (slot: SlotKey | null) => void
+  /** Render the pickers and nothing else. The shipyard draws its own rig. */
+  hideGrid?: boolean
   onClose: () => void
   /** When true (e.g. arriving via a /fishing?gear=appearance deep link), open
    *  straight to the Appearance picker on mount. */
@@ -935,7 +953,16 @@ export default function GearScreen({
   onAppearanceAutoOpened?: () => void
 }) {
   const locker = variant === 'locker'
-  const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
+  // Controlled when a parent passes `slot`; otherwise the internal state, which
+  // is every existing caller. `setOpenSlot` keeps its name and its signature so
+  // the ninety-odd call sites below do not care which mode they are in.
+  const [openSlotInner, setOpenSlotInner] = useState<SlotKey | null>(null)
+  const controlled = slotProp !== undefined
+  const openSlot = controlled ? slotProp : openSlotInner
+  const setOpenSlot = useCallback((next: SlotKey | null) => {
+    if (controlled) onSlotChange?.(next)
+    else setOpenSlotInner(next)
+  }, [controlled, onSlotChange])
   // Deep-link (mail CTA): open straight to the Appearance picker, then tell the
   // parent to drop the flag so re-opening the drawer later doesn't force it again.
   useEffect(() => {
@@ -1171,7 +1198,7 @@ export default function GearScreen({
           auto-height grid, fr rows all resolve to the tallest row's content,
           so every card on the screen is the size of the tallest one, and gap
           handles every space between them identically. */}
-      {locker ? (
+      {locker ? (hideGrid ? null : (
       <div className="sy-rig-grid">
         <div>
           <GearSlot big label="Rod" accent={SLOT_FAMILY.gear} image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
@@ -1323,6 +1350,7 @@ export default function GearScreen({
           )})()}
         </div>
       </div>
+      )
       ) : (
       <div style={{
         display: 'grid',
