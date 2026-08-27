@@ -814,7 +814,7 @@ export default function FishingHere({
       // dimmed. Only writes on an actual crossing.
       const zs = zonesRef.current
       if (zs.length > 0) {
-        const rel = (((angleNow() - zoneRotRef.current) % 360) + 360) % 360
+        const rel = (((resolveAngle() - zoneRotRef.current) % 360) + 360) % 360
         const zNow = zs.find(z => rel >= z.from && rel < z.to) ?? zs[0]
         if (zNow.from !== lastZoneFromRef.current) {
           lastZoneFromRef.current = zNow.from
@@ -851,6 +851,37 @@ export default function FishingHere({
     }
     return angleRef.current
   }, [])
+
+  /**
+   * THE ANGLE THAT DECIDES, and the only one anything is allowed to ask for.
+   *
+   * The needle runs on the compositor and the main thread reads
+   * document.timeline a commit or two behind the glass, so the freeze resolves
+   * one measured frame AHEAD — forward-only, because a prediction error in the
+   * direction of travel is invisible at spin speed and a back-step is not.
+   * That protocol is right and stays.
+   *
+   * What was wrong is that only the SCORE used it. The crossing paint — the
+   * thing that turns the needle gold — read the live angle instead, so the two
+   * disagreed by exactly one frame of travel:
+   *
+   *     difficulty 5, 650 deg/s, one frame at 60Hz  =  10.8 degrees
+   *     a perfect band                              =   6 degrees
+   *
+   * The needle could be painted gold while the tap resolved most of TWO bands
+   * further on. That is not a feel problem to be tuned, it is two clocks, and
+   * no amount of tuning makes two clocks agree.
+   *
+   * Now there is one. Gold means "tap on this frame and it is a perfect",
+   * because the paint and the score are the same number.
+   */
+  const resolveAngle = useCallback(() => {
+    // Capped so a stalled frame cannot balloon the prediction and overshoot a
+    // tight perfect.
+    const lookaheadMs = Math.min(frameDur.current, 20)
+    const a = angleNow() + sweepRef.current * lookaheadMs / 1000
+    return ((a % 360) + 360) % 360
+  }, [angleNow])
 
   const startSpin = useCallback((from: number) => {
     // A fresh spin paints from its first frame — see lastZoneFromRef.
@@ -1014,8 +1045,7 @@ export default function FishingHere({
     // into position", and was worse). REEL_LOOKAHEAD there is 1 frame — 2 read
     // aggressive. Capped at 20ms so a stalled frame cannot balloon the
     // prediction and overshoot a tight perfect.
-    const lookaheadMs = Math.min(frameDur.current, 20)
-    const at = (angleNow() + sweepRef.current * lookaheadMs / 1000) % 360
+    const at = resolveAngle()
     angleRef.current = at
 
     // WRITE THE RESTING ANGLE BEFORE CANCELLING, and that order is the whole
@@ -1293,7 +1323,9 @@ export default function FishingHere({
       // A grace beat so the dial visibly spins before the first auto-tap.
       // Without it the reel fires so fast it reads as a bug rather than a tool.
       if (performance.now() - startAt >= 420) {
-        const at = angleNow()
+        // The same angle the paint and the strike use. On the live angle it
+        // was aiming a frame behind the dial it was reading.
+        const at = ((resolveAngle() - zoneRotRef.current) % 360 + 360) % 360
         const z = zonesRef.current.find(zz => at >= zz.from && at < zz.to)
         if (z?.type === 'catch') { done = true; strikeRef.current?.(); return }
       }
