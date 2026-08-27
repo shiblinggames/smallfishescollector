@@ -1774,6 +1774,23 @@ export async function markFirstCatchCelebrationSeen(): Promise<void> {
 /** Toggle for the cast→bite count-up shown in the waiting pill.
  *  Stored on profiles so it syncs across devices. Toggled from the
  *  Preferences row in the Gear modal. */
+/**
+ * REMEMBER WHETHER THE MACHINE IS RUNNING.
+ *
+ * The auto toggle was client state seeded to `true`, so every time the rod came
+ * out the Auto Caster started casting and had to be switched off again. A
+ * toggle that forgets is a toggle you operate twice.
+ *
+ * Fire and forget on purpose: this is a preference, and a failed write costs a
+ * captain one tap next session rather than anything they can lose.
+ */
+export async function setAutoFishing(value: boolean): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ auto_fishing_on: value }).eq('id', user.id)
+}
+
 export async function setShowWaitTimer(value: boolean): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

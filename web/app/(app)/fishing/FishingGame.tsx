@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence, useDragControls, type MotionStyle } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { releaseAncient, castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, claimFishingLevelRewards, type FishSpecies, syncFishHold } from './actions'
+import { releaseAncient, castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, setAutoFishing as persistAutoFishing, claimFishingLevelRewards, type FishSpecies, syncFishHold } from './actions'
 import { equipSecondSpecial } from '../expeditions/spoilsActions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import { buyBaitWithFathoms } from '@/app/(app)/raids/gauntlet/actions'
@@ -1714,7 +1714,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
   selectedZone: initialZone, onBack, onHome, zoneRewardsClaimed, unfishedZones = 0,
   initialDailyChallenge, onDailyChallengeChange,
-  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
+  hasTideTurner, initialTideTurnerSkipsLeft, initialAutoOn = false, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
   initialEquippedSpecial2,
   hasDeepReel = false,
   hasAnglersPatience = false,
@@ -1779,6 +1779,10 @@ export default function FishingGame({
   ) => void
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
+  /** Whether the Auto Caster is switched on, as the captain last left it. The
+   *  chart's fishing screen reads the same profile column — a preference that
+   *  disagreed between the two would be worse than one that forgot. */
+  initialAutoOn?: boolean
   initialEquippedSpecial: string | null
   /** THE DEEP REEL: second special slot (Finn spoil). */
   initialEquippedSpecial2?: string | null
@@ -2526,7 +2530,10 @@ export default function FishingGame({
   const [ownedAutoCatcher, setOwnedAutoCatcher] = useState(hasAutoCatcher)
   // Quick on/off for the equipped auto item, toggled from a chip under the XP
   // bar — pauses auto-cast/catch without unequipping in the gear shop.
-  const [autoEnabled, setAutoEnabled] = useState(true)
+  // FROM THE PROFILE, not from `true`. Seeded to true it switched itself back
+  // on at the start of every session, so switching it off was a thing you did
+  // once per session forever.
+  const [autoEnabled, setAutoEnabled] = useState(initialAutoOn)
   /** Set only when the AUTO loop claimed a crate, so the resume below can tell
    *  that apart from a player tapping Claim themselves. */
   const autoResumeRef = useRef(false)
@@ -5584,7 +5591,11 @@ export default function FishingGame({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -4 }}
                             transition={{ duration: 0.18 }}
-                            onClick={() => setAutoEnabled(v => !v)}
+                            onClick={() => setAutoEnabled(v => {
+                              const next = !v
+                              void persistAutoFishing(next).catch(() => {})
+                              return next
+                            })}
                             aria-label={`${isCatcher ? 'Auto Catcher' : 'Auto Caster'}: ${autoEnabled ? 'on' : 'off'}`}
                             className="font-karla font-700"
                             // Matches the XP bar's panel (same dark fill so it reads over

@@ -69,7 +69,7 @@ export default function FishingPageClient({
   fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialCatchCounts, initialHighestPerfectStreak, initialPerfectStreak, initialStreakZone,
   hubSpeciesCaught, hubSpeciesTotal, hubMarketMood, hubMarketNextUpdate, hubOpenContracts, hubExchangeUnveil, hubTicker,
   hasSeenFishingHubTour, hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, ancientVigil, vigilUnlocked, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, equippedPetBow, unlockedPets,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialAutoOn, initialEquippedSpecial, initialEquippedSpecial2, hasDeepReel, hasAnglersPatience, anglersPatienceXp, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, goldenBoosts, ancientCatches, ancientVigil, vigilUnlocked, characterColor, unlockedCharacterColors, newlyUnlockedSkins, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, newlyUnlockedBoats, equippedHat, unlockedHats, equippedPet, equippedPetBow, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
   initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
@@ -118,6 +118,9 @@ export default function FishingPageClient({
   initialDailyChallenge: DailyChallengeState | null
   hasTideTurner: boolean
   initialTideTurnerSkipsLeft: number
+  /** Whether the Auto Caster is switched on, as last left. Forwarded straight
+   *  through; this wrapper has no opinion about it. */
+  initialAutoOn?: boolean
   initialEquippedSpecial: string | null
   /** THE DEEP REEL: the second special slot and its one legal occupant. */
   initialEquippedSpecial2?: string | null
@@ -421,6 +424,7 @@ export default function FishingPageClient({
       onDailyChallengeChange={handleDailyChallengeChange}
       hasTideTurner={hasTideTurner}
       initialTideTurnerSkipsLeft={initialTideTurnerSkipsLeft}
+      initialAutoOn={initialAutoOn}
       initialEquippedSpecial={initialEquippedSpecial}
       initialEquippedSpecial2={initialEquippedSpecial2}
       hasDeepReel={hasDeepReel}

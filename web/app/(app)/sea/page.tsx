@@ -288,6 +288,9 @@ export default async function SeaPage() {
       dealtToday={dealt}
       auto={{
         tier: autoTier,
+        // WHETHER IT IS SWITCHED ON, as they last left it. Owning the item and
+        // wanting it running are different things.
+        on: profile?.auto_fishing_on === true,
         maxRarity: gauntletAutoCatchMaxRarity(profile?.gauntlet_upgrades as string[] | null),
       }}
       tideTurner={{

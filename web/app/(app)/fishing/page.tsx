@@ -448,6 +448,7 @@ export default async function FishingPage() {
           }}
           hasTideTurner={hasTideTurner}
           initialTideTurnerSkipsLeft={tideTurnerSkipsLeft}
+          initialAutoOn={profile?.auto_fishing_on === true}
           initialEquippedSpecial={(profile?.equipped_special as string | null) ?? null}
           initialEquippedSpecial2={(profile?.equipped_special_2 as string | null) ?? null}
           hasDeepReel={profile?.finn_spoil_free === 'fishing' || profile?.finn_spoil_paid === 'fishing'}

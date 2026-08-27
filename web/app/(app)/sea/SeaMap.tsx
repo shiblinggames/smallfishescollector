@@ -809,7 +809,7 @@ export default function SeaMap({
   dealtToday: string[]
   /** The specials the CLIENT has to drive. See FishingHere for why these three
    *  are the only ones that needed carrying out here. */
-  auto: { tier: 0 | 1 | 2; maxRarity: number }
+  auto: { tier: 0 | 1 | 2; maxRarity: number; on: boolean }
   tideTurner: { has: boolean; left: number }
 }) {
   const router = useRouter()

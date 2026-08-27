@@ -71,6 +71,7 @@ import { getHook } from '@/lib/hooks'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { holdContents } from '../fishing/holdActions'
+import { setAutoFishing } from '../fishing/actions'
 import FishCollectionDrawer from '@/app/(app)/fishing/FishCollectionDrawer'
 import { claimZoneReward, prestigeZone, releaseAncient } from '@/app/(app)/fishing/actions'
 import { markFinnRevealSeen } from '@/app/(app)/fishing/finnActions'
@@ -365,6 +366,11 @@ export default function FishingHere({
     /** Highest bite rarity the Catcher will reel unaided. Gauntlet upgrades
      *  push this from uncommons up to epics; legendaries always need a hand. */
     maxRarity: number
+    /** Switched on, as the captain last left it. Persisted on the profile —
+     *  see setAutoFishing. Not a default: a machine fishing for you should be
+     *  running because you said so, and it should still be running the next
+     *  time you pick the rod up. */
+    on: boolean
   }
   tideTurner: { has: boolean; left: number }
   /** The sea's light, shown on the bar's row rather than in its own corner.
@@ -1297,7 +1303,9 @@ export default function FishingHere({
   // there is one the fishing screen does not have — SAILING AWAY. Pull the rod
   // out of the water and the loop is done, or a boat left drifting would fish
   // a zone the captain has already left.
-  const [autoOn, setAutoOn] = useState(true)
+  // SEEDED FROM THE PROFILE, not from `true`. The old default meant the item
+  // switched itself back on at the start of every session.
+  const [autoOn, setAutoOn] = useState(auto.on)
   useEffect(() => {
     if (auto.tier === 0 || !autoOn) return
     if (phase !== 'result') return
@@ -1607,7 +1615,16 @@ export default function FishingHere({
               and a toggle rather than always-on because handing your rod to a
               machine should stay a choice you can take back mid-session. */}
           {auto.tier > 0 && (
-            <button onClick={e => { e.stopPropagation(); setAutoOn(v => !v) }}
+            <button onClick={e => {
+                e.stopPropagation()
+                setAutoOn(v => {
+                  const next = !v
+                  // Remembered for next time. Nothing waits on it: a failed
+                  // write costs one tap next session and nothing else.
+                  void setAutoFishing(next).catch(() => {})
+                  return next
+                })
+              }}
               className="font-karla font-700 uppercase tracking-[0.1em]"
               style={{
                 flexShrink: 0,
