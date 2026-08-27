@@ -1526,11 +1526,6 @@ export default function FishingHere({
               </div>
             )}
 
-            {choiceNote && (
-              <p className="font-karla font-700" style={{ fontSize: '0.912rem', color: '#7fd6a0', marginTop: 8, textAlign: 'center' }}>
-                {choiceNote}
-              </p>
-            )}
           </motion.div>
           ) : phase === 'waiting' && castAnimDone ? (
           <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1563,110 +1558,140 @@ export default function FishingHere({
           ) : null}
         </AnimatePresence>
 
-        {/* ── THE UNDER-DIAL ACTION ROW ────────────────────────────────────
-            Actions ON THE ENCOUNTER live here, directly beneath the dial (or
-            beneath the card it turns into), because that is the thing they act
-            upon. The Tide Turner used to sit in the band below the CAST button,
-            which put a decision about the fish on your hook down among the
-            rig controls, a whole screen away from the fish.
+        {/* ── THE UNDERSTACK ───────────────────────────────────────────────
+            EVERYTHING THAT COMES AND GOES, and none of it in the flow.
 
-            ONE row, deliberately outside the phase branches above, so the two
-            occupants cannot drift apart: the Tide Turner is a `hooked` action
-            and the wormhole is a `result` one, so today only one is ever up —
-            but if that ever changes they sit side by side, each taking half,
-            rather than one of them re-inventing a row somewhere else.
+            This area is a centred column, so any child that appears re-centres
+            it and drags whatever is in it — the dial, or the result card — by
+            half its own height. Nothing was animating them; the column was
+            doing exactly what a centred column does. A skip offer arriving, a
+            hold filling up, a reroll resolving into a note: each one shoved the
+            instrument you were aiming with, or the card you were reading.
 
-            OUT OF THE FLOW, and that is the whole point. This area is a
-            centred column, so ANY child that appears re-centres the column and
-            drags the dial (or the card) with it — which is the reel visibly
-            jumping the moment a skip becomes available and jumping back when it
-            is used. Pinned to the bottom of the frame, the row costs zero
-            layout space, so what it does or does not contain cannot move the
-            instrument you are aiming with.
+            So the dial and the card are the ONLY things left in the column, and
+            every transient sits in this stack instead, pinned to the bottom of
+            the frame at zero layout cost. Nothing in here can move them. The
+            stack is the same place every time, which also beats sitting a fixed
+            distance under the dial — the dial and the card are different
+            heights, so "just below" would be two different spots.
 
-            Compact on purpose too. These are offers, not the task: the dial is
-            the thing being looked at, and a pair of full-width slabs under it
-            competed with it for attention. */}
-        {((tideTurner.has && phase === 'hooked' && skipsLeft > 0) || (wormhole && phase === 'result')) && (
-          <div data-no-steer style={{
-            position: 'absolute', left: 0, right: 0, bottom: 0,
-            display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap',
-            // The row itself catches nothing; each pill opts back in. Otherwise
-            // an invisible full-width band sits over the water and every tap
-            // near the bottom of the dial stops steering the boat.
-            pointerEvents: 'none',
-          }}>
-            {/* THE LABEL SAYS SKIP, NOT "throw it back". Both screens offer
-                this at the same moment — the dial is up and the fish is not
-                landed yet (this screen's `hooked` is the fishing screen's
-                `catching`) — but the port renamed it, and "throw it back"
-                describes putting a fish you have caught into the water.
-                Nothing has been caught. What the button does is drop the
-                encounter before it resolves. */}
-            {tideTurner.has && phase === 'hooked' && skipsLeft > 0 && (
-              <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
-                className="font-cinzel font-700"
-                style={{
-                  pointerEvents: 'auto',
-                  padding: '0.4rem 0.85rem', borderRadius: 999, fontSize: '0.816rem',
-                  color: '#cdbdf8', whiteSpace: 'nowrap',
-                  // AN OPAQUE FLOOR, like its neighbour. A translucent wash
-                  // over open water lets the sea read straight through the
-                  // label — the house rule for anything drawn on the world.
-                  background: 'linear-gradient(180deg, rgba(104,88,178,0.5) 0%, rgba(46,38,84,0.62) 100%), rgba(10,8,18,0.96)',
-                  border: '1px solid rgba(167,139,250,0.6)',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
-                  cursor: skipping ? 'default' : 'pointer', opacity: skipping ? 0.6 : 1,
-                }}>
-                {skipping ? '…' : <>Tide Turner · Skip <span style={{ opacity: 0.7 }}>· {skipsLeft} left</span></>}
-              </button>
-            )}
-            {wormhole && phase === 'result' && (
-              <button disabled={busyChoice}
-                onClick={async e => {
-                  e.stopPropagation(); setBusyChoice(true)
-                  const r = await rerollWormhole().catch(() => ({ error: 'The wormhole closed.' }))
-                  setBusyChoice(false)
-                  setWormhole(false)
-                  if ('error' in r) { setChoiceNote(r.error); return }
-                  setChoiceNote(`Rerolled into ${r.fish.name}`)
-                }}
-                className="font-cinzel font-700"
-                style={{
-                  pointerEvents: 'auto',
-                  padding: '0.4rem 0.85rem', borderRadius: 999,
-                  fontSize: '0.816rem', color: '#f0ddff', whiteSpace: 'nowrap',
-                  background: 'linear-gradient(180deg, rgba(120,70,170,0.5) 0%, rgba(60,32,92,0.62) 100%), rgba(10,8,18,0.96)',
-                  border: '1px solid rgba(192,132,252,0.6)',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
-                  cursor: 'pointer',
-                }}>
-                Wormhole · Reroll
-              </button>
-            )}
-          </div>
-        )}
+            pointer-events:none, with the pills opting back in. Otherwise an
+            invisible full-width band sits over the water and every tap near the
+            bottom of the dial stops steering the boat — the trap the log drawer
+            already hit once. */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          pointerEvents: 'none',
+        }}>
+          {err && (
+            <p className="font-karla font-600" style={{
+              fontSize: '0.936rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+            }}>{err}</p>
+          )}
+          {(holdFull || outOfBait) && (phase === 'idle' || phase === 'result') && (
+            // Not just "you cannot" — where the fix is. A zone buyer is sitting in
+            // this water and will take the lot, which is the whole reason they
+            // exist, and nobody is going to guess that from a greyed-out button.
+            <p className="font-karla font-600" style={{
+              fontSize: '0.888rem', color: holdFull ? '#f8a2a2' : '#e8c98a',
+              textAlign: 'center', lineHeight: 1.5,
+              textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+            }}>
+              {holdFull
+                ? 'Your hold is full. Sell it to the buyer in this water, or sail it home to the market.'
+                : 'Out of bait. There are peddlers out here, and the shop ashore.'}
+            </p>
+          )}
 
-        {(holdFull || outOfBait) && (phase === 'idle' || phase === 'result') && (
-          // Not just "you cannot" — where the fix is. A zone buyer is sitting in
-          // this water and will take the lot, which is the whole reason they
-          // exist, and nobody is going to guess that from a greyed-out button.
-          <p className="font-karla font-600" style={{
-            fontSize: '0.888rem', color: holdFull ? '#f8a2a2' : '#e8c98a',
-            textAlign: 'center', lineHeight: 1.5,
-            textShadow: '0 1px 8px rgba(0,0,0,0.9)',
-          }}>
-            {holdFull
-              ? 'Your hold is full. Sell it to the buyer in this water, or sail it home to the market.'
-              : 'Out of bait. There are peddlers out here, and the shop ashore.'}
-          </p>
-        )}
+          {choiceNote && (
+            <p className="font-karla font-700" style={{
+              fontSize: '0.912rem', color: '#7fd6a0', textAlign: 'center',
+              textShadow: '0 1px 8px rgba(0,0,0,0.9)',
+            }}>{choiceNote}</p>
+          )}
 
-        {err && (
-          <p className="font-karla font-600" style={{
-            fontSize: '0.936rem', color: '#e6a0a0', textShadow: '0 1px 8px rgba(0,0,0,0.9)',
-          }}>{err}</p>
-        )}
+          {/* ── THE UNDER-DIAL ACTION ROW ────────────────────────────────────
+              Actions ON THE ENCOUNTER live here, directly beneath the dial (or
+              beneath the card it turns into), because that is the thing they act
+              upon. The Tide Turner used to sit in the band below the CAST button,
+              which put a decision about the fish on your hook down among the
+              rig controls, a whole screen away from the fish.
+
+              ONE row, deliberately outside the phase branches above, so the two
+              occupants cannot drift apart: the Tide Turner is a `hooked` action
+              and the wormhole is a `result` one, so today only one is ever up —
+              but if that ever changes they sit side by side, each taking half,
+              rather than one of them re-inventing a row somewhere else.
+
+              OUT OF THE FLOW, and that is the whole point. This area is a
+              centred column, so ANY child that appears re-centres the column and
+              drags the dial (or the card) with it — which is the reel visibly
+              jumping the moment a skip becomes available and jumping back when it
+              is used. Pinned to the bottom of the frame, the row costs zero
+              layout space, so what it does or does not contain cannot move the
+              instrument you are aiming with.
+
+              Compact on purpose too. These are offers, not the task: the dial is
+              the thing being looked at, and a pair of full-width slabs under it
+              competed with it for attention. */}
+          {((tideTurner.has && phase === 'hooked' && skipsLeft > 0) || (wormhole && phase === 'result')) && (
+            <div data-no-steer style={{
+              display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap',
+            }}>
+              {/* THE LABEL SAYS SKIP, NOT "throw it back". Both screens offer
+                  this at the same moment — the dial is up and the fish is not
+                  landed yet (this screen's `hooked` is the fishing screen's
+                  `catching`) — but the port renamed it, and "throw it back"
+                  describes putting a fish you have caught into the water.
+                  Nothing has been caught. What the button does is drop the
+                  encounter before it resolves. */}
+              {tideTurner.has && phase === 'hooked' && skipsLeft > 0 && (
+                <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
+                  className="font-cinzel font-700"
+                  style={{
+                    pointerEvents: 'auto',
+                    padding: '0.4rem 0.85rem', borderRadius: 999, fontSize: '0.816rem',
+                    color: '#cdbdf8', whiteSpace: 'nowrap',
+                    // AN OPAQUE FLOOR, like its neighbour. A translucent wash
+                    // over open water lets the sea read straight through the
+                    // label — the house rule for anything drawn on the world.
+                    background: 'linear-gradient(180deg, rgba(104,88,178,0.5) 0%, rgba(46,38,84,0.62) 100%), rgba(10,8,18,0.96)',
+                    border: '1px solid rgba(167,139,250,0.6)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+                    cursor: skipping ? 'default' : 'pointer', opacity: skipping ? 0.6 : 1,
+                  }}>
+                  {skipping ? '…' : <>Tide Turner · Skip <span style={{ opacity: 0.7 }}>· {skipsLeft} left</span></>}
+                </button>
+              )}
+              {wormhole && phase === 'result' && (
+                <button disabled={busyChoice}
+                  onClick={async e => {
+                    e.stopPropagation(); setBusyChoice(true)
+                    const r = await rerollWormhole().catch(() => ({ error: 'The wormhole closed.' }))
+                    setBusyChoice(false)
+                    setWormhole(false)
+                    if ('error' in r) { setChoiceNote(r.error); return }
+                    setChoiceNote(`Rerolled into ${r.fish.name}`)
+                  }}
+                  className="font-cinzel font-700"
+                  style={{
+                    pointerEvents: 'auto',
+                    padding: '0.4rem 0.85rem', borderRadius: 999,
+                    fontSize: '0.816rem', color: '#f0ddff', whiteSpace: 'nowrap',
+                    background: 'linear-gradient(180deg, rgba(120,70,170,0.5) 0%, rgba(60,32,92,0.62) 100%), rgba(10,8,18,0.96)',
+                    border: '1px solid rgba(192,132,252,0.6)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+                    cursor: 'pointer',
+                  }}>
+                  Wormhole · Reroll
+                </button>
+              )}
+            </div>
+          )}
+
+        </div>
+
       </div>
 
       {/* THE TACKLE BOX. Opens over the rod, closes when you have picked, and
