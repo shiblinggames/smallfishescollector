@@ -204,8 +204,11 @@ const Z = {
   /** The at-anchor ripples, and the player's boat. */
   ripples: 4,
   boat: 5,
+  /** Scenery standing between the camera and the hull. The world is drawn in
+   *  two passes and this is the near one — see OCCLUDERS. */
+  front: 6,
   /** The full-screen "Entering the Abyss" flourish. */
-  crossing: 6,
+  crossing: 7,
   /** Readouts: where you are, what time it is. */
   hud: 12,
   /** The action button — go ashore, fish here, hail. NOTHING covers this. */
@@ -1043,6 +1046,10 @@ export default function SeaMap({
 
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const worldRef = useRef<HTMLDivElement | null>(null)
+  /** The thin layer above the hull. Carries the world's own transform, written
+   *  in the same breath, or the two would disagree by a frame and the scenery
+   *  in front of her would swim. */
+  const frontRef = useRef<HTMLDivElement | null>(null)
   const boatRef = useRef<HTMLDivElement | null>(null)
 
   // Position, velocity and target live in refs, not state: they change every
@@ -2048,6 +2055,10 @@ export default function SeaMap({
   /** Pressed up against the edge of the surveyed chart. Ref for the loop, state
    *  for the one line it puts on screen. */
   const [atEdge, setAtEdge] = useState(false)
+  /** Which scenery is currently nearer the camera than the hull. Indices into
+   *  OCCLUDERS; see the note there for why this is a second layer rather than
+   *  a z-index. */
+  const [occluding, setOccluding] = useState<number[]>([])
   const edgeRef = useRef(false)
   /** The isle whose landing panel is open, and what it gave up. `landed`, not
    *  `ashore` — that name is already the Mainland's three-card chooser. */
@@ -3545,8 +3556,12 @@ export default function SeaMap({
       // scaleY LAST (CSS applies right to left), so the camera pan happens in
       // world units and only then meets the plane's foreshortening.
       if (world) {
-        world.style.transform =
-          `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
+        const t = `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
+        world.style.transform = t
+        // THE SAME STRING, THE SAME FRAME. These two layers are one world drawn
+        // in two passes; a transform written to one and not the other would put
+        // the near scenery a frame behind the far scenery.
+        if (frontRef.current) frontRef.current.style.transform = t
       }
       // The sea recoloured under the boat. One style write per frame, and the
       // reason there are no zone edges anywhere on the chart.
@@ -3735,6 +3750,22 @@ export default function SeaMap({
           if (p.kind === 'port' ? dist(pos.current, p) < moorR(p) : inBand(pos.current, p)) { found = p; break }
         }
         setNear(prev => (prev?.id === found?.id ? prev : found))
+
+        // ── WHAT IS IN FRONT OF HER RIGHT NOW ──────────────────────────
+        // `m.y` is a mark's BASE — SeaMark anchors at translate(-50%,-100%) —
+        // so a base further SOUTH is nearer the camera, and that is the whole
+        // depth test. The epsilon keeps a mark whose foot is level with the
+        // hull from flickering in and out as she rocks.
+        const inFront: number[] = []
+        for (let k = 0; k < OCCLUDERS.length; k++) {
+          const o = OCCLUDERS[k]
+          if (o.y <= pos.current.y + 8) continue
+          if (Math.abs(o.x - pos.current.x) > OCCLUDE_RANGE) continue
+          if (o.y - pos.current.y > OCCLUDE_RANGE) continue
+          inFront.push(k)
+        }
+        setOccluding(prev =>
+          (prev.length === inFront.length && prev.every((v, k) => v === inFront[k])) ? prev : inFront)
 
         // Standing in a hotspot. Compared by KEY, not by identity: the object
         // is rebuilt every fifteen seconds and comparing references would
@@ -4297,6 +4328,21 @@ hullRef={hullRefFor(t.key)} />
                 rodColor: rodNow?.color ?? gear.rodColor,
               }}
               frame={frame} />}
+      </div>
+
+      {/* ── THE NEAR PASS ───────────────────────────────────────────────
+          The handful of things currently standing between the camera and the
+          hull, drawn again on top of her. Everything about the world layer
+          applies — same transform, same marks, same submerge — the only
+          difference is which side of the boat it lands on.
+
+          Empty almost always, which is the point: this is a few sprites when
+          you are among rocks and nothing at all in open water. */}
+      <div ref={frontRef} aria-hidden style={{
+        position: 'absolute', left: '50%', top: '50%', zIndex: Z.front,
+        willChange: 'transform', pointerEvents: 'none',
+      }}>
+        {occluding.map(k => <SeaMark key={k} m={OCCLUDERS[k]} i={k + 4000} />)}
       </div>
 
       {/* The prompt steps aside while the rod is out — the cast button is the
@@ -5787,6 +5833,36 @@ function anchorageRocks() {
 }
 
 const ANCHORAGE_WALL = anchorageRocks()
+
+/**
+ * EVERYTHING THAT CAN STAND IN FRONT OF THE BOAT.
+ *
+ * The hull is drawn on the SCREEN layer, at dead centre, above the whole world
+ * — which is what makes the camera-follow trivial and what meant the boat was
+ * painted over every rock on the chart whichever side of it she was on. Sail
+ * north of a stack and you were still in front of it, hovering.
+ *
+ * The world layer carries a transform, so it is its own stacking context and
+ * its children can never interleave with a sibling. Real depth sorting would
+ * mean putting the boat back INSIDE it at her world position, and the note on
+ * the boat node says what happened last time that was tried.
+ *
+ * So instead: a second, thin layer ABOVE the hull, carrying the same transform,
+ * holding only the few things currently nearer the camera than she is. They are
+ * drawn twice — once in the world, once here — which costs a handful of sprites
+ * and is invisible, because both copies land in exactly the same place.
+ *
+ * Only tall scenery. A flat shelf awash at the waterline never covers anything,
+ * and every extra candidate is one more distance test on the proximity tick.
+ */
+const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
+  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL]
+    .filter(m => m.size >= 300)
+    .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size }))
+
+/** How far out to look. A screen and a half at the widest zoom, so something
+ *  drifts in front of the hull before it could have been seen not to. */
+const OCCLUDE_RANGE = 1600
 
 /**
  * THE SCENERY, AS ONE ELEMENT.
