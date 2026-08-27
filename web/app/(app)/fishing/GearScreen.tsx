@@ -539,7 +539,7 @@ const SLOT_FAMILY = {
 } as const
 
 function GearSlot({
-  label, image, icon, itemName, sub, color, accent, onClick, small, empty, glowClass, notify, pulseKey, primeval,
+  label, image, icon, itemName, sub, color, accent, onClick, small, empty, glowClass, notify, pulseKey, primeval, big,
 }: {
   label: string
   image?: string | null
@@ -569,6 +569,21 @@ function GearSlot({
    *  primeval border instead of the flat rarity tint every other slot uses. It
    *  should not read as an ordinary slot that happens to be empty. */
   primeval?: boolean
+  /**
+   * ART FORWARD, for the shipyard's rig.
+   *
+   * The ordinary tile puts a 36px thumbnail above two lines of type, inside a
+   * cell that is around 134px wide on a phone. That is a postage stamp in a
+   * frame: the tile reads as a label with a picture attached, when the picture
+   * IS the thing — you know your rod by its silhouette long before you read its
+   * name. Here the art takes the top two thirds of the tile and carries a wash
+   * of its own colour behind it, and the words become the caption they always
+   * should have been.
+   *
+   * A flag rather than a separate component because everything else about the
+   * tile is identical, and the pickers it opens must not change at all.
+   */
+  big?: boolean
 }) {
   const glow = !!glowClass
   // The outline is the family; the thumbnail keeps the item's own colour.
@@ -603,9 +618,9 @@ function GearSlot({
               background: 'rgba(255,255,255,0.04)',
             }),
         borderRadius: 20,
-        padding: small ? '0.55rem 0.4rem' : '0.65rem 0.5rem',
+        padding: big ? '0.5rem 0.45rem 0.6rem' : small ? '0.55rem 0.4rem' : '0.65rem 0.5rem',
         cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: big ? 'flex-start' : 'center', gap: big ? 2 : 5,
         transition: 'border-color 0.15s, background 0.15s',
         touchAction: 'manipulation',
       }}
@@ -621,6 +636,40 @@ function GearSlot({
           pointerEvents: 'none',
         }} />
       )}
+      {big ? (
+        // Sized against the VIEWPORT, not a fixed pixel box, because the cell
+        // itself is a third of a column that changes width with the screen —
+        // a fixed thumbnail is what makes a tile look empty on a big display.
+        <div style={{
+          position: 'relative', width: '100%', height: 'clamp(62px, 23vw, 104px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          {/* The item's own colour, pooled behind it. An empty slot gets none,
+              so "nothing equipped" reads as an unlit tile rather than a lit one
+              with a grey shape in it. */}
+          {!empty && (
+            <div aria-hidden style={{
+              position: 'absolute', inset: '4%', borderRadius: '50%',
+              background: `radial-gradient(circle at 50% 46%, ${color}33 0%, ${color}0d 45%, ${color}00 70%)`,
+            }} />
+          )}
+          {image
+            ? <img
+                src={image}
+                alt={label}
+                loading="lazy"
+                decoding="async"
+                className={glowClass}
+                style={{
+                  position: 'relative',
+                  maxWidth: '88%', maxHeight: '88%', objectFit: 'contain',
+                  ...(glow ? { ['--rod-glow-color' as string]: color } : { filter: `drop-shadow(0 3px 10px ${color}66)` }),
+                } as React.CSSProperties}
+              />
+            : <div style={{ position: 'relative', transform: 'scale(2.1)', display: 'flex' }}>{icon}</div>
+          }
+        </div>
+      ) : (
       <div style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {image
           ? <img
@@ -639,18 +688,22 @@ function GearSlot({
           : icon
         }
       </div>
+      )}
       {/* Both lines truncate. A long name like "Angler's Formula" or
           "Charcoal Parrot" used to wrap onto a second line, and because the
           grid rows are auto-height, one long name in one tile grew the whole
           row and shunted everything below it down. minWidth:0 is the part
           that actually lets ellipsis happen inside a flex column. */}
-      <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>
+      <div style={{ textAlign: 'center', width: '100%', minWidth: 0, marginTop: big ? 'auto' : 0 }}>
         <p className="font-karla font-600 uppercase" style={{
-          fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1,
+          fontSize: big ? '0.68rem' : '0.76rem',
+          color: `rgba(255,255,255,${big ? 0.42 : 0.55})`,
+          letterSpacing: '0.14em', marginBottom: 1,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={label}>{label}</p>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.81rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2,
+          fontSize: big ? '0.86rem' : '0.81rem',
+          color: empty ? '#3a3734' : '#e6e2dc', lineHeight: 1.2,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={itemName}>{itemName}</p>
         {sub && (
@@ -1125,22 +1178,22 @@ export default function GearScreen({
         gap: 6,
       }}>
         <div>
-          <GearSlot label="Rod" accent={SLOT_FAMILY.gear} image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
+          <GearSlot big label="Rod" accent={SLOT_FAMILY.gear} image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
         </div>
         <div>
-          <GearSlot label="Reel" accent={SLOT_FAMILY.gear} image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} pulseKey={pulseKeys.reel} onClick={() => setOpenSlot('reel')} />
+          <GearSlot big label="Reel" accent={SLOT_FAMILY.gear} image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} pulseKey={pulseKeys.reel} onClick={() => setOpenSlot('reel')} />
         </div>
         <div>
-          <GearSlot label="Hook" accent={SLOT_FAMILY.gear} image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
+          <GearSlot big label="Hook" accent={SLOT_FAMILY.gear} image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
         </div>
         <div>
-          <GearSlot label="Line" accent={SLOT_FAMILY.gear} image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
+          <GearSlot big label="Line" accent={SLOT_FAMILY.gear} image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
         </div>
         <div>
           {(() => {
           const equippedDef = effectiveSpecialDef(equippedSpecial, hasAutoCatcher ? ['auto_catcher'] : [])
           return (
-            <GearSlot
+            <GearSlot big
               label="Special" accent={SLOT_FAMILY.special}
               image={equippedDef?.image ?? null}
               icon={<SpecialIcon color={equippedDef ? equippedDef.color : '#5a4a7a'} />}
@@ -1157,7 +1210,7 @@ export default function GearScreen({
           const seated = equippedSpecial2 ? SPECIAL_ITEMS.find(s => s.id === equippedSpecial2) : undefined
           const REEL = '#e0455a'   // ancient crimson, matching the hull mount + the rarity
           return (
-            <GearSlot
+            <GearSlot big
               label="Special" accent={SLOT_FAMILY.special}
               image={seated?.image ?? null}
               icon={hasDeepReel
@@ -1175,7 +1228,7 @@ export default function GearScreen({
           {(() => {
             const c = CHARACTER_COLORS.find(x => x.id === characterColor)
             return (
-              <GearSlot
+              <GearSlot big
                 label="Skin" accent={SLOT_FAMILY.cosmetic}
                 // Full-figure sprite, so it needs the same head crop the skin
                 // picker uses; GearSlot's `image` would letterbox the whole
@@ -1201,7 +1254,7 @@ export default function GearScreen({
           {(() => {
           const h = equippedHat ? HATS.find(x => x.id === equippedHat) : null
           return (
-            <GearSlot
+            <GearSlot big
               label="Hat" accent={SLOT_FAMILY.cosmetic}
               image={h?.restImageUrl ?? null}
               itemName={h?.name ?? 'None'}
@@ -1216,7 +1269,7 @@ export default function GearScreen({
           {(() => {
           const b = equippedBoat ? BOATS.find(x => x.id === equippedBoat) : null
           return (
-            <GearSlot
+            <GearSlot big
               label="Boat" accent={SLOT_FAMILY.cosmetic}
               image={b?.restImageUrl ?? null}
               itemName={b?.name ?? 'Default'}
@@ -1234,7 +1287,7 @@ export default function GearScreen({
           {(() => {
           const pet = equippedPet ? getPet(equippedPet) : null
           return (
-            <GearSlot
+            <GearSlot big
               label="Pet" accent={SLOT_FAMILY.cosmetic}
               image={pet?.restImageUrl ?? null}
               itemName={pet?.name ?? 'None'}
@@ -1250,7 +1303,7 @@ export default function GearScreen({
           const equipped = equippedBadges.filter(Boolean)
           const itemName = equipped.length === 0 ? 'None' : `${equipped.length} equipped`
           return (
-            <GearSlot
+            <GearSlot big
               label="Badges" accent={SLOT_FAMILY.badge}
               color="#f0c040"
               itemName={itemName}
