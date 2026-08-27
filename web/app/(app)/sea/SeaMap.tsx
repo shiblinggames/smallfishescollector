@@ -3090,8 +3090,21 @@ export default function SeaMap({
         // come off hullRef rather than being the fishing boat's numbers used
         // for everything that floats.
         const hull = hullRef.current
-        const sx = pos.current.x - ux * 46 * hull.scale + WATERLINE_X / zoomRef.current
-        const sy = pos.current.y - uy * 46 * hull.scale + hull.keelY / (GROUND * zoomRef.current)
+        // ── WHY THERE IS NO ZOOM HERE ──────────────────────────────────
+        //
+        // There used to be, and it put the wake a long way adrift of the
+        // Man-o-War. The waterline is a SCREEN measurement off a sprite that is
+        // itself drawn `scale(zoom)`, so the keel sits `keelY * zoom` below the
+        // boat on screen. The world layer is `scale(zoom) scaleY(GROUND)`, so a
+        // world offset d lands at `d * GROUND * zoom`. Setting those equal, the
+        // zoom cancels: d = keelY / GROUND, full stop.
+        //
+        // Dividing by zoom instead pinned the foam a CONSTANT number of screen
+        // pixels down while the hull above it grew and shrank with the camera.
+        // On the fishing boat that error was 34px at its worst and nobody
+        // noticed; at the Man-o-War's 140 it is most of a ship.
+        const sx = pos.current.x - ux * 46 * hull.scale + WATERLINE_X
+        const sy = pos.current.y - uy * 46 * hull.scale + hull.keelY / GROUND
         const ang = Math.atan2(uy, ux)
         const force = Math.min(1, speed / (SPEED * 0.9))
         for (const side of [-1, 1] as const) {
