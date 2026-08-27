@@ -31,9 +31,10 @@ import PopupShell from '@/components/PopupShell'
 import { FISH_HOLD_TIERS, getFishHold } from '@/lib/fishHold'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import { vibrate } from '@/lib/haptics'
-import FisherPose from '@/components/FisherPose'
 import LoadoutStats from '@/components/LoadoutStats'
 import GearScreen, { type SlotKey } from '../fishing/GearScreen'
+import CalloutLayer from './CalloutLayer'
+import PreviewStage from './PreviewStage'
 import { SPECIAL_ITEMS, effectiveSpecialDef } from '@/lib/specialItems'
 import {
   rackSlots, nextRackCost, MAX_RACK_TIER,
@@ -432,106 +433,23 @@ export default function ShipyardClient(p: {
             strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
 
-        <div style={{
-          position: 'relative', marginTop: 64, borderRadius: 22,
-          // MUST clip. FisherPose's overlays are positioned in percentages of
-          // this box and genuinely run past it — the hook alone is 204.5% wide
-          // at left -10.5% — so without this the widest child sets the page's
-          // scroll width and the whole thing slides sideways.
-          overflow: 'hidden',
-          // A SOLID base under the tint. This sits on the page ground and a
-          // translucent panel over anything painted reads as a smear.
-          background: 'linear-gradient(180deg, #16303f 0%, #0d1e2b 55%, #0a1622 100%)',
-          border: '1px solid rgba(150,196,222,0.22)',
-          boxShadow: 'inset 0 -40px 60px -40px rgba(0,8,18,0.9)',
+        <PreviewStage style={{ marginTop: 64 }} kit={{
+          characterColor: color,
+          equippedHat: hat, equippedBoat: boat,
+          equippedPet: pet, equippedPetBow: petBow,
+          rodTier: equipped, reelTier, hookTier,
         }}>
-          {/* A low band of water under the hull, so the boat is ON something. */}
-          <div aria-hidden style={{
-            position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%',
-            background: 'linear-gradient(180deg, rgba(24,66,88,0) 0%, rgba(20,58,80,0.5) 40%, rgba(10,30,44,0.9) 100%)',
-          }} />
-          <div style={{ position: 'relative', padding: '0.6rem 0.5rem 0.5rem' }}>
-            {/* The sprite is 900x800 with the figure in the bottom 55.5%, so the
-                top third of the box is empty sky. Pulled in by measurement, the
-                same way the gear grid's small preview does it. */}
-            {/* The sprite is 900x800 with the figure in the bottom 55.5%, so the
-                top third of the box is empty sky. Pulled in by measurement, the
-                same way the gear grid's small preview does it.
+          {/* ── THE CALLOUTS ────────────────────────────────────────────
+              Names beside the boat with a hairline to the thing each one names.
+              Both ends are free — see ./callouts — because a boat is not laid
+              out in even quarters and neither are the things hanging off it.
 
-                NOTHING IS LAYERED INSIDE THIS WRAPPER. The labelled zones that
-                briefly lived here sat between the art and the eye, and the art
-                stopped being visible. The callouts are a sibling of the whole
-                hero now, so whatever they do they cannot come between you and
-                the boat. */}
-            <div style={{ marginTop: '-30%', marginBottom: '-2%' }}>
-              <FisherPose
-                characterColor={color}
-                equippedHat={hat} equippedBoat={boat}
-                equippedPet={pet} equippedPetBow={petBow}
-                rodTier={equipped} reelTier={reelTier} hookTier={hookTier}
-              />
-            </div>
-
-            {/* ── THE LEADER LINES ────────────────────────────────
-                One SVG over the art, drawing from the top of each chip up to
-                the thing it names, with a dot where it lands.
-
-                preserveAspectRatio="none" so a 0-100 box maps straight onto
-                whatever shape the panel is, and non-scaling-stroke so that
-                stretching does not turn a hairline into a wedge. Decoration
-                only: the chip below is the button, because a one pixel line is
-                not a tap target and widening it would lay invisible glass over
-                the boat. */}
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden
-              style={{
-                position: 'absolute', inset: 0, width: '100%', height: '100%',
-                pointerEvents: 'none', zIndex: 3, overflow: 'visible',
-              }}>
-              {CALLOUTS.map((c, i) => (
-                <g key={c.slot}>
-                  <line x1={chipX(i, CALLOUTS.length)} y1={100} x2={c.x} y2={c.y}
-                    stroke="rgba(180,214,232,0.42)" strokeWidth={1}
-                    vectorEffect="non-scaling-stroke" />
-                  <circle cx={c.x} cy={c.y} r={1.1}
-                    fill="rgba(220,238,246,0.9)" vectorEffect="non-scaling-stroke" />
-                </g>
-              ))}
-            </svg>
-          </div>
-
-          {/* ── THE NAMES ───────────────────────────────────────────────
-              A strip of its own under the picture. Every one of these is a
-              button: tapping "Hat" opens the hat picker, and the line above it
-              says which part of the boat that is. */}
-          <div style={{
-            position: 'relative', zIndex: 4,
-            display: 'grid', gridTemplateColumns: `repeat(${CALLOUTS.length}, minmax(0, 1fr))`,
-            gap: 4, padding: '0 0.4rem 0.5rem',
-          }}>
-            {CALLOUTS.map(c => (
-              <button key={c.slot} type="button" className="tap"
-                onClick={() => { vibrate(8); setSlot(c.slot) }}
-                title={`${c.label}: ${nameFor(c.slot)}`}
-                style={{
-                  minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: 0, padding: '0.3rem 0.25rem', borderRadius: 10, cursor: 'pointer',
-                  // An opaque floor: this sits at the foot of painted art, and a
-                  // translucent chip over paint reads as a smear.
-                  background: 'rgba(6,14,22,0.88)',
-                  border: '1px solid rgba(180,214,232,0.26)',
-                }}>
-                <span className="font-karla font-700 uppercase" style={{
-                  fontSize: 'var(--sy-1)', letterSpacing: '0.12em', lineHeight: 1.1,
-                  color: 'rgba(190,212,228,0.6)',
-                }}>{c.label}</span>
-                <span className="font-cinzel font-700 truncate" style={{
-                  maxWidth: '100%', fontSize: 'var(--sy-2)', lineHeight: 1.25, color: '#e6e2dc',
-                }}>{nameFor(c.slot)}</span>
-              </button>
-            ))}
-          </div>
-
-        </div>
+              Shared with /shipyard/calibrate, which is where the numbers come
+              from. Placing them by reading coordinates is hopeless: the sprite
+              is a composite whose overlays move with every hat and every hull,
+              so the only honest way is to drag them while looking at it. */}
+          <CalloutLayer nameFor={nameFor} onPick={setSlot} />
+        </PreviewStage>
 
         {err && (
           <p className="font-karla font-600" style={{ fontSize: 'var(--sy-4)', color: '#e6a0a0', marginTop: 10, lineHeight: 1.5 }}>
@@ -1158,37 +1076,6 @@ export default function ShipyardClient(p: {
  *  locker grid all began at the same left edge with nothing saying where one
  *  thing ended and the next started, which is most of why it read as one
  *  undifferentiated pile. */
-/**
- * THE CALLOUTS.
- *
- * A row of names in a strip UNDER the picture, each with a line running up to
- * the thing it names.
- *
- * They were pinned to the left and right edges before, which squashed five
- * labels into two narrow gutters and left them stacked on top of each other.
- * Underneath there is a whole width to spread across, and a line can travel up
- * to anywhere on the boat — so the label is somewhere readable AND still points
- * at the item, which is the thing the edge version could not do.
- *
- * `x`/`y` are percentages of the ART BOX, not of the hero: the art has a strip
- * beneath it now and the two are different boxes. Ordered left to right by
- * where their chip sits, and chosen so the lines fan outward rather than
- * crossing each other.
- *
- * Placed by eye against the rest pose. Five rows in one table, so moving them
- * is a two minute job.
- */
-const CALLOUTS: { slot: SlotKey; label: string; x: number; y: number }[] = [
-  { slot: 'rod',  label: 'Rod',  x: 20, y: 34 },
-  { slot: 'hat',  label: 'Hat',  x: 50, y: 24 },
-  { slot: 'skin', label: 'Skin', x: 50, y: 46 },
-  { slot: 'boat', label: 'Boat', x: 48, y: 86 },
-  { slot: 'pet',  label: 'Pet',  x: 74, y: 70 },
-]
-
-/** Where a callout's chip sits along the strip: even columns, centre of each. */
-const chipX = (i: number, n: number) => ((i + 0.5) / n) * 100
-
 function Band({ title }: { title: string }) {
   return (
     <div style={{ marginTop: 26, marginBottom: 10 }}>
