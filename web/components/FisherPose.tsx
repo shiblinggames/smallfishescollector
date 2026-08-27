@@ -51,7 +51,23 @@ export default function FisherPose({
     <div style={{ position: 'relative', width: '100%', pointerEvents: 'none' }}>
       {/* Character base (rest frame). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={charSprites.rest} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
+      <img src={charSprites.rest} alt="" decoding="async"
+        // ── WHY THIS ONE IS NOT LAZY, AND WHY IT CARRIES ITS SIZE ──────
+        //
+        // Every other layer here is absolutely positioned, so this image alone
+        // gives the component its height. With `loading="lazy"` and no width or
+        // height attributes it reserves NOTHING before it loads, and in the
+        // shipyard the wrapper is pulled up 30% — so the panel collapsed to its
+        // own padding, which put the image out of the viewport, which meant the
+        // lazy load never fired, which kept the panel collapsed. A loop that
+        // cannot break itself: the preview was simply never there.
+        //
+        // 900x800 are the sprite's real dimensions, measured. They give the box
+        // an aspect ratio up front, so the space is correct before a byte
+        // arrives — which also removes the layout shift everywhere else this
+        // component is used.
+        width={900} height={800}
+        style={{ width: '100%', height: 'auto', display: 'block' }} />
 
       {/* Hat. */}
       {hd && (() => {

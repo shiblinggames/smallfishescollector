@@ -24,6 +24,8 @@ import { REELS, getReel } from '@/lib/reels'
 import { HOOKS, getHook } from '@/lib/hooks'
 import { getLine } from '@/lib/lines'
 import { getPet, petSlot } from '@/lib/pets'
+import { getHat } from '@/lib/hats'
+import { CHARACTER_COLORS } from '@/lib/characters'
 import { getBoat, boatSpeed, boatAgility, trimLabel } from '@/lib/boats'
 import PopupShell from '@/components/PopupShell'
 import { FISH_HOLD_TIERS, getFishHold } from '@/lib/fishHold'
@@ -339,6 +341,14 @@ export default function ShipyardClient(p: {
   }
 
   const rodDef = getEffectiveRod(equipped, effects)
+  /** What a callout writes under its label. The picture already tells you what
+   *  it looks like; the name is the bit you cannot read off a silhouette. */
+  const nameFor = (k: SlotKey) =>
+    k === 'rod' ? rodDef.name
+      : k === 'hat' ? (getHat(hat)?.name ?? 'No hat')
+        : k === 'skin' ? (CHARACTER_COLORS.find(c => c.id === color)?.name ?? color)
+          : k === 'pet' ? (getPet(pet)?.name ?? 'No pet')
+            : (getBoat(boat)?.name ?? 'No boat')
   // The three that the row under the picture names. Derived here rather than
   // inline so the row and anything else that wants them cannot disagree.
   const reelDef = getReel(reelTier)
@@ -444,34 +454,42 @@ export default function ShipyardClient(p: {
             {/* The sprite is 900x800 with the figure in the bottom 55.5%, so the
                 top third of the box is empty sky. Pulled in by measurement, the
                 same way the gear grid's small preview does it. */}
-            {/* THE PICTURE IS THE RIG. Every labelled zone over it opens the
-                picker for the thing underneath, so changing your hat is
-                tapping your hat rather than hunting for a tile named Hat in a
-                grid somewhere below the fold.
+            {/* The sprite is 900x800 with the figure in the bottom 55.5%, so the
+                top third of the box is empty sky. Pulled in by measurement, the
+                same way the gear grid's small preview does it.
 
-                `position: relative` and nothing else: the zones are
-                percentages of this box, and FisherPose's own overlays are
-                percentages of the same box, so the two coordinate systems are
-                already the same one. */}
-            <div style={{ position: 'relative', marginTop: '-30%', marginBottom: '-2%' }}>
+                NOTHING IS LAYERED INSIDE THIS WRAPPER. The labelled zones that
+                briefly lived here sat between the art and the eye, and the art
+                stopped being visible. The callouts are a sibling of the whole
+                hero now, so whatever they do they cannot come between you and
+                the boat. */}
+            <div style={{ marginTop: '-30%', marginBottom: '-2%' }}>
               <FisherPose
                 characterColor={color}
                 equippedHat={hat} equippedBoat={boat}
                 equippedPet={pet} equippedPetBow={petBow}
                 rodTier={equipped} reelTier={reelTier} hookTier={hookTier}
               />
-              {RIG_ZONES.map(z => (
-                <RigZone key={z.slot} label={z.label} l={z.l} t={z.t} w={z.w} h={z.h}
-                  name={
-                    z.slot === 'rod' ? rodDef.name
-                      : z.slot === 'hat' ? (hat ?? 'None')
-                        : z.slot === 'skin' ? color
-                          : z.slot === 'pet' ? (pet ?? 'None')
-                            : (boat ?? 'None')
-                  }
-                  onClick={() => { vibrate(8); setSlot(z.slot) }} />
-              ))}
             </div>
+          </div>
+
+          {/* ── THE CALLOUTS ────────────────────────────────────────────
+              The name sits OUT of the way at the edge and a hairline reaches in
+              to the thing it names. Labels standing on top of the art was the
+              obvious way to do this and the wrong one: the picture is the point
+              of the picture, and five chips laid across it covered exactly what
+              you came to look at.
+
+              pointer-events: none on the layer, auto on the chips, so the space
+              between them is not a sheet of glass over the boat. */}
+          <div aria-hidden={false} style={{
+            position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
+          }}>
+            {CALLOUTS.map(c => (
+              <Callout key={c.slot} label={c.label} name={nameFor(c.slot)}
+                side={c.side} y={c.y} reach={c.reach}
+                onClick={() => { vibrate(8); setSlot(c.slot) }} />
+            ))}
           </div>
 
         </div>
@@ -1102,53 +1120,78 @@ export default function ShipyardClient(p: {
  *  thing ended and the next started, which is most of why it read as one
  *  undifferentiated pile. */
 /**
- * WHERE EACH PIECE OF KIT LIVES ON THE PICTURE.
+ * WHERE THE CALLOUTS SIT, and how far each one reaches.
  *
- * Percentages of FisherPose's own box, which is the 900x800 character sprite
- * with the figure in the bottom 55.5% — so nothing worth tapping is above 34%.
+ * `y` is a percentage down the hero, `reach` how far across it the hairline
+ * runs before it stops at the thing being named. Percentages of the HERO box,
+ * not of FisherPose: the pose is inset by the panel's padding and pulled up
+ * 30%, so its coordinate system and this one are not the same, and pretending
+ * otherwise is how a label ends up pointing at water.
  *
- * REGIONS, not points. A point would need the label to land exactly on a hat
- * whose overlay coordinates differ for every hat in the game; a region only has
- * to contain it. Tapping anywhere near the head opens the hat, which is the
- * behaviour you want anyway on a phone.
- *
- * They do not overlap, and they are ordered so the label of one never sits on
- * top of the art of another. Placed by eye against the rest pose: expect to
- * nudge these when the sprite changes.
+ * Placed by eye against the rest pose. They are five rows in one table
+ * precisely so that nudging them is a two minute job rather than an
+ * archaeology expedition.
  */
-const RIG_ZONES: { slot: SlotKey; label: string; l: number; t: number; w: number; h: number }[] = [
-  { slot: 'rod',  label: 'Rod',  l: 1,  t: 34, w: 34, h: 30 },
-  { slot: 'hat',  label: 'Hat',  l: 37, t: 38, w: 28, h: 19 },
-  { slot: 'skin', label: 'Skin', l: 37, t: 57, w: 28, h: 22 },
-  { slot: 'pet',  label: 'Pet',  l: 67, t: 60, w: 32, h: 26 },
-  { slot: 'boat', label: 'Boat', l: 12, t: 80, w: 76, h: 19 },
+const CALLOUTS: { slot: SlotKey; label: string; side: 'left' | 'right'; y: number; reach: number }[] = [
+  { slot: 'hat',  label: 'Hat',  side: 'left',  y: 20, reach: 32 },
+  { slot: 'rod',  label: 'Rod',  side: 'left',  y: 40, reach: 22 },
+  { slot: 'skin', label: 'Skin', side: 'left',  y: 60, reach: 30 },
+  { slot: 'pet',  label: 'Pet',  side: 'right', y: 66, reach: 22 },
+  { slot: 'boat', label: 'Boat', side: 'right', y: 86, reach: 30 },
 ]
 
-/** One tappable piece of the boat. The label is pinned to the top of its own
- *  zone so it reads as naming the thing under it. */
-function RigZone({ label, name, l, t, w, h, onClick }: {
-  label: string; name: string; l: number; t: number; w: number; h: number; onClick: () => void
+/**
+ * ONE CALLOUT: a name at the edge, a hairline reaching in, a dot on the thing.
+ *
+ * The whole chip is the button, and the hairline is decoration — a one pixel
+ * line is not a tap target on a phone, and making it one would put a strip of
+ * invisible glass across the boat.
+ */
+function Callout({ label, name, side, y, reach, onClick }: {
+  label: string; name: string; side: 'left' | 'right'; y: number; reach: number; onClick: () => void
 }) {
+  const left = side === 'left'
   return (
-    <button type="button" onClick={onClick} title={`${label}: ${name}`}
-      className="tap sy-rig-zone"
-      style={{
-        position: 'absolute', left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%`,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
-        padding: 0, borderRadius: 12, cursor: 'pointer',
-        background: 'transparent', border: '1px solid transparent',
-      }}>
-      <span className="font-karla font-700 uppercase" style={{
-        fontSize: 'var(--sy-1)', letterSpacing: '0.14em', lineHeight: 1,
-        padding: '0.2rem 0.42rem', borderRadius: 999,
-        color: 'rgba(226,240,248,0.92)',
-        // An opaque floor: this sits on painted art, where a translucent chip
-        // reads as a smear. Same rule the panels on the chart follow.
-        background: 'rgba(6,14,22,0.82)',
-        border: '1px solid rgba(180,214,232,0.3)',
-        whiteSpace: 'nowrap',
-      }}>{label}</span>
-    </button>
+    <div style={{
+      position: 'absolute', top: `${y}%`, [left ? 'left' : 'right']: '2%',
+      width: `${reach}%`, height: 0,
+      display: 'flex', flexDirection: left ? 'row' : 'row-reverse', alignItems: 'center',
+    }}>
+      <button type="button" onClick={onClick} title={`${label}: ${name}`}
+        className="tap sy-callout"
+        style={{
+          flexShrink: 0, pointerEvents: 'auto', cursor: 'pointer',
+          display: 'flex', flexDirection: 'column',
+          alignItems: left ? 'flex-start' : 'flex-end',
+          gap: 0, padding: '0.28rem 0.5rem', borderRadius: 10,
+          // An opaque floor. This sits on painted art, where a translucent chip
+          // reads as a smear — the same rule the panels on the chart follow.
+          background: 'rgba(6,14,22,0.88)',
+          border: '1px solid rgba(180,214,232,0.28)',
+          maxWidth: '100%', minWidth: 0,
+        }}>
+        <span className="font-karla font-700 uppercase" style={{
+          fontSize: 'var(--sy-1)', letterSpacing: '0.14em', lineHeight: 1.1,
+          color: 'rgba(190,212,228,0.6)', whiteSpace: 'nowrap',
+        }}>{label}</span>
+        <span className="font-cinzel font-700 truncate" style={{
+          maxWidth: '100%', fontSize: 'var(--sy-2)', lineHeight: 1.2, color: '#e6e2dc',
+        }}>{name}</span>
+      </button>
+      {/* The reach. Flex-grows into whatever the chip left over, so a long item
+          name shortens the line rather than pushing the dot off the boat. */}
+      <span aria-hidden style={{
+        flex: 1, height: 1, minWidth: 6,
+        background: left
+          ? 'linear-gradient(90deg, rgba(180,214,232,0.5), rgba(180,214,232,0.14))'
+          : 'linear-gradient(270deg, rgba(180,214,232,0.5), rgba(180,214,232,0.14))',
+      }} />
+      <span aria-hidden style={{
+        flexShrink: 0, width: 5, height: 5, borderRadius: '50%',
+        background: 'rgba(214,232,240,0.85)',
+        boxShadow: '0 0 5px rgba(214,232,240,0.6)',
+      }} />
+    </div>
   )
 }
 
