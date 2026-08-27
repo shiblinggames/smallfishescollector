@@ -392,59 +392,38 @@ const OBSTACLES: { x: number; y: number; r: number }[] = [
 ]
 
 /**
- * THE ROCK, AS A BARRIER RATHER THAN A PAINTING.
+ * THE REEF AND THE HARBOUR WALL ARE LINES, NOT CIRCLES.
  *
- * The reef and the anchorage wall were scenery. The only thing enforced was the
- * LINE they straddle — so a boat could sit in the southern half of the band
- * with a boulder drawn through the middle of it, which is what "sailing onto
- * the arches" was.
+ * These rocks were briefly given collision of their own, to stop a hull being
+ * drawn sitting on top of one. It worked and it was wrong: the reef ALREADY has
+ * a barrier — the wall — and the rocks straddle it, so the two fought. The
+ * clamp put a boat on the line, a rock pushed it off, the clamp put it back,
+ * sixty times a second. A hull shaking itself apart on the border.
  *
- * Boulders and headlands only. The shingle is small, there are four times as
- * many of them, and the wall behind them is what actually stops you.
+ * Two barriers over one piece of water is the bug. There is one now: the line,
+ * moved south to the band's own FACE, so you stop at the rocks' feet instead of
+ * among them. See REEF_FACE. The rock goes back to being paint, which is all it
+ * ever needed to be — nothing can reach it to sail through it.
  *
- * A SECOND LIST because these are generated further down the file and a const
- * array cannot reference one that has not been evaluated yet. The two loops
- * that consult obstacles run inside functions, long after module load, so they
- * can walk both.
+ * The same applies to the harbour wall and its rim. Both bands are pierced in
+ * exactly one place, and both gaps are cut clear of rock by construction.
  */
-function rockObstacles(): { x: number; y: number; r: number }[] {
-  return [...REEF, ...ANCHORAGE_WALL]
-    .filter(m => m.solid)
-    .map(m => ({ x: m.x, y: m.y, r: m.solidR ?? m.size * 0.42 + HULL }))
-}
 
 /**
- * THE FOUR GATE STACKS GET A SMALLER CIRCLE THAN THEIR WIDTH SUGGESTS.
+ * HOW FAR THE PAINTED BAND REACHES from the line it is drawn along.
  *
- * They are placed to lap the mouth's lip by about ten pixels, deliberately: set
- * them back and the last stone stops short, leaving a nick of bare water that
- * reads as a gap in the barrier. That is fine as PAINT and wrong as collision —
- * at 0.42 of their width the two of them pinched each opening four pixels
- * narrower than the crossing test wants, so the one route through the reef was
- * being closed by its own signpost.
- *
- * It is also just more accurate. These are tall leaning stacks; what they put
- * ON THE WATER is a good deal narrower than their silhouette, which is exactly
- * the case a width-derived circle gets wrong.
- *
- * 310 sets the inner edge 60 clear of each lip, on both the arch and the
- * sortie — they happen to want the same number, because both stacks sit the
- * same 370 outside their own half-width.
+ * The boulders sit at 110 either side and jitter 75, and each is drawn with its
+ * base at that point, so the southernmost paint is about 185 out. 200 stops a
+ * hull just short of the nearest foot — close enough to read as pulling up at
+ * the rocks, far enough that nothing overlaps.
  */
+const REEF_FACE = 200
 const STACK_R = 310
 
 /** Nudge a point out to clear water if it has been asked for inside something
  *  solid. The helm should not be able to ORDER a course into rock, which is
  *  half the fix; the other half is that momentum cannot carry you in either. */
 function clearOfLand(w: Vec): Vec {
-  for (const o of ROCKS) {
-    const dx = w.x - o.x, dy = w.y - o.y
-    const d = Math.hypot(dx, dy)
-    if (d < o.r) {
-      if (d < 0.001) return { x: o.x + o.r, y: o.y }
-      return { x: o.x + (dx / d) * o.r, y: o.y + (dy / d) * o.r }
-    }
-  }
   for (const o of OBSTACLES) {
     const dx = w.x - o.x, dy = w.y - o.y
     const d = Math.hypot(dx, dy)
@@ -3146,23 +3125,28 @@ export default function SeaMap({
           setInAnchorage(isNorth)
         }
         sideRef.current = isNorth
-      } else if (isNorth !== wasNorth) {
-        // ── BACK TO THE SIDE YOU CAME FROM, AND CLEAR OF THE LINE ──────
+      } else if (!inGate(pos.current.x)) {
+        // ── HELD AT THE BAND'S FACE, NOT ON ITS CENTRELINE ─────────────
         //
-        // This used to put the hull exactly ON the wall, which is a position
-        // the test above calls SOUTH: `isNorth` is `y < NORTH_WALL`, strictly.
-        // For a boat coming from the south that is harmless — it lands on the
-        // side it was already on and nothing fires again. For one coming from
-        // the NORTH it is a trap: side says north, position says south, so the
-        // clamp fires every frame and zeroes vel.y every frame, and the hull
-        // can never build the northward way it needs to get off the line.
-        // Stuck at the border, exactly where leaving the anchorage puts you.
+        // Outside the gate the reef is solid ground, so the barrier belongs at
+        // the edge of the paint rather than down the middle of it. Stopping at
+        // NORTH_WALL put a hull among the boulders, which is what made it look
+        // like you could sail onto them — and once the boulders briefly had
+        // collision of their own, the two barriers fought over the same water
+        // and shook the boat apart between them.
         //
-        // The margin is the fix. Pushed properly onto its own side, the
-        // contradiction cannot exist, and it costs a boat's width of nothing.
-        pos.current.y = wasNorth ? NORTH_WALL - REEF_MARGIN : NORTH_WALL + REEF_MARGIN
-        vel.current.y = 0
+        // One barrier, at the face. Nothing can reach the rock, so the rock
+        // does not need to push back.
+        const face = wasNorth ? NORTH_WALL - REEF_FACE : NORTH_WALL + REEF_FACE
+        if (wasNorth ? pos.current.y > face : pos.current.y < face) {
+          pos.current.y = face
+          if (wasNorth ? vel.current.y > 0 : vel.current.y < 0) vel.current.y = 0
+        }
       }
+      // NOTHING FOLLOWS. The two arms above are `inGate` and `!inGate`, which
+      // between them cover every position there is — an arm after them would be
+      // unreachable, and an unreachable arm that looks like a rule is worse than
+      // no rule. The old "put it back on the line" clamp lived here.
 
       // ── THE EDGE, WHICHEVER SEA YOU ARE IN ─────────────────────────
       //
@@ -3174,8 +3158,13 @@ export default function SeaMap({
       // bigger radius, so "am I past the edge" stays one subtraction and the
       // raid water is simply more of the same disc rather than a third
       // coordinate system bolted to the side of two.
+      // THE HARBOUR WALL IS THE SAME SHAPE OF PROBLEM as the reef, and takes
+      // the same answer: stop at the band's inner face, except in the one gap.
+      // Inside the sortie's mouth the rim is the real rim, so the ship can
+      // reach it and cross, and the fishing boat can reach it and be told no.
       const rim = sideRef.current
-        ? (sortieRef.current ? RAID_EDGE : EXP_EDGE)
+        ? (sortieRef.current ? RAID_EDGE
+          : inSortie(pos.current.x, pos.current.y) ? EXP_EDGE : EXP_EDGE - REEF_FACE)
         : OUTER_EDGE
 
       // ── THE EDGE OF THE CHART ──────────────────────────────────────
@@ -3285,22 +3274,17 @@ export default function SeaMap({
       // you scrape along the coast and round it instead of stopping dead
       // against it. A hull that halts the instant it touches land feels like a
       // wall; one that slides feels like a shore.
-      // Islands and landmarks, then the reef and the harbour wall. Two lists
-      // for one reason only: the rock is generated further down the file than
-      // OBSTACLES is declared. Same treatment either way.
-      for (const list of [OBSTACLES, ROCKS]) {
-        for (const o of list) {
-          const dx = pos.current.x - o.x
-          const dy = pos.current.y - o.y
-          const dd = Math.hypot(dx, dy)
-          if (dd >= o.r) continue
-          const nx = dd < 0.001 ? 1 : dx / dd
-          const ny = dd < 0.001 ? 0 : dy / dd
-          pos.current.x = o.x + nx * o.r
-          pos.current.y = o.y + ny * o.r
-          const vn = vel.current.x * nx + vel.current.y * ny
-          if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
-        }
+      for (const o of OBSTACLES) {
+        const dx = pos.current.x - o.x
+        const dy = pos.current.y - o.y
+        const dd = Math.hypot(dx, dy)
+        if (dd >= o.r) continue
+        const nx = dd < 0.001 ? 1 : dx / dd
+        const ny = dd < 0.001 ? 0 : dy / dd
+        pos.current.x = o.x + nx * o.r
+        pos.current.y = o.y + ny * o.r
+        const vn = vel.current.x * nx + vel.current.y * ny
+        if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
       }
 
       // WHICH WAY THE CAPTAIN FACES.
@@ -5803,11 +5787,6 @@ function anchorageRocks() {
 }
 
 const ANCHORAGE_WALL = anchorageRocks()
-
-/** Every piece of rock a hull has to go round, worked out once. Declared here
- *  because it needs both runs above, and read by the two obstacle loops, which
- *  only execute long after this file has finished loading. */
-const ROCKS = rockObstacles()
 
 /**
  * THE SCENERY, AS ONE ELEMENT.
