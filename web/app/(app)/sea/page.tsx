@@ -111,14 +111,19 @@ export default async function SeaPage() {
   // instant without polling the server once — a crew that finishes while you
   // are halfway to the Abyss lights the Docks up on its own.
   const trawlState = await getTrawlState()
-  // WITH THE WATER THEY ARE IN. This threw the zone away and kept the clock,
-  // which was enough to count how many are due and nothing else — so the chart
-  // could say "2 crew back" and not which two.
+  // WHO IS OUT, WHERE, AND WHEN THEY ARE DUE. This threw everything but the
+  // clock away, which was enough to count how many are coming and nothing else
+  // — so the chart could say "2 crew back" and not which two, or from where.
   const trawlsOut = 'error' in trawlState
     ? []
     : trawlState.zones
         .filter(z => z.trawl?.endsAt)
-        .map(z => ({ zone: z.label, endsAt: z.trawl!.endsAt as string }))
+        .map(z => ({
+          zone: z.label,
+          endsAt: z.trawl!.endsAt as string,
+          crew: z.trawl!.crew.name,
+          art: z.trawl!.crew.filename,
+        }))
 
   // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
   const { data: finaleRow } = await admin

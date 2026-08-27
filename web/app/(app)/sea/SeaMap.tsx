@@ -787,7 +787,7 @@ export default function SeaMap({
    *  out how many are waiting at any instant without asking the server again —
    *  a crew that finishes while you are halfway to the Abyss lights the fleet
    *  up on its own. */
-  trawlsOut: { zone: string; endsAt: string }[]
+  trawlsOut: { zone: string; endsAt: string; crew: string; art: string }[]
   /** Fishing renown, for the level bar's chip. Null below the cap. */
   renown: RenownState | null
   /** Base64 fog bitfield as stored. See lib/seaExplore. */
@@ -4123,7 +4123,7 @@ hullRef={hullRefFor(t.key)} />
         const now = Date.now()
         // Soonest back first, so the top of the list is the next reason to sail.
         const rows = trawlsOut
-          .map(t => ({ zone: t.zone, end: new Date(t.endsAt).getTime() }))
+          .map(t => ({ ...t, end: new Date(t.endsAt).getTime() }))
           .sort((a, b) => a.end - b.end)
         return (
           <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
@@ -4160,17 +4160,43 @@ hullRef={hullRefFor(t.key)} />
                     const mins = Math.max(0, Math.ceil(left / 60_000))
                     return (
                       <div key={i} style={{
-                        display: 'flex', alignItems: 'baseline', gap: 10,
+                        display: 'flex', alignItems: 'center', gap: 10,
                         padding: '0.42rem 0', borderBottom: '1px solid rgba(255,255,255,0.07)',
                       }}>
-                        {/* THE WATER THEY ARE IN. "Crew 1" told you nothing you
-                            could act on; the zone is the whole reason you chose
-                            to send them there. */}
-                        <span className="font-cinzel font-700" style={{
-                          flex: 1, minWidth: 0, fontSize: '0.88rem',
-                          color: back ? '#f6e6bd' : '#e6e2dc',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>{r.zone}</span>
+                        {/* WHOSE CREW. You picked a specific hand for this water
+                            — their savvy and fortune are what the haul is worth
+                            — so a list that names the zone and not the person
+                            is only half the decision you made. */}
+                        <span aria-hidden style={{
+                          flexShrink: 0, width: 34, height: 34, borderRadius: '50%',
+                          overflow: 'hidden', position: 'relative',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: `1px solid ${back ? 'rgba(240,192,64,0.6)' : 'rgba(180,214,232,0.25)'}`,
+                        }}>
+                          {r.art && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={crewArt(r.art)} alt="" draggable={false} style={{
+                              // The card art is a full portrait; the head sits
+                              // in its upper middle, so it is scaled up and
+                              // pushed down to land a FACE in the circle rather
+                              // than a letterboxed body.
+                              position: 'absolute', left: '50%', top: '6%',
+                              width: '150%', transform: 'translateX(-50%)',
+                              display: 'block',
+                            }} />
+                          )}
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span className="font-cinzel font-700 block" style={{
+                            fontSize: '0.88rem', color: back ? '#f6e6bd' : '#e6e2dc',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{r.crew}</span>
+                          {/* THE WATER THEY ARE IN, under the name. */}
+                          <span className="font-karla font-600 block" style={{
+                            fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{r.zone}</span>
+                        </span>
                         <span className="font-karla font-700" style={{
                           fontSize: '0.84rem', fontVariantNumeric: 'tabular-nums',
                           color: back ? '#f0c040' : 'rgba(190,212,228,0.6)',
@@ -5014,6 +5040,10 @@ const REEF = reefRocks()
 const ReefLine = memo(function ReefLine() {
   return <>{REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}</>
 })
+
+/** Crew card art lives in Supabase storage, same bucket the crew hall reads. */
+const CREW_ART_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/`
+const crewArt = (f: string) => (f ? CREW_ART_BASE + f : '')
 
 const LandmarkField = memo(function LandmarkField() {
   return <>{LANDMARKS.map((m, i) => <SeaMark key={i} m={m} i={i} />)}</>
