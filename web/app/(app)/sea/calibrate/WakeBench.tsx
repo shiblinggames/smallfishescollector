@@ -125,7 +125,9 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         while (acc > WAKE_EVERY) {
           acc -= WAKE_EVERY
           const ox = (L.bow.x - 0.5) * L.box
-          const oy = (L.bow.y - 0.5) * L.box
+          // Divided back out, because the layer above squashes it again — the
+          // same round trip the sea makes through the world transform.
+          const oy = ((L.bow.y - 0.5) * L.box) / GROUND
           for (const side of [-1, 1] as const) {
             const i = next; next = (next + 1) % WAKE_MARKS
             // Barely off the centreline: the apex is a point. Matches the sea.
@@ -152,10 +154,8 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         const t = (L.tilt * Math.PI) / 180
         const ox2 = -Math.sin(t) * m.side * out
         const oy2 = Math.cos(t) * m.side * out
-        // GROUND is the ground plane's squash. The sea gets it from the world
-        // layer's scaleY; here it is applied to the mark's own offset.
         el.style.transform =
-          `translate3d(${m.x + ox2}px, ${(m.y + oy2) * GROUND}px, 0) translate(-50%, -50%) `
+          `translate3d(${m.x + ox2}px, ${m.y + oy2}px, 0) translate(-50%, -50%) `
           + `rotate(${t}rad) scale(${along}, ${across})`
       }
     }
@@ -269,7 +269,24 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         }}>
         {/* The marks. Behind the boat, exactly as on the chart, which is a good
             part of why the foam at the prow reads as being split. */}
-        <div style={{ position: 'absolute', left: '50%', top: '50%', zIndex: 1 }}>
+        {/* ── SQUASHED, LIKE THE WORLD LAYER ──────────────────────────
+            This was the bench lying. The sea lays the origin at a world offset
+            of bowDown / GROUND inside a layer carrying scaleY(GROUND), so it
+            lands at bowDown on the glass. The bench had no such layer and
+            MULTIPLIED by GROUND instead, drawing every cutwater 42% nearer the
+            hull's centre than the sea would — so anyone placing a ring on the
+            waterline was dragging it far below the hull to compensate.
+
+            The rotation was wrong for the same reason: a lean applied on the
+            flat is not a lean applied to something lying on a tilted plane.
+
+            One scaleY here, and the offsets inside go in raw. Now the bench is
+            the same construction as the chart rather than an approximation of
+            it, which is the only way it can be trusted. */}
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%', zIndex: 1,
+          transform: `scaleY(${GROUND})`,
+        }}>
           {Array.from({ length: WAKE_MARKS }, (_, i) => (
             <div key={i} aria-hidden className="sea-wake"
               ref={el => { if (el) marks.current[i] = el }} />
@@ -356,7 +373,11 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         <label className="font-karla font-700" style={{ fontSize: '0.78rem', color: 'rgba(190,212,228,0.7)' }}>
           Lean
         </label>
-        <input type="range" min={-30} max={30} step={0.5} value={tilt}
+        {/* WIDER THAN IT WAS. Every ship came back at exactly the old 30, which
+            is what a slider says when it has run out rather than when it is
+            right. A lean lives on the tilted plane too, so it takes a bigger
+            number there than it looks like on the flat. */}
+        <input type="range" min={-70} max={70} step={0.5} value={tilt}
           onChange={e => setTilts(t => ({ ...t, [pick]: Number(e.target.value) }))}
           style={{ flex: 1 }} />
         <span className="font-karla font-700" style={{

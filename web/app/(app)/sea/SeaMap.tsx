@@ -456,7 +456,7 @@ const WAKE_SPREAD = 62
  * all of them put the origin at 80% of the way to the prow on every hull, which
  * is wrong in a different direction each time.
  */
-const FISHING_BOW = { x: 0.281, y: 0.662 }
+const FISHING_BOW = { x: 0.308, y: 0.599 }
 /** And how far off the heading her wake leaves her. See `seaBowTilt`. */
 const FISHING_BOW_TILT = 0
 /** The Skipper sprite's width, which the fractions above are of. */

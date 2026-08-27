@@ -115,7 +115,8 @@ export const SHIPS: ShipDef[] = [
     description: 'A single-masted workhorse of the seas. Yours from the off.',
     color: '#60a5fa', imageUrl: '/models/sloop_v2.png',
     seaImageUrl: '/ship-hero/sloop_v3.png',
-    seaBow: { x: 0.711, y: 0.683 },
+    seaBow: { x: 0.708, y: 0.655 },
+    seaBowTilt: 45,
     seaBeam: 0.53, seaKeel: 0.683,
   },
   {
@@ -123,7 +124,8 @@ export const SHIPS: ShipDef[] = [
     description: 'Twin masts and a steady hull. Earning starts here.',
     color: '#4ade80', imageUrl: '/models/schooner_v2.png',
     seaImageUrl: '/ship-hero/schooner_v3.png',
-    seaBow: { x: 0.747, y: 0.728 },
+    seaBow: { x: 0.751, y: 0.694 },
+    seaBowTilt: 45,
     seaBeam: 0.62, seaKeel: 0.728,
   },
   {
@@ -131,7 +133,8 @@ export const SHIPS: ShipDef[] = [
     description: 'Fast and capable. A privateer\'s best friend.',
     color: '#f0c040', imageUrl: '/models/brigantine_v2.png',
     seaImageUrl: '/ship-hero/brigantine_v3.png',
-    seaBow: { x: 0.787, y: 0.748 },
+    seaBow: { x: 0.725, y: 0.736 },
+    seaBowTilt: 45,
     seaBeam: 0.72, seaKeel: 0.748,
   },
   {
@@ -139,7 +142,8 @@ export const SHIPS: ShipDef[] = [
     description: 'A grand vessel. The sea respects your presence.',
     color: '#a78bfa', imageUrl: '/models/galleon_v2.png',
     seaImageUrl: '/ship-hero/galleon_v3.png',
-    seaBow: { x: 0.846, y: 0.855 },
+    seaBow: { x: 0.776, y: 0.829 },
+    seaBowTilt: 45,
     seaBeam: 0.87, seaKeel: 0.855,
   },
   {
@@ -147,11 +151,7 @@ export const SHIPS: ShipDef[] = [
     description: 'The most feared ship on the water.',
     color: '#ff6b35', imageUrl: '/models/man-o-war_v2.png',
     seaImageUrl: '/ship-hero/man-o-war_v3.png',
-    // MIRRORED FROM THE OTHERS, because she is. The four above are painted
-    // bow-right and land above 0.5; she looks left like the fishing boat, so
-    // her prow is the same point measured from the other side. Still a first
-    // guess — the bench is where it gets put properly.
-    seaBow: { x: 0.114, y: 0.913 },
+    seaBow: { x: 0.569, y: 0.92 },
     seaBeam: 0.97, seaKeel: 0.913,
   },
 ]
