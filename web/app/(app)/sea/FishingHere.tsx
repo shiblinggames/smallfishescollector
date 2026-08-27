@@ -1490,10 +1490,21 @@ export default function FishingHere({
                 }}
                 className="font-cinzel font-700"
                 style={{
-                  marginTop: 10, width: '100%', padding: '0.6rem', borderRadius: 10,
-                  fontSize: '0.96rem', color: '#d8b4fe',
-                  background: 'rgba(192,132,252,0.14)',
-                  border: '1px solid rgba(192,132,252,0.45)', cursor: 'pointer',
+                  // MATCHES THE CARD IT BELONGS TO. ResultCard caps itself at
+                  // 330 and centres; this was width:100% of a 448 column, so
+                  // it hung wider than the thing it is an action on.
+                  marginTop: 10, width: '100%', maxWidth: 330, marginInline: 'auto',
+                  display: 'block',
+                  padding: '0.6rem', borderRadius: 10,
+                  fontSize: '0.96rem', color: '#f0ddff',
+                  // AND IT HAS A FLOOR NOW. The fill was a 14% violet wash with
+                  // nothing behind it, so the sea and whatever art was under it
+                  // read straight through the label — the house rule is that
+                  // anything written over the world gets an opaque base.
+                  background: 'linear-gradient(180deg, rgba(120,70,170,0.5) 0%, rgba(60,32,92,0.62) 100%), rgba(10,8,18,0.96)',
+                  border: '1px solid rgba(192,132,252,0.6)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+                  cursor: 'pointer',
                 }}>
                 Wormhole · reroll this catch
               </button>
@@ -1871,6 +1882,13 @@ export default function FishingHere({
       <div style={{
         height: 26, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
+        {/* THE LABEL SAYS SKIP, NOT "throw it back". Both screens offer this
+            at the same moment — the dial is up and the fish is not landed yet
+            (this screen's `hooked` is the fishing screen's `catching`) — but
+            the port renamed it, and "throw it back" describes putting a fish
+            you have caught into the water. Nothing has been caught. What the
+            button does is drop the encounter before it resolves, which is what
+            the original's wording says. */}
         {tideTurner.has && phase === 'hooked' && skipsLeft > 0 && (
           <button onClick={e => { e.stopPropagation(); void skip() }} disabled={skipping}
             className="font-karla font-700"
@@ -1880,7 +1898,7 @@ export default function FishingHere({
               border: '1px solid rgba(167,139,250,0.45)', cursor: skipping ? 'default' : 'pointer',
               opacity: skipping ? 0.6 : 1,
             }}>
-            {skipping ? '…' : `Throw it back · ${skipsLeft} left`}
+            {skipping ? '…' : <>Tide Turner · Skip <span style={{ opacity: 0.7 }}>· {skipsLeft} left</span></>}
           </button>
         )}
 

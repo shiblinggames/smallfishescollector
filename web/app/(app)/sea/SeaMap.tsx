@@ -1012,6 +1012,9 @@ export default function SeaMap({
   }, [])
 
   const zoomRef = useRef(1)
+  /** The window/wheel fit, callable from the frame loop while the push-in
+   *  eases — it is the one place that composes all three zoom factors. */
+  const fitRef = useRef<() => void>(() => {})
   /**
    * THE WHEEL ZOOMS THE CHART.
    *
@@ -1026,11 +1029,31 @@ export default function SeaMap({
    * picked up on the next frame with no React involved.
    */
   const wheelZoom = useRef(1)
+  /**
+   * THE CINEMATIC PUSH-IN, as a third factor on the same zoom.
+   *
+   * Casting is a different activity at a different scale: sailing wants the
+   * horizon, fishing wants the boat. Cutting between the two at the same zoom
+   * makes the dial feel like a screen that opened over the sea rather than a
+   * thing happening on it — you never travelled, the UI just arrived.
+   *
+   * A factor rather than a separate transform so it composes with the fitted
+   * zoom and the wheel instead of fighting them: a captain who has pulled the
+   * chart back still gets pushed in RELATIVE to where they were, and the frame
+   * loop keeps reading one number.
+   *
+   * Eased here rather than by CSS because the world transform is written every
+   * frame by the loop — a transition on it would be overwritten sixty times a
+   * second and do nothing.
+   */
+  const fishZoom = useRef(1)
+  const fishZoomTarget = useRef(1)
   useEffect(() => {
     const fit = () => {
       const z = zoomFor(wrapRef.current?.getBoundingClientRect().width ?? window.innerWidth)
-      zoomRef.current = z * wheelZoom.current
+      zoomRef.current = z * wheelZoom.current * fishZoom.current
     }
+    fitRef.current = fit
     const onWheel = (e: WheelEvent) => {
       // Only plain wheel — pinch-zoom on trackpads arrives as ctrl+wheel and
       // should zoom too, but browser-page zoom (ctrl+wheel on a mouse) is a
@@ -1704,6 +1727,12 @@ export default function SeaMap({
   const fishingRef = useRef<Place | null>(null)
   useEffect(() => { fishingRef.current = fishingIn }, [fishingIn])
 
+  // IN WHEN THE ROD COMES OUT, back when it goes away. 1.42x — enough that the
+  // boat is clearly the subject and the water around it has moved, not so much
+  // that the islands you were sailing past leave the frame entirely. The
+  // captain should still know where they are.
+  useEffect(() => { fishZoomTarget.current = fishingIn ? 1.42 : 1 }, [fishingIn])
+
   const locked = useCallback((p: Place) => level < p.minLevel, [level])
 
   /** Screen point to world point, through the current camera translation. */
@@ -2297,6 +2326,18 @@ export default function SeaMap({
       if (holding.current && holdAt.current && toWorldRef.current) {
         const w = toWorldRef.current(holdAt.current.x, holdAt.current.y)
         if (w) target.current = headingFrom(pos.current, w)
+      }
+
+      // ── THE PUSH-IN EASES ─────────────────────────────────────────
+      // Exponential toward the target, frame-rate independent like every other
+      // ease here. Stops writing once it is close enough to stop mattering, so
+      // a chart nobody is casting on does no zoom work at all.
+      if (Math.abs(fishZoom.current - fishZoomTarget.current) > 0.0015) {
+        fishZoom.current += (fishZoomTarget.current - fishZoom.current) * (1 - Math.exp(-4.5 * dt))
+        fitRef.current()
+      } else if (fishZoom.current !== fishZoomTarget.current) {
+        fishZoom.current = fishZoomTarget.current
+        fitRef.current()
       }
 
       const dx = target.current.x - pos.current.x
