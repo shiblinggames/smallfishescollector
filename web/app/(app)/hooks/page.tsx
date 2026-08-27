@@ -1,36 +1,18 @@
-import { createClient } from '@/lib/supabase/server'
+// THE OLD HOOK SHOP, now a signpost.
+//
+// This route predates the Tackle Shop, which sells hooks alongside everything
+// else. Nothing in the app has linked here for a long time — the sweep that
+// retired it found zero references — but a route is an address, and addresses
+// outlive their links: bookmarks, browser autocomplete, an old screenshot.
+// A dead page at a live address reads as the shop having vanished.
+//
+// The redirect is the whole page. HookShop.tsx went with it. actions.ts
+// STAYS — it looked orphaned and is not: FishingGame, the Tackle Shop and the
+// Shipyard all import buy actions from it. The lesson from deleting it and
+// getting three build errors is that a route being dead says nothing about the
+// files beside it.
 import { redirect } from 'next/navigation'
-import HookShop from './HookShop'
 
-export default async function HooksPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('hook_tier, doubloons, packs_available, gems')
-    .eq('id', user.id)
-    .single()
-
-  return (
-    <>
-      <main className="min-h-screen pb-24 sm:pb-0">
-        <div className="px-6 pt-8 pb-5 text-center">
-          <h1
-            className="font-cinzel font-700 text-[#f0ede8] leading-[0.92] tracking-[-0.01em]"
-            style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
-          >
-            Tackle Shop.
-          </h1>
-          <p className="font-karla font-300 text-[#a0a09a] text-sm mt-3">
-            Better hooks reach deeper waters.
-          </p>
-        </div>
-        <HookShop
-          hookTier={profile?.hook_tier ?? 0}
-          doubloons={profile?.doubloons ?? 0} />
-      </main>
-    </>
-  )
+export default function HooksPage() {
+  redirect('/marketplace/tackle-shop')
 }

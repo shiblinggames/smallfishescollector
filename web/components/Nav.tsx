@@ -451,7 +451,16 @@ export default function Nav({ doubloons, gems, canSail = false }: {
           </span>
         </Link>
 
-        <div className="hidden sm:flex flex-1 ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
+        {/* min-w-0 + overflow-x-auto, because this row has no other way to
+            lose. Seven tabs plus the logo and the currency chips need about
+            1,140px, the row neither wraps nor scrolls, and flex refuses to
+            shrink children below their content size — so at 1024-1200px (a
+            small laptop, half of a big monitor) the chips got pushed off the
+            right edge of the screen. Now the tabs scroll sideways under a
+            hidden scrollbar, and the chips — the thing a captain checks most —
+            always stay on screen. whitespace-nowrap keeps a two-word tab
+            ("Captain's Log") from folding into two lines mid-scroll. */}
+        <div className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-hide whitespace-nowrap ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
           {[...links, ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
             <Link key={href} href={href}
               className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>

@@ -93,7 +93,12 @@ export default async function TavernPage() {
           : null
       }
       <main className="min-h-screen">
-        <div className="px-4 max-w-lg mx-auto pt-6 pb-16 flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
+        {/* max-w-2xl, not lg. This page is two-column tile GRIDS, and lg
+            (512px) crammed each tile to ~240px — phone size, centered in a
+            desert of margin on any monitor. At 2xl the tiles sit around 320px,
+            which is what their art was made for. List-shaped pages keep the
+            narrower column; grids are the pages that can actually use width. */}
+        <div className="px-4 max-w-lg sm:max-w-2xl mx-auto pt-6 pb-16 flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
 
           {/* Thin Leaderboards bar — sits at the very top as a slim
               one-line ticker rotating through the top holder of each
