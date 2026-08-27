@@ -17,7 +17,7 @@
 // animates on its own timer, because that is how a scene ends up feeling like
 // several things happening near each other.
 
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -5976,29 +5976,47 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
               chart, so the ones further down the island overlap the ones
               behind them the way a hillside town does. */}
           {place.buildings?.map((b, i) => (
-            <div key={i} style={{
-              position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
-              width: d * b.scale,
-              transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-              transformOrigin: 'bottom center',
-              filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
-            }}>
-              {/* THE SHADOW IS AN ELLIPSE, not a drop-shadow() filter. The
-                  filter pushed the sprite through an offscreen blur every time
-                  its raster tile came back into view, and around the Mainland
-                  that is a dozen buildings doing it at once. An ellipse under
-                  the feet reads the same at chart distance and costs one
-                  gradient fill. */}
-              <div aria-hidden style={{
-                position: 'absolute', left: '50%', bottom: -4,
-                width: '86%', height: 14, transform: 'translateX(-50%)',
-                borderRadius: '50%',
-                background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 55%, transparent 78%)',
-              }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img decoding="async" src={b.art} alt="" draggable={false}
-                style={{ width: '100%', display: 'block', position: 'relative' }} />
-            </div>
+            <Fragment key={i}>
+              {/* ── THE CONTACT SHADOW, ON THE GROUND ──────────────────
+                  A SIBLING of the building, not a child, and that is the whole
+                  fix. It replaced a drop-shadow() filter (which re-blurred the
+                  sprite on every tile raster) with an ellipse — but the ellipse
+                  went INSIDE the wrapper, and the wrapper carries
+                  scaleY(1/GROUND). So the shadow was counter-squashed with the
+                  building: stretched 1.72x into a tall dark oval, and parked at
+                  bottom:-4, BELOW the feet. A dark blob under a sprite instead
+                  of a shadow at its base is exactly what "floating" looks like,
+                  and this repo has now learned that lesson five times.
+
+                  Out here it sits on the world layer, which already carries the
+                  plane's GROUND squash — so it comes out flat and foreshortened
+                  the way a real shadow on that ground would. Centred on the
+                  building's FEET, which is the same (b.x, b.y) the wrapper is
+                  anchored to.
+
+                  Softer and warmer than before, too: pure black at 0.42 reads
+                  as a hole cut in the grass. */}
+              {!locked && (
+                <div aria-hidden style={{
+                  position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
+                  width: d * b.scale * 0.8, height: d * b.scale * 0.8 * 0.42,
+                  transform: 'translate(-50%, -46%)',
+                  borderRadius: '50%', pointerEvents: 'none',
+                  background: 'radial-gradient(ellipse at 50% 50%, rgba(14,20,10,0.34) 0%, rgba(14,20,10,0.16) 48%, rgba(14,20,10,0) 76%)',
+                }} />
+              )}
+              <div style={{
+                position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
+                width: d * b.scale,
+                transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+                transformOrigin: 'bottom center',
+                filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img decoding="async" src={b.art} alt="" draggable={false}
+                  style={{ width: '100%', display: 'block' }} />
+              </div>
+            </Fragment>
           ))}
 
           {/* ── THE JETTY, standing on the plane ────────────────────────
