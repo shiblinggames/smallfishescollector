@@ -4739,6 +4739,53 @@ const SeaMark = memo(function SeaMark({ m, i }: {
  */
 const islandCache = new Map<string, HTMLCanvasElement>()
 
+/**
+ * THE SURF RINGS, pre-blurred at low resolution.
+ *
+ * Baked separately from the island because they MOVE: the breathing animation
+ * needs its own element. But each ring was an island-sized blurred clipped div
+ * promoted to its own GPU layer at device resolution — around the Mainland,
+ * eight such layers, on the order of ninety megabytes of texture on an iPhone.
+ * Past the compositor's budget it de-promotes and re-runs a Gaussian blur
+ * through a 160-point clip per ring per frame. As a canvas the texture is the
+ * backing store, and the backing store is drawn at half size — the content is
+ * a blur, so the resolution is genuinely irrelevant.
+ */
+const surfCache = new Map<string, HTMLCanvasElement>()
+
+function bakeSurf(id: string, d: number, scale: number, color: string, blurPx: number): HTMLCanvasElement {
+  const key = `${id}:${d}:${scale}`
+  const hit = surfCache.get(key)
+  if (hit) return hit
+  const cv = document.createElement('canvas')
+  cv.width = Math.max(32, Math.round(d * 0.5))
+  cv.height = cv.width
+  const rs = coastline(id)
+  const k = Math.max(2, Math.round(blurPx / 2))
+  const small = document.createElement('canvas')
+  small.width = Math.max(8, Math.round(cv.width / k))
+  small.height = small.width
+  const sg = small.getContext('2d')!
+  const su = small.width / d
+  sg.beginPath()
+  for (let i = 0; i < rs.length; i++) {
+    const a = (Math.PI * 2 * i) / rs.length
+    const r = (rs[i] / 100) * d * scale * su
+    const x = small.width / 2 + Math.cos(a) * r
+    const y = small.height / 2 + Math.sin(a) * r
+    if (i === 0) sg.moveTo(x, y); else sg.lineTo(x, y)
+  }
+  sg.closePath()
+  sg.fillStyle = color
+  sg.fill()
+  const g = cv.getContext('2d')!
+  g.imageSmoothingQuality = 'high'
+  g.drawImage(small, 0, 0, cv.width, cv.height)
+  surfCache.set(key, cv)
+  return cv
+}
+
+
 function bakeIsland(id: string, d: number, locked: boolean, pad: number): HTMLCanvasElement {
   const key = `${id}:${d}:${locked ? 1 : 0}`
   const hit = islandCache.get(key)
@@ -4954,217 +5001,66 @@ function bakeIsland(id: string, d: number, locked: boolean, pad: number): HTMLCa
  * `id` is the seed. Two things with the same id are the same rock, and every
  * shape on this chart is therefore stable across renders and reloads.
  */
-const Landmass = memo(function Landmass({ id, locked = false }: {
+const Landmass = memo(function Landmass({ id, r, locked = false }: {
   id: string
+  /** The island's radius in world px — the canvas needs real pixels where the
+   *  old div stack lived on percentages. */
+  r: number
   /** Greys the land out, for water a captain has not levelled into. */
   locked?: boolean
 }) {
-  /**
-   * THE COASTLINE.
-   *
-   * Seeded off the id, so it is stable across renders and different for every
-   * island. It used to be 26 points and three gentle sine terms, which makes a
-   * potato: every island the same smooth oval with the same small dents, at the
-   * same scale, all the way round. Real coasts are not one scale of detail —
-   * they have headlands, and bays cut into those, and rocks on the edge of
-   * those, and the amplitude is not the same the whole way round either.
-   *
-   * So: five octaves, each half the amplitude and roughly double the frequency
-   * of the last, plus a slow LOBE term that pulls one or two whole sides of the
-   * island out into headlands. The per-island amplitude varies too, so one is
-   * craggy and another is round rather than all of them being equally lumpy.
-   *
-   * TUNED AGAINST MEASUREMENTS, not by eye. The first pass at five octaves ran
-   * to a 7.5% radial jump between adjacent points and pinched one island down
-   * to a 17% waist — a saw tooth and a near-severed spit. Searched instead for
-   * a set where, across all four islands: the radius stays between 30% and 63%
-   * (no pinch, no bulge past the box), the biggest step between neighbours is
-   * 2.4% (a rocky notch over a 12px arc, not noise), and all four outlines are
-   * still distinct.
-   *
-   * 160 points, because at 26 the straight segments between them were visible
-   * on the big islands and read as a polygon — which is precisely the thing
-   * that makes a shape look drawn rather than surveyed.
-   */
-  // ONE DEFINITION, in lib/islandShape.ts. This used to be generated inline
-  // here and reproduced by hand in the build check, and the two drifted: the
-  // checker modelled the grass 35% too generous and spent months certifying
-  // buildings that were standing in the water. Shared now, so the thing that
-  // draws the coast and the thing that polices it cannot disagree.
-  const clip = useMemo(() => coastClip(id), [id])
+  const d = r * 2
+  // Room for the widest shoal wash (inset -6%) plus the blur's own spill.
+  const pad = Math.round(d * 0.08) + 24
 
-  /**
-   * TREE CLUMPS. Placed once per island off the same seed.
-   *
-   * Kept well inside the coast (radius under 24% of the box) so a clump never
-   * sits half in the water, and varied in size and darkness so the canopy reads
-   * as a wood rather than as a row of dots.
-   */
-  const canopy = useMemo(() => {
-    let h = 0
-    for (let i = 0; i < id.length; i++) h = (h * 37 + id.charCodeAt(i)) >>> 0
-    const out: { x: number; y: number; r: number; o: number }[] = []
-    let st = h || 1
-    const nx = () => { st ^= st << 13; st >>>= 0; st ^= st >>> 17; st ^= st << 5; st >>>= 0; return st / 0x100000000 }
-    for (let i = 0; i < 9; i++) {
-      const a = nx() * Math.PI * 2
-      const rad = 4 + nx() * 19
-      out.push({
-        x: 50 + Math.cos(a) * rad,
-        y: 50 + Math.sin(a) * rad * 0.9,
-        r: 7 + nx() * 11,
-        o: 0.20 + nx() * 0.26,
-      })
+  // Drawn via ref callback rather than an effect so the island is painted in
+  // the same frame it mounts — an effect leaves one frame of open water where
+  // the Mainland is about to be.
+  const blit = (el: HTMLCanvasElement | null) => {
+    if (!el) return
+    const baked = bakeIsland(id, d, locked, pad)
+    if (el.width !== baked.width) { el.width = baked.width; el.height = baked.height }
+    const g = el.getContext('2d')
+    g?.clearRect(0, 0, el.width, el.height)
+    g?.drawImage(baked, 0, 0)
+  }
+
+  const blitSurf = (scale: number, color: string, blur: number) =>
+    (el: HTMLCanvasElement | null) => {
+      if (!el) return
+      const baked = bakeSurf(id, d, scale, color, blur)
+      if (el.width !== baked.width) { el.width = baked.width; el.height = baked.height }
+      const g = el.getContext('2d')
+      g?.clearRect(0, 0, el.width, el.height)
+      g?.drawImage(baked, 0, 0)
     }
-    return out
-  }, [id])
 
   return (
     <>
-      {/* ── THE FOOTPRINT, flat on the water ──────────────────────
-          Shoals and a wet shore ring, which live INSIDE the squashed world
-          layer and so come out as ellipses. This is the island's shadow on
-          the sea and the only part of it that is genuinely lying down. */}
-      {/* THE SHOAL — shallow water standing off the coast, and the reason
-          an island reads as sitting IN the sea rather than on top of it.
-          Widened and softened: at inset 2% with a 6px blur it was a thin
-          halo, which is a glow. Shallow water around a real island is a
-          broad pale shelf that fades out with no edge anywhere. */}
-      <div aria-hidden style={{
-        position: 'absolute', inset: '-6%', clipPath: clip,
-        background: 'rgba(140,190,206,0.13)', filter: 'blur(16px)',
-      }} />
-      <div aria-hidden style={{
-        position: 'absolute', inset: '1%', clipPath: clip,
-        background: 'rgba(168,204,216,0.22)', filter: 'blur(8px)',
-      }} />
-      <div aria-hidden style={{
-        position: 'absolute', inset: '7%', clipPath: clip,
-        background: 'rgba(200,222,230,0.30)', filter: 'blur(2px)',
-      }} />
-      {/* ── SURF ────────────────────────────────────────────────────
-          A soft white collar hugging the coast, just outside the land and
-          just inside the shoal. Water hitting a shore is the single most
-          recognisable thing about a shore — without it the land meets the
-          sea on a hard vector edge, which is most of why these read as
-          shapes rather than places.
-
-          Two rings so it has depth: a wide diffuse one for spray and a
-          tight bright one for the break itself. Both breathe, slowly and
-          out of phase, so the coast is never quite still. */}
-      <div aria-hidden className="sea-surf" style={{
-        position: 'absolute', inset: '9%', clipPath: clip,
-        background: 'rgba(226,244,250,0.30)', filter: 'blur(7px)',
-      }} />
-      <div aria-hidden className="sea-surf sea-surf-2" style={{
-        position: 'absolute', inset: '11.4%', clipPath: clip,
-        background: 'rgba(240,250,255,0.55)', filter: 'blur(2.5px)',
-      }} />
-
-      {/* Contact shadow, thrown away from the light. Nothing says "this
-          object is ABOVE the water" faster than a shadow that is not
-          directly under it. */}
-      <div aria-hidden style={{
-        position: 'absolute', inset: '11%', clipPath: clip,
-        transform: `translate(${ISLAND_LIFT * 0.34}px, ${ISLAND_LIFT * 0.5}px)`,
-        background: 'rgba(2,10,18,0.42)', filter: 'blur(9px)',
-      }} />
-
-      {/* ── THE CLIFF, the extrusion ────────────────────────────────
-          The same coastline again, dropped by the island's height and
-          filled with wet rock. Drawn UNDER the top face, so all you ever
-          see of it is the band along the near edge — which is exactly what
-          you see of a real island's side from a low angle, and is the whole
-          trick of an extrusion. */}
-      <div aria-hidden style={{
-        position: 'absolute', inset: '13%', clipPath: clip,
-        transform: `translateY(${ISLAND_LIFT / GROUND}px)`,
-        background: 'linear-gradient(180deg, #3b3226 0%, #2a2419 55%, #191509 100%)',
-        filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
-      }} />
-
-      {/* ── THE TOP FACE, lifted clear of the water ─────────────────
-          Counter-squashed so the land itself is NOT foreshortened — an
-          island is a solid standing on the plane, not a decal printed on
-          it — then raised by the same lift the cliff was dropped by. */}
-      <div style={{
-        position: 'absolute', inset: '13%', clipPath: clip, overflow: 'hidden',
-        transform: `translateY(${-ISLAND_LIFT / GROUND}px)`,
-        filter: locked ? 'grayscale(0.9) brightness(0.55)' : 'brightness(0.94) saturate(0.92)',
-        boxShadow: 'inset 0 0 40px rgba(0,0,0,0.55)',
-      }}>
-        {/* ── TERRAIN, IN BANDS THAT FOLLOW THE COAST ───────────────
-            This was one flat radial gradient of brown. A single colour with
-            a soft vignette is a shape, not a place: no beach, nothing
-            growing, nothing to say where the water stops.
-
-            Each band is the SAME coastline polygon on a smaller box, so its
-            clip scales with it and every ring parallels the shore instead of
-            being a circle sitting inside an irregular outline. Outside in,
-            the way you would actually walk it: wet sand, dry sand, scrub,
-            grass, and a lighter crown where the ground rises.
-
-            Cheap, too — five absolutely-positioned divs per island, static
-            after mount, no filters on the bands themselves. */}
-        <div aria-hidden style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(165deg, #b9a077 0%, #9c8259 55%, #7d6743 100%)',
+      {/* THE SURF, UNDER THE LAND — same paint order the div stack had. Only
+          the rim outside the coast shows; the island covers the rest. The
+          classes keep the two rings breathing out of phase, on transform and
+          opacity, over a texture a fraction of the old layers' size. */}
+      <canvas ref={blitSurf(0.82, 'rgba(226,244,250,0.30)', 7)} aria-hidden
+        className="sea-surf" style={{
+          position: 'absolute', inset: 0, width: d, height: d, pointerEvents: 'none',
         }} />
-        {/* WET SAND — darker where the tide has just been. A beach with one
-            tone is a carpet; the damp strip at the edge is what makes it
-            read as sand at all. */}
-        <div aria-hidden style={{
-          position: 'absolute', inset: '1.5%', clipPath: clip,
-          background: 'linear-gradient(165deg, #cbb590 0%, #b89c72 100%)',
-        }} />
-        <div aria-hidden style={{
-          position: 'absolute', inset: '5%', clipPath: clip,
-          background: 'linear-gradient(165deg, #d8c49f 0%, #c2a97e 100%)',
-        }} />
-        {/* SCRUB — the dry stuff that grows above the tideline. */}
-        <div aria-hidden style={{
-          position: 'absolute', inset: '9.5%', clipPath: clip,
-          background: 'linear-gradient(165deg, #9aa269 0%, #7d8850 100%)',
-        }} />
-        {/* GRASS. */}
-        <div aria-hidden style={{
-          position: 'absolute', inset: '15%', clipPath: clip,
-          background: 'linear-gradient(165deg, #6f8a4e 0%, #55703c 62%, #466032 100%)',
-        }} />
-        {/* THE CROWN — higher ground, catching more light. Offset toward the
-            same corner every other highlight on this chart comes from, so
-            the whole scene agrees about where the sun is. */}
-        <div aria-hidden style={{
-          position: 'absolute', inset: '26%', clipPath: clip,
-          transform: 'translate(-3%, -4%)',
-          background: 'radial-gradient(ellipse 120% 120% at 40% 26%, rgba(190,206,140,0.55) 0%, rgba(150,176,105,0.22) 48%, transparent 78%)',
+      <canvas ref={blitSurf(0.772, 'rgba(240,250,255,0.55)', 2.5)} aria-hidden
+        className="sea-surf sea-surf-2" style={{
+          position: 'absolute', inset: 0, width: d, height: d, pointerEvents: 'none',
         }} />
 
-        {/* ── WOODS ──────────────────────────────────────────────────
-            Soft dark clumps, seeded per island. Not trees — at this size a
-            tree is two pixels — but the massed shadow a stand of them
-            throws, which is what you actually see of a wood from off shore. */}
-        {canopy.map((c, i) => (
-          <div key={i} aria-hidden style={{
-            position: 'absolute',
-            left: `${c.x}%`, top: `${c.y}%`,
-            width: `${c.r}%`, height: `${c.r * 0.82}%`,
-            marginLeft: `${-c.r / 2}%`, marginTop: `${-c.r * 0.41}%`,
-            borderRadius: '50%',
-            background: `radial-gradient(ellipse at 42% 34%, rgba(74,102,52,${c.o + 0.18}) 0%, rgba(46,68,34,${c.o}) 55%, rgba(40,58,30,0) 78%)`,
-          }} />
-        ))}
-
-        {/* A rim of light along the top edge, where the sky hits the land
-            and the cliff below it does not. */}
-        <div aria-hidden style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(180deg, rgba(240,248,250,0.34) 0%, rgba(240,248,250,0) 20%)',
-        }} />
-      </div>
+      {/* THE WHOLE STATIC ISLAND, one image, over the surf. See the bakery
+          above for the fourteen layers this replaced and why. */}
+      <canvas ref={blit} aria-hidden style={{
+        position: 'absolute', left: -pad, top: -pad,
+        width: d + pad * 2, height: d + pad * 2,
+        pointerEvents: 'none',
+      }} />
     </>
   )
 })
+
 
 /**
  * THE END OF THE SURVEYED CHART.
@@ -5807,7 +5703,7 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
       width: d, height: d, marginLeft: -isle.r, marginTop: -isle.r,
       pointerEvents: 'none',
     }}>
-      <Landmass id={isle.id} />
+      <Landmass id={isle.id} r={isle.r} />
 
       {/* WHAT IS ON IT.
           Counter-squashed and anchored at its BOTTOM, like every other solid on
@@ -6093,7 +5989,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
         </>
       ) : (
         <>
-          <Landmass id={place.id} locked={locked} />
+          <Landmass id={place.id} r={place.r} locked={locked} />
 
           {/* ── WHAT IS BUILT HERE ──────────────────────────────────────
               Counter-squashed and anchored at the BOTTOM, so each building
