@@ -990,13 +990,30 @@ export default function SeaMap({
       e.preventDefault()
       keysRef.current.add(d)
     }
+    /**
+     * LETTING GO HAS TO LET GO. The physics reads held keys every frame and
+     * aims the target THROW (9,000px) ahead — and a target, unlike a key, has
+     * no idea it was ever attached to one. Releasing the key emptied the set
+     * and left the last far target standing, so one tap of W sailed the boat
+     * the length of the chart. The helm's pointer-up already solves this with
+     * a short run-out; a key-up is the same event with a different name.
+     */
+    const runOut = () => {
+      const v = vel.current
+      const sp = Math.hypot(v.x, v.y)
+      target.current = sp > 1
+        ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.5, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.5 }
+        : { ...pos.current }
+    }
     const up = (e: KeyboardEvent) => {
       const d = DIRS[e.key.toLowerCase()]
-      if (d) keysRef.current.delete(d)
+      if (!d) return
+      keysRef.current.delete(d)
+      if (keysRef.current.size === 0) runOut()
     }
     // A tab-away with a key held would leave the boat sailing forever: keyup
     // fires at the OS focus, not at this window.
-    const clear = () => keysRef.current.clear()
+    const clear = () => { keysRef.current.clear(); runOut() }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     window.addEventListener('blur', clear)

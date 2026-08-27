@@ -284,6 +284,21 @@ export default function FishingHere({
   // be TOLD, via these two counters. The map was rendering the dial without
   // them, so the instrument was correct and completely mute.
   const [snapKey, setSnapKey] = useState(0)
+  /**
+   * WHERE THE ZONE LAYOUT SITS, rolled fresh for every attempt.
+   *
+   * The original fishing screen rotates the whole wheel by a random amount on
+   * every hook (`Math.floor(Math.random() * 360)` in FishingGame), and the port
+   * dropped it — so out here the perfect wedge sat at the same clock position
+   * on every cast, forever. A fixed layout is learnable by SCREEN POSITION:
+   * stop reading the dial, start timing "2 o'clock", and perfects stop being
+   * earned — which matters, because perfects drive the streak and Finn's bets.
+   *
+   * Ref + state pair for the same reason angle has one: the resolution reads
+   * the ref in the tap's own tick, the SVG renders the state.
+   */
+  const zoneRotRef = useRef(0)
+  const [zoneRot, setZoneRot] = useState(0)
   const [burstKey, setBurstKey] = useState(0)
 
   const angleRef = useRef(0)
@@ -668,6 +683,9 @@ export default function FishingHere({
       timerRef.current = setTimeout(() => {
         angleRef.current = 0
         setAngle(0)
+        // The wheel lands somewhere new every hook — see zoneRotRef.
+        zoneRotRef.current = Math.floor(Math.random() * 360)
+        setZoneRot(zoneRotRef.current)
         sweepRef.current = rollSweep(res.catchDifficulty, mods.reelSpeedMult)
         setHooked({
           fishId: res.fishId,
@@ -752,7 +770,11 @@ export default function FishingHere({
     spinRef.current?.cancel()
     spinRef.current = null
     spinStart.current = null
-    const hit = zones.find(z => at >= z.from && at < z.to)
+    // Resolved against the ROTATED layout, exactly as drawn — the same
+    // subtraction FishingGame's getZone does, so the wedge under the frozen
+    // needle and the wedge that pays are the same wedge by construction.
+    const rotAt = (((at - zoneRotRef.current) % 360) + 360) % 360
+    const hit = zones.find(z => rotAt >= z.from && rotAt < z.to)
     const raw = (hit?.type ?? 'miss') as 'perfect' | 'catch' | 'miss' | 'penalty'
     // SNAG IMMUNITY IS CLIENT-SIDE, on both screens. The server has no notion
     // of it — the fishing screen turns a penalty into a plain miss before it
@@ -773,6 +795,10 @@ export default function FishingHere({
       setTimeout(() => setRetryFlash(false), 1200)
       angleRef.current = Math.random() * 360
       setAngle(angleRef.current)
+      // A second wind is a fresh attempt, so it gets a fresh layout too —
+      // same as the fishing screen's retry.
+      zoneRotRef.current = Math.floor(Math.random() * 360)
+      setZoneRot(zoneRotRef.current)
       startSpin(angleRef.current)
       setSnapKey(k => k + 1)
       vibrate([0, 20, 50, 20])
@@ -1268,7 +1294,7 @@ export default function FishingHere({
                   WAAPI rotation above. `angle` is only the RESTING position
                   now — it changes at a bite, at a retry and at the freeze, and
                   never once per frame. */}
-              <DialSVG zones={zones} angle={angle} needleColor="#f4e3b2" zoneOpacityFn={() => 1}
+              <DialSVG zones={zones} angle={angle} rotation={zoneRot} needleColor="#f4e3b2" zoneOpacityFn={() => 1}
                 needleRef={needleRef}
                 snapKey={snapKey} perfectBurstKey={burstKey} />
             </motion.div>
