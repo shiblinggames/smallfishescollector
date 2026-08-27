@@ -366,6 +366,21 @@ export async function saveSeaPosition(
   x: number, y: number,
   /** Fog cells uncovered since the last flush. Merged with OR — see below. */
   seen: number[] = [],
+  /**
+   * WHICH SEA THIS POSITION IS IN.
+   *
+   * This used to be unnecessary because northern positions were never written
+   * at all: a coordinate past the reef, restored with no idea which side it
+   * belonged to, would put a captain beyond a wall they can only cross at the
+   * gate. The chart's answer was to refuse, and the cost was that the anchorage
+   * and the sortie evaporated on every remount — switch tabs, come back, and
+   * you are in the fishing grounds on the fishing boat, having been silently
+   * taken off your own ship.
+   *
+   * Storing the side is what makes the northern coordinate safe. The wall, the
+   * rim and the hull are all decided by it, so they agree on load.
+   */
+  side: 'fishing' | 'anchorage' | 'sortie' = 'fishing',
 ): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -380,6 +395,9 @@ export async function saveSeaPosition(
     // seconds ago or from last March, and the compass cannot honestly point a
     // friend at a boat without knowing which. This is the only writer.
     sea_seen_at: new Date().toISOString(),
+    // Never trusted from the client as anything but one of three words: this
+    // decides which wall a captain wakes up behind.
+    sea_side: side === 'anchorage' || side === 'sortie' ? side : 'fishing',
   }
 
   // ── THE FOG ───────────────────────────────────────────────────────────

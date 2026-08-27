@@ -753,7 +753,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
-  auto, tideTurner, userId, tour, shipTier, raidParty,
+  auto, tideTurner, userId, tour, shipTier, raidParty, startSide,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -798,6 +798,10 @@ export default function SeaMap({
   accelTier: number
   /** Where the boat was when you last left. Null = never sailed. */
   start: Vec | null
+  /** WHICH SEA that position is in. Restored together with it, so a captain
+   *  who logged off in the anchorage or out on the sortie comes back there on
+   *  the right hull rather than being quietly returned to the fishing grounds. */
+  startSide: 'fishing' | 'anchorage' | 'sortie'
   /** Everything the collection log reads. See SeaLog. */
   log: SeaLog
   /** ISO moments each running trawl comes due. See the Docks mark. */
@@ -867,14 +871,16 @@ export default function SeaMap({
    * drift into. `sortieAsk` holds the confirm open while the boat sits in the
    * mouth, and nothing changes until it is answered.
    *
-   * Nothing persists. This is a trial and there is no content out there yet, so
-   * a captain who closes the tab mid-sortie should reopen it in the fishing
-   * grounds like always rather than in an empty sea with no way to read where
-   * they are. See saveSeaPosition, which already refuses to write a northern
-   * position for the same reason.
+   * IT PERSISTS, and the first cut of this did not. Both northern states lived
+   * only as long as the component: switching tabs and coming back reset them
+   * and restored a fishing position, so a captain who had taken their ship out
+   * was silently put back in the harbour on the fishing boat. That is a far
+   * more common thing to do than closing the tab, and it read as being kicked
+   * off your own ship. See saveSeaPosition — the position now carries the side
+   * it belongs to, which is what makes storing a northern one safe.
    */
-  const [onSortie, setOnSortie] = useState(false)
-  const sortieRef = useRef(false)
+  const [onSortie, setOnSortie] = useState(startSide === 'sortie')
+  const sortieRef = useRef(startSide === 'sortie')
 
   /** THE WAKE. A fixed pool of marks laid in WORLD space and left behind, which
    *  is what makes it a wake rather than a tail: each stays exactly where the
@@ -947,10 +953,13 @@ export default function SeaMap({
   // than tracked as state: this is a starting point, and re-seeding it when the
   // prop happens to change would teleport a boat that is under way.
   //
-  // Clamped north, because the wall can move: a position saved before the
-  // Harbour became a border could otherwise strand you outside the world.
+  // CLAMPED NORTH ONLY IF THE SAVE SAYS YOU WERE SOUTH. The wall can move — a
+  // position saved before the reef became a border would otherwise strand you
+  // outside the world — but a captain who was legitimately in the anchorage
+  // saved a northern position on purpose, and dragging them back to the wall
+  // would be the stranding rather than the cure.
   const startAt: Vec = start
-    ? { x: start.x, y: Math.max(NORTH_WALL, start.y) }
+    ? { x: start.x, y: startSide === 'fishing' ? Math.max(NORTH_WALL, start.y) : start.y }
     : { ...HOME }
   const pos = useRef<Vec>({ ...startAt })
   const vel = useRef<Vec>({ x: 0, y: 0 })
@@ -1443,8 +1452,10 @@ export default function SeaMap({
    * The ref is what the frame loop reads; the state is what the chrome reacts
    * to. Same value, two consumers with different appetites for re-rendering.
    */
-  const [inAnchorage, setInAnchorage] = useState(false)
-  const sideRef = useRef(false)
+  // Seeded from the save, not always false. Both northern states are restored
+  // together with the position they belong to — see saveSeaPosition.
+  const [inAnchorage, setInAnchorage] = useState(startSide !== 'fishing')
+  const sideRef = useRef(startSide !== 'fishing')
   const [sortieAsk, setSortieAsk] = useState(false)
   const askRef = useRef(false)
 
@@ -1462,9 +1473,8 @@ export default function SeaMap({
    * So a Sloop pushes about half again the water the fishing boat does and a
    * Man-o-War close to three times, which is the ladder the art already draws.
    */
-  const hullRef = useRef({ scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX })
-  hullRef.current = useMemo(() => {
-    if (!onSortie) return { scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX }
+  const hull = useMemo(() => {
+    if (!onSortie) return { scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0 }
     const d = getShip(shipTier)
     const beam = d.seaBeam ?? 0.6
     const keel = d.seaKeel ?? 0.75
@@ -1481,20 +1491,36 @@ export default function SeaMap({
       // it has. Divided by the beam ratio, so the bigger she is the less she
       // moves, and the number stays one idea rather than a second table.
       heel: HEEL_MAX / ((WARSHIP_W * beam) / FISHING_HULL_W),
+      // HOW HEAVY SHE READS, 0 at the Sloop and 1 at the Man-o-War. Not the
+      // same thing as `scale`: the water at a standstill should not merely be
+      // BIGGER on a bigger ship, it should be slower and darker, and this is
+      // the number that says how far along that ladder a hull sits.
+      weight: Math.min(1, Math.max(0, (beam - 0.53) / (0.97 - 0.53))),
     }
   }, [onSortie, shipTier])
+  // Mirrored into a ref for the frame loop, which must not read a prop.
+  const hullRef = useRef(hull)
+  hullRef.current = hull
   /**
-   * WHERE THE BOAT IS, SAVED — but only ever a FISHING position.
+   * WHERE THE BOAT IS, SAVED — NOW INCLUDING WHICH SEA.
    *
-   * profiles.sea_x/sea_y is where you were on the southern chart. It is what
-   * puts you back when you open the tab, and goAshore sanity-checks landings
-   * against it. Writing a position from the far side of the reef into it would
-   * put a captain north of a wall they can only cross at the gate the next time
-   * they opened /sea, which is a stranding, not a bug you notice at the time.
+   * This used to refuse to write anything north of the reef, because a northern
+   * coordinate restored with no idea which side it belonged to would put a
+   * captain beyond a wall they can only cross at the gate.
+   *
+   * The refusal had a cost nobody paid until there was something up there worth
+   * keeping: the anchorage and the sortie survived only as long as the
+   * component did. Switching tabs and coming back reset both, so a captain who
+   * had taken their Man-o-War out was silently put back in the fishing grounds
+   * on the fishing boat.
+   *
+   * Saving the SIDE removes the reason for the refusal. Restore reads it back
+   * and sets the wall, the rim and the hull together, so nothing disagrees.
    */
   const saveSeaPosition = useCallback(
     (x: number, y: number, fog: number[]) =>
-      sideRef.current ? Promise.resolve(undefined) : persistSeaPosition(x, y, fog),
+      persistSeaPosition(x, y, fog,
+        sortieRef.current ? 'sortie' : sideRef.current ? 'anchorage' : 'fishing'),
     [])
   /**
    * TAKING THE SHIP OUT.
@@ -3979,10 +4005,28 @@ hullRef={hullRefFor(t.key)} />
           the zoom. Same reason as the sky above. */}
       <div ref={rippleRef} aria-hidden style={{
         position: 'absolute', inset: 0, zIndex: Z.ripples, pointerEvents: 'none',
+        // How heavy the hull reads, 0 at the Sloop and 1 at the Man-o-War. The
+        // loop owns `transform` on this node and nothing else, so a custom
+        // property set here is safe.
+        ...(onSortie ? { ['--heave' as string]: hull.weight } : null),
       }}>
-        <div className="sea-ripple" />
-        <div className="sea-ripple" style={{ animationDelay: '1.5s' }} />
-        <div className="sea-ripple" style={{ animationDelay: '3s' }} />
+        {onSortie ? (
+          // A WARSHIP STANDS IN THE WATER. See the note on .sea-heave-* — three
+          // thin rings racing outward is a pebble in a pond however big you
+          // draw it, and this is a ship of the line at anchor.
+          <>
+            <div className="sea-heave-trough" />
+            <div className="sea-heave-collar" />
+            <div className="sea-heave-swell" />
+            <div className="sea-heave-swell" style={{ animationDelay: '3.2s' }} />
+          </>
+        ) : (
+          <>
+            <div className="sea-ripple" />
+            <div className="sea-ripple" style={{ animationDelay: '1.5s' }} />
+            <div className="sea-ripple" style={{ animationDelay: '3s' }} />
+          </>
+        )}
       </div>
 
       {/* THE BOAT SITS AT THE CENTRE OF THE SCREEN AND STAYS THERE.

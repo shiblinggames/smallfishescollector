@@ -2499,6 +2499,94 @@ body.hardcore-gauntlet::after {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
+/* ── A HEAVY HULL AT REST ────────────────────────────────────────────────────
+   What the fishing boat does at anchor is `.sea-ripple` above: three thin
+   outlined rings sweeping from 0.42 to 2.2 of the beam in 4.6s. That is a
+   pebble hitting a pond, and it is right for a rowing boat.
+
+   Scaled up to a Man-o-War it was still a pebble, just a bigger one, and fast
+   thin rings travelling a long way is the single clearest way to say LIGHT.
+   Weight is the opposite of all three: slow, close, and dark.
+
+   So a warship gets a different set of parts:
+
+     · THE TROUGH — the water it is standing in. A soft dark ellipse wider than
+       the hull, always there, breathing on a long period. This is the one that
+       does most of the work: a hull with a shadow pressed into the water reads
+       as sitting IN it rather than on top of it.
+     · THE COLLAR — a bright rim tight against the waterline, where the hull
+       actually parts the surface.
+     · THE SWELL — two slow bands instead of three fast rings. They start at
+       0.92, hugging the hull, rather than at 0.42 in the middle of it, and they
+       travel about half as far.
+
+   `--heave` is 0 at the Sloop and 1 at the Man-o-War, and it makes the trough
+   darker and every period longer. Bigger displacement really does mean a longer
+   wavelength, so slowing these down with size is the physics as well as the
+   feeling. */
+
+.sea-heave-trough,
+.sea-heave-collar,
+.sea-heave-swell {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Wider than the beam, because displaced water does not stop at the plank. */
+.sea-heave-trough {
+  width: 150px;
+  height: 46px;
+  margin: -23px 0 0 -75px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%,
+    rgba(3,10,18,0.44) 0%,
+    rgba(4,12,20,0.26) 52%,
+    rgba(4,12,20,0) 78%);
+  opacity: calc(0.62 + var(--heave, 0.5) * 0.38);
+  animation: seaHeaveBreathe calc(6s + var(--heave, 0.5) * 2.5s) ease-in-out infinite;
+}
+
+.sea-heave-collar {
+  width: 112px;
+  height: 26px;
+  margin: -13px 0 0 -56px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%,
+    rgba(226,244,250,0) 56%,
+    rgba(226,244,250,0.3) 74%,
+    rgba(226,244,250,0) 92%);
+  animation: seaHeaveCollar calc(4.4s + var(--heave, 0.5) * 2s) ease-in-out infinite;
+}
+
+/* A BAND, not a hairline. The ripple's 1px border is what makes it read as a
+   drawn circle; a soft filled band reads as water standing up. */
+.sea-heave-swell {
+  width: 132px;
+  height: 38px;
+  margin: -19px 0 0 -66px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%,
+    rgba(198,226,238,0) 58%,
+    rgba(198,226,238,0.22) 78%,
+    rgba(198,226,238,0) 96%);
+  animation: seaHeaveSwell calc(6.2s + var(--heave, 0.5) * 3s) ease-out infinite;
+}
+
+@keyframes seaHeaveBreathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.055); }
+}
+@keyframes seaHeaveCollar {
+  0%, 100% { opacity: 0.32; transform: scale(1); }
+  50%      { opacity: 0.6;  transform: scale(1.03); }
+}
+@keyframes seaHeaveSwell {
+  0%   { transform: scale(0.92); opacity: 0; }
+  20%  { opacity: 0.85; }
+  100% { transform: scale(1.85); opacity: 0; }
+}
+
 /* THE HELM is a thumb control. A mouse has the whole window to point at and
    does not sit on top of the thing it is pointing at, so on anything with a
    fine pointer it is only clutter. Hidden by CAPABILITY rather than by width —
@@ -2756,6 +2844,12 @@ body.hardcore-gauntlet::after {
   .sea-ripple { animation: none; }
   .sea-ripple { opacity: 0; }
   .sea-wake { display: none; }
+  /* The trough STAYS. It is not motion, it is the shadow of a hull sitting in
+     water, and removing it would float the ship on the surface. Only the two
+     moving parts go. */
+  .sea-heave-trough { animation: none; }
+  .sea-heave-collar,
+  .sea-heave-swell { animation: none; opacity: 0; }
 }
 
 
