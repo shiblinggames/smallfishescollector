@@ -11,6 +11,7 @@ import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
+import { streakMult } from '@/lib/perfectStreak'
 import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
@@ -1120,18 +1121,19 @@ export async function reelIn(
   // 1.01× at level 1 — worth nothing at precisely the moment the mechanic has
   // to teach itself, which is the same mistake as today's in the other
   // direction. 0.40 at Lv1, rising to 1.00 at Lv100.
-  const STREAK_XP_CAP = 10
-  const STREAK_PER_STEP = 0.08
-  const STREAK_LEVEL_FLOOR = 0.4
-  const streakLevelScale = STREAK_LEVEL_FLOOR
-    + (1 - STREAK_LEVEL_FLOOR) * (Math.min(getLevelFromXP(profile.fishing_xp ?? 0), 100) / 100)
-  const streakForXp = Math.min(newPerfectStreak, STREAK_XP_CAP)
-  // 0 when the catch was not perfect, because newPerfectStreak is 0 there.
-  const streakMult = 1 + streakForXp * STREAK_PER_STEP * streakLevelScale
+  //
+  // The maths lives in lib/perfectStreak.ts because the Loadout sheet has to
+  // show a captain what their streak is worth, and a second copy of it on the
+  // client would be one edit away from lying. This is still the authority for
+  // the VALUE: nothing banked here is ever taken from the client.
+  //
+  // streakMult returns exactly 1 when the catch was not perfect, because
+  // newPerfectStreak is 0 there.
+  const mult = streakMult(newPerfectStreak, getLevelFromXP(profile.fishing_xp ?? 0))
   const baseCatchXP = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect')
   // What the streak itself was worth, measured the way it always was reported:
   // before prestige, renown, the rod and the Eye multiply the lot.
-  const serverStreakBonus = Math.round(baseCatchXP * (streakMult - 1))
+  const serverStreakBonus = Math.round(baseCatchXP * (mult - 1))
   const xpGained = Math.round((baseCatchXP + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
   // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
   // The mirror of the reel: his raid item is fed by the fishing half of the

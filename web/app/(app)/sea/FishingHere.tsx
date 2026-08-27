@@ -63,6 +63,7 @@ import { vibrate } from '@/lib/haptics'
 import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
 import type { FishSizeTier } from '@/lib/fishSize'
 import { getBait } from '@/lib/bait'
+import { streakMult, STREAK_XP_CAP } from '@/lib/perfectStreak'
 import { getHook } from '@/lib/hooks'
 import { getReel } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -1989,6 +1990,31 @@ export default function FishingHere({
                   <StatRow k="XP on a perfect" v={`×${mods.rodPerfectXpMult}`} tone="good" />
                 )}
               </div>
+
+              {/* ── THE STREAK ─────────────────────────────────────────
+                  Nothing told a captain this. The result card shows what a
+                  streak paid AFTER the catch, which is the wrong moment: the
+                  decision a streak drives is whether the next cast is worth
+                  being careful about.
+
+                  Both numbers come from lib/perfectStreak.ts, the same module
+                  reelIn banks the XP with, so this cannot quietly disagree with
+                  what actually lands. */}
+              <SheetLabel>Your perfect streak</SheetLabel>
+              <div style={{ marginTop: 4 }}>
+                <StatRow k={streak > 0 ? `Running now, ${streak} perfect${streak === 1 ? '' : 's'}` : 'Running now'}
+                  v={streak > 0 ? `×${streakMult(streak, mods.fishingLevel).toFixed(2)} XP` : 'None'}
+                  tone={streak > 0 ? 'good' : undefined} />
+                <StatRow k={`Held at ${STREAK_XP_CAP}, the most it pays`}
+                  v={`×${streakMult(STREAK_XP_CAP, mods.fishingLevel).toFixed(2)} XP`} tone="good" />
+              </div>
+              <p className="font-karla font-600" style={{
+                fontSize: '0.75rem', color: 'rgba(190,212,228,0.5)', marginTop: 6, lineHeight: 1.6,
+              }}>
+                It multiplies the fish you land, so it is worth the same in any
+                water. One miss resets it. The ceiling grows as you level, up to
+                ×{streakMult(STREAK_XP_CAP, 100).toFixed(2)} at Fishing 100.
+              </p>
 
               <p className="font-karla font-600" style={{
                 fontSize: '0.792rem', color: 'rgba(190,212,228,0.55)', marginTop: 14, lineHeight: 1.6,
