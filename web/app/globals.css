@@ -2624,6 +2624,16 @@ body.hardcore-gauntlet::after {
 }
 .sea-shipyard-col { max-width: 28rem; }
 
+/* THE BOAT'S UPGRADES, as tiles rather than full-width rows.
+   Two columns, because a four-word tag and a number do not need the width of
+   the page and five stacked rows pushed the rig section off the bottom of it.
+   Five items into two columns leaves an orphan, so the LAST tile takes the
+   whole final row — which suits the fish hold anyway, since it is the upgrade
+   that decides when a session ends. `:last-child` is why this is a class and
+   not an inline style. */
+.sy-boat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.sy-boat-grid > :last-child { grid-column: 1 / -1; }
+
 @media (min-width: 768px) {
   .sea-shipyard {
     --sy-1: 0.8rem;

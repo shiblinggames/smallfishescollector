@@ -75,8 +75,8 @@ const TAG: Record<Buyable, string> = {
   rack: 'Carry another rod',
   hull: 'Faster across the chart',
   handling: 'Comes round quicker',
-  accel: 'Away faster from a stop',
-  hold: 'Land more before it fills',
+  accel: 'Quicker off the mark',
+  hold: 'Land more before it fills up',
 }
 
 const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
@@ -534,8 +534,8 @@ export default function ShipyardClient(p: {
             strip, so the things you come to a shipyard to buy were the things
             you could not see. They are the first thing under the picture now. */}
         <Band title="Your boat" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <BoatRow
+        <div className="sy-boat-grid">
+          <BoatTile
             label="Rod rack" name={`${slots} berth${slots === 1 ? '' : 's'}`} accent="#67d4e8"
             now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
             does={TAG.rack}
@@ -544,7 +544,7 @@ export default function ShipyardClient(p: {
             busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
             onBuy={() => { setErr(''); setConfirm('rack') }}
           />
-          <BoatRow
+          <BoatTile
             label="Hull" name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
             now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
             does={TAG.hull}
@@ -553,7 +553,7 @@ export default function ShipyardClient(p: {
             busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
             onBuy={() => { setErr(''); setConfirm('hull') }}
           />
-          <BoatRow
+          <BoatTile
             label="Rudder" name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
             now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
             does={TAG.handling}
@@ -562,7 +562,7 @@ export default function ShipyardClient(p: {
             busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
             onBuy={() => { setErr(''); setConfirm('handling') }}
           />
-          <BoatRow
+          <BoatTile
             label="Rig" name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
             now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
             does={TAG.accel}
@@ -571,7 +571,7 @@ export default function ShipyardClient(p: {
             busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
             onBuy={() => { setErr(''); setConfirm('accel') }}
           />
-          <BoatRow
+          <BoatTile
             label="Fish hold" name={getFishHold(hold).name} accent="#f0c040"
             now={String(cap)} unit="fish aboard"
             does={TAG.hold}
@@ -996,7 +996,21 @@ function Band({ title }: { title: string }) {
  * Full width rather than a third of a row, because three columns is what forced
  * the copy out in the first place: there was nowhere to put a sentence.
  */
-function BoatRow({ label, name, accent, now, unit, does, next, cost, busy, disabled, onBuy }: {
+/**
+ * ONE UPGRADE.
+ *
+ * It was a full-width row for exactly one commit, which was a bad trade: the
+ * row existed to hold a sentence, the sentence became a four-word tag, and five
+ * stacked rows then pushed the rig off the bottom of the page to carry four
+ * words each. Tiles, two to a line.
+ *
+ * What it still has, and what BoatCard never did, is the tag. Five upgrades
+ * shipped for a long time with no words at all saying what sailing speed or
+ * turn rate were FOR — the sentences existed in EXPLAIN, but only the confirm
+ * modal read them, so the game explained a purchase after you decided to make
+ * it. The long version still lives there; this is the short one.
+ */
+function BoatTile({ label, name, accent, now, unit, does, next, cost, busy, disabled, onBuy }: {
   label: string; name: string; accent: string; now: string; unit: string; does: string
   next: string | null; cost: number | null
   busy: boolean; disabled: boolean; onBuy: () => void
@@ -1006,43 +1020,41 @@ function BoatRow({ label, name, accent, now, unit, does, next, cost, busy, disab
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
       style={{
         display: 'flex', flexDirection: 'column',
-        padding: '0.85rem 0.9rem', borderRadius: 14,
+        padding: '0.7rem 0.75rem 0.65rem', borderRadius: 14,
         background: `linear-gradient(180deg, ${accent}10 0%, rgba(255,255,255,0.015) 100%), #0b1620`,
         border: `1px solid ${accent}33`,
       }}>
-      {/* THE READING, first and biggest. What the boat is right now is the
-          thing you came to check; what it could be is the offer underneath. */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <p className="font-karla font-700 uppercase" style={{
-          flex: 1, minWidth: 0, fontSize: 'var(--sy-1)', letterSpacing: '0.12em', color: `${accent}b0`,
-        }}>{label}</p>
-        <p className="font-cinzel font-700" style={{
-          flexShrink: 0, fontSize: 'var(--sy-6)', color: '#f2ead8', lineHeight: 1,
-        }}>{now}</p>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 2 }}>
-        <p className="font-cinzel font-700 truncate" style={{ flex: 1, minWidth: 0, fontSize: 'var(--sy-4)', color: '#dfeaf2' }}>
-          {name}
-        </p>
-        <p className="font-karla font-600" style={{
-          flexShrink: 0, fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.5)',
-        }}>{unit}</p>
-      </div>
+      <p className="font-karla font-700 uppercase truncate" style={{
+        fontSize: 'var(--sy-1)', letterSpacing: '0.12em', color: `${accent}b0`,
+      }}>{label}</p>
 
+      {/* THE READING, big. What the boat is right now is what you came to
+          check; what it could be is the offer at the bottom. */}
+      <p className="font-cinzel font-700" style={{
+        fontSize: 'var(--sy-7)', color: '#f2ead8', lineHeight: 1.05, marginTop: 2,
+      }}>{now}</p>
       <p className="font-karla font-600" style={{
-        fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.72)', marginTop: 7, lineHeight: 1.5,
+        fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.5)', lineHeight: 1.25,
+      }}>{unit}</p>
+
+      <p className="font-karla font-600 truncate" style={{
+        fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.4)', marginTop: 5,
+      }}>{name}</p>
+      <p className="font-karla font-600" style={{
+        fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.72)', marginTop: 4, lineHeight: 1.4,
       }}>{does}</p>
 
       {maxed ? (
         <p className="font-karla font-700" style={{
-          fontSize: 'var(--sy-3)', color: '#7fd6a0', marginTop: 10,
+          fontSize: 'var(--sy-2)', color: '#7fd6a0', marginTop: 'auto', paddingTop: 9,
         }}>Fully upgraded</p>
       ) : (
         <button onClick={onBuy} disabled={disabled} className="font-karla font-700"
           style={{
-            marginTop: 11, width: '100%', padding: '0.55rem 0.7rem', borderRadius: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            fontSize: 'var(--sy-3)', lineHeight: 1.3,
+            marginTop: 'auto', width: '100%', padding: '0.42rem 0.5rem', borderRadius: 10,
+            display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6,
+            flexWrap: 'wrap',
+            fontSize: 'var(--sy-2)', lineHeight: 1.3,
             color: disabled ? 'rgba(242,234,216,0.38)' : '#f2ead8',
             background: 'rgba(240,192,64,0.12)',
             border: '1px solid rgba(240,192,64,0.36)',
@@ -1050,8 +1062,8 @@ function BoatRow({ label, name, accent, now, unit, does, next, cost, busy, disab
           }}>
           {busy ? <span>Working…</span> : (
             <>
-              <span>Upgrade to {next}</span>
-              <span style={{ flexShrink: 0, color: disabled ? 'rgba(240,192,64,0.45)' : '#f0c040' }}>
+              <span>{next}</span>
+              <span style={{ color: disabled ? 'rgba(240,192,64,0.45)' : '#f0c040' }}>
                 {cost.toLocaleString()} ⟡
               </span>
             </>
