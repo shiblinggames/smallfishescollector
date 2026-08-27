@@ -46,6 +46,7 @@ import { seaClock } from '@/lib/seaClock'
 const MAINLAND_DOORSTEP =
   (PLACES.find(p => p.id === 'mainland')?.r ?? 250) + 420 + 120
 import { NORTH_WALL, OUTER_EDGE, PLACES, YOON } from '@/app/(app)/sea/chart'
+import { clearOfSolids, BOAT_CLEAR } from '@/lib/seaSolid'
 
 /** The furthest a trader's patrol can carry them from their anchor. Must match
  *  the `driftR` roll in traderAt, and it is the margin the outer-edge guard
@@ -512,6 +513,26 @@ export function traderAt(cx: number, cy: number, day: number): Trader | null {
   // where the go-ashore prompt is already up.
   if (Math.hypot(x, y) < MAINLAND_DOORSTEP) return null
 
+  // ── AND NOT THROUGH THE MIDDLE OF IT EITHER ──────────────────────────
+  //
+  // The three guards above are all about the EDGES of the world: the outer
+  // ring, the reef, the Mainland's doorstep. Nothing tested the things standing
+  // in the middle of it, so traders were anchored inside islands and their
+  // patrols carried them straight across ports — a captain watched one sail
+  // through the Trawl Docks.
+  //
+  // MAX_DRIFT again, for the same reason the outer-edge guard uses it: an
+  // anchor that clears a rock is worthless if the patrol swings the hull back
+  // into it. Deliberately conservative — MAX_DRIFT is the widest patrol anyone
+  // can roll, not this one's — because over-clearing costs a trader in a cell
+  // that had a rock in it, and under-clearing costs a boat sailing through
+  // stone. BOAT_CLEAR on top, because a hull is a sprite and not a point.
+  //
+  // A cell with nothing clear in it simply has nobody, which is how every other
+  // guard here fails too: the population is probabilistic, so a refusal reads
+  // as an empty stretch of water rather than a hole.
+  if (!clearOfSolids(x, y, MAX_DRIFT + BOAT_CLEAR)) return null
+
   // TWO IN FIVE OF EVERYONE OUT HERE IS NOT SELLING ANYTHING.
   //
   // Raised from a fifth when the talkers took over a job the fishing screen
@@ -703,6 +724,7 @@ function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
 
   // DEEP WATER ONLY. Past the halfway mark of the chart, which in practice is
   // the far side of the Deep.
+  if (!clearOfSolids(x, y, MAX_DRIFT + BOAT_CLEAR)) return null
   if (depth < 0.45) return null
   // Uncommon even there: about one cell in nine.
   if (rnd() > 0.11) return null

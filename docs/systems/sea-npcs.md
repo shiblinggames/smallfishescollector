@@ -38,6 +38,39 @@ same day. Glowing rods are excluded: those are things people earned.
 | **Blockade runner** | Night + deep water only. Carries the three shop-banned rods. |
 | **Resident buyer** | Permanent, one per zone. See below. |
 
+## Nobody sails through stone
+
+Placement has always had guards, and every one of them was about the **edges** of the
+world: inside the outer ring, south of the reef, off the Mainland's doorstep. Nothing
+tested the things standing in the **middle** of it, so traders anchored inside islands and
+their patrols carried them across ports. A captain watched one sail through the Trawl
+Docks.
+
+`web/lib/seaSolid.ts` is the one model of what is solid — ports, isles, landmarks — and
+`traderAt` and `runnerAt` both refuse an anchor whose whole patrol is not clear of it. The
+pad is `MAX_DRIFT + BOAT_CLEAR`: the widest patrol anyone can roll, plus half a hull,
+because an anchor that clears a rock is worthless if the swing puts the boat back in it.
+Deliberately conservative — over-clearing costs one trader in a cell that had a rock in it,
+under-clearing costs a boat sailing through stone.
+
+A cell with nothing clear in it has nobody, the same way every other guard fails: the
+population is probabilistic, so a refusal reads as empty water rather than a hole.
+
+**`scripts/check-traders.mts` asserts it**, sampling 180 points around every patrol across
+six days and the whole clock (the runners only exist at night, and they are generated on
+their own path — the one that had missed every guard the day traders got). It also asserts
+the sea is not EMPTY, because a clearance test that refuses every cell would pass the first
+rule perfectly. Verified by removing the guard: 22 boats through solid ground, including
+the Trawl Docks.
+
+Finn keeps his own list and does not use this one. His clearances are hail circles, not
+hulls — he must not stand where his prompt would fight a port's, so his radii are far
+larger than anything physical. They are also load-bearing in a way these are not: his
+position is a pure function of how many times you have met him, so changing a radius moves
+him for every captain mid-story.
+
+---
+
 ## Finn is not on the Salt Road
 
 He is the campaign's rival (see [story-universe.md](story-universe.md), and read it before

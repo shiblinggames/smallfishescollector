@@ -7,7 +7,7 @@
     "dev:lan": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "check": "tsx scripts/check-campaign.mts && tsx scripts/check-copy.mts && tsx scripts/check-badge-goals.mts && tsx scripts/check-islands.mts && tsx scripts/check-finn.mts",
+    "check": "tsx scripts/check-campaign.mts && tsx scripts/check-copy.mts && tsx scripts/check-badge-goals.mts && tsx scripts/check-islands.mts && tsx scripts/check-finn.mts && tsx scripts/check-traders.mts",
     "prebuild": "tsx scripts/check-campaign.mts && tsx scripts/check-copy.mts && tsx scripts/check-badge-goals.mts"
   },
   "dependencies": {
