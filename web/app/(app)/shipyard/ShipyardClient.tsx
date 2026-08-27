@@ -450,7 +450,7 @@ export default function ShipyardClient(p: {
             position: 'absolute', left: 0, right: 0, bottom: 0, height: '46%',
             background: 'linear-gradient(180deg, rgba(24,66,88,0) 0%, rgba(20,58,80,0.5) 40%, rgba(10,30,44,0.9) 100%)',
           }} />
-          <div style={{ position: 'relative', padding: '0.6rem 0.5rem 0' }}>
+          <div style={{ position: 'relative', padding: '0.6rem 0.5rem 0.5rem' }}>
             {/* The sprite is 900x800 with the figure in the bottom 55.5%, so the
                 top third of the box is empty sky. Pulled in by measurement, the
                 same way the gear grid's small preview does it. */}
@@ -471,24 +471,63 @@ export default function ShipyardClient(p: {
                 rodTier={equipped} reelTier={reelTier} hookTier={hookTier}
               />
             </div>
+
+            {/* ── THE LEADER LINES ────────────────────────────────
+                One SVG over the art, drawing from the top of each chip up to
+                the thing it names, with a dot where it lands.
+
+                preserveAspectRatio="none" so a 0-100 box maps straight onto
+                whatever shape the panel is, and non-scaling-stroke so that
+                stretching does not turn a hairline into a wedge. Decoration
+                only: the chip below is the button, because a one pixel line is
+                not a tap target and widening it would lay invisible glass over
+                the boat. */}
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%',
+                pointerEvents: 'none', zIndex: 3, overflow: 'visible',
+              }}>
+              {CALLOUTS.map((c, i) => (
+                <g key={c.slot}>
+                  <line x1={chipX(i, CALLOUTS.length)} y1={100} x2={c.x} y2={c.y}
+                    stroke="rgba(180,214,232,0.42)" strokeWidth={1}
+                    vectorEffect="non-scaling-stroke" />
+                  <circle cx={c.x} cy={c.y} r={1.1}
+                    fill="rgba(220,238,246,0.9)" vectorEffect="non-scaling-stroke" />
+                </g>
+              ))}
+            </svg>
           </div>
 
-          {/* ── THE CALLOUTS ────────────────────────────────────────────
-              The name sits OUT of the way at the edge and a hairline reaches in
-              to the thing it names. Labels standing on top of the art was the
-              obvious way to do this and the wrong one: the picture is the point
-              of the picture, and five chips laid across it covered exactly what
-              you came to look at.
-
-              pointer-events: none on the layer, auto on the chips, so the space
-              between them is not a sheet of glass over the boat. */}
-          <div aria-hidden={false} style={{
-            position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
+          {/* ── THE NAMES ───────────────────────────────────────────────
+              A strip of its own under the picture. Every one of these is a
+              button: tapping "Hat" opens the hat picker, and the line above it
+              says which part of the boat that is. */}
+          <div style={{
+            position: 'relative', zIndex: 4,
+            display: 'grid', gridTemplateColumns: `repeat(${CALLOUTS.length}, minmax(0, 1fr))`,
+            gap: 4, padding: '0 0.4rem 0.5rem',
           }}>
             {CALLOUTS.map(c => (
-              <Callout key={c.slot} label={c.label} name={nameFor(c.slot)}
-                side={c.side} y={c.y} reach={c.reach}
-                onClick={() => { vibrate(8); setSlot(c.slot) }} />
+              <button key={c.slot} type="button" className="tap"
+                onClick={() => { vibrate(8); setSlot(c.slot) }}
+                title={`${c.label}: ${nameFor(c.slot)}`}
+                style={{
+                  minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 0, padding: '0.3rem 0.25rem', borderRadius: 10, cursor: 'pointer',
+                  // An opaque floor: this sits at the foot of painted art, and a
+                  // translucent chip over paint reads as a smear.
+                  background: 'rgba(6,14,22,0.88)',
+                  border: '1px solid rgba(180,214,232,0.26)',
+                }}>
+                <span className="font-karla font-700 uppercase" style={{
+                  fontSize: 'var(--sy-1)', letterSpacing: '0.12em', lineHeight: 1.1,
+                  color: 'rgba(190,212,228,0.6)',
+                }}>{c.label}</span>
+                <span className="font-cinzel font-700 truncate" style={{
+                  maxWidth: '100%', fontSize: 'var(--sy-2)', lineHeight: 1.25, color: '#e6e2dc',
+                }}>{nameFor(c.slot)}</span>
+              </button>
             ))}
           </div>
 
@@ -1120,80 +1159,35 @@ export default function ShipyardClient(p: {
  *  thing ended and the next started, which is most of why it read as one
  *  undifferentiated pile. */
 /**
- * WHERE THE CALLOUTS SIT, and how far each one reaches.
+ * THE CALLOUTS.
  *
- * `y` is a percentage down the hero, `reach` how far across it the hairline
- * runs before it stops at the thing being named. Percentages of the HERO box,
- * not of FisherPose: the pose is inset by the panel's padding and pulled up
- * 30%, so its coordinate system and this one are not the same, and pretending
- * otherwise is how a label ends up pointing at water.
+ * A row of names in a strip UNDER the picture, each with a line running up to
+ * the thing it names.
  *
- * Placed by eye against the rest pose. They are five rows in one table
- * precisely so that nudging them is a two minute job rather than an
- * archaeology expedition.
+ * They were pinned to the left and right edges before, which squashed five
+ * labels into two narrow gutters and left them stacked on top of each other.
+ * Underneath there is a whole width to spread across, and a line can travel up
+ * to anywhere on the boat — so the label is somewhere readable AND still points
+ * at the item, which is the thing the edge version could not do.
+ *
+ * `x`/`y` are percentages of the ART BOX, not of the hero: the art has a strip
+ * beneath it now and the two are different boxes. Ordered left to right by
+ * where their chip sits, and chosen so the lines fan outward rather than
+ * crossing each other.
+ *
+ * Placed by eye against the rest pose. Five rows in one table, so moving them
+ * is a two minute job.
  */
-const CALLOUTS: { slot: SlotKey; label: string; side: 'left' | 'right'; y: number; reach: number }[] = [
-  { slot: 'hat',  label: 'Hat',  side: 'left',  y: 20, reach: 32 },
-  { slot: 'rod',  label: 'Rod',  side: 'left',  y: 40, reach: 22 },
-  { slot: 'skin', label: 'Skin', side: 'left',  y: 60, reach: 30 },
-  { slot: 'pet',  label: 'Pet',  side: 'right', y: 66, reach: 22 },
-  { slot: 'boat', label: 'Boat', side: 'right', y: 86, reach: 30 },
+const CALLOUTS: { slot: SlotKey; label: string; x: number; y: number }[] = [
+  { slot: 'rod',  label: 'Rod',  x: 20, y: 34 },
+  { slot: 'hat',  label: 'Hat',  x: 50, y: 24 },
+  { slot: 'skin', label: 'Skin', x: 50, y: 46 },
+  { slot: 'boat', label: 'Boat', x: 48, y: 86 },
+  { slot: 'pet',  label: 'Pet',  x: 74, y: 70 },
 ]
 
-/**
- * ONE CALLOUT: a name at the edge, a hairline reaching in, a dot on the thing.
- *
- * The whole chip is the button, and the hairline is decoration — a one pixel
- * line is not a tap target on a phone, and making it one would put a strip of
- * invisible glass across the boat.
- */
-function Callout({ label, name, side, y, reach, onClick }: {
-  label: string; name: string; side: 'left' | 'right'; y: number; reach: number; onClick: () => void
-}) {
-  const left = side === 'left'
-  return (
-    <div style={{
-      position: 'absolute', top: `${y}%`, [left ? 'left' : 'right']: '2%',
-      width: `${reach}%`, height: 0,
-      display: 'flex', flexDirection: left ? 'row' : 'row-reverse', alignItems: 'center',
-    }}>
-      <button type="button" onClick={onClick} title={`${label}: ${name}`}
-        className="tap sy-callout"
-        style={{
-          flexShrink: 0, pointerEvents: 'auto', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column',
-          alignItems: left ? 'flex-start' : 'flex-end',
-          gap: 0, padding: '0.28rem 0.5rem', borderRadius: 10,
-          // An opaque floor. This sits on painted art, where a translucent chip
-          // reads as a smear — the same rule the panels on the chart follow.
-          background: 'rgba(6,14,22,0.88)',
-          border: '1px solid rgba(180,214,232,0.28)',
-          maxWidth: '100%', minWidth: 0,
-        }}>
-        <span className="font-karla font-700 uppercase" style={{
-          fontSize: 'var(--sy-1)', letterSpacing: '0.14em', lineHeight: 1.1,
-          color: 'rgba(190,212,228,0.6)', whiteSpace: 'nowrap',
-        }}>{label}</span>
-        <span className="font-cinzel font-700 truncate" style={{
-          maxWidth: '100%', fontSize: 'var(--sy-2)', lineHeight: 1.2, color: '#e6e2dc',
-        }}>{name}</span>
-      </button>
-      {/* The reach. Flex-grows into whatever the chip left over, so a long item
-          name shortens the line rather than pushing the dot off the boat. */}
-      <span aria-hidden style={{
-        flex: 1, height: 1, minWidth: 6,
-        background: left
-          ? 'linear-gradient(90deg, rgba(180,214,232,0.5), rgba(180,214,232,0.14))'
-          : 'linear-gradient(270deg, rgba(180,214,232,0.5), rgba(180,214,232,0.14))',
-      }} />
-      <span aria-hidden style={{
-        flexShrink: 0, width: 5, height: 5, borderRadius: '50%',
-        background: 'rgba(214,232,240,0.85)',
-        boxShadow: '0 0 5px rgba(214,232,240,0.6)',
-      }} />
-    </div>
-  )
-}
+/** Where a callout's chip sits along the strip: even columns, centre of each. */
+const chipX = (i: number, n: number) => ((i + 0.5) / n) * 100
 
 function Band({ title }: { title: string }) {
   return (
