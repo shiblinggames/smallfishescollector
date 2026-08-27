@@ -1155,3 +1155,43 @@ in. It clears when you sail off, since leaving is an answer.
 `sea_hints_seen` is a `text[]` rather than three booleans: the list grows every time the
 chart gains somewhere to land, and a column per port is how a profiles table ends up with
 forty of them.
+
+## The anchorage, and the way out of it
+
+The water north of the reef. Reached through the arch on the fishing boat, and it holds the
+places expeditions is run FROM: the Crew Hall now, the voyage board and the recruiter and
+the forge in time. Things you moor at, not things you fight.
+
+**It is 3,600 across and walled all the way round.** It was 5,200 with an invisible rim, and
+both halves of that were wrong: the extra water made it a sea to cross rather than a harbour
+to move about, and an edge you slide along without ever being told it is there is not a
+shore. `anchorageRocks()` in `SeaMap.tsx` runs the same rock as the reef — two staggered
+rows, shingle at four times the density, the same 520 of clearance at the gap — placed by
+ANGLE rather than by world stride, because stepping in pixels along a curve bunches the rock
+at the ends.
+
+The wall covers about **229°**, not a semicircle: the chord sits 1,500 from a centre 3,600
+out, so the anchorage is the major segment. `anchorageArc()` returns the sweep rather than
+hardcoding it, because a wall that stops short of the water it encloses leaves a gap that
+reads as the way out.
+
+**The Sortie** is that gap, due north, at the exact midpoint of the arc and dead opposite the
+arch. So the whole crossing is one straight line: in through the reef, across the harbour,
+out the top. The same two headland stacks that frame the arch frame this, inner edges
+lapping the mouth by about 10px, same as over there.
+
+It is the one place on the chart where the hull under you changes, so unlike the arch **it
+asks first** — the arch is a hole in rock with more harbour behind it, sailed through on the
+boat you were already on. Past the sortie you are on the ship the expedition ladder sells,
+and the confirm names the hull and counts the crew actually in raid seats, including zero.
+
+### Sizing it
+
+Any change to `EXP_EDGE` has to clear the Crew Hall, whose shore reaches 2,124 from the
+anchorage centre. At 3,600 that leaves about 1,000 of open water past it and still fits
+three or four more islands at the `r1 + r2 + 840` separation `check-islands` enforces. The
+arch-to-sortie sail is 5,100, which is a leg rather than a voyage.
+
+`SORTIE`, `anchorageArc()` and the minimap's `expeditions` half all derive from `EXP_EDGE`,
+so moving it moves them together. `RAID_EDGE` (13,000) does not — that is the open water
+beyond, and it is deliberately its own number.

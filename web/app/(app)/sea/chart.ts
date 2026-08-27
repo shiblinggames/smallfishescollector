@@ -533,17 +533,26 @@ export function inGate(x: number): boolean {
  * fight.
  *
  * The same half-disc geometry as the fishing grounds, mirrored in the reef, so
- * the arch and its boulders are its southern shore. Small on purpose: 5,200
- * holds a handful of islands and can be crossed in under a minute, which is
- * what makes it read as a harbour rather than as an empty sea somebody forgot
- * to fill.
+ * the arch and its boulders are its southern shore. Small on purpose, and
+ * SMALLER NOW: 5,200 was still enough open water to be crossing a sea rather
+ * than moving about a harbour, and it left the rim so far out that the boundary
+ * was a thing you only met by accident.
+ *
+ * 3,600 leaves about 1,000 of clear water past the Crew Hall's shore and still
+ * fits three or four more islands at the separation the chart demands. The sail
+ * from the arch to the sortie is 5,100, which is a leg, not a voyage.
+ *
+ * IT IS WALLED, all the way round, in the same rock as the reef — see
+ * `anchorageRocks`. That is what makes it a harbour rather than a disc: the
+ * boundary was an invisible line you slid along, and now it is a shore with one
+ * gap in it, exactly like the reef that let you in.
  *
  * WHAT IS BEYOND IT is raid water, and that is where the ship you actually own
  * takes over from the fishing boat. That boundary is THIS RIM, and the way out
  * through it is the Sortie — see below.
  */
 export const EXP_ORIGIN = { x: 0, y: NORTH_WALL - 1500 }
-export const EXP_EDGE = 5200
+export const EXP_EDGE = 3600
 
 /**
  * THE SORTIE — the one way out of the anchorage, and the only place on the
@@ -568,6 +577,25 @@ export const SORTIE = { x: EXP_ORIGIN.x, y: EXP_ORIGIN.y - EXP_EDGE }
  *  because you meet this one head-on at speed rather than lining up for a gap
  *  in a wall you can see. */
 export const SORTIE_HALF = 620
+
+/**
+ * WHERE THE ANCHORAGE'S WALL RUNS, as an angle sweep.
+ *
+ * The rim is only a boundary where it is north of the reef — south of that line
+ * the fishing grounds take over and the reef is already the shore. The chord
+ * sits 1,500 from the centre against a radius of 3,600, so the anchorage is the
+ * MAJOR segment and the wall covers about 229 degrees, not a semicircle.
+ *
+ * Returned rather than hardcoded because both numbers can move, and a wall that
+ * stops short of the water it is supposed to enclose leaves a gap that reads as
+ * the way out.
+ */
+export function anchorageArc(): { from: number; to: number } {
+  // worldY = EXP_ORIGIN.y + r sin0. North of the reef means worldY < NORTH_WALL.
+  const s = (NORTH_WALL - EXP_ORIGIN.y) / EXP_EDGE
+  const a = Math.asin(s)
+  return { from: Math.PI - a, to: 2 * Math.PI + a }
+}
 
 /** Is this point in the mouth of the sortie? Measured as a distance from the
  *  gap's centre rather than an angle, because an angular window subtends a

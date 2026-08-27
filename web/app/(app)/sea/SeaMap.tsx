@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, RAID_EDGE, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, type Place } from './chart'
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -3727,6 +3727,9 @@ export default function SeaMap({
             submerged base and the shoal for free and cannot drift out of
             style. */}
         <ReefLine />
+        {/* The harbour's own shore, north of the reef. Always drawn: from the
+            fishing grounds it is the far wall you can see beyond the arch. */}
+        <AnchorageWall />
 
         {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
             through the opening is what takes you to expeditions, so the opening
@@ -5441,6 +5444,101 @@ function reefRocks() {
 const REEF = reefRocks()
 
 /**
+ * THE ANCHORAGE'S WALL.
+ *
+ * The harbour used to be a disc with an invisible edge. You slid along it
+ * without ever being told there was anything there, and the sortie — the one
+ * place the edge means something — looked exactly like the rest of it.
+ *
+ * So it gets a shore, in the same rock as the reef and by the same rules: two
+ * staggered rows for depth, shingle at four times the density to close the
+ * gaps, and one gap left where the way out is. If the reef is how you get IN,
+ * this is the same idea drawn round the other side, and it should be the same
+ * object rather than a second kind of barrier that happens to do the same job.
+ *
+ * The one real difference is that it is an ARC, so everything is placed by
+ * angle and the strides are converted to angles at this radius. Stepping in
+ * world pixels along a curve would bunch the rock at the ends.
+ */
+function anchorageRocks() {
+  const out: { art: string; x: number; y: number; size: number }[] = []
+  let seed = 0x1f83d9ab
+  const nx = () => {
+    seed ^= seed << 13; seed >>>= 0
+    seed ^= seed >>> 17
+    seed ^= seed << 5; seed >>>= 0
+    return seed / 0x100000000
+  }
+  const { from, to } = anchorageArc()
+  /** A point on the rim, `off` world px out from it (negative = inside). */
+  const at = (th: number, off: number) => ({
+    x: EXP_ORIGIN.x + Math.cos(th) * (EXP_EDGE + off),
+    y: EXP_ORIGIN.y + Math.sin(th) * (EXP_EDGE + off),
+  })
+  /** The sortie sits at the middle of the arc, due north. */
+  const mid = (from + to) / 2
+  /** Arc distances as angles, so a stride means the same thing all the way
+   *  round rather than only where the curve happens to be flattest. */
+  const ang = (px: number) => px / EXP_EDGE
+
+  // ── THE BOULDERS ─────────────────────────────────────────────────────
+  // Same 520 of clearance the reef uses, for the same reason: the widest
+  // boulder is 820 across and jitters, so anything tighter drops half a rock
+  // into the mouth.
+  const skip = ang(SORTIE_HALF + 520)
+  for (const row of [0, 1]) {
+    const step = ang(REEF_STEP)
+    for (let th = from + (row * step) / 2; th < to; th += step) {
+      if (Math.abs(th - mid) < skip) continue
+      const b = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
+      const p = at(th + (nx() - 0.5) * step * 0.22,
+        (row ? 1 : -1) * 110 + (nx() - 0.5) * 150)
+      out.push({ art: b.art, x: p.x, y: p.y, size: b.min + nx() * (b.max - b.min) })
+    }
+  }
+
+  // ── THE HEADLANDS ────────────────────────────────────────────────────
+  //
+  // The same pair that frames the arch, framing this. Placed rather than
+  // rolled, because framing the gap is the entire reason they exist.
+  //
+  // NOT MIRRORED and not swapped: the art is lit from the upper left, and the
+  // west stone stays west. Flipping one to tidy the silhouette would flip its
+  // light and break the run it stands in.
+  const gate = ang(SORTIE_HALF + 370)
+  const w = at(mid - gate, 40), e = at(mid + gate, 40)
+  out.push({ art: '/sea/rock-gate-w.png', x: w.x, y: w.y, size: 760 })
+  out.push({ art: '/sea/rock-gate-e.png', x: e.x, y: e.y, size: 760 })
+  // One boulder behind each, so they grow out of the wall rather than reading
+  // as two towers parked on the end of it.
+  for (const side of [-1, 1]) {
+    const p = at(mid + side * ang(SORTIE_HALF + 640), -140)
+    out.push({ art: '/sea/rock-crag.png', x: p.x, y: p.y, size: 520 })
+  }
+
+  // ── THE SHINGLE ──────────────────────────────────────────────────────
+  // Coverage and scale, exactly as on the reef: the boulders leave bare
+  // patches the eye reads as a way through, and rock with nothing small in it
+  // has no size to it.
+  const pebbleSkip = ang(SORTIE_HALF + 300)
+  const pstep = ang(PEBBLE_STEP)
+  for (let th = from; th < to; th += pstep) {
+    if (Math.abs(th - mid) < pebbleSkip) continue
+    const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
+    const r = nx()
+    const p = at(th + (nx() - 0.5) * pstep * 0.8, (nx() - 0.5) * 330)
+    out.push({ art: pa.art, x: p.x, y: p.y, size: pa.min + r * r * (pa.max - pa.min) })
+  }
+
+  // Painter's order: further south is nearer, so it draws last and overlaps
+  // what is behind it. Without this a big rock at the back sits on top of a
+  // small one in front and the whole run goes flat.
+  return out.sort((p, q) => p.y - q.y)
+}
+
+const ANCHORAGE_WALL = anchorageRocks()
+
+/**
  * THE SCENERY, AS ONE ELEMENT.
  *
  * The reef is ~320 rocks and pebbles and the landmark field is another 35.
@@ -5455,6 +5553,12 @@ const REEF = reefRocks()
  */
 const ReefLine = memo(function ReefLine() {
   return <>{REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}</>
+})
+
+/** The harbour's shore. Same treatment as the reef and for the same reason —
+ *  a module constant that can never change, so the parent pays one element. */
+const AnchorageWall = memo(function AnchorageWall() {
+  return <>{ANCHORAGE_WALL.map((m, i) => <SeaMark key={`anch${i}`} m={m} i={i + 1200} />)}</>
 })
 
 /** Crew card art lives in Supabase storage, same bucket the crew hall reads. */
@@ -6196,55 +6300,35 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  */
 const SortieSign = memo(function SortieSign() {
   return (
-    <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}>
-      {[-1, 1].map(side => (
-        <div key={side} style={{
-          position: 'absolute', left: SORTIE.x + side * SORTIE_HALF, top: SORTIE.y,
-          transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-          transformOrigin: 'bottom center',
-        }}>
-          {/* A channel marker: a pole with a lamp, which is what actually
-              stands either side of a harbour mouth. Placeholder art is a shape
-              and a glow rather than a sprite, so nothing has to be redrawn when
-              the real thing arrives. */}
-          <div style={{
-            width: 6, height: 74, margin: '0 auto',
-            background: 'linear-gradient(180deg, rgba(232,238,244,0.5), rgba(120,150,170,0.28))',
-            borderRadius: 3,
-          }} />
-          <div style={{
-            position: 'absolute', left: '50%', top: -7, width: 18, height: 18,
-            transform: 'translateX(-50%)', borderRadius: '50%',
-            background: 'radial-gradient(circle at 40% 35%, #ffe9a8, #f0a83c 55%, rgba(240,168,60,0) 78%)',
-            boxShadow: '0 0 18px rgba(255,196,90,0.75)',
-          }} />
-        </div>
-      ))}
-
+    <div aria-hidden style={{
+      position: 'absolute', left: SORTIE.x, top: SORTIE.y - 150,
+      transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+      transformOrigin: 'bottom center', whiteSpace: 'nowrap', pointerEvents: 'none',
+    }}>
+      {/* THE LAMP POLES ARE GONE. They were standing in for a wall that did not
+          exist: with the rim invisible, two markers were the only way to see
+          how wide the opening was. The harbour has a rock shore now and two
+          headland stacks framing this gap, so the poles were a second set of
+          markers for a mouth that already had them. The arch does not have
+          them either, and this should read as the same kind of place. */}
+      {/* The same centring correction the arch's sign needs: letter-spacing
+          adds its gap after the last letter too, so the word hangs half a
+          space right of true until it is cancelled. */}
+      <p className="font-cinzel font-700" style={{
+        fontSize: '1.4rem', letterSpacing: '0.24em', textTransform: 'uppercase',
+        color: 'rgba(255,226,170,0.9)', margin: 0,
+        textAlign: 'center', marginRight: '-0.24em',
+        textShadow: '0 2px 16px rgba(0,0,0,0.98), 0 0 34px rgba(0,0,0,0.8)',
+      }}>The Sortie</p>
       <div style={{
-        position: 'absolute', left: SORTIE.x, top: SORTIE.y - 150,
-        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center', whiteSpace: 'nowrap',
-      }}>
-        {/* The same centring correction the arch's sign needs: letter-spacing
-            adds its gap after the last letter too, so the word hangs half a
-            space right of true until it is cancelled. */}
-        <p className="font-cinzel font-700" style={{
-          fontSize: '1.4rem', letterSpacing: '0.24em', textTransform: 'uppercase',
-          color: 'rgba(255,226,170,0.9)', margin: 0,
-          textAlign: 'center', marginRight: '-0.24em',
-          textShadow: '0 2px 16px rgba(0,0,0,0.98), 0 0 34px rgba(0,0,0,0.8)',
-        }}>The Sortie</p>
-        <div style={{
-          height: 1, width: SORTIE_HALF, margin: '7px auto 0',
-          background: 'linear-gradient(90deg, transparent, rgba(255,214,140,0.5), transparent)',
-        }} />
-        <p className="font-karla font-600" style={{
-          fontSize: '0.82rem', letterSpacing: '0.1em', textAlign: 'center',
-          color: 'rgba(226,212,186,0.66)', margin: '5px 0 0',
-          textShadow: '0 1px 12px rgba(0,0,0,0.98)',
-        }}>Open water, and your own ship</p>
-      </div>
+        height: 1, width: SORTIE_HALF, margin: '7px auto 0',
+        background: 'linear-gradient(90deg, transparent, rgba(255,214,140,0.5), transparent)',
+      }} />
+      <p className="font-karla font-600" style={{
+        fontSize: '0.82rem', letterSpacing: '0.1em', textAlign: 'center',
+        color: 'rgba(226,212,186,0.66)', margin: '5px 0 0',
+        textShadow: '0 1px 12px rgba(0,0,0,0.98)',
+      }}>Open water, and your own ship</p>
     </div>
   )
 })
