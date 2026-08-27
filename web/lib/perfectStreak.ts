@@ -43,3 +43,25 @@ export function streakLevelScale(fishingLevel: number): number {
 export function streakMult(streak: number, fishingLevel: number): number {
   return 1 + Math.min(Math.max(streak, 0), STREAK_XP_CAP) * PER_STEP * streakLevelScale(fishingLevel)
 }
+
+/**
+ * THE HIGHEST STREAK THE RECORD BOOKS WILL BELIEVE.
+ *
+ * The dial is client physics and reelIn takes the 'perfect' attestation from
+ * the client, so the streak COUNTER cannot be forged but its INPUTS can — an
+ * account was found at 69 with no boosters, against an all-time honest best of
+ * 33 set by a 22,615-cast veteran running the game's top sustained rate (33%).
+ * At that rate the chance of 40 straight is about 5e-20; a whole career of
+ * twenty thousand casts expects zero of them. 45 is comfortably past anything
+ * skill has ever produced and astronomically short of what forgery produces.
+ *
+ * Same shape as Tide Run's plausibility split: the record write is refused and
+ * the claim is flagged for review; the LIVE streak keeps counting, because
+ * gameplay is not the target — the leaderboard and the badge ladder are. The
+ * ladder tops out at 30 (in_the_flow), well under the ceiling, so no honest
+ * badge is reachable only by crossing it.
+ *
+ * If a legitimate player ever gets near this, the flags will show a clean
+ * climb through the 30s first — raise it then, with the evidence in hand.
+ */
+export const STREAK_RECORD_CEILING = 45

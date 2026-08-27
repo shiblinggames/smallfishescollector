@@ -1,6 +1,7 @@
 'use server'
 
 import { eyeFromProfile } from '@/lib/finnItems'
+import { flagAnomaly } from '@/lib/anomaly'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -12,7 +13,7 @@ import { rewardsOwed, type LevelReward } from '@/lib/levelRewards'
 import { grantBadgeDirect } from '@/lib/badgeGrant'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
-import { streakMult } from '@/lib/perfectStreak'
+import { streakMult, STREAK_RECORD_CEILING } from '@/lib/perfectStreak'
 import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
@@ -894,7 +895,12 @@ export async function reelIn(
     // as the xp that earned it and cannot drift out of sync.
     const updates: Record<string, unknown> = { fishing_xp: newXP, current_perfect_streak: aStreak, catch_pending: false, ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}) }
     if (result === 'perfect') updates.total_perfects = (profile.total_perfects ?? 0) + 1
-    if (aStreak > (profile.highest_perfect_streak ?? 0)) {
+    // The record believes the streak only up to the ceiling — see
+    // STREAK_RECORD_CEILING. The live counter runs on regardless: gameplay is
+    // not the target of forgery, the record books are.
+    if (aStreak > STREAK_RECORD_CEILING) {
+      await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: aStreak })
+    } else if (aStreak > (profile.highest_perfect_streak ?? 0)) {
       updates.highest_perfect_streak = aStreak
       updates.highest_streak_set_at = new Date().toISOString()
       updates.best_streak_zone = 'ancient_deep'
@@ -1197,7 +1203,10 @@ export async function reelIn(
   }
   if (sigilBonus > 0) profileUpdates.doubloons = newDoubloons
   if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
-  if (newPerfectStreak > (profile.highest_perfect_streak ?? 0)) {
+  // Ceiling-guarded like the other two record sites; see STREAK_RECORD_CEILING.
+  if (newPerfectStreak > STREAK_RECORD_CEILING) {
+    await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: newPerfectStreak })
+  } else if (newPerfectStreak > (profile.highest_perfect_streak ?? 0)) {
     profileUpdates.highest_perfect_streak = newPerfectStreak
     profileUpdates.highest_streak_set_at = new Date().toISOString()
     profileUpdates.best_streak_zone = fish.habitat
@@ -1578,7 +1587,10 @@ export async function reelCrate(_zone: string, _tier: CrateTier = 'wooden', resu
   // fish. This moves the streak and nothing else.
   const streak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
   const streakUpdate: Record<string, unknown> = { current_perfect_streak: streak, catch_pending: false }
-  if (streak > (profile.highest_perfect_streak ?? 0)) {
+  // Ceiling-guarded like the fish paths; see STREAK_RECORD_CEILING.
+  if (streak > STREAK_RECORD_CEILING) {
+    await flagAnomaly(admin, user.id, 'implausible:perfectStreak', 3, { claimed: streak })
+  } else if (streak > (profile.highest_perfect_streak ?? 0)) {
     streakUpdate.highest_perfect_streak = streak
     streakUpdate.highest_streak_set_at = new Date().toISOString()
     streakUpdate.best_streak_zone = crateToken.habitat
