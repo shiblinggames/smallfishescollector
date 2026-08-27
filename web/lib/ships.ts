@@ -23,6 +23,30 @@ export interface ShipDef {
    * artist's, not a table here. See Warship in the sea map.
    */
   seaImageUrl?: string
+  /**
+   * HOW BIG SHE DRAWS, as a fraction of the sprite's square canvas.
+   *
+   * MEASURED off the art, not judged. All five are drawn on one canvas at true
+   * relative scale, so this single number is the whole size ladder: a Sloop
+   * covers just over half the square, a Man-o-War nearly all of it. The sea map
+   * renders them at one width and gets the difference between hulls for free,
+   * and the wake reads this to know how much water a hull is pushing.
+   */
+  seaBeam?: number
+  /**
+   * WHERE THE KEEL SITS, as a fraction of the sprite's height.
+   *
+   * The waterline: the row where hull stops and water starts. Also measured,
+   * and per-hull because it genuinely varies — a Sloop's keel is at 68% of its
+   * square and a Man-o-War's at 91%. Guessing one number for all five would lay
+   * the wake amidships on the big hulls, which is where a boat is, not where it
+   * leaves foam.
+   *
+   * Found by scanning up from the bottom for the first row with a solid run
+   * across at least 15% of the canvas, so a trailing rope or a bowsprit is not
+   * mistaken for the keel.
+   */
+  seaKeel?: number
 }
 
 // ── WHY THE LADDER STARTS AT TIER 2 ───────────────────────────────────────
@@ -53,30 +77,35 @@ export const SHIPS: ShipDef[] = [
     description: 'A single-masted workhorse of the seas. Yours from the off.',
     color: '#60a5fa', imageUrl: '/models/sloop_v2.png',
     seaImageUrl: '/ship-hero/sloop_v3.png',
+    seaBeam: 0.53, seaKeel: 0.683,
   },
   {
     tier: 3, name: 'Schooner', cost: 5000,
     description: 'Twin masts and a steady hull. Earning starts here.',
     color: '#4ade80', imageUrl: '/models/schooner_v2.png',
     seaImageUrl: '/ship-hero/schooner_v3.png',
+    seaBeam: 0.62, seaKeel: 0.728,
   },
   {
     tier: 4, name: 'Brigantine', cost: 22000,
     description: 'Fast and capable. A privateer\'s best friend.',
     color: '#f0c040', imageUrl: '/models/brigantine_v2.png',
     seaImageUrl: '/ship-hero/brigantine_v3.png',
+    seaBeam: 0.72, seaKeel: 0.748,
   },
   {
     tier: 5, name: 'Galleon', cost: 80000,
     description: 'A grand vessel. The sea respects your presence.',
     color: '#a78bfa', imageUrl: '/models/galleon_v2.png',
     seaImageUrl: '/ship-hero/galleon_v3.png',
+    seaBeam: 0.87, seaKeel: 0.855,
   },
   {
     tier: 6, name: 'Man-o-War', cost: 200000,
     description: 'The most feared ship on the water.',
     color: '#ff6b35', imageUrl: '/models/man-o-war_v2.png',
     seaImageUrl: '/ship-hero/man-o-war_v3.png',
+    seaBeam: 0.97, seaKeel: 0.913,
   },
 ]
 

@@ -442,6 +442,15 @@ const WAKE_MARKS = WAKE_PAIRS * 2
  *  one, too much and the boat looks like it is dragging a net. */
 const WAKE_SPREAD = 62
 
+/** How wide the fishing boat's hull actually draws: the boat overlay is 55% of
+ *  the 210px Skipper sprite. The denominator of every hull comparison. */
+const FISHING_HULL_W = 210 * 0.55
+/** The box a warship is drawn in. One width for all five — see Warship. */
+const WARSHIP_W = 340
+/** The bow's lift under full power, in degrees, on the FISHING boat. Bigger
+ *  hulls divide this down; see hullRef. */
+const HEEL_MAX = 7
+
 type Vec = { x: number; y: number }
 
 /** '#rrggbb' → [r,g,b]. */
@@ -849,6 +858,24 @@ export default function SeaMap({
   }, [])
   useEffect(() => { collectLevelRewards() }, [collectLevelRewards])
 
+  /**
+   * OUT ON THE SORTIE — past the anchorage rim, on the ship you own.
+   *
+   * The same ref-plus-state pair as the anchorage and for the same reason: the
+   * frame loop reads a ref sixty times a second and the chrome reads a state
+   * when it changes. What differs is that this one is not something you can
+   * drift into. `sortieAsk` holds the confirm open while the boat sits in the
+   * mouth, and nothing changes until it is answered.
+   *
+   * Nothing persists. This is a trial and there is no content out there yet, so
+   * a captain who closes the tab mid-sortie should reopen it in the fishing
+   * grounds like always rather than in an empty sea with no way to read where
+   * they are. See saveSeaPosition, which already refuses to write a northern
+   * position for the same reason.
+   */
+  const [onSortie, setOnSortie] = useState(false)
+  const sortieRef = useRef(false)
+
   /** THE WAKE. A fixed pool of marks laid in WORLD space and left behind, which
    *  is what makes it a wake rather than a tail: each stays exactly where the
    *  hull dropped it while the boat sails on. Recycled oldest-first, so there is
@@ -861,9 +888,17 @@ export default function SeaMap({
    * nodes every frame.
    */
   const wakeClass = useMemo(() => {
+    // PLAIN FOAM ON THE SHIP. The coloured wakes belong to the fishing hulls
+    // that earned them — an Ethereal fishing boat trailing spirit-light is the
+    // reward for buying an Ethereal fishing boat, and it has no business
+    // following a Man-o-War around just because the same captain owns both.
+    if (sortieRef.current) return 'sea-wake'
     const w = BOATS.find(b => b.id === boatId)?.wake
     return w ? `sea-wake sea-wake--${w}` : 'sea-wake'
-  }, [boatId])
+  }, [boatId, onSortie])
+  // Each mark remembers the hull that made it. Reading the CURRENT hull when
+  // drawing would resize every mark still on the water the instant you change
+  // ships, so a Sloop's wake would swell into a Man-o-War's behind you.
   const wakeAt = useRef(Array.from({ length: WAKE_MARKS }, () => ({
     x: 0, y: 0, born: -9999,
     /** Heading at birth, radians. The mark keeps it — the water does not turn
@@ -874,6 +909,10 @@ export default function SeaMap({
     /** How hard she was going when this was laid, 0..1. Fast water is brighter
      *  and throws wider. */
     force: 1,
+    /** The hull that made it, relative to the fishing boat. Carried on the mark
+     *  rather than read at draw time, or changing ships would resize every
+     *  piece of foam still on the water behind you. */
+    scale: 1,
   })))
   const wakeNext = useRef(0)
   const wakeLast = useRef(0)
@@ -1406,25 +1445,44 @@ export default function SeaMap({
    */
   const [inAnchorage, setInAnchorage] = useState(false)
   const sideRef = useRef(false)
-  /**
-   * OUT ON THE SORTIE — past the anchorage rim, on the ship you own.
-   *
-   * The same ref-plus-state pair as the anchorage and for the same reason: the
-   * frame loop reads a ref sixty times a second and the chrome reads a state
-   * when it changes. What differs is that this one is not something you can
-   * drift into. `sortieAsk` holds the confirm open while the boat sits in the
-   * mouth, and nothing changes until it is answered.
-   *
-   * Nothing persists. This is a trial and there is no content out there yet, so
-   * a captain who closes the tab mid-sortie should reopen it in the fishing
-   * grounds like always rather than in an empty sea with no way to read where
-   * they are. See saveSeaPosition, which already refuses to write a northern
-   * position for the same reason.
-   */
-  const [onSortie, setOnSortie] = useState(false)
-  const sortieRef = useRef(false)
   const [sortieAsk, setSortieAsk] = useState(false)
   const askRef = useRef(false)
+
+  /**
+   * WHAT IS UNDER YOU, in the three numbers the frame loop needs.
+   *
+   * The loop draws a wake, a waterline and a heel, and every one of them was
+   * written for the fishing boat. Past the sortie the thing on the water is
+   * two to three times the size with its keel in a different place, so rather
+   * than sprinkling `onSortie ?` through the hot path, the hull answers for
+   * itself here and the loop just reads numbers.
+   *
+   * `scale` is a ratio of DRAWN WIDTHS, both measured. The fishing boat's
+   * overlay is 55% of a 210px sprite; a warship is `seaBeam` of a 340px one.
+   * So a Sloop pushes about half again the water the fishing boat does and a
+   * Man-o-War close to three times, which is the ladder the art already draws.
+   */
+  const hullRef = useRef({ scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX })
+  hullRef.current = useMemo(() => {
+    if (!onSortie) return { scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX }
+    const d = getShip(shipTier)
+    const beam = d.seaBeam ?? 0.6
+    const keel = d.seaKeel ?? 0.75
+    return {
+      scale: (WARSHIP_W * beam) / FISHING_HULL_W,
+      // From the sprite's centre down to the keel. The sprite is drawn centred
+      // on the boat node, so this is the distance from where the camera is
+      // looking to where the water actually is.
+      keelY: WARSHIP_W * (keel - 0.5),
+      // ── A BIG HULL DOES NOT SNAP ───────────────────────────────────
+      // The tilt reads as acceleration, and on the fishing boat 7 degrees is
+      // a small craft answering the throttle. The same 7 on a ship of the line
+      // is a toy being waggled: mass is exactly what a warship should look like
+      // it has. Divided by the beam ratio, so the bigger she is the less she
+      // moves, and the number stays one idea rather than a second table.
+      heel: HEEL_MAX / ((WARSHIP_W * beam) / FISHING_HULL_W),
+    }
+  }, [onSortie, shipTier])
   /**
    * WHERE THE BOAT IS, SAVED — but only ever a FISHING position.
    *
@@ -3027,8 +3085,13 @@ export default function SeaMap({
         // The stern, in world coordinates. WATERLINE_* are SCREEN measurements
         // taken off the sprite, so inside this squashed and zoomed layer both
         // have to be divided back out.
-        const sx = pos.current.x - ux * 46 + WATERLINE_X / zoomRef.current
-        const sy = pos.current.y - uy * 46 + WATERLINE_Y / (GROUND * zoomRef.current)
+        // SCALED TO THE HULL. The stern is further back on a bigger ship and
+        // the keel is lower in the sprite, so both the offset and the waterline
+        // come off hullRef rather than being the fishing boat's numbers used
+        // for everything that floats.
+        const hull = hullRef.current
+        const sx = pos.current.x - ux * 46 * hull.scale + WATERLINE_X / zoomRef.current
+        const sy = pos.current.y - uy * 46 * hull.scale + hull.keelY / (GROUND * zoomRef.current)
         const ang = Math.atan2(uy, ux)
         const force = Math.min(1, speed / (SPEED * 0.9))
         for (const side of [-1, 1] as const) {
@@ -3037,9 +3100,9 @@ export default function SeaMap({
           // Started just off the centreline rather than on it, so the two lines
           // are already separate where they leave the hull.
           wakeAt.current[i] = {
-            x: sx + -uy * side * 7,
-            y: sy + ux * side * 7,
-            born: now, ang, side, force,
+            x: sx + -uy * side * 7 * hull.scale,
+            y: sy + ux * side * 7 * hull.scale,
+            born: now, ang, side, force, scale: hull.scale,
           }
         }
       }
@@ -3061,7 +3124,12 @@ export default function SeaMap({
         // then settles, so most of the spread happens early and the far end of
         // the wake is nearly parallel — which is what stops the V reading as a
         // pair of straight rulers.
-        const out = WAKE_SPREAD * m.force * (1 - Math.pow(1 - age, 2.2))
+        // THE V WIDENS WITH THE HULL, but by the ROOT of it rather than by all
+        // of it. WAKE_SPREAD is the angle between the two lines, and the note
+        // on it warns that too much reads as the boat dragging a net — tripling
+        // it for a Man-o-War is exactly that. Root damping keeps a big ship's V
+        // visibly broader without turning it into a trawl.
+        const out = WAKE_SPREAD * Math.sqrt(m.scale) * m.force * (1 - Math.pow(1 - age, 2.2))
         const px = -Math.sin(m.ang) * m.side * out
         const py = Math.cos(m.ang) * m.side * out
 
@@ -3071,8 +3139,11 @@ export default function SeaMap({
         el.style.opacity = String(Math.pow(1 - age, 1.7) * 0.42 * (0.45 + m.force * 0.55))
         // Stretched ALONG the heading and thin across it: a streak of disturbed
         // water, not a ring. Growing mostly in the across axis as it settles.
-        const along = 0.55 + age * 0.7
-        const across = 0.3 + age * 1.5
+        // The marks themselves take the full ratio: this is how much water is
+        // being shoved aside, and a ship three times the beam shoves three
+        // times the water.
+        const along = (0.55 + age * 0.7) * m.scale
+        const across = (0.3 + age * 1.5) * m.scale
         el.style.transform =
           `translate3d(${m.x + px}px, ${m.y + py}px, 0) translate(-50%, -50%) `
           + `rotate(${m.ang}rad) scale(${along}, ${across})`
@@ -3083,8 +3154,11 @@ export default function SeaMap({
         // The waterline is a measurement off the sprite, so it moves with the
         // sprite when the sprite is scaled.
         const z = zoomRef.current
+        // At the hull's own waterline and at the hull's own size, or a
+        // Man-o-War sits at anchor inside a rowboat's ring of ripples.
+        const hull = hullRef.current
         ripples.style.transform =
-          `translate(${WATERLINE_X * z}px, ${WATERLINE_Y * z}px) scale(${z})`
+          `translate(${WATERLINE_X * z}px, ${hull.keelY * z}px) scale(${z * hull.scale})`
       }
 
       // ── OTHER PEOPLE'S BOATS ──────────────────────────────────────
@@ -3371,7 +3445,8 @@ export default function SeaMap({
         // to do with which way she is pointed, and the mirror already handles
         // the pointing. One flip instead of two, and the bow comes up on both.
         const drive = Math.hypot(vel.current.x, vel.current.y)
-        const heel = Math.min(7, (drive / SPEED) * 7)
+        const hullNow = hullRef.current
+        const heel = Math.min(hullNow.heel, (drive / SPEED) * hullNow.heel)
         boat.style.transform =
           `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
       }
