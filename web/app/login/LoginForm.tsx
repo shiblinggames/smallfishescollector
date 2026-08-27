@@ -7,7 +7,9 @@ import GoogleButton from '@/components/GoogleButton'
 
 export default function LoginForm() {
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') ?? '/packs'
+  // WAS '/packs', which is the retired pack economy — a default nobody had
+  // looked at since that system was pulled.
+  const next = searchParams.get('next') ?? '/sea'
   const [showEmail, setShowEmail] = useState(false)
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)

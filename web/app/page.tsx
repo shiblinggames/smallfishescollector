@@ -53,7 +53,12 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) redirect('/tavern')
+  // THE CHART IS THE GAME NOW. This sent everybody to the tavern, which was
+  // right when the tavern was the hub; the sea is where you fish, and fishing
+  // is what this is. /sea does its own gate — if the water is ever shut again
+  // it sends you on to the tavern itself, so there is exactly one place that
+  // decides who may sail.
+  if (user) redirect('/sea')
 
   return (
     <main className="min-h-screen relative" style={{ overflowX: 'hidden' }}>
