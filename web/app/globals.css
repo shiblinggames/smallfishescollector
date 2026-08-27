@@ -2593,6 +2593,46 @@ body.hardcore-gauntlet::after {
   will-change: transform, opacity;
 }
 
+/* ── WAKES WITH A COLOUR OF THEIR OWN ────────────────────────────────────────
+   The default above is white foam, which is what water does. These are for the
+   few hulls odd enough that plain foam undersells them.
+
+   Same SHAPE every time — the loop turns and scales one streak, and a variant
+   that changed the geometry would need the loop to know about it. Only the
+   gradient moves, and it keeps the default's structure: dense at 38% where the
+   hull just was, gone by 76%.
+
+   Restrained on purpose. These sit on painted water for the whole session and
+   read at a glance in the corner of the eye; the house rule is that juice stays
+   subtle, and a neon trail behind every premium boat is a sea that shouts. The
+   tell is a TINT and a little more reach, not a light show. */
+.sea-wake--gold {
+  background: radial-gradient(ellipse 62% 100% at 38% 50%,
+    rgba(255,236,178,0.72) 0%, rgba(240,192,64,0.34) 46%, rgba(240,192,64,0) 76%);
+}
+.sea-wake--ember {
+  background: radial-gradient(ellipse 62% 100% at 38% 50%,
+    rgba(255,224,180,0.74) 0%, rgba(255,122,26,0.32) 44%, rgba(255,90,20,0) 76%);
+}
+.sea-wake--frost {
+  background: radial-gradient(ellipse 62% 100% at 38% 50%,
+    rgba(236,252,255,0.76) 0%, rgba(150,224,246,0.36) 46%, rgba(120,206,238,0) 76%);
+}
+.sea-wake--void {
+  /* The one that goes DARKER than the water rather than paler: a black hull
+     leaving a pale streak is the one combination that looks like a mistake. */
+  background: radial-gradient(ellipse 62% 100% at 38% 50%,
+    rgba(140,150,170,0.38) 0%, rgba(18,20,28,0.42) 44%, rgba(12,14,20,0) 76%);
+}
+.sea-wake--ash {
+  background: radial-gradient(ellipse 62% 100% at 38% 50%,
+    rgba(214,214,222,0.5) 0%, rgba(120,120,132,0.3) 46%, rgba(96,96,108,0) 76%);
+}
+.sea-wake--spirit {
+  background: radial-gradient(ellipse 62% 100% at 38% 50%,
+    rgba(244,240,255,0.72) 0%, rgba(186,168,255,0.34) 44%, rgba(150,130,240,0) 76%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sea-ripple { animation: none; }
   .sea-ripple { opacity: 0; }

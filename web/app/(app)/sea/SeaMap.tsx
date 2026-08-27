@@ -847,6 +847,16 @@ export default function SeaMap({
    *  hull dropped it while the boat sails on. Recycled oldest-first, so there is
    *  no allocation in the loop and no garbage at 60fps. */
   const wakeRefs = useRef<(HTMLDivElement | null)[]>([])
+  /**
+   * WHAT THIS HULL LEAVES BEHIND. Most boats leave foam; a few leave something
+   * of their own — see `wake` in lib/boats. Read once per boat rather than per
+   * mark, because all of them are the same trail and the loop writes to these
+   * nodes every frame.
+   */
+  const wakeClass = useMemo(() => {
+    const w = BOATS.find(b => b.id === boatId)?.wake
+    return w ? `sea-wake sea-wake--${w}` : 'sea-wake'
+  }, [boatId])
   const wakeAt = useRef(Array.from({ length: WAKE_MARKS }, () => ({
     x: 0, y: 0, born: -9999,
     /** Heading at birth, radians. The mark keeps it — the water does not turn
@@ -3531,7 +3541,7 @@ hullRef={hullRefFor(t.key)} />
         {/* The wake, in the world layer so each mark stays on the water where
             the hull left it. Every one of these is positioned by the loop. */}
         {Array.from({ length: WAKE_MARKS }, (_, i) => (
-          <div key={i} aria-hidden className="sea-wake"
+          <div key={i} aria-hidden className={wakeClass}
             ref={el => { wakeRefs.current[i] = el }} />
         ))}
       </div>

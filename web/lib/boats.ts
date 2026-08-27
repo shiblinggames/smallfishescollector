@@ -28,6 +28,21 @@ export interface BoatDef {
    *  'ash'  = Charcoal's dark smoulder (also darkens the sprite).
    *  'gold' = Golden's warm aura — same subtle amount as ash, no darken. */
   glowType?: 'ash' | 'gold'
+  /**
+   * WHAT THIS HULL LEAVES BEHIND.
+   *
+   * The wake is otherwise white foam for everybody, which is right — it is
+   * water. A handful of boats are strange enough that plain foam undersells
+   * them: a hull made of fire does not part the sea like a rowboat does.
+   *
+   * A NAME, NOT A COLOUR, so the tuning lives in one place in globals.css next
+   * to the default it is a variant of, rather than as three rgba values sitting
+   * in a data file where nobody would think to look for them.
+   *
+   * Left off is the answer for most boats. A sea where every hull trails
+   * something coloured is a sea where none of them are special.
+   */
+  wake?: 'gold' | 'ember' | 'frost' | 'void' | 'ash' | 'spirit'
   /** Gem price in the shop (premium boats). Takes precedence over `cost`. */
   gemPrice?: number
   /** Earned (not bought) once the player reaches this Achievement Points total.
@@ -222,6 +237,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'charcoal',
+    wake: 'ash',
     trim: -0.08,
     name: 'Charcoal',
     color: '#3a3a40',
@@ -234,6 +250,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'golden',
+    wake: 'gold',
     trim: 0.06,
     grade: 1.03,
     name: 'Golden',
@@ -267,6 +284,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'ethereal',
+    wake: 'spirit',
     trim: -0.1,
     grade: 1.05,
     name: 'Ethereal',
@@ -279,6 +297,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'fire',
+    wake: 'ember',
     trim: 0.0,
     name: 'Fire',
     color: '#ff7a1a',
@@ -290,6 +309,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'ice',
+    wake: 'frost',
     trim: 0.0,
     name: 'Ice',
     color: '#a4dcf2',
@@ -301,6 +321,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'jetblack',
+    wake: 'void',
     trim: 0.0,
     name: 'Jet Black',
     color: '#1b1b20',
@@ -335,6 +356,7 @@ export const BOATS: BoatDef[] = [
   },
   {
     id: 'abyssal',
+    wake: 'ash',
     trim: 0.06,
     grade: 1.04,
     name: 'Abyssal',
