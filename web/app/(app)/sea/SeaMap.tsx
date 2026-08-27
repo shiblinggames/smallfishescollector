@@ -28,7 +28,7 @@ import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplor
 import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
-import { saveSeaPosition } from './traderActions'
+import { saveSeaPosition as persistSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, type Place } from './chart'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -1394,6 +1394,19 @@ export default function SeaMap({
   /** Which sea the boat is in: true north of the reef, on the expedition side.
    *  Only ever changed while inside the gate's mouth — see the crossing rule. */
   const sideRef = useRef(side === 'expeditions')
+  /**
+   * WHERE THE BOAT IS, SAVED — but only ever a FISHING position.
+   *
+   * profiles.sea_x/sea_y is where you were on the southern chart. It is what
+   * puts you back when you open the tab, and goAshore sanity-checks landings
+   * against it. Writing a position from the far side of the reef into it would
+   * put a captain north of a wall they can only cross at the gate the next time
+   * they opened /sea, which is a stranding, not a bug you notice at the time.
+   */
+  const saveSeaPosition = useCallback(
+    (x: number, y: number, fog: number[]) =>
+      side === 'fishing' ? persistSeaPosition(x, y, fog) : Promise.resolve(undefined),
+    [side])
   /** One crossing per page. The navigation is async, so the loop keeps running
    *  for a few frames after the push and would otherwise fire it again. */
   const crossedRef = useRef(false)
@@ -2815,7 +2828,7 @@ export default function SeaMap({
         if (isNorth !== wasNorth && !crossedRef.current) {
           crossedRef.current = true
           vibrate([18, 40, 24])
-          router.push(side === 'fishing' ? '/expeditions/sea' : '/sea')
+          router.push(side === 'fishing' ? '/expeditions/sea' : '/sea?from=arch')
         }
         sideRef.current = isNorth
       } else if (isNorth !== wasNorth) {

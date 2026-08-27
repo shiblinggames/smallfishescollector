@@ -43,7 +43,11 @@ export const metadata = { title: 'The Sea' }
  * they drop you into and what you are sailing while you are there. Two copies
  * of three hundred lines of loading would be two copies that drift.
  */
-export async function SeaPageBody({ side }: { side: 'fishing' | 'expeditions' }) {
+export async function SeaPageBody({ side, fromArch = false }: {
+  side: 'fishing' | 'expeditions'
+  /** Arrived by sailing through the reef rather than by opening the tab. */
+  fromArch?: boolean
+}) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
@@ -256,6 +260,19 @@ export async function SeaPageBody({ side }: { side: 'fishing' | 'expeditions' })
       exploredRaw={(profile?.sea_explored as string | null) ?? null}
       discovered={discovered}
       digs={digs}
+      // A FRESH MOUNT PER SEA, and this is not a nicety.
+      //
+      // /sea and /expeditions/sea render the same component in the same slot of
+      // the tree, so React reconciles them as one element and UPDATES it rather
+      // than replacing it: the ship swapped in, the props changed, and the
+      // sailing loop, the camera, the fog and the boat's position all carried
+      // straight over. It looked like a glitch and a page that would not load,
+      // because nothing had actually loaded.
+      //
+      // The key makes the two seas different elements. Crossing the reef now
+      // tears the old one down and builds the new one, which is what "a
+      // different place" has to mean.
+      key={side}
       side={side}
       shipTier={Number(profile?.ship_tier ?? 0)}
       homestead={homestead}
@@ -290,9 +307,15 @@ export async function SeaPageBody({ side }: { side: 'fishing' | 'expeditions' })
       // came through, facing open water, which is also the way back.
       start={side === 'expeditions'
         ? { x: GATE_X, y: NORTH_WALL - 260 }
-        : (profile?.sea_x != null && profile?.sea_y != null
+        // COMING BACK THROUGH THE ARCH puts you just south of it, not wherever
+        // you were before you left. The saved position is where you last were
+        // on the FISHING side, which is the right answer when you open the tab
+        // and the wrong one when you have just sailed in from the north.
+        : fromArch
+          ? { x: GATE_X, y: NORTH_WALL + 260 }
+          : (profile?.sea_x != null && profile?.sea_y != null
           ? { x: Number(profile.sea_x), y: Number(profile.sea_y) }
-          : null)}
+            : null)}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))
@@ -340,6 +363,9 @@ export async function SeaPageBody({ side }: { side: 'fishing' | 'expeditions' })
   )
 }
 
-export default async function SeaPage() {
-  return SeaPageBody({ side: 'fishing' })
+export default async function SeaPage({ searchParams }: {
+  searchParams: Promise<{ from?: string }>
+}) {
+  const { from } = await searchParams
+  return SeaPageBody({ side: 'fishing', fromArch: from === 'arch' })
 }
