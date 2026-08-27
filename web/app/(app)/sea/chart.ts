@@ -539,11 +539,55 @@ export function inGate(x: number): boolean {
  * to fill.
  *
  * WHAT IS BEYOND IT is raid water, and that is where the ship you actually own
- * takes over from the fishing boat. That boundary does not exist yet. When it
- * does it goes at this rim, which is why the rim is one constant.
+ * takes over from the fishing boat. That boundary is THIS RIM, and the way out
+ * through it is the Sortie — see below.
  */
 export const EXP_ORIGIN = { x: 0, y: NORTH_WALL - 1500 }
 export const EXP_EDGE = 5200
+
+/**
+ * THE SORTIE — the one way out of the anchorage, and the only place on the
+ * chart where the boat under you changes.
+ *
+ * DUE NORTH, dead opposite the arch. The two openings on the anchorage's two
+ * shores are on one straight line, so the whole crossing is: in through the
+ * reef, across the harbour, out the top. A player who has done it once knows
+ * where it is without a map, which is the entire reason it is not somewhere
+ * more interesting.
+ *
+ * It is the same idea as the arch and deliberately not the same object. The
+ * arch is a hole in rock you sail through without being asked, because the far
+ * side is more harbour. This is open water with nothing moored in it, reached
+ * by taking your CREW off the fishing boat and putting them on the ship you
+ * own — so it asks first. A crossing that changes what you are sailing should
+ * never happen because you drifted.
+ */
+export const SORTIE = { x: EXP_ORIGIN.x, y: EXP_ORIGIN.y - EXP_EDGE }
+
+/** Half the sortie's mouth, measured along the rim. Wider than the arch's 430
+ *  because you meet this one head-on at speed rather than lining up for a gap
+ *  in a wall you can see. */
+export const SORTIE_HALF = 620
+
+/** Is this point in the mouth of the sortie? Measured as a distance from the
+ *  gap's centre rather than an angle, because an angular window subtends a
+ *  different width at every radius and the mouth should be one size. */
+export function inSortie(x: number, y: number): boolean {
+  return Math.hypot(x - SORTIE.x, y - SORTIE.y) < SORTIE_HALF
+}
+
+/**
+ * RAID WATER — everything beyond the anchorage rim.
+ *
+ * Empty on purpose for now: this is the trial, and the thing being tried is the
+ * SWAP, not the content. What goes out here later is the campaign, so the
+ * radius is generous enough that raid islands have somewhere to be, and finite
+ * so the trial cannot be mistaken for a bug where the sea forgot to stop.
+ *
+ * Measured from EXP_ORIGIN like the anchorage, so the two are concentric and
+ * "how far out am I" is one subtraction rather than two coordinate systems.
+ */
+export const RAID_EDGE = 13000
 
 /** Is this point on the expedition side of the reef? */
 export function inExpeditions(y: number): boolean {

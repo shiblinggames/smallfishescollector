@@ -20,6 +20,7 @@ import { PETS } from '@/lib/pets'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getFishHold } from '@/lib/fishHold'
 import { rodsAboard, hullSpeed } from '@/lib/shipyard'
+import { MIN_SHIP_TIER } from '@/lib/ships'
 import { RODS } from '@/lib/rods'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
@@ -66,10 +67,16 @@ export default async function SeaPage() {
   // The same drawer the fishing page shows, so it needs the same reference
   // data. Species come from the long-TTL cross-request cache, not a per-view
   // query — this page is as hot as the fishing screen.
-  const [allSpecies, { data: collectionRows }, { data: pbRows }] = await Promise.all([
+  const [allSpecies, { data: collectionRows }, { data: pbRows }, { count: raidPartyCount }] = await Promise.all([
     getCachedFishSpecies(),
     admin.from('fish_collection').select('fish_id, is_golden').eq('user_id', user.id),
     admin.from('fish_personal_bests').select('fish_id, best_length_in').eq('user_id', user.id),
+    // WHO WOULD ACTUALLY SAIL. The sortie asks you to confirm you are taking
+    // your crew out, and a confirm that says "with your crew" to a captain who
+    // has assigned nobody is a lie. Head-only: the chart wants the number, and
+    // the party itself is the raid screen's business.
+    admin.from('user_crew').select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id).is('died_at', null).not('raid_slot', 'is', null),
   ])
   const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
   const mountedFishIds = (collectionRows ?? [])
@@ -232,6 +239,11 @@ export default async function SeaPage() {
       rack={rack}
       // The hull tier only ever changes how fast you cross the chart.
       hullSpeed={hullSpeed(Number(profile?.hull_speed_tier ?? 0))}
+      // THE SHIP YOU OWN, for the water beyond the anchorage. Not the fishing
+      // boat: past the sortie the hull under you is the one the expedition
+      // ladder sells, which is the whole point of the crossing.
+      shipTier={Number(profile?.ship_tier ?? MIN_SHIP_TIER)}
+      raidParty={raidPartyCount ?? 0}
       // The two new movement ladders. Passed as TIERS rather than as computed
       // rates: the map multiplies them by the boat's own trim, and doing half
       // that sum here and half there is how the two drift apart.

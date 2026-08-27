@@ -29,7 +29,8 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, RAID_EDGE, type Place } from './chart'
+import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
@@ -743,7 +744,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
-  auto, tideTurner, userId, tour,
+  auto, tideTurner, userId, tour, shipTier, raidParty,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -777,6 +778,12 @@ export default function SeaMap({
   }[]
   /** Multiplier on sailing speed. Nothing else. */
   hullSpeed: number
+  /** The expedition hull you own. Only ever drawn beyond the sortie — inside
+   *  the anchorage and the fishing grounds you are on the fishing boat. */
+  shipTier: number
+  /** How many crew are in raid seats. The sortie's confirm says who is coming,
+   *  and "nobody" is a thing it has to be able to say. */
+  raidParty: number
   /** Rudder and rig tiers, from the Shipyard. */
   handlingTier: number
   accelTier: number
@@ -1400,6 +1407,25 @@ export default function SeaMap({
   const [inAnchorage, setInAnchorage] = useState(false)
   const sideRef = useRef(false)
   /**
+   * OUT ON THE SORTIE — past the anchorage rim, on the ship you own.
+   *
+   * The same ref-plus-state pair as the anchorage and for the same reason: the
+   * frame loop reads a ref sixty times a second and the chrome reads a state
+   * when it changes. What differs is that this one is not something you can
+   * drift into. `sortieAsk` holds the confirm open while the boat sits in the
+   * mouth, and nothing changes until it is answered.
+   *
+   * Nothing persists. This is a trial and there is no content out there yet, so
+   * a captain who closes the tab mid-sortie should reopen it in the fishing
+   * grounds like always rather than in an empty sea with no way to read where
+   * they are. See saveSeaPosition, which already refuses to write a northern
+   * position for the same reason.
+   */
+  const [onSortie, setOnSortie] = useState(false)
+  const sortieRef = useRef(false)
+  const [sortieAsk, setSortieAsk] = useState(false)
+  const askRef = useRef(false)
+  /**
    * WHERE THE BOAT IS, SAVED — but only ever a FISHING position.
    *
    * profiles.sea_x/sea_y is where you were on the southern chart. It is what
@@ -1412,6 +1438,42 @@ export default function SeaMap({
     (x: number, y: number, fog: number[]) =>
       sideRef.current ? Promise.resolve(undefined) : persistSeaPosition(x, y, fog),
     [])
+  /**
+   * TAKING THE SHIP OUT.
+   *
+   * The nudge is load-bearing. The confirm is raised while the boat is pinned
+   * to the anchorage rim, so at the moment of accepting it is AT the radius the
+   * return test compares against — leaving it there means the first frame after
+   * the swap can read as "came home" and put the captain straight back on the
+   * fishing boat. Pushed clear of the line, the crossing is unambiguous in both
+   * directions.
+   */
+  const takeTheSortie = useCallback(() => {
+    const dx = pos.current.x - EXP_ORIGIN.x
+    const dy = pos.current.y - EXP_ORIGIN.y
+    const d = Math.hypot(dx, dy) || 1
+    pos.current.x = EXP_ORIGIN.x + (dx / d) * (EXP_EDGE + 140)
+    pos.current.y = EXP_ORIGIN.y + (dy / d) * (EXP_EDGE + 140)
+    sortieRef.current = true
+    setOnSortie(true)
+    askRef.current = false
+    setSortieAsk(false)
+    vibrate([18, 40, 22])
+  }, [])
+
+  /** Turned it down. Backs the boat off the line so the mouth does not simply
+   *  ask again on the very next frame. */
+  const declineSortie = useCallback(() => {
+    const dx = pos.current.x - EXP_ORIGIN.x
+    const dy = pos.current.y - EXP_ORIGIN.y
+    const d = Math.hypot(dx, dy) || 1
+    pos.current.x = EXP_ORIGIN.x + (dx / d) * (EXP_EDGE - 380)
+    pos.current.y = EXP_ORIGIN.y + (dy / d) * (EXP_EDGE - 380)
+    vel.current.x = 0; vel.current.y = 0
+    askRef.current = false
+    setSortieAsk(false)
+  }, [])
+
   /**
    * THE FOG.
    *
@@ -2840,7 +2902,13 @@ export default function SeaMap({
       // and the reef itself is the flat side of both — already handled above,
       // so all this has to do is stop you sailing off the round part.
       const home = sideRef.current ? EXP_ORIGIN : { x: 0, y: 0 }
-      const rim = sideRef.current ? EXP_EDGE : OUTER_EDGE
+      // THE ANCHORAGE RIM MOVES OUT once you are on the sortie. Same centre,
+      // bigger radius, so "am I past the edge" stays one subtraction and the
+      // raid water is simply more of the same disc rather than a third
+      // coordinate system bolted to the side of two.
+      const rim = sideRef.current
+        ? (sortieRef.current ? RAID_EDGE : EXP_EDGE)
+        : OUTER_EDGE
 
       // ── THE EDGE OF THE CHART ──────────────────────────────────────
       //
@@ -2857,6 +2925,42 @@ export default function SeaMap({
       // pinning you — which matters because the last band is 6,600 wide and its
       // rim is somewhere you might want to follow round.
       const R = Math.hypot(pos.current.x - home.x, pos.current.y - home.y)
+
+      // ── THE SORTIE ─────────────────────────────────────────────────
+      //
+      // The rim is a wall everywhere except one mouth, exactly like the reef.
+      // What is different is that this crossing changes the hull under you, so
+      // it ASKS. A boat nosing into the gap raises the confirm and is held at
+      // the line until it is answered — it does not slide through on momentum,
+      // because the one thing a swap must never be is something that happened
+      // while you were looking elsewhere.
+      //
+      // Coming BACK needs no confirm and gets none. Returning to harbour is not
+      // a decision, and a captain who has just been beaten out there should not
+      // have to agree to come home.
+      if (sideRef.current && !sortieRef.current && R > rim - 40 && inSortie(pos.current.x, pos.current.y)) {
+        if (!askRef.current) { askRef.current = true; setSortieAsk(true); vibrate(12) }
+      } else if (askRef.current && (!inSortie(pos.current.x, pos.current.y) || R < rim - 320)) {
+        // Backed out of the mouth. Hysteresis on the radius so idling on the
+        // line does not flicker the modal open and shut.
+        askRef.current = false
+        setSortieAsk(false)
+      }
+
+      // HOME AGAIN. Crossing back inside the anchorage rim puts you off the
+      // ship and back on the fishing boat, wherever on the rim you did it —
+      // the mouth is a way OUT of a wall, and there is no wall from outside.
+      //
+      // The margin is not decoration. Accepting the sortie leaves the boat
+      // sitting exactly ON the rim, where R < EXP_EDGE is a coin-flip on the
+      // next float, and losing it would put the captain back on the fishing
+      // boat in the same frame they left it.
+      if (sortieRef.current && R < EXP_EDGE - 90) {
+        sortieRef.current = false
+        setOnSortie(false)
+        vibrate([14, 30, 18])
+      }
+
       if (R > rim) {
         const nx2 = (pos.current.x - home.x) / R, ny2 = (pos.current.y - home.y) / R
         pos.current.x = home.x + nx2 * rim
@@ -3496,6 +3600,9 @@ export default function SeaMap({
             through the opening is what takes you to expeditions, so the opening
             is what has to say so. */}
         <GateSign to={inAnchorage ? 'Fishing' : 'Expeditions'} />
+        {/* Only from inside the harbour it belongs to. From the fishing
+            grounds it would be a sign for a door behind a wall. */}
+        {inAnchorage && <SortieSign />}
 
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
@@ -3804,16 +3911,21 @@ hullRef={hullRefFor(t.key)} />
           position: 'absolute', left: '50%', top: '50%', zIndex: Z.boat,
           willChange: 'transform', pointerEvents: 'none',
         }}>
-        <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
-          gear={{
-            ...gear,
-            // The rod in your hands is the rod you are holding.
-            rodSlug: rodNow?.slug ?? gear.rodSlug,
-            rod: rodNow?.image ?? gear.rod,
-            rodGlow: rodNow?.glow ?? gear.rodGlow,
-            rodColor: rodNow?.color ?? gear.rodColor,
-          }}
-          frame={frame} />
+        {/* PAST THE SORTIE IT IS NOT YOUR FISHING BOAT. The whole point of
+            the crossing is that the hull changes, so the captain-and-tackle
+            sprite is replaced outright rather than dressed up. */}
+        {onSortie
+          ? <Warship tier={shipTier} />
+          : <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
+              gear={{
+                ...gear,
+                // The rod in your hands is the rod you are holding.
+                rodSlug: rodNow?.slug ?? gear.rodSlug,
+                rod: rodNow?.image ?? gear.rod,
+                rodGlow: rodNow?.glow ?? gear.rodGlow,
+                rodColor: rodNow?.color ?? gear.rodColor,
+              }}
+              frame={frame} />}
       </div>
 
       {/* The prompt steps aside while the rod is out — the cast button is the
@@ -3888,6 +4000,84 @@ hullRef={hullRefFor(t.key)} />
       <FindPanel state={find} onClose={() => setFind(null)} />
 
       <EdgeOfChart at={atEdge} />
+
+      {/* ── THE SORTIE'S CONFIRM ────────────────────────────────────────
+          Raised while the boat is held in the mouth, and the ONLY way past the
+          anchorage rim. It exists because this crossing swaps the hull under
+          you: the arch does not ask, because the far side is more harbour on
+          the same boat, and this one does, because it is not.
+
+          Dismissing backs the boat off the line rather than leaving it pinned
+          there — a modal you close should not immediately reopen. */}
+      {sortieAsk && !onSortie && (
+        <PopupShell open onClose={declineSortie}>
+          <div onClick={e => e.stopPropagation()} style={{
+            margin: 'auto', width: '100%', maxWidth: 400,
+            borderRadius: 20, padding: '1.2rem 1.05rem 1.05rem',
+            // An opaque floor: this sits over painted water.
+            background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
+            border: '1px solid rgba(196,169,106,0.34)',
+            boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+          }}>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(196,169,106,0.8)', margin: 0,
+            }}>The Sortie</p>
+            <h2 className="font-pirata" style={{
+              fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0', lineHeight: 1.15,
+            }}>Take her out?</h2>
+
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12, margin: '0.9rem 0 0',
+              padding: '0.7rem 0.8rem', borderRadius: 14,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={getShip(shipTier).seaImageUrl} alt="" width={640} height={640}
+                decoding="async" style={{ width: 88, height: 'auto', flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#ecdcbd', margin: 0 }}>
+                  {getShip(shipTier).name}
+                </p>
+                <p className="font-karla" style={{
+                  fontSize: '0.76rem', color: 'rgba(214,226,236,0.7)', margin: '2px 0 0', lineHeight: 1.4,
+                }}>
+                  {/* The count is the honest version. A confirm that says "with
+                      your crew" to a captain who has assigned nobody is a lie,
+                      and finding that out past the rim is the wrong moment. */}
+                  {raidParty === 0
+                    ? 'No crew in the raid seats. She sails empty.'
+                    : `${raidParty} crew aboard, in their raid seats.`}
+                </p>
+              </div>
+            </div>
+
+            <p className="font-karla" style={{
+              fontSize: '0.8rem', color: 'rgba(214,226,236,0.72)', lineHeight: 1.5, margin: '0.85rem 0 0',
+            }}>
+              Past this line you leave the fishing boat at the harbour and sail your own
+              ship. The water out there is open and empty for now. Come back inside the
+              rim whenever you like.
+            </p>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: '1rem' }}>
+              <button type="button" onClick={declineSortie} className="tap font-karla font-700"
+                style={{
+                  flex: 1, padding: '0.7rem', borderRadius: 12, fontSize: '0.86rem', cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
+                }}>
+                Stay in
+              </button>
+              <button type="button" onClick={takeTheSortie} className="tap font-cinzel font-700"
+                style={{
+                  flex: 1.3, padding: '0.7rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer',
+                  background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f6dfa0',
+                }}>
+                Set sail
+              </button>
+            </div>
+          </div>
+        </PopupShell>
+      )}
 
       <AshorePanel state={landed} onClose={() => setLanded(null)} />
 
@@ -4362,7 +4552,7 @@ hullRef={hullRefFor(t.key)} />
         onClose={() => setMapOpen(false)}
         fog={fogRef.current}
         at={pos}
-        side={inAnchorage ? 'expeditions' : 'fishing'}
+        side={onSortie ? 'sortie' : inAnchorage ? 'expeditions' : 'fishing'}
         seaAt={p => seaAt(p, 0).solid}
         found={found}
         bearings={bearings}
@@ -4610,6 +4800,41 @@ function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
 // BEYOND the anchorage, into raid water, and that boundary does not exist yet —
 // so neither does the sprite. It was written and removed rather than left
 // sitting here unused: git has it when the outer sea arrives.
+
+/**
+ * THE SHIP YOU OWN, on the water.
+ *
+ * ONE BOX FOR ALL FIVE HULLS, and that is not a shortcut. The art is drawn on a
+ * shared 1024 canvas at true relative scale — the sloop's hull fills 53% of it
+ * and the Man-o-War fills 100% — so rendering every hull at the same width
+ * makes a Man-o-War almost twice a Sloop for free, with no per-tier table to
+ * keep in step with the ladder. Sized so the smallest reads a little larger
+ * than the fishing boat's 210, because trading up to your own ship should not
+ * make the thing under you smaller.
+ *
+ * No counter-squash. The wrapper that carries it is the screen-layer boat node,
+ * which was never on the tilted ground plane in the first place.
+ */
+const Warship = memo(function Warship({ tier }: { tier: number }) {
+  const hull = getShip(tier)
+  return (
+    <div style={{
+      position: 'relative', width: 340,
+      // NO OFFSET, and that is measured rather than assumed. The Skipper needs
+      // one because its sheet reserves empty space up and left for the rod, so
+      // the hull sits low-right of the bounding box. These are drawn centred:
+      // horizontally 50.0% on every hull, vertically 47-53%. The node above
+      // already centres the box, so correcting again would push the ship half
+      // its own width off the point the camera is following.
+      filter: 'drop-shadow(0 14px 22px rgba(0,0,0,0.6))',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={hull.seaImageUrl} alt="" draggable={false}
+        width={640} height={640} decoding="async"
+        style={{ width: '100%', display: 'block' }} />
+    </div>
+  )
+})
 
 function Skipper({ characterColor, boatId, hatId, gear, frame }: {
   characterColor: string
@@ -5805,6 +6030,75 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * Counter-squashed and lifted clear, like every other label on this chart —
  * a label was never lying on the water.
  */
+/**
+ * THE SIGN OVER THE SORTIE, and the placeholder standing in for whatever
+ * eventually marks it.
+ *
+ * Same idiom as the arch's sign: drawn in the WORLD, counter-squashed, lifted
+ * clear of the plane. It grows and shrinks with the camera because it is on the
+ * gap rather than being a caption about the gap.
+ *
+ * Two markers flank the mouth at exactly SORTIE_HALF, so the opening's width is
+ * a thing you can SEE rather than a number you discover by bumping into rock.
+ * The arch does not need this — it is a literal hole in a literal reef — but
+ * the anchorage rim is invisible water, and an invisible wall with an invisible
+ * door in it is a bad chart.
+ */
+const SortieSign = memo(function SortieSign() {
+  return (
+    <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}>
+      {[-1, 1].map(side => (
+        <div key={side} style={{
+          position: 'absolute', left: SORTIE.x + side * SORTIE_HALF, top: SORTIE.y,
+          transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+          transformOrigin: 'bottom center',
+        }}>
+          {/* A channel marker: a pole with a lamp, which is what actually
+              stands either side of a harbour mouth. Placeholder art is a shape
+              and a glow rather than a sprite, so nothing has to be redrawn when
+              the real thing arrives. */}
+          <div style={{
+            width: 6, height: 74, margin: '0 auto',
+            background: 'linear-gradient(180deg, rgba(232,238,244,0.5), rgba(120,150,170,0.28))',
+            borderRadius: 3,
+          }} />
+          <div style={{
+            position: 'absolute', left: '50%', top: -7, width: 18, height: 18,
+            transform: 'translateX(-50%)', borderRadius: '50%',
+            background: 'radial-gradient(circle at 40% 35%, #ffe9a8, #f0a83c 55%, rgba(240,168,60,0) 78%)',
+            boxShadow: '0 0 18px rgba(255,196,90,0.75)',
+          }} />
+        </div>
+      ))}
+
+      <div style={{
+        position: 'absolute', left: SORTIE.x, top: SORTIE.y - 150,
+        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center', whiteSpace: 'nowrap',
+      }}>
+        {/* The same centring correction the arch's sign needs: letter-spacing
+            adds its gap after the last letter too, so the word hangs half a
+            space right of true until it is cancelled. */}
+        <p className="font-cinzel font-700" style={{
+          fontSize: '1.4rem', letterSpacing: '0.24em', textTransform: 'uppercase',
+          color: 'rgba(255,226,170,0.9)', margin: 0,
+          textAlign: 'center', marginRight: '-0.24em',
+          textShadow: '0 2px 16px rgba(0,0,0,0.98), 0 0 34px rgba(0,0,0,0.8)',
+        }}>The Sortie</p>
+        <div style={{
+          height: 1, width: SORTIE_HALF, margin: '7px auto 0',
+          background: 'linear-gradient(90deg, transparent, rgba(255,214,140,0.5), transparent)',
+        }} />
+        <p className="font-karla font-600" style={{
+          fontSize: '0.82rem', letterSpacing: '0.1em', textAlign: 'center',
+          color: 'rgba(226,212,186,0.66)', margin: '5px 0 0',
+          textShadow: '0 1px 12px rgba(0,0,0,0.98)',
+        }}>Open water, and your own ship</p>
+      </div>
+    </div>
+  )
+})
+
 const GateSign = memo(function GateSign({ to }: { to: string }) {
   return (
     <div aria-hidden style={{

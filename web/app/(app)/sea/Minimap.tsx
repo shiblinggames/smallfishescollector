@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE } from './chart'
+import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from './chart'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
 import {
@@ -50,9 +50,13 @@ const PAD = 12
  * arc and the chord round without a second copy of the drawing code.
  */
 type Half = { cx: number; cy: number; r: number; flat: number; dir: 1 | -1 }
-const HALVES: Record<'fishing' | 'expeditions', Half> = {
+const HALVES: Record<'fishing' | 'expeditions' | 'sortie', Half> = {
   fishing:     { cx: 0, cy: 0,            r: OUTER_EDGE, flat: NORTH_WALL, dir: 1 },
   expeditions: { cx: EXP_ORIGIN.x, cy: EXP_ORIGIN.y, r: EXP_EDGE, flat: NORTH_WALL, dir: -1 },
+  // Past the sortie it is the SAME disc drawn wider — same centre, same flat
+  // side, bigger radius. A captain out there is off the anchorage chart
+  // entirely, and a map that cannot show where its own boat is is not a map.
+  sortie:      { cx: EXP_ORIGIN.x, cy: EXP_ORIGIN.y, r: RAID_EDGE, flat: NORTH_WALL, dir: -1 },
 }
 const worldW = (h: Half) => h.r * 2
 const worldH = (h: Half) => h.dir === 1 ? (h.cy + h.r) - h.flat : h.flat - (h.cy - h.r)
@@ -78,7 +82,7 @@ export default function Minimap({
   open: boolean
   onClose: () => void
   /** Which half of the world to draw. See HALVES. */
-  side?: 'fishing' | 'expeditions'
+  side?: 'fishing' | 'expeditions' | 'sortie'
   /** The live bitfield. Read, never written — the map owns it. */
   fog: Uint8Array
   /** The boat, read at draw time. */
