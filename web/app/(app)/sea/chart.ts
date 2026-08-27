@@ -318,10 +318,24 @@ export const LANDMARKS: {
   solid?: boolean; sway?: 'bob' | 'rock'
 }[] = [
   // ── THE BOATS AT THE TRAWL HARBOUR ───────────────────────────────────
-  // Moored off the island's south beach, just beyond the jetty that every
-  // place draws at 78% down its own box. In the water, so they submerge and
-  // bob; on the land they were three hulls standing in a field.
-  { art: '/sea/trawl-fleet.png', x: -3000, y: -560, size: 210, sway: 'bob' },
+  //
+  // THREE SPRITES, NOT ONE PICTURE OF THREE. The first cut was a single raft
+  // of three hulls, and it could never submerge: the waterline is one
+  // horizontal cut across a sprite, and the three boats were drawn at three
+  // different heights, so a line that took the nearest one under missed the
+  // other two entirely. That is a structural mismatch with how SUBMERGE works,
+  // not a picture that needed redrawing — one boat per sprite and each finds
+  // its own waterline.
+  //
+  // OFF THE WEST SHORE, and every one of them anchored ABOVE the island's
+  // caption line (world y -632, where the name hangs under the box). The old
+  // single raft sat south of the island at y -560 and covered its own title.
+  //
+  // Different sizes and a scatter, because three identical boats in a row is a
+  // sprite sheet rather than a mooring.
+  { art: '/sea/smack.png', x: -3330, y: -800, size: 124, sway: 'bob' },
+  { art: '/sea/smack.png', x: -3232, y: -700, size: 112, sway: 'bob' },
+  { art: '/sea/smack.png', x: -3428, y: -688, size: 104, sway: 'bob' },
   { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
   { art: '/sea/islet.png', x:   1003, y:   2620, size: 210, solid: true },
   { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },

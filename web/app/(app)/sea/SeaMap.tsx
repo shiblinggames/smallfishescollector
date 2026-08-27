@@ -1724,6 +1724,9 @@ export default function SeaMap({
   }, [])
   useEffect(() => { readOrders() }, [readOrders])
 
+  /** Still out. Distinct from ready: one is a clock, the other is a haul. */
+  const trawlsWorking = trawlsOut.length - trawlsReady
+
   /** Something finished and not yet collected — the dot on the icon. */
   const ordersReady = !!orders && orders.challenges.some(
     (c, i) => (orders.progress[i] ?? 0) >= c.target && orders.claimed[i] !== true)
@@ -4097,25 +4100,40 @@ hullRef={hullRefFor(t.key)} />
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, padding: 0,
             borderRadius: 999, cursor: 'pointer',
-            background: trawlsReady > 0 ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
-            border: `1px solid ${trawlsReady > 0 ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+            background: trawlsReady > 0 ? 'rgba(26,22,8,0.86)' : trawlsWorking > 0 ? 'rgba(8,18,24,0.82)' : 'rgba(6,12,18,0.7)',
+            border: `1px solid ${trawlsReady > 0 ? 'rgba(240,192,64,0.55)' : trawlsWorking > 0 ? 'rgba(103,212,232,0.4)' : 'rgba(180,214,232,0.22)'}`,
           }}>
           {/* A net. */}
           <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
             viewBox="0 0 24 24" fill="none"
-            stroke={trawlsReady > 0 ? '#f0c040' : 'rgba(214,232,240,0.8)'}
+            stroke={trawlsReady > 0 ? '#f0c040' : trawlsWorking > 0 ? '#67d4e8' : 'rgba(214,232,240,0.8)'}
             strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M4 4h16l-2 6a6 6 0 0 1-12 0z" />
             <path d="M8 4l1.5 12M16 4l-1.5 12M5 8h14" />
           </svg>
-          {trawlsReady > 0 && (
+
+          {/* ── TWO STATES, AND THEY ARE NOT THE SAME NEWS ────────────────
+              A crew still working is a thing to know; a crew standing on the
+              deck with a haul is a thing to DO. One dot for both said "there
+              is a trawl" and left you to sail out and find out which.
+
+              Gold and steady means come and get it. Cool blue and breathing
+              means they are still out there — the pulse is the tell that it is
+              a clock rather than a prompt, and it is slow enough not to nag. */}
+          {trawlsReady > 0 ? (
             <span aria-hidden style={{
               position: 'absolute', top: 2, right: 2,
               width: 9, height: 9, borderRadius: '50%',
               background: '#f0c040', border: '2px solid rgba(4,10,18,1)',
               boxShadow: '0 0 7px rgba(240,192,64,0.85)',
             }} />
-          )}
+          ) : trawlsWorking > 0 ? (
+            <span aria-hidden className="trawl-working" style={{
+              position: 'absolute', top: 3, right: 3,
+              width: 7, height: 7, borderRadius: '50%',
+              background: '#67d4e8', border: '2px solid rgba(4,10,18,1)',
+            }} />
+          ) : null}
         </button>
       )}
 
@@ -5063,9 +5081,10 @@ const LandmarkField = memo(function LandmarkField() {
  * effect.
  */
 const SUBMERGE: Record<string, { line: number; keep: number }> = {
-  // Moored boats. Barely under — a hull floats, it does not wade — but not
-  // zero: a hard edge at the waterline reads as sitting ON the sea.
-  'trawl-fleet': { line: 88, keep: 0.26 },
+  // A moored boat. Barely under — a hull floats, it does not wade — but not
+  // zero: a hard edge at the waterline reads as sitting ON the sea. The keel
+  // tapers to a point down there, so what goes under is the bit that should.
+  smack:    { line: 87, keep: 0.26 },
   // A float on a chain, riding low.
   buoy:     { line: 66, keep: 0.30 },
   // Aground and going nowhere. Half of it is under.

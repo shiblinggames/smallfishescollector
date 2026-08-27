@@ -2655,6 +2655,13 @@ body.hardcore-gauntlet::after {
 /* The tappable pieces of the boat. No resting outline: the picture should look
    like a picture until you reach for it. */
 .sy-rig-zone:hover { background: rgba(180,214,232,0.07) !important; border-color: rgba(180,214,232,0.28) !important; }
+/* A crew still out at sea. Slow on purpose: this is a clock, not a prompt, and
+   anything quicker turns a background fact into something that wants answering.
+   Opacity only, so it stays a compositor job. */
+@keyframes trawl-working { 0%, 100% { opacity: 0.45 } 50% { opacity: 1 } }
+.trawl-working { animation: trawl-working 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .trawl-working { animation: none; opacity: 0.85 } }
+
 .sy-rig-zone:focus-visible { outline: 2px solid rgba(240,192,64,0.8); outline-offset: 2px; }
 
 .sy-rig-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
