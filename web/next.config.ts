@@ -25,6 +25,23 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  /**
+   * WHICH BUILD A TAB IS RUNNING, stamped onto every asset request.
+   *
+   * Chunk filenames are hashed per build, so a tab left open across a deploy is
+   * holding a list of files the CDN has stopped serving. The first one it needs
+   * that it has not already downloaded 404s, and the page dies — after every
+   * deploy, regardless of what was in it.
+   *
+   * With this set, asset requests carry ?dpl=<id> and Vercel can serve them
+   * from the deployment the tab actually came from. THE DASHBOARD TOGGLE IS THE
+   * OTHER HALF: Skew Protection has to be enabled on the project or the
+   * parameter is simply ignored. Harmless either way, and useless on its own.
+   *
+   * The boundaries and lib/staleBuild are the belt to this pair of braces: they
+   * turn a dead page into a reload rather than preventing the mismatch.
+   */
+  deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
   images: {
     remotePatterns: [
       {

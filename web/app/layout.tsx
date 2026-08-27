@@ -11,6 +11,7 @@ import KeyboardAdvance from '@/components/KeyboardAdvance'
 import PendingSalesWatcher from '@/components/PendingSalesWatcher'
 import FishingAudioPrimer from '@/components/FishingAudioPrimer'
 import ActivityPing from '@/components/ActivityPing'
+import StaleBuildGuard from '@/components/StaleBuildGuard'
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -61,6 +62,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="min-h-screen bg-[#000000] text-[#f0ede8] font-karla">
+        {/* FIRST, because a tab running a build that no longer exists cannot
+            be fixed by anything below it. See lib/staleBuild. */}
+        <StaleBuildGuard />
         <ClientBackground />
         <PageTransition>
           {children}
