@@ -3254,7 +3254,20 @@ export default function SeaMap({
         // is not this element's business any more.
         const t = now / 1000
         const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
-        const heel = Math.max(-7, Math.min(7, (vel.current.x / SPEED) * 7))
+        // ── THE BOW LIFTS, WHICHEVER WAY SHE IS POINTING ──────────────
+        //
+        // This was `vel.x / SPEED`, a SIGNED number, and the rotate below sits
+        // AFTER scaleX(facing) — so it is applied inside the mirrored frame.
+        // Two sign flips: the velocity's, and the mirror's. They cancelled, so
+        // the boat tilted the same way in SCREEN space on both headings — which
+        // means the opposite way relative to her own bow. Sailing east she rode
+        // up on the plane; sailing west she dug her nose into it.
+        //
+        // The magnitude is the whole story. How hard she is driving has nothing
+        // to do with which way she is pointed, and the mirror already handles
+        // the pointing. One flip instead of two, and the bow comes up on both.
+        const drive = Math.hypot(vel.current.x, vel.current.y)
+        const heel = Math.min(7, (drive / SPEED) * 7)
         boat.style.transform =
           `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
       }
