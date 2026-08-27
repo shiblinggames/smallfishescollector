@@ -2631,8 +2631,26 @@ body.hardcore-gauntlet::after {
    whole final row — which suits the fish hold anyway, since it is the upgrade
    that decides when a session ends. `:last-child` is why this is a class and
    not an inline style. */
-.sy-boat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.sy-boat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sy-boat-grid > * { min-width: 0; }
 .sy-boat-grid > :last-child { grid-column: 1 / -1; }
+
+/* THE RIG'S SLOTS.
+   minmax(0, 1fr), NOT 1fr. A bare `1fr` is `minmax(auto, 1fr)`, and `auto`
+   floors at min-content — so with the captions set `white-space: nowrap`, each
+   column refused to shrink below the widest untruncated item name and the grid
+   ran off the right of the screen. The ellipsis could never fire, because the
+   column grew instead. `min-width: 0` on the items is the other half: without
+   it the same floor comes back one level down.
+
+   TWO columns on a phone, not three. Three put "Legendary Hook" into 115px,
+   which is a truncated word under a picture. Two gives the art real room, which
+   is the point of leading with it. */
+.sy-rig-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sy-rig-grid > * { min-width: 0; }
+@media (min-width: 768px) {
+  .sy-rig-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+}
 
 @media (min-width: 768px) {
   .sea-shipyard {

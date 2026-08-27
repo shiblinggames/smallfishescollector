@@ -641,7 +641,7 @@ function GearSlot({
         // itself is a third of a column that changes width with the screen —
         // a fixed thumbnail is what makes a tile look empty on a big display.
         <div style={{
-          position: 'relative', width: '100%', height: 'clamp(62px, 23vw, 104px)',
+          position: 'relative', width: '100%', height: 'clamp(54px, 19vw, 92px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
           {/* The item's own colour, pooled behind it. An empty slot gets none,
@@ -696,13 +696,13 @@ function GearSlot({
           that actually lets ellipsis happen inside a flex column. */}
       <div style={{ textAlign: 'center', width: '100%', minWidth: 0, marginTop: big ? 'auto' : 0 }}>
         <p className="font-karla font-600 uppercase" style={{
-          fontSize: big ? '0.68rem' : '0.76rem',
+          fontSize: big ? '0.64rem' : '0.76rem',
           color: `rgba(255,255,255,${big ? 0.42 : 0.55})`,
           letterSpacing: '0.14em', marginBottom: 1,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={label}>{label}</p>
         <p className="font-cinzel font-700" style={{
-          fontSize: big ? '0.86rem' : '0.81rem',
+          fontSize: big ? '0.8rem' : '0.81rem',
           color: empty ? '#3a3734' : '#e6e2dc', lineHeight: 1.2,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={itemName}>{itemName}</p>
@@ -1172,11 +1172,7 @@ export default function GearScreen({
           so every card on the screen is the size of the tallest one, and gap
           handles every space between them identically. */}
       {locker ? (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 6,
-      }}>
+      <div className="sy-rig-grid">
         <div>
           <GearSlot big label="Rod" accent={SLOT_FAMILY.gear} image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => { setRodView('owned'); setOpenSlot('rod') }} />
         </div>
