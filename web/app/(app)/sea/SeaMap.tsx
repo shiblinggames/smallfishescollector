@@ -218,6 +218,19 @@ const Z = {
 const GROUND = 0.58
 
 /**
+ * HOW FAR CLEAR OF THE REEF A REFUSED HULL IS PUT.
+ *
+ * The wall test is strict — `y < NORTH_WALL` — so a hull placed exactly on the
+ * line reads as SOUTH of it. Anything that pushes a boat back has to push it
+ * properly onto a side, or the side it belongs to and the side it is measured
+ * as disagree, and every frame after that re-asserts the disagreement.
+ *
+ * A boat's width, near enough. Big enough that a frame of way cannot cross it,
+ * small enough that being turned back does not look like being thrown back.
+ */
+const REEF_MARGIN = 40
+
+/**
  * HOW FAR OUT THE CAMERA SITS, by screen width.
  *
  * The chart was drawn at desktop scale and then shown unchanged on a phone,
@@ -1066,7 +1079,17 @@ export default function SeaMap({
   // saved a northern position on purpose, and dragging them back to the wall
   // would be the stranding rather than the cure.
   const startAt: Vec = start
-    ? { x: start.x, y: startSide === 'fishing' ? Math.max(NORTH_WALL, start.y) : start.y }
+    ? {
+      x: start.x,
+      // ONTO THE SIDE THE SAVE SAYS, and clear of the line. A row written
+      // before the clamp above was fixed can hold a northern side with a
+      // position sitting exactly on the wall, which is the stuck state itself
+      // — restoring it faithfully would restore the bug. This heals those on
+      // the way in, and costs nothing for a row that was always fine.
+      y: startSide === 'fishing'
+        ? Math.max(NORTH_WALL + REEF_MARGIN, start.y)
+        : Math.min(NORTH_WALL - REEF_MARGIN, start.y),
+    }
     : { ...HOME }
   const pos = useRef<Vec>({ ...startAt })
   const vel = useRef<Vec>({ x: 0, y: 0 })
@@ -3081,13 +3104,32 @@ export default function SeaMap({
       // updated while you are in the mouth — so a boat that drifts against the
       // rock anywhere else is put back on the side it came from.
       const wasNorth = sideRef.current
-      const isNorth = pos.current.y < NORTH_WALL
+      // ── WHICH SIDE, WITH HYSTERESIS ────────────────────────────────
+      //
+      // A bare `y < NORTH_WALL` is a knife edge, and there are two things on
+      // this chart that will sit a hull on it. The clamp below used to place
+      // one there itself. And the reef's rocks are solid now and they STRADDLE
+      // the wall, so their push — which runs after this test, later in the same
+      // frame — can shove a boat back across a line it was just held at.
+      //
+      // Either way the result was a boat whose side and whose position
+      // disagreed, and a clamp that re-asserted the disagreement every frame
+      // while zeroing vel.y, so it could never build the way to escape. One
+      // captain was found saved in exactly that state.
+      //
+      // A Schmitt trigger costs nothing and cannot be got into: you keep the
+      // side you had until you are properly across, so no push of a few dozen
+      // pixels can flip you, and being ON the line is no longer a state that
+      // means anything.
+      const isNorth = wasNorth
+        ? pos.current.y < NORTH_WALL + REEF_MARGIN
+        : pos.current.y < NORTH_WALL - REEF_MARGIN
       // A WARSHIP DOES NOT GO DOWN THROUGH THE REEF. The fishing grounds are
       // for the fishing boat; the whole point of leaving her at the dock is
       // that you took something else out. Held at the line with a word, the
       // same way the sortie holds the fishing boat.
       if (shipRef.current && inGate(pos.current.x) && isNorth !== wasNorth && !isNorth) {
-        pos.current.y = NORTH_WALL
+        pos.current.y = NORTH_WALL - REEF_MARGIN
         vel.current.y = 0
         if (now - refusedAt.current > 2600) {
           refusedAt.current = now
@@ -3105,7 +3147,20 @@ export default function SeaMap({
         }
         sideRef.current = isNorth
       } else if (isNorth !== wasNorth) {
-        pos.current.y = NORTH_WALL
+        // ── BACK TO THE SIDE YOU CAME FROM, AND CLEAR OF THE LINE ──────
+        //
+        // This used to put the hull exactly ON the wall, which is a position
+        // the test above calls SOUTH: `isNorth` is `y < NORTH_WALL`, strictly.
+        // For a boat coming from the south that is harmless — it lands on the
+        // side it was already on and nothing fires again. For one coming from
+        // the NORTH it is a trap: side says north, position says south, so the
+        // clamp fires every frame and zeroes vel.y every frame, and the hull
+        // can never build the northward way it needs to get off the line.
+        // Stuck at the border, exactly where leaving the anchorage puts you.
+        //
+        // The margin is the fix. Pushed properly onto its own side, the
+        // contradiction cannot exist, and it costs a boat's width of nothing.
+        pos.current.y = wasNorth ? NORTH_WALL - REEF_MARGIN : NORTH_WALL + REEF_MARGIN
         vel.current.y = 0
       }
 
