@@ -181,6 +181,7 @@ export default async function SeaPage() {
     <SeaMap
       fishingXP={Number(profile?.fishing_xp ?? 0)}
       userId={user.id}
+      isAdmin={profile?.is_admin === true}
       tour={{
         seen: profile?.has_seen_sea_tour === true,
         hints: (profile?.sea_hints_seen as string[] | null) ?? [],

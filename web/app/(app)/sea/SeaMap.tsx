@@ -699,7 +699,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlEndsAt, renown, exploredRaw, discovered, digs, homestead, dealtToday,
-  auto, tideTurner, userId, tour,
+  auto, tideTurner, userId, tour, isAdmin = false,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -708,6 +708,8 @@ export default function SeaMap({
   /** What the captain has already been taught. Both latch on profile columns,
    *  so neither replays on another device or after a reinstall. */
   tour: { seen: boolean; hints: string[] }
+  /** Shows the frame probe. Admins only — it is a diagnostic, not a HUD. */
+  isAdmin?: boolean
   /** The player's own loadout, so the thing crossing the ocean is the captain
    *  they dressed in the boat they bought — not a marker. */
   characterColor: string
@@ -957,6 +959,18 @@ export default function SeaMap({
    * what stops "sail west" from firing while a captain types the letter A into
    * some future chat box.
    */
+  /**
+   * THE FRAME PROBE'S COUNTERS, written by the loop and read by <FrameProbe>
+   * once a second. Zero cost when the probe is closed: two additions and two
+   * compares per frame, on numbers already in hand.
+   *
+   * `stepMs` is the part WE own — time spent inside the step body — against
+   * `frames`/`worst` which measure what the browser delivered. The whole point
+   * of the split: "the loop is heavy" and "the device is struggling to raster"
+   * feel identical on the water and need opposite fixes.
+   */
+  const frameStats = useRef({ frames: 0, worst: 0, over33: 0, over100: 0, stepMs: 0 })
+
   const keysRef = useRef<Set<string>>(new Set())
   useEffect(() => {
     const DIRS: Record<string, string> = {
@@ -2236,8 +2250,16 @@ export default function SeaMap({
       }
       // Clamped delta: a backgrounded tab returns with an enormous gap, and an
       // unclamped one would teleport the boat across the chart.
-      const dt = Math.min(0.05, (now - last) / 1000)
+      const rawMs = now - last
+      const dt = Math.min(0.05, rawMs / 1000)
       last = now
+      // ── the probe's ledger ────────────────────────────────────────
+      const st = frameStats.current
+      st.frames++
+      if (rawMs > st.worst) st.worst = rawMs
+      if (rawMs > 33) st.over33++
+      if (rawMs > 100) st.over100++
+      const stepT0 = performance.now()
 
       // THE STICK OUTRANKS EVERYTHING. While it is held the boat runs its
       // bearing directly rather than chasing a target point, so the course is
@@ -2916,6 +2938,7 @@ export default function SeaMap({
         // answer is the same.
       }
 
+      st.stepMs += performance.now() - stepT0
       raf = requestAnimationFrame(step)
     }
     raf = requestAnimationFrame(step)
@@ -3633,6 +3656,8 @@ hullRef={hullRefFor(t.key)} />
 
 
       <CrewNews news={crewNews} onDone={() => setCrewNews(null)} />
+
+      {isAdmin && <FrameProbe stats={frameStats} />}
 
       {/* THE CHART. `fogVersion` is in the key path so the canvas redraws when
           a cell flips — the bitfield itself is a ref and mutating it is
@@ -5043,6 +5068,60 @@ const FriendBoat = memo(function FriendBoat({ friend, refs }: {
           }}>last seen {Math.round(friend.ago / 60)}m ago</p>
         )}
       </div>
+    </div>
+  )
+})
+
+/**
+ * FRAMES, MEASURED WHERE THE FEEL IS.
+ *
+ * "Sailing does not feel smooth" cannot be diagnosed from source: the loop can
+ * be provably cheap and the device can still drop frames on raster, GC, or
+ * thermal throttling — and those need opposite fixes. This turns feel into
+ * three numbers, on the phone where the feel lives:
+ *
+ *   fps      what the browser actually delivered, averaged over the second
+ *   worst    the single longest frame in that second, in ms — hitches live
+ *            here even when the average looks fine
+ *   loop     the share of frame budget OUR step used. Low loop + bad fps means
+ *            the problem is the browser's (raster, GC, thermals); high loop
+ *            means it is ours and the profiler knows where.
+ *
+ * Yellow over one dropped frame in a second, red over five. Admin-only.
+ */
+const FrameProbe = memo(function FrameProbe({ stats }: {
+  stats: React.RefObject<{ frames: number; worst: number; over33: number; over100: number; stepMs: number }>
+}) {
+  const [view, setView] = useState({ fps: 0, worst: 0, over33: 0, over100: 0, loopPct: 0 })
+  useEffect(() => {
+    const id = setInterval(() => {
+      const st = stats.current
+      if (!st) return
+      const budget = st.frames * 16.7
+      setView({
+        fps: st.frames,
+        worst: Math.round(st.worst),
+        over33: st.over33,
+        over100: st.over100,
+        loopPct: budget > 0 ? Math.round((st.stepMs / budget) * 100) : 0,
+      })
+      st.frames = 0; st.worst = 0; st.over33 = 0; st.over100 = 0; st.stepMs = 0
+    }, 1000)
+    return () => clearInterval(id)
+  }, [stats])
+
+  const bad = view.over33 >= 5 || view.over100 > 0
+  const meh = view.over33 >= 1
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', bottom: 8, right: 8, zIndex: Z.hud,
+      padding: '3px 8px', borderRadius: 7, pointerEvents: 'none',
+      background: 'rgba(4,10,8,0.82)',
+      border: `1px solid ${bad ? 'rgba(244,110,110,0.7)' : meh ? 'rgba(240,196,64,0.6)' : 'rgba(120,160,140,0.35)'}`,
+      fontFamily: 'ui-monospace, monospace', fontSize: 10, lineHeight: 1.5,
+      color: bad ? '#ff9c8a' : meh ? '#f0d080' : 'rgba(170,210,190,0.9)',
+    }}>
+      {view.fps}fps · worst {view.worst}ms · {view.over33} slow · loop {view.loopPct}%
     </div>
   )
 })
