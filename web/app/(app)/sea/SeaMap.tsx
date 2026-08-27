@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, type Place } from './chart'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
@@ -739,7 +739,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
   auto, tideTurner, userId, tour,
 }: {
   fishingXP: number
@@ -800,6 +800,9 @@ export default function SeaMap({
   homestead: Homestead
   /** Trader keys already dealt with today, read on the server so the count
    *  cannot be reset by reloading the page. */
+  /** What stands on the Crew Hall's island: the tiers this captain has bought.
+   *  Hall, drill yard, stores, each 1..6. */
+  crewTiers: { hall: number; drill: number; stores: number }
   dealtToday: string[]
   /** The specials the CLIENT has to drive. See FishingHere for why these three
    *  are the only ones that needed carrying out here. */
@@ -1368,8 +1371,9 @@ export default function SeaMap({
   }, [])
   /** Under the arch, being asked whether you mean it. The ref is what the 60fps
    *  loop reads and writes; the state is only so React can draw the prompt. */
-  const [atGate, setAtGate] = useState(false)
-  const gateRef = useRef(false)
+  /** Which sea the boat is in: true north of the reef, on the expedition side.
+   *  Only ever changed while inside the gate's mouth — see the crossing rule. */
+  const sideRef = useRef(false)
   /**
    * THE FOG.
    *
@@ -2742,29 +2746,33 @@ export default function SeaMap({
       // exactly like a shoreline — position clamped, northward velocity killed,
       // eastings untouched — so running into it slides you along the line
       // rather than stopping you dead against an invisible pane of glass.
-      if (pos.current.y < NORTH_WALL) {
-        // THE ARCH IS THE ONE WAY THROUGH. Everywhere else along the wall is
-        // cliff and behaves as it always did. In the gate's mouth you carry on
-        // north into the throat, and the confirm meets you inside it — which is
-        // the whole point of a gate you sail into rather than a button you
-        // press: you are committed enough to be under the arch, and not so
-        // committed that you cannot back out.
-        if (inGate(pos.current.x)) {
-          if (pos.current.y < NORTH_WALL - GATE_DEPTH) {
-            pos.current.y = NORTH_WALL - GATE_DEPTH
-            if (vel.current.y < 0) vel.current.y = 0
-          }
-          if (!gateRef.current) { gateRef.current = true; setAtGate(true) }
-        } else {
-          pos.current.y = NORTH_WALL
-          if (vel.current.y < 0) vel.current.y = 0
-        }
-      } else if (gateRef.current && pos.current.y > NORTH_WALL + 90) {
-        // Backed out and cleared the mouth. The 90px of hysteresis stops the
-        // prompt flickering for anyone sitting exactly on the line.
-        gateRef.current = false
-        setAtGate(false)
+      // ── THE REEF, AND THE ONE HOLE IN IT ───────────────────────────
+      //
+      // It used to be a wall with a confirm behind it: sail into the arch, get
+      // asked, and be taken to a page. There is water on the other side now, so
+      // the arch is just an arch — you sail through it and keep going.
+      //
+      // The rule is the same from both sides, which is what makes it a reef
+      // rather than a door: you may cross the line only inside the gate.
+      // `sideRef` remembers which sea you were last definitely in, and is only
+      // updated while you are in the mouth — so a boat that drifts against the
+      // rock anywhere else is put back on the side it came from.
+      const wasNorth = sideRef.current
+      const isNorth = pos.current.y < NORTH_WALL
+      if (inGate(pos.current.x)) {
+        sideRef.current = isNorth
+      } else if (isNorth !== wasNorth) {
+        pos.current.y = NORTH_WALL
+        vel.current.y = 0
       }
+
+      // ── THE EDGE, WHICHEVER SEA YOU ARE IN ─────────────────────────
+      //
+      // Two semicircles sharing a reef. Each is a radius from its own centre,
+      // and the reef itself is the flat side of both — already handled above,
+      // so all this has to do is stop you sailing off the round part.
+      const home = sideRef.current ? EXP_ORIGIN : { x: 0, y: 0 }
+      const rim = sideRef.current ? EXP_EDGE : OUTER_EDGE
 
       // ── THE EDGE OF THE CHART ──────────────────────────────────────
       //
@@ -2780,18 +2788,18 @@ export default function SeaMap({
       // is removed, so running into the edge lets you coast along it instead of
       // pinning you — which matters because the last band is 6,600 wide and its
       // rim is somewhere you might want to follow round.
-      const R = Math.hypot(pos.current.x, pos.current.y)
-      if (R > OUTER_EDGE) {
-        const nx2 = pos.current.x / R, ny2 = pos.current.y / R
-        pos.current.x = nx2 * OUTER_EDGE
-        pos.current.y = ny2 * OUTER_EDGE
+      const R = Math.hypot(pos.current.x - home.x, pos.current.y - home.y)
+      if (R > rim) {
+        const nx2 = (pos.current.x - home.x) / R, ny2 = (pos.current.y - home.y) / R
+        pos.current.x = home.x + nx2 * rim
+        pos.current.y = home.y + ny2 * rim
         const outward = vel.current.x * nx2 + vel.current.y * ny2
         if (outward > 0) {
           vel.current.x -= nx2 * outward
           vel.current.y -= ny2 * outward
         }
         if (!edgeRef.current) { edgeRef.current = true; setAtEdge(true) }
-      } else if (edgeRef.current && R < OUTER_EDGE - 400) {
+      } else if (edgeRef.current && R < rim - 400) {
         // Hysteresis, so following the rim does not strobe the line.
         edgeRef.current = false
         setAtEdge(false)
@@ -3386,7 +3394,7 @@ export default function SeaMap({
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: Z.world, willChange: 'transform' }}>
         {PLACES.map(p => (
-          <PlaceIsland key={p.id} place={homeFor(p, visiting?.homestead ?? homestead, visiting?.username)} locked={locked(p)} isNear={near?.id === p.id}
+          <PlaceIsland key={p.id} place={crewHallFor(homeFor(p, visiting?.homestead ?? homestead, visiting?.username), crewTiers)} locked={locked(p)} isNear={near?.id === p.id}
             // CREW WAITING ON THE DOCK. The island says so itself rather than a
             // banner saying it for them: it is a fact about a PLACE, and the
             // chart is where facts about places belong. Nothing moves, nothing
@@ -3907,86 +3915,11 @@ hullRef={hullRefFor(t.key)} />
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
 
-      {/* ── THE GATE ──────────────────────────────────────────────────────
-          It meets you UNDER the arch rather than at a button on a menu, which
-          is the whole reason the wall became cliffs: leaving the fishing
-          grounds should be somewhere you sail to and a thing you feel yourself
-          doing. Backing out puts you back on the water facing south — no
-          penalty, nothing spent, and the arch is still there. */}
-      <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-        <PopupShell open={atGate} onClose={() => { gateRef.current = false; setAtGate(false) }}>
-          <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 6 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-            style={{
-              margin: 'auto', width: '100%', maxWidth: 420,
-              // A SOLID base. This sits over painted water and the one moment it
-              // has something to ask, it has to be readable.
-              background: 'linear-gradient(180deg, #16202b 0%, #0b1119 100%)',
-              border: '1px solid rgba(150,196,222,0.34)',
-              borderRadius: 20, padding: '1.25rem 1.15rem 1.2rem',
-              boxShadow: '0 22px 64px rgba(0,0,0,0.65)',
-            }}>
-            <p className="font-karla font-700 uppercase" style={{
-              fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(150,196,222,0.75)',
-            }}>Under the arch</p>
-            <h2 className="font-cinzel font-700" style={{
-              fontSize: '1.45rem', color: '#f2ead8', marginTop: 3, lineHeight: 1.12,
-            }}>Sail through to Expeditions?</h2>
-            <p className="font-karla" style={{
-              fontSize: '0.88rem', color: 'rgba(198,218,232,0.72)', marginTop: 8, lineHeight: 1.55,
-            }}>
-              Past the reef the water belongs to the voyages and the raids, and
-              you do not fish it. Your boat and everything in the hold stay
-              exactly where you left them; the gap is open whenever you want to
-              come back.
-            </p>
-
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button type="button"
-                onClick={() => {
-                  // Back out: nudge the bow south so the prompt does not open
-                  // again on the very next frame while you are still drifting
-                  // north under the arch.
-                  gateRef.current = false
-                  setAtGate(false)
-                  pos.current.y = NORTH_WALL + 120
-                  vel.current.y = Math.abs(vel.current.y) * 0.4
-                  target.current = { x: pos.current.x, y: NORTH_WALL + 900 }
-                }}
-                className="font-karla font-700"
-                style={{
-                  flex: 1, padding: '0.8rem', borderRadius: 12, fontSize: '0.94rem',
-                  color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
-                }}>
-                Come about
-              </button>
-              <button type="button"
-                onClick={() => {
-                  // STRAIGHT THERE. This used to `enter()` a Harbour island
-                  // that sat on the chart purely to be the thing this button
-                  // pointed at — a place nobody sailed to, because sailing
-                  // through the gap is what takes you to expeditions. The gap
-                  // is the door now, so this is the door's handle.
-                  vibrate([18, 40, 24])
-                  try { sessionStorage.setItem('sea:came-from-chart', '1') } catch { /* private mode */ }
-                  router.push('/expeditions')
-                }}
-                className="font-cinzel font-700"
-                style={{
-                  flex: 1.3, padding: '0.8rem', borderRadius: 12, fontSize: '0.94rem',
-                  color: '#f2ead8', background: 'rgba(150,196,222,0.18)',
-                  border: '1px solid rgba(150,196,222,0.5)', cursor: 'pointer',
-                }}>
-                Sail through
-              </button>
-            </div>
-          </motion.div>
-        </PopupShell>
-      </div>
+      {/* THE CONFIRM UNDER THE ARCH IS GONE. It asked "sail through to
+          Expeditions?" and answered by navigating to a page, which was the
+          right shape while there was nothing on the other side of the reef.
+          There is water there now, so the arch is just an arch: you sail
+          through a gap in a reef the way you sail anywhere else. */}
 
       {/* WHO YOU SAIL WITH — always here, never conditional.
           It used to appear only when somebody was already on the water, which
@@ -6540,6 +6473,35 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
  * shape `PLACES.buildings` already has, at the same percent coordinates, so
  * PlaceIsland never learns that one of its islands is special.
  */
+/**
+ * THE CREW HALL'S OWN BUILDINGS.
+ *
+ * The same shallow swap `homeFor` does, and for the same reason: the island is
+ * the same island for everybody, but what stands on it is what you have paid
+ * for. Hall, drill yard and stores each run 1..6 and each has its own art.
+ *
+ * Clamped rather than trusted. A profile carrying a tier this build has no art
+ * for would otherwise put a broken image in the middle of an island.
+ */
+function crewHallFor(p: Place, tiers: { hall: number; drill: number; stores: number }): Place {
+  if (p.id !== 'crew_hall') return p
+  const t = (n: number) => Math.max(1, Math.min(6, Math.round(n || 1)))
+  return {
+    ...p,
+    // THE SAME COORDINATES THE PLACEHOLDERS IN chart.ts CARRY, and they have
+    // to be: scripts/check-islands measures what is written down there, so if
+    // these drifted the checker would certify a layout the game never draws.
+    // The coastline is seeded and asymmetric — the west side of this island is
+    // tighter than the east, which is why the drill yard sits further in than
+    // the stores rather than mirroring it.
+    buildings: [
+      { art: `/crew/hall_${t(tiers.hall)}.png`, x: 50, y: 50, scale: 0.28 },
+      { art: `/crew/drill_${t(tiers.drill)}.png`, x: 36, y: 60, scale: 0.15 },
+      { art: `/crew/stores_${t(tiers.stores)}.png`, x: 64, y: 60, scale: 0.15 },
+    ],
+  }
+}
+
 function homeFor(p: Place, h: Homestead, guest?: string): Place {
   if (p.id !== 'home') return p
   return {

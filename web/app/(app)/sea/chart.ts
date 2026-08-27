@@ -198,6 +198,33 @@ export const PLACES: Place[] = [
     ],
   },
   {
+    // ── THE CREW HALL ────────────────────────────────────────────────────
+    //
+    // THE FIRST ISLAND ON THE FAR SIDE OF THE REEF, and for now the only one.
+    // Everything about expeditions that used to be a tab is going to be a place
+    // out here; this is the one that already had art to stand on.
+    //
+    // Its buildings are NOT written down. The hall, the drill yard and the
+    // stores each have six tiers and the player owns whichever they have paid
+    // for, so the three sprites are swapped in at render time from the profile
+    // — the same shallow swap the Homestead uses, and for the same reason: the
+    // island is the same island, the buildings are yours.
+    //
+    // Straight north of the arch, so it is the first thing you see when you
+    // come through and you do not have to go looking on a trial run.
+    id: 'crew_hall', name: 'The Crew Hall', blurb: 'Your hall, your drills, your stores',
+    href: '/crew', x: -900, y: -4400, r: 460, art: '/crew/hall_1.png',
+    kind: 'port', minLevel: 0,
+    // Placeholders. crewHallFor() replaces all three with the tiers actually
+    // owned; these are what the checker measures and what a captain with no
+    // profile would see.
+    buildings: [
+      { art: '/crew/hall_1.png', x: 50, y: 50, scale: 0.28 },
+      { art: '/crew/drill_1.png', x: 36, y: 60, scale: 0.15 },
+      { art: '/crew/stores_1.png', x: 64, y: 60, scale: 0.15 },
+    ],
+  },
+  {
     // ── THE TRAWL HARBOUR ────────────────────────────────────────────────
     //
     // Where a crew is sent out and brought back in. It was three boats rafted
@@ -481,6 +508,31 @@ export const GATE_HALF = 430
 /** Is this point in the arch's mouth? */
 export function inGate(x: number): boolean {
   return Math.abs(x - GATE_X) < GATE_HALF
+}
+
+/**
+ * THE EXPEDITION SEA — the same shape, mirrored.
+ *
+ * The fishing grounds are a semicircle centred on the Mainland at (0,0), cut
+ * off by the reef 1,500 north of it. Reflect that in the reef and you get this:
+ * a semicircle centred 1,500 NORTH of the reef, opening away from it, with the
+ * arch and its boulders along the bottom instead of the top.
+ *
+ * So the rock you have been looking at from the fishing side is the beach you
+ * arrive on, and everything you can see from it is new water. Nothing about the
+ * reef changes; you just stand on the other side of it.
+ *
+ * EDGE is smaller than the fishing sea's 22,600 for now. That number is sized
+ * for five bands and forty islands; this holds one, and a captain who sails for
+ * three minutes into nothing has been told the wrong thing about the place.
+ * It is one constant and it grows when the content does.
+ */
+export const EXP_ORIGIN = { x: 0, y: NORTH_WALL - 1500 }
+export const EXP_EDGE = 9000
+
+/** Is this point on the expedition side of the reef? */
+export function inExpeditions(y: number): boolean {
+  return y < NORTH_WALL
 }
 
 /** How far north the arch lets you go before the confirm stops you. A short

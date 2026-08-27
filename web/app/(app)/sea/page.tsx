@@ -248,6 +248,14 @@ export default async function SeaPage() {
       discovered={discovered}
       digs={digs}
       homestead={homestead}
+      // WHAT STANDS ON THE CREW HALL'S ISLAND. Three tiers off the profile, and
+      // the island renders whichever art the captain has paid for — the same
+      // shape the Homestead's buildings already take.
+      crewTiers={{
+        hall: Number(profile?.crew_hall_tier ?? 1),
+        drill: Number(profile?.crew_drill_level ?? 1),
+        stores: Number(profile?.crew_stores_level ?? 1),
+      }}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,
