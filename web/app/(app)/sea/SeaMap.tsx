@@ -48,6 +48,8 @@ import { handlingRate, accelRate } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
+import LevelRewardsGrant, { type Granted } from './LevelRewardsGrant'
+import { claimFishingLevelRewards } from '../fishing/actions'
 // A LEAF, not SeaMap's own exports. The cast button is this same control in its
 // other role and needs these numbers — and FishingHere importing back from here
 // is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
@@ -797,6 +799,33 @@ export default function SeaMap({
 }) {
   const router = useRouter()
   const level = useMemo(() => getLevelFromXP(fishingXP), [fishingXP])
+
+  /**
+   * WHAT LEVELLING OWES YOU, COLLECTED.
+   *
+   * claimFishingLevelRewards is idempotent and state-based: it compares
+   * claimed_fishing_levels against the level the XP implies and hands over the
+   * difference. It was called from ONE place, the fishing screen's mount — and
+   * that screen redirects every captain who can sail to this one. So the
+   * rewards have been accruing correctly and going to nobody.
+   *
+   * On arrival, and again whenever a rod is stowed, which is when a level is
+   * most likely to have just happened. Twice a session at worst, and because it
+   * is state-based rather than an event, the first call pays out everything a
+   * captain has been owed since the sea opened.
+   */
+  const [levelGrant, setLevelGrant] = useState<Granted | null>(null)
+  const collectLevelRewards = useCallback(() => {
+    void claimFishingLevelRewards().then(res => {
+      if (!res.granted.length) return
+      setLevelGrant(res.granted)
+      // The purse in the nav reads these events; without them the doubloons
+      // land in the database and the number on screen stays where it was.
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGems }))
+    }).catch(() => { /* a missed collection is picked up next time */ })
+  }, [])
+  useEffect(() => { collectLevelRewards() }, [collectLevelRewards])
 
   /** THE WAKE. A fixed pool of marks laid in WORLD space and left behind, which
    *  is what makes it a wake rather than a tail: each stays exactly where the
@@ -4080,8 +4109,14 @@ hullRef={hullRefFor(t.key)} />
           onBusy={setDialUp}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}
-          onClose={() => { setFishingIn(null); setFrame('rest') }}
+          onClose={() => { setFishingIn(null); setFrame('rest'); collectLevelRewards() }}
         />
+      )}
+
+      {/* WHAT LEVELLING OWED YOU. A hand-over rather than a notification: the
+          coin is already in the purse and the number in the nav has moved. */}
+      {levelGrant && (
+        <LevelRewardsGrant granted={levelGrant} onDone={() => setLevelGrant(null)} />
       )}
 
       {hailing && (
