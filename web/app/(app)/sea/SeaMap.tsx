@@ -7762,20 +7762,33 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
               you have to remember the meaning of. */}
           {waiting > 0 && (
             <p className="font-karla font-700 uppercase" style={{
-              fontSize: '0.84rem', letterSpacing: '0.1em', marginBottom: 3,
+              fontSize: '1rem', letterSpacing: '0.1em', marginBottom: 3,
               color: '#f0c040', textShadow: '0 1px 10px rgba(0,0,0,0.95)',
             }}>
               {waiting} crew back
             </p>
           )}
+          {/* ── SIZED FOR THE ZOOM IT IS READ AT ─────────────────────────
+              These live in the world layer, so the camera scales them: a
+              phone sits at about 0.5x, which turned a 1.15rem name into nine
+              pixels on the glass — a name plate you had to sail up to. The
+              rem sizes here are chosen for what they become AFTER the zoom:
+              ~14px on a phone, ~23px on a desktop, which is a sign you can
+              steer by rather than a caption you squint at.
+
+              Deliberately NOT counter-scaled to constant screen size. Every
+              label on this chart grows and shrinks with the world it is
+              nailed to — that is what makes it a sign on a place rather than
+              UI floating over one. */}
           <p className="font-cinzel font-700" style={{
-            fontSize: '1.152rem', color: locked ? 'rgba(180,192,200,0.55)' : '#e6eef4',
-            textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+            fontSize: '1.75rem', lineHeight: 1.1,
+            color: locked ? 'rgba(180,192,200,0.55)' : '#eef4f8',
+            textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
           }}>{place.name}</p>
           <p className="font-karla font-600" style={{
-            fontSize: '0.84rem', marginTop: 1,
-            color: locked ? 'rgba(206,152,152,0.8)' : 'rgba(184,204,218,0.72)',
-            textShadow: '0 1px 9px rgba(0,0,0,0.9)',
+            fontSize: '1.02rem', marginTop: 2,
+            color: locked ? 'rgba(206,152,152,0.8)' : 'rgba(192,210,224,0.8)',
+            textShadow: '0 1px 10px rgba(0,0,0,0.92)',
           }}>{locked ? `Fishing ${place.minLevel}` : place.blurb}</p>
         </div>
       )}
