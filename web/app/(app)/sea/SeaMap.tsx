@@ -442,6 +442,12 @@ const WAKE_MARKS = WAKE_PAIRS * 2
  *  one, too much and the boat looks like it is dragging a net. */
 const WAKE_SPREAD = 62
 
+/** How far ahead of the boat's centre the water is parted, in world px, on the
+ *  FISHING boat. Roughly the prow: the hull draws about 115 across, so this is
+ *  a shade inside the tip, which is where the bow actually meets water rather
+ *  than where the sprite happens to end. Multiplied by the hull's scale. */
+const BOW_REACH = 46
+
 /** How wide the fishing boat's hull actually draws: the boat overlay is 55% of
  *  the 210px Skipper sprite. The denominator of every hull comparison. */
 const FISHING_HULL_W = 210 * 0.55
@@ -3129,18 +3135,30 @@ export default function SeaMap({
         // pixels down while the hull above it grew and shrank with the camera.
         // On the fishing boat that error was 34px at its worst and nobody
         // noticed; at the Man-o-War's 140 it is most of a ship.
-        const sx = pos.current.x - ux * 46 * hull.scale + WATERLINE_X
-        const sy = pos.current.y - uy * 46 * hull.scale + hull.keelY / GROUND
+        // ── LAID AT THE BOW, NOT THE STERN ─────────────────────────────
+        //
+        // It used to be the stern, which put the V's apex behind the boat and
+        // made the foam look like something the hull was towing. A real wake
+        // starts where the water is actually parted: the prow. The marks do not
+        // travel — they are laid and then spread sideways — so with the origin
+        // forward, the boat sailing on is what leaves them trailing aft, and
+        // the V opens from the point of the bow.
+        //
+        // That is the whole difference between floating along and cutting.
+        const sx = pos.current.x + ux * BOW_REACH * hull.scale + WATERLINE_X
+        const sy = pos.current.y + uy * BOW_REACH * hull.scale + hull.keelY / GROUND
         const ang = Math.atan2(uy, ux)
         const force = Math.min(1, speed / (SPEED * 0.9))
         for (const side of [-1, 1] as const) {
           const i = wakeNext.current
           wakeNext.current = (i + 1) % WAKE_MARKS
-          // Started just off the centreline rather than on it, so the two lines
-          // are already separate where they leave the hull.
+          // BARELY OFF THE CENTRELINE. At the stern the pair wanted a gap
+          // between them, because that is where a hull's width is. At the bow
+          // they want to nearly touch: the apex is a POINT, and two lines that
+          // start apart read as a channel rather than as water being split.
           wakeAt.current[i] = {
-            x: sx + -uy * side * 7 * hull.scale,
-            y: sy + ux * side * 7 * hull.scale,
+            x: sx + -uy * side * 3 * hull.scale,
+            y: sy + ux * side * 3 * hull.scale,
             born: now, ang, side, force, scale: hull.scale,
           }
         }
