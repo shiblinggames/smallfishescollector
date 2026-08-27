@@ -133,6 +133,15 @@ export default function FishCollectionDrawer({
       {...drag.motionProps}
       style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+        // OPT BACK IN TO POINTERS. On the chart this drawer is a child of the
+        // fishing overlay, whose root is pointer-events:none on purpose — taps
+        // on the open water around the dial are meant to fall THROUGH to the
+        // map. Every interactive child has to opt back in, and the tackle sheet
+        // beside this one does. This never did, so the whole log was inert:
+        // taps went straight past it to the sea, no zone would expand, and the
+        // touches landed on the chart underneath. Harmless on the fishing
+        // screen, where auto is already the default.
+        pointerEvents: 'auto',
         // CAPPED, and centred with auto margins rather than a translateX: this
         // is a motion.div, framer owns `transform` for the slide-in AND for the
         // drag-to-dismiss, and a transform written here is silently clobbered
