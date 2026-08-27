@@ -74,6 +74,23 @@ import { ANCIENT_IDS } from '@/lib/ancientVigil'
 const MEGALODON_ID = 143
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import { HELM_D, HELM_BOTTOM, type SeaLog } from './SeaMap'
+
+/**
+ * WHERE THE CAST BUTTON SITS, so that it lands exactly on the helm.
+ *
+ * The wheel's centre is HELM_BOTTOM + HELM_D/2 off the bottom of the chart. The
+ * cast slot is the same control in its other role, so its centre has to be at
+ * the same height — and it is NOT the bottom-most thing in its column: the
+ * secondary band (the Tide Turner, the auto toggle) sits under it and pushes it
+ * up by its own height plus its margin.
+ *
+ * Padding the row by HELM_BOTTOM alone left the button sixty pixels high — the
+ * two bands that were below it. Written as the subtraction rather than as the
+ * answer so that changing either band moves the button back into place instead
+ * of silently off it.
+ */
+const BELOW_CAST_SLOT = 8 + 26          // the secondary band's margin + fixed height
+const ACTION_PAD_BOTTOM = HELM_BOTTOM - BELOW_CAST_SLOT
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 
 /**
@@ -177,14 +194,13 @@ export type FishingMods = {
 }
 
 export default function FishingHere({
-  zone, zoneName, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
+  zone, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
   seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
   onBaitSpent, onPose, onBusy, onCanLeave,
   spritesReady, onClose,
 }: {
   zone: string
-  zoneName: string
   bait: string
   baitBonus: number
   baitLeft: number
@@ -1854,7 +1870,7 @@ export default function FishingHere({
         // justified to its bottom edge, so raising the row raises the dial with
         // it by the same 70px. That is deliberate and the reason it is stated
         // here — a future change to either number moves the dial.
-        paddingTop: 8, paddingBottom: HELM_BOTTOM, pointerEvents: 'auto',
+        paddingTop: 8, paddingBottom: ACTION_PAD_BOTTOM, pointerEvents: 'auto',
       }}>
         {/* THE HELM'S OWN SIZE. This slot is the joystick's other half — the
             wheel is a 112px circle at bottom 92 on the chart, and when the rod
@@ -2061,18 +2077,10 @@ export default function FishingHere({
         </div>
       </div>
 
-      <div style={{ height: 20, marginTop: 6, display: 'flex', alignItems: 'center' }}>
-        <button onClick={e => { e.stopPropagation(); onClose() }}
-          className="font-karla font-700"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: '0.864rem', color: 'rgba(190,212,228,0.8)',
-            textShadow: '0 1px 8px rgba(0,0,0,0.9)',
-            borderBottom: '1px solid rgba(190,212,228,0.32)', paddingBottom: 1,
-          }}>
-          Stow rod · {zoneName}
-        </button>
-      </div>
+      {/* THE "STOW ROD" LINE IS GONE. Tapping the water stows the rod and
+          always did, the water's name is already on the banner at the top, and
+          a third row under the button was pushing the whole action column — and
+          therefore the dial — up the screen for a job nothing needed doing. */}
       </div>
     </div>
   )

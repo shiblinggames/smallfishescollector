@@ -2286,6 +2286,11 @@ export default function SeaMap({
     // it looks tappable and at max level genuinely is. A control is a control
     // on every path that can reach it.
     if ((e.target as HTMLElement).closest?.('button, [data-no-steer]')) return
+    // AND THE CLICK PATH TOO. onDown returns early with the rod out, but this
+    // fires from the same press and would set the course onDown just refused
+    // to — the level bar taught us once already that a guard on one path is
+    // not a guard.
+    if (fishingRef.current) return
     const pt = 'touches' in e
       ? { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }
       : { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY }
@@ -2345,14 +2350,27 @@ export default function SeaMap({
     // Anything with a button in it is a control, not the sea. Cast, Reel In,
     // the prompt and the trader panel all live inside this element.
     if ((e.target as HTMLElement).closest('button, [data-no-steer]')) return
-    // SAILING AWAY IS STOWING THE ROD. The fishing overlay is pointer-events
-    // none, so a tap on the water around the result card never reaches it —
-    // which is why clicking away appeared to do nothing at all. Handled here
-    // instead, on the first touch, so it works for the move box as well as for
-    // open water.
-    if (fishingRef.current && canLeaveRef.current) {
-      setFishingIn(null)
-      setFrame('rest')
+    // ── WITH THE ROD OUT, THE WATER IS NOT A HELM ────────────────────────
+    //
+    // Sailing away stows the rod: the fishing overlay is pointer-events none,
+    // so a tap on the water around the result card never reaches it and is
+    // handled here instead, on the first touch, which covers the move box as
+    // well as open water.
+    //
+    // BUT IT RETURNS NOW, and that is the fix. It used to fall through into the
+    // steering setup below, so the same press both stowed the rod AND set a
+    // course — and worse, mid-cast, when canLeave is false and the rod does NOT
+    // come in, the fall-through still ran: tapping anywhere while the line was
+    // in the water sailed the boat away from the fish it was playing.
+    //
+    // One press, one meaning. While fishing it either stows or does nothing,
+    // and never steers.
+    if (fishingRef.current) {
+      if (canLeaveRef.current) {
+        setFishingIn(null)
+        setFrame('rest')
+      }
+      return
     }
     dragFrom.current = { x: e.clientX, y: e.clientY }
     holdAt.current = { x: e.clientX, y: e.clientY }
@@ -3965,7 +3983,6 @@ hullRef={hullRefFor(t.key)} />
       {fishingIn && (
         <FishingHere
           zone={fishingIn.id}
-          zoneName={fishingIn.name}
           bait={activeBait}
           baitBonus={getBait(activeBait).catchZoneBonus}
           baitLeft={baitLeft}
