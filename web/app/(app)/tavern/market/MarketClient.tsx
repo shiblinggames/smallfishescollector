@@ -679,7 +679,7 @@ export default function MarketClient({
           linear-gradient(180deg, #0c0e13 0%, #090a0e 100%)
         `,
       }} />
-      <div className="px-5 pt-5 max-w-lg mx-auto flex flex-col gap-4 pb-10" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="page-col pt-5 flex flex-col gap-4 pb-10" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* The market had no header and so no way out but the tab bar, which
             got worse once the Fishing hub started sending players here. Same

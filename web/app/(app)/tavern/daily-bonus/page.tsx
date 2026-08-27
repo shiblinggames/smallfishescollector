@@ -24,7 +24,7 @@ export default async function DailyBonusPage() {
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0 pt-8">
-      <div className="px-5 max-w-lg mx-auto">
+      <div className="page-col">
         <DailyBonusClient
           isPremium={isPremium}
           gemsClaimed={profile?.last_daily_claim === today}

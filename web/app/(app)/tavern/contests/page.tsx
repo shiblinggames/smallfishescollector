@@ -11,7 +11,7 @@ export default async function ContestsPage() {
 
   return (
     <main className="min-h-screen">
-      <div className="px-4 max-w-lg mx-auto pt-6 pb-16">
+      <div className="page-col pt-6 pb-16">
         <ContestsClient views={views} />
       </div>
     </main>

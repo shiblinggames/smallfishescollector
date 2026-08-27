@@ -403,7 +403,7 @@ export default function ProfileClient({
           {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
         </div>
       )}
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
+    <div className="page-col" style={{ paddingBottom: '3rem', position: 'relative', zIndex: 1 }}>
 
       {/* ── Identity header — banner ── */}
       <div className="flex flex-col items-center" style={{ marginTop: 6, marginBottom: 20, padding: '1.7rem 1.2rem 1.5rem', borderRadius: 24, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(180deg, rgba(16,22,34,0.72), rgba(8,12,20,0.42))' }}>

@@ -1643,8 +1643,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     // above the fixed z0 backdrop via DOM order WITHOUT creating a stacking
     // context — so the inline fixed modals below (e.g. the hall-upgrade sheet)
     // still stack over the Nav exactly as before.
-    <div style={{ minHeight: '100vh', background: 'transparent', position: 'relative', color: '#f0ede8', padding: '1.25rem 1rem 4rem' }}>
-      <div style={{ maxWidth: 980, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: 'transparent', position: 'relative', color: '#f0ede8', padding: '1.25rem 0 4rem' }}>
+      {/* This page's 980 is where the app-wide `.page-col` came from. It is
+          the shared class now rather than a number here, so the standard has
+          one home instead of being a measurement other pages copy. */}
+      <div className="page-col">
 
         {/* Header — title + roster count chip. Gems + Nav level live in
             the Nav bar already, so the roster fill is the one fact worth

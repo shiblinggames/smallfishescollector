@@ -15,7 +15,7 @@ export default async function TurnBasedRaidPage() {
   return (
     <>
       <main className="min-h-screen pt-6">
-        <div className="px-3 pb-12 max-w-xl mx-auto">
+        <div className="page-col pb-12">
           <Link href="/raids" className="font-karla text-[#6a6764] text-xs uppercase tracking-[0.12em] hover:text-[#a0a09a] transition-colors">
             ← Back to raids
           </Link>

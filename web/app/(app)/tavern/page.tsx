@@ -98,7 +98,7 @@ export default async function TavernPage() {
             desert of margin on any monitor. At 2xl the tiles sit around 320px,
             which is what their art was made for. List-shaped pages keep the
             narrower column; grids are the pages that can actually use width. */}
-        <div className="px-4 max-w-lg sm:max-w-2xl mx-auto pt-6 pb-16 flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="page-col pt-6 pb-16 flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
 
           {/* Thin Leaderboards bar — sits at the very top as a slim
               one-line ticker rotating through the top holder of each

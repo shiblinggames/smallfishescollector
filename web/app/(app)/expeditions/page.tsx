@@ -375,7 +375,7 @@ export default async function ExpeditionsPage() {
         <ExpeditionsTour hasSeen={profile?.has_seen_expeditions_tour ?? false} />
         <main className="min-h-screen pb-24 sm:pb-0">
 
-          <div className="px-5 max-w-lg mx-auto expeditions-content" style={{ paddingTop: '1rem' }}>
+          <div className="page-col expeditions-content" style={{ paddingTop: '1rem' }}>
 
             {/* Ship Hero — streams when profile + crew roster arrive */}
             <Suspense fallback={<SkeletonBox height={210} radius={16} style={{ marginBottom: 14 }} />}>

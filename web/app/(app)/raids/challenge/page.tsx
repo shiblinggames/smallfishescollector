@@ -28,7 +28,7 @@ export default async function PeteChallengeRaidPage() {
   return (
     <>
       <main className="min-h-screen pt-6">
-        <div className="px-3 pb-12 max-w-xl mx-auto">
+        <div className="page-col pb-12">
           <RaidGame
             config={CORSAIRS_RECKONING_CHALLENGE}
             shipImageUrl={stats.shipImageUrl}

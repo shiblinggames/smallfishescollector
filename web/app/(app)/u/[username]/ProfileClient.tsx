@@ -213,7 +213,7 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
           {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
         </div>
       )}
-    <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
+    <div className="page-col flex flex-col" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
 
       {/* ── Header — identity banner ── */}
       <div className="flex flex-col items-center" style={{ marginTop: 6, marginBottom: 20, padding: '1.7rem 1.2rem 1.5rem', borderRadius: 24, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(180deg, rgba(16,22,34,0.72), rgba(8,12,20,0.42))' }}>

@@ -115,7 +115,7 @@ export default function HomeClient({
     <div className="min-h-full" style={{
       background: 'radial-gradient(ellipse 120% 90% at 50% 0%, #1b2436 0%, #101725 55%, #080d16 100%)',
     }}>
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '1rem 1rem 4rem' }}>
+      <div className="page-col" style={{ padding: '1rem 0 4rem' }}>
 
         {/* ── THE HEADER ────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>

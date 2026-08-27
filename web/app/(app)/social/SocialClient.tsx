@@ -126,7 +126,7 @@ export default function SocialClient({ initialCrew, me, username, newFollowers: 
 
 
   return (
-    <div className="px-6 max-w-xl mx-auto pb-14 flex flex-col gap-8">
+    <div className="page-col pb-14 flex flex-col gap-8">
 
       {/* ── 1. Find a crew member (top) ── */}
       <div>

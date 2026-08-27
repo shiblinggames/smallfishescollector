@@ -20,7 +20,7 @@ export default async function KrustRaidPage() {
   return (
     <>
       <main className="min-h-screen pt-6">
-        <div className="px-3 pb-12 max-w-xl mx-auto">
+        <div className="page-col pb-12">
           <RaidGame
             config={CAPTAIN_KRUST}
             shipImageUrl={stats.shipImageUrl}

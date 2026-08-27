@@ -32,7 +32,7 @@ export default async function SocialPage() {
     <>
       <main className="min-h-screen pt-6">
         {profile?.username && (
-          <div className="px-6 max-w-xl mx-auto mb-4 flex justify-end">
+          <div className="page-col mb-4 flex justify-end">
             <Link
               href={`/u/${profile.username}`}
               className="font-karla font-600"

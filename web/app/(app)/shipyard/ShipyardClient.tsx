@@ -406,7 +406,7 @@ export default function ShipyardClient(p: {
     // 27-inch screen.
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0 overflow-y-auto sea-shipyard"
       style={{ background: '#08121c' }}>
-      <div className="w-full mx-auto sea-shipyard-col" style={{ padding: '0 1rem 2rem' }}>
+      <div className="page-col" style={{ paddingBottom: '2rem' }}>
 
         {/* ── THE HERO ────────────────────────────────
             The boat, and then what it is carrying. No title, no blurb, no strip

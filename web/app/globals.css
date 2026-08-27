@@ -2593,6 +2593,62 @@ body.hardcore-gauntlet::after {
   will-change: transform, opacity;
 }
 
+/* ── ONE COLUMN WIDTH FOR THE WHOLE APP ──────────────────────────────────────
+   Every page used to pick its own. The app spanned NINE different measures:
+   440, 470, 512, 576, 640, 672, 860, 896 and 980, split between inline
+   `maxWidth` numbers and Tailwind `max-w-*` classes, so there was no single
+   knob to turn and no page that agreed with the one you had just left.
+
+   980 is the standard, taken from Crew Management. Wide enough for a grid of
+   cards to be a grid rather than a stack, narrow enough that the eye does not
+   have to travel the width of a monitor between a label and its value.
+
+   TWO PAGE KINDS ARE EXEMPT, and neither is an oversight:
+
+     · WORLD CANVASES — /sea, and the fishing game's play layer. They are not
+       documents, they are viewports. A column in the middle of the ocean would
+       be a window onto the sea rather than the sea.
+     · PROSE — privacy, terms, contact. 980px of running text is roughly 140
+       characters a line, about double what anybody can read comfortably. They
+       keep a measure, because their job is to be read rather than scanned.
+
+   The padding is part of the standard. A bare max-width leaves text touching
+   the glass on a phone, which is how half these pages ended up with their own
+   ad-hoc padding rules on top of their own ad-hoc width. */
+.page-col {
+  width: 100%;
+  max-width: 980px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 768px) {
+  .page-col { padding-inline: 1.5rem; }
+}
+
+/* The ship screen's refit tiles. Two across on a phone, three once there is
+   room — at the standard 980 column, two tiles are 485px wide and 98px tall,
+   which is a banner, not a tile.
+
+   The reserved height comes in as two numbers rather than being computed here,
+   because it depends on how many tiles THIS captain has unlocked and CSS
+   cannot count them. It exists so switching Refits/Armament/Look does not
+   change the page height under a thumb already reaching for the next tab. */
+.ship-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
+  min-height: var(--tiles-h-narrow);
+}
+
+@media (min-width: 768px) {
+  .ship-tile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: var(--tiles-h-wide);
+  }
+}
+
 /* ── WAKES WITH A SHAPE OF THEIR OWN ─────────────────────────────────────────
    The default above is a 76x26 streak of white foam, which is what water does
    behind an ordinary boat. These are for the hulls that are not ordinary, and
@@ -2725,7 +2781,6 @@ body.hardcore-gauntlet::after {
   --sy-6: 1.28rem;
   --sy-7: 1.5rem;
 }
-.sea-shipyard-col { max-width: 28rem; }
 
 /* THE BOAT'S UPGRADES, as tiles rather than full-width rows.
    Two columns, because a four-word tag and a number do not need the width of
@@ -2823,10 +2878,7 @@ body.hardcore-gauntlet::after {
     --sy-6: 1.55rem;
     --sy-7: 1.9rem;
   }
-  /* The column grows with the type rather than staying at phone width and
-     letting the bigger text wrap harder than it used to. */
-  .sea-shipyard-col { max-width: 40rem; }
-}
+  }
 
 
 /* ── HOTSPOTS ────────────────────────────────────────────────────────────────

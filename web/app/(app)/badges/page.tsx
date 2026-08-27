@@ -574,7 +574,7 @@ export default async function BadgesPage() {
   return (
     <>
       <main className="min-h-screen pt-8" style={{ position: 'relative', zIndex: 1 }}>
-        <div className="px-6 max-w-2xl mx-auto pb-16">
+        <div className="page-col pb-16">
           <div className="mb-4 flex items-baseline justify-between gap-3">
             <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Badges</h1>
             {/* Story moved out of here — a quiet link back to the Captain's Log. */}

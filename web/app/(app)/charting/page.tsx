@@ -23,7 +23,7 @@ export default async function TreasureMatchPage() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <main className="min-h-screen pb-24 sm:pb-0">
-          <div className="px-4 max-w-lg mx-auto" style={{ paddingTop: '1.25rem' }}>
+          <div className="page-col" style={{ paddingTop: '1.25rem' }}>
             {'error' in state ? (
               <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c8bfa6', marginBottom: '0.5rem' }}>No Board This Week</p>

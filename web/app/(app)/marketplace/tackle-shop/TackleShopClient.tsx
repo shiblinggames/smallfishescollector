@@ -380,7 +380,7 @@ export default function TackleShopClient({
   // opened them; this answers "what can I afford" before you touch anything.
   if (section === null) {
     return (
-      <div className="px-4 sm:px-6 max-w-lg sm:max-w-2xl mx-auto pb-16">
+      <div className="page-col pb-16">
         <ShopHeader title="Tackle Shop" backLabel="Back" onBack={() => router.back()} badge={levelBadge} />
 
         {/* ── THE PULSE: how kitted-out you are, at a glance ─────────────── */}
@@ -511,7 +511,7 @@ export default function TackleShopClient({
   const sectionLabel = CATEGORIES.find(c => c.key === section)?.label ?? ''
 
   return (
-    <div className="px-4 sm:px-6 max-w-4xl mx-auto">
+    <div className="page-col">
       <ShopHeader
         title={sectionLabel}
         backLabel="Tackle Shop"

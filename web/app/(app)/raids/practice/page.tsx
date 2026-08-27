@@ -19,7 +19,7 @@ export default async function PracticeRaidPage() {
   return (
     <>
       <main className="min-h-screen pt-6">
-        <div className="px-3 pb-12 max-w-xl mx-auto">
+        <div className="page-col pb-12">
           <PracticeRaidGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}

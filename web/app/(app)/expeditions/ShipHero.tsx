@@ -1694,10 +1694,10 @@ export default function ShipHero({
               {!focus && <DrawerHandle controls={loadoutDragControls} />}
               {/* Sticky header — outside the scroll container so the close
                   button never scrolls off-screen. */}
-              <div style={{
+              <div className={focus ? 'page-col' : undefined} style={{
                 flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: focus ? '1.1rem 1rem 0.85rem' : '0.25rem 1rem 0.7rem',
+                padding: focus ? '1.1rem 0 0.85rem' : '0.25rem 1rem 0.7rem',
                 borderBottom: focus ? 'none' : '1px solid rgba(255,255,255,0.08)',
               }}>
                 {/* On a ROUTE this is a page header, so it matches Crew
@@ -1754,8 +1754,14 @@ export default function ShipHero({
               {/* On a ROUTE the document scrolls, so this stops being a scroll
                   box. Both axes have to go visible together: set only one and
                   CSS computes the other to auto, which re-creates the box. */}
-              <div style={focus
-                ? { padding: '0 1rem 6rem' }
+              {/* ON A ROUTE, THE STANDARD COLUMN. Everything below was
+                  proportioned inside the drawer, which is pinned to 480px wide
+                  — so on a route, where nothing constrained it, the same markup
+                  stretched across the whole monitor and every tuned number was
+                  wrong at once. `.page-col` is the app-wide measure; see
+                  globals.css. */}
+              <div className={focus ? 'page-col' : undefined} style={focus
+                ? { paddingBottom: '6rem' }
                 : { flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '1rem 1rem 6rem' }}>
 
               {/* Launch-mode banner — only shows when the drawer was
@@ -2288,8 +2294,14 @@ export default function ShipHero({
                   (showUltimate ? 1 : 0) + 1,
                   1,
                 ]
-                const tileRows = Math.ceil(Math.max(...tabTileCounts) / 2)
-                const tileGridMinHeight = tileRows * 98 + (tileRows - 1) * 10
+                // Reserved height at BOTH column counts, because the grid is
+                // 2-across on a phone and 3-across on a desktop and CSS cannot
+                // count the tiles to work the rows out for itself.
+                const maxTiles = Math.max(...tabTileCounts)
+                const reserve = (cols: number) => {
+                  const rows = Math.ceil(maxTiles / cols)
+                  return rows * 98 + (rows - 1) * 10
+                }
                 return (
                   <>
                     {/* ── THE SHIP, AND WHAT YOU HAVE DONE TO IT ──────────────
@@ -2429,7 +2441,11 @@ export default function ShipHero({
                       })}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: '1.4rem', minHeight: tileGridMinHeight, alignContent: 'start' }}>
+                    <div className="ship-tile-grid" style={{
+                      marginBottom: '1.4rem',
+                      '--tiles-h-narrow': `${reserve(2)}px`,
+                      '--tiles-h-wide': `${reserve(3)}px`,
+                    } as React.CSSProperties}>
                       {/* Ultimate Weapon */}
                       {shipTab === 'armament' && showUltimate && (() => {
                         const activeAug = initialManowarAugment ? getShipAugment(initialManowarAugment) : null

@@ -51,7 +51,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
   }
 
   return (
-    <div className="px-4 sm:px-6 max-w-md sm:max-w-2xl mx-auto pb-16">
+    <div className="page-col pb-16">
       <ShopHeader title="Shipyard" backLabel="Back" onBack={() => router.back()} />
 
       {/* ── Active ship hero ─────────────────────────────────────────── */}

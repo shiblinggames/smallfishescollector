@@ -126,7 +126,7 @@ export default function FishingHub({
           single-frame swap. See .surface-in. */}
       <div className="surface-in" style={{ position: 'relative', zIndex: 1 }}>
         <main className="min-h-screen pb-24 sm:pb-0">
-          <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
+          <div className="page-col" style={{ paddingTop: '1rem' }}>
 
             {/* THE WAY OUT TO THE SEA.
                 The ocean hub is the successor to this screen and is now open to
