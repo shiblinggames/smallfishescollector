@@ -1,11 +1,11 @@
-// THE TRAWL DOCKS — where a crew is actually sent out.
+// THE TALLY HOUSE — where the day's work is counted and paid.
 //
-// Its own island on the ocean hub. Sending used to be available from any screen
-// that showed the trawl panel, which made a voyage into a menu you opened; now
-// it is somewhere you go. Collecting is deliberately NOT gated to this island —
-// see the `canDeploy` note in TrawlIndicator.
+// It was the Trawl Docks, and sending a crew out happens at the fleet moored on
+// the water now. What is left here is the day's orders: readable from anywhere
+// (the chart carries a copy), claimable only here. The sail IS the price of the
+// reward, which is the same bargain every other island on the hub makes.
 //
-// Admin-gated with the rest of the hub.
+// Gated with the rest of the hub — see lib/seaAccess.
 
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'

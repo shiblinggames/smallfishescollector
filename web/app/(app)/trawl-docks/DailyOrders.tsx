@@ -83,9 +83,13 @@ export default function DailyOrders({ initial, canClaim = true }: {
           {done.filter(Boolean).length}/{state.challenges.length} done
         </span>
       </div>
+      {/* "HERE" DEPENDS ON WHERE YOU ARE READING IT. This said "come back here
+          to collect" from the day it was written, which was true while the only
+          place it could be read was the island. It is on the chart now, where
+          "here" is open water and the sentence sends you nowhere. */}
       <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
-        Every cast counts toward these, wherever you make it. Come back here to
-        collect.
+        Every cast counts toward these, wherever you make it.{' '}
+        {canClaim ? 'Collect them here.' : 'Go to the Tally House to collect.'}
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
@@ -185,17 +189,6 @@ export default function DailyOrders({ initial, canClaim = true }: {
           fontSize: '0.74rem', color: GREEN, marginTop: 8, textAlign: 'center',
         }}>
           Every order filled. Back tomorrow.
-        </p>
-      )}
-
-      {/* WHERE TO COLLECT. Only said on the water, and only when there is
-          something waiting — a standing instruction on a page with nothing to
-          claim is just noise. */}
-      {!canClaim && (done.some((d, i) => d && !state.claimed[i]) || (allDone && claimedAll && !state.sweepClaimed)) && (
-        <p className="font-karla font-600" style={{
-          fontSize: '0.78rem', color: GOLD, marginTop: 10, textAlign: 'center', lineHeight: 1.5,
-        }}>
-          Sail to the Tally House to collect.
         </p>
       )}
 
