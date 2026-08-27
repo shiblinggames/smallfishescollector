@@ -260,7 +260,16 @@ export default async function SeaPage() {
         maxRarity: gauntletAutoCatchMaxRarity(profile?.gauntlet_upgrades as string[] | null),
       }}
       tideTurner={{
-        has: profile?.has_tide_turner === true,
+        // OWNING IT IS NOT CARRYING IT. This read `has_tide_turner` alone, so
+        // the skip was offered at sea to anyone who had ever bought the thing,
+        // equipped or not — while the fishing screen has always required it in
+        // the special slot. The auto tier four lines above already gates on
+        // `equippedSpecial`; this is the same rule, which was simply missed.
+        //
+        // Slot 1 only, matching FishingGame: the second special slot exists but
+        // is not consulted for behaviour items on either screen, and making the
+        // sea the one place it counts would be a new rule, not a fix.
+        has: profile?.has_tide_turner === true && equippedSpecial === 'tide_turner',
         // 3/day, matching useTideTurnerSkip's own guard. The date string is
         // built the same way the server builds it (UTC ISO date), or the count
         // shown here would disagree with the one enforced there.

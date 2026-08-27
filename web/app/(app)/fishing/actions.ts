@@ -1926,12 +1926,17 @@ export async function useTideTurnerSkip(): Promise<{ ok: true; skipsLeft: number
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('has_tide_turner, tide_turner_used, tide_turner_date')
+    .select('has_tide_turner, equipped_special, tide_turner_used, tide_turner_date')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
   if (!profile.has_tide_turner) return { error: 'No Tide Turner' }
+  // AND IT HAS TO BE IN THE SLOT. This checked ownership only, so the server
+  // would honour a skip from an unequipped Tide Turner — the fishing screen
+  // simply never offered the button, which made a UI rule look like a guard.
+  // The sea offered it, and that is how the gap surfaced.
+  if (profile.equipped_special !== 'tide_turner') return { error: 'Your Tide Turner is not equipped' }
 
   const todayStr = today()
   const usedToday = profile.tide_turner_date === todayStr ? (profile.tide_turner_used ?? 0) : 0
