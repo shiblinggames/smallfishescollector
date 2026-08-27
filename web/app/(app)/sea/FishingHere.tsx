@@ -536,6 +536,11 @@ export default function FishingHere({
    * actually in the document, whenever that turns out to be.
    */
   const needleEl = useRef<HTMLDivElement | null>(null)
+  /** The zones group inside the dial, for the crossing paint's arc weights. */
+  const zonesGroupEl = useRef<SVGGElement | null>(null)
+  /** The wedge the needle was last seen in, by its `from` edge. -1 forces the
+   *  first frame of every spin to paint. */
+  const lastZoneFromRef = useRef(-1)
   const needleRef = useCallback((el: HTMLDivElement | null) => {
     needleEl.current = el
     if (el && phaseRef.current === 'hooked') startSpinRef.current?.(angleRef.current)
@@ -554,9 +559,15 @@ export default function FishingHere({
    * and using the wrong number is the difference between the freeze landing
    * where you tapped and landing a zone away.
    *
-   * This is the only rAF left in this component and it deliberately does
-   * nothing else — no state, no DOM writes, no reads. It exists to time frames
-   * while the dial is up and stops the moment it is not.
+   * This is the only rAF in this component, and it carries exactly two jobs:
+   * timing frames, and the ZONE-CROSSING PAINT below — the needle recolouring
+   * to the wedge it is sweeping and that wedge's arc brightening, the tell the
+   * original dial has and the port dropped ("the needle used to change colours
+   * and now it just stays yellow"). The paint is imperative for the reason
+   * FishingGame's is: it fires mid-spin, and a setState per crossing is 6-10
+   * full re-renders per revolution on the exact frames that must not hitch.
+   * React never hears about it; a stray parent re-render can reset the
+   * attributes and the next crossing repaints them within ~150ms.
    */
   const frameDur = useRef(16.7)
   useEffect(() => {
@@ -570,6 +581,33 @@ export default function FishingHere({
         if (d >= 4 && d <= 40) frameDur.current = frameDur.current * 0.8 + d * 0.2
       }
       last = t
+
+      // ── THE CROSSING PAINT ──────────────────────────────────────────
+      // Same weights as FishingGame's: the wedge under the needle at full
+      // strength, perfects half-lit so they stay findable, everything else
+      // dimmed. Only writes on an actual crossing.
+      const zs = zonesRef.current
+      if (zs.length > 0) {
+        const rel = (((angleNow() - zoneRotRef.current) % 360) + 360) % 360
+        const zNow = zs.find(z => rel >= z.from && rel < z.to) ?? zs[0]
+        if (zNow.from !== lastZoneFromRef.current) {
+          lastZoneFromRef.current = zNow.from
+          const ng = needleEl.current
+          if (ng) {
+            ng.querySelectorAll('line').forEach(l => l.setAttribute('stroke', zNow.color))
+            ng.querySelector('circle')?.setAttribute('fill', zNow.color)
+          }
+          const zg = zonesGroupEl.current
+          if (zg) {
+            zg.querySelectorAll<SVGPathElement>('path[data-zone-arc]').forEach((pth, i) => {
+              const z = zs[i]
+              if (!z) return
+              const op = z.from === zNow.from ? 1.0 : z.type === 'perfect' ? 0.50 : z.type === 'penalty' ? 0.45 : 0.28
+              pth.setAttribute('fill-opacity', String(op))
+            })
+          }
+        }
+      }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -589,6 +627,8 @@ export default function FishingHere({
   }, [])
 
   const startSpin = useCallback((from: number) => {
+    // A fresh spin paints from its first frame — see lastZoneFromRef.
+    lastZoneFromRef.current = -1
     const el = needleEl.current
     spinRef.current?.cancel()
     spinRef.current = null
@@ -1294,7 +1334,11 @@ export default function FishingHere({
                   WAAPI rotation above. `angle` is only the RESTING position
                   now — it changes at a bite, at a retry and at the freeze, and
                   never once per frame. */}
-              <DialSVG zones={zones} angle={angle} rotation={zoneRot} needleColor="#f4e3b2" zoneOpacityFn={() => 1}
+              <DialSVG zones={zones} angle={angle} rotation={zoneRot}
+                // NEUTRAL, not yellow: the crossing paint owns the colour from
+                // the first frame of the spin, exactly like the original.
+                needleColor="rgba(255,255,255,0.35)" zoneOpacityFn={() => 1}
+                zonesGroupRef={zonesGroupEl}
                 needleRef={needleRef}
                 snapKey={snapKey} perfectBurstKey={burstKey} />
             </motion.div>
