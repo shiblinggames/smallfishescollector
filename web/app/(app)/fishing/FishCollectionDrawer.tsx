@@ -207,11 +207,20 @@ export default function FishCollectionDrawer({
               }}
               onClick={() => { setExpandedZone(isExpanded ? null : zone); setTappedFishId(null) }}
             >
-              <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
-                <div>
-                  <div className="flex items-center gap-2">
+              {/* THE RIGHT COLUMN MUST NOT MOVE. Everything on the left —
+                  the name, the prestige stars, the golden boost, the NEW pill —
+                  is optional and appears as you play, and each one used to
+                  widen this row and shove the percentage toward the edge of the
+                  screen. minWidth:0 lets the left column shrink instead, and
+                  the title truncates rather than pushing. */}
+              <div className="flex items-center justify-between gap-2" style={{ marginBottom: '0.5rem' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
                     <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                      style={{ fontSize: '0.85rem', color: zoneColor, lineHeight: 1 }}>{HABITAT_LABEL[zone]}</p>
+                      style={{
+                        fontSize: '0.85rem', color: zoneColor, lineHeight: 1,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{HABITAT_LABEL[zone]}</p>
                     {(prestigeLevels[zone] ?? 0) > 0 && (
                       <div style={{ display: 'flex', gap: 3 }}>
                         {Array.from({ length: prestigeLevels[zone] }).map((_, i) => (
@@ -241,6 +250,9 @@ export default function FishCollectionDrawer({
                           letterSpacing: '0.12em',
                           boxShadow: '0 0 12px rgba(253,230,138,0.32)',
                           lineHeight: 1,
+                          // Never squeezed and never wrapped: it is two words
+                          // and it is the reason this row is worth reading.
+                          flexShrink: 0, whiteSpace: 'nowrap',
                         }}>
                         {newInZone} NEW
                       </motion.span>
@@ -249,7 +261,7 @@ export default function FishCollectionDrawer({
                   <p className="font-karla font-400"
                     style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>{HABITAT_TAGLINE[zone]}</p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-1" style={{ flexShrink: 0 }}>
                   <div className="flex items-center gap-2">
                     {/* Percentage as the headline metric — bigger,
                         brighter, in Cinzel. Raw count drops to a

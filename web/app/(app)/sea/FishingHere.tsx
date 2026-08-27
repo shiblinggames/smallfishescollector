@@ -419,6 +419,26 @@ export default function FishingHere({
   const [caughtIds, setCaughtIds] = useState(() => new Set(log.caughtFishIds))
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
   const [uncheckedNew, setUncheckedNew] = useState<Set<number>>(new Set())
+
+  /**
+   * OPENING THE LOG COUNTS AS SEEING IT.
+   *
+   * The drawer only ever cleared an id when the captain tapped that individual
+   * fish's card, which nobody intuits — so the zone's "3 NEW" pill and the
+   * green dot on the Log button stayed lit forever, through opening the drawer,
+   * reading the zone, and closing it again. A notification that will not go out
+   * stops being a notification and becomes decoration.
+   *
+   * Cleared on the open -> CLOSED transition rather than on open, so the pills
+   * are still there to guide you while you are actually looking at the list —
+   * they are how you know which zone to expand. The fishing screen resolved
+   * this the same way and this port simply never carried the effect over.
+   */
+  const wasLogOpen = useRef(false)
+  useEffect(() => {
+    if (wasLogOpen.current && !logOpen) setUncheckedNew(new Set())
+    wasLogOpen.current = logOpen
+  }, [logOpen])
   const [claimedZones, setClaimedZones] = useState(log.zoneRewardsClaimed)
   const [claimingZone, setClaimingZone] = useState<string | null>(null)
   const mountedSet = useMemo(() => new Set(log.mountedFishIds), [log.mountedFishIds])
