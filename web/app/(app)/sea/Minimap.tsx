@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE } from './chart'
+import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE } from './chart'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
 import {
@@ -36,9 +36,26 @@ const PAD = 12
  * canvas was permanently blank, above and below a chart that could never reach
  * it. That is where the empty space came from; it was not the fog.
  */
-const WORLD_W = OUTER_EDGE * 2
-const WORLD_H = OUTER_EDGE - NORTH_WALL
-const ASPECT = WORLD_W / WORLD_H
+/**
+ * THE HALF OF THE WORLD THIS CHART IS OF.
+ *
+ * Two seas share a reef, and each is a half-disc with the reef as its flat
+ * side: the fishing grounds centred on the Mainland and opening south, the
+ * expedition sea centred 1,500 north of the reef and opening north. Everything
+ * the canvas does — the scale, the origin, which fog cells are reachable, where
+ * the survey stops — is that one shape, so it is described once here rather
+ * than as constants scattered through the draw.
+ *
+ * `dir` is which way the disc opens: +1 south, -1 north. It is what turns the
+ * arc and the chord round without a second copy of the drawing code.
+ */
+type Half = { cx: number; cy: number; r: number; flat: number; dir: 1 | -1 }
+const HALVES: Record<'fishing' | 'expeditions', Half> = {
+  fishing:     { cx: 0, cy: 0,            r: OUTER_EDGE, flat: NORTH_WALL, dir: 1 },
+  expeditions: { cx: EXP_ORIGIN.x, cy: EXP_ORIGIN.y, r: EXP_EDGE, flat: NORTH_WALL, dir: -1 },
+}
+const worldW = (h: Half) => h.r * 2
+const worldH = (h: Half) => h.dir === 1 ? (h.cy + h.r) - h.flat : h.flat - (h.cy - h.r)
 
 /** Every colour the chart draws with, in one place, so the key cannot drift
  *  from the map it is a key to. */
@@ -56,10 +73,12 @@ const INK = {
 } as const
 
 export default function Minimap({
-  open, onClose, fog, at, seaAt, found, bearings, dug, friends,
+  open, onClose, fog, at, seaAt, found, bearings, dug, friends, side = 'fishing',
 }: {
   open: boolean
   onClose: () => void
+  /** Which half of the world to draw. See HALVES. */
+  side?: 'fishing' | 'expeditions'
   /** The live bitfield. Read, never written — the map owns it. */
   fog: Uint8Array
   /** The boat, read at draw time. */
@@ -81,7 +100,7 @@ export default function Minimap({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [w, setW] = useState(0)
-  const h = Math.round(w / ASPECT)
+  const h = Math.round(w / (worldW(HALVES[side]) / worldH(HALVES[side])))
   const prog = fogProgress(fog)
 
   const draw = useCallback(() => {
@@ -89,7 +108,7 @@ export default function Minimap({
     if (!cv || !w) return
     const ctx = cv.getContext('2d')
     if (!ctx) return
-    const H = Math.round(w / ASPECT)
+    const H = Math.round(w / (worldW(HALVES[side]) / worldH(HALVES[side])))
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     cv.width = w * dpr
@@ -99,9 +118,14 @@ export default function Minimap({
 
     // World -> canvas. One scale for both axes: squashing it to fill the box
     // would make the bands ovals and lie about the shape of the sea.
-    const s = Math.min((w - PAD * 2) / WORLD_W, (H - PAD * 2) / WORLD_H)
-    const ox = (w - WORLD_W * s) / 2 + OUTER_EDGE * s
-    const oy = (H - WORLD_H * s) / 2 - NORTH_WALL * s
+    const hf = HALVES[side]
+    const WW = worldW(hf), WH = worldH(hf)
+    const s = Math.min((w - PAD * 2) / WW, (H - PAD * 2) / WH)
+    const ox = (w - WW * s) / 2 + (hf.r - hf.cx) * s
+    // The top of the drawn box: the reef for the fishing half, the far rim for
+    // the expedition one.
+    const top = hf.dir === 1 ? hf.flat : hf.cy - hf.r
+    const oy = (H - WH * s) / 2 - top * s
     const tx = (x: number) => ox + x * s
     const ty = (y: number) => oy + y * s
 
@@ -116,7 +140,10 @@ export default function Minimap({
       // half-disc inside it, so some of these cells are corners no boat can
       // reach. Painting them as fog advertises water that is not there, and
       // somebody would spend a long evening trying to sail into it.
-      if (Math.hypot(c.x, c.y) > OUTER_EDGE) continue
+      if (Math.hypot(c.x - hf.cx, c.y - hf.cy) > hf.r) continue
+      // And the reef is the flat side: cells on the far side of it belong to
+      // the OTHER sea and are not this chart's to draw.
+      if (hf.dir === 1 ? c.y < hf.flat : c.y > hf.flat) continue
       const x = tx(c.x - FOG_CELL / 2)
       const y = ty(c.y - FOG_CELL / 2)
       if (fogHas(fog, i)) {
@@ -140,14 +167,17 @@ export default function Minimap({
     ctx.setLineDash([4, 5])
     // The north wall, clipped to the chord the disc actually reaches at that
     // latitude rather than run the full width of a box the sea does not fill.
-    const half = Math.sqrt(Math.max(0, OUTER_EDGE * OUTER_EDGE - NORTH_WALL * NORTH_WALL))
+    const dy = hf.flat - hf.cy
+    const half = Math.sqrt(Math.max(0, hf.r * hf.r - dy * dy))
     ctx.beginPath()
-    ctx.moveTo(tx(-half), ty(NORTH_WALL))
-    ctx.lineTo(tx(half), ty(NORTH_WALL))
+    ctx.moveTo(tx(hf.cx - half), ty(hf.flat))
+    ctx.lineTo(tx(hf.cx + half), ty(hf.flat))
     ctx.stroke()
     ctx.beginPath()
-    const lift = Math.asin(Math.min(1, Math.abs(NORTH_WALL) / OUTER_EDGE))
-    ctx.arc(tx(0), ty(0), OUTER_EDGE * s, -lift, Math.PI + lift)
+    const lift = Math.asin(Math.min(1, Math.abs(dy) / hf.r))
+    // The arc runs the long way round the side the sea is actually on.
+    if (hf.dir === 1) ctx.arc(tx(hf.cx), ty(hf.cy), hf.r * s, -lift, Math.PI + lift)
+    else ctx.arc(tx(hf.cx), ty(hf.cy), hf.r * s, Math.PI - lift, lift)
     ctx.stroke()
     ctx.setLineDash([])
 
@@ -271,7 +301,7 @@ export default function Minimap({
     // off the bottom of its own panel.
     const CHROME = 210
     const fit = () => setW(Math.round(Math.min(
-      window.innerWidth - 40, 620, Math.max(220, (window.innerHeight - CHROME) * ASPECT))))
+      window.innerWidth - 40, 620, Math.max(220, (window.innerHeight - CHROME) * (worldW(HALVES[side]) / worldH(HALVES[side]))))))
     fit()
     window.addEventListener('resize', fit)
     return () => window.removeEventListener('resize', fit)

@@ -41,6 +41,7 @@ import { openBottle, digHere, type BottleResult, type DigResult, type DigState }
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
+import { getShip } from '@/lib/ships'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
@@ -742,7 +743,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
+  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, shipTier, side = 'fishing', dealtToday,
   auto, tideTurner, userId, tour,
 }: {
   fishingXP: number
@@ -806,6 +807,22 @@ export default function SeaMap({
   /** What stands on the Crew Hall's island: the tiers this captain has bought.
    *  Hall, drill yard, stores, each 1..6. */
   crewTiers: { hall: number; drill: number; stores: number }
+  /** The class of ship this captain owns, for the expedition side. */
+  shipTier: number
+  /**
+   * WHICH SEA THIS PAGE IS.
+   *
+   * Both are the same chart and the same sailing loop — the boat physics, the
+   * camera and the helm have no business being written twice. What changes is
+   * what you are sailing, what the reef's gap is signposted as, and which half
+   * of the world the minimap draws.
+   *
+   * Most of the fishing machinery needs no gate at all: traders refuse to spawn
+   * north of the reef, Finn's haunts are derived south of it, and the bands and
+   * their hotspots are rings around the Mainland. They are already absent up
+   * there by construction rather than by a flag.
+   */
+  side?: 'fishing' | 'expeditions'
   dealtToday: string[]
   /** The specials the CLIENT has to drive. See FishingHere for why these three
    *  are the only ones that needed carrying out here. */
@@ -1376,7 +1393,10 @@ export default function SeaMap({
    *  loop reads and writes; the state is only so React can draw the prompt. */
   /** Which sea the boat is in: true north of the reef, on the expedition side.
    *  Only ever changed while inside the gate's mouth — see the crossing rule. */
-  const sideRef = useRef(false)
+  const sideRef = useRef(side === 'expeditions')
+  /** One crossing per page. The navigation is async, so the loop keeps running
+   *  for a few frames after the push and would otherwise fire it again. */
+  const crossedRef = useRef(false)
   /**
    * THE FOG.
    *
@@ -2785,6 +2805,18 @@ export default function SeaMap({
       const wasNorth = sideRef.current
       const isNorth = pos.current.y < NORTH_WALL
       if (inGate(pos.current.x)) {
+        // ── THROUGH THE ARCH IS A NAVIGATION ─────────────────────────
+        //
+        // Crossing the reef inside the gate loads the other sea as its own
+        // page, because it is its own place: a different ship under you, a
+        // different half of the world on the chart, and a different set of
+        // things worth having in the corner of the screen. Sailing between them
+        // continuously would mean one page pretending to be both.
+        if (isNorth !== wasNorth && !crossedRef.current) {
+          crossedRef.current = true
+          vibrate([18, 40, 24])
+          router.push(side === 'fishing' ? '/expeditions/sea' : '/sea')
+        }
         sideRef.current = isNorth
       } else if (isNorth !== wasNorth) {
         pos.current.y = NORTH_WALL
@@ -3439,7 +3471,7 @@ export default function SeaMap({
         {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
             through the opening is what takes you to expeditions, so the opening
             is what has to say so. */}
-        <GateSign />
+        <GateSign to={side === 'expeditions' ? 'Fishing' : 'Expeditions'} />
 
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
@@ -3748,6 +3780,7 @@ hullRef={hullRefFor(t.key)} />
           position: 'absolute', left: '50%', top: '50%', zIndex: Z.boat,
           willChange: 'transform', pointerEvents: 'none',
         }}>
+        {side === 'expeditions' ? <ShipSprite tier={shipTier} /> : (
         <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
           gear={{
             ...gear,
@@ -3758,6 +3791,7 @@ hullRef={hullRefFor(t.key)} />
             rodColor: rodNow?.color ?? gear.rodColor,
           }}
           frame={frame} />
+        )}
       </div>
 
       {/* The prompt steps aside while the rod is out — the cast button is the
@@ -3858,7 +3892,7 @@ hullRef={hullRefFor(t.key)} />
       {/* THE LIGHT lives on the level bar's row while fishing — see
           FishingHere — and only sits on its own up here when the rod is stowed,
           because there is no bar to share a row with. */}
-      {!fishingIn && (
+      {side === 'fishing' && !fishingIn && (
         // A SYMBOL, NOT A NAME. The words were a label on a map, and the sky
         // already says what time it is in colour — the corner only has to
         // confirm it at a glance. `title` keeps the name for anyone who wants
@@ -3955,7 +3989,7 @@ hullRef={hullRefFor(t.key)} />
           be sailing with them.
 
           Shows a count when there is one and sits quiet at zero. */}
-      {(!fishingIn || wide) && (
+      {side === 'fishing' && (!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setCrewOpen(true) }}
@@ -4046,7 +4080,7 @@ hullRef={hullRefFor(t.key)} />
           moving them onto the water was that a crew is a place you sail to.
           What this fixes is not knowing, from anywhere, whether it is worth
           the sail yet. */}
-      {(trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide) && (
+      {side === 'fishing' && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setTrawlsPeek(true) }}
@@ -4214,7 +4248,7 @@ hullRef={hullRefFor(t.key)} />
       {/* ── THE DAY'S ORDERS ────────────────────────────────────────────
           Fourth in the HUD row. Nothing here claims anything: it is a readout,
           and the dot is the only thing it ever asks of you. */}
-      {orders && orders.challenges.length > 0 && (!fishingIn || wide) && (
+      {side === 'fishing' && orders && orders.challenges.length > 0 && (!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setOrdersOpen(true) }}
@@ -4306,6 +4340,7 @@ hullRef={hullRefFor(t.key)} />
         onClose={() => setMapOpen(false)}
         fog={fogRef.current}
         at={pos}
+        side={side}
         seaAt={p => seaAt(p, 0).solid}
         found={found}
         bearings={bearings}
@@ -4543,6 +4578,49 @@ function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
         )
       })}
     </>
+  )
+}
+
+/**
+ * WHAT YOU SAIL ON THE EXPEDITION SIDE.
+ *
+ * Not the fishing boat. Through the arch you are on the ship you actually own,
+ * and the whole point of owning a bigger one is that it is bigger — a Man-o-War
+ * next to a Rowboat should read as a different order of vessel before you have
+ * read a single word.
+ *
+ * WIDTHS ARE PER TIER, NOT A FORMULA. A smooth curve would give the middle
+ * classes sizes nobody chose; these are hand-set so each step up is visible and
+ * the top of the ladder is nearly three times the bottom. Measured against the
+ * fishing boat, which is 210 across: a Rowboat is smaller than the thing you
+ * fish from, and a Man-o-War dwarfs it.
+ */
+const SHIP_W: Record<number, number> = {
+  0: 150,  // Rowboat
+  1: 178,  // Dinghy
+  2: 214,  // Sloop
+  3: 258,  // Schooner
+  4: 306,  // Brigantine
+  5: 362,  // Galleon
+  6: 430,  // Man-o-War
+}
+
+function ShipSprite({ tier }: { tier: number }) {
+  const def = getShip(tier)
+  const w = SHIP_W[Math.max(0, Math.min(6, tier))] ?? SHIP_W[0]
+  return (
+    <div style={{
+      position: 'relative', width: w,
+      // Centred on the hull rather than the sprite box, so the camera follows
+      // the ship and not the empty air above its masts.
+      transform: 'translate(-50%, -58%)',
+      filter: 'drop-shadow(0 14px 22px rgba(0,0,0,0.5))',
+      pointerEvents: 'none',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={def.imageUrl ?? '/models/rowboat_v2.png'} alt="" draggable={false}
+        decoding="async" style={{ width: '100%', display: 'block' }} />
+    </div>
   )
 }
 
@@ -5740,7 +5818,7 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * Counter-squashed and lifted clear, like every other label on this chart —
  * a label was never lying on the water.
  */
-const GateSign = memo(function GateSign() {
+const GateSign = memo(function GateSign({ to }: { to: string }) {
   return (
     <div aria-hidden style={{
       position: 'absolute', left: GATE_X, top: NORTH_WALL - 210,
@@ -5759,7 +5837,7 @@ const GateSign = memo(function GateSign() {
         color: 'rgba(226,240,248,0.88)', margin: 0,
         textAlign: 'center', marginRight: '-0.24em',
         textShadow: '0 2px 16px rgba(0,0,0,0.98), 0 0 34px rgba(0,0,0,0.8)',
-      }}>Expeditions</p>
+      }}>{to}</p>
       {/* A rule under it, the width of the passage, so the word reads as
           belonging to THAT gap and not to the reef in general. */}
       <div style={{

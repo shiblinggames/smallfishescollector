@@ -12,6 +12,7 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
+import { GATE_X, NORTH_WALL } from './chart'
 import { getEffectiveRod } from '@/lib/rods'
 import { getLine } from '@/lib/lines'
 import { getReel } from '@/lib/reels'
@@ -34,7 +35,15 @@ import { getRenownState } from '../actions/renown'
 
 export const metadata = { title: 'The Sea' }
 
-export default async function SeaPage() {
+/**
+ * ONE PAGE BODY, TWO ROUTES.
+ *
+ * /sea and /expeditions/sea load exactly the same things — the same captain,
+ * the same chart, the same sailing loop — and differ in which half of the world
+ * they drop you into and what you are sailing while you are there. Two copies
+ * of three hundred lines of loading would be two copies that drift.
+ */
+export async function SeaPageBody({ side }: { side: 'fishing' | 'expeditions' }) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
@@ -247,6 +256,8 @@ export default async function SeaPage() {
       exploredRaw={(profile?.sea_explored as string | null) ?? null}
       discovered={discovered}
       digs={digs}
+      side={side}
+      shipTier={Number(profile?.ship_tier ?? 0)}
       homestead={homestead}
       // WHAT STANDS ON THE CREW HALL'S ISLAND. Three tiers off the profile, and
       // the island renders whichever art the captain has paid for — the same
@@ -273,9 +284,15 @@ export default async function SeaPage() {
           abyss:       profile?.zone_abyss_rewarded       ?? false,
         },
       }}
-      start={profile?.sea_x != null && profile?.sea_y != null
-        ? { x: Number(profile.sea_x), y: Number(profile.sea_y) }
-        : null}
+      // WHERE YOU COME IN. The saved position is a FISHING position — it is
+      // written as you sail the southern chart — so it means nothing on the far
+      // side of the reef. Arriving there puts you just north of the arch you
+      // came through, facing open water, which is also the way back.
+      start={side === 'expeditions'
+        ? { x: GATE_X, y: NORTH_WALL - 260 }
+        : (profile?.sea_x != null && profile?.sea_y != null
+          ? { x: Number(profile.sea_x), y: Number(profile.sea_y) }
+          : null)}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))
@@ -321,4 +338,8 @@ export default async function SeaPage() {
       }}
     />
   )
+}
+
+export default async function SeaPage() {
+  return SeaPageBody({ side: 'fishing' })
 }
