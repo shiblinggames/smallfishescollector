@@ -3266,25 +3266,38 @@ hullRef={hullRefFor(t.key)} />
 
       {/* CALLING ON SOMEBODY. Only within reach of the Homestead, and only
           when there is anybody to call on: an empty picker is a button that
-          teaches you nothing. Sits above the ashore prompt rather than
-          replacing it, because going to your own is still the common case. */}
+          teaches you nothing.
+
+          A CORNER BUTTON, NOT A SECOND PILL. It used to be a full-width
+          centred pill at bottom: 74 — which is inside the helm circle — so
+          approaching your own island stacked three controls into one thumb
+          zone: joystick, this, and the ashore pill under both. One action row
+          is the rule: the big pill is the primary, and a secondary action is a
+          small thing at the edge, not a second bar. Gold ring while a visit is
+          active, so the state the pill's text used to carry is not lost. */}
       {!fishingIn && near?.id === 'home' && guests.length > 0 && (
-        <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 74,
-          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
-        }}>
-          <button
-            onClick={e => { e.stopPropagation(); vibrate(8); setPicking(true) }}
-            data-no-steer
-            className="font-karla font-700"
-            style={{
-              padding: '0.42rem 0.9rem', borderRadius: 999, fontSize: '0.86rem',
-              color: '#dfe8f2', background: 'rgba(12,20,30,0.88)',
-              border: '1px solid rgba(180,214,232,0.34)', cursor: 'pointer',
-            }}>
-            {visiting ? `Visiting ${visiting.username} · change` : 'Call on a friend'}
-          </button>
-        </div>
+        <button
+          onClick={e => { e.stopPropagation(); vibrate(8); setPicking(true) }}
+          data-no-steer
+          aria-label={visiting ? `Visiting ${visiting.username} — change` : 'Call on a friend'}
+          title={visiting ? `Visiting ${visiting.username}` : 'Call on a friend'}
+          style={{
+            position: 'absolute', right: 14, bottom: 96, zIndex: Z.action,
+            width: 46, height: 46, borderRadius: '50%', padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: visiting ? '#f0c464' : '#dfe8f2',
+            background: 'rgba(12,20,30,0.9)',
+            border: `1px solid ${visiting ? 'rgba(240,196,100,0.65)' : 'rgba(180,214,232,0.34)'}`,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.45)', cursor: 'pointer',
+          }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </button>
       )}
 
       {/* DIGGING BEATS EVERYTHING. You are inside a band and possibly beside a
@@ -6412,6 +6425,12 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
   // Inset far enough that a marker and its label sit fully on screen.
   const mx = Math.min(64, hw * 0.22)
   const my = Math.min(74, hh * 0.22)
+  /** The BOTTOM inset is deeper than the other three. The bottom edge is where
+   *  the action pill and the helm live, and a marker pinned at 74px was
+   *  printing straight through them — the "!" with its metres sat behind the
+   *  ashore pill in the report that led here. Deep enough to clear the pill
+   *  row; side markers are unaffected because their x pins them first. */
+  const myBot = Math.min(170, hh * 0.5)
 
   /**
    * WHAT DESERVES AN ARROW, once the zones became rings.
@@ -6575,7 +6594,11 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
     if (shown.length >= COMPASS_MAX) break
     // Ray from the centre to the place, clamped to the inset rectangle.
     const ax = Math.abs(m.sx), ay = Math.abs(m.sy)
-    const t = Math.min(ax > 0.001 ? (hw - mx) / ax : Infinity, ay > 0.001 ? (hh - my) / ay : Infinity)
+    const t = Math.min(
+      ax > 0.001 ? (hw - mx) / ax : Infinity,
+      // Downward rays stop earlier — see myBot.
+      ay > 0.001 ? (hh - (m.sy > 0 ? myBot : my)) / ay : Infinity,
+    )
     const x = m.sx * t
     const y = m.sy * t
     if (placed.some(q => Math.hypot(q.x - x, q.y - y) < COMPASS_SPACING)) continue
