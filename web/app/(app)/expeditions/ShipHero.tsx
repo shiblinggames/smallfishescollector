@@ -19,7 +19,7 @@ import type { ShipStats } from '@/lib/expeditions'
 import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getShipClass, SHIP_CLASS_LINES, aggregateShipClasses, shipRefitCost, type ShipClassId } from '@/lib/shipClasses'
 import { navLevelReqForShip } from '@/lib/gearGating'
-import { SHIPS } from '@/lib/ships'
+import { SHIPS, MAX_SHIP_TIER, getShip, nextShip as nextHull, shipTierByName } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
@@ -418,8 +418,11 @@ const SHIP_PANEL = '#0b111b'
 // box. Uniform-width art means a Rowboat and a Man-o-War would otherwise
 // render identically, so the sense of scale that used to come free from
 // uneven canvas margins is made explicit here, where it can be tuned.
+// Drawn size by hull, so a Sloop does not fill the berth a Man-o-War needs.
+// 0 and 1 are kept as aliases of the Sloop for any profile still carrying a
+// legacy tier — without them a stale row would draw at full Man-o-War size.
 const HERO_TIER_SCALE: Record<number, number> = {
-  0: 0.74, 1: 0.79, 2: 0.85, 3: 0.90, 4: 0.94, 5: 0.97, 6: 1,
+  0: 0.85, 1: 0.85, 2: 0.85, 3: 0.90, 4: 0.94, 5: 0.97, 6: 1,
 }
 
 const shipPanelBg = (tint?: string) =>
@@ -722,7 +725,7 @@ export default function ShipHero({
   /** Which ship stat's explainer is open. */
   const [shipStatDetail, setShipStatDetail] = useState<string | null>(null)
 
-  const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
+  const shipTierForSlots = shipTierByName(shipStats.name)
   // Hull cap + the Ch4 Expanded Armory refit's extra mount (purchased flag),
   // plus any legacy class-pick itemSlots (none in production).
   const raidItemSlots = raidItemSlotsForTier(shipTierForSlots) + (aggregateShipClasses(shipClasses).itemSlots) + (hasArmoryExpansion ? 1 : 0)
@@ -2271,8 +2274,8 @@ export default function ShipHero({
 
               {loadoutTab === 'ship' && (<>
               {(() => {
-                const shipTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
-                const nextShip = SHIPS[shipTier + 1]
+                const shipTier = shipTierByName(shipStats.name)
+                const nextShip = nextHull(shipTier)
                 // ONE HEIGHT FOR EVERY TAB. The three tabs hold different numbers
                 // of tiles (Refits up to 3, Armament up to 2, Look 1), so the grid
                 // grew and shrank and the whole page jumped under your thumb as
@@ -2901,8 +2904,8 @@ export default function ShipHero({
                   setUpgradeOpen(false)
                   // Snapshot the before/after while `shipStats` still holds the
                   // OLD hull. router.refresh() swaps it underneath us.
-                  const oldTier = Math.max(0, SHIPS.findIndex(sh => sh.name === shipStats.name))
-                  const bought = SHIPS[oldTier + 1]
+                  const oldTier = shipTierByName(shipStats.name)
+                  const bought = nextHull(oldTier)
                   const a = EXPEDITION_SHIP_STATS[oldTier]
                   const b = EXPEDITION_SHIP_STATS[oldTier + 1]
                   if (bought && a && b) {
@@ -3369,7 +3372,7 @@ export default function ShipHero({
                     ) : !owned ? (
                       <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
                     ) : tierLocked ? (
-                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{SHIPS[skin.requiresShipTier!]?.name ?? 'Top hull'} only</span>
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{getShip(skin.requiresShipTier!).name} only</span>
                     ) : (
                       <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
                     )}
@@ -3492,12 +3495,15 @@ function UpgradeShipPanel({
   onBuy: () => void
   onClose: () => void
 }) {
-  const currentTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
+  const currentTier = shipTierByName(shipStats.name)
   const nextTier = currentTier + 1
-  const atMax = nextTier >= SHIPS.length
-  const nextShip = atMax ? null : SHIPS[nextTier]
+  // AGAINST THE TOP TIER, not the array's length. Those were the same number
+  // until the bottom two rungs came off; `nextTier >= SHIPS.length` would now
+  // call a Brigantine captain maxed out and hide the two hulls above them.
+  const atMax = currentTier >= MAX_SHIP_TIER
+  const nextShip = atMax ? null : nextHull(currentTier)
   const nextCombat = atMax ? null : EXPEDITION_SHIP_STATS[nextTier]
-  const currentShip = SHIPS[currentTier]
+  const currentShip = getShip(currentTier)
   const navReq = nextShip ? navLevelReqForShip(nextShip.cost) : 0
   const navMet = navLevel >= navReq
   const canAfford = !!nextShip && doubloons >= nextShip.cost

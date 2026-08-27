@@ -29,8 +29,7 @@ export function fishingLevelReqForCost(cost: number): number {
 
 /** Nav (expedition) Level required to buy a ship hull of the given price. */
 export function navLevelReqForShip(cost: number): number {
-  if (cost < 1_000) return 1      // Rowboat (0), Dinghy (500)
-  if (cost < 3_000) return 5      // Sloop (1,500)
+  if (cost < 3_000) return 1      // Sloop (0) — the free starting hull
   if (cost < 12_000) return 10    // Schooner (5,000)
   if (cost < 50_000) return 18    // Brigantine (22,000)
   if (cost < 150_000) return 30   // Galleon (80,000)

@@ -19,6 +19,43 @@ ships in the tackle economy — same word, different system.
 deliberately — reusing "berth" for hall slots would put two opposite meanings in the
 same files. Keep the vocabulary split.
 
+## The hull ladder starts at the Sloop
+
+Seven hulls became five (2026-08). The Rowboat and the Dinghy were removed and the
+**Sloop is free**, the hull every captain begins with. The live numbers made the case:
+55 of 81 captains had never bought a ship and 3 more had stopped at the Dinghy, so the
+bottom of the ladder was runway nobody walked. It bought durability and nothing that
+changed how a fight is fought.
+
+| Tier | Hull | Cost | Crew | Mounts | HP / speed / min dmg |
+|---|---|---|---|---|---|
+| 2 | Sloop | free | 1 | 1 | 35 / 4 / 4 |
+| 3 | Schooner | 5,000 ⟡ | 2 | 2 | 45 / 5 / 6 |
+| 4 | Brigantine | 22,000 ⟡ | 3 | 3 | 60 / 6 / 9 |
+| 5 | Galleon | 80,000 ⟡ | 4 | 4 | 85 / 8 / 14 |
+| 6 | Man-o-War | 200,000 ⟡ | 5 | 4 | 125 / 11 / 20 |
+
+Every rung now moves the crew count, which the old curve did not: four hulls used to
+carry a captain from 1 seat to 2.
+
+**The tier numbers did not shift, and must not.** `profiles.ship_tier` is read as a
+THRESHOLD in a dozen places that have nothing to do with this ladder — `MANOWAR_TIER`,
+the `ship_of_the_line` badge, ship skins' `requiresShipTier`/`imageByTier`, voyage
+routes' `minShipTier`, `RAID_ITEM_SLOTS`, `RAID_REPAIR_COST`. Renumbering means
+subtracting two from every one of them and a missed one fails silently, in the direction
+of giving things away. So the Sloop keeps tier 2 and the ladder simply has no bottom two
+rungs. A DB CHECK holds `ship_tier` between 2 and 6.
+
+**Index is no longer tier.** `SHIPS[n]` is wrong now; use `getShip(tier)`,
+`nextShip(tier)` and `shipTierByName(name)`. Anything comparing against `SHIPS.length`
+is also wrong — length is 5, the top tier is 6. That exact bug would have told a
+Brigantine captain they were maxed out and refused to sell them the last two hulls.
+`EXPEDITION_SHIP_STATS` keeps aliases at 0 and 1 pointing to the Sloop so a legacy tier
+still answers.
+
+**Voyage routes were left open.** Four of the five gate at `minShipTier: 2`, which every
+captain now meets. Deliberate: those gates are a floor for a future rung, not a lock.
+
 ## Design shape
 
 - Big buyables are GATED, not just priced: the Ultimate build (Man-o-War Mega) sits

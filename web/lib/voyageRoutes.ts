@@ -28,7 +28,10 @@ export interface RouteConfig {
   gemScale: number
   baseDoubloons: number
   /** Minimum ship tier required to set sail on this route. Coastal is open
-   *  to anyone (rowboat OK); deeper-water routes require a Sloop or better
+   *  to anyone; deeper-water routes ask for tier 2, which every captain now
+   *  has — the Sloop is the starting hull, so these gates are currently a
+   *  floor rather than a lock. Left in place deliberately: they are what a
+   *  future rung would be measured against
    *  since they have a crew-loss risk and we don't want to punish players
    *  who haven't upgraded their ship yet. */
   minShipTier: number

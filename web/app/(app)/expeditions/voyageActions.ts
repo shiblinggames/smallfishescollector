@@ -129,7 +129,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   if (!profile) return { error: 'Profile not found' }
 
   const shipTier = profile.ship_tier ?? 0
-  // Per-route ship gate. Coastal (rowboat OK) carries no crew-loss risk;
+  // Per-route ship gate. Coastal (open to every hull) carries no crew-loss risk;
   // the deeper routes do, and need at least a Sloop. See lib/voyageRoutes.
   const routeCfg = ROUTE_CONFIGS[route]
   if (!routeCfg) return { error: 'Unknown route' }

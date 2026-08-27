@@ -1,4 +1,4 @@
-import { SHIPS } from './ships'
+import { SHIPS, MIN_SHIP_TIER, MAX_SHIP_TIER } from './ships'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,8 +48,8 @@ export interface RunBuff {
 // upgrade should buy a felt-bigger survivability bump than its predecessor,
 // so the 22k→80k→200k cost climb feels rewarded. Step gains: +7, +8, +10,
 // +15, +25, +40. Galleon (+42% HP vs Brigantine) and Man-o-War (+47% HP vs
-// Galleon) are the headline endgame jumps. Early game (Rowboat → Schooner)
-// is unchanged.
+// Galleon) are the headline endgame jumps. The early game is unchanged; it
+// just starts at the Sloop now.
 //
 // minDamage curve steepened to match (tuned 2026-06-20): it feeds the raid
 // damage base (shipMin + 2 + power/4) AND floors hitMin, but at endgame crew
@@ -58,10 +58,14 @@ export interface RunBuff {
 // (steps +1/+2/+3/+5/+6) so the 200k hull reads as real guns (~29% over a
 // Brigantine at 120 crew power) without inflating the early raids, where the
 // low tiers barely move. Crew power is still the dominant scaler.
+//
+// STARTS AT TIER 2. The Rowboat and Dinghy came off the ladder (see lib/ships)
+// and the Sloop drops to ONE crew seat — as the free starting hull it should
+// hand out a bench, not a party. That also fixes something the old curve did
+// badly: every rung now moves the crew count, where before four hulls carried a
+// captain from 1 seat to 2 and two of them changed nothing but hit points.
 const EXPEDITION_COMBAT_STATS: Record<number, Omit<ShipStats, 'name' | 'image'>> = {
-  0: { durability:  20, speed: 2,  crewSlots: 1, minDamage: 1  },
-  1: { durability:  27, speed: 3,  crewSlots: 1, minDamage: 2  },
-  2: { durability:  35, speed: 4,  crewSlots: 2, minDamage: 4  },
+  2: { durability:  35, speed: 4,  crewSlots: 1, minDamage: 4  },
   3: { durability:  45, speed: 5,  crewSlots: 2, minDamage: 6  },
   4: { durability:  60, speed: 6,  crewSlots: 3, minDamage: 9  },
   5: { durability:  85, speed: 8,  crewSlots: 4, minDamage: 14 },
@@ -72,21 +76,39 @@ export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntri
   SHIPS.map(s => [s.tier, { name: s.name, image: s.imageUrl ?? '', ...EXPEDITION_COMBAT_STATS[s.tier] }])
 )
 
+// ── LEGACY TIERS 0 AND 1 STILL ANSWER ────────────────────────────────────────
+// The Rowboat and the Dinghy are gone, but `profiles.ship_tier` is a stored
+// number and 0 was its default for the whole of the game's life. A migration
+// lifts every captain to the Sloop; this covers the row that migration has not
+// reached yet, the profile created from an older default, and the fifteen-odd
+// call sites that read `EXPEDITION_SHIP_STATS[tier]` or fall back to `[0]`.
+//
+// Aliases rather than a clamp at each of those sites, because a clamp is
+// something a future call site can forget to do. Reading a tier that no longer
+// exists should quietly mean "the bottom of the ladder", and this is the one
+// place that decides what the bottom is.
+EXPEDITION_SHIP_STATS[0] = EXPEDITION_SHIP_STATS[MIN_SHIP_TIER]
+EXPEDITION_SHIP_STATS[1] = EXPEDITION_SHIP_STATS[MIN_SHIP_TIER]
+
 // ── Raid item slot cap by ship tier ──────────────────────────────────────────
 // How many raid items the captain can equip at once. Scales with the ship —
 // bigger hulls have the deck space + the crew to keep more kit ready in a
 // fight. Hand-tuned curve mirrors crew slots but caps lower so an endgame
 // loadout can't stack every Epic + Legendary effect at once:
-//   tier 0/1 Rowboat / Dinghy →   1
-//   tier 2/3 Sloop / Schooner →   2
-//   tier 4   Brigantine        →   3   (the previous global default)
+//   tier 2   Sloop             →   1
+//   tier 3   Schooner           →   2
+//   tier 4   Brigantine         →   3   (the previous global default)
 //   tier 5/6 Galleon / Man-o-War → 4
+//
+// The Sloop mounts ONE. It is the free hull now, and a starting captain with
+// two effects running every fight has been handed the interesting half of the
+// system before earning any of it.
 const RAID_ITEM_SLOTS: Record<number, number> = {
-  0: 1, 1: 1, 2: 2, 3: 2, 4: 3, 5: 4, 6: 4,
+  2: 1, 3: 2, 4: 3, 5: 4, 6: 4,
 }
 
 export function raidItemSlotsForTier(tier: number): number {
-  return RAID_ITEM_SLOTS[Math.max(0, Math.min(tier, 6))] ?? 3
+  return RAID_ITEM_SLOTS[Math.max(MIN_SHIP_TIER, Math.min(tier, MAX_SHIP_TIER))] ?? 1
 }
 
 // ── Raid sink penalty ─────────────────────────────────────────────────────────
@@ -94,8 +116,6 @@ export function raidItemSlotsForTier(tier: number): number {
 // again. Scales by ship tier (a bigger boat costs more to patch up). Moderate
 // scale: roughly one good raid's take at mid tiers, recoverable.
 const RAID_REPAIR_COST: Record<number, number> = {
-  0: 50,
-  1: 90,
   2: 150,
   3: 240,
   4: 350,
@@ -104,7 +124,11 @@ const RAID_REPAIR_COST: Record<number, number> = {
 }
 
 export function raidRepairCost(shipTier: number): number {
-  return RAID_REPAIR_COST[shipTier] ?? RAID_REPAIR_COST[0]
+  // Clamped rather than defaulted. A legacy tier of 0 or 1 is a Sloop now, and
+  // falling through to the cheapest entry would have quietly charged the
+  // hardest-to-reach captains the least.
+  return RAID_REPAIR_COST[Math.max(MIN_SHIP_TIER, Math.min(shipTier, MAX_SHIP_TIER))]
+    ?? RAID_REPAIR_COST[MIN_SHIP_TIER]
 }
 
 // ── Crew variant stat boosts ──────────────────────────────────────────────────

@@ -11,20 +11,32 @@ export interface ShipDef {
   imageUrl?: string
 }
 
+// ── WHY THE LADDER STARTS AT TIER 2 ───────────────────────────────────────
+// The Rowboat and the Dinghy were removed (2026-08). They were four hulls of
+// runway before crew slots moved at all — Rowboat through Schooner took a
+// captain from 1 seat to 2 — and the live numbers said nobody walked it: 55 of
+// 81 captains had never bought a ship, and 3 more had stopped at the Dinghy.
+// Two hulls that bought durability and nothing that changed how a fight is
+// fought, sitting between a new captain and the first upgrade that does.
+//
+// THE TIER NUMBERS DID NOT SHIFT. `profiles.ship_tier` is stored per player and
+// read as a threshold in a dozen places that have nothing to do with this file
+// — the Man-o-War gate on the ultimate build, `ship_of_the_line`, ship skins,
+// voyage routes, repair fees. Renumbering would mean subtracting two from every
+// one of them, and a missed one fails silently in the direction of giving
+// things away. So the Sloop keeps tier 2 and the ladder simply has no bottom
+// two rungs. Index and tier are NO LONGER THE SAME NUMBER: look hulls up by
+// `.tier` through the helpers below, never by `SHIPS[n]`.
+export const MIN_SHIP_TIER = 2
+export const MAX_SHIP_TIER = 6
+
 export const SHIPS: ShipDef[] = [
   {
-    tier: 0, name: 'Rowboat', cost: 0,
-    description: 'A humble start on the open sea.',
-    color: '#a07858', imageUrl: '/models/rowboat_v2.png',
-  },
-  {
-    tier: 1, name: 'Dinghy', cost: 500,
-    description: 'Small but reliable. A step up from rowing.',
-    color: '#9ca3af', imageUrl: '/models/dinghy_v2.png',
-  },
-  {
-    tier: 2, name: 'Sloop', cost: 1500,
-    description: 'A single-masted workhorse of the seas.',
+    // Free, because it is where everyone starts now. Its stats are unchanged
+    // from when it was a 1,500 purchase, so a new captain begins sturdier than
+    // the old Rowboat left them.
+    tier: 2, name: 'Sloop', cost: 0,
+    description: 'A single-masted workhorse of the seas. Yours from the off.',
     color: '#60a5fa', imageUrl: '/models/sloop_v2.png',
   },
   {
@@ -49,6 +61,23 @@ export const SHIPS: ShipDef[] = [
   },
 ]
 
+/** The hull at a tier. Anything below the floor reads as the Sloop, which is
+ *  what a legacy `ship_tier` of 0 or 1 now means. */
 export function getShip(tier: number): ShipDef {
-  return SHIPS[Math.min(Math.max(tier, 0), SHIPS.length - 1)]
+  const t = Math.min(Math.max(tier, MIN_SHIP_TIER), MAX_SHIP_TIER)
+  return SHIPS.find(s => s.tier === t) ?? SHIPS[0]
+}
+
+/** The next rung up, or null at the top. */
+export function nextShip(tier: number): ShipDef | null {
+  const t = Math.max(tier, MIN_SHIP_TIER)
+  return t >= MAX_SHIP_TIER ? null : (SHIPS.find(s => s.tier === t + 1) ?? null)
+}
+
+/** A hull's tier from its name. The ship screen only ever holds the display
+ *  stats, so this is how it finds its way back to a number — and it must be the
+ *  `.tier`, not the array position, which stopped agreeing with it when the
+ *  bottom two rungs came off. */
+export function shipTierByName(name: string): number {
+  return SHIPS.find(s => s.name === name)?.tier ?? MIN_SHIP_TIER
 }

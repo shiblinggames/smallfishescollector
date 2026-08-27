@@ -124,7 +124,7 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   if (!user) return
   const admin = createAdminClient()
   // Pull ship_tier so the slot cap scales with hull size (see
-  // raidItemSlotsForTier in lib/expeditions). A Rowboat captain gets 1
+  // raidItemSlotsForTier in lib/expeditions). A Sloop captain gets 1
   // slot; a Man-o-War captain gets 4.
   const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier, ship_classes, has_armory_expansion').eq('id', user.id).single()
   const owned = (profile?.raid_items as string[] | null) ?? []

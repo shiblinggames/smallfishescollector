@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { SHIPS } from '@/lib/ships'
+import { SHIPS, getShip, MAX_SHIP_TIER } from '@/lib/ships'
 import { buyShip, renameShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import { navLevelReqForShip } from '@/lib/gearGating'
@@ -21,7 +21,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
   const [nameInput, setNameInput] = useState(initialShipName ?? '')
   const [buying, setBuying] = useState<number | null>(null)
 
-  const activeShip = SHIPS[shipTier]
+  const activeShip = getShip(shipTier)
   const activeStats = EXPEDITION_SHIP_STATS[shipTier]
 
   function handleBuyShip(tier: number) {
@@ -139,7 +139,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
       {/* ── Available ships — only the upgrade path ahead. Boats you've
           already upgraded past aren't "owned" and you never sail them again,
           so they're hidden; your active hull is the hero above. ───────────── */}
-      {shipTier < SHIPS.length - 1 && (
+      {shipTier < MAX_SHIP_TIER && (
         <>
           <SectionLabel>Available Ships</SectionLabel>
 
@@ -252,7 +252,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
       )}
 
       {error && <p className="font-karla font-300 text-red-400 text-xs text-center mt-4">{error}</p>}
-      {shipTier === SHIPS.length - 1 && (
+      {shipTier >= MAX_SHIP_TIER && (
         <p className="font-karla font-300 italic text-center mt-6" style={{ color: '#5a5755', fontSize: '0.78rem' }}>
           Your fleet commands the sea.
         </p>

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { type ShipStats } from '@/lib/expeditions'
-import { SHIPS } from '@/lib/ships'
+import { getShip } from '@/lib/ships'
 import ShipViewer3D from '@/app/(app)/marketplace/shipyard/ShipViewer3D'
 
 const SHIP_STATS = [
@@ -12,7 +12,7 @@ const SHIP_STATS = [
 ]
 
 export default function ShipInfoPanel({ ship, shipTier }: { ship: ShipStats; shipTier: number }) {
-  const shipDef = SHIPS[shipTier]
+  const shipDef = getShip(shipTier)
   const [expanded, setExpanded] = useState(false)
 
   return (
