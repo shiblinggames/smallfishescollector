@@ -4790,6 +4790,10 @@ const LandmarkField = memo(function LandmarkField() {
  * effect.
  */
 const SUBMERGE: Record<string, { line: number; keep: number }> = {
+  // Moored boats. Barely under at all — a hull floats, it does not wade — but
+  // "barely" is not "not at all": with a hard edge at the waterline the raft
+  // read as sitting ON the sea rather than in it.
+  'trawl-fleet': { line: 88, keep: 0.26 },
   // A float on a chain, riding low.
   buoy:     { line: 66, keep: 0.30 },
   // Aground and going nowhere. Half of it is under.
@@ -5005,7 +5009,7 @@ function recallPos(): { x: number; y: number } | null {
 }
 
 const SeaMark = memo(function SeaMark({ m, i }: {
-  m: { art: string; x: number; y: number; size: number; sway?: 'bob' | 'rock' }
+  m: { art: string; x: number; y: number; size: number; sway?: 'bob' | 'rock'; label?: string }
   i: number
 }) {
   const kind = markKind(m.art)
@@ -5045,6 +5049,26 @@ const SeaMark = memo(function SeaMark({ m, i }: {
           without clobbering that. One element trying to do both means the
           animation overwrites the counter-squash and it lies flat the moment it
           starts moving. */}
+      {/* THE NAME, for the few marks that have one. Counter-squashed like the
+          islands' captions: it rides in the world layer so it travels with the
+          thing it names, but a label left on the plane renders 58% tall and
+          unreadable. A SIBLING of the sprite wrapper, never a child of it —
+          that wrapper already carries the counter-squash and nesting a second
+          one inside it doubles the correction. */}
+      {m.label && (
+        <div aria-hidden style={{
+          position: 'absolute', left: 0, top: 0,
+          transform: `translate(-50%, 10px) scaleY(${1 / GROUND})`,
+          transformOrigin: 'top center',
+          whiteSpace: 'nowrap', pointerEvents: 'none',
+        }}>
+          <p className="font-cinzel font-700" style={{
+            fontSize: '1.02rem', color: '#dfeaf2',
+            textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 26px rgba(0,0,0,0.7)',
+          }}>{m.label}</p>
+        </div>
+      )}
+
       <div style={{
         position: 'absolute', left: 0, top: 0, width: m.size,
         transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,

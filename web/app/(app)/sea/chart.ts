@@ -282,6 +282,10 @@ export const TRAWL_FLEET = { x: 900, y: 1100, range: 300 }
 export const LANDMARKS: {
   art: string; x: number; y: number; size: number
   solid?: boolean; sway?: 'bob' | 'rock'
+  /** Named on the chart. Almost nothing here is: a buoy is a buoy and a rock is
+   *  a rock. The fleet gets one because it is somewhere you GO, and a place you
+   *  are meant to steer to has to say what it is from across the water. */
+  label?: string
 }[] = [
   // ── THE TRAWL FLEET ──────────────────────────────────────────────────
   // Three smacks rafted together in the Shallows, a short sail south-east of
@@ -292,8 +296,12 @@ export const LANDMARKS: {
   // Placed by measurement, not by eye: 1,421 from the origin so it sits inside
   // the Shallows (inner 1,400), 921 clear of the Mainland's own mooring ring so
   // its prompt cannot fight the go-ashore one, and 2,262 from the nearest isle.
-  // NOT `solid` — you sail in among them, which is most of the appeal.
-  { art: '/sea/trawl-fleet.png', x: TRAWL_FLEET.x, y: TRAWL_FLEET.y, size: 280, sway: 'bob' },
+  // SOLID. You pull ALONGSIDE a raft of moored boats; sailing through them is
+  // the one thing that would say they are a picture rather than a place. The
+  // hull stops at size*0.3 + HULL = 139 from the centre, well inside the 300
+  // where the prompt is already up, so you are always offered the trawl before
+  // you are stopped by the boats.
+  { art: '/sea/trawl-fleet.png', x: TRAWL_FLEET.x, y: TRAWL_FLEET.y, size: 280, sway: 'bob', solid: true, label: 'Trawls' },
   { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
   { art: '/sea/islet.png', x:   1003, y:   2620, size: 210, solid: true },
   { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },
