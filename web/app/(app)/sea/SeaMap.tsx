@@ -3430,7 +3430,14 @@ hullRef={hullRefFor(t.key)} />
       <WaterBanner
         place={!fishingIn && near && near.kind === 'water' ? near : null}
         locked={near ? locked(near) : false}
-        lowered={false} />
+        // BELOW THE DISC ROW ON A PHONE. The banner centres itself and the
+        // discs hold the left corner, and both sat on the same top: 18 — fine
+        // on a monitor where the centre is nowhere near the corner, but on a
+        // 390px screen a long water name (THE SHALLOWS, tracked out at 0.2em)
+        // reaches the third disc and the two print over each other. hudSize is
+        // already the "how much room is this screen" signal: at its phone value
+        // the name takes the next row down.
+        lowered={hudSize === 26} />
 
       {/* THE BIG CENTRE-SCREEN CROSSING SPLASH IS GONE, deliberately. The
           waters are concentric rings, so an ordinary sail crosses several in a
@@ -6449,8 +6456,9 @@ function HotspotBadge({ spot, compact }: { spot: Hotspot | null; compact: boolea
 
 function WaterBanner({ place, locked, lowered }: {
   place: Place | null; locked: boolean
-  /** Drop below the level bar while the rod is out. The bar owns the top of the
-   *  screen then, and the banner was landing straight on top of it. */
+  /** Drop below the top row. Two callers, two reasons: while the rod is out
+   *  the level bar owns the top of the screen, and on a phone the HUD discs
+   *  do — either way the name must not print over what is already there. */
   lowered: boolean
 }) {
   const [shown, setShown] = useState<Place | null>(null)
@@ -6476,7 +6484,7 @@ function WaterBanner({ place, locked, lowered }: {
           exit={{ opacity: 0, y: -10, transition: { duration: 0.35 } }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: 'absolute', left: 0, right: 0, top: lowered ? 76 : 18,
+            position: 'absolute', left: 0, right: 0, top: lowered ? 56 : 18,
             zIndex: Z.hud,
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             pointerEvents: 'none',
