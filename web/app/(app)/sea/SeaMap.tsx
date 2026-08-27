@@ -2966,8 +2966,23 @@ export default function SeaMap({
         // scale) but it has to TRAVEL at the same rate the islands do, or the
         // water visibly slides against the land as you sail.
         const zx = zoomRef.current
-        const ox = (((pos.current.x + now / 1000 * 5.5) * zx) % DEEP_TILE + DEEP_TILE) % DEEP_TILE
-        const oy = (((pos.current.y + now / 1000 * 2.5) * zx * GROUND) % DEEP_TILE + DEEP_TILE) % DEEP_TILE
+        // ── THE WATER ZOOMS WITH EVERYTHING ELSE ────────────────────
+        //
+        // The tile's SIZE is written every frame, not just its offset. It used
+        // to be natural-size forever while the world layer scaled — so on a
+        // zoom the islands and the boat grew and the water did not, and the eye
+        // read the only thing filling the screen as a background sliding rather
+        // than a camera moving in.
+        //
+        // Worse, the offset is `pos * zoom` taken modulo a FIXED period, so
+        // changing the zoom moved the numerator without moving the wrap point:
+        // the texture physically jumped sideways. Scaling the period with it is
+        // what makes the whole thing continuous — both sides of the modulo move
+        // together, so the water simply gets bigger.
+        const dP = DEEP_TILE * zx
+        deep.style.backgroundSize = `${dP}px ${dP}px`
+        const ox = (((pos.current.x + now / 1000 * 5.5) * zx) % dP + dP) % dP
+        const oy = (((pos.current.y + now / 1000 * 2.5) * zx * GROUND) % dP + dP) % dP
         deep.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
       }
       // ── THE BAND'S OWN WATER ─────────────────────────────────────
@@ -3000,8 +3015,10 @@ export default function SeaMap({
         if (cur) {
           const zx = zoomRef.current
           const T = cur.tile.size
-          const ox = (((pos.current.x + now / 1000 * cur.drift.x) * zx) % T + T) % T
-          const oy = (((pos.current.y + now / 1000 * cur.drift.y) * zx * GROUND) % T + T) % T
+          const sP = T * zx
+          sfEl.style.backgroundSize = `${sP}px ${sP}px`
+          const ox = (((pos.current.x + now / 1000 * cur.drift.x) * zx) % sP + sP) % sP
+          const oy = (((pos.current.y + now / 1000 * cur.drift.y) * zx * GROUND) % sP + sP) % sP
           sfEl.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
           // THE ONE PLACE THIS MEETS THE CLOCK. Light marks dim when there is
           // no light to catch; dark marks stay. See inkStrength.
@@ -3012,8 +3029,10 @@ export default function SeaMap({
       const pale = paleRef.current
       if (pale) {
         const zx = zoomRef.current
-        const ox = (((pos.current.x - now / 1000 * 3.5) * zx) % PALE_TILE + PALE_TILE) % PALE_TILE
-        const oy = (((pos.current.y + now / 1000 * 6.5) * zx * GROUND) % PALE_TILE + PALE_TILE) % PALE_TILE
+        const pP = PALE_TILE * zx
+        pale.style.backgroundSize = `${pP}px ${pP}px`
+        const ox = (((pos.current.x - now / 1000 * 3.5) * zx) % pP + pP) % pP
+        const oy = (((pos.current.y + now / 1000 * 6.5) * zx * GROUND) % pP + pP) % pP
         pale.style.transform = `translate3d(${-ox}px, ${-oy}px, 0)`
         // The pale layer is light ON water, so there has to be less of it in
         // water that is not catching any. One opacity write, no repaint.
@@ -3199,8 +3218,13 @@ export default function SeaMap({
           <>
             <div ref={deepRef} style={{
               position: 'absolute', left: 0, top: 0,
-              width: `calc(100% + ${DEEP_TILE}px)`,
-              height: `calc(100% + ${DEEP_TILE}px)`,
+              // OVERSIZED FOR THE BIGGEST THE TILE CAN GET. The period is now
+              // TILE * zoom, and zoom runs to the window fit (0.82) times the
+              // wheel (1.6) times the fishing push-in (1.42) — call it 1.9. A
+              // wrapped offset can be a whole period, so the slack has to cover
+              // that or the far edge of the sheet walks into view at max zoom.
+              width: `calc(100% + ${Math.ceil(DEEP_TILE * 2)}px)`,
+              height: `calc(100% + ${Math.ceil(DEEP_TILE * 2)}px)`,
               backgroundImage: `url(${tiles.deep})`, backgroundRepeat: 'repeat',
               transformOrigin: '0 0', willChange: 'transform',
             }} />
@@ -3209,15 +3233,15 @@ export default function SeaMap({
                 floating in it. Image and opacity are the loop's to write. */}
             <div ref={surfaceRef} style={{
               position: 'absolute', left: 0, top: 0,
-              width: 'calc(100% + 660px)',
-              height: 'calc(100% + 660px)',
+              width: 'calc(100% + 1320px)',
+              height: 'calc(100% + 1320px)',
               backgroundRepeat: 'repeat', opacity: 0,
               transformOrigin: '0 0', willChange: 'transform, opacity',
             }} />
             <div ref={paleRef} style={{
               position: 'absolute', left: 0, top: 0,
-              width: `calc(100% + ${PALE_TILE}px)`,
-              height: `calc(100% + ${PALE_TILE}px)`,
+              width: `calc(100% + ${Math.ceil(PALE_TILE * 2)}px)`,
+              height: `calc(100% + ${Math.ceil(PALE_TILE * 2)}px)`,
               backgroundImage: `url(${tiles.pale})`, backgroundRepeat: 'repeat',
               transformOrigin: '0 0', willChange: 'transform, opacity',
             }} />
