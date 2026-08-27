@@ -56,6 +56,7 @@ const FinnScene = dynamic(() => import('../fishing/FinnScene'), { ssr: false })
 const AncientRankUp = dynamic(() => import('../fishing/AncientRankUp'), { ssr: false })
 const VigilCapstone = dynamic(() => import('../fishing/VigilCapstone'), { ssr: false })
 import { buildFishZones, ZONE_DIFFICULTY, FISH_DIFFICULTY_SPEED, type ZoneDef } from '../fishing/depths'
+import { applyAncientPalette } from '@/lib/ancientDial'
 import { castLine, reelIn, reelCrate, useTideTurnerSkip, rerollWormhole, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from '../fishing/actions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { levelCatchBonus } from '@/lib/fishingLevel'
@@ -174,6 +175,10 @@ type Hooked = {
   doubleCatch?: boolean
   catchQty?: number
   lockedStage?: number
+  /** The Vigil rank this giant is being fought at. castLine has always
+   *  returned it; out here nothing read it, so the dial never knew it was
+   *  looking at an ancient. */
+  vigilRank?: number
 }
 
 /** Everything the shared ResultCard needs. `reelIn` already returns all of it —
@@ -462,10 +467,24 @@ export default function FishingHere({
   const sfxRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  /**
+   * IS THIS ONE OF THE SIX GIANTS?
+   *
+   * The same test the fishing screen uses: an ancient_deep fish with no sell
+   * value, which is what a trophy is. Out here nothing asked, so a Megalodon
+   * came up on the ordinary blue-and-gold dial — the same fight, dressed as a
+   * mackerel, depending on which door you came through.
+   */
+  const ancientFight = useMemo(() => {
+    if (!hooked) return false
+    const f = log.allFishSpecies.find(x => x.id === hooked.fishId)
+    return f?.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0
+  }, [hooked, log.allFishSpecies])
+
   const zones: ZoneDef[] = useMemo(() => {
     if (!hooked) return []
     const zd = ZONE_DIFFICULTY[zone] ?? ZONE_DIFFICULTY.shallows
-    return buildFishZones(
+    const base = buildFishZones(
       hooked.catchDifficulty,
       mods.hookTier,
       mods.linePenalty,
@@ -473,7 +492,10 @@ export default function FishingHere({
       levelCatchBonus(mods.fishingLevel) + baitBonus + mods.rodCatchBonus,
       mods.rodPerfectBonus + 1,
     )
-  }, [hooked, zone, mods, baitBonus])
+    // The eldritch palette, at the rank being fought. Shared with the fishing
+    // screen rather than copied — see lib/ancientDial.
+    return ancientFight ? applyAncientPalette(base, hooked.vigilRank) : base
+  }, [hooked, zone, mods, baitBonus, ancientFight, log.allFishSpecies])
 
   // THE DIAL IS THE ONLY THING THAT MATTERS while it is up. Announced to the
   // map so it can stop its whole loop rather than competing for frames with the
@@ -501,6 +523,28 @@ export default function FishingHere({
   const [streak, setStreak] = useState(0)
   /** XP floated off the boat, where the boat is. */
   const [xpPop, setXpPop] = useState<{ id: number; value: number } | null>(null)
+
+  /**
+   * THE BAR HAS TO MOVE.
+   *
+   * `fishingXP` is a prop: what the server knew when the CHART loaded. It never
+   * changes again while you fish, so the bar at the top sat perfectly still for
+   * a whole session and only jumped once you stowed the rod and the page
+   * refetched. The floating "+140 XP" was the only sign anything had happened,
+   * and a number that flies away is not a progress bar.
+   *
+   * Live locally, seeded from the prop, and every reel adds what the SERVER
+   * said it granted. Never a number computed here: reelIn applies prestige,
+   * renown, the rod's perfect multiplier and the streak, and a client that
+   * guessed at that would drift within a dozen casts.
+   *
+   * The resync matters as much as the seed. A server prop copied into state
+   * once goes stale the moment anything else moves the same value — a trawl
+   * paying out, a level reward landing — so it re-seeds whenever the prop
+   * actually changes.
+   */
+  const [xp, setXp] = useState(fishingXP)
+  useEffect(() => { setXp(fishingXP) }, [fishingXP])
 
   /** Does the result card actually need to scroll? Measured, and only after it
    *  has finished arriving — see the note on the container. */
@@ -906,6 +950,7 @@ export default function FishingHere({
           jackpotMult: res.jackpotMult,
           doubleCatch: res.doubleCatch,
           catchQty: res.catchQty,
+          vigilRank: res.vigilRank,
           lockedStage: res.lockedStage,
         })
         setPhase('hooked')
@@ -1086,6 +1131,9 @@ export default function FishingHere({
         // is server authoritative and reelIn owns it.
         setStreak(res.perfectStreak ?? 0)
         setXpPop({ id: Date.now(), value: res.xpGained })
+        // The bar climbs by exactly what the popup says, so the two can never
+        // tell different stories about the same catch.
+        setXp(v => v + (res.xpGained ?? 0))
         // The server clamps catchQty to the space actually left, so this is the
         // number that went in rather than the number that was rolled.
         onCaught(res.catchQty ?? 1)
@@ -1467,7 +1515,7 @@ export default function FishingHere({
             {/* The chip only becomes tappable when both of these are set —
                 see XPBarDisplay. They were never passed, so a captain at 100
                 had a Renown readout they could not open. */}
-            <XPBarDisplay xp={fishingXP} bestStreak={streak}
+            <XPBarDisplay xp={xp} bestStreak={streak}
               renownAvailable={renownPoints} onOpenRenown={onOpenRenown} />
           </div>
         </div>
@@ -1518,6 +1566,12 @@ export default function FishingHere({
                   now — it changes at a bite, at a retry and at the freeze, and
                   never once per frame. */}
               <DialSVG zones={zones} angle={angle} rotation={zoneRot}
+                // THE DIAL CATCHES FIRE ON A STREAK, the same two steps the
+                // fishing screen has always had. Out here it never lit, so the
+                // one visible reward for holding a streak was missing from the
+                // screen the streak is earned on.
+                fireLevel={streak >= 3 ? 2 : streak === 2 ? 1 : 0}
+                ancientBoss={ancientFight}
                 // NEUTRAL, not yellow: the crossing paint owns the colour from
                 // the first frame of the spin, exactly like the original.
                 needleColor="rgba(255,255,255,0.35)" zoneOpacityFn={() => 1}

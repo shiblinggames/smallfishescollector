@@ -49,7 +49,8 @@ import {
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay, petSlot } from '@/lib/pets'
-import { vigilScale, vigilNumeral, ANCIENT_IDS, VIGIL_MAX_RANK, VIGIL_FRAME, VIGIL_DIAL, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
+import { vigilScale, vigilNumeral, ANCIENT_IDS, VIGIL_MAX_RANK, VIGIL_FRAME, VIGIL_PET_ID, type VigilState } from '@/lib/ancientVigil'
+import { applyAncientPalette } from '@/lib/ancientDial'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
@@ -233,27 +234,8 @@ function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDe
 // so it adopts these tones for free. Only the 6 trophies get this — the 12 sellable
 // regulars keep the normal look. Applied after applyBossMods so precision's
 // converted bands recolor as void too.
-const ANCIENT_ZONE_COLOR: Record<ZoneType, string> = {
-  catch:   '#22d3ee', // cyan — the water that will land the giant
-  perfect: '#fde68a', // gold stays the target (universal read)
-  penalty: '#fb5f7a', // hot rose — danger, but hotter/pinker than the normal red
-  miss:    '#4b3a63', // void-violet — dead water
-}
-/** The ancient dial, repainted for the rank being fought.
- *
- *  Rank 1 (and any non-Vigil ancient catch) gets ANCIENT_ZONE_COLOR, which is
- *  the palette as shipped. Higher ranks take their own from VIGIL_DIAL — see
- *  the rules that survive the repaint there: perfect stays the brightest band
- *  on the dial, and danger stays red. The needle inherits currentZone.color,
- *  so it adopts whichever palette is live for free. */
-function applyAncientPalette(zones: ZoneDef[], rank?: number): ZoneDef[] {
-  const pal = rank ? VIGIL_DIAL[rank] : undefined
-  return zones.map(z => ({
-    ...z,
-    color: pal ? (pal[z.type] ?? ANCIENT_ZONE_COLOR[z.type] ?? z.color)
-      : ANCIENT_ZONE_COLOR[z.type] ?? z.color,
-  }))
-}
+// ANCIENT_ZONE_COLOR and applyAncientPalette moved to lib/ancientDial so the
+// chart's dial can be the same instrument. One palette, two screens.
 
 // Megalodon (fish id 143) is the final-final boss. The SERVER gates it out of the
 // pool until the other five giants are on the wall (see fishing/actions.ts); this
