@@ -203,7 +203,6 @@ export default function ShipyardClient(p: {
     else router.push('/sea')
   }, [router])
 
-  const [tab, setTab] = useState<'locker' | 'upgrades'>('locker')
   /** Which berth's picker is open. 0 is the rod in your hands and never
    *  opens one — that swap is the locker's Rod slot. */
   const [berth, setBerth] = useState<number | null>(null)
@@ -518,97 +517,63 @@ export default function ShipyardClient(p: {
           </p>
         )}
 
-        {/* ── WHAT THE RIG ADDS UP TO ── directly under the picture it is the
-            sum of, so the numbers and the thing they describe read as one. */}
-        <div style={{ marginTop: 12 }}>
-          <LoadoutStats
-            rodTier={equipped} reelTier={reelTier} hookTier={hookTier} lineTier={p.lineTier}
-            completionistEffects={effects}
-            fishingLevel={p.fishingLevel}
-            boatId={boat} hullTier={hull} handlingTier={handling} accelTier={accel}
-            sub="Everything in the picture above, added up."
+        {/* ── YOUR BOAT ── what the boat IS, rather than what is on it.
+            OUT FROM BEHIND A TAB. These five were the back half of a two-tab
+            strip, so the things you come to a shipyard to buy were the things
+            you could not see. They are the first thing under the picture now. */}
+        <Band title="Your boat" sub="What she is. Bought once, and it stays bought." />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <BoatRow
+            label="Rod rack" name={`${slots} berth${slots === 1 ? '' : 's'}`} accent="#67d4e8"
+            now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
+            does={EXPLAIN.rack.does}
+            next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
+            cost={rackCost}
+            busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('rack') }}
+          />
+          <BoatRow
+            label="Hull" name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
+            now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
+            does={EXPLAIN.hull.does}
+            next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`}
+            cost={hullCost}
+            busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('hull') }}
+          />
+          <BoatRow
+            label="Rudder" name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
+            now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
+            does={EXPLAIN.handling.does}
+            next={handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`}
+            cost={handlingCost}
+            busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('handling') }}
+          />
+          <BoatRow
+            label="Rig" name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
+            now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
+            does={EXPLAIN.accel.does}
+            next={accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`}
+            cost={accelCost}
+            busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('accel') }}
+          />
+          <BoatRow
+            label="Fish hold" name={getFishHold(hold).name} accent="#f0c040"
+            now={String(cap)} unit="fish aboard"
+            does={EXPLAIN.hold.does}
+            next={holdNext ? `${holdNext.capacity} fish` : null}
+            cost={holdNext?.cost ?? null}
+            busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('hold') }}
           />
         </div>
 
-        {/* ── TWO TABS ── what is on the boat, and what the boat is.
-            The locker's OWN tab strip is off (variant="locker"): its Shop tab
-            and its Stats tab would each be a second copy of something already
-            on this page. */}
-        <div style={{
-          display: 'flex', gap: 3, marginTop: 16,
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 12, padding: 3,
-        }}>
-          {([['locker', 'Locker'], ['upgrades', 'Upgrades']] as const).map(([key, label]) => {
-            const on = tab === key
-            return (
-              <button key={key} type="button" onClick={() => setTab(key)}
-                className="font-karla font-800 uppercase tracking-[0.1em] tap"
-                style={{
-                  flex: 1, padding: '0.72rem 0', borderRadius: 10, fontSize: 'var(--sy-3)', cursor: 'pointer',
-                  border: on ? '1px solid rgba(240,192,64,0.55)' : '1px solid transparent',
-                  color: on ? '#f5d98a' : 'rgba(255,255,255,0.6)',
-                  background: on ? 'linear-gradient(180deg, rgba(240,192,64,0.22), rgba(224,168,46,0.10))' : 'transparent',
-                  boxShadow: on ? 'inset 0 0 14px rgba(240,192,64,0.12)' : 'none',
-                }}>
-                {label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* ── UPGRADES ── what the boat IS, rather than what is on it.
-            FIVE cards now, so the grid wraps to two rows rather than squeezing
-            five into three columns. */}
-        {tab === 'upgrades' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 12 }}>
-            <BoatCard
-              name="Rod Rack" accent="#67d4e8"
-              now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
-              next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
-              cost={rackCost}
-              busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
-              onBuy={() => { setErr(''); setConfirm('rack') }}
-            />
-            <BoatCard
-              name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
-              now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
-              next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}% speed`}
-              cost={hullCost}
-              busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
-              onBuy={() => { setErr(''); setConfirm('hull') }}
-            />
-            <BoatCard
-              name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
-              now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
-              next={handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`}
-              cost={handlingCost}
-              busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
-              onBuy={() => { setErr(''); setConfirm('handling') }}
-            />
-            <BoatCard
-              name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
-              now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
-              next={accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`}
-              cost={accelCost}
-              busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
-              onBuy={() => { setErr(''); setConfirm('accel') }}
-            />
-            <BoatCard
-              name={getFishHold(hold).name} accent="#f0c040"
-              now={String(cap)} unit="fish in the hold"
-              next={holdNext ? `${holdNext.capacity} fish` : null}
-              cost={holdNext?.cost ?? null}
-              busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
-              onBuy={() => { setErr(''); setConfirm('hold') }}
-            />
-          </div>
-        )}
-
-        {/* ── THE LOCKER ── every slot on the boat and nothing else: no tab
-            strip, no shop, no stats panel, no fisher preview. See `variant`. */}
-        {tab === 'locker' && (
-          <div style={{ marginTop: 12 }}>
+        {/* ── YOUR RIG ── every slot on the boat. Unchanged in what it DOES;
+            what changed is that it now sits under a heading that says what it
+            is, instead of appearing when you pressed a tab. */}
+        <Band title="Your rig" sub="What you carry. Tap a slot to change it." />
           <GearScreen
             variant="locker"
             baitInventory={p.baitInventory}
@@ -773,8 +738,18 @@ export default function ShipyardClient(p: {
             // themselves; only the drawer's own dismiss ever used this.
             onClose={() => {}}
           />
-          </div>
-        )}
+
+        {/* ── THE TOTAL ── last, because it is the sum of BOTH bands above and
+            not just the picture. It used to sit directly under the hero, which
+            put a table of numbers between you and everything the page is for. */}
+        <Band title="What it adds up to" sub="Every slot and every upgrade, totalled." />
+        <LoadoutStats
+          rodTier={equipped} reelTier={reelTier} hookTier={hookTier} lineTier={p.lineTier}
+          completionistEffects={effects}
+          fishingLevel={p.fishingLevel}
+          boatId={boat} hullTier={hull} handlingTier={handling} accelTier={accel}
+          sub="The boat, the rig and the trim, added up."
+        />
 
         <Link href="/sea" className="font-cinzel font-700 block text-center"
           style={{
@@ -980,8 +955,41 @@ export default function ShipyardClient(p: {
 
 /** One of the boat's three numbers. Deliberately narrow — three across on a
  *  phone — so the VALUE is what you read and the price is what you tap. */
-function BoatCard({ name, accent, now, unit, next, cost, busy, disabled, onBuy }: {
-  name: string; accent: string; now: string; unit: string
+/** A band heading. The page had none: five upgrade cards, a stats panel and a
+ *  locker grid all began at the same left edge with nothing saying where one
+ *  thing ended and the next started, which is most of why it read as one
+ *  undifferentiated pile. */
+function Band({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div style={{ marginTop: 26, marginBottom: 10 }}>
+      <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-6)', color: '#f2ead8', lineHeight: 1.1 }}>
+        {title}
+      </p>
+      <p className="font-karla font-600" style={{ fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.55)', marginTop: 2 }}>
+        {sub}
+      </p>
+      <div aria-hidden style={{
+        height: 1, marginTop: 9,
+        background: 'linear-gradient(90deg, rgba(180,214,232,0.32), rgba(180,214,232,0.04))',
+      }} />
+    </div>
+  )
+}
+
+/**
+ * ONE UPGRADE, and the whole reason this replaced BoatCard: it has a `does`.
+ *
+ * BoatCard rendered a name, a number, a unit and a buy button. Nothing on it
+ * said what sailing speed or turn rate or pick-up were FOR, so five upgrades
+ * shipped with zero sentences of explanation between them. The sentences did
+ * exist, in EXPLAIN, but only the confirm modal read them — so the game
+ * explained the purchase only after you had already decided to make it.
+ *
+ * Full width rather than a third of a row, because three columns is what forced
+ * the copy out in the first place: there was nowhere to put a sentence.
+ */
+function BoatRow({ label, name, accent, now, unit, does, next, cost, busy, disabled, onBuy }: {
+  label: string; name: string; accent: string; now: string; unit: string; does: string
   next: string | null; cost: number | null
   busy: boolean; disabled: boolean; onBuy: () => void
 }) {
@@ -990,34 +998,56 @@ function BoatCard({ name, accent, now, unit, next, cost, busy, disabled, onBuy }
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
       style={{
         display: 'flex', flexDirection: 'column',
-        padding: '0.6rem 0.5rem 0.5rem', borderRadius: 14,
-        background: `linear-gradient(180deg, ${accent}12 0%, rgba(255,255,255,0.02) 100%), #0b1620`,
-        border: `1px solid ${accent}38`,
+        padding: '0.85rem 0.9rem', borderRadius: 14,
+        background: `linear-gradient(180deg, ${accent}10 0%, rgba(255,255,255,0.015) 100%), #0b1620`,
+        border: `1px solid ${accent}33`,
       }}>
-      <p className="font-karla font-700 uppercase truncate" style={{
-        fontSize: 'var(--sy-1)', letterSpacing: '0.1em', color: `${accent}b0`,
-      }}>{name}</p>
-      <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-7)', color: '#f2ead8', lineHeight: 1.05, marginTop: 3 }}>
-        {now}
-      </p>
-      <p className="font-karla font-600" style={{ fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.5)', marginTop: 1, lineHeight: 1.3 }}>
-        {unit}
-      </p>
-      {maxed ? (
-        <p className="font-karla font-700" style={{ fontSize: 'var(--sy-2)', color: '#7fd6a0', marginTop: 'auto', paddingTop: 10 }}>
-          Fully upgraded
+      {/* THE READING, first and biggest. What the boat is right now is the
+          thing you came to check; what it could be is the offer underneath. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <p className="font-karla font-700 uppercase" style={{
+          flex: 1, minWidth: 0, fontSize: 'var(--sy-1)', letterSpacing: '0.12em', color: `${accent}b0`,
+        }}>{label}</p>
+        <p className="font-cinzel font-700" style={{
+          flexShrink: 0, fontSize: 'var(--sy-6)', color: '#f2ead8', lineHeight: 1,
+        }}>{now}</p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 2 }}>
+        <p className="font-cinzel font-700 truncate" style={{ flex: 1, minWidth: 0, fontSize: 'var(--sy-4)', color: '#dfeaf2' }}>
+          {name}
         </p>
+        <p className="font-karla font-600" style={{
+          flexShrink: 0, fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.5)',
+        }}>{unit}</p>
+      </div>
+
+      <p className="font-karla font-600" style={{
+        fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.72)', marginTop: 7, lineHeight: 1.5,
+      }}>{does}</p>
+
+      {maxed ? (
+        <p className="font-karla font-700" style={{
+          fontSize: 'var(--sy-3)', color: '#7fd6a0', marginTop: 10,
+        }}>Fully upgraded</p>
       ) : (
         <button onClick={onBuy} disabled={disabled} className="font-karla font-700"
           style={{
-            marginTop: 'auto', width: '100%', padding: '0.35rem 0.2rem', borderRadius: 9,
-            fontSize: 'var(--sy-2)', lineHeight: 1.35,
+            marginTop: 11, width: '100%', padding: '0.55rem 0.7rem', borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+            fontSize: 'var(--sy-3)', lineHeight: 1.3,
             color: disabled ? 'rgba(242,234,216,0.38)' : '#f2ead8',
-            background: 'rgba(240,192,64,0.13)',
-            border: '1px solid rgba(240,192,64,0.38)',
+            background: 'rgba(240,192,64,0.12)',
+            border: '1px solid rgba(240,192,64,0.36)',
             cursor: disabled ? 'default' : 'pointer',
           }}>
-          {busy ? '…' : <>{next}<br />{cost.toLocaleString()} ⟡</>}
+          {busy ? <span>Working…</span> : (
+            <>
+              <span>Upgrade to {next}</span>
+              <span style={{ flexShrink: 0, color: disabled ? 'rgba(240,192,64,0.45)' : '#f0c040' }}>
+                {cost.toLocaleString()} ⟡
+              </span>
+            </>
+          )}
         </button>
       )}
     </motion.div>
