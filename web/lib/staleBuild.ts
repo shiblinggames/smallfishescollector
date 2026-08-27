@@ -79,3 +79,15 @@ export function reloadOntoCurrentBuild(): boolean {
   window.location.replace(window.location.href)
   return true
 }
+
+/** Did this page load come from the guard's own reload a moment ago? Read by
+ *  the toast that names the flash. The window is generous because iOS can take
+ *  a few seconds to actually complete the navigation it was asked for. */
+export function justReloadedForBuild(): boolean {
+  try {
+    const last = Number(sessionStorage.getItem(KEY) ?? 0)
+    return last > 0 && Date.now() - last < 8000
+  } catch {
+    return false
+  }
+}
