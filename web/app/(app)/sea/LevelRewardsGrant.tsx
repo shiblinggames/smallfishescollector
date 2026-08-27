@@ -18,6 +18,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { rewardLabel, type LevelReward } from '@/lib/levelRewards'
+import { fishingLevelPerks, zonesUnlockedBetween } from '@/lib/fishingUnlocks'
+import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 
 export type Granted = { level: number; reward: LevelReward }[]
 
@@ -26,7 +28,14 @@ export default function LevelRewardsGrant({ granted, onDone }: {
   onDone: () => void
 }) {
   const top = granted[granted.length - 1]?.level ?? 0
+  const from = (granted[0]?.level ?? 1) - 1
   const many = granted.length > 1
+  // WHAT THE LEVEL OPENED, not just what it paid. A level-up that lists coin
+  // and says nothing about the water it just unlocked has buried the headline:
+  // the reward is spendable, the zone is a place you can now go.
+  const zones = zonesUnlockedBetween(from, top)
+  const gear = fishingGearUnlockedBetween(from, top)
+  const perks = fishingLevelPerks(top)
   return (
     <AnimatePresence>
       <motion.div
@@ -72,6 +81,40 @@ export default function LevelRewardsGrant({ granted, onDone }: {
               </div>
             ))}
           </div>
+
+          {(zones.length > 0 || gear.length > 0) && (
+            <div style={{ marginTop: 12 }}>
+              <p className="font-karla font-700 uppercase" style={{
+                fontSize: '0.66rem', letterSpacing: '0.16em', color: 'rgba(240,192,64,0.75)',
+                textAlign: 'left', marginBottom: 5,
+              }}>Now open to you</p>
+              {zones.map(z => (
+                <p key={z.key} className="font-cinzel font-700" style={{
+                  fontSize: '1rem', color: '#8fe3c0', textAlign: 'left', lineHeight: 1.5,
+                }}>{z.label}</p>
+              ))}
+              {gear.map((g, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.5 }}>
+                  {g.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={g.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain', flexShrink: 0 }} />
+                  )}
+                  <span className="font-karla font-600" style={{ fontSize: '0.85rem', color: '#cfe0ec' }}>
+                    {g.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* The two numbers every level moves. Small, because they are a
+              steady drip rather than an event, but a level that changed nothing
+              you can name is a level that felt like nothing. */}
+          <p className="font-karla font-600" style={{
+            fontSize: '0.78rem', color: 'rgba(190,212,228,0.55)', marginTop: 10, lineHeight: 1.55,
+          }}>
+            Catch zone +{perks.catchZone}°, bites {perks.biteSpeed}% quicker.
+          </p>
 
           {many && (
             // SAY WHY IT ARRIVED IN A HEAP. Several levels at once looks like a

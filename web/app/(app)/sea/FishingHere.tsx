@@ -57,6 +57,8 @@ const AncientRankUp = dynamic(() => import('../fishing/AncientRankUp'), { ssr: f
 const VigilCapstone = dynamic(() => import('../fishing/VigilCapstone'), { ssr: false })
 import { buildFishZones, ZONE_DIFFICULTY, FISH_DIFFICULTY_SPEED, type ZoneDef } from '../fishing/depths'
 import { applyAncientPalette } from '@/lib/ancientDial'
+import { renownLevel } from '@/lib/renown'
+import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 import { castLine, reelIn, reelCrate, useTideTurnerSkip, rerollWormhole, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from '../fishing/actions'
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { levelCatchBonus } from '@/lib/fishingLevel'
@@ -545,6 +547,16 @@ export default function FishingHere({
    */
   const [xp, setXp] = useState(fishingXP)
   useEffect(() => { setXp(fishingXP) }, [fishingXP])
+
+  /**
+   * RENOWN, PAST 100. One banked point per level crossed, and the overlay that
+   * says so was mounted on the fishing screen only — so a captain at the cap
+   * earned renown out here and nothing ever told them.
+   *
+   * Derived from XP exactly as the fishing screen derives it, which is only
+   * possible now that the XP above is live rather than a load-time snapshot.
+   */
+  const [renownUp, setRenownUp] = useState<RenownUpInfo | null>(null)
 
   /** Does the result card actually need to scroll? Measured, and only after it
    *  has finished arriving — see the note on the container. */
@@ -1133,7 +1145,13 @@ export default function FishingHere({
         setXpPop({ id: Date.now(), value: res.xpGained })
         // The bar climbs by exactly what the popup says, so the two can never
         // tell different stories about the same catch.
-        setXp(v => v + (res.xpGained ?? 0))
+        setXp(v => {
+          const next = v + (res.xpGained ?? 0)
+          const was = renownLevel('fishing', v)
+          const now = renownLevel('fishing', next)
+          if (now > was) setRenownUp({ skill: 'fishing', toLevel: now, points: now - was })
+          return next
+        })
         // The server clamps catchQty to the space actually left, so this is the
         // number that went in rather than the number that was rolled.
         onCaught(res.catchQty ?? 1)
@@ -1421,6 +1439,10 @@ export default function FishingHere({
           </motion.p>
         )}
       </AnimatePresence>
+
+      {/* PAST THE CAP. Every level beyond 100 banks a renown point, and this
+          is the only thing that says so. */}
+      <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
 
       {/* SECOND WIND. The rod handed the dial back. Without a cue this reads as
           the reel button simply not working. */}

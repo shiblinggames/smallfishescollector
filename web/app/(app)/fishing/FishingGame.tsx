@@ -77,6 +77,7 @@ import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { DialSVG, arcPath, polar, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
 import { ZONE_MIN_LEVEL } from './zoneData'
+import { fishingLevelPerks, zonesUnlockedBetween } from '@/lib/fishingUnlocks'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { DrawerHandle, DrawerClose } from '@/components/DrawerChrome'
 import { ZONES, HABITAT_COLOR, HABITAT_LABEL, HABITAT_TAGLINE, type ZoneKey, type FishSpeciesBasic } from './constants'
@@ -1488,23 +1489,8 @@ function FishInventory({ inventory, onSell }: {
  *  and catch-zone width scale linearly with level (see lib/fishingLevel
  *  and app/fishing/actions.ts fishWaitMs). Zone unlocks are checked against
  *  ZONE_MIN_LEVEL separately. */
-function fishingLevelPerks(level: number) {
-  return {
-    catchZone: Math.floor(level * 0.2),                                // degrees
-    biteSpeed: Math.round(((level - 1) / 99) * 33 * 10) / 10,          // percent
-  }
-}
-
-/** Returns the zones that unlock between two adjacent levels — the player
- *  sees a "Zone Unlocked" callout on the level-up overlay only when crossing
- *  a threshold. */
-function zonesUnlockedBetween(from: number, to: number): { key: string; label: string }[] {
-  const out: { key: string; label: string }[] = []
-  for (const [zone, min] of Object.entries(ZONE_MIN_LEVEL)) {
-    if (min > from && min <= to) out.push({ key: zone, label: HABITAT_LABEL[zone] ?? zone })
-  }
-  return out
-}
+// fishingLevelPerks and zonesUnlockedBetween moved to lib/fishingUnlocks, so
+// the chart can announce the same unlocks. One source, two screens.
 
 /** Stat-perk line for the level-up overlay. Cinzel value + caps label,
  *  styled to match NavLevelUpOverlay's stat-delta lines. */
