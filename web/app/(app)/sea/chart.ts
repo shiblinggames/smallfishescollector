@@ -341,7 +341,7 @@ export const RESIDENTS: {
   zoneId: string; name: string; line: string; x: number; y: number; rate: number
 }[] = [
   { zoneId: 'shallows', name: 'Meg Corrin',
-    line: "Bring it here and I'll weigh it here. Ashore they'll give you more, and a week to wait for it.",
+    line: "Bring it here and I'll weigh it here. Ashore they'll give you more, and a long haul home to collect it.",
     x: 1416, y: 2181, rate: 0.78 },
   { zoneId: 'open_waters', name: 'Bent Pell',
     line: "Fish don't keep and neither does my patience. Coin now, or row it home yourself.",

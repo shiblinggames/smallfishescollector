@@ -243,8 +243,8 @@ export default function TraderPanel({
                   memory of a number from another screen. */}
               <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
                 Paid now, right here.<br />
-                The market ashore pays full price, but you have to sail back for
-                it and wait for it to settle.
+                The market ashore pays full price, but the catch has to be
+                aboard when you get there.
               </p>
             </>
           ) : trader.deal === 'bait' ? (
