@@ -56,7 +56,7 @@ import CrewPanel from './CrewPanel'
 import SeaTour from './SeaTour'
 import SeaLandfallHint from './SeaLandfallHint'
 import { pendingPacts } from './pactActions'
-import { coastClip } from '@/lib/islandShape'
+import { coastClip, coastline } from '@/lib/islandShape'
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
 import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
@@ -4685,6 +4685,231 @@ const SeaMark = memo(function SeaMark({ m, i }: {
 })
 
 /**
+ * ── THE ISLAND BAKERY ──────────────────────────────────────────────────────
+ *
+ * An island used to be ~14 stacked divs: three blurred shoal washes, a blurred
+ * contact shadow, a cliff, and a top face holding five terrain bands, a crown,
+ * nine canopy blobs, a rim light and an inset shadow — every one clipped by a
+ * 160-point polygon, several carrying CSS blur() filters. All static, and all
+ * re-RASTERISED by the browser whenever the tiles they sit in scroll back into
+ * view or get evicted under memory pressure — which on a phone around the
+ * Mainland (four big islands and the reef in one screen) is constantly. The
+ * probe read it as raster hitches with a cheap loop: exactly the signature.
+ *
+ * So the static stack is painted ONCE into a canvas per island and shown as a
+ * single image. The two breathing surf rings stay as DOM: they animate
+ * transform/opacity under will-change, which composites from a texture
+ * rasterised once, so they were never the problem.
+ *
+ * CSS blur() is reproduced by the downscale trick — draw the shape into a
+ * small offscreen and scale it back up smoothed — rather than ctx.filter,
+ * which iOS Safari only gained recently. It is not gaussian-exact; on soft
+ * water washes nobody can tell.
+ *
+ * DPR is capped at 1.25: the art is deliberately soft, the Mainland's canvas
+ * is over a thousand CSS pixels across, and full-retina raster for four big
+ * islands is exactly the memory pressure this exists to relieve.
+ */
+const islandCache = new Map<string, HTMLCanvasElement>()
+
+function bakeIsland(id: string, d: number, locked: boolean, pad: number): HTMLCanvasElement {
+  const key = `${id}:${d}:${locked ? 1 : 0}`
+  const hit = islandCache.get(key)
+  if (hit) return hit
+
+  const dpr = Math.min(1.25, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1)
+  const D = d + pad * 2
+  const cv = document.createElement('canvas')
+  cv.width = Math.round(D * dpr)
+  cv.height = Math.round(D * dpr)
+  const ctx = cv.getContext('2d')!
+  ctx.scale(dpr, dpr)
+
+  const rs = coastline(id)
+  const C = pad + d / 2
+
+  /** Trace the coast at a scale of the island box, optionally offset. */
+  const trace = (g: CanvasRenderingContext2D, scale: number, cx = C, cy = C) => {
+    g.beginPath()
+    for (let i = 0; i < rs.length; i++) {
+      const a = (Math.PI * 2 * i) / rs.length
+      const r = (rs[i] / 100) * d * scale
+      const x = cx + Math.cos(a) * r
+      const y = cy + Math.sin(a) * r
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y)
+    }
+    g.closePath()
+  }
+
+  /** A 165deg linear gradient across a band's bounding box, like the CSS. */
+  const grad165 = (g: CanvasRenderingContext2D, scale: number, stops: [number, string][]) => {
+    const R = d * scale * 0.63
+    const lg = g.createLinearGradient(C - R * 0.26, C - R, C + R * 0.26, C + R)
+    for (const [at, col] of stops) lg.addColorStop(at, col)
+    return lg
+  }
+
+  /** The blur(): draw into an offscreen at 1/k scale, upscale smoothed. Two
+   *  passes for the big radii so the softness has no visible steps. */
+  const blurred = (draw: (g: CanvasRenderingContext2D, s: number) => void, blurPx: number) => {
+    const k = Math.max(2, Math.min(10, Math.round(blurPx / 2)))
+    const small = document.createElement('canvas')
+    small.width = Math.max(8, Math.round((D * dpr) / k))
+    small.height = small.width
+    const sg = small.getContext('2d')!
+    sg.scale((small.width / D), (small.width / D))
+    draw(sg, 1)
+    const mid = document.createElement('canvas')
+    mid.width = Math.max(16, Math.round((D * dpr) / 2))
+    mid.height = mid.width
+    const mg = mid.getContext('2d')!
+    mg.imageSmoothingQuality = 'high'
+    mg.drawImage(small, 0, 0, mid.width, mid.height)
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(mid, 0, 0, D, D)
+  }
+
+  // ── the shoal washes ─────────────────────────────────────────────
+  for (const [scale, col, blur] of [
+    [1.12, 'rgba(140,190,206,0.13)', 16],
+    [0.98, 'rgba(168,204,216,0.22)', 8],
+    [0.86, 'rgba(200,222,230,0.30)', 2],
+  ] as [number, string, number][]) {
+    blurred((g, _s) => { trace(g, scale); g.fillStyle = col; g.fill() }, blur)
+  }
+
+  // ── contact shadow, thrown toward the light's opposite ───────────
+  blurred((g) => {
+    trace(g, 0.78, C + ISLAND_LIFT * 0.34, C + ISLAND_LIFT * 0.5)
+    g.fillStyle = 'rgba(2,10,18,0.42)'
+    g.fill()
+  }, 9)
+
+  // ── cliff + top face, on their own layer so `locked` can grey them
+  //    without touching the water ────────────────────────────────────
+  const land = document.createElement('canvas')
+  land.width = cv.width; land.height = cv.height
+  const lg = land.getContext('2d')!
+  lg.scale(dpr, dpr)
+  const lift = ISLAND_LIFT / GROUND
+
+  const traceL = (scale: number, dy = 0) => {
+    lg.beginPath()
+    for (let i = 0; i < rs.length; i++) {
+      const a = (Math.PI * 2 * i) / rs.length
+      const r = (rs[i] / 100) * d * scale
+      const x = C + Math.cos(a) * r
+      const y = C + dy + Math.sin(a) * r
+      if (i === 0) lg.moveTo(x, y); else lg.lineTo(x, y)
+    }
+    lg.closePath()
+  }
+
+  // the cliff, dropped
+  traceL(0.74, lift)
+  lg.fillStyle = grad165(lg, 0.74, [[0, '#3b3226'], [0.55, '#2a2419'], [1, '#191509']])
+  lg.fill()
+
+  // the face, lifted, everything inside clipped to it
+  lg.save()
+  traceL(0.74, -lift)
+  lg.clip()
+  const face = (scale: number, fill: string | CanvasGradient) => {
+    traceL(0.74 * scale, -lift)
+    lg.fillStyle = fill
+    lg.fill()
+  }
+  face(10, grad165(lg, 0.74, [[0, '#b9a077'], [0.55, '#9c8259'], [1, '#7d6743']]))
+  face(0.97, grad165(lg, 0.72, [[0, '#cbb590'], [1, '#b89c72']]))
+  face(0.90, grad165(lg, 0.67, [[0, '#d8c49f'], [1, '#c2a97e']]))
+  face(0.81, grad165(lg, 0.60, [[0, '#9aa269'], [1, '#7d8850']]))
+  face(0.70, grad165(lg, 0.52, [[0, '#6f8a4e'], [0.62, '#55703c'], [1, '#466032']]))
+
+  // the crown — higher ground catching the light
+  {
+    const R = d * 0.74 * 0.48 * 0.63
+    const cx = C - R * 0.2, cy = C - lift - R * 0.55
+    const rg = lg.createRadialGradient(cx, cy, 0, cx, cy, R * 1.35)
+    rg.addColorStop(0, 'rgba(190,206,140,0.55)')
+    rg.addColorStop(0.48, 'rgba(150,176,105,0.22)')
+    rg.addColorStop(0.78, 'rgba(150,176,105,0)')
+    lg.fillStyle = rg
+    lg.fillRect(0, 0, D, D)
+  }
+
+  // the woods — the same nine seeded clumps the DOM drew
+  {
+    let h = 0
+    for (let i = 0; i < id.length; i++) h = (h * 37 + id.charCodeAt(i)) >>> 0
+    let st = h || 1
+    const nx = () => { st ^= st << 13; st >>>= 0; st ^= st >>> 17; st ^= st << 5; st >>>= 0; return st / 0x100000000 }
+    const faceD = d * 0.74
+    for (let i = 0; i < 9; i++) {
+      const a = nx() * Math.PI * 2
+      const rad = 4 + nx() * 19
+      const bx = C + ((Math.cos(a) * rad) / 100) * faceD
+      const by = C - lift + ((Math.sin(a) * rad * 0.9) / 100) * faceD
+      const rw = ((7 + nx() * 11) / 100) * faceD
+      const o = 0.20 + nx() * 0.26
+      const gx = bx - rw * 0.08, gy = by - rw * 0.13
+      const rg = lg.createRadialGradient(gx, gy, 0, gx, gy, rw * 0.78)
+      rg.addColorStop(0, `rgba(74,102,52,${o + 0.18})`)
+      rg.addColorStop(0.55, `rgba(46,68,34,${o})`)
+      rg.addColorStop(0.78, 'rgba(40,58,30,0)')
+      lg.save()
+      lg.translate(bx, by)
+      lg.scale(1, 0.82)
+      lg.translate(-bx, -by)
+      lg.fillStyle = rg
+      lg.beginPath()
+      lg.arc(bx, by, rw, 0, Math.PI * 2)
+      lg.fill()
+      lg.restore()
+    }
+  }
+
+  // rim light where the sky hits the top edge
+  {
+    const top = C - lift - d * 0.74 * 0.63
+    const rim = lg.createLinearGradient(0, top, 0, top + d * 0.74 * 1.26 * 0.2)
+    rim.addColorStop(0, 'rgba(240,248,250,0.34)')
+    rim.addColorStop(1, 'rgba(240,248,250,0)')
+    lg.fillStyle = rim
+    lg.fillRect(0, 0, D, D)
+  }
+
+  // the inset shadow the DOM did with box-shadow: a fat blurred stroke on the
+  // coast, of which the clip keeps only the inner half
+  lg.lineWidth = 64
+  lg.strokeStyle = 'rgba(0,0,0,0.34)'
+  lg.filter = 'blur(0px)'
+  traceL(0.74, -lift)
+  lg.stroke()
+  lg.lineWidth = 26
+  lg.strokeStyle = 'rgba(0,0,0,0.22)'
+  lg.stroke()
+
+  // brightness(0.94)-ish
+  lg.fillStyle = 'rgba(12,16,12,0.06)'
+  lg.fillRect(0, 0, D, D)
+  lg.restore()
+
+  if (locked) {
+    lg.globalCompositeOperation = 'saturation'
+    lg.fillStyle = 'rgb(120,120,120)'
+    lg.fillRect(0, 0, D, D)
+    lg.globalCompositeOperation = 'source-atop'
+    lg.fillStyle = 'rgba(0,0,0,0.45)'
+    lg.fillRect(0, 0, D, D)
+    lg.globalCompositeOperation = 'source-over'
+  }
+
+  ctx.drawImage(land, 0, 0, D, D)
+  islandCache.set(key, cv)
+  return cv
+}
+
+/**
  * A PIECE OF LAND, painted.
  *
  * Everything that makes an island look like an island and nothing that makes it
@@ -5855,13 +6080,23 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
               width: d * b.scale,
               transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
               transformOrigin: 'bottom center',
-              filter: locked
-                ? 'grayscale(0.9) brightness(0.5)'
-                : 'drop-shadow(0 6px 10px rgba(0,0,0,0.55))',
+              filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
             }}>
+              {/* THE SHADOW IS AN ELLIPSE, not a drop-shadow() filter. The
+                  filter pushed the sprite through an offscreen blur every time
+                  its raster tile came back into view, and around the Mainland
+                  that is a dozen buildings doing it at once. An ellipse under
+                  the feet reads the same at chart distance and costs one
+                  gradient fill. */}
+              <div aria-hidden style={{
+                position: 'absolute', left: '50%', bottom: -4,
+                width: '86%', height: 14, transform: 'translateX(-50%)',
+                borderRadius: '50%',
+                background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 55%, transparent 78%)',
+              }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img decoding="async" src={b.art} alt="" draggable={false}
-                style={{ width: '100%', display: 'block' }} />
+                style={{ width: '100%', display: 'block', position: 'relative' }} />
             </div>
           ))}
 
