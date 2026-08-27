@@ -390,12 +390,44 @@ const WATERLINE_Y = 34
  *  region — you pull alongside them, you do not "enter" them. */
 const HAIL_RANGE = 190
 
-const WAKE_MARKS = 16
-/** Milliseconds between marks. Shorter reads as a solid smear, longer as a
- *  dotted line. */
-const WAKE_EVERY = 85
-/** How long a mark takes to dissolve. */
-const WAKE_LIFE = 2100
+/**
+ * THE WAKE, AS A V.
+ *
+ * It used to be sixteen symmetric circles laid down the centreline, each
+ * growing uniformly as it faded. That reads as puffs dispersing behind the
+ * boat, not as a wake — because the one thing everybody recognises about a
+ * boat's wake seen from above is the V, and there was no V. Nothing about a
+ * ring tells you which way the hull went.
+ *
+ * Marks are laid in PAIRS now, one to port and one to starboard, and each
+ * drifts outward along the hull's beam as it ages. Two diverging lines, which
+ * is the shape. Each mark is also turned to the heading and stretched along it,
+ * so a single mark is a streak of disturbed water rather than a dot — and
+ * because they live inside the world layer, the plane's own squash shears that
+ * rotation exactly the way a real streak on the surface would foreshorten.
+ */
+/**
+ * THE POOL HAS TO OUTLAST THE MARKS, and it never did.
+ *
+ * A mark lives WAKE_LIFE and one pair is laid every WAKE_EVERY, so
+ * `WAKE_LIFE / WAKE_EVERY` pairs are on the water at any moment. The old
+ * numbers needed 25 marks and allocated 16 — so the ring buffer wrapped onto
+ * marks that were still visible and snuffed them, and the trail was quietly
+ * chopped off a third of the way along and restarted. That is its own answer
+ * to why the wake never looked like it went anywhere.
+ *
+ * 1900/95 is 20 pairs, and 22 are allocated: enough for the full trail with
+ * headroom, and 44 composited elements is a rounding error next to the blurred
+ * island layers this same loop stopped rasterising.
+ */
+const WAKE_EVERY = 95
+const WAKE_LIFE = 1900
+const WAKE_PAIRS = 22
+const WAKE_MARKS = WAKE_PAIRS * 2
+/** How far a mark slides off the centreline over its life, in world px. This
+ *  number IS the V's angle: too little and the two lines read as one thick
+ *  one, too much and the boat looks like it is dragging a net. */
+const WAKE_SPREAD = 62
 
 type Vec = { x: number; y: number }
 
@@ -768,7 +800,17 @@ export default function SeaMap({
    *  hull dropped it while the boat sails on. Recycled oldest-first, so there is
    *  no allocation in the loop and no garbage at 60fps. */
   const wakeRefs = useRef<(HTMLDivElement | null)[]>([])
-  const wakeAt = useRef(Array.from({ length: WAKE_MARKS }, () => ({ x: 0, y: 0, born: -9999 })))
+  const wakeAt = useRef(Array.from({ length: WAKE_MARKS }, () => ({
+    x: 0, y: 0, born: -9999,
+    /** Heading at birth, radians. The mark keeps it — the water does not turn
+     *  just because the boat did, which is what makes a turn leave a curve. */
+    ang: 0,
+    /** -1 to port, +1 to starboard. The pair that makes the V. */
+    side: 1,
+    /** How hard she was going when this was laid, 0..1. Fast water is brighter
+     *  and throws wider. */
+    force: 1,
+  })))
   const wakeNext = useRef(0)
   const wakeLast = useRef(0)
 
@@ -2555,18 +2597,31 @@ export default function SeaMap({
       // mark in the pool. Marks live in world coordinates inside the world
       // layer, so they stay put on the sea while the boat leaves them behind.
       const speed = Math.hypot(vel.current.x, vel.current.y)
-      if (speed > 55 && now - wakeLast.current > WAKE_EVERY) {
+      // A PAIR AT A TIME, port and starboard. The gate is lower than it was
+      // (55 left a boat under way at a crawl leaving nothing at all) and the
+      // force it was laid at is remembered rather than the mark simply
+      // existing — a hard run should look different from a drift.
+      if (speed > 26 && now - wakeLast.current > WAKE_EVERY) {
         wakeLast.current = now
-        const i = wakeNext.current
-        wakeNext.current = (i + 1) % WAKE_MARKS
-        wakeAt.current[i] = {
-          x: pos.current.x - (vel.current.x / speed) * 46 + WATERLINE_X / zoomRef.current,
-          // WATERLINE_Y is a SCREEN measurement and this is a world coordinate
-          // inside the squashed layer, so it has to be divided back out.
-          // WATERLINE_Y is a SCREEN measurement and this is a world coordinate
-          // inside the squashed, zoomed layer, so both have to be divided out.
-          y: pos.current.y - (vel.current.y / speed) * 46 + WATERLINE_Y / (GROUND * zoomRef.current),
-          born: now,
+        const ux = vel.current.x / speed
+        const uy = vel.current.y / speed
+        // The stern, in world coordinates. WATERLINE_* are SCREEN measurements
+        // taken off the sprite, so inside this squashed and zoomed layer both
+        // have to be divided back out.
+        const sx = pos.current.x - ux * 46 + WATERLINE_X / zoomRef.current
+        const sy = pos.current.y - uy * 46 + WATERLINE_Y / (GROUND * zoomRef.current)
+        const ang = Math.atan2(uy, ux)
+        const force = Math.min(1, speed / (SPEED * 0.9))
+        for (const side of [-1, 1] as const) {
+          const i = wakeNext.current
+          wakeNext.current = (i + 1) % WAKE_MARKS
+          // Started just off the centreline rather than on it, so the two lines
+          // are already separate where they leave the hull.
+          wakeAt.current[i] = {
+            x: sx + -uy * side * 7,
+            y: sy + ux * side * 7,
+            born: now, ang, side, force,
+          }
         }
       }
       for (let i = 0; i < WAKE_MARKS; i++) {
@@ -2581,10 +2636,27 @@ export default function SeaMap({
           if (el.style.opacity !== '0') el.style.opacity = '0'
           continue
         }
-        // Spreads as it fades, the way disturbed water settles.
-        el.style.opacity = String((1 - age) * 0.32)
+        // ── THE V ────────────────────────────────────────────────
+        // Perpendicular to the heading it was laid at, sliding outward as it
+        // ages. Eased rather than linear: the water leaves the hull fast and
+        // then settles, so most of the spread happens early and the far end of
+        // the wake is nearly parallel — which is what stops the V reading as a
+        // pair of straight rulers.
+        const out = WAKE_SPREAD * m.force * (1 - Math.pow(1 - age, 2.2))
+        const px = -Math.sin(m.ang) * m.side * out
+        const py = Math.cos(m.ang) * m.side * out
+
+        // Brightest at the hull and gone quickly after, rather than fading in a
+        // straight line — foam behaves that way and a linear fade is the main
+        // reason the old wake read as sixteen identical dots.
+        el.style.opacity = String(Math.pow(1 - age, 1.7) * 0.42 * (0.45 + m.force * 0.55))
+        // Stretched ALONG the heading and thin across it: a streak of disturbed
+        // water, not a ring. Growing mostly in the across axis as it settles.
+        const along = 0.55 + age * 0.7
+        const across = 0.3 + age * 1.5
         el.style.transform =
-          `translate3d(${m.x}px, ${m.y}px, 0) translate(-50%, -50%) scale(${0.5 + age * 2.0})`
+          `translate3d(${m.x + px}px, ${m.y + py}px, 0) translate(-50%, -50%) `
+          + `rotate(${m.ang}rad) scale(${along}, ${across})`
       }
       const ripples = rippleRef.current
       if (ripples) {

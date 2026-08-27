@@ -2575,15 +2575,21 @@ body.hardcore-gauntlet::after {
   position: absolute;
   left: 0;
   top: 0;
-  width: 54px;
-  /* Drawn round-ish because it lives on the ground plane and gets squashed to
-     58% by the world layer. At the old 16px it came out nine pixels tall and
-     read as a scratch rather than displaced water. */
-  height: 28px;
+  /* LONGER THAN IT IS WIDE, because the loop turns each mark to the heading
+     and scales it along that axis — so the base shape wants to already be a
+     streak. It was 54x28 and symmetric, which is a ring however you scale it,
+     and a ring cannot tell you which way the hull went. */
+  width: 76px;
+  height: 26px;
   border-radius: 50%;
   pointer-events: none;
   opacity: 0;
-  background: radial-gradient(ellipse at center, rgba(226,244,250,0.55), rgba(226,244,250,0) 70%);
+  /* Denser down the middle of the streak than at its ends, so the near edge
+     reads as foam and the tail dissolves. */
+  background: radial-gradient(ellipse 62% 100% at 38% 50%,
+    rgba(236,250,255,0.72) 0%,
+    rgba(226,244,250,0.34) 46%,
+    rgba(226,244,250,0) 76%);
   will-change: transform, opacity;
 }
 
