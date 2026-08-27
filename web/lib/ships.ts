@@ -47,6 +47,23 @@ export interface ShipDef {
    * mistaken for the keel.
    */
   seaKeel?: number
+  /**
+   * THE CUTWATER — where this hull parts the water, and so where its wake
+   * starts. Both numbers are fractions of the sprite's square canvas, x across
+   * and y down, which makes them independent of the size it happens to be drawn
+   * at and directly draggable on /sea/calibrate.
+   *
+   * This used to be one formula for all five: a fixed reach forward, multiplied
+   * by the hull's scale, which put every ship's origin at exactly 80% of the
+   * way to its own prow. That is a reasonable guess and it is wrong in a
+   * different direction on every hull — these are drawn in three-quarter view
+   * with bowsprits of very different lengths, and where the stem actually meets
+   * water is not something the bounding box knows.
+   *
+   * Defaults below are the old formula's output, so nothing moved until it was
+   * placed by eye.
+   */
+  seaBow?: { x: number; y: number }
 }
 
 // ── WHY THE LADDER STARTS AT TIER 2 ───────────────────────────────────────
@@ -77,6 +94,7 @@ export const SHIPS: ShipDef[] = [
     description: 'A single-masted workhorse of the seas. Yours from the off.',
     color: '#60a5fa', imageUrl: '/models/sloop_v2.png',
     seaImageUrl: '/ship-hero/sloop_v3.png',
+    seaBow: { x: 0.711, y: 0.683 },
     seaBeam: 0.53, seaKeel: 0.683,
   },
   {
@@ -84,6 +102,7 @@ export const SHIPS: ShipDef[] = [
     description: 'Twin masts and a steady hull. Earning starts here.',
     color: '#4ade80', imageUrl: '/models/schooner_v2.png',
     seaImageUrl: '/ship-hero/schooner_v3.png',
+    seaBow: { x: 0.747, y: 0.728 },
     seaBeam: 0.62, seaKeel: 0.728,
   },
   {
@@ -91,6 +110,7 @@ export const SHIPS: ShipDef[] = [
     description: 'Fast and capable. A privateer\'s best friend.',
     color: '#f0c040', imageUrl: '/models/brigantine_v2.png',
     seaImageUrl: '/ship-hero/brigantine_v3.png',
+    seaBow: { x: 0.787, y: 0.748 },
     seaBeam: 0.72, seaKeel: 0.748,
   },
   {
@@ -98,6 +118,7 @@ export const SHIPS: ShipDef[] = [
     description: 'A grand vessel. The sea respects your presence.',
     color: '#a78bfa', imageUrl: '/models/galleon_v2.png',
     seaImageUrl: '/ship-hero/galleon_v3.png',
+    seaBow: { x: 0.846, y: 0.855 },
     seaBeam: 0.87, seaKeel: 0.855,
   },
   {
@@ -105,6 +126,7 @@ export const SHIPS: ShipDef[] = [
     description: 'The most feared ship on the water.',
     color: '#ff6b35', imageUrl: '/models/man-o-war_v2.png',
     seaImageUrl: '/ship-hero/man-o-war_v3.png',
+    seaBow: { x: 0.886, y: 0.913 },
     seaBeam: 0.97, seaKeel: 0.913,
   },
 ]

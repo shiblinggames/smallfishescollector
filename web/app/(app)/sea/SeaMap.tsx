@@ -442,11 +442,19 @@ const WAKE_MARKS = WAKE_PAIRS * 2
  *  one, too much and the boat looks like it is dragging a net. */
 const WAKE_SPREAD = 62
 
-/** How far ahead of the boat's centre the water is parted, in world px, on the
- *  FISHING boat. Roughly the prow: the hull draws about 115 across, so this is
- *  a shade inside the tip, which is where the bow actually meets water rather
- *  than where the sprite happens to end. Multiplied by the hull's scale. */
-const BOW_REACH = 46
+/**
+ * WHERE THE FISHING BOAT PARTS THE WATER, as a fraction of its 210px sprite.
+ *
+ * The warships carry the same pair as `seaBow` on their own defs. Both are
+ * placed by eye on /sea/calibrate rather than derived, because a bounding box
+ * does not know where a stem meets water: these are three-quarter views with
+ * bowsprits of wildly different lengths, and the one formula that used to serve
+ * all of them put the origin at 80% of the way to the prow on every hull, which
+ * is wrong in a different direction each time.
+ */
+const FISHING_BOW = { x: 0.719, y: 0.662 }
+/** The Skipper sprite's width, which the fractions above are of. */
+const SKIPPER_W = 210
 
 /** How wide the fishing boat's hull actually draws: the boat overlay is 55% of
  *  the 210px Skipper sprite. The denominator of every hull comparison. */
@@ -1480,7 +1488,13 @@ export default function SeaMap({
    * Man-o-War close to three times, which is the ladder the art already draws.
    */
   const hull = useMemo(() => {
-    if (!onSortie) return { scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0 }
+    if (!onSortie) return {
+      scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0,
+      // The cutwater as OFFSETS from the sprite's centre, resolved once here so
+      // the frame loop never does this arithmetic sixty times a second.
+      bowFwd: (FISHING_BOW.x - 0.5) * SKIPPER_W,
+      bowDown: (FISHING_BOW.y - 0.5) * SKIPPER_W,
+    }
     const d = getShip(shipTier)
     const beam = d.seaBeam ?? 0.6
     const keel = d.seaKeel ?? 0.75
@@ -1502,6 +1516,8 @@ export default function SeaMap({
       // BIGGER on a bigger ship, it should be slower and darker, and this is
       // the number that says how far along that ladder a hull sits.
       weight: Math.min(1, Math.max(0, (beam - 0.53) / (0.97 - 0.53))),
+      bowFwd: ((d.seaBow?.x ?? 0.8) - 0.5) * WARSHIP_W,
+      bowDown: ((d.seaBow?.y ?? keel) - 0.5) * WARSHIP_W,
     }
   }, [onSortie, shipTier])
   // Mirrored into a ref for the frame loop, which must not read a prop.
@@ -3145,8 +3161,12 @@ export default function SeaMap({
         // the V opens from the point of the bow.
         //
         // That is the whole difference between floating along and cutting.
-        const sx = pos.current.x + ux * BOW_REACH * hull.scale + WATERLINE_X
-        const sy = pos.current.y + uy * BOW_REACH * hull.scale + hull.keelY / GROUND
+        // FORWARD along the heading, DOWN to the waterline. Both come off the
+        // hull's own cutwater now rather than one reach shared by every boat.
+        // The drop is divided by GROUND because it is a screen measurement off
+        // the sprite and the world layer is squashed; see the note below.
+        const sx = pos.current.x + ux * hull.bowFwd + WATERLINE_X
+        const sy = pos.current.y + uy * hull.bowFwd + hull.bowDown / GROUND
         const ang = Math.atan2(uy, ux)
         const force = Math.min(1, speed / (SPEED * 0.9))
         for (const side of [-1, 1] as const) {
