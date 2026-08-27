@@ -812,36 +812,83 @@ export default function MarketClient({
             <div style={{ margin: '0.6rem -0.3rem 0.3rem' }}>
               <Sparkline data={heroCurve} up={heroUp} height={56} fill />
             </div>
-            <div className="flex items-center justify-between" style={{ paddingTop: '0.35rem' }}>
-              <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a9488', ...TNUM }}>
-                {totalCount} fish · {portfolio.length} species
-              </p>
-              {!liquidateConfirm ? (
-                <button onClick={() => setLiquidateConfirm(true)} disabled={liquidating}
-                  className="font-karla font-700 uppercase tracking-[0.08em]"
-                  style={{ fontSize: '0.56rem', padding: '0.4rem 0.7rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.35)', color: '#f0c040', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  Sell all · full price
-                </button>
-              ) : null}
-            </div>
+            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a9488', paddingTop: '0.35rem', ...TNUM }}>
+              {totalCount} fish · {portfolio.length} species
+            </p>
 
-            {liquidateConfirm && (
-              <div style={{ marginTop: '0.7rem', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.7rem' }}>
-                <p className="font-karla font-400 mb-2" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
-                  Sell all {totalCount} fish for <span className="font-700" style={{ color: '#f0c040', ...TNUM }}>{liquidateValue.toLocaleString()} ⟡</span>{isPremium ? '' : ' (3% fee)'}? Paid straight away.
-                </p>
-                <div className="flex gap-2">
-                  <button onClick={() => setLiquidateConfirm(false)} className="font-karla font-600 flex-1"
-                    style={{ fontSize: '0.66rem', padding: '0.55rem', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: '#9a9488', cursor: 'pointer' }}>
-                    Keep fishing
+            {/* ── SELL ALL ────────────────────────────────────────────────
+                THE THING ALMOST EVERYONE CAME HERE TO DO, and it was a pill in
+                the bottom corner set in 0.56rem — nine pixels, the smallest
+                type on the page — sharing a line with the species count. The
+                per-species rows below are the SPECIALIST lane, for when you are
+                working the multipliers, and they were louder than the button
+                that empties the hold.
+
+                It matters more than it did. The market pays the full price and
+                the buyers out at sea pay 74 to 86 percent, so sailing home IS
+                the reward, and this button is the thing that collects it.
+
+                Still two steps, because it sells everything at once. What
+                changed is that the first step is now the largest thing in the
+                panel and the second names the number twice. */}
+            <div style={{ marginTop: '0.75rem' }}>
+              {!liquidateConfirm ? (
+                <>
+                  <button onClick={() => setLiquidateConfirm(true)} disabled={liquidating}
+                    className="font-cinzel font-700 tap"
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'baseline', justifyContent: 'center',
+                      gap: 10, flexWrap: 'wrap',
+                      padding: '0.85rem 1rem', borderRadius: 13,
+                      fontSize: '1.05rem', lineHeight: 1.2, color: '#1a1508',
+                      // The one SOLID control on the page. Every other gold here
+                      // is a translucent wash on dark, which is right for a row
+                      // in a list and wrong for the action the page exists to
+                      // offer. House rule says no solid gold FILLS on panels;
+                      // this is a button, and a primary button that looks like
+                      // every secondary one is not a primary button.
+                      background: 'linear-gradient(180deg, #f5cf6a 0%, #e0a82e 100%)',
+                      border: '1px solid rgba(255,232,170,0.65)',
+                      boxShadow: '0 6px 18px rgba(224,168,46,0.28)',
+                      cursor: 'pointer',
+                    }}>
+                    <span>Sell all {totalCount} fish</span>
+                    <span className="font-700" style={{ ...TNUM }}>{liquidateValue.toLocaleString()} ⟡</span>
                   </button>
-                  <button onClick={handleLiquidate} disabled={liquidating} className="font-karla font-700 uppercase tracking-[0.08em] flex-1"
-                    style={{ fontSize: '0.66rem', padding: '0.55rem', borderRadius: 9, background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.45)', color: '#f0c040', opacity: liquidating ? 0.5 : 1, cursor: liquidating ? 'default' : 'pointer', ...TNUM }}>
-                    {liquidating ? 'Selling…' : `Sell · ${liquidateValue.toLocaleString()} ⟡`}
-                  </button>
-                </div>
-              </div>
-            )}
+                  <p className="font-karla font-600" style={{
+                    fontSize: '0.68rem', color: '#9a9488', textAlign: 'center', marginTop: 6,
+                  }}>
+                    {isPremium
+                      ? 'Full market price, paid straight away.'
+                      : 'Paid straight away, less a 3% fee. Captains pay none.'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-karla font-600 mb-2" style={{ fontSize: '0.78rem', color: '#cfc9bd', textAlign: 'center' }}>
+                    Sell all {totalCount} fish for <span className="font-700" style={{ color: '#f0c040', ...TNUM }}>{liquidateValue.toLocaleString()} ⟡</span>? This cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setLiquidateConfirm(false)} disabled={liquidating}
+                      className="font-karla font-600 flex-1 tap"
+                      style={{ fontSize: '0.8rem', padding: '0.8rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: '#9a9488', cursor: 'pointer' }}>
+                      Keep fishing
+                    </button>
+                    <button onClick={handleLiquidate} disabled={liquidating}
+                      className="font-cinzel font-700 tap"
+                      style={{
+                        flex: 1.6, fontSize: '0.95rem', padding: '0.8rem', borderRadius: 12,
+                        color: '#1a1508',
+                        background: 'linear-gradient(180deg, #f5cf6a 0%, #e0a82e 100%)',
+                        border: '1px solid rgba(255,232,170,0.65)',
+                        opacity: liquidating ? 0.6 : 1, cursor: liquidating ? 'default' : 'pointer', ...TNUM,
+                      }}>
+                      {liquidating ? 'Selling…' : `Sell · ${liquidateValue.toLocaleString()} ⟡`}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
