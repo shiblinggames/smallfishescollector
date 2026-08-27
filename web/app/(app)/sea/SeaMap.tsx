@@ -1714,6 +1714,8 @@ export default function SeaMap({
    */
   const [orders, setOrders] = useState<DailyChallengeState | null>(null)
   const [ordersOpen, setOrdersOpen] = useState(false)
+  /** The trawls readout. Never claims anything; the fleet does that. */
+  const [trawlsPeek, setTrawlsPeek] = useState(false)
   const readOrders = useCallback(() => {
     void getDailyChallenge().then(setOrders).catch(() => { /* the icon just stays quiet */ })
   }, [])
@@ -1764,6 +1766,7 @@ export default function SeaMap({
       if (ashore) { setAshore(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); return }
+      if (trawlsPeek) { setTrawlsPeek(false); return }
       if (finnTalk) { setFinnTalk(null); return }
       if (hailing) { setHailing(null); return }
       if (picking) { setPicking(false); return }
@@ -1772,7 +1775,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, trawlOpen, ordersOpen, finnTalk, hailing, picking, crewOpen, mapOpen])
+  }, [find, ashore, trawlOpen, ordersOpen, trawlsPeek, finnTalk, hailing, picking, crewOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -3380,7 +3383,10 @@ export default function SeaMap({
             // chart is where facts about places belong. Nothing moves, nothing
             // interrupts — you notice it the next time you look at the chart,
             // which out here is constantly.
-            waiting={p.id === 'trawl_docks' ? trawlsReady : 0} />
+            // NOT THE TALLY HOUSE ANY MORE. Crews come back to the FLEET,
+            // so a "2 crew back" badge on this island would walk somebody a
+            // thousand pixels the wrong way. The badge moved with the work.
+            waiting={0} />
         ))}
         {/* THE TOP OF THE CHART. Rocks, not architecture — see reefRocks. The
             same SeaMark every other landmark goes through, so they get the
@@ -3425,7 +3431,7 @@ export default function SeaMap({
             now that the waters are bands — a ring has no box for an offset to
             be relative to. Rendered here rather than inside a place, which also
             means one pass over one array instead of five nested ones. */}
-        <LandmarkField />
+        <LandmarkField waiting={trawlsReady} />
 
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
@@ -3885,7 +3891,10 @@ hullRef={hullRefFor(t.key)} />
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!fishingIn && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
-          waitingAt={id => (id === 'trawl_docks' ? trawlsReady : 0)} />
+          // The compass points at PLACES, and the fleet is not one — it is a
+          // landmark on open water. Nothing to raise here now: what tells you
+          // a crew is back is the icon at the top and the badge on the boats.
+          waitingAt={() => 0} />
       )}
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
@@ -4064,6 +4073,117 @@ hullRef={hullRefFor(t.key)} />
           return false
         }
         return null
+      })()}
+
+      {/* ── THE TRAWLS ──────────────────────────────────────────────────
+          Fifth in the row, and a READOUT: what is out, and how long. Sending
+          and collecting both happen at the fleet, because the whole point of
+          moving them onto the water was that a crew is a place you sail to.
+          What this fixes is not knowing, from anywhere, whether it is worth
+          the sail yet. */}
+      {(trawlEndsAt.length > 0 || trawlsReady > 0) && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(8); setTrawlsPeek(true) }}
+          aria-label="Trawls"
+          title="Trawls"
+          data-no-steer
+          style={{
+            position: 'absolute', top: 18, left: hudAt(4), zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: hudSize, height: hudSize, padding: 0,
+            borderRadius: 999, cursor: 'pointer',
+            background: trawlsReady > 0 ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
+            border: `1px solid ${trawlsReady > 0 ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+          }}>
+          {/* A net. */}
+          <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
+            viewBox="0 0 24 24" fill="none"
+            stroke={trawlsReady > 0 ? '#f0c040' : 'rgba(214,232,240,0.8)'}
+            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 4h16l-2 6a6 6 0 0 1-12 0z" />
+            <path d="M8 4l1.5 12M16 4l-1.5 12M5 8h14" />
+          </svg>
+          {trawlsReady > 0 && (
+            <span aria-hidden style={{
+              position: 'absolute', top: 2, right: 2,
+              width: 9, height: 9, borderRadius: '50%',
+              background: '#f0c040', border: '2px solid rgba(4,10,18,1)',
+              boxShadow: '0 0 7px rgba(240,192,64,0.85)',
+            }} />
+          )}
+        </button>
+      )}
+
+      {trawlsPeek && (() => {
+        const now = Date.now()
+        const rows = trawlEndsAt
+          .map(t => new Date(t).getTime())
+          .sort((a, b) => a - b)
+        return (
+          <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+            <PopupShell open onClose={() => setTrawlsPeek(false)}>
+              <div onClick={e => e.stopPropagation()} style={{
+                margin: 'auto', width: '100%', maxWidth: 380,
+                borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
+                background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
+                border: '1px solid rgba(196,169,106,0.34)',
+                boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.26rem', color: '#f4ecd8' }}>Trawls</p>
+                  <button type="button" onClick={() => setTrawlsPeek(false)} aria-label="Close"
+                    style={{
+                      width: 30, height: 30, borderRadius: '50%', padding: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                      color: '#cfcabf', cursor: 'pointer',
+                    }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                  {rows.length === 0 ? (
+                    <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(190,212,228,0.6)', lineHeight: 1.55 }}>
+                      No crews out. Sail to the fleet to send one.
+                    </p>
+                  ) : rows.map((end, i) => {
+                    const left = end - now
+                    const back = left <= 0
+                    const mins = Math.max(0, Math.ceil(left / 60_000))
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'baseline', gap: 10,
+                        padding: '0.42rem 0', borderBottom: '1px solid rgba(255,255,255,0.07)',
+                      }}>
+                        <span className="font-karla font-600" style={{ flex: 1, fontSize: '0.84rem', color: '#e6e2dc' }}>
+                          Crew {i + 1}
+                        </span>
+                        <span className="font-karla font-700" style={{
+                          fontSize: '0.84rem', fontVariantNumeric: 'tabular-nums',
+                          color: back ? '#f0c040' : 'rgba(190,212,228,0.6)',
+                        }}>
+                          {back ? 'Back' : mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <p className="font-karla font-600" style={{
+                  fontSize: '0.78rem', color: trawlsReady > 0 ? '#f0c040' : 'rgba(190,212,228,0.55)',
+                  marginTop: 10, textAlign: 'center', lineHeight: 1.5,
+                }}>
+                  {trawlsReady > 0
+                    ? 'Sail to the fleet to bring them in.'
+                    : 'Sending and collecting both happen at the fleet.'}
+                </p>
+              </div>
+            </PopupShell>
+          </div>
+        )
       })()}
 
       {/* ── THE DAY'S ORDERS ────────────────────────────────────────────
@@ -4872,8 +4992,9 @@ const ReefLine = memo(function ReefLine() {
   return <>{REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}</>
 })
 
-const LandmarkField = memo(function LandmarkField() {
-  return <>{LANDMARKS.map((m, i) => <SeaMark key={i} m={m} i={i} />)}</>
+const LandmarkField = memo(function LandmarkField({ waiting }: { waiting: number }) {
+  // Only the labelled mark can carry a count, and there is exactly one of those.
+  return <>{LANDMARKS.map((m, i) => <SeaMark key={i} m={m} i={i} waiting={m.label ? waiting : 0} />)}</>
 })
 
 /**
@@ -5108,9 +5229,12 @@ function recallPos(): { x: number; y: number } | null {
   } catch { return null }
 }
 
-const SeaMark = memo(function SeaMark({ m, i }: {
+const SeaMark = memo(function SeaMark({ m, i, waiting }: {
   m: { art: string; x: number; y: number; size: number; sway?: 'bob' | 'rock'; label?: string }
   i: number
+  /** Crews standing on the deck waiting to be collected. Only the fleet ever
+   *  has any; every other mark is passed 0. */
+  waiting?: number
 }) {
   const kind = markKind(m.art)
   const sub = SUBMERGE[kind]
@@ -5162,8 +5286,17 @@ const SeaMark = memo(function SeaMark({ m, i }: {
           transformOrigin: 'top center',
           whiteSpace: 'nowrap', pointerEvents: 'none',
         }}>
+          {/* THE COUNT, above the name, in the same words the islands use.
+              "2 crew back" is a thing that happened; "2" is a badge you have to
+              remember the meaning of. */}
+          {(waiting ?? 0) > 0 && (
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.8rem', letterSpacing: '0.1em', marginBottom: 2,
+              color: '#f0c040', textShadow: '0 1px 10px rgba(0,0,0,0.95)',
+            }}>{waiting} crew back</p>
+          )}
           <p className="font-cinzel font-700" style={{
-            fontSize: '1.02rem', color: '#dfeaf2',
+            fontSize: '1.02rem', color: (waiting ?? 0) > 0 ? '#f6e6bd' : '#dfeaf2',
             textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 26px rgba(0,0,0,0.7)',
           }}>{m.label}</p>
         </div>
