@@ -943,6 +943,9 @@ export default function SeaMap({
   /** Counts up 0..1 while a still thumb rests, and drives the ring. */
   const [helmHold, setHelmHold] = useState(0)
   const helmHoldTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  /** The hold's interval is a closure made at press time; it reaches the live
+   *  starter through here rather than capturing a stale one. */
+  const startFishingRef = useRef<() => boolean>(() => false)
 
   const [helmOn, setHelmOn] = useState(false)
 
@@ -1053,6 +1056,16 @@ export default function SeaMap({
         || (el as HTMLElement).isContentEditable)
     }
     const down = (e: KeyboardEvent) => {
+      // SPACE AND E DO THE THING. Desktop steers with these keys already, and
+      // leaving the action to the mouse alone means both hands are needed for
+      // what one gesture does on a phone. Same resolution order as everything
+      // else: the nearest thing, and failing that, the water.
+      if ((e.key === ' ' || e.key.toLowerCase() === 'e') && !typing()
+          && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        if (!helmActRef.current()) startFishingRef.current()
+        return
+      }
       const d = DIRS[e.key.toLowerCase()]
       if (!d || typing() || e.metaKey || e.ctrlKey || e.altKey) return
       // Arrows scroll the page by default, and a scrolling chart is a broken
@@ -1848,6 +1861,40 @@ export default function SeaMap({
    * `hold` is the second line, and only where a hold would do something: it is
    * how anybody discovers the gesture at all.
    */
+  /**
+   * PUT THE ROD IN, from wherever the order came.
+   *
+   * Three things ask for this now — the touch hold, the desktop button, and the
+   * keyboard — and the all-stop matters to every one of them: casting under way
+   * sails you out of the water you just chose, and the dial comes up several
+   * hundred pixels from where you asked for it.
+   */
+  const startFishing = useCallback(() => {
+    const here = nearRef.current
+    if (!here || here.kind !== 'water' || locked(here)) return false
+    target.current = { ...pos.current }
+    vibrate([0, 30, 40, 30])
+    setFishingIn(here)
+    return true
+  }, [locked])
+  startFishingRef.current = startFishing
+
+  /**
+   * IS THERE A MOUSE? The helm is `display: none` on a fine pointer — it is a
+   * thumb control and a mouse has the whole window — so on desktop the label
+   * below has to BE the button rather than describe one. Capability, not width:
+   * a small laptop window still has a mouse and a big tablet still has a thumb.
+   */
+  const [finePointer, setFinePointer] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia?.('(pointer: fine)')
+    if (!mq) return
+    const sync = () => setFinePointer(mq.matches)
+    sync()
+    mq.addEventListener?.('change', sync)
+    return () => mq.removeEventListener?.('change', sync)
+  }, [])
+
   const helmLabel: { act: string | null; hold: string | null } = (() => {
     if (fishingIn) return { act: null, hold: null }
     if (nearFinn && !finnTalk) return { act: `Hail ${FINN_NAME}`, hold: null }
@@ -3373,28 +3420,59 @@ hullRef={hullRefFor(t.key)} />
           wheel does their job on a tap now, so what they were really for —
           telling you there is something here at all — is one line where the
           control actually is. Never eats a press: the helm is underneath it. */}
-      {!fishingIn && (helmLabel.act || helmLabel.hold) && (
-        <div aria-hidden style={{
-          position: 'absolute', left: 0, right: 0,
+      {!fishingIn && (helmLabel.act || helmLabel.hold) && (() => {
+        // ONE LINE, ONE STYLE. The two used to be different sizes and different
+        // families — the action in Cinzel at 1.02 and the hold in Karla at 0.78
+        // — which read as a heading with a footnote when they are the same kind
+        // of statement about the same control. Only the colour still differs,
+        // and only to say when a water is above your level.
+        const text = helmLabel.act ?? helmLabel.hold
+        const warn = !helmLabel.act && !helmFishable
+        const type = {
+          margin: 0, fontSize: '1.02rem', textAlign: 'center' as const,
+          color: warn ? 'rgba(226,176,176,0.95)' : '#f2ead8',
+          textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
+        }
+        const box = {
+          position: 'absolute' as const, left: 0, right: 0,
           bottom: HELM_BOTTOM + HELM_D + 10, zIndex: Z.action,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-          pointerEvents: 'none', padding: '0 1rem',
-        }}>
-          {helmLabel.act && (
-            <p className="font-cinzel font-700" style={{
-              margin: 0, fontSize: '1.02rem', color: '#f2ead8', textAlign: 'center',
-              textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
-            }}>{helmLabel.act}</p>
-          )}
-          {helmLabel.hold && (
-            <p className="font-karla font-600" style={{
-              margin: 0, fontSize: '0.78rem', letterSpacing: '0.06em', textAlign: 'center',
-              color: helmFishable ? 'rgba(170,226,206,0.9)' : 'rgba(214,176,176,0.9)',
-              textShadow: '0 1px 10px rgba(0,0,0,0.95)',
-            }}>{helmLabel.hold}</p>
-          )}
-        </div>
-      )}
+          display: 'flex', justifyContent: 'center', padding: '0 1rem',
+        }
+
+        // ── ON A MOUSE, THE LABEL IS THE CONTROL ──────────────────────
+        //
+        // The helm is display:none on a fine pointer, and the six action pills
+        // it replaced are gone — so without this a desktop captain has a line
+        // naming an action and nothing anywhere to perform it. Not a smaller
+        // version of the touch design: on a mouse this IS the button, and the
+        // wording drops "Hold to" because clicking is not holding.
+        if (finePointer) {
+          return (
+            <div style={box}>
+              <button
+                data-no-steer
+                onClick={e => { e.stopPropagation(); if (!helmActRef.current()) startFishing() }}
+                className="font-cinzel font-700"
+                style={{
+                  ...type,
+                  padding: '0.62rem 1.4rem', borderRadius: 999,
+                  background: 'rgba(10,20,28,0.86)',
+                  border: `1px solid ${warn ? 'rgba(200,130,130,0.4)' : 'rgba(180,214,232,0.45)'}`,
+                  boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
+                  cursor: warn ? 'default' : 'pointer',
+                }}
+                disabled={warn}>
+                {text?.replace(/^Hold to fish /, 'Fish ')}
+              </button>
+            </div>
+          )
+        }
+        return (
+          <div aria-hidden style={{ ...box, pointerEvents: 'none' }}>
+            <p className="font-cinzel font-700" style={type}>{text}</p>
+          </div>
+        )
+      })()}
 
       {!fishingIn && (
         <div
@@ -3423,15 +3501,7 @@ hullRef={hullRefFor(t.key)} />
                 helmDown.current = null
                 setHelmHold(0)
                 setHelmOn(false)
-                // ALL STOP, then the rod — the same order the Fish pill uses,
-                // and for the same reason: casting under way sails you out of
-                // the water you just chose.
-                const here = nearRef.current
-                if (here && here.kind === 'water' && !locked(here)) {
-                  target.current = { ...pos.current }
-                  vibrate([0, 30, 40, 30])
-                  setFishingIn(here)
-                }
+                startFishingRef.current()
               }
             }, 40)
           }}
