@@ -122,6 +122,14 @@ export default function FishCollectionDrawer({
     <motion.div key="collection-drawer"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
       transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+      // THIS DRAWER IS NOT THE SEA. On the chart, a pointer-down that is not a
+      // button and not marked reads as "sail away", which stows the rod — so a
+      // touch that missed the 34px close button by a few pixels, or a drag to
+      // scroll the species list, silently ended the fishing session. One
+      // attribute on the root covers the header, the list and the scroller in
+      // one go; the tackle sheet beside it already carries the same mark.
+      // Inert on the fishing screen, which has no such handler.
+      data-no-steer
       {...drag.motionProps}
       style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
