@@ -354,7 +354,10 @@ function moorR(p: Place): number { return p.r + MOOR }
 
 const OBSTACLES: { x: number; y: number; r: number }[] = [
   ...PLACES.filter(p => p.kind === 'port').map(p => ({ x: p.x, y: p.y, r: p.r * SHORE + HULL })),
-  ...LANDMARKS.filter(m => m.solid).map(m => ({ x: m.x, y: m.y, r: m.size * 0.3 + HULL })),
+  // EVERY landmark, not just the ones that remembered to say so. See the note
+  // on `solid` in chart.ts: it is an opt-OUT now, because a rock you can sail
+  // through is a bug nobody reports as one — they just stop believing the map.
+  ...LANDMARKS.filter(m => m.solid !== false).map(m => ({ x: m.x, y: m.y, r: m.size * 0.3 + HULL })),
 ]
 
 /** Nudge a point out to clear water if it has been asked for inside something
@@ -1951,6 +1954,28 @@ export default function SeaMap({
    * below has to BE the button rather than describe one. Capability, not width:
    * a small laptop window still has a mouse and a big tablet still has a thumb.
    */
+  /**
+   * IS THERE ROOM FOR THE HUD BESIDE THE FISHING BAR?
+   *
+   * The fishing screen puts a centred 448px XP bar across the top, and the HUD
+   * discs run from x=12 to roughly x=200. Under about 900px of viewport those
+   * two want the same pixels, which is why three of the discs were hidden
+   * whenever a rod was out. Above it there is room for both and no reason to
+   * take anything away.
+   *
+   * A WIDTH question, not an input one: a fine pointer on a narrow window does
+   * not create space.
+   */
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia?.('(min-width: 900px)')
+    if (!mq) return
+    const sync = () => setWide(mq.matches)
+    sync()
+    mq.addEventListener?.('change', sync)
+    return () => mq.removeEventListener?.('change', sync)
+  }, [])
+
   const [finePointer, setFinePointer] = useState(false)
   useEffect(() => {
     const mq = window.matchMedia?.('(pointer: fine)')
@@ -3871,7 +3896,7 @@ hullRef={hullRefFor(t.key)} />
           A real button, so the map's own `closest('button')` guard exempts it
           from steering on both the pointer and the click path without needing
           data-no-steer as well. */}
-      {!fishingIn && (
+      {(!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(10); setMapOpen(true) }}
@@ -3930,7 +3955,7 @@ hullRef={hullRefFor(t.key)} />
           be sailing with them.
 
           Shows a count when there is one and sits quiet at zero. */}
-      {!fishingIn && (
+      {(!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setCrewOpen(true) }}
@@ -4021,7 +4046,7 @@ hullRef={hullRefFor(t.key)} />
           moving them onto the water was that a crew is a place you sail to.
           What this fixes is not knowing, from anywhere, whether it is worth
           the sail yet. */}
-      {(trawlsOut.length > 0 || trawlsReady > 0) && (
+      {(trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setTrawlsPeek(true) }}
@@ -4189,7 +4214,7 @@ hullRef={hullRefFor(t.key)} />
       {/* ── THE DAY'S ORDERS ────────────────────────────────────────────
           Fourth in the HUD row. Nothing here claims anything: it is a readout,
           and the dot is the only thing it ever asks of you. */}
-      {orders && orders.challenges.length > 0 && (
+      {orders && orders.challenges.length > 0 && (!fishingIn || wide) && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(8); setOrdersOpen(true) }}

@@ -2650,6 +2650,40 @@ body.hardcore-gauntlet::after {
    column each is plenty. minmax(0,…) for the same reason as everything else on
    this page — a bare 1fr floors at min-content and a nowrap name then refuses
    to ellipsis. */
+/* ── FISHING, ON A BIG SCREEN ────────────────────────────────────────────────
+   Every size in FishingHere is an inline style, and an inline style cannot
+   carry a media query — the same problem the shipyard solved with --sy-*. So
+   the two things that need to change on a desktop are variables.
+
+   --fh-lift is extra space UNDER the action column, which pushes the whole
+   thing up. On a phone the column is pinned low because a thumb is at the
+   bottom of the device; on a desktop there is no thumb, and the same offset
+   just strands the cast button at the foot of a very tall window.
+
+   --fh-menu-* grows the four menus. They are sized for a 448px column split
+   four ways; given a whole monitor they can be read from further back.
+
+   The breakpoint is about ROOM, not input. The fishing XP bar is a centred
+   448px column and the HUD discs run from x=12 to roughly x=200, so the two
+   stop colliding at about 900px of viewport. Below that a fine pointer does not
+   help — there is simply nowhere to put both. */
+.sea-fishing {
+  --fh-lift: 0px;
+  --fh-menu-h: 40px;
+  --fh-menu-key: 0.57rem;
+  --fh-menu-val: 0.75rem;
+  --fh-menu-gap: 6px;
+}
+@media (min-width: 900px) {
+  .sea-fishing {
+    --fh-lift: 96px;
+    --fh-menu-h: 58px;
+    --fh-menu-key: 0.72rem;
+    --fh-menu-val: 0.98rem;
+    --fh-menu-gap: 10px;
+  }
+}
+
 .sy-kit-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 
 /* The tappable pieces of the boat. No resting outline: the picture should look

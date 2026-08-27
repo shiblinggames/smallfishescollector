@@ -342,6 +342,18 @@ export const PLACES: Place[] = [
  */
 export const LANDMARKS: {
   art: string; x: number; y: number; size: number
+  /**
+   * SOLID BY DEFAULT, and this used to be the other way round.
+   *
+   * `solid: true` meant "you cannot sail through this", and everything without
+   * it was water you could steer over — so a buoy and a moored fishing boat
+   * were scenery you passed straight through. Worse, it was silent: the three
+   * smacks at the Trawl Harbour were added without the flag and nobody could
+   * have told from the entry that they would not stop a hull.
+   *
+   * A landmark is a physical object on the water. Set `solid: false` for the
+   * exception, and then the exception is the thing written down.
+   */
   solid?: boolean; sway?: 'bob' | 'rock'
 }[] = [
   // ── THE BOATS AT THE TRAWL HARBOUR ───────────────────────────────────
@@ -364,40 +376,40 @@ export const LANDMARKS: {
   { art: '/sea/smack.png', x: -3232, y: -700, size: 112, sway: 'bob' },
   { art: '/sea/smack.png', x: -3428, y: -688, size: 104, sway: 'bob' },
   { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
-  { art: '/sea/islet.png', x:   1003, y:   2620, size: 210, solid: true },
+  { art: '/sea/islet.png', x:   1003, y:   2620, size: 210 },
   { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },
-  { art: '/sea/islet.png', x:   -625, y:   1793, size: 190, solid: true },
+  { art: '/sea/islet.png', x:   -625, y:   1793, size: 190 },
   { art: '/sea/buoy.png', x:  -2466, y:   2056, size: 130, sway: 'bob' },
-  { art: '/sea/islet.png', x:   4282, y:   1354, size: 190, solid: true },
+  { art: '/sea/islet.png', x:   4282, y:   1354, size: 190 },
   { art: '/sea/buoy.png', x:   4002, y:   3221, size: 130, sway: 'bob' },
-  { art: '/sea/wreck.png', x:   1553, y:   4276, size: 280, solid: true, sway: 'rock' },
+  { art: '/sea/wreck.png', x:   1553, y:   4276, size: 280, sway: 'rock' },
   { art: '/sea/buoy.png', x:  -2183, y:   5235, size: 120, sway: 'bob' },
-  { art: '/sea/islet.png', x:  -3850, y:   3714, size: 200, solid: true },
-  { art: '/sea/wreck.png', x:  -4955, y:   3446, size: 300, solid: true, sway: 'rock' },
-  { art: '/sea/wreck.png', x:   6724, y:   3748, size: 330, solid: true, sway: 'rock' },
+  { art: '/sea/islet.png', x:  -3850, y:   3714, size: 200 },
+  { art: '/sea/wreck.png', x:  -4955, y:   3446, size: 300, sway: 'rock' },
+  { art: '/sea/wreck.png', x:   6724, y:   3748, size: 330, sway: 'rock' },
   { art: '/sea/buoy.png', x:   5913, y:   7457, size: 120, sway: 'bob' },
-  { art: '/sea/rig.png', x:   2884, y:   7715, size: 300, solid: true },
-  { art: '/sea/wreck.png', x:  -1816, y:   9425, size: 300, solid: true, sway: 'rock' },
+  { art: '/sea/rig.png', x:   2884, y:   7715, size: 300 },
+  { art: '/sea/wreck.png', x:  -1816, y:   9425, size: 300, sway: 'rock' },
   { art: '/sea/buoy.png', x:  -3984, y:   7299, size: 130, sway: 'bob' },
-  { art: '/sea/rig.png', x:  -7216, y:   7113, size: 320, solid: true },
-  { art: '/sea/wreck.png', x:  -7509, y:   3960, size: 290, solid: true, sway: 'rock' },
-  { art: '/sea/rig.png', x:  12336, y:   5038, size: 350, solid: true },
-  { art: '/sea/bones.png', x:   9759, y:  10682, size: 360, solid: true },
-  { art: '/sea/wreck.png', x:   4725, y:  12320, size: 300, solid: true, sway: 'rock' },
-  { art: '/sea/rig.png', x:   1010, y:  12521, size: 320, solid: true },
-  { art: '/sea/bones.png', x:  -3642, y:  12420, size: 340, solid: true },
-  { art: '/sea/wreck.png', x:  -7585, y:   9424, size: 310, solid: true, sway: 'rock' },
-  { art: '/sea/rig.png', x:  -9967, y:   9418, size: 330, solid: true },
-  { art: '/sea/bones.png', x: -11330, y:   3934, size: 350, solid: true },
-  { art: '/sea/monolith.png', x:  19543, y:   4937, size: 320, solid: true },
-  { art: '/sea/bones.png', x:  14517, y:  10809, size: 400, solid: true },
-  { art: '/sea/monolith.png', x:   9890, y:  16479, size: 280, solid: true },
-  { art: '/sea/bones.png', x:   9004, y:  18786, size: 360, solid: true },
-  { art: '/sea/monolith.png', x:    164, y:  18391, size: 300, solid: true },
-  { art: '/sea/bones.png', x:  -7802, y:  19179, size: 380, solid: true },
-  { art: '/sea/monolith.png', x:  -9475, y:  17115, size: 340, solid: true },
-  { art: '/sea/bones.png', x: -15852, y:  10811, size: 370, solid: true },
-  { art: '/sea/monolith.png', x: -17571, y:   8736, size: 310, solid: true },
+  { art: '/sea/rig.png', x:  -7216, y:   7113, size: 320 },
+  { art: '/sea/wreck.png', x:  -7509, y:   3960, size: 290, sway: 'rock' },
+  { art: '/sea/rig.png', x:  12336, y:   5038, size: 350 },
+  { art: '/sea/bones.png', x:   9759, y:  10682, size: 360 },
+  { art: '/sea/wreck.png', x:   4725, y:  12320, size: 300, sway: 'rock' },
+  { art: '/sea/rig.png', x:   1010, y:  12521, size: 320 },
+  { art: '/sea/bones.png', x:  -3642, y:  12420, size: 340 },
+  { art: '/sea/wreck.png', x:  -7585, y:   9424, size: 310, sway: 'rock' },
+  { art: '/sea/rig.png', x:  -9967, y:   9418, size: 330 },
+  { art: '/sea/bones.png', x: -11330, y:   3934, size: 350 },
+  { art: '/sea/monolith.png', x:  19543, y:   4937, size: 320 },
+  { art: '/sea/bones.png', x:  14517, y:  10809, size: 400 },
+  { art: '/sea/monolith.png', x:   9890, y:  16479, size: 280 },
+  { art: '/sea/bones.png', x:   9004, y:  18786, size: 360 },
+  { art: '/sea/monolith.png', x:    164, y:  18391, size: 300 },
+  { art: '/sea/bones.png', x:  -7802, y:  19179, size: 380 },
+  { art: '/sea/monolith.png', x:  -9475, y:  17115, size: 340 },
+  { art: '/sea/bones.png', x: -15852, y:  10811, size: 370 },
+  { art: '/sea/monolith.png', x: -17571, y:   8736, size: 310 },
 ]
 
 /**

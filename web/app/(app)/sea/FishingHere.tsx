@@ -312,7 +312,7 @@ function StatRow({ k, v, tone }: { k: string; v: string; tone?: 'good' | 'warn' 
 /** One of the four menus along the bottom. Equal quarters on purpose: they are
  *  peers, and a row where one is wider reads as one being more important. */
 const MENU_BTN: React.CSSProperties = {
-  flex: 1, minWidth: 0, height: 40,
+  flex: 1, minWidth: 0, height: 'var(--fh-menu-h)',
   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
   gap: 1, padding: '0 0.35rem', borderRadius: 10,
   background: 'rgba(6,14,22,0.86)',
@@ -320,11 +320,11 @@ const MENU_BTN: React.CSSProperties = {
   cursor: 'pointer', position: 'relative',
 }
 const MENU_KEY: React.CSSProperties = {
-  fontSize: '0.57rem', letterSpacing: '0.12em',
+  fontSize: 'var(--fh-menu-key)', letterSpacing: '0.12em',
   color: 'rgba(190,212,228,0.5)', lineHeight: 1,
 }
 const MENU_VAL: React.CSSProperties = {
-  fontSize: '0.75rem', color: '#dfeaf2', lineHeight: 1.15,
+  fontSize: 'var(--fh-menu-val)', color: '#dfeaf2', lineHeight: 1.15,
   maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 }
 
@@ -1383,7 +1383,8 @@ export default function FishingHere({
   const castAgain = useCallback(() => { castRef.current?.(true) }, [])
 
   return (
-    <div
+    <div className="sea-fishing"
+      
       /* THE ROD IS NOT A RUDDER. Cast and Reel In stop `pointerdown`, but the
          map steers on `click` — and stopping pointerdown does nothing to the
          click that follows it, so every cast was also plotting a course to
@@ -2318,7 +2319,12 @@ export default function FishingHere({
         // justified to its bottom edge, so raising the row raises the dial with
         // it by the same 70px. That is deliberate and the reason it is stated
         // here — a future change to either number moves the dial.
-        paddingTop: 8, paddingBottom: ACTION_PAD_BOTTOM, pointerEvents: 'auto',
+        // ACTION_PAD_BOTTOM lands the cast button exactly on the helm, which
+        // is the whole point of it on touch. --fh-lift is 0 there and adds
+        // real space on a desktop, where there is no helm to line up with and
+        // the button was simply sitting at the bottom of a tall window.
+        paddingTop: 8, paddingBottom: `calc(${ACTION_PAD_BOTTOM}px + var(--fh-lift))`,
+        pointerEvents: 'auto',
       }}>
         {/* THE HELM'S OWN SIZE. This slot is the joystick's other half — the
             wheel is a 112px circle at bottom 92 on the chart, and when the rod
@@ -2425,8 +2431,9 @@ export default function FishingHere({
           the reason to care about a catch, and finding that out otherwise means
           leaving the water. */}
       <div data-no-steer style={{
-        height: 40, marginTop: 6, width: '100%', maxWidth: 448,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        height: 'var(--fh-menu-h)', marginTop: 6, width: '100%', maxWidth: 448,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 'var(--fh-menu-gap)',
         padding: '0 0.75rem',
       }}>
         {/* LOADOUT. Not a locker any more — gear is equipped at the Shipyard,
