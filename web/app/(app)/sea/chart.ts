@@ -605,6 +605,46 @@ export function inSortie(x: number, y: number): boolean {
 }
 
 /**
+ * THE TWO DOCKS, one either side of the sortie's throat.
+ *
+ * The swap used to happen AT the mouth: sail into the gap, get asked, change
+ * ships in open water. That put the most consequential decision in the game
+ * somewhere you arrive by drifting, and it left the fishing boat nowhere — she
+ * simply stopped existing for as long as you were out.
+ *
+ * A dock fixes both. You moor, you are asked, and the boat you came in is tied
+ * up where you left her, visibly, until you come back for her. The mouth itself
+ * becomes what it should always have been: a gate the expedition ship may use
+ * and the fishing boat may not.
+ *
+ * WEST IS RAIDS, east is voyages. They flank the throat far enough back that
+ * neither narrows it — 969 from the mouth's centre against a 620 half-width —
+ * and far enough from the headland stacks not to sit in the rock.
+ *
+ * Derived from the rim rather than written as coordinates, so moving EXP_EDGE
+ * moves the sortie and both docks together and they cannot drift apart.
+ */
+const DOCK_ARC = 820
+const DOCK_SETBACK = 620
+export const DOCK_R = 240
+
+function dockAt(side: -1 | 1): { x: number; y: number } {
+  const { from, to } = anchorageArc()
+  const th = (from + to) / 2 + side * (DOCK_ARC / EXP_EDGE)
+  const r = EXP_EDGE - DOCK_SETBACK
+  return { x: EXP_ORIGIN.x + Math.cos(th) * r, y: EXP_ORIGIN.y + Math.sin(th) * r }
+}
+
+/** Where you change ships. Your fishing boat waits here while you are out. */
+export const RAID_DOCK = { ...dockAt(-1), r: DOCK_R }
+/** Where the voyage board is. */
+export const VOYAGE_DOCK = { ...dockAt(1), r: DOCK_R }
+
+/** How close you have to come to be asked. Generous, like a port's mooring
+ *  ring: you are pulling alongside a jetty, not threading a needle. */
+export const DOCK_MOOR = 300
+
+/**
  * RAID WATER — everything beyond the anchorage rim.
  *
  * Empty on purpose for now: this is the trial, and the thing being tried is the

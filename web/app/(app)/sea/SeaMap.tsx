@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, type Place } from './chart'
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -371,6 +371,11 @@ const OBSTACLES: { x: number; y: number; r: number }[] = [
   // radius (IsleRock draws at r * 2), so this stops the boat a hull clear of
   // the stone, well inside the r + 260 you can go ashore from.
   ...ISLES.map(i => ({ x: i.x, y: i.y, r: i.r + HULL })),
+  // The two berths. You moor ALONGSIDE a dock; sailing through the middle of
+  // one is the same bug as sailing through an island, and it is the structure
+  // the whole swap happens at.
+  { x: RAID_DOCK.x, y: RAID_DOCK.y, r: RAID_DOCK.r + HULL },
+  { x: VOYAGE_DOCK.x, y: VOYAGE_DOCK.y, r: VOYAGE_DOCK.r + HULL },
 ]
 
 /**
@@ -883,7 +888,7 @@ export default function SeaMap({
   /** WHICH SEA that position is in. Restored together with it, so a captain
    *  who logged off in the anchorage or out on the sortie comes back there on
    *  the right hull rather than being quietly returned to the fishing grounds. */
-  startSide: 'fishing' | 'anchorage' | 'sortie'
+  startSide: 'fishing' | 'anchorage' | 'moored' | 'open'
   /** Everything the collection log reads. See SeaLog. */
   log: SeaLog
   /** ISO moments each running trawl comes due. See the Docks mark. */
@@ -961,8 +966,28 @@ export default function SeaMap({
    * off your own ship. See saveSeaPosition — the position now carries the side
    * it belongs to, which is what makes storing a northern one safe.
    */
-  const [onSortie, setOnSortie] = useState(startSide === 'sortie')
-  const sortieRef = useRef(startSide === 'sortie')
+  const [onSortie, setOnSortie] = useState(startSide === 'open')
+  const sortieRef = useRef(startSide === 'open')
+  /**
+   * WHICH HULL IS UNDER YOU, which is now a separate question from which water
+   * you are in.
+   *
+   * The swap happens at a dock rather than at the gate, so the expedition ship
+   * exists inside the anchorage: tied up, or crossing the harbour toward the
+   * sortie. `onSortie` only says whether you are past the rim.
+   *
+   * The two rules that make the docks mean anything both hang off this:
+   * a fishing boat may not pass the sortie, and a warship may not go back down
+   * through the reef.
+   */
+  const [onShip, setOnShip] = useState(startSide === 'moored' || startSide === 'open')
+  const shipRef = useRef(startSide === 'moored' || startSide === 'open')
+  /** Which dock you are alongside, if any. Drives the prompt. */
+  const [atDock, setAtDock] = useState<'raid' | 'voyage' | null>(null)
+  const dockRef = useRef<'raid' | 'voyage' | null>(null)
+  /** What the chart last refused to let you do, shown as a passing line. */
+  const [refused, setRefused] = useState<string | null>(null)
+  const refusedAt = useRef(0)
 
   /** THE WAKE. A fixed pool of marks laid in WORLD space and left behind, which
    *  is what makes it a wake rather than a tail: each stays exactly where the
@@ -980,10 +1005,10 @@ export default function SeaMap({
     // that earned them — an Ethereal fishing boat trailing spirit-light is the
     // reward for buying an Ethereal fishing boat, and it has no business
     // following a Man-o-War around just because the same captain owns both.
-    if (sortieRef.current) return 'sea-wake'
+    if (shipRef.current) return 'sea-wake'
     const w = BOATS.find(b => b.id === boatId)?.wake
     return w ? `sea-wake sea-wake--${w}` : 'sea-wake'
-  }, [boatId, onSortie])
+  }, [boatId, onShip])
   // Each mark remembers the hull that made it. Reading the CURRENT hull when
   // drawing would resize every mark still on the water the instant you change
   // ships, so a Sloop's wake would swell into a Man-o-War's behind you.
@@ -1538,8 +1563,9 @@ export default function SeaMap({
   // together with the position they belong to — see saveSeaPosition.
   const [inAnchorage, setInAnchorage] = useState(startSide !== 'fishing')
   const sideRef = useRef(startSide !== 'fishing')
-  const [sortieAsk, setSortieAsk] = useState(false)
-  const askRef = useRef(false)
+  /** The raid dock's confirm. Opened when you come alongside — see the dock
+   *  proximity block in the loop — and closed by answering it. */
+  const [swapAsk, setSwapAsk] = useState(false)
 
   /**
    * WHAT IS UNDER YOU, in the three numbers the frame loop needs.
@@ -1556,7 +1582,7 @@ export default function SeaMap({
    * Man-o-War close to three times, which is the ladder the art already draws.
    */
   const hull = useMemo(() => {
-    if (!onSortie) return {
+    if (!onShip) return {
       scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0,
       // The cutwater as OFFSETS from the sprite's centre, resolved once here so
       // the frame loop never does this arithmetic sixty times a second.
@@ -1589,7 +1615,7 @@ export default function SeaMap({
       bowDown: ((d.seaBow?.y ?? keel) - 0.5) * WARSHIP_W,
       bowTilt: ((d.seaBowTilt ?? 0) * Math.PI) / 180,
     }
-  }, [onSortie, shipTier])
+  }, [onShip, shipTier])
   // Mirrored into a ref for the frame loop, which must not read a prop.
   const hullRef = useRef(hull)
   hullRef.current = hull
@@ -1612,7 +1638,9 @@ export default function SeaMap({
   const saveSeaPosition = useCallback(
     (x: number, y: number, fog: number[]) =>
       persistSeaPosition(x, y, fog,
-        sortieRef.current ? 'sortie' : sideRef.current ? 'anchorage' : 'fishing'),
+        sortieRef.current ? 'open'
+          : shipRef.current ? 'moored'
+            : sideRef.current ? 'anchorage' : 'fishing'),
     [])
   /**
    * TAKING THE SHIP OUT.
@@ -1624,30 +1652,20 @@ export default function SeaMap({
    * fishing boat. Pushed clear of the line, the crossing is unambiguous in both
    * directions.
    */
-  const takeTheSortie = useCallback(() => {
-    const dx = pos.current.x - EXP_ORIGIN.x
-    const dy = pos.current.y - EXP_ORIGIN.y
-    const d = Math.hypot(dx, dy) || 1
-    pos.current.x = EXP_ORIGIN.x + (dx / d) * (EXP_EDGE + 140)
-    pos.current.y = EXP_ORIGIN.y + (dy / d) * (EXP_EDGE + 140)
-    sortieRef.current = true
-    setOnSortie(true)
-    askRef.current = false
-    setSortieAsk(false)
-    vibrate([18, 40, 22])
-  }, [])
-
-  /** Turned it down. Backs the boat off the line so the mouth does not simply
-   *  ask again on the very next frame. */
-  const declineSortie = useCallback(() => {
-    const dx = pos.current.x - EXP_ORIGIN.x
-    const dy = pos.current.y - EXP_ORIGIN.y
-    const d = Math.hypot(dx, dy) || 1
-    pos.current.x = EXP_ORIGIN.x + (dx / d) * (EXP_EDGE - 380)
-    pos.current.y = EXP_ORIGIN.y + (dy / d) * (EXP_EDGE - 380)
+  /**
+   * CHANGING SHIPS AT THE DOCK.
+   *
+   * All stop, both ways. You are tying up or casting off, and carrying way
+   * through either would put a different hull somewhere the one you were in had
+   * already got to.
+   */
+  const swapHull = useCallback((toShip: boolean) => {
     vel.current.x = 0; vel.current.y = 0
-    askRef.current = false
-    setSortieAsk(false)
+    target.current = { ...pos.current }
+    shipRef.current = toShip
+    setOnShip(toShip)
+    setSwapAsk(false)
+    vibrate([18, 40, 22])
   }, [])
 
   /**
@@ -2270,6 +2288,13 @@ export default function SeaMap({
     if (nearIsle) {
       return { act: found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`, hold: null }
     }
+    // THE BERTHS. The raid dock also asks on arrival, so this is the way back
+    // to a question you waved off rather than the only way to reach it — a
+    // modal that can only be opened by leaving and returning is a trap.
+    if (atDock === 'raid') {
+      return { act: onShip ? 'Tie up and take the fishing boat' : 'Board your ship', hold: null }
+    }
+    if (atDock === 'voyage') return { act: 'Open the voyage board', hold: null }
     if (near && near.kind === 'port') {
       // ITS OWN VERB. Every other port is somewhere you go ashore; this one is
       // a thing you DO from the deck, and "Go ashore at The Trawl Harbour"
@@ -3057,7 +3082,19 @@ export default function SeaMap({
       // rock anywhere else is put back on the side it came from.
       const wasNorth = sideRef.current
       const isNorth = pos.current.y < NORTH_WALL
-      if (inGate(pos.current.x)) {
+      // A WARSHIP DOES NOT GO DOWN THROUGH THE REEF. The fishing grounds are
+      // for the fishing boat; the whole point of leaving her at the dock is
+      // that you took something else out. Held at the line with a word, the
+      // same way the sortie holds the fishing boat.
+      if (shipRef.current && inGate(pos.current.x) && isNorth !== wasNorth && !isNorth) {
+        pos.current.y = NORTH_WALL
+        vel.current.y = 0
+        if (now - refusedAt.current > 2600) {
+          refusedAt.current = now
+          setRefused('Your ship stays north of the reef. Take the fishing boat down.')
+          vibrate(12)
+        }
+      } else if (inGate(pos.current.x)) {
         // THROUGH THE ARCH AND STRAIGHT ON. No page, no loading, no swap:
         // the anchorage on the far side is a short sail on the same boat, and
         // the only thing that changes is what is moored around you and what the
@@ -3115,12 +3152,20 @@ export default function SeaMap({
       // a decision, and a captain who has just been beaten out there should not
       // have to agree to come home.
       if (sideRef.current && !sortieRef.current && R > rim - 40 && inSortie(pos.current.x, pos.current.y)) {
-        if (!askRef.current) { askRef.current = true; setSortieAsk(true); vibrate(12) }
-      } else if (askRef.current && (!inSortie(pos.current.x, pos.current.y) || R < rim - 320)) {
-        // Backed out of the mouth. Hysteresis on the radius so idling on the
-        // line does not flicker the modal open and shut.
-        askRef.current = false
-        setSortieAsk(false)
+        if (shipRef.current) {
+          // ON THE SHIP, so the gate is yours. Straight through, no asking —
+          // the decision was made at the dock, and being asked twice for one
+          // crossing is how a gate becomes a chore.
+          sortieRef.current = true
+          setOnSortie(true)
+          vibrate([14, 30, 18])
+        } else if (now - refusedAt.current > 2600) {
+          // ON THE FISHING BOAT. The rim clamp below is what actually stops
+          // her; this only says why.
+          refusedAt.current = now
+          setRefused('The open sea wants your expedition ship. She is at the raid dock.')
+          vibrate(12)
+        }
       }
 
       // HOME AGAIN. Crossing back inside the anchorage rim puts you off the
@@ -3131,10 +3176,33 @@ export default function SeaMap({
       // sitting exactly ON the rim, where R < EXP_EDGE is a coin-flip on the
       // next float, and losing it would put the captain back on the fishing
       // boat in the same frame they left it.
+      // BACK INSIDE THE RIM. Still on the ship — she is only left at the dock,
+      // and the dock is a long way from here.
       if (sortieRef.current && R < EXP_EDGE - 90) {
         sortieRef.current = false
         setOnSortie(false)
         vibrate([14, 30, 18])
+      }
+
+      // ── ALONGSIDE A DOCK ───────────────────────────────────────────
+      // Proximity only. What the prompt then offers depends on which hull you
+      // are in, and pressing it is the player's business.
+      if (sideRef.current && !sortieRef.current) {
+        const dr = Math.hypot(pos.current.x - RAID_DOCK.x, pos.current.y - RAID_DOCK.y)
+        const dv = Math.hypot(pos.current.x - VOYAGE_DOCK.x, pos.current.y - VOYAGE_DOCK.y)
+        const reach = DOCK_R + DOCK_MOOR
+        const near = dr < reach && dr <= dv ? 'raid' : dv < reach ? 'voyage' : null
+        if (near !== dockRef.current) {
+          dockRef.current = near
+          setAtDock(near)
+          // ASKED ON ARRIVAL, once. The ring is what makes this bearable: it
+          // fires on the way IN and not again until you have left and come
+          // back, so mooring is a question and loitering is not.
+          if (near === 'raid') setSwapAsk(true)
+        }
+      } else if (dockRef.current) {
+        dockRef.current = null
+        setAtDock(null)
       }
 
       if (R > rim) {
@@ -3846,6 +3914,9 @@ export default function SeaMap({
         {/* Only from inside the harbour it belongs to. From the fishing
             grounds it would be a sign for a door behind a wall. */}
         {inAnchorage && <SortieSign />}
+        {/* The two berths either side of the throat. Only from inside the
+            harbour they belong to, like the sign. */}
+        {inAnchorage && <Docks boatAtDock={onShip} near={atDock} boatId={boatId} />}
 
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
@@ -4262,16 +4333,42 @@ hullRef={hullRefFor(t.key)} />
 
       <EdgeOfChart at={atEdge} />
 
-      {/* ── THE SORTIE'S CONFIRM ────────────────────────────────────────
-          Raised while the boat is held in the mouth, and the ONLY way past the
-          anchorage rim. It exists because this crossing swaps the hull under
-          you: the arch does not ask, because the far side is more harbour on
-          the same boat, and this one does, because it is not.
+      {/* ── WHAT THE CHART JUST REFUSED ─────────────────────────────────
+          The two hull rules are enforced by clamps, and a clamp on its own is
+          an invisible wall. This is the sentence that turns "she will not go"
+          into "she will not go, and here is why". Passing, never modal: it is
+          an explanation, not a decision. */}
+      <AnimatePresence>
+        {refused && (
+          <motion.div
+            key={refused}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.4 } }}
+            onAnimationComplete={() => { window.setTimeout(() => setRefused(null), 2200) }}
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: 128, zIndex: Z.crossing,
+              display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 1rem',
+            }}>
+            <p className="font-karla font-600" style={{
+              margin: 0, textAlign: 'center', maxWidth: 340,
+              fontSize: '0.84rem', lineHeight: 1.45, color: 'rgba(226,238,246,0.92)',
+              textShadow: '0 2px 16px rgba(0,0,0,0.98)',
+            }}>{refused}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          Dismissing backs the boat off the line rather than leaving it pinned
-          there — a modal you close should not immediately reopen. */}
-      {sortieAsk && !onSortie && (
-        <PopupShell open onClose={declineSortie}>
+      {/* ── THE RAID DOCK ───────────────────────────────────────────────
+          Where the hull under you changes. It used to happen at the sortie's
+          mouth, in open water, on a boat that was drifting — the most
+          consequential thing you can do on this chart and you could fall into
+          it. Now you moor, and the boat you came in is tied up where you left
+          her until you come back.
+
+          The gate is no longer a decision at all: it is a rule. The ship may
+          pass and the fishing boat may not, and both are told so. */}
+      {swapAsk && (
+        <PopupShell open onClose={() => setSwapAsk(false)}>
           <div onClick={e => e.stopPropagation()} style={{
             margin: 'auto', width: '100%', maxWidth: 400,
             borderRadius: 20, padding: '1.2rem 1.05rem 1.05rem',
@@ -4282,10 +4379,10 @@ hullRef={hullRefFor(t.key)} />
           }}>
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(196,169,106,0.8)', margin: 0,
-            }}>The Sortie</p>
+            }}>The Raid Dock</p>
             <h2 className="font-pirata" style={{
               fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0', lineHeight: 1.15,
-            }}>Take her out?</h2>
+            }}>{onShip ? 'Back to the fishing boat?' : 'Take out your ship?'}</h2>
 
             <div style={{
               display: 'flex', alignItems: 'center', gap: 12, margin: '0.9rem 0 0',
@@ -4315,25 +4412,25 @@ hullRef={hullRefFor(t.key)} />
             <p className="font-karla" style={{
               fontSize: '0.8rem', color: 'rgba(214,226,236,0.72)', lineHeight: 1.5, margin: '0.85rem 0 0',
             }}>
-              Past this line you leave the fishing boat at the harbour and sail your own
-              ship. The water out there is open and empty for now. Come back inside the
-              rim whenever you like.
+              {onShip
+                ? 'Your fishing boat is tied up here. Take her back and you can sail south through the reef again, but the open sea is closed to her.'
+                : 'She is the only hull that can pass the sortie into the open sea, and she does not go south of the reef. Your fishing boat waits here until you come back for her.'}
             </p>
 
             <div style={{ display: 'flex', gap: 8, marginTop: '1rem' }}>
-              <button type="button" onClick={declineSortie} className="tap font-karla font-700"
+              <button type="button" onClick={() => setSwapAsk(false)} className="tap font-karla font-700"
                 style={{
                   flex: 1, padding: '0.7rem', borderRadius: 12, fontSize: '0.86rem', cursor: 'pointer',
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
                 }}>
-                Stay in
+                Not yet
               </button>
-              <button type="button" onClick={takeTheSortie} className="tap font-cinzel font-700"
+              <button type="button" onClick={() => swapHull(!onShip)} className="tap font-cinzel font-700"
                 style={{
                   flex: 1.3, padding: '0.7rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer',
                   background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f6dfa0',
                 }}>
-                Set sail
+                {onShip ? 'Cast off in her' : 'Board her'}
               </button>
             </div>
           </div>
@@ -4538,6 +4635,8 @@ hullRef={hullRefFor(t.key)} />
           if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
           if (nearBottle) { take(nearBottle); return true }
           if (nearIsle) { void land(nearIsle); return true }
+          if (atDock === 'raid') { setSwapAsk(true); return true }
+          if (atDock === 'voyage') { vibrate([18, 40, 24]); router.push('/expeditions'); return true }
           const here = nearRef.current
           if (here && here.kind === 'port' && !locked(here)) { enter(here); return true }
           // A water is not a tap target: it is what a HOLD is for, and casting
@@ -5719,6 +5818,16 @@ const SUBMERGE: Record<string, { line: number; keep: number }> = {
   // the pale shoal that came with that is what made it look like it was hovering.
   islet:    { line: 76, keep: 0.24 },
 
+  // ── THE TWO BERTHS ───────────────────────────────────────────────────
+  //
+  // A jetty stands ON piles, so what goes under is the legs and nothing else —
+  // the deck has to stay dry or the whole structure reads as sinking. Set just
+  // below the boards on both, and they keep more of themselves visible under
+  // the surface than rock does, because you are meant to read the piles going
+  // down as piles rather than as the dock ending.
+  'dock-raids':   { line: 84, keep: 0.30 },
+  'dock-voyages': { line: 86, keep: 0.30 },
+
   // ── THE REEF ALONG THE TOP ───────────────────────────────────────────
   //
   // `line` is where the water crosses the SPRITE, as a percentage of its own
@@ -6415,6 +6524,80 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * the anchorage rim is invisible water, and an invisible wall with an invisible
  * door in it is a bad chart.
  */
+/**
+ * THE TWO DOCKS, and the boat left at one of them.
+ *
+ * Drawn in the world like every other structure, and submerged by SeaMark's own
+ * rule so the piles go into the water rather than standing on it.
+ *
+ * THE MOORED FISHING BOAT is the point of the raid dock. Leaving her out of the
+ * picture would make the swap a menu state — you would be told your boat was
+ * waiting and have to take it on trust. Tied up where you left her, it is a
+ * fact you can see from across the harbour.
+ */
+const Docks = memo(function Docks({ boatAtDock, near, boatId }: {
+  /** Is the fishing boat tied up here? True exactly when you are on the ship,
+   *  because she is what you left to take it. */
+  boatAtDock: boolean
+  near: 'raid' | 'voyage' | null
+  boatId: string | null
+}) {
+  /**
+   * HER HULL, WITHOUT THE CAPTAIN IN IT.
+   *
+   * The obvious thing is the fisher sprite, and it is wrong: that sheet is the
+   * captain AND the boat, so a captain out on the ship would also be sitting in
+   * the boat they left behind. The equipped hull's own overlay is the half that
+   * should be here, which happens to be the half they paid for.
+   *
+   * A plain smack when nothing is equipped, because the default boat has no
+   * standalone art — it is painted into the character sheet. The same moored
+   * boat the trawl harbour uses, so it is already the chart's word for "a boat
+   * tied up".
+   */
+  const hull = BOATS.find(b => b.id === boatId)?.restImageUrl ?? '/sea/smack.png'
+  return (
+    <>
+      {([['raid', RAID_DOCK, '/sea/dock-raids.png', 'Raids'],
+         ['voyage', VOYAGE_DOCK, '/sea/dock-voyages.png', 'Voyages']] as const).map(([id, d, art, label]) => (
+        <div key={id}>
+          <SeaMark m={{ art, x: d.x, y: d.y, size: DOCK_R * 2.6 }} i={id === 'raid' ? 1400 : 1401} />
+          {/* The name, counter-squashed and lifted clear like every label on
+              this chart. Brighter when you are alongside, because that is the
+              one moment it is telling you something you did not know. */}
+          <div aria-hidden style={{
+            position: 'absolute', left: d.x, top: d.y - DOCK_R * 0.9,
+            transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+            transformOrigin: 'bottom center', whiteSpace: 'nowrap', pointerEvents: 'none',
+          }}>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1rem', letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0,
+              textAlign: 'center', marginRight: '-0.18em',
+              color: near === id ? 'rgba(255,226,170,0.95)' : 'rgba(214,226,236,0.6)',
+              textShadow: '0 2px 14px rgba(0,0,0,0.98)',
+            }}>{label}</p>
+          </div>
+        </div>
+      ))}
+
+      {/* Her berth is the raid dock's, a little off the jetty head. */}
+      {boatAtDock && (
+        <div style={{
+          position: 'absolute', left: RAID_DOCK.x + DOCK_R * 0.75, top: RAID_DOCK.y + DOCK_R * 0.5,
+          transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
+          pointerEvents: 'none', opacity: 0.95,
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={hull} alt="" draggable={false} decoding="async" style={{
+            width: 150, height: 'auto', display: 'block',
+            filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
+          }} />
+        </div>
+      )}
+    </>
+  )
+})
+
 const SortieSign = memo(function SortieSign() {
   return (
     <div aria-hidden style={{
@@ -6445,7 +6628,7 @@ const SortieSign = memo(function SortieSign() {
         fontSize: '0.82rem', letterSpacing: '0.1em', textAlign: 'center',
         color: 'rgba(226,212,186,0.66)', margin: '5px 0 0',
         textShadow: '0 1px 12px rgba(0,0,0,0.98)',
-      }}>Open water, and your own ship</p>
+      }}>Expedition ships only</p>
     </div>
   )
 })

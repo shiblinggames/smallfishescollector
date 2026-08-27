@@ -294,7 +294,7 @@ export default async function SeaPage() {
         : null}
       // Which sea that position is in. Without it a saved northern position is
       // ambiguous, which is why one was never saved at all.
-      startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'sortie'}
+      startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'moored' | 'open'}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))

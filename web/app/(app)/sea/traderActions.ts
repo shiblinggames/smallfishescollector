@@ -379,8 +379,13 @@ export async function saveSeaPosition(
    *
    * Storing the side is what makes the northern coordinate safe. The wall, the
    * rim and the hull are all decided by it, so they agree on load.
+   *
+   * FOUR VALUES, because there are four states: which water, and which hull.
+   * They are not independent — no fishing boat in the open sea, no warship in
+   * the fishing grounds — so one field still covers it. `moored` is the harbour
+   * on the expedition ship, with the fishing boat tied up at the raid dock.
    */
-  side: 'fishing' | 'anchorage' | 'sortie' = 'fishing',
+  side: 'fishing' | 'anchorage' | 'moored' | 'open' = 'fishing',
 ): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -397,7 +402,7 @@ export async function saveSeaPosition(
     sea_seen_at: new Date().toISOString(),
     // Never trusted from the client as anything but one of three words: this
     // decides which wall a captain wakes up behind.
-    sea_side: side === 'anchorage' || side === 'sortie' ? side : 'fishing',
+    sea_side: side === 'anchorage' || side === 'moored' || side === 'open' ? side : 'fishing',
   }
 
   // ── THE FOG ───────────────────────────────────────────────────────────
