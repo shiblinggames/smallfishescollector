@@ -945,16 +945,91 @@ export default function SeaMap({
   // Only what the UI actually needs to re-render for.
   // A ref, not state: the loop is the only reader, and re-rendering the map on
   // a resize would buy nothing.
+  /**
+   * THE HELM, ON A KEYBOARD.
+   *
+   * WASD and the arrows, held down, steer exactly the way a held stick does —
+   * the same rank in the physics, the same THROW, the same feel. A Set rather
+   * than one key, so W+D is an honest diagonal and rolling from W to D through
+   * both-held never stutters.
+   *
+   * Keys are ignored while something is focused that eats typing, which is
+   * what stops "sail west" from firing while a captain types the letter A into
+   * some future chat box.
+   */
+  const keysRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const DIRS: Record<string, string> = {
+      w: 'w', arrowup: 'w', a: 'a', arrowleft: 'a',
+      s: 's', arrowdown: 's', d: 'd', arrowright: 'd',
+    }
+    const typing = () => {
+      const el = document.activeElement
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+        || (el as HTMLElement).isContentEditable)
+    }
+    const down = (e: KeyboardEvent) => {
+      const d = DIRS[e.key.toLowerCase()]
+      if (!d || typing() || e.metaKey || e.ctrlKey || e.altKey) return
+      // Arrows scroll the page by default, and a scrolling chart is a broken
+      // chart. Letters do nothing by default and lose nothing here.
+      e.preventDefault()
+      keysRef.current.add(d)
+    }
+    const up = (e: KeyboardEvent) => {
+      const d = DIRS[e.key.toLowerCase()]
+      if (d) keysRef.current.delete(d)
+    }
+    // A tab-away with a key held would leave the boat sailing forever: keyup
+    // fires at the OS focus, not at this window.
+    const clear = () => keysRef.current.clear()
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', clear)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', clear)
+    }
+  }, [])
+
   const zoomRef = useRef(1)
+  /**
+   * THE WHEEL ZOOMS THE CHART.
+   *
+   * A multiplier on top of the fitted zoom rather than a replacement for it:
+   * `zoomFor` keeps deciding what a fresh window shows, resizing still refits,
+   * and the wheel adjusts from wherever that lands. Kept between pulled-back
+   * 0.55x and leaned-in 1.6x of the fit — far enough out to plan a leg, close
+   * enough in to read a name plate, never so far either way that the sea stops
+   * being steerable.
+   *
+   * The ref is read by the frame loop every frame anyway, so a wheel tick is
+   * picked up on the next frame with no React involved.
+   */
+  const wheelZoom = useRef(1)
   useEffect(() => {
     const fit = () => {
       const z = zoomFor(wrapRef.current?.getBoundingClientRect().width ?? window.innerWidth)
-      zoomRef.current = z
+      zoomRef.current = z * wheelZoom.current
     }
+    const onWheel = (e: WheelEvent) => {
+      // Only plain wheel — pinch-zoom on trackpads arrives as ctrl+wheel and
+      // should zoom too, but browser-page zoom (ctrl+wheel on a mouse) is a
+      // user setting this must not eat. Taking both is the lesser evil: the
+      // page has nothing of its own to scroll.
+      e.preventDefault()
+      wheelZoom.current = Math.max(0.55, Math.min(1.6,
+        wheelZoom.current * Math.exp(-e.deltaY * 0.0012)))
+      fit()
+    }
+    const el = wrapRef.current
+    el?.addEventListener('wheel', onWheel, { passive: false })
     fit()
     window.addEventListener('resize', fit)
     window.addEventListener('orientationchange', fit)
     return () => {
+      el?.removeEventListener('wheel', onWheel)
       window.removeEventListener('resize', fit)
       window.removeEventListener('orientationchange', fit)
     }
@@ -1482,6 +1557,29 @@ export default function SeaMap({
   /** Mirrors `landing` for the callback, which is built once. */
   const landingRef = useRef(false)
   const [hailing, setHailing] = useState<Trader | null>(null)
+
+  /**
+   * ESC CLOSES THE TOP-MOST PANEL, one per press, most recent first.
+   *
+   * The order is the stacking order a captain actually sees: results and
+   * conversations over pickers, pickers over the chart. One panel per press,
+   * because Esc-mashing through three layers to the water is a feature, and
+   * closing all of them on one press is losing your place.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (find) { setFind(null); return }
+      if (ashore) { setAshore(false); return }
+      if (finnTalk) { setFinnTalk(null); return }
+      if (hailing) { setHailing(null); return }
+      if (picking) { setPicking(false); return }
+      if (crewOpen) { setCrewOpen(false); return }
+      if (mapOpen) { setMapOpen(false); return }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [find, ashore, finnTalk, hailing, picking, crewOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -2152,6 +2250,24 @@ export default function SeaMap({
           target.current = {
             x: pos.current.x + v.x * THROW,
             y: pos.current.y + (v.y / GROUND) * THROW,
+          }
+        }
+      }
+
+      // THE KEYBOARD RANKS WITH THE STICK. Held keys are a bearing, re-read
+      // every frame like the thumb is, and composed so W+D is a true diagonal.
+      // The y component is divided by GROUND for the same reason boxVec's is:
+      // the key means "down the SCREEN", and the plane is squashed, so a screen
+      // direction costs more world-y than world-x.
+      if (keysRef.current.size > 0) {
+        const k = keysRef.current
+        let kx = (k.has('d') ? 1 : 0) - (k.has('a') ? 1 : 0)
+        let ky = (k.has('s') ? 1 : 0) - (k.has('w') ? 1 : 0)
+        if (kx !== 0 || ky !== 0) {
+          const m = Math.hypot(kx, ky)
+          target.current = {
+            x: pos.current.x + (kx / m) * THROW,
+            y: pos.current.y + (ky / m / GROUND) * THROW,
           }
         }
       }

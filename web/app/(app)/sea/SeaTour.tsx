@@ -39,7 +39,13 @@ type Target = 'chart' | 'crew' | null
 const STEPS: { portrait: string; speaker: string; text: string; target: Target }[] = [
   {
     ...GUIDES.doby,
-    text: 'This is the whole sea, Captain. Drag anywhere to steer, and she keeps going where you point her.',
+    // The steering line teaches the input the player actually has: a fine
+    // pointer means a mouse, and a mouse usually means keys under the other
+    // hand. Checked at module level once — nobody hot-swaps their pointer
+    // mid-tour, and a hook for it would be ceremony.
+    ...(typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
+      ? { text: 'This is the whole sea, Captain. Drag to steer, or hold *WASD*, and she keeps going where you point her.' }
+      : { text: 'This is the whole sea, Captain. Drag anywhere to steer, and she keeps going where you point her.' }),
     target: null,
   },
   {
