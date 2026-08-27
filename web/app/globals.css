@@ -2610,25 +2610,29 @@ body.hardcore-gauntlet::after {
    legible in the sense that the pixels are present. Wider column, larger type,
    same layout. */
 .sea-shipyard {
-  --sy-1: 0.5rem;
-  --sy-2: 0.58rem;
-  --sy-3: 0.75rem;
-  --sy-4: 0.84rem;
-  --sy-5: 0.95rem;
-  --sy-6: 1.08rem;
-  --sy-7: 1.2rem;
+  /* THE FLOOR WAS EIGHT PIXELS. --sy-1 and --sy-2 carry every label, unit and
+     caption on the page, and at 0.5rem / 0.58rem that is 8px and 9.3px on a
+     phone — below the size at which layout can be blamed for a page being hard
+     to read. The whole scale lifts together so the hierarchy is unchanged. */
+  --sy-1: 0.7rem;
+  --sy-2: 0.78rem;
+  --sy-3: 0.88rem;
+  --sy-4: 0.98rem;
+  --sy-5: 1.08rem;
+  --sy-6: 1.28rem;
+  --sy-7: 1.5rem;
 }
 .sea-shipyard-col { max-width: 28rem; }
 
 @media (min-width: 768px) {
   .sea-shipyard {
-    --sy-1: 0.68rem;
-    --sy-2: 0.78rem;
-    --sy-3: 0.92rem;
-    --sy-4: 1rem;
-    --sy-5: 1.12rem;
-    --sy-6: 1.3rem;
-    --sy-7: 1.55rem;
+    --sy-1: 0.8rem;
+    --sy-2: 0.9rem;
+    --sy-3: 1.02rem;
+    --sy-4: 1.1rem;
+    --sy-5: 1.22rem;
+    --sy-6: 1.55rem;
+    --sy-7: 1.9rem;
   }
   /* The column grows with the type rather than staying at phone width and
      letting the bigger text wrap harder than it used to. */

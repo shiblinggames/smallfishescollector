@@ -34,8 +34,8 @@ function ShopLink({ href, label, sub, color, onClick }: { href: string; label: s
   return (
     <Link href={href} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.9rem 1rem', borderRadius: 20, background: `${color}12`, border: `1px solid ${color}45`, textDecoration: 'none' }}>
       <div style={{ flex: 1 }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color }}>{label}</p>
-        <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: `${color}aa`, marginTop: 2 }}>{sub}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color }}>{label}</p>
+        <p className="font-karla font-300" style={{ fontSize: '0.76rem', color: `${color}aa`, marginTop: 2 }}>{sub}</p>
       </div>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.75, flexShrink: 0 }}>
         <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -72,10 +72,10 @@ function rodTagline(r: typeof RODS[number]): string {
 
 function Pill({ label, color, muted }: { label: string; color?: string; muted?: boolean }) {
   if (muted) return (
-    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
+    <span className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
   )
   return (
-    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${color}cc`, background: `${color}14`, border: `1px solid ${color}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
+    <span className="font-karla font-600" style={{ fontSize: '0.75rem', color: `${color}cc`, background: `${color}14`, border: `1px solid ${color}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>{label}</span>
   )
 }
 
@@ -97,7 +97,7 @@ function TackleNote({ text, icon, color }: { text: React.ReactNode; icon: 'up' |
         {icon === 'fish' && <><path d="M2 12c3-4 8-6 13-6 4 0 7 3 7 6s-3 6-7 6c-5 0-10-2-13-6z" /><path d="M22 12l-3-3M22 12l-3 3" /></>}
         {icon === 'cards' && <><rect x="3" y="4" width="7" height="16" rx="1.5" /><rect x="14" y="4" width="7" height="16" rx="1.5" /></>}
       </svg>
-      <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#b8b0a6', lineHeight: 1.5 }}>{text}</p>
+      <p className="font-karla font-400" style={{ fontSize: '0.81rem', color: '#b8b0a6', lineHeight: 1.5 }}>{text}</p>
     </div>
   )
 }
@@ -112,12 +112,12 @@ function StatRow({ title, value, help, color }: { title: string; value: string; 
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
         <p className="font-karla font-700 uppercase tracking-[0.12em]"
-          style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>{title}</p>
+          style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>{title}</p>
         <p className="font-cinzel font-700"
           style={{ fontSize: '1rem', color, lineHeight: 1, whiteSpace: 'nowrap' }}>{value}</p>
       </div>
       <p className="font-karla font-400"
-        style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.58)', lineHeight: 1.4 }}>{help}</p>
+        style={{ fontSize: '0.81rem', color: 'rgba(255,255,255,0.58)', lineHeight: 1.4 }}>{help}</p>
     </div>
   )
 }
@@ -136,7 +136,7 @@ function StatBullet({ value, help, color }: { value: string; help: string; color
         marginTop: 7,
         boxShadow: `0 0 6px ${color}88`,
       }} />
-      <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.45 }}>
+      <p className="font-karla" style={{ fontSize: '0.85rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.45 }}>
         <span className="font-700" style={{ color }}>{value}</span>
         {' '}
         <span style={{ color: 'rgba(240,237,232,0.55)' }}>— {help}</span>
@@ -294,18 +294,18 @@ function StatDeltaRow({ row, color }: { row: RodStatDelta; color: string }) {
     }}>
       <div style={{ minWidth: 0 }}>
         <p className="font-karla font-700 uppercase tracking-[0.1em]"
-          style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.45)', marginBottom: 1 }}>
+          style={{ fontSize: '0.71rem', color: 'rgba(255,255,255,0.45)', marginBottom: 1 }}>
           {row.title}
         </p>
         <p className="font-karla font-600"
-          style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.1 }}>
+          style={{ fontSize: '0.8rem', color: '#7a7670', lineHeight: 1.1 }}>
           {row.currentLabel}
         </p>
       </div>
-      <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', lineHeight: 1 }}>→</span>
+      <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.83rem', lineHeight: 1 }}>→</span>
       <div style={{ textAlign: 'right' }}>
         <p className="font-cinzel font-700"
-          style={{ fontSize: '0.82rem', color: row.delta === 'up' ? color : deltaColor, lineHeight: 1.1 }}>
+          style={{ fontSize: '0.85rem', color: row.delta === 'up' ? color : deltaColor, lineHeight: 1.1 }}>
           {row.nextLabel}
         </p>
       </div>
@@ -340,7 +340,7 @@ function LineIcon({ color }: { color: string }) {
 function StatCell({ label, value, color, muted }: { label: string; value: string; color?: string; muted?: boolean }) {
   return (
     <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '0.6rem 0.75rem' }}>
-      <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>{label}</p>
+      <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>{label}</p>
       <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: muted ? '#2e2c2a' : (color ?? '#f0ede8'), lineHeight: 1 }}>{value}</p>
     </div>
   )
@@ -364,7 +364,7 @@ function CosmeticLegend() {
     </span>
   )
   const item = { display: 'inline-flex', alignItems: 'center', gap: 4 } as const
-  const txt = { fontSize: '0.56rem', color: '#8a877e' } as const
+  const txt = { fontSize: '0.74rem', color: '#8a877e' } as const
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', margin: '-2px 0 2px' }}>
       <span style={item}><CheckDot bg="rgba(14,22,16,0.96)" stroke="#5fce8a" /><span className="font-karla font-600" style={txt}>Owned</span></span>
@@ -429,10 +429,10 @@ function SpecialItemRow({
           )}
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: owned ? item.color : forSale ? '#a09890' : '#4a4845', lineHeight: 1 }}>{item.name}</p>
-              <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: `${item.color}88`, background: `${item.color}14`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{item.effectLabel}</span>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: owned ? item.color : forSale ? '#a09890' : '#4a4845', lineHeight: 1 }}>{item.name}</p>
+              <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.72rem', color: `${item.color}88`, background: `${item.color}14`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{item.effectLabel}</span>
             </div>
-            <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: owned ? '#7a7268' : forSale ? '#6a6460' : '#4a4845', lineHeight: 1.45 }}>{item.description}</p>
+            <p className="font-karla font-300" style={{ fontSize: '0.79rem', color: owned ? '#7a7268' : forSale ? '#6a6460' : '#4a4845', lineHeight: 1.45 }}>{item.description}</p>
           </div>
         </div>
         {owned && (
@@ -446,7 +446,7 @@ function SpecialItemRow({
               padding: '0.3rem 0.65rem',
               cursor: 'pointer',
               color: isEquipped ? item.color : '#6a6460',
-              fontSize: '0.62rem',
+              fontSize: '0.76rem',
               fontFamily: 'inherit',
               marginTop: 2,
             }}
@@ -469,35 +469,35 @@ function SpecialItemRow({
             }}
             className="font-karla font-700 uppercase tracking-[0.08em]"
           >
-            <span style={{ fontSize: '0.52rem', color: item.color, display: 'block', lineHeight: 1.2 }}>Buy</span>
-            <span style={{ fontSize: '0.58rem', color: isFathoms ? item.color : '#f0c040', display: 'block', lineHeight: 1.3 }}>{priceLabel}</span>
+            <span style={{ fontSize: '0.72rem', color: item.color, display: 'block', lineHeight: 1.2 }}>Buy</span>
+            <span style={{ fontSize: '0.74rem', color: isFathoms ? item.color : '#f0c040', display: 'block', lineHeight: 1.3 }}>{priceLabel}</span>
           </button>
         )}
         {locked && (
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, padding: '0.3rem 0.55rem', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8f877a" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-            <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#9a907c' }}>{isFathoms ? `${price} Fathoms` : `${(price ?? 0).toLocaleString()} ⟡`}</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#9a907c' }}>{isFathoms ? `${price} Fathoms` : `${(price ?? 0).toLocaleString()} ⟡`}</span>
           </div>
         )}
       </div>
       {locked && (
-        <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#caa05a', marginTop: 4, lineHeight: 1.4 }}>
+        <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#caa05a', marginTop: 4, lineHeight: 1.4 }}>
           {lockReason}
         </p>
       )}
       {upgradeNote && (
-        <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#caa05a', marginTop: 6, paddingTop: 6, borderTop: `1px solid ${item.color}18`, lineHeight: 1.4 }}>
+        <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#caa05a', marginTop: 6, paddingTop: 6, borderTop: `1px solid ${item.color}18`, lineHeight: 1.4 }}>
           {upgradeNote}
         </p>
       )}
       {owned && item.id === 'tide_turner' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, paddingTop: 6, borderTop: `1px solid ${item.color}18` }}>
-          <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: `${item.color}88` }}>Skips today</p>
+          <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.73rem', color: `${item.color}88` }}>Skips today</p>
           <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: tideTurnerSkipsLeft > 0 ? item.color : '#4a4845', lineHeight: 1 }}>{tideTurnerSkipsLeft} / 3</p>
         </div>
       )}
       {!owned && !forSale && (
-        <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#3a3835', marginTop: 2 }}>
+        <p className="font-karla font-300" style={{ fontSize: '0.76rem', color: '#3a3835', marginTop: 2 }}>
           From: {item.obtainedFrom}
         </p>
       )}
@@ -646,16 +646,16 @@ function GearSlot({
           that actually lets ellipsis happen inside a flex column. */}
       <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>
         <p className="font-karla font-600 uppercase" style={{
-          fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1,
+          fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={label}>{label}</p>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.72rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2,
+          fontSize: '0.81rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={itemName}>{itemName}</p>
         {sub && (
           <p className="font-karla font-700 uppercase" style={{
-            fontSize: '0.5rem', letterSpacing: '0.1em', marginTop: 1,
+            fontSize: '0.71rem', letterSpacing: '0.1em', marginTop: 1,
             color: empty ? '#2e2c2a' : `${color}bb`,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }} title={sub}>{sub}</p>
@@ -756,7 +756,7 @@ function FisherPreview({
       {/* Says what it is. Without this it reads as a slot you should be able
           to tap, which it deliberately is not. */}
       <p className="font-karla font-600 uppercase" style={{
-        fontSize: '0.56rem', letterSpacing: '0.18em',
+        fontSize: '0.74rem', letterSpacing: '0.18em',
         color: 'rgba(196,181,253,0.65)', marginTop: 4,
       }}>
         Preview
@@ -1094,7 +1094,7 @@ export default function GearScreen({
             <button key={key} type="button" onClick={() => setTab(key)}
               className="font-karla font-800 uppercase tracking-[0.1em] tap"
               style={{
-                flex: 1, padding: '0.72rem 0', borderRadius: 10, fontSize: '0.76rem', cursor: 'pointer',
+                flex: 1, padding: '0.72rem 0', borderRadius: 10, fontSize: '0.82rem', cursor: 'pointer',
                 border: on ? '1px solid rgba(240,192,64,0.55)' : '1px solid transparent',
                 color: on ? '#f5d98a' : 'rgba(255,255,255,0.6)',
                 background: on ? 'linear-gradient(180deg, rgba(240,192,64,0.22), rgba(224,168,46,0.10))' : 'transparent',
@@ -1461,14 +1461,14 @@ export default function GearScreen({
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span className="font-cinzel font-800" style={{ display: 'block', fontSize: '1.02rem', color: '#f7e2a8', lineHeight: 1.15 }}>The Tackle Shop</span>
-              <span className="font-karla" style={{ display: 'block', fontSize: '0.72rem', color: '#b8ae96', lineHeight: 1.35, marginTop: 2 }}>The full catalogue. Every rod, reel, hook, line and bait.</span>
+              <span className="font-karla" style={{ display: 'block', fontSize: '0.81rem', color: '#b8ae96', lineHeight: 1.35, marginTop: 2 }}>The full catalogue. Every rod, reel, hook, line and bait.</span>
             </span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden><path d="M9 6l6 6-6 6" /></svg>
           </Link>
 
           {/* Quick buy — one slot at a time, for when you know what you want. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: '#8794a6' }}>Quick Buy</span>
+            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.75rem', letterSpacing: '0.22em', color: '#8794a6' }}>Quick Buy</span>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
           </div>
           {([
@@ -1494,10 +1494,10 @@ export default function GearScreen({
                   )}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ display: 'block', fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)' }}>{row.label}</span>
+                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>{row.label}</span>
                   <span className="font-cinzel font-700 truncate" style={{ display: 'block', fontSize: '0.98rem', color: '#f0ede8' }}>{row.name}</span>
                 </span>
-                <span className="font-karla font-800 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.64rem', color: row.ready ? '#f0c040' : 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="font-karla font-800 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.77rem', color: row.ready ? '#f0c040' : 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {row.ready ? 'Upgrade ready' : 'Browse'}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                 </span>
@@ -1546,10 +1546,10 @@ export default function GearScreen({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e0ddd8' }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.83rem', color: '#e0ddd8' }}>
             Cast timer
           </p>
-          <p className="font-karla" style={{ fontSize: '0.65rem', color: '#7a7770', marginTop: 2, lineHeight: 1.35 }}>
+          <p className="font-karla" style={{ fontSize: '0.78rem', color: '#7a7770', marginTop: 2, lineHeight: 1.35 }}>
             Show elapsed seconds while waiting for a bite.
           </p>
         </div>
@@ -1624,7 +1624,7 @@ export default function GearScreen({
                   close button + title never leave the top of the sheet. */}
               <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0.85rem 0 0.7rem', marginBottom: 6, background: 'rgba(6,12,22,0.99)' }}>
-                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)' }}>
+                <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.79rem', color: 'rgba(255,255,255,0.55)' }}>
                   {openSlot.charAt(0).toUpperCase() + openSlot.slice(1)}
                 </p>
                 <button
@@ -1671,10 +1671,10 @@ export default function GearScreen({
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                           }}
                         >
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: '#f0ede8' }}>
                             ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
                           </p>
-                          <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: cosmeticToast.color }}>
                             −{cosmeticToast.cost.toLocaleString()} {cosmeticToast.currency === 'gems' ? '◆' : '⟡'}
                           </p>
                         </motion.div>
@@ -1729,7 +1729,7 @@ export default function GearScreen({
 
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                           <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f3d98a', letterSpacing: '0.02em', textShadow: `0 0 ${6 + auraT * 12}px rgba(240,200,90,${0.3 + auraT * 0.4})` }}>Completionist Forge</span>
-                          <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: filled >= COMPLETIONIST_MAX_EFFECTS ? '#f3d98a' : '#7a8aa0' }}>
+                          <span className="font-karla font-700" style={{ fontSize: '0.8rem', color: filled >= COMPLETIONIST_MAX_EFFECTS ? '#f3d98a' : '#7a8aa0' }}>
                             {filled}/{COMPLETIONIST_MAX_EFFECTS}
                           </span>
                         </div>
@@ -1808,20 +1808,20 @@ export default function GearScreen({
                           return (
                             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8 }}>
                               <div>
-                                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)', marginBottom: 5 }}>Base tool</p>
+                                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.71rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)', marginBottom: 5 }}>Base tool</p>
                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                   {base.map((l, i) => (
-                                    <span key={i} className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#cdd7e0', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{l}</span>
+                                    <span key={i} className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#cdd7e0', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{l}</span>
                                   ))}
                                 </div>
                               </div>
                               <div>
-                                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#f3d98a', marginBottom: 5 }}>Forged in <span style={{ color: '#7a8aa0' }}>· {forged.length}/{COMPLETIONIST_MAX_EFFECTS}</span></p>
+                                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.71rem', letterSpacing: '0.14em', color: '#f3d98a', marginBottom: 5 }}>Forged in <span style={{ color: '#7a8aa0' }}>· {forged.length}/{COMPLETIONIST_MAX_EFFECTS}</span></p>
                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                   {forged.length > 0 ? forged.map((l, i) => (
-                                    <span key={i} className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#f3d98a', background: 'rgba(232,200,74,0.12)', border: '1px solid rgba(232,200,74,0.4)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{l}</span>
+                                    <span key={i} className="font-karla font-700" style={{ fontSize: '0.76rem', color: '#f3d98a', background: 'rgba(232,200,74,0.12)', border: '1px solid rgba(232,200,74,0.4)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{l}</span>
                                   )) : (
-                                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#6a7888', fontStyle: 'italic' }}>Empty — fold rods in below</span>
+                                    <span className="font-karla" style={{ fontSize: '0.76rem', color: '#6a7888', fontStyle: 'italic' }}>Empty — fold rods in below</span>
                                   )}
                                 </div>
                               </div>
@@ -1829,11 +1829,11 @@ export default function GearScreen({
                           )
                         })()}
 
-                        <p className="font-karla" style={{ position: 'relative', fontSize: '0.68rem', color: '#9aa6b2', lineHeight: 1.45 }}>
+                        <p className="font-karla" style={{ position: 'relative', fontSize: '0.79rem', color: '#9aa6b2', lineHeight: 1.45 }}>
                           Fold up to three of your rods&rsquo; effects into the Completionist. Your rods are never consumed. The first forge is free; re-forging later costs {REFORGE_COST.toLocaleString()} ⟡.
                         </p>
                         {forgeableRods.length === 0 ? (
-                          <p className="font-karla" style={{ position: 'relative', fontSize: '0.66rem', color: '#6a7888', fontStyle: 'italic' }}>
+                          <p className="font-karla" style={{ position: 'relative', fontSize: '0.78rem', color: '#6a7888', fontStyle: 'italic' }}>
                             Buy or earn rods with special effects (Twin-Strike, Galaxy, YOLO and the like) to forge them in.
                           </p>
                         ) : (
@@ -1882,15 +1882,15 @@ export default function GearScreen({
                                 >
                                   <span style={{ width: 9, height: 9, borderRadius: '50%', background: fr.color, boxShadow: `0 0 7px ${fr.color}99`, flexShrink: 0 }} />
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fr.name}</div>
-                                    <div className="font-karla" style={{ fontSize: '0.64rem', color: dead ? '#c9a24a' : fr.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    <div className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fr.name}</div>
+                                    <div className="font-karla" style={{ fontSize: '0.77rem', color: dead ? '#c9a24a' : fr.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                       {dead
                                         ? `${rodEffectLabel(fr)} · already beaten by ${coveredBy ?? 'your other picks'}`
                                         : rodEffectLabel(fr)}
                                     </div>
                                   </div>
                                   <span className="font-karla font-700" style={{
-                                    fontSize: '0.7rem', flexShrink: 0, whiteSpace: 'nowrap',
+                                    fontSize: '0.8rem', flexShrink: 0, whiteSpace: 'nowrap',
                                     color: selected && dead ? '#c9a24a' : selected ? fr.color : dead ? '#8a7a4a' : '#7a8aa0',
                                   }}>
                                     {selected && dead ? '− Dead socket' : selected ? '− Remove' : swaps ? 'Swap in' : '+ Add'}
@@ -1922,25 +1922,25 @@ export default function GearScreen({
                             marginBottom: '-0.75rem', paddingBottom: '0.75rem',
                             borderTop: '1px solid rgba(232,200,74,0.28)',
                           }}>
-                            {forgeErr && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f2a0a0', textAlign: 'center' }}>{forgeErr}</p>}
+                            {forgeErr && <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#f2a0a0', textAlign: 'center' }}>{forgeErr}</p>}
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button
                                 onClick={discardForge}
                                 disabled={forgeBusy}
                                 className="font-karla font-700 uppercase tracking-[0.08em]"
-                                style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.62rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.72)', cursor: forgeBusy ? 'default' : 'pointer', opacity: forgeBusy ? 0.5 : 1 }}>
+                                style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.76rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.72)', cursor: forgeBusy ? 'default' : 'pointer', opacity: forgeBusy ? 0.5 : 1 }}>
                                 Discard
                               </button>
                               <button
                                 onClick={commitForge}
                                 disabled={forgeBusy || (reforgeCost > 0 && !canAffordReforge)}
                                 className="font-cinzel font-700 uppercase tracking-[0.06em]"
-                                style={{ flex: 1.6, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', background: (reforgeCost > 0 && !canAffordReforge) ? 'rgba(232,200,74,0.08)' : 'linear-gradient(180deg, rgba(240,200,90,0.34), rgba(200,160,50,0.28))', border: '1px solid rgba(240,200,90,0.7)', color: (reforgeCost > 0 && !canAffordReforge) ? 'rgba(243,217,138,0.5)' : '#fdf3d4', cursor: (forgeBusy || (reforgeCost > 0 && !canAffordReforge)) ? 'default' : 'pointer', boxShadow: (reforgeCost > 0 && !canAffordReforge) ? 'none' : '0 0 16px rgba(240,200,90,0.28)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                style={{ flex: 1.6, padding: '0.6rem', borderRadius: 10, fontSize: '0.78rem', background: (reforgeCost > 0 && !canAffordReforge) ? 'rgba(232,200,74,0.08)' : 'linear-gradient(180deg, rgba(240,200,90,0.34), rgba(200,160,50,0.28))', border: '1px solid rgba(240,200,90,0.7)', color: (reforgeCost > 0 && !canAffordReforge) ? 'rgba(243,217,138,0.5)' : '#fdf3d4', cursor: (forgeBusy || (reforgeCost > 0 && !canAffordReforge)) ? 'default' : 'pointer', boxShadow: (reforgeCost > 0 && !canAffordReforge) ? 'none' : '0 0 16px rgba(240,200,90,0.28)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                                 {forgeBusy ? 'Forging…' : reforgeCost > 0 ? `Re-Forge · ${REFORGE_COST.toLocaleString()} ⟡` : 'Forge'}
                               </button>
                             </div>
                             {reforgeCost > 0 && (
-                              <p className="font-karla" style={{ fontSize: '0.54rem', color: canAffordReforge ? '#8a8480' : '#f2a0a0', textAlign: 'center' }}>
+                              <p className="font-karla" style={{ fontSize: '0.73rem', color: canAffordReforge ? '#8a8480' : '#f2a0a0', textAlign: 'center' }}>
                                 You have {doubloons.toLocaleString()} ⟡
                               </p>
                             )}
@@ -1984,7 +1984,7 @@ export default function GearScreen({
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                                style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)', marginBottom: 1 }}>
+                                style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginBottom: 1 }}>
                                 Equipped Rod
                               </p>
                               <p className="font-cinzel font-700"
@@ -2006,7 +2006,7 @@ export default function GearScreen({
                                       details: (
                                         <div style={{ textAlign: 'center' }}>
                                           <p className="font-karla font-700 uppercase" style={{
-                                            fontSize: '0.55rem', letterSpacing: '0.14em',
+                                            fontSize: '0.73rem', letterSpacing: '0.14em',
                                             color: '#c4a96aaa', marginBottom: 4,
                                           }}>
                                             Quick-sell
@@ -2017,7 +2017,7 @@ export default function GearScreen({
                                             Sell {rod.name}?
                                           </p>
                                           <p className="font-karla" style={{
-                                            fontSize: '0.7rem', color: 'rgba(240,222,168,0.65)', lineHeight: 1.4,
+                                            fontSize: '0.8rem', color: 'rgba(240,222,168,0.65)', lineHeight: 1.4,
                                           }}>
                                             Refunds {refund.toLocaleString()} ⟡ (65% of {rod.cost.toLocaleString()}). Your Bamboo Rod will be re-equipped automatically.
                                           </p>
@@ -2036,7 +2036,7 @@ export default function GearScreen({
                                     background: 'rgba(196,169,106,0.16)',
                                     border: '1px solid rgba(196,169,106,0.55)',
                                     color: '#f0d695',
-                                    fontSize: '0.6rem', letterSpacing: '0.1em',
+                                    fontSize: '0.75rem', letterSpacing: '0.1em',
                                     lineHeight: 1.1,
                                     cursor: 'pointer',
                                   }}
@@ -2053,13 +2053,13 @@ export default function GearScreen({
                                 const group = rodLines.filter(l => l.group === g)
                                 return (
                                   <div key={g}>
-                                    <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.54rem', color: hc, marginBottom: 6 }}>{heading}</p>
+                                    <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.73rem', color: hc, marginBottom: 6 }}>{heading}</p>
                                     {group.length > 0 ? (
                                       <ul style={{ display: 'flex', flexDirection: 'column', gap: 5, listStyle: 'none', padding: 0, margin: 0 }}>
                                         {group.map(l => <StatBullet key={l.title} value={l.value} help={l.help} color={rod.color} />)}
                                       </ul>
                                     ) : (
-                                      <p className="font-karla" style={{ fontSize: '0.72rem', color: '#6a7888', fontStyle: 'italic' }}>Nothing forged in yet — fold rods in via the forge below.</p>
+                                      <p className="font-karla" style={{ fontSize: '0.81rem', color: '#6a7888', fontStyle: 'italic' }}>Nothing forged in yet — fold rods in via the forge below.</p>
                                     )}
                                   </div>
                                 )
@@ -2077,7 +2077,7 @@ export default function GearScreen({
                         {ownedCount > 1 && (
                           <>
                             <p className="font-karla font-600 uppercase tracking-[0.14em]"
-                              style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
+                              style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
                               Tap to Swap
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -2123,12 +2123,12 @@ export default function GearScreen({
                                           } as React.CSSProperties}
                                         />
                                       </div>
-                                      <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>
+                                      <p className="font-cinzel font-700" style={{ fontSize: '0.81rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>
                                         {r.name}
                                       </p>
                                       {isEquipped
-                                        ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: r.color }}>✓ Equipped</span>
-                                        : <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center' }}>{tagline}</span>
+                                        ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: r.color }}>✓ Equipped</span>
+                                        : <span className="font-karla font-600" style={{ fontSize: '0.75rem', color: r.color, lineHeight: 1.2, textAlign: 'center' }}>{tagline}</span>
                                       }
                                     </button>
                                     {sellable && (
@@ -2149,7 +2149,7 @@ export default function GearScreen({
                                             details: (
                                               <div style={{ textAlign: 'center' }}>
                                                 <p className="font-karla font-700 uppercase" style={{
-                                                  fontSize: '0.55rem', letterSpacing: '0.14em',
+                                                  fontSize: '0.73rem', letterSpacing: '0.14em',
                                                   color: '#c4a96aaa', marginBottom: 4,
                                                 }}>
                                                   Quick-sell
@@ -2160,7 +2160,7 @@ export default function GearScreen({
                                                   Sell {r.name}?
                                                 </p>
                                                 <p className="font-karla" style={{
-                                                  fontSize: '0.7rem', color: 'rgba(240,222,168,0.65)', lineHeight: 1.4,
+                                                  fontSize: '0.8rem', color: 'rgba(240,222,168,0.65)', lineHeight: 1.4,
                                                 }}>
                                                   Refunds {refund.toLocaleString()} ⟡ (65% of {r.cost.toLocaleString()}). You can re-buy it later for full price.
                                                 </p>
@@ -2179,7 +2179,7 @@ export default function GearScreen({
                                           background: 'rgba(196,169,106,0.14)',
                                           border: '1px solid rgba(196,169,106,0.45)',
                                           color: '#d4b87a',
-                                          fontSize: '0.5rem', letterSpacing: '0.08em',
+                                          fontSize: '0.71rem', letterSpacing: '0.08em',
                                           lineHeight: 1.1,
                                           cursor: 'pointer',
                                           zIndex: 2,
@@ -2208,7 +2208,7 @@ export default function GearScreen({
                             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#a09890', marginBottom: 4 }}>
                               You own every rod in the sea.
                             </p>
-                            <p className="font-karla" style={{ fontSize: '0.75rem', color: '#6a6460' }}>
+                            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#6a6460' }}>
                               The shop is bare, Captain.
                             </p>
                           </div>
@@ -2251,7 +2251,7 @@ export default function GearScreen({
                                         />
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                           <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                                            style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
                                             New Rod
                                           </p>
                                           <p className="font-cinzel font-700"
@@ -2261,7 +2261,7 @@ export default function GearScreen({
                                         </div>
                                       </div>
                                       <p className="font-karla font-300"
-                                        style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
+                                        style={{ fontSize: '0.85rem', color: '#a09890', lineHeight: 1.5 }}>
                                         {r.description}
                                       </p>
                                       {fallbackLines ? (
@@ -2273,7 +2273,7 @@ export default function GearScreen({
                                       ) : (
                                         <>
                                           <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                                            style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                                            style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
                                             What changes
                                           </p>
                                           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -2331,7 +2331,7 @@ export default function GearScreen({
                                       <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: canAfford ? '#f0ede8' : '#c4bfb6', lineHeight: 1.15, marginBottom: 2 }}>
                                         {r.name}
                                       </p>
-                                      <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: r.color, lineHeight: 1.3, opacity: 0.85 }}>
+                                      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: r.color, lineHeight: 1.3, opacity: 0.85 }}>
                                         {rodTagline(r)}
                                       </p>
                                     </div>
@@ -2340,7 +2340,7 @@ export default function GearScreen({
                                       gap: 2, flexShrink: 0,
                                     }}>
                                       <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                                        style={{ fontSize: '0.56rem', color: captainLocked ? '#f0c040' : !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
+                                        style={{ fontSize: '0.74rem', color: captainLocked ? '#f0c040' : !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
                                         {captainLocked ? <><IconAnchor size={10} /> Captain only</> : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
                                       </span>
                                       <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
@@ -2404,10 +2404,10 @@ export default function GearScreen({
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                           }}
                         >
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: '#f0ede8' }}>
                             ✓ Upgraded to <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>
                           </p>
-                          <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: cosmeticToast.color }}>
                             −{cosmeticToast.cost.toLocaleString()} {cosmeticToast.currency === 'gems' ? '◆' : '⟡'}
                           </p>
                         </motion.div>
@@ -2425,12 +2425,12 @@ export default function GearScreen({
                     }}>
                       <div>
                         <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                          style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                          style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
                           Equipped Reel
                         </p>
                         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: reel.color, lineHeight: 1.1 }}>{reel.name}</p>
                       </div>
-                      <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>{reel.description}</p>
+                      <p className="font-karla font-300" style={{ fontSize: '0.85rem', color: '#a09890', lineHeight: 1.5 }}>{reel.description}</p>
                       {dragPct > 0 ? (
                         <StatRow
                           title="Needle Speed"
@@ -2488,25 +2488,25 @@ export default function GearScreen({
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: canAffordReel ? nextReel.color : '#a09890', lineHeight: 1.1 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: canAffordReel ? nextReel.color : '#a09890', lineHeight: 1.1 }}>
                               {nextReel.name}
                             </p>
-                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: reelLevelMet ? `${nextReel.color}aa` : '#e0a44a', background: reelLevelMet ? `${nextReel.color}14` : 'rgba(224,164,74,0.12)', border: `1px solid ${reelLevelMet ? `${nextReel.color}30` : 'rgba(224,164,74,0.4)'}`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
+                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.71rem', color: reelLevelMet ? `${nextReel.color}aa` : '#e0a44a', background: reelLevelMet ? `${nextReel.color}14` : 'rgba(224,164,74,0.12)', border: `1px solid ${reelLevelMet ? `${nextReel.color}30` : 'rgba(224,164,74,0.4)'}`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
                               {reelLevelMet ? 'Upgrade' : `Fishing Lv ${reelReq}`}
                             </span>
                           </div>
                           {nextSlowPct > 0 && (
-                            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${nextReel.color}cc` }}>
+                            <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: `${nextReel.color}cc` }}>
                               Needle {nextSlowPct}% slower
                             </p>
                           )}
                         </div>
-                        <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: canAffordReel ? '#f0c040' : '#f0c04088', flexShrink: 0 }}>
+                        <span className="font-karla font-700" style={{ fontSize: '0.81rem', color: canAffordReel ? '#f0c040' : '#f0c04088', flexShrink: 0 }}>
                           {nextReel.cost.toLocaleString()} ⟡
                         </span>
                       </button>
                     ) : (
-                      <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', textAlign: 'center', padding: '0.6rem 0' }}>
+                      <p className="font-karla font-300" style={{ fontSize: '0.81rem', color: '#6a6764', textAlign: 'center', padding: '0.6rem 0' }}>
                         You have the finest reel in the sea.
                       </p>
                     )}
@@ -2541,10 +2541,10 @@ export default function GearScreen({
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                           }}
                         >
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: '#f0ede8' }}>
                             ✓ Upgraded to <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span>
                           </p>
-                          <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: cosmeticToast.color }}>
                             −{cosmeticToast.cost.toLocaleString()} {cosmeticToast.currency === 'gems' ? '◆' : '⟡'}
                           </p>
                         </motion.div>
@@ -2577,13 +2577,13 @@ export default function GearScreen({
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                            style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
                             Equipped Hook
                           </p>
                           <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: hook.color, lineHeight: 1.1 }}>{hook.name}</p>
                         </div>
                       </div>
-                      <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>{hook.description}</p>
+                      <p className="font-karla font-300" style={{ fontSize: '0.85rem', color: '#a09890', lineHeight: 1.5 }}>{hook.description}</p>
                       {hookTier > 0 ? (
                         <StatRow
                           title="Catch Zone"
@@ -2640,23 +2640,23 @@ export default function GearScreen({
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: canAffordHook ? nextHook.color : '#a09890', lineHeight: 1.1 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: canAffordHook ? nextHook.color : '#a09890', lineHeight: 1.1 }}>
                               {nextHook.name}
                             </p>
-                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: hookLevelMet ? `${nextHook.color}aa` : '#e0a44a', background: hookLevelMet ? `${nextHook.color}14` : 'rgba(224,164,74,0.12)', border: `1px solid ${hookLevelMet ? `${nextHook.color}30` : 'rgba(224,164,74,0.4)'}`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
+                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.71rem', color: hookLevelMet ? `${nextHook.color}aa` : '#e0a44a', background: hookLevelMet ? `${nextHook.color}14` : 'rgba(224,164,74,0.12)', border: `1px solid ${hookLevelMet ? `${nextHook.color}30` : 'rgba(224,164,74,0.4)'}`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
                               {hookLevelMet ? 'Upgrade' : `Fishing Lv ${hookReq}`}
                             </span>
                           </div>
-                          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${nextHook.color}cc` }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: `${nextHook.color}cc` }}>
                             +{nextZoneBonus}° catch zone
                           </p>
                         </div>
-                        <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: canAffordHook ? '#f0c040' : '#f0c04088', flexShrink: 0 }}>
+                        <span className="font-karla font-700" style={{ fontSize: '0.81rem', color: canAffordHook ? '#f0c040' : '#f0c04088', flexShrink: 0 }}>
                           {nextHook.cost.toLocaleString()} ⟡
                         </span>
                       </button>
                     ) : (
-                      <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#6a6764', textAlign: 'center', padding: '0.6rem 0' }}>
+                      <p className="font-karla font-300" style={{ fontSize: '0.81rem', color: '#6a6764', textAlign: 'center', padding: '0.6rem 0' }}>
                         You have the best hook in the sea.
                       </p>
                     )}
@@ -2678,12 +2678,12 @@ export default function GearScreen({
                   }}>
                     <div>
                       <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                        style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                        style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
                         Equipped Line
                       </p>
                       <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: line.color, lineHeight: 1.1 }}>{line.name}</p>
                     </div>
-                    <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>{line.description}</p>
+                    <p className="font-karla font-300" style={{ fontSize: '0.85rem', color: '#a09890', lineHeight: 1.5 }}>{line.description}</p>
                     {snagRedPct > 0 ? (
                       <StatRow
                         title="Snag Protection"
@@ -2700,7 +2700,7 @@ export default function GearScreen({
                       />
                     )}
                   </div>
-                  <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#6a6460', lineHeight: 1.5, textAlign: 'center' }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.78rem', color: '#6a6460', lineHeight: 1.5, textAlign: 'center' }}>
                     Lines are earned by catching unique species — no purchase needed.
                   </p>
                 </div>
@@ -2783,13 +2783,13 @@ export default function GearScreen({
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#6fd3c7' }}>The Deep Reel</p>
                   {!hasDeepReel ? (
                     <div style={{ padding: '1rem 0.85rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                      <p className="font-karla" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.5, color: '#9a958c', textAlign: 'center' }}>
+                      <p className="font-karla" style={{ margin: 0, fontSize: '0.81rem', lineHeight: 1.5, color: '#9a958c', textAlign: 'center' }}>
                         A second special slot, still shut. It opens with the spoils of the Sunken Hand, and it takes one thing only.
                       </p>
                     </div>
                   ) : !hasAnglersPatience ? (
                     <div style={{ padding: '1rem 0.85rem', borderRadius: 12, background: 'rgba(111,211,199,0.06)', border: '1px solid rgba(111,211,199,0.28)' }}>
-                      <p className="font-karla" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.5, color: '#9a958c', textAlign: 'center' }}>
+                      <p className="font-karla" style={{ margin: 0, fontSize: '0.81rem', lineHeight: 1.5, color: '#9a958c', textAlign: 'center' }}>
                         Open, and empty. Only The Primeval Eye seats here, and it comes off Finn.
                       </p>
                     </div>
@@ -2797,9 +2797,9 @@ export default function GearScreen({
                     <div style={{ padding: '0.8rem 0.85rem', borderRadius: 12, background: equippedSpecial2 ? 'rgba(111,211,199,0.1)' : 'rgba(255,255,255,0.03)', border: equippedSpecial2 ? '1px solid rgba(111,211,199,0.45)' : '1px solid rgba(255,255,255,0.10)' }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                         <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8e4de' }}>The Primeval Eye</span>
-                        {equippedSpecial2 && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: '#6fd3c7' }}>Equipped</span>}
+                        {equippedSpecial2 && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.71rem', color: '#6fd3c7' }}>Equipped</span>}
                       </div>
-                      <p className="font-karla" style={{ margin: '4px 0 10px', fontSize: '0.7rem', lineHeight: 1.45, color: '#9a958c' }}>
+                      <p className="font-karla" style={{ margin: '4px 0 10px', fontSize: '0.8rem', lineHeight: 1.45, color: '#9a958c' }}>
                         {FINN_ITEMS.anglers_patience.flavor}
                       </p>
                       <div style={{ marginBottom: 10 }}>
@@ -2808,7 +2808,7 @@ export default function GearScreen({
                       <button
                         onClick={() => onEquipSpecial2?.(equippedSpecial2 ? null : 'anglers_patience')}
                         className="font-karla font-700 uppercase tracking-[0.1em]"
-                        style={{ width: '100%', height: 36, borderRadius: 10, cursor: 'pointer', background: equippedSpecial2 ? 'rgba(255,255,255,0.06)' : 'rgba(111,211,199,0.18)', border: equippedSpecial2 ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(111,211,199,0.5)', color: equippedSpecial2 ? '#9a958c' : '#6fd3c7', fontSize: '0.64rem', touchAction: 'manipulation' }}>
+                        style={{ width: '100%', height: 36, borderRadius: 10, cursor: 'pointer', background: equippedSpecial2 ? 'rgba(255,255,255,0.06)' : 'rgba(111,211,199,0.18)', border: equippedSpecial2 ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(111,211,199,0.5)', color: equippedSpecial2 ? '#9a958c' : '#6fd3c7', fontSize: '0.77rem', touchAction: 'manipulation' }}>
                         {equippedSpecial2 ? 'Unequip' : 'Equip'}
                       </button>
                     </div>
@@ -2843,10 +2843,10 @@ export default function GearScreen({
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                         }}
                       >
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.83rem', color: '#f0ede8' }}>
                           ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
                         </p>
-                        <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
+                        <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: cosmeticToast.color }}>
                           −{cosmeticToast.cost.toLocaleString()} ⟡
                         </p>
                       </motion.div>
@@ -2899,7 +2899,7 @@ export default function GearScreen({
                               </div>
                             )}
                           </div>
-                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', color: isActive ? '#60a5fa' : isUnlocked ? '#b6b2aa' : '#6a675f', maxWidth: 84, textAlign: 'center', whiteSpace: 'nowrap' }}>{c.name}</p>
+                          <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: isActive ? '#60a5fa' : isUnlocked ? '#b6b2aa' : '#6a675f', maxWidth: 84, textAlign: 'center', whiteSpace: 'nowrap' }}>{c.name}</p>
                         </button>
                       )
                     }
@@ -2908,7 +2908,7 @@ export default function GearScreen({
                       { label: 'Earnable', items: CHARACTER_COLORS.filter(c => !c.free && !(c.price || c.gemPrice)) },
                       { label: 'Purchasable', items: CHARACTER_COLORS.filter(c => !!(c.price || c.gemPrice)) },
                     ]
-                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    const groupLabel = { fontSize: '0.74rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
@@ -2969,7 +2969,7 @@ export default function GearScreen({
                               </div>
                             )}
                           </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>{b.name}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>{b.name}</p>
                         </button>
                       )
                     }
@@ -2979,7 +2979,7 @@ export default function GearScreen({
                     // Crate + achievement boats shown even when unowned, so players see the chase.
                     const earnedBoats = BOATS.filter(b => b.crateOnly || typeof b.achievementPoints === 'number').sort(byOwnedFirst)
                     const purchasableBoats = BOATS.filter(b => !b.crateOnly && typeof b.achievementPoints !== 'number').sort(byOwnedFirst)
-                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    const groupLabel = { fontSize: '0.74rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     const driftEquipped = !equippedBoat
                     return (
@@ -2991,7 +2991,7 @@ export default function GearScreen({
                               here because the row of thumbnails cannot say it
                               and a player picking on looks alone should at
                               least know there is something else to weigh. */}
-                          <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: 'rgba(230,215,180,0.5)', marginTop: 3, lineHeight: 1.45 }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.79rem', color: 'rgba(230,215,180,0.5)', marginTop: 3, lineHeight: 1.45 }}>
                             Out on the water, the hull you sail decides how she
                             handles. Tap one to see what it does.
                           </p>
@@ -3024,7 +3024,7 @@ export default function GearScreen({
                                 </div>
                               )}
                             </div>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#f0ede8', textAlign: 'center' }}>Driftwood</p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#f0ede8', textAlign: 'center' }}>Driftwood</p>
                           </button>
                         </div>
 
@@ -3083,7 +3083,7 @@ export default function GearScreen({
                               </div>
                             )}
                           </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>{h.name}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>{h.name}</p>
                         </button>
                       )
                     }
@@ -3094,7 +3094,7 @@ export default function GearScreen({
                     // there); Purchasable = shop colors.
                     const earnedHats = HATS.filter(h => h.crateOnly).sort(byOwnedFirst)
                     const purchasableHats = HATS.filter(h => !h.crateOnly && h.cost > 0).sort(byOwnedFirst)
-                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    const groupLabel = { fontSize: '0.74rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     const defaultEquipped = !equippedHat
                     return (
@@ -3127,7 +3127,7 @@ export default function GearScreen({
                                 </div>
                               )}
                             </div>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#c8c4bc', textAlign: 'center', whiteSpace: 'nowrap' }}>Default</p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#c8c4bc', textAlign: 'center', whiteSpace: 'nowrap' }}>Default</p>
                           </button>
                         </div>
 
@@ -3200,7 +3200,7 @@ export default function GearScreen({
                               </div>
                             )}
                           </div>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: isEquipped ? '#f0ede8' : owned ? '#c8c4bc' : '#6a675f', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             {owned ? p.name.replace(/ (Parrot|Monkey|Seal)$/, '') : '???'}
                           </p>
                         </button>
@@ -3211,7 +3211,7 @@ export default function GearScreen({
                     // and crabs were owned and equippable but never rendered in
                     // the one screen that equips them.
                     const species = PET_SPECIES_ORDER.map(key => ({ key, label: PET_SPECIES_LABEL[key] }))
-                    const groupLabel = { fontSize: '0.56rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
+                    const groupLabel = { fontSize: '0.74rem', color: '#8a8272', letterSpacing: '0.12em', marginTop: 2 } as const
                     const rowStyle: React.CSSProperties = { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }
                     // "None" clears the STERN slot only. A bow pet rides in
                     // its own slot alongside, so unequipping your stern pet
@@ -3220,7 +3220,7 @@ export default function GearScreen({
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a78bfa' }}>Pets</p>
-                        <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#7a7268', lineHeight: 1.4 }}>
+                        <p className="font-karla font-300" style={{ fontSize: '0.78rem', color: '#7a7268', lineHeight: 1.4 }}>
                           Pets are a rare drop from crates — the golden variants are the trophies. Tap one to equip, or tap the equipped pet to put it away.
                         </p>
                         <CosmeticLegend />
@@ -3244,7 +3244,7 @@ export default function GearScreen({
                                 </div>
                               )}
                             </div>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#c8c4bc', textAlign: 'center', whiteSpace: 'nowrap' }}>None</p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: '#c8c4bc', textAlign: 'center', whiteSpace: 'nowrap' }}>None</p>
                           </button>
                         </div>
 
@@ -3274,7 +3274,7 @@ export default function GearScreen({
               {openSlot === 'badge' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Badges</p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#5a5755', lineHeight: 1.4 }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.79rem', color: '#5a5755', lineHeight: 1.4 }}>
                     {selectedBadgeSlot !== null
                       ? `Slot ${selectedBadgeSlot + 1} selected — pick a badge to equip there. Tap the slot again to deselect.`
                       : 'Pick a slot first, or tap a badge to fill the next empty slot. Tap an equipped badge to remove it.'}
@@ -3300,15 +3300,15 @@ export default function GearScreen({
                           {badge ? (
                             <img src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain' }} />
                           ) : (
-                            <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>Empty</span>
+                            <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.3)' }}>Empty</span>
                           )}
-                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: isSelected ? '#f0c040' : 'rgba(255,255,255,0.4)' }}>Slot {slot + 1}</span>
+                          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.71rem', letterSpacing: '0.1em', color: isSelected ? '#f0c040' : 'rgba(255,255,255,0.4)' }}>Slot {slot + 1}</span>
                         </button>
                       )
                     })}
                   </div>
                   {unlockedBadges.length === 0 ? (
-                    <p className="font-karla font-300" style={{ fontSize: '0.72rem', color: '#4a4845' }}>No badges earned yet.</p>
+                    <p className="font-karla font-300" style={{ fontSize: '0.81rem', color: '#4a4845' }}>No badges earned yet.</p>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                       {BADGES.filter(b => unlockedBadges.includes(b.id)).map(badge => {
@@ -3329,9 +3329,9 @@ export default function GearScreen({
                             }}
                           >
                             <img src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                            <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: isEquipped ? '#f0c040' : '#a0a09a', textAlign: 'center', lineHeight: 1.2 }}>{badge.name}</p>
+                            <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: isEquipped ? '#f0c040' : '#a0a09a', textAlign: 'center', lineHeight: 1.2 }}>{badge.name}</p>
                             {isEquipped && (
-                              <span className="font-karla font-700" style={{ fontSize: '0.48rem', color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>On</span>
+                              <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>On</span>
                             )}
                           </button>
                         )
@@ -3344,7 +3344,7 @@ export default function GearScreen({
                     background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.18)',
                     textDecoration: 'none',
                   }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: 'rgba(240,192,64,0.7)' }}>Want to earn more badges?</p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.79rem', color: 'rgba(240,192,64,0.7)' }}>Want to earn more badges?</p>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,64,0.5)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
@@ -3530,19 +3530,19 @@ export default function GearScreen({
                     return (
                       <div style={{ flex: 1, background: 'rgba(0,0,0,0.32)', borderRadius: 10, padding: '0.55rem 0.4rem' }}>
                         <p className="font-karla font-700 uppercase" style={{
-                          fontSize: '0.5rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.45)',
+                          fontSize: '0.71rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.45)',
                         }}>{label}</p>
                         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1, marginTop: 3 }}>
                           {Math.round(val * 100)}%
                         </p>
                         {!i.equipped && pp !== 0 && (
                           <p className="font-karla font-700" style={{
-                            fontSize: '0.6rem', marginTop: 1,
+                            fontSize: '0.75rem', marginTop: 1,
                             color: pp > 0 ? '#7fd6a0' : '#e08a8a',
                           }}>{pp > 0 ? '+' : ''}{pp}pp</p>
                         )}
                         {!i.equipped && pp === 0 && (
-                          <p className="font-karla font-700" style={{ fontSize: '0.6rem', marginTop: 1, color: 'rgba(255,255,255,0.3)' }}>same</p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.75rem', marginTop: 1, color: 'rgba(255,255,255,0.3)' }}>same</p>
                         )}
                       </div>
                     )
@@ -3554,7 +3554,7 @@ export default function GearScreen({
                         <Cell label="Agility" val={ag} delta={dAg} />
                       </div>
                       <p className="font-karla font-600" style={{
-                        fontSize: '0.66rem', color: 'rgba(255,255,255,0.42)', marginTop: 7, lineHeight: 1.45,
+                        fontSize: '0.78rem', color: 'rgba(255,255,255,0.42)', marginTop: 7, lineHeight: 1.45,
                       }}>
                         {trimLabel(getBoat(i.id)?.trim)} rig.{' '}
                         {/* Say what the two numbers are FOR. A percentage with no
@@ -3568,7 +3568,7 @@ export default function GearScreen({
                 })()}
 
                 {i.equipped ? (
-                  <div className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.72rem', color: '#4ade80', padding: '0.7rem', borderRadius: 12, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.35)' }}>✓ Equipped</div>
+                  <div className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.81rem', color: '#4ade80', padding: '0.7rem', borderRadius: 12, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.35)' }}>✓ Equipped</div>
                 ) : i.owned ? (
                   <button onClick={doEquip} className="font-cinzel font-700" style={{ width: '100%', padding: '0.72rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff' }}>Equip</button>
                 ) : i.purchasable ? (
@@ -3577,18 +3577,18 @@ export default function GearScreen({
                       {detailBusy ? 'Buying…' : `Buy for ${i.price!.toLocaleString()} ${glyph}`}
                     </button>
                   ) : (
-                    <div className="font-karla font-700" style={{ padding: '0.72rem', borderRadius: 12, fontSize: '0.78rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: '#c99' }}>
+                    <div className="font-karla font-700" style={{ padding: '0.72rem', borderRadius: 12, fontSize: '0.83rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: '#c99' }}>
                       Need {(i.price! - bal).toLocaleString()} more {glyph}
                     </div>
                   )
                 ) : (
                   <div style={{ padding: '0.8rem', borderRadius: 12, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.28)' }}>
-                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: 'rgba(196,169,106,0.75)', marginBottom: '0.4rem' }}>How to unlock</p>
-                    <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#e0d2ad', lineHeight: 1.4 }}>{i.unlockHint ?? 'Locked'}</p>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.71rem', color: 'rgba(196,169,106,0.75)', marginBottom: '0.4rem' }}>How to unlock</p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.85rem', color: '#e0d2ad', lineHeight: 1.4 }}>{i.unlockHint ?? 'Locked'}</p>
                   </div>
                 )}
 
-                <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Tap anywhere to close</p>
+                <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.9rem' }}>Tap anywhere to close</p>
               </motion.div>
             </motion.div>
           )
@@ -3657,7 +3657,7 @@ export default function GearScreen({
                           background: 'rgba(255,255,255,0.04)',
                           border: '1px solid rgba(255,255,255,0.15)',
                           color: 'rgba(240,237,232,0.65)',
-                          borderRadius: 12, fontSize: '0.72rem',
+                          borderRadius: 12, fontSize: '0.81rem',
                           cursor: confirming ? 'default' : 'pointer',
                         }}
                       >
@@ -3679,7 +3679,7 @@ export default function GearScreen({
                           background: unaffordable ? 'rgba(255,255,255,0.04)' : ctaBg,
                           border: `1px solid ${unaffordable ? 'rgba(255,255,255,0.12)' : ctaBorder}`,
                           color: unaffordable ? '#f0c04099' : ctaColor,
-                          borderRadius: 12, fontSize: '0.72rem',
+                          borderRadius: 12, fontSize: '0.81rem',
                           cursor: (confirming || unaffordable) ? 'default' : 'pointer',
                           opacity: confirming ? 0.65 : 1,
                         }}

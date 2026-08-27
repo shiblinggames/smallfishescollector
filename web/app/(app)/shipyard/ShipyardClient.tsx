@@ -67,6 +67,18 @@ type Buyable = 'rack' | 'hull' | 'handling' | 'accel' | 'hold'
  * of it. You are spending real money-equivalent on a permanent change and the
  * copy's only job is to make sure you meant to.
  */
+/** Four words, for the row. `EXPLAIN.does` is the full sentence and the
+ *  confirm modal still shows it — a page of five paragraphs is how a shipyard
+ *  becomes a wall of text, and the number beside the tag is doing most of the
+ *  explaining anyway. */
+const TAG: Record<Buyable, string> = {
+  rack: 'Carry another rod',
+  hull: 'Faster across the chart',
+  handling: 'Comes round quicker',
+  accel: 'Away faster from a stop',
+  hold: 'Land more before it fills',
+}
+
 const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
   rack: {
     does: 'Adds one berth to the rod rack, so the boat carries one more rod.',
@@ -400,7 +412,7 @@ export default function ShipyardClient(p: {
         </button>
 
         <div style={{
-          position: 'relative', marginTop: 12, borderRadius: 22,
+          position: 'relative', marginTop: 64, borderRadius: 22,
           // MUST clip. FisherPose's overlays are positioned in percentages of
           // this box and genuinely run past it — the hook alone is 204.5% wide
           // at left -10.5% — so without this the widest child sets the page's
@@ -521,12 +533,12 @@ export default function ShipyardClient(p: {
             OUT FROM BEHIND A TAB. These five were the back half of a two-tab
             strip, so the things you come to a shipyard to buy were the things
             you could not see. They are the first thing under the picture now. */}
-        <Band title="Your boat" sub="What she is. Bought once, and it stays bought." />
+        <Band title="Your boat" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <BoatRow
             label="Rod rack" name={`${slots} berth${slots === 1 ? '' : 's'}`} accent="#67d4e8"
             now={String(slots)} unit={slots === 1 ? 'rod aboard' : 'rods aboard'}
-            does={EXPLAIN.rack.does}
+            does={TAG.rack}
             next={rack >= MAX_RACK_TIER ? null : `${rackSlots(rack + 1)} rods`}
             cost={rackCost}
             busy={busy === 'rack'} disabled={!!busy || doubloons < (rackCost ?? Infinity)}
@@ -535,7 +547,7 @@ export default function ShipyardClient(p: {
           <BoatRow
             label="Hull" name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
             now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
-            does={EXPLAIN.hull.does}
+            does={TAG.hull}
             next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`}
             cost={hullCost}
             busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
@@ -544,7 +556,7 @@ export default function ShipyardClient(p: {
           <BoatRow
             label="Rudder" name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
             now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
-            does={EXPLAIN.handling.does}
+            does={TAG.handling}
             next={handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`}
             cost={handlingCost}
             busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
@@ -553,7 +565,7 @@ export default function ShipyardClient(p: {
           <BoatRow
             label="Rig" name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
             now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
-            does={EXPLAIN.accel.does}
+            does={TAG.accel}
             next={accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`}
             cost={accelCost}
             busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
@@ -562,7 +574,7 @@ export default function ShipyardClient(p: {
           <BoatRow
             label="Fish hold" name={getFishHold(hold).name} accent="#f0c040"
             now={String(cap)} unit="fish aboard"
-            does={EXPLAIN.hold.does}
+            does={TAG.hold}
             next={holdNext ? `${holdNext.capacity} fish` : null}
             cost={holdNext?.cost ?? null}
             busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
@@ -573,7 +585,7 @@ export default function ShipyardClient(p: {
         {/* ── YOUR RIG ── every slot on the boat. Unchanged in what it DOES;
             what changed is that it now sits under a heading that says what it
             is, instead of appearing when you pressed a tab. */}
-        <Band title="Your rig" sub="What you carry. Tap a slot to change it." />
+        <Band title="Your rig" />
           <GearScreen
             variant="locker"
             baitInventory={p.baitInventory}
@@ -742,13 +754,12 @@ export default function ShipyardClient(p: {
         {/* ── THE TOTAL ── last, because it is the sum of BOTH bands above and
             not just the picture. It used to sit directly under the hero, which
             put a table of numbers between you and everything the page is for. */}
-        <Band title="What it adds up to" sub="Every slot and every upgrade, totalled." />
+        <Band title="What it adds up to" />
         <LoadoutStats
           rodTier={equipped} reelTier={reelTier} hookTier={hookTier} lineTier={p.lineTier}
           completionistEffects={effects}
           fishingLevel={p.fishingLevel}
           boatId={boat} hullTier={hull} handlingTier={handling} accelTier={accel}
-          sub="The boat, the rig and the trim, added up."
         />
 
         <Link href="/sea" className="font-cinzel font-700 block text-center"
@@ -959,14 +970,11 @@ export default function ShipyardClient(p: {
  *  locker grid all began at the same left edge with nothing saying where one
  *  thing ended and the next started, which is most of why it read as one
  *  undifferentiated pile. */
-function Band({ title, sub }: { title: string; sub: string }) {
+function Band({ title }: { title: string }) {
   return (
     <div style={{ marginTop: 26, marginBottom: 10 }}>
       <p className="font-cinzel font-700" style={{ fontSize: 'var(--sy-6)', color: '#f2ead8', lineHeight: 1.1 }}>
         {title}
-      </p>
-      <p className="font-karla font-600" style={{ fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.55)', marginTop: 2 }}>
-        {sub}
       </p>
       <div aria-hidden style={{
         height: 1, marginTop: 9,
