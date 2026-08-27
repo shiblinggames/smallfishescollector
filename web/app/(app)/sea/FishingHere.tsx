@@ -1192,9 +1192,19 @@ export default function FishingHere({
     if (auto.tier === 0 || !autoOn) return
     if (phase !== 'result') return
     if (baitLeft <= 0) return
-    const t = setTimeout(() => { castRef.current?.() }, 900)
+    // A FULL HOLD STOPS THE LOOP. Only bait was checked, so an unattended boat
+    // kept casting into a hold that could not take another fish — the one
+    // failure a hold exists to warn you about, automated.
+    if (holdFull) return
+    // A SHINY IS A DECISION. Sell it or mount it, and the loop casting over the
+    // top of that card takes the choice away from you while you are looking at
+    // it. The fishing screen has always refused to auto-cast past one.
+    if (shiny) return
+    // A crate opens itself over 700ms and then wants a beat to be read. At 900
+    // the next cast landed on top of the reveal, which is the whole moment.
+    const t = setTimeout(() => { castRef.current?.() }, caught?.kind === 'crate' ? 2200 : 900)
     return () => clearTimeout(t)
-  }, [phase, auto.tier, autoOn, baitLeft])
+  }, [phase, auto.tier, autoOn, baitLeft, holdFull, shiny, caught?.kind])
 
   // ── AUTO CATCHER ────────────────────────────────────────────────────────
   // Watches the needle and taps the instant it is about to enter a green catch

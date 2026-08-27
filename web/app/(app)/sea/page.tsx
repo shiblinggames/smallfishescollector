@@ -128,10 +128,19 @@ export default async function SeaPage() {
   const equippedSpecial = (profile?.equipped_special as string | null) ?? null
   const hasCatcher = profile?.has_auto_catcher === true
   const hasCaster = profile?.has_auto_caster === true
+  // THE CATCHER IS AN UPGRADE OF THE CASTER, not a second thing you equip.
+  // specialItems declares it `upgradeOf: 'auto_caster'`, so a captain who owns
+  // both still has 'auto_caster' sitting in the slot and has_auto_catcher is
+  // what raises the tier. This asked for `equipped_special === 'auto_catcher'`
+  // before, which is a value almost nobody has — so the Auto Catcher never
+  // engaged at sea no matter what you owned or equipped.
+  //
+  // Ownership of the CASTER gates both tiers, matching FishingGame exactly.
+  // Legacy rows that really do say 'auto_catcher' resolve the same way.
   const autoTier: 0 | 1 | 2 =
-    (equippedSpecial === 'auto_catcher' && hasCatcher) ? 2
-      : (equippedSpecial === 'auto_caster' && hasCaster) ? 1
-        : 0
+    ((equippedSpecial === 'auto_caster' || equippedSpecial === 'auto_catcher') && hasCaster)
+      ? (hasCatcher ? 2 : 1)
+      : 0
 
   const todayStr = new Date().toISOString().slice(0, 10)
   const ttUsed = profile?.tide_turner_date === todayStr ? Number(profile?.tide_turner_used ?? 0) : 0
