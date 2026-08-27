@@ -1100,10 +1100,39 @@ export async function reelIn(
   // long perfect streak can't fountain uncapped XP (esp. into post-100 Fishing
   // Renown). The streak ITSELF keeps climbing — badges (Untouchable=20) + the
   // display read newPerfectStreak; only its XP contribution flattens past 10.
+  // ── THE STREAK MULTIPLIES THE CATCH; IT NO LONGER PAYS A FLAT SUM ────
+  //
+  // It was `min(streak,10)² × 3` XP ADDED to the catch, and a flat payment is
+  // backwards in a game whose per-catch XP spans 37.5× between the Shallows
+  // (zone mult 0.40) and the Ancient Deep (15.0). Measured: a streak-10 perfect
+  // was worth 12.5× the fish in the starting water and 1.3× in the endgame, so
+  // the streak mattered most exactly where the fish are worth least. One clean
+  // ten-perfect run took a brand new captain to LEVEL 14, and between Lv10 and
+  // Lv20 a single streak-10 perfect was a whole level per catch.
+  //
+  // As a percentage of the catch it is worth the same proportion wherever you
+  // fish, so the water stops deciding whether streaking is worth doing.
+  //
+  // Scaled by FISHING LEVEL on top of that, which is what keeps it honest while
+  // you are learning: the same run now leaves a fresh captain at level 5.
+  //
+  // THE FLOOR IS NOT A DETAIL. Scaling from zero would make a streak worth
+  // 1.01× at level 1 — worth nothing at precisely the moment the mechanic has
+  // to teach itself, which is the same mistake as today's in the other
+  // direction. 0.40 at Lv1, rising to 1.00 at Lv100.
   const STREAK_XP_CAP = 10
+  const STREAK_PER_STEP = 0.08
+  const STREAK_LEVEL_FLOOR = 0.4
+  const streakLevelScale = STREAK_LEVEL_FLOOR
+    + (1 - STREAK_LEVEL_FLOOR) * (Math.min(getLevelFromXP(profile.fishing_xp ?? 0), 100) / 100)
   const streakForXp = Math.min(newPerfectStreak, STREAK_XP_CAP)
-  const serverStreakBonus = streakForXp * streakForXp * 3 // 1=+3, 2=+12, … 10=+300, then flat (0 when not perfect)
-  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
+  // 0 when the catch was not perfect, because newPerfectStreak is 0 there.
+  const streakMult = 1 + streakForXp * STREAK_PER_STEP * streakLevelScale
+  const baseCatchXP = catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect')
+  // What the streak itself was worth, measured the way it always was reported:
+  // before prestige, renown, the rod and the Eye multiply the lot.
+  const serverStreakBonus = Math.round(baseCatchXP * (streakMult - 1))
+  const xpGained = Math.round((baseCatchXP + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult * eye.fishingXpMult)
   // THE BORROWED JAW charges on FISHING xp, and only while it is mounted.
   // The mirror of the reel: his raid item is fed by the fishing half of the
   // game, so wearing it is a standing reason to keep casting.
