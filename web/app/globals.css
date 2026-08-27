@@ -2593,44 +2593,107 @@ body.hardcore-gauntlet::after {
   will-change: transform, opacity;
 }
 
-/* ── WAKES WITH A COLOUR OF THEIR OWN ────────────────────────────────────────
-   The default above is white foam, which is what water does. These are for the
-   few hulls odd enough that plain foam undersells them.
+/* ── WAKES WITH A SHAPE OF THEIR OWN ─────────────────────────────────────────
+   The default above is a 76x26 streak of white foam, which is what water does
+   behind an ordinary boat. These are for the hulls that are not ordinary, and
+   colour alone turned out not to be much of a reward: seven boats trailing the
+   same streak in seven tints still read as one wake with a filter on it.
 
-   Same SHAPE every time — the loop turns and scales one streak, and a variant
-   that changed the geometry would need the loop to know about it. Only the
-   gradient moves, and it keeps the default's structure: dense at 38% where the
-   hull just was, gone by 76%.
+   WHAT A VARIANT MAY CHANGE is everything the loop does not write: size, edges
+   and the structure of the paint. The loop writes only `transform` and
+   `opacity`, every frame, to each mark — so a variant that tried to animate
+   transform would fight it and lose, and none of these do.
 
-   Restrained on purpose. These sit on painted water for the whole session and
-   read at a glance in the corner of the eye; the house rule is that juice stays
-   subtle, and a neon trail behind every premium boat is a sea that shouts. The
-   tell is a TINT and a little more reach, not a light show. */
+   The rarer the hull, the further from a plain streak it gets. That ordering is
+   the point: a wake is the one piece of a boat that is visible for a whole
+   session, and it should be the thing another captain notices first.
+
+   No `filter` anywhere. There are 28 marks alive at once and a drop-shadow on
+   each is a blur pass per mark per frame — the glow is painted into the
+   gradient instead, which costs nothing. */
+
+/* GOLDEN — 50,000 doubloons. A finer, longer line than foam, with a bright core
+   that holds its brightness further back than water does. Wealth reads as
+   polish, not as spectacle. */
 .sea-wake--gold {
-  background: radial-gradient(ellipse 62% 100% at 38% 50%,
-    rgba(255,236,178,0.72) 0%, rgba(240,192,64,0.34) 46%, rgba(240,192,64,0) 76%);
+  width: 88px;
+  height: 21px;
+  background:
+    radial-gradient(ellipse 34% 62% at 32% 50%, rgba(255,248,214,0.9) 0%, rgba(255,236,178,0) 70%),
+    radial-gradient(ellipse 62% 100% at 38% 50%,
+      rgba(255,236,178,0.6) 0%, rgba(240,192,64,0.34) 46%, rgba(240,192,64,0) 78%);
 }
+
+/* FIRE — 750 gems. Not a streak: embers dropping off the hull and going out.
+   Three hot spots at different sizes rather than one smooth gradient, so it
+   breaks up instead of trailing cleanly. Shorter, because embers do not last. */
 .sea-wake--ember {
-  background: radial-gradient(ellipse 62% 100% at 38% 50%,
-    rgba(255,224,180,0.74) 0%, rgba(255,122,26,0.32) 44%, rgba(255,90,20,0) 76%);
+  width: 64px;
+  height: 30px;
+  background:
+    radial-gradient(circle at 26% 44%, rgba(255,238,196,0.92) 0%, rgba(255,150,40,0) 34%),
+    radial-gradient(circle at 52% 62%, rgba(255,190,110,0.62) 0%, rgba(255,110,26,0) 30%),
+    radial-gradient(circle at 74% 40%, rgba(255,160,80,0.4) 0%, rgba(255,90,20,0) 26%),
+    radial-gradient(ellipse 62% 100% at 38% 50%,
+      rgba(255,140,50,0.26) 0%, rgba(255,90,20,0) 74%);
 }
+
+/* ICE — 750 gems. A crack rather than a swell. Narrow, hard-edged and much less
+   round than the others: this is the one that does not look like foam at all. */
 .sea-wake--frost {
-  background: radial-gradient(ellipse 62% 100% at 38% 50%,
-    rgba(236,252,255,0.76) 0%, rgba(150,224,246,0.36) 46%, rgba(120,206,238,0) 76%);
+  width: 96px;
+  height: 14px;
+  border-radius: 3px / 50%;
+  background:
+    linear-gradient(90deg, rgba(240,253,255,0.92) 0%, rgba(176,236,252,0.5) 34%, rgba(120,206,238,0) 82%),
+    radial-gradient(ellipse 50% 140% at 22% 50%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 72%);
 }
+
+/* JET BLACK — 500 gems. The only one that goes DARKER than the sea. Wide and
+   diffuse, with no bright core at all: a hole being dragged along rather than
+   water being pushed aside. A black hull leaving a white streak is the single
+   combination that reads as a mistake. */
 .sea-wake--void {
-  /* The one that goes DARKER than the water rather than paler: a black hull
-     leaving a pale streak is the one combination that looks like a mistake. */
-  background: radial-gradient(ellipse 62% 100% at 38% 50%,
-    rgba(140,150,170,0.38) 0%, rgba(18,20,28,0.42) 44%, rgba(12,14,20,0) 76%);
+  width: 104px;
+  height: 38px;
+  background:
+    radial-gradient(ellipse 70% 100% at 42% 50%,
+      rgba(10,12,18,0.5) 0%, rgba(14,16,24,0.3) 44%, rgba(12,14,20,0) 78%),
+    radial-gradient(ellipse 30% 70% at 20% 50%, rgba(150,160,184,0.26) 0%, rgba(150,160,184,0) 70%);
 }
+
+/* CHARCOAL and ABYSSAL — crate-only. Smoke on the water: broad, low-contrast
+   and shapeless, dispersing rather than dissolving. Deliberately the least
+   defined of the set. */
 .sea-wake--ash {
-  background: radial-gradient(ellipse 62% 100% at 38% 50%,
-    rgba(214,214,222,0.5) 0%, rgba(120,120,132,0.3) 46%, rgba(96,96,108,0) 76%);
+  width: 92px;
+  height: 34px;
+  background:
+    radial-gradient(ellipse 46% 78% at 30% 44%, rgba(222,222,230,0.42) 0%, rgba(150,150,162,0) 72%),
+    radial-gradient(ellipse 54% 90% at 58% 58%, rgba(140,140,152,0.3) 0%, rgba(96,96,108,0) 76%);
 }
+
+/* ETHEREAL — 500,000 doubloons, the most expensive hull in the game, and the
+   only wake built from two layers. A bright inner trail with a wider halo
+   around it on ::before, which inherits the mark's transform for free, so the
+   halo turns and stretches with the streak without the loop knowing it exists.
+   The longest of the set, and the only one that keeps light behind it. */
 .sea-wake--spirit {
-  background: radial-gradient(ellipse 62% 100% at 38% 50%,
-    rgba(244,240,255,0.72) 0%, rgba(186,168,255,0.34) 44%, rgba(150,130,240,0) 76%);
+  width: 112px;
+  height: 26px;
+  background:
+    radial-gradient(ellipse 40% 70% at 30% 50%, rgba(252,250,255,0.92) 0%, rgba(226,214,255,0) 66%),
+    radial-gradient(ellipse 62% 100% at 38% 50%,
+      rgba(214,198,255,0.5) 0%, rgba(168,146,255,0.26) 48%, rgba(150,130,240,0) 80%);
+}
+.sea-wake--spirit::before {
+  content: '';
+  position: absolute;
+  inset: -46% -12%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 60% 100% at 40% 50%,
+    rgba(178,158,255,0.2) 0%, rgba(150,130,240,0.08) 52%, rgba(150,130,240,0) 78%);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

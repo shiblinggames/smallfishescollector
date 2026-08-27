@@ -155,6 +155,9 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
     }
   }
 
+  // The skin is the captain on the chart, so /sea's cached render is now wrong.
+  // See the note in fishing/actions equipBoat.
+  revalidatePath('/sea')
   await admin.from('profiles').update({ character_color: colorId }).eq('id', user.id)
   return {}
 }

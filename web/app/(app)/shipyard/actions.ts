@@ -5,6 +5,7 @@
 // service-role client — the house rule for anything that moves money.
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RODS } from '@/lib/rods'
 import {
@@ -62,6 +63,15 @@ export async function buyRackBerth(): Promise<Res> {
   await admin.from('profiles')
     .update({ rod_rack_tier: Math.min(MAX_RACK_TIER, Number(after?.rod_rack_tier ?? tier) + 1) })
     .eq('id', user.id)
+  // THE CHART IS A CACHED PAGE, and this changed what is standing on it.
+  //
+  // /sea is rendered on the server from the profile, and the shipyard returns to
+  // it with router.back() — which restores the CACHED entry rather than asking
+  // for a new one. Nothing here invalidated it, so a captain could equip a boat,
+  // sail away, and still be in the old one. Worse than a stale render: it looked
+  // like the equip had silently failed, and it stuck on whichever boat happened
+  // to be current when that cache entry was made.
+  revalidatePath('/sea')
   return { ok: true, doubloons: bal }
 }
 
@@ -86,6 +96,15 @@ export async function buyHullTier(): Promise<Res> {
   await admin.from('profiles')
     .update({ hull_speed_tier: Math.min(MAX_HULL_TIER, Number(after?.hull_speed_tier ?? tier) + 1) })
     .eq('id', user.id)
+  // THE CHART IS A CACHED PAGE, and this changed what is standing on it.
+  //
+  // /sea is rendered on the server from the profile, and the shipyard returns to
+  // it with router.back() — which restores the CACHED entry rather than asking
+  // for a new one. Nothing here invalidated it, so a captain could equip a boat,
+  // sail away, and still be in the old one. Worse than a stale render: it looked
+  // like the equip had silently failed, and it stuck on whichever boat happened
+  // to be current when that cache entry was made.
+  revalidatePath('/sea')
   return { ok: true, doubloons: bal }
 }
 
@@ -125,6 +144,15 @@ async function buyTier(
   await admin.from('profiles')
     .update({ [col]: Math.min(maxTier, Number((after as Record<string, unknown> | null)?.[col] ?? tier) + 1) })
     .eq('id', user.id)
+  // THE CHART IS A CACHED PAGE, and this changed what is standing on it.
+  //
+  // /sea is rendered on the server from the profile, and the shipyard returns to
+  // it with router.back() — which restores the CACHED entry rather than asking
+  // for a new one. Nothing here invalidated it, so a captain could equip a boat,
+  // sail away, and still be in the old one. Worse than a stale render: it looked
+  // like the equip had silently failed, and it stuck on whichever boat happened
+  // to be current when that cache entry was made.
+  revalidatePath('/sea')
   return { ok: true, doubloons: bal }
 }
 
@@ -170,6 +198,14 @@ export async function setRodsAboard(tiers: number[]): Promise<{ ok: true; aboard
     .filter(t => t !== equipped)
     .slice(0, Math.max(0, slots - 1))
 
+  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
+  //
+  // /sea renders on the server from the profile, and the shipyard returns to it
+  // with router.back() — which restores the CACHED entry rather than asking for
+  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
+  // away and still be in the old one. It did not read as a stale render; it read
+  // as the equip having silently failed.
+  revalidatePath('/sea')
   await admin.from('profiles').update({ rods_aboard: clean }).eq('id', user.id)
   return { ok: true, aboard: clean }
 }
@@ -190,6 +226,14 @@ export async function equipRod(tier: number): Promise<{ ok: true } | { error: st
     if (!has) return { error: 'You do not carry that rod.' }
   }
 
+  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
+  //
+  // /sea renders on the server from the profile, and the shipyard returns to it
+  // with router.back() — which restores the CACHED entry rather than asking for
+  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
+  // away and still be in the old one. It did not read as a stale render; it read
+  // as the equip having silently failed.
+  revalidatePath('/sea')
   await admin.from('profiles').update({ rod_tier: tier }).eq('id', user.id)
   return { ok: true }
 }

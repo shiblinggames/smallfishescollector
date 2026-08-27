@@ -1,6 +1,7 @@
 'use server'
 
 import { eyeFromProfile } from '@/lib/finnItems'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
@@ -2080,6 +2081,14 @@ export async function equipSpecialItem(itemId: string | null): Promise<{ ok: tru
     }
   }
 
+  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
+  //
+  // /sea renders on the server from the profile, and the shipyard returns to it
+  // with router.back() — which restores the CACHED entry rather than asking for
+  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
+  // away and still be in the old one. It did not read as a stale render; it read
+  // as the equip having silently failed.
+  revalidatePath('/sea')
   await admin.from('profiles').update({ equipped_special: itemId }).eq('id', user.id)
   return { ok: true }
 }
@@ -2151,6 +2160,14 @@ export async function equipBoat(boatId: string | null): Promise<{ ok: true } | {
       if (!unlocked.includes(boatId)) return { error: 'Boat not unlocked' }
     }
   }
+  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
+  //
+  // /sea renders on the server from the profile, and the shipyard returns to it
+  // with router.back() — which restores the CACHED entry rather than asking for
+  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
+  // away and still be in the old one. It did not read as a stale render; it read
+  // as the equip having silently failed.
+  revalidatePath('/sea')
   await admin.from('profiles').update({ equipped_boat: boatId }).eq('id', user.id)
   return { ok: true }
 }
@@ -2200,6 +2217,14 @@ export async function equipHat(hatId: string | null): Promise<{ ok: true } | { e
     const unlocked = (profile?.unlocked_hats as string[] | null) ?? []
     if (!unlocked.includes(hatId)) return { error: 'Hat not unlocked' }
   }
+  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
+  //
+  // /sea renders on the server from the profile, and the shipyard returns to it
+  // with router.back() — which restores the CACHED entry rather than asking for
+  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
+  // away and still be in the old one. It did not read as a stale render; it read
+  // as the equip having silently failed.
+  revalidatePath('/sea')
   await admin.from('profiles').update({ equipped_hat: hatId }).eq('id', user.id)
   return { ok: true }
 }
@@ -2234,6 +2259,8 @@ export async function equipPet(petId: string | null, slot: 'stern' | 'bow' = 'st
     if (!own) return { error: 'No such pet' }
     column = PET_SLOT_COLUMN[own]
   }
+  // Same reason as the boat: the pet rides on the chart's sprite.
+  revalidatePath('/sea')
   await admin.from('profiles').update({ [column]: petId }).eq('id', user.id)
   return { ok: true }
 }
