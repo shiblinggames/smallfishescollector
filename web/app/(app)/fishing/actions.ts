@@ -999,7 +999,14 @@ export async function reelIn(
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
   let baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE
-  if (!baitSaved && profile.has_phantom_hook) baitSaved = Math.random() < 0.25
+  // OWNING IT IS NOT CARRYING IT. This read has_phantom_hook alone, so the 25%
+  // bait save applied to anyone who had ever bought the thing — which makes the
+  // special slot free for this one item and only this one. Every sibling gates
+  // on the slot: the Sigil checks equipped_special two dozen lines down, and
+  // the Eye checks equipped_special_2 inside eyeFromProfile. Slot 1 only,
+  // because equipSecondSpecial refuses anything but the Eye in slot 2.
+  const phantomSeated = profile.has_phantom_hook && profile.equipped_special === 'phantom_hook'
+  if (!baitSaved && phantomSeated) baitSaved = Math.random() < 0.25
   // THE PRIMEVAL EYE, tier 6: a perfect catch never costs bait. Absolute, so it
   // overrides both rolls above rather than adding another chance on top.
   if (!baitSaved && eye.perfectBaitSave && result === 'perfect') baitSaved = true
