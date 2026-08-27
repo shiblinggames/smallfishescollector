@@ -2667,6 +2667,12 @@ body.hardcore-gauntlet::after {
    448px column and the HUD discs run from x=12 to roughly x=200, so the two
    stop colliding at about 900px of viewport. Below that a fine pointer does not
    help — there is simply nowhere to put both. */
+/* On a phone the fishing screen carries its own day/night chip under the level
+   bar; above 900px the chart keeps its corner disc instead, because there is
+   room for it there and moving it was never the point. Same breakpoint the HUD
+   uses to decide it has space. */
+@media (min-width: 900px) { .fh-narrow-only { display: none !important; } }
+
 .sea-fishing {
   --fh-lift: 0px;
   --fh-menu-h: 40px;

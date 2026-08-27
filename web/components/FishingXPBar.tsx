@@ -95,8 +95,26 @@ export function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: 
             )
           })()
         )}
-        {(bestStreak ?? 0) > 0 && (
-          <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.9)', lineHeight: 1 }}>
+        {/* ── THE STREAK, ALWAYS ───────────────────────────────────────
+            It appeared at 1 and vanished at 0, and it is the LAST thing in a
+            flex row — so landing a perfect nudged everything beside it, and
+            breaking one nudged it back. A counter that moves the furniture
+            every time it changes is worse than no counter.
+
+            So it is always drawn, dim at zero, and it reserves the width of
+            three digits. tabular-nums on top of that, or 1 and 7 are different
+            widths and the row still breathes on the way to ten.
+
+            `undefined` still hides it — that is a caller saying it has no
+            streak to show, which is not the same as a streak of none. */}
+        {bestStreak !== undefined && (
+          <span className="font-karla font-700" style={{
+            fontSize: '0.6rem', lineHeight: 1, flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', gap: 2,
+            minWidth: 34, justifyContent: 'flex-end',
+            fontVariantNumeric: 'tabular-nums',
+            color: bestStreak > 0 ? 'rgba(251,146,60,0.9)' : 'rgba(214,232,240,0.3)',
+          }}>
             <IconFlame size={10} />{bestStreak}
           </span>
         )}

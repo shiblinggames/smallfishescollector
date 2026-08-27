@@ -3892,7 +3892,7 @@ hullRef={hullRefFor(t.key)} />
       {/* THE LIGHT lives on the level bar's row while fishing — see
           FishingHere — and only sits on its own up here when the rod is stowed,
           because there is no bar to share a row with. */}
-      {side === 'fishing' && !fishingIn && (
+      {side === 'fishing' && (!fishingIn || wide) && (
         // A SYMBOL, NOT A NAME. The words were a label on a map, and the sky
         // already says what time it is in colour — the corner only has to
         // confirm it at a glance. `title` keeps the name for anyone who wants

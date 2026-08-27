@@ -104,9 +104,8 @@ import { HELM_D, HELM_BOTTOM } from './helm'
  * Each entry is that band's own height PLUS the margin it puts above itself,
  * because this column has no `gap` — every band owns its own spacing.
  */
-const SECONDARY_BAND = 8 + 26           // margin + fixed height (Tide Turner / auto)
 const TACKLE_BAR = 6 + 40               // margin + fixed height (the four menus)
-const BELOW_CAST_SLOT = SECONDARY_BAND + TACKLE_BAR
+const BELOW_CAST_SLOT = TACKLE_BAR
 const ACTION_PAD_BOTTOM = HELM_BOTTOM - BELOW_CAST_SLOT
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 
@@ -1553,14 +1552,44 @@ export default function FishingHere({
             max level, where the chip does nothing, a tap on the bar was simply
             a course change nobody asked for. The map's tap handler bails on
             `closest('button, [data-no-steer]')`. */}
+        {/* THE BAR RUNS THE WHOLE WIDTH. The light used to sit on this row as
+            a pill and take a bite out of it, which cost the bar its space to
+            say anything — and on a desktop, where the corner disc had room to
+            stay exactly where it was, moving it here was a swap nobody asked
+            for. Everything that was beside the bar is under it now. */}
         <div data-no-steer style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* THE LIGHT, on the bar's row. It used to float in the top-left
-              corner on its own, which is a second thing in the same region of
-              screen doing the same job as the bar: telling you the state of
-              the world. One row. */}
-          <div aria-hidden style={{
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* bestStreak was never passed, which is why the flame and the
+                count the fishing screen shows have been missing out here. */}
+            {/* The chip only becomes tappable when both of these are set —
+                see XPBarDisplay. They were never passed, so a captain at 100
+                had a Renown readout they could not open. */}
+            <XPBarDisplay xp={xp} bestStreak={streak}
+              renownAvailable={renownPoints} onOpenRenown={onOpenRenown} />
+          </div>
+        </div>
+
+        {/* ── THE ROW UNDER THE BAR ────────────────────────────────────
+            What time it is, and anything you can switch on or off.
+
+            The auto toggle used to live in a band between the cast button and
+            the four menus, which is the busiest corner of the screen and the
+            one place a thumb is already committed. Up here it is beside the
+            other thing that describes the state of the world, out of the way of
+            everything you are actually doing, and still one tap away — which
+            matters, because a machine fishing for you is a thing you want to be
+            able to stop without hunting. */}
+        <div data-no-steer style={{
+          display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
+          minHeight: 26,
+        }}>
+          {/* THE LIGHT, on a phone. On a wide screen the chart keeps its own
+              disc in the corner — there is room for it there and moving it was
+              never the point — so this hides above the same 900px breakpoint
+              the chart uses to decide it has space. */}
+          <div aria-hidden className="fh-narrow-only" style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
-            padding: '0.3rem 0.55rem', borderRadius: 999,
+            padding: '0.28rem 0.5rem', borderRadius: 999,
             background: 'rgba(4,10,18,0.72)',
             border: '1px solid rgba(180,214,232,0.22)',
           }}>
@@ -1573,15 +1602,31 @@ export default function FishingHere({
               fontSize: '0.66rem', letterSpacing: '0.12em', color: 'rgba(214,232,240,0.75)', whiteSpace: 'nowrap',
             }}>{PHASE_LABEL[seaPhase]}</span>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* bestStreak was never passed, which is why the flame and the
-                count the fishing screen shows have been missing out here. */}
-            {/* The chip only becomes tappable when both of these are set —
-                see XPBarDisplay. They were never passed, so a captain at 100
-                had a Renown readout they could not open. */}
-            <XPBarDisplay xp={xp} bestStreak={streak}
-              renownAvailable={renownPoints} onOpenRenown={onOpenRenown} />
-          </div>
+
+          {/* The auto toggle. Shown only when the item is actually equipped,
+              and a toggle rather than always-on because handing your rod to a
+              machine should stay a choice you can take back mid-session. */}
+          {auto.tier > 0 && (
+            <button onClick={e => { e.stopPropagation(); setAutoOn(v => !v) }}
+              className="font-karla font-700 uppercase tracking-[0.1em]"
+              style={{
+                flexShrink: 0,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '0.28rem 0.66rem', borderRadius: 999, fontSize: '0.696rem',
+                color: autoOn ? '#f0ede8' : '#9a9488',
+                background: autoOn ? 'rgba(70,224,192,0.13)' : 'rgba(4,10,18,0.72)',
+                border: `1px solid ${autoOn ? 'rgba(70,224,192,0.5)' : 'rgba(255,255,255,0.16)'}`,
+                cursor: 'pointer',
+              }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/autocaster.png" alt="" style={{
+                width: 15, height: 15, objectFit: 'contain',
+                opacity: autoOn ? 1 : 0.45,
+                filter: autoOn ? 'drop-shadow(0 0 4px rgba(70,224,192,0.5))' : 'grayscale(1)',
+              }} />
+              {auto.tier === 2 ? 'Auto Catcher' : 'Auto Caster'} · {autoOn ? 'On' : 'Off'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -2386,41 +2431,12 @@ export default function FishingHere({
           )}
         </div>
 
-      {/* THE SECONDARY BAND — always present, never empty of SPACE.
-          Only the auto toggle lives here now; the Tide Turner moved up to the
-          under-dial row, where an action ON THE FISH belongs. The band still
-          reserves its height unconditionally, because the toggle appears only
-          in idle and result and the row must not change height when it does.
-          Its height is counted in BELOW_CAST_SLOT — see the note up there. */}
-      <div style={{
-        height: 26, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {/* The auto toggle. Shown only when the item is actually equipped, and
-            it is a toggle rather than always-on because handing your rod to a
-            machine should stay a choice you can take back mid-session. */}
-        {auto.tier > 0 && (phase === 'idle' || phase === 'result') && (
-          <button onClick={e => { e.stopPropagation(); setAutoOn(v => !v) }}
-            className="font-karla font-700 uppercase tracking-[0.1em]"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '0.28rem 0.66rem', borderRadius: 999, fontSize: '0.696rem',
-              color: autoOn ? '#f0ede8' : '#9a9488',
-              background: autoOn ? 'rgba(70,224,192,0.13)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${autoOn ? 'rgba(70,224,192,0.5)' : 'rgba(255,255,255,0.16)'}`,
-              cursor: 'pointer',
-            }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/autocaster.png" alt="" style={{
-              width: 15, height: 15, objectFit: 'contain',
-              opacity: autoOn ? 1 : 0.45,
-              filter: autoOn ? 'drop-shadow(0 0 4px rgba(70,224,192,0.5))' : 'grayscale(1)',
-            }} />
-            {auto.tier === 2 ? 'Auto Catcher' : 'Auto Caster'} · {autoOn ? 'On' : 'Off'}
-          </button>
-        )}
-
-      </div>
-
+      {/* THE SECONDARY BAND IS GONE. It reserved 26px between the cast
+          button and the menus so the row never changed height, and the only
+          thing it ever held was the auto toggle — which is under the level bar
+          now, where it is out of the way of the thumb and impossible to miss.
+          An empty band holding space for nothing is the clutter it was there
+          to prevent. */}
       {/* ── THE FOUR MENUS ─────────────────────────────────────────────
           Loadout, Bait, Log, Hold. Equal quarters, two lines each: what the
           menu is, and the one live number from behind it worth glancing at.
