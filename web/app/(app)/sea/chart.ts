@@ -227,10 +227,17 @@ export const PLACES: Place[] = [
     // opens the trawl panel where you float. It is present because a Place has
     // one, and /sea is the honest answer to "where does this go".
     id: 'trawl_fleet', name: 'The Trawl Harbour', blurb: 'Send a crew, bring them in',
-    href: '/sea', x: -3000, y: -850, r: 210, art: '/sea/trawl-harbour.png',
+    // THE SHED IS THE BUILDING; THE BOATS ARE NOT. A harbour drawn as one
+    // picture put its own jetty and its own boats up on the grass, which is
+    // a dock going nowhere and hulls sitting in a field. The island already
+    // draws a jetty running out from its shore — every place here does — so
+    // what belongs ON the land is the shore end of the work: the shed, the
+    // drying rack, the crates. The boats are moored off the beach as a
+    // landmark, in the water, submerging like everything else that floats.
+    href: '/sea', x: -3000, y: -850, r: 210, art: '/sea/trawl-shed.png',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/trawl-harbour.png', x: 50, y: 55, scale: 0.42 },
+      { art: '/sea/trawl-shed.png', x: 46, y: 52, scale: 0.34 },
     ],
   },
   {
@@ -310,6 +317,11 @@ export const LANDMARKS: {
   art: string; x: number; y: number; size: number
   solid?: boolean; sway?: 'bob' | 'rock'
 }[] = [
+  // ── THE BOATS AT THE TRAWL HARBOUR ───────────────────────────────────
+  // Moored off the island's south beach, just beyond the jetty that every
+  // place draws at 78% down its own box. In the water, so they submerge and
+  // bob; on the land they were three hulls standing in a field.
+  { art: '/sea/trawl-fleet.png', x: -3000, y: -560, size: 210, sway: 'bob' },
   { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
   { art: '/sea/islet.png', x:   1003, y:   2620, size: 210, solid: true },
   { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },

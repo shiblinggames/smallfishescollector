@@ -5063,6 +5063,9 @@ const LandmarkField = memo(function LandmarkField() {
  * effect.
  */
 const SUBMERGE: Record<string, { line: number; keep: number }> = {
+  // Moored boats. Barely under — a hull floats, it does not wade — but not
+  // zero: a hard edge at the waterline reads as sitting ON the sea.
+  'trawl-fleet': { line: 88, keep: 0.26 },
   // A float on a chain, riding low.
   buoy:     { line: 66, keep: 0.30 },
   // Aground and going nowhere. Half of it is under.
@@ -6591,34 +6594,19 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
               behind them the way a hillside town does. */}
           {place.buildings?.map((b, i) => (
             <Fragment key={i}>
-              {/* ── THE CONTACT SHADOW, ON THE GROUND ──────────────────
-                  A SIBLING of the building, not a child, and that is the whole
-                  fix. It replaced a drop-shadow() filter (which re-blurred the
-                  sprite on every tile raster) with an ellipse — but the ellipse
-                  went INSIDE the wrapper, and the wrapper carries
-                  scaleY(1/GROUND). So the shadow was counter-squashed with the
-                  building: stretched 1.72x into a tall dark oval, and parked at
-                  bottom:-4, BELOW the feet. A dark blob under a sprite instead
-                  of a shadow at its base is exactly what "floating" looks like,
-                  and this repo has now learned that lesson five times.
+              {/* NOTHING IS DRAWN UNDER A BUILDING. SIXTH TIME.
+                  There was a contact ellipse here, and the long note that used
+                  to sit in its place had already been through a dark blob, a
+                  pale one, and a counter-squash bug that parked it below the
+                  feet. It was finally flat, foreshortened, warm and centred on
+                  the base — and it still read as a smudge under a house.
 
-                  Out here it sits on the world layer, which already carries the
-                  plane's GROUND squash — so it comes out flat and foreshortened
-                  the way a real shadow on that ground would. Centred on the
-                  building's FEET, which is the same (b.x, b.y) the wrapper is
-                  anchored to.
-
-                  Softer and warmer than before, too: pure black at 0.42 reads
-                  as a hole cut in the grass. */}
-              {!locked && (
-                <div aria-hidden style={{
-                  position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
-                  width: d * b.scale * 0.8, height: d * b.scale * 0.8 * 0.42,
-                  transform: 'translate(-50%, -46%)',
-                  borderRadius: '50%', pointerEvents: 'none',
-                  background: 'radial-gradient(ellipse at 50% 50%, rgba(14,20,10,0.34) 0%, rgba(14,20,10,0.16) 48%, rgba(14,20,10,0) 76%)',
-                }} />
-              )}
+                  It is the same objection the landmarks settled: a discrete
+                  shape beneath an object says "this thing is ABOVE that thing",
+                  whatever tint you give it. The buildings sit on painted grass
+                  that is already shaded; they do not need help. If one ever
+                  reads as floating, the answer is in the ART, not underneath
+                  it. */}
               <div style={{
                 position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
                 width: d * b.scale,
