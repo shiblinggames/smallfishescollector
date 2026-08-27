@@ -50,6 +50,11 @@ export default function TrawlDocksClient({ daily }: { daily: DailyChallengeState
   return (
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
       style={{
+        // THE PAGE SCROLLS NOW. The panel used to be a sheet with its own
+        // maxHeight and overflow; laid onto the island as a page, the scrolling
+        // has to happen out here or a long day's orders simply runs off the
+        // bottom with no way to reach it.
+        overflowY: 'auto', overscrollBehavior: 'contain',
         // A solid base under the sheet. The panel is a bottom sheet with a
         // translucent backdrop, and on a page with nothing behind it that
         // backdrop would be a window onto the app shell.

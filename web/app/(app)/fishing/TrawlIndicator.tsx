@@ -258,6 +258,10 @@ export default function TrawlIndicator({
   before?: React.ReactNode
 }) {
   const dock = variant === 'dock'
+  /** Read inside closeDock without making it depend on a prop that changes
+   *  identity every render. */
+  const onDismissRef = useRef<(() => void) | undefined>(undefined)
+  onDismissRef.current = onDismiss
   const [state, setState] = useState<TrawlState | null>(null)
   const [open, setOpen] = useState(dock)
   const [now, setNow] = useState(() => Date.now())
@@ -446,6 +450,12 @@ export default function TrawlIndicator({
     setLeaving(true)
     setPicking(null)
     setOpen(false)
+    // STRAIGHT OUT. The dock used to animate the sheet away and let
+    // AnimatePresence's onExitComplete fire the dismiss, which meant leaving
+    // cost a spring before the navigation even started. There is no sheet to
+    // animate now — it is a page — so the only thing that exit was buying was
+    // delay on both ends.
+    onDismissRef.current?.()
   }, [leaving])
 
   if (!state) return null
@@ -657,16 +667,46 @@ export default function TrawlIndicator({
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const ns = state.nextSlot
+  // ── A SHEET, OR A PAGE ──────────────────────────────────────────────
+  /*
+      ── A SHEET, OR A PAGE ──────────────────────────────────────────────
+        Everywhere else this is a bottom sheet over whatever you were doing,
+        which is right: it interrupts you and then gets out of the way.
+
+        AT THE DOCKS IT IS THE PAGE, and it was still being drawn as a sheet —
+        a fixed backdrop fading up and a panel springing from y:40 over an empty
+        gradient. So arriving read as: navigate, blank island, dark scrim,
+        THEN the content slides in. Three beats to show a page you had already
+        arrived at, and it is exactly why the Docks felt slower than the
+        Shipyard, which simply renders.
+
+        No backdrop, no spring, no tap-outside, no rounded sheet lip. Same
+        content, laid straight onto the island like every other place you sail
+        to. `initial={false}` is what actually skips the entrance — the props
+        below still exist for the float variant. */
   const panel = (
-    <AnimatePresence onExitComplete={() => { if (dock && leaving) onDismiss?.() }}>
+    <AnimatePresence>
       {open && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }}
-          style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(4,8,14,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-          <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-            onClick={e => e.stopPropagation()}
-            style={{
+        <motion.div
+          initial={dock ? false : { opacity: 0 }}
+          animate={dock ? undefined : { opacity: 1 }}
+          exit={dock ? undefined : { opacity: 0 }}
+          onClick={dock ? undefined : () => { setOpen(false); setPicking(null) }}
+          style={dock
+            ? { position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }
+            : { position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(4,8,14,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <motion.div
+            initial={dock ? false : { y: 40 }}
+            animate={dock ? undefined : { y: 0 }}
+            exit={dock ? undefined : { y: 40, opacity: 0 }}
+            transition={dock ? undefined : { type: 'spring', stiffness: 340, damping: 30 }}
+            onClick={dock ? undefined : e => e.stopPropagation()}
+            style={dock ? {
               // RELATIVE, so the close button can pin itself to the panel.
+              position: 'relative',
+              width: '100%', maxWidth: 470,
+              padding: '1rem 1.1rem calc(2rem + env(safe-area-inset-bottom))',
+            } : {
               position: 'relative',
               width: '100%', maxWidth: 470, maxHeight: '86vh', overflowY: 'auto',
               background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)',
