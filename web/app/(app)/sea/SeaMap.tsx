@@ -276,6 +276,14 @@ const SHORE = 0.72
  *  goes where you tapped, a tap at the edge of the screen goes this far in that
  *  direction and no further. */
 const TAP_HOP = 460
+
+/** How far the thumb must travel before a press on the helm is a STEER rather
+ *  than a tap. Below this it is still undecided. Generous, because a thumb
+ *  resting on glass drifts a pixel or two and that must not read as a course. */
+const HELM_DEADZONE = 14
+/** How long a still thumb rests before the rod goes in. Long enough that a slow
+ *  tap is never mistaken for it, short enough to be a gesture and not a wait. */
+const HELM_HOLD_MS = 480
 /** Held bearings are thrown far enough to be a direction rather than a place.
  *  Re-set every frame while the thumb is down, so the distance only has to be
  *  further than the boat can travel in one frame. */
@@ -287,6 +295,15 @@ const HOLD_MS = 220
 const STOP_RADIUS = 190
 /** The helm's radius. */
 const HELM_R = 56
+/** The helm's diameter, exported because the fishing screen's action button is
+ *  the SAME control in its other role — see the action slot in FishingHere.
+ *  Two hardcoded numbers would drift the moment either is tuned. */
+export const HELM_D = HELM_R * 2
+/** How far the helm sits off the bottom. It used to be 92 so it could clear the
+ *  action pill; the pills are gone and the wheel does their job, so this is now
+ *  simply where the thumb wants it. Exported for the same reason HELM_D is: the
+ *  fishing screen's cast button has to land on exactly this spot. */
+export const HELM_BOTTOM = 92
 /** How far a press has to travel before it counts as a drag. Generous enough
  *  that a thumb resting on glass does not become a course change. */
 const DRAG_SLOP = 12
@@ -903,6 +920,30 @@ export default function SeaMap({
   /** The live touch inside the box, in client coordinates. */
   const boxHeld = useRef<Vec | null>(null)
   const knobRef = useRef<HTMLDivElement | null>(null)
+
+  /**
+   * THE HELM IS THREE CONTROLS, told apart by what your thumb does.
+   *
+   *   DRAG   steer. Unchanged, and still the common case.
+   *   TAP    do the nearest thing — go ashore, hail, dig, take the bottle.
+   *   HOLD   put the rod in the water where you are.
+   *
+   * It used to be one: pointer-down set a bearing immediately, so a tap that
+   * landed a few pixels off centre threw a target nine thousand pixels away and
+   * the boat lurched before your thumb was off the glass. A control cannot
+   * offer a tap while it also treats the beginning of every tap as a command.
+   *
+   * So nothing steers until the thumb has actually MOVED past HELM_DEADZONE.
+   * Below that it is still deciding, and which of the other two it becomes
+   * depends only on how long you stay.
+   */
+  const helmDown = useRef<{ x: number; y: number; at: number } | null>(null)
+  /** Set once a press has been ruled a steer; it cannot become a tap after. */
+  const helmSteering = useRef(false)
+  /** Counts up 0..1 while a still thumb rests, and drives the ring. */
+  const [helmHold, setHelmHold] = useState(0)
+  const helmHoldTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const [helmOn, setHelmOn] = useState(false)
 
   /** Client point to a world bearing, or null inside the deadzone. Normalised
@@ -1338,6 +1379,9 @@ export default function SeaMap({
   }, [dialUp])
 
   const [near, setNear] = useState<Place | null>(null)
+  /** The helm's handlers are created once and cannot see this as state. */
+  const nearRef = useRef<Place | null>(null)
+  nearRef.current = near
   /** Who is on the water around us. Recomputed only when the boat crosses into
    *  a new cell, because the answer cannot change until it does. */
   const [traders, setTraders] = useState<Trader[]>([])
@@ -1777,6 +1821,57 @@ export default function SeaMap({
 
   const locked = useCallback((p: Place) => level < p.minLevel, [level])
 
+  /**
+   * WOULD A HOLD HERE ACTUALLY PUT THE ROD IN?
+   *
+   * Plain derived data, not state: it is a function of `near` and the level,
+   * both of which this render already has, and holding it in state would mean
+   * an effect and a frame where the ring disagrees with the water the boat is
+   * in. The ring reads it so the indicator never promises something the
+   * release will not deliver — hold over a port or a band you have not levelled
+   * into and nothing fills.
+   */
+  const helmFishable = !!near && near.kind === 'water' && !locked(near)
+
+  /**
+   * WHAT THE HELM WILL DO, IN WORDS.
+   *
+   * Six full-width pills used to live along the bottom of the chart, one per
+   * kind of thing you could be next to, each its own button. The helm does all
+   * of that on a tap now, so the buttons are gone and this is what is left of
+   * them: one line above the wheel naming the action the thumb already has.
+   *
+   * DERIVED FROM THE SAME ORDER helmActRef RESOLVES IN, and that is the whole
+   * discipline here — the label and the gesture read one list, so the words can
+   * never describe an action other than the one about to happen.
+   *
+   * `hold` is the second line, and only where a hold would do something: it is
+   * how anybody discovers the gesture at all.
+   */
+  const helmLabel: { act: string | null; hold: string | null } = (() => {
+    if (fishingIn) return { act: null, hold: null }
+    if (nearFinn && !finnTalk) return { act: `Hail ${FINN_NAME}`, hold: null }
+    if (nearTrader && !hailing) {
+      return { act: dealt.includes(nearTrader.key) ? `Speak to ${nearTrader.name}` : `Hail ${nearTrader.name}`, hold: null }
+    }
+    if (nearDig && !dug.has(nearDig.id)) return { act: 'Dig here', hold: null }
+    if (nearBottle) return { act: 'Take the bottle', hold: null }
+    if (nearIsle) {
+      return { act: found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`, hold: null }
+    }
+    if (near && near.kind === 'port') {
+      return { act: locked(near) ? null : `Go ashore at ${near.name}`, hold: null }
+    }
+    // Open water. Nothing to tap, so the only thing worth saying is the hold —
+    // and if the band is above your level, why it will not work.
+    if (near && near.kind === 'water') {
+      return locked(near)
+        ? { act: null, hold: `Fishing ${near.minLevel} to work this water` }
+        : { act: null, hold: `Hold to fish ${near.name}` }
+    }
+    return { act: null, hold: null }
+  })()
+
   /** Screen point to world point, through the current camera translation. */
   const toWorld = useCallback((clientX: number, clientY: number): Vec | null => {
     const wrap = wrapRef.current
@@ -2154,6 +2249,16 @@ export default function SeaMap({
     const sky = skyRef.current
     if (sky) sky.style.background = seaAt(pos.current, seaClock().darkness).css
   }, [])
+
+  /**
+   * WHAT A TAP ON THE HELM DOES, and it is deliberately the same order the
+   * action pill uses — the pill is the label for this, so if the two disagreed
+   * the button would be lying about what the thumb is about to do.
+   *
+   * Returns false when there is nothing in reach, which is what lets a tap in
+   * open water fall through to "start fishing" instead of doing nothing at all.
+   */
+  const helmActRef = useRef<() => boolean>(() => false)
 
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
@@ -3220,6 +3325,35 @@ hullRef={hullRefFor(t.key)} />
           sets the speed. Touch only, and hidden while the rod is out, because
           you are anchored to fish and a control that does nothing is worse than
           no control. */}
+      {/* WHAT THE HELM WILL DO, directly above the thumb that will do it.
+          This is all that is left of six full-width pills that used to line the
+          bottom of the chart, one per kind of thing you could be beside. The
+          wheel does their job on a tap now, so what they were really for —
+          telling you there is something here at all — is one line where the
+          control actually is. Never eats a press: the helm is underneath it. */}
+      {!fishingIn && (helmLabel.act || helmLabel.hold) && (
+        <div aria-hidden style={{
+          position: 'absolute', left: 0, right: 0,
+          bottom: HELM_BOTTOM + HELM_D + 10, zIndex: Z.action,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+          pointerEvents: 'none', padding: '0 1rem',
+        }}>
+          {helmLabel.act && (
+            <p className="font-cinzel font-700" style={{
+              margin: 0, fontSize: '1.02rem', color: '#f2ead8', textAlign: 'center',
+              textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
+            }}>{helmLabel.act}</p>
+          )}
+          {helmLabel.hold && (
+            <p className="font-karla font-600" style={{
+              margin: 0, fontSize: '0.78rem', letterSpacing: '0.06em', textAlign: 'center',
+              color: helmFishable ? 'rgba(170,226,206,0.9)' : 'rgba(214,176,176,0.9)',
+              textShadow: '0 1px 10px rgba(0,0,0,0.95)',
+            }}>{helmLabel.hold}</p>
+          )}
+        </div>
+      )}
+
       {!fishingIn && (
         <div
           ref={boxRef}
@@ -3227,13 +3361,51 @@ hullRef={hullRefFor(t.key)} />
           onPointerDown={e => {
             e.stopPropagation()
             try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* fine */ }
-            boxHeld.current = { x: e.clientX, y: e.clientY }
+            // NOT `boxHeld` YET. That ref is what the frame loop steers by, and
+            // setting it here is exactly the bug: the boat left before the
+            // thumb did. It is set the moment the press is ruled a steer.
+            helmDown.current = { x: e.clientX, y: e.clientY, at: performance.now() }
+            helmSteering.current = false
             setHelmOn(true)
             vibrate(6)
+            // The hold's own clock. Ticks the ring so the captain can SEE the
+            // rod coming rather than discovering it.
+            helmHoldTimer.current = setInterval(() => {
+              const d = helmDown.current
+              if (!d || helmSteering.current) return
+              const t = Math.min(1, (performance.now() - d.at) / HELM_HOLD_MS)
+              setHelmHold(t)
+              if (t >= 1) {
+                if (helmHoldTimer.current) clearInterval(helmHoldTimer.current)
+                helmHoldTimer.current = null
+                helmDown.current = null
+                setHelmHold(0)
+                setHelmOn(false)
+                // ALL STOP, then the rod — the same order the Fish pill uses,
+                // and for the same reason: casting under way sails you out of
+                // the water you just chose.
+                const here = nearRef.current
+                if (here && here.kind === 'water' && !locked(here)) {
+                  target.current = { ...pos.current }
+                  vibrate([0, 30, 40, 30])
+                  setFishingIn(here)
+                }
+              }
+            }, 40)
           }}
           onPointerMove={e => {
-            if (!boxHeld.current) return
+            const d = helmDown.current
+            if (!d && !helmSteering.current) return
             e.stopPropagation()
+            // ONCE IT IS A STEER IT STAYS ONE. Coming back inside the deadzone
+            // mid-drag must not turn the course back into a pending tap.
+            if (!helmSteering.current && d
+                && Math.hypot(e.clientX - d.x, e.clientY - d.y) > HELM_DEADZONE) {
+              helmSteering.current = true
+              setHelmHold(0)
+              if (helmHoldTimer.current) { clearInterval(helmHoldTimer.current); helmHoldTimer.current = null }
+            }
+            if (!helmSteering.current) return
             boxHeld.current = { x: e.clientX, y: e.clientY }
             const v = boxVec(boxHeld.current)
             if (knobRef.current) {
@@ -3244,6 +3416,25 @@ hullRef={hullRefFor(t.key)} />
           }}
           onPointerUp={e => {
             e.stopPropagation()
+            if (helmHoldTimer.current) { clearInterval(helmHoldTimer.current); helmHoldTimer.current = null }
+            setHelmHold(0)
+            const wasSteering = helmSteering.current
+            const pending = helmDown.current
+            helmDown.current = null
+            helmSteering.current = false
+
+            // A TAP: let go, still, before the hold matured. Do the nearest
+            // thing — and if there is nothing in reach, nothing happens, which
+            // is the honest answer rather than a lurch.
+            if (!wasSteering && pending) {
+              boxHeld.current = null
+              setHelmOn(false)
+              if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
+              try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
+              helmActRef.current()
+              return
+            }
+
             // Let go and it runs out rather than stopping dead, which reads as
             // the boat hitting something.
             const v = vel.current
@@ -3257,6 +3448,10 @@ hullRef={hullRefFor(t.key)} />
             try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* fine */ }
           }}
           onPointerCancel={() => {
+            if (helmHoldTimer.current) { clearInterval(helmHoldTimer.current); helmHoldTimer.current = null }
+            helmDown.current = null
+            helmSteering.current = false
+            setHelmHold(0)
             boxHeld.current = null
             setHelmOn(false)
             if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
@@ -3264,7 +3459,7 @@ hullRef={hullRefFor(t.key)} />
           onClick={e => e.stopPropagation()}
           style={{
             position: 'absolute', zIndex: Z.helm,
-            left: '50%', bottom: 92, transform: 'translateX(-50%)',
+            left: '50%', bottom: HELM_BOTTOM, transform: 'translateX(-50%)',
             width: HELM_R * 2, height: HELM_R * 2, borderRadius: '50%',
             touchAction: 'none',
             background: helmOn
@@ -3274,13 +3469,35 @@ hullRef={hullRefFor(t.key)} />
             boxShadow: helmOn ? '0 0 22px rgba(120,180,210,0.2)' : 'none',
             transition: 'background 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out',
           }}>
+          {/* THE ROD COMING. A ring that fills round the helm while a still
+              thumb rests, so the hold is something you WATCH arrive rather than
+              something that happens to you. Only in fishable water: holding
+              over a port or a locked band fills nothing, which is the control
+              telling you it will not work before you have waited for it.
+
+              conic-gradient on a mask, so the sweep costs one paint and no
+              layout. Hidden at zero rather than mounted and empty. */}
+          {helmHold > 0 && helmFishable && (
+            <div aria-hidden style={{
+              position: 'absolute', inset: -5, borderRadius: '50%',
+              pointerEvents: 'none',
+              background: `conic-gradient(from -90deg, rgba(150,226,200,0.95) ${helmHold * 360}deg, rgba(150,226,200,0) 0deg)`,
+              WebkitMask: 'radial-gradient(circle, transparent 0 calc(100% - 4px), #000 calc(100% - 4px))',
+              mask: 'radial-gradient(circle, transparent 0 calc(100% - 4px), #000 calc(100% - 4px))',
+              filter: 'drop-shadow(0 0 8px rgba(120,220,190,0.6))',
+            }} />
+          )}
           <div ref={knobRef} aria-hidden style={{
             position: 'absolute', left: '50%', top: '50%',
             width: 42, height: 42, marginLeft: -21, marginTop: -21,
             borderRadius: '50%', pointerEvents: 'none',
-            background: 'radial-gradient(circle at 42% 36%, rgba(214,232,240,0.92), rgba(150,186,206,0.6))',
-            border: '1px solid rgba(226,242,250,0.6)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.45)',
+            background: helmHold > 0 && helmFishable
+              ? 'radial-gradient(circle at 42% 36%, rgba(206,250,232,0.96), rgba(120,200,176,0.7))'
+              : 'radial-gradient(circle at 42% 36%, rgba(214,232,240,0.92), rgba(150,186,206,0.6))',
+            border: `1px solid ${helmHold > 0 && helmFishable ? 'rgba(180,246,222,0.85)' : 'rgba(226,242,250,0.6)'}`,
+            boxShadow: helmHold > 0 && helmFishable
+              ? `0 4px 12px rgba(0,0,0,0.45), 0 0 ${8 + helmHold * 16}px rgba(120,220,190,${0.3 + helmHold * 0.5})`
+              : '0 4px 12px rgba(0,0,0,0.45)',
             willChange: 'transform',
           }} />
         </div>
@@ -3333,50 +3550,8 @@ hullRef={hullRefFor(t.key)} />
           The derivation keeps him off the moored buyers, but a WANDERING trader
           can still drift onto his spot, and this is the ordering that settles
           what happens when one does. */}
-      {!fishingIn && nearFinn && !finnTalk && (
-        <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: Z.action,
-          display: 'flex', justifyContent: 'center', padding: '0 1rem',
-        }}>
-          <button
-            disabled={finnBusy}
-            onClick={e => { e.stopPropagation(); vibrate(14); void hailFinn() }}
-            className="font-cinzel font-700"
-            style={{
-              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
-              color: '#f6e6c6', background: 'rgba(30,20,8,0.92)',
-              border: '1px solid rgba(255,196,110,0.7)',
-              boxShadow: '0 6px 22px rgba(0,0,0,0.5), 0 0 24px rgba(255,178,80,0.22)',
-              cursor: finnBusy ? 'default' : 'pointer', opacity: finnBusy ? 0.6 : 1,
-            }}>
-            {finnBusy ? '...' : `Hail ${FINN_NAME}`}
-          </button>
-        </div>
-      )}
-
       {/* HAILING SOMEONE OUTRANKS THE ZONE PROMPT. You have pulled alongside a
           person; what water you happen to be floating in can wait. */}
-      {!fishingIn && !nearFinn && nearTrader && !hailing && (
-        <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: Z.action,
-          display: 'flex', justifyContent: 'center', padding: '0 1rem',
-        }}>
-          <button
-            onClick={e => { e.stopPropagation(); vibrate(14); setHailing(nearTrader) }}
-            className="font-cinzel font-700"
-            style={{
-              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
-              color: '#f6e6c6', background: 'rgba(24,18,10,0.9)',
-              border: '1px solid rgba(255,206,138,0.5)',
-              boxShadow: '0 6px 22px rgba(0,0,0,0.5)', cursor: 'pointer',
-            }}>
-            {dealt.includes(nearTrader.key)
-              ? `Speak to ${nearTrader.name}`
-              : `Hail ${nearTrader.name}`}
-          </button>
-        </div>
-      )}
-
       {/* CALLING ON SOMEBODY. Only within reach of the Homestead, and only
           when there is anybody to call on: an empty picker is a button that
           teaches you nothing.
@@ -3416,98 +3591,10 @@ hullRef={hullRefFor(t.key)} />
       {/* DIGGING BEATS EVERYTHING. You are inside a band and possibly beside a
           bottle when you are stood over one, and a buried haul is the rarest
           thing on this chart — it goes to the front of the queue. */}
-      {!fishingIn && nearDig && !dug.has(nearDig.id) && (
-        <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 22,
-          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
-        }}>
-          <button
-            onClick={e => { e.stopPropagation(); dig(nearDig) }}
-            disabled={landing}
-            className="font-cinzel font-700"
-            style={{
-              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
-              color: '#f6e6c6', background: 'rgba(28,20,8,0.92)',
-              border: '1px solid rgba(255,206,138,0.62)',
-              boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
-              cursor: landing ? 'default' : 'pointer', opacity: landing ? 0.6 : 1,
-            }}>
-            {bearings.has(nearDig.id) ? `Dig for ${nearDig.name}` : 'Something is buried here'}
-          </button>
-        </div>
-      )}
-
       {/* THE BOTTLE, ahead of the zone prompt and behind a dig. */}
-      {!fishingIn && !nearFinn && !nearTrader && !(nearDig && !dug.has(nearDig.id)) && nearBottle && (
-        <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 22,
-          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
-        }}>
-          <button
-            onClick={e => { e.stopPropagation(); take(nearBottle) }}
-            disabled={landing}
-            className="font-cinzel font-700"
-            style={{
-              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
-              color: '#dff0e6', background: 'rgba(10,24,20,0.9)',
-              border: '1px solid rgba(150,206,172,0.5)',
-              boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
-              cursor: landing ? 'default' : 'pointer', opacity: landing ? 0.6 : 1,
-            }}>
-            Fish out the bottle
-          </button>
-        </div>
-      )}
-
       {/* GOING ASHORE BEATS FISHING. You are inside a band whenever you are
           on an isle, so without this the only offer on screen would be "Fish
           The Deep" while you are standing on a rock with a chest on it. */}
-      {!fishingIn && !nearFinn && !nearTrader && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && nearIsle && (
-        <div style={{
-          // THE SAME ROW AS "FISH THE DEEP" — bottom 22, which is what `Prompt`
-          // and the trader hail both use. This was lifted to 5.4rem off the
-          // bottom, which on a phone is exactly where the joystick lives, so
-          // the one button that opens a chest sat on top of the control you
-          // steer with. Every offer on this chart belongs on one line.
-          position: 'absolute', left: 0, right: 0, bottom: 22,
-          zIndex: Z.action, display: 'flex', justifyContent: 'center', padding: '0 1rem',
-        }}>
-          <button
-            onClick={e => { e.stopPropagation(); land(nearIsle) }}
-            disabled={landing}
-            className="font-cinzel font-700"
-            style={{
-              padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
-              color: '#f6e6c6', background: 'rgba(24,18,10,0.9)',
-              border: '1px solid rgba(255,206,138,0.5)',
-              boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
-              cursor: landing ? 'default' : 'pointer', opacity: landing ? 0.6 : 1,
-            }}>
-            {found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`}
-          </button>
-        </div>
-      )}
-
-      {!fishingIn && !nearFinn && !nearTrader && !nearIsle && !nearBottle && !(nearDig && !dug.has(nearDig.id)) && (
-        <Prompt
-          place={near}
-          locked={near ? locked(near) : false}
-          level={level}
-          // A water does not navigate. Pressing "Fish The Shallows" puts the rod
-          // in your hands where you are floating; only a port is a door.
-          onEnter={p => {
-            if (p.kind === 'water') {
-              // ALL STOP. A tap is a heading now, so without this you would cast
-              // at a full six knots and sail out of the zone you had just chosen
-              // to fish, and be several hundred pixels away by the time the
-              // dial came up.
-              target.current = { ...pos.current }
-              setFishingIn(p)
-              vibrate(14)
-            } else enter(p)
-          }}
-        />
-      )}
       {/* AND THE WATER'S NAME IS ALREADY ON SCREEN while the rod is out — the
           stow line at the bottom of the fishing UI reads "Stow rod · Open
           Waters". Two of them, one of them enormous, is the same fact twice. */}
@@ -3785,6 +3872,29 @@ hullRef={hullRefFor(t.key)} />
         onChanged={() => pullNow.current()}
       />
 
+
+      {/* WHAT A TAP ON THE HELM DOES. Assigned during render rather than
+          declared as a callback because it closes over a dozen pieces of live
+          state, and the helm's own handlers are built once and read it through
+          the ref. The ORDER is the action pill's order exactly — the pill is
+          the label for this gesture, and if the two disagreed the button would
+          be lying about what the thumb is about to do. */}
+      {(() => {
+        helmActRef.current = () => {
+          if (fishingIn) return false
+          if (nearFinn && !finnTalk) { vibrate(14); void hailFinn(); return true }
+          if (nearTrader && !hailing) { vibrate(14); setHailing(nearTrader); return true }
+          if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
+          if (nearBottle) { take(nearBottle); return true }
+          if (nearIsle) { void land(nearIsle); return true }
+          const here = nearRef.current
+          if (here && here.kind === 'port' && !locked(here)) { enter(here); return true }
+          // A water is not a tap target: it is what a HOLD is for, and casting
+          // on a tap would fire every time somebody meant to steer and missed.
+          return false
+        }
+        return null
+      })()}
 
       <CrewNews news={crewNews} onDone={() => setCrewNews(null)} />
 
@@ -6188,42 +6298,6 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
   )
 })
 
-/** The dock prompt. Says what to do, or why you cannot. */
-function Prompt({ place, locked, level, onEnter }: {
-  place: Place | null; locked: boolean; level: number
-  onEnter: (p: Place) => void
-}) {
-  if (!place) return null
-  const verb = place.kind === 'port' ? 'Go ashore at' : 'Fish'
-  return (
-    <div key={place.id}
-      style={{
-        // NOTHING COVERS THIS. It had no z-index, which is `auto`, which
-        // paints below the world layer — so the one button that gets you into
-        // a zone was hidden behind any island or landmark that happened to be
-        // in the bottom of the screen.
-        position: 'absolute', left: 0, right: 0, bottom: 22, zIndex: Z.action,
-        display: 'flex', justifyContent: 'center', padding: '0 1rem',
-      }}>
-      <button
-        onClick={e => { e.stopPropagation(); if (!locked) onEnter(place) }}
-        disabled={locked}
-        className="font-cinzel font-700"
-        style={{
-          padding: '0.72rem 1.5rem', borderRadius: 999, fontSize: '1.128rem',
-          color: locked ? 'rgba(210,170,170,0.9)' : '#f2ead8',
-          background: locked ? 'rgba(12,10,14,0.82)' : 'rgba(10,20,28,0.86)',
-          border: `1px solid ${locked ? 'rgba(200,130,130,0.4)' : 'rgba(180,214,232,0.45)'}`,
-          boxShadow: '0 6px 22px rgba(0,0,0,0.5)',
-          cursor: locked ? 'default' : 'pointer',
-        }}>
-        {locked
-          ? `${place.name} needs Fishing ${place.minLevel} — you are ${level}`
-          : `${verb} ${place.name}`}
-      </button>
-    </div>
-  )
-}
 
 /**
  * WHERE YOU ARE, along the top.

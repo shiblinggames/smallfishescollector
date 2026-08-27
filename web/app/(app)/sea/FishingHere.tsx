@@ -73,7 +73,7 @@ import { ANCIENT_IDS } from '@/lib/ancientVigil'
  *  is the one that runs cold. Same literal FishingGame uses. */
 const MEGALODON_ID = 143
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
-import type { SeaLog } from './SeaMap'
+import { HELM_D, HELM_BOTTOM, type SeaLog } from './SeaMap'
 import { PHASE_LABEL, type SeaPhase } from '@/lib/seaClock'
 
 /**
@@ -1843,15 +1843,32 @@ export default function FishingHere({
         // the dial. The 88px slot was already fixed — what shifted was the
         // Tide Turner disappearing when the phase left 'hooked', which took 34
         // pixels out of the row and slid the dial down with it.
-        paddingTop: 8, paddingBottom: 22, pointerEvents: 'auto',
+        // ── SITTING WHERE THE HELM SAT ──────────────────────────────
+        // HELM_BOTTOM, not 22. The wheel is 92px off the bottom of the chart
+        // (it has to clear the action pill, which owns 22), and this slot is
+        // the same control in its other role — so it has to land on the same
+        // spot or the thumb moves the instant the rod comes out, which is the
+        // one thing a control that changes role must never do.
+        //
+        // This row's height is load-bearing: the content above is flex:1
+        // justified to its bottom edge, so raising the row raises the dial with
+        // it by the same 70px. That is deliberate and the reason it is stated
+        // here — a future change to either number moves the dial.
+        paddingTop: 8, paddingBottom: HELM_BOTTOM, pointerEvents: 'auto',
       }}>
-        <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* THE HELM'S OWN SIZE. This slot is the joystick's other half — the
+            wheel is a 112px circle at bottom 92 on the chart, and when the rod
+            comes out it becomes this. Matching the diameter is what turns a
+            swap of two controls into ONE control changing role: the thumb never
+            moves and nothing resizes underneath it. HELM_D is exported from the
+            chart so the two cannot drift apart. */}
+        <div style={{ width: HELM_D, height: HELM_D, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {(phase === 'idle' || phase === 'result') && (
             <motion.button key="cast"
               onPointerDown={e => { e.preventDefault(); if (phase === 'result') castAgain(); else cast() }}
               className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
               style={{
-                width: 88, height: 88, borderRadius: '50%',
+                width: HELM_D, height: HELM_D, borderRadius: '50%',
                 background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.45), rgba(14,116,144,0.18))',
                 border: '1px solid rgba(34,170,200,0.5)', cursor: 'pointer',
                 fontSize: '0.864rem', touchAction: 'manipulation', lineHeight: 1.15,
@@ -1875,7 +1892,7 @@ export default function FishingHere({
               onPointerDown={e => { e.preventDefault(); strike() }}
               className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
               style={{
-                width: 88, height: 88, borderRadius: '50%',
+                width: HELM_D, height: HELM_D, borderRadius: '50%',
                 background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.28), rgba(240,192,64,0.08))',
                 border: '1px solid rgba(240,192,64,0.4)', cursor: 'pointer',
                 fontSize: '0.864rem', color: '#f0c040', touchAction: 'manipulation',
