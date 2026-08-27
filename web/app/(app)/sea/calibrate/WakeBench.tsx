@@ -31,17 +31,24 @@ const FISHING_HULL_W = 210 * 0.55
 
 /** Every boat the sea draws, in one list, because the fishing boat needs its
  *  cutwater placed too and it is the one that is not in SHIPS. */
-type Boat = { id: string; label: string; box: number; scale: number; art: string | null }
+type Boat = { id: string; label: string; box: number; scale: number; art: string | null; flip: boolean }
 const BOATS: Boat[] = [
-  { id: 'fishing', label: 'Fishing boat', box: SKIPPER_W, scale: 1, art: null },
+  { id: 'fishing', label: 'Fishing boat', box: SKIPPER_W, scale: 1, art: null, flip: false },
   ...SHIPS.map(s => ({
     id: String(s.tier),
     label: s.name,
     box: WARSHIP_W,
     scale: (WARSHIP_W * (s.seaBeam ?? 0.6)) / FISHING_HULL_W,
     art: s.seaImageUrl ?? null,
+    flip: s.seaFlip === true,
   })),
 ]
+
+/** THE RING MAY GO OUTSIDE THE SPRITE. It was clamped to the box, which sounds
+ *  sensible and is not: a bowsprit overhangs, the hull rarely fills its own
+ *  square, and the cutwater is a point on the WATER, which does not stop at the
+ *  edge of a PNG. Bounded only far enough out to stop a stray drag losing it. */
+const REACH = 0.6
 
 const DEFAULTS: Record<string, { x: number; y: number }> = {
   fishing: { x: 0.719, y: 0.662 },
@@ -49,7 +56,7 @@ const DEFAULTS: Record<string, { x: number; y: number }> = {
 }
 
 const round = (n: number) => Math.round(n * 1000) / 1000
-const clamp = (n: number) => Math.max(0, Math.min(1, n))
+const clamp = (n: number) => Math.max(-REACH, Math.min(1 + REACH, n))
 
 export default function WakeBench({ characterColor, equippedBoat, equippedHat }: {
   characterColor: string
@@ -57,6 +64,8 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
   equippedHat: string | null
 }) {
   const [bows, setBows] = useState<Record<string, { x: number; y: number }>>(DEFAULTS)
+  const [flips, setFlips] = useState<Record<string, boolean>>(
+    Object.fromEntries(BOATS.map(b => [b.id, b.flip])))
   const [pick, setPick] = useState('6')
   const [speed, setSpeed] = useState(0.85)
   const [running, setRunning] = useState(true)
@@ -64,6 +73,7 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
 
   const boat = BOATS.find(b => b.id === pick) ?? BOATS[0]
   const bow = bows[pick] ?? { x: 0.8, y: 0.75 }
+  const flipped = flips[pick] ?? false
 
   const stage = useRef<HTMLDivElement | null>(null)
   const marks = useRef<HTMLDivElement[]>([])
@@ -143,8 +153,11 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
   const move = useCallback((e: React.PointerEvent) => {
     const r = stage.current?.getBoundingClientRect()
     if (!r || !r.width) return
-    // The stage is one BOX wide and one box tall, centred, so a pointer
-    // position maps straight onto the sprite's own fractions.
+    // MEASURED against the sprite box, but DRAGGED anywhere on the water. The
+    // box is the coordinate system — it has to be, or the numbers would mean
+    // something different at every panel size — but it is not the boundary.
+    // Pinning the ring inside it was why the cutwater could not be put where
+    // the hull actually meets water.
     setBows(prev => ({
       ...prev,
       [pick]: {
@@ -170,11 +183,11 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
     const f = bows.fishing
     const lines = SHIPS.map(s => {
       const b = bows[String(s.tier)]
-      return `  ${s.name.padEnd(11)} seaBow: { x: ${b.x}, y: ${b.y} },`
+      return `  ${s.name.padEnd(11)} seaBow: { x: ${b.x}, y: ${b.y} },${flips[String(s.tier)] ? ' seaFlip: true,' : ''}`
     }).join('\n')
     return `// lib/ships.ts — one seaBow per hull\n${lines}\n\n`
       + `// SeaMap.tsx\nconst FISHING_BOW = { x: ${f.x}, y: ${f.y} }\n`
-  }, [bows])
+  }, [bows, flips])
 
   const copy = async () => {
     try {
@@ -218,12 +231,24 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
           judged against a page background is a wake judged against the wrong
           thing — these marks are pale and translucent and only read correctly
           over water. */}
-      <div style={{
-        position: 'relative', height: 420, borderRadius: 16, overflow: 'hidden',
-        background: 'linear-gradient(180deg, #0e2231 0%, #0b1a24 60%, #081420 100%)',
-        border: '1px solid rgba(150,196,222,0.2)',
-        touchAction: 'none',
-      }}>
+      {/* THE WHOLE PANEL TAKES THE DRAG, not just the sprite. The box is the
+          coordinate system and it has to be, or the numbers would mean
+          something different at every panel size — but it is not a fence. */}
+      <div
+        onPointerDown={e => {
+          e.preventDefault()
+          ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+          held.current = true; move(e)
+        }}
+        onPointerMove={e => { if (held.current) move(e) }}
+        onPointerUp={() => { held.current = false }}
+        onPointerCancel={() => { held.current = false }}
+        style={{
+          position: 'relative', height: 420, borderRadius: 16, overflow: 'hidden',
+          background: 'linear-gradient(180deg, #0e2231 0%, #0b1a24 60%, #081420 100%)',
+          border: '1px solid rgba(150,196,222,0.2)',
+          touchAction: 'none', cursor: 'crosshair',
+        }}>
         {/* The marks. Behind the boat, exactly as on the chart, which is a good
             part of why the foam at the prow reads as being split. */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', zIndex: 1 }}>
@@ -234,24 +259,20 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         </div>
 
         {/* The boat, held at the centre and drawn at its true sea size. */}
-        <div ref={stage}
-          onPointerDown={e => {
-            e.preventDefault()
-            ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-            held.current = true; move(e)
-          }}
-          onPointerMove={e => { if (held.current) move(e) }}
-          onPointerUp={() => { held.current = false }}
-          onPointerCancel={() => { held.current = false }}
-          style={{
-            position: 'absolute', left: '50%', top: '50%', zIndex: 2,
-            width: boat.box, height: boat.box, transform: 'translate(-50%, -50%)',
-            cursor: 'crosshair', touchAction: 'none',
-          }}>
+        <div ref={stage} style={{
+          position: 'absolute', left: '50%', top: '50%', zIndex: 2,
+          width: boat.box, height: boat.box, transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+        }}>
           {boat.art ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={boat.art} alt="" draggable={false} width={640} height={640}
-              style={{ width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }} />
+              style={{
+                width: '100%', height: '100%', display: 'block', pointerEvents: 'none',
+                // Shown exactly as the sea will draw her, so the ring is placed
+                // in the frame the game actually uses.
+                ...(flipped ? { transform: 'scaleX(-1)' } : null),
+              }} />
           ) : (
             // The fishing boat is a composite, so it is the real component. Its
             // sprite carries the same translate the sea gives it, or the hull
@@ -268,11 +289,23 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
               visible through the middle of it. */}
           <div aria-hidden style={{
             position: 'absolute', left: `${bow.x * 100}%`, top: `${bow.y * 100}%`,
-            transform: 'translate(-50%, -50%)',
-            width: 22, height: 22, borderRadius: '50%',
-            border: '2px solid #f0c040', boxShadow: '0 0 0 3px rgba(240,192,64,0.22)',
-            pointerEvents: 'none',
-          }} />
+            transform: 'translate(-50%, -50%)', pointerEvents: 'none',
+          }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: '50%',
+              border: '2px solid #f0c040', boxShadow: '0 0 0 3px rgba(240,192,64,0.22)',
+            }} />
+            {/* Hairlines, because the ring can now sit well off the hull and a
+                lone circle on open water is hard to line up against a prow. */}
+            <div style={{
+              position: 'absolute', left: '50%', top: '50%', width: 1, height: 240,
+              transform: 'translate(-50%, -50%)', background: 'rgba(240,192,64,0.28)',
+            }} />
+            <div style={{
+              position: 'absolute', left: '50%', top: '50%', width: 240, height: 1,
+              transform: 'translate(-50%, -50%)', background: 'rgba(240,192,64,0.28)',
+            }} />
+          </div>
         </div>
 
         {/* Keyboard access to the same handle. Focusable, invisible, and it is
@@ -293,6 +326,17 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
         </label>
         <input type="range" min={0.15} max={2} step={0.05} value={speed}
           onChange={e => setSpeed(Number(e.target.value))} style={{ flex: 1 }} />
+        <button type="button"
+          onClick={() => setFlips(f => ({ ...f, [pick]: !f[pick] }))}
+          className="tap font-karla font-700"
+          style={{
+            padding: '0.4rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', cursor: 'pointer',
+            background: flipped ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${flipped ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.16)'}`,
+            color: flipped ? '#f6dfa0' : '#d8e2ea',
+          }}>
+          {flipped ? 'Mirrored' : 'Mirror art'}
+        </button>
         <button type="button" onClick={() => setRunning(r => !r)} className="tap font-karla font-700"
           style={{
             padding: '0.4rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', cursor: 'pointer',
@@ -310,7 +354,11 @@ export default function WakeBench({ characterColor, equippedBoat, equippedHat }:
           }}>
           {copied ? 'Copied' : 'Copy the table'}
         </button>
-        <button type="button" onClick={() => setBows(DEFAULTS)} className="tap font-karla font-700"
+        <button type="button"
+          onClick={() => {
+            setBows(DEFAULTS)
+            setFlips(Object.fromEntries(BOATS.map(b => [b.id, b.flip])))
+          }} className="tap font-karla font-700"
           style={{
             padding: '0.65rem 0.9rem', borderRadius: 12, fontSize: '0.88rem', cursor: 'pointer',
             background: 'rgba(6,14,22,0.6)', border: '1px solid rgba(180,214,232,0.26)', color: '#cfe0ec',

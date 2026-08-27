@@ -5004,7 +5004,13 @@ const Warship = memo(function Warship({ tier }: { tier: number }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={hull.seaImageUrl} alt="" draggable={false}
         width={640} height={640} decoding="async"
-        style={{ width: '100%', display: 'block' }} />
+        style={{
+          width: '100%', display: 'block',
+          // Some art arrives bow-left. Composed with the loop's own scaleX,
+          // which is what turns the hull round when you steer west, so the two
+          // simply multiply and neither needs to know about the other.
+          ...(hull.seaFlip ? { transform: 'scaleX(-1)' } : null),
+        }} />
     </div>
   )
 })

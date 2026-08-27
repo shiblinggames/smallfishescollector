@@ -64,6 +64,21 @@ export interface ShipDef {
    * placed by eye.
    */
   seaBow?: { x: number; y: number }
+  /**
+   * THE ART IS DRAWN FACING THE WRONG WAY and has to be mirrored.
+   *
+   * Every hull on the water is drawn bow-right and mirrored by the sailing loop
+   * when you steer west. Four of the five were painted that way; the Man-o-War
+   * came back with its bowsprit to the LEFT, so without this it sails stern
+   * first, and its cutwater would be placed on its transom.
+   *
+   * A flag rather than a corrected file, because the flag is the honest record:
+   * the art really is mirrored, a future sheet may well arrive the same way,
+   * and re-exporting the PNG hides the fact from whoever adds the next one.
+   * `seaBow` is measured on the CORRECTED image, so the two compose without
+   * anybody having to think about it.
+   */
+  seaFlip?: boolean
 }
 
 // ── WHY THE LADDER STARTS AT TIER 2 ───────────────────────────────────────
@@ -126,6 +141,7 @@ export const SHIPS: ShipDef[] = [
     description: 'The most feared ship on the water.',
     color: '#ff6b35', imageUrl: '/models/man-o-war_v2.png',
     seaImageUrl: '/ship-hero/man-o-war_v3.png',
+    seaFlip: true,
     seaBow: { x: 0.886, y: 0.913 },
     seaBeam: 0.97, seaKeel: 0.913,
   },
