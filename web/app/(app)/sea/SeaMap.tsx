@@ -34,7 +34,7 @@ import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { crewTheDeck } from '../crew/actions'
-import { PORTAL, PORTAL_TIERS, inPortal, inPortalEye, CACHE_ISLE_IDS } from '@/lib/seaPortal'
+import { PORTAL, PORTAL_TIERS, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
@@ -4923,7 +4923,7 @@ hullRef={hullRefFor(t.key)} />
                     </div>
                     {owned ? (
                       <button type="button" data-no-steer
-                        onClick={() => warpTo(t.to.x, t.to.y)}
+                        onClick={() => { const w = warpPoint(t); warpTo(w.x, w.y) }}
                         className="tap font-cinzel font-700" style={{
                           flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 10, cursor: 'pointer',
                           background: `${t.accent}22`, border: `1px solid ${t.accent}66`,

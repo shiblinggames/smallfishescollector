@@ -12,6 +12,7 @@
 
 import { ISLES } from './seaIsles'
 import { PLACES } from '@/app/(app)/sea/chart'
+import { clearOfSolids, BOAT_CLEAR } from './seaSolid'
 
 /** Where the ring floats. Beside the Homestead (1900,-250 r460), outside its
  *  mooring prompt (ends at 880 from centre; this is 1,097 out), south of the
@@ -27,8 +28,9 @@ export type PortalTier = {
   cost: number
   /** Cache chests that must have been opened (cumulative spend, see actions). */
   components: number
-  /** Where the warp lands, in world px. Due south in the band's middle water,
-   *  clear of every isle and landmark on that meridian. */
+  /** The FALLBACK landing: due south in the band's middle water, verified
+   *  clear of everything. Real warps roll a spot — see warpPoint — and this
+   *  is what a run of unlucky rolls falls back to. */
   to: { x: number; y: number }
   /** The ring's accent at this tier — the destination band's own palette, so
    *  the portal wears where it can take you. */
@@ -76,6 +78,42 @@ export function inPortalEye(x: number, y: number): boolean {
  *  WHOLE ring before the eye will take you again. */
 export function inPortal(x: number, y: number): boolean {
   return Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r
+}
+
+/**
+ * WHERE A WARP ACTUALLY LANDS: rolled, southern, and clear.
+ *
+ * A fixed point taught well but wore thin — the same wave every time. Fully
+ * random within the ring occasionally dumped you half a sea from anything,
+ * because a band is a RING and its northern arc can be a long sail from the
+ * southern water the fixed point trained everyone to expect.
+ *
+ * So the roll is biased to the SOUTHERN ARC: an angle within ±55° of due
+ * south, a radius padded inside the band so a landing never straddles a
+ * border. Surprising enough that the sea stays a sea, never so surprising
+ * that the portal reads as a prank.
+ *
+ * Rejection-sampled against the same solids list the traders use to not moor
+ * inside islands. Even the Shallows is a third clear water and the deep bands
+ * run 60-85%, so a dozen tries effectively never miss — and when they do, the
+ * band's verified fixed point is the answer, not an unclear roll.
+ */
+export function warpPoint(tier: PortalTier): { x: number; y: number } {
+  const band = PLACES.find(p => p.id === tier.band)
+  if (!band || band.inner == null || band.outer == null) return tier.to
+  const pad = 300
+  for (let i = 0; i < 12; i++) {
+    // ±55° around due south (screen-down is +y, so due south is +90° in
+    // standard atan2 terms; sampled directly as an offset from it).
+    const theta = (Math.PI / 2) + (Math.random() * 2 - 1) * (55 * Math.PI / 180)
+    const r = band.inner + pad + Math.random() * (band.outer - band.inner - pad * 2)
+    const x = Math.cos(theta) * r
+    const y = Math.sin(theta) * r
+    if (y < 400) continue // never the harbour approaches
+    if (!clearOfSolids(x, y, BOAT_CLEAR + 120)) continue
+    return { x: Math.round(x), y: Math.round(y) }
+  }
+  return tier.to
 }
 
 // The compiler holds the band ids honest against the chart: a renamed band
