@@ -119,8 +119,13 @@ export default function FinnEncounter({
             data-any-key
             onClick={handleBackdropClick}
             style={{
+              // NO PAINTED BACKDROP. This used to drop a dock at dusk behind
+              // him, which is a cut AWAY, and Finn is not somewhere else: he is
+              // a boat you pulled alongside on the water you sailed to. The
+              // regulars' scene settled this convention and he follows it now.
+              // The chart stays where it was, dimmed.
               position: 'fixed', inset: 0, zIndex: 100, cursor: 'pointer',
-              background: 'linear-gradient(180deg, rgba(6,10,18,0.66) 0%, rgba(6,10,18,0.72) 100%), url(/scenes/dock-dusk.jpg) center/cover no-repeat',
+              background: 'rgba(4,8,14,0.72)',
               backdropFilter: 'blur(2px)',
               WebkitBackdropFilter: 'blur(2px)',
             }}
@@ -136,13 +141,19 @@ export default function FinnEncounter({
               position: 'fixed', zIndex: 101,
               top: '50%', left: '1rem', right: '1rem',
               transform: 'translateY(-50%)',
-              maxWidth: 380, margin: '0 auto',
+              // THE HOUSE MODAL WIDTH, and the regulars' card shape: fixed
+              // height in a flex column so nothing resizes under the reader's
+              // thumb as lines and buttons come and go, with only the region
+              // below the dialogue allowed to scroll.
+              maxWidth: 480, margin: '0 auto',
+              height: 'min(524px, 88vh)',
+              display: 'flex', flexDirection: 'column',
               background: 'linear-gradient(180deg, #0e1a2b 0%, #06101c 100%)',
               border: '1px solid rgba(200,168,80,0.32)',
               borderTop: '1px solid rgba(200,168,80,0.60)',
               borderRadius: 16,
-              padding: '1.1rem 1.1rem 1rem',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
+              padding: '1rem 1rem 0.9rem',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 34px rgba(200,168,80,0.08)',
               overflow: 'hidden',
             }}
           >
@@ -153,9 +164,10 @@ export default function FinnEncounter({
             <motion.div
               animate={shake ? { x: [0, -7, 6, -4, 3, 0], y: [0, 3, -2, 0] } : { x: 0, y: 0 }}
               transition={shake ? { duration: 0.42 } : { duration: 0.25 }}
+              style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
             >
             {/* Header — eyebrow + portrait + name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '0.85rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: '0.7rem', flexShrink: 0 }}>
               <div style={{
                 transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
                 flexShrink: 0,
@@ -167,18 +179,17 @@ export default function FinnEncounter({
                   equippedHat={FINN_AVATAR.equippedHat ?? null}
                   bgColor={FINN_AVATAR.bgColor}
                   ringColor={FINN_AVATAR.borderColor}
-                  size={62}
+                  size={58}
                 />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.55rem', color: '#c8a060', letterSpacing: '0.20em', marginBottom: 3,
+                  fontSize: '0.53rem', color: '#c8a060', letterSpacing: '0.2em', marginBottom: 2,
                 }}>
                   Rival
                 </p>
                 <p className="font-cinzel font-700" style={{
-                  fontSize: '1.2rem', color: '#f0ede8', lineHeight: 1,
-                  textShadow: '0 0 12px rgba(200,168,80,0.30)',
+                  fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1,
                 }}>
                   {FINN_NAME}
                 </p>
@@ -239,15 +250,21 @@ export default function FinnEncounter({
               </motion.div>
             )}
 
-            {/* Dialogue — typewriter with pauses + *italic* emphasis. */}
-            <div style={{ marginBottom: '0.85rem' }}>
+            {/* Dialogue: typewriter with pauses and *italic* emphasis. A
+                RESERVED block, like the regulars' card, so a four word line and
+                a thirty word one do not resize the window between them. */}
+            <div style={{ height: 104, flexShrink: 0, overflowY: 'auto', marginBottom: '0.7rem' }}>
               <TypedLine
                 line={line} lineKey={index} accent={FINN_AMBER} allText={allText} reduced={reduced}
                 onBegin={onBegin} onState={onState} finishRef={finishRef}
               />
             </div>
 
-            {/* Challenge card — shown on the LAST line of offer mode. */}
+            {/* Everything under the dialogue varies with the mode, so it is
+                the only part allowed to scroll. */}
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+
+            {/* Challenge card, shown on the LAST line of offer mode. */}
             {mode === 'offer' && isLast && challenge && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -288,8 +305,9 @@ export default function FinnEncounter({
               </motion.div>
             )}
 
-            {/* Buttons */}
-            <div style={{ display: 'flex', gap: 8 }}>
+            {/* Buttons. Pushed to the bottom of the scrolling region so they
+                sit in the same place whether or not a challenge is on offer. */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
               {mode === 'offer' && isLast && !typing && challenge ? (
                 <>
                   <button
@@ -349,6 +367,7 @@ export default function FinnEncounter({
                 {typing ? 'tap to skip' : 'tap to advance'}
               </p>
             )}
+            </div>
             </motion.div>
           </motion.div>
         </>

@@ -269,6 +269,19 @@ export const FINN_LOOK = {
   characterColor: 'ruby',
   boatId: 'mahogany',
   hatId: 'brown',
-  rodSlug: null,
-  hook: null,
+  /**
+   * HE CARRIES A ROD NOW. He was the only angler on this chart holding
+   * nothing, which on a sea where every trader and every regular is drawn with
+   * their kit made the rival look like scenery rather than a fisher.
+   *
+   * TWIN-STRIKE, and the choice is not idle. It is plain rather than glowing,
+   * because a glowing rod is a thing a player earns and putting one in his
+   * hands pre-reveal would flag him as more than he is claiming to be. It is
+   * tier 11, which reads simply as somebody genuinely good. And the NAME is
+   * the sort of foreshadowing the arc is built on: innocent on the way past,
+   * and obvious in hindsight once you know what he is. See
+   * docs/systems/story-universe.md on never leaking the twist early.
+   */
+  rodSlug: 'rod_twinstrike',
+  hook: '/hook_bronze.png',
 } as const

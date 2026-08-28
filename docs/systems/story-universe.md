@@ -23,6 +23,19 @@ he is somewhere else afterwards. `FINN_ENCOUNTER_RATE` is 0 and the old roll sit
   variant for it was designed but NOT built.
 - Chapter 4 / endgame is LIVE (de-gated 2026-07-04; the raidMap comments record it).
 
+## How Finn is presented
+
+- **His encounter follows the regulars' convention, not a cutscene's.** `FinnEncounter` has
+  no painted backdrop: the chart stays behind it, dimmed. A backdrop is a cut AWAY, and a
+  conversation with a boat you pulled alongside is not that. Same house modal width (480),
+  same fixed-height card and reserved dialogue block as `sea/FolkScene`, so nothing resizes
+  mid-sentence. `FinnScene` (the ancient-catch beats) is a REAL cutscene and keeps its
+  backdrop; the two are different things.
+- **He carries a rod: Twin-Strike (`rod_twinstrike`).** Plain, not glowing, because a
+  glowing rod is something a player earns and putting one in his hands pre-reveal would
+  flag him as more than he claims to be. Tier 11 reads as somebody genuinely good. The name
+  is the kind of foreshadowing this arc runs on: innocent going past, obvious in hindsight.
+
 ## Delivery machinery
 
 - Story nodes live in the raid chain (`web/lib/raidMap.ts`, nodes with `scene[]`).
