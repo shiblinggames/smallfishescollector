@@ -8699,8 +8699,10 @@ function WaterBanner({ place, locked, lowered }: {
  *   discoverable by sailing, which is the point of a chart you sail on.
  */
 const COMPASS_MAX = 4
-/** How far apart two markers must sit on the perimeter before both are shown. */
-const COMPASS_SPACING = 96
+/** The keep-clear box between two markers: a name plate is ~110 wide and two
+ *  lines tall, so side-by-side needs far more room than stacked. A radius (it
+ *  was 96) let two centres pass while the words lay on each other. */
+const COMPASS_KEEP = { x: 120, y: 42 }
 
 function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
   frozen: boolean
@@ -8741,7 +8743,9 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
    *  printing straight through them — the "!" with its metres sat behind the
    *  ashore pill in the report that led here. Deep enough to clear the pill
    *  row; side markers are unaffected because their x pins them first. */
-  const myBot = Math.min(170, hh * 0.5)
+  // Past the helm's upper arc, not just past the bottom edge — 170 left the
+  // Abyss's label lying on the wheel.
+  const myBot = Math.min(214, hh * 0.5)
 
   /**
    * WHAT DESERVES AN ARROW, once the zones became rings.
@@ -8910,9 +8914,22 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
       // Downward rays stop earlier — see myBot.
       ay > 0.001 ? (hh - (m.sy > 0 ? myBot : my)) / ay : Infinity,
     )
-    const x = m.sx * t
+    let x = m.sx * t
     const y = m.sy * t
-    if (placed.some(q => Math.hypot(q.x - x, q.y - y) < COMPASS_SPACING)) continue
+    // ── THE BANNER'S STRIP IS RESERVED ─────────────────────────────
+    // The water's name lives top-centre, and an upward ray lands exactly
+    // there. Markers SLIDE OUT of the strip rather than dropping below it:
+    // sideways keeps "up-ish" honest, and it puts the two commonest top
+    // marks flanking the title instead of underneath it.
+    if (hh + y < 150 && Math.abs(x) < 210) {
+      x = (x !== 0 ? Math.sign(x) : m.sx < 0 ? -1 : 1) * 210
+    }
+    // ── LABELS ARE WIDE, NOT ROUND ─────────────────────────────────
+    // The spacing test was a circle at 96, and two name plates are ~110
+    // wide: centres 96 apart passed the test and the words still lay on
+    // each other. Side-by-side needs more room than stacked, so the test
+    // is a box, not a radius.
+    if (placed.some(q => Math.abs(q.x - x) < COMPASS_KEEP.x && Math.abs(q.y - y) < COMPASS_KEEP.y)) continue
     placed.push({ x, y })
     shown.push({ m, x, y, a: Math.atan2(m.sy, m.sx) })
   }
