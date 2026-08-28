@@ -334,7 +334,7 @@ export default function FolkPanel({ open, onClose, finn, level }: {
             }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#e8f2ea', margin: 0 }}>
-                The Salt Road
+                {showing ? showing.folk.name : 'The Salt Road'}
               </p>
               <button type="button" onClick={onClose} aria-label="Close"
                 style={{
@@ -348,6 +348,18 @@ export default function FolkPanel({ open, onClose, finn, level }: {
               </button>
             </div>
 
+            {/* ── ONE OF THEM, OR EVERYBODY ────────────────────────────
+                Tapping a card swaps the whole body for what you know about
+                that person rather than opening a second modal over the first.
+                A panel that opens a panel is how the conversation flow went
+                wrong the first time, and the Back control is right there. */}
+            {showing ? (
+              <div style={{ marginTop: '0.9rem' }}>
+                <FolkDetail folk={showing.folk} rap={showing.rap}
+                  onBack={() => setOpenFolk(null)} />
+              </div>
+            ) : (
+              <>
             {/* ── FINN. The reason the button exists, so he gets the top of the
                 panel, the gold, and the only progress bars. */}
             <div style={{
@@ -490,6 +502,8 @@ export default function FolkPanel({ open, onClose, finn, level }: {
               They are somewhere different every day, and there are only so many deals in a
               day to be had. Nobody is waiting for you in particular.
             </p>
+              </>
+            )}
           </motion.div>
         </motion.div>
       )}
