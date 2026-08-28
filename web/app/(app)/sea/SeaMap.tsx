@@ -1643,13 +1643,19 @@ export default function SeaMap({
    * Saving the SIDE removes the reason for the refusal. Restore reads it back
    * and sets the wall, the rim and the hull together, so nothing disagrees.
    */
+  /** The one derivation of which state the boat is in. The server save, the
+   *  heartbeat snapshot and the unmount snapshot all read THIS, because two
+   *  encodings of the same fact is how the position and the side ended up
+   *  travelling by different routes and arriving disagreeing. */
+  const sideNow = useCallback((): 'fishing' | 'anchorage' | 'moored' | 'open' =>
+    sortieRef.current ? 'open'
+      : shipRef.current ? 'moored'
+        : sideRef.current ? 'anchorage' : 'fishing', [])
+
   const saveSeaPosition = useCallback(
     (x: number, y: number, fog: number[]) =>
-      persistSeaPosition(x, y, fog,
-        sortieRef.current ? 'open'
-          : shipRef.current ? 'moored'
-            : sideRef.current ? 'anchorage' : 'fishing'),
-    [])
+      persistSeaPosition(x, y, fog, sideNow()),
+    [sideNow])
   /**
    * TAKING THE SHIP OUT.
    *
@@ -2391,7 +2397,7 @@ export default function SeaMap({
       const p = pos.current
       const fog = [...fogPending.current]
       // THE TAB REMEMBERS TOO, and unconditionally. See `rememberPos`.
-      rememberPos(p)
+      rememberPos(p, sideNow())
 
       // ── IT IS A HEARTBEAT, NOT JUST A POSITION ────────────────────
       //
@@ -2453,7 +2459,7 @@ export default function SeaMap({
       // The sessionStorage write is the one that actually matters here. The
       // server write is fire-and-forget and the trip back can beat it home;
       // this one is synchronous and cannot lose the race.
-      rememberPos(pos.current)
+      rememberPos(pos.current, sideNow())
       void saveSeaPosition(pos.current.x, pos.current.y, [...fogPending.current])
       fogPending.current.clear()
     }
@@ -2486,9 +2492,29 @@ export default function SeaMap({
   useLayoutEffect(() => {
     const p = recallPos()
     if (!p) return
-    pos.current = { x: p.x, y: Math.max(NORTH_WALL, p.y) }
+    // ONTO THE SNAPSHOT'S OWN SIDE. The old line clamped y to the wall
+    // unconditionally — written when nothing lived north of it — so every
+    // return from the anchorage restored a captain ONTO the reef line, and
+    // the face clamps then shoved them to whichever side the (racy) server
+    // side said. That is both halves of "my location was not saved" and
+    // "it glitches out half the time".
+    const north = p.side !== 'fishing'
+    pos.current = {
+      x: p.x,
+      y: north ? Math.min(NORTH_WALL - REEF_MARGIN, p.y) : Math.max(NORTH_WALL + REEF_MARGIN, p.y),
+    }
     target.current = { ...pos.current }
     vel.current = { x: 0, y: 0 }
+    // The refs and the chrome, seeded together with the position they belong
+    // to. A position restored without its state is the bug this effect had.
+    sideRef.current = north
+    setInAnchorage(north)
+    const ship = p.side === 'moored' || p.side === 'open'
+    shipRef.current = ship
+    setOnShip(ship)
+    const out = p.side === 'open'
+    sortieRef.current = out
+    setOnSortie(out)
   }, [])
 
   /**
@@ -4341,9 +4367,9 @@ hullRef={hullRefFor(t.key)} />
         // How heavy the hull reads, 0 at the Sloop and 1 at the Man-o-War. The
         // loop owns `transform` on this node and nothing else, so a custom
         // property set here is safe.
-        ...(onSortie ? { ['--heave' as string]: hull.weight } : null),
+        ...(onShip ? { ['--heave' as string]: hull.weight } : null),
       }}>
-        {onSortie ? (
+        {onShip ? (
           // A WARSHIP STANDS IN THE WATER. See the note on .sea-heave-* — three
           // thin rings racing outward is a pebble in a pond however big you
           // draw it, and this is a ship of the line at anchor.
@@ -4379,7 +4405,7 @@ hullRef={hullRefFor(t.key)} />
         {/* PAST THE SORTIE IT IS NOT YOUR FISHING BOAT. The whole point of
             the crossing is that the hull changes, so the captain-and-tackle
             sprite is replaced outright rather than dressed up. */}
-        {onSortie
+        {onShip
           ? <Warship tier={shipTier} />
           : <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
               gear={{
@@ -6192,23 +6218,39 @@ const FinnBoat = memo(function FinnBoat({ at, isNear }: {
  * because a tab restored by the browser days later should defer to whatever the
  * account has been doing since.
  */
-const POS_KEY = 'sea:pos'
+const POS_KEY = 'sea:pos2'
 const POS_TTL = 30 * 60 * 1000
 
-function rememberPos(p: { x: number; y: number }) {
+type SeaSide = 'fishing' | 'anchorage' | 'moored' | 'open'
+
+/**
+ * The snapshot carries THE SIDE, not just the coordinates — and the key is
+ * versioned because the old shape did not.
+ *
+ * A position without its side is half a fact, and restoring half a fact is
+ * where "coming back glitches half the time" came from: this synchronous
+ * snapshot always beats the fire-and-forget server write home, so the POSITION
+ * came from here while the SIDE came from whichever server write happened to
+ * have landed. When the server lost the race a captain deep in the anchorage
+ * came back as side 'fishing' with a northern y — which the old restore then
+ * "fixed" by clamping to the wall. Whether you were put back where you were or
+ * dumped on the reef was literally a race.
+ */
+function rememberPos(p: { x: number; y: number }, side: SeaSide) {
   try {
-    sessionStorage.setItem(POS_KEY, JSON.stringify({ x: p.x, y: p.y, t: Date.now() }))
+    sessionStorage.setItem(POS_KEY, JSON.stringify({ x: p.x, y: p.y, side, t: Date.now() }))
   } catch { /* private mode. The server copy still works, just less precisely. */ }
 }
 
-function recallPos(): { x: number; y: number } | null {
+function recallPos(): { x: number; y: number; side: SeaSide } | null {
   try {
     const raw = sessionStorage.getItem(POS_KEY)
     if (!raw) return null
-    const p = JSON.parse(raw) as { x: number; y: number; t: number }
+    const p = JSON.parse(raw) as { x: number; y: number; side?: string; t: number }
     if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return null
     if (!(Date.now() - p.t < POS_TTL)) return null
-    return { x: p.x, y: p.y }
+    const side: SeaSide = p.side === 'anchorage' || p.side === 'moored' || p.side === 'open' ? p.side : 'fishing'
+    return { x: p.x, y: p.y, side }
   } catch { return null }
 }
 
