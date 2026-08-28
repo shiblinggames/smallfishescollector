@@ -81,10 +81,9 @@ export type Place = {
   /**
    * WHERE DOCKING HAPPENS, when the default is wrong.
    *
-   * Every port's berth defaults to the water off the end of the jetty it
-   * already draws (see berthOf). An override moves it — dx/dy from the
-   * island's centre, world px — for the one island whose approach needs to
-   * be somewhere else.
+   * Every port's berth defaults to the water off its south-east shore (see
+   * berthOf). An override moves it — dx/dy from the island's centre, world
+   * px — for the one island whose approach needs to be somewhere else.
    */
   berth?: { dx: number; dy: number; r?: number }
   /** Landmarks and resident buyers used to live per-place. They are module
@@ -434,16 +433,13 @@ export const LANDMARKS: {
  * needed 840px between their rings or the prompts fought — the single fact
  * that spread the harbour cluster apart.
  *
- * Now it is a circle of water off the end of the jetty every port already
- * draws — the lantern was always the thing you steered toward, and this makes
- * that literal. PortBerth in SeaMap draws it (dashed ring, three buoys), so
- * the zone is a thing you can SEE, and the action button offers docking only
- * inside it.
+ * Now it is a marked circle of water off the island's south-east shore.
+ * PortBerth in SeaMap draws it — a dashed ring with three beacon lights
+ * standing on it — so the zone is a thing you can SEE, and the action button
+ * offers docking only inside it.
  *
- * The default lands just off the jetty's seaward end: the jetty roots at the
- * island box's (50%, 78%) and runs east ~0.62r, so a hair past that and a
- * shade south is open water on every current port. `berth` on the Place
- * overrides it where the default is wrong.
+ * The default (x + 0.85r, y + 0.6r) is open water on every current port;
+ * `berth` on the Place overrides it where the default is wrong.
  */
 export const BERTH_R = 260
 export function berthOf(p: Place): { x: number; y: number; r: number } {

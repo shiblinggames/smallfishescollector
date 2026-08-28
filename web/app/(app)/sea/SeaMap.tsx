@@ -4212,7 +4212,7 @@ export default function SeaMap({
           <PortBerth key={`berth:${p.id}`} p={p} active={near?.id === p.id} />
         ))}
         {PLACES.map(p => (
-          <PlaceIsland key={p.id} place={crewHallFor(homeFor(p, visiting?.homestead ?? homestead, visiting?.username), crewTiers)} locked={locked(p)} isNear={near?.id === p.id}
+          <PlaceIsland key={p.id} place={crewHallFor(homeFor(p, visiting?.homestead ?? homestead, visiting?.username), crewTiers)} locked={locked(p)}
             // CREW WAITING ON THE DOCK. The island says so itself rather than a
             // banner saying it for them: it is a fact about a PLACE, and the
             // chart is where facts about places belong. Nothing moves, nothing
@@ -7014,11 +7014,12 @@ const Landmass = memo(function Landmass({ id, r, locked = false }: {
  *
  * A ring lying ON the plane (the world transform squashes it into the same
  * ellipse every zone edge gets) with three BEACONS standing on it — harbour
- * lights on piles, kin to the lantern on every jetty: same warm colour, same
- * glow, because they are the same idea (the light you steer for) moved out
- * onto the water. Drawn, not sprited: a dark pile counter-squashed off the
- * plane with a lamp at its head and a smear of that light lying on the water
- * at its foot, which is what a light standing IN water does.
+ * lights on piles, the one warm colour on the chart and the thing you steer
+ * for at distance (the jetty lantern used to be that; the jetty is gone and
+ * the job moved out here, onto the water the prompt actually owns). Drawn,
+ * not sprited: a dark pile counter-squashed off the plane with a lamp at its
+ * head and a smear of that light lying on the water at its foot, which is
+ * what a light standing IN water does.
  *
  * The ring brightens and turns solid, and the lamps flare, when the boat is
  * actually inside — the same signal, at the same moment, as the action button
@@ -8175,7 +8176,7 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
 
 /** MEMOISED. The loop pokes React four times a second to update proximity and
  *  the compass, and without this every island rebuilt its whole subtree —
- *  coastline clip, drift blobs, cliff, jetty and all — on each of those ticks
+ *  coastline clip, drift blobs, cliff and all — on each of those ticks
  *  for a result that had not changed. */
 /**
  * THE ONE ISLAND THAT IS DIFFERENT FOR EVERYBODY.
@@ -8230,8 +8231,8 @@ function homeFor(p: Place, h: Homestead, guest?: string): Place {
   }
 }
 
-const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting = 0 }: {
-  place: Place; locked: boolean; isNear: boolean
+const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
+  place: Place; locked: boolean
   /** Crew standing on this dock with a haul. Only the Trawl Docks ever pass a
    *  non-zero value; every other island ignores it. */
   waiting?: number
@@ -8317,44 +8318,10 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, isNear, waiting =
             </Fragment>
           ))}
 
-          {/* ── THE JETTY, standing on the plane ────────────────────────
-              Counter-squashed like everything else that has height, and
-              anchored at its landward end so it runs OUT from the shore
-              rather than floating beside it. */}
-          <div aria-hidden style={{
-            position: 'absolute', left: '50%', top: '78%',
-            transform: `translateY(${-ISLAND_LIFT / GROUND}px) scaleY(${1 / GROUND})`,
-            transformOrigin: 'left center',
-            width: place.r * 0.62, height: 11,
-          }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              transform: 'translateX(-6%) rotate(9deg)',
-              background: 'linear-gradient(180deg, #6d5636, #3d2f1d)',
-              borderRadius: 2,
-              boxShadow: '0 3px 10px rgba(0,0,0,0.55)',
-              opacity: locked ? 0.4 : 1,
-            }} />
-            {[0.34, 0.58, 0.82].map(f => (
-              <div key={f} style={{
-                position: 'absolute', left: `${f * 100}%`, top: 6,
-                width: 5, height: 15, background: '#2e2416', borderRadius: 1,
-                transform: 'rotate(9deg)', opacity: locked ? 0.4 : 0.9,
-              }} />
-            ))}
-          </div>
-
-          {/* A lantern on the end of the jetty. The thing you steer toward at
-              distance, and the only warm colour on the whole chart. It sits
-              highest of anything here, so it gets the most lift. */}
-          <div aria-hidden style={{
-            position: 'absolute', left: `calc(50% + ${place.r * 0.56}px)`, top: '72%',
-            transform: `translateY(${-(ISLAND_LIFT + 10) / GROUND}px)`,
-            width: 13, height: 13, borderRadius: '50%',
-            background: locked ? 'rgba(150,160,170,0.5)' : '#ffd986',
-            boxShadow: locked ? 'none' : `0 0 ${isNear ? 26 : 15}px 6px rgba(255,196,110,${isNear ? 0.5 : 0.3})`,
-            transition: 'box-shadow 300ms ease-out',
-          }} />
+          {/* No jetty, no lantern. Both were drawn here once — a plank run
+              and a warm light at its end — and both read as a brown log with
+              a dot. The berth's own beacons are the harbour lights now, and
+              they stand where the prompt actually is. */}
         </>
       )}
 
