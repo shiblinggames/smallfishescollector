@@ -37,6 +37,7 @@ import { getCharacterSprites } from '@/lib/characters'
 import { HATS } from '@/lib/hats'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
 import { folkState, type Rapport } from './folkActions'
+import { finnChapters, finnWaitingOn, FINN_CHAPTERS, type FinnChapterView } from '@/lib/finnQuests'
 import type { FinnSeaState } from './finnActions'
 
 const GOLD = '#f0c040'
@@ -185,6 +186,72 @@ function UnknownCard({ water }: { water: string }) {
   )
 }
 
+/**
+ * ONE ACT OF THE FISHING CAMPAIGN.
+ *
+ * The raid map has had chapters since Chapter I and the fishing story never
+ * did, which is most of why this panel read as a list of people rather than as
+ * the other half of the game. Same idea, same shape: a numbered act, a title, a
+ * line under it, and how far through you are.
+ *
+ * THE LOCKED STATE IS THE IMPORTANT ONE. Each act after the first opens on
+ * water with a level gate, so the campaign genuinely halts until you are rated
+ * for the next band. Shown as a chapter that has not started yet, that is a
+ * story waiting for you. Shown as a job you cannot do, it is a bug. The fact is
+ * identical and the framing is the whole difference.
+ */
+function ChapterRow({ view }: { view: FinnChapterView }) {
+  const { chapter, done, total, complete, current, open } = view
+  const accent = complete ? 'rgba(150,182,164' : current ? 'rgba(240,192,64' : SEA
+  const alpha = open ? 1 : 0.45
+  return (
+    <div style={{
+      display: 'flex', gap: 10, alignItems: 'flex-start',
+      padding: '0.5rem 0.6rem', borderRadius: 11, marginBottom: 5,
+      background: current ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.022)',
+      border: `1px ${open ? 'solid' : 'dashed'} ${accent},${current ? 0.4 : 0.14})`,
+      opacity: alpha,
+    }}>
+      <p className="font-cinzel font-700" style={{
+        fontSize: '0.86rem', color: `${accent},0.9)`, margin: 0,
+        width: 22, flexShrink: 0, textAlign: 'center',
+      }}>{chapter.romanNumeral}</p>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+          <p className="font-cinzel font-700" style={{
+            fontSize: '0.88rem', color: open ? '#f0ede8' : `${SEA},0.5)`, margin: 0,
+          }}>{chapter.title}</p>
+          <p className="font-karla font-700" style={{
+            fontSize: '0.62rem', margin: 0, flexShrink: 0,
+            color: complete ? 'rgba(150,182,164,0.9)' : `${SEA},0.45)`,
+          }}>
+            {complete ? 'Done' : open ? `${done} of ${total}` : `Fishing ${chapter.minLevel}`}
+          </p>
+        </div>
+        {/* The blurb only for acts you have reached. An unopened chapter gets
+            its title and its level and nothing else, because the line under it
+            is written for somebody who has been there. */}
+        {open && (
+          <p className="font-karla" style={{
+            fontSize: '0.68rem', color: `${SEA},0.52)`, margin: '2px 0 0', lineHeight: 1.4,
+          }}>{chapter.subtitle}</p>
+        )}
+        {open && total > 0 && (
+          <div style={{
+            height: 3, borderRadius: 999, marginTop: 5,
+            background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
+          }}>
+            <div style={{
+              width: `${Math.round((done / total) * 100)}%`, height: '100%',
+              background: `${accent},0.8)`, borderRadius: 999,
+            }} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function BackTo({ onBack }: { onBack: () => void }) {
   return (
     <button onClick={onBack} className="font-karla font-700"
@@ -298,7 +365,11 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
 
 /** What you know about the rival. His card turns over to the campaign rather
  *  than to a favourite fish, because that is what he is. */
-function RivalDetail({ finn, onBack }: { finn: FinnSeaState | null; onBack: () => void }) {
+function RivalDetail({ finn, here, onBack }: {
+  finn: FinnSeaState | null
+  here: FinnChapterView | null
+  onBack: () => void
+}) {
   const points = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
   const tier = finnStandingTier(points)
   const left = finnToNext(points)
@@ -311,6 +382,25 @@ function RivalDetail({ finn, onBack }: { finn: FinnSeaState | null; onBack: () =
       <BackTo onBack={onBack} />
       <Head face={FINN_FACE} accent={GOLD} role="Rival" name={FINN_NAME}
         water={finn ? `Moored off ${finn.at.bandName}` : undefined} />
+
+      {/* The act he is currently walking you through, named, so his page and
+          the campaign strip on the front agree about where you are. */}
+      {here && (
+        <div style={{
+          marginTop: '0.8rem', padding: '0.55rem 0.7rem', borderRadius: 11,
+          background: 'rgba(240,192,64,0.08)', border: `1px solid ${GOLD}44`,
+        }}>
+          <p className="font-karla font-700 uppercase" style={{
+            fontSize: '0.5rem', letterSpacing: '0.18em', color: GOLD, margin: 0,
+          }}>Chapter {here.chapter.romanNumeral} of {FINN_CHAPTERS.length}</p>
+          <p className="font-cinzel font-700" style={{
+            fontSize: '1rem', color: '#f4e2c0', margin: '2px 0 0',
+          }}>{here.chapter.title}</p>
+          <p className="font-karla" style={{
+            fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0', lineHeight: 1.4,
+          }}>{here.chapter.subtitle}</p>
+        </div>
+      )}
 
       <div style={{
         marginTop: '0.8rem', padding: '0.6rem 0.7rem', borderRadius: 11,
@@ -455,6 +545,11 @@ export default function FolkPanel({ open, onClose, finn }: {
   const finnPts = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
   const finnMore = !!finn && (finn.questReady || findNextEncounterBeat(finn.seenBeats) !== null)
   const finnQuest = finn?.quest ?? null
+  const chapters = finnChapters(finn?.questsDone ?? [], finn?.fishingLevel ?? 1)
+  const here = chapters.find(c => c.current) ?? null
+  /** Everything reachable is done and the next act wants a level you have not
+   *  got. Distinct from finishing the campaign, and it has to say so. */
+  const waitingOn = finnWaitingOn(finn?.questsDone ?? [], finn?.fishingLevel ?? 1)
 
   /**
    * ── NO TURN AT ALL ──────────────────────────────────────────────────────
@@ -517,7 +612,8 @@ export default function FolkPanel({ open, onClose, finn }: {
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   transition={{ duration: 0.12 }}
                   style={{ paddingTop: '0.9rem' }}>
-                  <RivalDetail finn={finn} onBack={() => { vibrate(6); setShowing(null) }} />
+                  <RivalDetail finn={finn} here={here}
+                    onBack={() => { vibrate(6); setShowing(null) }} />
                 </motion.div>
               ) : openFolk ? (
                 <motion.div key={`folk:${openFolk.folk.id}`}
@@ -532,7 +628,7 @@ export default function FolkPanel({ open, onClose, finn }: {
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   transition={{ duration: 0.12 }}>
 
-                    <Section title="The Rival">
+                    <Section title="The Fishing Campaign">
                       {/* THE SAME GRID THE REGULARS USE, so his card is
                           exactly one cell wide and lines up with theirs. It
                           was a fixed 118 in a flex row beside the job, which
@@ -544,7 +640,8 @@ export default function FolkPanel({ open, onClose, finn }: {
                       }}>
                         <PersonCard
                           face={FINN_FACE} accent={GOLD} name={FINN_NAME}
-                          sub={FINN_STANDING_NAME[finnStandingTier(finnPts)]}
+                          sub={here ? `Chapter ${here.chapter.romanNumeral}`
+                            : waitingOn ? `Ch ${waitingOn.romanNumeral} locked` : 'Rival'}
                           pct={Math.round((Math.min(finnPts, FINN_STANDING_AT[4]) / FINN_STANDING_AT[4]) * 100)}
                           dot={finnMore}
                           onOpen={() => { vibrate(6); setShowing('finn') }} />
@@ -596,6 +693,28 @@ export default function FolkPanel({ open, onClose, finn }: {
                           fontSize: '0.72rem', color: `${SEA},0.45)`, margin: '8px 0 0', lineHeight: 1.45,
                         }}>He has not asked you for anything. Go and see what he wants.</p>
                       )}
+
+                      {/* NOT FINISHED, JUST WAITING. Every act you can reach
+                          is done and the next wants a level you have not got,
+                          which without a word for it looks exactly like having
+                          completed the campaign. */}
+                      {waitingOn && (
+                        <p className="font-karla" style={{
+                          fontSize: '0.72rem', color: `${GOLD}`, margin: '8px 0 0', lineHeight: 1.45,
+                        }}>
+                          He has nothing more until you can work {
+                            PLACES.find(w => w.id === waitingOn.band)?.name ?? 'deeper water'
+                          }. Chapter {waitingOn.romanNumeral} opens at Fishing {waitingOn.minLevel}.
+                        </p>
+                      )}
+
+                      {/* THE WHOLE SHAPE OF IT, five acts deep, the way the
+                          raid map shows its chapters. A captain should be able
+                          to see at a glance that there is a story here, how far
+                          in they are, and that it keeps going. */}
+                      <div style={{ marginTop: 10 }}>
+                        {chapters.map(v => <ChapterRow key={v.chapter.id} view={v} />)}
+                      </div>
                     </Section>
 
                     {met.length > 0 && (

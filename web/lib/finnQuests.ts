@@ -303,6 +303,131 @@ export const FINN_QUESTS: FinnQuest[] = [
   },
 ]
 
+/**
+ * ── THE FISHING CAMPAIGN, IN CHAPTERS ───────────────────────────────────────
+ *
+ * Same idea as the expedition side (RAID_CHAPTERS in lib/raidMap), and the same
+ * job: turning a long ladder of tasks into a story with acts, so a captain can
+ * say where they are in it rather than counting jobs.
+ *
+ * THE CHAPTER BREAK IS THE WATER. Each act is one band of the sea, and you move
+ * into the next one when Finn sets you a job out there. That is not a rule laid
+ * on top of the ladder, it IS the ladder: his jobs walk outward, so the act
+ * changes exactly when the water does.
+ *
+ * IT ALSO EXPLAINS THE WALL. Every chapter after the first opens on water with
+ * a level gate, so the campaign genuinely stops until you are rated for the
+ * next band. Presented as a numbered chapter that has not started yet, that
+ * reads as a story waiting for you; presented as a job you cannot do, it reads
+ * as a bug. Same fact, and the framing is the whole difference.
+ *
+ * THE LAST CHAPTER IS THE SIX. Every giant, one at a time, ending on the
+ * Megalodon, and finishing it fills `ancient_catches`, which is what opens One
+ * Last Ride on the raid map. The two halves of the game meet there.
+ */
+export type FinnChapter = {
+  id: string
+  number: number
+  romanNumeral: string
+  title: string
+  /** One line under the title, in the house's evocative register. */
+  subtitle: string
+  /** The band this act is fished in. */
+  band: string
+  /** Fishing level the band opens at, and therefore the chapter. */
+  minLevel: number
+}
+
+export const FINN_CHAPTERS: FinnChapter[] = [
+  {
+    id: 'the_hand', number: 1, romanNumeral: 'I',
+    title: 'The Hand on the Rod',
+    subtitle: 'Somebody has started watching how you fish, and will not say why.',
+    band: 'shallows', minLevel: 1,
+  },
+  {
+    id: 'past_the_shelf', number: 2, romanNumeral: 'II',
+    title: 'Past the Shelf',
+    subtitle: 'The shallow water is finished with you. He says that like it is a compliment.',
+    band: 'open_waters', minLevel: 15,
+  },
+  {
+    id: 'the_long_sail', number: 3, romanNumeral: 'III',
+    title: 'The Long Sail',
+    subtitle: 'Deep water, and the first thing he asks for that he could never do himself.',
+    band: 'deep', minLevel: 30,
+  },
+  {
+    id: 'where_it_stops_being_blue', number: 4, romanNumeral: 'IV',
+    title: 'Where It Stops Being Blue',
+    subtitle: 'Everything down here has teeth or lights or both, and none of it has been polite to him.',
+    band: 'abyss', minLevel: 50,
+  },
+  {
+    id: 'the_six', number: 5, romanNumeral: 'V',
+    title: 'The Six',
+    subtitle: 'Six things worth the pulling, one at a time, and a name he has not said aloud in years.',
+    band: 'ancient_deep', minLevel: 75,
+  },
+]
+
+/** The jobs belonging to one act, in ladder order. */
+export function chapterQuests(chapterId: string): FinnQuest[] {
+  const ch = FINN_CHAPTERS.find(c => c.id === chapterId)
+  return ch ? FINN_QUESTS.filter(q => q.band === ch.band) : []
+}
+
+export type FinnChapterView = {
+  chapter: FinnChapter
+  /** Jobs handed back in this act. */
+  done: number
+  total: number
+  /** Every job in it is finished. */
+  complete: boolean
+  /** The act has begun: it is reachable and not finished. */
+  current: boolean
+  /** Reachable at all, by fishing level. */
+  open: boolean
+}
+
+/**
+ * WHERE THE CAPTAIN IS IN THE STORY.
+ *
+ * Every act, with its state, so the panel can show the whole shape at once the
+ * way the raid map does. `current` is the first act that is open and unfinished
+ * — which is also, deliberately, the act whose jobs Finn is handing out.
+ */
+/**
+ * THE ACT YOU ARE WAITING ON, if you are waiting on one.
+ *
+ * There is a state that is not "in a chapter" and is not "finished": every act
+ * you can reach is done and the next one wants a fishing level you have not
+ * got. It reads identically to having completed the campaign unless something
+ * says otherwise, which would tell a level-14 captain who has finished the
+ * Shallows that the fishing story is over after three jobs.
+ */
+export function finnWaitingOn(
+  doneIds: readonly string[], fishingLevel: number,
+): FinnChapter | null {
+  const views = finnChapters(doneIds, fishingLevel)
+  if (views.some(v => v.current)) return null
+  return views.find(v => !v.complete && !v.open)?.chapter ?? null
+}
+
+export function finnChapters(doneIds: readonly string[], fishingLevel: number): FinnChapterView[] {
+  const done = new Set(doneIds)
+  let foundCurrent = false
+  return FINN_CHAPTERS.map(chapter => {
+    const qs = FINN_QUESTS.filter(q => q.band === chapter.band)
+    const d = qs.filter(q => done.has(q.id)).length
+    const complete = qs.length > 0 && d === qs.length
+    const open = fishingLevel >= chapter.minLevel
+    const current = !foundCurrent && open && !complete
+    if (current) foundCurrent = true
+    return { chapter, done: d, total: qs.length, complete, current, open }
+  })
+}
+
 const BY_ID = new Map(FINN_QUESTS.map(q => [q.id, q]))
 export function finnQuestById(id: string | null | undefined): FinnQuest | null {
   return id ? BY_ID.get(id) ?? null : null

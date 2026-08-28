@@ -248,6 +248,21 @@ would make the story unreachable for everybody at once rather than for one capta
 `lib/finnQuests.ts` is the ladder, `finn_quest` (jsonb) is the one currently set and
 `finn_quests_done` (text[]) is the position on it. Thirteen jobs against thirteen beats.
 
+**The campaign is told in five chapters, and the chapter break is the water.**
+`FINN_CHAPTERS` in `lib/finnQuests`, the same shape as `RAID_CHAPTERS` on the raid map and
+for the same reason: it turns a ladder of tasks into a story with acts. I The Hand on the Rod
+(Shallows), II Past the Shelf (Open Waters), III The Long Sail (Deep), IV Where It Stops Being
+Blue (Abyss), V The Six (Ancient Deep, ending on the Megalodon). The act changes exactly when
+his jobs move to new water, because his jobs walking outward IS the structure.
+
+**It also reframes the wall.** Every act after the first opens on water with a level gate, so
+the campaign genuinely halts until you are rated for the next band. Shown as a numbered
+chapter that has not started, that is a story waiting for you; shown as a job you cannot do,
+it is a bug. Same fact, and the framing is all of the difference. There is a THIRD state
+between "in a chapter" and "finished" — every reachable act done, next one locked — which
+`finnWaitingOn` exists to name, because without a word for it a level-14 captain who has
+cleared the Shallows is told the fishing story is over after three jobs.
+
 **Twenty jobs, gated by fishing level, walking out through the bands.** 3 in the Shallows
 (Lv1), 3 in Open Waters (15), 3 in the Deep (30), 3 in the Abyss (50), 8 in the Ancient Deep
 (75). `minLevel` on each matches the gate on the water it is set in, so he can never hand you
