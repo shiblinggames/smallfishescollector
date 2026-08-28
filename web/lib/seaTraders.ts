@@ -40,6 +40,7 @@ import { CHARACTER_COLORS } from '@/lib/characters'
 import { RODS, TRADER_ONLY_RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { seaClock } from '@/lib/seaClock'
+import type { FolkId } from '@/lib/seaFolk'
 
 /** The Mainland's mooring ring plus a boat length, so the nearest wanderer is
  *  always outside the water the harbour prompt owns. */
@@ -98,6 +99,17 @@ export type Trader = {
   driftR: number
   driftRate: number
   driftPhase: number
+  /**
+   * ONE OF THE REGULARS, if this is one of them.
+   *
+   * Set on the five zone buyers, Yoon and the three who keep no shop. It is
+   * what gives a hail a "have a word" alongside whatever business is on offer,
+   * and it is the only handle the rapport system needs: everything else about
+   * a friendship lives in lib/seaFolk and the sea_rapport row. Absent on every
+   * wanderer, because a person who is re-rolled at midnight cannot be somebody
+   * you are getting to know.
+   */
+  folkId?: FolkId
 } & TraderOffer
 
 export type TraderOffer =
@@ -804,6 +816,7 @@ export function yoonTrader(): Trader {
   return {
     key: YOON.key,
     kind: 'talker',
+    folkId: 'yoon',
     name: YOON.name,
     x: YOON.x, y: YOON.y,
     line: YOON.line,

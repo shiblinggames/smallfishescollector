@@ -10,13 +10,15 @@
 // and the server rebuilds who that is and what they were asking. Everything
 // shown here is for the player to read, not for the server to believe.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { getBait } from '@/lib/bait'
 import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
 import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
+import { folkById, TIER_NAME, toNextTier, tierFor, type FolkTier } from '@/lib/seaFolk'
+import { folkState, talkToFolk, giftToFolk, holdForGifting, type Rapport } from './folkActions'
 
 export default function TraderPanel({
   trader, alreadyDealt, dealsLeft, onDealt, onHoldEmptied, onClose,
@@ -59,6 +61,62 @@ export default function TraderPanel({
    *  because the run is theirs and hearing it again from the top is how a
    *  person you already spoke to behaves. */
   const [said, setSaid] = useState(0)
+
+  // ── THE FRIENDSHIP, if this is one of the regulars ─────────────────
+  // Loaded when the panel opens rather than held by the map: a hail is rare
+  // and the map already carries enough live state.
+  const folk = trader.folkId ? folkById(trader.folkId) : null
+  const [rap, setRap] = useState<Rapport | null>(null)
+  const [hold, setHold] = useState<{ id: number; name: string; qty: number; habitat: string | null }[]>([])
+  /** What they just said, which replaces their standing line while it is up. */
+  const [heard, setHeard] = useState<string | null>(null)
+  /** The moment the bond deepens. Its own callout, because it is the payoff. */
+  const [deepened, setDeepened] = useState<string | null>(null)
+  const [gifting, setGifting] = useState(false)
+
+  useEffect(() => {
+    if (!folk) return
+    let alive = true
+    void folkState().then(rows => {
+      if (alive) setRap(rows.find(r => r.folkId === folk.id) ?? null)
+    })
+    void holdForGifting().then(h => { if (alive) setHold(h) })
+    return () => { alive = false }
+  }, [folk])
+
+  async function haveAWord() {
+    if (busy || !folk) return
+    setBusy(true); setErr(''); vibrate(10)
+    try {
+      const res = await talkToFolk(folk.id)
+      if ('error' in res) { setErr(res.error) }
+      else {
+        setHeard(res.line)
+        setDeepened(res.tierUp)
+        setRap(r => (r ? { ...r, points: res.points, tier: res.tier, chattedToday: true } : r))
+        if (res.tierUp) vibrate([0, 30, 50, 70])
+      }
+    } catch { setErr('They did not hear you.') }
+    setBusy(false)
+  }
+
+  async function handOver(fishId: number) {
+    if (busy || !folk) return
+    setBusy(true); setErr(''); vibrate(12)
+    try {
+      const res = await giftToFolk(folk.id, fishId)
+      if ('error' in res) { setErr(res.error) }
+      else {
+        setHeard(res.line)
+        setDeepened(res.tierUp)
+        setGifting(false)
+        setRap(r => (r ? { ...r, points: res.points, tier: res.tier, giftedToday: true } : r))
+        setHold(h => h.map(f => (f.id === fishId ? { ...f, qty: f.qty - 1 } : f)).filter(f => f.qty > 0))
+        vibrate(res.how === 'loved' ? [0, 40, 60, 90] : 14)
+      }
+    } catch { setErr('That did not reach them.') }
+    setBusy(false)
+  }
 
   const isResident = trader.deal === 'resident'
   const isTalk = trader.deal === 'talk'
@@ -197,7 +255,7 @@ export default function TraderPanel({
             paddingLeft: '0.85rem',
             borderLeft: '2px solid rgba(255,206,138,0.45)',
           } : {}),
-        }}>{trader.deal === 'talk' ? trader.lines[said % trader.lines.length] : trader.line}</p>
+        }}>{heard ?? (trader.deal === 'talk' ? trader.lines[said % trader.lines.length] : trader.line)}</p>
 
         {/* ── THE OFFER ─────────────────────────────────────────────────
             Stated plainly. The flavour above is allowed its charm; the
@@ -313,6 +371,66 @@ export default function TraderPanel({
           </p>
         )}
 
+        {/* ── WHERE YOU STAND WITH THEM ────────────────────────────────
+            Only for the regulars. A tier is not a number of hearts out here,
+            it is what they would call you, so the panel prints the words and
+            keeps the count underneath for anyone who wants it. */}
+        {folk && rap && (
+          <div style={{
+            marginTop: 12, padding: '0.55rem 0.7rem', borderRadius: 10,
+            background: 'rgba(255,206,138,0.07)',
+            border: '1px solid rgba(255,206,138,0.22)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f6ecd6' }}>
+                {TIER_NAME[rap.tier]}
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,206,138,0.7)' }}>
+                {toNextTier(rap.points) === null
+                  ? 'As far as it goes'
+                  : `${toNextTier(rap.points)} to go`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* THE BOND DEEPENING. Its own voice and its own gold, because it is
+            the entire reward the system pays. */}
+        {deepened && (
+          <p className="font-cinzel font-700" style={{
+            fontSize: '0.95rem', color: '#ffd986', marginTop: 12, lineHeight: 1.5,
+            padding: '0.6rem 0.7rem', borderRadius: 10,
+            background: 'rgba(60,44,10,0.7)', border: '1px solid rgba(240,192,64,0.45)',
+          }}>{deepened}</p>
+        )}
+
+        {/* THE HOLD, WHEN YOU ARE HANDING SOMETHING OVER. Their own water's
+            fish land better, and the ones they love land best, but nothing is
+            ever refused: sailing out with a gift should not be punished for
+            picking wrong. */}
+        {gifting && folk && (
+          <div style={{ marginTop: 12, maxHeight: 190, overflowY: 'auto' }}>
+            {hold.length === 0 ? (
+              <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+                Your hold is empty. Catch them something.
+              </p>
+            ) : hold.map(f => (
+              <button key={f.id} onClick={() => handOver(f.id)} disabled={busy}
+                className="font-karla font-600"
+                style={{
+                  display: 'flex', width: '100%', justifyContent: 'space-between', gap: 8,
+                  padding: '0.5rem 0.6rem', marginBottom: 5, borderRadius: 9,
+                  background: folk.loves.includes(f.id) ? 'rgba(255,206,138,0.14)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${folk.loves.includes(f.id) ? 'rgba(255,206,138,0.45)' : 'rgba(255,255,255,0.14)'}`,
+                  color: '#e8f0f6', cursor: busy ? 'default' : 'pointer', fontSize: '0.84rem',
+                }}>
+                <span>{f.name}</span>
+                <span style={{ color: 'rgba(255,255,255,0.45)' }}>{f.qty}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           {!spent && !isTalk && (
             <button onClick={isResident ? sellHold : trader.deal === 'rod' ? buyRod : strike}
@@ -344,6 +462,33 @@ export default function TraderPanel({
                 border: '1px solid rgba(255,206,138,0.45)', cursor: 'pointer',
               }}>
               Go on
+            </button>
+          )}
+          {/* HAVE A WORD, and GIVE THEM SOMETHING. One of each a day, per
+              regular. Missing a day costs nothing at all, so these simply are
+              not there until tomorrow rather than warning anybody about a
+              streak they are about to lose. */}
+          {folk && rap && !rap.chattedToday && (
+            <button onClick={haveAWord} disabled={busy}
+              className="font-cinzel font-700"
+              style={{
+                flex: 1.1, padding: '0.8rem', borderRadius: 11, fontSize: '1.02rem',
+                color: '#f2ead8', background: 'rgba(255,206,138,0.16)',
+                border: '1px solid rgba(255,206,138,0.45)',
+                cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+              }}>
+              {busy ? '…' : 'Have a word'}
+            </button>
+          )}
+          {folk && rap && !rap.giftedToday && hold.length > 0 && !gifting && (
+            <button onClick={() => { vibrate(8); setGifting(true) }}
+              className="font-karla font-700"
+              style={{
+                flex: 1, padding: '0.8rem', borderRadius: 11, fontSize: '0.94rem',
+                color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
+              }}>
+              Give a fish
             </button>
           )}
           {/* flex: 1 ALWAYS. It was 0.8 when it stood alone, which on a phone

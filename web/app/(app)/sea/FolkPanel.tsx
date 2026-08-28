@@ -28,13 +28,16 @@
 // wanderers get a legend saying what the five kinds want, because "salter" is
 // not a word the game had ever explained.
 
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import {
   FINN_NAME, FINN_AVATAR, FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS,
   findNextEncounterBeat,
 } from '@/lib/finn'
-import { RESIDENTS, YOON, PLACES } from './chart'
+import { PLACES } from './chart'
+import { FOLK, TIER_NAME, TIER_AT, toNextTier } from '@/lib/seaFolk'
+import { folkState, type Rapport } from './folkActions'
 import type { FinnSeaState } from './finnActions'
 
 const GOLD = 'rgba(240,192,64'
@@ -68,14 +71,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-/** One named, permanent person. Locked ones keep their name back: the water is
- *  the thing you have not reached, so the water is what it tells you. */
-function FolkRow({ name, water, what, locked, need }: {
+/** One regular, and where you stand with them. Locked ones keep their name
+ *  back: the water is the thing you have not reached, so the water is what it
+ *  tells you. */
+function FolkRow({ name, water, what, locked, need, rap }: {
   name: string; water: string; what: string; locked: boolean; need: number
+  rap: Rapport | null
 }) {
+  const met = !!rap && rap.points > 0
   return (
     <div style={{
-      display: 'flex', alignItems: 'baseline', gap: 8, padding: '0.42rem 0',
+      display: 'flex', alignItems: 'center', gap: 8, padding: '0.46rem 0',
       borderTop: `1px solid ${SEA},0.1)`,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -89,6 +95,32 @@ function FolkRow({ name, water, what, locked, need }: {
           {locked ? `${water}. Fishing ${need} to work that water.` : `${water}. ${what}`}
         </p>
       </div>
+      {/* WHAT THEY WOULD CALL YOU, which is the whole of the reward. The bar
+          under it is the same fact for anyone who wants a number. */}
+      {!locked && (
+        <div style={{ width: 108, flexShrink: 0, textAlign: 'right' }}>
+          <p className="font-karla font-700" style={{
+            fontSize: '0.66rem', margin: 0,
+            color: met ? `${GOLD},0.85)` : `${SEA},0.4)`,
+          }}>{met ? TIER_NAME[rap.tier] : 'Not met'}</p>
+          {met && (
+            <div style={{
+              height: 3, borderRadius: 999, marginTop: 4,
+              background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
+            }}>
+              <div style={{
+                width: `${Math.round((Math.min(rap.points, TIER_AT[4]) / TIER_AT[4]) * 100)}%`,
+                height: '100%', background: `${GOLD},0.6)`, borderRadius: 999,
+              }} />
+            </div>
+          )}
+          {met && rap.chattedToday === false && (
+            <p className="font-karla" style={{
+              fontSize: '0.58rem', margin: '3px 0 0', color: `${GOLD},0.6)`,
+            }}>Has a word for you</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -102,6 +134,17 @@ export default function FolkPanel({ open, onClose, finn, level }: {
   // How much of each track has been heard. seenBeats holds ids from both, so
   // each side counts only its own — the reveal id is in there too and belongs
   // to neither.
+  // Loaded on open. Rows only exist for regulars already spoken to, so a
+  // missing one reads as tier zero without any backfill.
+  const [rap, setRap] = useState<Rapport[]>([])
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    void folkState().then(rows => { if (alive) setRap(rows) })
+    return () => { alive = false }
+  }, [open])
+  const rapOf = (id: string) => rap.find(r => r.folkId === id) ?? null
+
   const seen = new Set(finn?.seenBeats ?? [])
   const heard = FINN_ENCOUNTER_BEATS.filter(b => seen.has(b.id)).length
   const wonHeard = FINN_WIN_BEATS.filter(b => seen.has(b.id)).length
@@ -227,28 +270,21 @@ export default function FolkPanel({ open, onClose, finn, level }: {
 
             {/* ── THE NAMED FOLK. Permanent, always in the same water, worth
                 knowing about before you sail out to them. */}
-            <Section title="Always out there">
-              <FolkRow
-                name={RESIDENTS[0].name} water={nameOf('shallows')}
-                what={`Buys your hold at ${Math.round(RESIDENTS[0].rate * 100)}% of market.`}
-                locked={level < needFor('shallows')} need={needFor('shallows')} />
-              {RESIDENTS.slice(1).map(r => (
-                <FolkRow key={r.zoneId}
-                  name={r.name} water={nameOf(r.zoneId)}
-                  what={`Buys your hold at ${Math.round(r.rate * 100)}% of market.`}
-                  locked={level < needFor(r.zoneId)} need={needFor(r.zoneId)} />
+            <Section title="The regulars">
+              {FOLK.map(f => (
+                <FolkRow key={f.id}
+                  name={f.name} water={nameOf(f.zoneId)} what={f.blurb}
+                  locked={level < needFor(f.zoneId)} need={needFor(f.zoneId)}
+                  rap={rapOf(f.id)} />
               ))}
-              <FolkRow
-                name={YOON.name} water={nameOf(YOON.zoneId)}
-                what="Carries one rod, and it is not sold anywhere else."
-                locked={level < needFor(YOON.zoneId)} need={needFor(YOON.zoneId)} />
             </Section>
 
             <p className="font-karla" style={{
               fontSize: '0.68rem', margin: '0.5rem 0 0', color: `${SEA},0.45)`, lineHeight: 1.4,
             }}>
-              Buyers pay less than the market ashore and pay it where you are floating. The
-              deeper the water, the better their rate, because the row home is longer.
+              These nine are always out there, always in the same water. Have a word once a
+              day and they warm to you, and a fish from your hold warms them faster. Nothing
+              is lost by staying away: there is no streak here and none of it fades.
             </p>
 
             {/* ── THE WANDERERS. Not a log: these people are different every

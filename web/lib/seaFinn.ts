@@ -50,7 +50,7 @@
 // hail circle, so finishing a conversation never leaves you already inside the
 // next one. `scripts/check-finn.mts` asserts both on every build.
 
-import { PLACES, LANDMARKS, RESIDENTS, YOON } from '@/app/(app)/sea/chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, YOON } from '@/app/(app)/sea/chart'
 import { ISLES, ashoreRange } from '@/lib/seaIsles'
 
 /** How close you have to be to hail him. Wider than a trader's HAIL_RANGE
@@ -108,6 +108,9 @@ const AVOID: { x: number; y: number; keep: number }[] = (() => {
   }
   for (const i of ISLES) out.push({ x: i.x, y: i.y, keep: ashoreRange(i) + FINN_REACH })
   for (const r of RESIDENTS) out.push({ x: r.x, y: r.y, keep: 600 + FINN_REACH })
+  // The three who keep no shop hail exactly like the buyers do, so they own
+  // exactly the same circle of water and Finn must not stand in it.
+  for (const r of SOCIALS) out.push({ x: r.x, y: r.y, keep: 600 + FINN_REACH })
   out.push({ x: YOON.x, y: YOON.y, keep: 600 + FINN_REACH })
   // LANDMARKS ARE SCENERY. A monolith has no prompt to compete with, so all
   // that matters is that Finn's boat is not drawn inside it — visual clearance,

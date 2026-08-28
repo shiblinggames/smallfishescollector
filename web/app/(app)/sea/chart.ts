@@ -483,6 +483,37 @@ export const YOON = {
   line: "You've the streak for it, or you haven't. Rod won't teach you that. It just stops wasting it.",
 } as const
 
+/**
+ * THE THREE WHO KEEP NO SHOP.
+ *
+ * Permanent people with nothing to sell, added with the rapport system in
+ * lib/seaFolk. Every other named face out here exists because of a
+ * transaction, which quietly meant that being sociable was something only
+ * merchants did. These three are only ever somebody to talk to.
+ *
+ * ONE APIECE IN THE THREE WATERS A CAPTAIN ACTUALLY LIVES IN, and placed by
+ * the same two rules every permanent hail obeys: far enough from another hail
+ * circle that two prompts never fight (1,200px minimum, HAIL_RANGE either
+ * side), and clear of anything solid. They also become keep-outs for Finn, so
+ * scripts/check-finn is the gate on any move.
+ *
+ * Cass is moored beside the middle wreck ON PURPOSE. She dives it, and a
+ * salvager anchored nowhere near a wreck is a biography nobody can read.
+ */
+export const SOCIALS: {
+  folkId: string; zoneId: string; name: string; line: string; x: number; y: number
+}[] = [
+  { folkId: 'brill', zoneId: 'shallows', name: 'Tam Brill',
+    line: "You are a real captain. Sorry. That was out loud.",
+    x: -1900, y: 2400 },
+  { folkId: 'turbot', zoneId: 'open_waters', name: 'Cass Turbot',
+    line: "Do not anchor here. I am working underneath you.",
+    x: 2073, y: 4476 },
+  { folkId: 'ream', zoneId: 'deep', name: 'Rue Bream',
+    line: "I carry word between the boats out here. No, there is no charge. That surprises everyone.",
+    x: 3900, y: 8300 },
+]
+
 /** The zone buyers, one per band, in absolute world coordinates. */
 export const RESIDENTS: {
   zoneId: string; name: string; line: string; x: number; y: number; rate: number

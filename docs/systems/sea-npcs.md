@@ -71,6 +71,44 @@ him for every captain mid-story.
 
 ---
 
+## The regulars, and rapport
+
+`web/lib/seaFolk.ts` is the cast and every word they say. `folkActions.ts` is the only
+thing that moves a point. Table: `sea_rapport (user_id, folk_id, points, seen_lines,
+last_chat_on, last_gift_on, gifts_given)`, SELECT-own RLS, every write service-role.
+
+**Nine regulars, and they are the only people rapport can attach to.** The five zone
+buyers, Yoon, and three added with this system who keep no shop at all (Tam Brill in the
+Shallows, Cass Turbot in Open Waters, Rue Bream in the Deep, all in `chart.ts` as
+`SOCIALS`). The wanderers are excluded by the architecture, not by choice: they are hashed
+out of (cell, day), so a friendship with one would be a friendship with a ghost. **Finn is
+excluded on purpose** — he is the rival, he has his own track, and a friendship meter works
+against what he turns out to be.
+
+| | |
+|---|---|
+| Tiers | 5, named not numbered: a stranger / a known face / good company / trusted / one of their own |
+| Points | chat +1, liked gift +2, loved gift +3. Thresholds 4 / 10 / 18 / 30 |
+| Gate | one chat and one gift per regular per day (UTC, same as dailies) |
+| Reward | **story only.** No rate bumps, no unlocks, no items. A tier buys new dialogue |
+
+**Nothing decays and nothing is lost.** The daily gate is a refill, not a demand: miss a
+week and you missed seven points you were never holding. There is deliberately no streak,
+no decay and no warning, because the house law is evergreen and player-paced and this is a
+mechanic that in other games exists to punish absence.
+
+**Nothing is ever refused as a gift.** Their own water's fish are liked, a short list each
+is loved, anything else still lands for a point and a warm line. A captain who sailed out
+with a gift must never be told they picked wrong.
+
+Guards worth keeping: the daily gate is claimed by the UPDATE itself (`last_chat_on IS NULL
+OR <> today` in the WHERE), so two taps cannot both be the first — verified on the live
+table, two taps in a day added exactly one point. Gifting claims the day FIRST and takes the
+fish second, reverting the claim if the hold turns out to be empty.
+
+Adding a regular means: an entry in `FOLK`, a position in `SOCIALS` (or a buyer row), and a
+keep-out in `seaFinn`'s list. `check-finn` and `check-traders` are the gate on any position.
+
 ## The Salt Road panel
 
 `FolkPanel.tsx`, behind a HUD button (two figures, slot 4). It exists for one reason:

@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, berthOf, inBerth, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, berthOf, inBerth, type Place } from './chart'
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -70,6 +70,14 @@ import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHots
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
+import { type FolkId } from '@/lib/seaFolk'
+
+/** Which regular buys in which water. The buyers and the rapport cast are the
+ *  same people; this is the one place the two tables are tied together. */
+const FOLK_BY_ZONE: Record<string, FolkId> = {
+  shallows: 'meg', open_waters: 'pell', deep: 'marlow',
+  abyss: 'fitch', ancient_deep: 'nance',
+}
 import FolkPanel from './FolkPanel'
 import SeaTour from './SeaTour'
 import SeaLandfallHint from './SeaLandfallHint'
@@ -2343,6 +2351,39 @@ export default function SeaMap({
         hook: plainHookFor(seed),
       },
       deal: 'resident' as const, zoneId: r.zoneId, rate: r.rate,
+      // The buyers ARE regulars, so a hail offers a word as well as a sale.
+      folkId: FOLK_BY_ZONE[r.zoneId],
+    }
+  }), [])
+
+  /**
+   * THE THREE WHO KEEP NO SHOP.
+   *
+   * Built exactly like the buyers and standing in the water the same way, so
+   * they draw, drift, submerge and hail through machinery that already exists.
+   * The only difference is that there is no business to do: their offer is a
+   * talk, and the panel finds the rapport by folkId like it does for everyone
+   * else.
+   */
+  const socials = useMemo<Trader[]>(() => SOCIALS.map(r => {
+    const seed = r.folkId.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 11)
+    return {
+      key: `folk:${r.folkId}`,
+      kind: 'talker' as const,
+      folkId: r.folkId as FolkId,
+      name: r.name,
+      x: r.x, y: r.y,
+      line: r.line,
+      driftR: 30, driftRate: (Math.PI * 2) / 88, driftPhase: (seed % 100) / 15,
+      look: {
+        characterColor: ['blue', 'pink', 'gray', 'default'][seed % 4],
+        boatId: ['taupe', 'oak', 'desert', 'mahogany', 'charcoal'][seed % 5],
+        hatId: ['olive', 'offwhite', 'brown', 'midnight'][seed % 4],
+        rodSlug: plainRodFor(seed),
+        hook: plainHookFor(seed),
+      },
+      deal: 'talk' as const, topic: 'chat' as const,
+      mood: 'One of the regulars', lines: [r.line],
     }
   }), [])
   // Mirrored for the loop, which must not be re-created every time the list
@@ -2389,7 +2430,7 @@ export default function SeaMap({
   }, [])
 
   const yoon = useMemo(() => yoonTrader(), [])
-  useEffect(() => { allTradersRef.current = [yoon, ...residents, ...traders] }, [yoon, residents, traders])
+  useEffect(() => { allTradersRef.current = [yoon, ...residents, ...socials, ...traders] }, [yoon, residents, socials, traders])
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
   /** For the keyboard handler, which binds once: while the rod is out, the
@@ -4337,7 +4378,7 @@ export default function SeaMap({
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
             construction rather than by anyone remembering to match it. */}
-        {[yoon, ...residents, ...traders].map(t => (
+        {[yoon, ...residents, ...socials, ...traders].map(t => (
           <TraderBoat key={t.key} trader={t}
             // The boats stay — they are part of the sea and the sea is the
             // backdrop. Their NAME PLATES go: you cannot hail anyone with a
