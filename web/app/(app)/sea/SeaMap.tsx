@@ -5199,61 +5199,10 @@ hullRef={hullRefFor(t.key)} />
           There is water there now, so the arch is just an arch: you sail
           through a gap in a reef the way you sail anywhere else. */}
 
-      {/* WHO YOU SAIL WITH — always here, never conditional.
-          It used to appear only when somebody was already on the water, which
-          made it useless for the two things people actually want from it. You
-          could not learn that nobody was about, because the absence of a button
-          is an absence rather than an answer. And you could not DO anything
-          about it: the only way to arrange to sail with somebody was to already
-          be sailing with them.
-
-          Shows a count when there is one and sits quiet at zero. */}
-      {!inAnchorage && (!fishingIn || wide) && (
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); vibrate(8); setCrewOpen(true) }}
-          aria-label="Who you sail with"
-          title="Sailing crew"
-          data-no-steer
-          style={{
-            position: 'absolute', top: 18, left: hudAt(2), zIndex: Z.hud,
-            display: 'flex', alignItems: 'center', gap: 5,
-            height: hudSize, padding: `0 ${Math.round(hudSize * 0.32)}px`,
-            borderRadius: 999, cursor: 'pointer',
-            background: friends.length > 0 ? 'rgba(10,22,18,0.86)' : 'rgba(6,12,18,0.7)',
-            border: `1px solid ${friends.length > 0 ? 'rgba(150,206,172,0.5)' : 'rgba(180,214,232,0.22)'}`,
-          }}>
-          <svg width={Math.round(hudSize * 0.46)} height={Math.round(hudSize * 0.46)}
-            viewBox="0 0 24 24" fill="none"
-            stroke={friends.length > 0 ? '#9fdcb6' : 'rgba(214,232,240,0.8)'}
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M3 18c2 3 16 3 18 0" /><path d="M5 18l1.6-4h10.8L19 18" />
-            <path d="M12 14V7" /><path d="M12 7l4.5 2.2L12 11.4" />
-          </svg>
-          {friends.length > 0 && (
-            <span className="font-karla font-700" style={{
-              fontSize: `${(hudSize / 26 * 0.76).toFixed(2)}rem`, color: '#dff0e6',
-            }}>
-              {friends.length}
-            </span>
-          )}
-          {/* SOMEBODY IS WAITING ON AN ANSWER. Amber, not green: green here
-              means "on the water" and this means "there is a question for
-              you". Cleared the moment the panel closes, because opening it IS
-              seeing them. */}
-          {pendingAsk > 0 && (
-            <span aria-hidden style={{
-              position: 'absolute', top: -3, right: -3,
-              minWidth: 15, height: 15, borderRadius: 999, padding: '0 4px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#ffb84d', border: '1px solid rgba(20,14,4,0.8)',
-              color: '#241604', fontSize: '0.62rem', fontWeight: 700,
-              boxShadow: '0 0 10px rgba(255,184,77,0.5)',
-            }}>{pendingAsk}</span>
-          )}
-        </button>
-      )}
-
+      {/* THE SAILING-CREW BUTTON IS SHELVED — removed from the HUD for now by
+          request, machinery intact: presence still runs (the compass still
+          shows who is out), CrewPanel still mounts, and putting the button
+          back is restoring one <button> here at the freed hudAt slot. */}
       <CrewPanel
         open={crewOpen}
         onClose={() => {
@@ -5309,7 +5258,7 @@ hullRef={hullRefFor(t.key)} />
           title="Trawls"
           data-no-steer
           style={{
-            position: 'absolute', top: 18, left: hudAt(4), zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt(3), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, padding: 0,
             borderRadius: 999, cursor: 'pointer',
@@ -5477,7 +5426,7 @@ hullRef={hullRefFor(t.key)} />
           title="Today's orders"
           data-no-steer
           style={{
-            position: 'absolute', top: 18, left: hudAt(3), zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt(2), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, padding: 0,
             borderRadius: 999, cursor: 'pointer',
