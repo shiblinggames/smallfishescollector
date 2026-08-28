@@ -34,6 +34,8 @@ import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { crewTheDeck } from '../crew/actions'
+import { PORTAL, PORTAL_TIERS, inPortal, CACHE_ISLE_IDS } from '@/lib/seaPortal'
+import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
@@ -835,7 +837,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
-  auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, startSide,
+  auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -886,6 +888,9 @@ export default function SeaMap({
   /** Owed repairs. Sailing a sunk ship is refused at the raid screen; the dock
    *  is where that should be discovered, not past the sortie. */
   raidRepairOwed: number
+  /** The Homestead Portal: highest tier owned, and components in hand —
+   *  cache chests opened minus components already spent. */
+  portal: { tier: number; components: number }
   /** Rudder and rig tiers, from the Shipyard. */
   handlingTier: number
   accelTier: number
@@ -1587,6 +1592,22 @@ export default function SeaMap({
    *  proximity block in the loop — and closed by answering it. */
   const [swapAsk, setSwapAsk] = useState(false)
   /**
+   * THE PORTAL SHEET. Opened by sailing THROUGH the ring — that is the
+   * activation gesture the portal exists for, so this is deliberately not the
+   * docks' press-to-ask manners: the ring is the button, and crossing it is
+   * the press. `portalIn` is the hysteresis so floating inside does not
+   * reopen it the frame after it is dismissed.
+   */
+  const [portalOpen, setPortalOpen] = useState(false)
+  const portalIn = useRef(false)
+  const [portalTier, setPortalTier] = useState(portal.tier)
+  useEffect(() => { setPortalTier(portal.tier) }, [portal.tier])
+  const [portalComponents, setPortalComponents] = useState(portal.components)
+  useEffect(() => { setPortalComponents(portal.components) }, [portal.components])
+  const [portalBusy, setPortalBusy] = useState(false)
+  const [portalErr, setPortalErr] = useState<string | null>(null)
+
+  /**
    * THE MUSTER, live. Server props seed it; Crew the Deck refreshes it from
    * the action's own returned state, so filling the seats never means leaving
    * the water. Resynced when the server prop changes (a return from the Crew
@@ -1693,6 +1714,35 @@ export default function SeaMap({
     (x: number, y: number, fog: number[]) =>
       persistSeaPosition(x, y, fog, sideNow()),
     [sideNow])
+
+  /** Step through: all stop at the far side, then the sheet. */
+  const warpTo = useCallback((x: number, y: number) => {
+    pos.current = { x, y }
+    target.current = { x, y }
+    vel.current = { x: 0, y: 0 }
+    portalIn.current = false
+    setPortalOpen(false)
+    vibrate([16, 40, 24])
+    void saveSeaPosition(x, y, [...fogPending.current])
+    fogPending.current.clear()
+  }, [saveSeaPosition])
+
+  const buyTier = useCallback(async () => {
+    if (portalBusy) return
+    setPortalBusy(true)
+    setPortalErr(null)
+    try {
+      const res = await buyPortalTier()
+      if ('error' in res) setPortalErr(res.error)
+      else {
+        setPortalTier(res.tier)
+        setPortalComponents(res.components)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+        vibrate([0, 30, 40, 60])
+      }
+    } catch { setPortalErr('That did not go through. Try again.') }
+    setPortalBusy(false)
+  }, [portalBusy])
   /**
    * TAKING THE SHIP OUT.
    *
@@ -3339,6 +3389,22 @@ export default function SeaMap({
         setAtDock(null)
       }
 
+      // ── THROUGH THE PORTAL ─────────────────────────────────────────
+      // The ring is the button and crossing it is the press: enter the mouth
+      // and the sheet opens, once, until you have left and come back. Fishing
+      // side only — the ring lives beside the Homestead and the warp points
+      // are all fishing water, so the expedition ship has no business in it.
+      if (!sideRef.current && !fishingIn) {
+        const inside = inPortal(pos.current.x, pos.current.y)
+        if (inside && !portalIn.current) {
+          portalIn.current = true
+          setPortalOpen(true)
+          vibrate([10, 24, 14])
+        } else if (!inside && portalIn.current) {
+          portalIn.current = false
+        }
+      }
+
       if (R > rim) {
         const nx2 = (pos.current.x - home.x) / R, ny2 = (pos.current.y - home.y) / R
         pos.current.x = home.x + nx2 * rim
@@ -4074,6 +4140,8 @@ export default function SeaMap({
         {/* Only from inside the harbour it belongs to. From the fishing
             grounds it would be a sign for a door behind a wall. */}
         {inAnchorage && <SortieSign />}
+        {/* The Homestead Portal, wearing the deepest band it can reach. */}
+        {!inAnchorage && <PortalRing tier={portalTier} />}
         {/* The two berths either side of the throat. Only from inside the
             harbour they belong to, like the sign. */}
         {inAnchorage && <Docks shipOut={onShip} near={atDock} shipTier={shipTier} />}
@@ -4765,6 +4833,102 @@ hullRef={hullRefFor(t.key)} />
                 {onShip ? 'Cast off in her' : 'Board her'}
               </button>
             </div>
+          </div>
+        </PopupShell>
+      )}
+
+      {/* ── THE PORTAL SHEET ────────────────────────────────────────────
+          Opened by crossing the ring. One list, all five bands: where it can
+          take you, tap to go; the next stage, priced, right below — so what
+          the portal IS and what it could BECOME are one picture. Components
+          are cache chests already opened, and the sheet says so, because a
+          currency you cannot see yourself earning is a currency that reads
+          as a paywall. */}
+      {portalOpen && (
+        <PopupShell open onClose={() => setPortalOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            margin: 'auto', width: '100%', maxWidth: 400,
+            borderRadius: 20, padding: '1.2rem 1.05rem 1.05rem',
+            background: 'linear-gradient(180deg, rgba(24,20,34,0.75) 0%, rgba(10,12,20,0.85) 100%), rgba(8,10,18,0.98)',
+            border: '1px solid rgba(150,130,240,0.35)',
+            boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+            maxHeight: '82vh', overflowY: 'auto',
+          }}>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(168,146,255,0.85)', margin: 0,
+            }}>The Homestead Portal</p>
+            <h2 className="font-pirata" style={{
+              fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0', lineHeight: 1.15,
+            }}>Step through?</h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.9rem' }}>
+              {PORTAL_TIERS.map(t => {
+                const owned = t.tier <= portalTier
+                const isNext = t.tier === portalTier + 1
+                return (
+                  <div key={t.tier} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '0.6rem 0.7rem', borderRadius: 12,
+                    background: owned ? `${t.accent}14` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${owned ? `${t.accent}55` : isNext ? 'rgba(240,192,64,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    opacity: owned || isNext ? 1 : 0.45,
+                  }}>
+                    <div aria-hidden style={{
+                      width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
+                      background: t.accent, boxShadow: owned ? `0 0 10px ${t.accent}` : 'none',
+                      opacity: owned ? 1 : 0.4,
+                    }} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p className="font-cinzel font-700" style={{
+                        fontSize: '0.9rem', margin: 0,
+                        color: owned ? '#ecdcbd' : 'rgba(214,226,236,0.75)',
+                      }}>{t.name}</p>
+                      {isNext && (
+                        <p className="font-karla" style={{
+                          fontSize: '0.7rem', margin: '1px 0 0', color: 'rgba(214,226,236,0.65)',
+                        }}>
+                          {t.cost.toLocaleString()} ⟡
+                          {t.components > 0 && ` + ${t.components} components (you hold ${portalComponents})`}
+                        </p>
+                      )}
+                    </div>
+                    {owned ? (
+                      <button type="button" data-no-steer
+                        onClick={() => warpTo(t.to.x, t.to.y)}
+                        className="tap font-cinzel font-700" style={{
+                          flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 10, cursor: 'pointer',
+                          background: `${t.accent}22`, border: `1px solid ${t.accent}66`,
+                          color: '#eef4f8', fontSize: '0.8rem',
+                        }}>
+                        Sail
+                      </button>
+                    ) : isNext ? (
+                      <button type="button" data-no-steer onClick={() => void buyTier()} disabled={portalBusy}
+                        className="tap font-karla font-700" style={{
+                          flexShrink: 0, padding: '0.45rem 0.7rem', borderRadius: 10, cursor: 'pointer',
+                          background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.5)',
+                          color: '#f6dfa0', fontSize: '0.74rem',
+                        }}>
+                        {portalBusy ? 'Working…' : 'Build'}
+                      </button>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+
+            {portalErr && (
+              <p className="font-karla font-600" style={{
+                fontSize: '0.74rem', color: '#e6a0a0', margin: '0.6rem 0 0', lineHeight: 1.45,
+              }}>{portalErr}</p>
+            )}
+
+            <p className="font-karla" style={{
+              fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)', lineHeight: 1.5, margin: '0.8rem 0 0',
+            }}>
+              The last stages take components as well as coin. Every cache chest you crack
+              open on the sea's small isles holds one — {CACHE_ISLE_IDS.size} are out there.
+            </p>
           </div>
         </PopupShell>
       )}
@@ -7007,6 +7171,69 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
         </div>
       )}
     </>
+  )
+})
+
+/**
+ * THE HOMESTEAD PORTAL'S RING, on the water.
+ *
+ * A hotspot, not a building: it lies ON the plane (no counter-squash — it is
+ * a shape the water makes, like the fishing hotspots), you can sail straight
+ * through it, and doing so is what opens it.
+ *
+ * It wears the deepest band it can reach: each tier's accent is the
+ * destination band's own palette, so an upgraded portal visibly deepens. The
+ * standing stones at the rim are the only vertical part, and they carry the
+ * counter-squash the flat ring must not have.
+ */
+const PortalRing = memo(function PortalRing({ tier }: { tier: number }) {
+  const t = PORTAL_TIERS.find(p => p.tier === tier) ?? PORTAL_TIERS[0]
+  return (
+    <div aria-hidden style={{ position: 'absolute', left: PORTAL.x, top: PORTAL.y, pointerEvents: 'none' }}>
+      {/* The mouth: a soft disc and two rims, in the destination's colour. */}
+      <div className="sea-portal-swirl" style={{
+        position: 'absolute', left: -PORTAL.r, top: -PORTAL.r,
+        width: PORTAL.r * 2, height: PORTAL.r * 2, borderRadius: '50%',
+        background: `radial-gradient(circle, ${t.accent}26 0%, ${t.accent}14 55%, transparent 72%)`,
+        border: `2px solid ${t.accent}55`,
+        boxShadow: `inset 0 0 40px ${t.accent}33`,
+      }} />
+      <div className="sea-portal-rim" style={{
+        position: 'absolute', left: -PORTAL.r * 0.7, top: -PORTAL.r * 0.7,
+        width: PORTAL.r * 1.4, height: PORTAL.r * 1.4, borderRadius: '50%',
+        border: `1px solid ${t.accent}66`,
+      }} />
+      {/* Four standing stones at the rim — the vertical part, counter-squashed
+          like everything with height. One per owned tier past the first would
+          be nicer still; four is the placeholder shape of that idea. */}
+      {[45, 135, 225, 315].map(deg => {
+        const rad = (deg * Math.PI) / 180
+        return (
+          <div key={deg} style={{
+            position: 'absolute',
+            left: Math.cos(rad) * PORTAL.r, top: Math.sin(rad) * PORTAL.r,
+            transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+            transformOrigin: 'bottom center',
+            width: 10, height: 34, borderRadius: 4,
+            background: `linear-gradient(180deg, ${t.accent}cc, rgba(40,50,64,0.9))`,
+            boxShadow: `0 0 12px ${t.accent}55`,
+          }} />
+        )
+      })}
+      {/* The name, in the label voice every structure on this chart uses. */}
+      <div style={{
+        position: 'absolute', left: 0, top: -PORTAL.r - 30,
+        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center', whiteSpace: 'nowrap',
+      }}>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '1rem', letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0,
+          textAlign: 'center', marginRight: '-0.18em',
+          color: `${t.accent}dd`,
+          textShadow: '0 2px 14px rgba(0,0,0,0.98)',
+        }}>The Portal</p>
+      </div>
+    </div>
   )
 })
 

@@ -2587,6 +2587,24 @@ body.hardcore-gauntlet::after {
   100% { transform: scale(1.85); opacity: 0; }
 }
 
+/* ── THE HOMESTEAD PORTAL ────────────────────────────────────────────────────
+   Flat on the water, so no counter-squash — the ellipse the plane makes of it
+   is correct. The swirl breathes and the inner rim turns; both are transforms
+   on their own elements, so the loop never has to know they exist. */
+.sea-portal-swirl { animation: seaPortalBreathe 5.2s ease-in-out infinite; }
+.sea-portal-rim   { animation: seaPortalTurn 14s linear infinite; border-style: dashed; }
+@keyframes seaPortalBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.05); opacity: 1; }
+}
+@keyframes seaPortalTurn {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sea-portal-swirl, .sea-portal-rim { animation: none; }
+}
+
 /* THE HELM is a thumb control. A mouse has the whole window to point at and
    does not sit on top of the thing it is pointing at, so on anything with a
    fine pointer it is only clutter. Hidden by CAPABILITY rather than by width —
