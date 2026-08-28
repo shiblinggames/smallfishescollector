@@ -4039,7 +4039,7 @@ export default function SeaMap({
         {inAnchorage && <SortieSign />}
         {/* The two berths either side of the throat. Only from inside the
             harbour they belong to, like the sign. */}
-        {inAnchorage && <Docks boatAtDock={onShip} near={atDock} boatId={boatId} />}
+        {inAnchorage && <Docks shipOut={onShip} near={atDock} shipTier={shipTier} />}
 
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
@@ -6794,27 +6794,13 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * waiting and have to take it on trust. Tied up where you left her, it is a
  * fact you can see from across the harbour.
  */
-const Docks = memo(function Docks({ boatAtDock, near, boatId }: {
-  /** Is the fishing boat tied up here? True exactly when you are on the ship,
-   *  because she is what you left to take it. */
-  boatAtDock: boolean
+const Docks = memo(function Docks({ shipOut, near, shipTier }: {
+  /** Is the expedition ship out being sailed? Her berth shows her only while
+   *  she is actually in it. */
+  shipOut: boolean
   near: 'raid' | 'voyage' | null
-  boatId: string | null
+  shipTier: number
 }) {
-  /**
-   * HER HULL, WITHOUT THE CAPTAIN IN IT.
-   *
-   * The obvious thing is the fisher sprite, and it is wrong: that sheet is the
-   * captain AND the boat, so a captain out on the ship would also be sitting in
-   * the boat they left behind. The equipped hull's own overlay is the half that
-   * should be here, which happens to be the half they paid for.
-   *
-   * A plain smack when nothing is equipped, because the default boat has no
-   * standalone art — it is painted into the character sheet. The same moored
-   * boat the trawl harbour uses, so it is already the chart's word for "a boat
-   * tied up".
-   */
-  const hull = BOATS.find(b => b.id === boatId)?.restImageUrl ?? '/sea/smack.png'
   return (
     <>
       {([['raid', RAID_DOCK, '/sea/dock-raids.png', 'Raids'],
@@ -6839,18 +6825,27 @@ const Docks = memo(function Docks({ boatAtDock, near, boatId }: {
         </div>
       ))}
 
-      {/* Her berth is the raid dock's, a little off the jetty head. */}
-      {boatAtDock && (
+      {/* ── HER BERTH ─────────────────────────────────────────────────
+          The expedition ship, tied up in the wide berth her dock was painted
+          with, whenever she is not out being sailed. She disappears from here
+          the moment you board — she is your sprite now — and the berth simply
+          stands empty until you bring her back.
+
+          The fishing boat is deliberately NOT drawn here while you are out.
+          Moored at ~0.71 of sailed size, the precedent the trawl fleet set:
+          reads as "tied up over there" without a second scale system. */}
+      {!shipOut && (
         <div style={{
           position: 'absolute', left: RAID_DOCK.x + DOCK_R * 0.75, top: RAID_DOCK.y + DOCK_R * 0.5,
           transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
           pointerEvents: 'none', opacity: 0.95,
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={hull} alt="" draggable={false} decoding="async" style={{
-            width: 150, height: 'auto', display: 'block',
-            filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
-          }} />
+          <img src={getShip(shipTier).seaImageUrl} alt="" draggable={false} decoding="async"
+            width={640} height={640} style={{
+              width: 240, height: 'auto', display: 'block',
+              filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
+            }} />
         </div>
       )}
     </>
