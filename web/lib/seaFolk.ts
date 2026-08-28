@@ -624,6 +624,229 @@ export const FOLK: Folk[] = [
   },
 ]
 
+/**
+ * ── THINGS YOU CAN SAY BACK ─────────────────────────────────────────────────
+ *
+ * A meeting used to be them saying one sentence at you. That is a notice
+ * board, not a conversation, and no amount of typewriter makes it one. So
+ * every regular carries two things you can ask at every tier, and asking is
+ * FREE and always available: the daily gate is on the point, never on the
+ * talking. Somebody who has already had their word today can still pull
+ * alongside and get a real exchange, which is the difference between a person
+ * standing in the water and a vending machine that pays out once a day.
+ *
+ * They deepen with the tier, and they are the only place these nine ever
+ * answer a direct question. A stranger tells you the rate. Somebody who
+ * trusts you tells you what happened to the captain before you.
+ */
+export type Ask = {
+  /** Your line. Written as something a captain would actually say out loud. */
+  you: string
+  /** Theirs back. */
+  they: string
+}
+
+export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
+  meg: [
+    [
+      { you: 'What do you pay?', they: 'Less than ashore. More than the row home costs you. Work it out.' },
+      { you: 'Busy today?', they: 'Three boats before you. Two of them tried to argue with the scale.' },
+    ],
+    [
+      { you: 'Do you ever go out deep?', they: 'Never had a reason. Everything I need comes past me eventually.' },
+      { you: 'How long have you been at this?', they: 'Long enough that the good scale is older than most of the captains using it.' },
+    ],
+    [
+      { you: 'Who taught you the trade?', they: 'My mother. Same water, worse scale, twice the temper.' },
+      { you: 'Any advice?', they: 'Come back with a full hold or come back empty. Just come back.' },
+    ],
+    [
+      { you: 'Do you get lonely out here?', they: 'There is a difference between alone and lonely. I have only ever been the first one.' },
+      { you: 'What happened to the ones who stopped coming?', they: 'Some got rich. Some got frightened. Two I do not talk about.' },
+    ],
+    [
+      { you: 'Would you ever leave the Shallows?', they: 'And go where. This is the water. Everything after it is only further away.' },
+      { you: 'What do you make of me?', they: 'You turned into somebody. I have watched it happen twice before and it never gets old.' },
+    ],
+  ],
+  pell: [
+    [
+      { you: 'Quick sale?', they: 'Fastest out here. That is not a boast, it is the only thing I sell.' },
+      { you: 'Bad day?', they: 'Every day. Next question.' },
+    ],
+    [
+      { you: 'Why so fast?', they: 'Because slow is how you end up holding a hold full of yesterday.' },
+      { you: 'Anyone else about?', they: 'Three boats north, one of them lost. Not my problem, or yours.' },
+    ],
+    [
+      { you: 'Do you ever stop?', they: 'When the light goes. Then I sit and I talk to nobody. Best hour of the day.' },
+      { you: 'Worst catch you have ever bought?', they: 'A hold of weed and one boot. He was very proud of the boot.' },
+    ],
+    [
+      { you: 'Who were you before this?', they: 'Somebody with a partner and half this water. Ask me the other half another time.' },
+      { you: 'Do you even like the work?', they: 'I am good at it. Liking it was never part of the arrangement.' },
+    ],
+    [
+      { you: 'Tell me about him.', they: 'Slowest hand I ever sailed with. Never once beat him to a fish.' },
+      { you: 'Do you still wait?', they: 'Same spot, same hour, every day. Draw your own conclusion and do not say it out loud.' },
+    ],
+  ],
+  marlow: [
+    [
+      { you: 'Why so far out?', they: 'Because you came anyway. That is the whole business model.' },
+      { you: 'Is the rate fixed?', they: 'Fixed by the distance you just sailed. I only read it out.' },
+    ],
+    [
+      { you: 'Do you ever go ashore?', they: 'Not in nine years. The harbour and I agreed to stop pretending.' },
+      { you: 'What is out past here?', they: 'Darker water and better prices. Both get worse the further you go.' },
+    ],
+    [
+      { you: 'You mentioned wrecks.', they: 'Three. Two picked clean. I said I would not tell you which two and I meant it.' },
+      { you: 'Do you fish yourself?', they: 'I did. I was terrible. It is why I am very good at buying.' },
+    ],
+    [
+      { you: 'Who was the captain you paid badly?', they: 'Her name was Tarn. She took it without a word, which was worse than shouting.' },
+      { you: 'Do you regret it?', they: 'Every time somebody new pulls alongside. That is what a regret is for.' },
+    ],
+    [
+      { you: 'What is in the eastern wreck?', they: 'Something I have been keeping for whoever came out here often enough to deserve it. Do not go looking yet.' },
+      { you: 'Will you ever stop?', they: 'Out here you do not stop. You stop being out here one day and somebody notices a week later.' },
+    ],
+  ],
+  fitch: [
+    [
+      { you: 'Cold down here.', they: 'Yes.' },
+      { you: 'Do you talk much?', they: 'No.' },
+    ],
+    [
+      { you: 'How deep does it go?', they: 'Further than the chart says. Do not.' },
+      { you: 'Do you sleep out here?', they: 'When it is quiet. It is always quiet.' },
+    ],
+    [
+      { you: 'What is the sound you mentioned?', they: 'You will know it. Everybody says the same thing afterwards and I will not spoil that.' },
+      { you: 'Are you all right out here?', they: 'That is the first time anybody has asked me. Yes.' },
+    ],
+    [
+      { you: 'Why the dark water?', they: 'Ask me again when you have earned it.' },
+      { you: 'What followed your boat?', they: 'Something patient. That is all you are getting.' },
+    ],
+    [
+      { you: 'So why the dark water?', they: 'Up there I could hear everybody at once. Down here it is one thing at a time.' },
+      { you: 'Would you ever come up?', they: 'For the right reason. Nobody has had one yet.' },
+    ],
+  ],
+  nance: [
+    [
+      { you: 'You buy anything?', they: 'Anything that comes up from down there. I stopped being surprised a long time ago.' },
+      { you: 'Not many boats out here.', they: 'Three this month. You are the third.' },
+    ],
+    [
+      { you: 'Strangest thing you have weighed?', they: 'I do not have a word for it. That is what makes it the strangest.' },
+      { you: 'Is it safe?', they: 'No. Go carefully and come up often.' },
+    ],
+    [
+      { you: 'How old is this water?', they: 'Older than everything you sailed past to get here. The reef included.' },
+      { you: 'Do you ever go down?', they: 'I weigh. Other people go down. That division has kept me alive.' },
+    ],
+    [
+      { you: 'Tell me about the captain before me.', they: 'Eleven years on this band. Never late, never careless. It did not matter in the end.' },
+      { you: 'What do you think the ancients are?', they: 'Not fish. I have said so for twenty years and nobody has argued with me twice.' },
+    ],
+    [
+      { you: 'Are you afraid of it?', they: 'Every day. That is why I am still here and the brave ones are not.' },
+      { you: 'What should I do differently?', they: 'Nothing. Keep coming up. That is the whole of it and it is harder than it sounds.' },
+    ],
+  ],
+  yoon: [
+    [
+      { you: 'Is the rod for sale?', they: 'Technically. Practically? Nah. Not yet.' },
+      { you: 'What tier is it?', they: 'Twenty. Sheeeeesh, right? Doesn\'t matter though.' },
+    ],
+    [
+      { you: 'What makes it different?', they: 'It doesn\'t waste a streak. That\'s it. That\'s the whole thing.' },
+      { you: 'How much?', they: 'You\'ll know when you stop asking. Gyattt, everybody asks.' },
+    ],
+    [
+      { you: 'How did you learn to make them?', they: 'Badly. For like six years. Then it clicked and I still couldn\'t tell you what changed.' },
+      { you: 'What does locked in mean to you?', they: 'When you stop counting and you\'re just doing it. Gyattt, it\'s hard to explain.' },
+    ],
+    [
+      { you: 'Why not sell in the harbour?', they: 'Because then anybody with coin gets it. That\'s not it. That was never it.' },
+      { you: 'Do you miss making them?', they: 'Lowkey, yeah. But I said one rod and I meant one rod.' },
+    ],
+    [
+      { you: 'What happens after I buy it?', they: 'You fish. That\'s it. Gyattt, everybody thinks there\'s a next thing.' },
+      { you: 'Was I ever close to failing?', they: 'Nah. Not once. You were locked in way earlier than you think.' },
+    ],
+  ],
+  brill: [
+    [
+      { you: 'How long have you been out?', they: 'Two seasons! Nearly. It is one and a bit if you are going to be strict about it.' },
+      { you: 'Caught much?', they: 'Some! Not loads. Some.' },
+    ],
+    [
+      { you: 'What are you fishing for?', they: 'Whatever bites. I have not earned a favourite yet.' },
+      { you: 'Is that your boat?', they: 'Second Try. The name is a whole thing. I will tell you when I know you better.' },
+    ],
+    [
+      { you: 'What happened to the first boat?', they: 'It is on the bottom of the harbour, I was fifteen, and that is all anybody needs.' },
+      { you: 'Do you want to go deeper?', they: 'More than anything. Also I am terrified. Both at once, constantly.' },
+    ],
+    [
+      { you: 'What does your family make of it?', they: 'My father fished here his whole life and never went past the shelf. He thinks I am mad.' },
+      { you: 'What goes in the log?', they: 'Dates, mostly. And the day you first stopped to talk to me, which is a bit much, I know.' },
+    ],
+    [
+      { you: 'You are ready, you know.', they: 'Do not say that. Say it again.' },
+      { you: 'Come out with me some time.', they: 'Yes. Yes. Right now? No. I need a week. But yes.' },
+    ],
+  ],
+  turbot: [
+    [
+      { you: 'What is down there?', they: 'Three boats that did not come back up. Mind where you put that anchor.' },
+      { you: 'Does salvage pay?', they: 'It pays in rope. Occasionally it pays in better rope.' },
+    ],
+    [
+      { you: 'How deep do you go?', they: 'Not deep. Long. There is a difference and the long ones are worse.' },
+      { you: 'Ever find anything good?', they: 'Define good. I found a kettle last month and I have never been happier.' },
+    ],
+    [
+      { you: 'Tell me about the bell.', they: 'Still hanging. I have never rung it. I am not going to and neither are you.' },
+      { you: 'Do you get frightened down there?', they: 'Only on the way up. On the way down you are working.' },
+    ],
+    [
+      { you: 'What is behind the door?', they: 'Ask me when you have earned it. I am not being coy, I am being careful.' },
+      { you: 'You mentioned a sister.', they: 'She dives the deep band. Six years. Neither of us will be the one to send word first.' },
+    ],
+    [
+      { you: 'Why did you close the door again?', they: 'Because it had been shut on purpose, and I am not the one who gets to undo that.' },
+      { you: 'Send her word. I will carry it.', they: 'You would, as well. Give me a season. I am nearly there.' },
+    ],
+  ],
+  ream: [
+    [
+      { you: 'You carry messages?', they: 'Anywhere on this sea. No charge. Yes, really.' },
+      { you: 'Who is out here?', they: 'More than you would think. Fewer than there were.' },
+    ],
+    [
+      { you: 'What is the news?', they: 'Meg is well, Pell is furious, Marlow is being Marlow. Nothing has changed in years.' },
+      { you: 'Why free?', they: 'Ask me when we know each other better. It is not a happy answer.' },
+    ],
+    [
+      { you: 'Does anybody send word to Fitch?', they: 'No. That is exactly why I go.' },
+      { you: 'What do they say about me?', they: 'That you stop. Out here that is practically a reputation.' },
+    ],
+    [
+      { you: 'So why free?', they: 'I carried word too slowly once. She was gone by the time it got there. That is the whole answer.' },
+      { you: 'Who was she?', they: 'A captain. That is all I will say, and it is more than I have said to anybody.' },
+    ],
+    [
+      { you: 'Who keeps the account when you stop?', they: 'I was rather hoping you had been listening when I brought that up.' },
+      { you: 'What did Yoon nearly tell me?', they: 'He said, and I quote, tell them they are locked in. Then he said forget it. So there you are.' },
+    ],
+  ],
+}
+
 const BY_ID = new Map(FOLK.map(f => [f.id, f]))
 export function folkById(id: string): Folk | null { return BY_ID.get(id as FolkId) ?? null }
 

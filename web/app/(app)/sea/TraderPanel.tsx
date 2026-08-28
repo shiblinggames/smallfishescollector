@@ -17,7 +17,7 @@ import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
 import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
-import { folkById, TIER_NAME, toNextTier, tierFor, type FolkTier } from '@/lib/seaFolk'
+import { folkById } from '@/lib/seaFolk'
 import { folkState, talkToFolk, giftToFolk, holdForGifting, type Rapport } from './folkActions'
 import FolkScene, { type SceneGain } from './FolkScene'
 
@@ -69,12 +69,12 @@ export default function TraderPanel({
   const folk = trader.folkId ? folkById(trader.folkId) : null
   const [rap, setRap] = useState<Rapport | null>(null)
   const [hold, setHold] = useState<{ id: number; name: string; qty: number; habitat: string | null }[]>([])
-  /** What they just said, which replaces their standing line while it is up. */
-  const [heard, setHeard] = useState<string | null>(null)
+  /** What they just said. Fed to the scene as a new turn rather than
+   *  replacing anything, so the exchange keeps its thread. */
+  const [spoke, setSpoke] = useState<{ text: string; nonce: number } | null>(null)
   /** The scene, and the last thing that moved in it. */
   const [scene, setScene] = useState(false)
   const [gain, setGain] = useState<SceneGain | null>(null)
-  const [gifting, setGifting] = useState(false)
 
   useEffect(() => {
     if (!folk) return
@@ -93,7 +93,7 @@ export default function TraderPanel({
       const res = await talkToFolk(folk.id)
       if ('error' in res) { setErr(res.error) }
       else {
-        setHeard(res.line)
+        setSpoke(v => ({ text: res.line, nonce: (v?.nonce ?? 0) + 1 }))
         setGain({ points: res.points, gained: res.points - (rap?.points ?? 0), tier: res.tier, tierUp: res.tierUp })
         setRap(r => (r ? { ...r, points: res.points, tier: res.tier, chattedToday: true } : r))
       }
@@ -108,13 +108,11 @@ export default function TraderPanel({
       const res = await giftToFolk(folk.id, fishId)
       if ('error' in res) { setErr(res.error) }
       else {
-        setHeard(res.line)
+        setSpoke(v => ({ text: res.line, nonce: (v?.nonce ?? 0) + 1 }))
         setGain({
           points: res.points, gained: res.points - (rap?.points ?? 0),
           tier: res.tier, tierUp: res.tierUp, how: res.how,
         })
-        setGifting(false)
-        setScene(true)
         setRap(r => (r ? { ...r, points: res.points, tier: res.tier, giftedToday: true } : r))
         setHold(h => h.map(f => (f.id === fishId ? { ...f, qty: f.qty - 1 } : f)).filter(f => f.qty > 0))
         vibrate(res.how === 'loved' ? [0, 40, 60, 90] : 14)
@@ -260,7 +258,7 @@ export default function TraderPanel({
             paddingLeft: '0.85rem',
             borderLeft: '2px solid rgba(255,206,138,0.45)',
           } : {}),
-        }}>{heard ?? (trader.deal === 'talk' ? trader.lines[said % trader.lines.length] : trader.line)}</p>
+        }}>{trader.deal === 'talk' ? trader.lines[said % trader.lines.length] : trader.line}</p>
 
         {/* ── THE OFFER ─────────────────────────────────────────────────
             Stated plainly. The flavour above is allowed its charm; the
@@ -376,34 +374,6 @@ export default function TraderPanel({
           </p>
         )}
 
-        {/* THE HOLD, WHEN YOU ARE HANDING SOMETHING OVER. Their own water's
-            fish land better, and the ones they love land best, but nothing is
-            ever refused: sailing out with a gift should not be punished for
-            picking wrong. Rendered here rather than in the scene because a
-            list of thirty species does not belong on a cinematic card. */}
-        {gifting && folk && (
-          <div style={{ marginTop: 12, maxHeight: 190, overflowY: 'auto' }}>
-            {hold.length === 0 ? (
-              <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
-                Your hold is empty. Catch them something.
-              </p>
-            ) : hold.map(f => (
-              <button key={f.id} onClick={() => handOver(f.id)} disabled={busy}
-                className="font-karla font-600"
-                style={{
-                  display: 'flex', width: '100%', justifyContent: 'space-between', gap: 8,
-                  padding: '0.5rem 0.6rem', marginBottom: 5, borderRadius: 9,
-                  background: folk.loves.includes(f.id) ? 'rgba(255,206,138,0.14)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${folk.loves.includes(f.id) ? 'rgba(255,206,138,0.45)' : 'rgba(255,255,255,0.14)'}`,
-                  color: '#e8f0f6', cursor: busy ? 'default' : 'pointer', fontSize: '0.84rem',
-                }}>
-                <span>{f.name}</span>
-                <span style={{ color: 'rgba(255,255,255,0.45)' }}>{f.qty}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           {!spent && !isTalk && (
             <button onClick={isResident ? sellHold : trader.deal === 'rod' ? buyRod : strike}
@@ -481,14 +451,16 @@ export default function TraderPanel({
           open={scene}
           tier={rap.tier}
           points={rap.points}
-          line={heard ?? folk.lines[rap.tier][0]}
+          opener={folk.lines[rap.tier][0]}
           gain={gain}
+          resolved={spoke}
           canChat={!rap.chattedToday}
           canGift={!rap.giftedToday && hold.length > 0}
+          hold={hold}
           busy={busy}
           onChat={haveAWord}
-          onGift={() => { setScene(false); setGifting(true) }}
-          onClose={() => { setScene(false); setGain(null) }}
+          onGift={handOver}
+          onClose={() => { setScene(false); setGain(null); setSpoke(null) }}
         />
       )}
     </div>
