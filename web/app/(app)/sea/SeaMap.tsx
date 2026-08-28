@@ -7135,9 +7135,14 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
           smacks get away with moored-scale because you never sail one. */}
       {!shipOut && (
         <div style={{
-          // IN FRONT of the deck, not beside it: the dock runs left-to-right
-          // now, so alongside means south of the boards, bow toward the piles.
-          position: 'absolute', left: RAID_DOCK.x - DOCK_R * 0.05, top: RAID_DOCK.y + DOCK_R * 0.62,
+          // AGAINST THE PIER. The dock's SeaMark anchors the art's BOTTOM (the
+          // pile feet) at RAID_DOCK.y; pulling her centre a quarter-radius
+          // NORTH of that lays her hull along the piles with her sails over
+          // the pier's front face — moored at the loading face, which faces
+          // the camera. Mocked against the real plates at 1:1 before the
+          // number was chosen. She paints after the dock in this fragment, so
+          // she reads in front of the planking she is tied to.
+          position: 'absolute', left: RAID_DOCK.x - DOCK_R * 0.05, top: RAID_DOCK.y - DOCK_R * 0.25,
           transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
           pointerEvents: 'none', opacity: 0.95,
         }}>
