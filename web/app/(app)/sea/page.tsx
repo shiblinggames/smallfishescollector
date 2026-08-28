@@ -21,6 +21,10 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getFishHold } from '@/lib/fishHold'
 import { rodsAboard, hullSpeed } from '@/lib/shipyard'
 import { MIN_SHIP_TIER } from '@/lib/ships'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { classSlotBonuses } from '@/lib/shipClasses'
+import { loadDeployedParty } from '@/lib/crewData'
+import { getRaidItem } from '@/lib/raidItems'
 import { RODS } from '@/lib/rods'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
@@ -71,19 +75,21 @@ export default async function SeaPage() {
   // exists at all is `trawlsOut`, which derives from trawlState SYNCHRONOUSLY
   // after the batch lands.
   const [
-    allSpecies, { data: collectionRows }, { data: pbRows }, { count: raidPartyCount },
+    allSpecies, { data: collectionRows }, { data: pbRows }, raidPartyRows,
     { data: baitRows }, dealt, discovered, digs, homestead, renown, trawlState,
     { data: finaleRow }, { data: holdRows },
   ] = await Promise.all([
     getCachedFishSpecies(),
     admin.from('fish_collection').select('fish_id, is_golden').eq('user_id', user.id),
     admin.from('fish_personal_bests').select('fish_id, best_length_in').eq('user_id', user.id),
-    // WHO WOULD ACTUALLY SAIL. The sortie asks you to confirm you are taking
-    // your crew out, and a confirm that says "with your crew" to a captain who
-    // has assigned nobody is a lie. Head-only: the chart wants the number, and
-    // the party itself is the raid screen's business.
-    admin.from('user_crew').select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id).is('died_at', null).not('raid_slot', 'is', null),
+    // WHO WOULD ACTUALLY SAIL. The dock is where the crew is CONFIRMED, so it
+    // gets the party itself — faces and names, not a count. Same loader every
+    // raid uses, so what the dock shows is exactly what would board.
+    loadDeployedParty(admin, user.id,
+      (EXPEDITION_SHIP_STATS[Number(profile?.ship_tier ?? MIN_SHIP_TIER)]?.crewSlots ?? 1)
+        + classSlotBonuses(profile?.ship_classes as Record<string, string> | null).crewSlots
+        + (profile?.has_sixth_berth === true ? 1 : 0),
+      'raid'),
     admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
     dealtToday(),
     getDiscoveries(),
@@ -229,7 +235,13 @@ export default async function SeaPage() {
       // boat: past the sortie the hull under you is the one the expedition
       // ladder sells, which is the whole point of the crossing.
       shipTier={Number(profile?.ship_tier ?? MIN_SHIP_TIER)}
-      raidParty={raidPartyCount ?? 0}
+      // The party and the mounts, for the dock's confirm. Names and art only:
+      // the chart shows the muster, the raid screens do the maths.
+      raidParty={raidPartyRows.map(c => ({ name: c.name, art: c.filename }))}
+      raidItems={((profile?.equipped_raid_items as string[] | null) ?? [])
+        .map(id => getRaidItem(id))
+        .filter((d): d is NonNullable<typeof d> => !!d)
+        .map(d => ({ name: d.name, image: d.image }))}
       // The two new movement ladders. Passed as TIERS rather than as computed
       // rates: the map multiplies them by the boat's own trim, and doing half
       // that sum here and half there is how the two drift apart.

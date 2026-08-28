@@ -834,7 +834,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
-  auto, tideTurner, userId, tour, shipTier, raidParty, startSide,
+  auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, startSide,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -873,7 +873,11 @@ export default function SeaMap({
   shipTier: number
   /** How many crew are in raid seats. The sortie's confirm says who is coming,
    *  and "nobody" is a thing it has to be able to say. */
-  raidParty: number
+  /** The raid party as it would actually board: names and card art, from the
+   *  same loader every raid uses. The dock is where the muster is confirmed. */
+  raidParty: { name: string; art: string }[]
+  /** What is mounted, names and images resolved server-side. */
+  raidItems: { name: string; image: string | null }[]
   /** Rudder and rig tiers, from the Shipyard. */
   handlingTier: number
   accelTier: number
@@ -4573,15 +4577,80 @@ hullRef={hullRefFor(t.key)} />
                 <p className="font-karla" style={{
                   fontSize: '0.76rem', color: 'rgba(214,226,236,0.7)', margin: '2px 0 0', lineHeight: 1.4,
                 }}>
-                  {/* The count is the honest version. A confirm that says "with
-                      your crew" to a captain who has assigned nobody is a lie,
-                      and finding that out past the rim is the wrong moment. */}
-                  {raidParty === 0
+                  {raidParty.length === 0
                     ? 'No crew in the raid seats. She sails empty.'
-                    : `${raidParty} crew aboard, in their raid seats.`}
+                    : `${raidParty.length} crew aboard, in their raid seats.`}
                 </p>
               </div>
             </div>
+
+            {/* ── THE MUSTER ──────────────────────────────────────────────
+                The dock is where the loadout is CONFIRMED, so it shows the
+                loadout: the faces that would board and the items mounted, from
+                the same loaders the raids read. A count was the honest version
+                of "not nothing"; this is the honest version of "exactly this".
+                Read-only on purpose — assembling the party is the Crew Hall's
+                job and mounting items is the Armory's, and each chip row says
+                where to go to change it. */}
+            {!onShip && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.7rem 0 0', flexWrap: 'wrap' }}>
+                  {raidParty.map(c => (
+                    <div key={c.name + c.art} title={c.name} style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '0.22rem 0.5rem 0.22rem 0.24rem', borderRadius: 999,
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                    }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={crewArt(c.art)} alt="" width={22} height={22} decoding="async"
+                        style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
+                      <span className="font-karla font-700" style={{
+                        fontSize: '0.68rem', color: '#dce6ee', maxWidth: 88,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{c.name}</span>
+                    </div>
+                  ))}
+                  <button type="button" data-no-steer
+                    onClick={() => { vibrate(8); router.push('/crew') }}
+                    className="tap font-karla font-700" style={{
+                      padding: '0.24rem 0.55rem', borderRadius: 999, cursor: 'pointer',
+                      background: 'none', border: '1px dashed rgba(196,169,106,0.45)',
+                      color: 'rgba(214,196,150,0.85)', fontSize: '0.68rem',
+                    }}>
+                    {raidParty.length === 0 ? 'Assign crew' : 'Change'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.55rem 0 0', flexWrap: 'wrap' }}>
+                  {raidItems.map(it => (
+                    <div key={it.name} title={it.name} style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '0.22rem 0.5rem 0.22rem 0.28rem', borderRadius: 999,
+                      background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.28)',
+                    }}>
+                      {it.image && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={it.image} alt="" width={20} height={20} decoding="async"
+                          style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                      )}
+                      <span className="font-karla font-700" style={{
+                        fontSize: '0.68rem', color: '#d8ccf0', maxWidth: 96,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{it.name}</span>
+                    </div>
+                  ))}
+                  <button type="button" data-no-steer
+                    onClick={() => { vibrate(8); router.push('/expeditions/items') }}
+                    className="tap font-karla font-700" style={{
+                      padding: '0.24rem 0.55rem', borderRadius: 999, cursor: 'pointer',
+                      background: 'none', border: '1px dashed rgba(167,139,250,0.4)',
+                      color: 'rgba(200,184,240,0.85)', fontSize: '0.68rem',
+                    }}>
+                    {raidItems.length === 0 ? 'Mount items' : 'Change'}
+                  </button>
+                </div>
+              </>
+            )}
 
             <p className="font-karla" style={{
               fontSize: '0.8rem', color: 'rgba(214,226,236,0.72)', lineHeight: 1.5, margin: '0.85rem 0 0',
