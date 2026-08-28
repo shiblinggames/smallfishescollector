@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Cinzel, Karla, Pirata_One } from 'next/font/google'
 import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import PageTransition from '@/components/PageTransition'
 import ClientBackground from '@/components/ClientBackground'
 import MobileTabBar from '@/components/MobileTabBar'
@@ -84,6 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </p>
         </footer>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
