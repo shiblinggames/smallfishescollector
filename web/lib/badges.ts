@@ -13,14 +13,37 @@ export interface Badge {
 }
 
 // Doubloons granted when a badge's reward is claimed (kept small + tunable —
-// the badge itself is the real prize, this is a little bonus). Tops out at
-// 10,000 for a Grandmaster feat; the lower tiers were rescaled under it.
+// the badge itself is the real prize, this is a little bonus). Rescaled DOWN
+// 2026-08-28: the list has grown well past what the old table was written for,
+// so a Grandmaster pays 5,000 rather than 10,000 and the tiers under it came
+// down with it. Master and Grandmaster gained gems instead (BADGE_GEM_REWARD).
 export const BADGE_REWARD: Record<BadgeDifficulty, number> = {
   rookie:      250,
-  seasoned:    1_000,
-  veteran:     2_500,
-  master:      5_000,
-  grandmaster: 10_000,
+  seasoned:    750,
+  veteran:     1_500,
+  master:      2_500,
+  grandmaster: 5_000,
+}
+
+/**
+ * GEMS, at the two tiers that are actually hard.
+ *
+ * The doubloon side was halved at the top (10,000 → 5,000 for a Grandmaster,
+ * 5,000 → 2,500 for a Master) because the badge list has grown a long way past
+ * what that table was written for, and a hundred-odd badges paying on the old
+ * scale is a faucet rather than a bonus.
+ *
+ * Gems are the compensation, and they are a better prize than the coin they
+ * replace: doubloons are earned by fishing and a Grandmaster feat is not, so
+ * paying it in the currency you cannot grind is the shape that says "this was
+ * hard". Nothing below Master pays any.
+ */
+export const BADGE_GEM_REWARD: Record<BadgeDifficulty, number> = {
+  rookie:      0,
+  seasoned:    0,
+  veteran:     0,
+  master:      50,
+  grandmaster: 200,
 }
 
 // Achievement points per tier (1–5) — a skill score summed over earned badges.
@@ -370,6 +393,12 @@ export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
 export function badgeReward(id: string): number {
   const b = BADGE_MAP[id]
   return b ? BADGE_REWARD[b.difficulty] : 0
+}
+
+/** Gem reward for a badge id (0 for anything under Master, 0 if unknown). */
+export function badgeGemReward(id: string): number {
+  const b = BADGE_MAP[id]
+  return b ? BADGE_GEM_REWARD[b.difficulty] : 0
 }
 
 /** Achievement points (1–4) for a badge id (0 if unknown). */

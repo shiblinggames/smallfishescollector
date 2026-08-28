@@ -75,70 +75,70 @@ export const DIG_SITES: DigSite[] = [
   // ── THE SHALLOWS ── 50 ◆ / 2,400 ⟡ ──────────────────────────────────
   {
     id: 'shallows-dig-0', name: 'The Cook’s Share', band: 'shallows',
-    x: 2402, y: 1945, gems: 50, doubloons: 2400,
+    x: 2402, y: 1945, gems: 50, doubloons: 1200,
     found: 'A ship’s cook buried this the day before he was paid off, and was never paid off.',
   },
 
   // ── OPEN WATERS ── 150 ◆ / 7,200 ⟡ ──────────────────────────────────
   {
     id: 'open_waters-dig-0', name: 'The Second Purse', band: 'open_waters',
-    x: 3367, y: 4961, gems: 70, doubloons: 3400,
+    x: 3367, y: 4961, gems: 70, doubloons: 1700,
     found: 'Whoever put this here had a first purse somewhere else, and did not trust the same water twice.',
   },
   {
     id: 'open_waters-dig-1', name: 'Bellow’s Cache', band: 'open_waters',
-    x: -3509, y: 4930, gems: 80, doubloons: 3800,
+    x: -3509, y: 4930, gems: 80, doubloons: 1900,
     found: 'Wrapped in three coats against the wet. Two of the coats worked.',
   },
 
   // ── THE DEEP ── 330 ◆ / 15,000 ⟡ ────────────────────────────────────
   {
     id: 'deep-dig-0', name: 'The Quartermaster’s Error', band: 'deep',
-    x: 8746, y: 2439, gems: 100, doubloons: 4600,
+    x: 8746, y: 2439, gems: 100, doubloons: 2300,
     found: 'Buried a full league from where the ledger says it was buried. The ledger has been wrong for years.',
   },
   {
     id: 'deep-dig-1', name: 'The Long Count', band: 'deep',
-    x: 3261, y: 9290, gems: 110, doubloons: 5000,
+    x: 3261, y: 9290, gems: 110, doubloons: 2500,
     found: 'Somebody counted this out coin by coin before they sank it. The tally is still in the box and it is short.',
   },
   {
     id: 'deep-dig-2', name: 'Two Fathom Hollow', band: 'deep',
-    x: -9088, y: 3308, gems: 120, doubloons: 5400,
+    x: -9088, y: 3308, gems: 120, doubloons: 2700,
     found: 'Dug at low water by a crew who meant to come back at the next one.',
   },
 
   // ── THE ABYSS ── 450 ◆ / 19,800 ⟡ ───────────────────────────────────
   {
     id: 'abyss-dig-0', name: 'The Widow’s Portion', band: 'abyss',
-    x: 11656, y: 7102, gems: 140, doubloons: 6200,
+    x: 11656, y: 7102, gems: 140, doubloons: 3100,
     found: 'Set aside for somebody ashore, by somebody who did not get ashore.',
   },
   {
     id: 'abyss-dig-1', name: 'The Deep Consignment', band: 'abyss',
-    x: 1018, y: 14961, gems: 150, doubloons: 6600,
+    x: 1018, y: 14961, gems: 150, doubloons: 3300,
     found: 'Sunk here on purpose and marked on nothing. Whoever hid it was hiding it from their own crew.',
   },
   {
     id: 'abyss-dig-2', name: 'Coldhand’s Keeping', band: 'abyss',
-    x: -14963, y: 2728, gems: 160, doubloons: 7000,
+    x: -14963, y: 2728, gems: 160, doubloons: 3500,
     found: 'Still tied the way it was tied going down. Nobody has been back to this water since.',
   },
 
   // ── THE ANCIENT DEEP ── 620 ◆ / 25,600 ⟡ ────────────────────────────
   {
     id: 'ancient_deep-dig-0', name: 'The Last Wage', band: 'ancient_deep',
-    x: 17166, y: 5281, gems: 200, doubloons: 8200,
+    x: 17166, y: 5281, gems: 200, doubloons: 4100,
     found: 'A whole crew’s pay, buried where none of them could reach it, by the one who could.',
   },
   {
     id: 'ancient_deep-dig-1', name: 'The Old Deposit', band: 'ancient_deep',
-    x: 4740, y: 17319, gems: 205, doubloons: 8600,
+    x: 4740, y: 17319, gems: 205, doubloons: 4300,
     found: 'Down so long the box has taken the shape of the seabed around it.',
   },
   {
     id: 'ancient_deep-dig-2', name: 'The Far Keeping', band: 'ancient_deep',
-    x: -15790, y: 9418, gems: 215, doubloons: 8800,
+    x: -15790, y: 9418, gems: 215, doubloons: 4400,
     found: 'The furthest thing anybody ever bothered to bury. They did not bother to mark it either.',
   },
 ]

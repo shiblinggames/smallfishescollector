@@ -161,40 +161,40 @@ export const ISLE_FURNISHING: Record<string, string> = {
 
 export const ISLES: Isle[] = [
   // ── THE SHALLOWS ── 35 ◆ / 1,400 ⟡ ──────────────────────────────────
-  { id: 'shallows-0', name: 'Cormorant Rock', band: 'shallows', x: 3080, y: 496, r: 131, kind: 'cache', gems: 35, doubloons: 1400 },
+  { id: 'shallows-0', name: 'Cormorant Rock', band: 'shallows', x: 3080, y: 496, r: 131, kind: 'cache', gems: 35, doubloons: 700 },
   { id: 'shallows-1', name: 'Gannet Bank', band: 'shallows', x: -988, y: 2877, r: 137, kind: 'note', note: NOTES['shallows-1'] },
   { id: 'shallows-2', name: 'Low Kelp', band: 'shallows', x: -1938, y: 784, r: 130, kind: 'note', note: NOTES['shallows-2'] },
 
   // ── OPEN WATERS ── 210 ◆ / 8,800 ⟡ ──────────────────────────────────
-  { id: 'open_waters-0', name: 'Brine Knuckle', band: 'open_waters', x: 5738, y: 1842, r: 168, kind: 'cache', gems: 45, doubloons: 1900 },
-  { id: 'open_waters-1', name: 'Halfmast Rock', band: 'open_waters', x: 4788, y: 4031, r: 152, kind: 'cache', gems: 50, doubloons: 2100 },
-  { id: 'open_waters-2', name: 'Pale Shoal', band: 'open_waters', x: 2132, y: 5930, r: 150, kind: 'cache', gems: 55, doubloons: 2300 },
-  { id: 'open_waters-3', name: 'The Kettle', band: 'open_waters', x: -835, y: 6138, r: 169, kind: 'cache', gems: 60, doubloons: 2500 },
+  { id: 'open_waters-0', name: 'Brine Knuckle', band: 'open_waters', x: 5738, y: 1842, r: 168, kind: 'cache', gems: 45, doubloons: 950 },
+  { id: 'open_waters-1', name: 'Halfmast Rock', band: 'open_waters', x: 4788, y: 4031, r: 152, kind: 'cache', gems: 50, doubloons: 1050 },
+  { id: 'open_waters-2', name: 'Pale Shoal', band: 'open_waters', x: 2132, y: 5930, r: 150, kind: 'cache', gems: 55, doubloons: 1150 },
+  { id: 'open_waters-3', name: 'The Kettle', band: 'open_waters', x: -835, y: 6138, r: 169, kind: 'cache', gems: 60, doubloons: 1250 },
   { id: 'open_waters-4', name: 'Spar Spit', band: 'open_waters', x: -3631, y: 2582, r: 156, kind: 'note', note: NOTES['open_waters-4'] },
   { id: 'open_waters-5', name: 'Old Anchorage', band: 'open_waters', x: -5651, y: 1460, r: 157, kind: 'note', note: NOTES['open_waters-5'] },
 
   // ── THE DEEP ── 330 ◆ / 15,200 ⟡ ────────────────────────────────────
-  { id: 'deep-0', name: 'Blackfin Rise', band: 'deep', x: 9927, y: 1395, r: 175, kind: 'cache', gems: 70, doubloons: 3200 },
-  { id: 'deep-1', name: 'The Cradle', band: 'deep', x: 6489, y: 6338, r: 179, kind: 'cache', gems: 80, doubloons: 3600 },
-  { id: 'deep-2', name: 'Saltbone Isle', band: 'deep', x: 967, y: 9319, r: 181, kind: 'cache', gems: 85, doubloons: 4000 },
-  { id: 'deep-3', name: 'Thirty Fathom Rock', band: 'deep', x: -3240, y: 9437, r: 157, kind: 'cache', gems: 95, doubloons: 4400 },
+  { id: 'deep-0', name: 'Blackfin Rise', band: 'deep', x: 9927, y: 1395, r: 175, kind: 'cache', gems: 70, doubloons: 1600 },
+  { id: 'deep-1', name: 'The Cradle', band: 'deep', x: 6489, y: 6338, r: 179, kind: 'cache', gems: 80, doubloons: 1800 },
+  { id: 'deep-2', name: 'Saltbone Isle', band: 'deep', x: 967, y: 9319, r: 181, kind: 'cache', gems: 85, doubloons: 2000 },
+  { id: 'deep-3', name: 'Thirty Fathom Rock', band: 'deep', x: -3240, y: 9437, r: 157, kind: 'cache', gems: 95, doubloons: 2200 },
   { id: 'deep-4', name: 'The Quiet Shelf', band: 'deep', x: -5974, y: 5532, r: 155, kind: 'note', note: NOTES['deep-4'] },
   { id: 'deep-5', name: 'Wreckwood', band: 'deep', x: -9518, y: 1163, r: 170, kind: 'note', note: NOTES['deep-5'] },
 
   // ── THE ABYSS ── 480 ◆ / 24,400 ⟡ ───────────────────────────────────
-  { id: 'abyss-0', name: 'The Black Tooth', band: 'abyss', x: 12931, y: 1689, r: 178, kind: 'cache', gems: 105, doubloons: 5200 },
-  { id: 'abyss-1', name: 'Coldwater Cay', band: 'abyss', x: 10474, y: 8925, r: 164, kind: 'cache', gems: 115, doubloons: 5800 },
-  { id: 'abyss-2', name: 'The Drowned Step', band: 'abyss', x: 5784, y: 13078, r: 192, kind: 'cache', gems: 125, doubloons: 6400 },
-  { id: 'abyss-3', name: 'Lantern Rock', band: 'abyss', x: -1606, y: 14323, r: 171, kind: 'cache', gems: 135, doubloons: 7000 },
+  { id: 'abyss-0', name: 'The Black Tooth', band: 'abyss', x: 12931, y: 1689, r: 178, kind: 'cache', gems: 105, doubloons: 2600 },
+  { id: 'abyss-1', name: 'Coldwater Cay', band: 'abyss', x: 10474, y: 8925, r: 164, kind: 'cache', gems: 115, doubloons: 2900 },
+  { id: 'abyss-2', name: 'The Drowned Step', band: 'abyss', x: 5784, y: 13078, r: 192, kind: 'cache', gems: 125, doubloons: 3200 },
+  { id: 'abyss-3', name: 'Lantern Rock', band: 'abyss', x: -1606, y: 14323, r: 171, kind: 'cache', gems: 135, doubloons: 3500 },
   { id: 'abyss-4', name: 'Deadwater', band: 'abyss', x: -12157, y: 8522, r: 191, kind: 'note', note: NOTES['abyss-4'] },
   { id: 'abyss-5', name: 'Farthing Rock', band: 'abyss', x: -14141, y: 5095, r: 191, kind: 'note', note: NOTES['abyss-5'] },
 
   // ── THE ANCIENT DEEP ── 945 ◆ / 49,200 ⟡ ────────────────────────────
-  { id: 'ancient_deep-0', name: 'The First Stone', band: 'ancient_deep', x: 18859, y: 8860, r: 176, kind: 'cache', gems: 175, doubloons: 9200 },
-  { id: 'ancient_deep-1', name: 'The Old Shell', band: 'ancient_deep', x: 12203, y: 13851, r: 199, kind: 'cache', gems: 185, doubloons: 9600 },
-  { id: 'ancient_deep-2', name: 'Worldsend Rock', band: 'ancient_deep', x: 6602, y: 16175, r: 189, kind: 'cache', gems: 190, doubloons: 10000 },
-  { id: 'ancient_deep-3', name: 'Stillwater Isle', band: 'ancient_deep', x: -5984, y: 20420, r: 178, kind: 'cache', gems: 195, doubloons: 10200 },
-  { id: 'ancient_deep-4', name: 'Nobody’s Rock', band: 'ancient_deep', x: -11564, y: 14089, r: 182, kind: 'cache', gems: 200, doubloons: 10200 },
+  { id: 'ancient_deep-0', name: 'The First Stone', band: 'ancient_deep', x: 18859, y: 8860, r: 176, kind: 'cache', gems: 175, doubloons: 4600 },
+  { id: 'ancient_deep-1', name: 'The Old Shell', band: 'ancient_deep', x: 12203, y: 13851, r: 199, kind: 'cache', gems: 185, doubloons: 4800 },
+  { id: 'ancient_deep-2', name: 'Worldsend Rock', band: 'ancient_deep', x: 6602, y: 16175, r: 189, kind: 'cache', gems: 190, doubloons: 5000 },
+  { id: 'ancient_deep-3', name: 'Stillwater Isle', band: 'ancient_deep', x: -5984, y: 20420, r: 178, kind: 'cache', gems: 195, doubloons: 5100 },
+  { id: 'ancient_deep-4', name: 'Nobody’s Rock', band: 'ancient_deep', x: -11564, y: 14089, r: 182, kind: 'cache', gems: 200, doubloons: 5100 },
   { id: 'ancient_deep-5', name: 'The Far Sounding', band: 'ancient_deep', x: -19106, y: 7132, r: 190, kind: 'note', note: NOTES['ancient_deep-5'] },
 ]
 

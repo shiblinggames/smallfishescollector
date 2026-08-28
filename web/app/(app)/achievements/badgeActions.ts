@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stampBadges } from '@/lib/badgeGrant'
-import { BADGES, BADGE_MAP, BADGE_REWARD, badgeReward, MAX_EQUIPPED_BADGES } from '@/lib/badges'
+import { BADGES, BADGE_MAP, BADGE_REWARD, BADGE_GEM_REWARD, badgeReward, badgeGemReward, MAX_EQUIPPED_BADGES } from '@/lib/badges'
 import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields, exchangeStatsFrom, type ExchangePositionRow } from '@/lib/badgeConditions'
 
 /** Grant every badge whose condition is met but not yet recorded. Derives
@@ -57,55 +57,71 @@ export async function reconcileBadges(): Promise<string[]> {
   return next
 }
 
-/** Claim the doubloon reward for one earned badge. Atomic + idempotent: the
- *  RPC only grants if the badge is unlocked AND not yet claimed. */
-export async function claimBadgeReward(badgeId: string): Promise<{ newDoubloons: number; claimed: string[]; amount: number } | { error: string }> {
+/** Claim one earned badge's reward. Atomic + idempotent: the RPC only grants if
+ *  the badge is unlocked AND not yet claimed, and it moves BOTH currencies in
+ *  the one statement that marks it claimed, so a Grandmaster can never land the
+ *  coin and miss the gems. */
+export async function claimBadgeReward(badgeId: string): Promise<{ newDoubloons: number; newGems: number; claimed: string[]; amount: number; gems: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
   const amount = badgeReward(badgeId)
+  const gems = badgeGemReward(badgeId)
   if (!BADGE_MAP[badgeId] || amount <= 0) return { error: 'No reward for that badge' }
 
   const admin = createAdminClient()
-  const { data, error } = await admin.rpc('claim_badge_reward', { p_user: user.id, p_badge: badgeId, p_amount: amount })
+  const { data, error } = await admin.rpc('claim_badge_reward', {
+    p_user: user.id, p_badge: badgeId, p_amount: amount, p_gems: gems,
+  })
   if (error) return { error: 'Could not claim reward' }
-  const row = (Array.isArray(data) ? data[0] : data) as { new_doubloons: number; claimed: string[]; granted: boolean } | undefined
+  const row = (Array.isArray(data) ? data[0] : data) as { new_doubloons: number; new_gems: number; claimed: string[]; granted: boolean } | undefined
   return {
     newDoubloons: Number(row?.new_doubloons ?? 0),
+    newGems: Number(row?.new_gems ?? 0),
     claimed: row?.claimed ?? [],
     amount: row?.granted ? amount : 0,
+    gems: row?.granted ? gems : 0,
   }
 }
 
 /** Claim every earned-but-unclaimed badge reward at once. */
-export async function claimAllBadgeRewards(): Promise<{ newDoubloons: number; claimed: string[]; totalGranted: number; count: number } | { error: string }> {
+export async function claimAllBadgeRewards(): Promise<{ newDoubloons: number; newGems: number; claimed: string[]; totalGranted: number; totalGems: number; count: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('doubloons, unlocked_badges, claimed_badge_rewards').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('doubloons, gems, unlocked_badges, claimed_badge_rewards').eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
   const unlocked = new Set<string>((profile.unlocked_badges as string[] | null) ?? [])
   const already = new Set<string>((profile.claimed_badge_rewards as string[] | null) ?? [])
   const claimable = BADGES.filter(b => unlocked.has(b.id) && !already.has(b.id))
   if (claimable.length === 0) {
-    return { newDoubloons: Number(profile.doubloons ?? 0), claimed: [...already], totalGranted: 0, count: 0 }
+    return {
+      newDoubloons: Number(profile.doubloons ?? 0), newGems: Number(profile.gems ?? 0),
+      claimed: [...already], totalGranted: 0, totalGems: 0, count: 0,
+    }
   }
 
-  // Sequential so each RPC's read-add-write of doubloons is deterministic.
+  // Sequential so each RPC's read-add-write of both balances is deterministic.
   let newDoubloons = Number(profile.doubloons ?? 0)
+  let newGems = Number(profile.gems ?? 0)
   let claimed: string[] = [...already]
   let totalGranted = 0
+  let totalGems = 0
   for (const b of claimable) {
     const amount = BADGE_REWARD[b.difficulty]
-    const { data } = await admin.rpc('claim_badge_reward', { p_user: user.id, p_badge: b.id, p_amount: amount })
-    const row = (Array.isArray(data) ? data[0] : data) as { new_doubloons: number; claimed: string[]; granted: boolean } | undefined
-    if (row?.granted) totalGranted += amount
+    const gems = BADGE_GEM_REWARD[b.difficulty]
+    const { data } = await admin.rpc('claim_badge_reward', {
+      p_user: user.id, p_badge: b.id, p_amount: amount, p_gems: gems,
+    })
+    const row = (Array.isArray(data) ? data[0] : data) as { new_doubloons: number; new_gems: number; claimed: string[]; granted: boolean } | undefined
+    if (row?.granted) { totalGranted += amount; totalGems += gems }
     newDoubloons = Number(row?.new_doubloons ?? newDoubloons)
+    newGems = Number(row?.new_gems ?? newGems)
     claimed = row?.claimed ?? claimed
   }
-  return { newDoubloons, claimed, totalGranted, count: claimable.length }
+  return { newDoubloons, newGems, claimed, totalGranted, totalGems, count: claimable.length }
 }
 
 export async function getUnlockedBadges(): Promise<string[]> {

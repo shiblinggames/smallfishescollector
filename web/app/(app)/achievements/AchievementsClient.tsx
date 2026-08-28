@@ -195,6 +195,13 @@ export default function AchievementsClient({ groups }: Props) {
       setClaimedIds(prev => new Set(prev).add(id))
       window.dispatchEvent(new Event('badges-changed'))
       if (r.amount > 0) flyCoins(from, r.amount, r.newDoubloons)
+      // Master and Grandmaster pay gems as well, and the whole point of paying
+      // them is that a hard badge should feel like it paid something you cannot
+      // grind. Swallowing them here would make the coin nerf look like a
+      // straight nerf.
+      if (r.gems > 0) {
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+      }
     })
   }
   function claimAll(from: { x: number; y: number }) {
@@ -207,6 +214,9 @@ export default function AchievementsClient({ groups }: Props) {
       setClaimedIds(new Set(r.claimed))
       window.dispatchEvent(new Event('badges-changed'))
       if (r.totalGranted > 0) flyCoins(from, r.totalGranted, r.newDoubloons)
+      if (r.totalGems > 0) {
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+      }
     })
   }
 
