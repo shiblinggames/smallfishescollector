@@ -1210,3 +1210,29 @@ arch-to-sortie sail is 5,100, which is a leg rather than a voyage.
 `SORTIE`, `anchorageArc()` and the minimap's `expeditions` half all derive from `EXP_EDGE`,
 so moving it moves them together. `RAID_EDGE` (13,000) does not — that is the open water
 beyond, and it is deliberately its own number.
+
+## How the minimap is read
+
+**Shape carries the meaning; colour only reinforces it.** Everything on the chart used to be
+a circle in gold or green, so a harbour, an isle, a buyer, another captain and a dig site
+were five dots in two colours and the key was ten rows of nearly the same picture. At four
+pixels across, hue is the weaker channel.
+
+| | |
+|---|---|
+| **Places** | gold and angular: square = harbour, triangle = isle, X = dig |
+| **People** | round and each its own hue: circle = buyer, ringed circle = a regular or Yoon, **diamond = Finn** |
+| **You** | white with a ring, and nothing else on the chart is white |
+
+The three golds can share a colour because their shapes never collide; the people are pulled
+apart by hue because they are all round. Other captains moved off green (`#62c8f0`) since a
+circle in almost the buyers' green was the single worst confusion on the map.
+
+**Finn is a ruby diamond, the only red and the only diamond**, and it doubles into a ringed
+one labelled "Finn — waiting" when he is holding a finished job. He used to be deliberately
+absent, on the rule that a rival you can look up is not a rival you find; that was right when
+he moved 4,200px per conversation and wrong the moment he was moored, because a fixed
+character the chart refuses to show is not mysterious, only missing.
+
+The key is grouped into Places / People / The chart, and every swatch is drawn through the
+same shape helpers the canvas uses so the two cannot drift.

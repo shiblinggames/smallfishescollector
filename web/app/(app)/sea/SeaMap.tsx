@@ -5674,6 +5674,12 @@ hullRef={hullRefFor(t.key)} />
         at={pos}
         side={onSortie ? 'sortie' : inAnchorage ? 'expeditions' : 'fishing'}
         seaAt={p => seaAt(p, 0).solid}
+        // The rival, and whether he is holding a finished job. Only on the
+        // fishing half: he is moored in the Shallows and drawing him on the
+        // expeditions chart would be a pin pointing through a reef.
+        finn={finn && !inAnchorage && !onSortie
+          ? { x: finn.at.x, y: finn.at.y, ready: finn.questReady }
+          : null}
         found={found}
         bearings={bearings}
         dug={dug}

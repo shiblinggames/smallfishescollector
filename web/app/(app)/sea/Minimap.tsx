@@ -63,26 +63,68 @@ const worldH = (h: Half) => h.dir === 1 ? (h.cy + h.r) - h.flat : h.flat - (h.cy
 
 /** Every colour the chart draws with, in one place, so the key cannot drift
  *  from the map it is a key to. */
+/**
+ * ── HOW THIS MAP IS READ ────────────────────────────────────────────────────
+ *
+ * SHAPE CARRIES THE MEANING; COLOUR ONLY REINFORCES IT. Everything on here was
+ * a circle in one of two colours, so a harbour, an isle, a buyer, a friend and
+ * a dig site were five dots in gold or green and the legend was ten rows of
+ * almost the same picture. At four pixels across, hue is the weaker channel and
+ * two greens are indistinguishable; a square is never mistaken for a triangle.
+ *
+ *   PLACES are gold and angular:   square = harbour, triangle = isle, X = dig.
+ *   PEOPLE are round and coloured: circle = buyer, ringed = one of the
+ *                                  regulars, diamond = the rival.
+ *   YOU are white with a ring, and nothing else on the chart is white.
+ *
+ * The three golds can share a colour precisely because their shapes do not
+ * collide, and the people are pulled apart by hue because they are all round.
+ */
 const INK = {
+  /** Places. One gold, three shapes. */
   port: '#f0c040',
   isle: '#f0c040',
   isleDone: 'rgba(150,182,164,0.75)',
   dig: '#f0c040',
   digDone: 'rgba(150,182,164,0.5)',
-  trader: '#7fd6a0',
-  /** The nine you can get to know. Warm against the traders' green, because
-   *  the two are different errands and the map should say which is which
-   *  without a legend. */
+  /** People. One shape family, four hues, none of them each other's. */
+  trader: '#6fd39a',
   regular: '#e8b464',
-  friend: '#5ee08a',
+  /** Other captains. Moved off green: it was the buyers' colour and a circle
+   *  in almost the same green was the single worst confusion on this map. */
+  friend: '#62c8f0',
   yoon: '#c084fc',
+  /** THE RIVAL. Ruby, which is his own character colour, and the only red on
+   *  the whole chart. Nothing else can be mistaken for him and he cannot be
+   *  mistaken for anything else, which is the entire requirement for the one
+   *  mark that means "the campaign is here". */
+  finn: '#e8564a',
   you: '#ffffff',
   fog: 'rgb(26,32,41)',
 } as const
 
+/** Canvas shape helpers, so the map and its legend cannot draw the same thing
+ *  two different ways. */
+function sq(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  ctx.beginPath(); ctx.rect(x - r, y - r, r * 2, r * 2)
+}
+function tri(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x, y - r); ctx.lineTo(x + r, y + r * 0.8); ctx.lineTo(x - r, y + r * 0.8)
+  ctx.closePath()
+}
+function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y)
+  ctx.closePath()
+}
+
 export default function Minimap({
-  open, onClose, fog, at, seaAt, found, bearings, dug, friends, side = 'fishing',
+  open, onClose, fog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
 }: {
+  /** The rival, if he is on this half of the world. `ready` doubles his mark:
+   *  a job of his is finished and he is holding your pay. */
+  finn?: { x: number; y: number; ready: boolean } | null
   open: boolean
   onClose: () => void
   /** Which half of the world to draw. See HALVES. */
@@ -197,7 +239,7 @@ export default function Minimap({
       if (p.kind !== 'port') continue
       const x = tx(p.x), y = ty(p.y)
       ctx.fillStyle = INK.port
-      ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill()
+      sq(ctx, x, y, 4); ctx.fill()
       ctx.strokeStyle = 'rgba(6,12,18,0.9)'; ctx.lineWidth = 1.5; ctx.stroke()
       ctx.fillStyle = 'rgba(244,236,216,0.92)'
       ctx.font = '600 9px ui-sans-serif, system-ui'
@@ -254,12 +296,12 @@ export default function Minimap({
       const done = found.has(isle.id)
       const x = tx(isle.x), y = ty(isle.y)
       ctx.fillStyle = done ? INK.isleDone : INK.isle
-      ctx.beginPath(); ctx.arc(x, y, done ? 2.4 : 3.4, 0, Math.PI * 2); ctx.fill()
+      tri(ctx, x, y, done ? 3 : 4.2); ctx.fill()
       if (!done) {
         // A ring, so an unclaimed isle reads at a glance on a busy chart.
         ctx.strokeStyle = 'rgba(255,206,138,0.55)'
         ctx.lineWidth = 1
-        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.stroke()
+        ctx.beginPath(); ctx.arc(x, y, 6.5, 0, Math.PI * 2); ctx.stroke()
       }
     }
 
@@ -285,9 +327,35 @@ export default function Minimap({
       ctx.stroke()
     }
 
-    // FINN IS DELIBERATELY NOT DRAWN. He had a ring here and it made the chart
-    // answer the one question the chart should never answer — a man you can
-    // look up is not a man you find. See the note on the compass.
+    // ── THE RIVAL ────────────────────────────────────────────────────────
+    //
+    // He used to be deliberately absent, and the note here said a man you can
+    // look up is not a man you find. That was correct for a rival who moved
+    // 4,200px after every conversation and whose whole role was to be hunted.
+    //
+    // IT IS WRONG NOW. He is moored (lib/seaFinn), and the reason he was moored
+    // is that the campaign should be somewhere you can go on purpose. A fixed
+    // character the chart refuses to show is not mysterious, it is just missing.
+    //
+    // A ruby diamond, the only red and the only diamond on this map, and when
+    // he is holding a finished job it doubles into a ringed one. That second
+    // state is the whole point: the chart should be able to tell you the
+    // campaign is waiting on you from one glance at the map.
+    if (finn) {
+      const x = tx(finn.x), y = ty(finn.y)
+      if (finn.ready) {
+        ctx.strokeStyle = INK.finn
+        ctx.lineWidth = 1.6
+        diamond(ctx, x, y, 9); ctx.stroke()
+      }
+      ctx.fillStyle = INK.finn
+      diamond(ctx, x, y, 5.2); ctx.fill()
+      ctx.strokeStyle = 'rgba(6,12,18,0.9)'; ctx.lineWidth = 1.4; ctx.stroke()
+      ctx.fillStyle = 'rgba(250,214,208,0.95)'
+      ctx.font = '700 8px ui-sans-serif, system-ui'
+      ctx.textAlign = 'center'
+      ctx.fillText(finn.ready ? 'Finn — waiting' : 'Finn', x, y - 11)
+    }
 
     // ── YOUR CREW ────────────────────────────────────────────────────────
     // Drawn last but one, so a friend is never buried under an isle pin, and
@@ -313,7 +381,7 @@ export default function Minimap({
       ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, w, at, seaAt, found, bearings, dug, friends])
+  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 
@@ -390,25 +458,33 @@ export default function Minimap({
               }} />
 
             {/* ── THE KEY ────────────────────────────────────────────────
-                Every mark the canvas draws, drawn the same way at the same
-                size. A chart with eight kinds of dot on it and no key is a
-                puzzle about the chart rather than about the sea, and this one
-                has quietly grown from three marks to eight. */}
-            <div style={{
-              width: w, marginTop: 10,
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))',
-              gap: '6px 14px',
-            }}>
-              <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="You" />
-              <Key mark={<Dot c={INK.port} r={4.5} ring="rgba(6,12,18,0.9)" />} label="Harbour" />
-              <Key mark={<Dot c={INK.isle} r={3.4} ring="rgba(255,206,138,0.55)" ringR={6.5} />} label="Isle, not landed" />
-              <Key mark={<Dot c={INK.isleDone} r={2.6} />} label="Been ashore" />
-              <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
-              <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
-              <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
-              <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
-              <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="A friend" />
-              <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
+                GROUPED, because ten flat rows of almost-identical dots is a
+                puzzle about the chart rather than a key to it. Places first
+                (gold, angular), then people (round, and each its own colour),
+                then you. Every mark is drawn at the canvas's own radii through
+                the same shape helpers, so the swatch cannot drift from the
+                thing it is a swatch for. */}
+            <div style={{ width: w, marginTop: 10 }}>
+              <KeyGroup title="Places">
+                <Key mark={<Square c={INK.port} />} label="Harbour" />
+                <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, not landed" />
+                <Key mark={<Tri c={INK.isleDone} />} label="Been ashore" />
+                <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
+                <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
+              </KeyGroup>
+
+              <KeyGroup title="People">
+                <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn, the rival" />
+                <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
+                <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
+                <Key mark={<Dot c={INK.yoon} r={2.4} ring={INK.yoon} ringR={4.6} />} label="Yoon" />
+                <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
+              </KeyGroup>
+
+              <KeyGroup title="The chart">
+                <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="You" />
+                <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
+              </KeyGroup>
             </div>
           </motion.div>
         </motion.div>
@@ -426,6 +502,23 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="font-cinzel font-700" style={{
         fontSize: '1.12rem', color: '#f2ead8', margin: 0, lineHeight: 1.15,
       }}>{value}</p>
+    </div>
+  )
+}
+
+/** One band of the key. The heading is what turns ten similar marks into
+ *  three short lists somebody can actually scan. */
+function KeyGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <p className="font-karla font-700 uppercase" style={{
+        fontSize: '0.52rem', letterSpacing: '0.18em',
+        color: 'rgba(180,214,232,0.4)', margin: '0 0 4px',
+      }}>{title}</p>
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))',
+        gap: '5px 14px',
+      }}>{children}</div>
     </div>
   )
 }
@@ -449,6 +542,32 @@ function Dot({ c, r, ring, ringR }: { c: string; r: number; ring?: string; ringR
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
       {ring && <circle cx="8" cy="8" r={ringR ?? r + 1.2} fill="none" stroke={ring} strokeWidth="1.2" />}
       <circle cx="8" cy="8" r={r} fill={c} />
+    </svg>
+  )
+}
+
+function Square({ c }: { c: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      <rect x="4" y="4" width="8" height="8" fill={c} stroke="rgba(6,12,18,0.9)" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
+function Tri({ c, ring }: { c: string; ring?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      {ring && <circle cx="8" cy="8" r="6.5" fill="none" stroke={ring} strokeWidth="1" />}
+      <path d="M8 3.4 L12.2 11.4 L3.8 11.4 Z" fill={c} />
+    </svg>
+  )
+}
+
+function Diamond({ c, ring }: { c: string; ring?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      {ring && <path d="M8 0.6 L15.4 8 L8 15.4 L0.6 8 Z" fill="none" stroke={ring} strokeWidth="1.3" />}
+      <path d="M8 3.2 L12.8 8 L8 12.8 L3.2 8 Z" fill={c} stroke="rgba(6,12,18,0.9)" strokeWidth="1.2" />
     </svg>
   )
 }
