@@ -22,6 +22,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { LANDMARKS, PLACES } from '../chart'
+import { ISLES } from '@/lib/seaIsles'
 import { coastline } from '@/lib/islandShape'
 import { ART_COLLIDERS, PORT_COLLIDERS, type ColliderShape } from '../colliders'
 
@@ -34,6 +35,7 @@ const STAGE = 460
 
 type Entry = { kind: 'art'; key: string; art: string; size: number }
   | { kind: 'port'; key: string; id: string; r: number }
+  | { kind: 'isle'; key: string; id: string; r: number }
 
 function buildEntries(): Entry[] {
   const byArt = new Map<string, number>()
@@ -47,9 +49,16 @@ function buildEntries(): Entry[] {
   }))
   out.push({ kind: 'art', key: 'dock-raids', art: '/sea/dock-raids.png', size: 624 })
   out.push({ kind: 'art', key: 'dock-voyages', art: '/sea/dock-voyages.png', size: 624 })
+  // The gate stacks: paint today, solid the moment shapes are drawn for them.
+  // See allObstacles in SeaMap — no entry means no obstacle, not a fallback.
+  out.push({ kind: 'art', key: 'rock-gate-w', art: '/sea/rock-gate-w.png', size: 760 })
+  out.push({ kind: 'art', key: 'rock-gate-e', art: '/sea/rock-gate-e.png', size: 760 })
   for (const p of PLACES) {
     if (p.kind !== 'port') continue
     out.push({ kind: 'port', key: `port:${p.id}`, id: p.id, r: p.r })
+  }
+  for (const i of ISLES) {
+    out.push({ kind: 'isle', key: `isle:${i.id}`, id: i.id, r: i.r })
   }
   return out
 }
@@ -68,7 +77,7 @@ export default function BoundaryBench() {
     for (const [k, v] of Object.entries(PORT_COLLIDERS)) t[`port:${k}`] = v.shapes.map(c => ({ ...c }))
     return t
   })
-  const [grab, setGrab] = useState<{ i: number; part: 'a' | 'b' | 'r' } | null>(null)
+  const [grab, setGrab] = useState<{ i: number; part: 'a' | 'b' | 'r' | 'm' } | null>(null)
   const [squash, setSquash] = useState(false)
   /** The centre-stop prediction, off by default: it kept reading as a second
    *  boundary to tune when it is only a consequence of the one you draw. */
@@ -133,20 +142,25 @@ export default function BoundaryBench() {
       s.ar = r3(Math.max(0.02, Math.hypot(x - cx, y - cy) / (entry.kind === 'art' ? STAGE : STAGE / 2)))
     } else if (grab.part === 'b' && s.kind === 'capsule') {
       const p = fromPx(x, y); s.bx = p.ax; s.by = p.ay
-    } else {
+    } else if (grab.part === 'm' && s.kind === 'capsule') {
+      // The blue centre handle carries the whole capsule.
       const p = fromPx(x, y)
-      if (s.kind === 'capsule') {
-        // Dragging A carries B with it, so the whole capsule moves; hold the
-        // ends individually by their own handles to reshape.
-        const dx = p.ax - s.ax, dy = p.ay - s.ay
-        s.ax = p.ax; s.ay = p.ay; s.bx = r3(s.bx + dx); s.by = r3(s.by + dy)
-      } else { s.ax = p.ax; s.ay = p.ay }
+      const cx = (s.ax + s.bx) / 2, cy = (s.ay + s.by) / 2
+      const dx = p.ax - cx, dy = p.ay - cy
+      s.ax = r3(s.ax + dx); s.ay = r3(s.ay + dy)
+      s.bx = r3(s.bx + dx); s.by = r3(s.by + dy)
+    } else {
+      // An END handle moves ONLY its end — which is exactly how a capsule
+      // rotates: hold one end, swing the other. It used to carry the far end
+      // with it, which made rotation impossible and was reported as such.
+      const p = fromPx(x, y)
+      s.ax = p.ax; s.ay = p.ay
     }
     setShapes(next)
   }
 
   const coastPts = useMemo(() => {
-    if (entry.kind !== 'port') return null
+    if (entry.kind === 'art') return null
     const rs = coastline(entry.id)
     return rs.map((rr, i) => {
       const a = (Math.PI * 2 * i) / rs.length
@@ -158,16 +172,18 @@ export default function BoundaryBench() {
     const fmt = (s: ColliderShape) => s.kind === 'circle'
       ? `{ kind: 'circle', ax: ${s.ax}, ay: ${s.ay}, ar: ${s.ar} }`
       : `{ kind: 'capsule', ax: ${s.ax}, ay: ${s.ay}, bx: ${s.bx}, by: ${s.by}, ar: ${s.ar} }`
-    const arts: string[] = [], ports: string[] = []
+    const arts: string[] = [], ports: string[] = [], isles: string[] = []
     for (const e of entries) {
       const cs = table[e.key]
       if (!cs || cs.length === 0) continue
       const list = cs.map(fmt).join(', ')
       if (e.kind === 'art') arts.push(`  '${e.key}': { aspect: ${r3(aspects[e.key] ?? 1)}, shapes: [${list}] },`)
-      else ports.push(`  '${e.id}': { shapes: [${list}] },`)
+      else if (e.kind === 'port') ports.push(`  '${e.id}': { shapes: [${list}] },`)
+      else isles.push(`  '${e.id}': { shapes: [${list}] },`)
     }
     return `export const ART_COLLIDERS: Record<string, ArtCollider> = {\n${arts.join('\n')}\n}\n\n`
-      + `export const PORT_COLLIDERS: Record<string, PortCollider> = {\n${ports.join('\n')}\n}\n`
+      + `export const PORT_COLLIDERS: Record<string, PortCollider> = {\n${ports.join('\n')}\n}\n\n`
+      + `export const ISLE_COLLIDERS: Record<string, PortCollider> = {\n${isles.join('\n')}\n}\n`
   }, [table, entries, aspects])
 
   const copy = async () => {
@@ -180,7 +196,10 @@ export default function BoundaryBench() {
   const pad = HULL * scale
   const defC = entry.kind === 'art'
     ? { x: STAGE / 2, y: stageH, r: 0.42 * STAGE }
-    : { x: STAGE / 2, y: STAGE / 2, r: SHORE * (STAGE / 2) }
+    : entry.kind === 'port'
+      ? { x: STAGE / 2, y: STAGE / 2, r: SHORE * (STAGE / 2) }
+      // An isle's default is its whole radius.
+      : { x: STAGE / 2, y: STAGE / 2, r: STAGE / 2 }
 
   /** One shape's stadium geometry in stage px, shared by fill and halo. */
   const geo = (s: ColliderShape) => {
@@ -242,10 +261,30 @@ export default function BoundaryBench() {
               <img src={entry.art} alt="" draggable={false}
                 style={{ width: STAGE, height: 'auto', display: 'block', opacity: 0.95, pointerEvents: 'none' }} />
             ) : (
-              <svg viewBox="0 0 460 460" style={{ width: STAGE, height: STAGE, display: 'block' }} aria-hidden>
-                <polygon points={coastPts ?? ''} fill="rgba(126,146,110,0.5)"
-                  stroke="rgba(196,204,176,0.7)" strokeWidth={2} />
-              </svg>
+              <>
+                <svg viewBox="0 0 460 460" style={{ width: STAGE, height: STAGE, display: 'block' }} aria-hidden>
+                  <polygon points={coastPts ?? ''} fill="rgba(126,146,110,0.5)"
+                    stroke="rgba(196,204,176,0.7)" strokeWidth={2} />
+                </svg>
+                {/* THE BUILDINGS, exactly as PlaceIsland stands them up: same
+                    percentages of the island box, same width share, same
+                    counter-squash — without them the bench showed a bare green
+                    blob and every port looked like every other port. The
+                    Homestead's list is empty by design (it is per-captain),
+                    so it stays a blob; its coastline is still the true one. */}
+                {entry.kind === 'port' && PLACES.find(pp => pp.id === entry.id)?.buildings?.map((b, bi) => (
+                  <div key={bi} aria-hidden style={{
+                    position: 'absolute', left: `${b.x}%`, top: `${b.y}%`,
+                    width: STAGE * b.scale,
+                    transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+                    transformOrigin: 'bottom center', pointerEvents: 'none',
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img decoding="async" src={b.art} alt="" draggable={false}
+                      style={{ width: '100%', display: 'block' }} />
+                  </div>
+                ))}
+              </>
             )}
 
             {/* Shapes: one SVG so stadiums and halos are cheap round-capped
@@ -286,7 +325,7 @@ export default function BoundaryBench() {
               const rHandle = s.kind === 'capsule'
                 ? { x: mid.x + nx * g.r, y: mid.y + ny * g.r }
                 : { x: g.a.x + g.r, y: g.a.y }
-              const H = (part: 'a' | 'b' | 'r', at: { x: number; y: number }, cursor: string) => (
+              const H = (part: 'a' | 'b' | 'r' | 'm', at: { x: number; y: number }, cursor: string, color?: string) => (
                 <div key={part}
                   onPointerDown={e => {
                     e.preventDefault()
@@ -296,15 +335,16 @@ export default function BoundaryBench() {
                   style={{
                     position: 'absolute', left: at.x - 8, top: at.y - 8,
                     width: 16, height: 16, borderRadius: '50%',
-                    background: part === 'r' ? '#f0c040' : 'rgba(240,120,90,0.95)',
+                    background: color ?? (part === 'r' ? '#f0c040' : 'rgba(240,120,90,0.95)'),
                     border: '2px solid rgba(6,14,22,0.85)',
                     cursor, touchAction: 'none',
                   }} />
               )
               return (
                 <div key={i}>
-                  {H('a', g.a, 'move')}
-                  {s.kind === 'capsule' && H('b', g.b, 'move')}
+                  {H('a', g.a, s.kind === 'capsule' ? 'crosshair' : 'move')}
+                  {s.kind === 'capsule' && H('b', g.b, 'crosshair')}
+                  {s.kind === 'capsule' && H('m', mid, 'move', 'rgba(120,180,240,0.95)')}
                   {H('r', rHandle, 'ew-resize')}
                 </div>
               )

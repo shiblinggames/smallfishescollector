@@ -35,7 +35,7 @@ import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/l
 import { goAshore, type AshoreResult } from './isleActions'
 import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
-import { ART_COLLIDERS, PORT_COLLIDERS } from './colliders'
+import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
 import { PORTAL, PORTAL_TIERS, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
@@ -397,6 +397,34 @@ function artShapes(art: string, x: number, y: number, size: number, fallbackR: n
     : { x: px(k.ax), y: py(k.ay), x2: px(k.bx), y2: py(k.by), r: k.ar * size + HULL })
 }
 
+/**
+ * THE GATE STACKS, solid only once drawn.
+ *
+ * The four headlands are paint by the one-barrier rule — the band's face line
+ * is the reef's collider — but they are the one rock a hull can actually
+ * REACH: their paint climbs well past the face on the northern side of both
+ * mouths, so you could sail onto them. A drawn entry for 'rock-gate-w'/'-e'
+ * makes them solid; NO entry means no obstacle at all rather than a fallback
+ * circle, because a fallback here would re-fight the face line, and that
+ * fight is the bug the one-barrier rule exists to prevent.
+ *
+ * Lazy, because REEF and ANCHORAGE_WALL are generated further down the module
+ * than this constant evaluates.
+ */
+let obstaclesAll: Obstacle[] | null = null
+function allObstacles(): Obstacle[] {
+  if (obstaclesAll) return obstaclesAll
+  const stacks = [...REEF, ...ANCHORAGE_WALL]
+    .filter(m => m.art.includes('rock-gate'))
+    .flatMap(m => {
+      const c = ART_COLLIDERS[markKind(m.art)]
+      if (!c || c.shapes.length === 0) return []
+      return artShapes(m.art, m.x, m.y, m.size, 0)
+    })
+  obstaclesAll = [...OBSTACLES, ...stacks]
+  return obstaclesAll
+}
+
 const OBSTACLES: Obstacle[] = [
   ...PLACES.filter(p => p.kind === 'port').flatMap((p): Obstacle[] => {
     const c = PORT_COLLIDERS[p.id]
@@ -420,7 +448,13 @@ const OBSTACLES: Obstacle[] = [
   // with chests on them that a hull went straight through. `r` is their painted
   // radius (IsleRock draws at r * 2), so this stops the boat a hull clear of
   // the stone, well inside the r + 260 you can go ashore from.
-  ...ISLES.map(i => ({ x: i.x, y: i.y, r: i.r + HULL })),
+  ...ISLES.flatMap((i): Obstacle[] => {
+    const c = ISLE_COLLIDERS[i.id]
+    if (!c || c.shapes.length === 0) return [{ x: i.x, y: i.y, r: i.r + HULL }]
+    return c.shapes.map(k => k.kind === 'circle'
+      ? { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, r: k.ar * i.r + HULL }
+      : { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, x2: i.x + k.bx * i.r, y2: i.y + k.by * i.r, r: k.ar * i.r + HULL })
+  }),
   // The two berths. You moor ALONGSIDE a dock; sailing through the middle of
   // one is the same bug as sailing through an island, and it is the structure
   // the whole swap happens at.
@@ -471,7 +505,7 @@ function obstacleNearest(o: Obstacle, px: number, py: number): { x: number; y: n
 }
 
 function clearOfLand(w: Vec): Vec {
-  for (const o of OBSTACLES) {
+  for (const o of allObstacles()) {
     const c = obstacleNearest(o, w.x, w.y)
     const dx = w.x - c.x, dy = w.y - c.y
     const d = Math.hypot(dx, dy)
@@ -3490,7 +3524,7 @@ export default function SeaMap({
       // you scrape along the coast and round it instead of stopping dead
       // against it. A hull that halts the instant it touches land feels like a
       // wall; one that slides feels like a shore.
-      for (const o of OBSTACLES) {
+      for (const o of allObstacles()) {
         // Capsule-aware: the normal comes off the segment's closest point, so
         // sliding along a jetty's face is the same slide a coast gives.
         const c = obstacleNearest(o, pos.current.x, pos.current.y)

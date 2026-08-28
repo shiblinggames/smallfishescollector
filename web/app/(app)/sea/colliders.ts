@@ -50,3 +50,7 @@ export const ART_COLLIDERS: Record<string, ArtCollider> = {}
 
 /** Keyed by port id. Fractions of the port's own r. */
 export const PORT_COLLIDERS: Record<string, PortCollider> = {}
+
+/** Keyed by isle id, same units as ports — fractions of the isle's own r,
+ *  centre-origin, drawn over its true seeded coastline on the bench. */
+export const ISLE_COLLIDERS: Record<string, PortCollider> = {}
