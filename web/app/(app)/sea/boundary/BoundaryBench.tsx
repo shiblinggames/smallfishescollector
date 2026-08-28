@@ -189,10 +189,13 @@ export default function BoundaryBench() {
       <p className="font-karla" style={{
         fontSize: '0.9rem', color: 'rgba(198,216,230,0.72)', lineHeight: 1.6, margin: '4px 0 14px',
       }}>
-        <strong>Solid red</strong> is the planking line — the boat&apos;s edge reaches it.
-        The <strong>faint dash</strong> is that plus her half-beam: where her centre is
-        stopped. Capsules fit isometric footprints; drag an end to reshape, the waist
-        handle for thickness, the body to move. Copy into app/(app)/sea/colliders.ts.
+        <strong>Draw the solid shape on the object&apos;s edge</strong> — that is the
+        boundary, and it is what gets stored. The faint dash is the same boundary
+        expressed for the boat&apos;s centre (edge + her half-beam): ignore it while
+        tracing, read it only when leaving a gap — the boat fits through a channel
+        exactly where the dashes of its two sides don&apos;t touch. Capsules fit
+        isometric footprints; drag an end to reshape, the waist handle for thickness,
+        the body to move. Copy into app/(app)/sea/colliders.ts.
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
