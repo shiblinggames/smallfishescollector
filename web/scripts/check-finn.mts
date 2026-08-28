@@ -1,122 +1,84 @@
 /**
- * FINN HAS TO HAVE SOMEWHERE TO STAND.
+ * IS FINN REACHABLE, AND IS HE STANDING ON ANYBODY?
  *
- * His haunts are derived (lib/seaFinn.ts), which means nobody will ever open a
- * file and see a bad one. What will happen is somebody adds an island, and a
- * band quietly stops having room in it, and every haunt in that band falls
- * through to the overlap-anyway fallback — a Finn moored inside a landing
- * circle, where his hail button and the isle's "go ashore" button fight over
- * the one action slot and the story stops being reachable.
+ * This script used to walk 1,800 haunts and assert two things about a rival who
+ * moved after every conversation: that consecutive positions were far apart,
+ * and that none of them landed inside somebody else's prompt. He is moored now
+ * (see lib/seaFinn), so the first question is gone and the second is a single
+ * comparison rather than a simulation.
  *
- * That is not hypothetical. The first cut of seaFinn gave landmarks a keep-out
- * of `size + 600 + FINN_REACH`, and 35 of them at that radius sealed the
- * Shallows off completely: 0.0% of the band was standing room. It looked fine.
- *
- * So this asserts the three things the derivation promises:
- *
- *   1. Every band he can haunt has real standing room in it.
- *   2. He never overlaps anything that owns a button — a port, an isle, or a
- *      moored buyer. Tangency is allowed; overlap is not.
- *   3. Consecutive haunts are far enough apart to be a voyage rather than a
- *      turn of the wheel.
- *
- * Runs in `npm run check`.
+ * What is left still matters, and matters MORE than it did. He is the fishing
+ * campaign's only delivery route, so a mooring that overlapped a port's go
+ * ashore prompt or a buyer's hail would make the story unreachable for
+ * everybody at once rather than for one unlucky captain on one hop.
  */
-import { finnHaunt, FINN_REACH } from '../lib/seaFinn'
-import { PLACES, LANDMARKS, RESIDENTS, YOON, NORTH_WALL, OUTER_EDGE } from '../app/(app)/sea/chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, YOON, HOME } from '../app/(app)/sea/chart'
+import { FINN_MOORING, FINN_REACH } from '../lib/seaFinn'
 import { ISLES, ashoreRange } from '../lib/seaIsles'
 
-/** Every level at which his pool of water changes, plus a fresh captain. */
-const LEVELS = [1, 15, 30, 50, 75, 100]
-/** Past the highest finn_encounters on the live table (141) with room to spare. */
-const N = 300
-/** Consecutive haunts must clear this. Below it the marker for the next haunt
- *  would already be on screen when you finish talking to him at this one. */
-const MIN_HOP = 1800
-
+const { x, y } = FINN_MOORING
+const R = Math.hypot(x, y)
 let bad = 0
-const say = (m: string) => { console.error('  ✗ ' + m); bad++ }
 
-// ── 1. IS THERE ROOM IN EACH BAND AT ALL? ────────────────────────────────
-// Sampled directly against the same obstacle set the derivation uses, rather
-// than inferred from where haunts landed — a band can be 0.4% clear and still
-// look fine from 300 samples.
-const BUTTONS: { x: number; y: number; keep: number }[] = []
+function need(label: string, ok: boolean, detail: string) {
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label.padEnd(34)} ${detail}`)
+  if (!ok) bad++
+}
+
+// ── IN FISHABLE WATER ────────────────────────────────────────────────────
+const shallows = PLACES.find(p => p.id === 'shallows')!
+need('inside the Shallows', R >= (shallows.inner ?? 0) && R < (shallows.outer ?? 0),
+  `R=${Math.round(R)} against ${shallows.inner}..${shallows.outer}`)
+
+// ── A SHORT SAIL FROM HOME ───────────────────────────────────────────────
+// The whole reason he was moored: the campaign should be somewhere you drop in
+// on. Anything past a couple of thousand pixels stops being "near home".
+const fromHome = Math.hypot(x - HOME.x, y - HOME.y)
+need('a short sail from home', fromHome < 2400, `${Math.round(fromHome)}px from the start point`)
+
+// ── NOT INSIDE ANYBODY ELSE'S PROMPT ─────────────────────────────────────
+// His hail reaches FINN_REACH; a port's go-ashore is its berth, and every other
+// permanent person hails at 600. Two prompts on one patch of water means one of
+// them never comes up.
+const others: { name: string; x: number; y: number; keep: number }[] = [
+  ...RESIDENTS.map(r => ({ name: r.name, x: r.x, y: r.y, keep: 600 })),
+  ...SOCIALS.map(r => ({ name: r.name, x: r.x, y: r.y, keep: 600 })),
+  { name: YOON.name, x: YOON.x, y: YOON.y, keep: 600 },
+]
+let worst = { name: '', slack: Infinity }
+for (const o of others) {
+  const slack = Math.hypot(x - o.x, y - o.y) - (o.keep + FINN_REACH)
+  if (slack < worst.slack) worst = { name: o.name, slack }
+}
+need('clear of every other hail', worst.slack > 0,
+  `nearest is ${worst.name} with ${Math.round(worst.slack)}px of slack`)
+
+// ── NOT ON LAND, NOT IN A ROCK ───────────────────────────────────────────
+let land = { name: '', slack: Infinity }
 for (const p of PLACES) {
-  if (p.inner !== undefined) continue
-  BUTTONS.push({ x: p.x, y: p.y, keep: p.r + 420 + FINN_REACH })
+  if (p.kind !== 'port') continue
+  const slack = Math.hypot(x - p.x, y - p.y) - (p.r + FINN_REACH)
+  if (slack < land.slack) land = { name: p.name, slack }
 }
-for (const i of ISLES) BUTTONS.push({ x: i.x, y: i.y, keep: ashoreRange(i) + FINN_REACH })
-for (const r of RESIDENTS) BUTTONS.push({ x: r.x, y: r.y, keep: 600 + FINN_REACH })
-BUTTONS.push({ x: YOON.x, y: YOON.y, keep: 600 + FINN_REACH })
+need('clear of every port', land.slack > 0,
+  `nearest is ${land.name} with ${Math.round(land.slack)}px of slack`)
 
-const bands = PLACES.filter(p => p.kind === 'water' && p.inner != null && p.outer != null)
-console.log('Standing room by band:')
-for (const b of bands) {
-  let tot = 0, ok = 0
-  for (let a = 0.10; a < Math.PI - 0.10; a += 0.01) {
-    for (let rad = b.inner! + 420; rad <= b.outer! - 420; rad += 40) {
-      const x = Math.cos(a) * rad, y = Math.sin(a) * rad
-      tot++
-      if (y < 700) continue
-      if (BUTTONS.some(v => Math.hypot(v.x - x, v.y - y) < v.keep)) continue
-      if (LANDMARKS.some(l => Math.hypot(l.x - x, l.y - y) < l.size + 300)) continue
-      ok++
-    }
-  }
-  const pct = (ok / tot) * 100
-  console.log(`  ${b.id.padEnd(14)} ${pct.toFixed(1).padStart(5)}% clear`)
-  // The Shallows is deliberately excluded from his pool once anything else is
-  // open (see bandsFor), so it is allowed to be cramped. Every other band has
-  // to be somewhere he can actually be.
-  if (b.id !== 'shallows' && pct < 8) say(`${b.id} has only ${pct.toFixed(1)}% standing room — Finn will fall back into obstacles there`)
+let rock = { name: '', slack: Infinity }
+for (const m of LANDMARKS) {
+  if (m.solid === false) continue
+  const slack = Math.hypot(x - m.x, y - m.y) - (m.size * 0.5 + 120)
+  if (slack < rock.slack) rock = { name: m.art.split('/').pop() ?? '', slack }
 }
+need('clear of every solid landmark', rock.slack > 0,
+  `nearest is ${rock.name} with ${Math.round(rock.slack)}px of slack`)
 
-// ── 2 & 3. WALK THE HAUNTS ───────────────────────────────────────────────
-let minHop = Infinity, minHopAt = ''
-let overlaps = 0
-let firstOverlap = ''
-
-for (const lvl of LEVELS) {
-  let prev: { x: number; y: number } | null = null
-  for (let n = 0; n < N; n++) {
-    const h = finnHaunt(n, lvl)
-    const r = Math.hypot(h.x, h.y)
-
-    if (h.y < NORTH_WALL || r > OUTER_EDGE) say(`lvl${lvl} n${n} is off the chart at ${h.x},${h.y}`)
-
-    const band = PLACES.find(p => p.id === h.bandId)!
-    if (r < band.inner! || r > band.outer!) say(`lvl${lvl} n${n} claims ${h.bandId} but sits at r=${Math.round(r)}`)
-
-    // OVERLAP, not tangency. Two circles that touch at a single point leave
-    // neither prompt unreachable, and the derivation packs haunts right up
-    // against their keep-outs in tight water — so a `<` here would fail on
-    // geometry that is actually correct.
-    for (const v of BUTTONS) {
-      const d = Math.hypot(v.x - h.x, v.y - h.y)
-      if (d < v.keep - 1) {
-        overlaps++
-        if (!firstOverlap) firstOverlap = `lvl${lvl} n${n} at ${h.x},${h.y} is ${Math.round(v.keep - d)}px inside a landing circle`
-      }
-    }
-
-    if (prev) {
-      const d = Math.hypot(prev.x - h.x, prev.y - h.y)
-      if (d < minHop) { minHop = d; minHopAt = `lvl${lvl} n${n - 1}→${n}` }
-    }
-    prev = { x: h.x, y: h.y }
-  }
+let isle = { id: '', slack: Infinity }
+for (const i of ISLES) {
+  const slack = Math.hypot(x - i.x, y - i.y) - (ashoreRange(i) + FINN_REACH)
+  if (slack < isle.slack) isle = { id: i.id, slack }
 }
+need('clear of every isle landing', isle.slack > 0,
+  `nearest is ${isle.id} with ${Math.round(isle.slack)}px of slack`)
 
-console.log(`\nHaunts walked        ${LEVELS.length * N}`)
-console.log(`Shortest hop         ${Math.round(minHop)}px  (${minHopAt})  — ${(minHop / (FINN_REACH * 2)).toFixed(1)}× the hail circle`)
-console.log(`Inside a prompt      ${overlaps}`)
-
-if (overlaps > 0) say(`${overlaps} haunt(s) overlap something with its own button. First: ${firstOverlap}`)
-if (minHop < MIN_HOP) say(`shortest hop ${Math.round(minHop)}px is under ${MIN_HOP}px — he barely moves at ${minHopAt}`)
-
-if (bad) {
-  console.error(`\ncheck-finn: ${bad} problem(s).`)
-  process.exit(1)
-}
-console.log('\ncheck-finn: Finn always has somewhere to stand, and always has to be sailed to.')
+console.log(`\ncheck-finn: he is moored at ${x},${y} and ${bad === 0 ? 'everybody can reach him' : 'SOMETHING IS IN THE WAY'}.`)
+if (bad) process.exit(1)

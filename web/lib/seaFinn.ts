@@ -230,18 +230,61 @@ export function haunt(n: number, fishingLevel: number, prev: { x: number; y: num
  */
 let memo: { n: number; lvl: number; h: FinnHaunt } | null = null
 
-export function finnHaunt(encounters: number, fishingLevel: number): FinnHaunt {
-  const n = Math.max(0, Math.min(100_000, Math.floor(encounters)))
-  if (memo && memo.n === n && memo.lvl === fishingLevel) return memo.h
+/**
+ * WHERE HE IS: ONE MOORING, JUST OFF HOME.
+ *
+ * He used to be somewhere new after every conversation, walked across the
+ * southern fan by low-discrepancy strides with a 4,200px minimum hop, and the
+ * whole apparatus existed to make finding him the errand. It worked, and it
+ * cost more than it paid.
+ *
+ * THE PROBLEM WITH A MOVING RIVAL is that he was the only campaign character
+ * on the chart and the only one you could not go and see. The fishing story
+ * advances one meeting at a time through him, so a captain who wanted the next
+ * beat had to sail a hunt first, and a captain who did not know that just never
+ * got the story. Everybody else out here keeps to their own water and can be
+ * visited on purpose; he was weather.
+ *
+ * He is moored now, a short sail south-west of the Mainland, inside the
+ * Shallows and comfortably outside every other prompt on this chart. Near
+ * enough to home that the campaign is somewhere you drop in on, far enough out
+ * that it is still a trip. He swings on his anchor like the regulars do.
+ *
+ * IT ALSO FIXED HIS SCRIPT. Six of his lines are written for somebody standing
+ * on a dock watching anglers come and go, which had quietly become nonsense
+ * when he was ambushing you in the Abyss. Moored off the Mainland, in sight of
+ * the harbour he has always claimed to work, they read the way they were
+ * written.
+ *
+ * `fishingLevel` is kept in the signature and ignored. His mooring is in the
+ * Shallows, which needs no level, so there is nothing left to gate; the
+ * argument stays so every call site does not need touching for a fact that may
+ * come back.
+ */
+/**
+ * SOLVED, NOT EYEBALLED. The first spot picked by eye overlapped the landing
+ * prompt of a Shallows isle by 116px, which check-finn caught: two prompts on
+ * one patch of water and one of them never comes up. This is the position with
+ * the most clearance from everything that owns a prompt, weighted toward
+ * staying close to home. 290px of slack on its nearest neighbour and a
+ * 1,118px sail from the start point.
+ */
+export const FINN_MOORING = { x: -150, y: 1600 } as const
 
-  let prev: { x: number; y: number } | null = null
-  let h = haunt(0, fishingLevel, null)
-  for (let i = 1; i <= n; i++) {
-    prev = { x: h.x, y: h.y }
-    h = haunt(i, fishingLevel, prev)
+export function finnHaunt(encounters: number, _fishingLevel: number): FinnHaunt {
+  const n = Math.max(0, Math.min(100_000, Math.floor(encounters)))
+  const { x, y } = FINN_MOORING
+  // He sits in the Shallows and always will; no need to solve for it.
+  const band = PLACES.find(b => b.id === 'shallows')
+  return {
+    x, y,
+    bandId: 'shallows',
+    bandName: band?.name ?? 'The Shallows',
+    // The count still rides in the key. It is an agreement check between the
+    // client and the server about WHICH meeting this is, and that is still a
+    // moving number even though he is not.
+    key: `finn:${n}`,
   }
-  memo = { n, lvl: fishingLevel, h }
-  return h
 }
 
 /** Whether a boat at (x, y) is close enough to hail him. */

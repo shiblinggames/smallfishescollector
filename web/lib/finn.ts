@@ -103,6 +103,53 @@ export const FINN_SPEED_ZONE_MULT: Record<string, number> = {
 
 // ─── Story beats ─────────────────────────────────────────────────────────────
 
+/**
+ * ── WHERE YOU STAND WITH HIM ────────────────────────────────────────────────
+ *
+ * The regulars have rapport; he has STANDING, and the difference is the point.
+ * You are not befriending Finn. You are earning his attention, which he gives
+ * grudgingly and takes back the moment you stop turning up.
+ *
+ * DERIVED, NEVER STORED. `finn_encounters` and `finn_wins` have both been
+ * written since long before the friendship system existed, and they are exactly
+ * the two things the player does with him: turn up, and take his bets. A second
+ * counter would be a second source of truth for a fact the database already
+ * holds twice over.
+ *
+ * A win is worth two meetings. Taking a bet and landing it costs a hunt for the
+ * streak on top of the sail out, and it is the only thing he actually respects.
+ *
+ * The tiers are named as a rivalry rather than a friendship, and the ladder is
+ * his arc in five words: he starts by not knowing which angler you are and ends
+ * one rung short of calling you his equal, which is the exact thing he says he
+ * will never do.
+ */
+export const FINN_STANDING_NAME = [
+  'Another angler',
+  'Worth watching',
+  'Worth betting against',
+  'Worth teaching',
+  'Nearly his equal',
+] as const
+
+export const FINN_STANDING_AT = [0, 3, 8, 16, 28] as const
+
+/** Meetings, plus two for every bet you have taken off him. */
+export function finnStanding(encounters: number, wins: number): number {
+  return Math.max(0, encounters) + Math.max(0, wins) * 2
+}
+
+export function finnStandingTier(points: number): 0 | 1 | 2 | 3 | 4 {
+  for (let t = 4; t >= 1; t--) if (points >= FINN_STANDING_AT[t]) return t as 1 | 2 | 3 | 4
+  return 0
+}
+
+/** Points to the next rung, or null once there is no rung left. */
+export function finnToNext(points: number): number | null {
+  const t = finnStandingTier(points)
+  return t === 4 ? null : FINN_STANDING_AT[t + 1] - points
+}
+
 export type FinnTrack = 'encounter' | 'win' | 'reveal'
 
 /** One line of Finn dialogue with cinematic staging — shared by the encounter /

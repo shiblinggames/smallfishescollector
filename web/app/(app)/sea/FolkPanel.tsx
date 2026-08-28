@@ -33,7 +33,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import {
   FINN_NAME, FINN_AVATAR, FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS,
-  findNextEncounterBeat,
+  findNextEncounterBeat, finnStanding, finnStandingTier, finnToNext,
+  FINN_STANDING_NAME, FINN_STANDING_AT,
 } from '@/lib/finn'
 import { PLACES } from './chart'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
@@ -298,6 +299,11 @@ export default function FolkPanel({ open, onClose, finn, level }: {
   const [openFolk, setOpenFolk] = useState<string | null>(null)
   useEffect(() => { if (!open) setOpenFolk(null) }, [open])
   const showing = met.find(m => m.folk.id === openFolk) ?? null
+  /** He gets his own slot in the same one-open-at-a-time state. */
+  const showRival = openFolk === 'finn'
+  const rivalPts = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
+  const rivalTier = finnStandingTier(rivalPts)
+  const rivalNext = finnToNext(rivalPts)
 
   const seen = new Set(finn?.seenBeats ?? [])
   const heard = FINN_ENCOUNTER_BEATS.filter(b => seen.has(b.id)).length
@@ -360,80 +366,141 @@ export default function FolkPanel({ open, onClose, finn, level }: {
               </div>
             ) : (
               <>
-            {/* ── FINN. The reason the button exists, so he gets the top of the
-                panel, the gold, and the only progress bars. */}
-            <div style={{
-              marginTop: '0.7rem', padding: '0.7rem 0.8rem', borderRadius: 12,
-              background: 'rgba(28,22,8,0.72)',
-              border: `1px solid ${GOLD},${more ? 0.5 : 0.26})`,
-            }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <CharacterAvatar
-                  characterColor={FINN_AVATAR.characterColor}
-                  equippedHat={FINN_AVATAR.equippedHat}
-                  size={38}
-                  bgColor={FINN_AVATAR.bgColor}
-                  ringColor={FINN_AVATAR.borderColor}
-                />
+            {/* ── THE RIVAL, IN HIS OWN CATEGORY ───────────────────────
+                He is not one of the regulars and the panel should never file
+                him with them: they are people you are getting to know and he
+                is the fishing campaign wearing a coat. Same card language so
+                the panel reads as one thing, his own heading and his own gold
+                so it is obvious he is not the same kind of entry.
+
+                His STANDING is derived, never stored: meetings plus two for
+                every bet taken off him, both of which the profile has been
+                counting since long before any of this existed. */}
+            <Section title="The Rival">
+              <button
+                onClick={() => setOpenFolk(showRival ? null : 'finn')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+                  padding: '0.65rem 0.7rem', borderRadius: 13, cursor: 'pointer',
+                  textAlign: 'left',
+                  background: `linear-gradient(180deg, ${GOLD},0.1) 0%, rgba(255,255,255,0.02) 70%)`,
+                  border: `1px solid ${GOLD},${more ? 0.5 : 0.28})`,
+                  position: 'relative',
+                }}>
+                <div style={{
+                  transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
+                  flexShrink: 0, borderRadius: '50%',
+                  boxShadow: `0 0 14px ${GOLD},0.28)`,
+                }}>
+                  <CharacterAvatar
+                    characterColor={FINN_AVATAR.characterColor}
+                    equippedHat={FINN_AVATAR.equippedHat}
+                    bgColor={FINN_AVATAR.bgColor}
+                    ringColor={FINN_AVATAR.borderColor}
+                    size={46}
+                  />
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-cinzel font-700" style={{
-                    fontSize: '1.02rem', margin: 0, color: '#f4e2c0',
+                    fontSize: '1rem', color: '#f4e2c0', margin: 0, lineHeight: 1.1,
                   }}>{FINN_NAME}</p>
-                  <p className="font-karla" style={{
-                    fontSize: '0.72rem', margin: '1px 0 0', color: `${GOLD},0.8)`,
-                  }}>
-                    Met {finn?.encounters ?? 0} {(finn?.encounters ?? 0) === 1 ? 'time' : 'times'}
-                  </p>
-                </div>
-              </div>
-
-              {/* WHAT THE COUNTER IS FOR. Every meeting hands over the next
-                  piece of his story, and this is the only place that says so. */}
-              <div style={{ marginTop: '0.6rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   <p className="font-karla font-700" style={{
-                    fontSize: '0.7rem', margin: 0, color: 'rgba(244,226,192,0.9)',
-                  }}>His story</p>
-                  <p className="font-karla" style={{
-                    fontSize: '0.7rem', margin: 0, color: `${GOLD},0.75)`,
-                  }}>{heard} of {FINN_ENCOUNTER_BEATS.length}</p>
-                </div>
-                <Bar at={heard} of={FINN_ENCOUNTER_BEATS.length} color={`${GOLD},0.7)`} />
-              </div>
-
-              {(finn?.wins ?? 0) > 0 && (
-                <div style={{ marginTop: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                    <p className="font-karla font-700" style={{
-                      fontSize: '0.7rem', margin: 0, color: 'rgba(244,226,192,0.9)',
-                    }}>Wagers won</p>
-                    <p className="font-karla" style={{
-                      fontSize: '0.7rem', margin: 0, color: `${GOLD},0.75)`,
-                    }}>{finn?.wins ?? 0}</p>
+                    fontSize: '0.66rem', color: `${GOLD},0.8)`, margin: '2px 0 0',
+                  }}>{FINN_STANDING_NAME[rivalTier]}</p>
+                  <div style={{
+                    height: 3, borderRadius: 999, marginTop: 5,
+                    background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      width: `${Math.round((Math.min(rivalPts, FINN_STANDING_AT[4]) / FINN_STANDING_AT[4]) * 100)}%`,
+                      height: '100%', background: `${GOLD},0.75)`, borderRadius: 999,
+                    }} />
                   </div>
-                  {wonHeard > 0 && (
-                    <Bar at={wonHeard} of={FINN_WIN_BEATS.length} color={`${GOLD},0.45)`} />
-                  )}
                 </div>
-              )}
+                {more && (
+                  <span aria-hidden style={{
+                    position: 'absolute', top: 8, right: 9,
+                    width: 8, height: 8, borderRadius: 999,
+                    background: '#f0c040', boxShadow: '0 0 8px rgba(240,192,64,0.8)',
+                  }} />
+                )}
+              </button>
 
-              <p className="font-karla" style={{
-                fontSize: '0.74rem', margin: '0.6rem 0 0', lineHeight: 1.45,
-                color: more ? 'rgba(244,226,192,0.92)' : `${SEA},0.6)`,
-              }}>
-                {!finn
-                  ? 'Somewhere on this sea, and in no hurry to be found.'
-                  : more
-                    ? `He has more to say, and he only says it face to face. Last seen out in ${finn.at.bandName}. Follow the compass and go and find him.`
-                    : 'You have heard everything he will tell you for now. He is still out there, and he still wants your coin.'}
-              </p>
+              {/* Opened, he shows the campaign rather than a favourite fish:
+                  how much of what he has to say you have heard, what he has
+                  taken off you and what you have taken back. */}
+              {showRival && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18 }}
+                  style={{
+                    marginTop: 8, padding: '0.7rem 0.8rem', borderRadius: 12,
+                    background: 'rgba(28,22,8,0.6)',
+                    border: `1px solid ${GOLD},0.24)`,
+                  }}>
+                  <p className="font-karla" style={{
+                    fontSize: '0.76rem', color: 'rgba(244,226,192,0.85)',
+                    lineHeight: 1.5, margin: 0,
+                  }}>
+                    {more
+                      ? `He has more to say, and he only says it face to face. Moored off the Mainland, a short sail out.`
+                      : 'You have heard everything he will tell you for now. He is still out there, and he still wants your coin.'}
+                  </p>
 
-              {finn?.challenge && (
-                <p className="font-karla font-700" style={{
-                  fontSize: '0.7rem', margin: '0.45rem 0 0', color: '#ffd986',
-                }}>A wager of his is running.</p>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <p className="font-karla font-700 uppercase" style={{
+                        fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
+                      }}>Met</p>
+                      <p className="font-cinzel font-700" style={{
+                        fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
+                      }}>{finn?.encounters ?? 0}</p>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p className="font-karla font-700 uppercase" style={{
+                        fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
+                      }}>Wagers won</p>
+                      <p className="font-cinzel font-700" style={{
+                        fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
+                      }}>{finn?.wins ?? 0}</p>
+                    </div>
+                    <div style={{ flex: 1.3 }}>
+                      <p className="font-karla font-700 uppercase" style={{
+                        fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
+                      }}>His story</p>
+                      <p className="font-cinzel font-700" style={{
+                        fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
+                      }}>{heard} of {FINN_ENCOUNTER_BEATS.length}</p>
+                    </div>
+                  </div>
+
+                  <Bar at={heard} of={FINN_ENCOUNTER_BEATS.length} color={`${GOLD},0.7)`} />
+
+                  {(finn?.wins ?? 0) > 0 && wonHeard > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <p className="font-karla" style={{
+                        fontSize: '0.62rem', color: `${SEA},0.45)`, margin: 0,
+                      }}>What winning has got out of him: {wonHeard} of {FINN_WIN_BEATS.length}</p>
+                      <Bar at={wonHeard} of={FINN_WIN_BEATS.length} color={`${GOLD},0.45)`} />
+                    </div>
+                  )}
+
+                  <p className="font-karla" style={{
+                    fontSize: '0.66rem', color: `${SEA},0.42)`, margin: '10px 0 0', lineHeight: 1.45,
+                  }}>
+                    {rivalNext === null
+                      ? 'There is no higher opinion of you to be had.'
+                      : `${rivalNext} more before he thinks better of you. A meeting counts once, a wager won counts twice.`}
+                  </p>
+
+                  {finn?.challenge && (
+                    <p className="font-karla font-700" style={{
+                      fontSize: '0.7rem', margin: '8px 0 0', color: '#ffd986',
+                    }}>A wager of his is running.</p>
+                  )}
+                </motion.div>
               )}
-            </div>
+            </Section>
 
             {/* ── THE NAMED FOLK. Permanent, always in the same water, worth
                 knowing about before you sail out to them. */}

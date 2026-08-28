@@ -199,7 +199,38 @@ If per-person "met" tracking is ever wanted for the residents and Yoon, that is 
 on profiles written at hail time. It was deliberately NOT built here: it buys a tick beside
 six names and the panel's job is the Finn loop.
 
-## Finn is not on the Salt Road
+## Finn IS on the Salt Road, in his own category
+
+He is filed under **The Rival**, never with the regulars: they are people you are getting to
+know and he is the fishing campaign wearing a coat. Same card language so the panel reads as
+one thing, his own heading and his own gold so it is obvious he is a different kind of entry.
+
+**He is moored now** (`FINN_MOORING`, a short sail south-west of the Mainland, 1,118px from
+the start point). He used to be somewhere new after every conversation, walked across the
+southern fan with a 4,200px minimum hop, and the hunt cost more than it paid: he was the only
+campaign character on the chart and the only one you could not go and visit, so a captain who
+wanted the next story beat had to sail a search first and a captain who did not know that
+never got the story at all. The position is SOLVED, not eyeballed — the first spot picked by
+eye clipped a Shallows isle's landing prompt by 116px and `check-finn` caught it.
+
+It also repaired his script for free. Six of his lines are written for somebody standing on a
+dock watching anglers come and go, which had become nonsense while he was ambushing captains
+in the Abyss. Moored in sight of the harbour he claims to work, they read as written.
+
+**His STANDING is derived, never stored:** `finn_encounters + finn_wins * 2`, both columns
+the profile has kept since long before any of this. A win counts double because taking a bet
+and landing it is the only thing he respects. Five rungs — Another angler / Worth watching /
+Worth betting against / Worth teaching / Nearly his equal — at 0 / 3 / 8 / 16 / 28. The
+ladder is his arc: he ends one rung short of calling you his equal, which is the exact thing
+he keeps saying he never will.
+
+`check-finn` changed jobs with him. It used to walk 1,800 haunts asserting they were far
+apart and clear; it now asserts the single mooring is in fishable water, a short sail from
+home, and clear of every port, hail, solid landmark and isle landing. That matters MORE than
+before: he is the campaign's only delivery route, so a mooring inside somebody else's prompt
+would make the story unreachable for everybody at once rather than for one captain on one hop.
+
+### The rest of his machinery
 
 He is the campaign's rival (see [story-universe.md](story-universe.md), and read it before
 writing him a line — the whole arc hangs on what he does not say yet). Code:
