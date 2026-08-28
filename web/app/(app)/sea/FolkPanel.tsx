@@ -33,6 +33,8 @@ import {
   FINN_STANDING_NAME, FINN_STANDING_AT,
 } from '@/lib/finn'
 import { PLACES } from './chart'
+import { getCharacterSprites } from '@/lib/characters'
+import { HATS } from '@/lib/hats'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
 import { folkState, type Rapport } from './folkActions'
 import type { FinnSeaState } from './finnActions'
@@ -136,6 +138,50 @@ function PersonCard({ face, accent, name, sub, pct, dot, onOpen }: {
         <div style={{ width: `${pct}%`, height: '100%', background: accent, borderRadius: 999 }} />
       </div>
     </button>
+  )
+}
+
+/**
+ * SOMEBODY OUT THERE YOU HAVE NOT MET.
+ *
+ * The roster was met-only for a while, on the reasoning that a list of
+ * strangers is homework. That was true when it was a list; as CARDS it reads
+ * the opposite way, because an empty slot in a set is an invitation rather than
+ * a chore. The difference is entirely in the shape.
+ *
+ * It gives away the WATER and nothing else. That is the honest middle: it tells
+ * you somebody is out there and roughly where to start looking, which is a
+ * reason to sail, without handing over the name or the face, which are the
+ * things worth finding.
+ */
+function UnknownCard({ water }: { water: string }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14,
+      background: 'rgba(255,255,255,0.018)',
+      border: `1px dashed ${SEA},0.18)`,
+    }}>
+      <div style={{
+        width: 62, height: 62, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid ${SEA},0.14)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span className="font-cinzel font-700" style={{
+          fontSize: '1.5rem', color: `${SEA},0.3)`, lineHeight: 1,
+        }}>?</span>
+      </div>
+      <p className="font-cinzel font-700" style={{
+        fontSize: '0.82rem', color: `${SEA},0.32)`, margin: '7px 0 0',
+        textAlign: 'center', lineHeight: 1.15,
+      }}>???</p>
+      <p className="font-karla font-700 uppercase" style={{
+        fontSize: '0.5rem', letterSpacing: '0.14em', color: `${SEA},0.28)`,
+        margin: '3px 0 0', textAlign: 'center',
+      }}>{water}</p>
+      <div style={{ width: '100%', height: 3, marginTop: 6 }} />
+    </div>
   )
 }
 
@@ -333,16 +379,61 @@ function RivalDetail({ finn, onBack }: { finn: FinnSeaState | null; onBack: () =
   )
 }
 
+/**
+ * ── THE FACES ARE FETCHED BEFORE ANYBODY ASKS FOR THEM ──────────────────────
+ *
+ * Every avatar on this panel was popping in a beat after it opened, every time.
+ * Two reasons, and the second is the real one.
+ *
+ * CharacterAvatar renders its sprites with `loading="lazy"`, which is right
+ * almost everywhere it is used (leaderboards, crew lists, long rosters) and
+ * exactly wrong here: a modal you deliberately opened is not somewhere the
+ * browser should be deferring work. And the panel's contents unmount when it
+ * closes, so every open re-created ten avatars and the lazy loader re-evaluated
+ * all of them from scratch.
+ *
+ * The cast is FIXED and TINY: nine regulars plus the rival, one body sprite and
+ * one hat each. So they are warmed once, on mount, long before the button is
+ * ever pressed. `decode()` rather than `onload` because a load event only means
+ * the bytes arrived, and what matters here is that the bitmap is ready to
+ * PAINT. After that the browser has them and the lazy attribute costs nothing.
+ *
+ * This runs on the sea page whether or not anybody opens the panel, which is
+ * the trade: about twenty small PNGs fetched once per session, against a
+ * visible stutter every single time the panel is opened.
+ */
+function warmFaces() {
+  const urls = new Set<string>()
+  for (const f of [...FOLK.map(x => x.face), FINN_FACE]) {
+    urls.add(getCharacterSprites(f.characterColor).rest)
+    const hat = HATS.find(h => h.id === f.hat)
+    if (hat?.restImageUrl) urls.add(hat.restImageUrl)
+  }
+  for (const src of urls) {
+    const img = new Image()
+    img.src = src
+    if (typeof img.decode === 'function') void img.decode().catch(() => {})
+  }
+}
+
 export default function FolkPanel({ open, onClose, finn }: {
   open: boolean
   onClose: () => void
   finn: FinnSeaState | null
 }) {
+  // Once per mount of the sea, not once per open.
+  useEffect(() => { warmFaces() }, [])
+
   const [rap, setRap] = useState<Rapport[]>([])
   const [showing, setShowing] = useState<string | null>(null)
 
+  /**
+   * Standings are loaded ON MOUNT and refreshed whenever the panel opens. The
+   * refresh matters (a chat out on the water changes them), but loading only on
+   * open meant the very first open had no cards at all until a server round
+   * trip came home. Mounting warm costs one read per session.
+   */
   useEffect(() => {
-    if (!open) return
     let alive = true
     void folkState().then(rows => { if (alive) setRap(rows) })
     return () => { alive = false }
@@ -353,6 +444,10 @@ export default function FolkPanel({ open, onClose, finn }: {
   const met = FOLK
     .map(folk => ({ folk, rap: rap.find(r => r.folkId === folk.id) }))
     .filter((x): x is { folk: Folk; rap: Rapport } => !!x.rap && x.rap.points > 0)
+
+  /** Everybody still out there, in the cast's own order so the grid does not
+   *  reshuffle as they are found. */
+  const unmet = FOLK.filter(f => !met.some(m => m.folk.id === f.id))
 
   const openFolk = met.find(m => m.folk.id === showing) ?? null
   const openRival = showing === 'finn'
@@ -503,14 +598,8 @@ export default function FolkPanel({ open, onClose, finn }: {
                       )}
                     </Section>
 
-                    <Section title={met.length > 0 ? `Known to you (${met.length})` : 'Known to you'}>
-                      {met.length === 0 ? (
-                        <p className="font-karla" style={{
-                          fontSize: '0.76rem', color: `${SEA},0.55)`, lineHeight: 1.5, margin: 0,
-                        }}>
-                          Nobody yet. Pull alongside somebody out there and say something.
-                        </p>
-                      ) : (
+                    {met.length > 0 && (
+                      <Section title={`Known to you (${met.length})`}>
                         <div style={{
                           display: 'grid', gap: 8,
                           gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
@@ -524,8 +613,27 @@ export default function FolkPanel({ open, onClose, finn }: {
                               onOpen={() => { vibrate(6); setShowing(folk.id) }} />
                           ))}
                         </div>
-                      )}
-                    </Section>
+                      </Section>
+                    )}
+
+                    {/* The set, minus what you have found. A card moves out of
+                        here and into the section above the moment you say
+                        something to them, which is the only reward this panel
+                        has to give and the reason the empty slots are worth
+                        showing at all. Gone entirely once nobody is left. */}
+                    {unmet.length > 0 && (
+                      <Section title={`Still out there (${unmet.length})`}>
+                        <div style={{
+                          display: 'grid', gap: 8,
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
+                        }}>
+                          {unmet.map(folk => (
+                            <UnknownCard key={folk.id}
+                              water={PLACES.find(w => w.id === folk.zoneId)?.name ?? 'Open water'} />
+                          ))}
+                        </div>
+                      </Section>
+                    )}
 
                     {/* The wanderers get a legend rather than rows: they are
                         hashed out of (cell, day) and gone at midnight, so "who

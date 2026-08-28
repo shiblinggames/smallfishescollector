@@ -152,11 +152,24 @@ new mark within the CURRENT TIER's span (not the whole ladder, or late tiers loo
 progress), and crossing a tier takes the card over with the line they only ever say once.
 The first cut paid out in a silent integer inside a panel nobody was looking at.
 
-**The Salt Road is a grid of portrait cards**, met-only, and tapping one opens what you know
-about them: water, standing, their favourite catch, and how many gifts you have brought. A
-card carries one piece of live state, a dot when they have a word for you, so the grid answers
-"who should I go and see" at a glance. It was a list of horizontal rows, which reads as a
-database; the face is the point. A roster of
+**The Salt Road is a grid of portrait cards.** Tapping one opens what you know about them:
+water, standing, favourite catch, gifts brought. A card carries one piece of live state, a dot
+when they have a word for you, so the grid answers "who should I go and see" at a glance. It
+was horizontal rows once, which reads as a database; the face is the point.
+
+**Two sections: Known to you, and Still out there.** Unmet regulars show as dashed cards with
+a question mark and their WATER and nothing else, and move up into Known to you the moment you
+say something to them. The roster was met-only for a while, on the reasoning that a list of
+strangers is homework. That is true of a LIST and the opposite of true for cards: an empty
+slot in a set is an invitation. Giving away the band is the honest middle, a reason to sail
+without handing over the name or the face. The section disappears once nobody is left.
+
+**The cast's faces are warmed on mount, not on open.** `CharacterAvatar` uses `loading="lazy"`,
+which is right in leaderboards and long rosters and exactly wrong in a modal somebody
+deliberately opened, and the panel's contents unmount on close so every open re-created ten
+avatars from scratch. The cast is fixed and tiny, so `warmFaces()` fetches and `decode()`s the
+lot once per session. Standings load on mount too, so the first open is not an empty grid
+waiting on a round trip. A roster of
 strangers is homework: it says there are eight more people out there and nothing about any
 of them, turning a thing you discover into a thing you are behind on.
 
