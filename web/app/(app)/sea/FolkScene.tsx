@@ -127,7 +127,7 @@ function Choice({ label, hint, accent, warm, onClick, disabled }: {
 }
 
 export default function FolkScene({
-  folk, open, tier, points, opener, gain, resolved, canChat, canGift, hold, busy,
+  folk, open, tier, points, opener, gain, resolved, canChat, canGift, knowsFav, hold, busy,
   onChat, onGift, onClose,
 }: {
   folk: Folk | null
@@ -144,6 +144,9 @@ export default function FolkScene({
   resolved: { text: string; nonce: number } | null
   canChat: boolean
   canGift: boolean
+  /** Have they actually told you what they like? Changes the picker from a
+   *  hint into a statement. */
+  knowsFav: boolean
   hold: { id: number; name: string; qty: number; habitat: string | null }[]
   busy: boolean
   onChat: () => void
@@ -337,8 +340,17 @@ export default function FolkScene({
                 ) : hold.map(f => (
                   <Choice key={f.id}
                     label={f.name}
+                    /* TWO WAYS TO LEARN WHAT SOMEBODY LIKES, and this is
+                       the one that does not need them to say it. Before they
+                       have told you, holding their fish shows a NUDGE - they
+                       keep looking at it - which is enough to work out on your
+                       own and not enough to be told. Afterwards it is a plain
+                       statement with the number on it, because by then it is
+                       something you know rather than something you noticed. */
                     hint={f.id === folk.favourite.id
-                      ? 'Their favourite. Worth three.'
+                      ? (knowsFav
+                        ? 'Their favourite. Worth three.'
+                        : 'They keep looking at this one.')
                       : `${f.qty} in the hold`}
                     accent={accent}
                     warm={f.id === folk.favourite.id}

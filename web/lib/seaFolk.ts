@@ -241,6 +241,7 @@ export const FOLK: Folk[] = [
         "Back again. Good. The ones who come back are the ones who last.",
         "I know your boat now. I hear it before I see it, which is more than I can say for most.",
         "You've stopped looking at the scale. That took you no time at all.",
+        "Bring me a largemouth bass one of these days. My mother weighed the first one I ever landed and told me it was small. It was not.",
       ],
       [
         "Sit a minute. The water is not going anywhere and neither is the price.",
@@ -291,6 +292,7 @@ export const FOLK: Folk[] = [
         "You again. Fine. You are quick, I will give you that.",
         "Most captains waste a minute of my day. You waste about forty seconds. That is nearly respect.",
         "Do not take the short way past the reef in a swell. That is free, and it is all you are getting.",
+        "A wahoo. That is the one. Fastest thing in this water and I have never once been bored watching one come in. Do not read anything into that.",
       ],
       [
         "Sit if you are sitting. Do not hover. Hovering is worse than talking.",
@@ -341,6 +343,7 @@ export const FOLK: Folk[] = [
         "You worked out the sums, then. Most do, around the fourth trip.",
         "I like a captain who knows they are being charged for convenience and pays anyway. That is not being fooled, that is arithmetic.",
         "The deep is not dangerous. It is just far. Far is what people are actually afraid of.",
+        "A blue marlin, since you have not asked. Yes. I have heard the joke about my name. I have heard it several thousand times and it was never funny.",
       ],
       [
         "I will tell you my trick. There is no trick. I sit still and everybody else does the sailing.",
@@ -391,6 +394,7 @@ export const FOLK: Folk[] = [
         "You again.",
         "Most stop coming after the first trip. You did not.",
         "Nothing has changed out here. I find that restful. You might not yet.",
+        "Anglerfish. It carries its own light down here. I could not tell you why that gets me, and it does.",
       ],
       [
         "I have been counting how many times you have come. It is more than anyone.",
@@ -441,6 +445,7 @@ export const FOLK: Folk[] = [
         "Twice now. The water down here does not usually get a second visit.",
         "You have the look already. It comes on quicker than people expect.",
         "I pay the best rate on this sea and I still think you are underpaid.",
+        "A coelacanth, if you ever raise one. It should have been gone sixty million years and nobody told it. I find that steadying.",
       ],
       [
         "This water is older than the harbour, older than the reef, older than whatever put the reef there.",
@@ -509,6 +514,7 @@ export const FOLK: Folk[] = [
         "Gyattt. You came back and you didn't even bring the coin. That's way more interesting.",
         "The rod's not the hard part. The hard part's the hand.",
         "Gyattt, you want it already? Betty johnson. Come back when the hand's ready.",
+        "Oarfish. Twenty feet of ribbon out of the black. Bruhhh. Bring me one of those and I will actually stop working for the afternoon.",
       ],
       [
         "I made it. Not the tier, the rod. The one on my boat. Made it, then I stopped making.",
@@ -569,6 +575,7 @@ export const FOLK: Folk[] = [
         "You stopped! Most do not stop.",
         "I watched you land one off the point yesterday. I tried the same spot. I caught weed.",
         "Is it true there is water so deep the fish make their own light? Somebody in the harbour told me and then laughed.",
+        "My favourite is a bluegill. I know. Everyone laughs. It was the first thing I ever caught and I am not going to pretend otherwise.",
       ],
       [
         "I have a question saved up. I have had it saved up for a week. How do you know when to reel?",
@@ -619,6 +626,7 @@ export const FOLK: Folk[] = [
         "You did not anchor. Good. You listen, which is more than the last four did.",
         "The middle wreck has a bell still hanging in it. I have never rung it and I am not going to.",
         "People think salvage is treasure. Salvage is mostly rope. Beautiful rope, sometimes.",
+        "Cobia, if you are ever holding one. They hang about wreckage, so I see more of them than most, and I have never once got tired of it.",
       ],
       [
         "I will tell you about the second wreck. Not today. But I will.",
@@ -669,6 +677,7 @@ export const FOLK: Folk[] = [
         "Marlow asked after you. He would deny it, so do not bring it up.",
         "I know where everybody is. Not because it is my business. Because nobody else keeps track.",
         "Pell said something almost warm about you. I have written the date down.",
+        "A cod. Plain Atlantic cod. Everything else out here is somebody's trophy and a cod is just supper, which is the entire point of it.",
       ],
       [
         "You want to know who is out here and where. Sit down, this takes a while, and it is the only thing I am good at.",
@@ -947,6 +956,30 @@ export function nextLine(folk: Folk, tier: FolkTier, seen: readonly string[]): {
   const idx = pool.findIndex((_, i) => !seenSet.has(`${folk.id}:${tier}:${i}`))
   const at = idx >= 0 ? idx : Math.floor(Math.random() * pool.length)
   return { line: pool[at], key: `${folk.id}:${tier}:${at}` }
+}
+
+/**
+ * HAVE THEY ACTUALLY TOLD YOU WHAT THEY LIKE?
+ *
+ * Read off the lines they have SAID, not off a tier. The panel used to reveal
+ * the favourite at tier 1 because that was roughly when they would have got
+ * round to it, which is the game handing over a fact rather than the captain
+ * learning one. Now the reveal and the telling are the same event: the check
+ * walks the seen-line keys, resolves each back to its text, and asks whether
+ * any of them names the fish.
+ *
+ * Derived by CONTENT rather than by a stored index, so reordering a pool
+ * cannot silently unlearn something a captain was told months ago.
+ */
+export function knowsFavourite(folk: Folk, seen: readonly string[]): boolean {
+  const needle = folk.favourite.name.toLowerCase()
+  for (const key of seen) {
+    const [id, t, i] = key.split(':')
+    if (id !== folk.id) continue
+    const line = folk.lines[Number(t)]?.[Number(i)]
+    if (line && line.toLowerCase().includes(needle)) return true
+  }
+  return false
 }
 
 /** How well a gift lands. Nothing is ever refused: a captain who sailed all

@@ -35,7 +35,7 @@ import {
 import { PLACES } from './chart'
 import { getCharacterSprites } from '@/lib/characters'
 import { HATS } from '@/lib/hats'
-import { FOLK, TIER_NAME, TIER_AT, toNextTier, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
+import { FOLK, TIER_NAME, TIER_AT, toNextTier, knowsFavourite, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
 import { folkState, type Rapport } from './folkActions'
 import { finnChapters, finnWaitingOn, FINN_CHAPTERS, type FinnChapterView } from '@/lib/finnQuests'
 import type { FinnSeaState } from './finnActions'
@@ -336,7 +336,9 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
         <p className="font-karla font-700 uppercase" style={{
           fontSize: '0.52rem', letterSpacing: '0.18em', color: `${SEA},0.5)`, margin: 0,
         }}>Favourite catch</p>
-        {rap.tier >= 1 ? (
+        {/* Shown once they have SAID it, not at a tier. The reveal and the
+            telling are the same event now. */}
+        {knowsFavourite(folk, rap.seenLines) ? (
           <>
             <p className="font-cinzel font-700" style={{
               fontSize: '1rem', color: folk.accent, margin: '4px 0 0',
@@ -348,7 +350,10 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
         ) : (
           <p className="font-karla" style={{
             fontSize: '0.74rem', color: `${SEA},0.45)`, margin: '4px 0 0', lineHeight: 1.45,
-          }}>You do not know them well enough yet.</p>
+          }}>
+            They have not mentioned it. Keep talking, or watch what they do when
+            you offer them something out of your hold.
+          </p>
         )}
       </div>
 

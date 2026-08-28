@@ -17,7 +17,7 @@ import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
 import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
-import { folkById } from '@/lib/seaFolk'
+import { folkById, knowsFavourite } from '@/lib/seaFolk'
 import { folkState, talkToFolk, giftToFolk, holdForGifting, type Rapport } from './folkActions'
 import FolkScene, { type SceneGain } from './FolkScene'
 
@@ -463,6 +463,7 @@ export default function TraderPanel({
           // when you happen to be holding fish is an option most captains
           // never discover.
           canGift={!rap.giftedToday}
+          knowsFav={knowsFavourite(folk, rap.seenLines)}
           hold={hold}
           busy={busy}
           onChat={haveAWord}
