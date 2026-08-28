@@ -1618,8 +1618,16 @@ export default function SeaMap({
         })
       }
       setFind({ kind: 'bottle', result })
-    } catch {
-      setFind({ kind: 'bottle', result: { ok: false, error: 'The tide took it.' } })
+    } catch (e) {
+      // NOT THE SAME MESSAGE THE SERVER USES. "The tide took it" is what
+      // openBottle says when a key genuinely no longer resolves, which is a
+      // normal thing that happens to a stale bottle. Reusing it here meant any
+      // exception at all - a dropped request, a server fault - was reported as
+      // that same ordinary outcome, so a real failure was indistinguishable
+      // from the tide and impossible to tell apart from the deck. Reported as
+      // exactly this: every bottle says the tide took it.
+      console.error('[bottle] open failed', e)
+      setFind({ kind: 'bottle', result: { ok: false, error: 'It slipped out of your hands. Try that one again.' } })
     } finally {
       landingRef.current = false
       setLanding(false)
