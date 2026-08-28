@@ -2700,6 +2700,23 @@ body.hardcore-gauntlet::after {
   .sea-hail { animation: none; }
 }
 
+/* FINN, HOLDING YOUR PAY. The one mark on this water that is allowed to throb
+   rather than bob, and it earns the exception: a finished job is the campaign
+   waiting on you, it shows from anywhere on the chart rather than only in hail
+   range, and it should read as an alert because that is exactly what it is.
+   The bob still runs underneath it; this rides on the glow so the two do not
+   fight over `transform`. */
+.finn-ready {
+  animation: seaHail 1.9s ease-in-out infinite, finnReady 1.4s ease-in-out infinite;
+}
+@keyframes finnReady {
+  0%, 100% { box-shadow: 0 0 26px rgba(255,190,80,0.75), 0 0 52px rgba(255,168,60,0.38); }
+  50%      { box-shadow: 0 0 40px rgba(255,206,110,1),   0 0 78px rgba(255,168,60,0.62); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .finn-ready { animation: none; }
+}
+
 /* THE WAKE. One mark, laid in world space by the rAF loop and left behind. No
    animation here on purpose: position, scale and opacity are all written by the
    loop, because a mark has to age from the moment the hull dropped it, and a CSS

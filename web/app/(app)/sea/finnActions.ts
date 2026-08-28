@@ -47,6 +47,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { finnHaunt } from '@/lib/seaFinn'
 import {
+  FINN_QUESTS, finnQuestById, nextFinnQuest, questProgressLabel, type FinnQuest,
+} from '@/lib/finnQuests'
+import {
   FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT,
   FINN_REVEAL_BEAT, FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
   FINN_EPILOGUE_OFFER_LINES, FINN_EPILOGUE_WIN_LINES, FINN_EPILOGUE_LOSS_LINES,
@@ -82,6 +85,38 @@ export type FinnChallenge = {
   endsAt?: number
 }
 
+/**
+ * THE JOB AS STORED, with the counters it will be judged against.
+ *
+ * Every one of these snapshots is taken at the moment he sets the job, which is
+ * what makes a job impossible to finish retroactively: the measurement is
+ * always a DELTA. A captain who takes "eight in a row" while sitting on a run
+ * of nine has done nothing yet.
+ */
+type StoredQuest = {
+  id: string
+  at: string
+  /** Lifetime catches when he set it. */
+  catch0: number
+  /** Lifetime perfects when he set it. */
+  perf0: number
+  /** Catches in the job's band, when it has one. */
+  zone0: number
+  /** Catches at or above the job's rarity, when it has one. */
+  rare0: number
+}
+
+export type FinnQuestView = {
+  id: string
+  label: string
+  reward: number
+  /** How far along, in the job's own units. */
+  have: number
+  target: number
+  done: boolean
+  progressText: string
+}
+
 export type FinnSeaState = {
   encounters: number
   wins: number
@@ -92,6 +127,14 @@ export type FinnSeaState = {
   at: { x: number; y: number; bandName: string }
   /** A bet in progress, if any. */
   challenge: FinnChallenge | null
+  /** The job he has set, if any, with live progress. */
+  quest: FinnQuestView | null
+  /** Is a job finished and waiting to be handed back? Drives every indicator
+   *  that points a captain at him, so it is derived once here rather than in
+   *  four places that could disagree. */
+  questReady: boolean
+  /** Jobs already handed in, for the ladder. */
+  questsDone: string[]
 }
 
 export type FinnTalk = {
@@ -105,7 +148,7 @@ export type FinnTalk = {
   at: { x: number; y: number; bandName: string }
 }
 
-const SEL = 'finn_encounters, finn_wins, finn_seen_beats, finn_revealed, finn_last_outcome, finn_challenge, fishing_xp, doubloons, ancient_catches, current_perfect_streak, total_perfects'
+const SEL = 'finn_encounters, finn_wins, finn_seen_beats, finn_revealed, finn_last_outcome, finn_challenge, finn_quest, finn_quests_done, fishing_xp, doubloons, ancient_catches, current_perfect_streak, total_perfects'
 
 type Row = {
   finn_encounters: number | null
@@ -114,6 +157,8 @@ type Row = {
   finn_revealed: boolean | null
   finn_last_outcome: string | null
   finn_challenge: StoredBet | null
+  finn_quest: StoredQuest | null
+  finn_quests_done: string[] | null
   fishing_xp: number | null
   doubloons: number | null
   ancient_catches: number[] | null
@@ -173,6 +218,92 @@ async function lifetimeCatches(admin: ReturnType<typeof createAdminClient>, uid:
   return (data ?? []).reduce((a, r) => a + ((r as { catches: number | null }).catches ?? 0), 0)
 }
 
+/**
+ * CATCHES IN ONE BAND, and catches at or above one rarity.
+ *
+ * Both join `fish_lifetime` against the species table server-side. They are the
+ * only two measurements a job needs that the profile does not already hold as a
+ * single number, and they are read at accept and again at turn-in so the job is
+ * always a delta.
+ */
+async function catchesWhere(
+  admin: ReturnType<typeof createAdminClient>, uid: string,
+  opts: { zone?: string; minRarity?: number },
+): Promise<number> {
+  if (!opts.zone && !opts.minRarity) return 0
+  let q = admin.from('fish_species').select('id')
+  if (opts.zone) q = q.eq('habitat', opts.zone)
+  if (opts.minRarity) q = q.gte('bite_rarity', opts.minRarity)
+  const { data: species } = await q
+  const ids = (species ?? []).map(r => (r as { id: number }).id)
+  if (!ids.length) return 0
+  const { data } = await admin.from('fish_lifetime')
+    .select('catches, fish_id').eq('user_id', uid).in('fish_id', ids)
+  return (data ?? []).reduce((a, r) => a + ((r as { catches: number | null }).catches ?? 0), 0)
+}
+
+/** Snapshot every counter a job could be measured against. Taken whole rather
+ *  than per-type: it is two extra reads once, at the moment he sets the job,
+ *  and it means changing a job's type later cannot silently read a snapshot
+ *  that was never captured. */
+async function snapshotFor(
+  admin: ReturnType<typeof createAdminClient>, uid: string,
+  quest: FinnQuest, perfNow: number,
+): Promise<StoredQuest> {
+  return {
+    id: quest.id,
+    at: new Date().toISOString(),
+    catch0: await lifetimeCatches(admin, uid),
+    perf0: perfNow,
+    zone0: quest.zone ? await catchesWhere(admin, uid, { zone: quest.zone }) : 0,
+    rare0: quest.minRarity ? await catchesWhere(admin, uid, { minRarity: quest.minRarity }) : 0,
+  }
+}
+
+/** How far along a stored job is, in its own units. */
+async function questProgress(
+  admin: ReturnType<typeof createAdminClient>, uid: string,
+  quest: FinnQuest, stored: StoredQuest, row: Row,
+): Promise<number> {
+  switch (quest.type) {
+    case 'catch_any':
+      return (await lifetimeCatches(admin, uid)) - stored.catch0
+    case 'land_perfects':
+      return (row.total_perfects ?? 0) - stored.perf0
+    case 'perfect_streak': {
+      // BOTH TESTS, for the reason the old bet needed both: the streak is a
+      // running total that survives being handed the job, so it also has to
+      // have been EARNED since. The progress shown is whichever is smaller,
+      // which is the honest answer to "how close am I".
+      const streak = row.current_perfect_streak ?? 0
+      const since = (row.total_perfects ?? 0) - stored.perf0
+      return Math.min(streak, since)
+    }
+    case 'catch_zone':
+      return (await catchesWhere(admin, uid, { zone: quest.zone })) - stored.zone0
+    case 'catch_rarity':
+      return (await catchesWhere(admin, uid, { minRarity: quest.minRarity })) - stored.rare0
+  }
+}
+
+async function viewQuest(
+  admin: ReturnType<typeof createAdminClient>, uid: string, row: Row,
+): Promise<FinnQuestView | null> {
+  const stored = row.finn_quest
+  const quest = finnQuestById(stored?.id)
+  if (!stored || !quest) return null
+  const have = Math.max(0, await questProgress(admin, uid, quest, stored, row))
+  return {
+    id: quest.id,
+    label: quest.label,
+    reward: quest.reward,
+    have,
+    target: quest.target,
+    done: have >= quest.target,
+    progressText: questProgressLabel(quest, have),
+  }
+}
+
 /** What the panel shows, rebuilt from the stored bet so it can never drift from
  *  what will actually be measured. `secs` is only meaningful for speed bets. */
 function viewOf(bet: StoredBet, fishingLevel: number, secs?: number): FinnChallenge {
@@ -201,6 +332,8 @@ export async function finnState(): Promise<FinnSeaState | null> {
   const h = finnHaunt(encounters, fishingLevel)
   const bet = row.finn_challenge
 
+  const quest = await viewQuest(admin, user.id, row)
+
   return {
     encounters,
     wins: row.finn_wins ?? 0,
@@ -209,6 +342,108 @@ export async function finnState(): Promise<FinnSeaState | null> {
     fishingLevel,
     at: { x: h.x, y: h.y, bandName: h.bandName },
     challenge: stillRunning(bet) ? viewOf(bet!, fishingLevel) : null,
+    quest,
+    questReady: !!quest?.done,
+    questsDone: row.finn_quests_done ?? [],
+  }
+}
+
+/**
+ * ── ONE RUNG OF THE LADDER ──────────────────────────────────────────────────
+ *
+ * The next unheard beat, and the next unset job, delivered together. This is
+ * the alternation in one place: he tells you the next piece of it and then asks
+ * you for the next thing, so a captain always leaves him carrying both a story
+ * and a task. Nothing else in this file is allowed to hand out either.
+ *
+ * Returns the lines to say and the job to write, so the caller can put both
+ * inside its own guarded update rather than this doing a second write that
+ * could land without the first.
+ */
+async function nextRung(
+  admin: ReturnType<typeof createAdminClient>, uid: string, row: Row,
+): Promise<{ lines: string[]; seen: string[]; quest: StoredQuest | null }> {
+  const seen = row.finn_seen_beats ?? []
+  const beat = findNextEncounterBeat(seen)
+  const lines: string[] = []
+  if (beat) lines.push(...beat.lines.map(l => (typeof l === 'string' ? l : l.text)))
+
+  const quest = nextFinnQuest(row.finn_quests_done ?? [])
+  let stored: StoredQuest | null = null
+  if (quest) {
+    stored = await snapshotFor(admin, uid, quest, row.total_perfects ?? 0)
+    lines.push(quest.give)
+  }
+  return {
+    lines,
+    seen: beat && !seen.includes(beat.id) ? [...seen, beat.id] : seen,
+    quest: stored,
+  }
+}
+
+/**
+ * ── HAND THE JOB BACK ───────────────────────────────────────────────────────
+ *
+ * Pays, records it, and clears the way for the next beat. Everything a captain
+ * gets for the work happens here rather than the moment the counter filled,
+ * which is the point of the whole change: the job ends by going and telling
+ * him, not by a number quietly reaching its target somewhere.
+ *
+ * GUARDED BY THE JOB STILL BEING THERE. Two taps on Hand it over would
+ * otherwise both read a finished job and both pay it; the update nulls the
+ * column and matches only while it is non-null, so the loser writes nothing.
+ * Same shape as the old bet settlement, and for the same reason.
+ */
+export async function turnInFinnQuest(): Promise<{
+  reward: number; lines: string[]; questsDone: string[]
+} | { error: string } | null> {
+  const user = await me()
+  if (!user) return null
+  const admin = createAdminClient()
+
+  const { data } = await admin.from('profiles').select(SEL).eq('id', user.id).single()
+  const row = data as Row | null
+  if (!row) return null
+  const stored = row.finn_quest
+  const quest = finnQuestById(stored?.id)
+  if (!stored || !quest) return { error: 'He has not set you anything.' }
+
+  const have = Math.max(0, await questProgress(admin, user.id, quest, stored, row))
+  if (have < quest.target) return { error: quest.waiting }
+
+  const doneIds = row.finn_quests_done ?? []
+  const newDone = doneIds.includes(quest.id) ? doneIds : [...doneIds, quest.id]
+
+  // HANDING IT BACK IS WHAT ADVANCES THE STORY. He takes the work, pays for it,
+  // and tells you the next piece of it on the spot, then asks for the next
+  // thing. One moment rather than three, and it is the only place a beat is
+  // handed out other than the very first meeting.
+  const rung = await nextRung(admin, user.id, { ...row, finn_quests_done: newDone })
+
+  const { data: settled } = await admin.from('profiles')
+    .update({
+      finn_quest: rung.quest,
+      finn_quests_done: newDone,
+      finn_seen_beats: rung.seen,
+      finn_last_outcome: null,
+    })
+    .eq('id', user.id)
+    .not('finn_quest', 'is', null)
+    .select('id')
+  if (!settled || settled.length === 0) return { error: 'That one is already handed in.' }
+
+  // PAID AFTER the job is provably ours to settle, never before.
+  if (quest.reward > 0) {
+    await admin.rpc('bump_profile_stat', { uid: user.id, col: 'doubloons', n: quest.reward })
+    await admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: quest.reward, reason: `Finn's job: ${quest.label}`,
+    })
+  }
+
+  return {
+    reward: quest.reward,
+    lines: [quest.done, ...rung.lines],
+    questsDone: newDone,
   }
 }
 
@@ -255,8 +490,23 @@ export async function speakToFinn(atIndex: number): Promise<FinnTalk | null> {
     }
   }
 
-  const beat = findNextEncounterBeat(seen)
-  const newSeen = beat && !seen.includes(beat.id) ? [...seen, beat.id] : seen
+  /**
+   * ── A JOB BLOCKS THE STORY, ON PURPOSE ──────────────────────────────
+   *
+   * While he has something outstanding with you he has nothing new to say,
+   * and this is the whole shape of the campaign rather than a restriction on
+   * it: beat, job, hand it back, next beat. A captain who could keep talking
+   * past an unfinished job would collect the entire story without ever doing
+   * any of the work, which is what the old wagers allowed.
+   *
+   * Turning up mid-job is never wasted. It still counts as a meeting for
+   * standing, and he tells you where you are with it.
+   */
+  const openStored = row.finn_quest
+  const openQuest = finnQuestById(openStored?.id)
+  const rung = openQuest ? null : await nextRung(admin, user.id, row)
+  const beat = openQuest ? null : findNextEncounterBeat(seen)
+  const newSeen = rung ? rung.seen : seen
   const newEncounters = encounters + 1
 
   // ── WHAT HE SAYS ────────────────────────────────────────────────────
@@ -274,9 +524,22 @@ export async function speakToFinn(atIndex: number): Promise<FinnTalk | null> {
   })()
 
   let lines: (string | FinnSceneLine)[]
-  if (beat) lines = [...beat.lines]
-  else if (revealed && Math.random() < FINN_EPILOGUE_LORE_CHANCE) lines = [pickRandomLine(FINN_EPILOGUE_LORE_LINES)]
-  else lines = [pickRandomLine(offerPool)]
+  if (openQuest) {
+    // MID-JOB. He says where you are with it, in his own words, and the panel
+    // shows the count underneath. Never a scold: there is no clock on any of
+    // these and he is a rival, not a foreman.
+    const have = Math.max(0, await questProgress(admin, user.id, openQuest, openStored!, row))
+    lines = have >= openQuest.target
+      ? ["You have got it. Go on then, hand it over."]
+      : [openQuest.waiting]
+  } else if (rung && rung.lines.length > 0) {
+    // The beat, then the job he sets off the back of it.
+    lines = rung.lines
+  } else if (revealed && Math.random() < FINN_EPILOGUE_LORE_CHANCE) {
+    lines = [pickRandomLine(FINN_EPILOGUE_LORE_LINES)]
+  } else {
+    lines = [pickRandomLine(offerPool)]
+  }
   if (callback) lines = [callback, ...lines]
 
   // ── AND WHETHER HE WANTS A BET ──────────────────────────────────────
@@ -314,6 +577,9 @@ export async function speakToFinn(atIndex: number): Promise<FinnTalk | null> {
       finn_encounters: newEncounters,
       finn_seen_beats: newSeen,
       finn_last_outcome: null,
+      // The job he just set, if he set one. An open job is left exactly as it
+      // was: only turnInFinnQuest may clear one.
+      finn_quest: rung?.quest ?? row.finn_quest,
       // A new offer replaces whatever was there; otherwise the running bet is
       // preserved and an expired one is swept.
       finn_challenge: bet ?? (running ? row.finn_challenge : null),

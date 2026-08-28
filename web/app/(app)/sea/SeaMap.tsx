@@ -78,10 +78,13 @@ import { pendingPacts } from './pactActions'
 import { coastClip, coastline } from '@/lib/islandShape'
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
-import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
+import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, turnInFinnQuest, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
 import { FINN_NAME, findNextEncounterBeat, type FinnSceneLine } from '@/lib/finn'
 
-const FinnEncounter = dynamic(() => import('../fishing/FinnEncounter'), { ssr: false })
+// THE SEA'S OWN. `fishing/FinnEncounter` is still mounted by the retired
+// fishing screen; this is the chart's version and it follows the chart's
+// conversation convention. See FinnTalk for why they are separate.
+const FinnTalk = dynamic(() => import('./FinnTalk'), { ssr: false })
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
@@ -1963,6 +1966,9 @@ export default function SeaMap({
   finnRef.current = finn
   const [nearFinn, setNearFinn] = useState(false)
   /** The conversation, while it is open. */
+  /** The scene, and the lines the server last handed back for it. */
+  const [finnOpen, setFinnOpen] = useState(false)
+  const [finnLines, setFinnLines] = useState<{ lines: string[]; nonce: number } | null>(null)
   const [finnTalk, setFinnTalk] = useState<{
     lines: (string | FinnSceneLine)[]
     mode: 'offer' | 'result' | 'reveal'
@@ -1986,10 +1992,11 @@ export default function SeaMap({
    * server's update, so a double tap cannot spend two beats of the story on one
    * meeting — the second call matches no row and comes back null.
    *
-   * `setFinn` with the new position is what makes him VANISH: the marker, the
-   * compass arrow and the proximity test all read the same `finn.at`, and the
-   * server has already moved it somewhere else by the time this resolves. He is
-   * gone from this patch of water before the conversation has closed.
+   * HE NO LONGER VANISHES. This used to note that `setFinn` with the new
+   * position is what made him disappear from the patch of water you were
+   * standing in, because the server had already moved him. He is moored now
+   * (see lib/seaFinn) and stays exactly where he is; what refreshes here is the
+   * job he may have just set and how far along it is.
    */
   const hailFinn = useCallback(async () => {
     const cur = finnRef.current
@@ -2006,7 +2013,40 @@ export default function SeaMap({
         at: talk.at,
       } : prev))
       setNearFinn(false)
-      setFinnTalk({ lines: talk.lines, mode: talk.mode, offer: talk.offer })
+      setFinnOpen(true)
+      setFinnLines(v => ({
+        lines: talk.lines.map(l => (typeof l === 'string' ? l : l.text)),
+        nonce: (v?.nonce ?? 0) + 1,
+      }))
+      // The job he may have just set, and any progress on it.
+      void finnState().then(f => { if (f) setFinn(f) })
+    } finally {
+      setFinnBusy(false)
+    }
+  }, [finnBusy])
+
+  /**
+   * HAND THE JOB BACK. Pays, records it, and he tells you the next piece of
+   * the story on the spot, so this is the campaign's forward gear and the only
+   * place a beat is handed out after the first meeting.
+   */
+  const handInFinnQuest = useCallback(async () => {
+    if (finnBusy) return
+    setFinnBusy(true)
+    try {
+      const res = await turnInFinnQuest()
+      if (!res || 'error' in res) {
+        if (res && 'error' in res) {
+          setFinnLines(v => ({ lines: [res.error], nonce: (v?.nonce ?? 0) + 1 }))
+        }
+        return
+      }
+      setFinnLines(v => ({ lines: res.lines, nonce: (v?.nonce ?? 0) + 1 }))
+      if (res.reward > 0) {
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: undefined }))
+      }
+      const f = await finnState()
+      if (f) setFinn(f)
     } finally {
       setFinnBusy(false)
     }
@@ -2241,7 +2281,10 @@ export default function SeaMap({
    *  (findNextEncounterBeat walks the unseen list, it is not milestone-gated),
    *  so this is amber right up until he has run out of things to say. */
   const finnWaiting = useMemo(
-    () => !!finn && findNextEncounterBeat(finn.seenBeats) !== null,
+    // A finished job outranks an unheard beat: one is "there is more story out
+    // there", the other is "he is holding your pay". Both light the same dot,
+    // and the dot is the only nudge either of them gets.
+    () => !!finn && (finn.questReady || findNextEncounterBeat(finn.seenBeats) !== null),
     [finn])
 
   /**
@@ -2321,6 +2364,7 @@ export default function SeaMap({
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); return }
       if (trawlsPeek) { setTrawlsPeek(false); return }
+      if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
       if (finnTalk) { setFinnTalk(null); return }
       if (hailing) { setHailing(null); return }
       if (picking) { setPicking(false); return }
@@ -2330,7 +2374,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, trawlOpen, ordersOpen, trawlsPeek, finnTalk, hailing, picking, crewOpen, folkOpen, mapOpen])
+  }, [find, ashore, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, picking, crewOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -2577,7 +2621,9 @@ export default function SeaMap({
 
   const helmLabel: { act: string | null; hold: string | null } = (() => {
     if (fishingIn) return { act: null, hold: null }
-    if (nearFinn && !finnTalk) return { act: `Hail ${FINN_NAME}`, hold: null }
+    if (nearFinn && !finnOpen) {
+      return { act: finn?.questReady ? `${FINN_NAME} is waiting on you` : `Hail ${FINN_NAME}`, hold: null }
+    }
     if (nearTrader && !hailing) {
       return { act: dealt.includes(nearTrader.key) ? `Speak to ${nearTrader.name}` : `Hail ${nearTrader.name}`, hold: null }
     }
@@ -4412,7 +4458,7 @@ hullRef={hullRefFor(t.key)} />
             behind a trader who happens to be moored on the same wave, and given
             his own component rather than a TraderBoat because the plate under
             him has to say what he is, and what he is is not a kind of trade. */}
-        {finn && !fishingIn && <FinnBoat at={finn.at} isNear={nearFinn} />}
+        {finn && !fishingIn && <FinnBoat at={finn.at} isNear={nearFinn} ready={finn.questReady} />}
 
         {/* The wake, in the world layer so each mark stays on the water where
             the hull left it. Every one of these is positioned by the loop. */}
@@ -5728,16 +5774,14 @@ hullRef={hullRefFor(t.key)} />
           moves the story. Mounts whenever there is something to say, which
           includes the settlement of a bet he is not standing next to: he gets
           the last word on a wager wherever you happened to finish it. */}
-      <FinnEncounter
-        visible={!!finnTalk}
-        lines={finnTalk?.lines ?? []}
-        mode={finnTalk?.mode ?? 'offer'}
-        challenge={finnTalk?.offer ?? undefined}
-        resultKind={finnTalk?.resultKind}
-        rewardText={finnTalk?.rewardText}
-        onAccept={() => { void takeFinnBet() }}
-        onPass={() => { void passFinnBet() }}
-        onDismiss={() => setFinnTalk(null)}
+      <FinnTalk
+        finn={finn}
+        open={finnOpen}
+        incoming={finnLines}
+        busy={finnBusy}
+        onSpeak={() => { void hailFinn() }}
+        onTurnIn={() => { void handInFinnQuest() }}
+        onClose={() => { setFinnOpen(false); setFinnLines(null) }}
       />
 
       {/* TEACHING. The walkthrough runs once on the first arrival; the
@@ -6650,9 +6694,11 @@ const FinnBet = memo(function FinnBet({ bet, progress }: {
  * Counter-squashed like everything else with height — he stands ON the plane,
  * he is not painted onto it.
  */
-const FinnBoat = memo(function FinnBoat({ at, isNear }: {
+const FinnBoat = memo(function FinnBoat({ at, isNear, ready }: {
   at: { x: number; y: number }
   isNear: boolean
+  /** A job of his is finished and waiting to be handed back. */
+  ready?: boolean
 }) {
   return (
     <div style={{
@@ -6665,23 +6711,37 @@ const FinnBoat = memo(function FinnBoat({ at, isNear }: {
 
       {/* THE HAIL MARK. Same shape as a trader's and a warmer colour, which is
           the whole visual claim being made: he is a person you can talk to,
-          and he is not one of the others. */}
-      {isNear && (
+          and he is not one of the others.
+
+          WHEN A JOB IS DONE IT SHOWS FROM ANYWHERE, not only in hail range. He
+          is the campaign's forward gear and a captain who has finished the work
+          has to be able to SEE that from across the water, or the reward for
+          doing it is remembering to go and check. Bigger, brighter, a tick
+          rather than an exclamation, and it pulses. */}
+      {(isNear || ready) && (
         <div aria-hidden style={{
-          position: 'absolute', left: 0, top: HEAD_TOP - 32,
+          position: 'absolute', left: 0, top: HEAD_TOP - (ready ? 40 : 32),
           transform: `translateX(-50%) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center', pointerEvents: 'none',
         }}>
-          <div className="sea-hail" style={{
+          <div className={ready ? 'sea-hail finn-ready' : 'sea-hail'} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 26, height: 26, borderRadius: '50%',
-            background: 'rgba(30,18,6,0.94)',
-            border: '1px solid rgba(255,190,96,0.95)',
-            boxShadow: '0 0 20px rgba(255,168,60,0.7)',
+            width: ready ? 34 : 26, height: ready ? 34 : 26, borderRadius: '50%',
+            background: ready ? 'rgba(52,34,4,0.96)' : 'rgba(30,18,6,0.94)',
+            border: `${ready ? 2 : 1}px solid rgba(255,206,110,0.98)`,
+            boxShadow: ready
+              ? '0 0 30px rgba(255,190,80,0.95), 0 0 60px rgba(255,168,60,0.5)'
+              : '0 0 20px rgba(255,168,60,0.7)',
           }}>
-            <span className="font-cinzel font-700" style={{
-              fontSize: '1.032rem', lineHeight: 1, color: '#ffd07a', marginTop: -1,
-            }}>!</span>
+            {ready ? (
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
+                stroke="#ffd07a" strokeWidth="3.2" strokeLinecap="round"
+                strokeLinejoin="round" aria-hidden><path d="M4.5 12.5l5 5 10-11" /></svg>
+            ) : (
+              <span className="font-cinzel font-700" style={{
+                fontSize: '1.032rem', lineHeight: 1, color: '#ffd07a', marginTop: -1,
+              }}>!</span>
+            )}
           </div>
         </div>
       )}
@@ -6695,7 +6755,8 @@ const FinnBoat = memo(function FinnBoat({ at, isNear }: {
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
         padding: '3px 9px 4px', borderRadius: 9,
         background: 'rgba(14,8,2,0.9)',
-        border: '1px solid rgba(255,190,96,0.45)',
+        border: `1px solid rgba(255,190,96,${ready ? 0.95 : 0.45})`,
+        boxShadow: ready ? '0 0 16px rgba(255,168,60,0.35)' : 'none',
       }}>
         <p className="font-cinzel font-700" style={{
           fontSize: '0.888rem', color: '#f4e2c0',

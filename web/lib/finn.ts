@@ -150,6 +150,74 @@ export function finnToNext(points: number): number | null {
   return t === 4 ? null : FINN_STANDING_AT[t + 1] - points
 }
 
+/**
+ * ── THINGS YOU CAN ASK HIM ──────────────────────────────────────────────────
+ *
+ * The regulars carry two per tier. He carries THREE, and they are longer,
+ * because he is the one character the whole fishing campaign runs through and
+ * a conversation with the story should not be thinner than a conversation with
+ * a wreck diver.
+ *
+ * ASKING IS ALWAYS FREE and never advances anything. The beats are behind the
+ * work, the work is behind the jobs, and these sit outside both: a captain
+ * mid-job who sails out to him can still get twenty lines of him out of it.
+ * That is deliberate. He is the most interesting person on this sea and the
+ * old design let you hear about six sentences from him a week.
+ *
+ * They deepen with STANDING, not with the story, so what you can ask him is a
+ * function of how much of you he has decided to take seriously. Early on he
+ * deflects. At the top he answers the question he spends the whole arc not
+ * answering, which is why he is really out here.
+ *
+ * WRITTEN PRE-REVEAL, IN INNOCENT VOICE. Every one of these has to read as an
+ * old salt who envies your hands, and only in hindsight as a man assembling
+ * something. Read docs/systems/story-universe.md before adding to this.
+ */
+export type FinnAsk = { you: string; they: string }
+
+export const FINN_ASKS: [FinnAsk[], FinnAsk[], FinnAsk[], FinnAsk[], FinnAsk[]] = [
+  [
+    { you: 'Who are you?',
+      they: "Finn. I fish, I watch, and I am here more than anybody sensible would be." },
+    { you: 'Why watch me?',
+      they: "Because you are new and I am not, and one of us is going to be interesting to the other." },
+    { you: 'What is worth catching out here?',
+      they: "Everything, until you have caught it. Then almost nothing. That is the trouble with the shallows." },
+  ],
+  [
+    { you: 'How long have you been out here?',
+      they: "Longer than the harbour has had a name I recognise. I stopped counting on purpose." },
+    { you: 'Do you fish much yourself?',
+      they: "Every day. Do not ask me what I catch." },
+    { you: 'What is the furthest you have been?',
+      they: "The lip of the old water. Never over it. Never once over it." },
+  ],
+  [
+    { you: 'What is actually down in the Ancient Deep?',
+      they: "Six things worth the pulling. I have said that before and I will keep saying it until somebody proves me wrong or right." },
+    { you: 'Why does it matter that it is six?',
+      they: "Because six is a set. Five is a collection and seven is a mess. Six is a thing somebody could finish." },
+    { you: 'What happens if somebody lands all six?',
+      they: "...ask me that one again when it is not hypothetical." },
+  ],
+  [
+    { you: 'You said your line comes back empty. Every time?',
+      they: "Every time. Forty years of every time. You get used to the sound of nothing on the other end." },
+    { you: 'Do you resent me for it?',
+      they: "Some days. Not most. It turns out watching it happen is closer than never seeing it at all." },
+    { you: 'Why keep setting me jobs?',
+      they: "Because a hand like yours goes soft if nobody asks anything of it. And because I want to see how far it goes." },
+  ],
+  [
+    { you: 'Why are you really out here?',
+      they: "I came looking for somebody who could do the thing I cannot. I have been looking a very long time." },
+    { you: 'And now?',
+      they: "Now I have found them and I am not entirely sure what I am supposed to feel about it." },
+    { you: 'What do you want from all six?',
+      they: "To see it. That is what I will tell you today, and it is not the whole of it, and you already knew that." },
+  ],
+]
+
 export type FinnTrack = 'encounter' | 'win' | 'reveal'
 
 /** One line of Finn dialogue with cinematic staging — shared by the encounter /

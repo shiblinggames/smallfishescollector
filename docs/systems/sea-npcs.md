@@ -230,6 +230,49 @@ home, and clear of every port, hail, solid landmark and isle landing. That matte
 before: he is the campaign's only delivery route, so a mooring inside somebody else's prompt
 would make the story unreachable for everybody at once rather than for one captain on one hop.
 
+### His bets are JOBS now
+
+`lib/finnQuests.ts` is the ladder, `finn_quest` (jsonb) is the one currently set and
+`finn_quests_done` (text[]) is the position on it. Thirteen jobs against thirteen beats.
+
+**The loop is beat, job, hand it back, beat.** He tells you something, asks you for
+something, and the next thing he has to say sits behind the work. `speakToFinn` will not
+hand out a beat while a job is open, and `turnInFinnQuest` pays, records, AND delivers the
+next beat plus the next job in one moment. Handing it back is the campaign's only forward
+gear, which is the whole point: the old wagers happened TO you while you fished normally and
+sat off to the side of the story, so a captain could take twenty of them and hear nothing.
+
+**Measured by snapshot and delta.** Every counter a job reads (`total_perfects`,
+`current_perfect_streak`, `fish_lifetime` summed, and per-band / per-rarity joins against
+`fish_species`) is one the cast path already maintains, so a job adds nothing to the hot
+loop and cannot be asserted by the client. Snapshots are taken whole at accept, which is what
+makes a job impossible to finish retroactively: verified on the live table, a captain with
+516 lifetime perfects starts "land 4 perfects" at zero. `perfect_streak` needs BOTH the
+running streak and the delta since accept, the same two-test rule the old bet needed.
+
+**No timers on anything.** The old speed bet had a deadline, so closing a tab could lose a
+wager. These wait as long as you do.
+
+**Finished jobs are unmissable.** `questReady` is derived once in `finnState` and drives
+every indicator: his hail mark goes bigger, brighter, becomes a tick and pulses (`.finn-ready`
+in globals.css, the one mark on this water allowed to throb rather than bob) and it shows
+from ANYWHERE on the chart rather than only in hail range, his name plate lights, the helm
+prompt reads "Finn is waiting on you", and the Salt Road button's dot lights.
+
+### His conversation
+
+`app/(app)/sea/FinnTalk.tsx`, the sea's own, following the regulars' convention exactly: no
+painted backdrop, the chart dimmed behind, house 480 width, fixed-height card, reserved
+dialogue block, and replies you choose. `fishing/FinnEncounter` still exists because the
+retired fishing screen mounts it; the two are deliberately separate rather than one component
+serving two very different surfaces.
+
+`FINN_ASKS` gives him **three asks per standing tier against the regulars' two**, because he
+is the character the campaign runs through and a conversation with the story should not be
+thinner than one with a wreck diver. Asking is free, always available, and advances nothing:
+the story is gated behind the work, the man is not. They deepen with STANDING rather than the
+story, so at the top he answers the question he spends the whole arc dodging.
+
 ### The rest of his machinery
 
 He is the campaign's rival (see [story-universe.md](story-universe.md), and read it before
