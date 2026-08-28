@@ -34,10 +34,12 @@ export const SUBMERGE: Record<string, Submerge> = {
   // A rock cluster breaking the surface.
   islet:    { keep: 0.24, pts: [[0, 76], [100, 76]] },
 
-  // The two berths: isometric, so the waterline is a V — lowest at the near
-  // corner. These carry the old v:6 as three points.
-  'dock-raids':   { keep: 0.30, pts: [[0, 78], [50, 90], [100, 78]] },
-  'dock-voyages': { keep: 0.30, pts: [[0, 80], [50, 92], [100, 80]] },
+  // The two berths, side-on now: a horizontal deck on a row of piles, so the
+  // waterline is a flat cut through the piles — the V existed for the old
+  // isometric plates' near corner and retired with them. First guesses;
+  // /sea/waterline is where they get drawn properly.
+  'dock-raids':   { keep: 0.30, pts: [[0, 74], [100, 74]] },
+  'dock-voyages': { keep: 0.30, pts: [[0, 72], [100, 72]] },
 
   // ── THE REEF ─────────────────────────────────────────────────────────
   // Each painted with a dark wet band at its foot; the waterline sits just

@@ -7045,7 +7045,9 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
           smacks get away with moored-scale because you never sail one. */}
       {!shipOut && (
         <div style={{
-          position: 'absolute', left: RAID_DOCK.x + DOCK_R * 0.75, top: RAID_DOCK.y + DOCK_R * 0.5,
+          // IN FRONT of the deck, not beside it: the dock runs left-to-right
+          // now, so alongside means south of the boards, bow toward the piles.
+          position: 'absolute', left: RAID_DOCK.x - DOCK_R * 0.05, top: RAID_DOCK.y + DOCK_R * 0.62,
           transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
           pointerEvents: 'none', opacity: 0.95,
         }}>
