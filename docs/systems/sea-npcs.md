@@ -71,6 +71,31 @@ him for every captain mid-story.
 
 ---
 
+## The Salt Road panel
+
+`FolkPanel.tsx`, behind a HUD button (two figures, slot 4). It exists for one reason:
+**the fishing campaign is told one meeting at a time by a man you have to go and find, and
+nothing on the chart said so.** A captain who had met Finn twice had no way to learn that a
+third meeting would say something new.
+
+- **Finn is the headline** and gets the gold: times met, how much of his story you have
+  heard (`seenBeats` counted against `FINN_ENCOUNTER_BEATS`, 13), wagers won and their own
+  beat track (16), and where he was last seen. The button carries an **amber dot whenever a
+  beat is waiting** — which, since `findNextEncounterBeat` walks the unseen list rather than
+  gating on a milestone, is true until he runs out of things to say. The `milestone` field
+  on a beat is vestigial; do not reintroduce it as a gate without changing this panel.
+- **The named folk are a roster, not a log.** Finn, the five zone buyers and Yoon are
+  permanent and always in the same water, so they are listed and gated by band level. Locked
+  rows withhold the name and say which water and what level.
+- **The wanderers get a legend, not rows.** They are hashed out of (cell, day) and gone at
+  midnight, so "who have I met" has no honest answer for them. What the panel gives instead
+  is what the five kinds want when you pull alongside, because "salter" was never explained
+  anywhere.
+
+If per-person "met" tracking is ever wanted for the residents and Yoon, that is a `text[]`
+on profiles written at hail time. It was deliberately NOT built here: it buys a tick beside
+six names and the panel's job is the Finn loop.
+
 ## Finn is not on the Salt Road
 
 He is the campaign's rival (see [story-universe.md](story-universe.md), and read it before

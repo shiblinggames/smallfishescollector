@@ -70,6 +70,7 @@ import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHots
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
+import FolkPanel from './FolkPanel'
 import SeaTour from './SeaTour'
 import SeaLandfallHint from './SeaLandfallHint'
 import { pendingPacts } from './pactActions'
@@ -77,7 +78,7 @@ import { coastClip, coastline } from '@/lib/islandShape'
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
 import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
-import { FINN_NAME, type FinnSceneLine } from '@/lib/finn'
+import { FINN_NAME, findNextEncounterBeat, type FinnSceneLine } from '@/lib/finn'
 
 const FinnEncounter = dynamic(() => import('../fishing/FinnEncounter'), { ssr: false })
 
@@ -2216,6 +2217,15 @@ export default function SeaMap({
   const hudAt = (i: number) => 12 + i * (hudSize + 10)
   /** The who-is-out list, open or shut. */
   const [crewOpen, setCrewOpen] = useState(false)
+  /** The Salt Road: Finn's progress and everyone else worth knowing about. */
+  const [folkOpen, setFolkOpen] = useState(false)
+  /** Does Finn have a piece of his story waiting? Drives the dot on the
+   *  button, which is the whole nudge: a beat is handed over at EVERY meeting
+   *  (findNextEncounterBeat walks the unseen list, it is not milestone-gated),
+   *  so this is amber right up until he has run out of things to say. */
+  const finnWaiting = useMemo(
+    () => !!finn && findNextEncounterBeat(finn.seenBeats) !== null,
+    [finn])
 
   /**
    * THE DAY'S ORDERS, READABLE FROM THE WATER.
@@ -2298,11 +2308,12 @@ export default function SeaMap({
       if (hailing) { setHailing(null); return }
       if (picking) { setPicking(false); return }
       if (crewOpen) { setCrewOpen(false); return }
+      if (folkOpen) { setFolkOpen(false); return }
       if (mapOpen) { setMapOpen(false); return }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, trawlOpen, ordersOpen, trawlsPeek, finnTalk, hailing, picking, crewOpen, mapOpen])
+  }, [find, ashore, trawlOpen, ordersOpen, trawlsPeek, finnTalk, hailing, picking, crewOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -5203,6 +5214,51 @@ hullRef={hullRefFor(t.key)} />
           request, machinery intact: presence still runs (the compass still
           shows who is out), CrewPanel still mounts, and putting the button
           back is restoring one <button> here at the freed hudAt slot. */}
+      {/* ── WHO IS OUT HERE, and how far you have got with Finn ─────────
+          The story of the fishing campaign is told one meeting at a time by a
+          man you have to go and find, and nothing on the chart ever said so.
+          The dot is the cue: amber whenever he has a piece of it waiting,
+          which is what turns "he shows up sometimes" into somewhere to sail.
+
+          Not while the rod is out on a phone, same rule as the rest of the
+          HUD: reading about people is not what you are doing mid-cast. */}
+      {!inAnchorage && (!fishingIn || wide) && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(8); setFolkOpen(true) }}
+          aria-label="The Salt Road"
+          title="The Salt Road"
+          data-no-steer
+          style={{
+            position: 'absolute', top: 18, left: hudAt(4), zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: hudSize, height: hudSize, padding: 0,
+            borderRadius: 999, cursor: 'pointer',
+            background: finnWaiting ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
+            border: `1px solid ${finnWaiting ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+          }}>
+          {/* Two figures in conversation: the people of the sea, not one
+              person. Stroked like every other icon up here. */}
+          <svg width={Math.round(hudSize * 0.5)} height={Math.round(hudSize * 0.5)}
+            viewBox="0 0 24 24" fill="none"
+            stroke={finnWaiting ? '#f0c040' : 'rgba(214,232,240,0.8)'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="8.5" cy="8" r="2.6" /><path d="M4 19v-1.4A4.1 4.1 0 0 1 8.5 14a4.1 4.1 0 0 1 4.1 3.6V19" />
+            <circle cx="16.8" cy="9.6" r="2.1" /><path d="M14 19v-1a3.4 3.4 0 0 1 6-2.2" />
+          </svg>
+          {finnWaiting && (
+            <span aria-hidden style={{
+              position: 'absolute', top: -2, right: -2,
+              width: 11, height: 11, borderRadius: 999,
+              background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
+              boxShadow: '0 0 10px rgba(240,192,64,0.6)',
+            }} />
+          )}
+        </button>
+      )}
+
+      <FolkPanel open={folkOpen} onClose={() => setFolkOpen(false)} finn={finn} level={level} />
+
       <CrewPanel
         open={crewOpen}
         onClose={() => {
