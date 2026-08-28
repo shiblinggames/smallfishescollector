@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, berthOf, inBerth, type Place } from './chart'
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -360,20 +360,18 @@ const HULL = 55
  * FOOTPRINT in the water is much narrower than the picture.
  */
 /**
- * HOW CLOSE IS CLOSE ENOUGH TO GO ASHORE.
+ * HOW CLOSE IS CLOSE ENOUGH TO GO ASHORE: inside the port's BERTH.
  *
- * It used to be the island's own radius, which was very nearly unusable: the
- * hull stops at `r * SHORE + HULL` — 235 world pixels off the Mainland — and
- * the go-ashore test was `r`, 250. Fifteen pixels of water, on one heading, is
- * not a window, it is a bug you have to fight.
- *
- * Now a port is approachable from a generous ring all the way around it. Pull
- * up anywhere in the vicinity, from any bearing, and the prompt is there. The
- * fishing bands start well outside this ring so the two never argue over which
- * prompt you get — see the Shallows' inner radius in chart.ts.
+ * The test has been through three eras. The island's own radius left fifteen
+ * pixels of usable water on one heading. The generous ring (r + 420, any
+ * bearing) fixed that and created two new problems: the prompt changed under
+ * your thumb anywhere NEAR an island, and two islands needed 840px between
+ * their rings or the prompts fought — which is what spread the harbour
+ * cluster apart. Now the prompt lives in a drawn, visible circle of water off
+ * each port's jetty — berthOf/inBerth in chart.ts, PortBerth below for the
+ * paint. Deliberate on both sides: you dock by sailing INTO the berth, and
+ * islands pack as close as the water allows.
  */
-const MOOR = 420
-function moorR(p: Place): number { return p.r + MOOR }
 
 /**
  * A drawn collider expanded into world circles, or the default single circle
@@ -3989,7 +3987,7 @@ export default function SeaMap({
         // Ports are discs; waters are rings. inBand answers the ring case, and
         // the bands do not overlap, so the first match is the only match.
         for (const p of PLACES) {
-          if (p.kind === 'port' ? dist(pos.current, p) < moorR(p) : inBand(pos.current, p)) { found = p; break }
+          if (p.kind === 'port' ? inBerth(pos.current, p) : inBand(pos.current, p)) { found = p; break }
         }
         setNear(prev => (prev?.id === found?.id ? prev : found))
 
@@ -4209,6 +4207,10 @@ export default function SeaMap({
 
       {/* THE WORLD. One transformed layer, so the camera is a single write. */}
       <div ref={worldRef} style={{ position: 'absolute', left: '50%', top: '50%', zIndex: Z.world, willChange: 'transform' }}>
+        {/* The berths first, so an island always paints over its own ring. */}
+        {PLACES.filter(p => p.kind === 'port').map(p => (
+          <PortBerth key={`berth:${p.id}`} p={p} active={near?.id === p.id} />
+        ))}
         {PLACES.map(p => (
           <PlaceIsland key={p.id} place={crewHallFor(homeFor(p, visiting?.homestead ?? homestead, visiting?.username), crewTiers)} locked={locked(p)} isNear={near?.id === p.id}
             // CREW WAITING ON THE DOCK. The island says so itself rather than a
@@ -7006,6 +7008,44 @@ const Landmass = memo(function Landmass({ id, r, locked = false }: {
   )
 })
 
+
+/**
+ * THE BERTH, PAINTED — the circle of water inBerth tests, made visible.
+ *
+ * A ring lying ON the plane (the world transform squashes it into the same
+ * ellipse every zone edge gets) with three of the chart's own buoys riding
+ * it, spaced around the bearing the berth sits at from its island so they
+ * face open water. The buoys go through SeaMark, so they bob and submerge
+ * exactly like every other buoy on the chart and cannot drift out of style.
+ *
+ * The ring brightens and turns solid when the boat is actually inside — the
+ * same signal, at the same moment, as the action button offering the dock.
+ */
+const PortBerth = memo(function PortBerth({ p, active }: { p: Place; active: boolean }) {
+  const b = berthOf(p)
+  const bearing = Math.atan2(b.y - p.y, b.x - p.x)
+  return (
+    <div aria-hidden style={{ position: 'absolute', left: b.x, top: b.y, pointerEvents: 'none' }}>
+      <div style={{
+        position: 'absolute', left: -b.r, top: -b.r, width: b.r * 2, height: b.r * 2,
+        borderRadius: '50%',
+        border: `2px ${active ? 'solid' : 'dashed'} ${active ? 'rgba(255,217,134,0.7)' : 'rgba(226,244,250,0.26)'}`,
+        background: active ? 'rgba(255,206,120,0.05)' : 'none',
+        boxShadow: active ? 'inset 0 0 40px rgba(255,196,110,0.16)' : 'none',
+        transition: 'border-color 300ms ease-out, background 300ms ease-out, box-shadow 300ms ease-out',
+      }} />
+      {[-0.95, 0, 0.95].map((off, i) => {
+        const a = bearing + off
+        return (
+          <SeaMark key={i} i={i * 2 + 1} m={{
+            art: '/sea/buoy.png', size: 48, sway: 'bob',
+            x: Math.cos(a) * b.r, y: Math.sin(a) * b.r,
+          }} />
+        )
+      })}
+    </div>
+  )
+})
 
 /**
  * THE END OF THE SURVEYED CHART.

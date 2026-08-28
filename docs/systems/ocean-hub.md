@@ -108,15 +108,28 @@ band is measured from; at 250 it was the same size as the two single-purpose por
 as one stop of three.
 
 One number drives all of it: the island art (`place.r * 2`), the buildings (percentages of
-that box), the shore the hull stops at (`r * SHORE + HULL` = 300) and the mooring ring
-(`r + MOOR` = 760). `MAINLAND_DOORSTEP` in seaTraders derives from it too.
+that box) and the shore the hull stops at (`r * SHORE + HULL`). The berth is placed by its
+own override (see the berth section). `MAINLAND_DOORSTEP` in seaTraders derives from r too.
 
-### The harbour approach
+### The berth (docking zones)
 
-Ports are approachable from a **generous ring all the way around** — `moorR(p) = p.r + MOOR`
-(420). It used to be the island's own radius, which was very nearly unusable: the hull stops
-at `r * SHORE + HULL` (235 off the Mainland) and the go-ashore test was `r` (250). Fifteen
-pixels of water on one heading is not a window.
+**The dock prompt lives in a drawn circle of water off each port's jetty** — `berthOf(p)` /
+`inBerth(at, p)` in chart.ts, painted by `PortBerth` in SeaMap (dashed ring + three buoys,
+brightening solid while you are inside). Default centre is just off the jetty's seaward end
+(`x + 0.85r, y + 0.6r`), radius `BERTH_R = 260`; a `berth` override on the Place moves it
+(the Mainland's is pulled south so the `HOME` start point sits inside it and a fresh session
+opens with the prompt up).
+
+This is the THIRD era of the test. The island's own radius left fifteen pixels of usable
+water on one heading. The generous 360° ring (`r + 420`) fixed that and created two new
+problems: the prompt changed under your thumb anywhere near an island, and two islands
+needed 840px between their rings or both prompts came up — the single fact that spread the
+harbour cluster apart. With berths, docking is deliberate (sail INTO the marked water; no
+hint outside it, the buoys and lantern are the teacher) and islands pack as close as
+sailing room allows — the cluster was tightened when the rings retired (Trawl Harbour
+-3000 → -2050, Homestead 1900 → 1500, Tally House -1500 → -1150, Shipyard 900 → 700; the
+fleet's moored smacks moved in lockstep). `scripts/check-finn` and `check-traders` gate any
+further moves.
 
 **The Shallows start at 1400, well outside every moor ring**, so the hub and the first zone
 never argue over which prompt you get: you are moored, or you are fishing, never both. That

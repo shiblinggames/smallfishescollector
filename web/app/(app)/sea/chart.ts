@@ -78,6 +78,15 @@ export type Place = {
    * the port is given, and `scale` is a fraction of the island's diameter.
    */
   buildings?: { art: string; x: number; y: number; scale: number }[]
+  /**
+   * WHERE DOCKING HAPPENS, when the default is wrong.
+   *
+   * Every port's berth defaults to the water off the end of the jetty it
+   * already draws (see berthOf). An override moves it — dx/dy from the
+   * island's centre, world px — for the one island whose approach needs to
+   * be somewhere else.
+   */
+  berth?: { dx: number; dy: number; r?: number }
   /** Landmarks and resident buyers used to live per-place. They are module
    *  level lists now (LANDMARKS, RESIDENTS) in absolute world coordinates,
    *  because a band is a ring and a ring has no box for an offset to be
@@ -140,10 +149,14 @@ export const PLACES: Place[] = [
     // pushed further apart instead, which is what turns a cluster into a town.
     //
     // Everything scales off this one number: the island art, the buildings
-    // (percentages of the island box), the shore the hull stops at
-    // (r * SHORE + HULL) and the mooring ring (r + MOOR).
+    // (percentages of the island box) and the shore the hull stops at
+    // (r * SHORE + HULL). The berth is the exception — see `berth` above.
     href: '/tavern', x: 0, y: 0, r: 500, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
+    // Pulled a touch further south than the jetty default so the HOME start
+    // point sits INSIDE the berth: a fresh session opens with the dock prompt
+    // already up, the way it always has.
+    berth: { dx: 425, dy: 400 },
     buildings: [
       { art: '/sea/tackle.png', x: 31, y: 43, scale: 0.153 },
       { art: '/sea/market.png', x: 63, y: 47, scale: 0.172 },
@@ -173,7 +186,7 @@ export const PLACES: Place[] = [
      * for everybody, which is the entire point of it.
      */
     id: 'home', name: 'The Homestead', blurb: 'Yours. Such as it is.',
-    href: '/home', x: 1900, y: -250, r: 460, art: '/sea/home-cottage.png',
+    href: '/home', x: 1500, y: -200, r: 460, art: '/sea/home-cottage.png',
     kind: 'port', minLevel: 0,
     buildings: [],
   },
@@ -191,7 +204,7 @@ export const PLACES: Place[] = [
     // you sail up to rather than a page you open. What is left here is the
     // day's work, counted and paid, which is what a tally house is for.
     id: 'trawl_docks', name: 'The Tally House', blurb: 'The day’s orders, and what they pay',
-    href: '/trawl-docks', x: -1500, y: -850, r: 265, art: '/page-tavern.jpg',
+    href: '/trawl-docks', x: -1150, y: -780, r: 265, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
       { art: '/sea/harbour.png', x: 48, y: 55, scale: 0.333 },
@@ -235,10 +248,10 @@ export const PLACES: Place[] = [
     //
     // POSITION IS TWO CONSTRAINTS AT ONCE, and they pull against each other.
     //
-    // RINGS. Every port's go-ashore prompt reaches r + MOOR, so two islands
-    // need r1 + r2 + 840 between their centres or both prompts come up and one
-    // of them loses. Against the Tally House that is 1,315 minimum — there is
-    // no radius at all that lets this sit closer.
+    // BERTHS. The prompt lives in a drawn circle off each jetty now, not a
+    // ring around the whole island, so islands only need sailing room between
+    // shores — which is what let this move in from -3000 to -2050 and the
+    // whole cluster close up with it.
     //
     // FINN. His haunts are derived by rejecting everything inside a keep-out,
     // and a new island adds one of 1,410. Dropped in the wrong water it eats
@@ -246,9 +259,8 @@ export const PLACES: Place[] = [
     // other; scripts/check-finn caught exactly that at four of the positions
     // tried here, including the one that read best on the rings alone.
     //
-    // Due west of the Tally House satisfies both: 1,500 from it with 185 of
-    // ring clearance, 1,609 from the nearest isle, 3,118 from the origin so it
-    // is still Shallows water, and check-finn green.
+    // West of the Tally House with 425px of open water between shores, its
+    // berth clear of the Tally House's paint, and check-finn green.
     //
     // `href` is never followed — the chart intercepts this island by id and
     // opens the trawl panel where you float. It is present because a Place has
@@ -261,7 +273,7 @@ export const PLACES: Place[] = [
     // what belongs ON the land is the shore end of the work: the shed, the
     // drying rack, the crates. The boats are moored off the beach as a
     // landmark, in the water, submerging like everything else that floats.
-    href: '/sea', x: -3000, y: -850, r: 210, art: '/sea/trawl-shed.png',
+    href: '/sea', x: -2050, y: -820, r: 210, art: '/sea/trawl-shed.png',
     kind: 'port', minLevel: 0,
     buildings: [
       { art: '/sea/trawl-shed.png', x: 46, y: 52, scale: 0.34 },
@@ -270,7 +282,7 @@ export const PLACES: Place[] = [
   {
     // On the way OUT rather than a detour, so you pass it heading for water.
     id: 'shipyard', name: 'The Shipyard', blurb: 'Loadout, rack and upgrades',
-    href: '/shipyard', x: 900, y: -900, r: 265, art: '/sea/shipyard.png',
+    href: '/shipyard', x: 700, y: -900, r: 265, art: '/sea/shipyard.png',
     kind: 'port', minLevel: 0,
     buildings: [
       { art: '/sea/shipyard.png', x: 50, y: 57, scale: 0.294 },
@@ -367,14 +379,15 @@ export const LANDMARKS: {
   // its own waterline.
   //
   // OFF THE WEST SHORE, and every one of them anchored ABOVE the island's
-  // caption line (world y -632, where the name hangs under the box). The old
-  // single raft sat south of the island at y -560 and covered its own title.
+  // caption line (where the name hangs under the box). The old single raft
+  // sat south of the island and covered its own title. They moved in lockstep
+  // when the island did — same offsets, new anchor.
   //
   // Different sizes and a scatter, because three identical boats in a row is a
   // sprite sheet rather than a mooring.
-  { art: '/sea/smack.png', x: -3330, y: -800, size: 124, sway: 'bob' },
-  { art: '/sea/smack.png', x: -3232, y: -700, size: 112, sway: 'bob' },
-  { art: '/sea/smack.png', x: -3428, y: -688, size: 104, sway: 'bob' },
+  { art: '/sea/smack.png', x: -2380, y: -770, size: 124, sway: 'bob' },
+  { art: '/sea/smack.png', x: -2282, y: -670, size: 112, sway: 'bob' },
+  { art: '/sea/smack.png', x: -2478, y: -658, size: 104, sway: 'bob' },
   { art: '/sea/buoy.png', x:   2472, y:   1249, size: 130, sway: 'bob' },
   { art: '/sea/islet.png', x:   1003, y:   2620, size: 210 },
   { art: '/sea/buoy.png', x:    397, y:   2082, size: 120, sway: 'bob' },
@@ -411,6 +424,39 @@ export const LANDMARKS: {
   { art: '/sea/bones.png', x: -15852, y:  10811, size: 370 },
   { art: '/sea/monolith.png', x: -17571, y:   8736, size: 310 },
 ]
+
+/**
+ * THE BERTH — where the dock prompt lives.
+ *
+ * It used to be a ring reaching r + 420 all the way around every port, which
+ * had two costs: docking was a thing that happened TO you (drift anywhere
+ * near an island and the button changed under your thumb), and two islands
+ * needed 840px between their rings or the prompts fought — the single fact
+ * that spread the harbour cluster apart.
+ *
+ * Now it is a circle of water off the end of the jetty every port already
+ * draws — the lantern was always the thing you steered toward, and this makes
+ * that literal. PortBerth in SeaMap draws it (dashed ring, three buoys), so
+ * the zone is a thing you can SEE, and the action button offers docking only
+ * inside it.
+ *
+ * The default lands just off the jetty's seaward end: the jetty roots at the
+ * island box's (50%, 78%) and runs east ~0.62r, so a hair past that and a
+ * shade south is open water on every current port. `berth` on the Place
+ * overrides it where the default is wrong.
+ */
+export const BERTH_R = 260
+export function berthOf(p: Place): { x: number; y: number; r: number } {
+  return {
+    x: p.x + (p.berth?.dx ?? p.r * 0.85),
+    y: p.y + (p.berth?.dy ?? p.r * 0.60),
+    r: p.berth?.r ?? BERTH_R,
+  }
+}
+export function inBerth(at: { x: number; y: number }, p: Place): boolean {
+  const b = berthOf(p)
+  return Math.hypot(at.x - b.x, at.y - b.y) < b.r
+}
 
 /**
  * YOON, who is not generated.
