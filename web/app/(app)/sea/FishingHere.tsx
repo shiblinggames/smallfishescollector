@@ -29,6 +29,7 @@
 // drift. Those are situational and belong to the full screen, and the map does
 // not offer the Ancient Deep as a quick cast.
 
+import { AUTO_RECAST_MS, AUTO_CRATE_TOTAL_MS } from '@/lib/autoFishing'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DialSVG } from '@/components/FishingDial'
@@ -1318,9 +1319,10 @@ export default function FishingHere({
     // top of that card takes the choice away from you while you are looking at
     // it. The fishing screen has always refused to auto-cast past one.
     if (shiny) return
-    // A crate opens itself over 700ms and then wants a beat to be read. At 900
-    // the next cast landed on top of the reveal, which is the whole moment.
-    const t = setTimeout(() => { castRef.current?.(true) }, caught?.kind === 'crate' ? 2200 : 900)
+    // The tempo lives in lib/autoFishing, shared with the fishing screen —
+    // the same item must not run at two rhythms depending on the surface.
+    const t = setTimeout(() => { castRef.current?.(true) },
+      caught?.kind === 'crate' ? AUTO_CRATE_TOTAL_MS : AUTO_RECAST_MS)
     return () => clearTimeout(t)
   }, [phase, auto.tier, autoOn, baitLeft, holdFull, shiny, caught?.kind])
 

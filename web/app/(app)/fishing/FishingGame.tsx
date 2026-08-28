@@ -1,5 +1,6 @@
 'use client'
 
+import { AUTO_RECAST_MS, AUTO_CRATE_LINGER_MS, AUTO_RESUME_MS } from '@/lib/autoFishing'
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
 import { ctaPill } from '@/lib/uiTokens'
 import { installSpaceAction } from '@/lib/spaceAction'
@@ -4426,7 +4427,7 @@ export default function FishingGame({
           // player got neither the moment nor the continuation.
           autoResumeRef.current = true
           void handleClaimCrate()
-        }, 1200)
+        }, AUTO_CRATE_LINGER_MS)
         return () => clearTimeout(t)
       }
       return
@@ -4437,7 +4438,7 @@ export default function FishingGame({
     const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
     if (currentBaitQty <= 0 || currentHoldCount >= holdCapacity) return
-    const t = setTimeout(() => { handleCastAgain() }, 1400)
+    const t = setTimeout(() => { handleCastAgain() }, AUTO_RECAST_MS)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, autoTier, autoEnabled, cratePhase, catchResult?.isShiny, crateResult])
@@ -4456,7 +4457,7 @@ export default function FishingGame({
     const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
     if (currentBaitQty <= 0 || currentHoldCount >= holdCapacity) return
-    const t = setTimeout(() => { void handleCast() }, 900)
+    const t = setTimeout(() => { void handleCast() }, AUTO_RESUME_MS)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, autoTier, autoEnabled])
