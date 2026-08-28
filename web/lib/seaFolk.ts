@@ -409,52 +409,65 @@ export const FOLK: Folk[] = [
     role: 'Rodmaker', accent: '#f0c040',
     blurb: 'Carries one rod that no shop will stock, and an opinion on whether you deserve it.',
     loves: [45, 49, 55], // Viperfish, Oarfish, Vampire Squid
-    // HE TALKS LIKE HE TALKS. Yoon is a real person and these are really his
-    // words, which is why he is the one voice out here that breaks the sea's
-    // register on purpose. Everyone else says "aye" and means it; Yoon says
-    // "betty johnson" and means the same thing. The Locked-In Rod is named
-    // after the way he says "locked in", not the other way round.
+    // HE TALKS LIKE HE TALKS.
+    //
+    // Yoon is a real person and this is really how he speaks, which makes him
+    // the one voice out here written in a different register on purpose. It is
+    // not slang sprinkled over the house voice: everybody else on this sea says
+    // "I do not" and "it is", and Yoon says "I don't" and "it's" and "aight"
+    // and "lowkey", because a mannerism dropped into a formal sentence reads as
+    // a costume and the entire point is that he is not wearing one.
+    //
+    // The gap between how he talks and what he is actually saying IS the
+    // character. He is the best rodmaker on this chart and the only one who
+    // sounds like he wandered in from somewhere else completely.
+    //
+    // GYATTT IS THE LOAD-BEARING ONE. It is his most frequent tic by a wide
+    // margin and it lands in about half his lines, usually as the reaction
+    // that opens one. The others are sheeeeesh, locked in, gucci and betty
+    // johnson. The Locked-In Rod is named after the way he says it rather than
+    // the other way round, so do not quietly formalise any of this later.
     lines: [
       [
-        "You've the streak for it, or you haven't. Rod won't teach you that. It just stops wasting it.",
-        "I am not here to sell. I am here in case somebody turns up who should have it.",
-        "Sheeeeesh. Another one out this far. All right then.",
+        "You've got the streak for it or you don't. Rod won't teach you that. It just stops wasting it.",
+        "I'm not out here to sell. I'm out here in case somebody turns up who should have it.",
+        "Sheeeeesh. Another one this far out. Gyattt. Aight then.",
       ],
       [
-        "Gyattt. You came back without the coin. That is more interesting than coming back with it.",
-        "The rod is not the difficult part. The difficult part is the hand.",
-        "You want it? Betty johnson. Come back when the hand is ready.",
+        "Gyattt. You came back and you didn't even bring the coin. That's way more interesting.",
+        "The rod's not the hard part. The hard part's the hand.",
+        "Gyattt, you want it already? Betty johnson. Come back when the hand's ready.",
       ],
       [
-        "I made it. Not the tier, the rod. The one on my boat. I made it and then I stopped making.",
-        "A perfect cast is not luck twenty times. It is one thing you learned, done twenty times.",
-        "You were locked in on that last run. I watched the whole thing. Gyattt. Do not let it go to your head.",
-        "Sheeeeesh, that hold is heavy. You have been out here since the light came up, have you not.",
+        "I made it. Not the tier, the rod. The one on my boat. Made it, then I stopped making.",
+        "A perfect cast isn't luck twenty times. It's one thing you learned, done twenty times. Gyattt, when you say it out loud.",
+        "You were so locked in on that last run. I watched the whole thing. Gyattt. Don't let it get to your head.",
+        "Sheeeeesh, that hold's heavy. You've been out here since the light came up, huh.",
       ],
       [
-        "There were three of us making rods out here. The other two sell in the harbour now and they make good ones.",
-        "I stayed out because a rod should go to the captain it fits, and you cannot tell that through a shop window.",
-        "Bring me a bad run one day. I would rather see how you fish when it is going wrong.",
-        "Locked in is not trying harder. It is the part where you stop trying and it just goes.",
-        "Gyattt. That is a lot of line out. You are fishing deeper than you were last season.",
+        "There were three of us making rods out here. Other two sell in the harbour now. They're good, no shade.",
+        "Gyattt. I stayed out because a rod should go to the captain it fits, and you can't tell that through a shop window.",
+        "Bring me a bad run some time. Lowkey I'd rather watch how you fish when it's going wrong.",
+        "Locked in isn't trying harder. It's the part where you stop trying and it just goes.",
+        "Gyattt, that's a lot of line out. You're fishing way deeper than you were last season.",
       ],
       [
-        "You have the hand. I have thought so for a while and I do not say it to be kind.",
-        "When you buy the rod, and you will, know that it was never a test. I wanted to be sure it would get used.",
-        "After this there is no better rod. There is only better fishing. That is the good news and nobody hears it that way.",
-        "You are locked in more days than you are not now. Gyattt. That took what, a season?",
-        "Everything is gucci out here when you are fishing like this. Do not tell the harbour I said gucci.",
+        "You've got the hand. I've thought so for a while and I'm not saying it to be nice.",
+        "Gyattt. When you buy the rod, and you will, know it was never a test. I just had to be sure it'd get used.",
+        "After this there's no better rod. There's only better fishing. That's the good news and nobody ever hears it that way.",
+        "You're locked in more days than you're not now. Gyattt. That took what, a season?",
+        "Everything's gucci out here when you're fishing like this. Gyattt. Don't tell the harbour I said gucci.",
       ],
     ],
     tierUp: [
-      "Yoon. You may as well have the name if you are going to keep mooring here.",
-      "You stopped asking for a discount. Gucci. There was never going to be one.",
-      "I will talk about the making with you. Betty johnson. I do not do that with buyers.",
-      "The rod is yours whenever you have the coin, and it was yours the day you stopped asking the price. Sheeeeesh. Took you long enough.",
+      "Yoon. Might as well have the name if you're gonna keep mooring here.",
+      "You stopped asking for a discount. Gucci. There was never gonna be one.",
+      "Gyattt. I'll talk about the making with you. Betty johnson. I don't do that with buyers.",
+      "Rod's yours whenever you've got the coin, and it was yours the day you stopped asking the price. Sheeeeesh. Took you long enough.",
     ],
-    onLoved: "Sheeeeesh. You carried this all the way out here. Sit down, I am going to tell you how it is caught properly.",
-    onLiked: "Good fish, and well handled. Gucci.",
-    onPlain: "Betty johnson. I will take it. I do not eat much out here.",
+    onLoved: "Gyattt. You hauled this all the way out here for me? Sit down. I'm gonna tell you how it's caught properly.",
+    onLiked: "Good fish, clean handling. Gucci.",
+    onPlain: "Betty johnson. I'll take it. I don't eat much out here anyway.",
   },
 
   // ── THE THREE WHO KEEP NO SHOP ─────────────────────────────────────────
