@@ -7098,7 +7098,10 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
       {([['raid', RAID_DOCK, '/sea/dock-raids.png', 'Raids'],
          ['voyage', VOYAGE_DOCK, '/sea/dock-voyages.png', 'Voyages']] as const).map(([id, d, art, label]) => (
         <div key={id}>
-          <SeaMark m={{ art, x: d.x, y: d.y, size: DOCK_R * 2.6 }} i={id === 'raid' ? 1400 : 1401} />
+          {/* The raid dock draws a shade larger: it is the hub that houses
+              your ship, and the new art is built like one — the hierarchy
+              between the two berths should be readable at a glance. */}
+          <SeaMark m={{ art, x: d.x, y: d.y, size: DOCK_R * (id === 'raid' ? 3.0 : 2.6) }} i={id === 'raid' ? 1400 : 1401} />
           {/* The name, counter-squashed and lifted clear like every label on
               this chart. Brighter when you are alongside, because that is the
               one moment it is telling you something you did not know. */}
