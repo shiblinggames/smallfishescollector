@@ -7013,14 +7013,45 @@ const Landmass = memo(function Landmass({ id, r, locked = false }: {
  * THE BERTH, PAINTED — the circle of water inBerth tests, made visible.
  *
  * A ring lying ON the plane (the world transform squashes it into the same
- * ellipse every zone edge gets) with three of the chart's own buoys riding
- * it, spaced around the bearing the berth sits at from its island so they
- * face open water. The buoys go through SeaMark, so they bob and submerge
- * exactly like every other buoy on the chart and cannot drift out of style.
+ * ellipse every zone edge gets) with three BEACONS standing on it — harbour
+ * lights on piles, kin to the lantern on every jetty: same warm colour, same
+ * glow, because they are the same idea (the light you steer for) moved out
+ * onto the water. Drawn, not sprited: a dark pile counter-squashed off the
+ * plane with a lamp at its head and a smear of that light lying on the water
+ * at its foot, which is what a light standing IN water does.
  *
- * The ring brightens and turns solid when the boat is actually inside — the
- * same signal, at the same moment, as the action button offering the dock.
+ * The ring brightens and turns solid, and the lamps flare, when the boat is
+ * actually inside — the same signal, at the same moment, as the action button
+ * offering the dock.
  */
+const Beacon = memo(function Beacon({ x, y, active }: { x: number; y: number; active: boolean }) {
+  return (
+    <div aria-hidden style={{ position: 'absolute', left: x, top: y }}>
+      {/* the light lying on the water — squashed with the plane, under the pile */}
+      <div style={{
+        position: 'absolute', left: -30, top: -18, width: 60, height: 36, borderRadius: '50%',
+        background: `radial-gradient(circle, rgba(255,196,110,${active ? 0.30 : 0.16}) 0%, rgba(255,196,110,0) 68%)`,
+        transition: 'background 300ms ease-out',
+      }} />
+      {/* the pile, standing up off the plane like every jetty post */}
+      <div style={{
+        position: 'absolute', left: -2.5, bottom: 0,
+        transform: `scaleY(${1 / GROUND})`, transformOrigin: 'bottom center',
+        width: 5, height: 26, borderRadius: 1,
+        background: 'linear-gradient(180deg, #4a3a24, #241b0f)',
+      }} />
+      {/* the lamp at its head */}
+      <div style={{
+        position: 'absolute', left: -4.5, top: -(26 / GROUND) - 7,
+        width: 9, height: 9, borderRadius: '50%',
+        background: '#ffd986',
+        boxShadow: `0 0 ${active ? 20 : 11}px ${active ? 6 : 3}px rgba(255,196,110,${active ? 0.55 : 0.3})`,
+        transition: 'box-shadow 300ms ease-out',
+      }} />
+    </div>
+  )
+})
+
 const PortBerth = memo(function PortBerth({ p, active }: { p: Place; active: boolean }) {
   const b = berthOf(p)
   const bearing = Math.atan2(b.y - p.y, b.x - p.x)
@@ -7036,12 +7067,7 @@ const PortBerth = memo(function PortBerth({ p, active }: { p: Place; active: boo
       }} />
       {[-0.95, 0, 0.95].map((off, i) => {
         const a = bearing + off
-        return (
-          <SeaMark key={i} i={i * 2 + 1} m={{
-            art: '/sea/buoy.png', size: 48, sway: 'bob',
-            x: Math.cos(a) * b.r, y: Math.sin(a) * b.r,
-          }} />
-        )
+        return <Beacon key={i} x={Math.cos(a) * b.r} y={Math.sin(a) * b.r} active={active} />
       })}
     </div>
   )

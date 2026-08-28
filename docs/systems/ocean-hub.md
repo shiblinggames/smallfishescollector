@@ -114,8 +114,8 @@ own override (see the berth section). `MAINLAND_DOORSTEP` in seaTraders derives 
 ### The berth (docking zones)
 
 **The dock prompt lives in a drawn circle of water off each port's jetty** — `berthOf(p)` /
-`inBerth(at, p)` in chart.ts, painted by `PortBerth` in SeaMap (dashed ring + three buoys,
-brightening solid while you are inside). Default centre is just off the jetty's seaward end
+`inBerth(at, p)` in chart.ts, painted by `PortBerth` in SeaMap (dashed ring + three beacon
+lights standing on it, kin to the jetty lantern; ring and lamps flare while you are inside). Default centre is just off the jetty's seaward end
 (`x + 0.85r, y + 0.6r`), radius `BERTH_R = 260`; a `berth` override on the Place moves it
 (the Mainland's is pulled south so the `HOME` start point sits inside it and a fresh session
 opens with the prompt up).
