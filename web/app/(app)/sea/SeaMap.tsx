@@ -5964,7 +5964,23 @@ const LandmarkField = memo(function LandmarkField() {
  * immediately. A little of the hull showing under the surface is the whole
  * effect.
  */
-const SUBMERGE: Record<string, { line: number; keep: number }> = {
+/**
+ * `v` — THE WATERLINE'S SWING, for art drawn isometrically.
+ *
+ * A flat cut is right for organic shapes: a rock meets the water wherever it
+ * happens to bulge. But the docks are built objects seen from above-and-aside,
+ * and a horizontal plane crosses an isometric object as a V — lowest at the
+ * near corner, rising along the base edges to either side. Cutting them flat
+ * put the near corner's piles underwater and left the same depth of water
+ * climbing the SIDE faces, which is what made them read as tilted rather than
+ * standing in water.
+ *
+ * `v` is half the swing, in % of the sprite's height: the apex dips `v` below
+ * `line` at the centre and the edges rise `v` above it. Hand-tuned per art like
+ * everything else in this table, because the painted perspective is the
+ * artist's, not a projection with a formula.
+ */
+const SUBMERGE: Record<string, { line: number; keep: number; v?: number }> = {
   // A moored boat. Barely under — a hull floats, it does not wade — but not
   // zero: a hard edge at the waterline reads as sitting ON the sea. The keel
   // tapers to a point down there, so what goes under is the bit that should.
@@ -5991,8 +6007,8 @@ const SUBMERGE: Record<string, { line: number; keep: number }> = {
   // below the boards on both, and they keep more of themselves visible under
   // the surface than rock does, because you are meant to read the piles going
   // down as piles rather than as the dock ending.
-  'dock-raids':   { line: 84, keep: 0.30 },
-  'dock-voyages': { line: 86, keep: 0.30 },
+  'dock-raids':   { line: 84, keep: 0.30, v: 6 },
+  'dock-voyages': { line: 86, keep: 0.30, v: 6 },
 
   // ── THE REEF ALONG THE TOP ───────────────────────────────────────────
   //
@@ -6252,13 +6268,23 @@ const SeaMark = memo(function SeaMark({ m, i }: {
             // The step is what sells it. A smooth fade from 1 to 0 reads as the
             // object dissolving; a step to a low plateau reads as a change of
             // MEDIUM, which is what a waterline is.
+            //
+            // WITH `v` SET this copy is only the UNDERWATER HALF of the effect:
+            // dim everywhere, fading with depth, and the solid copy clipped to
+            // the V is stacked on top of it. Without `v` it is the whole thing.
             ...(sub ? {
               maskImage:
-                `linear-gradient(to bottom, #000 ${sub.line}%, ` +
+                `linear-gradient(to bottom, ` +
+                (sub.v
+                  ? `rgba(0,0,0,${sub.keep}) 0%, `
+                  : `#000 ${sub.line}%, `) +
                 `rgba(0,0,0,${sub.keep}) ${sub.line + 3}%, ` +
                 `rgba(0,0,0,${sub.keep * 0.55}) ${(sub.line + 100) / 2}%, transparent 100%)`,
               WebkitMaskImage:
-                `linear-gradient(to bottom, #000 ${sub.line}%, ` +
+                `linear-gradient(to bottom, ` +
+                (sub.v
+                  ? `rgba(0,0,0,${sub.keep}) 0%, `
+                  : `#000 ${sub.line}%, `) +
                 `rgba(0,0,0,${sub.keep}) ${sub.line + 3}%, ` +
                 `rgba(0,0,0,${sub.keep * 0.55}) ${(sub.line + 100) / 2}%, transparent 100%)`,
             } : {}),
@@ -6266,6 +6292,28 @@ const SeaMark = memo(function SeaMark({ m, i }: {
             // row of buoys read as machinery.
             animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
           }} />
+
+        {/* ── THE DRY PART, CUT ALONG THE V ─────────────────────────────
+            The same sprite again, clipped to everything above the waterline —
+            which on an isometric object is not a line but a V, apex at the
+            near corner. Clip-path takes per-axis percentages, so the V is two
+            numbers a person can tune by eye against the painted base rather
+            than a projection formula the art never actually followed.
+
+            Same sway class and the same delay as the copy underneath, so the
+            two halves are one object in motion rather than a building and its
+            reflection drifting apart. */}
+        {sub?.v != null && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img decoding="async" src={m.art} alt="" draggable={false} loading="lazy"
+            className={m.sway ? `mark-${m.sway}` : undefined}
+            style={{
+              position: 'absolute', left: 0, top: 0,
+              width: '100%', maxWidth: 'none', display: 'block',
+              clipPath: `polygon(0 0, 100% 0, 100% ${sub.line - sub.v}%, 50% ${sub.line + sub.v}%, 0 ${sub.line - sub.v}%)`,
+              animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
+            }} />
+        )}
       </div>
     </div>
   )
