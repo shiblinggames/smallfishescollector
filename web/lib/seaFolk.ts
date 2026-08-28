@@ -95,6 +95,30 @@ export type Folk = {
   /** One line for the roster: who they are, in the third person. */
   blurb: string
   /**
+   * THEIR FACE.
+   *
+   * Written down rather than hashed off their id, which is what the buyers
+   * used to get. A hash gives you A face; it does not give you a face that
+   * suits the person, and these nine are the only people out here anybody is
+   * meant to recognise on sight. Same shape Finn's portrait uses, so the
+   * scene renderer treats the rival and the regulars identically.
+   *
+   * `role` is the eyebrow over the name in the scene: what they are to you,
+   * in two words, where Finn's says Rival.
+   */
+  face: {
+    characterColor: string
+    hat: string | null
+    bg: string
+    ring: string
+    /** Portraits face the player. Art is drawn looking left, so most mirror. */
+    mirrored?: boolean
+  }
+  role: string
+  /** The accent this character's scene is lit with. Warm for the sociable,
+   *  cold for the ones who live in the dark. */
+  accent: string
+  /**
    * WHAT THEY SAY, BY TIER.
    *
    * Chosen by what has not been heard yet, so a run of daily visits finds
@@ -141,6 +165,8 @@ export type Folk = {
 export const FOLK: Folk[] = [
   {
     id: 'meg', name: 'Meg Corrin', zoneId: 'shallows', buys: true,
+    face: { characterColor: 'sand', hat: 'brown', bg: '#1a1408', ring: '#c8a060', mirrored: true },
+    role: 'Shallows buyer', accent: '#d8b070',
     blurb: 'Buys the hold and weighs it in front of you.',
     loves: [7, 8, 11], // Rainbow Trout, Largemouth Bass, Northern Pike
     lines: [
@@ -187,6 +213,8 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'pell', name: 'Bent Pell', zoneId: 'open_waters', buys: true,
+    face: { characterColor: 'blue', hat: 'gray', bg: '#0c1620', ring: '#7fa8c8', mirrored: true },
+    role: 'Open Waters buyer', accent: '#7fa8c8',
     blurb: 'Buys fast, talks faster, and would rather you were quick about it.',
     loves: [22, 25, 60], // Wahoo, Mahi-mahi, Atlantic Bluefin Tuna
     lines: [
@@ -233,6 +261,8 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'marlow', name: 'Old Marlow', zoneId: 'deep', buys: true,
+    face: { characterColor: 'gray', hat: 'black', bg: '#101418', ring: '#a8b4c0', mirrored: true },
+    role: 'Deep water buyer', accent: '#b0bcc8',
     blurb: 'Buys deep and makes no secret of why it pays him.',
     loves: [38, 40, 39], // Blue Marlin, Swordfish, Mako Shark
     lines: [
@@ -279,6 +309,8 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'fitch', name: 'Quiet Fitch', zoneId: 'abyss', buys: true,
+    face: { characterColor: 'storm', hat: 'midnight', bg: '#080c14', ring: '#6878a0', mirrored: true },
+    role: 'Abyss buyer', accent: '#8090b8',
     blurb: 'Buys in the dark water. Says very little about anything.',
     loves: [41, 46, 50], // Anglerfish, Frilled Shark, Coelacanth
     lines: [
@@ -325,6 +357,8 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'nance', name: 'Grey Nance', zoneId: 'ancient_deep', buys: true,
+    face: { characterColor: 'ice', hat: 'offwhite', bg: '#0a1018', ring: '#9ec4d8', mirrored: true },
+    role: 'Ancient Deep buyer', accent: '#9ec4d8',
     blurb: 'Buys whatever comes up from the oldest water, and asks nothing.',
     loves: [143, 145, 148], // the ancients, if the hold ever carries one
     lines: [
@@ -371,49 +405,56 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'yoon', name: 'Yoon', zoneId: 'ancient_deep', buys: false,
+    face: { characterColor: 'golden', hat: 'black', bg: '#141008', ring: '#f0c040', mirrored: true },
+    role: 'Rodmaker', accent: '#f0c040',
     blurb: 'Carries one rod that no shop will stock, and an opinion on whether you deserve it.',
     loves: [45, 49, 55], // Viperfish, Oarfish, Vampire Squid
+    // HE TALKS LIKE HE TALKS. Yoon is a real person and these are really his
+    // words, which is why he is the one voice out here that breaks the sea's
+    // register on purpose. Everyone else says "aye" and means it; Yoon says
+    // "betty johnson" and means the same thing. The Locked-In Rod is named
+    // after the way he says "locked in", not the other way round.
     lines: [
       [
         "You've the streak for it, or you haven't. Rod won't teach you that. It just stops wasting it.",
-        "I am not here to sell. I am here in case somebody arrives who should have it.",
-        "Look if you like. Looking is free and mostly that is all it is.",
+        "I am not here to sell. I am here in case somebody turns up who should have it.",
+        "Sheeeeesh. Another one out this far. All right then.",
       ],
       [
-        "You came back without the coin. That is more interesting than coming back with it.",
+        "Gyattt. You came back without the coin. That is more interesting than coming back with it.",
         "The rod is not the difficult part. The difficult part is the hand.",
-        "Ask me about the rod again and I will give you the same answer. Ask me about the water and you will get a different one.",
+        "You want it? Betty johnson. Come back when the hand is ready.",
       ],
       [
         "I made it. Not the tier, the rod. The one on my boat. I made it and then I stopped making.",
         "A perfect cast is not luck twenty times. It is one thing you learned, done twenty times.",
-        "You are close. Not to the coin, to the hand. That is the one I watch.",
-        "Your hands have changed since the first time. Not better. Quieter. Quieter is better.",
+        "You were locked in on that last run. I watched the whole thing. Gyattt. Do not let it go to your head.",
+        "Sheeeeesh, that hold is heavy. You have been out here since the light came up, have you not.",
       ],
       [
         "There were three of us making rods out here. The other two sell in the harbour now and they make good ones.",
-        "I stayed out because a rod should go to the captain it fits and you cannot tell that through a shop window.",
+        "I stayed out because a rod should go to the captain it fits, and you cannot tell that through a shop window.",
         "Bring me a bad run one day. I would rather see how you fish when it is going wrong.",
-        "A rod is a promise about what you will do with it. Most captains break it inside a week.",
-        "I do not care what you catch. I care how you cast when nothing is biting.",
+        "Locked in is not trying harder. It is the part where you stop trying and it just goes.",
+        "Gyattt. That is a lot of line out. You are fishing deeper than you were last season.",
       ],
       [
         "You have the hand. I have thought so for a while and I do not say it to be kind.",
-        "When you buy the rod, and you will, I want you to know it was never a test. I just wanted to be sure it would be used.",
+        "When you buy the rod, and you will, know that it was never a test. I wanted to be sure it would get used.",
         "After this there is no better rod. There is only better fishing. That is the good news and nobody hears it that way.",
-        "I have made eleven rods. Nine are on the bottom, one is in the harbour, and one is on this boat.",
-        "You will not need me after this. That is what the work is for and it still takes some getting used to.",
+        "You are locked in more days than you are not now. Gyattt. That took what, a season?",
+        "Everything is gucci out here when you are fishing like this. Do not tell the harbour I said gucci.",
       ],
     ],
     tierUp: [
       "Yoon. You may as well have the name if you are going to keep mooring here.",
-      "You have stopped asking for a discount. Good. There was never going to be one.",
-      "I will talk about the making with you. I do not do that with buyers.",
-      "The rod is yours whenever you have the coin, and it was yours the day you stopped asking about the price.",
+      "You stopped asking for a discount. Gucci. There was never going to be one.",
+      "I will talk about the making with you. Betty johnson. I do not do that with buyers.",
+      "The rod is yours whenever you have the coin, and it was yours the day you stopped asking the price. Sheeeeesh. Took you long enough.",
     ],
-    onLoved: "You brought this all the way out here for me. Sit down. I am going to tell you how it is caught properly.",
-    onLiked: "Good fish, and well handled. I can see how it was landed from the state of it.",
-    onPlain: "I will take it. I do not eat much out here.",
+    onLoved: "Sheeeeesh. You carried this all the way out here. Sit down, I am going to tell you how it is caught properly.",
+    onLiked: "Good fish, and well handled. Gucci.",
+    onPlain: "Betty johnson. I will take it. I do not eat much out here.",
   },
 
   // ── THE THREE WHO KEEP NO SHOP ─────────────────────────────────────────
@@ -426,6 +467,8 @@ export const FOLK: Folk[] = [
 
   {
     id: 'brill', name: 'Tam Brill', zoneId: 'shallows', buys: false,
+    face: { characterColor: 'default', hat: 'green', bg: '#0e1810', ring: '#8cc890', mirrored: true },
+    role: 'Two seasons out', accent: '#8cc890',
     blurb: 'Two seasons out and convinced everyone else is a legend.',
     loves: [1, 4, 6], // Bluegill, Pumpkinseed, Crappie
     lines: [
@@ -472,6 +515,8 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'turbot', name: 'Cass Turbot', zoneId: 'open_waters', buys: false,
+    face: { characterColor: 'forest', hat: 'olive', bg: '#0c1410', ring: '#88b09c', mirrored: true },
+    role: 'Wreck diver', accent: '#88b09c',
     blurb: 'Dives the wrecks and comes up with stories, some of them true.',
     loves: [24, 21, 19], // Barracuda, Cobia, Flying Fish
     lines: [
@@ -518,6 +563,8 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'ream', name: 'Rue Bream', zoneId: 'deep', buys: false,
+    face: { characterColor: 'lavender', hat: 'purple', bg: '#12101c', ring: '#b0a0d0', mirrored: true },
+    role: 'Carries word', accent: '#b0a0d0',
     blurb: 'Carries news between the regulars and remembers all of it.',
     loves: [37, 33, 27], // Atlantic Sailfish, Grouper, Atlantic Cod
     lines: [

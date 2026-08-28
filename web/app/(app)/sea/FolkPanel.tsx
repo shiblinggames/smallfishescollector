@@ -36,7 +36,7 @@ import {
   findNextEncounterBeat,
 } from '@/lib/finn'
 import { PLACES } from './chart'
-import { FOLK, TIER_NAME, TIER_AT, toNextTier } from '@/lib/seaFolk'
+import { FOLK, TIER_NAME, TIER_AT, type Folk } from '@/lib/seaFolk'
 import { folkState, type Rapport } from './folkActions'
 import type { FinnSeaState } from './finnActions'
 
@@ -71,56 +71,64 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-/** One regular, and where you stand with them. Locked ones keep their name
- *  back: the water is the thing you have not reached, so the water is what it
- *  tells you. */
-function FolkRow({ name, water, what, locked, need, rap }: {
-  name: string; water: string; what: string; locked: boolean; need: number
-  rap: Rapport | null
-}) {
-  const met = !!rap && rap.points > 0
+/**
+ * ONE REGULAR YOU HAVE MET, with their face on it.
+ *
+ * ONLY ever rendered for somebody already spoken to. A roster of strangers is
+ * a list of homework: it tells a captain there are eight more people out there
+ * and exactly nothing about any of them, which turns a thing you discover into
+ * a thing you are behind on. The sea is for finding people. This is for
+ * remembering them.
+ */
+function FolkRow({ folk, rap }: { folk: Folk; rap: Rapport }) {
+  const pct = Math.round((Math.min(rap.points, TIER_AT[4]) / TIER_AT[4]) * 100)
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 8, padding: '0.46rem 0',
+      display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 0',
       borderTop: `1px solid ${SEA},0.1)`,
     }}>
+      {/* THE FACE. Same portrait the scene opens with, so the person you
+          remember and the person in the list are visibly the same one. */}
+      <div style={{
+        transform: folk.face.mirrored ? 'scaleX(-1)' : 'none',
+        flexShrink: 0, borderRadius: '50%',
+        boxShadow: `0 0 10px ${folk.accent}33`,
+      }}>
+        <CharacterAvatar
+          characterColor={folk.face.characterColor}
+          equippedHat={folk.face.hat}
+          bgColor={folk.face.bg}
+          ringColor={folk.face.ring}
+          size={34}
+        />
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p className="font-cinzel font-700" style={{
-          fontSize: '0.9rem', margin: 0,
-          color: locked ? `${SEA},0.35)` : '#e8f2ea',
-        }}>{locked ? 'Someone out there' : name}</p>
+          fontSize: '0.9rem', margin: 0, color: '#e8f2ea',
+        }}>{folk.name}</p>
         <p className="font-karla" style={{
-          fontSize: '0.7rem', margin: '1px 0 0', color: `${SEA},0.62)`,
-        }}>
-          {locked ? `${water}. Fishing ${need} to work that water.` : `${water}. ${what}`}
-        </p>
+          fontSize: '0.68rem', margin: '1px 0 0', color: `${SEA},0.55)`,
+        }}>{folk.role}</p>
       </div>
-      {/* WHAT THEY WOULD CALL YOU, which is the whole of the reward. The bar
-          under it is the same fact for anyone who wants a number. */}
-      {!locked && (
-        <div style={{ width: 108, flexShrink: 0, textAlign: 'right' }}>
-          <p className="font-karla font-700" style={{
-            fontSize: '0.66rem', margin: 0,
-            color: met ? `${GOLD},0.85)` : `${SEA},0.4)`,
-          }}>{met ? TIER_NAME[rap.tier] : 'Not met'}</p>
-          {met && (
-            <div style={{
-              height: 3, borderRadius: 999, marginTop: 4,
-              background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
-            }}>
-              <div style={{
-                width: `${Math.round((Math.min(rap.points, TIER_AT[4]) / TIER_AT[4]) * 100)}%`,
-                height: '100%', background: `${GOLD},0.6)`, borderRadius: 999,
-              }} />
-            </div>
-          )}
-          {met && rap.chattedToday === false && (
-            <p className="font-karla" style={{
-              fontSize: '0.58rem', margin: '3px 0 0', color: `${GOLD},0.6)`,
-            }}>Has a word for you</p>
-          )}
+      <div style={{ width: 104, flexShrink: 0, textAlign: 'right' }}>
+        <p className="font-karla font-700" style={{
+          fontSize: '0.66rem', margin: 0, color: folk.accent,
+        }}>{TIER_NAME[rap.tier]}</p>
+        <div style={{
+          height: 3, borderRadius: 999, marginTop: 4,
+          background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
+        }}>
+          <div style={{
+            width: `${pct}%`, height: '100%',
+            background: folk.accent, borderRadius: 999,
+          }} />
         </div>
-      )}
+        {!rap.chattedToday && (
+          <p className="font-karla" style={{
+            fontSize: '0.57rem', margin: '3px 0 0', color: `${GOLD},0.62)`,
+          }}>Has a word for you</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -143,16 +151,17 @@ export default function FolkPanel({ open, onClose, finn, level }: {
     void folkState().then(rows => { if (alive) setRap(rows) })
     return () => { alive = false }
   }, [open])
-  const rapOf = (id: string) => rap.find(r => r.folkId === id) ?? null
+  /** Only the ones actually spoken to, in the order the cast is written so
+   *  the list does not reshuffle as standings change. */
+  const met = FOLK
+    .map(folk => ({ folk, rap: rap.find(r => r.folkId === folk.id) }))
+    .filter((x): x is { folk: Folk; rap: Rapport } => !!x.rap && x.rap.points > 0)
 
   const seen = new Set(finn?.seenBeats ?? [])
   const heard = FINN_ENCOUNTER_BEATS.filter(b => seen.has(b.id)).length
   const wonHeard = FINN_WIN_BEATS.filter(b => seen.has(b.id)).length
   const more = findNextEncounterBeat(finn?.seenBeats ?? []) !== null
 
-  const waterOf = (zoneId: string) => PLACES.find(p => p.id === zoneId)
-  const needFor = (zoneId: string) => waterOf(zoneId)?.minLevel ?? 1
-  const nameOf = (zoneId: string) => waterOf(zoneId)?.name ?? 'Open water'
 
   return (
     <AnimatePresence>
@@ -270,21 +279,26 @@ export default function FolkPanel({ open, onClose, finn, level }: {
 
             {/* ── THE NAMED FOLK. Permanent, always in the same water, worth
                 knowing about before you sail out to them. */}
-            <Section title="The regulars">
-              {FOLK.map(f => (
-                <FolkRow key={f.id}
-                  name={f.name} water={nameOf(f.zoneId)} what={f.blurb}
-                  locked={level < needFor(f.zoneId)} need={needFor(f.zoneId)}
-                  rap={rapOf(f.id)} />
+            <Section title={met.length > 0 ? `Known to you (${met.length})` : 'Known to you'}>
+              {met.length === 0 ? (
+                <p className="font-karla" style={{
+                  fontSize: '0.76rem', color: `${SEA},0.55)`, lineHeight: 1.5,
+                  padding: '0.5rem 0', margin: 0,
+                }}>
+                  Nobody yet. There are folk out there who keep to the same water year in and
+                  year out. Pull alongside one and say something, and they will turn up here.
+                </p>
+              ) : met.map(({ folk, rap }) => (
+                <FolkRow key={folk.id} folk={folk} rap={rap} />
               ))}
             </Section>
 
             <p className="font-karla" style={{
               fontSize: '0.68rem', margin: '0.5rem 0 0', color: `${SEA},0.45)`, lineHeight: 1.4,
             }}>
-              These nine are always out there, always in the same water. Have a word once a
-              day and they warm to you, and a fish from your hold warms them faster. Nothing
-              is lost by staying away: there is no streak here and none of it fades.
+              Have a word once a day and they warm to you, and a fish out of your hold warms
+              them faster. Nothing is lost by staying away: there is no streak here and none
+              of it fades.
             </p>
 
             {/* ── THE WANDERERS. Not a log: these people are different every

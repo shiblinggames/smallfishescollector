@@ -19,6 +19,7 @@ import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
 import { folkById, TIER_NAME, toNextTier, tierFor, type FolkTier } from '@/lib/seaFolk'
 import { folkState, talkToFolk, giftToFolk, holdForGifting, type Rapport } from './folkActions'
+import FolkScene, { type SceneGain } from './FolkScene'
 
 export default function TraderPanel({
   trader, alreadyDealt, dealsLeft, onDealt, onHoldEmptied, onClose,
@@ -70,8 +71,9 @@ export default function TraderPanel({
   const [hold, setHold] = useState<{ id: number; name: string; qty: number; habitat: string | null }[]>([])
   /** What they just said, which replaces their standing line while it is up. */
   const [heard, setHeard] = useState<string | null>(null)
-  /** The moment the bond deepens. Its own callout, because it is the payoff. */
-  const [deepened, setDeepened] = useState<string | null>(null)
+  /** The scene, and the last thing that moved in it. */
+  const [scene, setScene] = useState(false)
+  const [gain, setGain] = useState<SceneGain | null>(null)
   const [gifting, setGifting] = useState(false)
 
   useEffect(() => {
@@ -92,9 +94,8 @@ export default function TraderPanel({
       if ('error' in res) { setErr(res.error) }
       else {
         setHeard(res.line)
-        setDeepened(res.tierUp)
+        setGain({ points: res.points, gained: res.points - (rap?.points ?? 0), tier: res.tier, tierUp: res.tierUp })
         setRap(r => (r ? { ...r, points: res.points, tier: res.tier, chattedToday: true } : r))
-        if (res.tierUp) vibrate([0, 30, 50, 70])
       }
     } catch { setErr('They did not hear you.') }
     setBusy(false)
@@ -108,8 +109,12 @@ export default function TraderPanel({
       if ('error' in res) { setErr(res.error) }
       else {
         setHeard(res.line)
-        setDeepened(res.tierUp)
+        setGain({
+          points: res.points, gained: res.points - (rap?.points ?? 0),
+          tier: res.tier, tierUp: res.tierUp, how: res.how,
+        })
         setGifting(false)
+        setScene(true)
         setRap(r => (r ? { ...r, points: res.points, tier: res.tier, giftedToday: true } : r))
         setHold(h => h.map(f => (f.id === fishId ? { ...f, qty: f.qty - 1 } : f)).filter(f => f.qty > 0))
         vibrate(res.how === 'loved' ? [0, 40, 60, 90] : 14)
@@ -371,43 +376,11 @@ export default function TraderPanel({
           </p>
         )}
 
-        {/* ── WHERE YOU STAND WITH THEM ────────────────────────────────
-            Only for the regulars. A tier is not a number of hearts out here,
-            it is what they would call you, so the panel prints the words and
-            keeps the count underneath for anyone who wants it. */}
-        {folk && rap && (
-          <div style={{
-            marginTop: 12, padding: '0.55rem 0.7rem', borderRadius: 10,
-            background: 'rgba(255,206,138,0.07)',
-            border: '1px solid rgba(255,206,138,0.22)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#f6ecd6' }}>
-                {TIER_NAME[rap.tier]}
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,206,138,0.7)' }}>
-                {toNextTier(rap.points) === null
-                  ? 'As far as it goes'
-                  : `${toNextTier(rap.points)} to go`}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* THE BOND DEEPENING. Its own voice and its own gold, because it is
-            the entire reward the system pays. */}
-        {deepened && (
-          <p className="font-cinzel font-700" style={{
-            fontSize: '0.95rem', color: '#ffd986', marginTop: 12, lineHeight: 1.5,
-            padding: '0.6rem 0.7rem', borderRadius: 10,
-            background: 'rgba(60,44,10,0.7)', border: '1px solid rgba(240,192,64,0.45)',
-          }}>{deepened}</p>
-        )}
-
         {/* THE HOLD, WHEN YOU ARE HANDING SOMETHING OVER. Their own water's
             fish land better, and the ones they love land best, but nothing is
             ever refused: sailing out with a gift should not be punished for
-            picking wrong. */}
+            picking wrong. Rendered here rather than in the scene because a
+            list of thirty species does not belong on a cinematic card. */}
         {gifting && folk && (
           <div style={{ marginTop: 12, maxHeight: 190, overflowY: 'auto' }}>
             {hold.length === 0 ? (
@@ -464,31 +437,23 @@ export default function TraderPanel({
               Go on
             </button>
           )}
-          {/* HAVE A WORD, and GIVE THEM SOMETHING. One of each a day, per
-              regular. Missing a day costs nothing at all, so these simply are
-              not there until tomorrow rather than warning anybody about a
-              streak they are about to lose. */}
-          {folk && rap && !rap.chattedToday && (
-            <button onClick={haveAWord} disabled={busy}
+          {/* SPEAK TO THEM opens the scene. One button here, because the
+              conversation is not a control in a shop panel: it is a portrait,
+              their voice typed out, and where you stand with them, and it gets
+              the whole screen. */}
+          {folk && rap && (
+            <button onClick={() => { vibrate(10); setScene(true) }}
               className="font-cinzel font-700"
               style={{
-                flex: 1.1, padding: '0.8rem', borderRadius: 11, fontSize: '1.02rem',
-                color: '#f2ead8', background: 'rgba(255,206,138,0.16)',
-                border: '1px solid rgba(255,206,138,0.45)',
-                cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+                flex: 1.2, padding: '0.8rem', borderRadius: 11, fontSize: '1.02rem',
+                color: '#f2ead8',
+                background: (!rap.chattedToday || !rap.giftedToday)
+                  ? `${folk.accent}26` : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${(!rap.chattedToday || !rap.giftedToday)
+                  ? folk.accent + '73' : 'rgba(255,255,255,0.16)'}`,
+                cursor: 'pointer',
               }}>
-              {busy ? '…' : 'Have a word'}
-            </button>
-          )}
-          {folk && rap && !rap.giftedToday && hold.length > 0 && !gifting && (
-            <button onClick={() => { vibrate(8); setGifting(true) }}
-              className="font-karla font-700"
-              style={{
-                flex: 1, padding: '0.8rem', borderRadius: 11, fontSize: '0.94rem',
-                color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
-              }}>
-              Give a fish
+              Speak to {folk.name.split(' ')[0]}
             </button>
           )}
           {/* flex: 1 ALWAYS. It was 0.8 when it stood alone, which on a phone
@@ -505,6 +470,27 @@ export default function TraderPanel({
           </button>
         </div>
       </motion.div>
+
+      {/* ── THE CONVERSATION, GIVEN THE SCREEN ──────────────────────────
+          Everything about knowing one of the regulars happens in here: their
+          face, their voice typed out, where you stand, and what moved. The
+          panel behind it stays what it always was, which is a shop. */}
+      {folk && rap && (
+        <FolkScene
+          folk={folk}
+          open={scene}
+          tier={rap.tier}
+          points={rap.points}
+          line={heard ?? folk.lines[rap.tier][0]}
+          gain={gain}
+          canChat={!rap.chattedToday}
+          canGift={!rap.giftedToday && hold.length > 0}
+          busy={busy}
+          onChat={haveAWord}
+          onGift={() => { setScene(false); setGifting(true) }}
+          onClose={() => { setScene(false); setGain(null) }}
+        />
+      )}
     </div>
   )
 }

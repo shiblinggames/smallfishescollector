@@ -114,8 +114,31 @@ OR <> today` in the WHERE), so two taps cannot both be the first — verified on
 table, two taps in a day added exactly one point. Gifting claims the day FIRST and takes the
 fish second, reverting the claim if the hold turns out to be empty.
 
-Adding a regular means: an entry in `FOLK`, a position in `SOCIALS` (or a buyer row), and a
-keep-out in `seaFinn`'s list. `check-finn` and `check-traders` are the gate on any position.
+**The conversation is a cutscene, not a panel row.** `FolkScene.tsx` uses the same
+`components/cutscene` kit Finn's encounter does (portrait, letterbox, typewriter, choices),
+so the rival and the regulars are lit by one renderer. Each regular carries a written-down
+`face` (colour, hat, ring), a `role` eyebrow and an `accent` that lights their whole scene;
+these are authored, not hashed off the id, because these nine are the only people out here
+meant to be recognised on sight. The gift picker stays in TraderPanel: a list of thirty
+species does not belong on a cinematic card.
+
+**The gain is staged in three sizes.** The `+N` flies up off the bar, the bar runs to its
+new mark within the CURRENT TIER's span (not the whole ladder, or late tiers look like no
+progress), and crossing a tier takes the card over with the line they only ever say once.
+The first cut paid out in a silent integer inside a panel nobody was looking at.
+
+**The Salt Road lists only people you have actually met**, with their portraits. A roster of
+strangers is homework: it says there are eight more people out there and nothing about any
+of them, turning a thing you discover into a thing you are behind on.
+
+**Yoon talks like Yoon.** He is based on a real person and the slang is really his:
+sheeeeesh, locked in, gucci, betty johnson, gyattt. He is deliberately the one voice that
+breaks the sea's register, and the Locked-In Rod is named after the way he says it rather
+than the other way round. Keep the mannerisms if his lines are ever extended.
+
+Adding a regular means: an entry in `FOLK` (with a face, role and accent), a position in
+`SOCIALS` (or a buyer row), and a keep-out in `seaFinn`'s list. `check-finn` and
+`check-traders` are the gate on any position.
 
 ## The Salt Road panel
 
