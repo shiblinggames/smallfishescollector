@@ -4865,35 +4865,63 @@ hullRef={hullRefFor(t.key)} />
           const t = PORTAL_TIERS.find(pt => pt.tier === portalTier) ?? PORTAL_TIERS[0]
           return (
             <motion.div key="portal-charge" aria-hidden
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.25 } }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }}
               style={{
                 position: 'absolute', inset: 0, zIndex: Z.crossing,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 pointerEvents: 'none',
               }}>
-              {/* Three rings, staggered, closing IN on the boat — the water
-                  gathering, not the boat exploding. */}
-              {[0, 0.18, 0.36].map(d => (
-                <motion.div key={d}
-                  initial={{ scale: 2.6, opacity: 0 }}
-                  animate={{ scale: 0.35, opacity: [0, 0.85, 0] }}
-                  transition={{ duration: 0.9, delay: d, ease: 'easeIn' }}
-                  style={{
-                    position: 'absolute', width: 260, height: 156, borderRadius: '50%',
-                    border: `2px solid ${t.accent}`,
-                    boxShadow: `0 0 24px ${t.accent}88, inset 0 0 24px ${t.accent}44`,
-                  }} />
-              ))}
-              {/* The bloom, last: it peaks as the sheet arrives, so the sheet
-                  reads as what the light resolved into. */}
+              {/* ── THE BEAM ─────────────────────────────────────────────
+                  A vertical cylinder of light around the hull. The cylinder
+                  is sold by two cheap facts: the column is BRIGHTEST AT ITS
+                  EDGES (a horizontal gradient — that is what a lit tube
+                  looks like from outside), and light streams UPWARD inside
+                  it (one streak layer sliding on transform, doubled so the
+                  loop is seamless). Everything animates on transform and
+                  opacity only; the gradients raster once.
+
+                  Anchored at the waterline, which sits ~46px below the
+                  screen's centre — the boat is always dead centre, so the
+                  beam needs no world maths at all. */}
+
+              {/* The pool where the cylinder meets the water. */}
               <motion.div
-                initial={{ scale: 0.2, opacity: 0 }}
-                animate={{ scale: 1.35, opacity: [0, 0, 0.9] }}
-                transition={{ duration: 1.0, times: [0, 0.55, 1], ease: 'easeIn' }}
+                initial={{ scale: 0.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
                 style={{
-                  position: 'absolute', width: 220, height: 220, borderRadius: '50%',
-                  background: `radial-gradient(circle, ${t.accent}cc 0%, ${t.accent}44 45%, transparent 70%)`,
+                  position: 'absolute', left: '50%', top: '50%',
+                  width: 260, height: 100, marginLeft: -130, marginTop: -4,
+                  borderRadius: '50%',
+                  border: `2px solid ${t.accent}cc`,
+                  background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${t.accent}33 0%, ${t.accent}11 55%, transparent 75%)`,
+                  boxShadow: `0 0 30px ${t.accent}66, inset 0 0 30px ${t.accent}44`,
                 }} />
+
+              {/* The column, rising out of the pool. */}
+              <div style={{
+                position: 'absolute', left: '50%', top: '50%',
+                width: 216, height: 440,
+                transform: 'translate(-50%, calc(-100% + 46px))',
+              }}>
+                <motion.div
+                  initial={{ scaleY: 0, opacity: 0 }}
+                  animate={{ scaleY: 1, opacity: 1 }}
+                  transition={{ duration: 0.55, ease: [0.2, 0.9, 0.3, 1] }}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    transformOrigin: 'bottom center',
+                    background: `linear-gradient(90deg, transparent 0%, ${t.accent}66 8%, ${t.accent}1c 30%, ${t.accent}10 50%, ${t.accent}1c 70%, ${t.accent}66 92%, transparent 100%)`,
+                    maskImage: 'linear-gradient(to top, #000 0%, #000 45%, transparent 96%)',
+                    WebkitMaskImage: 'linear-gradient(to top, #000 0%, #000 45%, transparent 96%)',
+                    overflow: 'hidden',
+                  }}>
+                  {/* The rising light inside the tube. */}
+                  <div className="sea-beam-streaks" style={{
+                    position: 'absolute', left: 0, right: 0, top: 0, height: '200%',
+                    background: `repeating-linear-gradient(0deg, transparent 0px, transparent 22px, ${t.accent}40 22px, ${t.accent}40 30px, transparent 30px, transparent 44px, rgba(255,255,255,0.22) 44px, rgba(255,255,255,0.22) 48px)`,
+                  }} />
+                </motion.div>
+              </div>
             </motion.div>
           )
         })()}
@@ -7286,6 +7314,37 @@ const PortalRing = memo(function PortalRing({ tier }: { tier: number }) {
           boxShadow: `0 0 26px ${t.accent}aa`,
         }} />
       )}
+      {/* ── THE RIM FLAMES, tiers 4 and 5 — and they burn ──────────────
+          Drawn by the chart, not painted into the plates: paint cannot
+          flicker, and a flame that does not move is a lamp. CSS, not a
+          sprite, after the sprite route came back with the model's own
+          transparency checkerboard baked through the glow — at this size a
+          two-gradient flame is indistinguishable from paint, tints itself
+          from the tier's accent, and cannot come back dithered.
+
+          Each stands at the rim, counter-squashed like everything vertical,
+          flickering on transform and opacity only, with a prime-ish delay
+          stride so no two ever sync up — twelve flames breathing in step is
+          machinery. */}
+      {tier >= 4 && Array.from({ length: tier >= 5 ? 12 : 8 }, (_, k) => {
+        const count = tier >= 5 ? 12 : 8
+        const rad = ((k / count) * 360 - 90) * (Math.PI / 180)
+        const size = tier >= 5 ? 30 : 22
+        return (
+          <div key={k} style={{
+            position: 'absolute',
+            left: Math.cos(rad) * PORTAL.r, top: Math.sin(rad) * PORTAL.r,
+            transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+            transformOrigin: 'bottom center',
+          }}>
+            <div className="sea-flame" style={{
+              width: size * 0.62, height: size,
+              ['--flame' as string]: t.accent,
+              animationDelay: `${(k * 0.53) % 2.1}s`,
+            }} />
+          </div>
+        )
+      })}
       <div style={{
         position: 'absolute', left: 0, top: -PORTAL.r - 30,
         transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
