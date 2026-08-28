@@ -2221,8 +2221,24 @@ export default function SeaMap({
     window.addEventListener('resize', fit)
     return () => window.removeEventListener('resize', fit)
   }, [])
-  /** Where each disc sits, so the row stays evenly spaced as they grow. */
-  const hudAt = (i: number) => 12 + i * (hudSize + 10)
+  /**
+   * WHERE EACH DISC SITS.
+   *
+   * Positions used to be hard-coded indices, which was fine while every button
+   * was always there and wrong the moment one was conditional: trawls only
+   * appear when a crew is actually out, so with none out its slot stayed empty
+   * and every button after it hung a disc-width away from the row with a hole
+   * where nothing was. Reported as blank icon space.
+   *
+   * The row is derived instead. Each button asks for its slot BY NAME, the
+   * order is fixed here, and anything not currently on screen is skipped, so
+   * the run closes up on its own however the conditions fall.
+   */
+  /** Left offset for a named button, or off-row if it is not showing. */
+  const hudAt = (id: string) => {
+    const i = hudRow.indexOf(id)
+    return 12 + (i < 0 ? hudRow.length : i) * (hudSize + 10)
+  }
   /** The who-is-out list, open or shut. */
   const [crewOpen, setCrewOpen] = useState(false)
   /** The Salt Road: Finn's progress and everyone else worth knowing about. */
@@ -2537,6 +2553,15 @@ export default function SeaMap({
    * not create space.
    */
   const [wide, setWide] = useState(false)
+
+  const hudRow = useMemo(() => {
+    const on: string[] = ['clock']
+    if (!fishingIn || wide) on.push('chart')
+    if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
+    if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
+    if (!inAnchorage && (!fishingIn || wide)) on.push('folk')
+    return on
+  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady])
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width: 900px)')
     if (!mq) return
@@ -5181,7 +5206,7 @@ hullRef={hullRefFor(t.key)} />
           // NOT rendered inside the banner, even though it shares its row: the
           // banner only exists while you are in a named water, and what time it
           // is has to be readable in open sea and off a dock too.
-          position: 'absolute', top: 18, left: hudAt(0), zIndex: Z.hud, pointerEvents: 'none',
+          position: 'absolute', top: 18, left: hudAt('clock'), zIndex: Z.hud, pointerEvents: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: hudSize, height: hudSize, borderRadius: '50%',
           background: 'rgba(6,12,18,0.7)',
@@ -5209,7 +5234,7 @@ hullRef={hullRefFor(t.key)} />
           title="The chart"
           data-coach="chart"
           style={{
-            position: 'absolute', top: 18, left: hudAt(1), zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt('chart'), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
             background: 'rgba(6,12,18,0.7)',
@@ -5271,7 +5296,7 @@ hullRef={hullRefFor(t.key)} />
           title="The Salt Road"
           data-no-steer
           style={{
-            position: 'absolute', top: 18, left: hudAt(4), zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt('folk'), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, padding: 0,
             borderRadius: 999, cursor: 'pointer',
@@ -5355,7 +5380,7 @@ hullRef={hullRefFor(t.key)} />
           title="Trawls"
           data-no-steer
           style={{
-            position: 'absolute', top: 18, left: hudAt(3), zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt('trawls'), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, padding: 0,
             borderRadius: 999, cursor: 'pointer',
@@ -5523,7 +5548,7 @@ hullRef={hullRefFor(t.key)} />
           title="Today's orders"
           data-no-steer
           style={{
-            position: 'absolute', top: 18, left: hudAt(2), zIndex: Z.hud,
+            position: 'absolute', top: 18, left: hudAt('orders'), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: hudSize, height: hudSize, padding: 0,
             borderRadius: 999, cursor: 'pointer',

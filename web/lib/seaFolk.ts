@@ -81,7 +81,21 @@ export function toNextTier(points: number): number | null {
 
 export const CHAT_POINTS = 1
 export const GIFT_LIKED_POINTS = 2
-export const GIFT_LOVED_POINTS = 3
+/**
+ * THE ONE FISH THEY ACTUALLY WANT.
+ *
+ * Five points against a chat's one, so landing somebody's favourite is worth
+ * most of a week of turning up. That is the intended shape: the fastest way to
+ * know one of these nine is to work out what they like and go and catch it.
+ *
+ * It does not break the curve, because it cannot be done casually. It is one
+ * species out of thirty in a band, you can only hand one over per day, and you
+ * have to have it in the hold when you are standing in front of them. A captain
+ * who does it every single day still needs twelve days to reach the top tier,
+ * against eighteen for somebody handing over whatever they happen to be
+ * carrying.
+ */
+export const GIFT_FAVOURITE_POINTS = 5
 
 export type Folk = {
   id: FolkId
@@ -137,10 +151,17 @@ export type Folk = {
   lines: [string[], string[], string[], string[], string[]]
   /** The moment the bond deepens. One per tier crossed into, so four. */
   tierUp: [string, string, string, string]
-  /** Species ids they love. Everything else in their own water they merely
-   *  like; anything at all is still worth something, because a captain who
-   *  sails out with a gift should never be told they got it wrong. */
-  loves: number[]
+  /**
+   * THE ONE FISH. Not a list: a single species, theirs, chosen to say
+   * something about them. Marlow wants a marlin. Tam Brill, two seasons out
+   * and proud of it, wants a bluegill. Nance, who reveres the oldest water,
+   * wants the fish that should have been extinct.
+   *
+   * The name is carried alongside the id so a panel can say it without a
+   * round trip to the species table. Rename a species and this needs the same
+   * edit, which is the trade and it is worth it here.
+   */
+  favourite: { id: number; name: string }
   /** Their reaction, by how well the gift landed. */
   onLoved: string
   onLiked: string
@@ -168,7 +189,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'sand', hat: 'brown', bg: '#1a1408', ring: '#c8a060', mirrored: true },
     role: 'Shallows buyer', accent: '#d8b070',
     blurb: 'Buys the hold and weighs it in front of you.',
-    loves: [7, 8, 11], // Rainbow Trout, Largemouth Bass, Northern Pike
+    // Honest, solid, nothing clever. Exactly her.
+    favourite: { id: 8, name: 'Largemouth Bass' },
     lines: [
       [
         "Bring it here and I'll weigh it here. Ashore they'll give you more, and a long haul home to collect it.",
@@ -216,7 +238,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'blue', hat: 'gray', bg: '#0c1620', ring: '#7fa8c8', mirrored: true },
     role: 'Open Waters buyer', accent: '#7fa8c8',
     blurb: 'Buys fast, talks faster, and would rather you were quick about it.',
-    loves: [22, 25, 60], // Wahoo, Mahi-mahi, Atlantic Bluefin Tuna
+    // The fastest thing in his water, for the one who cannot stand waiting.
+    favourite: { id: 22, name: 'Wahoo' },
     lines: [
       [
         "Fish don't keep and neither does my patience. Coin now, or row it home yourself.",
@@ -264,7 +287,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'gray', hat: 'black', bg: '#101418', ring: '#a8b4c0', mirrored: true },
     role: 'Deep water buyer', accent: '#b0bcc8',
     blurb: 'Buys deep and makes no secret of why it pays him.',
-    loves: [38, 40, 39], // Blue Marlin, Swordfish, Mako Shark
+    // Old Marlow wants a marlin. He has never once acknowledged this.
+    favourite: { id: 38, name: 'Blue Marlin' },
     lines: [
       [
         "Long way back to the dock from here. I've made a living out of exactly that.",
@@ -312,7 +336,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'storm', hat: 'midnight', bg: '#080c14', ring: '#6878a0', mirrored: true },
     role: 'Abyss buyer', accent: '#8090b8',
     blurb: 'Buys in the dark water. Says very little about anything.',
-    loves: [41, 46, 50], // Anglerfish, Frilled Shark, Coelacanth
+    // The one that carries its own light down there, which he has a line about.
+    favourite: { id: 41, name: 'Anglerfish' },
     lines: [
       [
         "Not many bring me anything this deep. I pay for that, not for the fish.",
@@ -360,7 +385,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'ice', hat: 'offwhite', bg: '#0a1018', ring: '#9ec4d8', mirrored: true },
     role: 'Ancient Deep buyer', accent: '#9ec4d8',
     blurb: 'Buys whatever comes up from the oldest water, and asks nothing.',
-    loves: [143, 145, 148], // the ancients, if the hold ever carries one
+    // The fish that should have been extinct, for the one who reveres old water.
+    favourite: { id: 50, name: 'Coelacanth' },
     lines: [
       [
         "You went down there and came back up. Whatever's in your hold, I'll take it and ask nothing.",
@@ -408,7 +434,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'golden', hat: 'black', bg: '#141008', ring: '#f0c040', mirrored: true },
     role: 'Rodmaker', accent: '#f0c040',
     blurb: 'Carries one rod that no shop will stock, and an opinion on whether you deserve it.',
-    loves: [45, 49, 55], // Viperfish, Oarfish, Vampire Squid
+    // Twenty feet of ribbon out of the dark. Gyattt.
+    favourite: { id: 49, name: 'Oarfish' },
     // HE TALKS LIKE HE TALKS.
     //
     // Yoon is a real person and this is really how he speaks, which makes him
@@ -483,7 +510,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'default', hat: 'green', bg: '#0e1810', ring: '#8cc890', mirrored: true },
     role: 'Two seasons out', accent: '#8cc890',
     blurb: 'Two seasons out and convinced everyone else is a legend.',
-    loves: [1, 4, 6], // Bluegill, Pumpkinseed, Crappie
+    // The first fish anybody catches, and he is not embarrassed about it.
+    favourite: { id: 1, name: 'Bluegill' },
     lines: [
       [
         "You are a real captain. Sorry. That was out loud.",
@@ -531,7 +559,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'forest', hat: 'olive', bg: '#0c1410', ring: '#88b09c', mirrored: true },
     role: 'Wreck diver', accent: '#88b09c',
     blurb: 'Dives the wrecks and comes up with stories, some of them true.',
-    loves: [24, 21, 19], // Barracuda, Cobia, Flying Fish
+    // Cobia hang around wreckage, which is where she spends her working day.
+    favourite: { id: 21, name: 'Cobia' },
     lines: [
       [
         "Do not anchor here. I am working underneath you.",
@@ -579,7 +608,8 @@ export const FOLK: Folk[] = [
     face: { characterColor: 'lavender', hat: 'purple', bg: '#12101c', ring: '#b0a0d0', mirrored: true },
     role: 'Carries word', accent: '#b0a0d0',
     blurb: 'Carries news between the regulars and remembers all of it.',
-    loves: [37, 33, 27], // Atlantic Sailfish, Grouper, Atlantic Cod
+    // Plain, dependable, everywhere. A messenger's fish.
+    favourite: { id: 27, name: 'Atlantic Cod' },
     lines: [
       [
         "I carry word between the boats out here. No, there is no charge. That surprises everyone.",
@@ -868,12 +898,13 @@ export function nextLine(folk: Folk, tier: FolkTier, seen: readonly string[]): {
   return { line: pool[at], key: `${folk.id}:${tier}:${at}` }
 }
 
-/** How well a gift lands. Nothing is ever refused: a captain who sailed out
- *  with a fish should not be told they picked the wrong one. */
+/** How well a gift lands. Nothing is ever refused: a captain who sailed all
+ *  the way out with a fish should never be told they picked the wrong one, so
+ *  the worst case is still a point and a warm line. */
 export function giftWorth(folk: Folk, fishId: number, habitat: string | null): {
   points: number; how: 'loved' | 'liked' | 'plain'
 } {
-  if (folk.loves.includes(fishId)) return { points: GIFT_LOVED_POINTS, how: 'loved' }
+  if (fishId === folk.favourite.id) return { points: GIFT_FAVOURITE_POINTS, how: 'loved' }
   if (habitat && habitat === folk.zoneId) return { points: GIFT_LIKED_POINTS, how: 'liked' }
   return { points: 1, how: 'plain' }
 }

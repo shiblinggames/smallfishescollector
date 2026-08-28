@@ -179,7 +179,14 @@ export default function FolkScene({
   }, [resolved?.nonce])
 
   useEffect(() => {
-    if (gain?.tierUp) { setCrest(gain.tierUp); vibrate([0, 40, 60, 90]) }
+    if (!gain?.tierUp) return
+    setCrest(gain.tierUp)
+    vibrate([0, 40, 60, 90])
+    // BELT AND BRACES. The button below dismisses it and so does a tap, but a
+    // celebration that can strand somebody in a modal is worse than one that
+    // outstays its welcome, so it also leaves on its own.
+    const t = setTimeout(() => setCrest(null), 9000)
+    return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gain?.tierUp])
 
@@ -212,7 +219,11 @@ export default function FolkScene({
             key="folk-dim"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            onClick={() => { if (typing) finishRef.current() }}
+            onClick={() => {
+              if (crest) { setCrest(null); return }
+              if (typing) { finishRef.current(); return }
+              onClose()
+            }}
             style={{
               position: 'fixed', inset: 0, zIndex: 9300,
               background: 'rgba(4,8,14,0.72)',
@@ -232,16 +243,22 @@ export default function FolkScene({
               top: '50%', left: '1rem', right: '1rem',
               transform: 'translateY(-50%)',
               maxWidth: 410, margin: '0 auto',
-              maxHeight: '86vh', overflowY: 'auto',
+              // FIXED, not auto. An auto-height card resized itself every time
+              // a choice appeared or a line ran long, which moved the buttons
+              // under the reader's thumb mid-sentence, and the outer overflow
+              // put a scrollbar across the portrait as well as the text.
+              height: 'min(524px, 88vh)',
+              display: 'flex', flexDirection: 'column',
               background: 'linear-gradient(180deg, #0e1a2b 0%, #06101c 100%)',
               border: `1px solid ${accent}3d`,
               borderTop: `1px solid ${accent}8f`,
               borderRadius: 16, padding: '1rem 1rem 0.9rem',
               boxShadow: `0 20px 50px rgba(0,0,0,0.6), 0 0 34px ${accent}14`,
+              overflow: 'hidden',
             }}>
 
             {/* ── WHO ─────────────────────────────────────────────────── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: '0.7rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: '0.7rem', flexShrink: 0 }}>
               <motion.div
                 animate={gain ? { scale: [1, 1.06, 1] } : { scale: 1 }}
                 transition={{ duration: 0.5 }}
@@ -288,20 +305,26 @@ export default function FolkScene({
               }}>You: {turns[turns.length - 2].text}</p>
             )}
 
-            {/* ── WHAT THEY ARE SAYING ────────────────────────────────── */}
-            <div style={{ minHeight: 76 }} onClick={() => { if (typing) finishRef.current() }}>
+            {/* ── WHAT THEY ARE SAYING ──────────────────────────────────
+                A RESERVED BLOCK. Their lines run from four words to thirty and
+                the card must not resize between them, so the tallest sets the
+                height once and short lines sit in the space. */}
+            <div style={{ height: 104, flexShrink: 0, overflowY: 'auto' }}
+              onClick={() => { if (typing) finishRef.current() }}>
               <TypedBody all={[last.text]} text={last.text}
                 shown={last.who === 'them' ? shown : last.text.length}
                 typing={last.who === 'them' ? typing : false}
                 accent={accent} quoted size="1rem" />
             </div>
 
-            <RapportBar points={points} gained={gain?.gained ?? 0} accent={accent} />
+            <div style={{ flexShrink: 0 }}>
+              <RapportBar points={points} gained={gain?.gained ?? 0} accent={accent} />
+            </div>
 
             {/* ── THE HOLD, INLINE. It never opens anything: the choices are
                 replaced by the list and come back when you pick or back out. */}
             {picking && (
-              <div style={{ marginTop: 10, maxHeight: 200, overflowY: 'auto' }}>
+              <div style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 {hold.length === 0 ? (
                   <p className="font-karla" style={{
                     fontSize: '0.8rem', color: 'rgba(226,238,246,0.5)', margin: '6px 0',
@@ -309,9 +332,12 @@ export default function FolkScene({
                 ) : hold.map(f => (
                   <Choice key={f.id}
                     label={f.name}
-                    hint={folk.loves.includes(f.id) ? 'They would love this one' : `${f.qty} in the hold`}
+                    hint={f.id === folk.favourite.id
+                      ? 'Their favourite. This is worth five.'
+                      : f.habitat === folk.zoneId ? `Out of their own water. ${f.qty} in the hold`
+                        : `${f.qty} in the hold`}
                     accent={accent}
-                    warm={folk.loves.includes(f.id)}
+                    warm={f.id === folk.favourite.id}
                     disabled={busy}
                     onClick={() => { setPicking(false); onGift(f.id) }} />
                 ))}
@@ -324,7 +350,7 @@ export default function FolkScene({
               <motion.div
                 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                style={{ marginTop: 10 }}>
+                style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto' }}>
 
                 {/* The day's word, when it has not been had. Warm, because it
                     is the one choice here that moves the friendship. */}
@@ -416,13 +442,19 @@ export default function FolkScene({
                       fontSize: '0.92rem', color: 'rgba(240,237,232,0.92)',
                       lineHeight: 1.55, margin: 0, fontStyle: 'italic',
                     }}>&ldquo;{gain?.tierUp}&rdquo;</motion.p>
-                  <motion.p
+                  {/* A REAL BUTTON, not a hint that the whole panel is
+                      tappable. The tap-anywhere was the only way out and it
+                      could end up somewhere unreachable; this cannot. */}
+                  <motion.button
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 1.1 }}
-                    className="font-karla"
+                    transition={{ delay: 0.7 }}
+                    onClick={e => { e.stopPropagation(); setCrest(null) }}
+                    className="font-cinzel font-700"
                     style={{
-                      fontSize: '0.62rem', color: 'rgba(226,238,246,0.35)', margin: '14px 0 0',
-                    }}>Tap to carry on</motion.p>
+                      marginTop: 18, padding: '0.6rem 1.6rem', borderRadius: 999,
+                      background: `${accent}26`, border: `1px solid ${accent}7a`,
+                      color: '#f4ecd8', fontSize: '0.92rem', cursor: 'pointer',
+                    }}>Carry on</motion.button>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -88,7 +88,7 @@ against what he turns out to be.
 | | |
 |---|---|
 | Tiers | 5, named not numbered: a stranger / a known face / good company / trusted / one of their own |
-| Points | chat +1, liked gift +2, loved gift +3. Thresholds **4 / 14 / 34 / 70** |
+| Points | chat +1, own-water fish +2, **their one favourite +5**. Thresholds **4 / 14 / 34 / 70** |
 | Gate | one chat and one gift per regular per day (UTC, same as dailies) |
 | Reward | **story only.** No rate bumps, no unlocks, no items. A tier buys new dialogue |
 
@@ -104,6 +104,16 @@ terminal one, because stretching a curve over a flat pool just buys repetition.
 week and you missed seven points you were never holding. There is deliberately no streak,
 no decay and no warning, because the house law is evergreen and player-paced and this is a
 mechanic that in other games exists to punish absence.
+
+**Each regular has ONE favourite species**, not a list, chosen to say something about them:
+Marlow wants a Blue Marlin, Tam Brill wants a Bluegill and is not embarrassed about it, Nance
+wants the Coelacanth, Cass wants Cobia because they school around wreckage. Worth 5 against a
+chat's 1, so the fastest way to know somebody is to work out what they like and go and catch
+it. It does not break the curve because it cannot be done casually: one species out of thirty
+in a band, one gift per day, and it has to be in the hold when you are in front of them.
+Favourite every single day is still 12 days to the top tier, against 24 for whatever came out
+of their own water and 70 for conversation alone. **The favourite is hidden until tier 1** so
+it reads as something you learned about them rather than a hint the game handed over.
 
 **Nothing is ever refused as a gift.** Their own water's fish are liked, a short list each
 is loved, anything else still lands for a point and a warm line. A captain who sailed out
@@ -142,7 +152,11 @@ new mark within the CURRENT TIER's span (not the whole ladder, or late tiers loo
 progress), and crossing a tier takes the card over with the line they only ever say once.
 The first cut paid out in a silent integer inside a panel nobody was looking at.
 
-**The Salt Road lists only people you have actually met**, with their portraits. A roster of
+**The Salt Road is a grid of portrait cards**, met-only, and tapping one opens what you know
+about them: water, standing, their favourite catch, and how many gifts you have brought. A
+card carries one piece of live state, a dot when they have a word for you, so the grid answers
+"who should I go and see" at a glance. It was a list of horizontal rows, which reads as a
+database; the face is the point. A roster of
 strangers is homework: it says there are eight more people out there and nothing about any
 of them, turning a thing you discover into a thing you are behind on.
 
@@ -151,7 +165,12 @@ sheeeeesh, locked in, gucci, betty johnson, gyattt. He is deliberately the one v
 breaks the sea's register, and the Locked-In Rod is named after the way he says it rather
 than the other way round. Keep the mannerisms if his lines are ever extended.
 
-Adding a regular means: an entry in `FOLK` (with a face, role and accent), a position in
+**Planned, not built: maxing a friendship should feed a Homestead upgrade.** Tier 4 currently
+ends in a line and nothing else, which is thin for a month of sailing. The intent is that
+"one of their own" across the cast unlocks something meaningful at home. Design it before
+building it, and do not bolt a currency onto rapport to get there.
+
+Adding a regular means: an entry in `FOLK` (with a face, role, accent and favourite), a position in
 `SOCIALS` (or a buyer row), and a keep-out in `seaFinn`'s list. `check-finn` and
 `check-traders` are the gate on any position.
 
