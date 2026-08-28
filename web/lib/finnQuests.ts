@@ -41,6 +41,7 @@ export type FinnQuestType =
   | 'perfect_streak'
   | 'catch_zone'
   | 'catch_rarity'
+  | 'catch_ancient'
 
 export type FinnQuest = {
   /** Stable. Stored on the profile and never renumbered. */
@@ -51,10 +52,34 @@ export type FinnQuest = {
   zone?: string
   /** catch_rarity only: the bite_rarity a fish must meet or beat. */
   minRarity?: number
+  /** catch_ancient only: WHICH giant. The six are handed out one at a time, by
+   *  name, in the order the water raises them (lib/ancientVigil ANCIENT_IDS),
+   *  so a job can name the one that is actually coming next. */
+  ancientId?: number
   /** Said plainly, because it is a task. No flourishes in the objective. */
   label: string
   /** Doubloons on turn-in. */
   reward: number
+  /**
+   * FISHING LEVEL BEFORE HE WILL EVEN ASK.
+   *
+   * Matches the level gate on the water the job is set in, so he can never
+   * hand you something you are not allowed to work. The ladder used to
+   * escalate through the bands without checking, which meant a captain at
+   * level five could be told to land twelve in the Deep and simply be stuck:
+   * the campaign would stop dead with no explanation and no way forward.
+   *
+   * It also paces the story properly. His jobs walk out through the zones as
+   * you unlock them, so the arc arrives in the Ancient Deep at the same moment
+   * you do, rather than talking about old water you have never seen.
+   */
+  minLevel: number
+  /** The water this job belongs to, for grouping and for what he says when you
+   *  are not there yet. */
+  band: string
+  /** What he says when the next job is above your level. Never a refusal: he
+   *  is waiting for you to be ready, which is his whole character. */
+  gated: string
   /** What he says handing it over. */
   give: string
   /** What he says when you come back with it done. */
@@ -78,96 +103,203 @@ export type FinnQuest = {
  * delivery route is the least player-paced thing in the game.
  */
 export const FINN_QUESTS: FinnQuest[] = [
+  // ── THE SHALLOWS (Fishing 1) ────────────────────────────────────────
   {
-    id: 'q1', type: 'catch_any', target: 8, reward: 220,
+    id: 'q1', type: 'catch_any', target: 8, reward: 220, minLevel: 1, band: 'shallows',
     label: 'Land 8 fish, anywhere',
     give: "Nothing clever. Go and pull eight out of the water and come back to me. I want to watch how you hold the rod, not what you catch with it.",
     done: "Eight. And not one of them fought you the same way twice. I noticed.",
     waiting: "Eight. You are not at eight. Off you go.",
+    gated: "Go and fish. Come back when you have done some of it.",
   },
   {
-    id: 'q2', type: 'land_perfects', target: 4, reward: 320,
+    id: 'q2', type: 'land_perfects', target: 4, reward: 320, minLevel: 1, band: 'shallows',
     label: 'Land 4 perfect catches',
     give: "Anybody can land a fish. Land four PERFECT and I will start paying attention properly.",
     done: "Four clean ones. Most anglers manage that by accident once a season.",
     waiting: "Four perfect. Not four fish. There is a difference and it is the entire difference.",
+    gated: "Not yet. Get some water under you first.",
   },
   {
-    id: 'q3', type: 'catch_zone', target: 10, zone: 'open_waters', reward: 420,
+    id: 'q3', type: 'catch_zone', target: 15, zone: 'shallows', reward: 400, minLevel: 1, band: 'shallows',
+    label: 'Land 15 fish in the Shallows',
+    give: "Fifteen out of the shallow water. It is not hard and it is not meant to be. It is meant to be a habit.",
+    done: "Fifteen. You have stopped thinking about the shallows, which means they are finished with you.",
+    waiting: "The Shallows. Fifteen. You have been elsewhere, have you not.",
+    gated: "Start where everybody starts.",
+  },
+
+  // ── OPEN WATERS (Fishing 15) ────────────────────────────────────────
+  {
+    id: 'q4', type: 'catch_zone', target: 10, zone: 'open_waters', reward: 560, minLevel: 15, band: 'open_waters',
     label: 'Land 10 fish in Open Waters',
     give: "The Shallows have taught you everything they are going to. Take ten out of Open Waters and stop wading.",
     done: "Ten, out where the bottom stops being a suggestion. Good.",
     waiting: "Open Waters. Past the shelf. You have not been out there enough.",
+    gated: "Open Waters is the next thing and you are not rated for it yet. Go and get levelled.",
   },
   {
-    id: 'q4', type: 'perfect_streak', target: 5, reward: 560,
+    id: 'q5', type: 'perfect_streak', target: 5, reward: 700, minLevel: 15, band: 'open_waters',
     label: 'Land 5 perfect catches in a row',
     give: "Five in a row. Not five in a day, five without a single miss between them. That is a hand, not a habit.",
     done: "Five straight. I have watched a hundred anglers try that and I am not exaggerating the number.",
     waiting: "In a ROW. One miss and you start again. That is what makes it worth asking for.",
+    gated: "Come back when you have grown into it.",
   },
   {
-    id: 'q5', type: 'catch_rarity', target: 3, minRarity: 3, reward: 700,
+    id: 'q6', type: 'catch_rarity', target: 3, minRarity: 3, reward: 880, minLevel: 15, band: 'open_waters',
     label: 'Land 3 rare or better fish',
     give: "Three rare ones. The water decides who gets those, and I want to see whether it has decided about you.",
     done: "Three. The water is making up its mind about you, and I do not think it is going the way I expected.",
     waiting: "Rare, I said. Common fish are just weather.",
+    gated: "Not at your level. The water does not hand those to beginners.",
   },
+
+  // ── THE DEEP (Fishing 30) ───────────────────────────────────────────
   {
-    id: 'q6', type: 'catch_zone', target: 12, zone: 'deep', reward: 880,
+    id: 'q7', type: 'catch_zone', target: 12, zone: 'deep', reward: 1200, minLevel: 30, band: 'deep',
     label: 'Land 12 fish in the Deep',
     give: "The Deep. Twelve of them. It is a long sail and that is deliberate, I want to see if you come back.",
     done: "Twelve, and you came back up. That second part is the one I was watching.",
     waiting: "The Deep. Past the abyss talk, before the black. Twelve.",
+    gated: "The Deep is the next water and it is not open to you yet. Go and earn it.",
   },
   {
-    id: 'q7', type: 'land_perfects', target: 15, reward: 1100,
-    label: 'Land 15 perfect catches',
-    give: "Fifteen perfect. Take your time. I am not going anywhere and neither, apparently, are you.",
-    done: "Fifteen. You have stopped counting them, have you not. That is when it starts working.",
-    waiting: "Fifteen clean. You are not there yet and there is no hurry.",
+    id: 'q8', type: 'land_perfects', target: 20, reward: 1500, minLevel: 30, band: 'deep',
+    label: 'Land 20 perfect catches',
+    give: "Twenty perfect. Take your time. I am not going anywhere and neither, apparently, are you.",
+    done: "Twenty. You have stopped counting them, have you not. That is when it starts working.",
+    waiting: "Twenty clean. You are not there yet and there is no hurry.",
+    gated: "Later. You are not deep enough into this.",
   },
   {
-    id: 'q8', type: 'catch_zone', target: 10, zone: 'abyss', reward: 1450,
-    label: 'Land 10 fish in the Abyss',
-    give: "The Abyss. Ten. Everything down there has teeth or lights or both, and none of it has ever been polite to me.",
-    done: "Ten out of the black. You did that in the time it takes most captains to work up to looking at it.",
-    waiting: "The Abyss. Where it stops being blue. Ten of them.",
-  },
-  {
-    id: 'q9', type: 'perfect_streak', target: 8, reward: 1900,
+    id: 'q9', type: 'perfect_streak', target: 8, reward: 1900, minLevel: 30, band: 'deep',
     label: 'Land 8 perfect catches in a row',
     give: "Eight in a row. I could not do six on my best day and I have had a great many days.",
     done: "Eight straight. I want to be sour about that and I find I am not.",
     waiting: "Eight, unbroken. It is meant to be hard. That is the whole of the request.",
+    gated: "Not yet. Ask me again when the deep water knows your name.",
+  },
+
+  // ── THE ABYSS (Fishing 50) ──────────────────────────────────────────
+  {
+    id: 'q10', type: 'catch_zone', target: 10, zone: 'abyss', reward: 2400, minLevel: 50, band: 'abyss',
+    label: 'Land 10 fish in the Abyss',
+    give: "The Abyss. Ten. Everything down there has teeth or lights or both, and none of it has ever been polite to me.",
+    done: "Ten out of the black. You did that in the time it takes most captains to work up to looking at it.",
+    waiting: "The Abyss. Where it stops being blue. Ten of them.",
+    gated: "The black water. Not at your level, and I am not sending you down there to prove me wrong.",
   },
   {
-    id: 'q10', type: 'catch_rarity', target: 5, minRarity: 4, reward: 2400,
+    id: 'q11', type: 'catch_rarity', target: 5, minRarity: 4, reward: 3000, minLevel: 50, band: 'abyss',
     label: 'Land 5 epic or better fish',
     give: "Five of the real ones. Not rare. The ones the water only hands over when it has decided something about the hand on the rod.",
     done: "Five. It has decided, then.",
     waiting: "Epic or better. If you are not sure whether it counted, it did not.",
+    gated: "Those do not come to captains at your level. Go on.",
   },
   {
-    id: 'q11', type: 'catch_zone', target: 8, zone: 'ancient_deep', reward: 3200,
-    label: 'Land 8 fish in the Ancient Deep',
-    give: "The old water. Eight. I have told you what is down there and I have told you my line comes back empty. Yours will not.",
-    done: "Eight out of the Ancient Deep. Do you understand that I have never held one of those? Not one.",
-    waiting: "The oldest water on your chart. Eight. I would go with you if it would do any good.",
-  },
-  {
-    id: 'q12', type: 'perfect_streak', target: 12, reward: 4200,
+    id: 'q12', type: 'perfect_streak', target: 12, reward: 3800, minLevel: 50, band: 'abyss',
     label: 'Land 12 perfect catches in a row',
     give: "Twelve without a miss. There is nothing left I can ask you for that is harder than this and still fair.",
     done: "Twelve. Straight. I have run out of things to test and I am not sure what I do now.",
     waiting: "Twelve in a row. Take a season over it if you need to. I have waited longer.",
+    gated: "Not yet. That one is for somebody further along than you.",
+  },
+
+  // ── THE ANCIENT DEEP (Fishing 75) ───────────────────────────────────
+  //
+  // WHERE THE WHOLE ARC HAS BEEN POINTING. Every beat about six things worth
+  // the pulling, every admission that his own line comes back empty, lands
+  // here. The last three jobs are the six giants, and `ancient_catches` is the
+  // same column the One Last Ride gate reads on the expedition side
+  // (`requiresAncients` in raidMap), so finishing his ladder IS the thing that
+  // opens the finale. The two halves of the game meet at this rung.
+  {
+    id: 'q13', type: 'catch_zone', target: 8, zone: 'ancient_deep', reward: 4600, minLevel: 75, band: 'ancient_deep',
+    label: 'Land 8 fish in the Ancient Deep',
+    give: "The old water. Eight ordinary fish out of it, to start. I have told you what is down there and I have told you my line comes back empty. Yours will not.",
+    done: "Eight out of the Ancient Deep. Do you understand that I have never held one of those? Not one.",
+    waiting: "The oldest water on your chart. Eight. I would go with you if it would do any good.",
+    gated: "The old water is not open to you yet. I have waited forty years. I can wait for you.",
   },
   {
-    id: 'q13', type: 'catch_rarity', target: 3, minRarity: 5, reward: 6000,
+    id: 'q14', type: 'catch_rarity', target: 3, minRarity: 5, reward: 6000, minLevel: 75, band: 'ancient_deep',
     label: 'Land 3 legendary fish',
     give: "Three legendaries. Not because I doubt you. Because I want to watch it happen and this is the only way I get to.",
     done: "Three. You make the impossible look like a Tuesday, and I have stopped pretending that does not sting.",
     waiting: "Legendary. The water gives those to almost nobody. It will give them to you.",
+    gated: "Not yet. Those are the far end of it.",
+  },
+  // ── THE SIX, ONE AT A TIME ──────────────────────────────────────────
+  //
+  // The arc has been pointing here since his first line about six things worth
+  // the pulling. They were three lumped jobs (one, then three, then all six),
+  // which made the back half of the campaign a counter going up rather than six
+  // separate hunts. Each giant is its own job now, named, described, and asked
+  // for on its own.
+  //
+  // THE ORDER IS THE WATER'S OWN. ANCIENT_IDS raises them 144, 145, 146, 147,
+  // 148 and Megalodon last, and castLine now follows that list exactly rather
+  // than rolling at random, so the giant Finn names IS the one that rises. If
+  // that list is ever reordered, this ladder has to move with it.
+  //
+  // Megalodon closes the game's fishing story and is independently gated in
+  // castLine behind the other five, so it cannot arrive early even if a captain
+  // somehow reached this rung out of turn.
+  {
+    id: 'q15', type: 'catch_ancient', target: 1, ancientId: 144,
+    reward: 9000, minLevel: 75, band: 'ancient_deep',
+    label: 'Raise the Plesiosaurus',
+    give: "The first of the six. A long neck and a longer memory, and it comes up slow, like it is deciding about you. And you will not manage it on worms, so listen. They rise for a shine: a Golden Lure will raise one, a Luminous will do it slower, and nothing else on your boat will do it at all. Forty years I stood at the lip of that water with the wrong thing on my line.",
+    done: "You are holding one. An actual one of the six. I am going to need a moment and I would rather you did not watch.",
+    waiting: "The Plesiosaurus. Golden Lure, old water, and patience. It is down there.",
+    gated: "Not until the old water opens to you.",
+  },
+  {
+    id: 'q16', type: 'catch_ancient', target: 1, ancientId: 145,
+    reward: 11000, minLevel: 75, band: 'ancient_deep',
+    label: 'Raise the Dunkleosteus',
+    give: "Second. This one is armour plate and a bite that never needed teeth. Same lure, same water. It will not come up politely.",
+    done: "Two. You have landed two of them and I have landed none, and I find I am not as sour about that as I expected to be.",
+    waiting: "The Dunkleosteus. Keep the shine on your line.",
+    gated: "Not yet.",
+  },
+  {
+    id: 'q17', type: 'catch_ancient', target: 1, ancientId: 146,
+    reward: 13500, minLevel: 75, band: 'ancient_deep',
+    label: 'Raise the Mosasaurus',
+    give: "Third. The one that hunts the dark on purpose rather than living in it. Do not fight it early, it is stronger at the start than it is at the end.",
+    done: "Three. Half the set. Nobody in the history of this harbour has been halfway.",
+    waiting: "The Mosasaurus. It is out there and it is in no hurry.",
+    gated: "Not yet.",
+  },
+  {
+    id: 'q18', type: 'catch_ancient', target: 1, ancientId: 147,
+    reward: 16500, minLevel: 75, band: 'ancient_deep',
+    label: 'Raise the Basilosaurus',
+    give: "Fourth. Longest thing in the old water and the quietest. You will feel it before the line does.",
+    done: "Four. I have started telling people about you, which is not a thing I do.",
+    waiting: "The Basilosaurus. Long, slow, and worth the wait.",
+    gated: "Not yet.",
+  },
+  {
+    id: 'q19', type: 'catch_ancient', target: 1, ancientId: 148,
+    reward: 20000, minLevel: 75, band: 'ancient_deep',
+    label: 'Raise the Shastasaurus',
+    give: "Fifth. The biggest of them that is not the last one, and the one I got closest to. Thirty seconds I held it. Then the water handed it back.",
+    done: "Five. Five of six. There is one left and we both know which, and I have not been able to say its name out loud in years.",
+    waiting: "The Shastasaurus. The one I nearly had. Go and finish what I could not.",
+    gated: "Not yet.",
+  },
+  {
+    id: 'q20', type: 'catch_ancient', target: 1, ancientId: 143,
+    reward: 30000, minLevel: 75, band: 'ancient_deep',
+    label: 'Raise the Megalodon',
+    give: "The last one. It does not surface for anybody holding fewer than five, which is why no living captain has ever seen it and why I never will. It is yours. Go.",
+    done: "All six. By one pair of hands, in one lifetime, and I watched it happen. ...Sit down. I need to tell you something, and you are not going to like where it starts.",
+    waiting: "The Megalodon. It is waiting on you now, not the other way round.",
+    gated: "Not yet. But it is going to be you.",
   },
 ]
 
@@ -183,7 +315,18 @@ export function finnQuestById(id: string | null | undefined): FinnQuest | null {
  * the beats already heard, so the two ladders advance in lockstep without
  * either needing to know about the other.
  */
-export function nextFinnQuest(doneIds: readonly string[]): FinnQuest | null {
+export function nextFinnQuest(
+  doneIds: readonly string[], fishingLevel: number,
+): FinnQuest | null {
+  const done = new Set(doneIds)
+  const next = FINN_QUESTS.find(q => !done.has(q.id))
+  if (!next) return null
+  return next.minLevel <= fishingLevel ? next : null
+}
+
+/** The next job WHATEVER the level, so he can say what he is waiting for
+ *  rather than going quiet and looking like the story has ended. */
+export function pendingFinnQuest(doneIds: readonly string[]): FinnQuest | null {
   const done = new Set(doneIds)
   return FINN_QUESTS.find(q => !done.has(q.id)) ?? null
 }
@@ -192,6 +335,9 @@ export function nextFinnQuest(doneIds: readonly string[]): FinnQuest | null {
 export function questProgressLabel(q: FinnQuest, have: number): string {
   if (q.type === 'perfect_streak') {
     return `Best run since he asked: ${Math.min(have, q.target)} of ${q.target}`
+  }
+  if (q.type === 'catch_ancient') {
+    return have >= 1 ? 'Landed' : 'Not yet raised'
   }
   return `${Math.min(have, q.target)} of ${q.target}`
 }

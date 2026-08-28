@@ -235,6 +235,36 @@ would make the story unreachable for everybody at once rather than for one capta
 `lib/finnQuests.ts` is the ladder, `finn_quest` (jsonb) is the one currently set and
 `finn_quests_done` (text[]) is the position on it. Thirteen jobs against thirteen beats.
 
+**Twenty jobs, gated by fishing level, walking out through the bands.** 3 in the Shallows
+(Lv1), 3 in Open Waters (15), 3 in the Deep (30), 3 in the Abyss (50), 8 in the Ancient Deep
+(75). `minLevel` on each matches the gate on the water it is set in, so he can never hand you
+something you are not allowed to work — the ladder used to escalate through the bands without
+checking, which meant a level-five captain could be told to land twelve in the Deep and be
+stuck with the campaign dead and no explanation. When the next job is above your level he says
+so (`gated`) rather than going quiet, because silence is indistinguishable from "the story has
+ended".
+
+**The last six jobs are the six giants, one at a time, by name, ending on Megalodon.** And the
+water was changed to match: `castLine` used to pick the next uncaught giant at RANDOM, with
+only the test flag forcing a readable order, which would have made "go and raise the
+Dunkleosteus" a job the sea could answer with the wrong creature. It now follows
+`ANCIENT_IDS` (144, 145, 146, 147, 148, Megalodon last) exactly, so the giant Finn names is
+the one that rises. **If that list is ever reordered, the ladder must move with it.** The
+independent Megalodon gate in castLine (filtered out until the other five are on the wall) is
+untouched.
+
+`catch_ancient` is the one type measured ABSOLUTE rather than as a delta: a giant is a unique
+lifetime trophy on an append-only list, not a counter, so "is the Dunkleosteus on your wall"
+has one honest answer whenever it is asked.
+
+**Finn is where the Golden Lure is explained.** The six rise for a shine (`lib/ancientVigil`:
+Golden raises one, Luminous at three quarters the rate, nothing else at all) and the game said
+this nowhere. The first giant's briefing says it plainly, because it is a mechanic, with his
+own voice either side of it: forty years at the lip of that water with the wrong thing on his
+line. **Finishing the ladder fills `ancient_catches`, which is the same column
+`requiresAncients` reads on the raid map, so his last job opens One Last Ride.** The fishing
+campaign and the expedition finale meet on that rung.
+
 **The loop is beat, job, hand it back, beat.** He tells you something, asks you for
 something, and the next thing he has to say sits behind the work. `speakToFinn` will not
 hand out a beat while a job is open, and `turnInFinnQuest` pays, records, AND delivers the

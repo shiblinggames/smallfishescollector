@@ -500,14 +500,34 @@ export async function castLine(
           baitType === 'golden' ? 'golden' : 'luminous',
         ))
       : undefined
+    /**
+     * WHICH GIANT SURFACES, and it is no longer a coin toss.
+     *
+     * The first hunt used to pick at RANDOM from whichever giants you had not
+     * landed, with only the test flag forcing a readable order. That was fine
+     * while the six were an unordered set to collect.
+     *
+     * They are a sequence now. Finn hands them out one at a time, by name, and
+     * a job that says "go and raise the Dunkleosteus" is broken if the water
+     * can answer with the Mosasaurus instead. So the canonical order in
+     * ANCIENT_IDS (144, 145, 146, 147, 148, and Megalodon last) is what the
+     * water actually does: the next uncaught giant in that list is the one that
+     * rises. Partial collections just resume from wherever they are.
+     *
+     * The Megalodon gate above is untouched and still independent: it is
+     * filtered out of the pool entirely until the other five are on the wall,
+     * so this ordering cannot be the only thing holding it back.
+     */
+    const nextInOrder = ANCIENT_IDS
+      .map(id => firstHunt.find(f => f.id === id))
+      .find((f): f is (typeof firstHunt)[number] => !!f)
     if (ALWAYS_ANCIENT_TROPHY && trophyPool.length > 0) {
-      // Test account: always the lowest-id uncaught giant, so they surface in a
-      // predictable order (144→148, then Megalodon once the gate opens).
-      fish = [...trophyPool].sort((a, b) => a.id - b.id)[0]
+      // Test account: skip the roll entirely and hand over the next one due.
+      fish = nextInOrder ?? [...trophyPool].sort((a, b) => a.id - b.id)[0]
     } else if (vigilHit) {
       fish = vigilHit
-    } else if (firstHunt.length > 0 && Math.random() < trophyChance) {
-      fish = firstHunt[Math.floor(Math.random() * firstHunt.length)]
+    } else if (nextInOrder && Math.random() < trophyChance) {
+      fish = nextInOrder
     } else if (regularPool.length > 0) {
       fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + hs.rarityBonus)
     } else {

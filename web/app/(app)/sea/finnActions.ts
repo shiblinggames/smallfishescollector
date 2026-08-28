@@ -47,7 +47,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { finnHaunt } from '@/lib/seaFinn'
 import {
-  FINN_QUESTS, finnQuestById, nextFinnQuest, questProgressLabel, type FinnQuest,
+  FINN_QUESTS, finnQuestById, nextFinnQuest, pendingFinnQuest, questProgressLabel,
+  type FinnQuest,
 } from '@/lib/finnQuests'
 import {
   FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT,
@@ -283,6 +284,18 @@ async function questProgress(
       return (await catchesWhere(admin, uid, { zone: quest.zone })) - stored.zone0
     case 'catch_rarity':
       return (await catchesWhere(admin, uid, { minRarity: quest.minRarity })) - stored.rare0
+    case 'catch_ancient': {
+      // ONE NAMED GIANT, AND DELIBERATELY THE EXCEPTION TO THE DELTA RULE.
+      //
+      // Everything else here is measured since he asked, so a job cannot be
+      // finished retroactively off a counter that was already high. A giant is
+      // not a counter: it is a unique trophy landed once in a lifetime, and
+      // `ancient_catches` is append-only. "Raise the Dunkleosteus" is a
+      // question about whether that specific creature is on your wall, which
+      // has exactly one honest answer whenever it is asked.
+      const wall = (row.ancient_catches as number[] | null) ?? []
+      return quest.ancientId && wall.includes(quest.ancientId) ? 1 : 0
+    }
   }
 }
 
@@ -368,7 +381,7 @@ async function nextRung(
   const lines: string[] = []
   if (beat) lines.push(...beat.lines.map(l => (typeof l === 'string' ? l : l.text)))
 
-  const quest = nextFinnQuest(row.finn_quests_done ?? [])
+  const quest = nextFinnQuest(row.finn_quests_done ?? [], getLevelFromXP(row.fishing_xp ?? 0))
   let stored: StoredQuest | null = null
   if (quest) {
     stored = await snapshotFor(admin, uid, quest, row.total_perfects ?? 0)
@@ -535,6 +548,14 @@ export async function speakToFinn(atIndex: number): Promise<FinnTalk | null> {
   } else if (rung && rung.lines.length > 0) {
     // The beat, then the job he sets off the back of it.
     lines = rung.lines
+  } else if (pendingFinnQuest(row.finn_quests_done ?? [])) {
+    // ── WAITING ON YOUR LEVEL ───────────────────────────────────────
+    //
+    // There IS a next job, and it is in water you cannot work yet. He says so
+    // rather than going quiet, because a campaign that stops with no
+    // explanation is indistinguishable from a campaign that has ended, and
+    // this one has eighteen rungs and a finale on the far side of it.
+    lines = [pendingFinnQuest(row.finn_quests_done ?? [])!.gated]
   } else if (revealed && Math.random() < FINN_EPILOGUE_LORE_CHANCE) {
     lines = [pickRandomLine(FINN_EPILOGUE_LORE_LINES)]
   } else {
