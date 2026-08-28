@@ -28,7 +28,7 @@
 // wanderers get a legend saying what the five kinds want, because "salter" is
 // not a word the game had ever explained.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import {
@@ -40,6 +40,8 @@ import { PLACES } from './chart'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
 import { PLACES as WATERS } from './chart'
 import { folkState, type Rapport } from './folkActions'
+import { vibrate } from '@/lib/haptics'
+import { prefersReducedMotion } from '@/components/cutscene'
 import type { FinnSeaState } from './finnActions'
 
 const GOLD = 'rgba(240,192,64'
@@ -86,13 +88,27 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * a small portrait bolted to the left is a database; a portrait with a name
  * under it is somebody you know. Tapping one opens what you have learned.
  */
-function FolkCard({ folk, rap, onOpen }: {
+function FolkCard({ folk, rap, onOpen, turning, muted, onTurned }: {
   folk: Folk; rap: Rapport; onOpen: () => void
+  /** This is the card being opened: it turns edge-on and hands over. */
+  turning?: boolean
+  /** A sibling of the card being opened: it gets out of the way quietly. */
+  muted?: boolean
+  onTurned?: () => void
 }) {
   const pct = Math.round((Math.min(rap.points, TIER_AT[4]) / TIER_AT[4]) * 100)
   return (
-    <button onClick={onOpen}
+    <motion.button onClick={onOpen}
+      // THE FIRST HALF OF THE FLIP. It rotates to edge-on and stops; the detail
+      // picks the turn up from the other side, so the two halves read as one
+      // card being turned over rather than two things animating at once. The
+      // hand-off is onAnimationComplete rather than a timeout, so a slow frame
+      // cannot leave the panel showing an edge and nothing else.
+      animate={turning ? { rotateY: -90, opacity: 0 } : muted ? { opacity: 0.25 } : { rotateY: 0, opacity: 1 }}
+      transition={{ duration: turning ? 0.19 : 0.16, ease: turning ? 'easeIn' : 'easeOut' }}
+      onAnimationComplete={() => { if (turning) onTurned?.() }}
       style={{
+        transformStyle: 'preserve-3d', backfaceVisibility: 'hidden',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14, cursor: 'pointer',
         background: `linear-gradient(180deg, ${folk.accent}14 0%, rgba(255,255,255,0.02) 60%)`,
@@ -137,7 +153,7 @@ function FolkCard({ folk, rap, onOpen }: {
           background: folk.accent, borderRadius: 999,
         }} />
       </div>
-    </button>
+    </motion.button>
   )
 }
 
@@ -150,15 +166,21 @@ function FolkCard({ folk, rap, onOpen }: {
  * shortcut handed over before you have said hello is not a thing you learned
  * about somebody, it is a hint from the game.
  */
-function FolkDetail({ folk, rap, onBack }: {
-  folk: Folk; rap: Rapport; onBack: () => void
+function FolkDetail({ folk, rap, onBack, reduced }: {
+  folk: Folk; rap: Rapport; onBack: () => void; reduced: boolean
 }) {
   const water = WATERS.find(w => w.id === folk.zoneId)?.name ?? 'Open water'
   const left = toNextTier(rap.points)
   return (
     <motion.div
-      initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.2 }}>
+      // THE SECOND HALF. It starts edge-on from the far side and completes the
+      // rotation the card began, which is what makes it read as the back of
+      // that card rather than a new screen sliding in.
+      initial={reduced ? { opacity: 0 } : { rotateY: 90, opacity: 0 }}
+      animate={reduced ? { opacity: 1 } : { rotateY: 0, opacity: 1 }}
+      exit={reduced ? { opacity: 0 } : { rotateY: 90, opacity: 0 }}
+      transition={{ duration: reduced ? 0.15 : 0.23, ease: 'easeOut' }}
+      style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}>
       <button onClick={onBack} className="font-karla font-700"
         style={{
           display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10,
@@ -297,7 +319,18 @@ export default function FolkPanel({ open, onClose, finn, level }: {
   /** Which one is open, if any. Cleared whenever the panel closes so it never
    *  reopens onto somebody the captain has stopped looking at. */
   const [openFolk, setOpenFolk] = useState<string | null>(null)
-  useEffect(() => { if (!open) setOpenFolk(null) }, [open])
+  /**
+   * MID-TURN. Holds whichever card is currently rotating to edge-on, which is
+   * the first half of the flip; when that card reports its animation finished
+   * it hands over and the detail completes the rotation from the far side.
+   *
+   * A separate piece of state rather than deriving it from `openFolk`, because
+   * the two halves must not be on screen at once: the card has to be gone
+   * before the back of it arrives.
+   */
+  const [turning, setTurning] = useState<string | null>(null)
+  const reduced = useMemo(prefersReducedMotion, [])
+  useEffect(() => { if (!open) { setOpenFolk(null); setTurning(null) } }, [open])
   const showing = met.find(m => m.folk.id === openFolk) ?? null
   /** He gets his own slot in the same one-open-at-a-time state. */
   const showRival = openFolk === 'finn'
@@ -359,13 +392,33 @@ export default function FolkPanel({ open, onClose, finn, level }: {
                 that person rather than opening a second modal over the first.
                 A panel that opens a panel is how the conversation flow went
                 wrong the first time, and the Back control is right there. */}
+            {/* ── THE TWO FACES OF THE CARD ────────────────────────────
+                One AnimatePresence owning both, in `wait` mode, because the
+                turn only reads as a turn if the faces are never on screen
+                together: the front has to be edge-on and gone before the back
+                arrives. It also has to live OUTSIDE the branch, or the detail
+                unmounts instantly on close and its half of the flip never
+                plays. `initial={false}` so the first open does not deal the
+                whole panel in. Perspective is on the parent so both faces
+                share one vanishing point. */}
+            <div style={{ perspective: 1100 }}>
+            <AnimatePresence mode="wait" initial={false}>
             {showing ? (
-              <div style={{ marginTop: '0.9rem' }}>
-                <FolkDetail folk={showing.folk} rap={showing.rap}
-                  onBack={() => setOpenFolk(null)} />
+              <div key={`detail:${showing.folk.id}`} style={{ marginTop: '0.9rem' }}>
+                <FolkDetail
+                  folk={showing.folk} rap={showing.rap} reduced={reduced}
+                  // CLOSING PLAYS THE TURN BACK: the detail rotates away to
+                  // edge-on and the grid comes in from the other side, which is
+                  // the same flip in reverse rather than a dismissal.
+                  onBack={() => { vibrate(6); setOpenFolk(null) }} />
               </div>
             ) : (
-              <>
+              <motion.div key="grid"
+                initial={reduced ? { opacity: 0 } : { rotateY: -90, opacity: 0 }}
+                animate={reduced ? { opacity: 1 } : { rotateY: 0, opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                transition={{ duration: reduced ? 0.15 : 0.23, ease: 'easeOut' }}
+                style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}>
             {/* ── THE RIVAL, IN HIS OWN CATEGORY ───────────────────────
                 He is not one of the regulars and the panel should never file
                 him with them: they are people you are getting to know and he
@@ -504,6 +557,11 @@ export default function FolkPanel({ open, onClose, finn, level }: {
 
             {/* ── THE NAMED FOLK. Permanent, always in the same water, worth
                 knowing about before you sail out to them. */}
+            {/* PERSPECTIVE lives here, on the parent of both faces, so the
+                card turning away and the detail turning in share one vanishing
+                point. Without it the rotation is an affine squash and reads as
+                a wipe rather than a card being turned over. */}
+            <div style={{ perspective: 1100 }}>
             <Section title={met.length > 0 ? `Known to you (${met.length})` : 'Known to you'}>
               {met.length === 0 ? (
                 <p className="font-karla" style={{
@@ -523,7 +581,17 @@ export default function FolkPanel({ open, onClose, finn, level }: {
                 }}>
                   {met.map(({ folk, rap }) => (
                     <FolkCard key={folk.id} folk={folk} rap={rap}
-                      onOpen={() => setOpenFolk(folk.id)} />
+                      turning={turning === folk.id}
+                      muted={!!turning && turning !== folk.id}
+                      onTurned={() => { setOpenFolk(folk.id); setTurning(null) }}
+                      onOpen={() => {
+                        vibrate(6)
+                        // Reduced motion skips the turn entirely rather than
+                        // playing it faster: a flip is the whole effect here,
+                        // and half of one is just a jump.
+                        if (reduced) setOpenFolk(folk.id)
+                        else setTurning(folk.id)
+                      }} />
                   ))}
                 </div>
               )}
@@ -536,6 +604,7 @@ export default function FolkPanel({ open, onClose, finn, level }: {
               wants is worth five times that, and nothing is lost by staying away: there is no
               streak here and none of it fades.
             </p>
+            </div>
 
             {/* ── THE WANDERERS. Not a log: these people are different every
                 day, so what the panel can honestly give is what the five kinds
@@ -569,8 +638,10 @@ export default function FolkPanel({ open, onClose, finn, level }: {
               They are somewhere different every day, and there are only so many deals in a
               day to be had. Nobody is waiting for you in particular.
             </p>
-              </>
+              </motion.div>
             )}
+            </AnimatePresence>
+            </div>
           </motion.div>
         </motion.div>
       )}
