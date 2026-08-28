@@ -323,7 +323,11 @@ export default function FolkPanel({ open, onClose, finn, level }: {
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
-              width: 'min(100%, 420px)', maxHeight: '82vh', overflowY: 'auto',
+              // 480 IS THE HOUSE MODAL WIDTH. The leaderboards, the crew
+              // assign picker, the bunks, the raid sheets and the tackle shop
+              // all sit at it; this was at 420 and read as a narrower thing
+              // than everything else the game opens.
+              width: '100%', maxWidth: 480, maxHeight: '82vh', overflowY: 'auto',
               background: 'rgba(8,14,22,0.98)',
               border: `1px solid ${SEA},0.28)`,
               borderRadius: 16, padding: '1rem 1.1rem',
@@ -431,8 +435,12 @@ export default function FolkPanel({ open, onClose, finn, level }: {
                   year out. Pull alongside one and say something, and they will turn up here.
                 </p>
               ) : (
+                // AUTO-FILL rather than a fixed three: at the house width a
+                // desktop fits four across and a narrow phone drops to three,
+                // without either being written down as a breakpoint.
                 <div style={{
-                  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
+                  display: 'grid', gap: 8,
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
                 }}>
                   {met.map(({ folk, rap }) => (
                     <FolkCard key={folk.id} folk={folk} rap={rap}

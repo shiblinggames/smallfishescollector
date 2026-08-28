@@ -242,7 +242,9 @@ export default function FolkScene({
               position: 'fixed', zIndex: 9302,
               top: '50%', left: '1rem', right: '1rem',
               transform: 'translateY(-50%)',
-              maxWidth: 410, margin: '0 auto',
+              // Same 480 the rest of the game's modals use, so the card you
+              // talk on and the panel you read them in are one surface size.
+              maxWidth: 480, margin: '0 auto',
               // FIXED, not auto. An auto-height card resized itself every time
               // a choice appeared or a line ran long, which moved the buttons
               // under the reader's thumb mid-sentence, and the outer overflow

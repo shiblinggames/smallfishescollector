@@ -50,3 +50,12 @@ The non-game knowledge: how the app is built, shipped, and kept safe.
   deal"), flavor keeps the charm. The split is by job, not by surface.
 - Mechanics explanations must be verified against the code that consumes the value.
 - `web/scripts/check-copy.mts` enforces some of this on data catalogs (not yet JSX).
+
+## The modal width is 480
+
+`maxWidth: 480` is the house width for anything that opens over the page: the leaderboards,
+the crew assign picker, the bunks, the raid sheets, the tackle shop sheet, the Salt Road and
+its conversation card. Twenty-plus surfaces sit on it. It was never written down, which is
+how the Salt Road shipped at 420 and read as a narrower thing than everything else the game
+opens. `.page-col` (980) is the PAGE column and is a different measurement; do not reach for
+it on a modal.
