@@ -1,44 +1,40 @@
 'use client'
 
-// PLACE THE CIRCLES, JUDGE THEM AGAINST A BOAT, COPY THE TABLE.
+// PLACE THE SHAPES, JUDGE THEM AGAINST A BOAT, COPY THE TABLE.
 //
-// Up to four circles per object, because that is what the frame loop resolves:
-// a hull is pushed out of a circle along its normal and keeps its sliding
-// component, and four circles trace a jetty or a headland closer than anyone
-// can tell from a deck. Each circle is dragged by its centre and resized by
-// its rim handle.
+// Two shapes, because the art is mostly isometric and a circle is the wrong
+// first shape for an isometric footprint:
 //
-// Two families, two coordinate systems, both the chart's own:
-//   · SeaMark art (landmarks, docks) — circles in fractions of the sprite,
-//     converted through its aspect and the ground squash exactly as
-//     SeaMap.artCircles does.
-//   · Ports — circles in fractions of the port's radius, drawn over the same
-//     seeded coastline polygon the island itself is clipped to.
+//   · CIRCLE, for the round things — dragged by its body, resized by the gold
+//     rim handle.
+//   · CAPSULE, a segment with a radius — the stadium the frame loop can
+//     resolve as cheaply as a circle. Lay it along a deck or a slab and it IS
+//     the footprint. Dragged by either end; the gold handle on its waist sets
+//     the thickness.
 //
-// The dashed grey circle is TODAY'S default for that object; the dashed outer
-// rim on each drawn circle is the HULL padding the runtime adds. The boat
-// ghost is the fishing hull at true relative scale, because "would she fit
-// through there" is the whole question.
+// WHAT THE LINES MEAN, because it was asked: the SOLID shape is where the
+// planking is — the boat's own edge reaches it. The faint dashed halo is that
+// shape plus the hull's half-beam (55 world px), which is where the boat's
+// CENTRE is stopped by the game; her edge and your solid line meet exactly
+// when her centre sits on the dash. On a small object the halo is honestly
+// huge — a hull-width around a buoy is nearly the buoy again.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { LANDMARKS, PLACES } from '../chart'
 import { coastline } from '@/lib/islandShape'
-import { ART_COLLIDERS, PORT_COLLIDERS } from '../colliders'
+import { ART_COLLIDERS, PORT_COLLIDERS, type ColliderShape } from '../colliders'
 
 const GROUND = 0.58   // kept in step with SeaMap by hand, like the other benches
 const HULL = 55
 const SHORE = 0.72
-const BOAT_W = 210 * 0.55  // the fishing hull's painted beam
-const MAX_C = 4
+const BOAT_W = 210 * 0.55
+const MAX_SHAPES = 4
+const STAGE = 460
 
-type Circle = { ax: number; ay: number; ar: number }
 type Entry = { kind: 'art'; key: string; art: string; size: number }
   | { kind: 'port'; key: string; id: string; r: number }
 
-/** Everything with a boundary worth drawing, deduped by art. Sizes are the
- *  chart's own — the largest instance of each art, so the ghost compares
- *  against the biggest thing you will meet. */
 function buildEntries(): Entry[] {
   const byArt = new Map<string, number>()
   for (const m of LANDMARKS) {
@@ -58,39 +54,35 @@ function buildEntries(): Entry[] {
   return out
 }
 
-const round3 = (n: number) => Math.round(n * 1000) / 1000
+const r3 = (n: number) => Math.round(n * 1000) / 1000
 
 export default function BoundaryBench() {
   const entries = useMemo(buildEntries, [])
   const [key, setKey] = useState(entries[0].key)
   const entry = entries.find(e => e.key === key) ?? entries[0]
 
-  /** aspect per art, measured from the loaded image — the one fact the
-   *  runtime cannot derive, so the bench emits it into the table. */
   const [aspects, setAspects] = useState<Record<string, number>>({})
-  const [table, setTable] = useState<Record<string, Circle[]>>(() => {
-    const t: Record<string, Circle[]> = {}
-    for (const [k, v] of Object.entries(ART_COLLIDERS)) t[k] = v.circles.map(c => ({ ...c }))
-    for (const [k, v] of Object.entries(PORT_COLLIDERS)) t[`port:${k}`] = v.circles.map(c => ({ ...c }))
+  const [table, setTable] = useState<Record<string, ColliderShape[]>>(() => {
+    const t: Record<string, ColliderShape[]> = {}
+    for (const [k, v] of Object.entries(ART_COLLIDERS)) t[k] = v.shapes.map(c => ({ ...c }))
+    for (const [k, v] of Object.entries(PORT_COLLIDERS)) t[`port:${k}`] = v.shapes.map(c => ({ ...c }))
     return t
   })
-  const [grab, setGrab] = useState<{ i: number; mode: 'move' | 'size' } | null>(null)
+  const [grab, setGrab] = useState<{ i: number; part: 'a' | 'b' | 'r' } | null>(null)
   const [squash, setSquash] = useState(false)
   const [copied, setCopied] = useState(false)
   const stage = useRef<HTMLDivElement | null>(null)
 
-  const circles: Circle[] = table[key]
-    ?? (entry.kind === 'art' ? [{ ax: 0.5, ay: 1, ar: 0.42 }] : [{ ax: 0, ay: 0, ar: SHORE }])
+  const shapes: ColliderShape[] = table[key]
+    ?? (entry.kind === 'art'
+      ? [{ kind: 'circle', ax: 0.5, ay: 1, ar: 0.42 }]
+      : [{ kind: 'circle', ax: 0, ay: 0, ar: SHORE }])
+  const setShapes = (next: ColliderShape[]) => setTable(prev => ({ ...prev, [key]: next }))
 
-  const setCircles = (next: Circle[]) => setTable(prev => ({ ...prev, [key]: next }))
-
-  // ── stage geometry ──────────────────────────────────────────────────────
-  // One world px = one stage px at width 460, so the ghost and the padding
-  // are true. Art stages are the sprite's box; port stages are the 2r box.
   const worldW = entry.kind === 'art' ? entry.size : entry.r * 2
-  const scale = 460 / worldW
+  const scale = STAGE / worldW
   const aspect = entry.kind === 'art' ? (aspects[entry.key] ?? 1) : 1
-  const stageH = entry.kind === 'art' ? 460 * aspect : 460
+  const stageH = entry.kind === 'art' ? STAGE * aspect : STAGE
 
   useEffect(() => {
     if (entry.kind !== 'art' || aspects[entry.key]) return
@@ -99,15 +91,13 @@ export default function BoundaryBench() {
     img.src = entry.art
   }, [entry, aspects])
 
-  /** Circle → stage px. Art: fractions of sprite box. Port: centre-origin r
-   *  fractions. */
-  const toPx = (c: Circle) => entry.kind === 'art'
-    ? { x: c.ax * 460, y: c.ay * stageH, r: c.ar * 460 }
-    : { x: (c.ax + 1) * 230, y: (c.ay + 1) * 230, r: c.ar * 230 }
-
-  const fromPx = (x: number, y: number): { ax: number; ay: number } => entry.kind === 'art'
-    ? { ax: round3(x / 460), ay: round3(y / stageH) }
-    : { ax: round3(x / 230 - 1), ay: round3(y / 230 - 1) }
+  const px = (ax: number, ay: number) => entry.kind === 'art'
+    ? { x: ax * STAGE, y: ay * stageH }
+    : { x: (ax + 1) * (STAGE / 2), y: (ay + 1) * (STAGE / 2) }
+  const rpx = (ar: number) => ar * (entry.kind === 'art' ? STAGE : STAGE / 2)
+  const fromPx = (x: number, y: number) => entry.kind === 'art'
+    ? { ax: r3(x / STAGE), ay: r3(y / stageH) }
+    : { ax: r3(x / (STAGE / 2) - 1), ay: r3(y / (STAGE / 2) - 1) }
 
   const onMove = (e: React.PointerEvent) => {
     if (!grab) return
@@ -115,41 +105,55 @@ export default function BoundaryBench() {
     if (!r) return
     const x = e.clientX - r.left
     const y = (e.clientY - r.top) / (squash ? GROUND : 1)
-    const next = circles.map(c => ({ ...c }))
-    const c = next[grab.i]
-    if (!c) return
-    if (grab.mode === 'move') {
-      const p = fromPx(x, y)
-      c.ax = p.ax; c.ay = p.ay
+    const next = shapes.map(s => ({ ...s }))
+    const s = next[grab.i]
+    if (!s) return
+    if (grab.part === 'r') {
+      // Radius = distance from the segment (or the centre, for a circle).
+      let cx: number, cy: number
+      if (s.kind === 'capsule') {
+        const a = px(s.ax, s.ay), b = px(s.bx, s.by)
+        const vx = b.x - a.x, vy = b.y - a.y
+        const t = Math.max(0, Math.min(1, ((x - a.x) * vx + (y - a.y) * vy) / Math.max(1, vx * vx + vy * vy)))
+        cx = a.x + vx * t; cy = a.y + vy * t
+      } else {
+        const c = px(s.ax, s.ay); cx = c.x; cy = c.y
+      }
+      s.ar = r3(Math.max(0.02, Math.hypot(x - cx, y - cy) / (entry.kind === 'art' ? STAGE : STAGE / 2)))
+    } else if (grab.part === 'b' && s.kind === 'capsule') {
+      const p = fromPx(x, y); s.bx = p.ax; s.by = p.ay
     } else {
-      const at = toPx(c)
-      const d = Math.hypot(x - at.x, y - at.y)
-      c.ar = round3(Math.max(0.03, d / (entry.kind === 'art' ? 460 : 230)))
+      const p = fromPx(x, y)
+      if (s.kind === 'capsule') {
+        // Dragging A carries B with it, so the whole capsule moves; hold the
+        // ends individually by their own handles to reshape.
+        const dx = p.ax - s.ax, dy = p.ay - s.ay
+        s.ax = p.ax; s.ay = p.ay; s.bx = r3(s.bx + dx); s.by = r3(s.by + dy)
+      } else { s.ax = p.ax; s.ay = p.ay }
     }
-    setCircles(next)
+    setShapes(next)
   }
 
   const coastPts = useMemo(() => {
     if (entry.kind !== 'port') return null
     const rs = coastline(entry.id)
-    const n = rs.length
     return rs.map((rr, i) => {
-      const a = (Math.PI * 2 * i) / n
+      const a = (Math.PI * 2 * i) / rs.length
       return `${230 + Math.cos(a) * rr * 230},${230 + Math.sin(a) * rr * 230}`
     }).join(' ')
   }, [entry])
 
   const source = useMemo(() => {
+    const fmt = (s: ColliderShape) => s.kind === 'circle'
+      ? `{ kind: 'circle', ax: ${s.ax}, ay: ${s.ay}, ar: ${s.ar} }`
+      : `{ kind: 'capsule', ax: ${s.ax}, ay: ${s.ay}, bx: ${s.bx}, by: ${s.by}, ar: ${s.ar} }`
     const arts: string[] = [], ports: string[] = []
     for (const e of entries) {
       const cs = table[e.key]
       if (!cs || cs.length === 0) continue
-      const list = cs.map(c => `{ ax: ${c.ax}, ay: ${c.ay}, ar: ${c.ar} }`).join(', ')
-      if (e.kind === 'art') {
-        arts.push(`  '${e.key}': { aspect: ${round3(aspects[e.key] ?? 1)}, circles: [${list}] },`)
-      } else {
-        ports.push(`  '${e.id}': { circles: [${list}] },`)
-      }
+      const list = cs.map(fmt).join(', ')
+      if (e.kind === 'art') arts.push(`  '${e.key}': { aspect: ${r3(aspects[e.key] ?? 1)}, shapes: [${list}] },`)
+      else ports.push(`  '${e.id}': { shapes: [${list}] },`)
     }
     return `export const ART_COLLIDERS: Record<string, ArtCollider> = {\n${arts.join('\n')}\n}\n\n`
       + `export const PORT_COLLIDERS: Record<string, PortCollider> = {\n${ports.join('\n')}\n}\n`
@@ -162,9 +166,17 @@ export default function BoundaryBench() {
     } catch { /* selectable below */ }
   }
 
-  const defaultCircle = entry.kind === 'art'
-    ? { x: 230, y: stageH, r: 0.42 * 460 }
-    : { x: 230, y: 230, r: SHORE * 230 }
+  const pad = HULL * scale
+  const defC = entry.kind === 'art'
+    ? { x: STAGE / 2, y: stageH, r: 0.42 * STAGE }
+    : { x: STAGE / 2, y: STAGE / 2, r: SHORE * (STAGE / 2) }
+
+  /** One shape's stadium geometry in stage px, shared by fill and halo. */
+  const geo = (s: ColliderShape) => {
+    const a = px(s.ax, s.ay)
+    const b = s.kind === 'capsule' ? px(s.bx, s.by) : a
+    return { a, b, r: rpx(s.ar) }
+  }
 
   return (
     <div className="page-col" style={{ paddingTop: '1rem', paddingBottom: '4rem', color: '#e6e2dc' }}>
@@ -177,10 +189,10 @@ export default function BoundaryBench() {
       <p className="font-karla" style={{
         fontSize: '0.9rem', color: 'rgba(198,216,230,0.72)', lineHeight: 1.6, margin: '4px 0 14px',
       }}>
-        Drag a circle to move it, drag its small rim handle to resize, up to four per
-        object. The dashed grey ring is today&apos;s default; the dashed halo on each
-        circle is the hull padding the game adds; the pale boat is the fishing hull at
-        true scale. Copy the table into app/(app)/sea/colliders.ts.
+        <strong>Solid red</strong> is the planking line — the boat&apos;s edge reaches it.
+        The <strong>faint dash</strong> is that plus her half-beam: where her centre is
+        stopped. Capsules fit isometric footprints; drag an end to reshape, the waist
+        handle for thickness, the body to move. Copy into app/(app)/sea/colliders.ts.
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -208,111 +220,120 @@ export default function BoundaryBench() {
             onPointerMove={onMove}
             onPointerUp={() => setGrab(null)}
             onPointerCancel={() => setGrab(null)}
-            style={{ position: 'relative', width: 460, height: stageH, touchAction: 'none' }}>
+            style={{ position: 'relative', width: STAGE, height: stageH, touchAction: 'none' }}>
 
             {entry.kind === 'art' ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={entry.art} alt="" draggable={false}
-                style={{ width: 460, height: 'auto', display: 'block', opacity: 0.95, pointerEvents: 'none' }} />
+                style={{ width: STAGE, height: 'auto', display: 'block', opacity: 0.95, pointerEvents: 'none' }} />
             ) : (
-              <svg viewBox="0 0 460 460" style={{ width: 460, height: 460, display: 'block' }} aria-hidden>
+              <svg viewBox="0 0 460 460" style={{ width: STAGE, height: STAGE, display: 'block' }} aria-hidden>
                 <polygon points={coastPts ?? ''} fill="rgba(126,146,110,0.5)"
                   stroke="rgba(196,204,176,0.7)" strokeWidth={2} />
               </svg>
             )}
 
-            {/* Today's default, for reference. */}
-            <div aria-hidden style={{
-              position: 'absolute',
-              left: defaultCircle.x - defaultCircle.r, top: defaultCircle.y - defaultCircle.r,
-              width: defaultCircle.r * 2, height: defaultCircle.r * 2, borderRadius: '50%',
-              border: '1px dashed rgba(190,200,210,0.4)', pointerEvents: 'none',
-            }} />
+            {/* Shapes: one SVG so stadiums and halos are cheap round-capped
+                strokes rather than div gymnastics. */}
+            <svg viewBox={`0 0 ${STAGE} ${stageH}`} aria-hidden
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+              <circle cx={defC.x} cy={defC.y} r={defC.r}
+                fill="none" stroke="rgba(190,200,210,0.35)" strokeWidth={1} strokeDasharray="5 4" />
+              {shapes.map((s, i) => {
+                const g = geo(s)
+                return (
+                  <g key={i}>
+                    <line x1={g.a.x} y1={g.a.y} x2={g.b.x} y2={g.b.y}
+                      stroke="rgba(240,120,90,0.2)" strokeWidth={g.r * 2} strokeLinecap="round" />
+                    <line x1={g.a.x} y1={g.a.y} x2={g.b.x} y2={g.b.y}
+                      stroke="rgba(240,120,90,0.9)" strokeWidth={2} strokeLinecap="round"
+                      strokeDasharray={s.kind === 'capsule' ? undefined : undefined} />
+                    {/* the solid outline of the stadium */}
+                    <line x1={g.a.x} y1={g.a.y} x2={g.b.x} y2={g.b.y}
+                      stroke="rgba(240,120,90,0.85)" strokeWidth={g.r * 2}
+                      strokeLinecap="round" fill="none" opacity={0.18} />
+                    {/* the hull halo, faint: where the boat's CENTRE stops */}
+                    <line x1={g.a.x} y1={g.a.y} x2={g.b.x} y2={g.b.y}
+                      stroke="rgba(240,180,120,0.22)" strokeWidth={(g.r + pad) * 2}
+                      strokeLinecap="round" strokeDasharray="2 6" fill="none" />
+                  </g>
+                )
+              })}
+            </svg>
 
-            {/* The boat ghost, at true world scale against this object. */}
+            {/* Handles (HTML, so pointer capture works per handle). */}
+            {shapes.map((s, i) => {
+              const g = geo(s)
+              const mid = { x: (g.a.x + g.b.x) / 2, y: (g.a.y + g.b.y) / 2 }
+              const len = Math.hypot(g.b.x - g.a.x, g.b.y - g.a.y) || 1
+              const nx = -(g.b.y - g.a.y) / len, ny = (g.b.x - g.a.x) / len
+              const rHandle = s.kind === 'capsule'
+                ? { x: mid.x + nx * g.r, y: mid.y + ny * g.r }
+                : { x: g.a.x + g.r, y: g.a.y }
+              const H = (part: 'a' | 'b' | 'r', at: { x: number; y: number }, cursor: string) => (
+                <div key={part}
+                  onPointerDown={e => {
+                    e.preventDefault()
+                    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                    setGrab({ i, part })
+                  }}
+                  style={{
+                    position: 'absolute', left: at.x - 8, top: at.y - 8,
+                    width: 16, height: 16, borderRadius: '50%',
+                    background: part === 'r' ? '#f0c040' : 'rgba(240,120,90,0.95)',
+                    border: '2px solid rgba(6,14,22,0.85)',
+                    cursor, touchAction: 'none',
+                  }} />
+              )
+              return (
+                <div key={i}>
+                  {H('a', g.a, 'move')}
+                  {s.kind === 'capsule' && H('b', g.b, 'move')}
+                  {H('r', rHandle, 'ew-resize')}
+                </div>
+              )
+            })}
+
+            {/* The boat ghost, true world scale. */}
             <div aria-hidden style={{
               position: 'absolute', right: 8, bottom: 8,
               width: BOAT_W * scale, height: BOAT_W * scale * 0.42,
               borderRadius: '50%', border: '1px solid rgba(150,200,230,0.55)',
               background: 'rgba(150,200,230,0.12)', pointerEvents: 'none',
             }} />
-
-            {circles.map((c, i) => {
-              const at = toPx(c)
-              const pad = HULL * scale
-              return (
-                <div key={i}>
-                  <div
-                    onPointerDown={e => {
-                      e.preventDefault()
-                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                      setGrab({ i, mode: 'move' })
-                    }}
-                    style={{
-                      position: 'absolute', left: at.x - at.r, top: at.y - at.r,
-                      width: at.r * 2, height: at.r * 2, borderRadius: '50%',
-                      background: 'rgba(240,120,90,0.14)',
-                      border: '2px solid rgba(240,120,90,0.85)',
-                      cursor: 'move', touchAction: 'none',
-                    }} />
-                  {/* The hull padding the runtime adds — what the BOAT hits. */}
-                  <div aria-hidden style={{
-                    position: 'absolute', left: at.x - at.r - pad, top: at.y - at.r - pad,
-                    width: (at.r + pad) * 2, height: (at.r + pad) * 2, borderRadius: '50%',
-                    border: '1px dashed rgba(240,120,90,0.35)', pointerEvents: 'none',
-                  }} />
-                  <div
-                    onPointerDown={e => {
-                      e.preventDefault()
-                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                      setGrab({ i, mode: 'size' })
-                    }}
-                    style={{
-                      position: 'absolute', left: at.x + at.r - 7, top: at.y - 7,
-                      width: 14, height: 14, borderRadius: '50%',
-                      background: '#f0c040', border: '2px solid rgba(6,14,22,0.8)',
-                      cursor: 'ew-resize', touchAction: 'none',
-                    }} />
-                </div>
-              )
-            })}
           </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0', flexWrap: 'wrap' }}>
         <button type="button"
-          onClick={() => circles.length < MAX_C && setCircles([...circles,
-            entry.kind === 'art' ? { ax: 0.5, ay: 0.8, ar: 0.18 } : { ax: 0, ay: 0, ar: 0.3 }])}
-          disabled={circles.length >= MAX_C}
-          className="tap font-karla font-700" style={{
-            padding: '0.35rem 0.6rem', borderRadius: 9, fontSize: '0.74rem', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
-            opacity: circles.length >= MAX_C ? 0.4 : 1,
-          }}>
+          onClick={() => shapes.length < MAX_SHAPES && setShapes([...shapes,
+            { kind: 'circle', ax: entry.kind === 'art' ? 0.5 : 0, ay: entry.kind === 'art' ? 0.8 : 0, ar: entry.kind === 'art' ? 0.18 : 0.3 }])}
+          disabled={shapes.length >= MAX_SHAPES}
+          className="tap font-karla font-700" style={btn(shapes.length >= MAX_SHAPES)}>
           + circle
         </button>
         <button type="button"
-          onClick={() => circles.length > 1 && setCircles(circles.slice(0, -1))}
-          disabled={circles.length <= 1}
-          className="tap font-karla font-700" style={{
-            padding: '0.35rem 0.6rem', borderRadius: 9, fontSize: '0.74rem', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
-            opacity: circles.length <= 1 ? 0.4 : 1,
-          }}>
-          − circle
+          onClick={() => shapes.length < MAX_SHAPES && setShapes([...shapes,
+            entry.kind === 'art'
+              ? { kind: 'capsule', ax: 0.25, ay: 0.85, bx: 0.75, by: 0.85, ar: 0.1 }
+              : { kind: 'capsule', ax: -0.4, ay: 0, bx: 0.4, by: 0, ar: 0.25 }])}
+          disabled={shapes.length >= MAX_SHAPES}
+          className="tap font-karla font-700" style={btn(shapes.length >= MAX_SHAPES)}>
+          + capsule
         </button>
-        <button type="button" onClick={() => {
-          setTable(prev => { const n = { ...prev }; delete n[key]; return n })
-        }} className="tap font-karla font-700" style={{
-          padding: '0.35rem 0.6rem', borderRadius: 9, fontSize: '0.74rem', cursor: 'pointer',
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
-        }}>
+        <button type="button" onClick={() => shapes.length > 1 && setShapes(shapes.slice(0, -1))}
+          disabled={shapes.length <= 1}
+          className="tap font-karla font-700" style={btn(shapes.length <= 1)}>
+          − shape
+        </button>
+        <button type="button" onClick={() => setTable(prev => { const n = { ...prev }; delete n[key]; return n })}
+          className="tap font-karla font-700" style={btn(false)}>
           Use default
         </button>
         <button type="button" onClick={() => setSquash(q => !q)} className="tap font-karla font-700"
           style={{
-            padding: '0.35rem 0.6rem', borderRadius: 9, fontSize: '0.74rem', cursor: 'pointer',
+            ...btn(false),
             background: squash ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.06)',
             border: `1px solid ${squash ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.16)'}`,
             color: squash ? '#f6dfa0' : '#d8e2ea',
@@ -332,10 +353,18 @@ export default function BoundaryBench() {
       </div>
 
       <pre className="font-karla" style={{
-        fontSize: '0.74rem', lineHeight: 1.7, color: '#cfe0ec', margin: 0,
+        fontSize: '0.72rem', lineHeight: 1.7, color: '#cfe0ec', margin: 0,
         padding: '0.75rem', borderRadius: 12, overflowX: 'auto',
         background: 'rgba(4,10,16,0.7)', border: '1px solid rgba(180,214,232,0.18)',
       }}>{source}</pre>
     </div>
   )
+}
+
+function btn(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '0.35rem 0.6rem', borderRadius: 9, fontSize: '0.74rem', cursor: 'pointer',
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
+    opacity: disabled ? 0.4 : 1,
+  }
 }

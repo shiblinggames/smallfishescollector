@@ -382,23 +382,28 @@ function moorR(p: Place): number { return p.r + MOOR }
  * maps onto MORE world-y than screen-y — the same arithmetic every standing
  * label on this chart already does in the other direction.
  */
-function artCircles(art: string, x: number, y: number, size: number, fallbackR: number) {
+/** An obstacle is a circle, or a capsule when x2/y2 are present. The loop
+ *  tests against the closest point of the segment; a circle is the degenerate
+ *  capsule whose segment is a point. */
+type Obstacle = { x: number; y: number; r: number; x2?: number; y2?: number }
+
+function artShapes(art: string, x: number, y: number, size: number, fallbackR: number): Obstacle[] {
   const c = ART_COLLIDERS[markKind(art)]
-  if (!c || c.circles.length === 0) return [{ x, y, r: fallbackR + HULL }]
-  return c.circles.map(k => ({
-    x: x + (k.ax - 0.5) * size,
-    y: y - (1 - k.ay) * c.aspect * size / GROUND,
-    r: k.ar * size + HULL,
-  }))
+  if (!c || c.shapes.length === 0) return [{ x, y, r: fallbackR + HULL }]
+  const px = (ax: number) => x + (ax - 0.5) * size
+  const py = (ay: number) => y - (1 - ay) * c.aspect * size / GROUND
+  return c.shapes.map(k => k.kind === 'circle'
+    ? { x: px(k.ax), y: py(k.ay), r: k.ar * size + HULL }
+    : { x: px(k.ax), y: py(k.ay), x2: px(k.bx), y2: py(k.by), r: k.ar * size + HULL })
 }
 
-const OBSTACLES: { x: number; y: number; r: number }[] = [
-  ...PLACES.filter(p => p.kind === 'port').flatMap(p => {
+const OBSTACLES: Obstacle[] = [
+  ...PLACES.filter(p => p.kind === 'port').flatMap((p): Obstacle[] => {
     const c = PORT_COLLIDERS[p.id]
-    if (!c || c.circles.length === 0) return [{ x: p.x, y: p.y, r: p.r * SHORE + HULL }]
-    return c.circles.map(k => ({
-      x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, r: k.ar * p.r + HULL,
-    }))
+    if (!c || c.shapes.length === 0) return [{ x: p.x, y: p.y, r: p.r * SHORE + HULL }]
+    return c.shapes.map(k => k.kind === 'circle'
+      ? { x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, r: k.ar * p.r + HULL }
+      : { x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, x2: p.x + k.bx * p.r, y2: p.y + k.by * p.r, r: k.ar * p.r + HULL })
   }),
   // EVERY landmark, not just the ones that remembered to say so. See the note
   // on `solid` in chart.ts: it is an opt-OUT now, because a rock you can sail
@@ -410,7 +415,7 @@ const OBSTACLES: { x: number; y: number; r: number }[] = [
   // On the big stacks that is over a hundred pixels of boat inside stone. A
   // shade under the paint is right, because these are irregular silhouettes and
   // the circle is the largest thing that fits in one, but a THIRD under is not.
-  ...LANDMARKS.filter(m => m.solid !== false).flatMap(m => artCircles(m.art, m.x, m.y, m.size, m.size * 0.42)),
+  ...LANDMARKS.filter(m => m.solid !== false).flatMap(m => artShapes(m.art, m.x, m.y, m.size, m.size * 0.42)),
   // THE DISCOVERABLE ISLES. They were never here at all — twenty-seven rocks
   // with chests on them that a hull went straight through. `r` is their painted
   // radius (IsleRock draws at r * 2), so this stops the boat a hull clear of
@@ -419,8 +424,8 @@ const OBSTACLES: { x: number; y: number; r: number }[] = [
   // The two berths. You moor ALONGSIDE a dock; sailing through the middle of
   // one is the same bug as sailing through an island, and it is the structure
   // the whole swap happens at.
-  ...artCircles('/sea/dock-raids.png', RAID_DOCK.x, RAID_DOCK.y, DOCK_R * 2.6, RAID_DOCK.r),
-  ...artCircles('/sea/dock-voyages.png', VOYAGE_DOCK.x, VOYAGE_DOCK.y, DOCK_R * 2.6, VOYAGE_DOCK.r),
+  ...artShapes('/sea/dock-raids.png', RAID_DOCK.x, RAID_DOCK.y, DOCK_R * 2.6, RAID_DOCK.r),
+  ...artShapes('/sea/dock-voyages.png', VOYAGE_DOCK.x, VOYAGE_DOCK.y, DOCK_R * 2.6, VOYAGE_DOCK.r),
 ]
 
 /**
@@ -454,14 +459,26 @@ const REEF_FACE = 200
 /** Nudge a point out to clear water if it has been asked for inside something
  *  solid. The helm should not be able to ORDER a course into rock, which is
  *  half the fix; the other half is that momentum cannot carry you in either. */
+/** The closest point of an obstacle to p — the centre for a circle, the
+ *  nearest point of the segment for a capsule. Everything else about the
+ *  resolve is identical for both, which is the whole reason capsules were the
+ *  shape to add. */
+function obstacleNearest(o: Obstacle, px: number, py: number): { x: number; y: number } {
+  if (o.x2 === undefined || o.y2 === undefined) return { x: o.x, y: o.y }
+  const vx = o.x2 - o.x, vy = o.y2 - o.y
+  const t = Math.max(0, Math.min(1, ((px - o.x) * vx + (py - o.y) * vy) / Math.max(1e-6, vx * vx + vy * vy)))
+  return { x: o.x + vx * t, y: o.y + vy * t }
+}
+
 function clearOfLand(w: Vec): Vec {
   for (const o of OBSTACLES) {
-    const dx = w.x - o.x, dy = w.y - o.y
+    const c = obstacleNearest(o, w.x, w.y)
+    const dx = w.x - c.x, dy = w.y - c.y
     const d = Math.hypot(dx, dy)
     if (d < o.r) {
       // Dead centre has no direction to be pushed in, so pick one.
-      if (d < 0.001) return { x: o.x + o.r, y: o.y }
-      return { x: o.x + (dx / d) * o.r, y: o.y + (dy / d) * o.r }
+      if (d < 0.001) return { x: c.x + o.r, y: c.y }
+      return { x: c.x + (dx / d) * o.r, y: c.y + (dy / d) * o.r }
     }
   }
   return w
@@ -3474,14 +3491,17 @@ export default function SeaMap({
       // against it. A hull that halts the instant it touches land feels like a
       // wall; one that slides feels like a shore.
       for (const o of OBSTACLES) {
-        const dx = pos.current.x - o.x
-        const dy = pos.current.y - o.y
+        // Capsule-aware: the normal comes off the segment's closest point, so
+        // sliding along a jetty's face is the same slide a coast gives.
+        const c = obstacleNearest(o, pos.current.x, pos.current.y)
+        const dx = pos.current.x - c.x
+        const dy = pos.current.y - c.y
         const dd = Math.hypot(dx, dy)
         if (dd >= o.r) continue
         const nx = dd < 0.001 ? 1 : dx / dd
         const ny = dd < 0.001 ? 0 : dy / dd
-        pos.current.x = o.x + nx * o.r
-        pos.current.y = o.y + ny * o.r
+        pos.current.x = c.x + nx * o.r
+        pos.current.y = c.y + ny * o.r
         const vn = vel.current.x * nx + vel.current.y * ny
         if (vn < 0) { vel.current.x -= vn * nx; vel.current.y -= vn * ny }
       }

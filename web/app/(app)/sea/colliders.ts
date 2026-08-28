@@ -25,8 +25,23 @@
 // Ports: `ax, ay` are plain world fractions of the port's radius, both axes,
 // relative to its centre — the coastline polygon lives in that same box.
 
-export type ArtCollider = { aspect: number; circles: { ax: number; ay: number; ar: number }[] }
-export type PortCollider = { circles: { ax: number; ay: number; ar: number }[] }
+/**
+ * Two primitives, because the art is mostly isometric and a circle is the
+ * wrong first shape for an isometric footprint:
+ *
+ *   · CIRCLE — for the round things. { ax, ay, ar }.
+ *   · CAPSULE — a segment with a radius, the stadium shape. { ax, ay, bx, by,
+ *     ar }. Laid along a deck, a slab or a hull it IS the footprint, one of it
+ *     replacing three circles on anything long — and the frame loop's resolve
+ *     is the same push-out, off the closest point of a segment instead of a
+ *     centre. Three extra arithmetic ops per test.
+ */
+export type ColliderShape =
+  | { kind: 'circle'; ax: number; ay: number; ar: number }
+  | { kind: 'capsule'; ax: number; ay: number; bx: number; by: number; ar: number }
+
+export type ArtCollider = { aspect: number; shapes: ColliderShape[] }
+export type PortCollider = { shapes: ColliderShape[] }
 
 /** Keyed by art basename (markKind). Empty entries fall back to the default
  *  single circle, so this table only ever needs the shapes a circle gets
