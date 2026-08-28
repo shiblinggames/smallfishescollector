@@ -34,6 +34,8 @@ import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { crewTheDeck } from '../crew/actions'
+import { SUBMERGE } from './submerge'
+import SubmergedSprite from './SubmergedSprite'
 import { PORTAL, PORTAL_TIERS, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
@@ -6344,75 +6346,6 @@ const LandmarkField = memo(function LandmarkField() {
  * immediately. A little of the hull showing under the surface is the whole
  * effect.
  */
-/**
- * `v` — THE WATERLINE'S SWING, for art drawn isometrically.
- *
- * A flat cut is right for organic shapes: a rock meets the water wherever it
- * happens to bulge. But the docks are built objects seen from above-and-aside,
- * and a horizontal plane crosses an isometric object as a V — lowest at the
- * near corner, rising along the base edges to either side. Cutting them flat
- * put the near corner's piles underwater and left the same depth of water
- * climbing the SIDE faces, which is what made them read as tilted rather than
- * standing in water.
- *
- * `v` is half the swing, in % of the sprite's height: the apex dips `v` below
- * `line` at the centre and the edges rise `v` above it. Hand-tuned per art like
- * everything else in this table, because the painted perspective is the
- * artist's, not a projection with a formula.
- */
-const SUBMERGE: Record<string, { line: number; keep: number; v?: number }> = {
-  // A moored boat. Barely under — a hull floats, it does not wade — but not
-  // zero: a hard edge at the waterline reads as sitting ON the sea. The keel
-  // tapers to a point down there, so what goes under is the bit that should.
-  smack:    { line: 87, keep: 0.26 },
-  // A float on a chain, riding low.
-  buoy:     { line: 66, keep: 0.30 },
-  // Aground and going nowhere. Half of it is under.
-  wreck:    { line: 62, keep: 0.26 },
-  // On legs, in deep water — you see the legs go down and lose them.
-  rig:      { line: 80, keep: 0.22 },
-  // A rib cage in the shallows, part buried.
-  bones:    { line: 74, keep: 0.24 },
-  // Carved stone, standing in it.
-  monolith: { line: 78, keep: 0.20 },
-  // A rock cluster breaking the surface. It used to be the one thing out here
-  // that did not submerge, on the grounds that it was land with a beach — and
-  // the pale shoal that came with that is what made it look like it was hovering.
-  islet:    { line: 76, keep: 0.24 },
-
-  // ── THE TWO BERTHS ───────────────────────────────────────────────────
-  //
-  // A jetty stands ON piles, so what goes under is the legs and nothing else —
-  // the deck has to stay dry or the whole structure reads as sinking. Set just
-  // below the boards on both, and they keep more of themselves visible under
-  // the surface than rock does, because you are meant to read the piles going
-  // down as piles rather than as the dock ending.
-  'dock-raids':   { line: 84, keep: 0.30, v: 6 },
-  'dock-voyages': { line: 86, keep: 0.30, v: 6 },
-
-  // ── THE REEF ALONG THE TOP ───────────────────────────────────────────
-  //
-  // `line` is where the water crosses the SPRITE, as a percentage of its own
-  // height — so it cannot be one shared number. Each of these is painted with
-  // a dark wet band at its foot, and the waterline is set just above where
-  // that band starts, which is what makes the paint and the mask agree.
-  //
-  // How much sits under is a property of the SHAPE, not the size. A flat
-  // wave-cut shelf is mostly awash whatever scale it is drawn at; a headland
-  // is a headland. Anything that goes deeper also keeps a little more of
-  // itself visible under the surface, or it just vanishes.
-  'rock-spire': { line: 82, keep: 0.20 },    // stands tall, barely in
-  'rock-dome': { line: 78, keep: 0.22 },     // rounded, settled low
-  'rock-split': { line: 80, keep: 0.20 },
-  'rock-slab': { line: 68, keep: 0.28 },     // a shelf. mostly awash
-  'rock-crag': { line: 80, keep: 0.21 },
-  'rock-cobbles': { line: 74, keep: 0.24 },  // small and low in the water
-  // The two headlands. Least submerged on the chart: they are the biggest
-  // rock out there and they should read as founded on the bottom, not
-  // floating at the mouth of the gate.
-  'rock-gate-w': { line: 86, keep: 0.18 },
-  'rock-gate-e': { line: 86, keep: 0.18 },
-}
 
 /** Which art file this is, from its path — `/sea/wreck.png` -> `wreck`. */
 function markKind(art: string): string {
@@ -6615,101 +6548,22 @@ const SeaMark = memo(function SeaMark({ m, i }: {
   return (
     <div style={{ position: 'absolute', left: m.x, top: m.y, pointerEvents: 'none' }}>
       {/* ── WHERE IT MEETS THE WATER ──────────────────────────────────────
-          NOTHING IS DRAWN UNDER IT. FIFTH TIME OF ASKING.
-
-          A dark ellipse, then a pale one, then a pale one again dressed up as
-          foam and called a "wash". Every version reads the same way, because
-          the objection was never the colour: a discrete shape sitting beneath
-          another object says "this thing is ABOVE that thing", and it says it
-          whatever tint you give it. Foam that you have to argue is foam is a
-          shadow.
-
-          The fade IS the effect. The sprite's own base dissolves into the water
-          (see SUBMERGE below) and that is the whole of it — no ellipse, no ring,
-          no disturbance. If a landmark ever reads as floating again, the answer
-          is to take MORE of it under, not to put something back beneath it.
-
-          The fifth time was an EXCEPTION I wrote myself. Islets kept a pale
-          ellipse under them, and the comment right here argued it was fine
-          because an islet is land and what land gets is a shoal, which is a
-          real thing that is genuinely there. All true, and all beside the
-          point: on screen it was a pale ellipse under an object, which is the
-          exact shape that says "this is floating above that", and it read that
-          way whatever it was called. Islets submerge like everything else now.
-
-          There is no version of this that works. Not a darker one, not a paler
-          one, not one with a good reason. If a landmark ever reads as floating
-          again the answer is to take MORE of it under, never to put something
-          back beneath it. */}
+          NOTHING IS DRAWN UNDER IT — no ellipse, no ring, no "wash". The
+          sprite's own base dissolving into the water IS the effect, and it is
+          rendered by SubmergedSprite, which the /sea/waterline bench shares:
+          the line is a drawn polyline per art, tuned by eye there, and the
+          chart cannot render it differently than the bench showed it. */}
       {/* TWO WRAPPERS, because they carry different transforms. The outer one
           stands the landmark up off the plane; the inner one is free to sway
-          without clobbering that. One element trying to do both means the
-          animation overwrites the counter-squash and it lies flat the moment it
-          starts moving. */}
+          without clobbering that. */}
       <div style={{
         position: 'absolute', left: 0, top: 0, width: m.size,
         transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
         transformOrigin: 'bottom center',
       }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img decoding="async" src={m.art} alt="" draggable={false} loading="lazy"
-          className={m.sway ? `mark-${m.sway}` : undefined}
-          style={{
-            width: '100%', maxWidth: 'none', display: 'block',
-            // THE SUBMERGED PART. A mask on the sprite itself, so the thing goes
-            // INTO the water rather than sitting on it: solid down to the
-            // waterline, then a step down to a fraction of its opacity — what
-            // you can still make out through the surface — and out to nothing.
-            //
-            // The step is what sells it. A smooth fade from 1 to 0 reads as the
-            // object dissolving; a step to a low plateau reads as a change of
-            // MEDIUM, which is what a waterline is.
-            //
-            // WITH `v` SET this copy is only the UNDERWATER HALF of the effect:
-            // dim everywhere, fading with depth, and the solid copy clipped to
-            // the V is stacked on top of it. Without `v` it is the whole thing.
-            ...(sub ? {
-              maskImage:
-                `linear-gradient(to bottom, ` +
-                (sub.v
-                  ? `rgba(0,0,0,${sub.keep}) 0%, `
-                  : `#000 ${sub.line}%, `) +
-                `rgba(0,0,0,${sub.keep}) ${sub.line + 3}%, ` +
-                `rgba(0,0,0,${sub.keep * 0.55}) ${(sub.line + 100) / 2}%, transparent 100%)`,
-              WebkitMaskImage:
-                `linear-gradient(to bottom, ` +
-                (sub.v
-                  ? `rgba(0,0,0,${sub.keep}) 0%, `
-                  : `#000 ${sub.line}%, `) +
-                `rgba(0,0,0,${sub.keep}) ${sub.line + 3}%, ` +
-                `rgba(0,0,0,${sub.keep * 0.55}) ${(sub.line + 100) / 2}%, transparent 100%)`,
-            } : {}),
-            // Offset so neighbours never move in step, which is what makes a
-            // row of buoys read as machinery.
-            animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
-          }} />
-
-        {/* ── THE DRY PART, CUT ALONG THE V ─────────────────────────────
-            The same sprite again, clipped to everything above the waterline —
-            which on an isometric object is not a line but a V, apex at the
-            near corner. Clip-path takes per-axis percentages, so the V is two
-            numbers a person can tune by eye against the painted base rather
-            than a projection formula the art never actually followed.
-
-            Same sway class and the same delay as the copy underneath, so the
-            two halves are one object in motion rather than a building and its
-            reflection drifting apart. */}
-        {sub?.v != null && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img decoding="async" src={m.art} alt="" draggable={false} loading="lazy"
-            className={m.sway ? `mark-${m.sway}` : undefined}
-            style={{
-              position: 'absolute', left: 0, top: 0,
-              width: '100%', maxWidth: 'none', display: 'block',
-              clipPath: `polygon(0 0, 100% 0, 100% ${sub.line - sub.v}%, 50% ${sub.line + sub.v}%, 0 ${sub.line - sub.v}%)`,
-              animationDelay: m.sway ? `${(i * 0.77) % 3}s` : undefined,
-            }} />
-        )}
+        <SubmergedSprite art={m.art} width="100%" sub={sub}
+          swayClass={m.sway ? `mark-${m.sway}` : undefined}
+          delay={m.sway ? `${(i * 0.77) % 3}s` : undefined} />
       </div>
     </div>
   )
