@@ -1410,23 +1410,6 @@ export default function FishingHere({
         alignItems: 'center', pointerEvents: 'none',
       }}>
 
-      {/* THE PERFECTED SIGIL's payout. Paid by the server on every perfect; the
-          only thing missing out here was anybody saying so. */}
-      <AnimatePresence>
-        {sigilPaid > 0 && (
-          <motion.p key="sigil"
-            initial={{ opacity: 0, y: 0, x: '-50%' }}
-            animate={{ opacity: [0, 1, 1, 0], y: -26, x: '-50%' }}
-            transition={{ duration: 2.4, times: [0, 0.12, 0.66, 1], ease: 'easeOut' }}
-            className="font-cinzel font-700"
-            style={{
-              position: 'absolute', top: 96, left: '50%', zIndex: 30, pointerEvents: 'none',
-              fontSize: '1.08rem', color: '#f0c040', textShadow: '0 2px 12px rgba(0,0,0,0.9)',
-            }}>
-            +{sigilPaid} ⟡
-          </motion.p>
-        )}
-      </AnimatePresence>
 
       {/* THE PERFECT. Lifted from the fishing screen: a gold wash across the
           whole frame, two rings expanding out of the middle, and the word.
@@ -1495,53 +1478,7 @@ export default function FishingHere({
           is the only thing that says so. */}
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
 
-      {/* SECOND WIND. The rod handed the dial back. Without a cue this reads as
-          the reel button simply not working. */}
-      <AnimatePresence>
-        {retryFlash && (
-          <motion.div key="retry"
-            initial={{ opacity: 0, scale: 0.7, x: '-50%' }}
-            animate={{ opacity: 1, scale: 1, x: '-50%' }}
-            exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
-            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-            style={{
-              position: 'absolute', top: 60, left: '50%', zIndex: 30, pointerEvents: 'none',
-              padding: '0.32rem 0.72rem', borderRadius: 999,
-              background: 'rgba(56,189,178,0.22)',
-              border: '1px solid rgba(94,234,212,0.7)',
-              boxShadow: '0 0 18px rgba(45,212,191,0.4)',
-            }}>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.672rem', color: '#ccfbf1' }}>Second Wind</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* LIGHTSPEED. The Lightsaber and its kin roll an instant bite, and the
-          whole experience of that effect is the wait NOT happening — which is
-          invisible unless something says so. Lifted from the fishing screen,
-          same red bolt, same 1100ms. */}
-      <AnimatePresence>
-        {instantBite && (
-          <motion.div key="instant-bite"
-            initial={{ opacity: 0, scale: 0.7, x: '-50%' }}
-            animate={{ opacity: 1, scale: 1, x: '-50%' }}
-            exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
-            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-            style={{
-              position: 'absolute', top: 60, left: '50%', zIndex: 30, pointerEvents: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '0.32rem 0.72rem', borderRadius: 999,
-              background: 'linear-gradient(180deg, rgba(255,59,71,0.32) 0%, rgba(224,0,34,0.18) 100%)',
-              border: '1px solid rgba(255,90,100,0.7)',
-              boxShadow: '0 0 18px rgba(255,40,60,0.5), inset 0 0 8px rgba(255,255,255,0.22)',
-            }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden style={{ filter: 'drop-shadow(0 0 4px #ff3344)' }}>
-              <path d="M13 2L3 14h7l-1 8 11-13h-7z" />
-            </svg>
-            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.672rem', color: '#fff', textShadow: '0 0 8px rgba(255,60,70,0.85)' }}>Instant Bite</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── THE BAR, along the top ────────────────────────────────────────
           The fishing screen's own component, not a copy of it. Casting on the
@@ -1647,6 +1584,79 @@ export default function FishingHere({
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── THE EFFECT PILLS' SLOT ──────────────────────────────────────
+          Second Wind, Instant Bite and the Sigil's payout used to float at
+          absolute tops measured from the overlay — numbers that were guesses
+          at the header's height, and wrong ones: they landed exactly on the
+          day/night chip and the auto toggle. A zero-height slot AFTER the
+          header costs no layout and moves with whatever the header becomes,
+          so the pills are always just below the chrome and never on it. */}
+      <div aria-hidden style={{ position: 'relative', width: '100%', height: 0, zIndex: 30, pointerEvents: 'none' }}>
+      {/* THE PERFECTED SIGIL's payout. Paid by the server on every perfect; the
+          only thing missing out here was anybody saying so. */}
+      <AnimatePresence>
+        {sigilPaid > 0 && (
+          <motion.p key="sigil"
+            initial={{ opacity: 0, y: 0, x: '-50%' }}
+            animate={{ opacity: [0, 1, 1, 0], y: -26, x: '-50%' }}
+            transition={{ duration: 2.4, times: [0, 0.12, 0.66, 1], ease: 'easeOut' }}
+            className="font-cinzel font-700"
+            style={{
+              position: 'absolute', top: 46, left: '50%', zIndex: 30, pointerEvents: 'none',
+              fontSize: '1.08rem', color: '#f0c040', textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+            }}>
+            +{sigilPaid} ⟡
+          </motion.p>
+        )}
+      </AnimatePresence>
+      {/* SECOND WIND. The rod handed the dial back. Without a cue this reads as
+          the reel button simply not working. */}
+      <AnimatePresence>
+        {retryFlash && (
+          <motion.div key="retry"
+            initial={{ opacity: 0, scale: 0.7, x: '-50%' }}
+            animate={{ opacity: 1, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+            style={{
+              position: 'absolute', top: 8, left: '50%', zIndex: 30, pointerEvents: 'none',
+              padding: '0.32rem 0.72rem', borderRadius: 999,
+              background: 'rgba(56,189,178,0.22)',
+              border: '1px solid rgba(94,234,212,0.7)',
+              boxShadow: '0 0 18px rgba(45,212,191,0.4)',
+            }}>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.672rem', color: '#ccfbf1' }}>Second Wind</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* LIGHTSPEED. The Lightsaber and its kin roll an instant bite, and the
+          whole experience of that effect is the wait NOT happening — which is
+          invisible unless something says so. Lifted from the fishing screen,
+          same red bolt, same 1100ms. */}
+      <AnimatePresence>
+        {instantBite && (
+          <motion.div key="instant-bite"
+            initial={{ opacity: 0, scale: 0.7, x: '-50%' }}
+            animate={{ opacity: 1, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+            style={{
+              position: 'absolute', top: 8, left: '50%', zIndex: 30, pointerEvents: 'none',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '0.32rem 0.72rem', borderRadius: 999,
+              background: 'linear-gradient(180deg, rgba(255,59,71,0.32) 0%, rgba(224,0,34,0.18) 100%)',
+              border: '1px solid rgba(255,90,100,0.7)',
+              boxShadow: '0 0 18px rgba(255,40,60,0.5), inset 0 0 8px rgba(255,255,255,0.22)',
+            }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden style={{ filter: 'drop-shadow(0 0 4px #ff3344)' }}>
+              <path d="M13 2L3 14h7l-1 8 11-13h-7z" />
+            </svg>
+            <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.672rem', color: '#fff', textShadow: '0 0 8px rgba(255,60,70,0.85)' }}>Instant Bite</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
 
       {/* ── CONTENT ───────────────────────────────────────────────────────
