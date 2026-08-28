@@ -122,6 +122,19 @@ export type Folk = {
   /** One line for the roster: who they are, in the third person. */
   blurb: string
   /**
+   * WHAT THEY SAY WHEN YOU PULL ALONGSIDE, before you have asked anything.
+   *
+   * Its own line, and it has to be. The scene opened on `lines[tier][0]`
+   * while the day's word handed back the first UNHEARD line, which on a
+   * fresh tier is also index 0 — so the button promised something new and
+   * then said the exact sentence already on screen. Reported as precisely
+   * that.
+   *
+   * Short, repeatable, and carrying no information, because you hear it
+   * every single visit. It is a hello, not a beat.
+   */
+  greeting: string
+  /**
    * THEIR FACE.
    *
    * Written down rather than hashed off their id, which is what the buyers
@@ -199,6 +212,7 @@ export type Folk = {
 export const FOLK: Folk[] = [
   {
     id: 'meg', name: 'Meg Corrin', zoneId: 'shallows', buys: false,
+    greeting: "Mind the rail. It is wet, and it is always wet.",
     face: { characterColor: 'sand', hat: 'brown', bg: '#1a1408', ring: '#c8a060', mirrored: true },
     role: 'Shallows buyer', accent: '#d8b070',
     blurb: 'Kept the Shallows scale for thirty years. Watches who turns into somebody.',
@@ -248,6 +262,7 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'pell', name: 'Bent Pell', zoneId: 'open_waters', buys: false,
+    greeting: "What.",
     face: { characterColor: 'blue', hat: 'gray', bg: '#0c1620', ring: '#7fa8c8', mirrored: true },
     role: 'Open Waters buyer', accent: '#7fa8c8',
     blurb: 'Short with everybody, and it is genuinely nothing personal.',
@@ -297,6 +312,7 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'marlow', name: 'Old Marlow', zoneId: 'deep', buys: false,
+    greeting: "You found me. Everybody does, eventually.",
     face: { characterColor: 'gray', hat: 'black', bg: '#101418', ring: '#a8b4c0', mirrored: true },
     role: 'Deep water buyer', accent: '#b0bcc8',
     blurb: 'Sits still in deep water and lets everybody else do the sailing.',
@@ -346,6 +362,7 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'fitch', name: 'Quiet Fitch', zoneId: 'abyss', buys: false,
+    greeting: "Mm.",
     face: { characterColor: 'storm', hat: 'midnight', bg: '#080c14', ring: '#6878a0', mirrored: true },
     role: 'Abyss buyer', accent: '#8090b8',
     blurb: 'Lives in the dark water. Says very little about anything.',
@@ -395,6 +412,7 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'nance', name: 'Grey Nance', zoneId: 'ancient_deep', buys: false,
+    greeting: "You are a long way out.",
     face: { characterColor: 'ice', hat: 'offwhite', bg: '#0a1018', ring: '#9ec4d8', mirrored: true },
     role: 'Ancient Deep buyer', accent: '#9ec4d8',
     blurb: 'Keeps the count of who goes down to the oldest water and comes back up.',
@@ -444,6 +462,7 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'yoon', name: 'Yoon', zoneId: 'ancient_deep', buys: false,
+    greeting: "Ayo. Sheeeeesh, look who it is.",
     face: { characterColor: 'golden', hat: 'black', bg: '#141008', ring: '#f0c040', mirrored: true },
     role: 'Rodmaker', accent: '#f0c040',
     blurb: 'Carries one rod that no shop will stock, and an opinion on whether you deserve it.',
@@ -482,14 +501,15 @@ export const FOLK: Folk[] = [
         "I made it. Not the tier, the rod. The one on my boat. Made it, then I stopped making.",
         "A perfect cast isn't luck twenty times. It's one thing you learned, done twenty times. Gyattt, when you say it out loud.",
         "You were so locked in on that last run. I watched the whole thing. Gyattt. Don't let it get to your head.",
-        "Sheeeeesh, that hold's heavy. You've been out here since the light came up, huh.",
+        "Bruhhh, that hold is heavy. You've been out here since the light came up, huh.",
       ],
       [
         "There were three of us making rods out here. Other two sell in the harbour now. They're good, no shade.",
         "Gyattt. I stayed out because a rod should go to the captain it fits, and you can't tell that through a shop window.",
         "Bring me a bad run some time. Lowkey I'd rather watch how you fish when it's going wrong.",
         "Locked in isn't trying harder. It's the part where you stop trying and it just goes.",
-        "Gyattt, that's a lot of line out. You're fishing way deeper than you were last season.",
+        "Bruhhh, you have way too much dip on your chip with that setup. Half of it is not doing anything for you. Strip it back.",
+        "Bruhhh, that is a lot of line out. You're fishing way deeper than you were last season.",
       ],
       [
         "You've got the hand. I've thought so for a while and I'm not saying it to be nice.",
@@ -520,6 +540,7 @@ export const FOLK: Folk[] = [
 
   {
     id: 'brill', name: 'Tam Brill', zoneId: 'shallows', buys: false,
+    greeting: "Oh! Hello. Hi.",
     face: { characterColor: 'default', hat: 'green', bg: '#0e1810', ring: '#8cc890', mirrored: true },
     role: 'Two seasons out', accent: '#8cc890',
     blurb: 'Two seasons out and convinced everyone else is a legend.',
@@ -569,6 +590,7 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'turbot', name: 'Cass Turbot', zoneId: 'open_waters', buys: false,
+    greeting: "Mind where you drop that anchor.",
     face: { characterColor: 'forest', hat: 'olive', bg: '#0c1410', ring: '#88b09c', mirrored: true },
     role: 'Wreck diver', accent: '#88b09c',
     blurb: 'Dives the wrecks and comes up with stories, some of them true.',
@@ -618,6 +640,7 @@ export const FOLK: Folk[] = [
   },
   {
     id: 'ream', name: 'Rue Bream', zoneId: 'deep', buys: false,
+    greeting: "News, or are you just passing?",
     face: { characterColor: 'lavender', hat: 'purple', bg: '#12101c', ring: '#b0a0d0', mirrored: true },
     role: 'Carries word', accent: '#b0a0d0',
     blurb: 'Carries news between the regulars and remembers all of it.',
@@ -812,10 +835,12 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'How did you learn to make them?', they: 'Badly. For like six years. Then it clicked and I still couldn\'t tell you what changed.' },
       { you: 'What does locked in mean to you?', they: 'When you stop counting and you\'re just doing it. Gyattt, it\'s hard to explain.' },
+      { you: 'What do you make of my rig?', they: 'Bruhhh. Too much dip on your chip. Half that setup is doing nothing and you are carrying it anyway.' },
     ],
     [
       { you: 'Why not sell in the harbour?', they: 'Because then anybody with coin gets it. That\'s not it. That was never it.' },
       { you: 'Do you miss making them?', they: 'Lowkey, yeah. But I said one rod and I meant one rod.' },
+      { you: 'Am I overthinking this?', they: 'Bruhhh. Constantly. That is most of what is between you and the next one.' },
     ],
     [
       { you: 'What happens after I buy it?', they: 'You fish. That\'s it. Gyattt, everybody thinks there\'s a next thing.' },

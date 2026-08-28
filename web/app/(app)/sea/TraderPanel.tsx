@@ -451,7 +451,11 @@ export default function TraderPanel({
           open={scene}
           tier={rap.tier}
           points={rap.points}
-          opener={folk.lines[rap.tier][0]}
+          // HIS OWN HELLO, never a line from the tier pool. The pool is what
+          // the day's word hands out, and opening on its first entry meant the
+          // button promised something new and then repeated the sentence
+          // already on the screen.
+          opener={folk.greeting}
           gain={gain}
           resolved={spoke}
           canChat={!rap.chattedToday}
