@@ -33,6 +33,7 @@ import { PLACES, LANDMARKS, RESIDENTS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, G
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
+import { crewTheDeck } from '../crew/actions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
@@ -834,7 +835,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
-  auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, startSide,
+  auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, startSide,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -878,6 +879,13 @@ export default function SeaMap({
   raidParty: { name: string; art: string }[]
   /** What is mounted, names and images resolved server-side. */
   raidItems: { name: string; image: string | null }[]
+  /** How many seats and mounts the ship HAS, so the muster can show the empty
+   *  ones. A muster that only lists who came cannot say who is missing. */
+  raidSeats: number
+  itemMounts: number
+  /** Owed repairs. Sailing a sunk ship is refused at the raid screen; the dock
+   *  is where that should be discovered, not past the sortie. */
+  raidRepairOwed: number
   /** Rudder and rig tiers, from the Shipyard. */
   handlingTier: number
   accelTier: number
@@ -1578,6 +1586,31 @@ export default function SeaMap({
   /** The raid dock's confirm. Opened when you come alongside — see the dock
    *  proximity block in the loop — and closed by answering it. */
   const [swapAsk, setSwapAsk] = useState(false)
+  /**
+   * THE MUSTER, live. Server props seed it; Crew the Deck refreshes it from
+   * the action's own returned state, so filling the seats never means leaving
+   * the water. Resynced when the server prop changes (a return from the Crew
+   * Hall remounts the page with a fresh party) — the standard prop-to-state
+   * pairing, or the first server render after an edit would win forever.
+   */
+  const [party, setParty] = useState(raidParty)
+  useEffect(() => { setParty(raidParty) }, [raidParty])
+  const [decking, setDecking] = useState(false)
+  const crewDeck = useCallback(async () => {
+    if (decking) return
+    setDecking(true)
+    vibrate(10)
+    try {
+      const res = await crewTheDeck()
+      if (!('error' in res)) {
+        setParty(res.state.roster
+          .filter(c => c.raidSlot != null)
+          .sort((a, b) => (a.raidSlot ?? 0) - (b.raidSlot ?? 0))
+          .map(c => ({ name: c.name, art: c.filename })))
+      }
+    } catch { /* the muster keeps what it had */ }
+    setDecking(false)
+  }, [decking])
 
   /**
    * WHAT IS UNDER YOU, in the three numbers the frame loop needs.
@@ -4577,25 +4610,60 @@ hullRef={hullRefFor(t.key)} />
                 <p className="font-karla" style={{
                   fontSize: '0.76rem', color: 'rgba(214,226,236,0.7)', margin: '2px 0 0', lineHeight: 1.4,
                 }}>
-                  {raidParty.length === 0
+                  {party.length === 0
                     ? 'No crew in the raid seats. She sails empty.'
-                    : `${raidParty.length} crew aboard, in their raid seats.`}
+                    : `${party.length} crew aboard, in their raid seats.`}
                 </p>
               </div>
             </div>
 
-            {/* ── THE MUSTER ──────────────────────────────────────────────
-                The dock is where the loadout is CONFIRMED, so it shows the
-                loadout: the faces that would board and the items mounted, from
-                the same loaders the raids read. A count was the honest version
-                of "not nothing"; this is the honest version of "exactly this".
-                Read-only on purpose — assembling the party is the Crew Hall's
-                job and mounting items is the Armory's, and each chip row says
-                where to go to change it. */}
+            {/* ── THE MUSTER ──────────────────────────────────────
+                Seats and mounts drawn as SLOTS, empties included, because a
+                muster that only lists who came cannot say who is missing —
+                and who is missing is the entire question you stop at a dock
+                to answer.
+
+                Crew the Deck fills the empty seats with the best of the bench
+                through the same action the Crew Hall uses, and refreshes from
+                that action's own returned state — confirming the loadout
+                never means leaving the water. The Change links stay for
+                picking by hand; the docks tie the systems together, they do
+                not replace them. */}
             {!onShip && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.7rem 0 0', flexWrap: 'wrap' }}>
-                  {raidParty.map(c => (
+                {raidRepairOwed > 0 && (
+                  <button type="button" data-no-steer
+                    onClick={() => { vibrate(8); router.push('/expeditions/ship') }}
+                    className="tap font-karla font-700" style={{
+                      display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+                      margin: '0.7rem 0 0', padding: '0.5rem 0.7rem', borderRadius: 10,
+                      background: 'rgba(240,120,90,0.1)', border: '1px solid rgba(240,120,90,0.4)',
+                      color: '#f0a890', fontSize: '0.76rem', lineHeight: 1.4,
+                    }}>
+                    She lies on the seabed — {raidRepairOwed.toLocaleString()} ⟡ to raise her. Tap to repair.
+                  </button>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0.75rem 0 0' }}>
+                  <p className="font-karla font-700 uppercase" style={{
+                    fontSize: '0.6rem', letterSpacing: '0.14em', margin: 0,
+                    color: party.length < raidSeats ? 'rgba(240,192,64,0.9)' : 'rgba(190,212,228,0.55)',
+                  }}>
+                    Crew · {party.length} / {raidSeats}
+                  </p>
+                  {party.length < raidSeats && (
+                    <button type="button" data-no-steer onClick={() => void crewDeck()} disabled={decking}
+                      className="tap font-karla font-700" style={{
+                        padding: '0.2rem 0.55rem', borderRadius: 999, cursor: 'pointer',
+                        background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.45)',
+                        color: '#f6dfa0', fontSize: '0.66rem',
+                      }}>
+                      {decking ? 'Mustering…' : 'Crew the deck'}
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.4rem 0 0', flexWrap: 'wrap' }}>
+                  {party.map(c => (
                     <div key={c.name + c.art} title={c.name} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '0.22rem 0.5rem 0.22rem 0.24rem', borderRadius: 999,
@@ -4610,6 +4678,14 @@ hullRef={hullRefFor(t.key)} />
                       }}>{c.name}</span>
                     </div>
                   ))}
+                  {/* The seats nobody is in. Dashed and dim: absence, drawn. */}
+                  {Array.from({ length: Math.max(0, raidSeats - party.length) }, (_, k) => (
+                    <div key={`empty${k}`} aria-hidden style={{
+                      width: 26, height: 26, borderRadius: '50%',
+                      border: '1px dashed rgba(240,192,64,0.4)',
+                      background: 'rgba(240,192,64,0.04)',
+                    }} />
+                  ))}
                   <button type="button" data-no-steer
                     onClick={() => { vibrate(8); router.push('/crew') }}
                     className="tap font-karla font-700" style={{
@@ -4617,11 +4693,17 @@ hullRef={hullRefFor(t.key)} />
                       background: 'none', border: '1px dashed rgba(196,169,106,0.45)',
                       color: 'rgba(214,196,150,0.85)', fontSize: '0.68rem',
                     }}>
-                    {raidParty.length === 0 ? 'Assign crew' : 'Change'}
+                    Change
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.55rem 0 0', flexWrap: 'wrap' }}>
+                <p className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.6rem', letterSpacing: '0.14em', margin: '0.75rem 0 0',
+                  color: raidItems.length < itemMounts ? 'rgba(240,192,64,0.9)' : 'rgba(190,212,228,0.55)',
+                }}>
+                  Mounted · {raidItems.length} / {itemMounts}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.4rem 0 0', flexWrap: 'wrap' }}>
                   {raidItems.map(it => (
                     <div key={it.name} title={it.name} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
@@ -4639,6 +4721,13 @@ hullRef={hullRefFor(t.key)} />
                       }}>{it.name}</span>
                     </div>
                   ))}
+                  {Array.from({ length: Math.max(0, itemMounts - raidItems.length) }, (_, k) => (
+                    <div key={`emptym${k}`} aria-hidden style={{
+                      width: 24, height: 24, borderRadius: 7,
+                      border: '1px dashed rgba(167,139,250,0.35)',
+                      background: 'rgba(167,139,250,0.04)',
+                    }} />
+                  ))}
                   <button type="button" data-no-steer
                     onClick={() => { vibrate(8); router.push('/expeditions/items') }}
                     className="tap font-karla font-700" style={{
@@ -4646,7 +4735,7 @@ hullRef={hullRefFor(t.key)} />
                       background: 'none', border: '1px dashed rgba(167,139,250,0.4)',
                       color: 'rgba(200,184,240,0.85)', fontSize: '0.68rem',
                     }}>
-                    {raidItems.length === 0 ? 'Mount items' : 'Change'}
+                    Change
                   </button>
                 </div>
               </>

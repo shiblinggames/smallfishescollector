@@ -21,7 +21,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getFishHold } from '@/lib/fishHold'
 import { rodsAboard, hullSpeed } from '@/lib/shipyard'
 import { MIN_SHIP_TIER } from '@/lib/ships'
-import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { loadDeployedParty } from '@/lib/crewData'
 import { getRaidItem } from '@/lib/raidItems'
@@ -59,6 +59,18 @@ export default async function SeaPage() {
 
   const admin = createAdminClient()
 
+  // THE SHIP'S CAPACITY, worked out once and shared: the party loader caps by
+  // it, and the dock draws the empty seats — the whole point of a muster is
+  // that an empty seat is VISIBLE.
+  const raidSeats =
+    (EXPEDITION_SHIP_STATS[Number(profile?.ship_tier ?? MIN_SHIP_TIER)]?.crewSlots ?? 1)
+    + classSlotBonuses(profile?.ship_classes as Record<string, string> | null).crewSlots
+    + (profile?.has_sixth_berth === true ? 1 : 0)
+  const itemMounts =
+    raidItemSlotsForTier(Number(profile?.ship_tier ?? MIN_SHIP_TIER))
+    + classSlotBonuses(profile?.ship_classes as Record<string, string> | null).itemSlots
+    + (profile?.has_armory_expansion === true ? 1 : 0)
+
   // ── THE COLLECTION LOG ────────────────────────────────────────────────
   // The same drawer the fishing page shows, so it needs the same reference
   // data. Species come from the long-TTL cross-request cache, not a per-view
@@ -85,11 +97,7 @@ export default async function SeaPage() {
     // WHO WOULD ACTUALLY SAIL. The dock is where the crew is CONFIRMED, so it
     // gets the party itself — faces and names, not a count. Same loader every
     // raid uses, so what the dock shows is exactly what would board.
-    loadDeployedParty(admin, user.id,
-      (EXPEDITION_SHIP_STATS[Number(profile?.ship_tier ?? MIN_SHIP_TIER)]?.crewSlots ?? 1)
-        + classSlotBonuses(profile?.ship_classes as Record<string, string> | null).crewSlots
-        + (profile?.has_sixth_berth === true ? 1 : 0),
-      'raid'),
+    loadDeployedParty(admin, user.id, raidSeats, 'raid'),
     admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
     dealtToday(),
     getDiscoveries(),
@@ -242,6 +250,11 @@ export default async function SeaPage() {
         .map(id => getRaidItem(id))
         .filter((d): d is NonNullable<typeof d> => !!d)
         .map(d => ({ name: d.name, image: d.image }))}
+      raidSeats={raidSeats}
+      itemMounts={itemMounts}
+      // Sailing a sunk ship is refused at the raid screen; the DOCK is where
+      // that should be discovered, not past the sortie.
+      raidRepairOwed={Number(profile?.raid_repair_owed ?? 0)}
       // The two new movement ladders. Passed as TIERS rather than as computed
       // rates: the map multiplies them by the boat's own trim, and doing half
       // that sum here and half there is how the two drift apart.
