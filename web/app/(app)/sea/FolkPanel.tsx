@@ -370,9 +370,9 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
 
 /** What you know about the rival. His card turns over to the campaign rather
  *  than to a favourite fish, because that is what he is. */
-function RivalDetail({ finn, here, onBack }: {
+function RivalDetail({ finn, chapters, onBack }: {
   finn: FinnSeaState | null
-  here: FinnChapterView | null
+  chapters: FinnChapterView[]
   onBack: () => void
 }) {
   const points = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
@@ -390,22 +390,12 @@ function RivalDetail({ finn, here, onBack }: {
 
       {/* The act he is currently walking you through, named, so his page and
           the campaign strip on the front agree about where you are. */}
-      {here && (
-        <div style={{
-          marginTop: '0.8rem', padding: '0.55rem 0.7rem', borderRadius: 11,
-          background: 'rgba(240,192,64,0.08)', border: `1px solid ${GOLD}44`,
-        }}>
-          <p className="font-karla font-700 uppercase" style={{
-            fontSize: '0.5rem', letterSpacing: '0.18em', color: GOLD, margin: 0,
-          }}>Chapter {here.chapter.romanNumeral} of {FINN_CHAPTERS.length}</p>
-          <p className="font-cinzel font-700" style={{
-            fontSize: '1rem', color: '#f4e2c0', margin: '2px 0 0',
-          }}>{here.chapter.title}</p>
-          <p className="font-karla" style={{
-            fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0', lineHeight: 1.4,
-          }}>{here.chapter.subtitle}</p>
-        </div>
-      )}
+      {/* THE WHOLE LADDER lives here now rather than on the front, where it
+          buried the one thing a captain actually needed. Five acts deep, the
+          way the raid map shows its chapters. */}
+      <div style={{ marginTop: '0.9rem' }}>
+        {chapters.map(v => <ChapterRow key={v.chapter.id} view={v} />)}
+      </div>
 
       <div style={{
         marginTop: '0.8rem', padding: '0.6rem 0.7rem', borderRadius: 11,
@@ -617,7 +607,7 @@ export default function FolkPanel({ open, onClose, finn }: {
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   transition={{ duration: 0.12 }}
                   style={{ paddingTop: '0.9rem' }}>
-                  <RivalDetail finn={finn} here={here}
+                  <RivalDetail finn={finn} chapters={chapters}
                     onBack={() => { vibrate(6); setShowing(null) }} />
                 </motion.div>
               ) : openFolk ? (
@@ -634,11 +624,6 @@ export default function FolkPanel({ open, onClose, finn }: {
                   transition={{ duration: 0.12 }}>
 
                     <Section title="The Fishing Campaign">
-                      {/* THE SAME GRID THE REGULARS USE, so his card is
-                          exactly one cell wide and lines up with theirs. It
-                          was a fixed 118 in a flex row beside the job, which
-                          made the one card that should look like the others
-                          the only one that did not. */}
                       <div style={{
                         display: 'grid', gap: 8,
                         gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
@@ -652,74 +637,106 @@ export default function FolkPanel({ open, onClose, finn }: {
                           onOpen={() => { vibrate(6); setShowing('finn') }} />
                       </div>
 
-                        {/* ── WHAT HE HAS ASKED YOU FOR ─────────────────────
-                            BESIDE HIS CARD, not buried behind it. This is the
-                            one live task in the game and the panel a captain
-                            opens to see who is out there is exactly where they
-                            will look for it. Done, it goes gold and stops
-                            describing the task at all: the only thing left to
-                            know is that he is holding your pay. */}
-                      {finnQuest ? (
+                      {/* ── THE ACT YOU ARE IN, AND NOTHING ELSE ──────────
+                          The whole five chapter ladder used to sit here, which
+                          answered a question nobody was asking and buried the
+                          one they were: what am I meant to be doing right now.
+                          One act, with the job INSIDE it rather than floating
+                          above it, because the job IS that act's current state
+                          and two boxes were saying it twice. The full ladder
+                          moved onto his card for anyone who wants the shape. */}
+                      {here && (
                         <button
                           onClick={() => { vibrate(6); setShowing('finn') }}
                           style={{
-                            width: '100%', marginTop: 8, textAlign: 'left', cursor: 'pointer',
-                          padding: '0.6rem 0.7rem', borderRadius: 12,
-                          background: finnQuest.done
-                            ? 'linear-gradient(180deg, rgba(96,72,14,0.85) 0%, rgba(44,32,6,0.9) 100%)'
-                            : 'rgba(255,255,255,0.035)',
-                          border: `1px solid ${finnQuest.done ? 'rgba(240,192,64,0.7)' : `${SEA},0.14)`}`,
-                          boxShadow: finnQuest.done ? '0 0 20px rgba(240,192,64,0.2)' : 'none',
-                        }}>
-                          <p className="font-karla font-700 uppercase" style={{
-                            fontSize: '0.5rem', letterSpacing: '0.18em', margin: 0,
-                            color: finnQuest.done ? '#ffd986' : `${SEA},0.5)`,
-                          }}>{finnQuest.done ? 'Done' : 'He asked you for'}</p>
-                          <p className="font-karla font-600" style={{
-                            fontSize: '0.82rem', margin: '3px 0 0', lineHeight: 1.3,
-                            color: '#f0ede8',
-                          }}>{finnQuest.label}</p>
-                          {finnQuest.done ? (
-                            <p className="font-cinzel font-700" style={{
-                              fontSize: '0.86rem', margin: '6px 0 0', color: '#ffd986',
-                            }}>Go back to Finn and hand it over</p>
+                            width: '100%', marginTop: 10, textAlign: 'left', cursor: 'pointer',
+                            padding: '0.7rem 0.8rem', borderRadius: 13,
+                            background: finnQuest?.done
+                              ? 'linear-gradient(180deg, rgba(96,72,14,0.85) 0%, rgba(44,32,6,0.9) 100%)'
+                              : 'rgba(240,192,64,0.07)',
+                            border: `1px solid ${finnQuest?.done ? 'rgba(240,192,64,0.7)' : `${GOLD}3d`}`,
+                            boxShadow: finnQuest?.done ? '0 0 20px rgba(240,192,64,0.2)' : 'none',
+                          }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+                            <p className="font-karla font-700 uppercase" style={{
+                              fontSize: '0.5rem', letterSpacing: '0.18em', color: GOLD, margin: 0,
+                            }}>Chapter {here.chapter.romanNumeral} of {FINN_CHAPTERS.length}</p>
+                            <p className="font-karla font-700" style={{
+                              fontSize: '0.62rem', color: `${SEA},0.45)`, margin: 0,
+                            }}>{here.done} of {here.total}</p>
+                          </div>
+                          <p className="font-cinzel font-700" style={{
+                            fontSize: '1rem', color: '#f4e2c0', margin: '2px 0 0',
+                          }}>{here.chapter.title}</p>
+                          <p className="font-karla" style={{
+                            fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0', lineHeight: 1.4,
+                          }}>{here.chapter.subtitle}</p>
+                          <div style={{
+                            height: 3, borderRadius: 999, marginTop: 6, overflow: 'hidden',
+                            background: 'rgba(255,255,255,0.08)',
+                          }}>
+                            <div style={{
+                              width: `${Math.round((here.done / Math.max(1, here.total)) * 100)}%`,
+                              height: '100%', background: GOLD, borderRadius: 999,
+                            }} />
+                          </div>
+
+                          {/* The job, inside the act it belongs to. */}
+                          {finnQuest ? (
+                            <div style={{
+                              marginTop: 9, paddingTop: 9,
+                              borderTop: `1px solid ${finnQuest.done ? 'rgba(240,192,64,0.3)' : `${SEA},0.12)`}`,
+                            }}>
+                              <p className="font-karla font-700 uppercase" style={{
+                                fontSize: '0.5rem', letterSpacing: '0.18em', margin: 0,
+                                color: finnQuest.done ? '#ffd986' : `${SEA},0.5)`,
+                              }}>{finnQuest.done ? 'Done' : 'He asked you for'}</p>
+                              <p className="font-karla font-600" style={{
+                                fontSize: '0.82rem', margin: '3px 0 0', lineHeight: 1.3, color: '#f0ede8',
+                              }}>{finnQuest.label}</p>
+                              {finnQuest.done ? (
+                                <p className="font-cinzel font-700" style={{
+                                  fontSize: '0.86rem', margin: '5px 0 0', color: '#ffd986',
+                                }}>Go back to Finn and hand it over</p>
+                              ) : (
+                                <>
+                                  <Bar at={finnQuest.have} of={finnQuest.target}
+                                    color="rgba(226,238,246,0.5)" />
+                                  <p className="font-karla" style={{
+                                    fontSize: '0.64rem', margin: '4px 0 0', color: `${SEA},0.45)`,
+                                  }}>{finnQuest.progressText}</p>
+                                </>
+                              )}
+                            </div>
                           ) : (
-                            <>
-                              <Bar at={finnQuest.have} of={finnQuest.target}
-                                color="rgba(226,238,246,0.5)" />
-                              <p className="font-karla" style={{
-                                fontSize: '0.64rem', margin: '4px 0 0', color: `${SEA},0.45)`,
-                              }}>{finnQuest.progressText}</p>
-                            </>
+                            <p className="font-karla" style={{
+                              fontSize: '0.7rem', color: `${SEA},0.45)`, margin: '9px 0 0',
+                              paddingTop: 9, borderTop: `1px solid ${SEA},0.12)`, lineHeight: 1.45,
+                            }}>He has not asked you for anything. Go and see what he wants.</p>
                           )}
                         </button>
-                      ) : (
-                        <p className="font-karla" style={{
-                          fontSize: '0.72rem', color: `${SEA},0.45)`, margin: '8px 0 0', lineHeight: 1.45,
-                        }}>He has not asked you for anything. Go and see what he wants.</p>
                       )}
 
-                      {/* NOT FINISHED, JUST WAITING. Every act you can reach
-                          is done and the next wants a level you have not got,
-                          which without a word for it looks exactly like having
-                          completed the campaign. */}
+                      {/* NOT FINISHED, JUST WAITING ON A LEVEL. */}
                       {waitingOn && (
-                        <p className="font-karla" style={{
-                          fontSize: '0.72rem', color: `${GOLD}`, margin: '8px 0 0', lineHeight: 1.45,
+                        <div style={{
+                          marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 13,
+                          border: `1px dashed ${GOLD}3d`, background: 'rgba(255,255,255,0.02)',
                         }}>
-                          He has nothing more until you can work {
-                            PLACES.find(w => w.id === waitingOn.band)?.name ?? 'deeper water'
-                          }. Chapter {waitingOn.romanNumeral} opens at Fishing {waitingOn.minLevel}.
-                        </p>
+                          <p className="font-karla font-700 uppercase" style={{
+                            fontSize: '0.5rem', letterSpacing: '0.18em', color: `${SEA},0.45)`, margin: 0,
+                          }}>Chapter {waitingOn.romanNumeral} of {FINN_CHAPTERS.length}</p>
+                          <p className="font-cinzel font-700" style={{
+                            fontSize: '1rem', color: `${SEA},0.55)`, margin: '2px 0 0',
+                          }}>{waitingOn.title}</p>
+                          <p className="font-karla" style={{
+                            fontSize: '0.7rem', color: GOLD, margin: '5px 0 0', lineHeight: 1.45,
+                          }}>
+                            Opens at Fishing {waitingOn.minLevel}. He has nothing more for you until
+                            you can work {PLACES.find(w => w.id === waitingOn.band)?.name ?? 'deeper water'}.
+                          </p>
+                        </div>
                       )}
-
-                      {/* THE WHOLE SHAPE OF IT, five acts deep, the way the
-                          raid map shows its chapters. A captain should be able
-                          to see at a glance that there is a story here, how far
-                          in they are, and that it keeps going. */}
-                      <div style={{ marginTop: 10 }}>
-                        {chapters.map(v => <ChapterRow key={v.chapter.id} view={v} />)}
-                      </div>
                     </Section>
 
                     {met.length > 0 && (

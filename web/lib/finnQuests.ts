@@ -129,6 +129,30 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "Start where everybody starts.",
   },
 
+  {
+    id: 'q21', type: 'catch_rarity', target: 2, minRarity: 2, reward: 460, minLevel: 1, band: 'shallows',
+    label: 'Land 2 uncommon or better fish',
+    give: "Two that are not the usual. The shallow water has better in it than people think, they just stop looking.",
+    done: "Two. You have started seeing what is actually down there rather than what you expected.",
+    waiting: "Uncommon or better. Look properly.",
+    gated: "Go and fish first.",
+  },
+  {
+    id: 'q22', type: 'perfect_streak', target: 3, reward: 520, minLevel: 1, band: 'shallows',
+    label: 'Land 3 perfect catches in a row',
+    give: "Three without a miss. It is the smallest run worth calling a run, and you will be surprised how it goes wrong.",
+    done: "Three straight. Do that ten more times and it stops being luck.",
+    waiting: "In a row. One miss and it starts again.",
+    gated: "Not yet.",
+  },
+  {
+    id: 'q23', type: 'catch_any', target: 30, reward: 600, minLevel: 1, band: 'shallows',
+    label: 'Land 30 fish',
+    give: "Thirty. Any water, any fish. There is no trick to this one, I want the hours in your hands.",
+    done: "Thirty. That is the part nobody puts in the stories and it is most of the work.",
+    waiting: "Thirty. You are not close and that is fine.",
+    gated: "Go and fish.",
+  },
   // ── OPEN WATERS (Fishing 15) ────────────────────────────────────────
   {
     id: 'q4', type: 'catch_zone', target: 10, zone: 'open_waters', reward: 560, minLevel: 15, band: 'open_waters',
@@ -155,6 +179,30 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "Not at your level. The water does not hand those to beginners.",
   },
 
+  {
+    id: 'q24', type: 'land_perfects', target: 10, reward: 1000, minLevel: 15, band: 'open_waters',
+    label: 'Land 10 perfect catches',
+    give: "Ten clean. Not in a row, just ten. I want to see whether the good ones are becoming the normal ones.",
+    done: "Ten. They are becoming the normal ones.",
+    waiting: "Ten perfect. Take as long as you like.",
+    gated: "Come back when you are rated for this water.",
+  },
+  {
+    id: 'q25', type: 'catch_zone', target: 25, zone: 'open_waters', reward: 1150, minLevel: 15, band: 'open_waters',
+    label: 'Land 25 fish in Open Waters',
+    give: "Twenty five out of the middle water. Long job. Do it around everything else you are doing.",
+    done: "Twenty five. You know that water now, which is different from having been there.",
+    waiting: "Open Waters. Twenty five. It adds up faster than you think.",
+    gated: "Not until you can work it.",
+  },
+  {
+    id: 'q26', type: 'catch_any', target: 60, reward: 1300, minLevel: 15, band: 'open_waters',
+    label: 'Land 60 fish',
+    give: "Sixty, anywhere. I am not testing your nerve with this one, I am testing whether you keep going.",
+    done: "Sixty. Most captains stop somewhere in the forties and never notice they stopped.",
+    waiting: "Sixty. Keep at it.",
+    gated: "Later.",
+  },
   // ── THE DEEP (Fishing 30) ───────────────────────────────────────────
   {
     id: 'q7', type: 'catch_zone', target: 12, zone: 'deep', reward: 1200, minLevel: 30, band: 'deep',
@@ -181,6 +229,30 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "Not yet. Ask me again when the deep water knows your name.",
   },
 
+  {
+    id: 'q27', type: 'catch_rarity', target: 4, minRarity: 3, reward: 2200, minLevel: 30, band: 'deep',
+    label: 'Land 4 rare or better fish',
+    give: "Four rare, out of deep water. They are down there in numbers the shallows never see.",
+    done: "Four. The deep gives them up more readily to somebody it has decided about.",
+    waiting: "Rare or better. Four of them.",
+    gated: "The Deep first.",
+  },
+  {
+    id: 'q28', type: 'catch_zone', target: 25, zone: 'deep', reward: 2500, minLevel: 30, band: 'deep',
+    label: 'Land 25 fish in the Deep',
+    give: "Twenty five out of the Deep. That is a lot of sailing and I am aware of it.",
+    done: "Twenty five. You have spent more hours down there this month than I have this year.",
+    waiting: "The Deep. Twenty five. It is a long one on purpose.",
+    gated: "Not yet.",
+  },
+  {
+    id: 'q29', type: 'catch_any', target: 100, reward: 2900, minLevel: 30, band: 'deep',
+    label: 'Land 100 fish',
+    give: "A hundred. Anywhere, anything. Nobody has ever asked you for a number like that and meant it kindly.",
+    done: "A hundred. There is nothing clever about it and it is still the hardest thing I have asked you for.",
+    waiting: "A hundred. Chip at it.",
+    gated: "Later.",
+  },
   // ── THE ABYSS (Fishing 50) ──────────────────────────────────────────
   {
     id: 'q10', type: 'catch_zone', target: 10, zone: 'abyss', reward: 2400, minLevel: 50, band: 'abyss',
@@ -207,6 +279,30 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "Not yet. That one is for somebody further along than you.",
   },
 
+  {
+    id: 'q30', type: 'land_perfects', target: 40, reward: 4300, minLevel: 50, band: 'abyss',
+    label: 'Land 40 perfect catches',
+    give: "Forty clean ones. At this point I am not testing anything. I just want to watch you do it forty times.",
+    done: "Forty. I have stopped being able to tell when you are trying.",
+    waiting: "Forty perfect. No hurry on this one at all.",
+    gated: "Not at your level.",
+  },
+  {
+    id: 'q31', type: 'catch_zone', target: 22, zone: 'abyss', reward: 4900, minLevel: 50, band: 'abyss',
+    label: 'Land 22 fish in the Abyss',
+    give: "Twenty two out of the black. Most captains never manage two. Take your lantern and your patience.",
+    done: "Twenty two. You go down there the way other people go to the market.",
+    waiting: "The Abyss. Twenty two of them.",
+    gated: "The black water is not open to you.",
+  },
+  {
+    id: 'q32', type: 'catch_rarity', target: 2, minRarity: 5, reward: 5600, minLevel: 50, band: 'abyss',
+    label: 'Land 2 legendary fish',
+    give: "Two legendaries, before we go anywhere near the old water. I need to know you can do it on demand.",
+    done: "Two. On demand. That is the last thing I needed to know and I already knew it.",
+    waiting: "Legendary. Two of them. The water decides, but it decides about you differently now.",
+    gated: "Not yet.",
+  },
   // ── THE ANCIENT DEEP (Fishing 75) ───────────────────────────────────
   //
   // WHERE THE WHOLE ARC HAS BEEN POINTING. Every beat about six things worth
