@@ -4156,6 +4156,11 @@ export default function SeaMap({
         {inAnchorage && <SortieSign />}
         {/* The Homestead Portal, wearing the deepest band it can reach. */}
         {!inAnchorage && <PortalRing tier={portalTier} />}
+        {/* The charge stands on the RING, not the hull: the painted band is
+            the cylinder's footprint, so the ring itself is what flares. */}
+        <AnimatePresence>
+          {portalCharge && !inAnchorage && <PortalBeam tier={portalTier} />}
+        </AnimatePresence>
         {/* The two berths either side of the throat. Only from inside the
             harbour they belong to, like the sign. */}
         {inAnchorage && <Docks shipOut={onShip} near={atDock} shipTier={shipTier} />}
@@ -4860,72 +4865,6 @@ hullRef={hullRefFor(t.key)} />
 
           Wears the tier's accent. A charge through a Shallows portal is a
           pale shimmer; through the Ancient Deep's it is a violet event. */}
-      <AnimatePresence>
-        {portalCharge && (() => {
-          const t = PORTAL_TIERS.find(pt => pt.tier === portalTier) ?? PORTAL_TIERS[0]
-          return (
-            <motion.div key="portal-charge" aria-hidden
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }}
-              style={{
-                position: 'absolute', inset: 0, zIndex: Z.crossing,
-                pointerEvents: 'none',
-              }}>
-              {/* ── THE BEAM ─────────────────────────────────────────────
-                  A vertical cylinder of light around the hull. The cylinder
-                  is sold by two cheap facts: the column is BRIGHTEST AT ITS
-                  EDGES (a horizontal gradient — that is what a lit tube
-                  looks like from outside), and light streams UPWARD inside
-                  it (one streak layer sliding on transform, doubled so the
-                  loop is seamless). Everything animates on transform and
-                  opacity only; the gradients raster once.
-
-                  Anchored at the waterline, which sits ~46px below the
-                  screen's centre — the boat is always dead centre, so the
-                  beam needs no world maths at all. */}
-
-              {/* The pool where the cylinder meets the water. */}
-              <motion.div
-                initial={{ scale: 0.3, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-                style={{
-                  position: 'absolute', left: '50%', top: '50%',
-                  width: 260, height: 100, marginLeft: -130, marginTop: -4,
-                  borderRadius: '50%',
-                  border: `2px solid ${t.accent}cc`,
-                  background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${t.accent}33 0%, ${t.accent}11 55%, transparent 75%)`,
-                  boxShadow: `0 0 30px ${t.accent}66, inset 0 0 30px ${t.accent}44`,
-                }} />
-
-              {/* The column, rising out of the pool. */}
-              <div style={{
-                position: 'absolute', left: '50%', top: '50%',
-                width: 216, height: 440,
-                transform: 'translate(-50%, calc(-100% + 46px))',
-              }}>
-                <motion.div
-                  initial={{ scaleY: 0, opacity: 0 }}
-                  animate={{ scaleY: 1, opacity: 1 }}
-                  transition={{ duration: 0.55, ease: [0.2, 0.9, 0.3, 1] }}
-                  style={{
-                    position: 'absolute', inset: 0,
-                    transformOrigin: 'bottom center',
-                    background: `linear-gradient(90deg, transparent 0%, ${t.accent}66 8%, ${t.accent}1c 30%, ${t.accent}10 50%, ${t.accent}1c 70%, ${t.accent}66 92%, transparent 100%)`,
-                    maskImage: 'linear-gradient(to top, #000 0%, #000 45%, transparent 96%)',
-                    WebkitMaskImage: 'linear-gradient(to top, #000 0%, #000 45%, transparent 96%)',
-                    overflow: 'hidden',
-                  }}>
-                  {/* The rising light inside the tube. */}
-                  <div className="sea-beam-streaks" style={{
-                    position: 'absolute', left: 0, right: 0, top: 0, height: '200%',
-                    background: `repeating-linear-gradient(0deg, transparent 0px, transparent 22px, ${t.accent}40 22px, ${t.accent}40 30px, transparent 30px, transparent 44px, rgba(255,255,255,0.22) 44px, rgba(255,255,255,0.22) 48px)`,
-                  }} />
-                </motion.div>
-              </div>
-            </motion.div>
-          )
-        })()}
-      </AnimatePresence>
 
       {/* ── THE PORTAL SHEET ────────────────────────────────────────────
           Opened by crossing the ring. One list, all five bands: where it can
@@ -7358,6 +7297,78 @@ const PortalRing = memo(function PortalRing({ tier }: { tier: number }) {
         }}>The Portal</p>
       </div>
     </div>
+  )
+})
+
+/**
+ * THE CHARGE — the ring become a cylinder.
+ *
+ * World-anchored at the portal, not screen-anchored at the boat: the eye is
+ * 80px wide, so a hull activating at its edge is visibly off the ring's
+ * centre, and a beam around the HULL there reads as the boat catching fire
+ * rather than the portal firing. The painted band is the cylinder's
+ * footprint — the column is exactly the ring's outer diameter, so the ring
+ * IS the base of the tube.
+ *
+ * Geometry comes free twice. The flat pool is squashed into the right
+ * ellipse by the world layer itself; the column counter-squashes like every
+ * standing thing, so inside the squashed world it stands at true height. And
+ * because it lives in the world it scales with the camera, as a structure
+ * should — the screen version hovered at one size over every zoom.
+ *
+ * The cylinder is sold by the same two cheap facts as before: brightest at
+ * its EDGES (a lit tube seen from outside), and light streaming UPWARD
+ * inside it on a doubled, transform-only streak layer.
+ */
+const PortalBeam = memo(function PortalBeam({ tier }: { tier: number }) {
+  const t = PORTAL_TIERS.find(pt => pt.tier === tier) ?? PORTAL_TIERS[0]
+  const W = PORTAL.r * 2
+  return (
+    <motion.div aria-hidden
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.3 } }}
+      style={{ position: 'absolute', left: PORTAL.x, top: PORTAL.y, pointerEvents: 'none' }}>
+
+      {/* The ring flaring: a flat pool matched to the painted band. */}
+      <motion.div
+        initial={{ scale: 0.55, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: -W / 2, top: -W / 2,
+          width: W, height: W, borderRadius: '50%',
+          border: `3px solid ${t.accent}dd`,
+          background: `radial-gradient(circle, transparent 52%, ${t.accent}2e 68%, ${t.accent}14 82%, transparent 94%)`,
+          boxShadow: `0 0 34px ${t.accent}77, inset 0 0 40px ${t.accent}44`,
+        }} />
+
+      {/* The column, standing on the band. Counter-squashed: inside the
+          squashed world it rises at true height and rides the zoom. */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0,
+        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+        transformOrigin: 'bottom center',
+        width: W, height: 470,
+      }}>
+        <motion.div
+          initial={{ scaleY: 0, opacity: 0 }}
+          animate={{ scaleY: 1, opacity: 1 }}
+          transition={{ duration: 0.55, ease: [0.2, 0.9, 0.3, 1] }}
+          style={{
+            position: 'absolute', inset: 0,
+            transformOrigin: 'bottom center',
+            background: `linear-gradient(90deg, transparent 0%, ${t.accent}5c 6%, ${t.accent}1a 26%, ${t.accent}0e 50%, ${t.accent}1a 74%, ${t.accent}5c 94%, transparent 100%)`,
+            maskImage: 'linear-gradient(to top, #000 0%, #000 42%, transparent 96%)',
+            WebkitMaskImage: 'linear-gradient(to top, #000 0%, #000 42%, transparent 96%)',
+            overflow: 'hidden',
+          }}>
+          <div className="sea-beam-streaks" style={{
+            position: 'absolute', left: 0, right: 0, top: 0, height: '200%',
+            background: `repeating-linear-gradient(0deg, transparent 0px, transparent 22px, ${t.accent}40 22px, ${t.accent}40 30px, transparent 30px, transparent 44px, rgba(255,255,255,0.22) 44px, rgba(255,255,255,0.22) 48px)`,
+          }} />
+        </motion.div>
+      </div>
+    </motion.div>
   )
 })
 
