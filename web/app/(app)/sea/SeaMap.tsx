@@ -7188,39 +7188,66 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
  */
 const PortalRing = memo(function PortalRing({ tier }: { tier: number }) {
   const t = PORTAL_TIERS.find(p => p.tier === tier) ?? PORTAL_TIERS[0]
+  /**
+   * THE UPGRADE IS VISIBLE, not just tinted. Colour alone made tier 5 read as
+   * tier 1 with a filter on it, and a capstone bought with six hunted chests
+   * should be recognisable from across the bay. What grows:
+   *
+   *   · STONES — one more per stage, 4 at the Shallows to 8 at the Ancient
+   *     Deep, taller each time. The circle visibly completes as the ladder
+   *     does, which is the upgrade drawn as architecture.
+   *   · LIGHT — the mouth's glow deepens with the water it can reach.
+   *   · At the Deep and past it, a SECOND rim turns against the first; at the
+   *     Ancient Deep the mouth gains a bright core. The top of the ladder is
+   *     the only portal with a light in its throat.
+   *
+   * The CROSSING radius never moves — PORTAL.r is geometry, and a hitbox that
+   * grows with cosmetics is how cosmetics stop being cosmetic.
+   */
+  const stones = 3 + tier
+  const stoneH = 30 + tier * 5
   return (
     <div aria-hidden style={{ position: 'absolute', left: PORTAL.x, top: PORTAL.y, pointerEvents: 'none' }}>
-      {/* The mouth: a soft disc and two rims, in the destination's colour. */}
       <div className="sea-portal-swirl" style={{
         position: 'absolute', left: -PORTAL.r, top: -PORTAL.r,
         width: PORTAL.r * 2, height: PORTAL.r * 2, borderRadius: '50%',
-        background: `radial-gradient(circle, ${t.accent}26 0%, ${t.accent}14 55%, transparent 72%)`,
+        background: `radial-gradient(circle, ${t.accent}${tier >= 4 ? '33' : '26'} 0%, ${t.accent}14 55%, transparent 72%)`,
         border: `2px solid ${t.accent}55`,
-        boxShadow: `inset 0 0 40px ${t.accent}33`,
+        boxShadow: `inset 0 0 ${34 + tier * 10}px ${t.accent}${tier >= 3 ? '44' : '33'}`,
       }} />
       <div className="sea-portal-rim" style={{
         position: 'absolute', left: -PORTAL.r * 0.7, top: -PORTAL.r * 0.7,
         width: PORTAL.r * 1.4, height: PORTAL.r * 1.4, borderRadius: '50%',
         border: `1px solid ${t.accent}66`,
       }} />
-      {/* Four standing stones at the rim — the vertical part, counter-squashed
-          like everything with height. One per owned tier past the first would
-          be nicer still; four is the placeholder shape of that idea. */}
-      {[45, 135, 225, 315].map(deg => {
-        const rad = (deg * Math.PI) / 180
+      {tier >= 3 && (
+        <div className="sea-portal-rim-counter" style={{
+          position: 'absolute', left: -PORTAL.r * 0.5, top: -PORTAL.r * 0.5,
+          width: PORTAL.r, height: PORTAL.r, borderRadius: '50%',
+          border: `1px dashed ${t.accent}77`,
+        }} />
+      )}
+      {tier >= 5 && (
+        <div className="sea-portal-core" style={{
+          position: 'absolute', left: -22, top: -22, width: 44, height: 44, borderRadius: '50%',
+          background: `radial-gradient(circle, ${t.accent}ee 0%, ${t.accent}55 55%, transparent 75%)`,
+          boxShadow: `0 0 26px ${t.accent}aa`,
+        }} />
+      )}
+      {Array.from({ length: stones }, (_, k) => {
+        const rad = ((k / stones) * 360 - 90) * (Math.PI / 180)
         return (
-          <div key={deg} style={{
+          <div key={k} style={{
             position: 'absolute',
             left: Math.cos(rad) * PORTAL.r, top: Math.sin(rad) * PORTAL.r,
             transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
             transformOrigin: 'bottom center',
-            width: 10, height: 34, borderRadius: 4,
+            width: 10, height: stoneH, borderRadius: 4,
             background: `linear-gradient(180deg, ${t.accent}cc, rgba(40,50,64,0.9))`,
-            boxShadow: `0 0 12px ${t.accent}55`,
+            boxShadow: `0 0 ${10 + tier * 3}px ${t.accent}55`,
           }} />
         )
       })}
-      {/* The name, in the label voice every structure on this chart uses. */}
       <div style={{
         position: 'absolute', left: 0, top: -PORTAL.r - 30,
         transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,

@@ -2593,6 +2593,10 @@ body.hardcore-gauntlet::after {
    on their own elements, so the loop never has to know they exist. */
 .sea-portal-swirl { animation: seaPortalBreathe 5.2s ease-in-out infinite; }
 .sea-portal-rim   { animation: seaPortalTurn 14s linear infinite; border-style: dashed; }
+/* The second rim turns AGAINST the first — two motions in opposition is what
+   makes a mechanism read as a mechanism rather than a spinner. */
+.sea-portal-rim-counter { animation: seaPortalTurn 9s linear infinite reverse; }
+.sea-portal-core { animation: seaPortalBreathe 3.4s ease-in-out infinite; }
 @keyframes seaPortalBreathe {
   0%, 100% { transform: scale(1); opacity: 0.85; }
   50%      { transform: scale(1.05); opacity: 1; }
@@ -2602,7 +2606,7 @@ body.hardcore-gauntlet::after {
   to   { transform: rotate(360deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sea-portal-swirl, .sea-portal-rim { animation: none; }
+  .sea-portal-swirl, .sea-portal-rim, .sea-portal-rim-counter, .sea-portal-core { animation: none; }
 }
 
 /* THE HELM is a thumb control. A mouse has the whole window to point at and
