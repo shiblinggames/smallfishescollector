@@ -76,11 +76,19 @@ export default function BoundaryBench() {
   const [copied, setCopied] = useState(false)
   const stage = useRef<HTMLDivElement | null>(null)
 
-  const shapes: ColliderShape[] = table[key]
-    ?? (entry.kind === 'art'
-      ? [{ kind: 'circle', ax: 0.5, ay: 1, ar: 0.42 }]
-      : [{ kind: 'circle', ax: 0, ay: 0, ar: SHORE }])
-  const setShapes = (next: ColliderShape[]) => setTable(prev => ({ ...prev, [key]: next }))
+  // EMPTY UNTIL DRAWN. The bench used to open with the runtime's fallback
+  // circle as an editable red shape, which read as "someone already placed
+  // this" — the opposite of an invitation to draw. The faint grey dashed ring
+  // stays as reference (what the game does TODAY with no entry); red appears
+  // only when you add a shape. Removing the last shape returns the object to
+  // the default rather than storing an empty entry.
+  const shapes: ColliderShape[] = table[key] ?? []
+  const setShapes = (next: ColliderShape[]) => setTable(prev => {
+    const t = { ...prev }
+    if (next.length === 0) delete t[key]
+    else t[key] = next
+    return t
+  })
 
   const worldW = entry.kind === 'art' ? entry.size : entry.r * 2
   const scale = STAGE / worldW
@@ -330,9 +338,9 @@ export default function BoundaryBench() {
           className="tap font-karla font-700" style={btn(shapes.length >= MAX_SHAPES)}>
           + capsule
         </button>
-        <button type="button" onClick={() => shapes.length > 1 && setShapes(shapes.slice(0, -1))}
-          disabled={shapes.length <= 1}
-          className="tap font-karla font-700" style={btn(shapes.length <= 1)}>
+        <button type="button" onClick={() => shapes.length > 0 && setShapes(shapes.slice(0, -1))}
+          disabled={shapes.length === 0}
+          className="tap font-karla font-700" style={btn(shapes.length === 0)}>
           − shape
         </button>
         <button type="button" onClick={() => setTable(prev => { const n = { ...prev }; delete n[key]; return n })}
