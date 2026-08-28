@@ -34,7 +34,7 @@ import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { crewTheDeck } from '../crew/actions'
-import { PORTAL, PORTAL_TIERS, inPortal, CACHE_ISLE_IDS } from '@/lib/seaPortal'
+import { PORTAL, PORTAL_TIERS, inPortal, inPortalEye, CACHE_ISLE_IDS } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
@@ -1600,6 +1600,11 @@ export default function SeaMap({
    */
   const [portalOpen, setPortalOpen] = useState(false)
   const portalIn = useRef(false)
+  /** The charge: the beat between being taken and being asked. While it runs
+   *  the flourish plays and the helm is dead weight — the portal has her. */
+  const [portalCharge, setPortalCharge] = useState(false)
+  const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (chargeTimer.current) clearTimeout(chargeTimer.current) }, [])
   const [portalTier, setPortalTier] = useState(portal.tier)
   useEffect(() => { setPortalTier(portal.tier) }, [portal.tier])
   const [portalComponents, setPortalComponents] = useState(portal.components)
@@ -3389,18 +3394,27 @@ export default function SeaMap({
         setAtDock(null)
       }
 
-      // ── THROUGH THE PORTAL ─────────────────────────────────────────
-      // The ring is the button and crossing it is the press: enter the mouth
-      // and the sheet opens, once, until you have left and come back. Fishing
-      // side only — the ring lives beside the Homestead and the warp points
-      // are all fishing water, so the expedition ship has no business in it.
+      // ── INTO THE PORTAL'S EYE ──────────────────────────────────────
+      // The EYE activates, not the mouth: the sheet used to pop on brushing
+      // the rim, which made the ring a tripwire to steer around. Now the boat
+      // has to be sailed into the CENTRE — a deliberate threading, not a graze
+      // — and the moment it is, the portal takes her: all stop, the flourish
+      // plays, and only then the sheet. Leaving the whole mouth is what arms
+      // it again, so floating inside cannot re-trigger it.
       if (!sideRef.current && !fishingIn) {
-        const inside = inPortal(pos.current.x, pos.current.y)
-        if (inside && !portalIn.current) {
+        if (!portalIn.current && inPortalEye(pos.current.x, pos.current.y)) {
           portalIn.current = true
-          setPortalOpen(true)
-          vibrate([10, 24, 14])
-        } else if (!inside && portalIn.current) {
+          // THE PORTAL HAS HER. Course and way both die here, which is what
+          // separates being taken by something from tapping a button on it.
+          vel.current.x = 0; vel.current.y = 0
+          target.current = { ...pos.current }
+          setPortalCharge(true)
+          vibrate([12, 50, 18, 50, 26])
+          chargeTimer.current = setTimeout(() => {
+            setPortalCharge(false)
+            setPortalOpen(true)
+          }, 1050)
+        } else if (portalIn.current && !inPortal(pos.current.x, pos.current.y)) {
           portalIn.current = false
         }
       }
@@ -4836,6 +4850,54 @@ hullRef={hullRefFor(t.key)} />
           </div>
         </PopupShell>
       )}
+
+      {/* ── THE ACTIVATION ──────────────────────────────────────────────
+          The beat between the eye taking the boat and the sheet asking where
+          to. Centred on the SCREEN, because the boat is always at screen
+          centre and, having just been centred in the eye, so is the portal —
+          the two coincide for exactly this moment, which is what makes one
+          overlay read as both the ring flaring and the hull being lit.
+
+          Wears the tier's accent. A charge through a Shallows portal is a
+          pale shimmer; through the Ancient Deep's it is a violet event. */}
+      <AnimatePresence>
+        {portalCharge && (() => {
+          const t = PORTAL_TIERS.find(pt => pt.tier === portalTier) ?? PORTAL_TIERS[0]
+          return (
+            <motion.div key="portal-charge" aria-hidden
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.25 } }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: Z.crossing,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}>
+              {/* Three rings, staggered, closing IN on the boat — the water
+                  gathering, not the boat exploding. */}
+              {[0, 0.18, 0.36].map(d => (
+                <motion.div key={d}
+                  initial={{ scale: 2.6, opacity: 0 }}
+                  animate={{ scale: 0.35, opacity: [0, 0.85, 0] }}
+                  transition={{ duration: 0.9, delay: d, ease: 'easeIn' }}
+                  style={{
+                    position: 'absolute', width: 260, height: 156, borderRadius: '50%',
+                    border: `2px solid ${t.accent}`,
+                    boxShadow: `0 0 24px ${t.accent}88, inset 0 0 24px ${t.accent}44`,
+                  }} />
+              ))}
+              {/* The bloom, last: it peaks as the sheet arrives, so the sheet
+                  reads as what the light resolved into. */}
+              <motion.div
+                initial={{ scale: 0.2, opacity: 0 }}
+                animate={{ scale: 1.35, opacity: [0, 0, 0.9] }}
+                transition={{ duration: 1.0, times: [0, 0.55, 1], ease: 'easeIn' }}
+                style={{
+                  position: 'absolute', width: 220, height: 220, borderRadius: '50%',
+                  background: `radial-gradient(circle, ${t.accent}cc 0%, ${t.accent}44 45%, transparent 70%)`,
+                }} />
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
 
       {/* ── THE PORTAL SHEET ────────────────────────────────────────────
           Opened by crossing the ring. One list, all five bands: where it can

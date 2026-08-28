@@ -55,7 +55,25 @@ export function componentsAvailable(discoveredIsleIds: string[], spent: number):
   return Math.max(0, opened - spent)
 }
 
-/** Is this point inside the ring's mouth? */
+/**
+ * THE EYE — the small centre that actually activates.
+ *
+ * The whole mouth used to: brushing the rim popped the sheet, which made the
+ * ring a tripwire you had to steer around. Activation now wants the boat
+ * CENTRED — sailed deliberately into the middle, the way you thread a mark —
+ * and the rest of the ring is just water with paint on it. 80 against the
+ * boat's 210 length means "in the middle" by eye is enough; nobody is being
+ * asked to park on a pixel.
+ */
+export const PORTAL_CORE = 80
+
+/** Inside the small activating centre? */
+export function inPortalEye(x: number, y: number): boolean {
+  return Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL_CORE
+}
+
+/** Inside the ring's full mouth? The hysteresis boundary: you must leave the
+ *  WHOLE ring before the eye will take you again. */
 export function inPortal(x: number, y: number): boolean {
   return Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r
 }
