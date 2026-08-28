@@ -1357,15 +1357,39 @@ export default function SeaMap({
       return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
         || (el as HTMLElement).isContentEditable)
     }
+    // SPACE AND E ARE THE ACTION BUTTON, with the button's own grammar:
+    // press-and-release acts on the nearest thing, press-and-HOLD fills the
+    // same ring the helm shows and brings the rod out when it matures. The
+    // first cut fired everything on keydown, which made a space tap start
+    // fishing instantly — a behaviour the button itself does not have.
+    let keyAt: number | null = null
+    let keyHold: ReturnType<typeof setInterval> | null = null
+    const keyCancel = () => {
+      if (keyHold) { clearInterval(keyHold); keyHold = null }
+      keyAt = null
+      setHelmHold(0)
+      setHelmOn(false)
+    }
     const down = (e: KeyboardEvent) => {
-      // SPACE AND E DO THE THING. Desktop steers with these keys already, and
-      // leaving the action to the mouse alone means both hands are needed for
-      // what one gesture does on a phone. Same resolution order as everything
-      // else: the nearest thing, and failing that, the water.
       if ((e.key === ' ' || e.key.toLowerCase() === 'e') && !typing()
           && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // The rod is out: these keys belong to FishingHere while it is.
+        if (fishingInRef.current) return
         e.preventDefault()
-        if (!helmActRef.current()) startFishingRef.current()
+        // Auto-repeat is the OS holding the key FOR you; the ring is already
+        // doing that.
+        if (e.repeat || keyAt !== null) return
+        keyAt = performance.now()
+        setHelmOn(true)
+        keyHold = setInterval(() => {
+          if (keyAt === null) return
+          const t = Math.min(1, (performance.now() - keyAt) / HELM_HOLD_MS)
+          setHelmHold(t)
+          if (t >= 1) {
+            keyCancel()
+            startFishingRef.current()
+          }
+        }, 40)
         return
       }
       const d = DIRS[e.key.toLowerCase()]
@@ -1391,6 +1415,17 @@ export default function SeaMap({
         : { ...pos.current }
     }
     const up = (e: KeyboardEvent) => {
+      // Let go before the hold matured: a tap. The nearest thing, and if
+      // nothing is in reach, nothing — the button's own honest answer.
+      if (e.key === ' ' || e.key.toLowerCase() === 'e') {
+        if (keyAt === null) return
+        keyCancel()
+        // The hold matured into fishing while the key was still down; its
+        // release is part of the same gesture, not a new tap.
+        if (fishingInRef.current) return
+        helmActRef.current()
+        return
+      }
       const d = DIRS[e.key.toLowerCase()]
       if (!d) return
       keysRef.current.delete(d)
@@ -1398,7 +1433,7 @@ export default function SeaMap({
     }
     // A tab-away with a key held would leave the boat sailing forever: keyup
     // fires at the OS focus, not at this window.
-    const clear = () => { keysRef.current.clear(); runOut() }
+    const clear = () => { keysRef.current.clear(); runOut(); keyCancel() }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     window.addEventListener('blur', clear)
@@ -2346,6 +2381,10 @@ export default function SeaMap({
   useEffect(() => { allTradersRef.current = [yoon, ...residents, ...traders] }, [yoon, residents, traders])
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
+  /** For the keyboard handler, which binds once: while the rod is out, the
+   *  chart's space/E stand down and FishingHere's own handler works the rod. */
+  const fishingInRef = useRef<Place | null>(null)
+  fishingInRef.current = fishingIn
   const [baitLeft, setBaitLeft] = useState(baitQty)
   /** WHICH BAIT IS ON THE HOOK. Fixed for the whole session before, at whatever
    *  the page happened to pick; the bait row can change it now. */

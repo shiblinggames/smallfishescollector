@@ -1391,6 +1391,38 @@ export default function FishingHere({
    *  there is never a separate dismiss step to hunt for. */
   const castAgain = useCallback(() => { castRef.current?.(true) }, [])
 
+  /**
+   * SPACE AND E WORK THE ROD, the way they work the helm outside it. The chart
+   * hands the keys over when the rod comes out (its handler checks fishingIn
+   * and stands down), so one key means the one control the thumbless hand is
+   * on: Cast when idle, Cast Again off a result, Reel In on a bite. Nothing on
+   * 'waiting' or 'reeling' — the button shows an ellipsis there and a key
+   * should not do what the button will not.
+   *
+   * Through the same refs the auto-caster presses the buttons through, so a
+   * key press and a finger press are indistinguishable to the phase machine —
+   * and cast() carries its own canCast guard, so a key cannot cast on an empty
+   * bait tin any more than the button can.
+   */
+  useEffect(() => {
+    const typing = () => {
+      const el = document.activeElement
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+        || (el as HTMLElement).isContentEditable)
+    }
+    const down = (e: KeyboardEvent) => {
+      if (e.key !== ' ' && e.key.toLowerCase() !== 'e') return
+      if (typing() || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
+      e.preventDefault()
+      const ph = phaseRef.current
+      if (ph === 'hooked') strikeRef.current?.()
+      else if (ph === 'idle') castRef.current?.()
+      else if (ph === 'result') castRef.current?.(true)
+    }
+    window.addEventListener('keydown', down)
+    return () => window.removeEventListener('keydown', down)
+  }, [])
+
   return (
     <div className="sea-fishing"
       
