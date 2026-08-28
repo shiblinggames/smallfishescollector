@@ -71,13 +71,6 @@ import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
 import { type FolkId } from '@/lib/seaFolk'
-
-/** Which regular buys in which water. The buyers and the rapport cast are the
- *  same people; this is the one place the two tables are tied together. */
-const FOLK_BY_ZONE: Record<string, FolkId> = {
-  shallows: 'meg', open_waters: 'pell', deep: 'marlow',
-  abyss: 'fitch', ancient_deep: 'nance',
-}
 import FolkPanel from './FolkPanel'
 import SeaTour from './SeaTour'
 import SeaLandfallHint from './SeaLandfallHint'
@@ -2367,8 +2360,9 @@ export default function SeaMap({
         hook: plainHookFor(seed),
       },
       deal: 'resident' as const, zoneId: r.zoneId, rate: r.rate,
-      // The buyers ARE regulars, so a hail offers a word as well as a sale.
-      folkId: FOLK_BY_ZONE[r.zoneId],
+      // NO folkId. These are traders and nothing else. The people you can get
+      // to know are a separate cast standing in the same water, and a hail
+      // that offered a sale AND a friendship is what made the two read as one.
     }
   }), [])
 

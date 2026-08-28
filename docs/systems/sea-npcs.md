@@ -255,21 +255,32 @@ Offers come at ~45% of meetings, never stacked on a running bet, and an EXPIRED 
 stops counting as running — otherwise closing the tab mid-bet would block every future
 offer for the life of the account.
 
-## The three sell lanes
+## The two sell lanes
 
-This is the shape the economy is moving toward, and the resident buyers are the middle rung:
+**Quick sell retired with the old fishing screen.** There are two ways out of a full hold
+now, which makes the zone buyers considerably more load-bearing than when they were the
+middle rung of three:
 
 | Lane | Pays | Costs you |
 |---|---|---|
-| Market ashore | 100% | Sail home, wait for settlement |
-| **Zone buyer** | **78–86%** | Nothing — it is in the water you are fishing |
-| Quick sell | 65% | Nothing, anywhere |
+| Market ashore | 100% | Sail the catch home, wait for settlement |
+| **Zone buyer** | **78–86%** | Nothing. They are in the water you are fishing |
 
-The rate climbs with depth because the sail home is longer. Residents are defined on the
-chart (`chart.ts`, `resident`), are the same person every time, swing on an anchor rather
-than patrolling, and are **deliberately outside the daily deal cap** — selling your own
-catch is not a reward you can farm, it is the conversion quick-sell already does without
-limit. Capping it would only ever strand somebody with a full hold.
+The rate climbs with depth because the sail home is longer. Buyers are defined on the chart
+(`chart.ts`, `RESIDENTS`), are the same person every time, swing on an anchor rather than
+patrolling, and are **deliberately outside the daily deal cap** — selling your own catch is
+a conversion, not a reward to farm, and capping it would only ever strand somebody with a
+full hold a long way from home.
+
+**The buyers are NOT the regulars, and that separation is deliberate.** They used to be the
+same five people, which meant the friend you had spent a month getting to know was also the
+counter you sold across: a conversation with a price on it, and two systems wearing one
+coat. Sandy Sole, Nell Pollack, Hattie Ling, Sim Dory and Bess Skate carry the trade and
+have a name, a rate and one line between them. Meg, Pell, Marlow, Fitch and Nance kept
+their moorings and every word of their writing and are now strictly dialogue. Nobody with
+rapport sells anything (`buys` is always false in `FOLK`, and the field is kept so the rule
+is visible). Yoon's rod is the one edge and it is deliberate: a one-off gate on a
+relationship rather than a counter you come back to.
 
 ## Guards
 

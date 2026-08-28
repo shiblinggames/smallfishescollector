@@ -512,27 +512,67 @@ export const SOCIALS: {
   { folkId: 'ream', zoneId: 'deep', name: 'Rue Bream',
     line: "I carry word between the boats out here. No, there is no charge. That surprises everyone.",
     x: 3900, y: 8300 },
+
+  // ── AND THE FIVE WHO USED TO KEEP THE SCALES ──────────────────────────
+  // They were the zone buyers. A friend you have spent a month getting to know
+  // should not also be the counter you sell a hold across, because then every
+  // conversation has a price on it. The trade moved to five plain traders in
+  // RESIDENTS below; these five kept their moorings, their voices and every
+  // line they had.
+  { folkId: 'meg', zoneId: 'shallows', name: 'Meg Corrin',
+    line: "I kept the scale on this water for thirty years. Sit down anyway.",
+    x: 1416, y: 2181 },
+  { folkId: 'pell', zoneId: 'open_waters', name: 'Bent Pell',
+    line: "Fish don't keep and neither does my patience. Say something.",
+    x: 559, y: 5321 },
+  { folkId: 'marlow', zoneId: 'deep', name: 'Old Marlow',
+    line: "Long way back to the dock from here. I've made a living out of exactly that.",
+    x: -1545, y: 8765 },
+  { folkId: 'fitch', zoneId: 'abyss', name: 'Quiet Fitch',
+    line: "Not many come this deep. Sit.",
+    x: -5896, y: 12089 },
+  { folkId: 'nance', zoneId: 'ancient_deep', name: 'Grey Nance',
+    line: "You went down there and came back up. That is the part worth talking about.",
+    x: -14343, y: 12914 },
 ]
 
-/** The zone buyers, one per band, in absolute world coordinates. */
+/**
+ * THE ZONE BUYERS, one per band, in absolute world coordinates.
+ *
+ * PLAIN TRADERS ON PURPOSE. These five used to BE the five people the rapport
+ * system is built on, which meant the friend you had spent a month getting to
+ * know was also the counter you sold a hold across, and the two systems read
+ * as one confused thing: a conversation with a price on it.
+ *
+ * They are separate people now. The regulars are strictly dialogue and
+ * friendship (lib/seaFolk; they moved up into SOCIALS with every word they
+ * had). These five carry the trade and nothing else. A name, a rate, one line,
+ * no rapport, no portrait, nothing to get to know.
+ *
+ * THE RATE LADDER IS UNCHANGED and it matters more than it used to. Quick sell
+ * retired with the old fishing screen, so there are two lanes left: sail the
+ * catch home for full market, or sell out here for 78 to 86 percent. These
+ * five ARE that second lane, which makes their rates and their reachability
+ * load bearing in a way they were not when there was a third way out.
+ */
 export const RESIDENTS: {
   zoneId: string; name: string; line: string; x: number; y: number; rate: number
 }[] = [
-  { zoneId: 'shallows', name: 'Meg Corrin',
-    line: "Bring it here and I'll weigh it here. Ashore they'll give you more, and a long haul home to collect it.",
-    x: 1416, y: 2181, rate: 0.78 },
-  { zoneId: 'open_waters', name: 'Bent Pell',
-    line: "Fish don't keep and neither does my patience. Coin now, or row it home yourself.",
-    x: 559, y: 5321, rate: 0.8 },
-  { zoneId: 'deep', name: 'Old Marlow',
-    line: "Long way back to the dock from here. I've made a living out of exactly that.",
-    x: -1545, y: 8765, rate: 0.82 },
-  { zoneId: 'abyss', name: 'Quiet Fitch',
-    line: "Not many bring me anything this deep. I pay for that, not for the fish.",
-    x: -5896, y: 12089, rate: 0.84 },
-  { zoneId: 'ancient_deep', name: 'Grey Nance',
-    line: "You went down there and came back up. Whatever's in your hold, I'll take it and ask nothing.",
-    x: -14343, y: 12914, rate: 0.86 },
+  { zoneId: 'shallows', name: 'Sandy Sole',
+    line: "Weighed and paid, right here. You will do better ashore if you fancy the row.",
+    x: 2900, y: 1400, rate: 0.78 },
+  { zoneId: 'open_waters', name: 'Nell Pollack',
+    line: "Coin for the hold. No questions, no conversation. That is the arrangement.",
+    x: -2600, y: 4600, rate: 0.8 },
+  { zoneId: 'deep', name: 'Hattie Ling',
+    line: "Long way out, better rate. That is the only reason anybody finds me.",
+    x: -4200, y: 6900, rate: 0.82 },
+  { zoneId: 'abyss', name: 'Sim Dory',
+    line: "Dark water pays. Hold out, coin in, and mind how you go back up.",
+    x: 4200, y: 11800, rate: 0.84 },
+  { zoneId: 'ancient_deep', name: 'Bess Skate',
+    line: "Furthest scale on the chart. Whatever you have got, I will take it.",
+    x: -2000, y: 17500, rate: 0.86 },
 ]
 
 /**

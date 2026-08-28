@@ -103,8 +103,21 @@ export type Folk = {
   /** The band they keep to. Drives where the panel files them and what a
    *  captain must have levelled into to reach them. */
   zoneId: string
-  /** Do they buy your hold? The five originals do; the three added with this
-   *  system keep no shop and are only ever somebody to talk to. */
+  /**
+   * ALWAYS FALSE, and kept as a field so the rule is visible rather than only
+   * true by accident.
+   *
+   * NOBODY YOU CAN BUILD RAPPORT WITH SELLS YOU ANYTHING. The five zone buyers
+   * used to be these same five people, which meant the friend you had spent a
+   * month getting to know was also the counter you sold across, and a
+   * conversation with a price on it is two systems wearing one coat. The trade
+   * lives on five plain traders in chart.ts RESIDENTS with a name, a rate and
+   * one line between them.
+   *
+   * Yoon is the single edge and he is deliberate: his rod is a one-off gate on
+   * a relationship rather than a counter you come back to, which is the good
+   * version of the thing this rule exists to prevent.
+   */
   buys: boolean
   /** One line for the roster: who they are, in the third person. */
   blurb: string
@@ -185,10 +198,10 @@ export type Folk = {
 
 export const FOLK: Folk[] = [
   {
-    id: 'meg', name: 'Meg Corrin', zoneId: 'shallows', buys: true,
+    id: 'meg', name: 'Meg Corrin', zoneId: 'shallows', buys: false,
     face: { characterColor: 'sand', hat: 'brown', bg: '#1a1408', ring: '#c8a060', mirrored: true },
     role: 'Shallows buyer', accent: '#d8b070',
-    blurb: 'Buys the hold and weighs it in front of you.',
+    blurb: 'Kept the Shallows scale for thirty years. Watches who turns into somebody.',
     // Honest, solid, nothing clever. Exactly her.
     favourite: { id: 8, name: 'Largemouth Bass' },
     lines: [
@@ -234,10 +247,10 @@ export const FOLK: Folk[] = [
     onPlain: "For me? Go on then. I will find a use for it.",
   },
   {
-    id: 'pell', name: 'Bent Pell', zoneId: 'open_waters', buys: true,
+    id: 'pell', name: 'Bent Pell', zoneId: 'open_waters', buys: false,
     face: { characterColor: 'blue', hat: 'gray', bg: '#0c1620', ring: '#7fa8c8', mirrored: true },
     role: 'Open Waters buyer', accent: '#7fa8c8',
-    blurb: 'Buys fast, talks faster, and would rather you were quick about it.',
+    blurb: 'Short with everybody, and it is genuinely nothing personal.',
     // The fastest thing in his water, for the one who cannot stand waiting.
     favourite: { id: 22, name: 'Wahoo' },
     lines: [
@@ -283,10 +296,10 @@ export const FOLK: Folk[] = [
     onPlain: "Right. Yes. Thank you. Now go and catch something.",
   },
   {
-    id: 'marlow', name: 'Old Marlow', zoneId: 'deep', buys: true,
+    id: 'marlow', name: 'Old Marlow', zoneId: 'deep', buys: false,
     face: { characterColor: 'gray', hat: 'black', bg: '#101418', ring: '#a8b4c0', mirrored: true },
     role: 'Deep water buyer', accent: '#b0bcc8',
-    blurb: 'Buys deep and makes no secret of why it pays him.',
+    blurb: 'Sits still in deep water and lets everybody else do the sailing.',
     // Old Marlow wants a marlin. He has never once acknowledged this.
     favourite: { id: 38, name: 'Blue Marlin' },
     lines: [
@@ -332,10 +345,10 @@ export const FOLK: Folk[] = [
     onPlain: "You did not have to. I will remember that you did.",
   },
   {
-    id: 'fitch', name: 'Quiet Fitch', zoneId: 'abyss', buys: true,
+    id: 'fitch', name: 'Quiet Fitch', zoneId: 'abyss', buys: false,
     face: { characterColor: 'storm', hat: 'midnight', bg: '#080c14', ring: '#6878a0', mirrored: true },
     role: 'Abyss buyer', accent: '#8090b8',
-    blurb: 'Buys in the dark water. Says very little about anything.',
+    blurb: 'Lives in the dark water. Says very little about anything.',
     // The one that carries its own light down there, which he has a line about.
     favourite: { id: 41, name: 'Anglerfish' },
     lines: [
@@ -381,10 +394,10 @@ export const FOLK: Folk[] = [
     onPlain: "That was kind. I do not have much to say to kind.",
   },
   {
-    id: 'nance', name: 'Grey Nance', zoneId: 'ancient_deep', buys: true,
+    id: 'nance', name: 'Grey Nance', zoneId: 'ancient_deep', buys: false,
     face: { characterColor: 'ice', hat: 'offwhite', bg: '#0a1018', ring: '#9ec4d8', mirrored: true },
     role: 'Ancient Deep buyer', accent: '#9ec4d8',
-    blurb: 'Buys whatever comes up from the oldest water, and asks nothing.',
+    blurb: 'Keeps the count of who goes down to the oldest water and comes back up.',
     // The fish that should have been extinct, for the one who reveres old water.
     favourite: { id: 50, name: 'Coelacanth' },
     lines: [
