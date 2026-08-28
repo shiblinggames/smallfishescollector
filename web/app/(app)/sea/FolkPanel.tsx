@@ -2,35 +2,32 @@
 
 // ── WHO IS OUT HERE ─────────────────────────────────────────────────────────
 //
-// One panel behind one HUD button, answering the question the chart could not:
-// the sea is full of people, and nothing on it ever said who they are or which
-// of them is worth crossing water for.
+// One panel behind one HUD button. Everybody permanent on this sea gets a card
+// with their face on it, and turning a card over shows what you know about
+// them.
 //
-// FINN IS THE HEADLINE, and that is the whole reason this exists. His story is
-// the fishing campaign, every meeting hands over the next piece of it, and none
-// of that was legible from the boat: a captain who met him twice had no way to
-// learn that a third meeting would say something new, so the one NPC the story
-// hangs on read as a man who occasionally appears and talks. The block at the
-// top makes the loop visible. How many times you have found him, how much of
-// what he has to say you have heard, and whether there is more waiting.
+// ── ONLY PEOPLE YOU HAVE MET ────────────────────────────────────────────────
 //
-// ── WHY THE REST IS A ROSTER AND NOT A LOG ──────────────────────────────────
+// A roster of strangers is a list of homework: it says there are eight more
+// people out there and nothing about any of them, which turns a thing you
+// discover into a thing you are behind on. The sea is for finding people; this
+// is for remembering them.
 //
-// "Who have I met" cannot be answered honestly for most of this sea. The
-// wanderers are hashed out of (cell, day) and cease to exist at midnight (see
-// docs/systems/sea-npcs.md) — there is no row to mark met, and a peddler you
-// traded with on Tuesday is not a person you can go back and visit.
+// ── AND IT EXPLAINS ALMOST NOTHING ──────────────────────────────────────────
 //
-// What IS permanent: Finn, the five zone buyers, and Yoon. Those are named,
-// they are always in the same water, and they are worth knowing about before
-// you sail. So the named folk are listed as a roster gated by the water they
-// stand in — you can read about anyone whose band you have unlocked — and the
-// wanderers get a legend saying what the five kinds want, because "salter" is
-// not a word the game had ever explained.
+// There were two paragraphs here spelling out the daily word, the five-point
+// favourite and the fact that the wanderers move. They are gone on purpose.
+// Every one of those is discoverable by pulling alongside somebody once, and a
+// panel that pre-explains its own systems reads as a manual rather than a
+// place. What is left is the faces, where you stand, and one line each on the
+// kinds of stranger you might meet, which is the only thing out here the game
+// never says anywhere else.
 
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
+import { prefersReducedMotion } from '@/components/cutscene'
+import { vibrate } from '@/lib/haptics'
 import {
   FINN_NAME, FINN_AVATAR, FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS,
   findNextEncounterBeat, finnStanding, finnStandingTier, finnToNext,
@@ -38,16 +35,26 @@ import {
 } from '@/lib/finn'
 import { PLACES } from './chart'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
-import { PLACES as WATERS } from './chart'
 import { folkState, type Rapport } from './folkActions'
-import { vibrate } from '@/lib/haptics'
-import { prefersReducedMotion } from '@/components/cutscene'
 import type { FinnSeaState } from './finnActions'
 
-const GOLD = 'rgba(240,192,64'
+const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
 
-/** The bar under a counted thing. Plain: filled part, track, nothing clever. */
+/** A face, in the one shape both the regulars and the rival can be drawn from. */
+type Portrait = {
+  characterColor: string; hat: string | null
+  bg: string; ring: string; mirrored?: boolean
+}
+
+const FINN_FACE: Portrait = {
+  characterColor: FINN_AVATAR.characterColor,
+  hat: FINN_AVATAR.equippedHat,
+  bg: FINN_AVATAR.bgColor,
+  ring: FINN_AVATAR.borderColor,
+  mirrored: FINN_AVATAR.mirrored,
+}
+
 function Bar({ at, of, color }: { at: number; of: number; color: string }) {
   return (
     <div style={{
@@ -55,9 +62,8 @@ function Bar({ at, of, color }: { at: number; of: number; color: string }) {
       overflow: 'hidden', marginTop: 5,
     }}>
       <div style={{
-        width: `${Math.round((Math.min(at, of) / of) * 100)}%`, height: '100%',
-        background: color, borderRadius: 999,
-        transition: 'width 400ms ease-out',
+        width: `${Math.round((Math.min(at, of) / Math.max(1, of)) * 100)}%`,
+        height: '100%', background: color, borderRadius: 999,
       }} />
     </div>
   )
@@ -65,9 +71,9 @@ function Bar({ at, of, color }: { at: number; of: number; color: string }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginTop: '1rem' }}>
+    <div style={{ marginTop: '0.9rem' }}>
       <p className="font-karla font-700 uppercase" style={{
-        fontSize: '0.6rem', letterSpacing: '0.18em', margin: '0 0 0.45rem',
+        fontSize: '0.58rem', letterSpacing: '0.18em', margin: '0 0 0.45rem',
         color: `${SEA},0.5)`,
       }}>{title}</p>
       {children}
@@ -76,179 +82,141 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 /**
- * ONE REGULAR YOU HAVE MET, as a card.
+ * ONE PERSON, AS A CARD.
  *
- * ONLY ever rendered for somebody already spoken to. A roster of strangers is
- * a list of homework: it tells a captain there are eight more people out there
- * and exactly nothing about any of them, which turns a thing you discover into
- * a thing you are behind on. The sea is for finding people; this is for
- * remembering them.
- *
- * A CARD RATHER THAN A ROW, because the face is the point. A line of text with
- * a small portrait bolted to the left is a database; a portrait with a name
- * under it is somebody you know. Tapping one opens what you have learned.
+ * Deliberately generic. The rival used to be a wide banner with its own layout
+ * at the top of the panel, which said "this is a different kind of thing" so
+ * loudly that it stopped reading as part of the same list. He is a card like
+ * everybody else now, in his own section and his own gold, which says the same
+ * thing quietly and leaves the panel one idea instead of two.
  */
-function FolkCard({ folk, rap, onOpen, turning, muted, onTurned }: {
-  folk: Folk; rap: Rapport; onOpen: () => void
-  /** This is the card being opened: it turns edge-on and hands over. */
-  turning?: boolean
-  /** A sibling of the card being opened: it gets out of the way quietly. */
-  muted?: boolean
-  onTurned?: () => void
+function PersonCard({ face, accent, name, sub, pct, dot, onOpen }: {
+  face: Portrait; accent: string; name: string; sub: string
+  pct: number; dot?: boolean; onOpen: () => void
 }) {
-  const pct = Math.round((Math.min(rap.points, TIER_AT[4]) / TIER_AT[4]) * 100)
   return (
-    <motion.button onClick={onOpen}
-      // THE FIRST HALF OF THE FLIP. It rotates to edge-on and stops; the detail
-      // picks the turn up from the other side, so the two halves read as one
-      // card being turned over rather than two things animating at once. The
-      // hand-off is onAnimationComplete rather than a timeout, so a slow frame
-      // cannot leave the panel showing an edge and nothing else.
-      animate={turning ? { rotateY: -90, opacity: 0 } : muted ? { opacity: 0.25 } : { rotateY: 0, opacity: 1 }}
-      transition={{ duration: turning ? 0.19 : 0.16, ease: turning ? 'easeIn' : 'easeOut' }}
-      onAnimationComplete={() => { if (turning) onTurned?.() }}
+    <button onClick={onOpen}
       style={{
-        transformStyle: 'preserve-3d', backfaceVisibility: 'hidden',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14, cursor: 'pointer',
-        background: `linear-gradient(180deg, ${folk.accent}14 0%, rgba(255,255,255,0.02) 60%)`,
-        border: `1px solid ${folk.accent}3a`,
+        background: `linear-gradient(180deg, ${accent}14 0%, rgba(255,255,255,0.02) 60%)`,
+        border: `1px solid ${accent}3a`,
         position: 'relative', overflow: 'hidden',
       }}>
-      {/* SOMETHING TO SAY. The one piece of live state a card carries, so the
-          grid answers "who should I go and see" at a glance. */}
-      {!rap.chattedToday && (
+      {dot && (
         <span aria-hidden style={{
           position: 'absolute', top: 7, right: 7,
           width: 8, height: 8, borderRadius: 999,
-          background: folk.accent, boxShadow: `0 0 8px ${folk.accent}`,
+          background: accent, boxShadow: `0 0 8px ${accent}`,
         }} />
       )}
       <div style={{
-        transform: folk.face.mirrored ? 'scaleX(-1)' : 'none',
-        borderRadius: '50%', boxShadow: `0 0 16px ${folk.accent}30`,
+        transform: face.mirrored ? 'scaleX(-1)' : 'none',
+        borderRadius: '50%', boxShadow: `0 0 16px ${accent}30`,
       }}>
         <CharacterAvatar
-          characterColor={folk.face.characterColor}
-          equippedHat={folk.face.hat}
-          bgColor={folk.face.bg}
-          ringColor={folk.face.ring}
+          characterColor={face.characterColor}
+          equippedHat={face.hat}
+          bgColor={face.bg}
+          ringColor={face.ring}
           size={62}
         />
       </div>
       <p className="font-cinzel font-700" style={{
         fontSize: '0.82rem', color: '#e8f2ea', margin: '7px 0 0',
         textAlign: 'center', lineHeight: 1.15,
-      }}>{folk.name}</p>
+      }}>{name}</p>
       <p className="font-karla font-700 uppercase" style={{
-        fontSize: '0.5rem', letterSpacing: '0.14em', color: folk.accent,
+        fontSize: '0.5rem', letterSpacing: '0.14em', color: accent,
         margin: '3px 0 0', textAlign: 'center',
-      }}>{TIER_NAME[rap.tier]}</p>
+      }}>{sub}</p>
       <div style={{
         width: '100%', height: 3, borderRadius: 999, marginTop: 6,
         background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
       }}>
-        <div style={{
-          width: `${pct}%`, height: '100%',
-          background: folk.accent, borderRadius: 999,
-        }} />
+        <div style={{ width: `${pct}%`, height: '100%', background: accent, borderRadius: 999 }} />
       </div>
-    </motion.button>
+    </button>
   )
 }
 
-/**
- * WHAT YOU KNOW ABOUT THEM.
- *
- * Everything the captain has actually earned the right to know, in one place:
- * where they keep to, how far the friendship has got, and the one fish they
- * want. The favourite is withheld until they are a known face, because a
- * shortcut handed over before you have said hello is not a thing you learned
- * about somebody, it is a hint from the game.
- */
-function FolkDetail({ folk, rap, onBack, reduced }: {
-  folk: Folk; rap: Rapport; onBack: () => void; reduced: boolean
-}) {
-  const water = WATERS.find(w => w.id === folk.zoneId)?.name ?? 'Open water'
-  const left = toNextTier(rap.points)
+function BackTo({ onBack }: { onBack: () => void }) {
   return (
-    <motion.div
-      // THE SECOND HALF. It starts edge-on from the far side and completes the
-      // rotation the card began, which is what makes it read as the back of
-      // that card rather than a new screen sliding in.
-      initial={reduced ? { opacity: 0 } : { rotateY: 90, opacity: 0 }}
-      animate={reduced ? { opacity: 1 } : { rotateY: 0, opacity: 1 }}
-      exit={reduced ? { opacity: 0 } : { rotateY: 90, opacity: 0 }}
-      transition={{ duration: reduced ? 0.15 : 0.23, ease: 'easeOut' }}
-      style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}>
-      <button onClick={onBack} className="font-karla font-700"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10,
-          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-          color: `${SEA},0.6)`, fontSize: '0.72rem',
-        }}>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M15 18l-6-6 6-6" /></svg>
-        Everyone
-      </button>
+    <button onClick={onBack} className="font-karla font-700"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10,
+        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+        color: `${SEA},0.6)`, fontSize: '0.72rem',
+      }}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M15 18l-6-6 6-6" /></svg>
+      Everyone
+    </button>
+  )
+}
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <div style={{
-          transform: folk.face.mirrored ? 'scaleX(-1)' : 'none',
-          flexShrink: 0, borderRadius: '50%',
-          boxShadow: `0 0 20px ${folk.accent}40`,
-        }}>
-          <CharacterAvatar
-            characterColor={folk.face.characterColor}
-            equippedHat={folk.face.hat}
-            bgColor={folk.face.bg}
-            ringColor={folk.face.ring}
-            size={72}
-          />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase" style={{
-            fontSize: '0.52rem', letterSpacing: '0.2em', color: folk.accent, margin: 0,
-          }}>{folk.role}</p>
-          <p className="font-cinzel font-700" style={{
-            fontSize: '1.24rem', color: '#f0ede8', margin: '2px 0 0', lineHeight: 1.1,
-          }}>{folk.name}</p>
+function Head({ face, accent, role, name, water }: {
+  face: Portrait; accent: string; role: string; name: string; water?: string
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div style={{
+        transform: face.mirrored ? 'scaleX(-1)' : 'none',
+        flexShrink: 0, borderRadius: '50%', boxShadow: `0 0 20px ${accent}40`,
+      }}>
+        <CharacterAvatar
+          characterColor={face.characterColor} equippedHat={face.hat}
+          bgColor={face.bg} ringColor={face.ring} size={72}
+        />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p className="font-karla font-700 uppercase" style={{
+          fontSize: '0.52rem', letterSpacing: '0.2em', color: accent, margin: 0,
+        }}>{role}</p>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '1.24rem', color: '#f0ede8', margin: '2px 0 0', lineHeight: 1.1,
+        }}>{name}</p>
+        {water && (
           <p className="font-karla" style={{
             fontSize: '0.72rem', color: `${SEA},0.55)`, margin: '3px 0 0',
           }}>{water}</p>
-        </div>
+        )}
       </div>
+    </div>
+  )
+}
+
+/** What you know about one of the regulars. */
+function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: () => void }) {
+  const water = PLACES.find(w => w.id === folk.zoneId)?.name ?? 'Open water'
+  const left = toNextTier(rap.points)
+  return (
+    <>
+      <BackTo onBack={onBack} />
+      <Head face={folk.face} accent={folk.accent} role={folk.role} name={folk.name} water={water} />
 
       <p className="font-karla" style={{
         fontSize: '0.78rem', color: `${SEA},0.75)`, lineHeight: 1.5, margin: '0.8rem 0 0',
       }}>{folk.blurb}</p>
 
-      {/* ── HOW FAR IT HAS GOT ──────────────────────────────────────── */}
       <div style={{
         marginTop: '0.8rem', padding: '0.6rem 0.7rem', borderRadius: 11,
         background: `${folk.accent}10`, border: `1px solid ${folk.accent}30`,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-          <p className="font-cinzel font-700" style={{
-            fontSize: '0.95rem', color: '#f6ecd6', margin: 0,
-          }}>{TIER_NAME[rap.tier]}</p>
-          <p className="font-karla" style={{
-            fontSize: '0.68rem', color: `${SEA},0.5)`, margin: 0,
-          }}>{left === null ? 'As far as it goes' : `${left} to the next`}</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f6ecd6', margin: 0 }}>
+            {TIER_NAME[rap.tier]}
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: `${SEA},0.5)`, margin: 0 }}>
+            {left === null ? 'As far as it goes' : `${left} to the next`}
+          </p>
         </div>
-        <div style={{
-          height: 5, borderRadius: 999, marginTop: 6,
-          background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
-        }}>
-          <div style={{
-            width: `${Math.round((Math.min(rap.points, TIER_AT[4]) / TIER_AT[4]) * 100)}%`,
-            height: '100%', background: folk.accent, borderRadius: 999,
-          }} />
-        </div>
+        <Bar at={rap.points} of={TIER_AT[4]} color={folk.accent} />
       </div>
 
-      {/* ── THE ONE FISH ────────────────────────────────────────────── */}
+      {/* The one fish. Withheld until they are a known face, so it reads as
+          something you learned about them rather than a hint handed over. */}
       <div style={{
         marginTop: 8, padding: '0.6rem 0.7rem', borderRadius: 11,
         background: 'rgba(255,255,255,0.035)', border: `1px solid ${SEA},0.14)`,
@@ -262,87 +230,185 @@ function FolkDetail({ folk, rap, onBack, reduced }: {
               fontSize: '1rem', color: folk.accent, margin: '4px 0 0',
             }}>{folk.favourite.name}</p>
             <p className="font-karla" style={{
-              fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0', lineHeight: 1.45,
-            }}>
-              Hand them one of these and it is worth {GIFT_FAVOURITE_POINTS} where a word is
-              worth one. Anything else out of their own water is worth two.
-            </p>
+              fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0',
+            }}>Worth {GIFT_FAVOURITE_POINTS} where a word is worth one.</p>
           </>
         ) : (
           <p className="font-karla" style={{
             fontSize: '0.74rem', color: `${SEA},0.45)`, margin: '4px 0 0', lineHeight: 1.45,
-          }}>
-            You do not know them well enough yet. Keep turning up and they will mention it.
-          </p>
+          }}>You do not know them well enough yet.</p>
         )}
       </div>
 
-      {/* Facts, not warnings. */}
-      <p className="font-karla" style={{
-        fontSize: '0.68rem', color: `${SEA},0.4)`, margin: '10px 0 0', lineHeight: 1.45,
-      }}>
-        {rap.giftsGiven > 0
-          ? `You have brought them ${rap.giftsGiven} ${rap.giftsGiven === 1 ? 'gift' : 'gifts'}. `
-          : ''}
-        {rap.chattedToday
-          ? 'You have had your word today.'
-          : 'They have something to say to you.'}
-      </p>
-    </motion.div>
+      {rap.giftsGiven > 0 && (
+        <p className="font-karla" style={{
+          fontSize: '0.68rem', color: `${SEA},0.4)`, margin: '10px 0 0',
+        }}>
+          You have brought them {rap.giftsGiven} {rap.giftsGiven === 1 ? 'gift' : 'gifts'}.
+        </p>
+      )}
+    </>
   )
 }
 
-export default function FolkPanel({ open, onClose, finn, level }: {
+/** What you know about the rival. His card turns over to the campaign rather
+ *  than to a favourite fish, because that is what he is. */
+function RivalDetail({ finn, onBack }: { finn: FinnSeaState | null; onBack: () => void }) {
+  const points = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
+  const tier = finnStandingTier(points)
+  const left = finnToNext(points)
+  const seen = new Set(finn?.seenBeats ?? [])
+  const heard = FINN_ENCOUNTER_BEATS.filter(b => seen.has(b.id)).length
+  const wonHeard = FINN_WIN_BEATS.filter(b => seen.has(b.id)).length
+  const quest = finn?.quest ?? null
+  return (
+    <>
+      <BackTo onBack={onBack} />
+      <Head face={FINN_FACE} accent={GOLD} role="Rival" name={FINN_NAME}
+        water={finn ? `Moored off ${finn.at.bandName}` : undefined} />
+
+      <div style={{
+        marginTop: '0.8rem', padding: '0.6rem 0.7rem', borderRadius: 11,
+        background: `${GOLD}10`, border: `1px solid ${GOLD}30`,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f6ecd6', margin: 0 }}>
+            {FINN_STANDING_NAME[tier]}
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: `${SEA},0.5)`, margin: 0 }}>
+            {left === null ? 'As far as it goes' : `${left} to the next`}
+          </p>
+        </div>
+        <Bar at={points} of={FINN_STANDING_AT[4]} color={GOLD} />
+      </div>
+
+      {/* The job, when he has set one. The loudest thing here when it is done,
+          because that is the campaign waiting on you. */}
+      {quest && (
+        <div style={{
+          marginTop: 8, padding: '0.6rem 0.7rem', borderRadius: 11,
+          background: quest.done ? 'rgba(60,44,10,0.72)' : 'rgba(255,255,255,0.035)',
+          border: `1px solid ${quest.done ? 'rgba(240,192,64,0.6)' : `${SEA},0.14)`}`,
+        }}>
+          <p className="font-karla font-700 uppercase" style={{
+            fontSize: '0.52rem', letterSpacing: '0.18em', margin: 0,
+            color: quest.done ? '#ffd986' : `${SEA},0.5)`,
+          }}>{quest.done ? 'Done. Go and hand it over' : 'He asked you for'}</p>
+          <p className="font-karla font-600" style={{
+            fontSize: '0.84rem', color: '#f0ede8', margin: '3px 0 0', lineHeight: 1.3,
+          }}>{quest.label}</p>
+          <Bar at={quest.have} of={quest.target} color={quest.done ? GOLD : 'rgba(226,238,246,0.5)'} />
+          <p className="font-karla" style={{
+            fontSize: '0.64rem', color: `${SEA},0.45)`, margin: '4px 0 0',
+          }}>{quest.progressText}</p>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        {([['Met', finn?.encounters ?? 0], ['Wagers won', finn?.wins ?? 0],
+          ['Jobs done', finn?.questsDone.length ?? 0]] as const).map(([k, v]) => (
+          <div key={k} style={{ flex: 1 }}>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
+            }}>{k}</p>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
+            }}>{v}</p>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(244,226,192,0.9)', margin: 0 }}>
+            His story
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.7rem', color: `${SEA},0.5)`, margin: 0 }}>
+            {heard} of {FINN_ENCOUNTER_BEATS.length}
+          </p>
+        </div>
+        <Bar at={heard} of={FINN_ENCOUNTER_BEATS.length} color={GOLD} />
+        {wonHeard > 0 && <Bar at={wonHeard} of={FINN_WIN_BEATS.length} color={`${GOLD}70`} />}
+      </div>
+    </>
+  )
+}
+
+export default function FolkPanel({ open, onClose, finn }: {
   open: boolean
   onClose: () => void
   finn: FinnSeaState | null
-  level: number
 }) {
-  // How much of each track has been heard. seenBeats holds ids from both, so
-  // each side counts only its own — the reveal id is in there too and belongs
-  // to neither.
-  // Loaded on open. Rows only exist for regulars already spoken to, so a
-  // missing one reads as tier zero without any backfill.
+  const reduced = useMemo(prefersReducedMotion, [])
   const [rap, setRap] = useState<Rapport[]>([])
+  const [showing, setShowing] = useState<string | null>(null)
+
   useEffect(() => {
     if (!open) return
     let alive = true
     void folkState().then(rows => { if (alive) setRap(rows) })
     return () => { alive = false }
   }, [open])
-  /** Only the ones actually spoken to, in the order the cast is written so
-   *  the list does not reshuffle as standings change. */
+
+  useEffect(() => { if (!open) setShowing(null) }, [open])
+
   const met = FOLK
     .map(folk => ({ folk, rap: rap.find(r => r.folkId === folk.id) }))
     .filter((x): x is { folk: Folk; rap: Rapport } => !!x.rap && x.rap.points > 0)
 
-  /** Which one is open, if any. Cleared whenever the panel closes so it never
-   *  reopens onto somebody the captain has stopped looking at. */
-  const [openFolk, setOpenFolk] = useState<string | null>(null)
+  const openFolk = met.find(m => m.folk.id === showing) ?? null
+  const openRival = showing === 'finn'
+
+  const finnPts = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
+  const finnMore = !!finn && (finn.questReady || findNextEncounterBeat(finn.seenBeats) !== null)
+  const finnQuest = finn?.quest ?? null
+
   /**
-   * MID-TURN. Holds whichever card is currently rotating to edge-on, which is
-   * the first half of the flip; when that card reports its animation finished
-   * it hands over and the detail completes the rotation from the far side.
+   * ── THE TURN ────────────────────────────────────────────────────────────
    *
-   * A separate piece of state rather than deriving it from `openFolk`, because
-   * the two halves must not be on screen at once: the card has to be gone
-   * before the back of it arrives.
+   * ONE element out, one element in, and nothing else moving. The first cut
+   * flipped the tapped card, THEN faded the whole grid, THEN turned the detail
+   * in: three phases across two elements, with the panel's own height changing
+   * underneath all of it. That is why it read as a stutter rather than as a
+   * card turning over.
+   *
+   * The face itself is what rotates now. The outgoing one turns to edge-on and
+   * the incoming one completes the same rotation from the other side, in `wait`
+   * mode so the two are never on screen together. Opacity SNAPS at the edge
+   * rather than easing across the turn: a rotation that fades looks like a
+   * dissolve, and at ninety degrees the element is invisible anyway.
+   *
+   * A floor height on the container stops the panel resizing mid-turn, which
+   * was the other half of the jank.
    */
-  const [turning, setTurning] = useState<string | null>(null)
-  const reduced = useMemo(prefersReducedMotion, [])
-  useEffect(() => { if (!open) { setOpenFolk(null); setTurning(null) } }, [open])
-  const showing = met.find(m => m.folk.id === openFolk) ?? null
-  /** He gets his own slot in the same one-open-at-a-time state. */
-  const showRival = openFolk === 'finn'
-  const rivalPts = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
-  const rivalTier = finnStandingTier(rivalPts)
-  const rivalNext = finnToNext(rivalPts)
+  const face = reduced
+    ? {
+      initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 },
+      transition: { duration: 0.12 },
+    }
+    : {
+      initial: { rotateY: -90, opacity: 0 },
+      animate: {
+        rotateY: 0, opacity: 1,
+        transition: {
+          rotateY: { duration: 0.2, ease: [0.16, 0.8, 0.36, 1] as [number, number, number, number] },
+          opacity: { duration: 0.01 },
+        },
+      },
+      exit: {
+        rotateY: 90, opacity: 0,
+        transition: {
+          rotateY: { duration: 0.17, ease: [0.7, 0, 0.84, 0] as [number, number, number, number] },
+          opacity: { duration: 0.01, delay: 0.16 },
+        },
+      },
+    }
 
-  const seen = new Set(finn?.seenBeats ?? [])
-  const heard = FINN_ENCOUNTER_BEATS.filter(b => seen.has(b.id)).length
-  const wonHeard = FINN_WIN_BEATS.filter(b => seen.has(b.id)).length
-  const more = findNextEncounterBeat(finn?.seenBeats ?? []) !== null
-
+  const faceStyle = {
+    transformStyle: 'preserve-3d' as const,
+    backfaceVisibility: 'hidden' as const,
+    willChange: 'transform',
+  }
 
   return (
     <AnimatePresence>
@@ -362,10 +428,6 @@ export default function FolkPanel({ open, onClose, finn, level }: {
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
-              // 480 IS THE HOUSE MODAL WIDTH. The leaderboards, the crew
-              // assign picker, the bunks, the raid sheets and the tackle shop
-              // all sit at it; this was at 420 and read as a narrower thing
-              // than everything else the game opens.
               width: '100%', maxWidth: 480, maxHeight: '82vh', overflowY: 'auto',
               background: 'rgba(8,14,22,0.98)',
               border: `1px solid ${SEA},0.28)`,
@@ -373,7 +435,7 @@ export default function FolkPanel({ open, onClose, finn, level }: {
             }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#e8f2ea', margin: 0 }}>
-                {showing ? showing.folk.name : 'The Salt Road'}
+                The Salt Road
               </p>
               <button type="button" onClick={onClose} aria-label="Close"
                 style={{
@@ -387,260 +449,143 @@ export default function FolkPanel({ open, onClose, finn, level }: {
               </button>
             </div>
 
-            {/* ── ONE OF THEM, OR EVERYBODY ────────────────────────────
-                Tapping a card swaps the whole body for what you know about
-                that person rather than opening a second modal over the first.
-                A panel that opens a panel is how the conversation flow went
-                wrong the first time, and the Back control is right there. */}
-            {/* ── THE TWO FACES OF THE CARD ────────────────────────────
-                One AnimatePresence owning both, in `wait` mode, because the
-                turn only reads as a turn if the faces are never on screen
-                together: the front has to be edge-on and gone before the back
-                arrives. It also has to live OUTSIDE the branch, or the detail
-                unmounts instantly on close and its half of the flip never
-                plays. `initial={false}` so the first open does not deal the
-                whole panel in. Perspective is on the parent so both faces
-                share one vanishing point. */}
-            <div style={{ perspective: 1100 }}>
-            <AnimatePresence mode="wait" initial={false}>
-            {showing ? (
-              <div key={`detail:${showing.folk.id}`} style={{ marginTop: '0.9rem' }}>
-                <FolkDetail
-                  folk={showing.folk} rap={showing.rap} reduced={reduced}
-                  // CLOSING PLAYS THE TURN BACK: the detail rotates away to
-                  // edge-on and the grid comes in from the other side, which is
-                  // the same flip in reverse rather than a dismissal.
-                  onBack={() => { vibrate(6); setOpenFolk(null) }} />
-              </div>
-            ) : (
-              <motion.div key="grid"
-                initial={reduced ? { opacity: 0 } : { rotateY: -90, opacity: 0 }}
-                animate={reduced ? { opacity: 1 } : { rotateY: 0, opacity: 1 }}
-                exit={{ opacity: 0, transition: { duration: 0.1 } }}
-                transition={{ duration: reduced ? 0.15 : 0.23, ease: 'easeOut' }}
-                style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}>
-            {/* ── THE RIVAL, IN HIS OWN CATEGORY ───────────────────────
-                He is not one of the regulars and the panel should never file
-                him with them: they are people you are getting to know and he
-                is the fishing campaign wearing a coat. Same card language so
-                the panel reads as one thing, his own heading and his own gold
-                so it is obvious he is not the same kind of entry.
+            <div style={{ perspective: 1400, minHeight: 340 }}>
+              <AnimatePresence mode="wait" initial={false}>
+                {openRival ? (
+                  <motion.div key="rival" {...face}
+                    style={{ ...faceStyle, paddingTop: '0.9rem' }}>
+                    <RivalDetail finn={finn} onBack={() => { vibrate(6); setShowing(null) }} />
+                  </motion.div>
+                ) : openFolk ? (
+                  <motion.div key={`folk:${openFolk.folk.id}`} {...face}
+                    style={{ ...faceStyle, paddingTop: '0.9rem' }}>
+                    <FolkDetail folk={openFolk.folk} rap={openFolk.rap}
+                      onBack={() => { vibrate(6); setShowing(null) }} />
+                  </motion.div>
+                ) : (
+                  <motion.div key="grid" {...face} style={faceStyle}>
 
-                His STANDING is derived, never stored: meetings plus two for
-                every bet taken off him, both of which the profile has been
-                counting since long before any of this existed. */}
-            <Section title="The Rival">
-              <button
-                onClick={() => setOpenFolk(showRival ? null : 'finn')}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 11, width: '100%',
-                  padding: '0.65rem 0.7rem', borderRadius: 13, cursor: 'pointer',
-                  textAlign: 'left',
-                  background: `linear-gradient(180deg, ${GOLD},0.1) 0%, rgba(255,255,255,0.02) 70%)`,
-                  border: `1px solid ${GOLD},${more ? 0.5 : 0.28})`,
-                  position: 'relative',
-                }}>
-                <div style={{
-                  transform: FINN_AVATAR.mirrored ? 'scaleX(-1)' : 'none',
-                  flexShrink: 0, borderRadius: '50%',
-                  boxShadow: `0 0 14px ${GOLD},0.28)`,
-                }}>
-                  <CharacterAvatar
-                    characterColor={FINN_AVATAR.characterColor}
-                    equippedHat={FINN_AVATAR.equippedHat}
-                    bgColor={FINN_AVATAR.bgColor}
-                    ringColor={FINN_AVATAR.borderColor}
-                    size={46}
-                  />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-cinzel font-700" style={{
-                    fontSize: '1rem', color: '#f4e2c0', margin: 0, lineHeight: 1.1,
-                  }}>{FINN_NAME}</p>
-                  <p className="font-karla font-700" style={{
-                    fontSize: '0.66rem', color: `${GOLD},0.8)`, margin: '2px 0 0',
-                  }}>{FINN_STANDING_NAME[rivalTier]}</p>
-                  <div style={{
-                    height: 3, borderRadius: 999, marginTop: 5,
-                    background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      width: `${Math.round((Math.min(rivalPts, FINN_STANDING_AT[4]) / FINN_STANDING_AT[4]) * 100)}%`,
-                      height: '100%', background: `${GOLD},0.75)`, borderRadius: 999,
-                    }} />
-                  </div>
-                </div>
-                {more && (
-                  <span aria-hidden style={{
-                    position: 'absolute', top: 8, right: 9,
-                    width: 8, height: 8, borderRadius: 999,
-                    background: '#f0c040', boxShadow: '0 0 8px rgba(240,192,64,0.8)',
-                  }} />
+                    <Section title="The Rival">
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                        <div style={{ width: 118, flexShrink: 0, display: 'flex' }}>
+                          <PersonCard
+                            face={FINN_FACE} accent={GOLD} name={FINN_NAME}
+                            sub={FINN_STANDING_NAME[finnStandingTier(finnPts)]}
+                            pct={Math.round((Math.min(finnPts, FINN_STANDING_AT[4]) / FINN_STANDING_AT[4]) * 100)}
+                            dot={finnMore}
+                            onOpen={() => { vibrate(6); setShowing('finn') }} />
+                        </div>
+
+                        {/* ── WHAT HE HAS ASKED YOU FOR ─────────────────────
+                            BESIDE HIS CARD, not buried behind it. This is the
+                            one live task in the game and the panel a captain
+                            opens to see who is out there is exactly where they
+                            will look for it. Done, it goes gold and stops
+                            describing the task at all: the only thing left to
+                            know is that he is holding your pay. */}
+                        {finnQuest ? (
+                          <button
+                            onClick={() => { vibrate(6); setShowing('finn') }}
+                            style={{
+                              flex: 1, minWidth: 0, textAlign: 'left', cursor: 'pointer',
+                              padding: '0.6rem 0.7rem', borderRadius: 14,
+                              background: finnQuest.done
+                                ? 'linear-gradient(180deg, rgba(96,72,14,0.85) 0%, rgba(44,32,6,0.9) 100%)'
+                                : 'rgba(255,255,255,0.035)',
+                              border: `1px solid ${finnQuest.done ? 'rgba(240,192,64,0.7)' : `${SEA},0.14)`}`,
+                              boxShadow: finnQuest.done ? '0 0 20px rgba(240,192,64,0.2)' : 'none',
+                              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                            }}>
+                            <p className="font-karla font-700 uppercase" style={{
+                              fontSize: '0.5rem', letterSpacing: '0.18em', margin: 0,
+                              color: finnQuest.done ? '#ffd986' : `${SEA},0.5)`,
+                            }}>{finnQuest.done ? 'Done' : 'He asked you for'}</p>
+                            <p className="font-karla font-600" style={{
+                              fontSize: '0.82rem', margin: '3px 0 0', lineHeight: 1.3,
+                              color: '#f0ede8',
+                            }}>{finnQuest.label}</p>
+                            {finnQuest.done ? (
+                              <p className="font-cinzel font-700" style={{
+                                fontSize: '0.86rem', margin: '6px 0 0', color: '#ffd986',
+                              }}>Go back to Finn and hand it over</p>
+                            ) : (
+                              <>
+                                <Bar at={finnQuest.have} of={finnQuest.target}
+                                  color="rgba(226,238,246,0.5)" />
+                                <p className="font-karla" style={{
+                                  fontSize: '0.64rem', margin: '4px 0 0', color: `${SEA},0.45)`,
+                                }}>{finnQuest.progressText}</p>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <div style={{
+                            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center',
+                            padding: '0.6rem 0.7rem', borderRadius: 14,
+                            border: `1px dashed ${SEA},0.14)`,
+                          }}>
+                            <p className="font-karla" style={{
+                              fontSize: '0.74rem', color: `${SEA},0.45)`, margin: 0, lineHeight: 1.45,
+                            }}>He has not asked you for anything. Go and see what he wants.</p>
+                          </div>
+                        )}
+                      </div>
+                    </Section>
+
+                    <Section title={met.length > 0 ? `Known to you (${met.length})` : 'Known to you'}>
+                      {met.length === 0 ? (
+                        <p className="font-karla" style={{
+                          fontSize: '0.76rem', color: `${SEA},0.55)`, lineHeight: 1.5, margin: 0,
+                        }}>
+                          Nobody yet. Pull alongside somebody out there and say something.
+                        </p>
+                      ) : (
+                        <div style={{
+                          display: 'grid', gap: 8,
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
+                        }}>
+                          {met.map(({ folk, rap: r }) => (
+                            <PersonCard key={folk.id}
+                              face={folk.face} accent={folk.accent} name={folk.name}
+                              sub={TIER_NAME[r.tier]}
+                              pct={Math.round((Math.min(r.points, TIER_AT[4]) / TIER_AT[4]) * 100)}
+                              dot={!r.chattedToday}
+                              onOpen={() => { vibrate(6); setShowing(folk.id) }} />
+                          ))}
+                        </div>
+                      )}
+                    </Section>
+
+                    {/* The wanderers get a legend rather than rows: they are
+                        hashed out of (cell, day) and gone at midnight, so "who
+                        have I met" has no honest answer for them. What the
+                        panel CAN give is what each kind wants, which the game
+                        says nowhere else. */}
+                    <Section title="Who else you might meet">
+                      {[
+                        ['Bait peddler', 'Sells bait well under shop price.'],
+                        ['Salter', 'Buys your whole hold on the spot.'],
+                        ['Deep tinker', 'Better bait, bigger discount, deep water only.'],
+                        ['An old hand', 'Wants nothing. Says one thing and means it.'],
+                        ['Blockade runner', 'Night and deep water. Rods no shop will stock.'],
+                      ].map(([who, what]) => (
+                        <div key={who} style={{
+                          display: 'flex', gap: 8, padding: '0.34rem 0',
+                          borderTop: `1px solid ${SEA},0.1)`,
+                        }}>
+                          <p className="font-karla font-700" style={{
+                            fontSize: '0.74rem', margin: 0, color: 'rgba(226,238,246,0.85)',
+                            flexShrink: 0, width: 116,
+                          }}>{who}</p>
+                          <p className="font-karla" style={{
+                            fontSize: '0.72rem', margin: 0, color: `${SEA},0.62)`, flex: 1,
+                          }}>{what}</p>
+                        </div>
+                      ))}
+                    </Section>
+                  </motion.div>
                 )}
-              </button>
-
-              {/* Opened, he shows the campaign rather than a favourite fish:
-                  how much of what he has to say you have heard, what he has
-                  taken off you and what you have taken back. */}
-              {showRival && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18 }}
-                  style={{
-                    marginTop: 8, padding: '0.7rem 0.8rem', borderRadius: 12,
-                    background: 'rgba(28,22,8,0.6)',
-                    border: `1px solid ${GOLD},0.24)`,
-                  }}>
-                  <p className="font-karla" style={{
-                    fontSize: '0.76rem', color: 'rgba(244,226,192,0.85)',
-                    lineHeight: 1.5, margin: 0,
-                  }}>
-                    {more
-                      ? `He has more to say, and he only says it face to face. Moored off the Mainland, a short sail out.`
-                      : 'You have heard everything he will tell you for now. He is still out there, and he still wants your coin.'}
-                  </p>
-
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <div style={{ flex: 1 }}>
-                      <p className="font-karla font-700 uppercase" style={{
-                        fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
-                      }}>Met</p>
-                      <p className="font-cinzel font-700" style={{
-                        fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
-                      }}>{finn?.encounters ?? 0}</p>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p className="font-karla font-700 uppercase" style={{
-                        fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
-                      }}>Wagers won</p>
-                      <p className="font-cinzel font-700" style={{
-                        fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
-                      }}>{finn?.wins ?? 0}</p>
-                    </div>
-                    <div style={{ flex: 1.3 }}>
-                      <p className="font-karla font-700 uppercase" style={{
-                        fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
-                      }}>His story</p>
-                      <p className="font-cinzel font-700" style={{
-                        fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
-                      }}>{heard} of {FINN_ENCOUNTER_BEATS.length}</p>
-                    </div>
-                  </div>
-
-                  <Bar at={heard} of={FINN_ENCOUNTER_BEATS.length} color={`${GOLD},0.7)`} />
-
-                  {(finn?.wins ?? 0) > 0 && wonHeard > 0 && (
-                    <div style={{ marginTop: 8 }}>
-                      <p className="font-karla" style={{
-                        fontSize: '0.62rem', color: `${SEA},0.45)`, margin: 0,
-                      }}>What winning has got out of him: {wonHeard} of {FINN_WIN_BEATS.length}</p>
-                      <Bar at={wonHeard} of={FINN_WIN_BEATS.length} color={`${GOLD},0.45)`} />
-                    </div>
-                  )}
-
-                  <p className="font-karla" style={{
-                    fontSize: '0.66rem', color: `${SEA},0.42)`, margin: '10px 0 0', lineHeight: 1.45,
-                  }}>
-                    {rivalNext === null
-                      ? 'There is no higher opinion of you to be had.'
-                      : `${rivalNext} more before he thinks better of you. A meeting counts once, a wager won counts twice.`}
-                  </p>
-
-                  {finn?.challenge && (
-                    <p className="font-karla font-700" style={{
-                      fontSize: '0.7rem', margin: '8px 0 0', color: '#ffd986',
-                    }}>A wager of his is running.</p>
-                  )}
-                </motion.div>
-              )}
-            </Section>
-
-            {/* ── THE NAMED FOLK. Permanent, always in the same water, worth
-                knowing about before you sail out to them. */}
-            {/* PERSPECTIVE lives here, on the parent of both faces, so the
-                card turning away and the detail turning in share one vanishing
-                point. Without it the rotation is an affine squash and reads as
-                a wipe rather than a card being turned over. */}
-            <div style={{ perspective: 1100 }}>
-            <Section title={met.length > 0 ? `Known to you (${met.length})` : 'Known to you'}>
-              {met.length === 0 ? (
-                <p className="font-karla" style={{
-                  fontSize: '0.76rem', color: `${SEA},0.55)`, lineHeight: 1.5,
-                  padding: '0.5rem 0', margin: 0,
-                }}>
-                  Nobody yet. There are folk out there who keep to the same water year in and
-                  year out. Pull alongside one and say something, and they will turn up here.
-                </p>
-              ) : (
-                // AUTO-FILL rather than a fixed three: at the house width a
-                // desktop fits four across and a narrow phone drops to three,
-                // without either being written down as a breakpoint.
-                <div style={{
-                  display: 'grid', gap: 8,
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
-                }}>
-                  {met.map(({ folk, rap }) => (
-                    <FolkCard key={folk.id} folk={folk} rap={rap}
-                      turning={turning === folk.id}
-                      muted={!!turning && turning !== folk.id}
-                      onTurned={() => { setOpenFolk(folk.id); setTurning(null) }}
-                      onOpen={() => {
-                        vibrate(6)
-                        // Reduced motion skips the turn entirely rather than
-                        // playing it faster: a flip is the whole effect here,
-                        // and half of one is just a jump.
-                        if (reduced) setOpenFolk(folk.id)
-                        else setTurning(folk.id)
-                      }} />
-                  ))}
-                </div>
-              )}
-            </Section>
-
-            <p className="font-karla" style={{
-              fontSize: '0.68rem', margin: '0.7rem 0 0', color: `${SEA},0.45)`, lineHeight: 1.4,
-            }}>
-              Have a word once a day and they warm to you. The one fish each of them actually
-              wants is worth five times that, and nothing is lost by staying away: there is no
-              streak here and none of it fades.
-            </p>
-            </div>
-
-            {/* ── THE WANDERERS. Not a log: these people are different every
-                day, so what the panel can honestly give is what the five kinds
-                want when you pull alongside one. */}
-            <Section title="Who else you might meet">
-              {[
-                ['Bait peddler', 'Sells bait well under shop price.'],
-                ['Salter', 'Buys your whole hold on the spot.'],
-                ['Deep tinker', 'Better bait, bigger discount, deep water only.'],
-                ['An old hand', 'Wants nothing. Says one thing and means it.'],
-                ['Blockade runner', 'Night and deep water. Carries rods no shop will stock.'],
-              ].map(([who, what]) => (
-                <div key={who} style={{
-                  display: 'flex', gap: 8, padding: '0.34rem 0',
-                  borderTop: `1px solid ${SEA},0.1)`,
-                }}>
-                  <p className="font-karla font-700" style={{
-                    fontSize: '0.74rem', margin: 0, color: 'rgba(226,238,246,0.85)',
-                    flexShrink: 0, width: 116,
-                  }}>{who}</p>
-                  <p className="font-karla" style={{
-                    fontSize: '0.72rem', margin: 0, color: `${SEA},0.62)`, flex: 1,
-                  }}>{what}</p>
-                </div>
-              ))}
-            </Section>
-
-            <p className="font-karla" style={{
-              fontSize: '0.68rem', margin: '0.55rem 0 0', color: `${SEA},0.45)`, lineHeight: 1.4,
-            }}>
-              They are somewhere different every day, and there are only so many deals in a
-              day to be had. Nobody is waiting for you in particular.
-            </p>
-              </motion.div>
-            )}
-            </AnimatePresence>
+              </AnimatePresence>
             </div>
           </motion.div>
         </motion.div>

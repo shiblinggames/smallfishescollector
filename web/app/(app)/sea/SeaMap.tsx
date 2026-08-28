@@ -5363,7 +5363,7 @@ hullRef={hullRefFor(t.key)} />
         </button>
       )}
 
-      <FolkPanel open={folkOpen} onClose={() => setFolkOpen(false)} finn={finn} level={level} />
+      <FolkPanel open={folkOpen} onClose={() => setFolkOpen(false)} finn={finn} />
 
       <CrewPanel
         open={crewOpen}
