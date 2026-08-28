@@ -70,6 +70,9 @@ export default function BoundaryBench() {
   })
   const [grab, setGrab] = useState<{ i: number; part: 'a' | 'b' | 'r' } | null>(null)
   const [squash, setSquash] = useState(false)
+  /** The centre-stop prediction, off by default: it kept reading as a second
+   *  boundary to tune when it is only a consequence of the one you draw. */
+  const [showHalo, setShowHalo] = useState(false)
   const [copied, setCopied] = useState(false)
   const stage = useRef<HTMLDivElement | null>(null)
 
@@ -189,13 +192,14 @@ export default function BoundaryBench() {
       <p className="font-karla" style={{
         fontSize: '0.9rem', color: 'rgba(198,216,230,0.72)', lineHeight: 1.6, margin: '4px 0 14px',
       }}>
-        <strong>Draw the solid shape on the object&apos;s edge</strong> — that is the
-        boundary, and it is what gets stored. The faint dash is the same boundary
-        expressed for the boat&apos;s centre (edge + her half-beam): ignore it while
-        tracing, read it only when leaving a gap — the boat fits through a channel
-        exactly where the dashes of its two sides don&apos;t touch. Capsules fit
-        isometric footprints; drag an end to reshape, the waist handle for thickness,
-        the body to move. Copy into app/(app)/sea/colliders.ts.
+        <strong>There is one boundary: the shape you draw.</strong> Put it on the
+        object&apos;s edge — the boat&apos;s planking stops exactly there. The optional
+        &ldquo;centre-stop&rdquo; overlay is a PREDICTION, not a second boundary: the
+        game tracks the boat by her centre point, and that point is held half a boat
+        back from your line — which is what makes her planking stop on it. Turn the
+        overlay on only to judge whether a gap between two objects admits her.
+        Capsules fit isometric footprints; drag an end to reshape, the waist handle
+        for thickness, the body to move. Copy into app/(app)/sea/colliders.ts.
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -255,10 +259,11 @@ export default function BoundaryBench() {
                     <line x1={g.a.x} y1={g.a.y} x2={g.b.x} y2={g.b.y}
                       stroke="rgba(240,120,90,0.85)" strokeWidth={g.r * 2}
                       strokeLinecap="round" fill="none" opacity={0.18} />
-                    {/* the hull halo, faint: where the boat's CENTRE stops */}
-                    <line x1={g.a.x} y1={g.a.y} x2={g.b.x} y2={g.b.y}
-                      stroke="rgba(240,180,120,0.22)" strokeWidth={(g.r + pad) * 2}
-                      strokeLinecap="round" strokeDasharray="2 6" fill="none" />
+                    {showHalo && (
+                      <line x1={g.a.x} y1={g.a.y} x2={g.b.x} y2={g.b.y}
+                        stroke="rgba(240,180,120,0.22)" strokeWidth={(g.r + pad) * 2}
+                        strokeLinecap="round" strokeDasharray="2 6" fill="none" />
+                    )}
                   </g>
                 )
               })}
@@ -333,6 +338,15 @@ export default function BoundaryBench() {
         <button type="button" onClick={() => setTable(prev => { const n = { ...prev }; delete n[key]; return n })}
           className="tap font-karla font-700" style={btn(false)}>
           Use default
+        </button>
+        <button type="button" onClick={() => setShowHalo(v => !v)} className="tap font-karla font-700"
+          style={{
+            ...btn(false),
+            background: showHalo ? 'rgba(240,180,120,0.16)' : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${showHalo ? 'rgba(240,180,120,0.5)' : 'rgba(255,255,255,0.16)'}`,
+            color: showHalo ? '#f6d8b0' : '#d8e2ea',
+          }}>
+          {showHalo ? 'Centre-stop: shown' : 'Centre-stop: hidden'}
         </button>
         <button type="button" onClick={() => setSquash(q => !q)} className="tap font-karla font-700"
           style={{
