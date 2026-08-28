@@ -272,6 +272,15 @@ patrolling, and are **deliberately outside the daily deal cap** — selling your
 a conversion, not a reward to farm, and capping it would only ever strand somebody with a
 full hold a long way from home.
 
+**And the two are told apart on sight, in both places you see them.** On the water a
+regular's hail mark is two figures in their own accent colour where a trader gets the bare
+amber exclamation, their name plate is lit by that same accent, and the plate's second line
+says what they are (`role`) rather than what they sell (`KIND_LABEL`). On the minimap buyers
+are a plain green pip and regulars are a warm ringed one, so they differ by shape as well as
+colour. The regulars were not drawn on the minimap at all before this, which made the nine
+people the friendship system is built on the only permanent thing on the sea the chart would
+not show you.
+
 **The buyers are NOT the regulars, and that separation is deliberate.** They used to be the
 same five people, which meant the friend you had spent a month getting to know was also the
 counter you sold across: a conversation with a price on it, and two systems wearing one

@@ -70,7 +70,7 @@ import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHots
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
-import { type FolkId } from '@/lib/seaFolk'
+import { folkById, type FolkId } from '@/lib/seaFolk'
 import FolkPanel from './FolkPanel'
 import SeaTour from './SeaTour'
 import SeaLandfallHint from './SeaLandfallHint'
@@ -6116,6 +6116,10 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
    *  rather than left/top so it composites instead of relaying out. */
   hullRef: (el: HTMLDivElement | null) => void
 }) {
+  /** Somebody you can get to know, or somebody selling something. It changes
+   *  the hail mark, the plate's colour and what the plate calls them, because
+   *  from a boat's length away those are the only three things you can read. */
+  const folk = trader.folkId ? folkById(trader.folkId) : null
   return (
     <div ref={hullRef} style={{
       position: 'absolute', left: trader.x, top: trader.y,
@@ -6164,13 +6168,25 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
           <div className="sea-hail" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 26, height: 26, borderRadius: '50%',
-            background: 'rgba(24,18,10,0.92)',
-            border: '1px solid rgba(255,206,138,0.85)',
-            boxShadow: '0 0 16px rgba(255,196,110,0.55)',
+            background: folk ? 'rgba(14,20,28,0.92)' : 'rgba(24,18,10,0.92)',
+            border: `1px solid ${folk ? folk.accent : 'rgba(255,206,138,0.85)'}`,
+            boxShadow: `0 0 16px ${folk ? folk.accent + '8c' : 'rgba(255,196,110,0.55)'}`,
           }}>
-            <span className="font-cinzel font-700" style={{
-              fontSize: '1.032rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
-            }}>!</span>
+            {folk ? (
+              /* SOMEBODY TO TALK TO. Two figures, in their own colour, where a
+                 trader gets the bare exclamation: the mark tells you what kind
+                 of stop this is before you are close enough to read a name. */
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke={folk.accent} strokeWidth="2.2" strokeLinecap="round"
+                strokeLinejoin="round" aria-hidden>
+                <circle cx="9" cy="8.4" r="2.5" /><path d="M4.4 18v-1.2A4 4 0 0 1 9 13.4a4 4 0 0 1 4.6 3.4V18" />
+                <circle cx="16.6" cy="9.8" r="2" /><path d="M14 18v-.9a3.3 3.3 0 0 1 5.8-2.1" />
+              </svg>
+            ) : (
+              <span className="font-cinzel font-700" style={{
+                fontSize: '1.032rem', lineHeight: 1, color: '#ffd986', marginTop: -1,
+              }}>!</span>
+            )}
           </div>
         </div>
       )}
@@ -6194,7 +6210,13 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
         textAlign: 'center', whiteSpace: 'nowrap', pointerEvents: 'none',
         padding: '3px 9px 4px', borderRadius: 9,
         background: 'rgba(6,12,18,0.86)',
-        border: `1px solid ${done ? 'rgba(150,166,178,0.3)' : 'rgba(255,206,138,0.34)'}`,
+        // LIT BY WHOSE PLATE IT IS. A regular carries their own accent, which
+        // is the same colour their conversation card and their Salt Road entry
+        // are lit with, so the person is recognisable as that person from
+        // across the water. Traders keep the shop amber they always had.
+        border: `1px solid ${done ? 'rgba(150,166,178,0.3)'
+          : folk ? folk.accent + '7a' : 'rgba(255,206,138,0.34)'}`,
+        boxShadow: folk ? `0 0 14px ${folk.accent}26` : 'none',
         opacity: isNear ? 1 : 0.8, transition: 'opacity 220ms ease-out',
       }}>
         <p className="font-cinzel font-700" style={{
@@ -6203,9 +6225,10 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
         }}>{trader.name}</p>
         <p className="font-karla font-600" style={{
           fontSize: '0.696rem', marginTop: 1,
-          color: done ? 'rgba(160,176,186,0.55)' : 'rgba(255,214,150,0.85)',
+          color: done ? 'rgba(160,176,186,0.55)'
+            : folk ? folk.accent : 'rgba(255,214,150,0.85)',
           textShadow: '0 1px 9px rgba(0,0,0,0.9)',
-        }}>{done ? 'Traded today' : KIND_LABEL[trader.kind]}</p>
+        }}>{done ? 'Traded today' : folk ? folk.role : KIND_LABEL[trader.kind]}</p>
       </div>}
     </div>
   )

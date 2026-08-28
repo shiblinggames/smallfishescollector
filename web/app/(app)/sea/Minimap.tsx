@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PLACES, YOON, RESIDENTS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from './chart'
+import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from './chart'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
 import {
@@ -70,6 +70,10 @@ const INK = {
   dig: '#f0c040',
   digDone: 'rgba(150,182,164,0.5)',
   trader: '#7fd6a0',
+  /** The nine you can get to know. Warm against the traders' green, because
+   *  the two are different errands and the map should say which is which
+   *  without a legend. */
+  regular: '#e8b464',
   friend: '#5ee08a',
   yoon: '#c084fc',
   you: '#ffffff',
@@ -205,11 +209,26 @@ export default function Minimap({
     // Only in water you have uncovered — finding them is the point, and a pin
     // on a foggy cell would hand you the discovery for free.
     ctx.textAlign = 'center'
+    // BUYERS: a plain green pip. Somewhere to sell, nothing more.
     for (const r of RESIDENTS) {
       const i = Math.floor((r.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((r.x - FOG_X0) / FOG_CELL)
       if (!fogHas(fog, i)) continue
       ctx.fillStyle = INK.trader
       ctx.beginPath(); ctx.arc(tx(r.x), ty(r.y), 2.6, 0, Math.PI * 2); ctx.fill()
+    }
+    // THE REGULARS: warm, and RINGED, so they are told apart by shape as well
+    // as colour. They were not drawn here at all, which meant the nine people
+    // the friendship system is built on were the only permanent thing on this
+    // sea the chart would not show you.
+    for (const r of SOCIALS) {
+      const i = Math.floor((r.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((r.x - FOG_X0) / FOG_CELL)
+      if (!fogHas(fog, i)) continue
+      const x = tx(r.x), y = ty(r.y)
+      ctx.fillStyle = INK.regular
+      ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = INK.regular
+      ctx.lineWidth = 1
+      ctx.beginPath(); ctx.arc(x, y, 4.4, 0, Math.PI * 2); ctx.stroke()
     }
     {
       const i = Math.floor((YOON.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((YOON.x - FOG_X0) / FOG_CELL)
@@ -386,7 +405,8 @@ export default function Minimap({
               <Key mark={<Dot c={INK.isleDone} r={2.6} />} label="Been ashore" />
               <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
               <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
-              <Key mark={<Dot c={INK.trader} r={2.8} />} label="Trader" />
+              <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
+              <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
               <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="A friend" />
               <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
             </div>
