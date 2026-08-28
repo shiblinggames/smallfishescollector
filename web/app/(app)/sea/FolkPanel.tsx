@@ -23,10 +23,9 @@
 // kinds of stranger you might meet, which is the only thing out here the game
 // never says anywhere else.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { prefersReducedMotion } from '@/components/cutscene'
 import { vibrate } from '@/lib/haptics'
 import {
   FINN_NAME, FINN_AVATAR, FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS,
@@ -339,7 +338,6 @@ export default function FolkPanel({ open, onClose, finn }: {
   onClose: () => void
   finn: FinnSeaState | null
 }) {
-  const reduced = useMemo(prefersReducedMotion, [])
   const [rap, setRap] = useState<Rapport[]>([])
   const [showing, setShowing] = useState<string | null>(null)
 
@@ -364,51 +362,20 @@ export default function FolkPanel({ open, onClose, finn }: {
   const finnQuest = finn?.quest ?? null
 
   /**
-   * ── THE TURN ────────────────────────────────────────────────────────────
+   * ── NO TURN AT ALL ──────────────────────────────────────────────────────
    *
-   * ONE element out, one element in, and nothing else moving. The first cut
-   * flipped the tapped card, THEN faded the whole grid, THEN turned the detail
-   * in: three phases across two elements, with the panel's own height changing
-   * underneath all of it. That is why it read as a stutter rather than as a
-   * card turning over.
+   * There was a card flip here, in two versions. The first stuttered, because
+   * it ran three phases across two elements while the panel resized underneath
+   * them. The second was smooth and was simply annoying, which is the more
+   * useful verdict of the two: a panel you open to check on nine people is
+   * somewhere you move around quickly, and an animation between every face
+   * taxes the exact thing the panel is for.
    *
-   * The face itself is what rotates now. The outgoing one turns to edge-on and
-   * the incoming one completes the same rotation from the other side, in `wait`
-   * mode so the two are never on screen together. Opacity SNAPS at the edge
-   * rather than easing across the turn: a rotation that fades looks like a
-   * dissolve, and at ninety degrees the element is invisible anyway.
-   *
-   * A floor height on the container stops the panel resizing mid-turn, which
-   * was the other half of the jank.
+   * So the faces just swap. A 120ms fade on the one arriving, nothing on the
+   * one leaving, no perspective and no rotation. The floor height stays,
+   * because stopping the panel jumping between a tall grid and a short detail
+   * was always a layout problem rather than an animation one.
    */
-  const face = reduced
-    ? {
-      initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 },
-      transition: { duration: 0.12 },
-    }
-    : {
-      initial: { rotateY: -90, opacity: 0 },
-      animate: {
-        rotateY: 0, opacity: 1,
-        transition: {
-          rotateY: { duration: 0.2, ease: [0.16, 0.8, 0.36, 1] as [number, number, number, number] },
-          opacity: { duration: 0.01 },
-        },
-      },
-      exit: {
-        rotateY: 90, opacity: 0,
-        transition: {
-          rotateY: { duration: 0.17, ease: [0.7, 0, 0.84, 0] as [number, number, number, number] },
-          opacity: { duration: 0.01, delay: 0.16 },
-        },
-      },
-    }
-
-  const faceStyle = {
-    transformStyle: 'preserve-3d' as const,
-    backfaceVisibility: 'hidden' as const,
-    willChange: 'transform',
-  }
 
   return (
     <AnimatePresence>
@@ -449,32 +416,44 @@ export default function FolkPanel({ open, onClose, finn }: {
               </button>
             </div>
 
-            <div style={{ perspective: 1400, minHeight: 340 }}>
-              <AnimatePresence mode="wait" initial={false}>
-                {openRival ? (
-                  <motion.div key="rival" {...face}
-                    style={{ ...faceStyle, paddingTop: '0.9rem' }}>
-                    <RivalDetail finn={finn} onBack={() => { vibrate(6); setShowing(null) }} />
-                  </motion.div>
-                ) : openFolk ? (
-                  <motion.div key={`folk:${openFolk.folk.id}`} {...face}
-                    style={{ ...faceStyle, paddingTop: '0.9rem' }}>
-                    <FolkDetail folk={openFolk.folk} rap={openFolk.rap}
-                      onBack={() => { vibrate(6); setShowing(null) }} />
-                  </motion.div>
-                ) : (
-                  <motion.div key="grid" {...face} style={faceStyle}>
+            <div style={{ minHeight: 340 }}>
+              {openRival ? (
+                <motion.div key="rival"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  transition={{ duration: 0.12 }}
+                  style={{ paddingTop: '0.9rem' }}>
+                  <RivalDetail finn={finn} onBack={() => { vibrate(6); setShowing(null) }} />
+                </motion.div>
+              ) : openFolk ? (
+                <motion.div key={`folk:${openFolk.folk.id}`}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  transition={{ duration: 0.12 }}
+                  style={{ paddingTop: '0.9rem' }}>
+                  <FolkDetail folk={openFolk.folk} rap={openFolk.rap}
+                    onBack={() => { vibrate(6); setShowing(null) }} />
+                </motion.div>
+              ) : (
+                <motion.div key="grid"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  transition={{ duration: 0.12 }}>
 
                     <Section title="The Rival">
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-                        <div style={{ width: 118, flexShrink: 0, display: 'flex' }}>
-                          <PersonCard
-                            face={FINN_FACE} accent={GOLD} name={FINN_NAME}
-                            sub={FINN_STANDING_NAME[finnStandingTier(finnPts)]}
-                            pct={Math.round((Math.min(finnPts, FINN_STANDING_AT[4]) / FINN_STANDING_AT[4]) * 100)}
-                            dot={finnMore}
-                            onOpen={() => { vibrate(6); setShowing('finn') }} />
-                        </div>
+                      {/* THE SAME GRID THE REGULARS USE, so his card is
+                          exactly one cell wide and lines up with theirs. It
+                          was a fixed 118 in a flex row beside the job, which
+                          made the one card that should look like the others
+                          the only one that did not. */}
+                      <div style={{
+                        display: 'grid', gap: 8,
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
+                      }}>
+                        <PersonCard
+                          face={FINN_FACE} accent={GOLD} name={FINN_NAME}
+                          sub={FINN_STANDING_NAME[finnStandingTier(finnPts)]}
+                          pct={Math.round((Math.min(finnPts, FINN_STANDING_AT[4]) / FINN_STANDING_AT[4]) * 100)}
+                          dot={finnMore}
+                          onOpen={() => { vibrate(6); setShowing('finn') }} />
+                      </div>
 
                         {/* ── WHAT HE HAS ASKED YOU FOR ─────────────────────
                             BESIDE HIS CARD, not buried behind it. This is the
@@ -483,53 +462,45 @@ export default function FolkPanel({ open, onClose, finn }: {
                             will look for it. Done, it goes gold and stops
                             describing the task at all: the only thing left to
                             know is that he is holding your pay. */}
-                        {finnQuest ? (
-                          <button
-                            onClick={() => { vibrate(6); setShowing('finn') }}
-                            style={{
-                              flex: 1, minWidth: 0, textAlign: 'left', cursor: 'pointer',
-                              padding: '0.6rem 0.7rem', borderRadius: 14,
-                              background: finnQuest.done
-                                ? 'linear-gradient(180deg, rgba(96,72,14,0.85) 0%, rgba(44,32,6,0.9) 100%)'
-                                : 'rgba(255,255,255,0.035)',
-                              border: `1px solid ${finnQuest.done ? 'rgba(240,192,64,0.7)' : `${SEA},0.14)`}`,
-                              boxShadow: finnQuest.done ? '0 0 20px rgba(240,192,64,0.2)' : 'none',
-                              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                            }}>
-                            <p className="font-karla font-700 uppercase" style={{
-                              fontSize: '0.5rem', letterSpacing: '0.18em', margin: 0,
-                              color: finnQuest.done ? '#ffd986' : `${SEA},0.5)`,
-                            }}>{finnQuest.done ? 'Done' : 'He asked you for'}</p>
-                            <p className="font-karla font-600" style={{
-                              fontSize: '0.82rem', margin: '3px 0 0', lineHeight: 1.3,
-                              color: '#f0ede8',
-                            }}>{finnQuest.label}</p>
-                            {finnQuest.done ? (
-                              <p className="font-cinzel font-700" style={{
-                                fontSize: '0.86rem', margin: '6px 0 0', color: '#ffd986',
-                              }}>Go back to Finn and hand it over</p>
-                            ) : (
-                              <>
-                                <Bar at={finnQuest.have} of={finnQuest.target}
-                                  color="rgba(226,238,246,0.5)" />
-                                <p className="font-karla" style={{
-                                  fontSize: '0.64rem', margin: '4px 0 0', color: `${SEA},0.45)`,
-                                }}>{finnQuest.progressText}</p>
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <div style={{
-                            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center',
-                            padding: '0.6rem 0.7rem', borderRadius: 14,
-                            border: `1px dashed ${SEA},0.14)`,
-                          }}>
-                            <p className="font-karla" style={{
-                              fontSize: '0.74rem', color: `${SEA},0.45)`, margin: 0, lineHeight: 1.45,
-                            }}>He has not asked you for anything. Go and see what he wants.</p>
-                          </div>
-                        )}
-                      </div>
+                      {finnQuest ? (
+                        <button
+                          onClick={() => { vibrate(6); setShowing('finn') }}
+                          style={{
+                            width: '100%', marginTop: 8, textAlign: 'left', cursor: 'pointer',
+                          padding: '0.6rem 0.7rem', borderRadius: 12,
+                          background: finnQuest.done
+                            ? 'linear-gradient(180deg, rgba(96,72,14,0.85) 0%, rgba(44,32,6,0.9) 100%)'
+                            : 'rgba(255,255,255,0.035)',
+                          border: `1px solid ${finnQuest.done ? 'rgba(240,192,64,0.7)' : `${SEA},0.14)`}`,
+                          boxShadow: finnQuest.done ? '0 0 20px rgba(240,192,64,0.2)' : 'none',
+                        }}>
+                          <p className="font-karla font-700 uppercase" style={{
+                            fontSize: '0.5rem', letterSpacing: '0.18em', margin: 0,
+                            color: finnQuest.done ? '#ffd986' : `${SEA},0.5)`,
+                          }}>{finnQuest.done ? 'Done' : 'He asked you for'}</p>
+                          <p className="font-karla font-600" style={{
+                            fontSize: '0.82rem', margin: '3px 0 0', lineHeight: 1.3,
+                            color: '#f0ede8',
+                          }}>{finnQuest.label}</p>
+                          {finnQuest.done ? (
+                            <p className="font-cinzel font-700" style={{
+                              fontSize: '0.86rem', margin: '6px 0 0', color: '#ffd986',
+                            }}>Go back to Finn and hand it over</p>
+                          ) : (
+                            <>
+                              <Bar at={finnQuest.have} of={finnQuest.target}
+                                color="rgba(226,238,246,0.5)" />
+                              <p className="font-karla" style={{
+                                fontSize: '0.64rem', margin: '4px 0 0', color: `${SEA},0.45)`,
+                              }}>{finnQuest.progressText}</p>
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <p className="font-karla" style={{
+                          fontSize: '0.72rem', color: `${SEA},0.45)`, margin: '8px 0 0', lineHeight: 1.45,
+                        }}>He has not asked you for anything. Go and see what he wants.</p>
+                      )}
                     </Section>
 
                     <Section title={met.length > 0 ? `Known to you (${met.length})` : 'Known to you'}>
@@ -583,9 +554,8 @@ export default function FolkPanel({ open, onClose, finn }: {
                         </div>
                       ))}
                     </Section>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         </motion.div>
