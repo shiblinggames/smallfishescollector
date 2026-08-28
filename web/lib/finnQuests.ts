@@ -35,11 +35,18 @@
 // over, which is the whole reason he is moored somewhere reachable, and is what
 // turns "a counter filled up" into "I went and told him".
 
+/**
+ * EVERY TYPE EXCEPT THE GIANTS IS MEASURED IN ONE BAND.
+ *
+ * `catch_any` is gone. A chapter IS a water, and a job that could be finished
+ * anywhere was the one shape that let a captain clear an act without ever
+ * sailing to the act's own sea. `land_perfects` and `perfect_streak` carry a
+ * zone too now, which is what `profiles.zone_perfects` was added for.
+ */
 export type FinnQuestType =
-  | 'catch_any'
-  | 'land_perfects'
-  | 'perfect_streak'
   | 'catch_zone'
+  | 'zone_perfects'
+  | 'zone_streak'
   | 'catch_rarity'
   | 'catch_ancient'
 
@@ -105,16 +112,16 @@ export type FinnQuest = {
 export const FINN_QUESTS: FinnQuest[] = [
   // ── THE SHALLOWS (Fishing 1) ────────────────────────────────────────
   {
-    id: 'q1', type: 'catch_any', target: 8, reward: 220, minLevel: 1, band: 'shallows',
-    label: 'Land 8 fish, anywhere',
+    id: 'q1', type: 'catch_zone', target: 8, zone: 'shallows', reward: 220, minLevel: 1, band: 'shallows',
+    label: 'Land 8 fish in the Shallows',
     give: "Nothing clever. Go and pull eight out of the water and come back to me. I want to watch how you hold the rod, not what you catch with it.",
     done: "Eight. And not one of them fought you the same way twice. I noticed.",
     waiting: "Eight. You are not at eight. Off you go.",
     gated: "Go and fish. Come back when you have done some of it.",
   },
   {
-    id: 'q2', type: 'land_perfects', target: 4, reward: 320, minLevel: 1, band: 'shallows',
-    label: 'Land 4 perfect catches',
+    id: 'q2', type: 'zone_perfects', target: 4, zone: 'shallows', reward: 320, minLevel: 1, band: 'shallows',
+    label: 'Land 4 perfect catches in the Shallows',
     give: "Anybody can land a fish. Land four PERFECT and I will start paying attention properly.",
     done: "Four clean ones. Most anglers manage that by accident once a season.",
     waiting: "Four perfect. Not four fish. There is a difference and it is the entire difference.",
@@ -130,24 +137,24 @@ export const FINN_QUESTS: FinnQuest[] = [
   },
 
   {
-    id: 'q21', type: 'catch_rarity', target: 2, minRarity: 2, reward: 460, minLevel: 1, band: 'shallows',
-    label: 'Land 2 uncommon or better fish',
+    id: 'q21', type: 'catch_rarity', target: 2, minRarity: 2, zone: 'shallows', reward: 460, minLevel: 1, band: 'shallows',
+    label: 'Land 2 uncommon or better in the Shallows',
     give: "Two that are not the usual. The shallow water has better in it than people think, they just stop looking.",
     done: "Two. You have started seeing what is actually down there rather than what you expected.",
     waiting: "Uncommon or better. Look properly.",
     gated: "Go and fish first.",
   },
   {
-    id: 'q22', type: 'perfect_streak', target: 3, reward: 520, minLevel: 1, band: 'shallows',
-    label: 'Land 3 perfect catches in a row',
+    id: 'q22', type: 'zone_streak', target: 3, zone: 'shallows', reward: 520, minLevel: 1, band: 'shallows',
+    label: 'Land 3 perfect catches in a row in the Shallows',
     give: "Three without a miss. It is the smallest run worth calling a run, and you will be surprised how it goes wrong.",
     done: "Three straight. Do that ten more times and it stops being luck.",
     waiting: "In a row. One miss and it starts again.",
     gated: "Not yet.",
   },
   {
-    id: 'q23', type: 'catch_any', target: 30, reward: 600, minLevel: 1, band: 'shallows',
-    label: 'Land 30 fish',
+    id: 'q23', type: 'catch_zone', target: 30, zone: 'shallows', reward: 600, minLevel: 1, band: 'shallows',
+    label: 'Land 30 fish in the Shallows',
     give: "Thirty. Any water, any fish. There is no trick to this one, I want the hours in your hands.",
     done: "Thirty. That is the part nobody puts in the stories and it is most of the work.",
     waiting: "Thirty. You are not close and that is fine.",
@@ -163,16 +170,16 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "Open Waters is the next thing and you are not rated for it yet. Go and get levelled.",
   },
   {
-    id: 'q5', type: 'perfect_streak', target: 5, reward: 700, minLevel: 15, band: 'open_waters',
-    label: 'Land 5 perfect catches in a row',
+    id: 'q5', type: 'zone_streak', target: 5, zone: 'open_waters', reward: 700, minLevel: 15, band: 'open_waters',
+    label: 'Land 5 perfect catches in a row in Open Waters',
     give: "Five in a row. Not five in a day, five without a single miss between them. That is a hand, not a habit.",
     done: "Five straight. I have watched a hundred anglers try that and I am not exaggerating the number.",
     waiting: "In a ROW. One miss and you start again. That is what makes it worth asking for.",
     gated: "Come back when you have grown into it.",
   },
   {
-    id: 'q6', type: 'catch_rarity', target: 3, minRarity: 3, reward: 880, minLevel: 15, band: 'open_waters',
-    label: 'Land 3 rare or better fish',
+    id: 'q6', type: 'catch_rarity', target: 3, minRarity: 3, zone: 'open_waters', reward: 880, minLevel: 15, band: 'open_waters',
+    label: 'Land 3 rare or better in Open Waters',
     give: "Three rare ones. The water decides who gets those, and I want to see whether it has decided about you.",
     done: "Three. The water is making up its mind about you, and I do not think it is going the way I expected.",
     waiting: "Rare, I said. Common fish are just weather.",
@@ -180,8 +187,8 @@ export const FINN_QUESTS: FinnQuest[] = [
   },
 
   {
-    id: 'q24', type: 'land_perfects', target: 10, reward: 1000, minLevel: 15, band: 'open_waters',
-    label: 'Land 10 perfect catches',
+    id: 'q24', type: 'zone_perfects', target: 10, zone: 'open_waters', reward: 1000, minLevel: 15, band: 'open_waters',
+    label: 'Land 10 perfect catches in Open Waters',
     give: "Ten clean. Not in a row, just ten. I want to see whether the good ones are becoming the normal ones.",
     done: "Ten. They are becoming the normal ones.",
     waiting: "Ten perfect. Take as long as you like.",
@@ -196,8 +203,8 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "Not until you can work it.",
   },
   {
-    id: 'q26', type: 'catch_any', target: 60, reward: 1300, minLevel: 15, band: 'open_waters',
-    label: 'Land 60 fish',
+    id: 'q26', type: 'catch_zone', target: 60, zone: 'open_waters', reward: 1300, minLevel: 15, band: 'open_waters',
+    label: 'Land 60 fish in Open Waters',
     give: "Sixty, anywhere. I am not testing your nerve with this one, I am testing whether you keep going.",
     done: "Sixty. Most captains stop somewhere in the forties and never notice they stopped.",
     waiting: "Sixty. Keep at it.",
@@ -213,16 +220,16 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "The Deep is the next water and it is not open to you yet. Go and earn it.",
   },
   {
-    id: 'q8', type: 'land_perfects', target: 20, reward: 1500, minLevel: 30, band: 'deep',
-    label: 'Land 20 perfect catches',
+    id: 'q8', type: 'zone_perfects', target: 20, zone: 'deep', reward: 1500, minLevel: 30, band: 'deep',
+    label: 'Land 20 perfect catches in the Deep',
     give: "Twenty perfect. Take your time. I am not going anywhere and neither, apparently, are you.",
     done: "Twenty. You have stopped counting them, have you not. That is when it starts working.",
     waiting: "Twenty clean. You are not there yet and there is no hurry.",
     gated: "Later. You are not deep enough into this.",
   },
   {
-    id: 'q9', type: 'perfect_streak', target: 8, reward: 1900, minLevel: 30, band: 'deep',
-    label: 'Land 8 perfect catches in a row',
+    id: 'q9', type: 'zone_streak', target: 8, zone: 'deep', reward: 1900, minLevel: 30, band: 'deep',
+    label: 'Land 8 perfect catches in a row in the Deep',
     give: "Eight in a row. I could not do six on my best day and I have had a great many days.",
     done: "Eight straight. I want to be sour about that and I find I am not.",
     waiting: "Eight, unbroken. It is meant to be hard. That is the whole of the request.",
@@ -230,8 +237,8 @@ export const FINN_QUESTS: FinnQuest[] = [
   },
 
   {
-    id: 'q27', type: 'catch_rarity', target: 4, minRarity: 3, reward: 2200, minLevel: 30, band: 'deep',
-    label: 'Land 4 rare or better fish',
+    id: 'q27', type: 'catch_rarity', target: 4, minRarity: 3, zone: 'deep', reward: 2200, minLevel: 30, band: 'deep',
+    label: 'Land 4 rare or better in the Deep',
     give: "Four rare, out of deep water. They are down there in numbers the shallows never see.",
     done: "Four. The deep gives them up more readily to somebody it has decided about.",
     waiting: "Rare or better. Four of them.",
@@ -246,8 +253,8 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "Not yet.",
   },
   {
-    id: 'q29', type: 'catch_any', target: 100, reward: 2900, minLevel: 30, band: 'deep',
-    label: 'Land 100 fish',
+    id: 'q29', type: 'catch_zone', target: 100, zone: 'deep', reward: 2900, minLevel: 30, band: 'deep',
+    label: 'Land 100 fish in the Deep',
     give: "A hundred. Anywhere, anything. Nobody has ever asked you for a number like that and meant it kindly.",
     done: "A hundred. There is nothing clever about it and it is still the hardest thing I have asked you for.",
     waiting: "A hundred. Chip at it.",
@@ -263,16 +270,16 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "The black water. Not at your level, and I am not sending you down there to prove me wrong.",
   },
   {
-    id: 'q11', type: 'catch_rarity', target: 5, minRarity: 4, reward: 3000, minLevel: 50, band: 'abyss',
-    label: 'Land 5 epic or better fish',
+    id: 'q11', type: 'catch_rarity', target: 5, minRarity: 4, zone: 'abyss', reward: 3000, minLevel: 50, band: 'abyss',
+    label: 'Land 5 epic or better in the Abyss',
     give: "Five of the real ones. Not rare. The ones the water only hands over when it has decided something about the hand on the rod.",
     done: "Five. It has decided, then.",
     waiting: "Epic or better. If you are not sure whether it counted, it did not.",
     gated: "Those do not come to captains at your level. Go on.",
   },
   {
-    id: 'q12', type: 'perfect_streak', target: 12, reward: 3800, minLevel: 50, band: 'abyss',
-    label: 'Land 12 perfect catches in a row',
+    id: 'q12', type: 'zone_streak', target: 12, zone: 'abyss', reward: 3800, minLevel: 50, band: 'abyss',
+    label: 'Land 12 perfect catches in a row in the Abyss',
     give: "Twelve without a miss. There is nothing left I can ask you for that is harder than this and still fair.",
     done: "Twelve. Straight. I have run out of things to test and I am not sure what I do now.",
     waiting: "Twelve in a row. Take a season over it if you need to. I have waited longer.",
@@ -280,8 +287,8 @@ export const FINN_QUESTS: FinnQuest[] = [
   },
 
   {
-    id: 'q30', type: 'land_perfects', target: 40, reward: 4300, minLevel: 50, band: 'abyss',
-    label: 'Land 40 perfect catches',
+    id: 'q30', type: 'zone_perfects', target: 40, zone: 'abyss', reward: 4300, minLevel: 50, band: 'abyss',
+    label: 'Land 40 perfect catches in the Abyss',
     give: "Forty clean ones. At this point I am not testing anything. I just want to watch you do it forty times.",
     done: "Forty. I have stopped being able to tell when you are trying.",
     waiting: "Forty perfect. No hurry on this one at all.",
@@ -296,8 +303,8 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "The black water is not open to you.",
   },
   {
-    id: 'q32', type: 'catch_rarity', target: 2, minRarity: 5, reward: 5600, minLevel: 50, band: 'abyss',
-    label: 'Land 2 legendary fish',
+    id: 'q32', type: 'catch_rarity', target: 2, minRarity: 5, zone: 'abyss', reward: 5600, minLevel: 50, band: 'abyss',
+    label: 'Land 2 legendary fish in the Abyss',
     give: "Two legendaries, before we go anywhere near the old water. I need to know you can do it on demand.",
     done: "Two. On demand. That is the last thing I needed to know and I already knew it.",
     waiting: "Legendary. Two of them. The water decides, but it decides about you differently now.",
@@ -320,8 +327,8 @@ export const FINN_QUESTS: FinnQuest[] = [
     gated: "The old water is not open to you yet. I have waited forty years. I can wait for you.",
   },
   {
-    id: 'q14', type: 'catch_rarity', target: 3, minRarity: 5, reward: 6000, minLevel: 75, band: 'ancient_deep',
-    label: 'Land 3 legendary fish',
+    id: 'q14', type: 'catch_rarity', target: 3, minRarity: 5, zone: 'ancient_deep', reward: 6000, minLevel: 75, band: 'ancient_deep',
+    label: 'Land 3 legendary fish in the Ancient Deep',
     give: "Three legendaries. Not because I doubt you. Because I want to watch it happen and this is the only way I get to.",
     done: "Three. You make the impossible look like a Tuesday, and I have stopped pretending that does not sting.",
     waiting: "Legendary. The water gives those to almost nobody. It will give them to you.",
@@ -554,7 +561,7 @@ export function pendingFinnQuest(doneIds: readonly string[]): FinnQuest | null {
 
 /** Plain progress wording, for the panel. Mechanics copy stays literal. */
 export function questProgressLabel(q: FinnQuest, have: number): string {
-  if (q.type === 'perfect_streak') {
+  if (q.type === 'zone_streak') {
     return `Best run since he asked: ${Math.min(have, q.target)} of ${q.target}`
   }
   if (q.type === 'catch_ancient') {

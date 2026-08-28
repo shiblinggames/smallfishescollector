@@ -105,6 +105,8 @@ type StoredQuest = {
   zone0: number
   /** Catches at or above the job's rarity, when it has one. */
   rare0: number
+  /** Clean catches in the job's own water, when it has one. */
+  zperf0: number
 }
 
 export type FinnQuestView = {
@@ -149,7 +151,7 @@ export type FinnTalk = {
   at: { x: number; y: number; bandName: string }
 }
 
-const SEL = 'finn_encounters, finn_wins, finn_seen_beats, finn_revealed, finn_last_outcome, finn_challenge, finn_quest, finn_quests_done, fishing_xp, doubloons, ancient_catches, current_perfect_streak, total_perfects'
+const SEL = 'finn_encounters, finn_wins, finn_seen_beats, finn_revealed, finn_last_outcome, finn_challenge, finn_quest, finn_quests_done, fishing_xp, doubloons, ancient_catches, current_perfect_streak, total_perfects, zone_perfects'
 
 type Row = {
   finn_encounters: number | null
@@ -163,6 +165,7 @@ type Row = {
   fishing_xp: number | null
   doubloons: number | null
   ancient_catches: number[] | null
+  zone_perfects: Record<string, number> | null
   current_perfect_streak: number | null
   total_perfects: number | null
 }
@@ -249,7 +252,7 @@ async function catchesWhere(
  *  that was never captured. */
 async function snapshotFor(
   admin: ReturnType<typeof createAdminClient>, uid: string,
-  quest: FinnQuest, perfNow: number,
+  quest: FinnQuest, perfNow: number, zonePerfects: Record<string, number>,
 ): Promise<StoredQuest> {
   return {
     id: quest.id,
@@ -257,7 +260,8 @@ async function snapshotFor(
     catch0: await lifetimeCatches(admin, uid),
     perf0: perfNow,
     zone0: quest.zone ? await catchesWhere(admin, uid, { zone: quest.zone }) : 0,
-    rare0: quest.minRarity ? await catchesWhere(admin, uid, { minRarity: quest.minRarity }) : 0,
+    rare0: quest.minRarity ? await catchesWhere(admin, uid, { zone: quest.zone, minRarity: quest.minRarity }) : 0,
+    zperf0: quest.zone ? (zonePerfects[quest.zone] ?? 0) : 0,
   }
 }
 
@@ -266,33 +270,39 @@ async function questProgress(
   admin: ReturnType<typeof createAdminClient>, uid: string,
   quest: FinnQuest, stored: StoredQuest, row: Row,
 ): Promise<number> {
+  const zp = row.zone_perfects ?? {}
   switch (quest.type) {
-    case 'catch_any':
-      return (await lifetimeCatches(admin, uid)) - stored.catch0
-    case 'land_perfects':
-      return (row.total_perfects ?? 0) - stored.perf0
-    case 'perfect_streak': {
-      // BOTH TESTS, for the reason the old bet needed both: the streak is a
-      // running total that survives being handed the job, so it also has to
-      // have been EARNED since. The progress shown is whichever is smaller,
-      // which is the honest answer to "how close am I".
-      const streak = row.current_perfect_streak ?? 0
-      const since = (row.total_perfects ?? 0) - stored.perf0
-      return Math.min(streak, since)
-    }
     case 'catch_zone':
+      // Fish landed in the job's own water since he asked.
       return (await catchesWhere(admin, uid, { zone: quest.zone })) - stored.zone0
+
+    case 'zone_perfects':
+      // Clean catches in that water. `zone_perfects` is bumped in reelIn off
+      // fish.habitat, so this is the same delta rule as everything else.
+      return (zp[quest.zone ?? ''] ?? 0) - stored.zperf0
+
+    case 'zone_streak': {
+      // BOTH TESTS, for the reason the old bet needed both, plus the water.
+      // `current_perfect_streak` is a running total that survives being handed
+      // the job, so the run has to have been EARNED since; and the perfects
+      // have to have happened in the job's own band, or a streak run in the
+      // Shallows would clear a job set in the Abyss. The smaller of the two is
+      // the honest answer to "how close am I".
+      const streak = row.current_perfect_streak ?? 0
+      const sinceHere = (zp[quest.zone ?? ''] ?? 0) - stored.zperf0
+      return Math.min(streak, sinceHere)
+    }
+
     case 'catch_rarity':
-      return (await catchesWhere(admin, uid, { minRarity: quest.minRarity })) - stored.rare0
+      // Rarity AND water together, so a rare fish from somewhere else does not
+      // count toward an act set here.
+      return (await catchesWhere(admin, uid, { zone: quest.zone, minRarity: quest.minRarity })) - stored.rare0
+
     case 'catch_ancient': {
       // ONE NAMED GIANT, AND DELIBERATELY THE EXCEPTION TO THE DELTA RULE.
-      //
-      // Everything else here is measured since he asked, so a job cannot be
-      // finished retroactively off a counter that was already high. A giant is
-      // not a counter: it is a unique trophy landed once in a lifetime, and
-      // `ancient_catches` is append-only. "Raise the Dunkleosteus" is a
-      // question about whether that specific creature is on your wall, which
-      // has exactly one honest answer whenever it is asked.
+      // A giant is a unique lifetime trophy on an append-only list, not a
+      // counter, so "is the Dunkleosteus on your wall" has exactly one honest
+      // answer whenever it is asked.
       const wall = (row.ancient_catches as number[] | null) ?? []
       return quest.ancientId && wall.includes(quest.ancientId) ? 1 : 0
     }
@@ -384,7 +394,7 @@ async function nextRung(
   const quest = nextFinnQuest(row.finn_quests_done ?? [], getLevelFromXP(row.fishing_xp ?? 0))
   let stored: StoredQuest | null = null
   if (quest) {
-    stored = await snapshotFor(admin, uid, quest, row.total_perfects ?? 0)
+    stored = await snapshotFor(admin, uid, quest, row.total_perfects ?? 0, row.zone_perfects ?? {})
     lines.push(quest.give)
   }
   return {

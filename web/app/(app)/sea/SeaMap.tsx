@@ -4466,7 +4466,16 @@ hullRef={hullRefFor(t.key)} />
             behind a trader who happens to be moored on the same wave, and given
             his own component rather than a TraderBoat because the plate under
             him has to say what he is, and what he is is not a kind of trade. */}
-        {finn && !fishingIn && <FinnBoat at={finn.at} isNear={nearFinn} ready={finn.questReady} />}
+        {finn && !fishingIn && (
+          <FinnBoat at={finn.at} isNear={nearFinn}
+            ready={finn.questReady}
+            // He has something TO GIVE, which is exactly "no job outstanding":
+            // with one open he hands out nothing until it comes back, so a ?
+            // over him mid-job would be sending captains on a wasted sail.
+            // Not OR-ed with unheard beats for the same reason - the beats are
+            // behind the work, so their existence is not an invitation.
+            offering={!finn.quest} />
+        )}
 
         {/* The wake, in the world layer so each mark stays on the water where
             the hull left it. Every one of these is positioned by the loop. */}
@@ -5343,6 +5352,12 @@ hullRef={hullRefFor(t.key)} />
           aria-label="The Salt Road"
           title="The Salt Road"
           data-no-steer
+          // BLINKS ONLY WHEN HE IS HOLDING YOUR PAY. Not for a beat waiting,
+          // not for a regular with a word for you: those get the quiet dot.
+          // The HUD is otherwise completely still, so the one thing that moves
+          // up there has to mean one thing, and this is the only state worth
+          // interrupting somebody mid-sail for.
+          className={finn?.questReady ? 'hud-blink' : undefined}
           style={{
             position: 'absolute', top: 18, left: hudAt('folk'), zIndex: Z.hud,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -6190,7 +6205,12 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
         // scaleX comes from the patrol rather than a coin flip, so a trader
         // always looks the way they are actually drifting. Written every frame
         // by the loop, which finds this node by THIS CLASS.
-        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78)`,
+        // 0.94, up from 0.78. Everybody out here was drawn three quarters
+        // the size of the hull you are steering, which made a person you can
+        // talk to read as scenery in the middle distance. The player's boat is
+        // still the biggest thing on the water, which is correct, but the gap
+        // is now a nudge rather than two thirds.
+        transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.94)`,
         // Somebody you have already dealt with today is still there — they do
         // not vanish, because a person disappearing once you are done with them
         // is what makes a world feel like a vending machine. They just stop
@@ -6708,20 +6728,59 @@ const FinnBet = memo(function FinnBet({ bet, progress }: {
  * Counter-squashed like everything else with height — he stands ON the plane,
  * he is not painted onto it.
  */
-const FinnBoat = memo(function FinnBoat({ at, isNear, ready }: {
+const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
   at: { x: number; y: number }
   isNear: boolean
   /** A job of his is finished and waiting to be handed back. */
   ready?: boolean
+  /** He has a beat or a job to hand out. Gold question mark, MMO style. */
+  offering?: boolean
 }) {
   return (
     <div style={{
       position: 'absolute', left: at.x, top: at.y,
       pointerEvents: 'none', zIndex: 3,
     }}>
-      <div style={{ transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.82)` }}>
+      <div style={{ transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.98)` }}>
         <TraderSkiff look={FINN_LOOK} />
       </div>
+
+      {/* ── THE QUEST MARKER ────────────────────────────────────────
+          The one piece of deliberately un-subtle UI on this chart, and it
+          earns it: he is the fishing campaign's only delivery route, so a
+          captain who cannot tell at a glance that he has something is a
+          captain who does not get the story.
+
+          A GOLD ? when he has a beat or a job to give, a GOLD ! when a job is
+          finished and he is holding your pay. MMO shorthand, used on purpose,
+          because it is shorthand everybody already reads.
+
+          IT SITS ABOVE THE MAST AND NEVER ON HIM. Anchored well clear of
+          HEAD_TOP and counter-squashed upward from its own bottom edge, so it
+          grows away from the hull rather than down into it. The hail mark
+          below is separate and only shows in range. */}
+      {(offering || ready) && (
+        <div aria-hidden style={{
+          position: 'absolute', left: 0, top: HEAD_TOP - 96,
+          transform: `translateX(-50%) scaleY(${1 / GROUND})`,
+          transformOrigin: 'bottom center', pointerEvents: 'none',
+        }}>
+          <div className="finn-quest-mark" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 42, height: 42,
+          }}>
+            <span className="font-cinzel font-700" style={{
+              fontSize: '2.3rem', lineHeight: 1,
+              color: '#ffd24a',
+              textShadow: [
+                '0 0 3px rgba(60,36,0,1)', '0 2px 5px rgba(0,0,0,0.9)',
+                '0 0 18px rgba(255,196,60,0.95)', '0 0 38px rgba(255,168,40,0.7)',
+              ].join(', '),
+              WebkitTextStroke: '1.5px rgba(70,42,0,0.85)',
+            }}>{ready ? '!' : '?'}</span>
+          </div>
+        </div>
+      )}
 
       {/* THE HAIL MARK. Same shape as a trader's and a warmer colour, which is
           the whole visual claim being made: he is a person you can talk to,

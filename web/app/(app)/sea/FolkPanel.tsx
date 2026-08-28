@@ -37,6 +37,7 @@ import { getCharacterSprites } from '@/lib/characters'
 import { HATS } from '@/lib/hats'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, knowsFavourite, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
 import { folkState, type Rapport } from './folkActions'
+import { finnState } from './finnActions'
 import { finnChapters, finnWaitingOn, FINN_CHAPTERS, type FinnChapterView } from '@/lib/finnQuests'
 import type { FinnSeaState } from './finnActions'
 
@@ -501,11 +502,33 @@ function warmFaces() {
   }
 }
 
-export default function FolkPanel({ open, onClose, finn }: {
+export default function FolkPanel({ open, onClose, finn: finnProp }: {
   open: boolean
   onClose: () => void
   finn: FinnSeaState | null
 }) {
+  /**
+   * ── READ IT FRESH ON EVERY OPEN ────────────────────────────────────────
+   *
+   * The rival's state arrived as a prop from the map, which is loaded once when
+   * the chart mounts and refreshed only when you actually speak to him. So a
+   * captain who took a job, went and caught eight fish, and opened this panel
+   * saw the progress it had when they last stood in front of him: zero. The
+   * numbers were real, they were just old.
+   *
+   * The prop stays as the immediate value so the panel never opens blank, and a
+   * live read lands over it. Job progress is computed server-side from counters
+   * the cast path maintains, so this is genuinely current rather than a cache.
+   */
+  const [finnLive, setFinnLive] = useState<FinnSeaState | null>(null)
+  const finn = finnLive ?? finnProp
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    void finnState().then(f => { if (alive && f) setFinnLive(f) })
+    return () => { alive = false }
+  }, [open])
+
   // Once per mount of the sea, not once per open.
   useEffect(() => { warmFaces() }, [])
 

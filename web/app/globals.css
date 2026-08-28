@@ -2717,6 +2717,32 @@ body.hardcore-gauntlet::after {
   .finn-ready { animation: none; }
 }
 
+/* THE QUEST MARKER over Finn. Bobs like everything else afloat out here rather
+   than throbbing: it is already the largest and brightest thing on the water,
+   and a big gold glyph that pulses as well reads as an error state. */
+.finn-quest-mark {
+  animation: finnMark 2.4s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes finnMark {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-7px) rotate(3deg); }
+}
+
+/* THE SALT ROAD BUTTON, when a job is finished and he is holding your pay. The
+   HUD is otherwise still, so this is the only thing up there that moves and it
+   only ever means one thing. */
+.hud-blink {
+  animation: hudBlink 1.15s ease-in-out infinite;
+}
+@keyframes hudBlink {
+  0%, 100% { box-shadow: 0 0 0 rgba(240,192,64,0); border-color: rgba(240,192,64,0.5); }
+  50%      { box-shadow: 0 0 22px rgba(240,192,64,0.85); border-color: rgba(255,214,110,1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .finn-quest-mark, .hud-blink { animation: none; }
+}
+
 /* THE WAKE. One mark, laid in world space by the rAF loop and left behind. No
    animation here on purpose: position, scale and opacity are all written by the
    loop, because a mark has to age from the moment the hull dropped it, and a CSS

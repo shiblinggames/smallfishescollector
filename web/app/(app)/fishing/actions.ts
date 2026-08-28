@@ -823,7 +823,7 @@ export async function reelIn(
   }
 
   const [{ data: profile }, { data: holdRows }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, ancient_vigil, unlocked_pets, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, line_tier, prestige_levels, ancient_catches, ancient_vigil, unlocked_pets, unlocked_character_colors, total_perfects, zone_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc, pending_cast, zone_golden_boost, lifetime_species').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -1120,6 +1120,15 @@ export async function reelIn(
   // Track abyss streak for achievements
   const isAbyssPerfect = result === 'perfect' && fish.habitat === 'abyss'
   const newAbyssStreak = isAbyssPerfect ? (profile.fishing_abyss_streak ?? 0) + 1 : 0
+
+  // PERFECTS, BY WATER. total_perfects has always been global, so a job could
+  // ask for clean catches but never for clean catches SOMEWHERE. Finn's ladder
+  // is one band per chapter now and needs to know where. Rides the same update
+  // as everything else here, so it costs nothing on the cast path.
+  const zonePerfects = { ...((profile.zone_perfects as Record<string, number> | null) ?? {}) }
+  if (result === 'perfect') {
+    zonePerfects[fish.habitat] = (zonePerfects[fish.habitat] ?? 0) + 1
+  }
   const prestigeLevels = (profile.prestige_levels as Record<string, number> | null) ?? {}
   const zonePrestige = prestigeLevels[fish.habitat] ?? 0
   // +10% catch XP per prestige, capped at P5 (+50%) to match the zone reward cap.
@@ -1218,6 +1227,7 @@ export async function reelIn(
     // Computed here rather than in a helper so it rides the SAME update
     // as the xp that earned it and cannot drift out of sync.
     fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false,
+    ...(result === 'perfect' ? { zone_perfects: zonePerfects } : {}),
     ...(jawCharge !== null ? { borrowed_jaw_xp: jawCharge } : {}),
     pending_reroll: wormholeAvail ? { fishId, qty: catchQty, habitat: fish.habitat } : null,
   }
