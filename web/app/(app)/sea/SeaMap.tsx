@@ -7037,8 +7037,12 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
           stands empty until you bring her back.
 
           The fishing boat is deliberately NOT drawn here while you are out.
-          Moored at ~0.71 of sailed size, the precedent the trawl fleet set:
-          reads as "tied up over there" without a second scale system. */}
+
+          FULL SAILED SIZE, not the trawl fleet's moored 0.71. She is the same
+          object you will be steering ten seconds after boarding, and the two
+          renders can be seen within moments of each other — a hull that grows
+          a third when you step onto it reads as a swap, not a boarding. The
+          smacks get away with moored-scale because you never sail one. */}
       {!shipOut && (
         <div style={{
           position: 'absolute', left: RAID_DOCK.x + DOCK_R * 0.75, top: RAID_DOCK.y + DOCK_R * 0.5,
@@ -7048,7 +7052,7 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={getShip(shipTier).seaImageUrl} alt="" draggable={false} decoding="async"
             width={640} height={640} style={{
-              width: 240, height: 'auto', display: 'block',
+              width: WARSHIP_W, height: 'auto', display: 'block',
               filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
             }} />
         </div>
