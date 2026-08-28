@@ -459,7 +459,10 @@ export default function TraderPanel({
           gain={gain}
           resolved={spoke}
           canChat={!rap.chattedToday}
-          canGift={!rap.giftedToday && hold.length > 0}
+          // NOT gated on carrying anything. An option that only appears
+          // when you happen to be holding fish is an option most captains
+          // never discover.
+          canGift={!rap.giftedToday}
           hold={hold}
           busy={busy}
           onChat={haveAWord}

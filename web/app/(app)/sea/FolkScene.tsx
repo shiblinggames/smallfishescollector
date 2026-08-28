@@ -38,7 +38,7 @@ export type SceneGain = {
   gained: number
   tier: FolkTier
   tierUp: string | null
-  how?: 'loved' | 'liked' | 'plain'
+  how?: 'loved' | 'plain'
 }
 
 /** Who is speaking. Their lines are typed; yours appear whole, because you
@@ -329,15 +329,17 @@ export default function FolkScene({
               <div style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 {hold.length === 0 ? (
                   <p className="font-karla" style={{
-                    fontSize: '0.8rem', color: 'rgba(226,238,246,0.5)', margin: '6px 0',
-                  }}>Your hold is empty. Catch them something.</p>
+                    fontSize: '0.8rem', color: 'rgba(226,238,246,0.5)', margin: '6px 0', lineHeight: 1.5,
+                  }}>
+                    Your hold is empty. Anything you catch is worth having,
+                    and the one fish they actually want is worth three times as much.
+                  </p>
                 ) : hold.map(f => (
                   <Choice key={f.id}
                     label={f.name}
                     hint={f.id === folk.favourite.id
-                      ? 'Their favourite. This is worth five.'
-                      : f.habitat === folk.zoneId ? `Out of their own water. ${f.qty} in the hold`
-                        : `${f.qty} in the hold`}
+                      ? 'Their favourite. Worth three.'
+                      : `${f.qty} in the hold`}
                     accent={accent}
                     warm={f.id === folk.favourite.id}
                     disabled={busy}
@@ -374,8 +376,15 @@ export default function FolkScene({
                     }} />
                 ))}
 
+                {/* OFFERED EVEN WITH AN EMPTY HOLD, and that is the point.
+                    It used to be hidden unless you were already carrying fish,
+                    so a captain who had never happened to pull alongside with a
+                    full hold had no way of learning that gifting exists at all.
+                    Tapping it with nothing aboard says so, which teaches the
+                    mechanic in the one place somebody would want it. */}
                 {canGift && (
                   <Choice label="I brought you something." accent={accent}
+                    hint={hold.length === 0 ? 'Your hold is empty' : undefined}
                     disabled={busy}
                     onClick={() => { vibrate(8); setPicking(true) }} />
                 )}

@@ -343,7 +343,7 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
             }}>{folk.favourite.name}</p>
             <p className="font-karla" style={{
               fontSize: '0.7rem', color: `${SEA},0.55)`, margin: '3px 0 0',
-            }}>Worth {GIFT_FAVOURITE_POINTS} where a word is worth one.</p>
+            }}>Worth {GIFT_FAVOURITE_POINTS}. Any other fish is worth one.</p>
           </>
         ) : (
           <p className="font-karla" style={{

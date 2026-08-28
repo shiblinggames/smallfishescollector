@@ -80,22 +80,25 @@ export function toNextTier(points: number): number | null {
 }
 
 export const CHAT_POINTS = 1
-export const GIFT_LIKED_POINTS = 2
 /**
  * THE ONE FISH THEY ACTUALLY WANT.
  *
- * Five points against a chat's one, so landing somebody's favourite is worth
- * most of a week of turning up. That is the intended shape: the fastest way to
- * know one of these nine is to work out what they like and go and catch it.
+ * Three points against a chat's one, so hunting somebody's favourite is worth
+ * three days of turning up. The fastest way to know one of these eight is still
+ * to work out what they like and go and catch it, but the gap is a nudge rather
+ * than a shortcut.
  *
- * It does not break the curve, because it cannot be done casually. It is one
- * species out of thirty in a band, you can only hand one over per day, and you
- * have to have it in the hold when you are standing in front of them. A captain
- * who does it every single day still needs twelve days to reach the top tier,
- * against eighteen for somebody handing over whatever they happen to be
- * carrying.
+ * THERE IS NO MIDDLE TIER. Anything that is not their favourite is worth one,
+ * full stop. A fish from their own water used to be worth two, which meant the
+ * picker had three grades to explain and a captain had to think about habitats
+ * to give somebody a present. One special fish and everything else is the same
+ * fact in a shape anybody can hold.
+ *
+ * At the ceiling this is a chat plus a favourite every single day, which is
+ * eighteen days to the top tier — the same figure the curve was tuned to before
+ * favourites existed.
  */
-export const GIFT_FAVOURITE_POINTS = 5
+export const GIFT_FAVOURITE_POINTS = 3
 
 export type Folk = {
   id: FolkId
@@ -188,7 +191,17 @@ export type Folk = {
    * edit, which is the trade and it is worth it here.
    */
   favourite: { id: number; name: string }
-  /** Their reaction, by how well the gift landed. */
+  /**
+   * Their reaction. TWO outcomes, because there are two grades of gift: the one
+   * fish they want, and everything else.
+   *
+   * `onLiked` and `onPlain` are a POOL for that second case rather than two
+   * grades of it. They were written when a fish from the regular's own water
+   * scored higher than a stranger's, and when that middle tier was removed the
+   * warmer line had nothing left to fire on. Keeping both as a pair costs
+   * nothing, keeps nine good lines in the game, and means handing somebody an
+   * ordinary fish twice does not read back the identical sentence.
+   */
   onLoved: string
   onLiked: string
   onPlain: string
@@ -939,10 +952,9 @@ export function nextLine(folk: Folk, tier: FolkTier, seen: readonly string[]): {
 /** How well a gift lands. Nothing is ever refused: a captain who sailed all
  *  the way out with a fish should never be told they picked the wrong one, so
  *  the worst case is still a point and a warm line. */
-export function giftWorth(folk: Folk, fishId: number, habitat: string | null): {
-  points: number; how: 'loved' | 'liked' | 'plain'
+export function giftWorth(folk: Folk, fishId: number): {
+  points: number; how: 'loved' | 'plain'
 } {
   if (fishId === folk.favourite.id) return { points: GIFT_FAVOURITE_POINTS, how: 'loved' }
-  if (habitat && habitat === folk.zoneId) return { points: GIFT_LIKED_POINTS, how: 'liked' }
   return { points: 1, how: 'plain' }
 }

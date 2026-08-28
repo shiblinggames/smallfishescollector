@@ -39,7 +39,7 @@ export type FolkTalk = {
 
 export type FolkGift = {
   line: string
-  how: 'loved' | 'liked' | 'plain'
+  how: 'loved' | 'plain'
   points: number
   tier: FolkTier
   tierUp: string | null
@@ -184,7 +184,7 @@ export async function giftToFolk(folkId: string, fishId: number): Promise<FolkGi
   if (!fish) return { error: 'No such fish.' }
 
   // ── CLAIM THE DAY ───────────────────────────────────────────────────
-  const worth = giftWorth(folk, fishId, (fish.habitat as string | null) ?? null)
+  const worth = giftWorth(folk, fishId)
   const points = (before.points ?? 0) + worth.points
   const wasTier = tierFor(before.points ?? 0)
   const tier = tierFor(points)
@@ -231,7 +231,11 @@ export async function giftToFolk(folkId: string, fishId: number): Promise<FolkGi
   }
 
   return {
-    line: worth.how === 'loved' ? folk.onLoved : worth.how === 'liked' ? folk.onLiked : folk.onPlain,
+    // The non-favourite pool, picked per gift so the same ordinary fish
+    // handed over twice does not produce the same sentence.
+    line: worth.how === 'loved'
+      ? folk.onLoved
+      : (Math.random() < 0.5 ? folk.onLiked : folk.onPlain),
     how: worth.how,
     points,
     tier,
