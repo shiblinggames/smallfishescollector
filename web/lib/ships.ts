@@ -85,6 +85,22 @@ export interface ShipDef {
    * other going west rather than snapping across when she turns.
    */
   seaBowTilt?: number
+  /**
+   * THE ART IS PAINTED BOW-RIGHT and must be mirrored to sail.
+   *
+   * The chart's convention is BOW-LEFT — not a preference, it is what the
+   * sailing loop does: `facing = vel.x < 0 ? 1 : -1` shows the UNMIRRORED
+   * sprite heading west, and the fishing boat, the oldest art in the game, is
+   * painted looking left. The Man-o-War happens to agree. The four middle
+   * hulls came back bow-right, and under that convention they sailed stern
+   * first on BOTH headings — confirmed on the water, not a theory.
+   *
+   * The flag, not a re-exported PNG: the art really is mirrored, the next
+   * sheet may arrive the same way, and `seaBow`/`seaBowTilt` are measured on
+   * the image AS DELIVERED — the runtime mirrors those two alongside the
+   * pixels, so the bench never has to know.
+   */
+  seaFlip?: boolean
 }
 
 // ── WHY THE LADDER STARTS AT TIER 2 ───────────────────────────────────────
@@ -115,6 +131,7 @@ export const SHIPS: ShipDef[] = [
     description: 'A single-masted workhorse of the seas. Yours from the off.',
     color: '#60a5fa', imageUrl: '/models/sloop_v2.png',
     seaImageUrl: '/ship-hero/sloop_v3.png',
+    seaFlip: true,
     seaBow: { x: 0.708, y: 0.655 },
     seaBowTilt: 45,
     seaBeam: 0.53, seaKeel: 0.683,
@@ -124,6 +141,7 @@ export const SHIPS: ShipDef[] = [
     description: 'Twin masts and a steady hull. Earning starts here.',
     color: '#4ade80', imageUrl: '/models/schooner_v2.png',
     seaImageUrl: '/ship-hero/schooner_v3.png',
+    seaFlip: true,
     seaBow: { x: 0.751, y: 0.694 },
     seaBowTilt: 45,
     seaBeam: 0.62, seaKeel: 0.728,
@@ -133,6 +151,7 @@ export const SHIPS: ShipDef[] = [
     description: 'Fast and capable. A privateer\'s best friend.',
     color: '#f0c040', imageUrl: '/models/brigantine_v2.png',
     seaImageUrl: '/ship-hero/brigantine_v3.png',
+    seaFlip: true,
     seaBow: { x: 0.725, y: 0.736 },
     seaBowTilt: 45,
     seaBeam: 0.72, seaKeel: 0.748,
@@ -142,6 +161,7 @@ export const SHIPS: ShipDef[] = [
     description: 'A grand vessel. The sea respects your presence.',
     color: '#a78bfa', imageUrl: '/models/galleon_v2.png',
     seaImageUrl: '/ship-hero/galleon_v3.png',
+    seaFlip: true,
     seaBow: { x: 0.776, y: 0.829 },
     seaBowTilt: 45,
     seaBeam: 0.87, seaKeel: 0.855,

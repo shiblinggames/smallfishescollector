@@ -1684,9 +1684,12 @@ export default function SeaMap({
       // BIGGER on a bigger ship, it should be slower and darker, and this is
       // the number that says how far along that ladder a hull sits.
       weight: Math.min(1, Math.max(0, (beam - 0.53) / (0.97 - 0.53))),
-      bowX: ((d.seaBow?.x ?? 0.8) - 0.5) * WARSHIP_W,
+      // seaBow and seaBowTilt are measured on the art AS DELIVERED; a hull
+      // rendered mirrored (seaFlip) mirrors them here, in the one place the
+      // conversion can live, so the bench keeps tuning raw images.
+      bowX: (((d.seaFlip ? 1 - (d.seaBow?.x ?? 0.8) : d.seaBow?.x ?? 0.8)) - 0.5) * WARSHIP_W,
       bowDown: ((d.seaBow?.y ?? keel) - 0.5) * WARSHIP_W,
-      bowTilt: ((d.seaBowTilt ?? 0) * Math.PI) / 180,
+      bowTilt: (((d.seaBowTilt ?? 0) * (d.seaFlip ? -1 : 1)) * Math.PI) / 180,
     }
   }, [onShip, shipTier])
   // Mirrored into a ref for the frame loop, which must not read a prop.
@@ -5718,7 +5721,13 @@ const Warship = memo(function Warship({ tier }: { tier: number }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={hull.seaImageUrl} alt="" draggable={false}
         width={640} height={640} decoding="async"
-        style={{ width: '100%', display: 'block' }} />
+        style={{
+          width: '100%', display: 'block',
+          // Into the chart's bow-left convention. Composes with the loop's own
+          // scaleX(facing) multiplicatively, so neither needs to know about
+          // the other.
+          ...(hull.seaFlip ? { transform: 'scaleX(-1)' } : null),
+        }} />
     </div>
   )
 })
@@ -7056,6 +7065,8 @@ const Docks = memo(function Docks({ shipOut, near, shipTier }: {
             width={640} height={640} style={{
               width: WARSHIP_W, height: 'auto', display: 'block',
               filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
+              // The berth shows her exactly as the helm will.
+              ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
             }} />
         </div>
       )}
