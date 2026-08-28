@@ -35,6 +35,7 @@ import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/l
 import { goAshore, type AshoreResult } from './isleActions'
 import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
+import { ART_COLLIDERS, PORT_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
 import { PORTAL, PORTAL_TIERS, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
@@ -374,8 +375,31 @@ const HULL = 55
 const MOOR = 420
 function moorR(p: Place): number { return p.r + MOOR }
 
+/**
+ * A drawn collider expanded into world circles, or the default single circle
+ * when nothing has been drawn for this art. See colliders.ts for the units;
+ * the vertical conversion divides by GROUND because a sprite's painted height
+ * maps onto MORE world-y than screen-y — the same arithmetic every standing
+ * label on this chart already does in the other direction.
+ */
+function artCircles(art: string, x: number, y: number, size: number, fallbackR: number) {
+  const c = ART_COLLIDERS[markKind(art)]
+  if (!c || c.circles.length === 0) return [{ x, y, r: fallbackR + HULL }]
+  return c.circles.map(k => ({
+    x: x + (k.ax - 0.5) * size,
+    y: y - (1 - k.ay) * c.aspect * size / GROUND,
+    r: k.ar * size + HULL,
+  }))
+}
+
 const OBSTACLES: { x: number; y: number; r: number }[] = [
-  ...PLACES.filter(p => p.kind === 'port').map(p => ({ x: p.x, y: p.y, r: p.r * SHORE + HULL })),
+  ...PLACES.filter(p => p.kind === 'port').flatMap(p => {
+    const c = PORT_COLLIDERS[p.id]
+    if (!c || c.circles.length === 0) return [{ x: p.x, y: p.y, r: p.r * SHORE + HULL }]
+    return c.circles.map(k => ({
+      x: p.x + k.ax * p.r, y: p.y + k.ay * p.r, r: k.ar * p.r + HULL,
+    }))
+  }),
   // EVERY landmark, not just the ones that remembered to say so. See the note
   // on `solid` in chart.ts: it is an opt-OUT now, because a rock you can sail
   // through is a bug nobody reports as one — they just stop believing the map.
@@ -386,7 +410,7 @@ const OBSTACLES: { x: number; y: number; r: number }[] = [
   // On the big stacks that is over a hundred pixels of boat inside stone. A
   // shade under the paint is right, because these are irregular silhouettes and
   // the circle is the largest thing that fits in one, but a THIRD under is not.
-  ...LANDMARKS.filter(m => m.solid !== false).map(m => ({ x: m.x, y: m.y, r: m.size * 0.42 + HULL })),
+  ...LANDMARKS.filter(m => m.solid !== false).flatMap(m => artCircles(m.art, m.x, m.y, m.size, m.size * 0.42)),
   // THE DISCOVERABLE ISLES. They were never here at all — twenty-seven rocks
   // with chests on them that a hull went straight through. `r` is their painted
   // radius (IsleRock draws at r * 2), so this stops the boat a hull clear of
@@ -395,8 +419,8 @@ const OBSTACLES: { x: number; y: number; r: number }[] = [
   // The two berths. You moor ALONGSIDE a dock; sailing through the middle of
   // one is the same bug as sailing through an island, and it is the structure
   // the whole swap happens at.
-  { x: RAID_DOCK.x, y: RAID_DOCK.y, r: RAID_DOCK.r + HULL },
-  { x: VOYAGE_DOCK.x, y: VOYAGE_DOCK.y, r: VOYAGE_DOCK.r + HULL },
+  ...artCircles('/sea/dock-raids.png', RAID_DOCK.x, RAID_DOCK.y, DOCK_R * 2.6, RAID_DOCK.r),
+  ...artCircles('/sea/dock-voyages.png', VOYAGE_DOCK.x, VOYAGE_DOCK.y, DOCK_R * 2.6, VOYAGE_DOCK.r),
 ]
 
 /**
