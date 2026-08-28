@@ -88,9 +88,17 @@ against what he turns out to be.
 | | |
 |---|---|
 | Tiers | 5, named not numbered: a stranger / a known face / good company / trusted / one of their own |
-| Points | chat +1, liked gift +2, loved gift +3. Thresholds 4 / 10 / 18 / 30 |
+| Points | chat +1, liked gift +2, loved gift +3. Thresholds **4 / 14 / 34 / 70** |
 | Gate | one chat and one gift per regular per day (UTC, same as dailies) |
 | Reward | **story only.** No rate bumps, no unlocks, no items. A tier buys new dialogue |
+
+**The curve steepens on purpose.** It was 4 / 10 / 18 / 30, which put the top tier eight
+days out for anyone gifting daily, and eight days is an errand rather than a friendship. The
+early rungs stayed where they were (tier one inside a day or two is what tells a captain the
+system pays at all); the far end stretched to 70, which is 18 days at the theoretical
+maximum and closer to two months at a real pace. **Dialogue pools are sized to match** the
+time spent in each tier: 3 / 3 / 4 / 5 / 5, deepest at the two long middle tiers and at the
+terminal one, because stretching a curve over a flat pool just buys repetition.
 
 **Nothing decays and nothing is lost.** The daily gate is a refill, not a demand: miss a
 week and you missed seven points you were never holding. There is deliberately no streak,
