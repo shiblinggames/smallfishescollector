@@ -3263,10 +3263,13 @@ export default function SeaMap({
         if (near !== dockRef.current) {
           dockRef.current = near
           setAtDock(near)
-          // ASKED ON ARRIVAL, once. The ring is what makes this bearable: it
-          // fires on the way IN and not again until you have left and come
-          // back, so mooring is a question and loitering is not.
-          if (near === 'raid') setSwapAsk(true)
+          // NO MODAL ON ARRIVAL. It used to open itself the moment you came
+          // alongside, and a dialog you did not ask for is an interruption
+          // wherever it appears — sailing past the dock on the way to the
+          // sortie meant closing a question you had not raised. The action
+          // pill and the warmed helm already announce the berth; pressing
+          // them is what asks. Same manners as every other place on the
+          // chart: nothing opens because you drifted near it.
         }
       } else if (dockRef.current) {
         dockRef.current = null
