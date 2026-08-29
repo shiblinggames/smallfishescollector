@@ -120,6 +120,15 @@ export default function SkiffBench() {
         app = a
         el.appendChild(a.canvas)
 
+        // Resolved INSIDE the effect, off the primitive selections. Doing it
+        // outside and depending on the results is what tore the renderer down
+        // on every pose change: getCharacterSprites returns a fresh object
+        // literal every render, so the dependency never compared equal.
+        const boat = BOATS.find(b => b.id === boatId) ?? null
+        const hat = HATS.find(h => h.id === hatId) ?? null
+        const pet = PETS.find(p => p.id === petId) ?? null
+        const char = getCharacterSprites(colour)
+
         const skiff = await makeSkiff(PIXI, {
           character: f => char[f],
           hat: hat ? {
@@ -186,7 +195,12 @@ export default function SkiffBench() {
       app?.destroy(true, { children: true })
       app = null
     }
-  }, [colour, boatId, hatId, petId, rod, hook, reel, char, boat, hat, pet, glow])
+    // PRIMITIVES ONLY, and no `frame`. Each of these really does mean a
+    // different scene; the pose does not — it is a texture swap the ticker
+    // applies to the skiff that is already standing there. An object in this
+    // list rebuilds the whole renderer on every render, which is what the
+    // flicker between poses was.
+  }, [colour, boatId, hatId, petId, rod, hook, reel, glow])
 
   const img = (src: string, p: Placement, className?: string) => (
     // eslint-disable-next-line @next/next/no-img-element
