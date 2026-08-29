@@ -632,6 +632,12 @@ export type RodAura = {
    *  than in front of it. */
   over: Container
   update(dt: number): void
+  /** Follow the rod into a new pose. Rest, wait and cast are three different
+   *  PICTURES at three different angles and sizes, so the silhouette to blur
+   *  and the outline to throw sparks off both change — an aura that does not
+   *  follow ends up glowing at where the rod used to be. Cheap on a pose it has
+   *  seen before: the bakes and the point cloud are cached per image. */
+  setPose(image: HTMLImageElement, key: string): void
   /** The Locked-In Rod's live streak stage, 0..3. Ignored by every other rod. */
   setStage(stage: number): void
   /** 0 stops emission and lets the tail burn out; 1 is full. The chart turns
@@ -670,13 +676,11 @@ export function makeRodAura(
   const under: Container = new PIXI.Container()
   const over: Container = new PIXI.Container()
 
-  // ── THE GLOW ──────────────────────────────────────────────────────────────
+  // ── HOW WIDE EACH SHADOW EVER GETS ────────────────────────────────────────
   //
-  // Baked at the rod's ON-SCREEN size, so the CSS radii mean what they say.
-  const texW = rod.texture.width, texH = rod.texture.height
-  const scr = Math.abs(rod.scale.x)
-  const screenW = texW * scr, screenH = texH * Math.abs(rod.scale.y)
-
+  // Measured across the WHOLE family rather than the current stage, because the
+  // Locked-In Rod can reach stage 3 mid-cast and that is not the moment to
+  // start blurring canvases.
   const family = glowType === 'lockedin' ? LOCKED_IN_GLOWS : [GLOWS[glowType]]
   const count = Math.max(...family.map(f => Math.max(...f.stops.map(s => s.layers.length))))
   const pairs: { tight: Sprite; wide: Sprite; lo: number; hi: number }[] = []
@@ -689,53 +693,80 @@ export function makeRodAura(
       lo = Math.min(lo, sh.r); hi = Math.max(hi, sh.r)
     }
     if (!Number.isFinite(lo)) continue
-    // Two bakes and a crossfade — the tightest and the widest this shadow ever
-    // gets. One bake would leave a rod that breathes 4px to 32px either always
-    // fat or always thin; two costs a sprite and gets the swell back.
-    const tt = bakeGlow(PIXI, image, key, screenW, screenH, lo)
-    const wt = bakeGlow(PIXI, image, key, screenW, screenH, hi)
-    if (!tt || !wt) continue
-    const mk = (t: Texture, r: number) => {
-      const s: Sprite = new PIXI.Sprite(t)
-      const pad = padFor(r)
-      // The rod's own anchor, re-expressed in the padded texture. The rod is
-      // anchored bottom-right, and a glow anchored anywhere else slides off the
-      // tip as the rod turns.
-      s.anchor.set((pad + rod.anchor.x * screenW) / (screenW + pad * 2),
-                   (pad + rod.anchor.y * screenH) / (screenH + pad * 2))
-      // Scale 1: the bake is ALREADY in screen pixels. This is the line that
-      // was quietly shrinking every glow.
-      s.position.set(rod.x, rod.y)
-      s.rotation = rod.rotation
+    // Two sprites and a crossfade — the tightest and the widest this shadow
+    // ever gets. One bake would leave a rod that breathes 4px to 32px either
+    // always fat or always thin; two costs a sprite and gets the swell back.
+    // They start empty and are filled by the pose.
+    const tight: Sprite = new PIXI.Sprite()
+    const wide: Sprite = new PIXI.Sprite()
+    for (const s of [tight, wide]) {
       // Additive, because this is LIGHT: where the core and the halo overlap
       // they get brighter, which is what makes a lit thing look lit.
       s.blendMode = 'add'
       s.alpha = 0
-      return s
+      s.visible = false
+      under.addChild(s)
     }
-    const tight = mk(tt, lo), wide = mk(wt, hi)
     pairs.push({ tight, wide, lo, hi })
-    under.addChild(tight, wide)
   }
 
   const shadows: Shadow[] = Array.from({ length: count }, () => ({ r: 1, c: 0xffffff, a: 0 }))
 
-  // ── THE SHAPE, IN THE SKIFF'S SPACE ───────────────────────────────────────
-  //
-  // Transformed once. The rod does not move relative to the captain, so doing
-  // this per particle would be the same arithmetic sixty times a second for an
-  // answer that never changes.
-  const shape = shapeOf(image, key)
-  const cos = Math.cos(rod.rotation), sin = Math.sin(rod.rotation)
-  const ax = rod.anchor.x * texW, ay = rod.anchor.y * texH
-  const toLocal = (px: number, py: number) => {
-    const dx = (px - ax) * rod.scale.x, dy = (py - ay) * rod.scale.y
-    return { x: rod.x + dx * cos - dy * sin, y: rod.y + dx * sin + dy * cos }
-  }
-
   let edgePts: Float32Array = new Float32Array(0)   // x, y, nx, ny
   let fillPts: Float32Array = new Float32Array(0)   // x, y
-  if (shape) {
+
+  /**
+   * Point the whole aura at one pose of the rod.
+   *
+   * Rest, wait and cast are three different pictures at three different angles
+   * and sizes, so BOTH halves have to be redone: a different silhouette to
+   * blur, and a different outline to throw sparks off. Everything expensive in
+   * here is cached by image, so the second time through a pose is arithmetic.
+   *
+   * Reads the rod sprite's CURRENT state, so the caller's only obligation is to
+   * place the rod before calling.
+   */
+  function applyPose(img: HTMLImageElement, k: string) {
+    const texW = rod.texture.width, texH = rod.texture.height
+    // Baked at the rod's ON-SCREEN size, so the CSS radii mean what they say.
+    const screenW = texW * Math.abs(rod.scale.x)
+    const screenH = texH * Math.abs(rod.scale.y)
+
+    for (const p of pairs) {
+      const set = (s: Sprite, t: Texture | null, r: number) => {
+        if (!t) { s.visible = false; return }
+        s.visible = true
+        s.texture = t
+        const pad = padFor(r)
+        // The rod's own anchor, re-expressed in the padded texture. The rod is
+        // anchored bottom-right, and a glow anchored anywhere else slides off
+        // the tip as the rod turns — which it does, hard, on the cast.
+        s.anchor.set((pad + rod.anchor.x * screenW) / (screenW + pad * 2),
+                     (pad + rod.anchor.y * screenH) / (screenH + pad * 2))
+        // Scale 1: the bake is ALREADY in screen pixels. This is the line that
+        // was quietly shrinking every glow.
+        s.scale.set(1, 1)
+        s.position.set(rod.x, rod.y)
+        s.rotation = rod.rotation
+      }
+      set(p.tight, bakeGlow(PIXI, img, k, screenW, screenH, p.lo), p.lo)
+      set(p.wide, bakeGlow(PIXI, img, k, screenW, screenH, p.hi), p.hi)
+    }
+
+    // ── THE SHAPE, IN THE SKIFF'S SPACE ─────────────────────────────────────
+    //
+    // Transformed once per pose. The rod does not move relative to the captain
+    // between poses, so doing this per particle would be the same arithmetic
+    // sixty times a second for an answer that does not change.
+    const shape = shapeOf(img, k)
+    if (!shape) { edgePts = new Float32Array(0); fillPts = new Float32Array(0); return }
+    const cos = Math.cos(rod.rotation), sin = Math.sin(rod.rotation)
+    const ax = rod.anchor.x * texW, ay = rod.anchor.y * texH
+    const toLocal = (px: number, py: number) => {
+      const dx = (px - ax) * rod.scale.x, dy = (py - ay) * rod.scale.y
+      return { x: rod.x + dx * cos - dy * sin, y: rod.y + dx * sin + dy * cos }
+    }
+
     edgePts = new Float32Array(shape.edge.length)
     for (let i = 0; i < shape.edge.length; i += 4) {
       const p = toLocal(shape.edge[i], shape.edge[i + 1])
@@ -751,6 +782,8 @@ export function makeRodAura(
       fillPts[i] = p.x; fillPts[i + 1] = p.y
     }
   }
+
+  applyPose(image, key)
 
   // ── THE PARTICLES ─────────────────────────────────────────────────────────
   const layer: ParticleContainer = new PIXI.ParticleContainer({
@@ -972,6 +1005,14 @@ export function makeRodAura(
           drawBolts(a)
         }
       }
+    },
+
+    setPose(img, k) {
+      applyPose(img, k)
+      // Bolts are attached to points on the OLD outline, so they would hang in
+      // the air pointing at a rod that has moved. A strike lasts a tenth of a
+      // second; dropping them is what a cut looks like anyway.
+      if (bolts.length) { bolts.length = 0; arcG?.clear() }
     },
 
     setStage(stage) {
