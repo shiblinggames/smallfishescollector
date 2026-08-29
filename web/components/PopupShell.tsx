@@ -96,6 +96,13 @@ export default function PopupShell({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
             {...(anyKey ? { 'data-any-key': true } : {})}
+            // THE SEA IS NOT UNDER THIS. The chart steers on pointerdown and
+            // captures the pointer for the rest of the gesture, so a modal
+            // mounted inside it did two wrong things at once: the press sailed
+            // the boat, and the capture meant the click never arrived here at
+            // all. One attribute, on the shell every modal is built from, so
+            // this is answered once rather than per dialogue.
+            data-no-steer
             onClick={e => { if (e.target === e.currentTarget) onClose() }}
             style={{
               position: 'fixed', inset: 0, zIndex,

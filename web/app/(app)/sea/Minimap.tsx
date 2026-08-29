@@ -404,6 +404,10 @@ export default function Minimap({
           transition={{ duration: 0.16 }}
           onClick={onClose}
           onPointerDown={e => e.stopPropagation()}
+          // The chart under this steers on pointerdown and CAPTURES the pointer
+          // for the rest of the gesture, so an overlay without this both sails
+          // the boat and never receives its own click. See PopupShell.
+          data-no-steer
           style={{
             position: 'fixed', inset: 0, zIndex: 9200,
             background: 'rgba(3,8,14,0.86)', backdropFilter: 'blur(3px)',

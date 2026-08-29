@@ -223,6 +223,11 @@ export default function FinnTalk({
             key="finn-dim"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
+            // See PopupShell: the chart steers on pointerdown and captures the
+            // pointer, so without this a tap to go on both sailed the boat and
+            // failed to advance the line. This one is its own overlay rather
+            // than a PopupShell, so it needs saying again here.
+            data-no-steer
             onClick={() => { if (typing || more) tapBody(); else onClose() }}
             style={{
               position: 'fixed', inset: 0, zIndex: 9300,

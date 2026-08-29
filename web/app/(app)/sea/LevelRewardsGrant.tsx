@@ -41,6 +41,10 @@ export default function LevelRewardsGrant({ granted, onDone }: {
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onDone}
+        // The chart under this steers on pointerdown and CAPTURES the pointer
+        // for the rest of the gesture, so an overlay without this both sails
+        // the boat and never receives its own click. See PopupShell.
+        data-no-steer
         style={{
           position: 'fixed', inset: 0, zIndex: 90,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
