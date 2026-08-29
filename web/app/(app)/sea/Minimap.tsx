@@ -454,7 +454,7 @@ export default function Minimap({
             {/* ── THE KEY ────────────────────────────────────────────────
                 GROUPED, because ten flat rows of almost-identical dots is a
                 puzzle about the chart rather than a key to it. Places first
-                (gold, angular), then people (round, and each its own colour),
+                (gold, angular), then faces (round, and each its own colour),
                 then you. Every mark is drawn at the canvas's own radii through
                 the same shape helpers, so the swatch cannot drift from the
                 thing it is a swatch for. */}
@@ -467,8 +467,10 @@ export default function Minimap({
                 <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
               </KeyGroup>
 
-              <KeyGroup title="People">
-                <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn, the rival" />
+              {/* NOT "People". Nothing on this sea is one, and the key is no
+                  place to be loose about it. */}
+              <KeyGroup title="Faces">
+                <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn" />
                 <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
                 <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
                 <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />

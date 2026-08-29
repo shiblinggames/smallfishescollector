@@ -501,15 +501,19 @@ export const YOON = {
  * salvager anchored nowhere near a wreck is a biography nobody can read.
  */
 export const SOCIALS: {
+  /** WHAT THE CHART CALLS THEM, which is what you call them: the short name
+   *  from their `Folk` entry, never the full one. This file has no imports on
+   *  purpose, so the two have to be kept in step by hand - `lib/seaFolk.ts` is
+   *  the side that decides, and its `short` field says why. */
   folkId: string; zoneId: string; name: string; line: string; x: number; y: number
 }[] = [
-  { folkId: 'brill', zoneId: 'shallows', name: 'Tam Brill',
+  { folkId: 'brill', zoneId: 'shallows', name: 'Tam',
     line: "You are a real captain. Sorry. That was out loud.",
     x: -1900, y: 2400 },
-  { folkId: 'turbot', zoneId: 'open_waters', name: 'Cass Turbot',
+  { folkId: 'turbot', zoneId: 'open_waters', name: 'Cass',
     line: "Do not anchor here. I am working underneath you.",
     x: 2073, y: 4476 },
-  { folkId: 'ream', zoneId: 'deep', name: 'Rue Bream',
+  { folkId: 'ream', zoneId: 'deep', name: 'Rue',
     line: "I carry word between the boats out here. No, there is no charge. That surprises everyone.",
     x: 3900, y: 8300 },
 
@@ -519,19 +523,19 @@ export const SOCIALS: {
   // conversation has a price on it. The trade moved to five plain traders in
   // RESIDENTS below; these five kept their moorings, their voices and every
   // line they had.
-  { folkId: 'meg', zoneId: 'shallows', name: 'Meg Corrin',
+  { folkId: 'meg', zoneId: 'shallows', name: 'Meg',
     line: "I kept the scale on this water for thirty years. Sit down anyway.",
     x: 1416, y: 2181 },
-  { folkId: 'pell', zoneId: 'open_waters', name: 'Bent Pell',
+  { folkId: 'pell', zoneId: 'open_waters', name: 'Pell',
     line: "Fish don't keep and neither does my patience. Say something.",
     x: 559, y: 5321 },
-  { folkId: 'marlow', zoneId: 'deep', name: 'Old Marlow',
+  { folkId: 'marlow', zoneId: 'deep', name: 'Marlow',
     line: "Long way back to the dock from here. I've made a living out of exactly that.",
     x: -1545, y: 8765 },
-  { folkId: 'fitch', zoneId: 'abyss', name: 'Quiet Fitch',
+  { folkId: 'fitch', zoneId: 'abyss', name: 'Fitch',
     line: "Not many come this deep. Sit.",
     x: -5896, y: 12089 },
-  { folkId: 'nance', zoneId: 'ancient_deep', name: 'Grey Nance',
+  { folkId: 'nance', zoneId: 'ancient_deep', name: 'Nance',
     line: "You went down there and came back up. That is the part worth talking about.",
     x: -14343, y: 12914 },
 ]

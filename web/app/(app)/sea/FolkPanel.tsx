@@ -306,7 +306,7 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
   return (
     <>
       <BackTo onBack={onBack} />
-      <Head face={folk.face} accent={folk.accent} role={folk.role} name={folk.name} water={water} />
+      <Head face={folk.face} accent={folk.accent} role={folk.role} name={folk.short} water={water} />
 
       <p className="font-karla" style={{
         fontSize: '0.78rem', color: `${SEA},0.75)`, lineHeight: 1.5, margin: '0.8rem 0 0',
@@ -744,7 +744,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                         }}>
                           {met.map(({ folk, rap: r }) => (
                             <PersonCard key={folk.id}
-                              face={folk.face} accent={folk.accent} name={folk.name}
+                              face={folk.face} accent={folk.accent} name={folk.short}
                               sub={TIER_NAME[r.tier]}
                               pct={Math.round((Math.min(r.points, TIER_AT[4]) / TIER_AT[4]) * 100)}
                               dot={!r.chattedToday}

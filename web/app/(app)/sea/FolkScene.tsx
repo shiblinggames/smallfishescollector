@@ -335,7 +335,7 @@ export default function FolkScene({
                 }}>{folk.role}</p>
                 <p className="font-cinzel font-700" style={{
                   fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1,
-                }}>{folk.name}</p>
+                }}>{folk.short}</p>
               </div>
               <button type="button" onClick={onClose} aria-label="Close"
                 style={{

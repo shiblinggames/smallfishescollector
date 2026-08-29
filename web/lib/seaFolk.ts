@@ -102,7 +102,25 @@ export const GIFT_FAVOURITE_POINTS = 3
 
 export type Folk = {
   id: FolkId
+  /** Their whole name. Kept, but it is almost never what gets printed - see
+   *  `short`. */
   name: string
+  /**
+   * WHAT YOU CALL THEM ONCE YOU KNOW THEM, and what nearly every surface
+   * shows.
+   *
+   * A captain who has spent a month getting to know somebody does not call
+   * them "Quiet Fitch", and a roster of full names reads like a crew manifest
+   * rather than a list of friends. The buyers and the other captains out here
+   * keep their full names on purpose: that is the difference between somebody
+   * you deal with and somebody you know.
+   *
+   * NOT a `split(' ')[0]`, which is what the hail button used to do. Half of
+   * this cast wear their epithet in front ("Bent Pell", "Old Marlow", "Grey
+   * Nance"), so the first word is an adjective and splitting on it greets a
+   * friend as "Old". Written down per person instead.
+   */
+  short: string
   /** The band they keep to. Drives where the panel files them and what a
    *  captain must have levelled into to reach them. */
   zoneId: string
@@ -224,7 +242,7 @@ export type Folk = {
 
 export const FOLK: Folk[] = [
   {
-    id: 'meg', name: 'Meg Corrin', zoneId: 'shallows', buys: false,
+    id: 'meg', name: 'Meg Corrin', short: 'Meg', zoneId: 'shallows', buys: false,
     greeting: "Mind the rail. It is wet, and it is always wet.",
     face: { characterColor: 'sand', hat: 'brown', bg: '#1a1408', ring: '#c8a060', mirrored: true },
     role: 'Shallows buyer', accent: '#d8b070',
@@ -275,7 +293,7 @@ export const FOLK: Folk[] = [
     onPlain: "For me? Go on then. I will find a use for it.",
   },
   {
-    id: 'pell', name: 'Bent Pell', zoneId: 'open_waters', buys: false,
+    id: 'pell', name: 'Bent Pell', short: 'Pell', zoneId: 'open_waters', buys: false,
     greeting: "What.",
     face: { characterColor: 'blue', hat: 'gray', bg: '#0c1620', ring: '#7fa8c8', mirrored: true },
     role: 'Open Waters buyer', accent: '#7fa8c8',
@@ -326,7 +344,7 @@ export const FOLK: Folk[] = [
     onPlain: "Right. Yes. Thank you. Now go and catch something.",
   },
   {
-    id: 'marlow', name: 'Old Marlow', zoneId: 'deep', buys: false,
+    id: 'marlow', name: 'Old Marlow', short: 'Marlow', zoneId: 'deep', buys: false,
     greeting: "You found me. Everybody does, eventually.",
     face: { characterColor: 'gray', hat: 'black', bg: '#101418', ring: '#a8b4c0', mirrored: true },
     role: 'Deep water buyer', accent: '#b0bcc8',
@@ -377,7 +395,7 @@ export const FOLK: Folk[] = [
     onPlain: "You did not have to. I will remember that you did.",
   },
   {
-    id: 'fitch', name: 'Quiet Fitch', zoneId: 'abyss', buys: false,
+    id: 'fitch', name: 'Quiet Fitch', short: 'Fitch', zoneId: 'abyss', buys: false,
     greeting: "Mm.",
     face: { characterColor: 'storm', hat: 'midnight', bg: '#080c14', ring: '#6878a0', mirrored: true },
     role: 'Abyss buyer', accent: '#8090b8',
@@ -428,7 +446,7 @@ export const FOLK: Folk[] = [
     onPlain: "That was kind. I do not have much to say to kind.",
   },
   {
-    id: 'nance', name: 'Grey Nance', zoneId: 'ancient_deep', buys: false,
+    id: 'nance', name: 'Grey Nance', short: 'Nance', zoneId: 'ancient_deep', buys: false,
     greeting: "You are a long way out.",
     face: { characterColor: 'ice', hat: 'offwhite', bg: '#0a1018', ring: '#9ec4d8', mirrored: true },
     role: 'Ancient Deep buyer', accent: '#9ec4d8',
@@ -479,7 +497,7 @@ export const FOLK: Folk[] = [
     onPlain: "Thank you. It is a long way to carry a gift.",
   },
   {
-    id: 'yoon', name: 'Yoon', zoneId: 'ancient_deep', buys: false,
+    id: 'yoon', name: 'Yoon', short: 'Yoon', zoneId: 'ancient_deep', buys: false,
     greeting: "Ayo. Sheeeeesh, look who it is.",
     face: { characterColor: 'golden', hat: 'black', bg: '#141008', ring: '#f0c040', mirrored: true },
     role: 'Rodmaker', accent: '#f0c040',
@@ -558,7 +576,7 @@ export const FOLK: Folk[] = [
   // Deep only Marlow working his angle.
 
   {
-    id: 'brill', name: 'Tam Brill', zoneId: 'shallows', buys: false,
+    id: 'brill', name: 'Tam Brill', short: 'Tam', zoneId: 'shallows', buys: false,
     greeting: "Oh! Hello. Hi.",
     face: { characterColor: 'default', hat: 'green', bg: '#0e1810', ring: '#8cc890', mirrored: true },
     role: 'Two seasons out', accent: '#8cc890',
@@ -609,7 +627,7 @@ export const FOLK: Folk[] = [
     onPlain: "Thank you! Genuinely. Nobody gives me anything out here.",
   },
   {
-    id: 'turbot', name: 'Cass Turbot', zoneId: 'open_waters', buys: false,
+    id: 'turbot', name: 'Cass Turbot', short: 'Cass', zoneId: 'open_waters', buys: false,
     greeting: "Mind where you drop that anchor.",
     face: { characterColor: 'forest', hat: 'olive', bg: '#0c1410', ring: '#88b09c', mirrored: true },
     role: 'Wreck diver', accent: '#88b09c',
@@ -660,7 +678,7 @@ export const FOLK: Folk[] = [
     onPlain: "That is decent of you. I eat what I find, mostly, and what I find is usually rope.",
   },
   {
-    id: 'ream', name: 'Rue Bream', zoneId: 'deep', buys: false,
+    id: 'ream', name: 'Rue Bream', short: 'Rue', zoneId: 'deep', buys: false,
     greeting: "News, or are you just passing?",
     face: { characterColor: 'lavender', hat: 'purple', bg: '#12101c', ring: '#b0a0d0', mirrored: true },
     role: 'Carries word', accent: '#b0a0d0',

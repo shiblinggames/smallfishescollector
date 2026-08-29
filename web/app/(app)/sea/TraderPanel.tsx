@@ -434,7 +434,7 @@ export default function TraderPanel({
                   ? folk.accent + '73' : 'rgba(255,255,255,0.16)'}`,
                 cursor: 'pointer',
               }}>
-              Speak to {folk.name.split(' ')[0]}
+              Speak to {folk.short}
             </button>
           )}
           {/* flex: 1 ALWAYS. It was 0.8 when it stood alone, which on a phone

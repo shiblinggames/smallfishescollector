@@ -205,9 +205,16 @@ const NAMES_FIRST = [
   'Old', 'Salt', 'Bent', 'Wry', 'Quiet', 'Lucky', 'Patched', 'Barnacle',
   'Half', 'Crooked', 'Squint', 'Grey', 'Tallow', 'Hollow',
 ]
+// NO SURNAME HERE MAY BE A REGULAR'S SHORT NAME. The nine you can befriend now
+// go by one name each (see `short` in lib/seaFolk.ts), and six of those - Meg,
+// Corrin, Pell, Marlow, Fitch, Nance - were drawn from this very list, because
+// their full names were built out of it. Leaving them in meant a randomly
+// rolled buyer could sail up calling herself Grey Nance while your friend Nance
+// was moored two waters south. Replaced rather than deleted, so the pool keeps
+// its size and its register.
 const NAMES_LAST = [
-  'Meg', 'Corrin', 'Dunnage', 'Pell', 'Marlow', 'Bilge', 'Fitch', 'Ketch',
-  'Sorrel', 'Rud', 'Nance', 'Thole', 'Garrick', 'Wick',
+  'Dunnage', 'Bilge', 'Ketch', 'Crayle', 'Murrow', 'Skerry', 'Fennick',
+  'Sorrel', 'Rud', 'Hessel', 'Thole', 'Garrick', 'Wick', 'Drassel',
 ]
 
 /** Kinds that are hashed into the sea by the daily grid. Residents live on the
