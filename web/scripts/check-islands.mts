@@ -12,20 +12,22 @@
  * stands on is inside the grass, corners included.
  */
 import { PLACES } from '../app/(app)/sea/chart'
-import { coastline, grassAt, outBy, GRASS, BUILDABLE } from '../lib/islandShape'
+import { coastline, grassAt, outBy, GRASS, BUILDABLE, SHORE } from '../lib/islandShape'
 import { HOTSPOTS } from '../lib/homestead'
 
 /* The coastline and the grass both come from lib/islandShape now — the same
    module PlaceIsland draws from, so this cannot drift from what is on screen
    the way it did before. */
 
-type Item = { label: string; x: number; y: number; scale: number }
+type Item = { label: string; x: number; y: number; scale: number; toShore?: boolean }
 
-/** How far outside the BUILDABLE band a point is. outBy measures against the
- *  green; the scrub is one band further out, so it is the same number scaled. */
+/** How far outside its own band a point is. outBy measures against the green;
+ *  the scrub and the shore are further out, so each is the same number scaled.
+ *  `toShore` is the town allowance — see SHORE in lib/islandShape. */
 const K = BUILDABLE / GRASS
-const outByLand = (rs: number[], x: number, y: number) =>
-  Math.hypot(x - 50, y - 50) - grassAt(rs, Math.atan2(y - 50, x - 50)) * K
+const K_SHORE = SHORE / GRASS
+const outByLand = (rs: number[], x: number, y: number, toShore = false) =>
+  Math.hypot(x - 50, y - 50) - grassAt(rs, Math.atan2(y - 50, x - 50)) * (toShore ? K_SHORE : K)
 
 function check(id: string, name: string, items: Item[]) {
   const rs = coastline(id)
@@ -41,13 +43,13 @@ function check(id: string, name: string, items: Item[]) {
       ['right', it.x + hw, it.y],
     ]
     const worst = pts.reduce((w, [tag, px, py]) => {
-      const d = outByLand(rs, px, py)
+      const d = outByLand(rs, px, py, it.toShore)
       return d > w.d ? { tag, d } : w
     }, { tag: '', d: -Infinity })
     const ok = worst.d < -1.5           // 1.5% of margin, so nothing sits on the surf
     if (!ok) bad++
     console.log(`    ${ok ? 'ok  ' : 'OFF '} ${it.label.padEnd(20)} at ${String(it.x).padStart(3)},${String(it.y).padStart(3)} w${(hw * 2).toFixed(0).padStart(3)}` +
-      `   worst ${worst.tag.padEnd(6)} ${worst.d > 0 ? '+' : ''}${worst.d.toFixed(1)}%`)
+      `   worst ${worst.tag.padEnd(6)} ${worst.d > 0 ? '+' : ''}${worst.d.toFixed(1)}%${it.toShore ? '   (to shore)' : ''}`)
   }
   return bad
 }
@@ -65,7 +67,7 @@ for (const p of PLACES) {
   } else {
     bad += check(p.id, p.name, (p.buildings ?? []).map(b => ({
       label: b.art.split('/').pop()!.replace('.png', ''),
-      x: b.x, y: b.y, scale: b.scale,
+      x: b.x, y: b.y, scale: b.scale, toShore: b.toShore,
     })))
   }
 }

@@ -57,6 +57,22 @@ export const GRASS = 0.70 * TOP
  */
 export const BUILDABLE = (1 - 0.095 * 2) * TOP
 
+/**
+ * HOW FAR A TOWN MAY REACH, which is further, and only a town gets it.
+ *
+ * BUILDABLE is the scrub band and it is deliberately cautious, because it is
+ * sizing ONE cottage: a lean-to whose corner hangs over the beach looks like a
+ * mistake. A port does not work that way. A town is built out to the water it
+ * exists for, and its outermost roofs standing on the sand is the whole look of
+ * a working harbour — the Mainland painted at scrub width came out as a village
+ * marooned in the middle of a field.
+ *
+ * So this is the top face itself: the full painted land, cliff edge excluded.
+ * A base corner here is on the beach, never in the sea. Opt in per building
+ * with `toShore` in chart.ts, which the Mainland town is the only user of.
+ */
+export const SHORE = TOP
+
 /** How many points the outline is drawn with. 160, because at 26 the straight
  *  segments were visible on the big islands and read as a polygon. */
 const N = 160

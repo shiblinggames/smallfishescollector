@@ -77,7 +77,13 @@ export type Place = {
    * percentages of the island box so a building keeps its spot whatever radius
    * the port is given, and `scale` is a fraction of the island's diameter.
    */
-  buildings?: { art: string; x: number; y: number; scale: number }[]
+  buildings?: {
+    art: string; x: number; y: number; scale: number
+    /** Measured against the shore rather than the scrub band. For a TOWN, whose
+     *  outermost buildings are supposed to stand on the sand — see SHORE in
+     *  lib/islandShape. A single building should never set this. */
+    toShore?: boolean
+  }[]
   /**
    * WHERE DOCKING HAPPENS, when the default is wrong.
    *
@@ -177,11 +183,27 @@ export const PLACES: Place[] = [
      * of the land where the shore is furthest away.
      */
     buildings: [
-      // x 47, not 50. The town is wider than it is tall and this island's
-      // coastline runs shallow on the right, so it is nudged a hair to port to
-      // keep its outermost roofs over land. check-islands is the judge: it
-      // tests both bottom corners of the base, and this clears by 3.9%.
-      { art: '/sea/mainland-town.png', x: 47, y: 55, scale: 0.38 },
+      // AS BIG AS THE SHORE ALLOWS, WHICH MEANS THE BASE SITS HIGH.
+      //
+      // Only the FEET have to be on the island. This is a 2.5D chart: the land
+      // is an ellipse squashed toward the camera, and a roof standing behind
+      // the shoreline is simply further away, so the town is meant to overhang
+      // the island's top edge and does. What cannot overhang is the bottom row,
+      // which is painted full width right to the edge of the sprite, so both
+      // base corners are the real constraint.
+      //
+      // That makes the base want to sit where the island is WIDEST rather than
+      // politely inside it, and on this coastline that is just above the middle
+      // and a touch to port. scripts/fit-town.mts binary-searches the largest
+      // scale that stands at every base position.
+      //
+      // AND IT REACHES THE SHORE, not the scrub band. toShore is the one
+      // allowance in the check and this is its only user: BUILDABLE is sized so
+      // a single cottage never hangs over the sand, which is right for a
+      // cottage and wrong for a port. A town is built out to the water it
+      // exists for. At scrub width this came out as a village marooned in the
+      // middle of a green field.
+      { art: '/sea/mainland-town.png', x: 47, y: 46, scale: 0.62, toShore: true },
     ],
   },
   {
