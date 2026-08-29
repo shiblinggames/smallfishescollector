@@ -35,10 +35,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { PLACES } from '../chart'
-import { coastline } from '@/lib/islandShape'
-
-/** The chart's own squash. */
-const GROUND = 0.58
+import { GROUND, bakeIsland, requestGround } from '../islandArt'
 
 type Stats = { renderer: string; objects: number; ms: number; town: string }
 
@@ -81,30 +78,48 @@ export default function PixiBench() {
         world.scale.set(1, GROUND)
         a.stage.addChild(world)
 
-        // ── THE ISLANDS, from the shared coastline ─────────────────────
+        // ── THE ISLANDS, BAKED BY THE CHART'S OWN PAINTER ─────────────
+        //
+        // The first cut drew flat concentric polygons here and they looked it:
+        // no cliff, no lift, no crown, no rim light. Reproducing all that in
+        // Pixi would have proved nothing except that it can be reproduced.
+        //
+        // So it calls `bakeIsland` instead — the same function the DOM chart
+        // calls, now that it lives in ../islandArt. It hands back a finished
+        // HTMLCanvasElement, and a canvas is a texture source, so every island
+        // arrives here looking EXACTLY as it does on the real chart. That is
+        // the actual finding of this bench: the island art does not need
+        // porting at all, only re-hosting.
+        const islands: { id: string; sprite: import('pixi.js').Sprite; d: number; pad: number }[] = []
         let objects = 0
         for (const p of PLACES) {
           if (p.inner !== undefined) continue          // waters have no land
-          const rs = coastline(p.id)
           const d = p.r * 2
-          const bands: [number, number][] = [
-            [1.00, 0x2a2419], [0.74, 0xb9a077], [0.666, 0xd8c49f],
-            [0.599, 0x9aa269], [0.518, 0x5c7a44],
-          ]
-          for (const [k, colour] of bands) {
-            const g = new PIXI.Graphics()
-            rs.forEach((r, i) => {
-              const ang = (Math.PI * 2 * i) / rs.length
-              const x = p.x + Math.cos(ang) * (r / 100) * d * k
-              const y = p.y + Math.sin(ang) * (r / 100) * d * k
-              if (i === 0) g.moveTo(x, y); else g.lineTo(x, y)
-            })
-            g.closePath()
-            g.fill(colour)
-            world.addChild(g)
-            objects++
-          }
+          // The chart's own padding: room for the widest shoal wash plus blur.
+          const pad = Math.round(d * 0.08) + 24
+          const baked = bakeIsland(p.id, d, false, pad)
+          const s = new PIXI.Sprite(PIXI.Texture.from(baked))
+          // The canvas is drawn at DPR, so it is placed by its CSS size, not
+          // by its pixel size.
+          s.width = d + pad * 2
+          s.height = d + pad * 2
+          s.anchor.set(0.5, 0.5)
+          s.x = p.x
+          s.y = p.y
+          world.addChild(s)
+          islands.push({ id: p.id, sprite: s, d, pad })
+          objects++
         }
+
+        // The turf and rock arrive after the first bake, exactly as they do on
+        // the chart. When they land, re-bake and swap each texture.
+        requestGround(() => {
+          if (dead) return
+          for (const it of islands) {
+            const again = bakeIsland(it.id, it.d, false, it.pad)
+            it.sprite.texture = PIXI.Texture.from(again)
+          }
+        })
 
         // ── CAMERA, INPUT AND TICKER. All synchronous, all before any
         //    asset is requested. See the note at the top of this file. ──
