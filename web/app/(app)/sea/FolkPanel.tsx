@@ -607,7 +607,13 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: 480, overflowY: 'auto',
-              maxHeight: 'calc(100dvh - 2rem - var(--tabbar-safe, 0px))',
+              // 100% OF THE PADDED PARENT, not a dvh sum of its own. The
+              // container already subtracts its padding and the tab bar; doing
+              // the arithmetic again here meant two numbers that could
+              // disagree, and on a phone they did — the panel came out taller
+              // than the space it was being centred in, so it overflowed
+              // upward and lost its title off the top of the screen.
+              maxHeight: '100%',
               background: 'rgba(8,14,22,0.98)',
               border: `1px solid ${SEA},0.28)`,
               borderRadius: 16, padding: '1rem 1.1rem',

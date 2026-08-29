@@ -215,10 +215,10 @@ export default function FolkScene({
   return (
     <AnimatePresence>
       {open && (
-        <>
-          {/* THE CHART STAYS. Dimmed, not replaced: you are alongside their
-              boat, on the water you sailed to get here. */}
-          <motion.div
+        /* THE CHART STAYS. Dimmed, not replaced: you are alongside their boat,
+           on the water you sailed to get here. This element is both the dim and
+           the flex box that centres the card. */
+        <motion.div
             key="folk-dim"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
@@ -232,7 +232,11 @@ export default function FolkScene({
               background: 'rgba(4,8,14,0.72)',
               backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)',
               cursor: typing ? 'pointer' : 'default',
-            }} />
+              // THE CARD LIVES INSIDE THE BACKDROP so one flex box does the
+              // centring and its bottom padding carries the tab bar's room.
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '1rem 1rem calc(1rem + var(--tabbar-safe, 0px))',
+            }}>
 
           <motion.div
             key="folk-card"
@@ -242,30 +246,38 @@ export default function FolkScene({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             onClick={e => e.stopPropagation()}
             style={{
-              position: 'fixed', zIndex: 9302,
-              top: '50%', left: '1rem', right: '1rem',
-              transform: 'translateY(-50%)',
-              // Same 480 the rest of the game's modals use, so the card you
-              // talk on and the panel you read them in are one surface size.
-              maxWidth: 480, margin: '0 auto',
-              // FIXED, not auto. An auto-height card resized itself every time
-              // a choice appeared or a line ran long, which moved the buttons
-              // under the reader's thumb mid-sentence, and the outer overflow
-              // put a scrollbar across the portrait as well as the text.
-              // ABOVE THE TAB BAR ON A PHONE. Centred on 50% the card's bottom
-              // ran under the fixed nav, which put the choices - the only part
-              // you need - behind it. The height gives the bar its room and the
-              // margin lifts the centre by half of it, so the card is centred in
-              // the space that is actually visible. `dvh` rather than `vh`
-              // because a phone's URL bar makes vh a lie about what is on screen.
-              height: 'min(524px, calc(100dvh - 2rem - var(--tabbar-safe, 0px)))',
-              marginTop: 'calc(var(--tabbar-safe, 0px) / -2)',
+              // CENTRED BY LAYOUT, NEVER BY TRANSFORM.
+              //
+              // This was `top: 50%` with `transform: translateY(-50%)` on a
+              // motion.div — and framer-motion writes `transform` for its own y
+              // and scale, so the centring half was silently discarded on the
+              // first frame. The card sat pinned at the halfway mark and hung
+              // off the bottom, which is why the choices ended up under the nav
+              // and why adjusting margins only moved the problem around.
+              //
+              // The parent flex box already reserves the tab bar, so the card
+              // states a size and lets that box place it.
+              //
+              // The HEIGHT IS STILL FIXED rather than auto: an auto-height card
+              // resized itself every time a choice appeared or a line ran long,
+              // which moved the buttons under the reader's thumb mid-sentence.
+              // `maxHeight: 100%` of the padded parent rather than a dvh sum,
+              // because two independent height calculations are two things that
+              // can disagree.
+              maxWidth: 480, width: '100%',
+              height: 524, maxHeight: '100%',
               display: 'flex', flexDirection: 'column',
-              background: 'linear-gradient(180deg, #0e1a2b 0%, #06101c 100%)',
+              // THE SAME SLAB AS THE PANEL THIS OPENED FROM. TraderPanel's
+              // card is a flat near-black; this was a blue gradient that ran
+              // lighter at the top, so stepping from "speak to them" into the
+              // conversation changed screens rather than continued one. The
+              // accent stays in the border and the glow, where it names who
+              // you are talking to without repainting the surface.
+              background: 'rgba(10,16,22,0.98)',
               border: `1px solid ${accent}3d`,
               borderTop: `1px solid ${accent}8f`,
-              borderRadius: 16, padding: '1rem 1rem 0.9rem',
-              boxShadow: `0 20px 50px rgba(0,0,0,0.6), 0 0 34px ${accent}14`,
+              borderRadius: 18, padding: '1rem 1rem 0.9rem',
+              boxShadow: `0 18px 50px rgba(0,0,0,0.6), 0 0 34px ${accent}14`,
               overflow: 'hidden',
             }}>
 
@@ -433,8 +445,11 @@ export default function FolkScene({
                   onClick={() => setCrest(null)}
                   style={{
                     position: 'absolute', inset: 0, zIndex: 4, cursor: 'pointer',
-                    background: 'linear-gradient(180deg, rgba(6,10,18,0.94) 0%, rgba(4,8,14,0.97) 100%)',
-                    borderRadius: 16,
+                    // Covers the card, so it is the card's own colour. A
+                    // different gradient here made the surface change shade
+                    // underneath the gift instead of the gift landing on it.
+                    background: 'rgba(10,16,22,0.98)',
+                    borderRadius: 18,
                     display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center',
                     padding: '1.4rem 1.2rem', textAlign: 'center',
@@ -489,7 +504,7 @@ export default function FolkScene({
               )}
             </AnimatePresence>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   )
