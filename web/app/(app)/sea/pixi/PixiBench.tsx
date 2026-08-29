@@ -103,7 +103,7 @@ export default function PixiBench() {
           uSwell: 1,
         })
         if (water) {
-          a.stage.addChild(water.mesh)
+          a.stage.addChild(water.sprite)
           water.size(a.screen.width, a.screen.height)
         }
 

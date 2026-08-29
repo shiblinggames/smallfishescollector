@@ -58,23 +58,52 @@ export type WaterUniforms = {
   uSwell: number
 }
 
+// ── THE SHADERS ─────────────────────────────────────────────────────────────
+//
+// A FILTER ON A FULL-SCREEN SPRITE, not a hand-written Mesh shader. The first
+// attempt was a Mesh with its own vertex program declaring uProjectionMatrix,
+// uWorldTransformMatrix and uTransformMatrix as bare uniforms. It COMPILED and
+// drew nothing: in Pixi 8 a mesh's matrices arrive through uniform groups the
+// pipeline binds, so those names sat at zero, the quad collapsed, and the only
+// thing on screen was the renderer's clear colour. A shader that compiles and
+// draws nothing is the worst kind, because every readout says it is fine.
+//
+// The filter path has none of that risk. Pixi supplies the vertex program's
+// uniforms itself — uInputSize, uOutputFrame, uOutputTexture — and this vertex
+// source is its own, taken from the library rather than from memory. All this
+// file provides is the fragment.
+
 const VERT = `
 in vec2 aPosition;
-out vec2 vUv;
-uniform mat3 uProjectionMatrix;
-uniform mat3 uWorldTransformMatrix;
-uniform mat3 uTransformMatrix;
-void main() {
-  mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
-  gl_Position = vec4((mvp * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
-  vUv = aPosition;
+out vec2 vTextureCoord;
+
+uniform vec4 uInputSize;
+uniform vec4 uOutputFrame;
+uniform vec4 uOutputTexture;
+
+vec4 filterVertexPosition( void )
+{
+    vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+    position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
+    position.y = position.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
+    return vec4(position, 0.0, 1.0);
+}
+
+vec2 filterTextureCoord( void )
+{
+    return aPosition * (uOutputFrame.zw * uInputSize.zw);
+}
+
+void main(void)
+{
+    gl_Position = filterVertexPosition();
+    vTextureCoord = filterTextureCoord();
 }
 `
 
 const FRAG = `
-precision highp float;
-in vec2 vUv;
-out vec4 fragColor;
+in vec2 vTextureCoord;
+out vec4 finalColor;
 
 uniform float uTime;
 uniform vec2  uCam;
@@ -103,11 +132,13 @@ float vnoise(vec2 p) {
              mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
-void main() {
+void main(void) {
+  vec2 uv = vTextureCoord;
+
   // ── THE GRADIENT THE CSS DREW, exactly ────────────────────────────
   // radial-gradient(ellipse 130% 104% at 50% -10%, shallow 0, mid 24%,
   //                 deep 60%, deep*0.62 100%)
-  vec2 g = (vUv - vec2(0.5, -0.10)) / vec2(1.30, 1.04);
+  vec2 g = (uv - vec2(0.5, -0.10)) / vec2(1.30, 1.04);
   float t = clamp(length(g), 0.0, 1.0);
 
   vec3 col;
@@ -118,7 +149,7 @@ void main() {
   // ── THE SURFACE, in world units ───────────────────────────────────
   // Screen to world, undoing the squash on y so a wave is as long across the
   // plane as it is along it.
-  vec2 px = (vUv - 0.5) * uRes;
+  vec2 px = (uv - 0.5) * uRes;
   vec2 world = uCam + vec2(px.x, px.y / GROUND) / uZoom;
   vec2 w = world * 0.0016;
 
@@ -131,64 +162,61 @@ void main() {
   // Brightness only. Hue is the zone blend's business and nothing here may
   // touch it.
   float shade = 1.0 + swell * 0.20 * uSwell;
-
-  // Away from the light is where a trough darkens.
   float facing = dot(normalize(vec2(swell, swell * 0.6) + vec2(0.0001)), normalize(uLight));
   shade += facing * 0.035 * uSwell;
-
   col *= shade;
 
   // ── GLINTS ────────────────────────────────────────────────────────
-  // Stretched across the light so they lie along the swell, thresholded hard
-  // so they wink rather than slide, and gone entirely after dark.
   vec2 gv = vec2(uLight.y, -uLight.x);
-  vec2 gw = w * 9.0 + gv * 2.0;
-  float sparkle = vnoise(gw + vec2(uTime * 0.10, uTime * 0.06));
+  float sparkle = vnoise(w * 9.0 + gv * 2.0 + vec2(uTime * 0.10, uTime * 0.06));
   sparkle = smoothstep(0.86, 0.995, sparkle) * smoothstep(0.30, 0.75, d1);
   col += sparkle * 0.16 * uSwell * (1.0 - uDark);
 
-  fragColor = vec4(col, 1.0);
+  finalColor = vec4(col, 1.0);
 }
 `
 
 /**
- * A full-screen quad running the water. Returns the mesh and a setter, so the
- * frame loop can feed it without this module knowing anything about the chart.
+ * The water, as a full-screen sprite wearing a filter.
  *
- * Built defensively: if the shader will not compile on this device, the caller
+ * Returns the sprite to add to the stage and a setter for the frame loop, so
+ * this module never needs to know anything about the chart.
+ *
+ * Built defensively: if the shader will not build on this device the caller
  * gets null and keeps whatever water it already had. A sea that does not
  * animate is a disappointment; a sea that does not draw is a bug.
  */
 export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUniforms) {
   try {
-    const geometry = new PIXI.Geometry({
-      attributes: { aPosition: [0, 0, 1, 0, 1, 1, 0, 1] },
-      indexBuffer: [0, 1, 2, 0, 2, 3],
+    const uniforms = new PIXI.UniformGroup({
+      uTime: { value: initial.uTime, type: 'f32' },
+      uCam: { value: initial.uCam, type: 'vec2<f32>' },
+      uZoom: { value: initial.uZoom, type: 'f32' },
+      uRes: { value: initial.uRes, type: 'vec2<f32>' },
+      uShallow: { value: initial.uShallow, type: 'vec3<f32>' },
+      uMid: { value: initial.uMid, type: 'vec3<f32>' },
+      uDeep: { value: initial.uDeep, type: 'vec3<f32>' },
+      uDark: { value: initial.uDark, type: 'f32' },
+      uLight: { value: initial.uLight, type: 'vec2<f32>' },
+      uSwell: { value: initial.uSwell, type: 'f32' },
     })
-    const shader = PIXI.Shader.from({
-      gl: { vertex: VERT, fragment: FRAG },
-      resources: {
-        waterUniforms: {
-          uTime: { value: initial.uTime, type: 'f32' },
-          uCam: { value: initial.uCam, type: 'vec2<f32>' },
-          uZoom: { value: initial.uZoom, type: 'f32' },
-          uRes: { value: initial.uRes, type: 'vec2<f32>' },
-          uShallow: { value: initial.uShallow, type: 'vec3<f32>' },
-          uMid: { value: initial.uMid, type: 'vec3<f32>' },
-          uDeep: { value: initial.uDeep, type: 'vec3<f32>' },
-          uDark: { value: initial.uDark, type: 'f32' },
-          uLight: { value: initial.uLight, type: 'vec2<f32>' },
-          uSwell: { value: initial.uSwell, type: 'f32' },
-        },
-      },
+
+    const filter = new PIXI.Filter({
+      glProgram: PIXI.GlProgram.from({ vertex: VERT, fragment: FRAG, name: 'sea-water' }),
+      resources: { waterUniforms: uniforms },
     })
-    const mesh = new PIXI.Mesh({ geometry, shader })
-    const u = shader.resources.waterUniforms.uniforms as Record<string, unknown>
+
+    // A plain white rectangle for the filter to run over. Its only job is to
+    // give the filter an area; not one of its pixels survives the fragment.
+    const sprite = new PIXI.Sprite(PIXI.Texture.WHITE)
+    sprite.filters = [filter]
+
+    const u = uniforms.uniforms as Record<string, unknown>
     return {
-      mesh,
-      /** Stretch the quad over the whole drawing surface. */
+      sprite,
       size(w: number, h: number) {
-        mesh.scale.set(w, h)
+        sprite.width = w
+        sprite.height = h
         ;(u.uRes as Float32Array).set([w, h])
       },
       set(next: Partial<WaterUniforms>) {
