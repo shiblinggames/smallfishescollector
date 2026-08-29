@@ -56,20 +56,7 @@ export type WaterUniforms = {
   uLight: Float32Array
   /** How much surface there is at all. 0 is the old flat gradient exactly. */
   uSwell: number
-  /** The nearest few islands, packed (x, y, boxSize, coastRow) — FOUR floats
-   *  each, not three. `coastRow` is its line in the coast texture; the radius
-   *  is NOT here because these coasts are not circles. Only the near ones:
-   *  foam is a shore effect and a pixel in open water should not pay to be told
-   *  that thirty islands are far away. */
-  uIsles: Float32Array
-  uIsleCount: number
-  /** How many rows the coast texture has, so a row index can be turned into a
-   *  texture coordinate. */
-  uCoastRows: number
 }
-
-/** The coastlines, as a lookup. */
-export type CoastTexture = { source: import('pixi.js').TextureSource; rows: number }
 
 // ── THE SHADERS ─────────────────────────────────────────────────────────────
 //
@@ -128,10 +115,6 @@ uniform vec3  uDeep;
 uniform float uDark;
 uniform vec2  uLight;
 uniform float uSwell;
-uniform vec4  uIsles[6];
-uniform float uIsleCount;
-uniform float uCoastRows;
-uniform sampler2D uCoast;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -183,55 +166,17 @@ void main(void) {
   shade += facing * 0.035 * uSwell;
   col *= shade;
 
-  // ── THE SHORE ─────────────────────────────────────────────────────
+  // ── THE SHORE IS NOT DRAWN HERE ──────────────────────────────────
   //
-  // What the two breathing DOM rings were, done as water instead. They were a
-  // pair of blurred canvases scaled 0.82 and 0.772 of the island box, pulsing
-  // opacity out of phase — which reads as two rings pulsing, because that is
-  // what it was. Nothing about it moved OUTWARD, and a surf that does not run
-  // at the beach is just a halo.
+  // It was, twice, and both times it landed in open water. A screen-space
+  // shader has to reconstruct world position from the camera, the ground
+  // squash, the zoom and an actually-uploaded uniform before it can measure a
+  // distance to anything — and every one of those was a chance to put the surf
+  // somewhere the coast is not.
   //
-  // Here it is distance to the nearest shore, banded, with the bands travelling
-  // toward the land and the whole edge chewed up by the same noise that makes
-  // the swell — so the foam wanders along the coast instead of ringing it.
-  float foam = 0.0;
-  for (int i = 0; i < 6; i++) {
-    if (float(i) >= uIsleCount) break;
-    vec4 isle = uIsles[i];
-    vec2 dv = world - isle.xy;
-
-    // ── WHERE THIS COAST ACTUALLY IS, at this bearing ───────────────
-    //
-    // Not a circle. The chart's coastline wobbles a radius between about 32%
-    // and 60% of an island's box, so a ring at one radius cuts inland on one
-    // side and sits out in open water on the other, which is exactly what a
-    // circle looked like. The 160 radii are in a lookup texture, one island
-    // per row, and this reads the one for the bearing of this pixel.
-    float ang = atan(dv.y, dv.x);              // -PI..PI
-    float u = ang / 6.2831853 + 0.5;
-    float v = (isle.w + 0.5) / uCoastRows;
-    // The stored value is the radius as a fraction of the island box; the land
-    // reaches 0.74 of it, which is the top face, and that is the waterline.
-    float shore = texture(uCoast, vec2(u, v)).r * isle.z * 0.74;
-
-    float dist = length(dv) - shore;
-
-    // Chewed by noise so even the true coast does not read as a traced outline.
-    float wob = (vnoise(dv * 0.010 + vec2(uTime * 0.05, 0.0)) - 0.5) * shore * 0.08;
-    float d = dist + wob;
-
-    // Two crests running shorewards, out of phase, fading as they go out.
-    float travel = uTime * 0.16;
-    float band = shore * 0.13;
-    float a = smoothstep(band, 0.0, abs(mod(d / band + travel, 2.0) - 1.0) * band);
-    float reach = 1.0 - smoothstep(0.0, band * 2.4, max(d, 0.0));
-    float inside = smoothstep(-band * 0.6, 0.0, d);   // nothing under the land
-    foam = max(foam, a * reach * inside);
-  }
-  // Foam is white water: it lightens, and it survives the dark better than a
-  // glint does because breaking water is bright by being broken, not by being
-  // lit. It still gives most of itself up at night.
-  col += foam * 0.30 * uSwell * (1.0 - uDark * 0.55);
+  // It is a ring of triangles parented to each island now: see shoreFoam. It
+  // moves with the island because it is AT the island, the same way the
+  // contact shadow is, and no camera enters into it.
 
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
@@ -253,10 +198,7 @@ void main(void) {
  * gets null and keeps whatever water it already had. A sea that does not
  * animate is a disappointment; a sea that does not draw is a bug.
  */
-export async function makeWater(
-  PIXI: typeof import('pixi.js'),
-  initial: WaterUniforms & { coast: CoastTexture },
-) {
+export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUniforms) {
   try {
     const uniforms = new PIXI.UniformGroup({
       uTime: { value: initial.uTime, type: 'f32' },
@@ -269,23 +211,11 @@ export async function makeWater(
       uDark: { value: initial.uDark, type: 'f32' },
       uLight: { value: initial.uLight, type: 'vec2<f32>' },
       uSwell: { value: initial.uSwell, type: 'f32' },
-      // vec4 AND NOT vec3, and the padding is the whole reason.
-      //
-      // A uniform block lays an array of vec3 out with every element aligned to
-      // sixteen bytes — so six of them occupy twenty-four floats, not eighteen,
-      // with a dead float after each. Handing it a tight eighteen made every
-      // island after the first read its position out of the previous one's
-      // radius: one enormous ring in open water, anchored to nothing that
-      // exists. The fourth float here is that padding, made explicit and
-      // written rather than assumed.
-      uIsles: { value: initial.uIsles, type: 'vec4<f32>', size: 6 },
-      uIsleCount: { value: initial.uIsleCount, type: 'f32' },
-      uCoastRows: { value: initial.uCoastRows, type: 'f32' },
     })
 
     const filter = new PIXI.Filter({
       glProgram: PIXI.GlProgram.from({ vertex: VERT, fragment: FRAG, name: 'sea-water' }),
-      resources: { waterUniforms: uniforms, uCoast: initial.coast.source },
+      resources: { waterUniforms: uniforms },
     })
 
     // A plain white rectangle for the filter to run over. Its only job is to
@@ -371,50 +301,4 @@ export function nightShift(rgb: Float32Array, dark: number): Float32Array {
     rgb[1] * (1 - k) + NIGHT[1] * k,
     rgb[2] * (1 - k) + NIGHT[2] * k,
   ])
-}
-
-/**
- * THE COASTLINES, BAKED INTO A TEXTURE.
- *
- * One row per island, 160 columns — the same 160 radii `coastline` generates,
- * in the same order, so this is the chart's own shape rather than a likeness of
- * it. The radius, as a fraction of the island's box, goes in the red channel;
- * it runs about 0.32 to 0.60, which sits comfortably inside 0..1 with no
- * scaling to get wrong.
- *
- * A texture and not uniforms because 160 floats per island is not a uniform
- * array, it is an image — and sampling it costs one fetch where marching a
- * polygon would cost a loop.
- */
-export function makeCoastTexture(
-  PIXI: typeof import('pixi.js'),
-  coasts: number[][],
-): CoastTexture {
-  const w = coasts[0]?.length ?? 160
-  const h = Math.max(1, coasts.length)
-  const cv = document.createElement('canvas')
-  cv.width = w
-  cv.height = h
-  const g = cv.getContext('2d')!
-  const img = g.createImageData(w, h)
-  for (let y = 0; y < h; y++) {
-    const rs = coasts[y] ?? []
-    for (let x = 0; x < w; x++) {
-      // Column 0 is bearing -PI, matching the shader's atan mapping.
-      const i = (x + Math.floor(w / 2)) % w
-      const v = Math.max(0, Math.min(255, Math.round(((rs[i] ?? 46) / 100) * 255)))
-      const p = (y * w + x) * 4
-      img.data[p] = v
-      img.data[p + 1] = v
-      img.data[p + 2] = v
-      img.data[p + 3] = 255
-    }
-  }
-  g.putImageData(img, 0, 0)
-  const source = new PIXI.CanvasSource({ resource: cv })
-  // Wrap across the seam so a bearing either side of due west reads the same
-  // coast, and smooth between the 160 samples so the line is not faceted.
-  source.addressMode = 'repeat'
-  source.scaleMode = 'linear'
-  return { source, rows: h }
 }
