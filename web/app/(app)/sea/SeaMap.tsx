@@ -9534,17 +9534,30 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
 /**
  * GOING ASHORE AT THE MAINLAND.
  *
- * Three cards on the backdrop, no modal container behind them — the same shape
- * as the Gauntlets chooser on the expeditions hub, because it is the same
- * question: one door on the chart, three rooms behind it.
+ * Six cards on the backdrop, no modal container behind them — the same shape as
+ * the Gauntlets chooser on the expeditions hub, because it is the same
+ * question: one door on the chart, several rooms behind it.
  *
- * The art is the building plates already standing on the island, so the card
- * you tap is visibly the building you sailed past. That is the whole reason
- * this is a chooser rather than a list of links.
+ * SIX, NOT THREE, AND THE TAVERN IS NO LONGER A LOBBY. It was one of three
+ * cards and then a hub in its own right, which put the chart room, the den and
+ * the parlour two doors deep: you went ashore, entered a tavern, and chose
+ * again from a page of cards. That is a menu wearing a building's name. They
+ * are their own buildings now and they open from the water, which is what they
+ * always were on the island anyway.
+ *
+ * The art is the same six buildings standing in the painted town on the island,
+ * so the card you tap is visibly the one you sailed past. That is the whole
+ * reason this is a chooser and not a list of links.
  */
 const ASHORE: { href: string; art: string; name: string; blurb: string; cta: string; accent: string }[] = [
   { href: '/tavern', art: '/sea/tavern.png', name: 'The Tavern',
-    blurb: 'Cards, dice and the day\u2019s takings', cta: 'Enter', accent: '#e0a545' },
+    blurb: 'A drink, and whoever is drinking', cta: 'Enter', accent: '#e0a545' },
+  { href: '/tavern/casino', art: '/sea/den.png', name: 'The Den',
+    blurb: 'Cards, dice and the wheel', cta: 'Play', accent: '#d9534f' },
+  { href: '/tavern/chart-room', art: '/sea/charting.png', name: 'The Chart Room',
+    blurb: 'The week\u2019s puzzles and the world chart', cta: 'Study', accent: '#6fc4b4' },
+  { href: '/tavern/trivia', art: '/sea/parlor.png', name: 'The Parlor',
+    blurb: 'Trivia, and the Pirate King ladder', cta: 'Sit in', accent: '#dd8f79' },
   { href: '/tavern/market', art: '/sea/market.png', name: 'The Market',
     blurb: 'Sell the hold at full price', cta: 'Trade', accent: '#7fd6a0' },
   { href: '/marketplace/tackle-shop', art: '/sea/tackle.png', name: 'Tackle Shop',
@@ -9587,9 +9600,10 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
           </button>
         </div>
 
-        {/* Three across. They stay three across on the narrowest phone: this is
-            one choice between three things and stacking it turns it into a
-            list you scroll, which is what the nav already is. */}
+        {/* Three across, which with six doors is two rows of three. They stay
+            three across on the narrowest phone: this is one choice between six
+            things, and stacking it turns it into a list you scroll, which is
+            what the nav already is. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {ASHORE.map((d, i) => (
             <motion.button key={d.href} type="button" className="tap"

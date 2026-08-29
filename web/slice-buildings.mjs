@@ -36,8 +36,15 @@ if (!SHEET || !fs.existsSync(SHEET)) {
   process.exit(1)
 }
 
-/** Reading order, left to right then top to bottom. Fixed by the prompt. */
-const NAMES = [
+/**
+ * Reading order, left to right then top to bottom. Fixed by the prompt.
+ *
+ * Overridable, because the sheet is not always the whole town: a later pass
+ * that adds two or three buildings is still one sheet and still wants one
+ * camera across it. Pass `--names=den,charting,parlor` and the count check
+ * below follows.
+ */
+const NAMES = (process.argv.find(a => a.startsWith('--names='))?.slice(8).split(',')) ?? [
   'tavern', 'market', 'tackle',
   'harbour', 'shipyard', 'trawl-shed',
   'lighthouse', 'dock-raids', 'dock-voyages',

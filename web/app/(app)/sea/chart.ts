@@ -156,14 +156,32 @@ export const PLACES: Place[] = [
     // point sits INSIDE the berth: a fresh session opens with the dock prompt
     // already up, the way it always has.
     berth: { dx: 425, dy: 400 },
+    /**
+     * ONE TOWN, NOT THREE BUILDINGS ON A LAWN.
+     *
+     * This was a tackle shop, a market stall and a tavern placed at three
+     * percentages with grass between them, which reads as three sprites parked
+     * on an island rather than as the place every captain launches from. The
+     * Mainland is the one port that is supposed to feel like somewhere people
+     * live.
+     *
+     * So it is a single painted cluster: the six doors you can actually open,
+     * spread through it and drawn large enough to pick out, packed in among
+     * cottages, a warehouse, a well and a cart that exist only to make the
+     * lanes between them look inhabited. One image means one camera and one
+     * light for the whole town, which is the thing three separate sprites could
+     * never hold.
+     *
+     * Placed low and centred: `y` is the BASE (buildings anchor bottom-centre),
+     * so this sits the town's feet below the island's middle, on the wide part
+     * of the land where the shore is furthest away.
+     */
     buildings: [
-      // 0.128, NOT 0.153. `scale` sets the sprite BOX's width, and the old
-      // tackle painting only filled 83% of its own canvas — so the same number
-      // now buys a fifth more building, because the redraw is trimmed flush.
-      // The other five filled their canvases already and keep their numbers.
-      { art: '/sea/tackle.png', x: 31, y: 43, scale: 0.128 },
-      { art: '/sea/market.png', x: 63, y: 47, scale: 0.172 },
-      { art: '/sea/tavern.png', x: 50, y: 62, scale: 0.224 },
+      // x 47, not 50. The town is wider than it is tall and this island's
+      // coastline runs shallow on the right, so it is nudged a hair to port to
+      // keep its outermost roofs over land. check-islands is the judge: it
+      // tests both bottom corners of the base, and this clears by 3.9%.
+      { art: '/sea/mainland-town.png', x: 47, y: 55, scale: 0.38 },
     ],
   },
   {
