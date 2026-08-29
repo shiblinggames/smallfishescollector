@@ -7041,6 +7041,91 @@ const SeaMark = memo(function SeaMark({ m, i }: {
 const islandCache = new Map<string, HTMLCanvasElement>()
 
 /**
+ * ── THE PAINTED GROUND ──────────────────────────────────────────────────────
+ *
+ * The islands were smooth vector gradients sitting under hand-painted
+ * buildings, and that reads as a sticker under a drawing. It gets reported as
+ * "the perspective does not match", which it does: the light here already runs
+ * from the upper left exactly as the buildings' does, and the ground plane's
+ * GROUND squash is a 35 degree camera against their 30. What was missing was
+ * not angle, it was SURFACE - a gradient has no brushwork in it, so there is
+ * nothing for the eye to read as the same hand.
+ *
+ * So two painted textures are laid over the bands the gradients already
+ * establish. OVER, never instead of: every fill below stays exactly as tuned,
+ * and the texture goes on at partial strength in `overlay`, so the crown
+ * highlight, the woods, the rim light and the coast shadow all still do their
+ * modelling and the paint only gives them a surface to happen on.
+ *
+ * DRAWN TO FIT, NOT TILED. A generated texture is never truly seamless and a
+ * visible repeat across an island is worse than no texture at all, so each one
+ * is drawn once, scaled to cover, and rotated by the island's own seed so two
+ * islands do not wear the same patch of grass.
+ *
+ * ASYNC INTO A SYNCHRONOUS BAKE. The bake is deliberately synchronous - it runs
+ * in the ref callback so an island is painted in the frame it mounts rather
+ * than a frame later. An image cannot be. So the first bake simply goes without
+ * the texture, exactly as it does today, and when the files land the cache is
+ * dropped and every mounted island repaints itself once.
+ */
+const GROUND_TEX: { turf?: HTMLImageElement; rock?: HTMLImageElement; done?: boolean } = {}
+const groundWaiters = new Set<() => void>()
+
+function requestGround(repaint: () => void) {
+  if (GROUND_TEX.done) return
+  groundWaiters.add(repaint)
+  if (GROUND_TEX.turf) return
+  if (typeof window === 'undefined') return
+
+  let left = 2
+  const settle = () => {
+    if (--left > 0) return
+    GROUND_TEX.done = true
+    // Everything baked before the paint arrived was baked without it.
+    islandCache.clear()
+    for (const again of groundWaiters) again()
+    groundWaiters.clear()
+  }
+  const load = (src: string, key: 'turf' | 'rock') => {
+    const img = new Image()
+    img.decoding = 'async'
+    // A texture that never arrives must not leave the islands unpainted, so a
+    // failure settles the same as a success and the gradients simply stand.
+    img.onload = () => { GROUND_TEX[key] = img; settle() }
+    img.onerror = settle
+    img.src = src
+  }
+  GROUND_TEX.turf = new Image()   // claims the slot so this only runs once
+  load('/sea/ground-turf.png', 'turf')
+  load('/sea/ground-rock.png', 'rock')
+}
+
+/** The same string hash `coastline` uses, so an island's turf is turned by the
+ *  same number that shaped its coast. */
+function seedOf(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return h
+}
+
+/** Lay one texture over whatever is already on `g`, confined to the pixels
+ *  that are already opaque. `seed` turns it so no two islands match. */
+function paintGround(
+  g: CanvasRenderingContext2D, img: HTMLImageElement | undefined,
+  D: number, seed: number, alpha: number,
+) {
+  if (!img || !img.width) return
+  g.save()
+  g.globalCompositeOperation = 'source-atop'
+  g.globalAlpha = alpha
+  g.translate(D / 2, D / 2)
+  g.rotate((seed % 360) * Math.PI / 180)
+  const cover = D * 1.5
+  g.drawImage(img, -cover / 2, -cover / 2, cover, cover)
+  g.restore()
+}
+
+/**
  * THE SURF RINGS, pre-blurred at low resolution.
  *
  * Baked separately from the island because they MOVE: the breathing animation
@@ -7185,6 +7270,10 @@ function bakeIsland(id: string, d: number, locked: boolean, pad: number): HTMLCa
   lg.fillStyle = grad165(lg, 0.74, [[0, '#3b3226'], [0.55, '#2a2419'], [1, '#191509']])
   lg.fill()
 
+  // Rock over the cliff, gently — it is in shadow and mostly edge, so the
+  // texture is there to break the flat brown rather than to be read.
+  paintGround(lg, GROUND_TEX.rock, D, seedOf(id) * 7, 0.3)
+
   // the face, lifted, everything inside clipped to it
   lg.save()
   traceL(0.74, -lift)
@@ -7199,6 +7288,13 @@ function bakeIsland(id: string, d: number, locked: boolean, pad: number): HTMLCa
   face(0.90, grad165(lg, 0.67, [[0, '#d8c49f'], [1, '#c2a97e']]))
   face(0.81, grad165(lg, 0.60, [[0, '#9aa269'], [1, '#7d8850']]))
   face(0.70, grad165(lg, 0.52, [[0, '#6f8a4e'], [0.62, '#55703c'], [1, '#466032']]))
+
+  // TURF OVER ALL FIVE BANDS AT ONCE, inside the face clip that is still open,
+  // so the beach reads as sand and the middle as grass without either needing
+  // its own texture. The crown, the woods and the rim light are drawn after
+  // this and keep sitting on top, which is the whole reason it goes on here
+  // rather than last.
+  paintGround(lg, GROUND_TEX.turf, D, seedOf(id), 0.42)
 
   // the crown — higher ground catching the light
   {
@@ -7319,11 +7415,19 @@ const Landmass = memo(function Landmass({ id, r, locked = false }: {
   // the Mainland is about to be.
   const blit = (el: HTMLCanvasElement | null) => {
     if (!el) return
-    const baked = bakeIsland(id, d, locked, pad)
-    if (el.width !== baked.width) { el.width = baked.width; el.height = baked.height }
-    const g = el.getContext('2d')
-    g?.clearRect(0, 0, el.width, el.height)
-    g?.drawImage(baked, 0, 0)
+    const paint = () => {
+      const baked = bakeIsland(id, d, locked, pad)
+      if (el.width !== baked.width) { el.width = baked.width; el.height = baked.height }
+      const g = el.getContext('2d')
+      g?.clearRect(0, 0, el.width, el.height)
+      g?.drawImage(baked, 0, 0)
+    }
+    paint()
+    // AND AGAIN WHEN THE PAINT ARRIVES. The first pass is the gradients alone,
+    // in this frame, because an island appearing a frame late is worse than an
+    // island appearing untextured. `requestGround` is a no-op once the files
+    // are in, so a later mount pays nothing and repaints nobody.
+    requestGround(paint)
   }
 
   const blitSurf = (scale: number, color: string, blur: number) =>
