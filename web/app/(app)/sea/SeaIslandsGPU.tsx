@@ -46,6 +46,7 @@ import { makeCaptain, lookKey, type Captain, type CaptainLook } from './seaCapta
 import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
+import { makeTowns, type Towns, type GpuTown } from './seaTown'
 import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
 
@@ -115,6 +116,9 @@ export type GpuHandle = {
      *  only ±1 and says which way the sprite is mirrored; a wake needs to know
      *  which way they are actually going. */
     ang: number
+    /** Where the HULL sits, for the rings they make at rest. Not the same as
+     *  where the sprite is centred: the boat is drawn low in its sheet. */
+    cx: number; cy: number
   }[]): void
   skipper(s: {
     bob: number
@@ -126,7 +130,7 @@ export type GpuHandle = {
   } | null): void
 }
 
-export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, handle }: {
+export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, towns, handle }: {
   islands: GpuIsland[]
   marks: GpuMark[]
   /** How the player looks right now. Rebuilt only when it actually changes —
@@ -135,6 +139,9 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
   captain: CaptainLook | null
   /** Where a boat can be tied up. Static, so read once. */
   berths: BerthSpec[]
+  /** What is built on the islands. Read once: an island's buildings change
+   *  only when a place unlocks, which is a page-level event. */
+  towns: GpuTown[]
   /** Everyone else, and how they look. Rebuilt only when somebody's outfit
    *  actually changes — see the effect below. */
   fleet: { key: string; look: CaptainLook }[]
@@ -169,6 +176,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
   // Read once. Both lists are derived from static chart data, so re-baking on a
   // parent render would be pure waste.
   const berthRef = useRef(berths)
+  const townRef = useRef(towns)
   const listRef = useRef(islands)
   const marksRef = useRef(marks)
 
@@ -394,7 +402,8 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
        *  handle calls that set them and the ticker that uses them. */
       let mine: Contact | null = null
       let fleetAt: {
-        key: string; x: number; y: number; facing: number; scale: number; dim: number; ang: number
+        key: string; x: number; y: number; facing: number; scale: number; dim: number
+        ang: number; cx: number; cy: number
       }[] = []
       const contacts: Contact[] = []
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
@@ -427,6 +436,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
         const halfW = a.screen.width / 2 / camZoom
         const halfH = a.screen.height / 2 / camZoom / GROUND
         drift.advance(camX, camY, halfW, halfH, t, a.ticker.deltaMS / 1000)
+        townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
         // module works out for itself which of them are under way and which are
@@ -438,6 +448,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
           if (!c) continue
           contacts.push({
             id: e.key, x: e.x, y: e.y, ang: e.ang,
+            cx: e.cx, cy: e.cy,
             scale: e.scale, kind: c.kind,
           })
         }
@@ -465,6 +476,27 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
       })
 
       let lastTint = -1
+      // ── AND WHAT IS BUILT ON THEM ─────────────────────────────────
+      //
+      // A town is a container of its own, added to the world AFTER the islands
+      // so a building stands on its island rather than under it — and the
+      // building sprites share that display list, which is the whole point: a
+      // tavern cannot slide off the island it is parented to.
+      //
+      // Started here but NOT awaited. Forty buildings is a lot of decoding, and
+      // everything below this line is what makes the chart respond. This file
+      // has already been caught once putting essential setup behind an await
+      // that never settled; a town that arrives two hundred milliseconds late
+      // is a town that arrives.
+      let townLayer: Towns | null = null
+      void makeTowns(PIXI, townRef.current).then(t => {
+        if (dead) { t.destroy(); return }
+        townLayer = t
+        world.addChild(t.view)
+      }).catch(() => {
+        // An island with no buildings on it is still an island.
+      })
+
       // The water's quad is screen space, so it has to follow the surface it is
       // drawn on. `resizeTo` handles the renderer; this handles the shader.
       const ro = new ResizeObserver(() => {
@@ -502,6 +534,11 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
           // gives up much less to the hour than the water around it. Most of
           // the point of a lit berth is that it is still lit after dark.
           berthLayer.night(nightTint(d * 0.3, w))
+          // The buildings take the hour at the same strength the land does —
+          // they are standing on it. The second number is the town's own lights
+          // coming up, which is the one thing on the chart that gets BRIGHTER
+          // after dark.
+          townLayer?.night(tint, d)
         },
         palette(stops) {
           if (!water || stops.length < 3) return

@@ -125,6 +125,7 @@ import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './S
 import { type CaptainLook } from './seaCaptain'
 import { type WakeKind } from './seaWake'
 import { type BerthSpec } from './seaBerth'
+import { type GpuTown } from './seaTown'
 
 /**
  * ── THE ISLANDS ON THE GPU, BEHIND A FLAG ───────────────────────────────────
@@ -2707,6 +2708,11 @@ export default function SeaMap({
    *  frame; the canvas reads this and is done with it before the next one. */
   const fleetAt = useRef<{
     key: string; x: number; y: number; facing: number; scale: number; dim: number; ang: number
+    /** Where the HULL sits, as opposed to where the sprite is centred. The
+     *  sheet reserves a large empty region up and to the left for the rod, so
+     *  the boat is well below the middle of it — rings drawn at the centre
+     *  float above the captain's head. */
+    cx: number; cy: number
   }[]>([])
   /** YOON. Written down rather than rolled, permanent, and the only person on
    *  this sea who sells the rod with his name on it. See chart.ts. */
@@ -2854,6 +2860,31 @@ export default function SeaMap({
   useEffect(() => { fishZoomTarget.current = fishingIn ? 1.42 : 1 }, [fishingIn])
 
   const locked = useCallback((p: Place) => level < p.minLevel, [level])
+
+  /**
+   * WHAT IS BUILT, for the canvas.
+   *
+   * The same list `PlaceIsland` walks, handed over whole rather than
+   * reassembled: where a building stands is chart data, and there should be one
+   * copy of it however many renderers are drawing it.
+   *
+   * `locked` is in here because a locked island's buildings are drawn dark, and
+   * that changes when a place unlocks — which is a page-level event, so the
+   * layer is rebuilt rather than patched.
+   */
+  const gpuTowns = useMemo<GpuTown[]>(() => {
+    if (!GPU_ISLANDS) return []
+    return PLACES
+      .filter(p => p.kind !== 'water' && p.buildings && p.buildings.length > 0)
+      .map(p => ({
+        id: p.id, x: p.x, y: p.y, r: p.r, locked: locked(p),
+        buildings: (p.buildings ?? []).map(b => ({
+          x: b.x, y: b.y, scale: b.scale, art: b.art,
+        })),
+      }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked])
+
 
   /**
    * WOULD A HOLD HERE ACTUALLY PUT THE ROD IN?
@@ -4304,12 +4335,20 @@ export default function SeaMap({
             // Which way they are actually GOING, as opposed to which way their
             // sprite is mirrored. A wake needs the heading.
             ang: (at.headingDeg * Math.PI) / 180,
+            // Everybody out here is in the same fishing boat, so it is the
+            // fishing boat's own waterline, taken at their size and divided
+            // back out of the plane's squash — the same arithmetic the player's
+            // rings use, which is why hers were already sitting right.
+            cx: at.x + WATERLINE_X * 0.94,
+            cy: at.y + (WATERLINE_Y * 0.94) / GROUND,
           })
         }
         // Finn barely moves and never turns: he is not passing through.
         const f = finnRef.current
         if (f) list.push({
           key: 'finn', x: f.at.x, y: f.at.y, facing: 1, scale: 0.98, dim: 1, ang: 0,
+          cx: f.at.x + WATERLINE_X * 0.98,
+          cy: f.at.y + (WATERLINE_Y * 0.98) / GROUND,
         })
         gpuRef.current.fleet(list)
       }
@@ -4836,7 +4875,7 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
-            fleet={gpuFleet} berths={gpuBerths} handle={gpuRef} />
+            fleet={gpuFleet} berths={gpuBerths} towns={gpuTowns} handle={gpuRef} />
         </div>
       )}
 
@@ -8814,7 +8853,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
               throwing light onto the ground they stand on.
 
               Not on water zones, which have no buildings to light. */}
-          {!isWater && place.buildings && place.buildings.length > 0 && (
+          {!GPU_ISLANDS && !isWater && place.buildings && place.buildings.length > 0 && (
             <div aria-hidden style={{
               position: 'absolute', left: '50%', top: '52%',
               width: '78%', height: '52%',
@@ -8835,7 +8874,12 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
             }} />
           )}
 
-          {place.buildings?.map((b, i) => (
+          {/* ON THE CANVAS UNDER THE FLAG, together with the town glow above.
+              They are parented to their island's display list there, which is
+              the thing this could never be while the island was a texture and
+              the tavern standing on it was a div: two renderers handed the same
+              camera and asked to agree every frame. */}
+          {!GPU_ISLANDS && place.buildings?.map((b, i) => (
             <Fragment key={i}>
               {/* NOTHING IS DRAWN UNDER A BUILDING. SIXTH TIME.
                   There was a contact ellipse here, and the long note that used
