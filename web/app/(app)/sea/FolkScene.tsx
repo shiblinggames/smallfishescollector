@@ -31,7 +31,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { TypedBody, useTypewriter, prefersReducedMotion } from '@/components/cutscene'
 import { vibrate } from '@/lib/haptics'
-import { TIER_NAME, TIER_AT, tierFor, ASKS, type Folk, type FolkTier } from '@/lib/seaFolk'
+import {
+  TIER_NAME, TIER_AT, tierFor, ASKS, GIFT_FAVOURITE_POINTS,
+  type Folk, type FolkTier,
+} from '@/lib/seaFolk'
 
 export type SceneGain = {
   points: number
@@ -100,27 +103,54 @@ function RapportBar({ points, gained, accent }: {
 
 /** One thing you can say or do. Same shape whether it continues the talk,
  *  spends the day's word, opens the hold or ends the visit. */
-function Choice({ label, hint, accent, warm, onClick, disabled }: {
+function Choice({ label, hint, accent, warm, onClick, disabled, tag, spent }: {
   label: string; hint?: string; accent: string; warm?: boolean
   onClick: () => void; disabled?: boolean
+  /** A short pill on the right. What this choice PAYS ("+1 rapport"), or that
+   *  it has already been taken today ("Had today"). */
+  tag?: string
+  /** Spent for the day: still listed, greyed, and not a button any more. The
+   *  option used to vanish instead, which left no way to tell "you already did
+   *  this" apart from "this was never here". */
+  spent?: boolean
 }) {
+  const off = disabled || spent
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button onClick={spent ? undefined : onClick} disabled={off}
       className="font-karla font-600"
       style={{
-        display: 'block', width: '100%', textAlign: 'left',
+        display: 'flex', alignItems: 'center', gap: 8,
+        width: '100%', textAlign: 'left',
         padding: '0.55rem 0.7rem', marginTop: 6, borderRadius: 10,
-        background: warm ? `${accent}1f` : 'rgba(255,255,255,0.045)',
-        border: `1px solid ${warm ? accent + '5c' : 'rgba(255,255,255,0.13)'}`,
-        color: warm ? '#f4ecd8' : '#cfe0ec',
+        background: spent ? 'rgba(255,255,255,0.02)'
+          : warm ? `${accent}1f` : 'rgba(255,255,255,0.045)',
+        border: `1px ${spent ? 'dashed' : 'solid'} ${spent ? 'rgba(255,255,255,0.1)'
+          : warm ? accent + '5c' : 'rgba(255,255,255,0.13)'}`,
+        color: spent ? 'rgba(226,238,246,0.42)' : warm ? '#f4ecd8' : '#cfe0ec',
         fontSize: '0.86rem', lineHeight: 1.35,
-        cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
+        cursor: off ? 'default' : 'pointer',
+        // A spent choice is dimmed by its own colours, not by opacity: it has
+        // to stay readable, because reading it is the whole point of it still
+        // being on the card.
+        opacity: disabled && !spent ? 0.5 : 1,
       }}>
-      {label}
-      {hint && (
-        <span className="font-karla" style={{
-          display: 'block', fontSize: '0.66rem', color: 'rgba(226,238,246,0.4)', marginTop: 2,
-        }}>{hint}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        {label}
+        {hint && (
+          <span className="font-karla" style={{
+            display: 'block', fontSize: '0.66rem',
+            color: 'rgba(226,238,246,0.4)', marginTop: 2,
+          }}>{hint}</span>
+        )}
+      </span>
+      {tag && (
+        <span className="font-karla font-700" style={{
+          flexShrink: 0, fontSize: '0.6rem', letterSpacing: '0.06em',
+          padding: '0.2rem 0.45rem', borderRadius: 999, whiteSpace: 'nowrap',
+          background: spent ? 'rgba(255,255,255,0.05)' : `${accent}2b`,
+          border: `1px solid ${spent ? 'rgba(255,255,255,0.12)' : accent + '66'}`,
+          color: spent ? 'rgba(226,238,246,0.5)' : accent,
+        }}>{tag}</span>
       )}
     </button>
   )
@@ -349,6 +379,11 @@ export default function FolkScene({
                 replaced by the list and come back when you pick or back out. */}
             {picking && (
               <div style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto', touchAction: 'pan-y' }}>
+                <p className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.54rem', letterSpacing: '0.18em',
+                  color: 'rgba(226,238,246,0.5)', margin: '0 0 7px',
+                }}>In your hold</p>
+
                 {hold.length === 0 ? (
                   <p className="font-karla" style={{
                     fontSize: '0.8rem', color: 'rgba(226,238,246,0.5)', margin: '6px 0', lineHeight: 1.5,
@@ -356,26 +391,73 @@ export default function FolkScene({
                     Your hold is empty. Anything you catch is worth having,
                     and the one fish they actually want is worth three times as much.
                   </p>
-                ) : hold.map(f => (
-                  <Choice key={f.id}
-                    label={f.name}
-                    /* TWO WAYS TO LEARN WHAT SOMEBODY LIKES, and this is
-                       the one that does not need them to say it. Before they
-                       have told you, holding their fish shows a NUDGE - they
-                       keep looking at it - which is enough to work out on your
-                       own and not enough to be told. Afterwards it is a plain
-                       statement with the number on it, because by then it is
-                       something you know rather than something you noticed. */
-                    hint={f.id === folk.favourite.id
-                      ? (knowsFav
-                        ? 'Their favourite. Worth three.'
-                        : 'They keep looking at this one.')
-                      : `${f.qty} in the hold`}
-                    accent={accent}
-                    warm={f.id === folk.favourite.id}
-                    disabled={busy}
-                    onClick={() => { setPicking(false); onGift(f.id) }} />
-                ))}
+                ) : (
+                  /* THREE FIXED COLUMNS. A hold runs to a couple of dozen
+                     species and one full-width row each turned picking a gift
+                     into a scroll down a list. Fixed tiles mean the whole hold
+                     is one glance, and the names truncate rather than reflow,
+                     so the tiles stay on a grid instead of jumping about as the
+                     hold changes. */
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
+                  }}>
+                    {hold.map(f => {
+                      const fav = f.id === folk.favourite.id
+                      return (
+                        <button key={f.id} disabled={busy}
+                          onClick={() => { setPicking(false); onGift(f.id) }}
+                          className="font-karla font-600"
+                          style={{
+                            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                            height: 62, padding: '0.4rem 0.45rem', borderRadius: 10,
+                            textAlign: 'left', cursor: busy ? 'default' : 'pointer',
+                            opacity: busy ? 0.5 : 1,
+                            background: fav ? `${accent}26` : 'rgba(255,255,255,0.045)',
+                            border: `1px solid ${fav ? accent + '8a' : 'rgba(255,255,255,0.13)'}`,
+                            boxShadow: fav ? `0 0 14px ${accent}30` : 'none',
+                          }}>
+                          {/* One line, clipped. The tile is a fixed size and the
+                              name is the part that gives, so it ellipses. */}
+                          <span style={{
+                            fontSize: '0.72rem', lineHeight: 1.2,
+                            color: fav ? '#f4ecd8' : '#cfe0ec',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            display: 'block', width: '100%',
+                          }} title={f.name}>{f.name}</span>
+
+                          <span style={{
+                            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 4,
+                          }}>
+                            <span className="font-cinzel font-700" style={{
+                              fontSize: '0.78rem',
+                              color: fav ? accent : 'rgba(226,238,246,0.72)',
+                            }}>+{fav ? GIFT_FAVOURITE_POINTS : 1}</span>
+                            <span style={{
+                              fontSize: '0.56rem', color: 'rgba(226,238,246,0.38)', whiteSpace: 'nowrap',
+                            }}>{'\u00d7'}{f.qty}</span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* WHY THE FAVOURITE IS MARKED BEFORE THEY SAY IT. Carrying
+                    somebody's fish is one of the two ways to work out what they
+                    like, and the tile IS that hint - it just carries the number
+                    now instead of a coy line about them looking at it. Once
+                    they have told you, the line under it changes from a thing
+                    you noticed to a thing you know. */}
+                {hold.some(f => f.id === folk.favourite.id) && (
+                  <p className="font-karla" style={{
+                    fontSize: '0.66rem', color: `${accent}c0`, margin: '8px 0 0', lineHeight: 1.4,
+                  }}>
+                    {knowsFav
+                      ? `${folk.favourite.name} is their favourite.`
+                      : 'They keep looking at one of these.'}
+                  </p>
+                )}
+
                 <Choice label="Never mind" accent={accent} onClick={() => setPicking(false)} />
               </div>
             )}
@@ -389,13 +471,20 @@ export default function FolkScene({
 
                 {/* The day's word, when it has not been had. Warm, because it
                     is the one choice here that moves the friendship. */}
-                {canChat && (
-                  <Choice
-                    label="So how have you been?"
-                    hint={busy ? undefined : 'They will have something new to say'}
-                    accent={accent} warm disabled={busy}
-                    onClick={() => { vibrate(10); onChat() }} />
-                )}
+                {/* ALWAYS LISTED, SPENT OR NOT. Both daily acts used to
+                    disappear once taken, so pulling alongside somebody late in
+                    the day showed a short card with no way to tell whether you
+                    had already had your word or whether talking was simply not
+                    a thing you could do with this person. They stay, greyed,
+                    and say which. */}
+                <Choice
+                  label="So how have you been?"
+                  hint={canChat
+                    ? (busy ? undefined : 'They will have something new to say')
+                    : 'Come back tomorrow'}
+                  tag={canChat ? '+1 rapport' : 'Had today'}
+                  accent={accent} warm={canChat} spent={!canChat} disabled={busy}
+                  onClick={() => { vibrate(10); onChat() }} />
 
                 {/* Free, always, whether or not the day's word is spent. */}
                 {openAsks.map(({ a, i }) => (
@@ -413,23 +502,29 @@ export default function FolkScene({
                     full hold had no way of learning that gifting exists at all.
                     Tapping it with nothing aboard says so, which teaches the
                     mechanic in the one place somebody would want it. */}
-                {canGift && (
-                  <Choice label="I brought you something." accent={accent}
-                    hint={hold.length === 0 ? 'Your hold is empty' : undefined}
-                    disabled={busy}
-                    onClick={() => { vibrate(8); setPicking(true) }} />
-                )}
+                <Choice label="I brought you something." accent={accent}
+                  hint={canGift
+                    ? (hold.length === 0 ? 'Your hold is empty' : undefined)
+                    : 'Come back tomorrow'}
+                  // WHAT IT PAYS, ON THE OPTION. Gifting moved the friendship
+                  // more than anything else you can do out here and said so
+                  // nowhere until after you had given the fish away.
+                  tag={canGift ? `+1 to +${GIFT_FAVOURITE_POINTS} rapport` : 'Given today'}
+                  spent={!canGift} disabled={busy}
+                  onClick={() => { vibrate(8); setPicking(true) }} />
 
                 <Choice label="I should get back to it." accent={accent} onClick={onClose} />
 
                 {/* Only once both are spent, and only as a fact. Never a
-                    warning about a streak, because there is not one. */}
+                    warning about a streak, because there is not one. The two
+                    choices above already say they are spent; this says the part
+                    they cannot, which is that waiting costs nothing. */}
                 {!canChat && !canGift && (
                   <p className="font-karla" style={{
                     fontSize: '0.66rem', color: 'rgba(226,238,246,0.35)',
                     textAlign: 'center', margin: '9px 0 2px',
                   }}>
-                    You have had your word and given your gift today. Nothing is lost by waiting.
+                    Nothing is lost by waiting.
                   </p>
                 )}
               </motion.div>

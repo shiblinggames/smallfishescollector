@@ -29,9 +29,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { vibrate } from '@/lib/haptics'
 import {
-  FINN_NAME, FINN_AVATAR, FINN_ENCOUNTER_BEATS, FINN_WIN_BEATS,
-  findNextEncounterBeat, finnStanding, finnStandingTier, finnToNext,
-  FINN_STANDING_NAME, FINN_STANDING_AT,
+  FINN_NAME, FINN_AVATAR, findNextEncounterBeat,
 } from '@/lib/finn'
 import { PLACES } from './chart'
 import { getCharacterSprites } from '@/lib/characters'
@@ -377,42 +375,34 @@ function RivalDetail({ finn, chapters, onBack }: {
   chapters: FinnChapterView[]
   onBack: () => void
 }) {
-  const points = finnStanding(finn?.encounters ?? 0, finn?.wins ?? 0)
-  const tier = finnStandingTier(points)
-  const left = finnToNext(points)
-  const seen = new Set(finn?.seenBeats ?? [])
-  const heard = FINN_ENCOUNTER_BEATS.filter(b => seen.has(b.id)).length
-  const wonHeard = FINN_WIN_BEATS.filter(b => seen.has(b.id)).length
   const quest = finn?.quest ?? null
+
+  // ── ONE CHAPTER: THE ONE YOU ARE IN ────────────────────────────────────
+  //
+  // The whole five-act ladder used to print here. It read as a table of
+  // contents for a story nobody has finished, and the four rows that were not
+  // yours pushed the one that was down the card. The act you are walking
+  // through is the only thing on this page that answers "what now".
+  //
+  // Falling back to the last OPEN act covers the end of the campaign, where
+  // nothing is current because there is nothing left to do.
+  const act = chapters.find(v => v.current) ?? [...chapters].reverse().find(v => v.open) ?? null
+
   return (
     <>
       <BackTo onBack={onBack} />
       <Head face={FINN_FACE} accent={GOLD} role="Rival" name={FINN_NAME}
         water={finn ? `Moored off ${finn.at.bandName}` : undefined} />
 
-      {/* The act he is currently walking you through, named, so his page and
-          the campaign strip on the front agree about where you are. */}
-      {/* THE WHOLE LADDER lives here now rather than on the front, where it
-          buried the one thing a captain actually needed. Five acts deep, the
-          way the raid map shows its chapters. */}
-      <div style={{ marginTop: '0.9rem' }}>
-        {chapters.map(v => <ChapterRow key={v.chapter.id} view={v} />)}
-      </div>
-
-      <div style={{
-        marginTop: '0.8rem', padding: '0.6rem 0.7rem', borderRadius: 11,
-        background: `${GOLD}10`, border: `1px solid ${GOLD}30`,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f6ecd6', margin: 0 }}>
-            {FINN_STANDING_NAME[tier]}
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.68rem', color: `${SEA},0.5)`, margin: 0 }}>
-            {left === null ? 'As far as it goes' : `${left} to the next`}
-          </p>
-        </div>
-        <Bar at={points} of={FINN_STANDING_AT[4]} color={GOLD} />
-      </div>
+      {/* ── WHAT WENT, AND WHY ────────────────────────────────────────────
+          A standing bar ("Nearly his equal"), a Met / Wagers won / Jobs done
+          row, and a "His story" progress bar all used to sit under here. Every
+          one of them counted something from the version of Finn who turned up
+          at random and bet you on a cast: encounters and wagers are not how you
+          get anywhere with him any more. Counters for a mechanic that no longer
+          runs are worse than no counters, because they look like progress.
+          What he is now is the campaign, so the campaign is what his page is. */}
+      {act && <div style={{ marginTop: '0.9rem' }}><ChapterRow view={act} /></div>}
 
       {/* The job, when he has set one. The loudest thing here when it is done,
           because that is the campaign waiting on you. */}
@@ -435,33 +425,6 @@ function RivalDetail({ finn, chapters, onBack }: {
           }}>{quest.progressText}</p>
         </div>
       )}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        {([['Met', finn?.encounters ?? 0], ['Wagers won', finn?.wins ?? 0],
-          ['Jobs done', finn?.questsDone.length ?? 0]] as const).map(([k, v]) => (
-          <div key={k} style={{ flex: 1 }}>
-            <p className="font-karla font-700 uppercase" style={{
-              fontSize: '0.5rem', letterSpacing: '0.16em', color: `${SEA},0.45)`, margin: 0,
-            }}>{k}</p>
-            <p className="font-cinzel font-700" style={{
-              fontSize: '1.05rem', color: '#f4e2c0', margin: '2px 0 0',
-            }}>{v}</p>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: 'rgba(244,226,192,0.9)', margin: 0 }}>
-            His story
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.7rem', color: `${SEA},0.5)`, margin: 0 }}>
-            {heard} of {FINN_ENCOUNTER_BEATS.length}
-          </p>
-        </div>
-        <Bar at={heard} of={FINN_ENCOUNTER_BEATS.length} color={GOLD} />
-        {wonHeard > 0 && <Bar at={wonHeard} of={FINN_WIN_BEATS.length} color={`${GOLD}70`} />}
-      </div>
     </>
   )
 }
