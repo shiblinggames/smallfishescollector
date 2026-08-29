@@ -768,6 +768,42 @@ const FAR_MS = 20_000
 
 const SEA_STEP = 96
 
+/**
+ * ── NIGHT ON EVERYTHING THAT IS NOT WATER ───────────────────────────────────
+ *
+ * The clock has always been real: `darkness` ramps 0 to 1 with its own dusk and
+ * dawn fades, and `seaAt` pulls the whole water palette 78% toward a cold
+ * blue-black when it does. What it never touched was the SOLID world — the
+ * islands, the buildings, the wrecks, the traders and your own hull are painted
+ * sprites and baked canvases, and they went on being lit for noon while the sea
+ * around them went dark. Which is why night did not read: the water changed
+ * colour and every object a captain actually looks at did not.
+ *
+ * A SHEET OVER THE TOP IS THE WRONG FIX, for the same reason `seaAt` gives for
+ * not using one on the water: a flat dark overlay flattens what is under it
+ * into one grey, and the Shallows stop being lighter than the Abyss. It would
+ * also darken the water a second time, on top of the palette shift that is
+ * already tuned.
+ *
+ * So the light is graded onto the world layers themselves and the water is left
+ * to the palette. Dim, and desaturate rather harder than it dims — colour is
+ * the first thing to go at low light and the last thing anybody notices going,
+ * which is exactly why it sells. A touch of contrast comes back so the dimming
+ * does not turn the whole chart to mud.
+ *
+ * CHEAP BECAUSE IT IS QUANTISED. `dark` is already rounded to 24 steps to stop
+ * the backdrop strobing through dusk, and this rides the same number: a filter
+ * on a promoted layer re-rasterises when its value changes, and this one
+ * changes 24 times across a whole fade rather than sixty times a second.
+ */
+function nightGrade(dark: number, strength = 1): string {
+  if (dark <= 0) return 'none'
+  const k = dark * strength
+  return `brightness(${(1 - k * 0.42).toFixed(3)}) `
+    + `saturate(${(1 - k * 0.55).toFixed(3)}) `
+    + `contrast(${(1 + k * 0.10).toFixed(3)})`
+}
+
 function seaAt(p: Vec, darkness = 0): SeaLook {
   // THE OPEN OCEAN GETS A SMALL VOTE, NOT A BIG ONE.
   //
@@ -3351,6 +3387,9 @@ export default function SeaMap({
      *  is measured against these, never against a rounded position. */
     const lookAt = { x: Infinity, y: Infinity }
     let lastDark = -1
+    /** Tracked apart from `lastDark` because the backdrop also repaints when
+     *  the boat has sailed far enough, and the grade has no reason to. */
+    let lastGrade = -1
     /** How bright this water is, held between recomputes. The pale surface
      *  layer's opacity reads it every frame — that write is a composite, not a
      *  repaint, so it is free and does not want the deadband's coarseness. */
@@ -4116,6 +4155,23 @@ export default function SeaMap({
       // Once computed at P nothing changes until you are a full step from P, so
       // there is no boundary to sit on and no way back to the previous value
       // without actually sailing there.
+      // ── THE LIGHT ON THE WORLD ──────────────────────────────────
+      // Its own guard: the grade depends only on the hour, so sailing must not
+      // re-rasterise three promoted layers.
+      if (dark !== lastGrade) {
+        lastGrade = dark
+        const grade = nightGrade(dark)
+        if (worldRef.current) worldRef.current.style.filter = grade
+        if (frontRef.current) frontRef.current.style.filter = grade
+        // YOUR OWN HULL TAKES LESS OF IT. Everything else can go to a silhouette
+        // after dark; the boat under your thumb is the one thing that still has
+        // to be legible, and it is carrying its own lamp besides.
+        if (boatRef.current) boatRef.current.style.filter = nightGrade(dark, 0.55)
+        // Published for anything that wants to light UP as the light goes down
+        // rather than dim with it — see the harbour lights on the ports.
+        wrapRef.current?.style.setProperty('--sea-night', dark.toFixed(3))
+      }
+
       const movedFar = Math.hypot(pos.current.x - lookAt.x, pos.current.y - lookAt.y) >= SEA_STEP
       if (movedFar || dark !== lastDark) {
         lookAt.x = pos.current.x; lookAt.y = pos.current.y
@@ -8747,6 +8803,41 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
               ground rather than from its middle. Ordered back to front in the
               chart, so the ones further down the island overlap the ones
               behind them the way a hillside town does. */}
+          {/* ── THE TOWN LIGHTS UP ────────────────────────────────────────
+              The grade takes the whole world down after dark. This is the one
+              thing that comes UP, and it is what turns a dimmer into nightfall:
+              a warm pool over the buildings that is nothing at noon and full by
+              the middle of the night.
+
+              Driven by `--sea-night`, which the frame loop publishes on the
+              chart's wrapper whenever the light moves. So it costs one custom
+              property write per step of the fade and no React render at all,
+              and it sits UNDER the buildings on purpose — a glow painted over
+              them would wash the art out; behind them it reads as the windows
+              throwing light onto the ground they stand on.
+
+              Not on water zones, which have no buildings to light. */}
+          {!isWater && place.buildings && place.buildings.length > 0 && (
+            <div aria-hidden style={{
+              position: 'absolute', left: '50%', top: '52%',
+              width: '78%', height: '52%',
+              transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              // PITCHED TO SURVIVE THE GRADE. This glow lives inside the world
+              // layer, so the same brightness() that darkens the island darkens
+              // the light on it too — about 40% of it at full night. The alphas
+              // are set for what is left after that, not for what they look
+              // like on their own.
+              background: 'radial-gradient(ellipse at center,'
+                + ' rgba(255,198,116,0.66) 0%,'
+                + ' rgba(255,178,92,0.32) 42%,'
+                + ' rgba(255,160,70,0) 72%)',
+              opacity: 'var(--sea-night, 0)',
+              mixBlendMode: 'screen',
+              pointerEvents: 'none',
+            }} />
+          )}
+
           {place.buildings?.map((b, i) => (
             <Fragment key={i}>
               {/* NOTHING IS DRAWN UNDER A BUILDING. SIXTH TIME.
