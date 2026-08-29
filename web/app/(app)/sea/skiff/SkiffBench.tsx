@@ -194,6 +194,12 @@ export default function SkiffBench() {
         // it has seen: the bakes and the outline are cached per image.
         skiff.onFrame = () => {
           for (const w of worn) {
+            // The hook is hidden on the wait pose — it is in the water — and an
+            // aura that is not told keeps burning where the hook used to be.
+            const part = skiff.parts[w.key]
+            const on = !!part?.visible
+            w.aura.setHidden(!on)
+            if (!on) continue
             const p = skiff.poseOf(w.key)
             if (p) w.aura.setPose(p.image, p.key)
           }

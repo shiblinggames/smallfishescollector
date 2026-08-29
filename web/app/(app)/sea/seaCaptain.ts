@@ -210,6 +210,15 @@ export async function makeCaptain(
   // before: the bakes and the outline are cached per image.
   skiff.onFrame = () => {
     for (const w of worn) {
+      // A PART THAT IS NOT DRAWN DOES NOT GLOW. The hook is hidden on the wait
+      // pose because it is in the WATER, and an aura that is not told simply
+      // keeps burning wherever the hook was last seen — a glow and a stream of
+      // sparks hanging in mid-air at the end of the cast, which is exactly what
+      // it looked like.
+      const part = skiff.parts[w.key]
+      const on = !!part?.visible
+      w.aura.setHidden(!on)
+      if (!on) continue
       const p = skiff.poseOf(w.key)
       if (p) w.aura.setPose(p.image, p.key)
     }

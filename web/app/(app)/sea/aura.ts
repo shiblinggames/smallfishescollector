@@ -332,6 +332,16 @@ export type Aura = {
    *  this down for distant boats — fill rate is the one thing here that is not
    *  free. */
   setIntensity(k: number): void
+  /**
+   * The part itself is not being drawn, so neither is anything it does.
+   *
+   * Separate from `setIntensity` on purpose: intensity is a DIMMER, for a boat
+   * far enough away that its sparks are not worth the fill rate, and it leaves
+   * the glow burning. This is a SWITCH, for a part that is not there at all —
+   * the hook on the wait pose is in the water, and a hook glowing in mid-air
+   * where the hook used to be is not a dimmer problem.
+   */
+  setHidden(hidden: boolean): void
   destroy(): void
 }
 
@@ -618,6 +628,7 @@ export function makeAura(
   }
 
   let clock = 0
+  let hidden = false
 
   return {
     under,
@@ -651,7 +662,7 @@ export function makeAura(
       }
 
       // ── the part emits ──
-      if (intensity > 0) {
+      if (intensity > 0 && !hidden) {
         if (spec.burst) {
           sinceBurst += d
           if (sinceBurst >= spec.burst.every) {
@@ -700,7 +711,7 @@ export function makeAura(
       }
 
       // ── the part arcs ──
-      if (arcG) {
+      if (arcG && !hidden) {
         const a = spec.arcs
         if (!a) { if (bolts.length) { bolts.length = 0; arcG.clear() } }
         else {
@@ -738,6 +749,18 @@ export function makeAura(
     },
 
     setIntensity(k) { intensity = Math.max(0, Math.min(1, k)) },
+
+    setHidden(h) {
+      if (h === hidden) return
+      hidden = h
+      under.visible = !h
+      over.visible = !h
+      // The pool is left alone rather than cleared. Everything in the air is
+      // shorter-lived than any pose, so by the time the part comes back its old
+      // sparks have died on their own — and clearing would mean writing to
+      // three hundred particles to hide something already hidden.
+      if (h && bolts.length) { bolts.length = 0; arcG?.clear() }
+    },
 
     destroy() {
       // The bakes and the two particle canvases are shared and deliberately

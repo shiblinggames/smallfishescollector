@@ -24,6 +24,21 @@
 //   without it the V starts from nothing and reads as two lines rather than as
 //   something a boat is doing.
 //
+// ── AND EVERY HULL ON THE WATER, NOT JUST YOURS ─────────────────────────────
+//
+// The same disturbance belongs to everyone out there, and it is one system
+// rather than two because a hull is always doing ONE of these: moving, and
+// therefore leaving a wake, or sitting still, and therefore sitting in rings of
+// its own displacement. Sources are laid every frame and the module works out
+// which of the two each of them is doing, so a trader that drifts to a halt
+// stops trailing and starts rippling without anybody deciding when.
+//
+// The rings follow the stylesheet's own reasoning about weight: fast thin rings
+// travelling a long way is the clearest way to say LIGHT, and a heavy hull
+// wants the opposite - slow, close and dark. `heave` is that dial. The heavy
+// hull's TROUGH and COLLAR are not here yet; they belong to the Warship, and
+// the Warship is still a DOM sprite.
+//
 // ── AND EVERY HULL KEEPS ITS OWN CHARACTER ──────────────────────────────────
 //
 // The stylesheet gives six hulls a wake of their own and each one is a real
@@ -161,6 +176,31 @@ function textureFor(PIXI: typeof import('pixi.js'), shape: Shape): Texture {
   return t
 }
 
+/** A thin outlined ellipse: the ring a hull pushes out while it sits. Drawn as
+ *  a ring rather than a disc because the water is DISPLACED, not lit — a filled
+ *  blob at the waterline reads as a puddle of light under the boat. */
+let ringTex: Texture | null = null
+
+function ringTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (ringTex) return ringTex
+  const S = 256
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  // Soft on both edges. A hard 1px stroke aliases into a dotted line the moment
+  // it is scaled up, and these spend their whole life being scaled up.
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0.00, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.74, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.86, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.97, 'rgba(255,255,255,0)')
+  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, S, S)
+  ringTex = PIXI.Texture.from(c)
+  return ringTex
+}
+
 // ── THE TRAIL ───────────────────────────────────────────────────────────────
 
 /** How often a pair is laid, ms. A third of the DOM's 95, which is what turns a
@@ -173,6 +213,17 @@ const DENSITY = EVERY / 95
  *  number IS the V's angle: too little and the two lines read as one thick one,
  *  too much and the boat looks like it is dragging a net. */
 const SPREAD = 62
+
+/** Below this she is at rest and rings rather than trails. World px/sec, and
+ *  the same 26 the DOM gate uses so the two renderers change over at the same
+ *  moment. */
+const UNDER_WAY = 26
+
+/** One ring every this many seconds, at heave 0. The stylesheet runs three
+ *  rings over a 4.6s cycle, which is one every 1.53. */
+const RING_EVERY = 1.53
+/** How long one ring lives, at heave 0. */
+const RING_LIFE = 4.6
 
 type Mark = {
   p: Particle
@@ -191,22 +242,55 @@ type Mark = {
   /** Churn sits behind the hull and boils; it does not join the V. */
   churn: boolean
   tint: number
+  /** THE MARK REMEMBERS ITS OWN HULL. Several boats are on this water at once
+   *  and a shared `style` would redraw every mark in whatever the last hull to
+   *  emit happened to be — an Ethereal sailing past would recolour a plain
+   *  trader's whole wake behind them. */
+  st: Style
+}
+
+/** One hull meeting the water. */
+export type Contact = {
+  /** Stable per hull. Cadence and speed are tracked against it, so a trader
+   *  that leaves the list and comes back starts a fresh trail rather than one
+   *  stitched to wherever they were an hour ago. */
+  id: string
+  /** The CUTWATER, in world coordinates — where she parts the water, not where
+   *  her sprite is centred. */
+  x: number
+  y: number
+  /** Heading, radians. */
+  ang: number
+  /** Where she SITS, as opposed to where she cuts. Rings come from here — a
+   *  hull at rest is standing in water it displaced, and that is under the
+   *  middle of it rather than off the bow. Defaults to the cutwater. */
+  cx?: number
+  cy?: number
+  /** The hull's own size, and how heavily it sits. `heave` 0 is a rowing boat
+   *  and 1 is a Man-o-War: slower rings, closer, darker. */
+  scale: number
+  heave?: number
+  kind: WakeKind
+  /**
+   * How hard she is driving, 0..1. OPTIONAL, and left out for everyone but the
+   * player: the chart knows her velocity exactly, and for everybody else the
+   * honest measure is how far they actually moved since the last frame, which
+   * this module can see and the caller would have to compute.
+   */
+  force?: number
 }
 
 export type Wake = {
   view: Container
   /**
-   * Where the hull is parting the water, and how hard.
+   * Every hull on the water, this frame.
    *
-   * `x`/`y` are the cutwater in world coordinates, `ang` the heading in
-   * radians, `force` 0..1, `scale` the hull's own size. Called every frame; the
-   * cadence is this module's business.
+   * Called every frame with the WHOLE list. A hull that stops appearing has
+   * left; its marks stay and age out, because they are water and the water does
+   * not know it was abandoned.
    */
-  lay(s: { x: number; y: number; ang: number; force: number; scale: number } | null): void
+  lay(list: Contact[]): void
   advance(dt: number): void
-  /** Swap the hull's wake. Marks already on the water keep the old one and age
-   *  out, which is right: they were left by the boat that was there. */
-  setKind(kind: WakeKind): void
   night(tint: number): void
   destroy(): void
 }
@@ -226,8 +310,13 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   })
   view.addChild(paint, add)
 
-  let kind: WakeKind = 'plain'
-  let style: Style = STYLES.plain
+  /** What each hull was doing last frame. Speed is measured here rather than
+   *  asked for, because the only caller that knows its own velocity is the
+   *  player and everyone else would have to be given a differentiator. */
+  const seen = new Map<string, {
+    x: number; y: number; speed: number; primed: boolean
+    since: number; ringSince: number
+  }>()
 
   // Sized for the longest life at the fastest cadence, plus the churn that
   // rides with it. Recycled forever after that.
@@ -256,14 +345,42 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     pool.push({
       p, x: 0, y: 0, ang: 0, side: 1, force: 0, scale: 1,
       age: 1, life: 1, wobble: 0, drift: 0, churn: false, tint: 0xffffff,
+      st: STYLES.plain,
     })
     ;(pool[i] as Mark & { alt: Particle }).alt = q
   }
 
+  // ── THE RINGS ─────────────────────────────────────────────────────────────
+  // A hull at rest is not doing nothing: it is standing in water it has pushed
+  // out of the way. Far fewer of these than marks — three at a time per hull,
+  // over a long cycle.
+  const rings: {
+    p: Particle; x: number; y: number; age: number; life: number
+    scale: number; heave: number; tint: number
+  }[] = []
+  // THREE RINGS EACH, over a cycle, for everybody on screen at once. A quiet
+  // corner of the chart holds a couple of dozen captains and a busy one more,
+  // and a ring that gets recycled early snaps out of existence mid-sweep.
+  const RING_CAP = 240
+  const ringLayer: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: false, vertex: true, color: true },
+  })
+  // Under the marks: a boat that starts moving should have its wake laid over
+  // the rings it was sitting in a moment ago.
+  view.addChildAt(ringLayer, 0)
+  for (let i = 0; i < RING_CAP; i++) {
+    const p: Particle = new PIXI.Particle({ texture: ringTexture(PIXI) })
+    p.anchorX = 0.5
+    p.anchorY = 0.5
+    p.alpha = 0
+    p.scaleX = p.scaleY = 0
+    ringLayer.addParticle(p)
+    rings.push({ p, x: 0, y: 0, age: 1, life: 1, scale: 1, heave: 0, tint: 0xffffff })
+  }
+  let ringNext = 0
+
   let next = 0
-  let since = 0
   let tint = 0xffffff
-  let at: { x: number; y: number; ang: number; force: number; scale: number } | null = null
 
   const take = (): Mark & { alt: Particle } => {
     const m = pool[next] as Mark & { alt: Particle }
@@ -271,12 +388,16 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     return m
   }
 
-  function emit(m: Mark & { alt: Particle }, s: NonNullable<typeof at>, side: number, churn: boolean) {
+  function emit(
+    m: Mark & { alt: Particle },
+    s: Contact, style: Style, force: number, side: number, churn: boolean,
+  ) {
+    m.st = style
     m.x = s.x
     m.y = s.y
     m.ang = s.ang
     m.side = side
-    m.force = s.force
+    m.force = force
     m.scale = s.scale
     m.age = 0
     m.life = style.life / 1000
@@ -310,31 +431,109 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     dead.scaleX = dead.scaleY = 0
   }
 
+  /** One ring, pushed out from a hull that is standing still. */
+  function ring(s: Contact, style: Style, heave: number) {
+    const r = rings[ringNext]
+    ringNext = (ringNext + 1) % RING_CAP
+    r.x = s.cx ?? s.x
+    r.y = s.cy ?? s.y
+    r.age = 0
+    // Bigger displacement really does mean a longer wavelength, so slowing
+    // these down with weight is the physics as well as the feeling.
+    r.life = RING_LIFE * (1 + heave * 0.8)
+    r.scale = s.scale
+    r.heave = heave
+    r.tint = style.colors[0]
+  }
+
+  let pending: Contact[] = []
+
   return {
     view,
 
-    lay(s) { at = s },
+    lay(list) { pending = list },
 
     advance(dt) {
       const d = Math.min(dt, 0.05)
-      if (at && at.force > 0.02) {
-        since += d * 1000
-        while (since >= EVERY) {
-          since -= EVERY
-          emit(take(), at, -1, false)
-          emit(take(), at, 1, false)
-          // The stern boils in proportion to how hard she is driving.
-          if (Math.random() < style.churn * at.force) emit(take(), at, 0, true)
+
+      // ── WHAT EVERY HULL IS DOING ──────────────────────────────────
+      const alive = new Set<string>()
+      for (const s of pending) {
+        alive.add(s.id)
+        let st = seen.get(s.id)
+        if (!st) {
+          st = { x: s.x, y: s.y, speed: 0, primed: false, since: 0, ringSince: 1e9 }
+          seen.set(s.id, st)
         }
-      } else {
-        since = 0
+        // MEASURED, not asked for. The player knows her own velocity and hands
+        // it over; nobody else does, and how far they actually moved since the
+        // last frame is the same answer arrived at honestly.
+        const moved = Math.hypot(s.x - st.x, s.y - st.y) / Math.max(d, 1e-4)
+        st.speed = st.primed ? st.speed + (moved - st.speed) * Math.min(1, d * 8) : 0
+        st.x = s.x; st.y = s.y; st.primed = true
+
+        const style = STYLES[s.kind] ?? STYLES.plain
+        const heave = s.heave ?? 0
+        // The player's own force is exact; everybody else's comes off the
+        // measurement above, against the same speed the DOM gate used.
+        const force = s.force ?? Math.min(1, st.speed / 210)
+        const underWay = s.force != null ? s.force > 0.02 : st.speed > UNDER_WAY
+
+        if (underWay) {
+          st.since += d * 1000
+          // A hull that has been sitting still starts its next ring promptly
+          // when it stops, rather than up to a cycle and a half later.
+          st.ringSince = 1e9
+          while (st.since >= EVERY) {
+            st.since -= EVERY
+            emit(take(), s, style, force, -1, false)
+            emit(take(), s, style, force, 1, false)
+            // The stern boils in proportion to how hard she is driving.
+            if (Math.random() < style.churn * force) emit(take(), s, style, force, 0, true)
+          }
+        } else {
+          st.since = 0
+          st.ringSince += d
+          const every = RING_EVERY * (1 + heave * 0.8)
+          if (st.ringSince >= every) {
+            st.ringSince = 0
+            ring(s, style, heave)
+          }
+        }
+      }
+      // Anyone who has left. Their marks and rings are already on the water and
+      // stay there: it is water, and it does not know it was abandoned.
+      for (const id of [...seen.keys()]) if (!alive.has(id)) seen.delete(id)
+
+      // ── THE RINGS ─────────────────────────────────────────────────
+      for (const r of rings) {
+        if (r.age >= r.life) continue
+        r.age += d
+        if (r.age >= r.life) { r.p.alpha = 0; r.p.scaleX = r.p.scaleY = 0; continue }
+        const age = r.age / r.life
+        // 0.42 to 2.2 of the beam for a light hull; a heavy one starts at 0.92,
+        // hugging the waterline, and travels about half as far.
+        const from = 0.42 + heaveMix(r.heave, 0, 0.5)
+        const to = 2.2 - heaveMix(r.heave, 0, 1.05)
+        const k = (from + (to - from) * age) * r.scale
+        r.p.x = r.x
+        r.p.y = r.y
+        // 104 x 30, the beam the stylesheet opens from, and squashed on y for
+        // the same reason everything else on this plane is.
+        r.p.scaleX = (104 * k) / 256
+        r.p.scaleY = (30 * k) / 256
+        // In fast, out slow: 0 at the start, up by a seventh of the way
+        // through, gone by the end.
+        const rise = Math.min(1, age / 0.14)
+        r.p.alpha = rise * Math.pow(1 - age, 1.4) * 0.34 * (1 - r.heave * 0.35)
+        r.p.tint = tint === 0xffffff ? r.tint : mix(r.tint, tint)
       }
 
-      const light = style.blend === 'add'
       for (const raw of pool) {
         const m = raw as Mark & { alt: Particle }
         if (m.age >= m.life) continue
         m.age += d
+        const light = m.st.blend === 'add'
         const p = light ? m.p : m.alt
         if (m.age >= m.life) { p.alpha = 0; p.scaleX = p.scaleY = 0; continue }
         const age = m.age / m.life
@@ -349,7 +548,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         const ang = m.ang + m.wobble * age
         const out = m.churn
           ? 14 * m.scale * age * m.drift
-          : SPREAD * style.spread * Math.sqrt(m.scale) * m.force * m.drift
+          : SPREAD * m.st.spread * Math.sqrt(m.scale) * m.force * m.drift
             * (1 - Math.pow(1 - age, 2.2))
         p.x = m.x + -Math.sin(ang) * m.side * out
         p.y = m.y + Math.cos(ang) * m.side * out
@@ -358,7 +557,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         // straight line — foam behaves that way, and a linear fade is the main
         // reason a wake reads as a row of identical dots.
         const fade = Math.pow(1 - age, m.churn ? 2.4 : 1.7)
-        p.alpha = fade * style.alpha * DENSITY * (0.45 + m.force * 0.55)
+        p.alpha = fade * m.st.alpha * DENSITY * (0.45 + m.force * 0.55)
           * (m.churn ? 2.2 : 1)
         p.tint = tint === 0xffffff ? m.tint : mix(m.tint, tint)
 
@@ -368,15 +567,9 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         const along = (0.55 + age * 0.7) * m.scale * (m.churn ? 0.5 : 1)
         const across = (0.3 + age * 1.5) * m.scale * (m.churn ? 0.7 : 1)
         p.rotation = ang
-        p.scaleX = (style.along * along) / 128
-        p.scaleY = (style.across * across) / 64
+        p.scaleX = (m.st.along * along) / 128
+        p.scaleY = (m.st.across * across) / 64
       }
-    },
-
-    setKind(k) {
-      if (k === kind) return
-      kind = k
-      style = STYLES[k] ?? STYLES.plain
     },
 
     night(next) { tint = next },
@@ -384,6 +577,11 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     destroy() { view.destroy({ children: true }) },
   }
 }
+
+/** Interpolate a weight-dependent number: `at 0` for a rowing boat, `at 1` for
+ *  a Man-o-War. Named because `a + (b - a) * h` three times in a row reads as
+ *  arithmetic rather than as weight. */
+const heaveMix = (h: number, a: number, b: number) => a + (b - a) * h
 
 /** The hour, applied to a mark's own colour. Foam takes the light it is given;
  *  it does not have a colour of its own to keep. */

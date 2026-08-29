@@ -44,7 +44,8 @@ import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, lookKey, type Captain, type CaptainLook } from './seaCaptain'
 import { makeDrift, type Drift } from './seaDrift'
-import { makeWake, type Wake, type WakeKind } from './seaWake'
+import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
+import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
@@ -89,6 +90,8 @@ export type GpuHandle = {
    */
   wake(s: {
     x: number; y: number; ang: number; force: number; scale: number; kind: WakeKind
+    /** Where she sits, for the rings she makes at rest. */
+    cx: number; cy: number
   } | null): void
   /**
    * EVERYONE ELSE ON THE WATER, every frame.
@@ -104,6 +107,10 @@ export type GpuHandle = {
    */
   fleet(list: {
     key: string; x: number; y: number; facing: number; scale: number; dim: number
+    /** Heading in radians, for the wake they leave. A captain's `facing` is
+     *  only ±1 and says which way the sprite is mirrored; a wake needs to know
+     *  which way they are actually going. */
+    ang: number
   }[]): void
   skipper(s: {
     bob: number
@@ -148,6 +155,9 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
     holder: import('pixi.js').Container
     cap: Captain
     sig: string
+    /** What this hull leaves behind. Read once when they are built rather than
+     *  sent every frame: a trader does not change boats mid-patrol. */
+    kind: WakeKind
   }>())
   const crewLayerRef = useRef<import('pixi.js').Container | null>(null)
   // Read once. Both lists are derived from static chart data, so re-baking on a
@@ -366,6 +376,13 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
       let camX = 0, camY = 0, camZoom = 1
       let dark = 0, warm = 0
       let lastCamX = 0, lastCamY = 0, rush = 0
+      /** The player's contact and the fleet's last positions, held between the
+       *  handle calls that set them and the ticker that uses them. */
+      let mine: Contact | null = null
+      let fleetAt: {
+        key: string; x: number; y: number; facing: number; scale: number; dim: number; ang: number
+      }[] = []
+      const contacts: Contact[] = []
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
       a.ticker.add(() => {
         const t = performance.now() / 1000
@@ -396,6 +413,21 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
         const halfW = a.screen.width / 2 / camZoom
         const halfH = a.screen.height / 2 / camZoom / GROUND
         drift.advance(camX, camY, halfW, halfH, t, a.ticker.deltaMS / 1000)
+        // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
+        // The player and the whole Salt Road go in together, because the wake
+        // module works out for itself which of them are under way and which are
+        // sitting still. Rebuilt into the same array rather than allocated.
+        contacts.length = 0
+        if (mine) contacts.push(mine)
+        for (const e of fleetAt) {
+          const c = crewRef.current.get(e.key)
+          if (!c) continue
+          contacts.push({
+            id: e.key, x: e.x, y: e.y, ang: e.ang,
+            scale: e.scale, kind: c.kind,
+          })
+        }
+        wake.lay(contacts)
         wake.advance(a.ticker.deltaMS / 1000)
         for (const sw of swayers) {
           // Generous margins: a landmark is anchored at its base and stands
@@ -458,11 +490,10 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
           water.set({ uDeep: f(stops[0]), uMid: f(stops[1]), uShallow: f(stops[2]) })
         },
         wake(w) {
-          if (!w) { wake.lay(null); return }
-          wake.setKind(w.kind)
-          wake.lay(w)
+          mine = w ? { id: 'me', ...w } : null
         },
         fleet(list) {
+          fleetAt = list
           const seen = crewRef.current
           for (const c of seen.values()) c.holder.visible = false
           for (const e of list) {
@@ -614,7 +645,11 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
         // for one frame and then jumps.
         holder.visible = false
         layer.addChild(holder)
-        crew.set(key, { holder, cap, sig: lookKey(f.look) })
+        const hull = f.look.boatId ? BOATS.find(b => b.id === f.look.boatId) : null
+        crew.set(key, {
+          holder, cap, sig: lookKey(f.look),
+          kind: (hull?.wake as WakeKind | undefined) ?? 'plain',
+        })
       }
     })().catch(() => {
       // One captain who will not assemble must not take the sea with them.

@@ -2705,7 +2705,7 @@ export default function SeaMap({
   /** Reused every frame. Forty small objects a frame is forty small objects a
    *  frame; the canvas reads this and is done with it before the next one. */
   const fleetAt = useRef<{
-    key: string; x: number; y: number; facing: number; scale: number; dim: number
+    key: string; x: number; y: number; facing: number; scale: number; dim: number; ang: number
   }[]>([])
   /** YOON. Written down rather than rolled, permanent, and the only person on
    *  this sea who sells the rod with his name on it. See chart.ts. */
@@ -4043,14 +4043,24 @@ export default function SeaMap({
       // GROUND because it is a screen measurement inside a squashed layer.
       if (gpuRef.current) {
         const h = hullRef.current
-        gpuRef.current.wake(speed > 26 ? {
+        // ALWAYS SENT, never null. It used to go quiet below the gate, which
+        // was right when the only thing on the other end was a trail — but a
+        // hull at rest is not doing nothing, it is standing in water it pushed
+        // out of the way, and the canvas cannot draw that for a boat it has
+        // been told is not there. The force is what says which of the two she
+        // is doing, and zero is a perfectly good force.
+        gpuRef.current.wake({
           x: pos.current.x + facing.current * h.bowX + WATERLINE_X,
           y: pos.current.y + h.bowDown / GROUND,
+          // Where she SITS, for the rings: under the middle of her, at her own
+          // waterline, rather than off the bow where she cuts.
+          cx: pos.current.x + WATERLINE_X,
+          cy: pos.current.y + h.keelY / GROUND,
           ang: Math.atan2(vel.current.y, vel.current.x) + h.bowTilt * facing.current,
-          force: Math.min(1, speed / (SPEED * 0.9)),
+          force: speed > 26 ? Math.min(1, speed / (SPEED * 0.9)) : 0,
           scale: h.scale,
           kind: wakeKindRef.current,
-        } : null)
+        })
       }
 
       // A PAIR AT A TIME, port and starboard. The gate is lower than it was
@@ -4274,11 +4284,16 @@ export default function SeaMap({
           list.push({
             key: t.key, x: at.x, y: at.y, facing: at.facing, scale: 0.94,
             dim: dealtRef.current.includes(t.key) ? 0.62 : 1,
+            // Which way they are actually GOING, as opposed to which way their
+            // sprite is mirrored. A wake needs the heading.
+            ang: (at.headingDeg * Math.PI) / 180,
           })
         }
         // Finn barely moves and never turns: he is not passing through.
         const f = finnRef.current
-        if (f) list.push({ key: 'finn', x: f.at.x, y: f.at.y, facing: 1, scale: 0.98, dim: 1 })
+        if (f) list.push({
+          key: 'finn', x: f.at.x, y: f.at.y, facing: 1, scale: 0.98, dim: 1, ang: 0,
+        })
         gpuRef.current.fleet(list)
       }
 
@@ -4291,14 +4306,12 @@ export default function SeaMap({
           if (!el) continue
           const at = traderPos(t, ts)
           el.style.transform = `translate3d(${at.x - t.x}px, ${at.y - t.y}px, 0)`
-          // The wake lies along the heading. One rotation write per trader; the
-          // marks inside it never change.
-          let wake = wakeCache.current.get(t.key)
-          if (!wake) {
-            wake = el.querySelector<HTMLElement>('.trader-wake') ?? undefined
-            if (wake) wakeCache.current.set(t.key, wake)
-          }
-          if (wake) wake.style.transform = `rotate(${at.headingDeg}deg)`
+          // THE `.trader-wake` LOOKUP THAT USED TO BE HERE FOUND NOTHING.
+          // There is no such node in the markup and there is no sign there ever
+          // was: traders have never left a wake in the DOM, so this was a
+          // querySelector per trader on first sight, a cache miss every time,
+          // and a rotation written to undefined. Traders leave a real one on
+          // the canvas now — see the contact list above.
 
           // CACHED. This was a querySelector per trader per frame — a DOM
           // search sixty times a second for a node that never changes. Looked
@@ -5248,7 +5261,7 @@ hullRef={hullRefFor(t.key)} />
             <div className="sea-heave-swell" />
             <div className="sea-heave-swell" style={{ animationDelay: '3.2s' }} />
           </>
-        ) : (
+        ) : GPU_ISLANDS ? null : (
           <>
             <div className="sea-ripple" />
             <div className="sea-ripple" style={{ animationDelay: '1.5s' }} />
