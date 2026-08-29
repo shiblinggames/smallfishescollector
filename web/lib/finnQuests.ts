@@ -561,6 +561,10 @@ export function pendingFinnQuest(doneIds: readonly string[]): FinnQuest | null {
 
 /** Plain progress wording, for the panel. Mechanics copy stays literal. */
 export function questProgressLabel(q: FinnQuest, have: number): string {
+  // A LAST GUARD. The NaN that reached players came from a missing snapshot
+  // field upstream, and that is fixed at the source, but a progress label is
+  // the one place a bad number becomes something a captain reads.
+  if (!Number.isFinite(have)) have = 0
   if (q.type === 'zone_streak') {
     return `Best run since he asked: ${Math.min(have, q.target)} of ${q.target}`
   }

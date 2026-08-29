@@ -271,15 +271,36 @@ async function questProgress(
   quest: FinnQuest, stored: StoredQuest, row: Row,
 ): Promise<number> {
   const zp = row.zone_perfects ?? {}
+  /**
+   * EVERY SNAPSHOT READ IS COALESCED, and that is not defensive noise.
+   *
+   * A stored job is a jsonb blob written when it was accepted, so a job taken
+   * before a new field existed simply does not have it — and `0 - undefined` is
+   * NaN, which sails straight through the arithmetic and into the panel as
+   * "NaN of 4". Exactly that shipped: `zperf0` arrived with the zoned jobs and
+   * every job already in flight was missing it.
+   *
+   * Reading a missing baseline as zero measures that job from the moment the
+   * field appeared rather than from when it was accepted: generous by a few
+   * catches, and impossible to farm. Any field added here later must be read
+   * the same way.
+   */
+  const base = {
+    catch0: stored.catch0 ?? 0,
+    perf0: stored.perf0 ?? 0,
+    zone0: stored.zone0 ?? 0,
+    rare0: stored.rare0 ?? 0,
+    zperf0: stored.zperf0 ?? 0,
+  }
   switch (quest.type) {
     case 'catch_zone':
       // Fish landed in the job's own water since he asked.
-      return (await catchesWhere(admin, uid, { zone: quest.zone })) - stored.zone0
+      return (await catchesWhere(admin, uid, { zone: quest.zone })) - base.zone0
 
     case 'zone_perfects':
       // Clean catches in that water. `zone_perfects` is bumped in reelIn off
       // fish.habitat, so this is the same delta rule as everything else.
-      return (zp[quest.zone ?? ''] ?? 0) - stored.zperf0
+      return (zp[quest.zone ?? ''] ?? 0) - base.zperf0
 
     case 'zone_streak': {
       // BOTH TESTS, for the reason the old bet needed both, plus the water.
@@ -289,14 +310,14 @@ async function questProgress(
       // Shallows would clear a job set in the Abyss. The smaller of the two is
       // the honest answer to "how close am I".
       const streak = row.current_perfect_streak ?? 0
-      const sinceHere = (zp[quest.zone ?? ''] ?? 0) - stored.zperf0
+      const sinceHere = (zp[quest.zone ?? ''] ?? 0) - base.zperf0
       return Math.min(streak, sinceHere)
     }
 
     case 'catch_rarity':
       // Rarity AND water together, so a rare fish from somewhere else does not
       // count toward an act set here.
-      return (await catchesWhere(admin, uid, { zone: quest.zone, minRarity: quest.minRarity })) - stored.rare0
+      return (await catchesWhere(admin, uid, { zone: quest.zone, minRarity: quest.minRarity })) - base.rare0
 
     case 'catch_ancient': {
       // ONE NAMED GIANT, AND DELIBERATELY THE EXCEPTION TO THE DELTA RULE.
