@@ -24,7 +24,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { makeSkiff, SKIFF_W, type Placement } from '../skiffArt'
-import { makeRodFx, type GlowType } from '../rodFx'
+import { makeRodFx, makeRodGlow, type GlowType } from '../rodFx'
 
 /** Every effect the engine knows, in the order the rods unlock them. */
 const GLOWS: GlowType[] = ['fire', 'sparkle', 'electric', 'moon', 'tech',
@@ -56,7 +56,12 @@ export default function SkiffBench() {
   const boat = BOATS.find(b => b.id === boatId) ?? null
   const hat = HATS.find(h => h.id === hatId) ?? null
   const char = getCharacterSprites(colour)
-  const rod = RODS.find(r => r.slug)?.slug ?? null
+  // The rod that actually wears this glow, so picking "saber" shows the
+  // Lightsaber and not a bamboo pole with a crimson aura. The whole point is to
+  // judge the light against the art it was drawn for.
+  const rodDef = (glow !== 'none' && RODS.find(r => r.glowType === glow && r.slug))
+    || RODS.find(r => r.slug)
+  const rod = rodDef?.slug ?? null
   const hook = HOOKS.find(h => h.imageUrl)?.imageUrl ?? null
 
   useEffect(() => {
@@ -92,18 +97,34 @@ export default function SkiffBench() {
         skiff.view.y += 60
         a.stage.addChild(skiff.view)
 
-        // THE EFFECT, AT THE ROD. A child of the skiff rather than of the
-        // stage, so it travels with the boat for free — a captain who sails
-        // away from their own sparks is worse than no sparks.
-        if (skiff.rodTip && glow !== 'none') {
-          const fx = makeRodFx(PIXI, glow, { stage: stageRef.current })
-          fx.view.x = skiff.rodTip.x
-          fx.view.y = skiff.rodTip.y
-          skiff.view.addChild(fx.view)
-          a.ticker.add(t => {
-            fx.setStage(stageRef.current)
-            fx.update(t.deltaMS / 1000)
-          })
+        if (glow !== 'none') {
+          // THE GLOW, ON THE ROD ITSELF. Inserted directly beneath the rod
+          // sprite, so the light comes off the rod's own silhouette and the rod
+          // sits on top of its own aura — which is what the CSS drop-shadow was
+          // always doing and the part that identifies the rod.
+          if (skiff.rodSprite) {
+            const g = makeRodGlow(PIXI, skiff.rodSprite, glow, { stage: stageRef.current })
+            const under = skiff.view.getChildIndex(skiff.rodSprite)
+            for (const l of g.layers) skiff.view.addChildAt(l, under)
+            a.ticker.add(t => {
+              g.setStage(stageRef.current)
+              g.update(t.deltaMS / 1000)
+            })
+          }
+
+          // THE EFFECT, OFF THE TIP. A child of the skiff rather than of the
+          // stage, so it travels with the boat for free — a captain who sails
+          // away from their own sparks is worse than no sparks.
+          if (skiff.rodTip) {
+            const fx = makeRodFx(PIXI, glow, { stage: stageRef.current })
+            fx.view.x = skiff.rodTip.x
+            fx.view.y = skiff.rodTip.y
+            skiff.view.addChild(fx.view)
+            a.ticker.add(t => {
+              fx.setStage(stageRef.current)
+              fx.update(t.deltaMS / 1000)
+            })
+          }
         }
       } catch (e) {
         setErr(e instanceof Error ? `${e.name}: ${e.message}` : String(e))
@@ -168,7 +189,7 @@ export default function SkiffBench() {
     <div style={{ minHeight: '100vh', background: '#12222e', color: '#cfe0ec',
       fontFamily: 'ui-monospace, monospace', fontSize: 12, padding: 16 }}>
       <p style={{ color: '#f0c040', fontWeight: 700, marginBottom: 10 }}>
-        SKIFF: DOM vs PIXI{err ? ` — ${err}` : ''}
+        SKIFF: DOM vs PIXI{rodDef ? ` — ${rodDef.name}` : ''}{err ? ` — ${err}` : ''}
       </p>
 
       <div style={{

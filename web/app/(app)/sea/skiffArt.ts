@@ -121,6 +121,11 @@ export type Skiff = {
   /** Where the rod's tip is, in the skiff's own coordinates. Emitters hang off
    *  this: a spark that comes out of the middle of a captain is not a rod. */
   rodTip: { x: number; y: number } | null
+  /** The placed rod, for the glow to match. A rod's aura is its own silhouette
+   *  lit up, so the thing that draws it needs the sprite rather than a
+   *  position — same texture, same anchor, same rotation, or the light slides
+   *  off the rod as it turns. */
+  rodSprite: import('pixi.js').Sprite | null
 }
 
 /**
@@ -157,6 +162,7 @@ export async function makeSkiff(
   // Painted in the DOM's order: hat, hull, hook, rod. Order is not decoration —
   // the hull is drawn OVER the character because a captain sits in a boat.
   let rodTip: Skiff['rodTip'] = null
+  let rodSprite: Skiff['rodSprite'] = null
   for (const key of ['hat', 'boat', 'hook', 'rod'] as const) {
     const part = parts[key]
     if (!part) continue
@@ -165,6 +171,7 @@ export async function makeSkiff(
     place(sprite, part.at, w, h)
     view.addChild(sprite)
     if (key === 'rod') {
+      rodSprite = sprite
       // The far end of the rod, which for the rest frame is up and to the left.
       // Taken from the sprite's own placed box rather than guessed, so a longer
       // rod puts its sparks further out without anybody editing a number.
@@ -178,5 +185,5 @@ export async function makeSkiff(
   view.x = -0.08 * w
   view.y = -0.26 * h
 
-  return { view, rodTip }
+  return { view, rodTip, rodSprite }
 }
