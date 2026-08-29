@@ -124,6 +124,7 @@ import { GROUND, ISLAND_LIFT, bakeIsland, requestGround } from './islandArt'
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
 import { type CaptainLook } from './seaCaptain'
 import { type WakeKind } from './seaWake'
+import { type BerthSpec } from './seaBerth'
 
 /**
  * ── THE ISLANDS ON THE GPU, BEHIND A FLAG ───────────────────────────────────
@@ -2748,6 +2749,22 @@ export default function SeaMap({
    * trade — but the BOAT is the same boat, and giving him a second pipeline to
    * be drawn through would be two places for a captain to stop matching.
    */
+  /** Every berth on the chart, for the canvas. Static: the ports do not move,
+   *  so this is read once and the only thing that ever changes is which one has
+   *  you in it. */
+  const gpuBerths = useMemo<BerthSpec[]>(() => {
+    if (!GPU_ISLANDS) return []
+    return PLACES.filter(p => p.kind === 'port').map(p => {
+      const b = berthOf(p)
+      return {
+        id: p.id, x: b.x, y: b.y, r: b.r,
+        // Which way the dock is from the berth — the approach lights run toward
+        // it, which is the one thing a symmetric circle cannot tell you.
+        bearing: Math.atan2(p.y - b.y, p.x - b.x),
+      }
+    })
+  }, [])
+
   const gpuFleet = useMemo(() => {
     if (!GPU_ISLANDS) return []
     const out = [yoon, ...residents, ...socials, ...traders]
@@ -4630,6 +4647,10 @@ export default function SeaMap({
           if (p.kind === 'port' ? inBerth(pos.current, p) : inBand(pos.current, p)) { found = p; break }
         }
         setNear(prev => (prev?.id === found?.id ? prev : found))
+        // The berth lights up around whoever is standing in it. Sent on the
+        // proximity tick rather than every frame: this changes when you arrive
+        // somewhere, which is not sixty times a second.
+        gpuRef.current?.berth(found?.kind === 'port' ? found.id : null)
 
         // ── WHAT IS IN FRONT OF HER RIGHT NOW ──────────────────────────
         // `m.y` is a mark's BASE — SeaMark anchors at translate(-50%,-100%) —
@@ -4815,7 +4836,7 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
-            fleet={gpuFleet} handle={gpuRef} />
+            fleet={gpuFleet} berths={gpuBerths} handle={gpuRef} />
         </div>
       )}
 
@@ -7533,14 +7554,18 @@ const PortBerth = memo(function PortBerth({ p, active }: { p: Place; active: boo
   const bearing = Math.atan2(b.y - p.y, b.x - p.x)
   return (
     <div aria-hidden style={{ position: 'absolute', left: b.x, top: b.y, pointerEvents: 'none' }}>
-      <div style={{
+      {/* THE RING IS ON THE CANVAS UNDER THE FLAG, along with a lit pool and
+          a run of approach lights — see seaBerth for what a berth is actually
+          trying to say. The BEACONS stay either way: they are lamps standing on
+          the water with art of their own, not an annotation drawn over it. */}
+      {!GPU_ISLANDS && <div style={{
         position: 'absolute', left: -b.r, top: -b.r, width: b.r * 2, height: b.r * 2,
         borderRadius: '50%',
         border: `2px ${active ? 'solid' : 'dashed'} ${active ? 'rgba(255,217,134,0.7)' : 'rgba(226,244,250,0.26)'}`,
         background: active ? 'rgba(255,206,120,0.05)' : 'none',
         boxShadow: active ? 'inset 0 0 40px rgba(255,196,110,0.16)' : 'none',
         transition: 'border-color 300ms ease-out, background 300ms ease-out, box-shadow 300ms ease-out',
-      }} />
+      }} />}
       {[-0.95, 0, 0.95].map((off, i) => {
         const a = bearing + off
         return <Beacon key={i} x={Math.cos(a) * b.r} y={Math.sin(a) * b.r} active={active} />

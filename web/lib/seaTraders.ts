@@ -696,17 +696,68 @@ function gcd(a: number, b: number): number {
  * to price it and never asks where they are, so this can be as fluid as it
  * likes without anything needing to agree about it.
  */
+/**
+ * WORK AND WAIT, rather than a constant crawl.
+ *
+ * A trader used to travel their patrol circle at a fixed rate, which comes out
+ * around eleven pixels a second — slow enough that nothing they did ever
+ * registered as movement. They were never still and never going anywhere, which
+ * is the worst of both: no stillness to make the sea calm, no motion to make it
+ * alive, and far too slow to leave a wake.
+ *
+ * So the circle is now walked in LEGS. They sit a while at a spot, get under
+ * way, cross to the next spot, and settle again. Same water, same reachable
+ * set, told differently.
+ *
+ * THE PATH IS UNCHANGED, AND THAT IS DELIBERATE. Only the parameterisation
+ * moves: every position a trader can occupy is a position on the circle they
+ * already patrolled, so `check-traders` is verifying exactly the same geometry
+ * it verified before and cannot be quietly invalidated by a movement change.
+ * Anything that altered the shape would need the collision proof redone.
+ *
+ * The travel is smootherstep, which leaves and arrives at a dead stop. Covering
+ * the same arc in half the time at a peak of nearly twice the average puts them
+ * comfortably over the speed at which a hull starts leaving a wake — so a
+ * moving trader now trails, and a stopped one sits in its own rings, and the
+ * difference between the two is visible from across the chart.
+ */
+const smootherstep = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
+
+/** Stable per trader, derived from a number they already have rather than
+ *  stored on them: a new field would mean touching every place a trader is
+ *  built, and this is a presentation detail. */
+function legsFor(phase: number): number {
+  const n = Math.abs(Math.sin(phase * 12.9898) * 43758.5453)
+  return 4 + Math.floor((n % 1) * 3)
+}
+
 export function traderPos(t: Trader, nowSec: number): {
   x: number; y: number; facing: 1 | -1
   /** Heading in SCREEN degrees, for the wake to lie along. */
   headingDeg: number
 } {
-  const a = t.driftPhase + nowSec * t.driftRate
+  let a = t.driftPhase + nowSec * t.driftRate
+  if (t.driftRate > 0) {
+    // One lap, in seconds, and how far through it we are.
+    const lap = (Math.PI * 2) / t.driftRate
+    const u = (((nowSec / lap) % 1) + 1) % 1
+    const legs = legsFor(t.driftPhase)
+    // Rather more than half the time spent moored. A sea where everybody is
+    // under way at once is as uniform as a sea where nobody is.
+    const DWELL = 0.58
+    const leg = u * legs
+    const i = Math.floor(leg)
+    const f = leg - i
+    const moved = f <= DWELL ? 0 : smootherstep((f - DWELL) / (1 - DWELL))
+    a = t.driftPhase + ((i + moved) / legs) * Math.PI * 2
+  }
   const x = t.x + Math.cos(a) * t.driftR
   const y = t.y + Math.sin(a) * t.driftR * 0.6
   // The tangent of the patrol circle — which way they are actually travelling.
-  const vx = -Math.sin(a) * t.driftRate
-  const vy = Math.cos(a) * t.driftRate * 0.6
+  // Direction only, so it does not care how fast they are going along it, which
+  // is what keeps a moored trader from spinning while they sit.
+  const vx = -Math.sin(a)
+  const vy = Math.cos(a) * 0.6
   return {
     x, y,
     // Facing comes from the heading, so a trader always looks where they are

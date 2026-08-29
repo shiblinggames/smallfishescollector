@@ -45,6 +45,7 @@ import { SUBMERGE } from './submerge'
 import { makeCaptain, lookKey, type Captain, type CaptainLook } from './seaCaptain'
 import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
+import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
 import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
 
@@ -93,6 +94,9 @@ export type GpuHandle = {
     /** Where she sits, for the rings she makes at rest. */
     cx: number; cy: number
   } | null): void
+  /** Which berth she is standing in, or null. Eased on the far side, so this
+   *  can be called every frame or only on change. */
+  berth(id: string | null): void
   /**
    * EVERYONE ELSE ON THE WATER, every frame.
    *
@@ -122,13 +126,15 @@ export type GpuHandle = {
   } | null): void
 }
 
-export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }: {
+export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, handle }: {
   islands: GpuIsland[]
   marks: GpuMark[]
   /** How the player looks right now. Rebuilt only when it actually changes —
    *  see the effect below, which compares by VALUE because a captain is
    *  expensive to assemble and cheap to steer. */
   captain: CaptainLook | null
+  /** Where a boat can be tied up. Static, so read once. */
+  berths: BerthSpec[]
   /** Everyone else, and how they look. Rebuilt only when somebody's outfit
    *  actually changes — see the effect below. */
   fleet: { key: string; look: CaptainLook }[]
@@ -162,6 +168,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
   const crewLayerRef = useRef<import('pixi.js').Container | null>(null)
   // Read once. Both lists are derived from static chart data, so re-baking on a
   // parent render would be pure waste.
+  const berthRef = useRef(berths)
   const listRef = useRef(islands)
   const marksRef = useRef(marks)
 
@@ -238,6 +245,13 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
       // as travel where a scrolling texture reads as a scrolling texture.
       const drift: Drift = makeDrift(PIXI)
       world.addChild(drift.view)
+
+      // ── WHERE SHE CAN TIE UP ──────────────────────────────────────
+      // Added before the islands, which attach asynchronously as they bake, so
+      // an island always paints over its own berth ring. That ordering is the
+      // DOM's too, and for the same reason.
+      const berthLayer: Berths = makeBerths(PIXI, berthRef.current)
+      world.addChild(berthLayer.view)
 
       // ── AND WHAT SHE LEAVES BEHIND ────────────────────────────────
       // In the world for the same reason the flecks are: a wake that travels
@@ -428,6 +442,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
           })
         }
         wake.lay(contacts)
+        berthLayer.advance(t, a.ticker.deltaMS / 1000)
         wake.advance(a.ticker.deltaMS / 1000)
         for (const sw of swayers) {
           // Generous margins: a landmark is anchored at its base and stands
@@ -483,6 +498,10 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
           for (const c of crewRef.current.values()) c.cap.setNight(tint)
           drift.night(tint)
           wake.night(tint)
+          // A harbour lamp is the one light out here that is NOT the sun, so it
+          // gives up much less to the hour than the water around it. Most of
+          // the point of a lit berth is that it is still lit after dark.
+          berthLayer.night(nightTint(d * 0.3, w))
         },
         palette(stops) {
           if (!water || stops.length < 3) return
@@ -492,6 +511,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
         wake(w) {
           mine = w ? { id: 'me', ...w } : null
         },
+        berth(id) { berthLayer.setActive(id) },
         fleet(list) {
           fleetAt = list
           const seen = crewRef.current
