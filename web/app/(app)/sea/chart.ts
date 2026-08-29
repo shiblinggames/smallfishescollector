@@ -192,10 +192,13 @@ export const PLACES: Place[] = [
       // which is painted full width right to the edge of the sprite, so both
       // base corners are the real constraint.
       //
-      // That makes the base want to sit where the island is WIDEST rather than
-      // politely inside it, and on this coastline that is just above the middle
-      // and a touch to port. scripts/fit-town.mts binary-searches the largest
-      // scale that stands at every base position.
+      // y 51 IS THE FLOOR AT THIS SIZE, and it is a floor rather than a
+      // preference. Sitting at the widest point put the town in the top half
+      // and left the whole lower island as empty grass; every step down costs
+      // width, because the island narrows. scripts/fit-town.mts prints the
+      // lowest base that still holds a given scale, and 0.62 runs out at 51 —
+      // dropping to 53 would buy two more points of depth and cost six of
+      // width, which is the wrong trade when the size is already right.
       //
       // AND IT REACHES THE SHORE, not the scrub band. toShore is the one
       // allowance in the check and this is its only user: BUILDABLE is sized so
@@ -203,7 +206,7 @@ export const PLACES: Place[] = [
       // cottage and wrong for a port. A town is built out to the water it
       // exists for. At scrub width this came out as a village marooned in the
       // middle of a green field.
-      { art: '/sea/mainland-town.png', x: 47, y: 46, scale: 0.62, toShore: true },
+      { art: '/sea/mainland-town.png', x: 47, y: 51, scale: 0.62, toShore: true },
     ],
   },
   {
