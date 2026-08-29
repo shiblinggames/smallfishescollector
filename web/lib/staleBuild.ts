@@ -50,6 +50,8 @@ export function isStaleBuild(err: unknown): boolean {
 /** At most one automatic reload per minute, remembered across the reload. */
 const KEY = 'stb:stale-reload'
 const COOLDOWN = 60_000
+/** The throwaway parameter that makes the recovery navigation a new address. */
+const BUST = 'stb'
 
 /**
  * Reload onto the current build, once.
@@ -76,7 +78,20 @@ export function reloadOntoCurrentBuild(): boolean {
   }
   // replace(), not reload(): reload can re-run from the back/forward cache with
   // the same stale document, which is exactly what we are trying to leave.
-  window.location.replace(window.location.href)
+  //
+  // AND TO A DIFFERENT URL, for the same reason one step further on. Replacing
+  // with the identical href can still be answered from a cache — the bfcache on
+  // an installed PWA especially — and coming back to the same document is not a
+  // recovery, it is the same failure with the cooldown now spent. One throwaway
+  // parameter makes the address new, so the navigation has to be satisfied from
+  // the network. The guard strips it again on arrival.
+  try {
+    const u = new URL(window.location.href)
+    u.searchParams.set(BUST, String(Date.now()))
+    window.location.replace(u.toString())
+  } catch {
+    window.location.replace(window.location.href)
+  }
   return true
 }
 
@@ -89,5 +104,24 @@ export function justReloadedForBuild(): boolean {
     return last > 0 && Date.now() - last < 8000
   } catch {
     return false
+  }
+}
+
+/**
+ * Take the recovery parameter back out of the address bar.
+ *
+ * It exists only to make one navigation uncacheable; leaving it behind would
+ * put it in every share, every bookmark and every subsequent history entry.
+ * `replaceState`, so it does not add a step to the back button.
+ */
+export function clearBuildBust(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const u = new URL(window.location.href)
+    if (!u.searchParams.has(BUST)) return
+    u.searchParams.delete(BUST)
+    window.history.replaceState(null, '', u.pathname + u.search + u.hash)
+  } catch {
+    // An address we cannot parse is one we should not be rewriting.
   }
 }

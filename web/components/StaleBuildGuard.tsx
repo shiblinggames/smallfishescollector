@@ -17,7 +17,7 @@
 // worse than the problem.
 
 import { useEffect, useState } from 'react'
-import { isStaleBuild, reloadOntoCurrentBuild, justReloadedForBuild } from '@/lib/staleBuild'
+import { isStaleBuild, reloadOntoCurrentBuild, justReloadedForBuild, clearBuildBust } from '@/lib/staleBuild'
 
 export default function StaleBuildGuard() {
   /**
@@ -35,6 +35,9 @@ export default function StaleBuildGuard() {
    */
   const [updated, setUpdated] = useState(false)
   useEffect(() => {
+    // The recovery navigation carries a throwaway parameter so it cannot be
+    // answered from a cache. Take it back out before it ends up in a bookmark.
+    clearBuildBust()
     if (!justReloadedForBuild()) return
     setUpdated(true)
     const t = setTimeout(() => setUpdated(false), 3200)

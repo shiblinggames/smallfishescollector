@@ -4156,16 +4156,32 @@ export default function SeaMap({
       // there is no boundary to sit on and no way back to the previous value
       // without actually sailing there.
       // ── THE LIGHT ON THE WORLD ──────────────────────────────────
-      // Its own guard: the grade depends only on the hour, so sailing must not
-      // re-rasterise three promoted layers.
+      //
+      // NOT ON `worldRef` OR `frontRef`, AND THAT IS THE WHOLE NOTE.
+      //
+      // Both of those are `position: absolute; left: 50%; top: 50%` with NO
+      // WIDTH OR HEIGHT: zero-size boxes whose children are placed at world
+      // coordinates that run to twenty thousand pixels in every direction. A
+      // CSS filter applies to an element and its descendants AS A GROUP, so
+      // filtering one of those asks the compositor to rasterise a surface the
+      // size of the entire chart's ink overflow rather than the viewport. On a
+      // phone that is not slow, it is fatal: the renderer is killed for memory,
+      // the page comes back white, and iOS eventually gives up with "a problem
+      // repeatedly occurred". It was reported exactly that way, worst around
+      // deploys because that is when tabs reload and re-rasterise everything at
+      // once.
+      //
+      // The boat keeps its grade: that subtree is one hull sprite, and it is
+      // bounded. The harbour lights keep theirs too — they are small divs
+      // reading a custom property, not a filter over a subtree.
+      //
+      // Which leaves the islands and the landmarks ungraded after dark for now.
+      // The bounded way to give them the light back is to bake it into each
+      // island's own canvas, which is already a fixed-size surface, rather than
+      // to filter the layer they live on. That is worth doing and is not worth
+      // guessing at while the page is crashing.
       if (dark !== lastGrade) {
         lastGrade = dark
-        const grade = nightGrade(dark)
-        if (worldRef.current) worldRef.current.style.filter = grade
-        if (frontRef.current) frontRef.current.style.filter = grade
-        // YOUR OWN HULL TAKES LESS OF IT. Everything else can go to a silhouette
-        // after dark; the boat under your thumb is the one thing that still has
-        // to be legible, and it is carrying its own lamp besides.
         if (boatRef.current) boatRef.current.style.filter = nightGrade(dark, 0.55)
         // Published for anything that wants to light UP as the light goes down
         // rather than dim with it — see the harbour lights on the ports.
