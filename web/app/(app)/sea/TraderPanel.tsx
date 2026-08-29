@@ -230,14 +230,24 @@ export default function TraderPanel({
           fontSize: '0.744rem', letterSpacing: '0.16em', color: 'rgba(255,206,138,0.75)',
           paddingRight: 34,
         }}>
-          {KIND_LABEL[trader.kind]}
+          {/* ONE OF THE NINE READS AS ONE OF THE NINE, wherever you meet
+              them. Every regular is a `talker` under the hood, and so is every
+              stranger who only has a story, so both came up as "An old hand"
+              and there was no telling from the panel whether this was somebody
+              you could get to know or somebody passing through. Their own class
+              line settles it, and it is the same words their card carries on
+              the Salt Road. */}
+          {folk ? folk.role : KIND_LABEL[trader.kind]}
           {/* WHO THEY ARE, not what they are about to hand you.
               This used to read "Knows something useful" or "Heard something",
               which labelled the CONTENT and quietly turned every stranger into
               a category of loot. The persona's own mood says something about
               the person instead, and you find out what they know by listening,
-              which is the right order for a conversation. */}
-          {trader.deal === 'talk' && (
+              which is the right order for a conversation.
+
+              Not for the nine: their mood is "One of the regulars", which is
+              the line above said twice. */}
+          {trader.deal === 'talk' && !folk && (
             <span style={{ color: 'rgba(255,206,138,0.45)' }}>
               {' · '}{trader.mood}
             </span>

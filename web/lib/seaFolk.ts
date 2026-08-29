@@ -175,6 +175,22 @@ export type Folk = {
     /** Portraits face the player. Art is drawn looking left, so most mirror. */
     mirrored?: boolean
   }
+  /**
+   * WHAT KIND OF PERSON THIS IS, and it is the SAME LINE for all nine.
+   *
+   * It used to be a job apiece: "Shallows buyer", "Rodmaker", "Wreck diver",
+   * "Carries word". Two things wrong with that. Five of them were describing a
+   * job none of them has had since the trade moved to the plain traders - every
+   * one of these nine is `buys: false` - so the card under a friend's name was
+   * simply false. And read down the roster the nine looked like nine unrelated
+   * kinds of stranger, when the one thing a captain needs to know at a glance
+   * is that they are all the same kind: somebody you can get to know.
+   *
+   * So the line is the CLASS, exactly as the rival's card reads "Rival". Who
+   * they actually are has not gone anywhere - that is `blurb`, which sits right
+   * under this on the same card and is where a wreck diver gets to be a wreck
+   * diver.
+   */
   role: string
   /** The accent this character's scene is lit with. Warm for the sociable,
    *  cold for the ones who live in the dark. */
@@ -245,7 +261,7 @@ export const FOLK: Folk[] = [
     id: 'meg', name: 'Meg Corrin', short: 'Meg', zoneId: 'shallows', buys: false,
     greeting: "Mind the rail. It is wet, and it is always wet.",
     face: { characterColor: 'sand', hat: 'brown', bg: '#1a1408', ring: '#c8a060', mirrored: true },
-    role: 'Shallows buyer', accent: '#d8b070',
+    role: 'Someone to know', accent: '#d8b070',
     blurb: 'Kept the Shallows scale for thirty years. Watches who turns into somebody.',
     // Honest, solid, nothing clever. Exactly her.
     favourite: { id: 8, name: 'Largemouth Bass' },
@@ -296,7 +312,7 @@ export const FOLK: Folk[] = [
     id: 'pell', name: 'Bent Pell', short: 'Pell', zoneId: 'open_waters', buys: false,
     greeting: "What.",
     face: { characterColor: 'blue', hat: 'gray', bg: '#0c1620', ring: '#7fa8c8', mirrored: true },
-    role: 'Open Waters buyer', accent: '#7fa8c8',
+    role: 'Someone to know', accent: '#7fa8c8',
     blurb: 'Short with everybody, and it is genuinely nothing personal.',
     // The fastest thing in his water, for the one who cannot stand waiting.
     favourite: { id: 22, name: 'Wahoo' },
@@ -347,7 +363,7 @@ export const FOLK: Folk[] = [
     id: 'marlow', name: 'Old Marlow', short: 'Marlow', zoneId: 'deep', buys: false,
     greeting: "You found me. Everybody does, eventually.",
     face: { characterColor: 'gray', hat: 'black', bg: '#101418', ring: '#a8b4c0', mirrored: true },
-    role: 'Deep water buyer', accent: '#b0bcc8',
+    role: 'Someone to know', accent: '#b0bcc8',
     blurb: 'Sits still in deep water and lets everybody else do the sailing.',
     // Old Marlow wants a marlin. He has never once acknowledged this.
     favourite: { id: 38, name: 'Blue Marlin' },
@@ -398,7 +414,7 @@ export const FOLK: Folk[] = [
     id: 'fitch', name: 'Quiet Fitch', short: 'Fitch', zoneId: 'abyss', buys: false,
     greeting: "Mm.",
     face: { characterColor: 'storm', hat: 'midnight', bg: '#080c14', ring: '#6878a0', mirrored: true },
-    role: 'Abyss buyer', accent: '#8090b8',
+    role: 'Someone to know', accent: '#8090b8',
     blurb: 'Lives in the dark water. Says very little about anything.',
     // The one that carries its own light down there, which he has a line about.
     favourite: { id: 41, name: 'Anglerfish' },
@@ -449,7 +465,7 @@ export const FOLK: Folk[] = [
     id: 'nance', name: 'Grey Nance', short: 'Nance', zoneId: 'ancient_deep', buys: false,
     greeting: "You are a long way out.",
     face: { characterColor: 'ice', hat: 'offwhite', bg: '#0a1018', ring: '#9ec4d8', mirrored: true },
-    role: 'Ancient Deep buyer', accent: '#9ec4d8',
+    role: 'Someone to know', accent: '#9ec4d8',
     blurb: 'Keeps the count of who goes down to the oldest water and comes back up.',
     // The fish that should have been extinct, for the one who reveres old water.
     favourite: { id: 50, name: 'Coelacanth' },
@@ -500,7 +516,7 @@ export const FOLK: Folk[] = [
     id: 'yoon', name: 'Yoon', short: 'Yoon', zoneId: 'ancient_deep', buys: false,
     greeting: "Ayo. Sheeeeesh, look who it is.",
     face: { characterColor: 'golden', hat: 'black', bg: '#141008', ring: '#f0c040', mirrored: true },
-    role: 'Rodmaker', accent: '#f0c040',
+    role: 'Someone to know', accent: '#f0c040',
     blurb: 'Carries one rod that no shop will stock, and an opinion on whether you deserve it.',
     // Twenty feet of ribbon out of the dark. Gyattt.
     favourite: { id: 49, name: 'Oarfish' },
@@ -579,7 +595,7 @@ export const FOLK: Folk[] = [
     id: 'brill', name: 'Tam Brill', short: 'Tam', zoneId: 'shallows', buys: false,
     greeting: "Oh! Hello. Hi.",
     face: { characterColor: 'default', hat: 'green', bg: '#0e1810', ring: '#8cc890', mirrored: true },
-    role: 'Two seasons out', accent: '#8cc890',
+    role: 'Someone to know', accent: '#8cc890',
     blurb: 'Two seasons out and convinced everyone else is a legend.',
     // The first fish anybody catches, and he is not embarrassed about it.
     favourite: { id: 1, name: 'Bluegill' },
@@ -630,7 +646,7 @@ export const FOLK: Folk[] = [
     id: 'turbot', name: 'Cass Turbot', short: 'Cass', zoneId: 'open_waters', buys: false,
     greeting: "Mind where you drop that anchor.",
     face: { characterColor: 'forest', hat: 'olive', bg: '#0c1410', ring: '#88b09c', mirrored: true },
-    role: 'Wreck diver', accent: '#88b09c',
+    role: 'Someone to know', accent: '#88b09c',
     blurb: 'Dives the wrecks and comes up with stories, some of them true.',
     // Cobia hang around wreckage, which is where she spends her working day.
     favourite: { id: 21, name: 'Cobia' },
@@ -681,7 +697,7 @@ export const FOLK: Folk[] = [
     id: 'ream', name: 'Rue Bream', short: 'Rue', zoneId: 'deep', buys: false,
     greeting: "News, or are you just passing?",
     face: { characterColor: 'lavender', hat: 'purple', bg: '#12101c', ring: '#b0a0d0', mirrored: true },
-    role: 'Carries word', accent: '#b0a0d0',
+    role: 'Someone to know', accent: '#b0a0d0',
     blurb: 'Carries news between the regulars and remembers all of it.',
     // Plain, dependable, everywhere. A messenger's fish.
     favourite: { id: 27, name: 'Atlantic Cod' },
