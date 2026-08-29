@@ -6446,7 +6446,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
       {/* THE BOAT ITSELF. Nothing is drawn under it: two attempts at a
           waterline lived here, a dark ellipse and then a pale one, and both
           read as the boat hovering over a surface. There is no surface. */}
-      <div className="trader-hull" style={{
+      <div className="trader-hull sea-lit" style={{
         // scaleX comes from the patrol rather than a coin flip, so a trader
         // always looks the way they are actually drifting. Written every frame
         // by the loop, which finds this node by THIS CLASS.
@@ -6991,7 +6991,7 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
       position: 'absolute', left: at.x, top: at.y,
       pointerEvents: 'none', zIndex: 3,
     }}>
-      <div style={{ transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.98)` }}>
+      <div className="sea-lit" style={{ transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.98)` }}>
         <TraderSkiff look={FINN_LOOK} />
       </div>
 
@@ -8199,10 +8199,19 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
         transformOrigin: 'bottom center',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img decoding="async" src={art} alt="" draggable={false} loading="lazy" style={{
-          width: '100%', maxWidth: 'none', display: 'block',
-          filter: found ? 'saturate(0.86) brightness(0.94)' : 'none',
-        }} />
+        {/* `sea-lit` carries the hour; the dug-over look is folded into the
+            same declaration because a filter property cannot be written twice
+            and the class would win. */}
+        <img decoding="async" src={art} alt="" draggable={false} loading="lazy"
+          className={found ? undefined : 'sea-lit'}
+          style={{
+            width: '100%', maxWidth: 'none', display: 'block',
+            ...(found ? {
+              filter: 'saturate(calc(0.86 - var(--sea-night, 0) * 0.5))'
+                + ' brightness(calc(0.94 - var(--sea-night, 0) * 0.42))'
+                + ' sepia(calc(var(--sea-warm, 0) * 0.34))',
+            } : {}),
+          }} />
       </div>
 
       {/* THE NAME. Counter-squashed and lifted clear, because a label was never

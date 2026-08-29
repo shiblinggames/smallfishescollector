@@ -2717,6 +2717,28 @@ body.hardcore-gauntlet::after {
   .finn-ready { animation: none; }
 }
 
+/* ── THE HOUR, FOR WORLD SPRITES STILL DRAWN IN THE DOM ─────────────────────
+   The islands, the landmarks and the water take the clock's light on the
+   canvas. The traders, Finn and the isles are still DOM, and without this they
+   go on being lit for noon while everything around them turns to evening — one
+   boat at midday brightness on a night sea reads as a bug, because it is one.
+
+   A filter on each SPRITE, never on the layer they live in. The world layer is
+   a zero-size box whose children span twenty thousand pixels, and filtering it
+   is what made the compositor rasterise the whole chart and iOS kill the tab.
+   These are small elements and each costs a small buffer.
+
+   `--sea-night` and `--sea-warm` are published on the chart's wrapper once per
+   step of the fade, so this costs no per-frame write and no React render. If a
+   browser will not take calc() inside a filter primitive the declaration is
+   dropped whole and the sprite simply stays lit, which is the old behaviour. */
+.sea-lit {
+  filter:
+    brightness(calc(1 - var(--sea-night, 0) * 0.42))
+    saturate(calc(1 - var(--sea-night, 0) * 0.5 + var(--sea-warm, 0) * 0.18))
+    sepia(calc(var(--sea-warm, 0) * 0.34));
+}
+
 /* HOW MUCH ROOM THE MOBILE TAB BAR TAKES.
    It is `sm:hidden` and fixed to the bottom on every page but / and /login, and
    anything vertically centred on a phone has to stay above it. The bar is a
