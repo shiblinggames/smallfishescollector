@@ -24,7 +24,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { makeSkiff, SKIFF_W, type Placement } from '../skiffArt'
-import { makeRodFx, makeRodGlow, type GlowType } from '../rodFx'
+import { makeRodAura, type GlowType } from '../rodFx'
 
 /** Every effect the engine knows, in the order the rods unlock them. */
 const GLOWS: GlowType[] = ['fire', 'sparkle', 'electric', 'moon', 'tech',
@@ -97,34 +97,27 @@ export default function SkiffBench() {
         skiff.view.y += 60
         a.stage.addChild(skiff.view)
 
-        if (glow !== 'none') {
-          // THE GLOW, ON THE ROD ITSELF. Inserted directly beneath the rod
-          // sprite, so the light comes off the rod's own silhouette and the rod
-          // sits on top of its own aura — which is what the CSS drop-shadow was
-          // always doing and the part that identifies the rod.
-          if (skiff.rodSprite) {
-            const g = makeRodGlow(PIXI, skiff.rodSprite, glow, { stage: stageRef.current })
-            const under = skiff.view.getChildIndex(skiff.rodSprite)
-            for (const l of g.layers) skiff.view.addChildAt(l, under)
-            a.ticker.add(t => {
-              g.setStage(stageRef.current)
-              g.update(t.deltaMS / 1000)
-            })
-          }
-
-          // THE EFFECT, OFF THE TIP. A child of the skiff rather than of the
-          // stage, so it travels with the boat for free — a captain who sails
-          // away from their own sparks is worse than no sparks.
-          if (skiff.rodTip) {
-            const fx = makeRodFx(PIXI, glow, { stage: stageRef.current })
-            fx.view.x = skiff.rodTip.x
-            fx.view.y = skiff.rodTip.y
-            skiff.view.addChild(fx.view)
-            a.ticker.add(t => {
-              fx.setStage(stageRef.current)
-              fx.update(t.deltaMS / 1000)
-            })
-          }
+        // THE AURA, BUILT ON THE ROD. The glow goes UNDER the rod so the rod
+        // sits on top of its own light the way the CSS shadow does, and the
+        // sparks and bolts go OVER it so the rod sits inside its effect rather
+        // than in front of it. Both travel with the boat for free, being
+        // children of the skiff — a captain who sails away from their own
+        // sparks is worse than no sparks.
+        if (glow !== 'none' && skiff.rodSprite && skiff.rodImage && rod) {
+          const aura = makeRodAura(PIXI, {
+            rod: skiff.rodSprite,
+            image: skiff.rodImage,
+            glowType: glow,
+            key: rod,
+            stage: stageRef.current,
+          })
+          const at = skiff.view.getChildIndex(skiff.rodSprite)
+          skiff.view.addChildAt(aura.under, at)
+          skiff.view.addChild(aura.over)
+          a.ticker.add(t => {
+            aura.setStage(stageRef.current)
+            aura.update(t.deltaMS / 1000)
+          })
         }
       } catch (e) {
         setErr(e instanceof Error ? `${e.name}: ${e.message}` : String(e))

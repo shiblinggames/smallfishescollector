@@ -61,6 +61,19 @@ export const SKIFF_W = 210
 // ── TEXTURES, SHARED AND LOADED ONCE ────────────────────────────────────────
 const textures = new Map<string, Promise<import('pixi.js').Texture>>()
 
+/** The bitmaps behind those textures, kept because the effects need PIXELS and
+ *  not just something to draw. A rod's glow is its own silhouette blurred, and
+ *  its sparks come off its own outline, so both have to read the alpha channel.
+ *  Digging the image back out of a Texture is possible and fragile — the shape
+ *  of `source.resource` is an internal detail that has changed between Pixi
+ *  majors before — so it is kept here on the way past instead. */
+const images = new Map<string, HTMLImageElement>()
+
+/** The loaded bitmap for a url, if it has been through `texture()`. */
+export function imageFor(url: string): HTMLImageElement | null {
+  return images.get(url) ?? null
+}
+
 export function texture(
   PIXI: typeof import('pixi.js'),
   url: string,
@@ -76,6 +89,7 @@ export function texture(
     img.decoding = 'async'
     img.src = url
     await img.decode()
+    images.set(url, img)
     return PIXI.Texture.from(img)
   })()
   textures.set(url, job)
@@ -126,6 +140,9 @@ export type Skiff = {
    *  position — same texture, same anchor, same rotation, or the light slides
    *  off the rod as it turns. */
   rodSprite: import('pixi.js').Sprite | null
+  /** The rod's bitmap. The effects read its alpha: the glow blurs it, and the
+   *  sparks come off the outline it describes. */
+  rodImage: HTMLImageElement | null
 }
 
 /**
@@ -185,5 +202,8 @@ export async function makeSkiff(
   view.x = -0.08 * w
   view.y = -0.26 * h
 
-  return { view, rodTip, rodSprite }
+  return {
+    view, rodTip, rodSprite,
+    rodImage: parts.rod ? imageFor(parts.rod.url) : null,
+  }
 }
