@@ -25,12 +25,11 @@ import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { getCharacterSprites } from '@/lib/characters'
-import { makeSkiff, type Frame, type Placement, type Skiff } from './skiffArt'
+import { imageFor, makeSkiff, texture, type Frame, type Placement, type Skiff } from './skiffArt'
 import {
   makeAura, bakeSilhouette, rodEffect, hookEffect, hullEffect,
   type Aura, type EffectName,
 } from './aura'
-import { imageFor } from './skiffArt'
 
 /** Everything about how one captain looks. Flat and primitive on purpose: it is
  *  compared field by field to decide whether a captain needs rebuilding, and an
@@ -262,5 +261,60 @@ export async function makeCaptain(
       for (const w of worn) w.aura.destroy()
       view.destroy({ children: true })
     },
+  }
+}
+
+/**
+ * THE EXPEDITION HULL, past the sortie.
+ *
+ * Not a captain at all: one sprite, centred, with a shadow under it. The whole
+ * point of the crossing is that the hull CHANGES rather than being dressed up,
+ * so this replaces the composite outright the way the DOM does.
+ *
+ * Shaped like a Captain anyway, so the chart has one slot for "the thing at the
+ * centre of the screen" rather than two code paths that have to be kept in
+ * step. Everything a ship has no opinion about is a no-op: it has no poses, no
+ * streak and no auras.
+ */
+export async function makeShip(
+  PIXI: typeof import('pixi.js'),
+  ship: { url: string; flip: boolean },
+): Promise<Captain> {
+  const tex = await texture(PIXI, ship.url)
+  const view: Container = new PIXI.Container()
+
+  const W = 340
+  const k = W / tex.width
+  const h = tex.height * k
+
+  // NO OFFSET, and that is measured rather than assumed. A Skipper needs one
+  // because its sheet reserves empty space up and left for the rod; these are
+  // drawn centred, so correcting again would push the ship half its own width
+  // off the point the camera is following.
+  const img = imageFor(ship.url)
+  if (img) {
+    const shade = bakeSilhouette(PIXI, img, `shadow|${ship.url}`, W, h, 22)
+    if (shade) {
+      const sp: Sprite = new PIXI.Sprite(shade.texture)
+      sp.position.set(-W / 2 - shade.pad, -h / 2 - shade.pad + 14)
+      sp.tint = 0x000000
+      sp.alpha = 0.6
+      view.addChild(sp)
+    }
+  }
+
+  const hull: Sprite = new PIXI.Sprite(tex)
+  hull.anchor.set(0.5)
+  hull.scale.set(ship.flip ? -k : k, k)
+  view.addChild(hull)
+
+  return {
+    view,
+    setFrame() {},
+    setStage() {},
+    setNight(tint) { hull.tint = tint },
+    setIntensity() {},
+    update() {},
+    destroy() { view.destroy({ children: true }) },
   }
 }

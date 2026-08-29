@@ -1811,6 +1811,12 @@ export default function SeaMap({
   }, [])
   /** Every wreck, rig, buoy, bone pile and moored smack, in chart order —
    *  the index is what gives each its own sway phase. */
+  /** The tall scenery, for the near pass. The SAME list the depth test walks,
+   *  handed over so the two agree about which rock is index seven. */
+  const gpuOccluders = useMemo<GpuMark[]>(() => GPU_ISLANDS
+    ? OCCLUDERS.map((o, i) => ({ art: o.art, x: o.x, y: o.y, size: o.size, i }))
+    : [], [])
+
   const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
     ? LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i }))
     : [], [])
@@ -2581,6 +2587,9 @@ export default function SeaMap({
    *  OCCLUDERS; see the note there for why this is a second layer rather than
    *  a z-index. */
   const [occluding, setOccluding] = useState<number[]>([])
+  /** The same list, where the frame loop can see it. The canvas redraws the
+   *  near pass every frame; React only hears about it when the SET changes. */
+  const occludingRef = useRef<number[]>([])
   const edgeRef = useRef(false)
   /** The isle whose landing panel is open, and what it gave up. `landed`, not
    *  `ashore` — that name is already the Mainland's three-card chooser. */
@@ -2810,6 +2819,17 @@ export default function SeaMap({
    * glow out here and comes alive in the fishing game. Worth wiring properly
    * once the streak is on the chart, and deliberately not guessed at now.
    */
+  /** The expedition hull, for the canvas. The other half of the same slot the
+   *  captain fills: exactly one of the two is ever non-null. */
+  const gpuShip = useMemo(() => {
+    if (!GPU_ISLANDS || !onShip) return null
+    const h = getShip(shipTier)
+    // A hull with no sea sprite is a hull that cannot be drawn out here, and
+    // that is a data problem rather than something to paper over with a
+    // placeholder — the DOM would render a broken image in the same case.
+    return h.seaImageUrl ? { url: h.seaImageUrl, flip: !!h.seaFlip } : null
+  }, [onShip, shipTier])
+
   const gpuCaptain = useMemo<CaptainLook | null>(() => {
     if (!GPU_ISLANDS || onShip) return null
     const tier = rodNow?.tier
@@ -4672,6 +4692,11 @@ export default function SeaMap({
           bob, heel, facing: facing.current, zoom: zoomRef.current,
           frame: frameRef.current, stage: 0,
         })
+        // AND THE NEAR PASS, every frame. Which rocks are in front changes on
+        // the proximity tick, but WHERE they are on the screen changes as fast
+        // as the camera does, and they are drawn in screen space because the
+        // hull they cover is.
+        if (occludingRef.current.length) gpuRef.current?.front(occludingRef.current)
       }
 
       // Proximity drives React, but only a few times a second. Nothing on screen
@@ -4715,8 +4740,17 @@ export default function SeaMap({
           if (o.y - pos.current.y > o.size * 2 + 260) continue
           inFront.push(k)
         }
-        setOccluding(prev =>
-          (prev.length === inFront.length && prev.every((v, k) => v === inFront[k])) ? prev : inFront)
+        // THE SAME ANSWER, TO WHICHEVER RENDERER IS DRAWING HER. The canvas is
+        // told every proximity tick and does not need the deadband — a set that
+        // has not changed costs it a loop over a list that is almost always
+        // empty. React does need it, because this state change re-renders an
+        // eight-thousand-line component.
+        occludingRef.current = inFront
+        gpuRef.current?.front(inFront)
+        if (!GPU_ISLANDS) {
+          setOccluding(prev =>
+            (prev.length === inFront.length && prev.every((v, k) => v === inFront[k])) ? prev : inFront)
+        }
 
         // Standing in a hotspot. Compared by KEY, not by identity: the object
         // is rebuilt every fifteen seconds and comparing references would
@@ -4875,7 +4909,8 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
-            fleet={gpuFleet} berths={gpuBerths} towns={gpuTowns} handle={gpuRef} />
+            ship={gpuShip} fleet={gpuFleet} berths={gpuBerths} towns={gpuTowns}
+            occluders={gpuOccluders} handle={gpuRef} />
         </div>
       )}
 
@@ -5350,9 +5385,9 @@ hullRef={hullRefFor(t.key)} />
         {/* SHE IS ON THE CANVAS UNDER THE FLAG. The wrapper stays either way —
             the loop writes her bob and heel to it, and past the sortie it is
             still carrying the Warship, which has not moved yet. */}
-        {onShip
+        {GPU_ISLANDS ? null
+          : onShip
           ? <Warship tier={shipTier} />
-          : GPU_ISLANDS ? null
           : <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
               gear={{
                 ...gear,
@@ -5377,7 +5412,7 @@ hullRef={hullRefFor(t.key)} />
         position: 'absolute', left: '50%', top: '50%', zIndex: Z.front,
         willChange: 'transform', pointerEvents: 'none',
       }}>
-        {occluding.map(k => <SeaMark key={k} m={OCCLUDERS[k]} i={k + 4000} />)}
+        {!GPU_ISLANDS && occluding.map(k => <SeaMark key={k} m={OCCLUDERS[k]} i={k + 4000} />)}
       </div>
 
       {/* The prompt steps aside while the rod is out — the cast button is the

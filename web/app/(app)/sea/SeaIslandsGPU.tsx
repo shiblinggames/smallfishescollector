@@ -42,7 +42,7 @@ import { nightTint, makeWater } from './seaWater'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
-import { makeCaptain, lookKey, type Captain, type CaptainLook } from './seaCaptain'
+import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from './seaCaptain'
 import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
@@ -95,6 +95,9 @@ export type GpuHandle = {
     /** Where she sits, for the rings she makes at rest. */
     cx: number; cy: number
   } | null): void
+  /** Which pieces of tall scenery are standing in front of the hull right now,
+   *  as indices into `occluders`. Empty almost always. */
+  front(list: number[]): void
   /** Which berth she is standing in, or null. Eased on the far side, so this
    *  can be called every frame or only on change. */
   berth(id: string | null): void
@@ -130,15 +133,24 @@ export type GpuHandle = {
   } | null): void
 }
 
-export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, towns, handle }: {
+export default function SeaIslandsGPU({
+  islands, marks, captain, ship, fleet, berths, towns, occluders, handle,
+}: {
   islands: GpuIsland[]
   marks: GpuMark[]
   /** How the player looks right now. Rebuilt only when it actually changes —
    *  see the effect below, which compares by VALUE because a captain is
    *  expensive to assemble and cheap to steer. */
   captain: CaptainLook | null
+  /** The expedition hull, past the sortie. Mutually exclusive with `captain`:
+   *  the crossing REPLACES what is at the centre of the screen rather than
+   *  dressing it up, so there is one slot and two things that can fill it. */
+  ship: { url: string; flip: boolean } | null
   /** Where a boat can be tied up. Static, so read once. */
   berths: BerthSpec[]
+  /** The tall scenery that can stand between the camera and the hull. Static,
+   *  and a subset of `marks` — see the note where the front pass is built. */
+  occluders: GpuMark[]
   /** What is built on the islands. Read once: an island's buildings change
    *  only when a place unlocks, which is a page-level event. */
   towns: GpuTown[]
@@ -162,6 +174,8 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
   const [ready, setReady] = useState(0)
   const lookRef = useRef<CaptainLook | null>(captain)
   lookRef.current = captain
+  const shipRef = useRef(ship)
+  shipRef.current = ship
   const fleetRef = useRef(fleet)
   fleetRef.current = fleet
   const crewRef = useRef(new Map<string, {
@@ -177,6 +191,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
   // parent render would be pure waste.
   const berthRef = useRef(berths)
   const townRef = useRef(towns)
+  const occRef = useRef(occluders)
   const listRef = useRef(islands)
   const marksRef = useRef(marks)
 
@@ -279,6 +294,54 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
       a.stage.addChild(boats)
       pixiRef.current = PIXI
       boatsRef.current = boats
+
+      // ── THE NEAR PASS ─────────────────────────────────────────────
+      //
+      // The handful of things currently standing between the camera and the
+      // hull, drawn again ON TOP of her. The world is drawn in two passes and
+      // this is the near one; the only difference is which side of the boat it
+      // lands on.
+      //
+      // It exists because she is not IN the world. The camera follows her, so
+      // she is screen-space at the centre and cannot be depth-sorted against
+      // scenery that is not — which is the price of a camera-follow and this is
+      // what it costs. Empty almost always: a few sprites when you are among
+      // rocks and nothing at all in open water.
+      //
+      // Sprites are made on FIRST NEED and then kept. The list is bounded and
+      // small, but most of it is never needed in a session — a rock on the far
+      // side of the chart is not worth a texture because it might one day be
+      // passed closely.
+      const front = new PIXI.Container()
+      a.stage.addChild(front)
+      const nearBuilt = new Map<number, import('pixi.js').Container>()
+      const nearWanted = new Set<number>()
+
+      function nearSprite(i: number) {
+        const held = nearBuilt.get(i)
+        if (held) return held
+        const m = occRef.current[i]
+        if (!m) return null
+        const node = new PIXI.Container()
+        node.visible = false
+        front.addChild(node)
+        nearBuilt.set(i, node)
+        const sub = SUBMERGE[m.art.split('/').pop()!.replace('.png', '')]
+        bakeMark(m.art, sub).then(({ wet, dry }) => {
+          if (dead) return
+          // A mark above the waterline has no wet half, and that null is the
+          // answer rather than a missing one.
+          for (const cv of [wet, dry]) {
+            if (!cv) continue
+            const sp = new PIXI.Sprite(PIXI.Texture.from(cv))
+            const k = m.size / cv.width
+            sp.scale.set(k, k / GROUND)
+            sp.anchor.set(0.5, 1)
+            node.addChild(sp)
+          }
+        }).catch(() => {})
+        return node
+      }
 
       const foamTex = makeFoamTexture(PIXI)
       const foams: Foam[] = []
@@ -398,6 +461,9 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
       let camX = 0, camY = 0, camZoom = 1
       let dark = 0, warm = 0
       let lastCamX = 0, lastCamY = 0, rush = 0
+      /** The viewport in world units, as of the last frame. Written by the
+       *  ticker and read by `fleet`, which runs before it. */
+      let lastHalfW = 1, lastHalfH = 1
       /** The player's contact and the fleet's last positions, held between the
        *  handle calls that set them and the ticker that uses them. */
       let mine: Contact | null = null
@@ -435,6 +501,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
         })
         const halfW = a.screen.width / 2 / camZoom
         const halfH = a.screen.height / 2 / camZoom / GROUND
+        lastHalfW = halfW; lastHalfH = halfH
         drift.advance(camX, camY, halfW, halfH, t, a.ticker.deltaMS / 1000)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
@@ -549,6 +616,24 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
           mine = w ? { id: 'me', ...w } : null
         },
         berth(id) { berthLayer.setActive(id) },
+        front(list) {
+          nearWanted.clear()
+          for (const i of list) nearWanted.add(i)
+          for (const [i, node] of nearBuilt) node.visible = nearWanted.has(i)
+          for (const i of list) {
+            const node = nearSprite(i)
+            const m = occRef.current[i]
+            if (!node || !m) continue
+            node.visible = true
+            // Screen space, because the boat this is drawn over is. The same
+            // mapping the world container uses, applied to one point.
+            node.position.set(
+              a.screen.width / 2 + camZoom * (m.x - camX),
+              a.screen.height / 2 + camZoom * GROUND * (m.y - camY),
+            )
+            node.scale.set(camZoom, camZoom * GROUND)
+          }
+        },
         fleet(list) {
           fleetAt = list
           const seen = crewRef.current
@@ -562,6 +647,14 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
             // the same ±1 mirror the DOM writes.
             c.holder.scale.set(e.scale * e.facing, e.scale / GROUND)
             c.holder.alpha = e.dim
+            // ── FAR AWAY COSTS LESS ────────────────────────────────
+            // Fill rate is the one thing on this canvas that is not free, and a
+            // captain most of a screen away is contributing sparks nobody is
+            // looking at. Faded rather than switched, so nothing pops as you
+            // sail toward somebody.
+            const gone = Math.max(Math.abs(e.x - camX) / lastHalfW,
+                                  Math.abs(e.y - camY) / lastHalfH)
+            c.cap.setIntensity(Math.max(0, Math.min(1, 2.1 - gone * 1.6)))
           }
         },
         skipper(sk) {
@@ -625,15 +718,21 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, berths, 
   // sixty times a second — the same trap that made the skiff bench flicker
   // between poses. Assembling a captain loads a dozen images and bakes a glow;
   // steering one is arithmetic.
-  const key = lookKey(captain)
+  const key = `${lookKey(captain)}#${ship ? `${ship.url}${ship.flip ? '~f' : ''}` : ''}`
   useEffect(() => {
     let dead = false
     ;(async () => {
       const PIXI = pixiRef.current
       const boats = boatsRef.current
       const look = lookRef.current
+      const hull = shipRef.current
       if (!PIXI || !boats) return
-      const built = look ? await makeCaptain(PIXI, look) : null
+      // One slot. Past the sortie it is not your fishing boat, and the ship is
+      // built through the same door so the loop that steers her does not have
+      // to know which of the two it is holding.
+      const built = look ? await makeCaptain(PIXI, look)
+        : hull ? await makeShip(PIXI, hull)
+        : null
       if (dead || !boatsRef.current) { built?.destroy(); return }
 
       capRef.current?.cap.destroy()
