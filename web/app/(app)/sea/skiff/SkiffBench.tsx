@@ -2,7 +2,7 @@
 
 // ── THE SAME CAPTAIN, DRAWN TWICE ───────────────────────────────────────────
 //
-// The DOM skiff on the left, the Pixi one on the right, same look, same size,
+// The DOM skiff on the left, the Pixi one on the right, same gear, same size,
 // same background. Nothing here ships; it exists so the port is verified by
 // looking rather than by reasoning about percentages.
 //
@@ -13,30 +13,37 @@
 // exists for exactly this reason for the DOM composite; this is its equivalent
 // for the renderer swap.
 //
-// Overlay mode is the one that matters. Side by side, two nearly-right skiffs
-// look identical; stacked with the top one at half opacity, a two-pixel drift
-// in a hat is impossible to miss.
+// Overlay mode is the one that matters for the COMPOSITION. Side by side, two
+// nearly-right skiffs look identical; stacked with the top one at half opacity,
+// a two-pixel drift in a hat is impossible to miss.
+//
+// For the EFFECTS it is the other way round: the left pane wears the CSS auras
+// the game ships today and the right pane wears the canvas ones, so the two
+// panes are before and after. Every rod, hull and hook is selectable, because
+// "is this the same item, turned up" is a question you answer by looking at the
+// item rather than at a list of effect names.
 //
 // AND IT RUNS ALL THREE POSES, because a skiff is not a picture, it is a
 // fishing animation. Rest, wait, cast — every layer moves between them, and the
-// cast is where the placements are strangest: the rod swings, the hook rotates
-// 66 degrees, and the hook vanishes entirely on the wait because it is in the
-// water. Anything that only looks right at rest is not ported.
+// cast is where the placements are strangest: the rod swings and shortens, the
+// hook rotates 66 degrees, and the hook vanishes entirely on the wait because
+// it is in the water. Anything that only looks right at rest is not ported.
 
 import { useEffect, useRef, useState } from 'react'
-import { BOATS } from '@/lib/boats'
+import { BOATS, boatGlowClass } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
-import { RODS } from '@/lib/rods'
-import { HOOKS } from '@/lib/hooks'
+import { RODS, rodGlowClass } from '@/lib/rods'
+import { HOOKS, hookGlowClass } from '@/lib/hooks'
 import { REELS } from '@/lib/reels'
 import { PETS, PET_OVERLAYS } from '@/lib/pets'
 import { makeSkiff, SKIFF_W, FRAMES, type Frame, type Placement } from '../skiffArt'
-import { makeRodAura, type GlowType } from '../rodFx'
+import { makeAura, rodEffect, hookEffect, hullEffect, type Aura, type EffectName } from '../aura'
 
-/** Every effect the engine knows, in the order the rods unlock them. */
-const GLOWS: GlowType[] = ['fire', 'sparkle', 'electric', 'moon', 'tech',
-  'galaxy', 'saber', 'forge', 'prismatic', 'lockedin']
+/** The rods worth looking at: every one that carries an aura. Read off the rod
+ *  table rather than off a list of effect names, so a rod that gains a glow
+ *  appears here without anybody editing the bench. */
+const GLOWING_RODS = RODS.filter(r => r.glow && r.slug)
 
 /** The rod, reel and hook placements, per pose. Copied deliberately from
  *  SeaMap: it owns them, and importing a component to read a constant would
@@ -62,11 +69,12 @@ const HOOK_AT: Record<Frame, Placement> = {
 export default function SkiffBench() {
   const holder = useRef<HTMLDivElement | null>(null)
   const [colour, setColour] = useState('default')
-  const [boatId, setBoatId] = useState(BOATS[0]?.id ?? '')
+  const [boatId, setBoatId] = useState('ethereal')
   const [hatId, setHatId] = useState(HATS[0]?.id ?? '')
   const [petId, setPetId] = useState('none')
+  const [rodTier, setRodTier] = useState(20)
+  const [hookTier, setHookTier] = useState(8)
   const [overlay, setOverlay] = useState(false)
-  const [glow, setGlow] = useState<GlowType | 'none'>('lockedin')
   const [stage, setStage] = useState(3)
   const [frame, setFrame] = useState<Frame>('rest')
   const [cycle, setCycle] = useState(false)
@@ -85,13 +93,10 @@ export default function SkiffBench() {
   // every parrot sits where a parrot sits. Getting that backwards is the trap
   // the pet docs warn about: never copy another species' overlay coords.
   const pet = PETS.find(p => p.id === petId) ?? null
-  // The rod that actually wears this glow, so picking "saber" shows the
-  // Lightsaber and not a bamboo pole with a crimson aura. The whole point is to
-  // judge the light against the art it was drawn for.
-  const rodDef = (glow !== 'none' && RODS.find(r => r.glowType === glow && r.slug))
-    || RODS.find(r => r.slug)
+  const rodDef = RODS.find(r => r.tier === rodTier) ?? null
   const rod = rodDef?.slug ?? null
-  const hook = HOOKS.find(h => h.imageUrl)?.imageUrl ?? null
+  const hookDef = HOOKS.find(h => h.tier === hookTier) ?? null
+  const hook = hookDef?.imageUrl ?? null
   const reel = REELS.find(r => r.imageUrl)?.imageUrl ?? null
 
   // ── THE FISHING LOOP, so the poses are seen in motion ──────────────────────
@@ -124,25 +129,32 @@ export default function SkiffBench() {
         // outside and depending on the results is what tore the renderer down
         // on every pose change: getCharacterSprites returns a fresh object
         // literal every render, so the dependency never compared equal.
-        const boat = BOATS.find(b => b.id === boatId) ?? null
-        const hat = HATS.find(h => h.id === hatId) ?? null
-        const pet = PETS.find(p => p.id === petId) ?? null
-        const char = getCharacterSprites(colour)
+        const boatNow = BOATS.find(b => b.id === boatId) ?? null
+        const hatNow = HATS.find(h => h.id === hatId) ?? null
+        const petNow = PETS.find(p => p.id === petId) ?? null
+        const rodNow = RODS.find(r => r.tier === rodTier) ?? null
+        const hookNow = HOOKS.find(h => h.tier === hookTier) ?? null
+        const charNow = getCharacterSprites(colour)
+        const rodSlug = rodNow?.slug ?? null
+        const hookUrl = hookNow?.imageUrl ?? null
 
         const skiff = await makeSkiff(PIXI, {
-          character: f => char[f],
-          hat: hat ? {
-            url: f => (f === 'cast' ? hat.castImageUrl : hat.restImageUrl),
-            at: f => hat.positions[f],
+          character: f => charNow[f],
+          hat: hatNow ? {
+            url: f => (f === 'cast' ? hatNow.castImageUrl : hatNow.restImageUrl),
+            at: f => hatNow.positions[f],
           } : undefined,
-          boat: boat ? {
-            url: f => (f === 'cast' ? boat.castImageUrl : boat.restImageUrl),
-            at: f => boat.positions[f],
+          boat: boatNow ? {
+            url: f => (f === 'cast' ? boatNow.castImageUrl : boatNow.restImageUrl),
+            at: f => boatNow.positions[f],
           } : undefined,
-          rod: rod ? { url: f => `/${rod}_${f}.png`, at: f => ROD_AT[f] } : undefined,
+          rod: rodSlug ? { url: f => `/${rodSlug}_${f}.png`, at: f => ROD_AT[f] } : undefined,
           reel: reel ? { url: () => reel, at: f => REEL_AT[f] } : undefined,
-          pet: pet ? { url: () => pet.restImageUrl, at: f => PET_OVERLAYS[pet.species][f] } : undefined,
-          hook: hook ? { url: () => hook, at: f => HOOK_AT[f] } : undefined,
+          pet: petNow ? {
+            url: () => petNow.restImageUrl,
+            at: f => PET_OVERLAYS[petNow.species][f],
+          } : undefined,
+          hook: hookUrl ? { url: () => hookUrl, at: f => HOOK_AT[f] } : undefined,
         }, { frame: frameRef.current })
         if (dead) { a.destroy(true, { children: true }); return }
 
@@ -152,37 +164,44 @@ export default function SkiffBench() {
         skiff.view.y += 60
         a.stage.addChild(skiff.view)
 
-        // THE AURA, BUILT ON THE ROD. The glow goes UNDER the rod so the rod
-        // sits on top of its own light the way the CSS shadow does, and the
-        // sparks and bolts go OVER it so the rod sits inside its effect rather
-        // than in front of it. Both travel with the boat for free, being
-        // children of the skiff — a captain who sails away from their own
-        // sparks is worse than no sparks.
-        const pose = skiff.rodPose()
-        if (glow !== 'none' && skiff.rodSprite && pose) {
-          const aura = makeRodAura(PIXI, {
-            rod: skiff.rodSprite,
-            image: pose.image,
-            glowType: glow,
-            key: pose.key,
-            stage: stageRef.current,
+        // ── THE AURAS ─────────────────────────────────────────────────────
+        //
+        // One per glowing part, each built on that part's own image. The glow
+        // goes UNDER its part, so the part sits on top of its own light the way
+        // the CSS shadow does, and the sparks go OVER it, so the part sits
+        // inside its effect rather than in front of it. All of them are
+        // children of the skiff, so they travel with the boat for free — a
+        // captain who sails away from their own sparks is worse than no sparks.
+        const worn: { key: 'rod' | 'boat' | 'hook'; aura: Aura }[] = []
+        const hang = (key: 'rod' | 'boat' | 'hook', name: EffectName | null, staged = false) => {
+          const part = skiff.parts[key]
+          const pose = skiff.poseOf(key)
+          if (!part || !pose || !name) return
+          const aura = makeAura(PIXI, {
+            part, image: pose.image, name, key: pose.key, staged, stage: stageRef.current,
           })
-          const at = skiff.view.getChildIndex(skiff.rodSprite)
-          skiff.view.addChildAt(aura.under, at)
+          skiff.view.addChildAt(aura.under, skiff.view.getChildIndex(part))
           skiff.view.addChild(aura.over)
-          // The rod is a different picture at a different angle in every pose,
-          // so the aura is re-pointed whenever the skiff changes.
-          skiff.onFrame = () => {
-            const p = skiff.rodPose()
-            if (p) aura.setPose(p.image, p.key)
-          }
-          a.ticker.add(t => {
-            aura.setStage(stageRef.current)
-            aura.update(t.deltaMS / 1000)
-          })
+          worn.push({ key, aura })
         }
 
-        a.ticker.add(() => {
+        hang('rod', rodEffect(rodNow), !!rodNow?.lockedIn)
+        hang('boat', hullEffect(boatNow))
+        hang('hook', hookEffect(hookNow))
+
+        // Every part is a different picture at a different angle in each pose,
+        // so every aura is re-pointed when the skiff changes. Cheap on a pose
+        // it has seen: the bakes and the outline are cached per image.
+        skiff.onFrame = () => {
+          for (const w of worn) {
+            const p = skiff.poseOf(w.key)
+            if (p) w.aura.setPose(p.image, p.key)
+          }
+        }
+
+        a.ticker.add(t => {
+          const dt = t.deltaMS / 1000
+          for (const w of worn) { w.aura.setStage(stageRef.current); w.aura.update(dt) }
           if (skiff.frame() !== frameRef.current) skiff.setFrame(frameRef.current)
         })
       } catch (e) {
@@ -200,7 +219,7 @@ export default function SkiffBench() {
     // applies to the skiff that is already standing there. An object in this
     // list rebuilds the whole renderer on every render, which is what the
     // flicker between poses was.
-  }, [colour, boatId, hatId, petId, rod, hook, reel, glow])
+  }, [colour, boatId, hatId, petId, rodTier, hookTier, reel])
 
   const img = (src: string, p: Placement, className?: string) => (
     // eslint-disable-next-line @next/next/no-img-element
@@ -213,23 +232,23 @@ export default function SkiffBench() {
     }} />
   )
 
+  // The DOM side wears the CSS auras the game ships today, so the two panes are
+  // before and after rather than with-sparks and without.
   const domSkiff = (
     <div style={{ position: 'relative', width: SKIFF_W, transform: 'translate(-8%, -26%)' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={char[frame]} alt="" draggable={false} style={{ width: '100%', display: 'block' }} />
       {hat && img(frame === 'cast' ? hat.castImageUrl : hat.restImageUrl, hat.positions[frame])}
-      {boat && img(frame === 'cast' ? boat.castImageUrl : boat.restImageUrl, boat.positions[frame])}
-      {/* The DOM rod wears the OLD css aura, so the two panes are before and
-          after rather than with-sparks and without. Locked-In has a class per
-          stage; the others have one. */}
-      {rod && img(`/${rod}_${frame}.png`, ROD_AT[frame],
-        glow === 'none' ? undefined
-          : glow === 'lockedin'
-            ? (stage === 0 ? 'rod-glow-lockedin' : `rod-glow-lockedin-${stage}`)
-            : `rod-glow-${glow}`)}
+      {boat && img(frame === 'cast' ? boat.castImageUrl : boat.restImageUrl, boat.positions[frame],
+        boatGlowClass(boat))}
+      {rod && rodDef && img(`/${rod}_${frame}.png`, ROD_AT[frame],
+        // Locked-In has a class per streak stage; every other rod has one.
+        rodDef.lockedIn
+          ? (stage === 0 ? 'rod-glow-lockedin' : `rod-glow-lockedin-${stage}`)
+          : rodGlowClass(rodDef))}
       {reel && img(reel, REEL_AT[frame])}
       {pet && img(pet.restImageUrl, PET_OVERLAYS[pet.species][frame])}
-      {hook && img(hook, HOOK_AT[frame])}
+      {hook && hookDef && img(hook, HOOK_AT[frame], hookGlowClass(hookDef))}
     </div>
   )
 
@@ -240,7 +259,7 @@ export default function SkiffBench() {
     <div style={{ minHeight: '100vh', background: '#12222e', color: '#cfe0ec',
       fontFamily: 'ui-monospace, monospace', fontSize: 12, padding: 16 }}>
       <p style={{ color: '#f0c040', fontWeight: 700, marginBottom: 10 }}>
-        SKIFF: DOM vs PIXI{rodDef ? ` — ${rodDef.name}` : ''}{err ? ` — ${err}` : ''}
+        SKIFF: DOM vs PIXI{err ? ` — ${err}` : ''}
       </p>
 
       <div style={{
@@ -272,14 +291,23 @@ export default function SkiffBench() {
           <input type="checkbox" checked={cycle} onChange={e => setCycle(e.target.checked)} />
           &nbsp;run the cast
         </label>
-        <label>colour&nbsp;
-          <select style={sel} value={colour} onChange={e => setColour(e.target.value)}>
-            {CHARACTER_COLORS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        <label>rod&nbsp;
+          <select style={sel} value={rodTier} onChange={e => setRodTier(Number(e.target.value))}>
+            {GLOWING_RODS.map(r => <option key={r.tier} value={r.tier}>{r.name}</option>)}
           </select>
         </label>
-        <label>boat&nbsp;
+        <label>hull&nbsp;
           <select style={sel} value={boatId} onChange={e => setBoatId(e.target.value)}>
-            {BOATS.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            {BOATS.map(b => (
+              <option key={b.id} value={b.id}>{hullEffect(b) ? `${b.name} +` : b.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>hook&nbsp;
+          <select style={sel} value={hookTier} onChange={e => setHookTier(Number(e.target.value))}>
+            {HOOKS.map(h => (
+              <option key={h.tier} value={h.tier}>{h.glow ? `${h.name} +` : h.name}</option>
+            ))}
           </select>
         </label>
         <label>hat&nbsp;
@@ -293,17 +321,16 @@ export default function SkiffBench() {
             {PETS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </label>
+        <label>colour&nbsp;
+          <select style={sel} value={colour} onChange={e => setColour(e.target.value)}>
+            {CHARACTER_COLORS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
         <label>
           <input type="checkbox" checked={overlay} onChange={e => setOverlay(e.target.checked)} />
           &nbsp;overlay at 50%
         </label>
-        <label>effect&nbsp;
-          <select style={sel} value={glow} onChange={e => setGlow(e.target.value as GlowType | 'none')}>
-            <option value="none">none</option>
-            {GLOWS.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-        </label>
-        {glow === 'lockedin' && (
+        {rodDef?.lockedIn && (
           <label style={{ color: '#f0c040' }}>
             streak stage {stage}&nbsp;
             <input type="range" min={0} max={3} step={1} value={stage}
@@ -313,17 +340,16 @@ export default function SkiffBench() {
       </div>
 
       <p style={{ color: 'rgba(207,224,236,0.55)', marginTop: 10, maxWidth: 640, lineHeight: 1.6 }}>
-        Left is the CSS aura the rods wear today; right is the same rod on the
-        canvas. Overlay mode is for the composition rather than the effect: side
-        by side, two nearly-right skiffs look the same, and stacked, a two-pixel
-        drift in a hat is obvious.
+        A + marks gear that carries an aura. Overlay mode is for the composition
+        rather than the effect: side by side, two nearly-right skiffs look the
+        same, and stacked, a two-pixel drift in a hat is obvious.
       </p>
       <p style={{ color: 'rgba(207,224,236,0.55)', marginTop: 8, maxWidth: 640, lineHeight: 1.6 }}>
         Run the cast to check the poses in motion. The cast is where the numbers
         are strangest — the rod swings and shortens, the hook rotates 66 degrees,
-        and on the wait the hook disappears because it is in the water. The aura
-        is re-pointed on every pose change, since the rod is a different picture
-        at a different angle in each one.
+        and on the wait the hook disappears because it is in the water. Every
+        aura is re-pointed on each pose change, since its part is a different
+        picture at a different angle in each one.
       </p>
       <p style={{ color: 'rgba(207,224,236,0.55)', marginTop: 8, maxWidth: 640, lineHeight: 1.6 }}>
         The Locked-In slider is the streak: 0 is dormant and meant to

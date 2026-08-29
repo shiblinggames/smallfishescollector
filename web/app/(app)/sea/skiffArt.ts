@@ -176,16 +176,15 @@ export type Skiff = {
    *  poses, so an effect that does not follow ends up glowing at where the rod
    *  used to be. */
   onFrame: ((f: Frame) => void) | null
-  /** The placed rod, for the glow to match. A rod's aura is its own silhouette
-   *  lit up, so the thing that draws it needs the sprite rather than a
-   *  position — same texture, same anchor, same rotation, or the light slides
-   *  off the rod as it turns. */
-  rodSprite: import('pixi.js').Sprite | null
-  /** The rod's bitmap and cache key FOR THE CURRENT POSE. The effects read its
+  /** The placed layers. An aura is its part's own silhouette lit up, so the
+   *  thing that draws one needs the SPRITE rather than a position — same
+   *  texture, same anchor, same rotation, or the light slides off as it turns. */
+  parts: Partial<Record<Key, import('pixi.js').Sprite>>
+  /** A layer's bitmap and cache key FOR THE CURRENT POSE. The effects read its
    *  alpha: the glow blurs it, and the sparks come off the outline it
-   *  describes, and both of those are different pictures in a cast than in a
+   *  describes, and both of those are a different picture in a cast than in a
    *  rest. */
-  rodPose(): { image: HTMLImageElement; key: string } | null
+  poseOf(key: Key): { image: HTMLImageElement; key: string } | null
   /** Where the rod's tip is, in the skiff's own coordinates, for the current
    *  pose. A spark that comes out of the middle of a captain is not a rod. */
   rodTip: { x: number; y: number } | null
@@ -249,17 +248,21 @@ export async function makeSkiff(
 
   let current: Frame = opts?.frame ?? 'rest'
   let rodTip: Skiff['rodTip'] = null
-  let rodUrl: string | null = null
+  /** Which file each layer is showing right now. The aura keys off this: two
+   *  poses of a rod are two different pictures, and a glow baked from the wrong
+   *  one is a glow of the wrong shape. */
+  const showing = {} as Partial<Record<Key, string>>
 
   const skiff: Skiff = {
     view,
     onFrame: null,
     frame: () => current,
-    rodSprite: sprites.rod ?? null,
-    rodPose: () => {
-      if (!rodUrl) return null
-      const image = images.get(rodUrl)
-      return image ? { image, key: rodUrl } : null
+    parts: sprites,
+    poseOf: (key) => {
+      const url = showing[key]
+      if (!url) return null
+      const image = images.get(url)
+      return image ? { image, key: url } : null
     },
     get rodTip() { return rodTip },
 
@@ -276,10 +279,11 @@ export async function makeSkiff(
         const at = part.at(f)
         if (!at || at.hidden) { s.visible = false; continue }
         s.visible = true
-        s.texture = tex(part.url(f))
+        const url = part.url(f)
+        showing[key] = url
+        s.texture = tex(url)
         place(s, at, w, h)
         if (key === 'rod') {
-          rodUrl = part.url(f)
           // The far end of the rod, taken from the sprite's own placed box
           // rather than guessed, so a longer rod puts its sparks further out
           // without anybody editing a number — and so the tip follows the rod
