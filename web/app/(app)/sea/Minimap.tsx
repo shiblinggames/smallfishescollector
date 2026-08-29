@@ -149,6 +149,9 @@ export default function Minimap({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [w, setW] = useState(0)
+  /** Enough width to stand the key beside the chart rather than under it. */
+  const [wide, setWide] = useState(false)
+  const KEY_W = 268
   const h = Math.round(w / (worldW(HALVES[side]) / worldH(HALVES[side])))
   const prog = fogProgress(fog)
 
@@ -159,9 +162,20 @@ export default function Minimap({
     if (!ctx) return
     const H = Math.round(w / (worldW(HALVES[side]) / worldH(HALVES[side])))
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    cv.width = w * dpr
-    cv.height = H * dpr
+    // ── THE BACKING STORE IS BOUNDED, NOT THE MAP ────────────────────
+    //
+    // This canvas is now allowed to be most of a desktop window, and a backing
+    // store is width TIMES height: doubling the map quadruples the memory. At
+    // 1500 across and full retina that is a 3000 by 2400 surface, near thirty
+    // megabytes, allocated the moment somebody opens the chart.
+    //
+    // So the density gives way as the size grows. It is a schematic — dots,
+    // rules and a coastline — and the crispness that matters is at the SMALL
+    // sizes where a 2px mark is two pixels. A big one already has the room to
+    // say what it means.
+    const dpr = Math.min(window.devicePixelRatio || 1, w > 1000 ? 1.5 : 2)
+    cv.width = Math.round(w * dpr)
+    cv.height = Math.round(H * dpr)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, H)
 
@@ -381,16 +395,41 @@ export default function Minimap({
 
   useEffect(() => {
     if (!open) return
-    // Width first, height derived. Capped against the viewport HEIGHT too, with
-    // room left for the header and the key, or on a short screen the chart runs
-    // off the bottom of its own panel.
-    const CHROME = 210
-    const fit = () => setW(Math.round(Math.min(
-      window.innerWidth - 40, 620, Math.max(220, (window.innerHeight - CHROME) * (worldW(HALVES[side]) / worldH(HALVES[side]))))))
+    // ── HOW BIG THE CHART GETS ───────────────────────────────────────────
+    //
+    // Width first, height derived, and capped against the viewport HEIGHT too
+    // or on a short screen the chart runs off the bottom of its own panel.
+    //
+    // THE 620 CAP WAS A PHONE NUMBER. It made sense when every surface in this
+    // game was a column; on a wide screen it left a postcard of a chart in the
+    // middle of an acre of backdrop, and the map of the world you are sailing
+    // is the one thing that most deserves the room.
+    //
+    // Two things change on a wide screen and they compound. The cap goes up,
+    // and THE KEY MOVES BESIDE THE CHART instead of under it — so the height
+    // budget stops paying for ten rows of legend and the chart can have nearly
+    // the whole window. Narrow screens keep the stacked layout exactly as it
+    // was, because there the key under the map is the only place it fits.
+    const KEY_W = 268
+    const aspect = worldW(HALVES[side]) / worldH(HALVES[side])
+    const fit = () => {
+      const roomy = window.innerWidth >= 1024
+      setWide(roomy)
+      // Header and padding. When the key is beside the chart it costs the
+      // height budget nothing, which is most of where the extra size comes
+      // from on a laptop.
+      const chrome = roomy ? 104 : 210
+      const across = window.innerWidth - 40 - (roomy ? KEY_W + 18 : 0)
+      setW(Math.round(Math.min(
+        across,
+        roomy ? 1500 : 620,
+        Math.max(220, (window.innerHeight - chrome) * aspect),
+      )))
+    }
     fit()
     window.addEventListener('resize', fit)
     return () => window.removeEventListener('resize', fit)
-  }, [open])
+  }, [open, side])
 
   const islesFound = ISLES.filter(i => found.has(i.id)).length
   const digsDone = DIG_SITES.filter(d => dug.has(d.id)).length
@@ -432,7 +471,11 @@ export default function Minimap({
                 the chart is willing to tell you. */}
             <div style={{
               display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-              gap: 12, marginBottom: 9, width: w,
+              gap: 12, marginBottom: 9,
+              // Spans the chart AND the key when they sit side by side, so the
+              // close button stays in the panel's top corner rather than in
+              // the middle of it.
+              width: wide ? w + KEY_W + 18 : w,
             }}>
               <div style={{ display: 'flex', gap: 20, minWidth: 0 }}>
                 <Stat label="Sailed" value={`${Math.round(prog.pct * 100)}%`} />
@@ -449,6 +492,7 @@ export default function Minimap({
               </button>
             </div>
 
+            <div style={{ display: 'flex', gap: wide ? 18 : 0, alignItems: 'flex-start' }}>
             <canvas ref={canvasRef}
               style={{
                 width: w, height: h, display: 'block', borderRadius: 12,
@@ -462,7 +506,13 @@ export default function Minimap({
                 then you. Every mark is drawn at the canvas's own radii through
                 the same shape helpers, so the swatch cannot drift from the
                 thing it is a swatch for. */}
-            <div style={{ width: w, marginTop: 10 }}>
+            <div style={{
+              width: wide ? KEY_W : w,
+              marginTop: wide ? 0 : 10,
+              // Beside a tall chart the key can run past the bottom of it.
+              // Scrolling the key is right and scrolling the chart is not.
+              ...(wide ? { maxHeight: h, overflowY: 'auto' as const } : null),
+            }}>
               <KeyGroup title="Places">
                 <Key mark={<Square c={INK.port} />} label="Harbour" />
                 <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, not landed" />
@@ -484,6 +534,7 @@ export default function Minimap({
                 <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="You" />
                 <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
               </KeyGroup>
+            </div>
             </div>
           </motion.div>
         </motion.div>
