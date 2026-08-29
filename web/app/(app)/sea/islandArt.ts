@@ -209,14 +209,18 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     ctx.drawImage(mid, 0, 0, D, D)
   }
 
-  // ── the shoal washes ─────────────────────────────────────────────
-  for (const [scale, col, blur] of [
-    [1.12, 'rgba(140,190,206,0.13)', 16],
-    [0.98, 'rgba(168,204,216,0.22)', 8],
-    [0.86, 'rgba(200,222,230,0.30)', 2],
-  ] as [number, string, number][]) {
-    blurred((g, _s) => { trace(g, scale); g.fillStyle = col; g.fill() }, blur)
-  }
+  // ── THE SHOAL WASHES ARE GONE ────────────────────────────────────
+  //
+  // Three blurred rings at 1.12, 0.98 and 0.86 of the island box, painted into
+  // this canvas. They are the rings that were still showing after the two
+  // animated DOM ones were removed, and they were the more static of the two:
+  // baked into the island's own texture, they could not have moved if they
+  // wanted to.
+  //
+  // The shore belongs to the water now — seaWater draws it as distance to the
+  // nearest coast with the bands running shorewards. Leaving these in would put
+  // a painted ring under a moving surf, and the ring would win, because it is
+  // attached to the land and the surf is attached to the sea.
 
   // ── contact shadow, thrown toward the light's opposite ───────────
   blurred((g) => {

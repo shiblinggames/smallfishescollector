@@ -264,12 +264,24 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
         sprite.width = w
         sprite.height = h
         ;(u.uRes as Float32Array).set([w, h])
+        uniforms.update()
       },
       set(next: Partial<WaterUniforms>) {
         for (const [k, v] of Object.entries(next)) {
           if (v instanceof Float32Array) (u[k] as Float32Array).set(v)
           else u[k] = v
         }
+        // AND SAY SO. A UniformGroup uploads when its dirty id moves, and
+        // writing THROUGH a Float32Array does not move it: the array is the
+        // same object it always was, so nothing looks changed and the old
+        // values stay on the GPU.
+        //
+        // That is why the surf drifted with the screen. `uCam` was written
+        // every frame and uploaded once, so the shader kept reconstructing
+        // world position from the camera the page started at — which makes
+        // world space and screen space the same thing, and anchors the foam to
+        // the viewport instead of to the coast it is supposed to be breaking on.
+        uniforms.update()
       },
     }
   } catch {
