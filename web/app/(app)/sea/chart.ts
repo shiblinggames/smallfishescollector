@@ -293,7 +293,7 @@ export const PLACES: Place[] = [
   },
   {
     id: 'shallows', name: 'The Shallows', blurb: 'Calm water, common fish',
-    href: '/fishing?zone=shallows',
+    href: '/sea',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
     x: 0, y: 2600, r: 1200,
@@ -304,7 +304,7 @@ export const PLACES: Place[] = [
   },
   {
     id: 'open_waters', name: 'Open Waters', blurb: 'Further out, better catches',
-    href: '/fishing?zone=open_waters',
+    href: '/sea',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
     x: 0, y: 5350, r: 1550,
@@ -315,7 +315,7 @@ export const PLACES: Place[] = [
   },
   {
     id: 'deep', name: 'The Deep', blurb: 'Long waits, real weight',
-    href: '/fishing?zone=deep',
+    href: '/sea',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
     x: 0, y: 8900, r: 2000,
@@ -326,7 +326,7 @@ export const PLACES: Place[] = [
   },
   {
     id: 'abyss', name: 'The Abyss', blurb: 'Where the dark begins',
-    href: '/fishing?zone=abyss',
+    href: '/sea',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
     x: 0, y: 13450, r: 2550,
@@ -337,7 +337,7 @@ export const PLACES: Place[] = [
   },
   {
     id: 'ancient_deep', name: 'The Ancient Deep', blurb: 'Giants, and worse',
-    href: '/fishing?zone=ancient_deep',
+    href: '/sea',
     // x/y is the band's midpoint straight south — used only as a
     // representative point for the compass. The band itself is inner..outer.
     x: 0, y: 19300, r: 3300,

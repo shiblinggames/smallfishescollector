@@ -61,6 +61,29 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  /**
+   * THE OLD FISHING PAGE IS GONE, and this is where it went.
+   *
+   * /fishing was the original hub: a zone list, a landing per zone and the
+   * dial. All of it moved onto the chart at /sea, where you sail to the water
+   * and fish where you are floating, and the page has been unreachable for a
+   * while — Nav points "Fishing" at /sea, no route pushes to it, and a day of
+   * production traffic shows not one request for it.
+   *
+   * A redirect rather than a deletion, because unreachable from inside the app
+   * is not the same as unreachable. The address has existed for the life of the
+   * game and is sitting in bookmarks and on home screens as an installed PWA
+   * shortcut; those people should arrive at the sea, not at a 404. `permanent`
+   * because it is: 308 tells the browser and the crawler to stop asking.
+   *
+   * Redirects are checked before the filesystem, so this also covers the
+   * ?zone= links the five waters carried until the chart stopped using them.
+   */
+  async redirects() {
+    return [
+      { source: '/fishing', destination: '/sea', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {
