@@ -36,14 +36,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLACES } from '../chart'
 import { GROUND, bakeIsland, requestGround } from '../islandArt'
+import { makeWater, rgb3 } from '../seaWater'
 
-type Stats = { renderer: string; objects: number; ms: number; town: string }
+type Stats = { renderer: string; objects: number; ms: number; town: string; water: string }
+
+/** The five bands' own palettes, so the bench can show what a zone reads as
+ *  with a live surface on it rather than as a flat wash. */
+const BANDS = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 
 export default function PixiBench() {
   const holder = useRef<HTMLDivElement | null>(null)
   const [stats, setStats] = useState<Stats>({
-    renderer: 'starting…', objects: 0, ms: 0, town: 'waiting',
+    renderer: 'starting…', objects: 0, ms: 0, town: 'waiting', water: 'off',
   })
+  /** Bench controls. Live, so the sea can be judged by moving them rather than
+   *  by rebuilding and guessing. */
+  const [band, setBand] = useState(0)
+  const [swell, setSwell] = useState(1)
+  const [dark, setDark] = useState(0)
+  const tune = useRef<{ band: number; swell: number; dark: number }>({ band: 0, swell: 1, dark: 0 })
+  tune.current = { band, swell, dark }
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
@@ -74,6 +86,27 @@ export default function PixiBench() {
 
         // ── THE WORLD, one container, exactly as the DOM chart has it ──
         // The camera is this container's position; the squash is its scale.
+        // ── THE WATER, UNDER EVERYTHING ───────────────────────────────
+        // Added to the stage before the world, so the land draws on top of it.
+        // Its own quad is screen-space; only the noise is sampled in world.
+        const water = await makeWater(PIXI, {
+          uTime: 0,
+          uCam: new Float32Array([0, 0]),
+          uZoom: 1,
+          uRes: new Float32Array([a.screen.width, a.screen.height]),
+          uShallow: rgb3(PLACES.find(p => p.id === BANDS[0])!.sea![2]),
+          uMid: rgb3(PLACES.find(p => p.id === BANDS[0])!.sea![1]),
+          uDeep: rgb3(PLACES.find(p => p.id === BANDS[0])!.sea![0]),
+          uDark: 0,
+          // Upper left, the same key the buildings and the islands are lit by.
+          uLight: new Float32Array([-0.7, -0.7]),
+          uSwell: 1,
+        })
+        if (water) {
+          a.stage.addChild(water.mesh)
+          water.size(a.screen.width, a.screen.height)
+        }
+
         const world = new PIXI.Container()
         world.scale.set(1, GROUND)
         a.stage.addChild(world)
@@ -127,6 +160,7 @@ export default function PixiBench() {
         const look = () => {
           world.x = a.screen.width / 2 - (main ? main.x : 0)
           world.y = a.screen.height / 2 - (main ? main.y * GROUND : 0)
+          water?.size(a.screen.width, a.screen.height)
         }
         look()
         onResize = look
@@ -154,12 +188,30 @@ export default function PixiBench() {
         cv.addEventListener('pointerleave', stop)
 
         const rendererName = a.renderer.type === 1 ? 'WebGL' : `other (${a.renderer.type})`
+        setStats(st => ({ ...st, water: water ? 'shader' : 'FAILED to compile' }))
         // Painted once immediately, so the readout is honest about what has
         // happened even if nothing else ever completes.
         setStats(s => ({ ...s, renderer: rendererName, objects }))
 
         let acc = 0, frames = 0
         a.ticker.add(() => {
+          if (water) {
+            const b = PLACES.find(p => p.id === BANDS[tune.current.band])!
+            water.set({
+              uTime: performance.now() / 1000,
+              // The camera is the world container's offset, read back out.
+              uCam: new Float32Array([
+                (a.screen.width / 2 - world.x),
+                (a.screen.height / 2 - world.y) / GROUND,
+              ]),
+              uZoom: 1,
+              uShallow: rgb3(b.sea![2]),
+              uMid: rgb3(b.sea![1]),
+              uDeep: rgb3(b.sea![0]),
+              uDark: tune.current.dark,
+              uSwell: tune.current.swell,
+            })
+          }
           acc += a.ticker.deltaMS
           frames++
           if (frames >= 30) {
@@ -226,9 +278,44 @@ export default function PixiBench() {
               <div>objects   {stats.objects}</div>
               <div>frame     {stats.ms.toFixed(1)} ms</div>
               <div>town      {stats.town}</div>
+              <div>water     {stats.water}</div>
               <div style={{ color: 'rgba(207,224,236,0.5)', marginTop: 4 }}>drag to sail</div>
             </>
           )}
+      </div>
+
+      {/* Live controls. The sea is the largest surface on the screen and no
+          amount of reading the numbers substitutes for moving them. */}
+      <div style={{
+        position: 'absolute', left: 12, right: 12, bottom: 12, zIndex: 2,
+        padding: '0.7rem 0.9rem', borderRadius: 10,
+        background: 'rgba(4,10,18,0.86)', border: '1px solid rgba(255,255,255,0.14)',
+        fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#cfe0ec',
+        display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 460,
+      }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {BANDS.map((b, i) => (
+            <button key={b} type="button" onClick={() => setBand(i)} style={{
+              padding: '0.3rem 0.55rem', borderRadius: 6, cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 11,
+              background: band === i ? 'rgba(240,192,64,0.22)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${band === i ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.16)'}`,
+              color: band === i ? '#f0c040' : '#cfe0ec',
+            }}>{b.replace('_', ' ')}</button>
+          ))}
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 52 }}>swell</span>
+          <input type="range" min={0} max={2} step={0.05} value={swell}
+            onChange={e => setSwell(Number(e.target.value))} style={{ flex: 1 }} />
+          <span style={{ width: 34, textAlign: 'right' }}>{swell.toFixed(2)}</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 52 }}>night</span>
+          <input type="range" min={0} max={1} step={0.05} value={dark}
+            onChange={e => setDark(Number(e.target.value))} style={{ flex: 1 }} />
+          <span style={{ width: 34, textAlign: 'right' }}>{dark.toFixed(2)}</span>
+        </label>
       </div>
     </div>
   )
