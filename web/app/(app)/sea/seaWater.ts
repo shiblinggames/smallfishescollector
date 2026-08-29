@@ -159,11 +159,25 @@ void main(void) {
   //
   // Toward amber, not away from blue: it is added as light rather than taken
   // out as saturation, so the deep water goes bronze instead of grey.
-  float horizon = 1.0 - smoothstep(0.0, 0.66, t);
-  vec3 gold = vec3(1.00, 0.62, 0.30);
-  col = mix(col, col * 0.55 + gold * 0.62, uWarm * horizon * 0.72);
+  float horizon = 1.0 - smoothstep(0.0, 0.72, t);
+  // A SECOND, TIGHTER BAND right at the top. A sunset is not one colour, it is
+  // a stack: fire where the sun is going down, gold above and around it, and
+  // the water's own colour underneath. One amber wash across the lot reads as
+  // a filter over a photograph; the stack reads as an evening.
+  float ember = 1.0 - smoothstep(0.0, 0.30, t);
+  vec3 gold = vec3(1.00, 0.56, 0.20);
+  vec3 fire = vec3(0.98, 0.26, 0.11);
+  vec3 warmCol = mix(gold, fire, ember * 0.85);
+
+  // STRONG, and it has to be. At the peak of golden hour the clock is halfway
+  // through dusk, so seaAt has ALREADY pulled this palette 39% toward cold
+  // blue-black before a single warm pixel is added. A gentle tint on top of
+  // that is a grey sea with a hint of yellow. This has to out-argue the night
+  // that is already in the colour, which is why it replaces most of it rather
+  // than blending politely with it.
+  col = mix(col, col * 0.34 + warmCol * 0.92, uWarm * horizon * 0.88);
   // And a little of it everywhere, so the whole sea agrees about the hour.
-  col = mix(col, col * 0.86 + gold * 0.20, uWarm * 0.28);
+  col = mix(col, col * 0.78 + gold * 0.30, uWarm * 0.38);
 
   // ── THE SURFACE, in world units ───────────────────────────────────
   // Screen to world, undoing the squash on y so a wave is as long across the
@@ -208,7 +222,8 @@ void main(void) {
   // Weighted to the horizon like the warmth is, because that is where a low
   // sun's reflection actually is.
   float road = mix(1.0, 1.0 + horizon * 1.6, uWarm);
-  vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.80, 0.52), uWarm);
+  // The road is the colour of the sun making it, not white.
+  vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), uWarm);
   col += sparkle * glintCol * 0.16 * road * uSwell * (1.0 - uDark);
 
   finalColor = vec4(col, 1.0);
@@ -326,9 +341,9 @@ export function nightTint(dark: number, warm = 0): number {
   // and blue pulled down, which is the opposite of what night does — and doing
   // both at once, in the order they actually happen, is what makes an evening
   // read as an evening instead of as a dimmer.
-  r *= 1 + w * 0.26
-  g *= 1 + w * 0.04
-  b *= 1 - w * 0.22
+  r *= 1 + w * 0.42
+  g *= 1 - w * 0.04
+  b *= 1 - w * 0.34
   const c = (v: number) => Math.max(0, Math.min(255, Math.round(255 * v)))
   return (c(r) << 16) | (c(g) << 8) | c(b)
 }
