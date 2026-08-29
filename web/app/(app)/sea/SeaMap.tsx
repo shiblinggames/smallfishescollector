@@ -71,6 +71,16 @@ import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
 import { folkById, type FolkId } from '@/lib/seaFolk'
+import { RODS } from '@/lib/rods'
+
+/** The sprite for the rod a regular sells, when they sell one. One place, so
+ *  the man on the water and the offer in his panel cannot show different
+ *  tackle. */
+function folkRodSlug(folkId: string): string | null {
+  const tier = folkById(folkId as FolkId)?.rodTier
+  if (!tier) return null
+  return RODS.find(r => r.tier === tier)?.slug ?? null
+}
 import FolkPanel from './FolkPanel'
 import SeaTour from './SeaTour'
 import SeaLandfallHint from './SeaLandfallHint'
@@ -2441,7 +2451,11 @@ export default function SeaMap({
         characterColor: ['blue', 'pink', 'gray', 'default'][seed % 4],
         boatId: ['taupe', 'oak', 'desert', 'mahogany', 'charcoal'][seed % 5],
         hatId: ['olive', 'offwhite', 'brown', 'midnight'][seed % 4],
-        rodSlug: plainRodFor(seed),
+        // WHAT THEY SELL IS WHAT THEY ARE HOLDING. Two of these nine carry a
+        // rod no shop stocks, and drawing them with a rod rolled out of the
+        // plain pool made the one thing that marks them out invisible on the
+        // water. Everybody else keeps the pool.
+        rodSlug: folkRodSlug(r.folkId) ?? plainRodFor(seed),
         hook: plainHookFor(seed),
       },
       deal: 'talk' as const, topic: 'chat' as const,

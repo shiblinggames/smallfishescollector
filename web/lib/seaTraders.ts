@@ -836,9 +836,17 @@ export function yoonTrader(): Trader {
       rodSlug: rod?.slug ?? null,
       hook: null,
     },
-    deal: 'rod',
-    rodTier: YOON.rodTier,
-    cost: rod?.cost ?? 350_000,
+    // A TALKER, like every other regular. He used to be `deal: 'rod'`, which
+    // turned his panel into a shop counter and let anybody who could reach the
+    // Ancient Deep and cover the price walk off with the rod on the first
+    // meeting - while his own dialogue had been saying "technically, yeah.
+    // Practically? Nah. Not yet." the whole time. The rod is behind full
+    // rapport now, in the same block Fitch's and Nance's live in, and this is
+    // just the man.
+    deal: 'talk',
+    topic: 'chat',
+    mood: 'One of the regulars',
+    lines: [YOON.line],
   }
 }
 

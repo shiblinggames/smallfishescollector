@@ -24,7 +24,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { traderFromKey, seaDay, DEALS_PER_DAY } from '@/lib/seaTraders'
-import { PLACES, RESIDENTS, YOON } from '@/app/(app)/sea/chart'
+import { PLACES, RESIDENTS } from '@/app/(app)/sea/chart'
 import { decodeFog, encodeFog, fogSet } from '@/lib/seaExplore'
 import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
@@ -290,21 +290,22 @@ export async function buyRunnerRod(traderKey: string): Promise<
   const admin = createAdminClient()
   const today = seaDay()
 
-  // THE CAP DOES NOT APPLY TO YOON.
+  // THE CAP APPLIES TO EVERYONE WHO GETS THIS FAR, which is now only the
+  // blockade runners. It exists because the wanderers are a daily rotation and
+  // skipping the sailing should not get you the best six deals on the chart.
   //
-  // It exists because the wanderers are a daily rotation and skipping the
-  // sailing should not get you the best six deals on the chart. Yoon sells one
-  // thing, once ever — you cannot own the rod twice — so a cap on him is not a
-  // bound on anything, it is a way to make somebody burn a day's trading to
-  // discover they were one deal short of a rod they sailed an hour for.
-  if (trader.key !== YOON.key) {
-    const { count } = await admin
-      .from('sea_trader_deals')
-      .select('trader_key', { count: 'exact', head: true })
-      .eq('user_id', user.id).eq('sea_day', today)
-    if ((count ?? 0) >= DEALS_PER_DAY) {
-      return { error: 'Word travels. Nobody else out here will deal with you today.' }
-    }
+  // Yoon used to be exempted here by key. He is not a rod deal at all any more:
+  // his rod, like Fitch's and Nance's, is the last thing a friendship does and
+  // is bought through `buyFolkRod`, which reads the rapport row and is outside
+  // this cap for the reason he always was - a once-ever purchase capped by a
+  // daily rotation only makes somebody burn a day's trading to find out they
+  // were one deal short.
+  const { count } = await admin
+    .from('sea_trader_deals')
+    .select('trader_key', { count: 'exact', head: true })
+    .eq('user_id', user.id).eq('sea_day', today)
+  if ((count ?? 0) >= DEALS_PER_DAY) {
+    return { error: 'Word travels. Nobody else out here will deal with you today.' }
   }
 
   // Already own it? Say so before taking the claim, or a captain burns one of

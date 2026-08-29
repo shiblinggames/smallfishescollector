@@ -541,6 +541,11 @@ export const FOLK: Folk[] = [
     blurb: 'Carries one rod that no shop will stock, and an opinion on whether you deserve it.',
     // Twenty feet of ribbon out of the dark. Gyattt.
     favourite: { id: 49, name: 'Oarfish' },
+    // The Locked-In Rod. His own asks have promised this for as long as they
+    // have existed - "Technically. Practically? Nah. Not yet." - and the code
+    // never made it true: anybody who could sail to him and cover the price
+    // could take it on the first meeting. Now the dialogue is the mechanic.
+    rodTier: 20,
     // HE TALKS LIKE HE TALKS.
     //
     // Yoon is a real person and this is really how he speaks, which makes him
@@ -876,6 +881,8 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'So why the dark water?', they: 'Up there I could hear everybody at once. Down here it is one thing at a time.' },
       { you: 'Would you ever come up?', they: 'For the right reason. Nobody has had one yet.' },
+      { you: 'Tell me about the rod.', they: 'It is wound from the same dark that is over your head right now. Land a fish on it and you may fold the water once and bring up a different one from these depths instead. Better or worse. It does not promise you better.' },
+      { you: 'Why would I want to undo a catch?', they: 'You would not, most times. You will know the time. It comes once a trip and you will feel it before you decide.' },
     ],
   ],
   nance: [
@@ -898,6 +905,8 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'Are you afraid of it?', they: 'Every day. That is why I am still here and the brave ones are not.' },
       { you: 'What should I do differently?', they: 'Nothing. Keep coming up. That is the whole of it and it is harder than it sounds.' },
+      { you: 'Tell me about the rod.', they: 'It is a blade, and it is lit. Down here that is not decoration. The fish come to it, and they come fast - most casts take before your line has finished falling.' },
+      { you: 'Why give it to me?', they: 'Because you keep coming back up. That is the entire test and almost nobody passes it.' },
     ],
   ],
   yoon: [
@@ -922,6 +931,8 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'What happens after I buy it?', they: 'You fish. That\'s it. Gyattt, everybody thinks there\'s a next thing.' },
       { you: 'Was I ever close to failing?', they: 'Nah. Not once. You were locked in way earlier than you think.' },
+      { you: 'Tell me about the rod. Properly.', they: 'It reads your streak and it grows with it. Perfect after perfect and the thing keeps getting stronger in your hands. Sheeeeesh.' },
+      { you: 'And when I miss?', they: 'It drops back to nothing. All of it, one miss. That is not a punishment, bruhhh, that is the rod being honest about what you were doing.' },
     ],
   ],
   brill: [
