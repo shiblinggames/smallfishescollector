@@ -56,6 +56,10 @@ export type WaterUniforms = {
   uLight: Float32Array
   /** How much surface there is at all. 0 is the old flat gradient exactly. */
   uSwell: number
+  /** How hard the camera is travelling, 0..1. See the note in the fragment
+   *  shader: fine detail crossing the whole screen at speed is what makes
+   *  sailing unpleasant, and this is the knob that takes it away. */
+  uRush: number
   /** The clock's second axis: 0 at noon and midnight, 1 with the sun on the
    *  horizon. See seaClock. */
   uWarm: number
@@ -118,6 +122,7 @@ uniform vec3  uDeep;
 uniform float uDark;
 uniform vec2  uLight;
 uniform float uSwell;
+uniform float uRush;
 uniform float uWarm;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
@@ -190,7 +195,16 @@ void main(void) {
   // swell and the other along it, so the pattern never repeats visibly.
   float d1 = vnoise(w + vec2(uTime * 0.020, uTime * -0.013));
   float d2 = vnoise(w * 2.7 + vec2(d1 * 1.6 - uTime * 0.031, d1 * -1.2));
-  float swell = (d1 * 0.65 + d2 * 0.35) - 0.5;
+  // ── THE FINE OCTAVE STANDS DOWN AT SPEED ─────────────────────────
+  //
+  // A short exposure of something moving fast is BLURRED, and blur is exactly
+  // the loss of high frequencies. A shader cannot blur cheaply, but it can
+  // simply turn the high-frequency term down, which is perceptually most of the
+  // same thing and costs one multiply. The big swell is kept whole: it is low
+  // frequency, so it crosses the screen slowly in visual terms and reads as the
+  // sea heaving rather than as detail rushing past.
+  float fine = 0.35 * (1.0 - 0.55 * uRush);
+  float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
   // Brightness only. Hue is the zone blend's business and nothing here may
   // touch it.
@@ -213,7 +227,12 @@ void main(void) {
 
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
-  float sparkle = vnoise(w * 9.0 + gv * 2.0 + vec2(uTime * 0.10, uTime * 0.06));
+  // 6.0, NOT 9.0. At 9 a glint cell is about seventy world pixels across, so
+  // at a cruise the whole screen is crossed by several of them a second — a
+  // high-contrast, high-frequency field strobing past, which is the single
+  // most nauseating thing a moving background can do. Wider cells cross less
+  // often and read as the same water.
+  float sparkle = vnoise(w * 6.0 + gv * 2.0 + vec2(uTime * 0.10, uTime * 0.06));
   // THE GLARE PATH WIDENS AS THE SUN DROPS. A high sun scatters a few points
   // of light; a low one lays a road of them across the water. So the threshold
   // opens with warmth and the specks recruit their neighbours.
@@ -224,7 +243,10 @@ void main(void) {
   float road = mix(1.0, 1.0 + horizon * 1.6, uWarm);
   // The road is the colour of the sun making it, not white.
   vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), uWarm);
-  col += sparkle * glintCol * 0.16 * road * uSwell * (1.0 - uDark);
+  // AND THEY FADE AS SHE DRIVES. Glare is the highest-contrast thing on the
+  // water and the most expensive to sweep past; under way it gives up most of
+  // itself, and comes back the moment you slow down and look.
+  col += sparkle * glintCol * 0.16 * road * uSwell * (1.0 - uDark) * (1.0 - 0.7 * uRush);
 
   finalColor = vec4(col, 1.0);
 }
@@ -262,6 +284,7 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       uDark: { value: initial.uDark, type: 'f32' },
       uLight: { value: initial.uLight, type: 'vec2<f32>' },
       uSwell: { value: initial.uSwell, type: 'f32' },
+      uRush: { value: initial.uRush, type: 'f32' },
       uWarm: { value: initial.uWarm, type: 'f32' },
     })
 

@@ -206,6 +206,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
         uLight: new Float32Array([-0.7, -0.7]),
         uSwell: 1,
         uWarm: 0,
+        uRush: 0,
       })
       if (water) {
         if (dead) { a.destroy(true, { children: true }); return }
@@ -364,6 +365,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
       // or not.
       let camX = 0, camY = 0, camZoom = 1
       let dark = 0, warm = 0
+      let lastCamX = 0, lastCamY = 0, rush = 0
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
       a.ticker.add(() => {
         const t = performance.now() / 1000
@@ -371,6 +373,16 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
         // the hour arrive through the handle, from the chart's own loop.
         for (const f of foams) f.advance(t)
         const dt = a.ticker.deltaMS / 1000
+        // ── HOW HARD SHE IS TRAVELLING ────────────────────────────────
+        // Derived from the camera rather than passed in: the chart already
+        // hands this layer plenty, and the camera's own delta is the honest
+        // measure of how fast the water is going past whatever is looking at
+        // it. Smoothed, or a single stuttered frame reads as a lurch.
+        const rvx = (camX - lastCamX) / Math.max(dt, 1e-4)
+        const rvy = (camY - lastCamY) / Math.max(dt, 1e-4)
+        lastCamX = camX; lastCamY = camY
+        const raw = Math.min(1, Math.hypot(rvx, rvy) / 520)
+        rush += (raw - rush) * Math.min(1, dt * 5)
         capRef.current?.cap.update(dt)
         for (const c of crewRef.current.values()) c.cap.update(dt)
         water?.set({
@@ -379,6 +391,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }
           uZoom: camZoom,
           uDark: dark,
           uWarm: warm,
+          uRush: rush,
         })
         const halfW = a.screen.width / 2 / camZoom
         const halfH = a.screen.height / 2 / camZoom / GROUND

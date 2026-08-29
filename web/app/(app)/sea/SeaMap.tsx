@@ -871,6 +871,10 @@ function nightGrade(dark: number, strength = 1): string {
     + `contrast(${(1 + k * 0.10).toFixed(3)})`
 }
 
+/** Three channels, as a css colour wants them: whole numbers, in range. The
+ *  blend itself stays continuous — see the note where `out` is built. */
+const px = (c: number[]) => c.map(v => Math.max(0, Math.min(255, Math.round(v)))).join(',')
+
 function seaAt(p: Vec, darkness = 0): SeaLook {
   // THE OPEN OCEAN GETS A SMALL VOTE, NOT A BIG ONE.
   //
@@ -910,7 +914,13 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
       for (let ch = 0; ch < 3; ch++) acc[k][ch] += w.c[k][ch] * weight
     }
   }
-  let out = acc.map(c => c.map(v => Math.round(v / wSum)))
+  // UNROUNDED. The css string rounds when it writes the colours, because that
+  // is what a css colour is; the numbers themselves do not have to be integers
+  // and the canvas is happier if they are not. Rounding here quantises the
+  // whole palette to 255 steps per channel, and a deep stop that travels from
+  // 39 down to 6 across a fade has 33 of them to do it in — which is a band you
+  // can see, on a gradient that fills the screen.
+  let out = acc.map(c => c.map(v => v / wSum))
 
   // NIGHT, applied to the blend rather than as a sheet over the top. A dark
   // overlay flattens everything underneath it into one grey; pulling the
@@ -919,7 +929,7 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
   if (darkness > 0) {
     const NIGHT: [number, number, number] = [6, 11, 22]
     const k = darkness * 0.78
-    out = out.map(c => c.map((v, i) => Math.round(v * (1 - k) + NIGHT[i] * k)))
+    out = out.map(c => c.map((v, i) => v * (1 - k) + NIGHT[i] * k))
   }
 
   // Perceived brightness of the DEEP stop, 0..1. Drives how much light the
@@ -934,16 +944,16 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
     lum,
     stops: out,
     // The middle stop, which is the colour this water reads as overall.
-    solid: `rgb(${out[1].join(',')})`,
+    solid: `rgb(${px(out[1])})`,
     // Painted three ways from the same blend, and weighted DOWN toward the
     // deep end: the pale stop used to own the top 38% of the screen, which is
     // a lot of light to be showing in water that is meant to be black.
     css:
       `radial-gradient(ellipse 130% 104% at 50% -10%, ` +
-      `rgb(${out[2].join(',')}) 0%, ` +
-      `rgb(${out[1].join(',')}) 24%, ` +
-      `rgb(${out[0].join(',')}) 60%, ` +
-      `rgb(${out[0].map(v => Math.max(0, Math.round(v * 0.62))).join(',')}) 100%)`,
+      `rgb(${px(out[2])}) 0%, ` +
+      `rgb(${px(out[1])}) 24%, ` +
+      `rgb(${px(out[0])}) 60%, ` +
+      `rgb(${px(out[0].map(v => v * 0.62))}) 100%)`,
   }
 }
 
@@ -3552,6 +3562,9 @@ export default function SeaMap({
      *  is measured against these, never against a rounded position. */
     const lookAt = { x: Infinity, y: Infinity }
     let lastDark = -1
+    /** The canvas's own last hour, unrounded. Separate from `lastDark` because
+     *  the two are deliberately at different resolutions. */
+    let lastRaw = -1
     /** Tracked apart from `lastDark` because the backdrop also repaints when
      *  the boat has sailed far enough, and the grade has no reason to. */
     let lastGrade = -1
@@ -4418,7 +4431,6 @@ export default function SeaMap({
         // And the canvas, which cannot read a custom property. A tint, not a
         // filter: see nightTint for why that distinction is the whole reason
         // the islands can be lit at all after what the filter did.
-        gpuRef.current?.night(dark, clk.warmth)
       }
 
       const movedFar = Math.hypot(pos.current.x - lookAt.x, pos.current.y - lookAt.y) >= SEA_STEP
@@ -4432,11 +4444,33 @@ export default function SeaMap({
           lastCss = look.css
           sky.style.background = look.css
         }
-        // THE SAME BLEND, HANDED TO THE SHADER. Not recomputed: what colour
-        // this water is, is one decision, and it is made just above on the same
-        // deadband. The canvas is only being told what the chart already
-        // decided. Null unless the flag is on.
-        gpuRef.current?.palette(look.stops)
+      }
+
+      // ── AND THE CANVAS GETS THE HOUR WHOLE ────────────────────────
+      //
+      // THE DEADBAND ABOVE IS A CSS DEADBAND. Rounding the light to 24 steps is
+      // the right answer for a full-viewport gradient STRING, which has to be
+      // re-parsed and repainted every time one character of it changes — the
+      // note there is about a screen that strobed sixty times a second.
+      //
+      // None of that is true of a canvas. Three colours and a float are four
+      // uniform writes, and they cost the same whether they changed or not. So
+      // the shader gets the raw continuous darkness, and the twenty-four steps
+      // it was watching the light climb in become one smooth ramp.
+      //
+      // The stops are recomputed here rather than reused from the block above
+      // because that one is holding a DIFFERENT darkness: theirs is rounded and
+      // this one is not, and handing the canvas a palette from the wrong hour
+      // is how you get a sea that is a step behind its own sky.
+      if (gpuRef.current) {
+        const raw = clk.darkness
+        if (movedFar || Math.abs(raw - lastRaw) > 0.002) {
+          lastRaw = raw
+          gpuRef.current.palette(seaAt(pos.current, raw).stops)
+        }
+        // A tint, not a filter: see nightTint for why that distinction is the
+        // whole reason the islands can be lit at all after what the filter did.
+        gpuRef.current.night(raw, clk.warmth)
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two

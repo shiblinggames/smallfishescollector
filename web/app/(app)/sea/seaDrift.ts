@@ -36,9 +36,12 @@
 
 import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
 
-/** How many flecks are alive at once. Sized so a viewport holds a scattering
- *  rather than a crowd: the eye wants a few things to track, not confetti. */
-const COUNT = 260
+/** How many flecks are alive at once. Sized so a viewport holds a SCATTERING
+ *  rather than a crowd: the eye wants a few things to track, not confetti, and
+ *  a dense field of small bright things crossing the whole screen at speed is
+ *  the thing that makes people feel sick. Fewer, bigger and dimmer reads as
+ *  more water rather than less. */
+const COUNT = 140
 
 /** World px per second of the common current. Slower than the slowest useful
  *  sailing speed by an order of magnitude, on purpose. */
@@ -100,7 +103,7 @@ export type Drift = {
 
 export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
   const view: ParticleContainer = new PIXI.ParticleContainer({
-    dynamicProperties: { position: true, rotation: false, vertex: true, color: true },
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
   })
   // Foam is brighter than the water under it and never darker, so it adds.
   view.blendMode = 'add'
@@ -118,8 +121,12 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
       x: Math.random(), y: Math.random(),
       vx: CURRENT_X * (0.6 + Math.random() * 0.8),
       vy: CURRENT_Y * (0.6 + Math.random() * 0.8),
-      size: 3 + Math.random() * 7,
-      base: 0.10 + Math.random() * 0.30,
+      // Bigger and dimmer than they were. What causes the treadmill feeling is
+      // high-frequency detail travelling fast across the whole field of view;
+      // the cure is lower frequency and lower contrast, not a slower speed —
+      // the speed IS the information.
+      size: 6 + Math.random() * 12,
+      base: 0.07 + Math.random() * 0.16,
       rate: 0.25 + Math.random() * 0.5,
       phase: Math.random() * Math.PI * 2,
     }
@@ -129,6 +136,10 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
 
   let seeded = false
   let tint = 0xffffff
+  // The camera's own speed, smoothed. Derived here rather than passed in
+  // because it is only ever used for this and the chart already has enough to
+  // hand over every frame.
+  let lastCamX = 0, lastCamY = 0, camSpeed = 0, primed = false
 
   return {
     view,
@@ -143,6 +154,28 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
         }
       }
       const d = Math.min(dt, 0.05)
+
+      // ── HOW FAST THE WATER IS GOING PAST ──────────────────────────
+      const vx = primed ? (camX - lastCamX) / Math.max(d, 1e-4) : 0
+      const vy = primed ? (camY - lastCamY) / Math.max(d, 1e-4) : 0
+      lastCamX = camX; lastCamY = camY; primed = true
+      // Smoothed hard: the raw frame-to-frame delta is noisy enough that
+      // streaks would flicker in and out at a steady cruise.
+      camSpeed += (Math.hypot(vx, vy) - camSpeed) * Math.min(1, d * 6)
+
+      // ── AND WHAT THAT DOES TO THEM ────────────────────────────────
+      //
+      // Anything you pass at speed SMEARS. That is not a stylistic choice, it
+      // is what a short exposure of a moving thing looks like, and it is the
+      // difference between water going by and a wall of dots strobing across
+      // the screen. Streaking them along the direction of travel and taking
+      // some of their brightness away as they stretch turns the treadmill back
+      // into motion — a still frame at speed looks blurred, which is right,
+      // and the eye stops trying to track individual specks.
+      const smear = 1 + Math.min(3.4, camSpeed / 210)
+      const streakAng = camSpeed > 12 ? Math.atan2(vy, vx) : 0
+      const busy = 1 / (1 + camSpeed / 620)
+
       for (const f of flecks) {
         f.x += f.vx * d
         f.y += f.vy * d
@@ -158,11 +191,13 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
         f.p.x = f.x
         f.p.y = f.y
         const k = f.size / 32
-        f.p.scaleX = k
-        // Squashed against the plane's own squash, so a fleck lying on the
-        // water is as foreshortened as the water is.
+        f.p.rotation = streakAng
+        f.p.scaleX = k * smear
         f.p.scaleY = k
-        f.p.alpha = f.base * (0.45 + 0.55 * Math.sin(t * f.rate + f.phase))
+        // Dimmer as it stretches: the same light spread over more of the
+        // screen. Without this the smear reads as MORE foam at speed, which is
+        // the opposite of what a blur does.
+        f.p.alpha = f.base * busy * (0.45 + 0.55 * Math.sin(t * f.rate + f.phase))
         f.p.tint = tint
       }
     },

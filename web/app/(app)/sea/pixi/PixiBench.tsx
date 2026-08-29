@@ -110,6 +110,8 @@ export default function PixiBench() {
           uLight: new Float32Array([-0.7, -0.7]),
           uSwell: 1,
           uWarm: 0,
+        // The bench sits still, so there is nothing to ease off for.
+        uRush: 0,
         })
         if (water) {
           a.stage.addChild(water.sprite)
