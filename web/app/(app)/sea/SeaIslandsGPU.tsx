@@ -38,6 +38,7 @@
 import { useEffect, useRef } from 'react'
 import { GROUND, bakeIsland, requestGround } from './islandArt'
 import { bakeMark } from './markArt'
+import { nightTint } from './seaWater'
 import { SUBMERGE } from './submerge'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
@@ -52,6 +53,9 @@ export type GpuMark = {
 export type GpuHandle = {
   /** Called by the frame loop, right after it writes the DOM world transform. */
   camera(x: number, y: number, zoom: number): void
+  /** The clock's 0..1. Tints every sprite on this canvas — see nightTint for
+   *  why this is a tint and emphatically not a filter. */
+  night(dark: number): void
 }
 
 export default function SeaIslandsGPU({ islands, marks, handle }: {
@@ -225,7 +229,19 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
         }
       })
 
+      let lastTint = -1
       handle.current = {
+        night(dark) {
+          const tint = nightTint(dark)
+          if (tint === lastTint) return
+          lastTint = tint
+          for (const b of baked) b.sprite.tint = tint
+          for (const sw of swayers) {
+            for (const child of sw.holder.children) {
+              (child as import('pixi.js').Sprite).tint = tint
+            }
+          }
+        },
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom
           world.scale.set(zoom, zoom * GROUND)

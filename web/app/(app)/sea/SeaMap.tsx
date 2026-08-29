@@ -88,7 +88,7 @@ import { pendingPacts } from './pactActions'
 import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
-import { GROUND, ISLAND_LIFT, bakeIsland, bakeSurf, requestGround } from './islandArt'
+import { GROUND, ISLAND_LIFT, bakeIsland, requestGround } from './islandArt'
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
 
 /**
@@ -4239,6 +4239,10 @@ export default function SeaMap({
         // Published for anything that wants to light UP as the light goes down
         // rather than dim with it — see the harbour lights on the ports.
         wrapRef.current?.style.setProperty('--sea-night', dark.toFixed(3))
+        // And the canvas, which cannot read a custom property. A tint, not a
+        // filter: see nightTint for why that distinction is the whole reason
+        // the islands can be lit at all after what the filter did.
+        gpuRef.current?.night(dark)
       }
 
       const movedFar = Math.hypot(pos.current.x - lookAt.x, pos.current.y - lookAt.y) >= SEA_STEP
@@ -7183,31 +7187,19 @@ const Landmass = memo(function Landmass({ id, r, locked = false }: {
     requestGround(paint)
   }
 
-  const blitSurf = (scale: number, color: string, blur: number) =>
-    (el: HTMLCanvasElement | null) => {
-      if (!el) return
-      const baked = bakeSurf(id, d, scale, color, blur)
-      if (el.width !== baked.width) { el.width = baked.width; el.height = baked.height }
-      const g = el.getContext('2d')
-      g?.clearRect(0, 0, el.width, el.height)
-      g?.drawImage(baked, 0, 0)
-    }
 
   return (
     <>
-      {/* THE SURF, UNDER THE LAND — same paint order the div stack had. Only
-          the rim outside the coast shows; the island covers the rest. The
-          classes keep the two rings breathing out of phase, on transform and
-          opacity, over a texture a fraction of the old layers' size. */}
-      <canvas ref={blitSurf(0.82, 'rgba(226,244,250,0.30)', 7)} aria-hidden
-        className="sea-surf" style={{
-          position: 'absolute', inset: 0, width: d, height: d, pointerEvents: 'none',
-        }} />
-      <canvas ref={blitSurf(0.772, 'rgba(240,250,255,0.55)', 2.5)} aria-hidden
-        className="sea-surf sea-surf-2" style={{
-          position: 'absolute', inset: 0, width: d, height: d, pointerEvents: 'none',
-        }} />
+      {/* THE SURF RINGS ARE GONE. Two blurred canvases scaled 0.82 and 0.772 of
+          the island box, pulsing opacity out of phase — which is exactly what
+          it read as: two rings pulsing. Nothing about it ever moved OUTWARD,
+          and a surf that does not run at the beach is a halo, not water.
 
+          The shore is the water's business now. seaWater draws it as distance
+          to the nearest coast, banded, with the bands travelling shorewards and
+          the edge chewed by the same noise that makes the swell — so the foam
+          wanders along a coastline instead of ringing it. That needs the GPU
+          renderer, so it arrives with ?gpu=1. */}
       {/* THE WHOLE STATIC ISLAND, one image, over the surf. See the bakery
           above for the fourteen layers this replaced and why. */}
       <canvas ref={blit} aria-hidden style={{
@@ -8557,7 +8549,20 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
                 width: d * b.scale,
                 transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
                 transformOrigin: 'bottom center',
-                filter: locked ? 'grayscale(0.9) brightness(0.5)' : 'none',
+                // NIGHT, ON A BOUNDED BOX. A building is a small element and
+                // filtering it costs a small buffer; the crash came from
+                // filtering the world CONTAINER, which is zero-size with
+                // children spread across twenty thousand pixels, so the
+                // compositor had to rasterise the whole chart's ink overflow.
+                // Reading `--sea-night` means no per-frame write and no
+                // re-render — the loop publishes the number once per step of
+                // the fade. If a browser will not take calc() inside
+                // brightness(), the declaration is simply dropped and the
+                // building stays lit, which is the old behaviour.
+                filter: locked
+                  ? 'grayscale(0.9) brightness(0.5)'
+                  : 'brightness(calc(1 - var(--sea-night, 0) * 0.42))'
+                    + ' saturate(calc(1 - var(--sea-night, 0) * 0.5))',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img decoding="async" src={b.art} alt="" draggable={false}

@@ -151,52 +151,6 @@ function paintGround(
   g.restore()
 }
 
-/**
- * THE SURF RINGS, pre-blurred at low resolution.
- *
- * Baked separately from the island because they MOVE: the breathing animation
- * needs its own element. But each ring was an island-sized blurred clipped div
- * promoted to its own GPU layer at device resolution — around the Mainland,
- * eight such layers, on the order of ninety megabytes of texture on an iPhone.
- * Past the compositor's budget it de-promotes and re-runs a Gaussian blur
- * through a 160-point clip per ring per frame. As a canvas the texture is the
- * backing store, and the backing store is drawn at half size — the content is
- * a blur, so the resolution is genuinely irrelevant.
- */
-const surfCache = new Map<string, HTMLCanvasElement>()
-
-export function bakeSurf(id: string, d: number, scale: number, color: string, blurPx: number): HTMLCanvasElement {
-  const key = `${id}:${d}:${scale}`
-  const hit = surfCache.get(key)
-  if (hit) return hit
-  const cv = document.createElement('canvas')
-  cv.width = Math.max(32, Math.round(d * 0.5))
-  cv.height = cv.width
-  const rs = coastline(id)
-  const k = Math.max(2, Math.round(blurPx / 2))
-  const small = document.createElement('canvas')
-  small.width = Math.max(8, Math.round(cv.width / k))
-  small.height = small.width
-  const sg = small.getContext('2d')!
-  const su = small.width / d
-  sg.beginPath()
-  for (let i = 0; i < rs.length; i++) {
-    const a = (Math.PI * 2 * i) / rs.length
-    const r = (rs[i] / 100) * d * scale * su
-    const x = small.width / 2 + Math.cos(a) * r
-    const y = small.height / 2 + Math.sin(a) * r
-    if (i === 0) sg.moveTo(x, y); else sg.lineTo(x, y)
-  }
-  sg.closePath()
-  sg.fillStyle = color
-  sg.fill()
-  const g = cv.getContext('2d')!
-  g.imageSmoothingQuality = 'high'
-  g.drawImage(small, 0, 0, cv.width, cv.height)
-  surfCache.set(key, cv)
-  return cv
-}
-
 
 export function bakeIsland(id: string, d: number, locked: boolean, pad: number): HTMLCanvasElement {
   const key = `${id}:${d}:${locked ? 1 : 0}`

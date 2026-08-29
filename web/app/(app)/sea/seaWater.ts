@@ -56,6 +56,11 @@ export type WaterUniforms = {
   uLight: Float32Array
   /** How much surface there is at all. 0 is the old flat gradient exactly. */
   uSwell: number
+  /** The nearest few islands, packed (x, y, shoreRadius) in world units. Only
+   *  the near ones: foam is a shore effect and a pixel in open water should not
+   *  pay to be told that thirty islands are far away. */
+  uIsles: Float32Array
+  uIsleCount: number
 }
 
 // ── THE SHADERS ─────────────────────────────────────────────────────────────
@@ -115,6 +120,8 @@ uniform vec3  uDeep;
 uniform float uDark;
 uniform vec2  uLight;
 uniform float uSwell;
+uniform vec3  uIsles[6];
+uniform float uIsleCount;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -166,6 +173,43 @@ void main(void) {
   shade += facing * 0.035 * uSwell;
   col *= shade;
 
+  // ── THE SHORE ─────────────────────────────────────────────────────
+  //
+  // What the two breathing DOM rings were, done as water instead. They were a
+  // pair of blurred canvases scaled 0.82 and 0.772 of the island box, pulsing
+  // opacity out of phase — which reads as two rings pulsing, because that is
+  // what it was. Nothing about it moved OUTWARD, and a surf that does not run
+  // at the beach is just a halo.
+  //
+  // Here it is distance to the nearest shore, banded, with the bands travelling
+  // toward the land and the whole edge chewed up by the same noise that makes
+  // the swell — so the foam wanders along the coast instead of ringing it.
+  float foam = 0.0;
+  for (int i = 0; i < 6; i++) {
+    if (float(i) >= uIsleCount) break;
+    vec3 isle = uIsles[i];
+    // World distance, with y unsquashed so the band is as wide off a north
+    // shore as off an east one.
+    vec2 dv = world - isle.xy;
+    float dist = length(dv) - isle.z;
+
+    // The band, chewed by noise so the edge is never a circle.
+    float wob = (vnoise(dv * 0.010 + vec2(uTime * 0.05, 0.0)) - 0.5) * isle.z * 0.10;
+    float d = dist + wob;
+
+    // Two crests running shorewards, out of phase, fading as they go out.
+    float travel = uTime * 0.16;
+    float band = isle.z * 0.11;
+    float a = smoothstep(band, 0.0, abs(mod(d / band + travel, 2.0) - 1.0) * band);
+    float reach = 1.0 - smoothstep(0.0, band * 2.4, max(d, 0.0));
+    float inside = smoothstep(-band * 0.6, 0.0, d);   // nothing under the land
+    foam = max(foam, a * reach * inside);
+  }
+  // Foam is white water: it lightens, and it survives the dark better than a
+  // glint does because breaking water is bright by being broken, not by being
+  // lit. It still gives most of itself up at night.
+  col += foam * 0.30 * uSwell * (1.0 - uDark * 0.55);
+
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
   float sparkle = vnoise(w * 9.0 + gv * 2.0 + vec2(uTime * 0.10, uTime * 0.06));
@@ -199,6 +243,8 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       uDark: { value: initial.uDark, type: 'f32' },
       uLight: { value: initial.uLight, type: 'vec2<f32>' },
       uSwell: { value: initial.uSwell, type: 'f32' },
+      uIsles: { value: initial.uIsles, type: 'vec3<f32>', size: 6 },
+      uIsleCount: { value: initial.uIsleCount, type: 'f32' },
     })
 
     const filter = new PIXI.Filter({
@@ -235,4 +281,46 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
 export function rgb3(hex: string): Float32Array {
   const n = parseInt(hex.replace('#', ''), 16)
   return new Float32Array([((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255])
+}
+
+/**
+ * ── THE GLOBAL LIGHT ────────────────────────────────────────────────────────
+ *
+ * One number, one tint, everything on the chart. `dark` is the clock's own 0 to
+ * 1, and this is the multiply that goes on every sprite standing in it.
+ *
+ * IT DIMS AND IT COOLS, and it cools harder than it dims. Colour is the first
+ * thing to go at low light and the last thing anybody notices going, which is
+ * exactly why it sells: a sea at night is not a grey sea, it is a blue one you
+ * cannot quite read. The blue channel is held up while red is pulled down.
+ *
+ * A tint rather than a filter, and the difference is not cosmetic. A CSS filter
+ * on the world layer is what killed the renderer: it made the compositor
+ * rasterise a surface the size of the chart's ink overflow. `sprite.tint` is a
+ * multiply the GPU does per pixel as it draws, with no buffer at all.
+ */
+export function nightTint(dark: number): number {
+  const k = Math.max(0, Math.min(1, dark))
+  const r = Math.round(255 * (1 - k * 0.48))
+  const g = Math.round(255 * (1 - k * 0.44))
+  const b = Math.round(255 * (1 - k * 0.34))
+  return (r << 16) | (g << 8) | b
+}
+
+/**
+ * The night shift `seaAt` applies to the water palette, so the shader can be
+ * handed colours that already know what hour it is.
+ *
+ * Duplicated deliberately in one direction only: `seaAt` remains the authority
+ * on the chart and this exists for the bench, which has no camera position to
+ * blend a zone from. Same constant, same 78%.
+ */
+export function nightShift(rgb: Float32Array, dark: number): Float32Array {
+  const NIGHT = [6 / 255, 11 / 255, 22 / 255]
+  const k = Math.max(0, Math.min(1, dark)) * 0.78
+  return new Float32Array([
+    rgb[0] * (1 - k) + NIGHT[0] * k,
+    rgb[1] * (1 - k) + NIGHT[1] * k,
+    rgb[2] * (1 - k) + NIGHT[2] * k,
+  ])
 }

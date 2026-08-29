@@ -36,7 +36,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLACES } from '../chart'
 import { GROUND, bakeIsland, requestGround } from '../islandArt'
-import { makeWater, rgb3 } from '../seaWater'
+import { makeWater, rgb3, nightShift, nightTint } from '../seaWater'
 
 type Stats = { renderer: string; objects: number; ms: number; town: string; water: string }
 
@@ -101,6 +101,8 @@ export default function PixiBench() {
           // Upper left, the same key the buildings and the islands are lit by.
           uLight: new Float32Array([-0.7, -0.7]),
           uSwell: 1,
+          uIsles: new Float32Array(18),
+          uIsleCount: 0,
         })
         if (water) {
           a.stage.addChild(water.sprite)
@@ -123,7 +125,7 @@ export default function PixiBench() {
         // arrives here looking EXACTLY as it does on the real chart. That is
         // the actual finding of this bench: the island art does not need
         // porting at all, only re-hosting.
-        const islands: { id: string; sprite: import('pixi.js').Sprite; d: number; pad: number }[] = []
+        const islands: { id: string; sprite: import('pixi.js').Sprite; d: number; pad: number; x: number; y: number; r: number }[] = []
         let objects = 0
         for (const p of PLACES) {
           if (p.inner !== undefined) continue          // waters have no land
@@ -140,7 +142,7 @@ export default function PixiBench() {
           s.x = p.x
           s.y = p.y
           world.addChild(s)
-          islands.push({ id: p.id, sprite: s, d, pad })
+          islands.push({ id: p.id, sprite: s, d, pad, x: p.x, y: p.y, r: p.r })
           objects++
         }
 
@@ -197,6 +199,30 @@ export default function PixiBench() {
         a.ticker.add(() => {
           if (water) {
             const b = PLACES.find(p => p.id === BANDS[tune.current.band])!
+            const d = tune.current.dark
+            // THE NEAREST SIX SHORES, and only six. Foam happens at a beach, so
+            // a pixel in open water should not pay to be told that thirty
+            // islands are a long way off. Re-picked each frame because the
+            // camera moves and the cost of sorting thirty things is nothing
+            // next to a per-pixel loop.
+            const camX = a.screen.width / 2 - world.x
+            const camY = (a.screen.height / 2 - world.y) / GROUND
+            const near = islands
+              .map(it => ({ it, d2: (it.x - camX) ** 2 + (it.y - camY) ** 2 }))
+              .sort((p, q) => p.d2 - q.d2)
+              .slice(0, 6)
+            const packed = new Float32Array(18)
+            near.forEach(({ it }, i) => {
+              packed[i * 3] = it.x
+              packed[i * 3 + 1] = it.y
+              // Where the water actually meets the land: the DOM surf rings sat
+              // at 0.82 and 0.772 of the island box, and the coastline runs
+              // about 46% of it, so the shore is a shade under 0.78 of r.
+              packed[i * 3 + 2] = it.r * 0.78
+            })
+            // THE SAME SHIFT seaAt APPLIES. Without it the night slider only
+            // killed the glints and left the sea its noon colour, which made
+            // the bench a liar about the one thing it was built to show.
             water.set({
               uTime: performance.now() / 1000,
               // The camera is the world container's offset, read back out.
@@ -205,13 +231,19 @@ export default function PixiBench() {
                 (a.screen.height / 2 - world.y) / GROUND,
               ]),
               uZoom: 1,
-              uShallow: rgb3(b.sea![2]),
-              uMid: rgb3(b.sea![1]),
-              uDeep: rgb3(b.sea![0]),
-              uDark: tune.current.dark,
+              uShallow: nightShift(rgb3(b.sea![2]), d),
+              uMid: nightShift(rgb3(b.sea![1]), d),
+              uDeep: nightShift(rgb3(b.sea![0]), d),
+              uDark: d,
               uSwell: tune.current.swell,
+              uIsles: packed,
+              uIsleCount: near.length,
             })
           }
+          // The land takes the same light the water does, so the slider shows
+          // one hour rather than two.
+          const tint = nightTint(tune.current.dark)
+          for (const it of islands) it.sprite.tint = tint
           acc += a.ticker.deltaMS
           frames++
           if (frames >= 30) {
