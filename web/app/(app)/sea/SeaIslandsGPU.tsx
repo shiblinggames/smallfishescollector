@@ -53,9 +53,10 @@ export type GpuMark = {
 export type GpuHandle = {
   /** Called by the frame loop, right after it writes the DOM world transform. */
   camera(x: number, y: number, zoom: number): void
-  /** The clock's 0..1. Tints every sprite on this canvas — see nightTint for
-   *  why this is a tint and emphatically not a filter. */
-  night(dark: number): void
+  /** The clock's two axes: how dark, and how low the sun is. Tints every
+   *  sprite on this canvas — see nightTint for why this is a tint and
+   *  emphatically not a filter. */
+  night(dark: number, warm: number): void
 }
 
 export default function SeaIslandsGPU({ islands, marks, handle }: {
@@ -231,8 +232,8 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
 
       let lastTint = -1
       handle.current = {
-        night(dark) {
-          const tint = nightTint(dark)
+        night(dark, warm) {
+          const tint = nightTint(dark, warm)
           if (tint === lastTint) return
           lastTint = tint
           for (const b of baked) b.sprite.tint = tint

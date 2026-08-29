@@ -37,6 +37,7 @@ import { useEffect, useRef, useState } from 'react'
 import { PLACES } from '../chart'
 import { GROUND, bakeIsland, requestGround } from '../islandArt'
 import { coastline } from '@/lib/islandShape'
+import { CYCLE_MS, seaClock, PHASE_LABEL } from '@/lib/seaClock'
 import { makeFoamTexture, makeShoreFoam, type Foam } from '../shoreFoam'
 import { makeWater, rgb3, nightShift, nightTint } from '../seaWater'
 
@@ -55,9 +56,14 @@ export default function PixiBench() {
    *  by rebuilding and guessing. */
   const [band, setBand] = useState(0)
   const [swell, setSwell] = useState(1)
-  const [dark, setDark] = useState(0)
-  const tune = useRef<{ band: number; swell: number; dark: number }>({ band: 0, swell: 1, dark: 0 })
-  tune.current = { band, swell, dark }
+  /** WHERE IN THE DAY, 0 to 1 through one whole cycle. Darkness and warmth are
+   *  both read from seaClock at that moment rather than set by hand, so the
+   *  bench shows the real curve and not a pair of sliders that happen to
+   *  resemble it. Scrubbing this IS scrubbing the game's own clock. */
+  const [hour, setHour] = useState(0.30)
+  const tune = useRef<{ band: number; swell: number; hour: number }>({ band: 0, swell: 1, hour: 0.30 })
+  tune.current = { band, swell, hour }
+  const clock = seaClock(tune.current.hour * CYCLE_MS)
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
@@ -103,6 +109,7 @@ export default function PixiBench() {
           // Upper left, the same key the buildings and the islands are lit by.
           uLight: new Float32Array([-0.7, -0.7]),
           uSwell: 1,
+          uWarm: 0,
         })
         if (water) {
           a.stage.addChild(water.sprite)
@@ -201,7 +208,8 @@ export default function PixiBench() {
         a.ticker.add(() => {
           if (water) {
             const b = PLACES.find(p => p.id === BANDS[tune.current.band])!
-            const d = tune.current.dark
+            const now = seaClock(tune.current.hour * CYCLE_MS)
+            const d = now.darkness
             water.set({
               uTime: performance.now() / 1000,
               // The camera is the world container's offset, read back out.
@@ -215,13 +223,14 @@ export default function PixiBench() {
               uDeep: nightShift(rgb3(b.sea![0]), d),
               uDark: d,
               uSwell: tune.current.swell,
+              uWarm: now.warmth,
             })
           }
-          const now = performance.now() / 1000
-          for (const f of foams) f.advance(now)
-          // The land takes the same light the water does, so the slider shows
+          for (const f of foams) f.advance(performance.now() / 1000)
+          // The land takes the same light the water does, so the slider moves
           // one hour rather than two.
-          const tint = nightTint(tune.current.dark)
+          const c = seaClock(tune.current.hour * CYCLE_MS)
+          const tint = nightTint(c.darkness, c.warmth)
           for (const it of islands) it.sprite.tint = tint
           acc += a.ticker.deltaMS
           frames++
@@ -322,11 +331,16 @@ export default function PixiBench() {
           <span style={{ width: 34, textAlign: 'right' }}>{swell.toFixed(2)}</span>
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 52 }}>night</span>
-          <input type="range" min={0} max={1} step={0.05} value={dark}
-            onChange={e => setDark(Number(e.target.value))} style={{ flex: 1 }} />
-          <span style={{ width: 34, textAlign: 'right' }}>{dark.toFixed(2)}</span>
+          <span style={{ width: 52 }}>hour</span>
+          <input type="range" min={0} max={1} step={0.002} value={hour}
+            onChange={e => setHour(Number(e.target.value))} style={{ flex: 1 }} />
+          <span style={{ width: 86, textAlign: 'right', color: '#f0c040' }}>
+            {PHASE_LABEL[clock.phase]}
+          </span>
         </label>
+        <div style={{ color: 'rgba(207,224,236,0.55)', fontSize: 11 }}>
+          dark {clock.darkness.toFixed(2)} · warmth {clock.warmth.toFixed(2)}
+        </div>
       </div>
     </div>
   )

@@ -4239,10 +4239,12 @@ export default function SeaMap({
         // Published for anything that wants to light UP as the light goes down
         // rather than dim with it — see the harbour lights on the ports.
         wrapRef.current?.style.setProperty('--sea-night', dark.toFixed(3))
+        // The hour's second axis, for the buildings. See seaClock.warmth.
+        wrapRef.current?.style.setProperty('--sea-warm', clk.warmth.toFixed(3))
         // And the canvas, which cannot read a custom property. A tint, not a
         // filter: see nightTint for why that distinction is the whole reason
         // the islands can be lit at all after what the filter did.
-        gpuRef.current?.night(dark)
+        gpuRef.current?.night(dark, clk.warmth)
       }
 
       const movedFar = Math.hypot(pos.current.x - lookAt.x, pos.current.y - lookAt.y) >= SEA_STEP
@@ -8561,8 +8563,13 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
                 // building stays lit, which is the old behaviour.
                 filter: locked
                   ? 'grayscale(0.9) brightness(0.5)'
+                  // Golden hour warms as night dims, and sepia is the only
+                  // filter primitive that shifts hue toward amber without a
+                  // colour matrix. Small: it is a whole town going evening, not
+                  // a photograph being toned.
                   : 'brightness(calc(1 - var(--sea-night, 0) * 0.42))'
-                    + ' saturate(calc(1 - var(--sea-night, 0) * 0.5))',
+                    + ' saturate(calc(1 - var(--sea-night, 0) * 0.5 + var(--sea-warm, 0) * 0.18))'
+                    + ' sepia(calc(var(--sea-warm, 0) * 0.34))',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img decoding="async" src={b.art} alt="" draggable={false}

@@ -56,6 +56,9 @@ export type WaterUniforms = {
   uLight: Float32Array
   /** How much surface there is at all. 0 is the old flat gradient exactly. */
   uSwell: number
+  /** The clock's second axis: 0 at noon and midnight, 1 with the sun on the
+   *  horizon. See seaClock. */
+  uWarm: number
 }
 
 // ── THE SHADERS ─────────────────────────────────────────────────────────────
@@ -115,6 +118,7 @@ uniform vec3  uDeep;
 uniform float uDark;
 uniform vec2  uLight;
 uniform float uSwell;
+uniform float uWarm;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -145,6 +149,21 @@ void main(void) {
   if (t < 0.24)      col = mix(uShallow, uMid,  t / 0.24);
   else if (t < 0.60) col = mix(uMid,     uDeep, (t - 0.24) / 0.36);
   else               col = mix(uDeep, uDeep * 0.62, (t - 0.60) / 0.40);
+
+  // ── GOLDEN HOUR ───────────────────────────────────────────────────
+  //
+  // A low sun lands on the far water and barely reaches the near, because you
+  // are looking ALONG it rather than down at it. So the warmth is weighted to
+  // the top of the gradient, the horizon end where the ramp is near zero, and
+  // falls away toward the bottom of the screen where the sea is under you.
+  //
+  // Toward amber, not away from blue: it is added as light rather than taken
+  // out as saturation, so the deep water goes bronze instead of grey.
+  float horizon = 1.0 - smoothstep(0.0, 0.66, t);
+  vec3 gold = vec3(1.00, 0.62, 0.30);
+  col = mix(col, col * 0.55 + gold * 0.62, uWarm * horizon * 0.72);
+  // And a little of it everywhere, so the whole sea agrees about the hour.
+  col = mix(col, col * 0.86 + gold * 0.20, uWarm * 0.28);
 
   // ── THE SURFACE, in world units ───────────────────────────────────
   // Screen to world, undoing the squash on y so a wave is as long across the
@@ -181,12 +200,29 @@ void main(void) {
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
   float sparkle = vnoise(w * 9.0 + gv * 2.0 + vec2(uTime * 0.10, uTime * 0.06));
-  sparkle = smoothstep(0.86, 0.995, sparkle) * smoothstep(0.30, 0.75, d1);
-  col += sparkle * 0.16 * uSwell * (1.0 - uDark);
+  // THE GLARE PATH WIDENS AS THE SUN DROPS. A high sun scatters a few points
+  // of light; a low one lays a road of them across the water. So the threshold
+  // opens with warmth and the specks recruit their neighbours.
+  float lo = mix(0.86, 0.66, uWarm);
+  sparkle = smoothstep(lo, 0.995, sparkle) * smoothstep(0.30, 0.75, d1);
+  // Weighted to the horizon like the warmth is, because that is where a low
+  // sun's reflection actually is.
+  float road = mix(1.0, 1.0 + horizon * 1.6, uWarm);
+  vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.80, 0.52), uWarm);
+  col += sparkle * glintCol * 0.16 * road * uSwell * (1.0 - uDark);
 
   finalColor = vec4(col, 1.0);
 }
 `
+
+// GLSL LIVES IN A TEMPLATE LITERAL, so a backtick inside it ends the string and
+// turns the rest of the shader into TypeScript - with the errors pointing at
+// shader source, which reads like a shader problem and is not one. This has
+// happened twice. Checked rather than trusted, because it is silent until the
+// compiler gets confused about something unrelated.
+if (VERT.includes(String.fromCharCode(96)) || FRAG.includes(String.fromCharCode(96))) {
+  throw new Error('seaWater: a backtick in the shader source would truncate it')
+}
 
 /**
  * The water, as a full-screen sprite wearing a filter.
@@ -211,6 +247,7 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       uDark: { value: initial.uDark, type: 'f32' },
       uLight: { value: initial.uLight, type: 'vec2<f32>' },
       uSwell: { value: initial.uSwell, type: 'f32' },
+      uWarm: { value: initial.uWarm, type: 'f32' },
     })
 
     const filter = new PIXI.Filter({
@@ -277,12 +314,23 @@ export function rgb3(hex: string): Float32Array {
  * rasterise a surface the size of the chart's ink overflow. `sprite.tint` is a
  * multiply the GPU does per pixel as it draws, with no buffer at all.
  */
-export function nightTint(dark: number): number {
+export function nightTint(dark: number, warm = 0): number {
   const k = Math.max(0, Math.min(1, dark))
-  const r = Math.round(255 * (1 - k * 0.48))
-  const g = Math.round(255 * (1 - k * 0.44))
-  const b = Math.round(255 * (1 - k * 0.34))
-  return (r << 16) | (g << 8) | b
+  const w = Math.max(0, Math.min(1, warm))
+  // Night: dim, and cool harder than it dims.
+  let r = 1 - k * 0.48
+  let g = 1 - k * 0.44
+  let b = 1 - k * 0.34
+  // Golden hour: the same light that is leaving turns amber on the way out, so
+  // the land goes warm as it goes dark rather than simply grey. Red is held up
+  // and blue pulled down, which is the opposite of what night does — and doing
+  // both at once, in the order they actually happen, is what makes an evening
+  // read as an evening instead of as a dimmer.
+  r *= 1 + w * 0.26
+  g *= 1 + w * 0.04
+  b *= 1 - w * 0.22
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(255 * v)))
+  return (c(r) << 16) | (c(g) << 8) | c(b)
 }
 
 /**

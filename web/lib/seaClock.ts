@@ -55,6 +55,23 @@ export type SeaClock = {
   /** 0 in full day, 1 at the deepest point of night. Drives every colour on
    *  the map, so the change is continuous rather than a switch being thrown. */
   darkness: number
+  /**
+   * HOW LOW THE SUN IS, 0 at noon and 0 at midnight, 1 when it is on the
+   * horizon. The second axis the light needed.
+   *
+   * Darkness alone can only make an evening into a dimmer afternoon, because
+   * that is all it describes: how much light there is. It says nothing about
+   * what COLOUR the light is, and the whole reason golden hour looks the way it
+   * does is that a low sun travels through more air, loses its blue, and lands
+   * on everything sideways and amber.
+   *
+   * So this peaks in the MIDDLE of each fade — deepest at the moment the sun is
+   * neither up nor down — and is zero at both ends. Dusk and dawn share it,
+   * which is right: they are the same geometry running opposite ways, and no
+   * amount of tinting will tell them apart. What tells them apart is which one
+   * you are sailing into.
+   */
+  warmth: number
   /** Which night this is. Part of a rare trader's key, so one cannot be
    *  redeemed a cycle after it has gone. */
   nightIndex: number
@@ -78,9 +95,17 @@ export function seaClock(now: number = Date.now()): SeaClock {
   else if (t < nightEnd + FADE) { darkness = 1 - (t - nightEnd) / FADE; phase = 'dawn' }
   else { darkness = 0; phase = 'day' }
 
+  // Where in its own fade this moment sits, 0 at the start and 1 at the end.
+  // Sine rather than a triangle so the colour arrives and leaves the way light
+  // does, quickest in the middle, rather than ramping like a dimmer switch.
+  let warmth = 0
+  if (phase === 'dusk') warmth = Math.sin(Math.PI * ((t - (nightStart - FADE)) / FADE))
+  else if (phase === 'dawn') warmth = Math.sin(Math.PI * ((t - nightEnd) / FADE))
+
   return {
     t,
     phase,
+    warmth,
     // Dusk counts. Somebody who arrives as the light is going should not be
     // told to come back in ninety seconds.
     isNight: phase === 'night' || phase === 'dusk',
