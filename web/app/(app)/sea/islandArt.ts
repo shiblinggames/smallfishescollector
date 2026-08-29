@@ -292,36 +292,14 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     lg.fillRect(0, 0, D, D)
   }
 
-  // the woods — the same nine seeded clumps the DOM drew
-  {
-    let h = 0
-    for (let i = 0; i < id.length; i++) h = (h * 37 + id.charCodeAt(i)) >>> 0
-    let st = h || 1
-    const nx = () => { st ^= st << 13; st >>>= 0; st ^= st >>> 17; st ^= st << 5; st >>>= 0; return st / 0x100000000 }
-    const faceD = d * 0.74
-    for (let i = 0; i < 9; i++) {
-      const a = nx() * Math.PI * 2
-      const rad = 4 + nx() * 19
-      const bx = C + ((Math.cos(a) * rad) / 100) * faceD
-      const by = C - lift + ((Math.sin(a) * rad * 0.9) / 100) * faceD
-      const rw = ((7 + nx() * 11) / 100) * faceD
-      const o = 0.20 + nx() * 0.26
-      const gx = bx - rw * 0.08, gy = by - rw * 0.13
-      const rg = lg.createRadialGradient(gx, gy, 0, gx, gy, rw * 0.78)
-      rg.addColorStop(0, `rgba(74,102,52,${o + 0.18})`)
-      rg.addColorStop(0.55, `rgba(46,68,34,${o})`)
-      rg.addColorStop(0.78, 'rgba(40,58,30,0)')
-      lg.save()
-      lg.translate(bx, by)
-      lg.scale(1, 0.82)
-      lg.translate(-bx, -by)
-      lg.fillStyle = rg
-      lg.beginPath()
-      lg.arc(bx, by, rw, 0, Math.PI * 2)
-      lg.fill()
-      lg.restore()
-    }
-  }
+  // ── THE WOODS ARE GONE ───────────────────────────────────────────
+  //
+  // Nine seeded radial clumps of dark green, meant to read as canopy from
+  // above. They read as dark circles, because that is what a soft radial
+  // gradient is: at chart size there was no canopy in them, only nine blobs on
+  // a lawn. The painted turf underneath does the job they were doing - it has
+  // real brushwork, scrub and worn ground in it - and it does not need nine
+  // discs sitting on top saying "trees".
 
   // rim light where the sky hits the top edge
   {

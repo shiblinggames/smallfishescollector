@@ -36,7 +36,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLACES } from '../chart'
 import { GROUND, bakeIsland, requestGround } from '../islandArt'
-import { makeWater, rgb3, nightShift, nightTint } from '../seaWater'
+import { coastline } from '@/lib/islandShape'
+import { makeWater, rgb3, nightShift, nightTint, makeCoastTexture } from '../seaWater'
 
 type Stats = { renderer: string; objects: number; ms: number; town: string; water: string }
 
@@ -86,6 +87,12 @@ export default function PixiBench() {
 
         // ── THE WORLD, one container, exactly as the DOM chart has it ──
         // The camera is this container's position; the squash is its scale.
+        // Every coastline on the chart, one row each, so the foam can follow
+        // the actual shape of the land instead of a circle through it.
+        const landIds = PLACES.filter(p => p.inner === undefined).map(p => p.id)
+        const coast = makeCoastTexture(PIXI, landIds.map(id => coastline(id)))
+        const coastRow = new Map(landIds.map((id, i) => [id, i]))
+
         // ── THE WATER, UNDER EVERYTHING ───────────────────────────────
         // Added to the stage before the world, so the land draws on top of it.
         // Its own quad is screen-space; only the noise is sampled in world.
@@ -101,8 +108,10 @@ export default function PixiBench() {
           // Upper left, the same key the buildings and the islands are lit by.
           uLight: new Float32Array([-0.7, -0.7]),
           uSwell: 1,
-          uIsles: new Float32Array(18),
+          uIsles: new Float32Array(24),
           uIsleCount: 0,
+          uCoastRows: coast.rows,
+          coast,
         })
         if (water) {
           a.stage.addChild(water.sprite)
@@ -211,14 +220,18 @@ export default function PixiBench() {
               .map(it => ({ it, d2: (it.x - camX) ** 2 + (it.y - camY) ** 2 }))
               .sort((p, q) => p.d2 - q.d2)
               .slice(0, 6)
-            const packed = new Float32Array(18)
+            // Four floats each: see the note on uIsles about vec3 padding.
+            const packed = new Float32Array(24)
             near.forEach(({ it }, i) => {
-              packed[i * 3] = it.x
-              packed[i * 3 + 1] = it.y
+              packed[i * 4] = it.x
+              packed[i * 4 + 1] = it.y
               // Where the water actually meets the land: the DOM surf rings sat
               // at 0.82 and 0.772 of the island box, and the coastline runs
               // about 46% of it, so the shore is a shade under 0.78 of r.
-              packed[i * 3 + 2] = it.r * 0.78
+              // The island's BOX, not a radius: the shader reads the radius for
+              // this bearing out of the coast texture.
+              packed[i * 4 + 2] = it.r * 2
+              packed[i * 4 + 3] = coastRow.get(it.id) ?? 0
             })
             // THE SAME SHIFT seaAt APPLIES. Without it the night slider only
             // killed the glints and left the sea its noon colour, which made
