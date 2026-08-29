@@ -317,7 +317,7 @@ export default function FinnTalk({
               }}>You: {turns[turns.length - 2].text}</p>
             )}
 
-            <div style={{ height: 112, flexShrink: 0, overflowY: 'auto' }} onClick={tapBody}>
+            <div style={{ height: 112, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y' }} onClick={tapBody}>
               <TypedBody all={[last.text]} text={last.text}
                 shown={last.who === 'them' ? shown : last.text.length}
                 typing={last.who === 'them' ? typing : false}
@@ -338,7 +338,7 @@ export default function FinnTalk({
               <motion.div
                 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto', touchAction: 'pan-y' }}>
 
                 {/* HANDING IT BACK is the campaign's only forward gear, so when
                     it is available it is the loudest thing on the card. */}

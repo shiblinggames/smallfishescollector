@@ -24,6 +24,7 @@
 // never says anywhere else.
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { vibrate } from '@/lib/haptics'
@@ -549,6 +550,16 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
 
   useEffect(() => { if (!open) setShowing(null) }, [open])
 
+  // PORTALLED TO THE BODY, and it has to be, for a reason that is not
+  // layout: the chart's root div carries `touchAction: 'none'` so that a
+  // drag pans the sea instead of scrolling the page. A touch's allowed
+  // behaviours are worked out from the element it lands on AND every DOM
+  // ancestor, and `position: fixed` moves where a box is PAINTED, not where
+  // it sits in the tree. So this panel inherited `none` and could not be
+  // scrolled by finger at all, however tall its content ran.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
   const met = FOLK
     .map(folk => ({ folk, rap: rap.find(r => r.folkId === folk.id) }))
     .filter((x): x is { folk: Folk; rap: Rapport } => !!x.rap && x.rap.points > 0)
@@ -584,7 +595,9 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
    * was always a layout problem rather than an animation one.
    */
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -595,10 +608,24 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
           style={{
             position: 'fixed', inset: 0, zIndex: 9200,
             background: 'rgba(3,8,14,0.86)', backdropFilter: 'blur(3px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            // The bottom padding carries the mobile tab bar's room, so a tall
-            // panel centres in the space that is actually visible instead of
-            // running its last rows under the nav.
+            // THE BACKDROP IS THE SCROLLER, and the panel is centred with
+            // `margin: auto` rather than `alignItems: center`.
+            //
+            // Those two are not interchangeable. A flex item centred on the
+            // cross axis and TALLER than its line overflows equally in both
+            // directions, and the half that goes off the TOP cannot be scrolled
+            // back to — scrolling only ever reaches content below the origin.
+            // That is the whole bug: the roster's first rows, and the title,
+            // were above the top of the screen with no way to reach them.
+            // `margin: auto` centres a panel that fits and pins a tall one to
+            // the top edge instead, so every row stays reachable.
+            display: 'flex', justifyContent: 'center',
+            overflowY: 'auto',
+            // Undoes the chart's `touch-action: none` for this subtree so a
+            // finger can actually move the list.
+            touchAction: 'pan-y', WebkitOverflowScrolling: 'touch',
+            // The bottom padding carries the mobile tab bar's room, so the last
+            // rows clear the nav instead of running under it.
             padding: '1rem 1rem calc(1rem + var(--tabbar-safe, 0px))',
           }}>
           <motion.div
@@ -606,14 +633,12 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 480, overflowY: 'auto',
-              // 100% OF THE PADDED PARENT, not a dvh sum of its own. The
-              // container already subtracts its padding and the tab bar; doing
-              // the arithmetic again here meant two numbers that could
-              // disagree, and on a phone they did — the panel came out taller
-              // than the space it was being centred in, so it overflowed
-              // upward and lost its title off the top of the screen.
-              maxHeight: '100%',
+              width: '100%', maxWidth: 480,
+              // See the backdrop: this centres the panel without ever putting
+              // part of it out of reach. No max-height and no scroller of its
+              // own — one scroll container, on the parent, so there is no inner
+              // box that can be clamped short while the outer one is not.
+              margin: 'auto', flexShrink: 0,
               background: 'rgba(8,14,22,0.98)',
               border: `1px solid ${SEA},0.28)`,
               borderRadius: 16, padding: '1rem 1.1rem',
@@ -818,6 +843,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }

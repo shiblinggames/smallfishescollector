@@ -333,7 +333,7 @@ export default function FolkScene({
                 A RESERVED BLOCK. Their lines run from four words to thirty and
                 the card must not resize between them, so the tallest sets the
                 height once and short lines sit in the space. */}
-            <div style={{ height: 104, flexShrink: 0, overflowY: 'auto' }}
+            <div style={{ height: 104, flexShrink: 0, overflowY: 'auto', touchAction: 'pan-y' }}
               onClick={() => { if (typing) finishRef.current() }}>
               <TypedBody all={[last.text]} text={last.text}
                 shown={last.who === 'them' ? shown : last.text.length}
@@ -348,7 +348,7 @@ export default function FolkScene({
             {/* ── THE HOLD, INLINE. It never opens anything: the choices are
                 replaced by the list and come back when you pick or back out. */}
             {picking && (
-              <div style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              <div style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto', touchAction: 'pan-y' }}>
                 {hold.length === 0 ? (
                   <p className="font-karla" style={{
                     fontSize: '0.8rem', color: 'rgba(226,238,246,0.5)', margin: '6px 0', lineHeight: 1.5,
@@ -385,7 +385,7 @@ export default function FolkScene({
               <motion.div
                 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                style={{ marginTop: 10, flex: 1, minHeight: 0, overflowY: 'auto', touchAction: 'pan-y' }}>
 
                 {/* The day's word, when it has not been had. Warm, because it
                     is the one choice here that moves the friendship. */}
