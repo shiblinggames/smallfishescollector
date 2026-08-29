@@ -157,7 +157,11 @@ export const PLACES: Place[] = [
     // already up, the way it always has.
     berth: { dx: 425, dy: 400 },
     buildings: [
-      { art: '/sea/tackle.png', x: 31, y: 43, scale: 0.153 },
+      // 0.128, NOT 0.153. `scale` sets the sprite BOX's width, and the old
+      // tackle painting only filled 83% of its own canvas — so the same number
+      // now buys a fifth more building, because the redraw is trimmed flush.
+      // The other five filled their canvases already and keep their numbers.
+      { art: '/sea/tackle.png', x: 31, y: 43, scale: 0.128 },
       { art: '/sea/market.png', x: 63, y: 47, scale: 0.172 },
       { art: '/sea/tavern.png', x: 50, y: 62, scale: 0.224 },
     ],
