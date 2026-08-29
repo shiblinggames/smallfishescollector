@@ -89,6 +89,31 @@ import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
 import { GROUND, ISLAND_LIFT, bakeIsland, bakeSurf, requestGround } from './islandArt'
+import SeaIslandsGPU, { type GpuHandle, type GpuIsland } from './SeaIslandsGPU'
+
+/**
+ * ── THE ISLANDS ON THE GPU, BEHIND A FLAG ───────────────────────────────────
+ *
+ * `?gpu=1` draws the land through Pixi instead of through a canvas per island
+ * in the DOM. Everything else on the chart is untouched either way: the
+ * buildings, the labels, the berths, the boat and the traders stay exactly
+ * where they are and draw over the top.
+ *
+ * A MODULE CONSTANT, read once. It cannot change during a session, so reading
+ * it at render time in a memoised child is honest and costs nothing — whereas
+ * threading it through PlaceIsland and IsleRock as a prop would re-render every
+ * island on the chart to deliver a value that never moves.
+ *
+ * Off by default and staying that way until it has been lived with. When it is
+ * off, not one line of this file behaves differently from the day before it
+ * was written.
+ */
+let GPU_ISLANDS = false
+if (typeof window !== 'undefined') {
+  try {
+    GPU_ISLANDS = new URLSearchParams(window.location.search).get('gpu') === '1'
+  } catch { /* an address we cannot parse is one we do not act on */ }
+}
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
 import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, turnInFinnQuest, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
@@ -1706,6 +1731,22 @@ export default function SeaMap({
 
   /** The Mainland's landing chooser — tavern, market or tackle shop. */
   const [ashore, setAshore] = useState(false)
+
+  /** The GPU island layer's camera, filled in when it mounts. Null whenever the
+   *  flag is off, which is why every call below is optional. */
+  const gpuRef = useRef<GpuHandle | null>(null)
+  /** Every piece of land on the chart, ports and isles alike, in one list.
+   *  Static: the ids, radii and positions are all chart data. */
+  const gpuIslands = useMemo<GpuIsland[]>(() => {
+    if (!GPU_ISLANDS) return []
+    const out: GpuIsland[] = []
+    for (const p of PLACES) {
+      if (p.kind === 'water') continue
+      out.push({ id: p.id, r: p.r, x: p.x, y: p.y, locked: false })
+    }
+    for (const i of ISLES) out.push({ id: i.id, r: i.r, x: i.x, y: i.y, locked: false })
+    return out
+  }, [])
 
   /**
    * GO ASHORE AT AN ISLE.
@@ -4099,6 +4140,11 @@ export default function SeaMap({
         // in two passes; a transform written to one and not the other would put
         // the near scenery a frame behind the far scenery.
         if (frontRef.current) frontRef.current.style.transform = t
+        // AND THE THIRD PASS, WHICH IS NOT A STRING. Same numbers, same frame,
+        // for the same reason: the islands are on a canvas and the buildings
+        // standing on them are not, so a camera written a frame late slides a
+        // tavern off its own island. Null unless ?gpu=1.
+        gpuRef.current?.camera(pos.current.x, pos.current.y, zoomRef.current)
       }
       // The sea recoloured under the boat. One style write per frame, and the
       // reason there are no zone edges anywhere on the chart.
@@ -4494,6 +4540,19 @@ export default function SeaMap({
       <div ref={skyRef} aria-hidden style={{
         position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
       }} />
+
+      {/* THE LAND, ON THE GPU. Between the water and the world on purpose: the
+          same z as the backdrop but later in the DOM, so it draws over the sea
+          and under every building that stands on it. Its camera is written by
+          the frame loop from the same numbers as the DOM transform — see the
+          note in SeaIslandsGPU about why that has to be the same frame. */}
+      {GPU_ISLANDS && (
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
+        }}>
+          <SeaIslandsGPU islands={gpuIslands} handle={gpuRef} />
+        </div>
+      )}
 
       {/* THE SURFACE, under everything. Two repeating-background layers that
           the loop only ever TRANSFORMS — see seaTiles for why this stopped
@@ -8108,7 +8167,9 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
       width: d, height: d, marginLeft: -isle.r, marginTop: -isle.r,
       pointerEvents: 'none',
     }}>
-      <Landmass id={isle.id} r={isle.r} />
+      {/* The land is on the GPU under ?gpu=1 — see GPU_ISLANDS. Everything
+          else about an isle, chest and all, is unchanged. */}
+      {!GPU_ISLANDS && <Landmass id={isle.id} r={isle.r} />}
 
       {/* WHAT IS ON IT.
           Counter-squashed and anchored at its BOTTOM, like every other solid on
@@ -8423,7 +8484,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
         </>
       ) : (
         <>
-          <Landmass id={place.id} r={place.r} locked={locked} />
+          {!GPU_ISLANDS && <Landmass id={place.id} r={place.r} locked={locked} />}
 
           {/* ── WHAT IS BUILT HERE ──────────────────────────────────────
               Counter-squashed and anchored at the BOTTOM, so each building
