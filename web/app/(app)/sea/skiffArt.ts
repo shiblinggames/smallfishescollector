@@ -167,6 +167,12 @@ type Key = typeof KEYS[number]
 
 export type Skiff = {
   view: import('pixi.js').Container
+  /** The composite's own box, which is the box every percentage in the
+   *  cosmetic tables resolves against. Callers need it to centre the captain:
+   *  the DOM does that with translate(-50%,-50%) on a div that is exactly this
+   *  size, and there is no other way to know what half of it is. */
+  w: number
+  h: number
   /** Switch pose. Every texture is already resident, so this is one synchronous
    *  pass and the whole skiff commits together. */
   setFrame(f: Frame): void
@@ -255,6 +261,7 @@ export async function makeSkiff(
 
   const skiff: Skiff = {
     view,
+    w, h,
     onFrame: null,
     frame: () => current,
     parts: sprites,

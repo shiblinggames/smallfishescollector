@@ -35,13 +35,15 @@
 // `centre + zoom * (wx - x, GROUND * (wy - y))`, which is a container scaled by
 // (zoom, zoom * GROUND) and positioned at (w/2 - zoom*x, h/2 - zoom*GROUND*y).
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GROUND, bakeIsland, requestGround } from './islandArt'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
+import { makeCaptain, lookKey, type Captain, type CaptainLook } from './seaCaptain'
+import type { Frame } from './skiffArt'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
 export type GpuMark = {
@@ -64,15 +66,52 @@ export type GpuHandle = {
    *  not change sixty times a second and the shader does not need telling that
    *  it has not. */
   palette(stops: number[][]): void
+  /**
+   * The player's own captain, every frame.
+   *
+   * She is NOT in the world container, and that is not an oversight: the camera
+   * follows her, so relative to the screen she never moves and only the sea
+   * does. The DOM version learned the same thing the hard way — it used to sit
+   * her in the world at her world position with the world translated by the
+   * negative of it, which composes to dead centre by a needlessly clever route.
+   *
+   * `bob`, `heel` and `facing` are screen-space only, exactly as the DOM writes
+   * them. Null while she is not being drawn here at all.
+   */
+  skipper(s: {
+    bob: number
+    heel: number
+    facing: number
+    zoom: number
+    frame: Frame
+    stage: number
+  } | null): void
 }
 
-export default function SeaIslandsGPU({ islands, marks, handle }: {
+export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
   islands: GpuIsland[]
   marks: GpuMark[]
+  /** How the player looks right now. Rebuilt only when it actually changes —
+   *  see the effect below, which compares by VALUE because a captain is
+   *  expensive to assemble and cheap to steer. */
+  captain: CaptainLook | null
   /** Filled in on mount so the loop can steer this without a re-render. */
   handle: { current: GpuHandle | null }
 }) {
   const holder = useRef<HTMLDivElement | null>(null)
+  // The renderer starts asynchronously and the captain is built separately, so
+  // the two need somewhere to meet. `ready` fires once, when there is a stage
+  // to hang her on.
+  const pixiRef = useRef<typeof import('pixi.js') | null>(null)
+  const boatsRef = useRef<import('pixi.js').Container | null>(null)
+  const capRef = useRef<{
+    outer: import('pixi.js').Container
+    inner: import('pixi.js').Container
+    cap: Captain
+  } | null>(null)
+  const [ready, setReady] = useState(0)
+  const lookRef = useRef<CaptainLook | null>(captain)
+  lookRef.current = captain
   // Read once. Both lists are derived from static chart data, so re-baking on a
   // parent render would be pure waste.
   const listRef = useRef(islands)
@@ -138,6 +177,16 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
 
       const world = new PIXI.Container()
       a.stage.addChild(world)
+
+      // ── WHERE THE CAPTAINS GO ─────────────────────────────────────
+      // Above the world, because a boat is on the water rather than under it,
+      // and OUTSIDE it, because the player does not move relative to the
+      // screen — the camera follows her. Traders will move in here too, but
+      // they belong in the world container with the islands: they DO move.
+      const boats = new PIXI.Container()
+      a.stage.addChild(boats)
+      pixiRef.current = PIXI
+      boatsRef.current = boats
 
       const foamTex = makeFoamTexture(PIXI)
       const foams: Foam[] = []
@@ -262,6 +311,7 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
         // The surf runs and the sea moves. Both are time only: the camera and
         // the hour arrive through the handle, from the chart's own loop.
         for (const f of foams) f.advance(t)
+        capRef.current?.cap.update(a.ticker.deltaMS / 1000)
         water?.set({
           uTime: t,
           uCam: new Float32Array([camX, camY]),
@@ -313,11 +363,37 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
               (child as import('pixi.js').Sprite).tint = tint
             }
           }
+          // She takes the hour at just over half strength, which is what the
+          // DOM did with `nightGrade(dark, 0.55)`: the boat you are steering
+          // stays readable after dark while the world around it does not.
+          capRef.current?.cap.setNight(nightTint(d * 0.55, w))
         },
         palette(stops) {
           if (!water || stops.length < 3) return
           const f = (c: number[]) => new Float32Array([c[0] / 255, c[1] / 255, c[2] / 255])
           water.set({ uDeep: f(stops[0]), uMid: f(stops[1]), uShallow: f(stops[2]) })
+        },
+        skipper(sk) {
+          const c = capRef.current
+          if (!c) return
+          if (!sk) { c.outer.visible = false; return }
+          c.outer.visible = true
+          // TWO CONTAINERS, because the DOM transform is
+          // `translate(-50%,-50%) scale(zoom) translateY(bob) scaleX(facing) rotate(heel)`
+          // and a matrix reads right to left: the heel is applied INSIDE the
+          // mirror. Pixi composes one node as translate·rotate·scale, which is
+          // the opposite order, so a single node cannot say it. The outer one
+          // carries the zoom and the bob (scaled, since the bob sits inside the
+          // zoom), the inner one carries the mirror and the heel.
+          c.outer.position.set(
+            a.screen.width / 2,
+            a.screen.height / 2 + sk.zoom * sk.bob,
+          )
+          c.outer.scale.set(sk.zoom)
+          c.inner.scale.x = sk.facing
+          c.inner.rotation = (sk.heel * Math.PI) / 180
+          c.cap.setFrame(sk.frame)
+          c.cap.setStage(sk.stage)
         },
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom
@@ -328,6 +404,7 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
           )
         },
       }
+      if (!dead) setReady(n => n + 1)
     })().catch(() => {
       // A renderer that will not start must not take the chart with it. The
       // DOM islands are still mounted behind the flag that turned this on, so
@@ -338,10 +415,55 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
       dead = true
       cleanup?.()
       handle.current = null
+      // The app destroys her children with it; dropping the reference first is
+      // what stops the captain effect from destroying an already-dead sprite.
+      capRef.current = null
+      pixiRef.current = null
+      boatsRef.current = null
       app?.destroy(true, { children: true })
       app = null
     }
   }, [handle])
+
+  // ── THE CAPTAIN, REBUILT ONLY WHEN SHE CHANGES ────────────────────────────
+  //
+  // Keyed by VALUE rather than by object identity. A look is assembled fresh on
+  // every render of the chart, so depending on the object would rebuild her
+  // sixty times a second — the same trap that made the skiff bench flicker
+  // between poses. Assembling a captain loads a dozen images and bakes a glow;
+  // steering one is arithmetic.
+  const key = lookKey(captain)
+  useEffect(() => {
+    let dead = false
+    ;(async () => {
+      const PIXI = pixiRef.current
+      const boats = boatsRef.current
+      const look = lookRef.current
+      if (!PIXI || !boats) return
+      const built = look ? await makeCaptain(PIXI, look) : null
+      if (dead || !boatsRef.current) { built?.destroy(); return }
+
+      capRef.current?.cap.destroy()
+      capRef.current?.outer.destroy({ children: true })
+      capRef.current = null
+      if (!built) return
+
+      const outer = new PIXI.Container()
+      const inner = new PIXI.Container()
+      inner.addChild(built.view)
+      outer.addChild(inner)
+      // Hidden until the loop places her. One frame at the origin is a boat
+      // that appears in the top-left corner and then jumps, which is worse than
+      // a boat that arrives a frame late.
+      outer.visible = false
+      boats.addChild(outer)
+      capRef.current = { outer, inner, cap: built }
+    })().catch(() => {
+      // A captain who will not assemble must not take the chart with her.
+    })
+    return () => { dead = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, ready])
 
   return <div ref={holder} aria-hidden style={{ position: 'absolute', inset: 0 }} />
 }

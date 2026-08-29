@@ -72,6 +72,7 @@ import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
 import { folkById, type FolkId } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
+import { HOOKS } from '@/lib/hooks'
 
 /** The sprite for the rod a regular sells, when they sell one. One place, so
  *  the man on the water and the offer in his panel cannot show different
@@ -90,6 +91,7 @@ import { coastClip, coastline } from '@/lib/islandShape'
 // for why it moved and why the move is a pure one.
 import { GROUND, ISLAND_LIFT, bakeIsland, requestGround } from './islandArt'
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
+import { type CaptainLook } from './seaCaptain'
 
 /**
  * ── THE ISLANDS ON THE GPU, BEHIND A FLAG ───────────────────────────────────
@@ -2694,6 +2696,41 @@ export default function SeaMap({
     () => rack.find(r => r.tier === activeRod) ?? rack[0] ?? null,
     [rack, activeRod],
   )
+  /**
+   * THE PLAYER, FOR THE CANVAS.
+   *
+   * Null when the canvas is not drawing her: with the flag off, or past the
+   * sortie, where the hull changes outright and the Warship is still a DOM
+   * sprite of its own. A null look tears the captain down, and `skipper()`
+   * quietly stops doing anything, so there is never a moment where two of her
+   * are on the water.
+   *
+   * The streak stage is pinned at 0, which is what the DOM does too: the chart
+   * has no live perfect streak to read, so the Locked-In Rod shows its dormant
+   * glow out here and comes alive in the fishing game. Worth wiring properly
+   * once the streak is on the chart, and deliberately not guessed at now.
+   */
+  const gpuCaptain = useMemo<CaptainLook | null>(() => {
+    if (!GPU_ISLANDS || onShip) return null
+    const tier = rodNow?.tier
+    return {
+      characterColor,
+      boatId: boatId ?? null,
+      hatId: hatId ?? null,
+      petArt: gear.petArt,
+      petSpecies: gear.pet,
+      // The rod in your hands is the rod you are holding, out of the rack.
+      rodSlug: rodNow?.slug ?? gear.rodSlug,
+      rodImage: rodNow?.image ?? gear.rod,
+      rodGlowType: rodNow?.glow ?? gear.rodGlow,
+      rodLockedIn: tier != null && (RODS.find(r => r.tier === tier)?.lockedIn ?? false),
+      reel: gear.reel,
+      hookUrl: gear.hook,
+      // The hook arrives as a url, so its glow is looked up rather than passed.
+      hookGlowType: HOOKS.find(h => h.imageUrl === gear.hook)?.glowType ?? null,
+    }
+  }, [onShip, characterColor, boatId, hatId, gear, rodNow])
+
   /** WHAT IS IN THE HOLD, live. Seeded from the server on load and then kept in
    *  step here: it climbs as you catch and empties the moment you sell to a
    *  buyer. Read once and never updated, it would sit at its load-time value
@@ -2705,6 +2742,12 @@ export default function SeaMap({
    *  inventing a fourth. `wait` during the bite wait is most of the missing
    *  feedback: the line is visibly IN the water. */
   const [frame, setFrame] = useState<'rest' | 'wait' | 'cast'>('rest')
+  /** The pose, where the frame loop can see it. The loop is set up once and
+   *  would otherwise close over the pose she was in when it started — the
+   *  stale-closure trap. The DOM path does not need this because React re-renders
+   *  the sprite; the canvas is steered rather than re-rendered. */
+  const frameRef = useRef(frame)
+  frameRef.current = frame
   // Mirrored so the rAF loop can read it without being re-created every time it
   // changes, which would restart the sweep.
   const fishingRef = useRef<Place | null>(null)
@@ -4375,6 +4418,14 @@ export default function SeaMap({
         const heel = Math.min(hullNow.heel, (drive / SPEED) * hullNow.heel)
         boat.style.transform =
           `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
+        // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is
+        // riding is one decision and it is made here. Null unless the flag is
+        // on and she is the one being drawn, in which case the DOM sprite above
+        // is not mounted and this transform is written to an empty div.
+        gpuRef.current?.skipper({
+          bob, heel, facing: facing.current, zoom: zoomRef.current,
+          frame: frameRef.current, stage: 0,
+        })
       }
 
       // Proximity drives React, but only a few times a second. Nothing on screen
@@ -4573,7 +4624,8 @@ export default function SeaMap({
         <div aria-hidden style={{
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
-          <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} handle={gpuRef} />
+          <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
+            handle={gpuRef} />
         </div>
       )}
 
@@ -5036,8 +5088,12 @@ hullRef={hullRefFor(t.key)} />
         {/* PAST THE SORTIE IT IS NOT YOUR FISHING BOAT. The whole point of
             the crossing is that the hull changes, so the captain-and-tackle
             sprite is replaced outright rather than dressed up. */}
+        {/* SHE IS ON THE CANVAS UNDER THE FLAG. The wrapper stays either way —
+            the loop writes her bob and heel to it, and past the sortie it is
+            still carrying the Warship, which has not moved yet. */}
         {onShip
           ? <Warship tier={shipTier} />
+          : GPU_ISLANDS ? null
           : <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
               gear={{
                 ...gear,

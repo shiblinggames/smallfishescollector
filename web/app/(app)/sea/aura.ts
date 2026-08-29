@@ -57,6 +57,24 @@ const glowBakes = new Map<string, Texture>()
 const padFor = (r: number) => Math.ceil(r * 2) + 2
 
 /**
+ * The part's blurred silhouette, plus the padding around it.
+ *
+ * Exported because a drop SHADOW is the same operation as a drop shadow used as
+ * a glow: blur the alpha, paint it flat, put it behind. The captain's own
+ * `drop-shadow(0 12px 18px ...)` is one of these, tinted black and offset, and
+ * writing a second blur for it would be two things to keep in agreement.
+ */
+export function bakeSilhouette(
+  PIXI: typeof import('pixi.js'),
+  img: CanvasImageSource,
+  key: string,
+  w: number, h: number, r: number,
+): { texture: Texture; pad: number } | null {
+  const t = bakeGlow(PIXI, img, key, w, h, r)
+  return t ? { texture: t, pad: padFor(r) } : null
+}
+
+/**
  * The part's silhouette, blurred, at the size it will actually be seen.
  *
  * `w`/`h` are the part's ON-SCREEN size and `r` is the CSS radius in screen
