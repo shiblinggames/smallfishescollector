@@ -93,7 +93,6 @@ const INK = {
   /** Other captains. Moved off green: it was the buyers' colour and a circle
    *  in almost the same green was the single worst confusion on this map. */
   friend: '#62c8f0',
-  yoon: '#c084fc',
   /** THE RIVAL. Ruby, which is his own character colour, and the only red on
    *  the whole chart. Nothing else can be mistaken for him and he cannot be
    *  mistaken for anything else, which is the entire requirement for the one
@@ -262,7 +261,12 @@ export default function Minimap({
     // as colour. They were not drawn here at all, which meant the nine people
     // the friendship system is built on were the only permanent thing on this
     // sea the chart would not show you.
-    for (const r of SOCIALS) {
+    // YOON IS ONE OF THEM. He had his own purple pip with his name printed
+    // beside it, from back when he was a one-off vendor sitting on a rod. He is
+    // one of the nine you can build rapport with, so a mark of his own said he
+    // was a different kind of thing, and it put a fourth people-colour on a map
+    // that had just been cut back to being readable.
+    for (const r of [...SOCIALS, { x: YOON.x, y: YOON.y }]) {
       const i = Math.floor((r.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((r.x - FOG_X0) / FOG_CELL)
       if (!fogHas(fog, i)) continue
       const x = tx(r.x), y = ty(r.y)
@@ -271,16 +275,6 @@ export default function Minimap({
       ctx.strokeStyle = INK.regular
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.arc(x, y, 4.4, 0, Math.PI * 2); ctx.stroke()
-    }
-    {
-      const i = Math.floor((YOON.y - FOG_Y0) / FOG_CELL) * FOG_W + Math.floor((YOON.x - FOG_X0) / FOG_CELL)
-      if (fogHas(fog, i)) {
-        ctx.fillStyle = INK.yoon
-        ctx.beginPath(); ctx.arc(tx(YOON.x), ty(YOON.y), 3.2, 0, Math.PI * 2); ctx.fill()
-        ctx.fillStyle = 'rgba(226,214,250,0.9)'
-        ctx.font = '600 8px ui-sans-serif, system-ui'
-        ctx.fillText('Yoon', tx(YOON.x), ty(YOON.y) - 6)
-      }
     }
 
     // ── THE ISLES ────────────────────────────────────────────────────────
@@ -477,7 +471,6 @@ export default function Minimap({
                 <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn, the rival" />
                 <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
                 <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
-                <Key mark={<Dot c={INK.yoon} r={2.4} ring={INK.yoon} ringR={4.6} />} label="Yoon" />
                 <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
               </KeyGroup>
 
