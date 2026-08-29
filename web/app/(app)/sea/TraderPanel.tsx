@@ -191,7 +191,10 @@ export default function TraderPanel({
       onClick={e => e.stopPropagation()}
       style={{
         position: 'absolute', inset: 0, zIndex: 40, display: 'flex',
-        alignItems: 'flex-end', justifyContent: 'center', padding: '1.25rem',
+        alignItems: 'flex-end', justifyContent: 'center',
+        // Bottom-anchored, so the tab bar's room goes straight into the pad or
+        // the sheet sits underneath it.
+        padding: '1.25rem 1.25rem calc(1.25rem + var(--tabbar-safe, 0px))',
         background: 'rgba(2,8,14,0.6)', backdropFilter: 'blur(3px)',
       }}>
       <motion.div
@@ -411,15 +414,23 @@ export default function TraderPanel({
               conversation is not a control in a shop panel: it is a portrait,
               their voice typed out, and where you stand with them, and it gets
               the whole screen. */}
-          {folk && rap && (
+          {/* SHOWN THE MOMENT WE KNOW WHO THEY ARE, which is synchronous:
+              `folk` comes off the trader the map already drew. It used to wait
+              on `rap` as well, which is a server round trip, so pulling
+              alongside somebody meant staring at a panel with no way to talk to
+              them until it came home. The standing inside the scene can arrive
+              late; the door should not. */}
+          {folk && (
             <button onClick={() => { vibrate(10); setScene(true) }}
               className="font-cinzel font-700"
               style={{
                 flex: 1.2, padding: '0.8rem', borderRadius: 11, fontSize: '1.02rem',
                 color: '#f2ead8',
-                background: (!rap.chattedToday || !rap.giftedToday)
+                // Warm until we know otherwise: an unloaded standing is far
+                // likelier to have something waiting than not.
+                background: (!rap || !rap.chattedToday || !rap.giftedToday)
                   ? `${folk.accent}26` : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${(!rap.chattedToday || !rap.giftedToday)
+                border: `1px solid ${(!rap || !rap.chattedToday || !rap.giftedToday)
                   ? folk.accent + '73' : 'rgba(255,255,255,0.16)'}`,
                 cursor: 'pointer',
               }}>

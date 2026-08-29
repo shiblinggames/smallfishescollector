@@ -244,7 +244,14 @@ export default function FinnTalk({
               top: '50%', left: '1rem', right: '1rem',
               transform: 'translateY(-50%)',
               maxWidth: 480, margin: '0 auto',
-              height: 'min(560px, 90vh)',
+              // ABOVE THE TAB BAR ON A PHONE. Centred on 50% the card's bottom
+              // ran under the fixed nav, which put the choices - the only part
+              // you need - behind it. The height gives the bar its room and the
+              // margin lifts the centre by half of it, so the card is centred in
+              // the space that is actually visible. `dvh` rather than `vh`
+              // because a phone's URL bar makes vh a lie about what is on screen.
+              height: 'min(560px, calc(100dvh - 2rem - var(--tabbar-safe, 0px)))',
+              marginTop: 'calc(var(--tabbar-safe, 0px) / -2)',
               display: 'flex', flexDirection: 'column',
               background: 'linear-gradient(180deg, #0e1a2b 0%, #06101c 100%)',
               border: `1px solid ${GOLD}52`,

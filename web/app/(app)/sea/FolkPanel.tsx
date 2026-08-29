@@ -595,14 +595,19 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
           style={{
             position: 'fixed', inset: 0, zIndex: 9200,
             background: 'rgba(3,8,14,0.86)', backdropFilter: 'blur(3px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            // The bottom padding carries the mobile tab bar's room, so a tall
+            // panel centres in the space that is actually visible instead of
+            // running its last rows under the nav.
+            padding: '1rem 1rem calc(1rem + var(--tabbar-safe, 0px))',
           }}>
           <motion.div
             initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.97, y: 6 }}
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 480, maxHeight: '82vh', overflowY: 'auto',
+              width: '100%', maxWidth: 480, overflowY: 'auto',
+              maxHeight: 'calc(100dvh - 2rem - var(--tabbar-safe, 0px))',
               background: 'rgba(8,14,22,0.98)',
               border: `1px solid ${SEA},0.28)`,
               borderRadius: 16, padding: '1rem 1.1rem',

@@ -2717,6 +2717,18 @@ body.hardcore-gauntlet::after {
   .finn-ready { animation: none; }
 }
 
+/* HOW MUCH ROOM THE MOBILE TAB BAR TAKES.
+   It is `sm:hidden` and fixed to the bottom on every page but / and /login, and
+   anything vertically centred on a phone has to stay above it. The bar is a
+   20px icon plus a label inside py-3, which lands near 60px, plus whatever the
+   device reserves under it. Declared once here so a modal never has to guess,
+   and so a change to the bar's padding has one place to follow.
+   Zero above the sm breakpoint, where the bar is not rendered at all. */
+:root { --tabbar-safe: 0px; }
+@media (max-width: 639px) {
+  :root { --tabbar-safe: calc(64px + env(safe-area-inset-bottom, 0px)); }
+}
+
 /* THE QUEST MARKER over Finn. Bobs like everything else afloat out here rather
    than throbbing: it is already the largest and brightest thing on the water,
    and a big gold glyph that pulses as well reads as an error state. */

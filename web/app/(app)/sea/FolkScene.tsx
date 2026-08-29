@@ -252,7 +252,14 @@ export default function FolkScene({
               // a choice appeared or a line ran long, which moved the buttons
               // under the reader's thumb mid-sentence, and the outer overflow
               // put a scrollbar across the portrait as well as the text.
-              height: 'min(524px, 88vh)',
+              // ABOVE THE TAB BAR ON A PHONE. Centred on 50% the card's bottom
+              // ran under the fixed nav, which put the choices - the only part
+              // you need - behind it. The height gives the bar its room and the
+              // margin lifts the centre by half of it, so the card is centred in
+              // the space that is actually visible. `dvh` rather than `vh`
+              // because a phone's URL bar makes vh a lie about what is on screen.
+              height: 'min(524px, calc(100dvh - 2rem - var(--tabbar-safe, 0px)))',
+              marginTop: 'calc(var(--tabbar-safe, 0px) / -2)',
               display: 'flex', flexDirection: 'column',
               background: 'linear-gradient(180deg, #0e1a2b 0%, #06101c 100%)',
               border: `1px solid ${accent}3d`,
