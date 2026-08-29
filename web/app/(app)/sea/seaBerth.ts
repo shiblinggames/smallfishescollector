@@ -124,7 +124,10 @@ export type Berths = {
   view: Container
   /** Which berth the captain is standing in, if any. */
   setActive(id: string | null): void
-  advance(t: number, dt: number): void
+  /** `camX`/`camY` and the half-viewport in world units, so a berth on the far
+   *  side of the chart costs nothing. Each one is fourteen lamps plus a pool
+   *  and a rim, all trigonometry, and there are one per port. */
+  advance(t: number, dt: number, camX: number, camY: number, halfW: number, halfH: number): void
   night(tint: number): void
   destroy(): void
 }
@@ -195,9 +198,15 @@ export function makeBerths(
 
     setActive(id) { active = id },
 
-    advance(t, dt) {
+    advance(t, dt, camX, camY, halfW, halfH) {
       const d = Math.min(dt, 0.05)
       for (const b of built) {
+        // Off screen is off: the node is hidden AND left alone, so a berth you
+        // cannot see costs neither a draw nor sixteen sprite writes.
+        const on = Math.abs(b.spec.x - camX) < halfW + b.spec.r * 1.4
+          && Math.abs(b.spec.y - camY) < halfH + b.spec.r * 1.4
+        b.view.visible = on
+        if (!on) continue
         const want = b.spec.id === active ? 1 : 0
         // About a third of a second either way. Fast enough to feel like a
         // response to arriving, slow enough not to snap.

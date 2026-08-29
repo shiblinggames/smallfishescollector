@@ -41,6 +41,15 @@ const ALONG = 3.5
  *  moving. */
 const SPEED = 0.09
 
+/**
+ * Below this the lap is not worth having. The band is 4.5% of a sprite's
+ * height, so on a pebble it is two or three pixels of foam that nobody will
+ * ever pick out — and there are four times as many pebbles as rocks. Each lap
+ * costs a mesh and a UV upload on every frame it is visible, so this threshold
+ * is the difference between a few dozen of them and four hundred.
+ */
+export const LAP_MIN_SIZE = 150
+
 /** Points along the line. The polylines have at most seven, and a strip built
  *  straight from them has visible corners where the artist changed direction. */
 const STEPS = 28

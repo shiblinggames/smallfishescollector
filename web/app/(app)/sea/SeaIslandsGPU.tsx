@@ -40,7 +40,7 @@ import { GROUND, bakeIsland, requestGround } from './islandArt'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
-import { makeLap, type Lap } from './markLap'
+import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from './seaCaptain'
@@ -327,7 +327,11 @@ export default function SeaIslandsGPU({
       // to from a hoisted function it is declared after is a trap waiting for
       // somebody to move a call earlier.
       const foamTex = makeFoamTexture(PIXI)
-      const laps: Lap[] = []
+      /** Each with the mark it belongs to, because scrolling a UV buffer costs
+       *  an upload per mesh per frame and there is no point paying it for foam
+       *  nobody can see. With the reef on the canvas this is the difference
+       *  between a handful of uploads a frame and several hundred. */
+      const laps: { l: Lap; x: number; y: number; half: number }[] = []
 
       // ── THE NEAR PASS ─────────────────────────────────────────────
       //
@@ -378,18 +382,18 @@ export default function SeaIslandsGPU({
             node.addChild(sp)
           }
           put(wet)
-          if (sub) {
+          if (sub && m.size >= LAP_MIN_SIZE) {
             const k = m.size / wet.width
             const lap = makeLap(PIXI, sub, foamTex, m.size, (wet.height * k) / GROUND, (i * 0.41) % 1)
             node.addChild(lap.mesh)
-            laps.push(lap)
+            laps.push({ l: lap, x: m.x, y: m.y, half: m.size })
           }
           if (dry) put(dry)
         }).catch(() => {})
         return node
       }
 
-      const foams: Foam[] = []
+      const foams: { f: Foam; x: number; y: number; r: number }[] = []
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
       const place = (isle: GpuIsland) => {
         const d = isle.r * 2
@@ -415,7 +419,7 @@ export default function SeaIslandsGPU({
         f.mesh.x = isle.x
         f.mesh.y = isle.y
         world.addChildAt(f.mesh, 0)
-        foams.push(f)
+        foams.push({ f, x: isle.x, y: isle.y, r: isle.r })
       }
       for (const isle of listRef.current) place(isle)
 
@@ -482,11 +486,11 @@ export default function SeaIslandsGPU({
           // above it. Foam sits AT the water, so it belongs in front of what is
           // below and behind what is above, and the display list says that
           // without anybody blending anything.
-          if (sub) {
+          if (sub && m.size >= LAP_MIN_SIZE) {
             const k = m.size / wet.width
             const lap = makeLap(PIXI, sub, foamTex, m.size, wet.height * k, (m.i * 0.41) % 1)
             inner.addChild(lap.mesh)
-            laps.push(lap)
+            laps.push({ l: lap, x: m.x, y: m.y, half: m.size })
           }
 
           if (dry) add(dry)
@@ -532,14 +536,32 @@ export default function SeaIslandsGPU({
         ang: number; cx: number; cy: number
       }[] = []
       const contacts: Contact[] = []
+      /** Backing store for the above. Grows once to the size of the busiest
+       *  frame and is written through forever after. */
+      const pooled: Contact[] = []
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
       a.ticker.add(() => {
         const t = performance.now() / 1000
-        // The surf runs and the sea moves. Both are time only: the camera and
-        // the hour arrive through the handle, from the chart's own loop.
-        for (const f of foams) f.advance(t)
-        for (const l of laps) l.advance(t)
         const dt = a.ticker.deltaMS / 1000
+        const halfW = a.screen.width / 2 / camZoom
+        const halfH = a.screen.height / 2 / camZoom / GROUND
+        lastHalfW = halfW; lastHalfH = halfH
+
+        // ── THE SURF RUNS, WHERE ANYONE CAN SEE IT ────────────────────
+        //
+        // Scrolling foam means rewriting a UV buffer and uploading it, once per
+        // mesh per frame. That was fine for thirty island rings; with the reef
+        // on the canvas it would be hundreds of small uploads a frame, nearly
+        // all of them for water off the edge of the screen. The cull is the
+        // same bounds test the landmarks use.
+        for (const f of foams) {
+          if (Math.abs(f.x - camX) < halfW + f.r * 1.6
+            && Math.abs(f.y - camY) < halfH + f.r * 1.6) f.f.advance(t)
+        }
+        for (const l of laps) {
+          if (Math.abs(l.x - camX) < halfW + l.half * 2
+            && Math.abs(l.y - camY) < halfH + l.half * 3) l.l.advance(t)
+        }
         // ── HOW HARD SHE IS TRAVELLING ────────────────────────────────
         // Derived from the camera rather than passed in: the chart already
         // hands this layer plenty, and the camera's own delta is the honest
@@ -552,37 +574,35 @@ export default function SeaIslandsGPU({
         rush += (raw - rush) * Math.min(1, dt * 5)
         capRef.current?.cap.update(dt)
         for (const c of crewRef.current.values()) c.cap.update(dt)
-        water?.set({
-          uTime: t,
-          uCam: new Float32Array([camX, camY]),
-          uZoom: camZoom,
-          uDark: dark,
-          uWarm: warm,
-          uRush: rush,
-        })
-        const halfW = a.screen.width / 2 / camZoom
-        const halfH = a.screen.height / 2 / camZoom / GROUND
-        lastHalfW = halfW; lastHalfH = halfH
-        drift.advance(camX, camY, halfW, halfH, t, a.ticker.deltaMS / 1000)
+        water?.frame(t, camX, camY, camZoom, dark, warm, rush)
+        drift.advance(camX, camY, halfW, halfH, t, dt)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
         // module works out for itself which of them are under way and which are
         // sitting still. Rebuilt into the same array rather than allocated.
+        // REUSED, not rebuilt. Forty hulls is forty object literals a frame and
+        // two and a half thousand a second, for a list that is read once and
+        // thrown away. The array is trimmed to length and its entries are
+        // written through.
         contacts.length = 0
         if (mine) contacts.push(mine)
         for (const e of fleetAt) {
           const c = crewRef.current.get(e.key)
           if (!c) continue
-          contacts.push({
-            id: e.key, x: e.x, y: e.y, ang: e.ang,
-            cx: e.cx, cy: e.cy,
-            scale: e.scale, kind: c.kind,
+          const n = contacts.length
+          const slot = pooled[n] ?? (pooled[n] = {
+            id: '', x: 0, y: 0, ang: 0, cx: 0, cy: 0, scale: 1, kind: 'plain',
           })
+          slot.id = e.key
+          slot.x = e.x; slot.y = e.y; slot.ang = e.ang
+          slot.cx = e.cx; slot.cy = e.cy
+          slot.scale = e.scale; slot.kind = c.kind
+          contacts.push(slot)
         }
         wake.lay(contacts)
-        berthLayer.advance(t, a.ticker.deltaMS / 1000)
-        wake.advance(a.ticker.deltaMS / 1000)
+        berthLayer.advance(t, dt, camX, camY, halfW, halfH)
+        wake.advance(dt)
         for (const sw of swayers) {
           // Generous margins: a landmark is anchored at its base and stands
           // well above it, so culling on the anchor alone pops the tall ones.

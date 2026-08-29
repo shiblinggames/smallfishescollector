@@ -1862,8 +1862,27 @@ export default function SeaMap({
     ? OCCLUDERS.map((o, i) => ({ art: o.art, x: o.x, y: o.y, size: o.size, i }))
     : [], [])
 
+  /**
+   * EVERY PAINTING THAT STANDS IN WATER, for the canvas.
+   *
+   * THE REEF AND THE HARBOUR WALL WERE LEFT BEHIND. When the marks moved to
+   * the canvas only `LandmarkField` was gated, so the other two kept rendering
+   * as DOM — and they are not the small half. The landmarks are 39; the reef is
+   * three hundred and twenty rocks and pebbles and the wall is more again, each
+   * one TWO masked <img> permanently mounted inside the world layer. It was the
+   * largest remaining cost on the chart by a wide margin and it was invisible,
+   * because it looked identical either way.
+   *
+   * The `i` offsets are the DOM's own (reef +500, wall +1200). They seed the
+   * sway phase, so keeping them means the reef breathes in exactly the pattern
+   * it always did rather than being reshuffled by the move.
+   */
   const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
-    ? LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i }))
+    ? [
+      ...LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i })),
+      ...REEF.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 500 })),
+      ...ANCHORAGE_WALL.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 1200 })),
+    ]
     : [], [])
 
   /**
@@ -7271,12 +7290,16 @@ const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
  * each, and React never descends into them again.
  */
 const ReefLine = memo(function ReefLine() {
+  // On the canvas now, with the landmarks — see gpuMarks. Three hundred rocks
+  // as six hundred masked images was the biggest thing the port had left.
+  if (GPU_ISLANDS) return null
   return <>{REEF.map((m, i) => <SeaMark key={`reef${i}`} m={m} i={i + 500} />)}</>
 })
 
 /** The harbour's shore. Same treatment as the reef and for the same reason —
  *  a module constant that can never change, so the parent pays one element. */
 const AnchorageWall = memo(function AnchorageWall() {
+  if (GPU_ISLANDS) return null
   return <>{ANCHORAGE_WALL.map((m, i) => <SeaMark key={`anch${i}`} m={m} i={i + 1200} />)}</>
 })
 

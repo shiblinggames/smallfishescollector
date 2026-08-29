@@ -299,8 +299,39 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
     sprite.filters = [filter]
 
     const u = uniforms.uniforms as Record<string, unknown>
+    const cam = u.uCam as Float32Array
     return {
       sprite,
+
+      /**
+       * THE PER-FRAME PATH, and it is separate from `set` on purpose.
+       *
+       * `set` walks an object with Object.entries and accepts Float32Arrays,
+       * which is right for the handful of calls that change a palette — and
+       * wrong sixty times a second. Every frame it was allocating an options
+       * object, a Float32Array for the camera, an entries array, and a pair
+       * array per key: call it ten allocations a frame, six hundred a second,
+       * all of them garbage. None of it showed as a frame time; it shows as the
+       * collector deciding to run in the middle of a turn.
+       *
+       * This writes the six numbers that actually move, straight into the
+       * uniform buffer, and allocates nothing.
+       */
+      frame(time: number, camX: number, camY: number, zoom: number,
+            dark: number, warm: number, rush: number) {
+        u.uTime = time
+        cam[0] = camX
+        cam[1] = camY
+        u.uZoom = zoom
+        u.uDark = dark
+        u.uWarm = warm
+        u.uRush = rush
+        // Writing THROUGH the array does not move the group's dirty id — see
+        // the note in `set`, which is the bug that anchored the surf to the
+        // viewport for an afternoon.
+        uniforms.update()
+      },
+
       size(w: number, h: number) {
         sprite.width = w
         sprite.height = h
