@@ -105,6 +105,34 @@ function captainFromTrader(l: TraderLook): CaptainLook {
   }
 }
 
+/**
+ * A FRIEND, AS A CAPTAIN.
+ *
+ * Every glow they own, kept. A trader's are nulled because they are scenery
+ * dressed from a plain pool; somebody you sailed out to meet is a PLAYER, and
+ * the rod they worked for is most of what you are looking at when you spot
+ * them on the water. The comment on the trader converter is the argument for
+ * why they are different, and this is the other side of it.
+ */
+function captainFromFriend(f: FriendAtSea): CaptainLook {
+  return {
+    characterColor: f.characterColor,
+    boatId: f.boatId,
+    hatId: f.hatId,
+    petArt: f.gear.petArt,
+    petSpecies: f.gear.pet,
+    rodSlug: f.gear.rodSlug,
+    rodImage: f.gear.rod,
+    rodGlowType: f.gear.rodGlow,
+    // Their live streak is not on the wire, so a Locked-In Rod shows its
+    // dormant glow out here — the same thing yours does on the chart.
+    rodLockedIn: false,
+    reel: f.gear.reel,
+    hookUrl: f.gear.hook,
+    hookGlowType: HOOKS.find(h => h.imageUrl === f.gear.hook)?.glowType ?? null,
+  }
+}
+
 /** The sprite for the rod a regular sells, when they sell one. One place, so
  *  the man on the water and the offer in his panel cannot show different
  *  tackle. */
@@ -2785,8 +2813,12 @@ export default function SeaMap({
     const out = [yoon, ...residents, ...socials, ...traders]
       .map(t => ({ key: t.key, look: captainFromTrader(t.look) }))
     if (finn) out.push({ key: 'finn', look: captainFromTrader(FINN_LOOK) })
+    // AND THE PEOPLE YOU ACTUALLY KNOW. Same builder, same slot: a friend's
+    // boat is not a different kind of thing from a trader's, it is the same
+    // thing with better tackle on it.
+    for (const f of friends) out.push({ key: `friend:${f.username}`, look: captainFromFriend(f) })
     return out
-  }, [yoon, residents, socials, traders, finn])
+  }, [yoon, residents, socials, traders, finn, friends])
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
   /** For the keyboard handler, which binds once: while the rod is out, the
@@ -4370,6 +4402,20 @@ export default function SeaMap({
           cx: f.at.x + WATERLINE_X * 0.98,
           cy: f.at.y + (WATERLINE_Y * 0.98) / GROUND,
         })
+        // THE PEOPLE YOU KNOW, from the eased positions the block above just
+        // settled. Read from `friendAt` rather than recomputed: where a friend
+        // is on screen is a smoothing decision, made once, up there.
+        for (const [name, at] of friendAt.current) {
+          list.push({
+            key: `friend:${name}`, x: at.shown.x, y: at.shown.y,
+            facing: at.face, scale: 1, dim: 1,
+            // Their heading is the direction they are easing in. A boat that
+            // has arrived leaves no wake, which is correct.
+            ang: Math.atan2(at.target.y - at.shown.y, at.target.x - at.shown.x),
+            cx: at.shown.x + WATERLINE_X,
+            cy: at.shown.y + WATERLINE_Y / GROUND,
+          })
+        }
         gpuRef.current.fleet(list)
       }
 
@@ -8075,13 +8121,17 @@ const FriendBoat = memo(function FriendBoat({ friend, refs }: {
         position: 'absolute', left: 0, top: 0,
         transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
       }}>
-        <Skipper
-          characterColor={friend.characterColor}
-          boatId={friend.boatId}
-          hatId={friend.hatId}
-          gear={friend.gear}
-          frame="rest"
-        />
+        {/* ON THE CANVAS UNDER THE FLAG. The wrapper stays: it carries their
+            name, and the loop still eases the position into it. */}
+        {!GPU_ISLANDS && (
+          <Skipper
+            characterColor={friend.characterColor}
+            boatId={friend.boatId}
+            hatId={friend.hatId}
+            gear={friend.gear}
+            frame="rest"
+          />
+        )}
       </div>
 
       {/* THEIR NAME, over the boat and counter-squashed like every other label
