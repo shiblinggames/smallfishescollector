@@ -38,7 +38,9 @@
 import { useEffect, useRef } from 'react'
 import { GROUND, bakeIsland, requestGround } from './islandArt'
 import { bakeMark } from './markArt'
-import { nightTint } from './seaWater'
+import { nightTint, makeWater } from './seaWater'
+import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
+import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
@@ -57,6 +59,11 @@ export type GpuHandle = {
    *  sprite on this canvas — see nightTint for why this is a tint and
    *  emphatically not a filter. */
   night(dark: number, warm: number): void
+  /** The three blended stops out of seaAt, 0..255, deep first. Called on the
+   *  chart's own deadband rather than every frame: the colour of the sea does
+   *  not change sixty times a second and the shader does not need telling that
+   *  it has not. */
+  palette(stops: number[][]): void
 }
 
 export default function SeaIslandsGPU({ islands, marks, handle }: {
@@ -74,6 +81,7 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
   useEffect(() => {
     let dead = false
     let app: import('pixi.js').Application | null = null
+    let cleanup: (() => void) | null = null
 
     ;(async () => {
       const PIXI = await import('pixi.js')
@@ -100,9 +108,39 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
       // Input belongs to the DOM chart underneath. This canvas is scenery.
       a.canvas.style.pointerEvents = 'none'
 
+      // ── THE WATER, UNDER EVERYTHING ───────────────────────────────
+      //
+      // The CSS gradient is still mounted behind this canvas and still being
+      // painted every deadband; this covers it. Nothing else on the chart has
+      // to know which sea is showing, and turning the flag off puts the old one
+      // back with no other change anywhere.
+      const water = await makeWater(PIXI, {
+        uTime: 0,
+        uCam: new Float32Array([0, 0]),
+        uZoom: 1,
+        uRes: new Float32Array([a.screen.width, a.screen.height]),
+        // Placeholders only. The first `palette` call replaces all three, and
+        // it arrives before the first frame the captain sees.
+        uShallow: new Float32Array([0.36, 0.60, 0.58]),
+        uMid: new Float32Array([0.17, 0.35, 0.37]),
+        uDeep: new Float32Array([0.07, 0.19, 0.22]),
+        uDark: 0,
+        // Upper left: the same key the buildings and the islands are lit by.
+        uLight: new Float32Array([-0.7, -0.7]),
+        uSwell: 1,
+        uWarm: 0,
+      })
+      if (water) {
+        if (dead) { a.destroy(true, { children: true }); return }
+        a.stage.addChild(water.sprite)
+        water.size(a.screen.width, a.screen.height)
+      }
+
       const world = new PIXI.Container()
       a.stage.addChild(world)
 
+      const foamTex = makeFoamTexture(PIXI)
+      const foams: Foam[] = []
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
       const place = (isle: GpuIsland) => {
         const d = isle.r * 2
@@ -117,6 +155,18 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
         s.y = isle.y
         world.addChild(s)
         baked.push({ isle, sprite: s, pad })
+
+        // THE SURF, AT THE ISLAND. A child of the world at the island's own
+        // position, so it moves because the island moves and there is no camera
+        // in it at all — which is the whole reason it is geometry rather than a
+        // shader measuring distances in screen space. Added at the BOTTOM of
+        // the display list so the crests run up under the shore instead of over
+        // the sand.
+        const f = makeShoreFoam(PIXI, coastline(isle.id), d, foamTex, (isle.x * 0.013) % 1)
+        f.mesh.x = isle.x
+        f.mesh.y = isle.y
+        world.addChildAt(f.mesh, 0)
+        foams.push(f)
       }
       for (const isle of listRef.current) place(isle)
 
@@ -205,9 +255,20 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
       // where a mounted <img> costs a compositing layer whether you can see it
       // or not.
       let camX = 0, camY = 0, camZoom = 1
+      let dark = 0, warm = 0
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
       a.ticker.add(() => {
         const t = performance.now() / 1000
+        // The surf runs and the sea moves. Both are time only: the camera and
+        // the hour arrive through the handle, from the chart's own loop.
+        for (const f of foams) f.advance(t)
+        water?.set({
+          uTime: t,
+          uCam: new Float32Array([camX, camY]),
+          uZoom: camZoom,
+          uDark: dark,
+          uWarm: warm,
+        })
         const halfW = a.screen.width / 2 / camZoom
         const halfH = a.screen.height / 2 / camZoom / GROUND
         for (const sw of swayers) {
@@ -231,9 +292,19 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
       })
 
       let lastTint = -1
+      // The water's quad is screen space, so it has to follow the surface it is
+      // drawn on. `resizeTo` handles the renderer; this handles the shader.
+      const ro = new ResizeObserver(() => {
+        if (!dead) water?.size(a.screen.width, a.screen.height)
+      })
+      ro.observe(el)
+      cleanup = () => ro.disconnect()
+
       handle.current = {
-        night(dark, warm) {
-          const tint = nightTint(dark, warm)
+        night(d, w) {
+          dark = d
+          warm = w
+          const tint = nightTint(d, w)
           if (tint === lastTint) return
           lastTint = tint
           for (const b of baked) b.sprite.tint = tint
@@ -242,6 +313,11 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
               (child as import('pixi.js').Sprite).tint = tint
             }
           }
+        },
+        palette(stops) {
+          if (!water || stops.length < 3) return
+          const f = (c: number[]) => new Float32Array([c[0] / 255, c[1] / 255, c[2] / 255])
+          water.set({ uDeep: f(stops[0]), uMid: f(stops[1]), uShallow: f(stops[2]) })
         },
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom
@@ -260,6 +336,7 @@ export default function SeaIslandsGPU({ islands, marks, handle }: {
 
     return () => {
       dead = true
+      cleanup?.()
       handle.current = null
       app?.destroy(true, { children: true })
       app = null

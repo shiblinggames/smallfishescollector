@@ -756,6 +756,12 @@ export function inBand(p: Vec, place: Place): boolean {
 type SeaLook = {
   css: string
   lum: number
+  /** The three blended stops, 0..255, deep first — the same numbers the css is
+   *  written from. The water shader wants colours rather than a gradient
+   *  string, and this is where they already exist: blending the zones a second
+   *  time anywhere else would be a second opinion about what colour the sea is,
+   *  which is the exact thing this function exists to prevent. */
+  stops: number[][]
   /** ONE SOLID COLOUR from the same blend, for anything that cannot take a
    *  gradient — the minimap paints 2,275 cells into a canvas, and
    *  `ctx.fillStyle = 'radial-gradient(…)'` is not an error, it is a silent
@@ -892,6 +898,7 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
 
   return {
     lum,
+    stops: out,
     // The middle stop, which is the colour this water reads as overall.
     solid: `rgb(${out[1].join(',')})`,
     // Painted three ways from the same blend, and weighted DOWN toward the
@@ -4258,6 +4265,11 @@ export default function SeaMap({
           lastCss = look.css
           sky.style.background = look.css
         }
+        // THE SAME BLEND, HANDED TO THE SHADER. Not recomputed: what colour
+        // this water is, is one decision, and it is made just above on the same
+        // deadband. The canvas is only being told what the chart already
+        // decided. Null unless the flag is on.
+        gpuRef.current?.palette(look.stops)
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two
