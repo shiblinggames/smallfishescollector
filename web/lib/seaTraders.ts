@@ -133,10 +133,24 @@ export type TraderOffer =
     mood: string
     lines: string[]
   }
-  /** THE RARE ONE. Carries a rod the shops ashore will not stock, and only
-   *  exists at night in deep water. Keyed on the NIGHT rather than the day, so
-   *  the offer cannot be redeemed a cycle after it has gone. */
-  | { deal: 'rod'; rodTier: number; cost: number }
+  /**
+   * THE RARE ONE, AND HE DOES NOT SELL. He deals.
+   *
+   * One rod, in the blackest water on the chart, at night, and he will not
+   * name a price for it: he names a stake. You put up the stake, he cuts for
+   * it, and one time in ten you walk away with the rod. The other nine you
+   * walk away with nothing, and he will not deal again until tomorrow.
+   *
+   * That is the YOLO Rod's own mechanic pointed back at the person buying it.
+   * A rod whose whole idea is a long-odds roll on every cast should not be
+   * something you simply pay for, and ten stakes is exactly what the rod used
+   * to cost — so the average captain pays the old price and the lucky one
+   * pays a tenth of it. Which is the rod.
+   *
+   * Keyed on the NIGHT, so an offer cannot be redeemed a cycle after it has
+   * gone; the once-a-day lock is separate and lives on the sea day.
+   */
+  | { deal: 'wager'; rodTier: number; stake: number; odds: number }
   /** A ZONE'S RESIDENT BUYER. Permanent, always in the same water, and not
    *  subject to the daily deal cap — see the `resident` note in chart.ts. */
   | { deal: 'resident'; zoneId: string; rate: number }
@@ -715,11 +729,25 @@ export function traderPos(t: Trader, nowSec: number): {
  * round about three times an hour and there are several of them out there each
  * time — the difficulty is the SAILING, not the waiting.
  */
+/** What he wants staked for one cut. Ten of these is the rod's old shelf
+ *  price, so the odds and the money agree with each other. */
+export const RUNNER_STAKE = 100_000
+/** And what a cut is worth. Read by the panel to print the odds and by the
+ *  server to roll them, so the number a captain is shown is the number. */
+export const RUNNER_ODDS = 0.1
+
+/** The band he works, read off the chart rather than written here again: the
+ *  Ancient Deep's own inner and outer radii, so moving the band moves him. */
+const ANCIENT = PLACES.find(p => p.id === 'ancient_deep')
+const ANCIENT_INNER = ANCIENT?.inner ?? 16000
+const ANCIENT_OUTER = ANCIENT?.outer ?? OUTER_EDGE
+
 const RUNNER_LINES = [
+  "I have got one rod and no price on it. I have got a stake, and I have got a deck.",
   "Shops ashore won't touch what I carry. That's rather the point of me.",
-  "I only come out when the water's black. Look for me in daylight and you'll look a long while.",
-  "No paperwork, no chandler, no questions. Just the rod and the coin.",
-  "You've come a long way out in the dark. So have I. Let's not waste it.",
+  "Nine captains out of ten row home lighter. I tell them all that and they all sit down anyway.",
+  "You came this far out into the black for a rod that gambles. Do not act surprised.",
+  "No paperwork, no chandler, no questions. Put your money on the table.",
 ]
 
 function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
@@ -728,7 +756,6 @@ function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
 
   const x = cx * CELL + rnd() * CELL
   const y = cy * CELL + rnd() * CELL
-  const depth = depthRamp(x, y)
 
   // SAME EDGE, SAME REASON. Runners are placed by their own roll rather than
   // through traderAt, so the outer-edge guard there does not cover them — and
@@ -741,38 +768,49 @@ function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
   // south of it can still swing across on their patrol.
   if (y < NORTH_WALL + MAX_DRIFT) return null
 
-  // DEEP WATER ONLY. Past the halfway mark of the chart, which in practice is
-  // the far side of the Deep.
+  // THE ANCIENT DEEP AND NOWHERE ELSE.
+  //
+  // He used to appear anywhere past the halfway mark of the chart, which meant
+  // the rarest rod in the game could be bought in water a captain reaches at
+  // Fishing 30. The band is the gate: you cannot sail here until 75, so there
+  // is no separate level check on the deal and there does not need to be.
+  //
+  // It also makes him properly rare. One cell in nine was a lot of cells when
+  // it was half the chart; inside one band, at night, it is a night's sailing.
   if (!clearOfSolids(x, y, MAX_DRIFT + BOAT_CLEAR)) return null
-  if (depth < 0.45) return null
+  const r = Math.hypot(x, y)
+  if (r < ANCIENT_INNER + MAX_DRIFT || r > ANCIENT_OUTER - MAX_DRIFT) return null
   // Uncommon even there: about one cell in nine.
   if (rnd() > 0.11) return null
   if (!RUNNER_RODS.length) return null
 
   const rod = RUNNER_RODS[Math.floor(rnd() * RUNNER_RODS.length)]
-  // They charge a premium over what a shop would have wanted, because no shop
-  // wants it and they know exactly how far you sailed.
-  const cost = Math.round(rod.cost * (1.15 + rnd() * 0.25) / 1000) * 1000
-
   return {
     key: `night:${nightIndex}:${cx}:${cy}`,
     kind: 'runner',
     name: `${pick(NAMES_FIRST, rnd)} ${pick(NAMES_LAST, rnd)}`,
     x, y,
+    // BLACK, AND WRITTEN DOWN RATHER THAN ROLLED. Everyone else out here is
+    // dressed out of the same pools, which is right for a sea full of people
+    // and wrong for the one you only see once. The darkest hull and hat in the
+    // game, no hook to catch the light, and the rod he is dealing for openly
+    // in his hands - so the thing you sailed into the black to find is
+    // recognisable from further away than his name is.
     look: {
-      characterColor: pick(CHAR_COLORS, rnd),
-      boatId: pick(BOAT_IDS, rnd),
-      hatId: pick(HAT_IDS, rnd),
+      characterColor: 'gray',
+      boatId: 'charcoal',
+      hatId: 'black',
       rodSlug: rod.slug ?? null,
-      hook: pick(HOOK_ART, rnd),
+      hook: null,
     },
     line: pick(RUNNER_LINES, rnd),
     driftR: 70 + rnd() * 120,
     driftRate: (rnd() < 0.5 ? 1 : -1) * (Math.PI * 2) / (60 + rnd() * 70),
     driftPhase: rnd() * Math.PI * 2,
-    deal: 'rod',
+    deal: 'wager',
     rodTier: rod.tier,
-    cost,
+    stake: RUNNER_STAKE,
+    odds: RUNNER_ODDS,
   }
 }
 

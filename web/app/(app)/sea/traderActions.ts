@@ -260,28 +260,43 @@ export async function sellToResident(zoneId: string): Promise<
 }
 
 /**
- * BUY A ROD FROM A BLOCKADE RUNNER.
+ * ── CUT THE DECK FOR THE YOLO ROD ───────────────────────────────────────────
  *
- * The only way three of the rods in this game change hands. The shop refuses
- * them and the shop's list hides them, so this is it.
+ * The blockade runner does not sell. He deals: one stake, one cut, one time in
+ * ten you row home with the rod, and either way he will not deal with you again
+ * until tomorrow.
  *
- * Rebuilt from the key like every other deal, which here does two jobs: it
- * fixes the price, and because a runner's key carries the NIGHT it belongs to,
- * it also enforces that it is still that night. A key saved from an earlier
- * cycle rebuilds to nothing.
+ * WHY IT IS NOT A PRICE. The YOLO Rod is a long-odds roll on every cast, and it
+ * used to be the one rod you could simply buy if you had sailed far enough on
+ * the right night. Ten stakes is what it cost on the shelf, so the arithmetic
+ * has not moved - the average captain still pays a million for it - but the
+ * money now behaves the way the rod does. Somebody gets it for a hundred
+ * thousand and tells that story for a year.
  *
- * Counts against the daily deal cap and against the once-per-trader key, the
- * same as any other encounter — a rod is emphatically a reward.
+ * THE THREE LOCKS, and each one is a different thing being protected:
+ *
+ * 1. THE KEY carries the night it belongs to, so an offer saved from an earlier
+ *    cycle rebuilds to nothing. That is the encounter.
+ * 2. THE DAY ROW is `yolo:<sea day>` in sea_trader_deals, whose primary key is
+ *    (user_id, trader_key) - so the insert IS the once-a-day lock, and two taps
+ *    in the same second cannot both get a cut. That is the pacing.
+ * 3. THE ROLL happens here and nowhere else. A client that decides its own odds
+ *    is not a gamble, it is a button.
+ *
+ * NOT AGAINST THE DAILY DEAL CAP. It has a harder limit of its own, and burning
+ * one of six ordinary trades on a coin flip would make somebody choose between
+ * the rod and their day's selling.
  */
-export async function buyRunnerRod(traderKey: string): Promise<
-  { ok: true; rodTier: number; spent: number; doubloons: number } | { error: string }
+export async function wagerForRunnerRod(traderKey: string): Promise<
+  { ok: true; won: boolean; rodTier: number; rodName: string; stake: number; doubloons: number }
+  | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
   const trader = traderFromKey(traderKey)
-  if (!trader || trader.deal !== 'rod') {
+  if (!trader || trader.deal !== 'wager') {
     return { error: 'They have gone. The dark does not keep anyone in one place.' }
   }
   const rod = RODS.find(r => r.tier === trader.rodTier)
@@ -290,58 +305,69 @@ export async function buyRunnerRod(traderKey: string): Promise<
   const admin = createAdminClient()
   const today = seaDay()
 
-  // THE CAP APPLIES TO EVERYONE WHO GETS THIS FAR, which is now only the
-  // blockade runners. It exists because the wanderers are a daily rotation and
-  // skipping the sailing should not get you the best six deals on the chart.
-  //
-  // Yoon used to be exempted here by key. He is not a rod deal at all any more:
-  // his rod, like Fitch's and Nance's, is the last thing a friendship does and
-  // is bought through `buyFolkRod`, which reads the rapport row and is outside
-  // this cap for the reason he always was - a once-ever purchase capped by a
-  // daily rotation only makes somebody burn a day's trading to find out they
-  // were one deal short.
-  const { count } = await admin
-    .from('sea_trader_deals')
-    .select('trader_key', { count: 'exact', head: true })
-    .eq('user_id', user.id).eq('sea_day', today)
-  if ((count ?? 0) >= DEALS_PER_DAY) {
-    return { error: 'Word travels. Nobody else out here will deal with you today.' }
-  }
-
-  // Already own it? Say so before taking the claim, or a captain burns one of
-  // six daily deals discovering they have one.
+  // Say so before taking a stake. You cannot own the rod twice, and somebody
+  // who already has it staking a hundred thousand on winning it again is the
+  // worst possible way to find that out.
   const { data: had } = await admin
     .from('rod_inventory').select('rod_tier')
     .eq('user_id', user.id).eq('rod_tier', trader.rodTier).maybeSingle()
   if (had) return { error: `You already carry the ${rod.name}.` }
 
+  // ONE CUT A DAY, and the row is the lock rather than a count that could be
+  // read twice. Keyed on the sea day rather than the trader, deliberately: a
+  // second runner on the same night is still the same night's cut.
   const { error: claimErr } = await admin.from('sea_trader_deals').insert({
-    user_id: user.id, trader_key: traderKey, sea_day: today, kind: 'runner',
-    detail: { deal: 'rod', rodTier: trader.rodTier, cost: trader.cost },
+    user_id: user.id, trader_key: `yolo:${today}`, sea_day: today, kind: 'runner',
+    detail: { deal: 'wager', rodTier: trader.rodTier, stake: trader.stake },
   })
   if (claimErr) {
-    if (claimErr.code === '23505') return { error: 'You have already dealt with them.' }
+    if (claimErr.code === '23505') {
+      return { error: 'You have had your cut tonight. He will deal again tomorrow.' }
+    }
     return { error: 'The deal fell through.' }
   }
 
-  // The RESULT is the guard, not the error — deduct_doubloons checks the
-  // balance inside its own WHERE and returns NULL rather than raising.
+  // The RESULT is the guard, not the error: deduct_doubloons checks the balance
+  // inside its own WHERE and returns NULL rather than raising. If it will not
+  // cover, the day's cut goes back - nobody loses a turn for being short.
   const { data: newBalance, error: spendErr } = await admin.rpc('deduct_doubloons', {
-    uid: user.id, amount: trader.cost,
+    uid: user.id, amount: trader.stake,
   })
   if (spendErr || newBalance == null) {
     await admin.from('sea_trader_deals')
-      .delete().eq('user_id', user.id).eq('trader_key', traderKey)
-    return { error: `They want ${trader.cost.toLocaleString()} and you have not got it.` }
+      .delete().eq('user_id', user.id).eq('trader_key', `yolo:${today}`)
+    return { error: `He wants ${trader.stake.toLocaleString()} on the table and you have not got it.` }
   }
 
-  await admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: trader.rodTier })
-  await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -trader.cost,
-    reason: `Bought the ${rod.name} from ${trader.name} at sea`,
-  })
+  const won = Math.random() < trader.odds
 
-  return { ok: true, rodTier: trader.rodTier, spent: trader.cost, doubloons: Number(newBalance) }
+  if (won) {
+    // The insert can still lose a race against another grant of the same rod.
+    // If it does the captain keeps the stake as a loss rather than paying for
+    // something they already own - which is the same outcome the dice give nine
+    // times in ten, and cannot be told apart from it.
+    const { error: grantErr } = await admin.from('rod_inventory')
+      .insert({ user_id: user.id, rod_tier: trader.rodTier })
+    if (!grantErr) {
+      await admin.from('doubloon_transactions').insert({
+        user_id: user.id, amount: -trader.stake,
+        reason: `Won the ${rod.name} off a blockade runner`,
+      })
+      return {
+        ok: true, won: true, rodTier: trader.rodTier, rodName: rod.name,
+        stake: trader.stake, doubloons: Number(newBalance),
+      }
+    }
+  }
+
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -trader.stake,
+    reason: `Staked on the ${rod.name} with a blockade runner`,
+  })
+  return {
+    ok: true, won: false, rodTier: trader.rodTier, rodName: rod.name,
+    stake: trader.stake, doubloons: Number(newBalance),
+  }
 }
 
 

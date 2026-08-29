@@ -15,7 +15,7 @@ import { motion } from 'framer-motion'
 import { getBait } from '@/lib/bait'
 import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
-import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
+import { strikeDeal, sellToResident, wagerForRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
 import { folkById, knowsFavourite } from '@/lib/seaFolk'
 import { folkState, talkToFolk, giftToFolk, holdForGifting, buyFolkRod, type Rapport } from './folkActions'
@@ -142,18 +142,29 @@ export default function TraderPanel({
 
   const isResident = trader.deal === 'resident'
   const isTalk = trader.deal === 'talk'
-  const rod = trader.deal === 'rod' ? RODS.find(r => r.tier === trader.rodTier) : null
+  /** The runner. His deal is the only one that is not a transaction, so he
+   *  is excused the daily cap and gets his own footer button. */
+  const isWager = trader.deal === 'wager'
+  const rod = trader.deal === 'wager' ? RODS.find(r => r.tier === trader.rodTier) : null
 
-  async function buyRod() {
-    if (busy || trader.deal !== 'rod') return
+  /** Whether the cut has been made, and how it fell. Held apart from `done`
+   *  because a LOSS is not an error and must not read as one: he took the
+   *  stake, the deal worked, the dice did not. */
+  const [cut, setCut] = useState<{ won: boolean; rodName: string } | null>(null)
+
+  async function cutForRod() {
+    if (busy || trader.deal !== 'wager') return
     setBusy(true); setErr(''); vibrate(14)
     try {
-      const res = await buyRunnerRod(trader.key)
+      const res = await wagerForRunnerRod(trader.key)
       if ('error' in res) { setErr(res.error); setBusy(false); return }
       announce(res.doubloons)
-      onDealt(trader.key)
-      setDone(`The ${rod?.name ?? 'rod'} is yours. Equip it from the tackle shop.`)
-      vibrate([0, 40, 60, 80])
+      setCut({ won: res.won, rodName: res.rodName })
+      // ONLY A WIN CLOSES HIM OUT. A loss leaves him on the chart, because he
+      // is still there in the water and pretending otherwise would be a lie
+      // the player can see through by looking.
+      if (res.won) { onDealt(trader.key); vibrate([0, 40, 60, 80, 40, 120]) }
+      else vibrate(30)
     } catch {
       setErr('The deal fell through. Try again.')
     }
@@ -363,22 +374,55 @@ export default function TraderPanel({
           background: 'rgba(255,255,255,0.045)',
           border: '1px solid rgba(255,255,255,0.09)',
         }}>
-          {trader.deal === 'rod' ? (
+          {trader.deal === 'wager' ? (
             <>
+              {/* HE NAMES A STAKE, NOT A PRICE, and the odds are printed
+                  because a gamble you have to guess the shape of is a trick.
+                  One in ten, a hundred thousand a cut, once a night: all three
+                  on the table before anybody puts money on it. */}
               <p className="font-karla font-700 uppercase" style={{
-                fontSize: '0.66rem', letterSpacing: '0.16em', color: '#c4b5fd',
-              }}>Not sold ashore</p>
+                fontSize: '0.66rem', letterSpacing: '0.16em', color: '#7fd8ff',
+              }}>He will not name a price</p>
               <p className="font-cinzel font-700" style={{ fontSize: '1.224rem', color: '#f6ecd6', marginTop: 3 }}>
                 {rod?.name ?? 'A rod'}
               </p>
-              <p className="font-karla font-700" style={{ fontSize: '1.104rem', color: '#f0c040', marginTop: 4 }}>
-                {trader.cost.toLocaleString()} ⟡
-              </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, lineHeight: 1.6 }}>
-                No chandler ashore stocks this one. He will be gone when the
-                light comes back, but there is always another night and always
-                another runner.
-              </p>
+
+              {cut ? (
+                <p className="font-karla font-600" style={{
+                  fontSize: '0.94rem', marginTop: 8, lineHeight: 1.6,
+                  color: cut.won ? '#7fd8ff' : 'rgba(255,255,255,0.62)',
+                }}>
+                  {cut.won
+                    ? `He turns the card, looks at it for a long moment, and hands the ${cut.rodName} across. Equip it from the tackle shop.`
+                    : 'He turns the card, shakes his head once, and pockets your stake. That is the deal you agreed to. Come back tomorrow.'}
+                </p>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                    <div>
+                      <p className="font-karla font-700 uppercase" style={{
+                        fontSize: '0.52rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.45)',
+                      }}>The stake</p>
+                      <p className="font-karla font-700" style={{ fontSize: '1.05rem', color: '#f0c040', marginTop: 2 }}>
+                        {trader.stake.toLocaleString()} ⟡
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-karla font-700 uppercase" style={{
+                        fontSize: '0.52rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.45)',
+                      }}>Your odds</p>
+                      <p className="font-karla font-700" style={{ fontSize: '1.05rem', color: '#7fd8ff', marginTop: 2 }}>
+                        1 in {Math.round(1 / trader.odds)}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.5)', marginTop: 8, lineHeight: 1.6 }}>
+                    One cut of the deck. Win and the rod is yours for the stake.
+                    Lose and he keeps it and you get nothing.<br />
+                    Once a night, whoever you find out here.
+                  </p>
+                </>
+              )}
             </>
           ) : trader.deal === 'resident' ? (
             <>
@@ -464,21 +508,25 @@ export default function TraderPanel({
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          {!spent && !isTalk && (
-            <button onClick={isResident ? sellHold : trader.deal === 'rod' ? buyRod : strike}
-              disabled={busy || (!isResident && dealsLeft <= 0)}
+          {!spent && !isTalk && !cut && (
+            <button onClick={isResident ? sellHold : isWager ? cutForRod : strike}
+              // THE CUT IS NOT ONE OF THE SIX. It has a harder limit of its own
+              // - once a night - and making somebody choose between a shot at
+              // the rod and a day's selling is not a choice, it is a tax on
+              // having found him.
+              disabled={busy || (!isResident && !isWager && dealsLeft <= 0)}
               className="font-cinzel font-700"
               style={{
                 flex: 1.2, padding: '0.8rem', borderRadius: 11, fontSize: '1.128rem',
-                color: dealsLeft <= 0 ? 'rgba(242,234,216,0.4)' : '#f2ead8',
+                color: dealsLeft <= 0 && !isWager ? 'rgba(242,234,216,0.4)' : '#f2ead8',
                 background: 'rgba(255,206,138,0.16)',
                 border: '1px solid rgba(255,206,138,0.45)',
-                cursor: busy || dealsLeft <= 0 ? 'default' : 'pointer',
+                cursor: busy || (dealsLeft <= 0 && !isWager) ? 'default' : 'pointer',
                 opacity: busy ? 0.6 : 1,
               }}>
               {busy ? '…'
                 : trader.deal === 'bait' ? 'Buy'
-                  : trader.deal === 'rod' ? 'Buy the rod'
+                  : isWager ? `Stake ${trader.stake.toLocaleString()} ⟡`
                     : 'Sell the hold'}
             </button>
           )}
