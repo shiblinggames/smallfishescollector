@@ -40,6 +40,7 @@ import { GROUND, bakeIsland, requestGround } from './islandArt'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
+import { makeLap, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from './seaCaptain'
@@ -320,6 +321,14 @@ export default function SeaIslandsGPU({
       pixiRef.current = PIXI
       boatsRef.current = boats
 
+      // The surf texture and every strip of foam that scrolls with it — the
+      // islands' shore rings and the lap at each landmark's waterline. Declared
+      // before the near pass because that builds laps too, and a const referred
+      // to from a hoisted function it is declared after is a trap waiting for
+      // somebody to move a call earlier.
+      const foamTex = makeFoamTexture(PIXI)
+      const laps: Lap[] = []
+
       // ── THE NEAR PASS ─────────────────────────────────────────────
       //
       // The handful of things currently standing between the camera and the
@@ -356,19 +365,30 @@ export default function SeaIslandsGPU({
           if (dead) return
           // A mark above the waterline has no wet half, and that null is the
           // answer rather than a missing one.
-          for (const cv of [wet, dry]) {
-            if (!cv) continue
+          //
+          // Wet, then the lap, then dry — the same order and the same reason as
+          // the world copy. This one is drawn OVER the hull, so without the
+          // foam a rock would lose its waterline at the exact moment it passed
+          // in front of you, which is the moment you are looking straight at it.
+          const put = (cv: HTMLCanvasElement) => {
             const sp = new PIXI.Sprite(PIXI.Texture.from(cv))
             const k = m.size / cv.width
             sp.scale.set(k, k / GROUND)
             sp.anchor.set(0.5, 1)
             node.addChild(sp)
           }
+          put(wet)
+          if (sub) {
+            const k = m.size / wet.width
+            const lap = makeLap(PIXI, sub, foamTex, m.size, (wet.height * k) / GROUND, (i * 0.41) % 1)
+            node.addChild(lap.mesh)
+            laps.push(lap)
+          }
+          if (dry) put(dry)
         }).catch(() => {})
         return node
       }
 
-      const foamTex = makeFoamTexture(PIXI)
       const foams: Foam[] = []
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
       const place = (isle: GpuIsland) => {
@@ -454,6 +474,21 @@ export default function SeaIslandsGPU({
             return sp
           }
           add(wet)
+
+          // ── THE WATER LAPPING AT IT ─────────────────────────────
+          //
+          // BETWEEN THE TWO HALVES, which is the whole reason it works: over
+          // the wet copy that is under the surface, under the dry copy that is
+          // above it. Foam sits AT the water, so it belongs in front of what is
+          // below and behind what is above, and the display list says that
+          // without anybody blending anything.
+          if (sub) {
+            const k = m.size / wet.width
+            const lap = makeLap(PIXI, sub, foamTex, m.size, wet.height * k, (m.i * 0.41) % 1)
+            inner.addChild(lap.mesh)
+            laps.push(lap)
+          }
+
           if (dry) add(dry)
 
           // The counter-squash, about the base, so it stands rather than lies.
@@ -503,6 +538,7 @@ export default function SeaIslandsGPU({
         // The surf runs and the sea moves. Both are time only: the camera and
         // the hour arrive through the handle, from the chart's own loop.
         for (const f of foams) f.advance(t)
+        for (const l of laps) l.advance(t)
         const dt = a.ticker.deltaMS / 1000
         // ── HOW HARD SHE IS TRAVELLING ────────────────────────────────
         // Derived from the camera rather than passed in: the chart already
