@@ -214,9 +214,34 @@ export default function SeaIslandsGPU({
         backgroundAlpha: 0,
         resizeTo: el,
         antialias: true,
-        // The same cap bakeIsland uses. Full retina across this many islands is
-        // the memory pressure the port exists to relieve.
-        resolution: Math.min(window.devicePixelRatio || 1, 1.25),
+        // ── TWO DIFFERENT COSTS, AND THEY WERE THE SAME NUMBER ────────
+        //
+        // This used to be 1.25, matching bakeIsland's cap, on the reasoning
+        // that full retina across this many islands is the memory pressure the
+        // port exists to relieve. That reasoning is right about BAKES and wrong
+        // about this, and the two are not the same thing:
+        //
+        //   A BAKE is one canvas per island at its own world diameter, kept for
+        //   the session. Thirty of those at full retina really is the problem,
+        //   and bakeIsland's 1.25 cap stays exactly where it is.
+        //
+        //   THE RENDERER RESOLUTION is the framebuffer. It is ONE surface the
+        //   size of the viewport, and it does not multiply by anything.
+        //
+        // Sharing a constant between them made the whole chart render at 1.25
+        // and upscale to the device — on a phone at DPR 3 that is every pixel
+        // blown up by two and a half, which is exactly as soft as it sounds.
+        // It did not show while this canvas drew only the land, because the
+        // land is deliberately soft art and everything crisp was still DOM
+        // drawing at native density over the top. Now that the canvas draws all
+        // of it, the cap was the only thing deciding how sharp the chart is.
+        //
+        // 2 rather than 3: the honest ceiling. It is native on the DPR-2 phones
+        // that are most of them, two thirds on a DPR-3 screen — a difference
+        // you have to look for — and it keeps the framebuffer, and the water
+        // filter's render target that matches it, to something a five-year-old
+        // handset can hold.
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
         autoDensity: true,
       })
       if (dead) { a.destroy(true, { children: true }); return }
