@@ -156,26 +156,43 @@ import { type BerthSpec } from './seaBerth'
 import { type GpuTown } from './seaTown'
 
 /**
- * ── THE ISLANDS ON THE GPU, BEHIND A FLAG ───────────────────────────────────
+ * ── THE CHART IS DRAWN ON A CANVAS ──────────────────────────────────────────
  *
- * `?gpu=1` draws the land through Pixi instead of through a canvas per island
- * in the DOM. Everything else on the chart is untouched either way: the
- * buildings, the labels, the berths, the boat and the traders stay exactly
- * where they are and draw over the top.
+ * Pixi draws the water, the land, the buildings, the shore, the wakes, every
+ * captain out here and everything they glow with. This flag now only says
+ * whether to fall BACK to the DOM chart, which is still whole and still
+ * correct: `?gpu=0`.
+ *
+ * ── WHY THE FALLBACK IS STILL HERE ──────────────────────────────────────────
+ *
+ * Not sentiment, and not indecision. This port began because iOS was killing
+ * the renderer for memory on the DOM chart — reported as a white screen and
+ * eventually as "a problem repeatedly occurred" — and a rendering failure on a
+ * device neither of us owns is exactly the class of bug that shows up after a
+ * flip rather than before it. `?gpu=0` is a link that can be handed to somebody
+ * whose sea will not draw, and it costs one branch per call site to keep.
+ *
+ * It should not stay forever: two charts is two charts, and the DOM one will
+ * quietly rot the moment anybody adds something to the canvas and not to it.
+ * Delete it once this has been out long enough to have been sailed on a range
+ * of hardware, and take the `!GPU_ISLANDS` branches with it.
  *
  * A MODULE CONSTANT, read once. It cannot change during a session, so reading
  * it at render time in a memoised child is honest and costs nothing — whereas
  * threading it through PlaceIsland and IsleRock as a prop would re-render every
  * island on the chart to deliver a value that never moves.
  *
- * Off by default and staying that way until it has been lived with. When it is
- * off, not one line of this file behaves differently from the day before it
- * was written.
+ * THE DEFAULT IS THE SAME ON BOTH SIDES, deliberately. The server cannot read a
+ * query string, so a default that disagreed with the client's would hand React
+ * a different tree to hydrate than the one it rendered — every island on the
+ * chart, present on one side and absent on the other. True on both means the
+ * only mismatch possible is for somebody who typed `?gpu=0`, which is a person
+ * debugging rather than a person playing.
  */
-let GPU_ISLANDS = false
+let GPU_ISLANDS = true
 if (typeof window !== 'undefined') {
   try {
-    GPU_ISLANDS = new URLSearchParams(window.location.search).get('gpu') === '1'
+    GPU_ISLANDS = new URLSearchParams(window.location.search).get('gpu') !== '0'
   } catch { /* an address we cannot parse is one we do not act on */ }
 }
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
@@ -4470,7 +4487,7 @@ export default function SeaMap({
         // AND THE THIRD PASS, WHICH IS NOT A STRING. Same numbers, same frame,
         // for the same reason: the islands are on a canvas and the buildings
         // standing on them are not, so a camera written a frame late slides a
-        // tavern off its own island. Null unless ?gpu=1.
+        // tavern off its own island. Null only on the ?gpu=0 fallback.
         gpuRef.current?.camera(pos.current.x, pos.current.y, zoomRef.current)
       }
       // The sea recoloured under the boat. One style write per frame, and the
@@ -7268,7 +7285,7 @@ const CREW_ART_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object
 const crewArt = (f: string) => (f ? CREW_ART_BASE + f : '')
 
 const LandmarkField = memo(function LandmarkField() {
-  // Under ?gpu=1 these are drawn on the canvas instead — two sprites sharing a
+  // These are drawn on the canvas now — two sprites sharing a
   // texture baked once per painting, and culled to the viewport. See
   // SeaIslandsGPU. The DOCK marks below are not part of this: they belong to
   // the berth UI rather than to the scenery pass.
@@ -7612,7 +7629,7 @@ const Landmass = memo(function Landmass({ id, r, locked = false }: {
           to the nearest coast, banded, with the bands travelling shorewards and
           the edge chewed by the same noise that makes the swell — so the foam
           wanders along a coastline instead of ringing it. That needs the GPU
-          renderer, so it arrives with ?gpu=1. */}
+          renderer, so it is not on the ?gpu=0 fallback. */}
       {/* THE WHOLE STATIC ISLAND, one image, over the surf. See the bakery
           above for the fourteen layers this replaced and why. */}
       <canvas ref={blit} aria-hidden style={{
@@ -8590,7 +8607,7 @@ const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
       width: d, height: d, marginLeft: -isle.r, marginTop: -isle.r,
       pointerEvents: 'none',
     }}>
-      {/* The land is on the GPU under ?gpu=1 — see GPU_ISLANDS. Everything
+      {/* The land is on the GPU — see GPU_ISLANDS. Everything
           else about an isle, chest and all, is unchanged. */}
       {!GPU_ISLANDS && <Landmass id={isle.id} r={isle.r} />}
 
