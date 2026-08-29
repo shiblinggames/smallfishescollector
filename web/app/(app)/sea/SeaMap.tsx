@@ -74,6 +74,37 @@ import { folkById, type FolkId } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 
+/**
+ * A TRADER, AS A CAPTAIN.
+ *
+ * The same builder the player goes through, which is the point: everyone out
+ * here is assembled from the same parts, so a cosmetic that ships for players
+ * turns up on the sea for free rather than by anyone remembering to match it.
+ *
+ * EVERY GLOW IS NULLED, deliberately and not for want of data. A trader's rod
+ * and hook are drawn from the plain pools for the reason written on TraderLook
+ * — the glowing ones are things players earned, and handing them to background
+ * characters cheapens both — and their hulls are filtered the same way in
+ * lib/seaTraders. Passing null here is the third lock on the same door: even
+ * if a showy item reached one of them, they would still not light up.
+ */
+function captainFromTrader(l: TraderLook): CaptainLook {
+  return {
+    characterColor: l.characterColor,
+    boatId: l.boatId,
+    hatId: l.hatId,
+    petArt: null,
+    petSpecies: null,
+    rodSlug: l.rodSlug,
+    rodImage: null,
+    rodGlowType: null,
+    rodLockedIn: false,
+    reel: null,
+    hookUrl: l.hook,
+    hookGlowType: null,
+  }
+}
+
 /** The sprite for the rod a regular sells, when they sell one. One place, so
  *  the man on the water and the offer in his panel cannot show different
  *  tackle. */
@@ -2577,6 +2608,11 @@ export default function SeaMap({
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
+  /** Somebody you have already dealt with today, where the frame loop can see
+   *  it. They do not vanish — a person disappearing once you are done with them
+   *  is what makes a world feel like a vending machine — they just dim. */
+  const dealtRef = useRef(dealt)
+  dealtRef.current = dealt
   const day = useMemo(() => seaDay(), [])
 
   /** THE RESIDENT BUYERS. Not hashed and not daily — they live here. Built into
@@ -2656,6 +2692,11 @@ export default function SeaMap({
   useEffect(() => { tradersRef.current = traders }, [traders])
   /** Wanderers AND residents, for proximity and for the patrol writes. */
   const allTradersRef = useRef<Trader[]>([])
+  /** Reused every frame. Forty small objects a frame is forty small objects a
+   *  frame; the canvas reads this and is done with it before the next one. */
+  const fleetAt = useRef<{
+    key: string; x: number; y: number; facing: number; scale: number; dim: number
+  }[]>([])
   /** YOON. Written down rather than rolled, permanent, and the only person on
    *  this sea who sells the rod with his name on it. See chart.ts. */
   /**
@@ -2688,6 +2729,22 @@ export default function SeaMap({
 
   const yoon = useMemo(() => yoonTrader(), [])
   useEffect(() => { allTradersRef.current = [yoon, ...residents, ...socials, ...traders] }, [yoon, residents, socials, traders])
+
+  /**
+   * EVERYONE ELSE, FOR THE CANVAS.
+   *
+   * Finn rides in the same list. He is his own component in the DOM because the
+   * plate under him has to say what he is, and what he is is not a kind of
+   * trade — but the BOAT is the same boat, and giving him a second pipeline to
+   * be drawn through would be two places for a captain to stop matching.
+   */
+  const gpuFleet = useMemo(() => {
+    if (!GPU_ISLANDS) return []
+    const out = [yoon, ...residents, ...socials, ...traders]
+      .map(t => ({ key: t.key, look: captainFromTrader(t.look) }))
+    if (finn) out.push({ key: 'finn', look: captainFromTrader(FINN_LOOK) })
+    return out
+  }, [yoon, residents, socials, traders, finn])
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
   /** For the keyboard handler, which binds once: while the rod is out, the
@@ -4186,6 +4243,32 @@ export default function SeaMap({
         }
       }
 
+      // ── THE SALT ROAD, ON THE CANVAS ──────────────────────────────
+      //
+      // The same patrol positions the DOM block below writes, handed over
+      // whole. Not recomputed: where a trader is at a given second is one
+      // decision and `traderPos` is where it is made.
+      //
+      // Iterated off the trader list rather than off the DOM refs, because
+      // under the flag there is no hull node to find — only the wrapper that
+      // carries their name plate.
+      if (gpuRef.current) {
+        const ts = now / 1000
+        const list = fleetAt.current
+        list.length = 0
+        for (const t of allTradersRef.current) {
+          const at = traderPos(t, ts)
+          list.push({
+            key: t.key, x: at.x, y: at.y, facing: at.facing, scale: 0.94,
+            dim: dealtRef.current.includes(t.key) ? 0.62 : 1,
+          })
+        }
+        // Finn barely moves and never turns: he is not passing through.
+        const f = finnRef.current
+        if (f) list.push({ key: 'finn', x: f.at.x, y: f.at.y, facing: 1, scale: 0.98, dim: 1 })
+        gpuRef.current.fleet(list)
+      }
+
       // THE PATROLS. Every trader on screen nudged along its own slow circle,
       // and turned to face the way it is going.
       if (hullRefs.current.size) {
@@ -4213,8 +4296,14 @@ export default function SeaMap({
             if (hull) hullCache.current.set(t.key, hull)
           }
           if (hull) {
+            // 0.94, NOT 0.78. The JSX below this has said 0.94 for a while,
+            // under a note explaining that three quarters of the player's size
+            // made a person you can talk to read as scenery in the middle
+            // distance — but the loop rewrites this transform every frame and
+            // was still writing the old number, so the change never once took
+            // effect. A style the loop owns cannot also be set in the markup.
             hull.style.transform =
-              `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.78) scaleX(${at.facing})`
+              `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.94) scaleX(${at.facing})`
           }
         }
       }
@@ -4450,18 +4539,26 @@ export default function SeaMap({
         // the pointing. One flip instead of two, and the bow comes up on both.
         const drive = Math.hypot(vel.current.x, vel.current.y)
         const hullNow = hullRef.current
-        // ── AND NEGATIVE, SO THE BOW GOES UP RATHER THAN DOWN ─────────
+        // ── THE SIGN IS THE FACING, AND THIS IS SETTLED BY LOOKING ────
         //
-        // The note above is right that the MAGNITUDE is the whole story and
-        // that two sign flips were cancelling. It then settled on a positive
-        // number, which is consistently wrong instead of inconsistently wrong:
-        // a positive CSS rotate turns clockwise, and the sprite's bow points
-        // right, so she drove nose-first into the water on both headings.
+        // Three versions of this line have been wrong, so here is the whole of
+        // it. It began as `vel.x / SPEED`, signed, which tilted her the same
+        // way in SCREEN space on both headings and therefore the opposite way
+        // relative to her own bow. The fix took the MAGNITUDE, which is right
+        // about the amount and silent about the direction: a constant sign is
+        // correct on exactly one heading. Positive dug the bow in going right;
+        // negative dug it in going left. Both were half a fix.
         //
-        // Negative lifts the bow when she is unmirrored, and the mirror flips
-        // the apparent direction along with the bow it is flipping — so the
-        // bow rises on both headings, which is what a boat under power does.
-        const heel = -Math.min(hullNow.heel, (drive / SPEED) * hullNow.heel)
+        // The direction is the facing. `mag * facing` is +mag unmirrored and
+        // -mag mirrored, which is the one combination that lifts the bow on
+        // both headings — and it is not what the geometry naively predicts,
+        // because reflecting a rotation about a vertical axis preserves which
+        // way is up. That argument assumes a symmetric hull seen flat. These
+        // are three-quarter views, and mirroring one changes which end of it
+        // reads as rising. The art decides this, not the matrix, which is why
+        // it is settled by sailing east and then west and looking at her.
+        const mag = Math.min(hullNow.heel, (drive / SPEED) * hullNow.heel)
+        const heel = mag * facing.current
         boat.style.transform =
           `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
         // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is
@@ -4671,7 +4768,7 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
-            handle={gpuRef} />
+            fleet={gpuFleet} handle={gpuRef} />
         </div>
       )}
 
@@ -6573,7 +6670,10 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
         // calling out.
         opacity: done ? 0.62 : 1,
       }}>
-        <TraderSkiff look={trader.look} />
+        {/* ON THE CANVAS UNDER THE FLAG. The wrapper stays: it carries their
+            name plate and their wake, and the loop still writes the patrol to
+            it. Only the captain moves. */}
+        {!GPU_ISLANDS && <TraderSkiff look={trader.look} />}
       </div>
 
       {/* ── THE HAIL MARK ────────────────────────────────────────────
@@ -7103,7 +7203,7 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
       pointerEvents: 'none', zIndex: 3,
     }}>
       <div className="sea-lit" style={{ transform: `translate(-50%, -50%) scaleY(${1 / GROUND}) scale(0.98)` }}>
-        <TraderSkiff look={FINN_LOOK} />
+        {!GPU_ISLANDS && <TraderSkiff look={FINN_LOOK} />}
       </div>
 
       {/* ── THE QUEST MARKER ────────────────────────────────────────

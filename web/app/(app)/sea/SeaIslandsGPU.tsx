@@ -90,6 +90,21 @@ export type GpuHandle = {
   wake(s: {
     x: number; y: number; ang: number; force: number; scale: number; kind: WakeKind
   } | null): void
+  /**
+   * EVERYONE ELSE ON THE WATER, every frame.
+   *
+   * Unlike the player, these DO belong in the world container: they have world
+   * positions and the camera does not follow them. `scale` is the hull's own
+   * (traders are drawn smaller than you) and is divided by GROUND on the y to
+   * undo the plane's squash, exactly as the DOM's `scaleY(1 / GROUND)` does —
+   * a captain is standing up in the world, not lying flat on it.
+   *
+   * Anyone not in the list is hidden rather than destroyed. A trader who sails
+   * off the edge of the patrol is coming back.
+   */
+  fleet(list: {
+    key: string; x: number; y: number; facing: number; scale: number; dim: number
+  }[]): void
   skipper(s: {
     bob: number
     heel: number
@@ -100,13 +115,16 @@ export type GpuHandle = {
   } | null): void
 }
 
-export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
+export default function SeaIslandsGPU({ islands, marks, captain, fleet, handle }: {
   islands: GpuIsland[]
   marks: GpuMark[]
   /** How the player looks right now. Rebuilt only when it actually changes —
    *  see the effect below, which compares by VALUE because a captain is
    *  expensive to assemble and cheap to steer. */
   captain: CaptainLook | null
+  /** Everyone else, and how they look. Rebuilt only when somebody's outfit
+   *  actually changes — see the effect below. */
+  fleet: { key: string; look: CaptainLook }[]
   /** Filled in on mount so the loop can steer this without a re-render. */
   handle: { current: GpuHandle | null }
 }) {
@@ -124,6 +142,14 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
   const [ready, setReady] = useState(0)
   const lookRef = useRef<CaptainLook | null>(captain)
   lookRef.current = captain
+  const fleetRef = useRef(fleet)
+  fleetRef.current = fleet
+  const crewRef = useRef(new Map<string, {
+    holder: import('pixi.js').Container
+    cap: Captain
+    sig: string
+  }>())
+  const crewLayerRef = useRef<import('pixi.js').Container | null>(null)
   // Read once. Both lists are derived from static chart data, so re-baking on a
   // parent render would be pure waste.
   const listRef = useRef(islands)
@@ -208,6 +234,13 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
       // laid near a shore runs up under the sand rather than over it.
       const wake: Wake = makeWake(PIXI)
       world.addChild(wake.view)
+
+      // Other captains, IN the world: they have world positions and the camera
+      // does not follow them. Added last so a boat is never behind the island
+      // it is moored beside.
+      const crewLayer = new PIXI.Container()
+      world.addChild(crewLayer)
+      crewLayerRef.current = crewLayer
 
       const boats = new PIXI.Container()
       a.stage.addChild(boats)
@@ -337,7 +370,9 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
         // The surf runs and the sea moves. Both are time only: the camera and
         // the hour arrive through the handle, from the chart's own loop.
         for (const f of foams) f.advance(t)
-        capRef.current?.cap.update(a.ticker.deltaMS / 1000)
+        const dt = a.ticker.deltaMS / 1000
+        capRef.current?.cap.update(dt)
+        for (const c of crewRef.current.values()) c.cap.update(dt)
         water?.set({
           uTime: t,
           uCam: new Float32Array([camX, camY]),
@@ -395,6 +430,12 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
           // DOM did with `nightGrade(dark, 0.55)`: the boat you are steering
           // stays readable after dark while the world around it does not.
           capRef.current?.cap.setNight(nightTint(d * 0.55, w))
+          // Other captains take the hour at FULL strength, like the islands
+          // and unlike the player. That is what `.sea-lit` does to them in the
+          // DOM, and it is the right call: the boat you are steering staying
+          // readable after dark is a concession to the person steering it, not
+          // a fact about the light.
+          for (const c of crewRef.current.values()) c.cap.setNight(tint)
           drift.night(tint)
           wake.night(tint)
         },
@@ -407,6 +448,20 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
           if (!w) { wake.lay(null); return }
           wake.setKind(w.kind)
           wake.lay(w)
+        },
+        fleet(list) {
+          const seen = crewRef.current
+          for (const c of seen.values()) c.holder.visible = false
+          for (const e of list) {
+            const c = seen.get(e.key)
+            if (!c) continue
+            c.holder.visible = true
+            c.holder.position.set(e.x, e.y)
+            // scaleY undoes the plane's squash, and the facing rides on x —
+            // the same ±1 mirror the DOM writes.
+            c.holder.scale.set(e.scale * e.facing, e.scale / GROUND)
+            c.holder.alpha = e.dim
+          }
         },
         skipper(sk) {
           const c = capRef.current
@@ -453,6 +508,8 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
       // The app destroys her children with it; dropping the reference first is
       // what stops the captain effect from destroying an already-dead sprite.
       capRef.current = null
+      crewRef.current.clear()
+      crewLayerRef.current = null
       pixiRef.current = null
       boatsRef.current = null
       app?.destroy(true, { children: true })
@@ -499,6 +556,59 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
     return () => { dead = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, ready])
+
+  // ── AND EVERYONE ELSE, RECONCILED ─────────────────────────────────────────
+  //
+  // Keyed by who is out there and what they are wearing, joined into one
+  // string. A trader's LOOK is fixed for the day, so in practice this settles
+  // once at dawn and then never fires again while you sail — which is the
+  // point: assembling forty captains is expensive and steering them is not.
+  //
+  // Anyone whose outfit changed is torn down and rebuilt rather than patched.
+  // A look change means a different hat sprite, a different hull, possibly a
+  // different rod, and reaching into a built captain to swap those is a second
+  // way of doing what makeCaptain already does.
+  const fleetKey = fleet.map(f => `${f.key}~${lookKey(f.look)}`).join(',')
+  useEffect(() => {
+    let dead = false
+    ;(async () => {
+      const PIXI = pixiRef.current
+      const layer = crewLayerRef.current
+      if (!PIXI || !layer) return
+      const crew = crewRef.current
+      const want = new Map(fleetRef.current.map(f => [f.key, f]))
+
+      // Gone, or wearing something else.
+      for (const [key, held] of [...crew]) {
+        const w = want.get(key)
+        if (w && lookKey(w.look) === held.sig) continue
+        held.cap.destroy()
+        held.holder.destroy({ children: true })
+        crew.delete(key)
+      }
+
+      // New. Awaited one at a time on purpose: the textures are shared, so the
+      // second captain in the same hat pays nothing, and forty parallel image
+      // decodes on a phone is how you drop the frame they were supposed to
+      // arrive on.
+      for (const [key, f] of want) {
+        if (crew.has(key)) continue
+        const cap = await makeCaptain(PIXI, f.look)
+        if (dead || !crewLayerRef.current) { cap.destroy(); return }
+        const holder = new PIXI.Container()
+        holder.addChild(cap.view)
+        // Hidden until the loop places them, or a boat appears at the origin
+        // for one frame and then jumps.
+        holder.visible = false
+        layer.addChild(holder)
+        crew.set(key, { holder, cap, sig: lookKey(f.look) })
+      }
+    })().catch(() => {
+      // One captain who will not assemble must not take the sea with them.
+    })
+    return () => { dead = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fleetKey, ready])
 
   return <div ref={holder} aria-hidden style={{ position: 'absolute', inset: 0 }} />
 }
