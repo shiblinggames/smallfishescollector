@@ -4644,8 +4644,14 @@ export default function SeaMap({
           the loop only ever TRANSFORMS — see seaTiles for why this stopped
           being a canvas. Oversized by a tile in each direction so a wrapped
           offset never exposes an edge. */}
+      {/* AND NOT AT ALL WHEN THE CANVAS IS DRAWING THE SEA. These sit at the
+          same z-index as the canvas and come after it in the DOM, so all three
+          were painting straight over the shader — three repeating tiles muting
+          the water and supplying the one motion cue that does not work. The
+          canvas answers both: real world-space swell in the shader, and a field
+          of flecks you actually sail past. See seaDrift. */}
       <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: Z.backdrop, overflow: 'hidden', pointerEvents: 'none' }}>
-        {tiles && (
+        {tiles && !GPU_ISLANDS && (
           <>
             <div ref={deepRef} style={{
               position: 'absolute', left: 0, top: 0,

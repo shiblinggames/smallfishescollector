@@ -43,6 +43,7 @@ import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, lookKey, type Captain, type CaptainLook } from './seaCaptain'
+import { makeDrift, type Drift } from './seaDrift'
 import type { Frame } from './skiffArt'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
@@ -183,6 +184,13 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
       // and OUTSIDE it, because the player does not move relative to the
       // screen — the camera follows her. Traders will move in here too, but
       // they belong in the world container with the islands: they DO move.
+      // ── WHAT YOU SAIL PAST ────────────────────────────────────────
+      // In the world, under the land, over the water: flecks of foam at fixed
+      // world positions. See seaDrift for why a field of discrete things reads
+      // as travel where a scrolling texture reads as a scrolling texture.
+      const drift: Drift = makeDrift(PIXI)
+      world.addChild(drift.view)
+
       const boats = new PIXI.Container()
       a.stage.addChild(boats)
       pixiRef.current = PIXI
@@ -321,6 +329,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
         })
         const halfW = a.screen.width / 2 / camZoom
         const halfH = a.screen.height / 2 / camZoom / GROUND
+        drift.advance(camX, camY, halfW, halfH, t, a.ticker.deltaMS / 1000)
         for (const sw of swayers) {
           // Generous margins: a landmark is anchored at its base and stands
           // well above it, so culling on the anchor alone pops the tall ones.
@@ -367,6 +376,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
           // DOM did with `nightGrade(dark, 0.55)`: the boat you are steering
           // stays readable after dark while the world around it does not.
           capRef.current?.cap.setNight(nightTint(d * 0.55, w))
+          drift.night(tint)
         },
         palette(stops) {
           if (!water || stops.length < 3) return
