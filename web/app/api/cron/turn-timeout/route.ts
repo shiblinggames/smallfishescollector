@@ -14,7 +14,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const admin = createAdminClient()
+  // BULK WORK, so it opts out of the ten-second default every page takes.
+  // Kept under this route's own maxDuration of 60 so the deadline still bites
+  // before the platform's does.
+  const admin = createAdminClient({ timeoutMs: 50_000 })
   const now = new Date()
   const nowIso = now.toISOString()
   const cutoffIso = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()

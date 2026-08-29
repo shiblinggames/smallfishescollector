@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { timedFetch } from './timeout'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -7,6 +8,9 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // A DEADLINE ON EVERY CALL. This client runs inside page renders, so a
+      // stuck request here is a page that never finishes. See ./timeout.
+      global: { fetch: timedFetch() },
       cookies: {
         getAll() {
           return cookieStore.getAll()
