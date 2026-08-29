@@ -7176,7 +7176,17 @@ function paintGround(
   g.globalAlpha = alpha
   g.translate(D / 2, D / 2)
   g.rotate((seed % 360) * Math.PI / 180)
-  const cover = D * 1.5
+  // NEAR ITS OWN SIZE, and this is the whole difference between paint and a
+  // tint. It was drawn at D * 1.5, which for the Mainland blew a 768px texture
+  // up to 1812 and then showed the island only the middle third of it: every
+  // brush mark smeared past the point of being a mark, and the result was a
+  // faint tonal wash indistinguishable from the gradient underneath.
+  //
+  // The land is about 0.68 of the box across, so this covers it roughly once at
+  // the texture native resolution. Still generous enough that a rotation cannot
+  // uncover a corner: the island sits inside a circle of radius 0.34 d and this
+  // covers one of 0.39 d whichever way it is turned.
+  const cover = D * 0.78
   g.drawImage(img, -cover / 2, -cover / 2, cover, cover)
   g.restore()
 }
