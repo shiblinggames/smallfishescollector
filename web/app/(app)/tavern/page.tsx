@@ -4,10 +4,7 @@ import Link from 'next/link'
 import { isPremiumActive } from '@/lib/premium'
 import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
-import TriviaHubCard from './TriviaHubCard'
-import ChartRoomHubCard from './ChartRoomHubCard'
 import ContestsHubCard from './ContestsHubCard'
-import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
@@ -16,7 +13,6 @@ import { CHARACTER_COLORS } from '@/lib/characters'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
 import { kingWeekStr } from './trivia/constants'
-import { getCasinoState } from './casino/actions'
 
 // Same streaming pattern as /expeditions: shell + Nav paint as soon as
 // profile arrives, then each card-group section streams in via its own
@@ -26,25 +22,22 @@ import { getCasinoState } from './casino/actions'
 // ── Sections ────────────────────────────────────────────────────────────────
 
 function GamesSection() {
-  // The Den + Tide Run share this row (layout reshuffle 2026-06-18: Tide Run
-  // took the Parlor's old slot; the Parlor moved down to the Charting row).
-  // The Den's daily-cap state streams in (DenCard) so the card paints
-  // immediately and the reset timer pops in once the buy-in total resolves.
+  // TIDE RUN, ALONE, AND ON PURPOSE.
+  //
+  // The Den used to share this row. It is its own building on the Mainland now
+  // and opens straight off the water, so a second door to it here would be the
+  // lobby this page has stopped being.
+  //
+  // Tide Run stayed because it had nowhere else to go. It is not a chip game —
+  // the Den's tables are blackjack, roulette and slots, and its wallet and its
+  // daily cap are all about buy-ins — so filing it under the Den would put a
+  // free arcade run behind a gambling door. This page is its only entrance,
+  // and an orphaned minigame is worse than a slightly wider remit.
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <Suspense fallback={<CasinoHubCard />}>
-        <DenCard />
-      </Suspense>
+    <div className="grid grid-cols-1 gap-3">
       <TideRunCard />
     </div>
   )
-}
-
-// Async: reads today's buy-in total vs the cap so the card can show a reset
-// timer once the player has hit the Den's daily limit.
-async function DenCard() {
-  const state = await getCasinoState()
-  return <CasinoHubCard capped={state.dailyRemaining <= 0} />
 }
 
 // Top-of-page features grid: Login Bonus + Contests (Contests took Tide Run's
@@ -114,27 +107,24 @@ export default async function TavernPage() {
               sell it, which is a fishing concern, and the Tavern is where you
               come to gamble rather than to check the board. */}
 
-          {/* Featured — Daily Bonus + Tide Run as standard compact
-              cards. Daily Bonus took Recruit Crew's slot here on
-              2026-06-11. */}
+          {/* WHAT THE TAVERN IS NOW. The day's tot and whatever race is
+              running: the two things that are about turning up rather than
+              about a room you go into. Everything else that used to be listed
+              here is a building on the island. */}
           <div>
             <FeaturesSection dailyClaimed={dailyClaimed} contestsUnseen={profile?.has_seen_contests !== true} />
           </div>
 
-          {/* Games — the Den + the Parlor, one door each into their
-              multi-game rooms. Header dropped 2026-06-13 (it was the last
-              section label left and the cards read fine unlabeled). */}
+          {/* See GamesSection: Tide Run alone, because this is the only door
+              it has. */}
           <div>
             <GamesSection />
           </div>
 
-          {/* The Chart Room + Contests share a row — both are destination
-              doors. Bottom row = Charting (puzzles) + the Parlor (trivia games)
-              after the 2026-06-18 reshuffle. */}
-          <div className="grid grid-cols-2 gap-3">
-            <ChartRoomHubCard />
-            <TriviaHubCard />
-          </div>
+          {/* The Chart Room and the Parlor were here. Both are their own
+              buildings in the Mainland town now and open off the water like
+              every other door, so listing them again would put them two deep
+              behind a tavern nobody has to walk through. */}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <SupportStudioCard isPremium={isPremiumActive(profile)} />

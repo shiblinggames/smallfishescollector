@@ -9551,7 +9551,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
  */
 const ASHORE: { href: string; art: string; name: string; blurb: string; cta: string; accent: string }[] = [
   { href: '/tavern', art: '/sea/tavern.png', name: 'The Tavern',
-    blurb: 'A drink, and whoever is drinking', cta: 'Enter', accent: '#e0a545' },
+    blurb: 'The day\u2019s tot, and whatever race is running', cta: 'Enter', accent: '#e0a545' },
   { href: '/tavern/casino', art: '/sea/den.png', name: 'The Den',
     blurb: 'Cards, dice and the wheel', cta: 'Play', accent: '#d9534f' },
   { href: '/tavern/chart-room', art: '/sea/charting.png', name: 'The Chart Room',
