@@ -4415,7 +4415,18 @@ export default function SeaMap({
         // the pointing. One flip instead of two, and the bow comes up on both.
         const drive = Math.hypot(vel.current.x, vel.current.y)
         const hullNow = hullRef.current
-        const heel = Math.min(hullNow.heel, (drive / SPEED) * hullNow.heel)
+        // ── AND NEGATIVE, SO THE BOW GOES UP RATHER THAN DOWN ─────────
+        //
+        // The note above is right that the MAGNITUDE is the whole story and
+        // that two sign flips were cancelling. It then settled on a positive
+        // number, which is consistently wrong instead of inconsistently wrong:
+        // a positive CSS rotate turns clockwise, and the sprite's bow points
+        // right, so she drove nose-first into the water on both headings.
+        //
+        // Negative lifts the bow when she is unmirrored, and the mirror flips
+        // the apparent direction along with the bow it is flipping — so the
+        // bow rises on both headings, which is what a boat under power does.
+        const heel = -Math.min(hullNow.heel, (drive / SPEED) * hullNow.heel)
         boat.style.transform =
           `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
         // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is

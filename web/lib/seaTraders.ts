@@ -34,7 +34,7 @@
 // asks for has to pay for itself in something, and this is it.
 
 import { BAITS, getBait } from '@/lib/bait'
-import { BOATS } from '@/lib/boats'
+import { BOATS, AURA_HULL_IDS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { RODS, RUNNER_RODS } from '@/lib/rods'
@@ -957,7 +957,15 @@ export const KIND_LABEL: Record<TraderKind, string> = {
 // The showy ones are held back on purpose. A wandering worm salesman in an
 // Ethereal hull reads as a bug, and the glowing cosmetics are things players
 // worked for — handing them to background characters cheapens both.
-const BOAT_IDS = BOATS.filter(b => !b.glow && !b.crateOnly).map(b => b.id)
+// AND NOT THE ONES THAT GLOW ON THE CANVAS EITHER. `!b.glow` only ever caught
+// Ethereal, because it is the only hull with a CSS glow class of its own — so
+// Golden, Fire, Ice, Jet Black, Abyssal, Celestial and Chromium were all in
+// this pool. That was harmless while a hull was a flat sprite and stopped
+// being harmless the moment hulls got auras: the reasoning above applies to
+// every one of them, and a worm salesman trailing embers is the same bug as a
+// worm salesman in an Ethereal hull.
+const BOAT_IDS = BOATS.filter(b => !b.glow && !b.crateOnly && !AURA_HULL_IDS.has(b.id))
+  .map(b => b.id)
 const HAT_IDS = HATS.filter(h => !h.crateOnly).map(h => h.id)
 const CHAR_COLORS = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
 /** Every hook with art and NO glow, filtered off the real table so a new plain

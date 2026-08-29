@@ -400,6 +400,28 @@ export function getBoat(id: string | null | undefined): BoatDef | null {
  *  brightness/contrast/saturate in `.boat-glow-ash` in globals.css. */
 export const BOAT_ASH_DARKEN = 'brightness(0.58) contrast(1.1) saturate(0.85)'
 
+/**
+ * HULLS THAT CARRY AN AURA ON THE CANVAS.
+ *
+ * Kept here rather than derived, because the thing that needs it is the
+ * BACKGROUND-CHARACTER pools in lib/seaTraders, and a lib file has no business
+ * importing the chart to find out whether a boat glows.
+ *
+ * The CSS fields cannot answer this on their own: Fire, Ice, Jet Black,
+ * Celestial and Chromium have no glow class at all and are still the showiest
+ * hulls in the game — they earned their effects on the canvas, where a filter
+ * was never affordable.
+ *
+ * `hullEffect()` in app/(app)/sea/auraSpecs is the real authority, and it
+ * checks this list against itself at import in development. A hull that gains
+ * an aura and is not added here starts turning up under wandering worm
+ * salesmen, which is the exact thing the pool comment below is about.
+ */
+export const AURA_HULL_IDS: ReadonlySet<string> = new Set([
+  'ethereal', 'charcoal', 'golden',
+  'fire', 'ice', 'jetblack', 'abyssal', 'celestial', 'chromium',
+])
+
 /** Single source of truth for which glow CSS class a boat's overlay image
  *  gets. `glow` → Ethereal's bright shimmer; `glowType: 'ash'` → Charcoal's
  *  subtle dark smoulder. Use this everywhere the boat is rendered. */

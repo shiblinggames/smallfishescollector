@@ -20,6 +20,8 @@
 // designer retunes rows, an engineer changes the engine, and neither should
 // have to read the other's file to do it.
 
+import { BOATS, AURA_HULL_IDS } from '@/lib/boats'
+
 // ── TIMELINES ───────────────────────────────────────────────────────────────
 
 /** One `drop-shadow(0 0 Rpx COLOR)`. `r` is SCREEN pixels, exactly as written
@@ -715,6 +717,20 @@ if (process.env.NODE_ENV !== 'production') {
   ]
   const dupes = names.filter((n, i) => names.indexOf(n) !== i)
   if (dupes.length) throw new Error(`aura: duplicate effect name(s): ${dupes.join(', ')}`)
+
+  // AND THE HULL LIST AGREES WITH ITSELF. lib/boats exports AURA_HULL_IDS so
+  // the background-character pools can keep showy hulls out without a lib file
+  // importing the chart. Two lists is one more than one, so they are checked
+  // against each other here rather than trusted: a hull that gains an aura and
+  // is not added there starts turning up under wandering worm salesmen.
+  const lit = BOATS.filter(b => hullEffect(b)).map(b => b.id).sort()
+  const declared = [...AURA_HULL_IDS].sort()
+  if (lit.join() !== declared.join()) {
+    throw new Error(
+      `aura: AURA_HULL_IDS disagrees with hullEffect(). `
+      + `lit=[${lit.join(',')}] declared=[${declared.join(',')}]`,
+    )
+  }
 }
 
 export function effect(name: EffectName): Effect {
