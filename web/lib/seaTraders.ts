@@ -37,7 +37,7 @@ import { BAITS, getBait } from '@/lib/bait'
 import { BOATS } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { CHARACTER_COLORS } from '@/lib/characters'
-import { RODS, TRADER_ONLY_RODS } from '@/lib/rods'
+import { RODS, RUNNER_RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { seaClock } from '@/lib/seaClock'
 import type { FolkId } from '@/lib/seaFolk'
@@ -747,9 +747,9 @@ function runnerAt(cx: number, cy: number, nightIndex: number): Trader | null {
   if (depth < 0.45) return null
   // Uncommon even there: about one cell in nine.
   if (rnd() > 0.11) return null
-  if (!TRADER_ONLY_RODS.length) return null
+  if (!RUNNER_RODS.length) return null
 
-  const rod = TRADER_ONLY_RODS[Math.floor(rnd() * TRADER_ONLY_RODS.length)]
+  const rod = RUNNER_RODS[Math.floor(rnd() * RUNNER_RODS.length)]
   // They charge a premium over what a shop would have wanted, because no shop
   // wants it and they know exactly how far you sailed.
   const cost = Math.round(rod.cost * (1.15 + rnd() * 0.25) / 1000) * 1000

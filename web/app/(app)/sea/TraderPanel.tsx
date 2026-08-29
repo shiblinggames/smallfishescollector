@@ -18,7 +18,7 @@ import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
 import { strikeDeal, sellToResident, buyRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
 import { folkById, knowsFavourite } from '@/lib/seaFolk'
-import { folkState, talkToFolk, giftToFolk, holdForGifting, type Rapport } from './folkActions'
+import { folkState, talkToFolk, giftToFolk, holdForGifting, buyFolkRod, type Rapport } from './folkActions'
 import FolkScene, { type SceneGain } from './FolkScene'
 
 export default function TraderPanel({
@@ -75,6 +75,25 @@ export default function TraderPanel({
   /** The scene, and the last thing that moved in it. */
   const [scene, setScene] = useState(false)
   const [gain, setGain] = useState<SceneGain | null>(null)
+
+  // ── THE ROD, when this is one of the two who carry one ─────────────
+  // Only ever rendered at full rapport. The server checks the same thing
+  // against the row before it takes a doubloon, so this is a door rather
+  // than a lock.
+  const folkRod = folk?.rodTier ? RODS.find(r => r.tier === folk.rodTier) : null
+  const rodEarned = !!folkRod && rap?.tier === 4
+  const [rodBought, setRodBought] = useState<string | null>(null)
+  const [rodErr, setRodErr] = useState<string | null>(null)
+
+  async function takeFolkRod() {
+    if (busy || !folk) return
+    setBusy(true); setRodErr(null)
+    try {
+      const res = await buyFolkRod(folk.id)
+      if ('error' in res) setRodErr(res.error)
+      else { vibrate([0, 30, 60, 90]); setRodBought(res.rodName) }
+    } finally { setBusy(false) }
+  }
 
   useEffect(() => {
     if (!folk) return
@@ -277,6 +296,63 @@ export default function TraderPanel({
             Stated plainly. The flavour above is allowed its charm; the
             numbers are not, because a player deciding whether to spend
             needs to know exactly what happens. */}
+        {/* ── WHAT A FRIENDSHIP IS FOR ──────────────────────────────────────
+            Two of the regulars carry a rod no shop stocks and will not mention
+            it until you are as far along with them as the friendship goes. It
+            sits ABOVE the conversation button rather than inside the talk,
+            because by the time it appears it is not news any more: you have
+            been told, and this is where you come back to it.
+
+            Nothing hints at it beforehand. A locked row saying "at full
+            rapport" would turn a month of visits into a progress bar with a
+            prize at the end, which is the opposite of the reason to visit. */}
+        {rodEarned && folkRod && folk && (
+          <div style={{
+            marginTop: 14, padding: '0.85rem 0.95rem', borderRadius: 12,
+            background: `${folk.accent}18`,
+            border: `1px solid ${folk.accent}5c`,
+            boxShadow: `0 0 22px ${folk.accent}1f`,
+          }}>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.6rem', letterSpacing: '0.16em', color: folk.accent,
+            }}>{rodBought ? 'Yours' : `${folk.short} will part with it`}</p>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1.15rem', color: '#f6ecd6', marginTop: 3,
+            }}>{folkRod.name}</p>
+
+            {rodBought ? (
+              <p className="font-karla" style={{
+                fontSize: '0.86rem', color: '#cfe0ec', marginTop: 5, lineHeight: 1.5,
+              }}>Stowed. It is in your tackle now.</p>
+            ) : (
+              <>
+                <p className="font-karla" style={{
+                  fontSize: '0.84rem', color: '#b9cbd8', marginTop: 5, lineHeight: 1.5,
+                }}>{folkRod.description}</p>
+                <p className="font-karla font-700" style={{
+                  fontSize: '1.05rem', color: '#f0c040', marginTop: 6,
+                }}>{folkRod.cost.toLocaleString()} ⟡</p>
+                <button onClick={takeFolkRod} disabled={busy}
+                  className="font-cinzel font-700"
+                  style={{
+                    width: '100%', marginTop: 9, padding: '0.7rem', borderRadius: 11,
+                    fontSize: '1rem', color: '#f2ead8',
+                    background: `${folk.accent}2e`,
+                    border: `1px solid ${folk.accent}8a`,
+                    cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+                  }}>
+                  Take the {folkRod.name}
+                </button>
+                {rodErr && (
+                  <p className="font-karla" style={{
+                    fontSize: '0.78rem', color: '#f0a0a0', marginTop: 6, lineHeight: 1.45,
+                  }}>{rodErr}</p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Nothing to show a talker here. The line above is the whole of it,
             and a bordered box repeating "Worth remembering" under it was a
             caption for something that had already been said — plus a pill

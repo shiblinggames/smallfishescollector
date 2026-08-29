@@ -226,6 +226,20 @@ export type Folk = {
    */
   favourite: { id: number; name: string }
   /**
+   * THE LAST THING THEY DO FOR YOU, and only two of them have one.
+   *
+   * At full rapport they offer to sell a rod no shop stocks. It is not a
+   * reward for money and it is not a reward for level: you cannot buy your way
+   * to it and you cannot grind a zone to it, you have to have actually spent
+   * the days. Yoon has always worked this way; Fitch and Nance now do too, so
+   * the two rods that used to turn up on a random runner in the dark belong to
+   * somebody instead.
+   *
+   * Priced from the rod table, never from here, so the panel and the server
+   * cannot disagree about what it costs.
+   */
+  rodTier?: number
+  /**
    * Their reaction. TWO outcomes, because there are two grades of gift: the one
    * fish they want, and everything else.
    *
@@ -418,6 +432,10 @@ export const FOLK: Folk[] = [
     blurb: 'Lives in the dark water. Says very little about anything.',
     // The one that carries its own light down there, which he has a line about.
     favourite: { id: 41, name: 'Anglerfish' },
+    // The Galaxy Rod. He lives in the dark and his fish carries its own light;
+    // the void down there and the one overhead are the same void, and he is the
+    // one person out here who would say so.
+    rodTier: 18,
     lines: [
       [
         "Not many bring me anything this deep. I pay for that, not for the fish.",
@@ -469,6 +487,9 @@ export const FOLK: Folk[] = [
     blurb: 'Keeps the count of who goes down to the oldest water and comes back up.',
     // The fish that should have been extinct, for the one who reveres old water.
     favourite: { id: 50, name: 'Coelacanth' },
+    // The Lightsaber Rod. She keeps the count of who goes down to the oldest
+    // water and comes back up, and a blade of light is what you take down.
+    rodTier: 19,
     lines: [
       [
         "You went down there and came back up. Whatever's in your hold, I'll take it and ask nothing.",

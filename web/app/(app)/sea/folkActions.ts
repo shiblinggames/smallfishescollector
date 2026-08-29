@@ -13,6 +13,7 @@ import {
   FOLK, folkById, tierFor, nextLine, giftWorth, CHAT_POINTS,
   type FolkId, type FolkTier,
 } from '@/lib/seaFolk'
+import { RODS } from '@/lib/rods'
 
 /** UTC date string, the same convention lib/dailyChallenges and lib/bounties
  *  use, so every daily thing in the game turns over together. */
@@ -264,3 +265,86 @@ export async function holdForGifting(): Promise<{ id: number; name: string; qty:
   })).filter(f => f.qty > 0)
 }
 
+
+/**
+ * ── THE LAST THING A FRIEND DOES FOR YOU ────────────────────────────────────
+ *
+ * Two of the regulars carry a rod no shop stocks, and they only offer it once
+ * you are as far along with them as the friendship goes. Yoon has always been
+ * that shape; this is the same shape written down properly, so Fitch and Nance
+ * work the way he does rather than approximately like him.
+ *
+ * THE GATE IS THE ROW, NOT THE KEY. A runner's rod is guarded by a trader key
+ * that carries the night it belongs to, because a runner is a place you sailed
+ * to. This is not a place, it is a relationship, and the only honest record of
+ * one is `sea_rapport`. So the client sends a folk id and nothing else, and
+ * every term of the deal - whether they will sell to you at all, which rod, and
+ * what it costs - is read here.
+ *
+ * OUTSIDE THE DAILY DEAL CAP, for the reason Yoon is: the cap bounds a rotation
+ * of wanderers, and a cap on a once-ever purchase only makes somebody burn a
+ * day's trading to find out they were one deal short of a rod they spent a
+ * month earning.
+ */
+export async function buyFolkRod(folkId: FolkId): Promise<
+  { ok: true; rodTier: number; rodName: string; spent: number; doubloons: number }
+  | { error: string }
+> {
+  const user = await me()
+  if (!user) return { error: 'Unauthorized' }
+
+  const folk = folkById(folkId)
+  if (!folk?.rodTier) return { error: 'They have nothing like that to sell.' }
+  const rod = RODS.find(r => r.tier === folk.rodTier)
+  if (!rod) return { error: 'The deal fell through.' }
+
+  const admin = createAdminClient()
+
+  // Are you actually that far along with them? Read, never taken on trust.
+  const { data: standing } = await admin.from('sea_rapport')
+    .select('points').eq('user_id', user.id).eq('folk_id', folk.id).maybeSingle()
+  if (tierFor(standing?.points ?? 0) < 4) {
+    return { error: `${folk.short} is not going to part with that for you yet.` }
+  }
+
+  // Say so BEFORE taking the money. You cannot own a rod twice.
+  const { data: had } = await admin.from('rod_inventory')
+    .select('rod_tier').eq('user_id', user.id).eq('rod_tier', folk.rodTier).maybeSingle()
+  if (had) return { error: `You already carry the ${rod.name}.` }
+
+  // ── CLAIM THE ROD, THEN CHARGE FOR IT. That order is deliberate.
+  //
+  // `rod_inventory` is keyed on (user_id, rod_tier), so this insert IS the
+  // lock: two taps that both got past the check above cannot both get through
+  // here, the loser comes back 23505, and nobody has been charged twice.
+  //
+  // Doing it the other way round - deduct, then insert - looks more natural and
+  // is worse, because there is no `add_doubloons` to undo a deduct with. A
+  // duplicate insert would leave a captain 300,000 lighter with nothing to show
+  // for it and no way back. This way the only bad window is a crash between the
+  // two lines, and it hands out a rod rather than eating a fortune.
+  const { error: grantErr } = await admin.from('rod_inventory')
+    .insert({ user_id: user.id, rod_tier: folk.rodTier })
+  if (grantErr) return { error: `You already carry the ${rod.name}.` }
+
+  // The RESULT is the guard, not the error: deduct_doubloons checks the balance
+  // inside its own WHERE and returns NULL rather than raising.
+  const { data: newBalance, error: spendErr } = await admin.rpc('deduct_doubloons', {
+    uid: user.id, amount: rod.cost,
+  })
+  if (spendErr || newBalance == null) {
+    await admin.from('rod_inventory')
+      .delete().eq('user_id', user.id).eq('rod_tier', folk.rodTier)
+    return { error: `They want ${rod.cost.toLocaleString()} and you have not got it.` }
+  }
+
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -rod.cost,
+    reason: `Bought the ${rod.name} from ${folk.short} at sea`,
+  })
+
+  return {
+    ok: true, rodTier: folk.rodTier, rodName: rod.name,
+    spent: rod.cost, doubloons: Number(newBalance),
+  }
+}

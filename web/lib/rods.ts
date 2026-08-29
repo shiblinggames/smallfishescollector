@@ -57,6 +57,10 @@ export interface RodDef {
   // profiles.current_perfect_streak, cheat-proof; the client reads the same pure
   // helper for the glow/HUD. One miss resets the streak → the rod drops to base.
   lockedIn?: boolean
+  // Sold by one of the sea's regulars at full rapport rather than by a
+  // wandering runner. Keeps them out of RUNNER_RODS; who sells which is
+  // written on the person, in lib/seaFolk.ts.
+  soldByFolk?: boolean
   // 3-pose sprite slug. Loads /{slug}_rest.png / _wait.png / _cast.png.
   // Every rod's source sheet is sliced into raw quadrants by web/slice-rod.mjs
   // so a single CHAR_ROD_OVERLAY position applies to all of them.
@@ -222,7 +226,7 @@ export const RODS: RodDef[] = [
     description: 'Spun from cosmic thread. After any catch, open a wormhole and reroll it into a different fish from the same waters — fortune or folly, you take what surfaces.',
     color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 2660, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    wormhole: true,
+    wormhole: true, soldByFolk: true,
     slug: 'rod_galaxy', glow: true, glowType: 'galaxy',
   },
   {
@@ -230,7 +234,7 @@ export const RODS: RodDef[] = [
     description: 'A blade of pure energy. Fish are drawn to the light — most casts bite almost the instant your line touches the water.',
     color: '#ff3b47', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
-    instantBiteChance: 0.35,
+    instantBiteChance: 0.35, soldByFolk: true,
     slug: 'rod_lightsaber', glow: true, glowType: 'saber',
   },
   {
@@ -339,7 +343,17 @@ export const BUYABLE_ROD_TIERS: number[] = RODS.filter(r => !r.earnedOnly && !r.
  */
 export const ROD_SELL_RATE = 0.65
 
-export const TRADER_ONLY_RODS = RODS.filter(r => r.traderOnly)
+/**
+ * WHAT A BLOCKADE RUNNER MIGHT BE CARRYING.
+ *
+ * `traderOnly` only means "not on a shop shelf", and three rods carry it. Two
+ * of those three are now the last thing two of the regulars will do for you
+ * once you have maxed your rapport with them, the way Yoon's rod always was —
+ * so they cannot also turn up on a stranger in the dark, or the friendship is
+ * just the slow way to buy something. The runner keeps the YOLO Rod, which
+ * belongs to nobody.
+ */
+export const RUNNER_RODS = RODS.filter(r => r.traderOnly && !r.soldByFolk)
 
 // ── Completionist Rod forge ───────────────────────────────────────────────────
 // The Completionist (the 100%-completion reward) is a plain master-tool base;
