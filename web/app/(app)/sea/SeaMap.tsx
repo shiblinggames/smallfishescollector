@@ -89,7 +89,7 @@ import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
 import { GROUND, ISLAND_LIFT, bakeIsland, bakeSurf, requestGround } from './islandArt'
-import SeaIslandsGPU, { type GpuHandle, type GpuIsland } from './SeaIslandsGPU'
+import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
 
 /**
  * ── THE ISLANDS ON THE GPU, BEHIND A FLAG ───────────────────────────────────
@@ -1747,6 +1747,11 @@ export default function SeaMap({
     for (const i of ISLES) out.push({ id: i.id, r: i.r, x: i.x, y: i.y, locked: false })
     return out
   }, [])
+  /** Every wreck, rig, buoy, bone pile and moored smack, in chart order —
+   *  the index is what gives each its own sway phase. */
+  const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
+    ? LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i }))
+    : [], [])
 
   /**
    * GO ASHORE AT AN ISLE.
@@ -4550,7 +4555,7 @@ export default function SeaMap({
         <div aria-hidden style={{
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
-          <SeaIslandsGPU islands={gpuIslands} handle={gpuRef} />
+          <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} handle={gpuRef} />
         </div>
       )}
 
@@ -6846,6 +6851,11 @@ const CREW_ART_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object
 const crewArt = (f: string) => (f ? CREW_ART_BASE + f : '')
 
 const LandmarkField = memo(function LandmarkField() {
+  // Under ?gpu=1 these are drawn on the canvas instead — two sprites sharing a
+  // texture baked once per painting, and culled to the viewport. See
+  // SeaIslandsGPU. The DOCK marks below are not part of this: they belong to
+  // the berth UI rather than to the scenery pass.
+  if (GPU_ISLANDS) return null
   return <>{LANDMARKS.map((m, i) => <SeaMark key={i} m={m} i={i} />)}</>
 })
 

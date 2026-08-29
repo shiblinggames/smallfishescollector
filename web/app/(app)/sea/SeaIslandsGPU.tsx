@@ -37,23 +37,34 @@
 
 import { useEffect, useRef } from 'react'
 import { GROUND, bakeIsland, requestGround } from './islandArt'
+import { bakeMark } from './markArt'
+import { SUBMERGE } from './submerge'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
+export type GpuMark = {
+  art: string; x: number; y: number; size: number
+  sway?: 'bob' | 'rock'
+  /** Its index on the chart, which is all the sway phase is derived from — so
+   *  two identical wrecks side by side are never in step. */
+  i: number
+}
 
 export type GpuHandle = {
   /** Called by the frame loop, right after it writes the DOM world transform. */
   camera(x: number, y: number, zoom: number): void
 }
 
-export default function SeaIslandsGPU({ islands, handle }: {
+export default function SeaIslandsGPU({ islands, marks, handle }: {
   islands: GpuIsland[]
+  marks: GpuMark[]
   /** Filled in on mount so the loop can steer this without a re-render. */
   handle: { current: GpuHandle | null }
 }) {
   const holder = useRef<HTMLDivElement | null>(null)
-  // Read once. The list is derived from static chart data, so re-baking on a
+  // Read once. Both lists are derived from static chart data, so re-baking on a
   // parent render would be pure waste.
   const listRef = useRef(islands)
+  const marksRef = useRef(marks)
 
   useEffect(() => {
     let dead = false
@@ -114,8 +125,109 @@ export default function SeaIslandsGPU({ islands, handle }: {
         }
       })
 
+      // ── THE LANDMARKS ─────────────────────────────────────────────
+      //
+      // Wrecks, rigs, buoys, bones and the moored smacks. In the DOM these are
+      // TWO masked <img> each and all 42 stay mounted whatever is on screen;
+      // here they are two sprites sharing a texture baked once per painting,
+      // and the ones off screen are simply not drawn.
+      //
+      // Two sprites and not a shader, deliberately: the waterline was placed by
+      // eye on /sea/waterline and this reproduces the same two layers with the
+      // same stops rather than approximating them. See markArt.
+      type Swayer = {
+        node: import('pixi.js').Container
+        holder: import('pixi.js').Container
+        sway: 'bob' | 'rock' | undefined
+        phase: number
+        x: number
+        y: number
+        half: number
+      }
+      const swayers: Swayer[] = []
+
+      for (const m of marksRef.current) {
+        const sub = SUBMERGE[m.art.split('/').pop()!.replace('.png', '')]
+        bakeMark(m.art, sub).then(({ wet, dry }) => {
+          if (dead) return
+
+          // Anchored bottom-centre and stood up out of the plane, which is the
+          // outer wrapper SeaMark uses; the inner one is free to sway without
+          // clobbering it.
+          const node = new PIXI.Container()
+          node.x = m.x
+          node.y = m.y
+
+          const inner = new PIXI.Container()
+          node.addChild(inner)
+
+          const add = (cv: HTMLCanvasElement) => {
+            const sp = new PIXI.Sprite(PIXI.Texture.from(cv))
+            const k = m.size / cv.width
+            sp.scale.set(k, k)
+            sp.anchor.set(0.5, 1)
+            inner.addChild(sp)
+            return sp
+          }
+          add(wet)
+          if (dry) add(dry)
+
+          // The counter-squash, about the base, so it stands rather than lies.
+          node.scale.set(1, 1 / GROUND)
+
+          // Sway pivots at 50%/92% of the sprite, as the CSS does. The sprites
+          // are anchored at their base, so that is a little way ABOVE zero.
+          const h = (dry ?? wet).height * (m.size / (dry ?? wet).width)
+          inner.pivot.set(0, -h * 0.08)
+          inner.position.set(0, -h * 0.08)
+
+          world.addChild(node)
+          swayers.push({
+            node, holder: inner, sway: m.sway,
+            phase: (m.i * 0.77) % 3,
+            x: m.x, y: m.y, half: m.size,
+          })
+        }).catch(() => {
+          // One painting that will not decode must not cost the other forty.
+        })
+      }
+
+      // ── SWAY AND CULL, once a frame ───────────────────────────────
+      //
+      // The DOM ran these as CSS animations on 84 promoted elements. Here it is
+      // arithmetic on whatever is actually visible, and the cull is the thing
+      // this stage exists for: a landmark off screen costs nothing at all,
+      // where a mounted <img> costs a compositing layer whether you can see it
+      // or not.
+      let camX = 0, camY = 0, camZoom = 1
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+      a.ticker.add(() => {
+        const t = performance.now() / 1000
+        const halfW = a.screen.width / 2 / camZoom
+        const halfH = a.screen.height / 2 / camZoom / GROUND
+        for (const sw of swayers) {
+          // Generous margins: a landmark is anchored at its base and stands
+          // well above it, so culling on the anchor alone pops the tall ones.
+          const on = Math.abs(sw.x - camX) < halfW + sw.half * 2
+            && Math.abs(sw.y - camY) < halfH + sw.half * 3
+          sw.node.visible = on
+          if (!on || !sw.sway || reduce) continue
+          if (sw.sway === 'bob') {
+            // markBob: 3.6s, translateY 0 to -5, rotate -3.2 to 3.2.
+            const u = Math.sin(((t + sw.phase) / 3.6) * Math.PI * 2)
+            sw.holder.rotation = (3.2 * Math.PI / 180) * u
+            sw.holder.y = -sw.half * 0.08 - 2.5 * (u + 1)
+          } else {
+            // A wreck is thousands of tons of waterlogged timber: slower, less.
+            const u = Math.sin(((t + sw.phase) / 9) * Math.PI * 2)
+            sw.holder.rotation = (1.1 * Math.PI / 180) * u
+          }
+        }
+      })
+
       handle.current = {
         camera(x, y, zoom) {
+          camX = x; camY = y; camZoom = zoom
           world.scale.set(zoom, zoom * GROUND)
           world.position.set(
             a.screen.width / 2 - zoom * x,
