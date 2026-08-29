@@ -44,6 +44,7 @@ import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
 import { makeCaptain, lookKey, type Captain, type CaptainLook } from './seaCaptain'
 import { makeDrift, type Drift } from './seaDrift'
+import { makeWake, type Wake, type WakeKind } from './seaWake'
 import type { Frame } from './skiffArt'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
@@ -79,6 +80,16 @@ export type GpuHandle = {
    * `bob`, `heel` and `facing` are screen-space only, exactly as the DOM writes
    * them. Null while she is not being drawn here at all.
    */
+  /**
+   * Where the hull is parting the water, in WORLD coordinates, and how hard.
+   *
+   * The wake is the one part of the player that is NOT screen-space: each mark
+   * has to stay where the hull left it, or it is a tail rather than a wake.
+   * Null when she is not moving enough to leave one.
+   */
+  wake(s: {
+    x: number; y: number; ang: number; force: number; scale: number; kind: WakeKind
+  } | null): void
   skipper(s: {
     bob: number
     heel: number
@@ -190,6 +201,13 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
       // as travel where a scrolling texture reads as a scrolling texture.
       const drift: Drift = makeDrift(PIXI)
       world.addChild(drift.view)
+
+      // ── AND WHAT SHE LEAVES BEHIND ────────────────────────────────
+      // In the world for the same reason the flecks are: a wake that travels
+      // with the boat is a tail. Over the drift and under the land, so a mark
+      // laid near a shore runs up under the sand rather than over it.
+      const wake: Wake = makeWake(PIXI)
+      world.addChild(wake.view)
 
       const boats = new PIXI.Container()
       a.stage.addChild(boats)
@@ -330,6 +348,7 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
         const halfW = a.screen.width / 2 / camZoom
         const halfH = a.screen.height / 2 / camZoom / GROUND
         drift.advance(camX, camY, halfW, halfH, t, a.ticker.deltaMS / 1000)
+        wake.advance(a.ticker.deltaMS / 1000)
         for (const sw of swayers) {
           // Generous margins: a landmark is anchored at its base and stands
           // well above it, so culling on the anchor alone pops the tall ones.
@@ -377,11 +396,17 @@ export default function SeaIslandsGPU({ islands, marks, captain, handle }: {
           // stays readable after dark while the world around it does not.
           capRef.current?.cap.setNight(nightTint(d * 0.55, w))
           drift.night(tint)
+          wake.night(tint)
         },
         palette(stops) {
           if (!water || stops.length < 3) return
           const f = (c: number[]) => new Float32Array([c[0] / 255, c[1] / 255, c[2] / 255])
           water.set({ uDeep: f(stops[0]), uMid: f(stops[1]), uShallow: f(stops[2]) })
+        },
+        wake(w) {
+          if (!w) { wake.lay(null); return }
+          wake.setKind(w.kind)
+          wake.lay(w)
         },
         skipper(sk) {
           const c = capRef.current

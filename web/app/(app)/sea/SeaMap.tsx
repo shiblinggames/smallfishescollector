@@ -92,6 +92,7 @@ import { coastClip, coastline } from '@/lib/islandShape'
 import { GROUND, ISLAND_LIFT, bakeIsland, requestGround } from './islandArt'
 import SeaIslandsGPU, { type GpuHandle, type GpuIsland, type GpuMark } from './SeaIslandsGPU'
 import { type CaptainLook } from './seaCaptain'
+import { type WakeKind } from './seaWake'
 
 /**
  * ── THE ISLANDS ON THE GPU, BEHIND A FLAG ───────────────────────────────────
@@ -1234,6 +1235,15 @@ export default function SeaMap({
     const w = BOATS.find(b => b.id === boatId)?.wake
     return w ? `sea-wake sea-wake--${w}` : 'sea-wake'
   }, [boatId, onShip])
+  /** THE SAME DECISION, for the canvas. Same reasoning as the class above and
+   *  deliberately derived from the same two facts, so the two renderers cannot
+   *  disagree about which wake a hull leaves. */
+  const wakeKind = useMemo<WakeKind>(() => {
+    if (shipRef.current) return 'plain'
+    return (BOATS.find(b => b.id === boatId)?.wake as WakeKind | undefined) ?? 'plain'
+  }, [boatId, onShip])
+  const wakeKindRef = useRef(wakeKind)
+  wakeKindRef.current = wakeKind
   // Each mark remembers the hull that made it. Reading the CURRENT hull when
   // drawing would resize every mark still on the water the instant you change
   // ships, so a Sloop's wake would swell into a Man-o-War's behind you.
@@ -3948,6 +3958,31 @@ export default function SeaMap({
       // mark in the pool. Marks live in world coordinates inside the world
       // layer, so they stay put on the sea while the boat leaves them behind.
       const speed = Math.hypot(vel.current.x, vel.current.y)
+
+      // ── THE CUTWATER, FOR THE CANVAS ──────────────────────────────
+      //
+      // EVERY FRAME, and not inside the throttle below. The DOM pool has a
+      // fixed 44 marks and so has to ration them; the canvas lays its own on
+      // its own cadence and only needs to be told where the bow is and how hard
+      // she is driving — including, crucially, when she has stopped, which a
+      // call that only fires while she is moving can never say.
+      //
+      // The geometry is the throttle's, deliberately: the bow offset is a
+      // SPRITE offset carried through the mirror by `facing`, so the foam comes
+      // off whichever stem the art actually draws, and the drop is divided by
+      // GROUND because it is a screen measurement inside a squashed layer.
+      if (gpuRef.current) {
+        const h = hullRef.current
+        gpuRef.current.wake(speed > 26 ? {
+          x: pos.current.x + facing.current * h.bowX + WATERLINE_X,
+          y: pos.current.y + h.bowDown / GROUND,
+          ang: Math.atan2(vel.current.y, vel.current.x) + h.bowTilt * facing.current,
+          force: Math.min(1, speed / (SPEED * 0.9)),
+          scale: h.scale,
+          kind: wakeKindRef.current,
+        } : null)
+      }
+
       // A PAIR AT A TIME, port and starboard. The gate is lower than it was
       // (55 left a boat under way at a crawl leaving nothing at all) and the
       // force it was laid at is remembered rather than the mark simply
@@ -4795,8 +4830,11 @@ hullRef={hullRefFor(t.key)} />
         )}
 
         {/* The wake, in the world layer so each mark stays on the water where
-            the hull left it. Every one of these is positioned by the loop. */}
-        {Array.from({ length: WAKE_MARKS }, (_, i) => (
+            the hull left it. Every one of these is positioned by the loop —
+            and none of them are mounted when the canvas is laying it instead,
+            which it does three times as often and with turbulence the fixed
+            44-mark pool could never afford. */}
+        {!GPU_ISLANDS && Array.from({ length: WAKE_MARKS }, (_, i) => (
           <div key={i} aria-hidden className={wakeClass}
             ref={el => { wakeRefs.current[i] = el }} />
         ))}
