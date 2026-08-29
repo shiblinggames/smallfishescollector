@@ -24,6 +24,11 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
 import { makeSkiff, SKIFF_W, type Placement } from '../skiffArt'
+import { makeRodFx, type GlowType } from '../rodFx'
+
+/** Every effect the engine knows, in the order the rods unlock them. */
+const GLOWS: GlowType[] = ['fire', 'sparkle', 'electric', 'moon', 'tech',
+  'galaxy', 'saber', 'forge', 'prismatic', 'lockedin']
 
 /** The rod and hook placements the chart uses for a resting captain. Copied
  *  deliberately: SeaMap owns them, and importing a component to read a constant
@@ -38,7 +43,15 @@ export default function SkiffBench() {
   const [boatId, setBoatId] = useState(BOATS[0]?.id ?? '')
   const [hatId, setHatId] = useState(HATS[0]?.id ?? '')
   const [overlay, setOverlay] = useState(false)
+  const [glow, setGlow] = useState<GlowType | 'none'>('lockedin')
+  const [stage, setStage] = useState(3)
   const [err, setErr] = useState<string | null>(null)
+
+  // The stage is read inside the ticker, which is set up once. Without the ref
+  // the ticker closes over the stage it was born with and the slider does
+  // nothing — the stale-closure trap this codebase has hit before.
+  const stageRef = useRef(stage)
+  stageRef.current = stage
 
   const boat = BOATS.find(b => b.id === boatId) ?? null
   const hat = HATS.find(h => h.id === hatId) ?? null
@@ -79,12 +92,18 @@ export default function SkiffBench() {
         skiff.view.y += 60
         a.stage.addChild(skiff.view)
 
-        if (skiff.rodTip) {
-          const dot = new PIXI.Graphics()
-          dot.circle(0, 0, 4).fill(0xff3b47)
-          dot.x = skiff.view.x + skiff.rodTip.x
-          dot.y = skiff.view.y + skiff.rodTip.y
-          a.stage.addChild(dot)
+        // THE EFFECT, AT THE ROD. A child of the skiff rather than of the
+        // stage, so it travels with the boat for free — a captain who sails
+        // away from their own sparks is worse than no sparks.
+        if (skiff.rodTip && glow !== 'none') {
+          const fx = makeRodFx(PIXI, glow, { stage: stageRef.current })
+          fx.view.x = skiff.rodTip.x
+          fx.view.y = skiff.rodTip.y
+          skiff.view.addChild(fx.view)
+          a.ticker.add(t => {
+            fx.setStage(stageRef.current)
+            fx.update(t.deltaMS / 1000)
+          })
         }
       } catch (e) {
         setErr(e instanceof Error ? `${e.name}: ${e.message}` : String(e))
@@ -96,7 +115,7 @@ export default function SkiffBench() {
       app?.destroy(true, { children: true })
       app = null
     }
-  }, [colour, boatId, hatId, rod, hook, char.rest, boat, hat])
+  }, [colour, boatId, hatId, rod, hook, char.rest, boat, hat, glow])
 
   const domSkiff = (
     <div style={{ position: 'relative', width: SKIFF_W, transform: 'translate(-8%, -26%)' }}>
@@ -125,8 +144,16 @@ export default function SkiffBench() {
         }} />
       )}
       {rod && (
+        // The DOM rod wears the OLD css aura, so the two panes are before and
+        // after rather than with-sparks and without. Locked-In has a class per
+        // stage; the others have one.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/${rod}_rest.png`} alt="" draggable={false} style={{
+        <img src={`/${rod}_rest.png`} alt="" draggable={false}
+          className={glow === 'none' ? undefined
+            : glow === 'lockedin'
+              ? (stage === 0 ? 'rod-glow-lockedin' : `rod-glow-lockedin-${stage}`)
+              : `rod-glow-${glow}`}
+          style={{
           position: 'absolute', top: `${ROD_REST.top}%`, left: `${ROD_REST.left}%`,
           width: `${ROD_REST.width}%`, maxWidth: 'none',
           transform: `rotate(${ROD_REST.rotate}deg)`, transformOrigin: 'bottom right',
@@ -183,12 +210,32 @@ export default function SkiffBench() {
           <input type="checkbox" checked={overlay} onChange={e => setOverlay(e.target.checked)} />
           &nbsp;overlay at 50%
         </label>
+        <label>effect&nbsp;
+          <select value={glow} onChange={e => setGlow(e.target.value as GlowType | 'none')}>
+            <option value="none">none</option>
+            {GLOWS.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </label>
+        {glow === 'lockedin' && (
+          <label style={{ color: '#f0c040' }}>
+            streak stage {stage}&nbsp;
+            <input type="range" min={0} max={3} step={1} value={stage}
+              onChange={e => setStage(Number(e.target.value))} />
+          </label>
+        )}
       </div>
       <p style={{ color: 'rgba(207,224,236,0.55)', marginTop: 10, maxWidth: 620, lineHeight: 1.6 }}>
-        The red dot is where an emitter would hang: the rod&rsquo;s far end, taken
-        from the placed sprite rather than a guessed offset. Overlay mode is the
-        one that finds a two-pixel drift; side by side, two nearly-right skiffs
-        look the same.
+        Left is the CSS aura the rods wear today; right is the same rod on the
+        canvas. Overlay mode is for the composition rather than the effect: side
+        by side, two nearly-right skiffs look the same, and stacked, a two-pixel
+        drift in a hat is obvious. The emitter hangs off the rod&rsquo;s far end,
+        taken from the placed sprite rather than a guessed offset, so a longer
+        rod throws further with no number to edit.
+      </p>
+      <p style={{ color: 'rgba(207,224,236,0.55)', marginTop: 8, maxWidth: 620, lineHeight: 1.6 }}>
+        The Locked-In slider is the streak: 0 is dormant and meant to
+        disappoint, 3 is ten perfect catches in a row and meant to be slightly
+        too much.
       </p>
     </div>
   )
