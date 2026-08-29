@@ -325,6 +325,58 @@ const SHORE = 0.72
  *  direction and no further. */
 const TAP_HOP = 460
 
+/**
+ * WHERE LETTING GO COASTS TO.
+ *
+ * Releasing the helm must not stop the hull dead - that reads as hitting
+ * something - so a release aims a short way further on and the boat eases off.
+ * The question is: further on in WHICH direction.
+ *
+ * It used to be the direction the boat was already MOVING, and that is wrong
+ * for the one case anybody notices. On a light tap the hull has not turned yet:
+ * the heading takes time to come around, so a sixteenth of a second after you
+ * press left, the velocity is still pointing wherever you were going before.
+ * Releasing then re-aimed the run-out along the OLD heading and quietly threw
+ * the tap away, which is why a quick nudge sometimes sailed the boat back the
+ * way it came, or the way it went last time. The longer you held a direction
+ * the more it worked, which is exactly the shape of a bug that reads as "the
+ * steering feels off" rather than as a fault.
+ *
+ * So it coasts along what you last ASKED for, and falls back to velocity only
+ * when nothing was asked - a blur mid-glide, say. After a long hold the two
+ * agree anyway, so this only changes the case that was broken.
+ */
+/**
+ * The bearing a set of held keys means, in world units. W+D is a true diagonal
+ * and the y is divided by GROUND because a key means "down the SCREEN" and the
+ * plane is squashed. Shared by the key press and the frame loop so the bearing
+ * recorded at the instant of the press and the one steered by cannot differ.
+ */
+function keysToDir(k: Set<string>): Vec | null {
+  const kx = (k.has('d') ? 1 : 0) - (k.has('a') ? 1 : 0)
+  const ky = (k.has('s') ? 1 : 0) - (k.has('w') ? 1 : 0)
+  if (kx === 0 && ky === 0) return null
+  const m = Math.hypot(kx, ky)
+  return { x: kx / m, y: ky / m / GROUND }
+}
+
+function runOutTarget(pos: Vec, vel: Vec, cmd: Vec | null, scale: number): Vec {
+  let dx = 0
+  let dy = 0
+  if (cmd) {
+    const m = Math.hypot(cmd.x, cmd.y)
+    if (m > 1e-4) { dx = cmd.x / m; dy = cmd.y / m }
+  }
+  if (dx === 0 && dy === 0) {
+    const sp = Math.hypot(vel.x, vel.y)
+    // Below this the hull is drifting, not running, and a "run-out" would be
+    // the boat setting off rather than settling.
+    if (sp > 1) { dx = vel.x / sp; dy = vel.y / sp }
+  }
+  if (dx === 0 && dy === 0) return { ...pos }
+  return { x: pos.x + dx * TAP_HOP * scale, y: pos.y + dy * TAP_HOP * scale }
+}
+
 /** Held bearings are thrown far enough to be a direction rather than a place.
  *  Re-set every frame while the thumb is down, so the distance only has to be
  *  further than the boat can travel in one frame. */
@@ -1236,6 +1288,15 @@ export default function SeaMap({
   const boxRef = useRef<HTMLDivElement | null>(null)
   /** The live touch inside the box, in client coordinates. */
   const boxHeld = useRef<Vec | null>(null)
+  /**
+   * THE LAST BEARING THE PLAYER ACTUALLY ASKED FOR, in world units, written by
+   * whichever input is steering and cleared the moment the gesture ends.
+   *
+   * It exists because velocity is a slow and dishonest answer to "which way is
+   * this boat being steered" - see runOutTarget. Cleared on release so a later
+   * blur or stray event cannot coast along a command from minutes ago.
+   */
+  const cmdDir = useRef<Vec | null>(null)
   const knobRef = useRef<HTMLDivElement | null>(null)
 
   /**
@@ -1413,6 +1474,13 @@ export default function SeaMap({
       // chart. Letters do nothing by default and lose nothing here.
       e.preventDefault()
       keysRef.current.add(d)
+      // RECORDED AT THE PRESS, not at the next frame. A tap shorter than one
+      // frame is added and removed between two steps of the loop, so the loop
+      // never sees it - and the release would then coast along the old
+      // velocity, which is the very thing that made a quick nudge sail the
+      // wrong way. Sixty times a second is not fast enough to catch a person
+      // being brisk with the arrow keys.
+      cmdDir.current = keysToDir(keysRef.current)
     }
     /**
      * LETTING GO HAS TO LET GO. The physics reads held keys every frame and
@@ -1423,11 +1491,8 @@ export default function SeaMap({
      * a short run-out; a key-up is the same event with a different name.
      */
     const runOut = () => {
-      const v = vel.current
-      const sp = Math.hypot(v.x, v.y)
-      target.current = sp > 1
-        ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.5, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.5 }
-        : { ...pos.current }
+      target.current = runOutTarget(pos.current, vel.current, cmdDir.current, 0.5)
+      cmdDir.current = null
     }
     const up = (e: KeyboardEvent) => {
       // Let go before the hold matured: a tap. The nearest thing, and if
@@ -1446,9 +1511,22 @@ export default function SeaMap({
       keysRef.current.delete(d)
       if (keysRef.current.size === 0) runOut()
     }
-    // A tab-away with a key held would leave the boat sailing forever: keyup
-    // fires at the OS focus, not at this window.
-    const clear = () => { keysRef.current.clear(); runOut(); keyCancel() }
+    /**
+     * A tab-away with a key held would leave the boat sailing forever: keyup
+     * fires at the OS focus, not at this window. So a held key is released.
+     *
+     * BUT ONLY IF ONE WAS HELD. This used to run out unconditionally, and a
+     * run-out is a small push: clicking on another window while the hull still
+     * had way on it handed the boat a fresh half-hop and it set off by itself.
+     * Nobody had touched the helm. Losing focus is not a course change, and
+     * with no key down there is nothing here to let go of.
+     */
+    const clear = () => {
+      const steering = keysRef.current.size > 0
+      keysRef.current.clear()
+      if (steering) runOut()
+      keyCancel()
+    }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     window.addEventListener('blur', clear)
@@ -3247,11 +3325,8 @@ export default function SeaMap({
       // would stop the hull dead the instant your thumb left the glass, which
       // reads as the boat hitting something. A short run-on along the bearing
       // lets it ease off the way a hull actually does.
-      const v = vel.current
-      const sp = Math.hypot(v.x, v.y)
-      target.current = sp > 1
-        ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.55, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.55 }
-        : { ...pos.current }
+      target.current = runOutTarget(pos.current, vel.current, cmdDir.current, 0.55)
+      cmdDir.current = null
       // The browser fires a click after the gesture; it must not also be read
       // as a tap and re-aim what you have just finished steering.
       swallowTap.current = true
@@ -3302,6 +3377,7 @@ export default function SeaMap({
       if (boxHeld.current) {
         const v = boxVec(boxHeld.current)
         if (v) {
+          cmdDir.current = { x: v.x, y: v.y / GROUND }
           target.current = {
             x: pos.current.x + v.x * THROW,
             y: pos.current.y + (v.y / GROUND) * THROW,
@@ -3315,14 +3391,12 @@ export default function SeaMap({
       // the key means "down the SCREEN", and the plane is squashed, so a screen
       // direction costs more world-y than world-x.
       if (keysRef.current.size > 0) {
-        const k = keysRef.current
-        let kx = (k.has('d') ? 1 : 0) - (k.has('a') ? 1 : 0)
-        let ky = (k.has('s') ? 1 : 0) - (k.has('w') ? 1 : 0)
-        if (kx !== 0 || ky !== 0) {
-          const m = Math.hypot(kx, ky)
+        const kd = keysToDir(keysRef.current)
+        if (kd) {
+          cmdDir.current = kd
           target.current = {
-            x: pos.current.x + (kx / m) * THROW,
-            y: pos.current.y + (ky / m / GROUND) * THROW,
+            x: pos.current.x + kd.x * THROW,
+            y: pos.current.y + kd.y * THROW,
           }
         }
       }
@@ -3333,7 +3407,11 @@ export default function SeaMap({
       // is pointing.
       if (holding.current && holdAt.current && toWorldRef.current) {
         const w = toWorldRef.current(holdAt.current.x, holdAt.current.y)
-        if (w) target.current = headingFrom(pos.current, w)
+        if (w) {
+          const t = headingFrom(pos.current, w)
+          cmdDir.current = { x: t.x - pos.current.x, y: t.y - pos.current.y }
+          target.current = t
+        }
       }
 
       // ── THE PUSH-IN EASES ─────────────────────────────────────────
@@ -4633,6 +4711,10 @@ hullRef={hullRefFor(t.key)} />
             if (!helmSteering.current) return
             boxHeld.current = { x: e.clientX, y: e.clientY }
             const v = boxVec(boxHeld.current)
+            // At the MOVE, not at the next frame — a flick of the thumb can
+            // begin and end between two steps of the loop. Same reason as the
+            // key press above.
+            if (v) cmdDir.current = { x: v.x, y: v.y / GROUND }
             if (knobRef.current) {
               knobRef.current.style.transform = v
                 ? `translate3d(${v.x * v.mag * (HELM_R - 22)}px, ${v.y * v.mag * (HELM_R - 22)}px, 0)`
@@ -4662,11 +4744,8 @@ hullRef={hullRefFor(t.key)} />
 
             // Let go and it runs out rather than stopping dead, which reads as
             // the boat hitting something.
-            const v = vel.current
-            const sp = Math.hypot(v.x, v.y)
-            target.current = sp > 1
-              ? { x: pos.current.x + (v.x / sp) * TAP_HOP * 0.5, y: pos.current.y + (v.y / sp) * TAP_HOP * 0.5 }
-              : { ...pos.current }
+            target.current = runOutTarget(pos.current, vel.current, cmdDir.current, 0.5)
+            cmdDir.current = null
             boxHeld.current = null
             setHelmOn(false)
             if (knobRef.current) knobRef.current.style.transform = 'translate3d(0,0,0)'
