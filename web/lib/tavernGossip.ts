@@ -421,23 +421,48 @@ export const GOSSIP: Overheard[] = [
 /**
  * ── THE FACES ───────────────────────────────────────────────────────────────
  *
- * A short, fixed cast. Two dozen recurring faces read as regulars in a room; a
- * different fish every time reads as a slot machine. Small copies are built by
- * make-gossip-faces.mjs, which explains why they are not the full 154.
+ * PEOPLE, drawn the way every other person in this game is drawn: the character
+ * sprite in a disc with a hat on, which is what the crew list, the Salt Road
+ * roster, the sea traders and your own profile all use. The first cut put FISH
+ * in these discs and that was a category error. A fish is a thing you catch. The
+ * tavern is full of the people who catch them.
+ *
+ * TWO SHORT PALETTES rather than the full wardrobe. The flashy unlocks (galaxy,
+ * ethereal, gilded, lava) and the loud hats are left out on purpose: those are
+ * things a captain EARNED, and putting them on an anonymous extra at the next
+ * table cheapens them and makes the room look like a costume party. What is in
+ * here is what ordinary people out on this sea wear.
+ *
+ * Thirteen colours against twelve hats is 156 patrons, which is more than
+ * enough that the room never repeats a face inside a sitting.
  */
-export const FACES = [
-  'anglerfish', 'blobfish', 'pufferfish', 'seahorse',
-  'clownfish', 'lionfish', 'hammerhead-shark', 'moray-eel',
-  'ocean-sunfish', 'sheepshead', 'mudskipper', 'triggerfish',
-  'viperfish', 'dumbo-octopus', 'vampire-squid', 'blue-tang',
-  'flounder', 'bluegill', 'largemouth-bass', 'red-snapper',
-  'grouper', 'barracuda', 'pumpkinseed', 'yeti-crab',
+const PATRON_COLOURS = [
+  'default', 'gray', 'blue', 'pink', 'sand', 'forest', 'autumn',
+  'ruby', 'ice', 'storm', 'mint', 'lavender', 'sky',
 ] as const
 
+/** `null` is bare headed, and it is in here as an option because a room where
+ *  everybody owns a hat is a room where nobody does. */
+const PATRON_HATS = [
+  null, 'brown', 'gray', 'black', 'olive', 'offwhite',
+  'green', 'blue', 'midnight', 'yellow', 'sky', 'purple',
+] as const
+
+/**
+ * ONE FRAME FOR EVERY PATRON. The disc and the ring are the same warm lamplight
+ * on all of them, so the variation reads as different PEOPLE rather than as
+ * different badges: the regulars and your crew each carry their own colours
+ * because they are somebody, and these are the room.
+ */
+export const PATRON_BG = '#171009'
+export const PATRON_RING = '#8a6f42'
+
+export type Face = { characterColor: string; hat: string | null }
+
 export type Heard = Overheard & {
-  /** The two speakers, as face ids. Lines alternate between them, so a three
-   *  line exchange is A, B, A. */
-  faces: [string, string]
+  /** The two speakers. Lines alternate between them, so a three line exchange
+   *  is A, B, A. */
+  faces: [Face, Face]
 }
 
 /** FNV-1a. Small, stable, and the same answer on the server and the client,
@@ -497,12 +522,19 @@ export function overheardFor(seed: string, now: number = Date.now(), count = 3):
   for (let k = 0; k < count; k++) {
     const o = deck[(start + k) % deck.length]
     // FACES COME FROM THE LINE, NOT FROM THE CAPTAIN OR THE HOUR. The same
-    // sentence is always said by the same fish, so a line you heard last week
-    // is recognisably the same person saying it again.
-    const a = hash(o.say[0]) % FACES.length
-    let b = hash(o.say[0] + '::second') % FACES.length
-    if (b === a) b = (b + 1) % FACES.length
-    out.push({ ...o, faces: [FACES[a], FACES[b]] })
+    // sentence is always said by the same person, so something you heard last
+    // week is recognisably them saying it again.
+    out.push({ ...o, faces: [face(o.say[0], 'a'), face(o.say[0], 'b')] })
   }
   return out
+}
+
+/** One patron, derived from what they said. Colour and hat are hashed
+ *  separately so two speakers on the same line rarely collide on both. */
+function face(line: string, which: 'a' | 'b'): Face {
+  const h = hash(line + '::' + which)
+  return {
+    characterColor: PATRON_COLOURS[h % PATRON_COLOURS.length],
+    hat: PATRON_HATS[(h >>> 8) % PATRON_HATS.length],
+  }
 }

@@ -59,11 +59,17 @@ week. It gets its own line and its own colour.
   it meant "something moves every seven seconds forever", and it burned all 81 lines in
   half an hour. The deck is shuffled per captain and the window advances by 3 an hour, so
   every line is heard once before any repeats: **27 hours of unique conversation**.
-- **A line always wears the same two faces.** Portraits come from a fixed cast of 24 fish
-  (`make-gossip-faces.mjs` writes 96px copies to `public/fish/face/`, ~12KB each against
-  the 140KB catch plates). The faces hash off the LINE, not the captain or the hour, so a
-  sentence you heard last week is recognisably the same person saying it again. Speakers
-  alternate, so an exchange is A, B, A.
+- **A line always wears the same two faces, and they are PEOPLE.** `CharacterAvatar`, the
+  same component the crew list, the Salt Road roster, the sea traders and your own profile
+  use. The first cut put fish in these discs and that was a category error: a fish is a
+  thing you catch, and the tavern is full of the people who catch them. Patrons draw from
+  short palettes (13 colours, 12 hats, one of them bare) that deliberately EXCLUDE the
+  flashy unlocks and loud hats: those are things a captain earned, and putting them on an
+  anonymous extra cheapens them. One warm disc and ring on all of them, so the variation
+  reads as different people rather than different badges. The faces hash off the LINE, not
+  the captain or the hour, so a sentence you heard last week is recognisably the same
+  person saying it again. Speakers alternate (A, B, A) and the replier is flipped, so the
+  two face each other down the column.
 - **A PRESENCE WALL SHIPPED HERE FIRST AND WAS REPLACED.** It named the captains currently
   at sea, off `sea_seen_at`. It worked; it was thin. On a small roster it was usually empty,
   and even full it only said that other people existed. If it ever comes back, the rule it

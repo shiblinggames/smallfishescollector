@@ -19,20 +19,25 @@
 // the server. Come back twice in ten minutes and the same three people are
 // still talking about the same things, which is what a room does. Come back
 // after lunch and the conversation has moved on. Nothing animates, nothing
-// polls, and there is no client JavaScript here at all.
+// polls, and there is no client JavaScript here beyond the avatar itself.
 //
 // ── THE FACES ───────────────────────────────────────────────────────────────
 //
-// A portrait beside each voice, the way the crew list puts a face to a name.
-// They are fish, out of a fixed cast of two dozen (see make-gossip-faces.mjs),
-// and a given line always wears the same two: the same sentence said by the
-// same fish is a person you recognise, a new fish every time is a slot machine.
+// The same CharacterAvatar the crew list, the Salt Road roster and the sea
+// traders use, so a patron at the next table is drawn exactly like every other
+// person in this game. The first cut put FISH in these discs, which was a
+// category error: a fish is a thing you catch, and the tavern is full of the
+// people who catch them.
 //
-// Lines alternate speakers, so an exchange is A, B, A. The second voice is
-// indented and dimmer as well as differently faced, because on a phone the
-// portraits are 34px and shape alone is not enough to tell two people apart.
+// A line always wears the same two faces (they hash off the LINE, not off the
+// captain or the hour), so something you heard last week is recognisably the
+// same person saying it again. Lines alternate speakers, so an exchange is
+// A, B, A, and the second voice is indented, smaller, dimmer and TURNED to
+// answer, because at this size a different hat alone does not separate two
+// people on a phone.
 
-import { overheardFor } from '@/lib/tavernGossip'
+import CharacterAvatar from '@/components/CharacterAvatar'
+import { overheardFor, PATRON_BG, PATRON_RING } from '@/lib/tavernGossip'
 
 export default function Gossip({ seed }: {
   /** Who is listening. The deck is shuffled per captain so two people in the
@@ -57,45 +62,43 @@ export default function Gossip({ seed }: {
         }}>Overheard</p>
       </div>
 
-      <div style={{ padding: '0.2rem 0 0.35rem' }}>
+      <div>
         {heard.map((o, i) => (
           <div key={o.say[0]} style={{
-            padding: '0.75rem 1rem',
+            padding: '0.8rem 1rem',
             // A hairline between conversations, not around them. Three boxed
             // cards inside a box is one border too many for three sentences.
             borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.05)',
           }}>
             {o.say.map((line, k) => {
               const second = k % 2 === 1
+              const who = o.faces[second ? 1 : 0]
               return (
                 <div key={k} style={{
                   display: 'flex', alignItems: 'flex-start', gap: 9,
-                  marginTop: k === 0 ? 0 : 7,
-                  paddingLeft: second ? 16 : 0,
+                  marginTop: k === 0 ? 0 : 8,
+                  paddingLeft: second ? 18 : 0,
+                  opacity: second ? 0.82 : 1,
                 }}>
                   <span aria-hidden style={{
-                    width: second ? 28 : 34, height: second ? 28 : 34, flexShrink: 0,
-                    borderRadius: '50%', overflow: 'hidden',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    // A LIT DISC, not a plain hole. The plates are painted on
-                    // transparency and a fish floating on the panel's own
-                    // gradient reads as a sticker; a disc behind it makes it a
-                    // portrait.
-                    background: 'radial-gradient(circle at 50% 35%, rgba(96,78,48,0.55), rgba(18,14,8,0.9))',
-                    border: '1px solid rgba(200,170,100,0.28)',
-                    opacity: second ? 0.78 : 1,
+                    flexShrink: 0,
+                    // TURNED TO ANSWER. The sprite faces one way by default, so
+                    // flipping the replier puts the two of them face to face
+                    // down the column. Same trick the Salt Road faces use.
+                    transform: second ? 'scaleX(-1)' : 'none',
+                    display: 'block',
                   }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/fish/face/${o.faces[second ? 1 : 0]}.png`} alt=""
-                      width={96} height={96} loading="lazy" decoding="async"
-                      style={{
-                        width: '82%', height: '82%', objectFit: 'contain', display: 'block',
-                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
-                      }} />
+                    <CharacterAvatar
+                      characterColor={who.characterColor}
+                      equippedHat={who.hat}
+                      bgColor={PATRON_BG}
+                      ringColor={PATRON_RING}
+                      size={second ? 30 : 36}
+                    />
                   </span>
                   <p className="font-karla" style={{
-                    fontSize: '0.82rem', lineHeight: 1.45, margin: 0, paddingTop: second ? 3 : 6,
-                    color: second ? 'rgba(200,182,150,0.66)' : 'rgba(230,216,188,0.94)',
+                    fontSize: '0.82rem', lineHeight: 1.45, margin: 0, paddingTop: second ? 4 : 7,
+                    color: second ? 'rgba(200,182,150,0.7)' : 'rgba(230,216,188,0.94)',
                     fontStyle: 'italic',
                   }}>
                     &ldquo;{line}&rdquo;
@@ -105,7 +108,7 @@ export default function Gossip({ seed }: {
             })}
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.5rem', letterSpacing: '0.16em',
-              color: 'rgba(200,170,100,0.4)', margin: '6px 0 0', paddingLeft: 43,
+              color: 'rgba(200,170,100,0.4)', margin: '7px 0 0', paddingLeft: 45,
             }}>{o.from}</p>
           </div>
         ))}
