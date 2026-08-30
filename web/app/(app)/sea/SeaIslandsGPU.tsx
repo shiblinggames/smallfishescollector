@@ -96,6 +96,8 @@ export type GpuHandle = {
     x: number; y: number; ang: number; force: number; scale: number; kind: WakeKind
     /** Where she sits, for the rings she makes at rest. */
     cx: number; cy: number
+    /** How heavily she sits, 0 to 1. Drives the trough and the collar. */
+    heave: number
   } | null): void
   /** Which pieces of tall scenery are standing in front of the hull right now,
    *  as indices into `occluders`. Empty almost always. */

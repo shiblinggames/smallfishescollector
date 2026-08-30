@@ -49,7 +49,8 @@
 // longest and the only one that leaves light behind it. All six are rows below,
 // with the shapes redrawn rather than approximated.
 
-import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
+import type { Container, Particle, ParticleContainer, Sprite, Texture } from 'pixi.js'
+import { GROUND } from './islandArt'
 
 export type WakeKind = 'plain' | 'gold' | 'ember' | 'frost' | 'void' | 'ash' | 'spirit'
 
@@ -201,6 +202,28 @@ function ringTexture(PIXI: typeof import('pixi.js')): Texture {
   return ringTex
 }
 
+/** A soft filled dish. The water a heavy hull is standing IN, as opposed to the
+ *  rings it pushes out — drawn dark and tinted at use, because this one is the
+ *  absence of light rather than any colour of its own. */
+let dishTex: Texture | null = null
+
+function dishTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (dishTex) return dishTex
+  const S = 256
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0.00, 'rgba(255,255,255,0.44)')
+  grad.addColorStop(0.52, 'rgba(255,255,255,0.26)')
+  grad.addColorStop(0.78, 'rgba(255,255,255,0)')
+  grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, S, S)
+  dishTex = PIXI.Texture.from(c)
+  return dishTex
+}
+
 // ── THE TRAIL ───────────────────────────────────────────────────────────────
 
 /** How often a pair is laid, ms. A third of the DOM's 95, which is what turns a
@@ -241,6 +264,13 @@ type Mark = {
   drift: number
   /** Churn sits behind the hull and boils; it does not join the V. */
   churn: boolean
+  /** The crest off the stem. Thrown forward and out rather than trailing, and
+   *  it is the single thing that reads as a SHIP rather than a boat. */
+  bow: boolean
+  /** How heavy the hull that made it was. Carried on the mark, like the style,
+   *  because a Man-o-War's water is still settling long after she has gone and
+   *  should not be redrawn as a sloop's the moment she is. */
+  heave: number
   tint: number
   /** THE MARK REMEMBERS ITS OWN HULL. Several boats are on this water at once
    *  and a shared `style` would redraw every mark in whatever the last hull to
@@ -301,6 +331,22 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   // visibility rather than rebuilt, since a hull change mid-sail has to leave
   // the old marks alone.
   const view: Container = new PIXI.Container()
+
+  // ── WHAT A HEAVY HULL IS STANDING IN ──────────────────────────────────────
+  //
+  // Under everything else, because it is the water beneath the ship rather than
+  // anything happening on top of it. Sprites and not particles: the trough and
+  // the collar are ALWAYS THERE while she is at rest, breathing, where a ring
+  // is a thing that gets born and dies.
+  //
+  // Only ever built for a hull with weight. Every trader on the chart is in the
+  // same fishing boat, so this map has one entry in it in practice — but it is
+  // keyed per hull rather than assumed, because an NPC warship would otherwise
+  // be a rewrite instead of a row.
+  const heavyLayer: Container = new PIXI.Container()
+  view.addChild(heavyLayer)
+  const heavy = new Map<string, { trough: Sprite; collar: Sprite }>()
+
   const add: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
   })
@@ -318,9 +364,14 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     since: number; ringSince: number
   }>()
 
-  // Sized for the longest life at the fastest cadence, plus the churn that
-  // rides with it. Recycled forever after that.
-  const CAP = Math.ceil(2400 / EVERY) * 2 + 90
+  // Sized for the LONGEST life at the fastest cadence, plus the churn and the
+  // bow wave riding with it. The longest life is not a style's own number any
+  // more: a Man-o-War stretches it by 1.9, so a pool sized on the raw 2400 is
+  // a third of what her wake needs and she would spend her whole voyage
+  // recycling marks that are still on screen — the exact bug the note on
+  // WAKE_PAIRS describes from the DOM version, which is what happens when a
+  // pool is sized against a number that later grew a multiplier.
+  const CAP = Math.ceil((2400 * 1.9) / EVERY) * 4 + 120
   const pool: Mark[] = []
   const mk = (into: ParticleContainer, tex: Texture) => {
     const p: Particle = new PIXI.Particle({ texture: tex })
@@ -344,8 +395,8 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     // re-uploads both static buffers.
     pool.push({
       p, x: 0, y: 0, ang: 0, side: 1, force: 0, scale: 1,
-      age: 1, life: 1, wobble: 0, drift: 0, churn: false, tint: 0xffffff,
-      st: STYLES.plain,
+      age: 1, life: 1, wobble: 0, drift: 0, churn: false, bow: false, heave: 0,
+      tint: 0xffffff, st: STYLES.plain,
     })
     ;(pool[i] as Mark & { alt: Particle }).alt = q
   }
@@ -380,6 +431,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   let ringNext = 0
 
   let next = 0
+  let clock = 0
   let tint = 0xffffff
 
   const take = (): Mark & { alt: Particle } => {
@@ -390,9 +442,12 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
 
   function emit(
     m: Mark & { alt: Particle },
-    s: Contact, style: Style, force: number, side: number, churn: boolean,
+    s: Contact, style: Style, force: number, side: number,
+    churn: boolean, bow = false,
   ) {
     m.st = style
+    m.bow = bow
+    m.heave = s.heave ?? 0
     m.x = s.x
     m.y = s.y
     m.ang = s.ang
@@ -400,7 +455,10 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
     m.force = force
     m.scale = s.scale
     m.age = 0
-    m.life = style.life / 1000
+    // HEAVY WATER SETTLES SLOWLY. A ship of the line leaves a disturbance that
+    // is still there long after a rowing boat's has gone flat, which is most of
+    // what makes a big hull feel big from behind.
+    m.life = (style.life / 1000) * (1 + (s.heave ?? 0) * 0.9)
     m.churn = churn
     // Angle wobble and spread variation, per mark.
     m.wobble = (Math.random() * 2 - 1) * (churn ? 0.5 : 0.16)
@@ -421,6 +479,26 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
       m.x -= ux * back
       m.y -= uy * back
       m.life *= 0.4
+    }
+    if (bow) {
+      // ── THE CREST OFF THE STEM ──────────────────────────────────
+      //
+      // Thrown FORWARD and outward rather than trailing, which is the whole
+      // difference: everything else here is water the hull has left behind,
+      // and this is water it is currently shouldering out of the way. It is
+      // also the thing a big ship has and a small one barely does, so it is
+      // the clearest read on the ladder at a glance.
+      //
+      // Short-lived and bright. A bow wave that lingers is a wake; the crest
+      // itself only exists where the hull is, and it is renewed every cadence
+      // because the hull keeps being somewhere.
+      m.ang = s.ang + side * (0.42 + 0.16 * (s.heave ?? 0))
+      m.side = 0
+      m.life *= 0.34
+      m.wobble = (Math.random() * 2 - 1) * 0.08
+      const out = (10 + Math.random() * 14) * s.scale
+      m.x += Math.cos(m.ang) * out
+      m.y += Math.sin(m.ang) * out
     }
 
     const light = style.blend === 'add'
@@ -455,6 +533,8 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
 
     advance(dt) {
       const d = Math.min(dt, 0.05)
+      clock += d
+      const t = clock
 
       // ── WHAT EVERY HULL IS DOING ──────────────────────────────────
       const alive = new Set<string>()
@@ -488,8 +568,20 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
             st.since -= EVERY
             emit(take(), s, style, force, -1, false)
             emit(take(), s, style, force, 1, false)
-            // The stern boils in proportion to how hard she is driving.
-            if (Math.random() < style.churn * force) emit(take(), s, style, force, 0, true)
+            // The stern boils in proportion to how hard she is driving, and to
+            // how much of her there is to drive. Three times the hull shoves
+            // three times the water, and the churn is where that shows.
+            const boil = style.churn * force * (1 + (s.heave ?? 0) * 1.8)
+            if (Math.random() < boil) emit(take(), s, style, force, 0, true)
+            if (boil > 1 && Math.random() < boil - 1) emit(take(), s, style, force, 0, true)
+            // THE STEM, both sides. Only once she is properly under way — a
+            // hull idling forward does not throw a crest — and scaled hard by
+            // weight, because this is the part a Man-o-War has and a sloop
+            // only hints at.
+            if (force > 0.45) {
+              emit(take(), s, style, force, -1, false, true)
+              emit(take(), s, style, force, 1, false, true)
+            }
           }
         } else {
           st.since = 0
@@ -500,9 +592,65 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
             ring(s, style, heave)
           }
         }
+
+        // ── AND THE DISH SHE SITS IN ──────────────────────────────────
+        //
+        // A rowing boat rings and that is the whole of it. A ship of the line
+        // does something else entirely: the water around it is pressed DOWN,
+        // and the surface stands up against the hull where it parts. Three thin
+        // rings racing outward is a pebble in a pond however big you draw it,
+        // which is the note the stylesheet makes and the reason a Man-o-War
+        // needed its own treatment rather than a scaled-up ripple.
+        //
+        // Weight is the dial: at 0 nothing here exists at all.
+        if (heave > 0.02) {
+          let h = heavy.get(s.id)
+          if (!h) {
+            const trough: Sprite = new PIXI.Sprite(dishTexture(PIXI))
+            trough.anchor.set(0.5)
+            trough.tint = 0x040c14
+            const collar: Sprite = new PIXI.Sprite(ringTexture(PIXI))
+            collar.anchor.set(0.5)
+            collar.tint = 0xe2f4fa
+            collar.blendMode = 'add'
+            heavyLayer.addChild(trough, collar)
+            h = { trough, collar }
+            heavy.set(s.id, h)
+          }
+          const cx = s.cx ?? s.x
+          const cy = s.cy ?? s.y
+          // She stops standing in a hole the moment she is moving through one.
+          const settled = 1 - Math.min(1, force * 1.6)
+
+          // THE TROUGH — wider than the beam, because displaced water does not
+          // stop at the plank. Breathing slower the heavier she is, which is
+          // the physics as much as the feeling: more displacement is a longer
+          // wavelength.
+          const bt = 1 + 0.055 * (0.5 + 0.5 * Math.sin(t / (6 + heave * 2.5) * Math.PI * 2))
+          h.trough.position.set(cx, cy)
+          h.trough.width = 150 * s.scale * bt
+          h.trough.height = (46 / GROUND) * s.scale * bt
+          h.trough.alpha = (0.62 + heave * 0.38) * settled
+
+          // THE COLLAR — a bright rim tight against the waterline, where the
+          // hull actually parts the surface.
+          const bc = 0.5 + 0.5 * Math.sin(t / (4.4 + heave * 2) * Math.PI * 2)
+          h.collar.position.set(cx, cy)
+          const ck = 1 + 0.03 * bc
+          h.collar.width = 112 * s.scale * ck
+          h.collar.height = (26 / GROUND) * s.scale * ck
+          h.collar.alpha = (0.32 + bc * 0.28) * settled
+        }
       }
       // Anyone who has left. Their marks and rings are already on the water and
-      // stay there: it is water, and it does not know it was abandoned.
+      // stay there: it is water, and it does not know it was abandoned. The
+      // trough goes with them, though — it is not a mark left behind, it is the
+      // dish a hull is sitting in, and there is no hull.
+      for (const [id, h] of heavy) {
+        if (alive.has(id)) continue
+        h.trough.destroy(); h.collar.destroy()
+        heavy.delete(id)
+      }
       for (const id of [...seen.keys()]) if (!alive.has(id)) seen.delete(id)
 
       // ── THE RINGS ─────────────────────────────────────────────────
@@ -518,10 +666,14 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         const k = (from + (to - from) * age) * r.scale
         r.p.x = r.x
         r.p.y = r.y
-        // 104 x 30, the beam the stylesheet opens from, and squashed on y for
-        // the same reason everything else on this plane is.
+        // 104 x 30, the beam the stylesheet opens from — but those are SCREEN
+        // numbers. `.sea-ripple` lives outside the world layer, so its 30 is
+        // the ellipse a viewer already sees; this mesh is INSIDE the world and
+        // gets the plane's squash applied on top. Written as 30 it drew at 17
+        // and the rings came out as slots. Divided back out, they land at the
+        // height the stylesheet always meant.
         r.p.scaleX = (104 * k) / 256
-        r.p.scaleY = (30 * k) / 256
+        r.p.scaleY = (30 / GROUND * k) / 256
         // In fast, out slow: 0 at the start, up by a seventh of the way
         // through, gone by the end.
         const rise = Math.min(1, age / 0.14)
@@ -546,26 +698,34 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         // THE V WIDENS WITH THE HULL, but by the ROOT of it: a Man-o-War's V is
         // visibly broader without the boat looking like it is dragging a net.
         const ang = m.ang + m.wobble * age
-        const out = m.churn
+        const out = m.bow
+          ? 0
+          : m.churn
           ? 14 * m.scale * age * m.drift
-          : SPREAD * m.st.spread * Math.sqrt(m.scale) * m.force * m.drift
-            * (1 - Math.pow(1 - age, 2.2))
+          : SPREAD * m.st.spread * Math.sqrt(m.scale) * (1 + m.heave * 0.55)
+            * m.force * m.drift * (1 - Math.pow(1 - age, 2.2))
         p.x = m.x + -Math.sin(ang) * m.side * out
         p.y = m.y + Math.cos(ang) * m.side * out
 
         // Brightest at the hull and gone quickly after, rather than fading in a
         // straight line — foam behaves that way, and a linear fade is the main
         // reason a wake reads as a row of identical dots.
-        const fade = Math.pow(1 - age, m.churn ? 2.4 : 1.7)
+        const fade = Math.pow(1 - age, m.churn ? 2.4 : m.bow ? 1.2 : 1.7)
         p.alpha = fade * m.st.alpha * DENSITY * (0.45 + m.force * 0.55)
-          * (m.churn ? 2.2 : 1)
+          * (m.churn ? 2.2 : m.bow ? 3.4 : 1)
         p.tint = tint === 0xffffff ? m.tint : mix(m.tint, tint)
 
         // Stretched ALONG the heading and thin across it: a streak of disturbed
         // water, not a ring. Growing mostly across as it settles, because that
         // is the axis the water is spreading along.
-        const along = (0.55 + age * 0.7) * m.scale * (m.churn ? 0.5 : 1)
-        const across = (0.3 + age * 1.5) * m.scale * (m.churn ? 0.7 : 1)
+        // A crest is LONG and thin and barely spreads: it is a standing edge of
+        // water, not something dispersing.
+        const along = m.bow
+          ? (0.7 + age * 0.5) * m.scale * (1 + m.heave)
+          : (0.55 + age * 0.7) * m.scale * (m.churn ? 0.5 : 1)
+        const across = m.bow
+          ? (0.22 + age * 0.3) * m.scale
+          : (0.3 + age * 1.5) * m.scale * (m.churn ? 0.7 : 1)
         p.rotation = ang
         p.scaleX = (m.st.along * along) / 128
         p.scaleY = (m.st.across * across) / 64

@@ -4247,6 +4247,12 @@ export default function SeaMap({
           ang: Math.atan2(vel.current.y, vel.current.x) + h.bowTilt * facing.current,
           force: speed > 26 ? Math.min(1, speed / (SPEED * 0.9)) : 0,
           scale: h.scale,
+          // HOW HEAVILY SHE SITS. 0 for the fishing boat, up to 1 at the
+          // Man-o-War. It was never passed, so every expedition hull has been
+          // ringing like a rowing boat: the trough and the collar that make a
+          // ship of the line read as a ship of the line are gated on this and
+          // were therefore switched off for the whole ladder.
+          heave: h.weight,
           kind: wakeKindRef.current,
         })
       }
