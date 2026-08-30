@@ -160,26 +160,67 @@ export async function makeCaptain(
 
   // ── WHAT SHE CASTS ────────────────────────────────────────────────────────
   //
-  // `drop-shadow(0 12px 18px rgba(0,0,0,0.55))` on the whole composite, which
-  // is what stops a boat reading as a sticker floating over the water. Baked
-  // the same way a glow is — blur the alpha, paint it flat, put it behind —
-  // because a shadow IS a drop-shadow; it is simply black and offset.
+  // THE HULL ONLY, and softly. The DOM put `drop-shadow()` on the whole
+  // composite, so everything threw one — the captain, the hat, the rod, and the
+  // hook sprite, which is two hundred per cent of the skiff's width and almost
+  // all of it fishing LINE. A hard black line lying across the water is not
+  // something a fishing line does at this scale, and the shadow's whole job is
+  // to give the BOAT weight rather than to be an accurate account of what is
+  // between the sun and the sea.
   //
-  // Taken from the CHARACTER sheet rather than from the finished stack: the
-  // hull and the captain are painted into it, so its outline is the shape that
-  // casts, and the alternative is compositing seven layers to a canvas every
-  // time somebody changes a hat.
-  const charImage = imageFor(char.rest)
-  if (charImage) {
-    const shade = bakeSilhouette(PIXI, charImage, `shadow|${char.rest}`, skiff.w, skiff.h, 18)
-    if (shade) {
-      const s: Sprite = new PIXI.Sprite(shade.texture)
-      s.position.set(-shade.pad, -shade.pad + 12)
-      s.tint = 0x000000
-      s.alpha = 0.55
-      skiff.view.addChildAt(s, 0)
+  // So it is the hull's own silhouette, from the hull she is actually sailing.
+  // The old version baked the character sheet, which has a plain boat painted
+  // into it — meaning an equipped hull of a different shape threw the DEFAULT
+  // hull's shadow. The sheet is still the fallback, because a captain with no
+  // boat cosmetic has no other source for a hull outline, and no shadow at all
+  // reads worse than an approximate one.
+  //
+  // Softer and shallower than the DOM's, which was pitched to survive being
+  // seen through a CSS filter stack: 0.3 rather than 0.55, and eight pixels
+  // down rather than twelve. It should say the boat is sitting ON something,
+  // and stop there.
+  const shadow: Sprite = new PIXI.Sprite()
+  shadow.tint = 0x000000
+  shadow.alpha = 0.30
+  shadow.visible = false
+  skiff.view.addChildAt(shadow, 0)
+
+  /** Re-cut for the pose. A hull has a rest sprite and a cast sprite and they
+   *  are different shapes at different angles, so a shadow fixed at build time
+   *  is the wrong one for a third of the animation. Cached by image and size,
+   *  so coming back to a pose is a lookup. */
+  function alignShadow() {
+    const part: Sprite | undefined = skiff.parts.boat
+    const pose = part ? skiff.poseOf('boat') : null
+    const img = pose?.image ?? imageFor(char.rest)
+    const key = pose?.key ?? char.rest
+    if (!img) { shadow.visible = false; return }
+
+    // The boat's own placed box when there is one; the whole composite when
+    // falling back to the sheet, which is what that sheet is drawn at.
+    const w = part ? part.texture.width * Math.abs(part.scale.x) : skiff.w
+    const h = part ? part.texture.height * Math.abs(part.scale.y) : skiff.h
+    const shade = bakeSilhouette(PIXI, img, `shadow|${key}`, w, h, 22)
+    if (!shade) { shadow.visible = false; return }
+
+    shadow.visible = true
+    shadow.texture = shade.texture
+    if (part) {
+      // The hull's own anchor, re-expressed in the padded bake — the same
+      // arithmetic the auras use, and wrong in the same way if it is skipped.
+      shadow.anchor.set((shade.pad + part.anchor.x * w) / (w + shade.pad * 2),
+                        (shade.pad + part.anchor.y * h) / (h + shade.pad * 2))
+      shadow.scale.set(1, 1)
+      shadow.position.set(part.x, part.y + 8)
+      shadow.rotation = part.rotation
+    } else {
+      shadow.anchor.set(0, 0)
+      shadow.scale.set(1, 1)
+      shadow.rotation = 0
+      shadow.position.set(-shade.pad, -shade.pad + 8)
     }
   }
+  alignShadow()
 
   // ── WHAT THEY GLOW WITH ───────────────────────────────────────────────────
   //
@@ -208,6 +249,8 @@ export async function makeCaptain(
   // every aura is re-pointed when the pose changes. Cheap on a pose it has seen
   // before: the bakes and the outline are cached per image.
   skiff.onFrame = () => {
+    // The hull moved, so what it throws moved with it.
+    alignShadow()
     for (const w of worn) {
       // A PART THAT IS NOT DRAWN DOES NOT GLOW. The hook is hidden on the wait
       // pose because it is in the WATER, and an aura that is not told simply
@@ -296,9 +339,12 @@ export async function makeShip(
     const shade = bakeSilhouette(PIXI, img, `shadow|${ship.url}`, W, h, 22)
     if (shade) {
       const sp: Sprite = new PIXI.Sprite(shade.texture)
-      sp.position.set(-W / 2 - shade.pad, -h / 2 - shade.pad + 14)
+      sp.position.set(-W / 2 - shade.pad, -h / 2 - shade.pad + 10)
       sp.tint = 0x000000
-      sp.alpha = 0.6
+      // The same restraint the fishing hull got. A ship of the line is bigger
+      // and sits heavier, so it keeps a little more than she does — but it is
+      // still saying "on the water" rather than drawing a second boat in black.
+      sp.alpha = 0.34
       view.addChild(sp)
     }
   }
