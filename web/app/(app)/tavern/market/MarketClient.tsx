@@ -526,10 +526,72 @@ export default function MarketClient({
   // count would keep showing whatever this component was first mounted with.
   useEffect(() => { setOpenContracts(initialOpenContracts) }, [initialOpenContracts])
   const [selling, setSelling] = useState<number | null>(null)
-  /** The first voyage sent them in here to sell. Held in state rather than read
-   *  from the prop at sale time so the card goes the moment they do it, without
-   *  waiting for the page to be told. */
-  const [tourAtSell, setTourAtSell] = useState(tourStep === SELL_STEP)
+  /**
+   * WHERE THE FIRST VOYAGE IS, in this room.
+   *
+   *   'sell' — they were sent in to sell and have not yet.
+   *   'out'  — they have. The only thing left to say is how to get back.
+   *   null   — no voyage in progress, or it is done with this room.
+   *
+   * Held in state rather than read off the prop, so it moves the instant they
+   * act rather than when the page next hears about it.
+   */
+  const [tourAt, setTourAt] = useState<'sell' | 'out' | null>(
+    tourStep === SELL_STEP ? 'sell' : null)
+
+  /**
+   * THE SALE HAPPENED, BY WHATEVER ROUTE.
+   *
+   * One function, called from every path that can empty a hold, because the
+   * first version hooked only the per-species Sell button — and a captain who
+   * used SELL ALL, which is the obvious thing to do with a hold full of fish
+   * and the one this page is built around, sold everything and advanced
+   * nothing. They then sailed back to a tour still asking them to sell, with
+   * an empty hold, which can only be answered by going and catching another
+   * fish. That is the loop, and it was mine.
+   */
+  /**
+   * ALREADY SOLD, BY SOME ROUTE NOBODY HOOKED.
+   *
+   * If the voyage is on the sell beat and the hold is empty, the sale has
+   * happened — the beat is asking for something that cannot be done and the
+   * captain would be sent back out to catch another fish to satisfy it. This
+   * is the net under every future path into this room that forgets to say so,
+   * and it also unsticks anybody standing in that loop right now.
+   */
+  useEffect(() => {
+    if (tourAt === 'sell' && portfolio.length === 0) {
+      setTourAt('out')
+      void setSeaTourStep(SELL_STEP + 1)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourAt, portfolio.length])
+
+  // The control being talked about, lit up. Same handle-and-flash the sea tour
+  // uses; retried briefly because a panel can mount after the card does.
+  useEffect(() => {
+    const want = tourAt === 'sell' ? 'sell-all' : tourAt === 'out' ? 'market-back' : null
+    const clear = () => document.querySelectorAll('.coach-flash')
+      .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
+    clear()
+    if (!want) return
+    let tries = 0
+    const find = () => {
+      const el = document.querySelector(`[data-coach="${want}"]`)
+      if (el) { el.classList.add('coach-flash', 'coach-flash-gold'); return }
+      if (++tries < 20) window.setTimeout(find, 120)
+    }
+    find()
+    return clear
+  }, [tourAt])
+
+  const sellBeatDone = useCallback(() => {
+    setTourAt(now => {
+      if (now !== 'sell') return now
+      void setSeaTourStep(SELL_STEP + 1)
+      return 'out'
+    })
+  }, [])
   const [toast, setToast] = useState<string | null>(null)
   const [tradeFish, setTradeFish] = useState<MarketFishEntry | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -615,15 +677,7 @@ export default function MarketClient({
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       hapticReward()
       showToast(`+${res.earned.toLocaleString()} ⟡`)
-      // ── THE FIRST VOYAGE, IF ONE IS RUNNING ────────────────────────
-      // Doby sends a new captain in here with their first fish, and this is the
-      // only surface that knows the sale happened — the tour lives on the chart
-      // and the chart is a route away. Advancing the stored step is what lets
-      // it pick up where it left off when they sail back out.
-      if (tourAtSell) {
-        setTourAtSell(false)
-        void setSeaTourStep(SELL_STEP + 1)
-      }
+      sellBeatDone()
     })
   }
 
@@ -649,6 +703,7 @@ export default function MarketClient({
       hapticReward()
       showToast(`+${res.earned.toLocaleString()} ⟡`)
       setPortfolio([])
+      sellBeatDone()
     })
   }
 
@@ -683,17 +738,28 @@ export default function MarketClient({
 
   return (
     <MarketModeCtx.Provider value={colorMode}>
-    {/* KAT FOLLOWED THEM THROUGH THE DOOR. One line, only on the first voyage,
-        and only until the fish is sold — the beat that sent them here is still
-        up on the chart, and arriving to no instruction at all is where a guided
-        tour usually loses somebody. */}
+    {/* KAT FOLLOWED THEM THROUGH THE DOOR.
+        Two lines, and the second one matters as much as the first: a captain
+        who has sold their catch is standing in a shop with no idea that the
+        way back to the sea is a Back button at the top of it. Arriving to no
+        instruction is where a guided tour loses somebody; so is finishing to
+        none. */}
     <GuideCoach
-      show={tourAtSell}
+      show={tourAt === 'sell'}
       portrait={GUIDES.kat.portrait}
       speaker={GUIDES.kat.speaker}
-      text="Everything in your hold is here. Hit *Sell* on the fish you caught."
+      text="Everything you caught is here. *Sell all* takes the lot in one go."
       accent={SEA_ACCENT}
       placement="bottom"
+    />
+    <GuideCoach
+      show={tourAt === 'out'}
+      portrait={GUIDES.doby.portrait}
+      speaker={GUIDES.doby.speaker}
+      text="That is coin in your pocket. *Back* at the top takes you to the water."
+      accent={SEA_ACCENT}
+      placement="bottom"
+      onClose={() => setTourAt(null)}
     />
     <main className="min-h-screen pb-24 sm:pb-0">
       {/* THE HARBOURMASTER'S BOARD.
@@ -721,7 +787,7 @@ export default function MarketClient({
             is reached from the fishing hub, the tavern ticker AND mid-cast
             from the fishing screen, so it returns you where you came from
             rather than picking one of the three. */}
-        <ShopHeader title="Fish Market" backLabel="Back" onBack={() => router.back()}
+        <ShopHeader title="Fish Market" backLabel="Back" coach="market-back" onBack={() => router.back()}
           /* RANKS OPPOSITE BACK, in the slot the header already keeps for it.
              It sat above the board before, taking a row of its own and pushing
              the market down. Only on the Exchange side: the Hold sells fish and
@@ -869,6 +935,7 @@ export default function MarketClient({
               {!liquidateConfirm ? (
                 <>
                   <button onClick={() => setLiquidateConfirm(true)} disabled={liquidating}
+                    data-coach="sell-all"
                     className="font-cinzel font-700 tap"
                     style={{
                       width: '100%', display: 'flex', alignItems: 'baseline', justifyContent: 'center',

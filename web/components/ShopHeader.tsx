@@ -33,8 +33,11 @@ const PILL_STYLE: React.CSSProperties = {
 }
 
 export default function ShopHeader({
-  title, backLabel, href, onBack, accent = '#f0c040', badge,
+  title, backLabel, href, onBack, accent = '#f0c040', badge, coach,
 }: {
+  /** `data-coach` handle on the BACK control, for a walkthrough that needs to
+   *  point at the way out. A shop is a room somebody can get stuck in. */
+  coach?: string
   title: string
   backLabel: string
   href?: string
@@ -48,13 +51,14 @@ export default function ShopHeader({
 }) {
   const back = href ? (
     <motion.div whileTap={{ scale: 0.9 }} whileHover={{ y: -1 }} transition={{ type: 'spring', stiffness: 600, damping: 22 }} style={{ display: 'inline-flex' }}>
-      <Link href={href} aria-label={`Back to ${backLabel}`} className="font-karla font-700 uppercase" style={PILL_STYLE}>
+      <Link href={href} data-coach={coach} aria-label={`Back to ${backLabel}`} className="font-karla font-700 uppercase" style={PILL_STYLE}>
         <Chevron />{backLabel}
       </Link>
     </motion.div>
   ) : (
     <motion.button
       onClick={onBack}
+      data-coach={coach}
       aria-label={`Back to ${backLabel}`}
       className="font-karla font-700 uppercase"
       whileTap={{ scale: 0.9 }} whileHover={{ y: -1 }} transition={{ type: 'spring', stiffness: 600, damping: 22 }}
