@@ -1388,6 +1388,21 @@ export default function SeaMap({
   const tourGoal = useRef<{ x: number; y: number; r: number } | null>(null)
   /** Raised by the tour while the rod should stay stowed. */
   const tourHoldCast = useRef(false)
+  /**
+   * THE ONLY THING ON OFFER IS THE WATER.
+   *
+   * Raised while the first voyage is asking for a cast. The helm's precedence
+   * puts a person ahead of a place and a place ahead of the sea, which is right
+   * every other minute of the game and wrong in this one: Finn or a trader
+   * drifting past while a captain is being taught to fish turns the one button
+   * they have been told to use into a conversation, and the tutorial stops with
+   * no way forward that it has explained.
+   *
+   * They are still THERE. The boats, the plates and the hail marks are all
+   * untouched; it is the helm that stops offering them for the minute it takes
+   * to land one fish.
+   */
+  const tourFishOnly = useRef(false)
 
   // Position, velocity and target live in refs, not state: they change every
   // frame and re-rendering React sixty times a second to move one sprite is how
@@ -3101,6 +3116,11 @@ export default function SeaMap({
 
   const helmLabel: { act: string | null; hold: string | null } = (() => {
     if (fishingIn) return { act: null, hold: null }
+    // THE TUTORIAL'S ONE INSTRUCTION WINS. See tourFishOnly: everything below
+    // this outranks the water, and for this one beat none of it may.
+    if (tourFishOnly.current && near?.kind === 'water' && !locked(near)) {
+      return { act: null, hold: `Hold to fish ${near.name}` }
+    }
     if (nearFinn && !finnOpen) {
       return { act: finn?.questReady ? `${FINN_NAME} is waiting on you` : `Hail ${FINN_NAME}`, hold: null }
     }
@@ -6163,6 +6183,9 @@ hullRef={hullRefFor(t.key)} />
       {(() => {
         helmActRef.current = () => {
           if (fishingIn) return false
+          // The same skip the pill makes, and it has to be the same or the
+          // button would be lying about what the thumb is about to do.
+          if (tourFishOnly.current) return false
           if (nearFinn && !finnTalk) { vibrate(14); void hailFinn(); return true }
           if (nearTrader && !hailing) { vibrate(14); setHailing(nearTrader); return true }
           if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
@@ -6580,7 +6603,7 @@ hullRef={hullRefFor(t.key)} />
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
-        stowRod={stowRod} at={pos} />
+        fishOnly={tourFishOnly} stowRod={stowRod} at={pos} />
       {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.

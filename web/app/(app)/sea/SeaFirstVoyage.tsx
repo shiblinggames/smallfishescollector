@@ -69,7 +69,7 @@ function destination(id: string): { x: number; y: number; r: number } | null {
 
 export default function SeaFirstVoyage({
   hasSeen, startAt, fishing, caught, nearId, ashore, blocked, cam, goal,
-  holdCast, stowRod, at,
+  holdCast, fishOnly, stowRod, at,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -103,6 +103,10 @@ export default function SeaFirstVoyage({
    *  radius draws a ring there: somewhere to sail INTO, rather than a heading
    *  to hold and no way of knowing when you have held it long enough. */
   goal: { current: { x: number; y: number; r: number } | null }
+  /** Raised while the only thing the helm should offer is the water. A trader
+   *  drifting past during the cast beat otherwise turns the one button the
+   *  captain has been told to press into a conversation. */
+  fishOnly: { current: boolean }
   /** Raised while the tour wants the rod stowed. The chart refuses to cast
    *  while it is up, and says why rather than going quiet. */
   holdCast: { current: boolean }
@@ -251,6 +255,13 @@ export default function SeaFirstVoyage({
     holdCast.current = !!beat?.holdCast && step !== hidden
     return () => { holdCast.current = false }
   }, [beat, step, hidden, holdCast])
+
+  // Only while the cast is actually being ASKED for. It ends the moment the
+  // rod is out, so the sea is a normal sea again for the whole of the catch.
+  useEffect(() => {
+    fishOnly.current = beat?.until === 'cast' && step !== hidden
+    return () => { fishOnly.current = false }
+  }, [beat, step, hidden, fishOnly])
 
   // Tied up where the beat asked.
   const wantMoor = beat?.until === 'moor'
