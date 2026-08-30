@@ -421,9 +421,24 @@ export async function castLine(
   // check, which is the whole prize. Inheriting cuts both ways, so a chest you
   // walked away from is still a chest when you come back.
   const stale = (live?.shot && live.habitat !== habitat) ? live : null
-  const isCrate = stale
-    ? stale.fishId === CRATE_FISH_ID
-    : Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult * hs.crateChanceMult
+  // ── THE FIRST ONE IS ALWAYS A FISH ──────────────────────────────────
+  //
+  // A captain with no fishing XP has never landed anything, so this cast is
+  // their first — and the tour is standing over it with a card that says "stop
+  // the needle in the green to land it" and then "there's your first, it sits
+  // in the hold until you sell it". A 2% chest instead would answer neither,
+  // and would send them to the market with an empty hold and an instruction
+  // that cannot be followed.
+  //
+  // Not a difficulty concession. A chest runs the same aim minigame; the point
+  // is that the ONE catch the tutorial narrates has to be the thing the
+  // tutorial is narrating. Everything after it rolls exactly as it always did.
+  const firstEver = (profile.fishing_xp ?? 0) === 0
+  const isCrate = firstEver
+    ? false
+    : stale
+      ? stale.fishId === CRATE_FISH_ID
+      : Math.random() < zoneCrateChance(habitat) * (rod.crateChanceMult ?? 1) * patience.crateChanceMult * renownFishing.crateChanceMult * hs.crateChanceMult
 
   // Remember this bait so the fishing UI auto-selects it on next open
   // (FishingGame.tsx seeds selectedBait from profile.last_used_bait). Also mark
@@ -534,6 +549,20 @@ export async function castLine(
       // Regulars somehow exhausted — hand back a trophy so the cast still lands.
       fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
     }
+  } else if (firstEver) {
+    // THE COMMONEST THING IN THIS WATER, chosen rather than rolled.
+    //
+    // `bite_rarity` is a TIER, and LOW IS COMMON: ZONE_RARITY_RATES gives the
+    // Shallows 55% at tier 1 and 1% at tier 5. Sorting the other way — which is
+    // what I did first — hands every new captain a one-percent Arapaima worth
+    // 360 as their ordinary first fish, and then the market chapter opens with
+    // a windfall the game has no way to repeat.
+    //
+    // Picked from the data rather than pinned to an id: a species can be
+    // retired or rebalanced, and a hardcoded fish that no longer lives in the
+    // Shallows would break the one cast that has to work.
+    fish = [...pool].sort((a, b) =>
+      (a.bite_rarity - b.bite_rarity) || (a.catch_difficulty - b.catch_difficulty))[0]
   } else {
     fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus + locked.rarityBonus + hs.rarityBonus)
   }
@@ -559,9 +588,12 @@ export async function castLine(
   const isAncientTrophyRoll = habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0
   const canDoubleHere = habitat !== 'ancient_deep' || (rod.doubleCatchChance ?? 0) >= 1
   const zoneJackpotChance = isAncientTrophyRoll ? 0 : jackpotChanceForZone(rod, habitat)
-  const jackpotHit = zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
+  // No jackpot and no double on the first one either. Both are lovely and both
+  // arrive with their own celebration on top of the tour's, and two overlays
+  // explaining different things at once is how a first minute gets lost.
+  const jackpotHit = !firstEver && zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
   const rolledJackpotMult = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
-  const rolledDoubleCatch = !jackpotHit && !isAncientTrophyRoll && canDoubleHere
+  const rolledDoubleCatch = !firstEver && !jackpotHit && !isAncientTrophyRoll && canDoubleHere
     && (rod.doubleCatchChance ?? 0) > 0 && Math.random() < (rod.doubleCatchChance ?? 0)
 
   const lockedQty = locked.catchQty > 1 ? locked.catchQty : undefined
