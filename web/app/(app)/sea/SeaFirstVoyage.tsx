@@ -38,7 +38,9 @@ export default function SeaFirstVoyage({
   hasSeen: boolean
   /** Whether the rod is currently out. Advances the `cast` beat. */
   fishing: boolean
-  /** Rises when anything is landed. Advances the `catch` beat. */
+  /** Rises by one every time a fish is landed, and never falls. Deliberately
+   *  NOT the hold count: that is clamped to the hold's capacity, so a full hold
+   *  catches a fish without the number moving, and it drops when you sell. */
   caught: number
   /** The chart's camera override. Written while showing an island, cleared
    *  when the tour is done with it. */

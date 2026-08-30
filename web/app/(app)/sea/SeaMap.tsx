@@ -2930,6 +2930,16 @@ export default function SeaMap({
    *  while you filled the boat — and the hold is the one number that decides
    *  when a session has to end. */
   const [holdCount, setHoldCount] = useState(hold.count)
+  /**
+   * HOW MANY FISH HAVE BEEN LANDED THIS SESSION.
+   *
+   * Not the hold count, which is the wrong signal for "did you catch
+   * something" in two separate ways: it is CLAMPED to the hold's capacity, so a
+   * full hold lands a fish and the number does not move, and it FALLS when you
+   * sell. A counter that only ever goes up says the thing that actually
+   * happened. The first voyage waits on this.
+   */
+  const [caughtTick, setCaughtTick] = useState(0)
   /** Which pose the captain is in. The game already draws three — rod up,
    *  line in the water, mid-cast — so the map uses the same ones rather than
    *  inventing a fourth. `wait` during the bite wait is most of the missing
@@ -6481,7 +6491,10 @@ hullRef={hullRefFor(t.key)} />
           log={log}
           renownPoints={renownState ? renownPoints : undefined}
           onOpenRenown={renownState ? () => setRenownOpen(true) : undefined}
-          onCaught={qty => setHoldCount(n => Math.min(hold.capacity, n + qty))}
+          onCaught={qty => {
+            setHoldCount(n => Math.min(hold.capacity, n + qty))
+            setCaughtTick(n => n + 1)
+          }}
           onReel={onFinnReel}
           onBaitChange={t => {
             // Re-reads the remaining count off the bag. The catch-zone bonus is
@@ -6540,7 +6553,7 @@ hullRef={hullRefFor(t.key)} />
           the dial is on screen, which was the whole reason the retired fishing
           hub had an intro scene of its own. */}
       <SeaFirstVoyage hasSeen={tour.seen} fishing={!!fishingIn}
-        caught={holdCount} cam={tourCam} />
+        caught={caughtTick} cam={tourCam} />
       {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
