@@ -65,10 +65,13 @@ import { ISLES, ashoreRange } from '@/lib/seaIsles'
  * 780 was four times a trader's reach, and Finn was hailing captains from most
  * of a screen away. Reported as exactly that: his proximity extending very far.
  *
- * 300 is the widening the note was describing: half again as far as anybody
- * else, which is generous without owning the water around him.
+ * DERIVED, NOT WRITTEN DOWN. Half again as far as anybody else — the widening
+ * the old note was describing — expressed as a multiple of the number it is a
+ * multiple OF. That is the actual fix: a ratio kept in prose drifts the moment
+ * either number moves, and this one had drifted so far that the constant meant
+ * four times what its own comment claimed. Tune HAIL_RANGE and this follows.
  */
-export const FINN_REACH = 300
+export const FINN_REACH = Math.round(HAIL_RANGE * 1.5)
 
 /**
  * How far he must move between haunts, when the water allows it.

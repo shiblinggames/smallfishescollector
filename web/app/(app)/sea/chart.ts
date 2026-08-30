@@ -843,6 +843,10 @@ export const OPEN_SEA: [string, string, string] = ['#0b1a24', '#1c3a48', '#4a6f7
  * A trader is a person, not a region — you pull alongside them, you do not
  * "enter" them.
  *
+ * 260 rather than 190. A trader's hull is about 200px across, so the old value
+ * was barely half a boat length off her beam and asked a captain to park on top
+ * of somebody to talk to them. This is a comfortable pull-alongside.
+ *
  * IT LIVES HERE BECAUSE TWO FILES NEED IT. It used to be a module-local const
  * in SeaMap, and lib/seaFinn described it from memory as 600 in two separate
  * comments while sizing Finn's own reach and his keep-clear circles against
@@ -850,7 +854,7 @@ export const OPEN_SEA: [string, string, string] = ['#0b1a24', '#1c3a48', '#4a6f7
  * three times too big, and nobody could see it because the wrong number was
  * only ever written in prose.
  */
-export const HAIL_RANGE = 190
+export const HAIL_RANGE = 260
 
 export const HOME = { x: 260, y: 560 }
 
