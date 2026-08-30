@@ -27,6 +27,53 @@ import { vibrate } from '@/lib/haptics'
  *  and the port pins have room for their labels. */
 const PAD = 12
 
+/** How wide the key column is when it stands beside the chart, and the gap
+ *  between them. Module scope because BOTH the sizing effect and the JSX need
+ *  them, and they were declared twice — a panel whose header is measured
+ *  against one copy and whose body is laid out against another is one edit away
+ *  from being wrong. */
+const KEY_W = 268
+const KEY_GAP = 18
+
+/**
+ * ── THE PANEL IS AS WIDE AS EVERY OTHER PAGE IN THE APP ─────────────────────
+ *
+ * 980 is `.page-col`, the app's one column measure (see globals.css), and it is
+ * what the leaderboard, the badges wall and every other document surface stop
+ * at. This overlay used to stop at 1500, on the reasoning that the map of the
+ * world deserves the room — which is true of the chart you SAIL, and /sea is
+ * exempt from the measure for exactly that reason. This is not that. It is a
+ * panel of statistics and a legend, laid over the world rather than being it,
+ * and a panel that is half again as wide as every other panel in the game reads
+ * as a different app's screen.
+ */
+const PANEL_MAX = 980
+
+/**
+ * ── EVERY FIXED PIXEL BETWEEN THE VIEWPORT EDGE AND THE CANVAS EDGE ─────────
+ *
+ * The backdrop's padding, the panel's padding inside it, and the panel's
+ * border. The sizing maths and the inline styles BOTH read these numbers,
+ * because the last time they were written down separately the maths subtracted
+ * 40 for a chrome that actually measured 64 — and the missing 24px is why the
+ * chart hung off both sides of a phone.
+ *
+ * It overflowed SYMMETRICALLY, which is the part that made it hard to see for
+ * what it was. The panel is centred by a flex box, so a panel wider than the
+ * screen loses the same slice from the left as from the right and still looks
+ * deliberately composed; it simply has no edges. And nothing scrolls to reveal
+ * them, because the backdrop is `position: fixed`.
+ *
+ * The padding also TIGHTENS on a phone. A 2:1 sea drawn into a portrait screen
+ * is width-bound and nothing else — there are four hundred vertical pixels
+ * going spare and no way to spend them — so the only thing that makes the chart
+ * bigger there is giving back the margin, and 26px of it is 8% more map.
+ */
+const SHELL_PAD = { narrow: 8, wide: 16 }
+const PANEL_PAD = { narrow: 10, wide: 15 }
+const gutter = (roomy: boolean) =>
+  roomy ? (SHELL_PAD.wide + PANEL_PAD.wide + 1) * 2 : (SHELL_PAD.narrow + PANEL_PAD.narrow + 1) * 2
+
 /**
  * THE SHAPE OF THE SEA, and therefore the shape of this canvas.
  *
@@ -151,7 +198,6 @@ export default function Minimap({
   const [w, setW] = useState(0)
   /** Enough width to stand the key beside the chart rather than under it. */
   const [wide, setWide] = useState(false)
-  const KEY_W = 268
   const h = Math.round(w / (worldW(HALVES[side]) / worldH(HALVES[side])))
   const prog = fogProgress(fog)
 
@@ -400,29 +446,31 @@ export default function Minimap({
     // Width first, height derived, and capped against the viewport HEIGHT too
     // or on a short screen the chart runs off the bottom of its own panel.
     //
-    // THE 620 CAP WAS A PHONE NUMBER. It made sense when every surface in this
-    // game was a column; on a wide screen it left a postcard of a chart in the
-    // middle of an acre of backdrop, and the map of the world you are sailing
-    // is the one thing that most deserves the room.
+    // THE CANVAS IS WHAT IS LEFT OVER, and it is derived rather than capped.
+    // There used to be two hand-picked ceilings here, 620 on a phone and 1500
+    // on a desktop, sitting alongside a viewport calculation that disagreed
+    // with both of them. Two of the three numbers were always wrong and which
+    // one won depended on the screen.
     //
-    // Two things change on a wide screen and they compound. The cap goes up,
-    // and THE KEY MOVES BESIDE THE CHART instead of under it — so the height
-    // budget stops paying for ten rows of legend and the chart can have nearly
-    // the whole window. Narrow screens keep the stacked layout exactly as it
-    // was, because there the key under the map is the only place it fits.
-    const KEY_W = 268
+    // Now there is one budget — the panel is at most PANEL_MAX and at most the
+    // window — and everything else is subtracted OUT of it: the gutters, and on
+    // a wide screen the key column standing beside the chart. Whatever remains
+    // is the chart. It cannot exceed the panel, so it cannot hang off the
+    // screen, and there is no cap left to be stale.
+    //
+    // THE KEY MOVING is still what buys the height on a laptop: beside the
+    // chart it costs the height budget nothing. Narrow screens keep it stacked
+    // underneath, because there that is the only place it fits.
     const aspect = worldW(HALVES[side]) / worldH(HALVES[side])
     const fit = () => {
       const roomy = window.innerWidth >= 1024
       setWide(roomy)
-      // Header and padding. When the key is beside the chart it costs the
-      // height budget nothing, which is most of where the extra size comes
-      // from on a laptop.
+      // Header and padding, plus the stacked key on a narrow screen.
       const chrome = roomy ? 104 : 210
-      const across = window.innerWidth - 40 - (roomy ? KEY_W + 18 : 0)
+      const panel = Math.min(window.innerWidth, PANEL_MAX)
+      const across = panel - gutter(roomy) - (roomy ? KEY_W + KEY_GAP : 0)
       setW(Math.round(Math.min(
         across,
-        roomy ? 1500 : 620,
         Math.max(220, (window.innerHeight - chrome) * aspect),
       )))
     }
@@ -451,7 +499,7 @@ export default function Minimap({
             position: 'fixed', inset: 0, zIndex: 9200,
             background: 'rgba(3,8,14,0.86)', backdropFilter: 'blur(3px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '1rem',
+            padding: wide ? SHELL_PAD.wide : SHELL_PAD.narrow,
           }}>
           <motion.div
             initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.97, y: 6 }}
@@ -460,7 +508,7 @@ export default function Minimap({
             style={{
               background: 'rgba(8,14,22,0.98)',
               border: '1px solid rgba(180,214,232,0.28)',
-              borderRadius: 18, padding: '0.95rem',
+              borderRadius: 18, padding: wide ? PANEL_PAD.wide : PANEL_PAD.narrow,
               boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
             }}>
             {/* ── THE TALLY ──────────────────────────────────────────────
@@ -475,7 +523,7 @@ export default function Minimap({
               // Spans the chart AND the key when they sit side by side, so the
               // close button stays in the panel's top corner rather than in
               // the middle of it.
-              width: wide ? w + KEY_W + 18 : w,
+              width: wide ? w + KEY_W + KEY_GAP : w,
             }}>
               <div style={{ display: 'flex', gap: 20, minWidth: 0 }}>
                 <Stat label="Sailed" value={`${Math.round(prog.pct * 100)}%`} />
@@ -492,7 +540,7 @@ export default function Minimap({
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: wide ? 18 : 0, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: wide ? KEY_GAP : 0, alignItems: 'flex-start' }}>
             <canvas ref={canvasRef}
               style={{
                 width: w, height: h, display: 'block', borderRadius: 12,
