@@ -88,8 +88,9 @@ export default async function TavernPage() {
           <TavernLeaderboardsCard />
         </Suspense>
 
-        {/* ── THE ROOM TALKING ── */}
-        <Gossip />
+        {/* ── THE ROOM TALKING ── seeded per captain, and it turns over on
+            the hour rather than on a timer. See lib/tavernGossip. */}
+        <Gossip seed={user.id} />
 
         {/* ── WHO YOU KNOW ── a digest. The list is /social. */}
         <Suspense fallback={<SkeletonBox height={132} radius={16} />}>

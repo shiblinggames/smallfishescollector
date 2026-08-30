@@ -23,7 +23,7 @@ filing cabinet with a fireplace.
 
 | Group | What it holds |
 |---|---|
-| **Overheard** | the room talking: 81 snatches of conversation, hints and pure talk |
+| **Overheard** | the room talking: 3 of 81 snatches, turning over on the hour |
 | **Your crew** | counts, a row of faces, anyone waiting on an answer → `/social` |
 | **The Salt Road** | where you stand with the nine, read-only, top three only |
 | **The day** | the tot, the races, Tide Run — everything that resets, and it is LAST |
@@ -51,6 +51,19 @@ week. It gets its own line and its own colour.
   is a briefing), **the nine regulars are subjects and never speakers** (they keep to the
   water, which is the whole reason they are worth sailing to), and no em dashes. The lines
   are in `check-copy.mts` so the last one is enforced.
+- **The room turns over ON THE HOUR, not on a timer and not per visit.** `overheardFor(seed,
+  now)` is a pure function of the captain's id and the current hour, worked out on the
+  server: no client JS, no polling, no hydration risk. Come back twice in ten minutes and
+  the same three people are still talking about the same things, which is what a room does.
+  A seven second cycle shipped first and was wrong twice over: three slots take turns, so
+  it meant "something moves every seven seconds forever", and it burned all 81 lines in
+  half an hour. The deck is shuffled per captain and the window advances by 3 an hour, so
+  every line is heard once before any repeats: **27 hours of unique conversation**.
+- **A line always wears the same two faces.** Portraits come from a fixed cast of 24 fish
+  (`make-gossip-faces.mjs` writes 96px copies to `public/fish/face/`, ~12KB each against
+  the 140KB catch plates). The faces hash off the LINE, not the captain or the hour, so a
+  sentence you heard last week is recognisably the same person saying it again. Speakers
+  alternate, so an exchange is A, B, A.
 - **A PRESENCE WALL SHIPPED HERE FIRST AND WAS REPLACED.** It named the captains currently
   at sea, off `sea_seen_at`. It worked; it was thin. On a small roster it was usually empty,
   and even full it only said that other people existed. If it ever comes back, the rule it

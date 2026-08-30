@@ -419,18 +419,90 @@ export const GOSSIP: Overheard[] = [
 ]
 
 /**
- * A SHUFFLED DECK, not a random pick each time.
+ * ── THE FACES ───────────────────────────────────────────────────────────────
  *
- * Random picking repeats: with this many lines you would still see the same one
- * twice within a few minutes, and a room that says the same sentence twice is
- * obviously a list. Dealing off a shuffled deck means every line lands once
- * before any lands again.
+ * A short, fixed cast. Two dozen recurring faces read as regulars in a room; a
+ * different fish every time reads as a slot machine. Small copies are built by
+ * make-gossip-faces.mjs, which explains why they are not the full 154.
  */
-export function shuffled(): Overheard[] {
-  const d = [...GOSSIP]
-  for (let i = d.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[d[i], d[j]] = [d[j], d[i]]
+export const FACES = [
+  'anglerfish', 'blobfish', 'pufferfish', 'seahorse',
+  'clownfish', 'lionfish', 'hammerhead-shark', 'moray-eel',
+  'ocean-sunfish', 'sheepshead', 'mudskipper', 'triggerfish',
+  'viperfish', 'dumbo-octopus', 'vampire-squid', 'blue-tang',
+  'flounder', 'bluegill', 'largemouth-bass', 'red-snapper',
+  'grouper', 'barracuda', 'pumpkinseed', 'yeti-crab',
+] as const
+
+export type Heard = Overheard & {
+  /** The two speakers, as face ids. Lines alternate between them, so a three
+   *  line exchange is A, B, A. */
+  faces: [string, string]
+}
+
+/** FNV-1a. Small, stable, and the same answer on the server and the client,
+ *  which a hash built out of Math.random or Date.now would not be. */
+function hash(s: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
   }
-  return d
+  return h >>> 0
+}
+
+/** mulberry32, seeded. Deterministic, so the same captain in the same hour is
+ *  handed the same room. */
+function rng(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * ── WHAT THIS CAPTAIN HEARS, AND WHEN IT CHANGES ────────────────────────────
+ *
+ * NOT A TIMER, AND NOT RANDOM PER VISIT. The first version cycled a line every
+ * few seconds, which meant a room that never sat still and eighty one lines
+ * burned through in half an hour. Random-per-visit is the same problem wearing
+ * a different hat: open the tavern four times in a session and you have heard
+ * a dozen, and the twelfth lands with no more weight than the first.
+ *
+ * So the room is a function of WHO you are and WHAT HOUR IT IS. Come back
+ * twice in ten minutes and the same three people are still talking about the
+ * same things, which is what a room does. Come back after lunch and the
+ * conversation has moved on.
+ *
+ * The deck is shuffled per captain, so two people in the tavern at the same
+ * moment are not overhearing an identical script, and the window advances by
+ * exactly `count` an hour: with eighty one lines that is twenty seven hours
+ * before anybody hears a repeat, and every line gets said once first.
+ */
+export function overheardFor(seed: string, now: number = Date.now(), count = 3): Heard[] {
+  const deck = [...GOSSIP]
+  const r = rng(hash(seed))
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1))
+    ;[deck[i], deck[j]] = [deck[j], deck[i]]
+  }
+
+  const hour = Math.floor(now / 3_600_000)
+  const start = ((hour * count) % deck.length + deck.length) % deck.length
+
+  const out: Heard[] = []
+  for (let k = 0; k < count; k++) {
+    const o = deck[(start + k) % deck.length]
+    // FACES COME FROM THE LINE, NOT FROM THE CAPTAIN OR THE HOUR. The same
+    // sentence is always said by the same fish, so a line you heard last week
+    // is recognisably the same person saying it again.
+    const a = hash(o.say[0]) % FACES.length
+    let b = hash(o.say[0] + '::second') % FACES.length
+    if (b === a) b = (b + 1) % FACES.length
+    out.push({ ...o, faces: [FACES[a], FACES[b]] })
+  }
+  return out
 }
