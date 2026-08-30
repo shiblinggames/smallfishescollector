@@ -13,10 +13,20 @@
 // other two sit still is how a room actually moves. Your eye catches the change
 // where it happened and the rest of the page stays where you left it.
 //
-// SLOW, because these are sentences. Seven seconds is long enough to finish the
-// one you started and short enough that the room is never still, and the house
-// rule on juice is that the longer a thing is on screen the quieter it has to
-// be. Nothing here slides or bounces; a line fades out and another fades in.
+// SLOW, because these are sentences, and the interval is NOT how long a line
+// lasts. Three slots take it in turns, so a line is on screen for three times
+// the interval: at the seven seconds this shipped with, something moved every
+// seven seconds forever, which is about as often as you can finish reading one.
+// The panel was never still, and a panel that is never still while you are
+// trying to read the page underneath it is not atmosphere, it is a flicker in
+// the corner of your eye.
+//
+// Twenty-five seconds. A line stands for seventy-five, somebody glancing at the
+// tavern sees the room hold steady, and somebody who lingers watches it turn
+// over. The house rule on juice is that the longer a thing is on screen the
+// quieter it has to be, and this is on screen the whole time you are on the
+// page. Nothing slides or bounces; a line fades out and another fades in, and
+// the fade is slow enough not to read as a blink.
 //
 // ── AND IT SHUFFLES AFTER MOUNT, NOT DURING RENDER ──────────────────────────
 //
@@ -32,7 +42,8 @@ import { shuffled, type Overheard } from '@/lib/tavernGossip'
 /** How many are audible at once. Three fills the corner of an eye without
  *  becoming a page of dialogue. */
 const SHOWN = 3
-const EVERY_MS = 7000
+/** Between swaps. A line lives 3x this, because the three slots take turns. */
+const EVERY_MS = 25000
 
 export default function Gossip() {
   const [heard, setHeard] = useState<Overheard[] | null>(null)
@@ -98,7 +109,7 @@ export default function Gossip() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.55, ease: 'easeInOut' }}
+                  transition={{ duration: 0.9, ease: 'easeInOut' }}
                 >
                   {o.say.map((line, k) => (
                     <p key={k} className="font-karla" style={{
