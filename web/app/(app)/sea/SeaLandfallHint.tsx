@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState, startTransition } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { GUIDES } from '@/lib/onboardingScenes'
-import { SEA_ACCENT } from './SeaTour'
+import { SEA_ACCENT } from '@/lib/seaOnboarding'
 import { markSeaHintSeen } from './tourActions'
 
 /** Keyed by the place id in chart.ts. Anywhere not listed simply has no hint,
