@@ -218,6 +218,28 @@ export const FIRST_VOYAGE: Beat[] = [
     until: 'look',
     at: 'crew_hall',
   },
+  // ── AND THE PEOPLE ON IT ──────────────────────────────────────────────
+  //
+  // Said LAST, and said at all because nothing else in the game does. The
+  // regulars are the one system a captain can sail past for a week without
+  // discovering: the boats are scenery until you learn that hailing one is a
+  // thing, and the rapport behind them only starts paying once you have talked
+  // to somebody more than once.
+  //
+  // It is also the other half of what the cast beat does. That beat stops the
+  // helm offering to hail anyone, so the tour has quietly taught them that
+  // people are not something you interact with. This is where that is taken
+  // back.
+  {
+    ...K,
+    text: 'And you’re not the only one out here. *Hail* any boat you pass, and keep passing them.',
+    until: 'next',
+  },
+  {
+    ...K,
+    text: 'Some buy your catch on the spot. Some just like the company, and they warm to you the more you stop.',
+    until: 'next',
+  },
   {
     ...D,
     text: 'That’s the sea, Captain. She’s yours to sail.',
