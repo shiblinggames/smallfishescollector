@@ -64,19 +64,33 @@ const GUIDE = 0x7fd6c0
 
 export type SeaPath = {
   view: Container
-  /** Both ends in world coordinates, or null to put it away. */
-  set(from: { x: number; y: number } | null, to: { x: number; y: number } | null): void
+  /**
+   * Both ends in world coordinates, or null to put it away. `radius` draws a
+   * ring at the far end — somewhere to sail INTO rather than a direction to
+   * sail in, which is the difference between "south" and "there".
+   */
+  set(
+    from: { x: number; y: number } | null,
+    to: { x: number; y: number } | null,
+    radius?: number,
+  ): void
   advance(t: number): void
   destroy(): void
 }
 
 export function makePath(PIXI: typeof import('pixi.js')): SeaPath {
-  const view: ParticleContainer = new PIXI.ParticleContainer({
+  // A PLAIN container holding both halves. The lights are particles and the
+  // ring is a sprite, and a ParticleContainer takes particles ONLY — putting a
+  // Sprite in one is not a thing that draws.
+  const view: Container = new PIXI.Container()
+  view.visible = false
+
+  const dotLayer: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: false, vertex: true, color: true },
   })
   // Light on water, like everything else out here that is not a solid thing.
-  view.blendMode = 'add'
-  view.visible = false
+  dotLayer.blendMode = 'add'
+  view.addChild(dotLayer)
 
   const tex = light(PIXI)
   const dots: Particle[] = []
@@ -86,31 +100,81 @@ export function makePath(PIXI: typeof import('pixi.js')): SeaPath {
     p.anchorY = 0.5
     p.alpha = 0
     p.tint = GUIDE
-    view.addParticle(p)
+    dotLayer.addParticle(p)
     dots.push(p)
   }
 
+  // ── AND THE PLACE ITSELF ──────────────────────────────────────────────────
+  //
+  // A ring on the water at the far end. The lights say which way; this says
+  // where it stops, and gives the captain something to be INSIDE rather than a
+  // heading to hold forever. Flat on the plane, like everything else lying on
+  // the water.
+  const ringTex = (() => {
+    const S = 256
+    const c = document.createElement('canvas')
+    c.width = c.height = S
+    const g = c.getContext('2d')!
+    const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+    grad.addColorStop(0.00, 'rgba(255,255,255,0.10)')
+    grad.addColorStop(0.62, 'rgba(255,255,255,0.13)')
+    grad.addColorStop(0.86, 'rgba(255,255,255,0.85)')
+    grad.addColorStop(0.98, 'rgba(255,255,255,0)')
+    grad.addColorStop(1.00, 'rgba(255,255,255,0)')
+    g.fillStyle = grad
+    g.fillRect(0, 0, S, S)
+    return PIXI.Texture.from(c)
+  })()
+  const mark: import('pixi.js').Sprite = new PIXI.Sprite(ringTex)
+  mark.anchor.set(0.5)
+  mark.tint = GUIDE
+  mark.blendMode = 'add'
+  mark.visible = false
+  view.addChild(mark)
+
   let a: { x: number; y: number } | null = null
   let b: { x: number; y: number } | null = null
+  let rad = 0
 
   return {
     view,
 
-    set(from, to) {
+    set(from, to, radius = 0) {
       a = from
       b = to
+      rad = radius
       view.visible = !!(from && to)
+      mark.visible = !!(to && radius > 0)
     },
 
     advance(t) {
       if (!a || !b) return
+
+      if (rad > 0) {
+        // Breathing, and it never goes out — the ring is the destination, so it
+        // is still the answer when the captain is standing in it.
+        const pulse = 0.5 + 0.5 * Math.sin(t * 1.5)
+        mark.visible = true
+        mark.position.set(b.x, b.y)
+        const k = (rad * 2 * (1 + pulse * 0.05)) / 256
+        mark.width = 256 * k
+        // Flat on the water, so it is an ellipse for the same reason the
+        // berths and the island shadows are.
+        mark.height = 256 * k * 0.58
+        mark.alpha = 0.24 + pulse * 0.16
+      } else {
+        mark.visible = false
+      }
       const dx = b.x - a.x
       const dy = b.y - a.y
       const len = Math.hypot(dx, dy)
-      // Close enough to be arriving: the path has done its job and a cluster of
-      // lights on top of the destination is clutter.
-      if (len < 320) { view.visible = false; return }
-      view.visible = true
+      // Arrived: the lights have done their job and a stack of them on top of
+      // the destination is clutter. The RING stays — it is where they are meant
+      // to be, and it should still be saying so once they are there.
+      if (len < Math.max(320, rad)) {
+        for (const p of dots) p.alpha = 0
+        return
+      }
 
       const ux = dx / len, uy = dy / len
       // CLEAR OF BOTH ENDS. Never under the hull, never on the island.

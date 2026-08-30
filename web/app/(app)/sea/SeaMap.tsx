@@ -1385,7 +1385,7 @@ export default function SeaMap({
   /** Set by the first-voyage tour to fly the camera; null gives it back. */
   const tourCam = useRef<{ x: number; y: number } | null>(null)
   /** And where it is telling her to sail, for the guiding path. */
-  const tourGoal = useRef<{ x: number; y: number } | null>(null)
+  const tourGoal = useRef<{ x: number; y: number; r: number } | null>(null)
   /** Raised by the tour while the rod should stay stowed. */
   const tourHoldCast = useRef(false)
 
@@ -4836,7 +4836,8 @@ export default function SeaMap({
         boat.style.marginTop = `${offY}px`
         // THE WAY THERE, from wherever she actually is. Recomputed every frame
         // rather than set once, because the near end of it is the hull.
-        gpuRef.current?.guide(tourGoal.current ? pos.current : null, tourGoal.current)
+        gpuRef.current?.guide(
+          tourGoal.current ? pos.current : null, tourGoal.current, tourGoal.current?.r)
         gpuRef.current?.skipper({
           bob, heel, facing: facing.current, zoom: zoomRef.current,
           frame: frameRef.current, stage: 0,
@@ -6579,7 +6580,7 @@ hullRef={hullRefFor(t.key)} />
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
-        stowRod={stowRod} />
+        stowRod={stowRod} at={pos} />
       {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.

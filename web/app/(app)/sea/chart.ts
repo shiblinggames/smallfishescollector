@@ -838,3 +838,21 @@ export const OPEN_SEA: [string, string, string] = ['#0b1a24', '#1c3a48', '#4a6f7
  *  to go ashore from a standing start, and a short sail short of the Shallows.
  *  So the first thing you ever see is home on your left and open water ahead. */
 export const HOME = { x: 260, y: 560 }
+
+/**
+ * WHERE A NEW CAPTAIN IS SENT TO FISH.
+ *
+ * Due south of HOME, which is what makes "head south" a direction rather than
+ * a hint, and at radius 1769 — comfortably inside the Shallows, whose inner
+ * edge is 1400. A point ON the edge would have them arrive somewhere the Cast
+ * button flickers.
+ *
+ * A REAL PLACE, not the band's midpoint. The Shallows' own x/y is (0, 2600),
+ * the middle of a ring used for the compass; pointing a new captain at it
+ * would be 2,056px of open water to reach nothing in particular. This is
+ * 1,190px straight down and it is somewhere, because the tour draws a ring
+ * round it and asks them to sail into it.
+ *
+ * Clear water: 1,269px from the Mainland's shore and nothing else near it.
+ */
+export const TOUR_SPOT = { x: 260, y: 1750, r: 300 }

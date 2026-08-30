@@ -103,7 +103,11 @@ export type GpuHandle = {
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
-  guide(from: { x: number; y: number } | null, to: { x: number; y: number } | null): void
+  guide(
+    from: { x: number; y: number } | null,
+    to: { x: number; y: number } | null,
+    radius?: number,
+  ): void
   /** Which berth she is standing in, or null. Eased on the far side, so this
    *  can be called every frame or only on change. */
   berth(id: string | null): void
@@ -714,7 +718,7 @@ export default function SeaIslandsGPU({
         wake(w) {
           mine = w ? { id: 'me', ...w } : null
         },
-        guide(from, to) { guide.set(from, to) },
+        guide(from, to, radius) { guide.set(from, to, radius) },
         berth(id) { berthLayer.setActive(id) },
         front(list) {
           nearWanted.clear()

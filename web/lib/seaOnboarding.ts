@@ -68,13 +68,14 @@ export type Beat = {
    *               a tour that taught nothing.
    *   'catch'   — waits for a fish in the hold.
    *   'look'    — the camera flies somewhere and holds while they read.
+   *   'reach'   — waits until they have sailed into the ring the path draws.
    *   'moor'    — waits until they are actually tied up at `at`.
    *   'ashore'  — waits until the island's door chooser is open.
    *   'sold'    — waits until the hold has been emptied at the market. That
    *               happens on ANOTHER ROUTE, which is why the tour's step is a
    *               profile column rather than component state.
    */
-  until: 'next' | 'cast' | 'catch' | 'look' | 'moor' | 'ashore' | 'sold'
+  until: 'next' | 'cast' | 'catch' | 'look' | 'reach' | 'moor' | 'ashore' | 'sold'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
@@ -124,8 +125,11 @@ export const FIRST_VOYAGE: Beat[] = [
     // radius 617 and the Shallows do not begin until 1400, so they are sailing
     // OUT TO them — telling somebody to go past the first water they will
     // reach sends them through it and out the other side.
-    text: 'Head south, out to the *Shallows*. Follow the lights.',
-    until: 'next',
+    text: 'Head south, out to the *Shallows*. Follow the lights to the ring.',
+    // Waits until she is actually IN it. "Next" here would let a captain read
+    // the instruction, dismiss it, and be told about the Cast button while
+    // still tied to the dock where it does not exist.
+    until: 'reach',
     path: 'shallows',
   },
 

@@ -39,12 +39,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { FIRST_VOYAGE, SEA_ACCENT } from '@/lib/seaOnboarding'
-import { PLACES } from './chart'
+import { PLACES, TOUR_SPOT, berthOf } from './chart'
 import { markSeaTourSeen, setSeaTourStep } from './tourActions'
+
+/**
+ * WHERE A BEAT IS POINTING.
+ *
+ * Two of these are deliberately NOT the place's own coordinates:
+ *
+ *   THE SHALLOWS is a ring 1400 to 3800 out, and its x/y is the midpoint of
+ *   that ring — a number the compass uses, not a place. Pointing a new captain
+ *   at it is two thousand pixels of open water to arrive at nothing. TOUR_SPOT
+ *   is somewhere, just inside the band and due south of where they start.
+ *
+ *   AN ISLAND'S x/y IS ITS MIDDLE, which is land. You cannot sail to the
+ *   middle of the Mainland; the path has to end at the BERTH, which is the
+ *   only part of it a boat can occupy, and is where the ashore prompt comes up.
+ */
+function destination(id: string): { x: number; y: number; r: number } | null {
+  if (id === 'shallows') return TOUR_SPOT
+  const place = PLACES.find(p => p.id === id)
+  if (!place) return null
+  if (place.kind === 'port') {
+    const b = berthOf(place)
+    return { x: b.x, y: b.y, r: b.r }
+  }
+  return { x: place.x, y: place.y, r: place.r }
+}
 
 export default function SeaFirstVoyage({
   hasSeen, startAt, fishing, caught, nearId, ashore, blocked, cam, goal,
-  holdCast, stowRod,
+  holdCast, stowRod, at,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -74,11 +99,15 @@ export default function SeaFirstVoyage({
   /** The chart's camera override. Written while showing an island, cleared
    *  when the tour is done with it. */
   cam: { current: { x: number; y: number } | null }
-  /** And where it is sending her, for the guiding path on the water. */
-  goal: { current: { x: number; y: number } | null }
+  /** And where it is sending her, for the guiding path on the water. The
+   *  radius draws a ring there: somewhere to sail INTO, rather than a heading
+   *  to hold and no way of knowing when you have held it long enough. */
+  goal: { current: { x: number; y: number; r: number } | null }
   /** Raised while the tour wants the rod stowed. The chart refuses to cast
    *  while it is up, and says why rather than going quiet. */
   holdCast: { current: boolean }
+  /** Where she is, live. Read to tell when a `reach` beat has been answered. */
+  at: { current: { x: number; y: number } }
   /** Bring the rod in. Called once when the first fish is landed: the tour has
    *  somewhere to be, and leaving the captain in the fishing overlay is leaving
    *  them where the next instruction is not. */
@@ -155,10 +184,23 @@ export default function SeaFirstVoyage({
   // it does not, so a path never outlives the instruction that drew it.
   useEffect(() => {
     if (!beat?.path) { goal.current = null; return }
-    const place = PLACES.find(p => p.id === beat.path)
-    goal.current = place ? { x: place.x, y: place.y } : null
+    goal.current = destination(beat.path)
     return () => { goal.current = null }
   }, [beat, goal])
+
+  // Sailed into the ring, for a beat that asked them to.
+  const wantReach = beat?.until === 'reach'
+  useEffect(() => {
+    if (!wantReach || !beat?.path) return
+    const to = destination(beat.path)
+    if (!to) return
+    // Checked on the same tick the proximity UI runs on rather than per frame:
+    // arriving somewhere is not a sixty-times-a-second question.
+    const id = window.setInterval(() => {
+      if (Math.hypot(at.current.x - to.x, at.current.y - to.y) < to.r) next()
+    }, 200)
+    return () => window.clearInterval(id)
+  }, [wantReach, beat, next, at])
 
   // ── THE BEATS THAT WAIT ───────────────────────────────────────────────────
   const wantCast = beat?.until === 'cast'
