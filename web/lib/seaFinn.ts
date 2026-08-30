@@ -50,13 +50,25 @@
 // hail circle, so finishing a conversation never leaves you already inside the
 // next one. `scripts/check-finn.mts` asserts both on every build.
 
-import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, YOON } from '@/app/(app)/sea/chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, YOON, HAIL_RANGE } from '@/app/(app)/sea/chart'
 import { ISLES, ashoreRange } from '@/lib/seaIsles'
 
-/** How close you have to be to hail him. Wider than a trader's HAIL_RANGE
- *  (600): a trader is one of dozens and you will pass another, whereas missing
- *  Finn by a boat length means sailing the whole leg again. */
-export const FINN_REACH = 780
+/**
+ * How close you have to be to hail him.
+ *
+ * Wider than a trader's, and for the reason the old note gave: a trader is one
+ * of dozens and you will pass another, whereas missing Finn by a boat length
+ * means sailing the whole leg again.
+ *
+ * THE OLD NOTE HAD THE NUMBER WRONG. It said "wider than a trader's HAIL_RANGE
+ * (600)" and sized 780 against that — a modest widening. HAIL_RANGE is 190, so
+ * 780 was four times a trader's reach, and Finn was hailing captains from most
+ * of a screen away. Reported as exactly that: his proximity extending very far.
+ *
+ * 300 is the widening the note was describing: half again as far as anybody
+ * else, which is generous without owning the water around him.
+ */
+export const FINN_REACH = 300
 
 /**
  * How far he must move between haunts, when the water allows it.
@@ -101,17 +113,21 @@ const AVOID: { x: number; y: number; keep: number }[] = (() => {
   // ANYTHING WITH ITS OWN BUTTON keeps a full hail circle clear, because the
   // action bar shows one thing at a time and two overlapping prompts means one
   // of them is unreachable. That is ports (MOOR is 420), isles (ashoreRange)
-  // and the moored buyers (HAIL_RANGE is 600).
+  // and the moored buyers, who own HAIL_RANGE like everybody else.
+  //
+  // IMPORTED, NOT REMEMBERED. Three of these circles were sized against a
+  // remembered 600 and were therefore three times too big — which is what
+  // "35 landmarks sealed the Shallows off completely" below was really about.
   for (const p of PLACES) {
     if (p.inner !== undefined) continue
     out.push({ x: p.x, y: p.y, keep: p.r + 420 + FINN_REACH })
   }
   for (const i of ISLES) out.push({ x: i.x, y: i.y, keep: ashoreRange(i) + FINN_REACH })
-  for (const r of RESIDENTS) out.push({ x: r.x, y: r.y, keep: 600 + FINN_REACH })
+  for (const r of RESIDENTS) out.push({ x: r.x, y: r.y, keep: HAIL_RANGE + FINN_REACH })
   // The three who keep no shop hail exactly like the buyers do, so they own
   // exactly the same circle of water and Finn must not stand in it.
-  for (const r of SOCIALS) out.push({ x: r.x, y: r.y, keep: 600 + FINN_REACH })
-  out.push({ x: YOON.x, y: YOON.y, keep: 600 + FINN_REACH })
+  for (const r of SOCIALS) out.push({ x: r.x, y: r.y, keep: HAIL_RANGE + FINN_REACH })
+  out.push({ x: YOON.x, y: YOON.y, keep: HAIL_RANGE + FINN_REACH })
   // LANDMARKS ARE SCENERY. A monolith has no prompt to compete with, so all
   // that matters is that Finn's boat is not drawn inside it — visual clearance,
   // not a hail circle. The first cut gave these `size + 600 + FINN_REACH` and

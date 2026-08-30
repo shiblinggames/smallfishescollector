@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, berthOf, inBerth, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, berthOf, inBerth, type Place } from './chart'
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -713,9 +713,8 @@ const WATERLINE_Y = 34
 
 /** Marks in the wake. Enough to trail a couple of seconds at speed; more just
  *  costs nodes nobody can see. */
-/** How close you have to be to hail someone. A trader is a person, not a
- *  region — you pull alongside them, you do not "enter" them. */
-const HAIL_RANGE = 190
+// HAIL_RANGE now lives in chart.ts, because seaFinn sizes Finn's reach and his
+// keep-clear circles against it and had been describing it as 600 from memory.
 
 /**
  * THE WAKE, AS A V.

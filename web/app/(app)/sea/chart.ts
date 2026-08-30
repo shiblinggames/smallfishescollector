@@ -837,6 +837,21 @@ export const OPEN_SEA: [string, string, string] = ['#0b1a24', '#1c3a48', '#4a6f7
 /** Where the boat starts: in the harbour approach, close enough to the Mainland
  *  to go ashore from a standing start, and a short sail short of the Shallows.
  *  So the first thing you ever see is home on your left and open water ahead. */
+/**
+ * HOW CLOSE YOU HAVE TO BE TO HAIL SOMEBODY.
+ *
+ * A trader is a person, not a region — you pull alongside them, you do not
+ * "enter" them.
+ *
+ * IT LIVES HERE BECAUSE TWO FILES NEED IT. It used to be a module-local const
+ * in SeaMap, and lib/seaFinn described it from memory as 600 in two separate
+ * comments while sizing Finn's own reach and his keep-clear circles against
+ * that number. It is 190. Everything derived from the remembered figure was
+ * three times too big, and nobody could see it because the wrong number was
+ * only ever written in prose.
+ */
+export const HAIL_RANGE = 190
+
 export const HOME = { x: 260, y: 560 }
 
 /**
