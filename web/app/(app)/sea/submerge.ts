@@ -29,8 +29,6 @@ export const SUBMERGE: Record<string, Submerge> = {
   monolith: { keep: 0.2,  pts: [[0, 71.5], [59.4, 79.5], [100, 80]] },
   islet:    { keep: 0.24, pts: [[0, 72.7], [32.6, 79.3], [69.3, 80], [100, 64.4]] },
 
-  'dock-raids':   { keep: 0.3, pts: [[0, 74], [100, 74]] },
-  'dock-voyages': { keep: 0.3, pts: [[0, 75.6], [100, 75.6]] },
 
   'rock-spire':   { keep: 0.2,  pts: [[0, 82], [46, 83.7], [100, 82]] },
   'rock-dome':    { keep: 0.22, pts: [[0, 78], [45.9, 82.6], [100, 78]] },

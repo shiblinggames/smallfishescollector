@@ -60,8 +60,6 @@ export const ART_COLLIDERS: Record<string, ArtCollider> = {
   rig:      { aspect: 1,     shapes: [{ kind: 'capsule', ax: 0.21,  ay: 0.726, bx: 0.71,  by: 0.726, ar: 0.1 }] },
   bones:    { aspect: 1,     shapes: [{ kind: 'capsule', ax: 0.159, ay: 0.632, bx: 0.829, by: 0.641, ar: 0.1 }] },
   monolith: { aspect: 1,     shapes: [{ kind: 'capsule', ax: 0.362, ay: 0.814, bx: 0.632, by: 0.819, ar: 0.1 }] },
-  'dock-raids':   { aspect: 0.553, shapes: [{ kind: 'capsule', ax: 0.127, ay: 0.807, bx: 0.857, by: 0.803, ar: 0.1 }] },
-  'dock-voyages': { aspect: 0.497, shapes: [{ kind: 'capsule', ax: 0.105, ay: 0.826, bx: 0.898, by: 0.808, ar: 0.1 }] },
   'rock-gate-w':  { aspect: 1.092, shapes: [{ kind: 'capsule', ax: 0.147, ay: 0.866, bx: 0.877, by: 0.861, ar: 0.1 }] },
   'rock-gate-e':  { aspect: 1.249, shapes: [{ kind: 'capsule', ax: 0.108, ay: 0.872, bx: 0.889, by: 0.863, ar: 0.121 }] },
 }

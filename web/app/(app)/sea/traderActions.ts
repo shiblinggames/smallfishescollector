@@ -410,7 +410,7 @@ export async function saveSeaPosition(
    * FOUR VALUES, because there are four states: which water, and which hull.
    * They are not independent — no fishing boat in the open sea, no warship in
    * the fishing grounds — so one field still covers it. `moored` is the harbour
-   * on the expedition ship, with the fishing boat tied up at the raid dock.
+   * on the expedition ship, with the fishing boat moored at the Gunwharf.
    */
   side: 'fishing' | 'anchorage' | 'moored' | 'open' = 'fishing',
 ): Promise<void> {

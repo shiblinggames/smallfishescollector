@@ -47,8 +47,6 @@ function buildEntries(): Entry[] {
   const out: Entry[] = [...byArt.entries()].map(([k, size]) => ({
     kind: 'art', key: k, art: `/sea/${k}.png`, size,
   }))
-  out.push({ kind: 'art', key: 'dock-raids', art: '/sea/dock-raids.png', size: 624 })
-  out.push({ kind: 'art', key: 'dock-voyages', art: '/sea/dock-voyages.png', size: 624 })
   // The gate stacks: paint today, solid the moment shapes are drawn for them.
   // See allObstacles in SeaMap — no entry means no obstacle, not a fallback.
   out.push({ kind: 'art', key: 'rock-gate-w', art: '/sea/rock-gate-w.png', size: 760 })

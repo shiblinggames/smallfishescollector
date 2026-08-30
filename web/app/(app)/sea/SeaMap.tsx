@@ -29,7 +29,7 @@ import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
 import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
-import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, RAID_DOCK, VOYAGE_DOCK, DOCK_MOOR, DOCK_R, berthOf, inBerth, type Place } from './chart'
+import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
@@ -628,11 +628,9 @@ const OBSTACLES: Obstacle[] = [
       ? { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, r: k.ar * i.r + HULL }
       : { x: i.x + k.ax * i.r, y: i.y + k.ay * i.r, x2: i.x + k.bx * i.r, y2: i.y + k.by * i.r, r: k.ar * i.r + HULL })
   }),
-  // The two berths. You moor ALONGSIDE a dock; sailing through the middle of
-  // one is the same bug as sailing through an island, and it is the structure
-  // the whole swap happens at.
-  ...artShapes('/sea/dock-raids.png', RAID_DOCK.x, RAID_DOCK.y, DOCK_R * 2.6, RAID_DOCK.r),
-  ...artShapes('/sea/dock-voyages.png', VOYAGE_DOCK.x, VOYAGE_DOCK.y, DOCK_R * 2.6, VOYAGE_DOCK.r),
+  // The Gunwharf and the Charterhouse need no entry of their own: they are
+  // ports now, and the port sweep at the top of this list already gives every
+  // one of them its coastline.
 ]
 
 /**
@@ -1296,8 +1294,6 @@ export default function SeaMap({
   const [onShip, setOnShip] = useState(startSide === 'moored' || startSide === 'open')
   const shipRef = useRef(startSide === 'moored' || startSide === 'open')
   /** Which dock you are alongside, if any. Drives the prompt. */
-  const [atDock, setAtDock] = useState<'raid' | 'voyage' | null>(null)
-  const dockRef = useRef<'raid' | 'voyage' | null>(null)
   /** What the chart last refused to let you do, shown as a passing line. */
   const [refused, setRefused] = useState<string | null>(null)
   const refusedAt = useRef(0)
@@ -1861,6 +1857,9 @@ export default function SeaMap({
 
   /** The Mainland's landing chooser — tavern, market or tackle shop. */
   const [ashore, setAshore] = useState(false)
+  /** The Gunwharf's chooser. Its own flag rather than a second use of
+   *  `ashore`, which is the Mainland's. */
+  const [wharf, setWharf] = useState(false)
 
   /** The GPU island layer's camera, filled in when it mounts. Null whenever the
    *  flag is off, which is why every call below is optional. */
@@ -2038,8 +2037,8 @@ export default function SeaMap({
   // together with the position they belong to — see saveSeaPosition.
   const [inAnchorage, setInAnchorage] = useState(startSide !== 'fishing')
   const sideRef = useRef(startSide !== 'fishing')
-  /** The raid dock's confirm. Opened when you come alongside — see the dock
-   *  proximity block in the loop — and closed by answering it. */
+  /** THE BERTH SHEET, and the second half of the Gunwharf's chooser: the
+   *  muster, the mounts, and the confirm that actually changes the hull. */
   const [swapAsk, setSwapAsk] = useState(false)
   /**
    * THE PORTAL SHEET. Opened by sailing THROUGH the ring — that is the
@@ -2699,6 +2698,7 @@ export default function SeaMap({
       if (e.key !== 'Escape') return
       if (find) { setFind(null); return }
       if (ashore) { setAshore(false); return }
+      if (wharf) { setWharf(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); return }
       if (trawlsPeek) { setTrawlsPeek(false); return }
@@ -2712,7 +2712,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, picking, crewOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, picking, crewOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -3131,14 +3131,13 @@ export default function SeaMap({
     if (nearIsle) {
       return { act: found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`, hold: null }
     }
-    // THE BERTHS. The raid dock also asks on arrival, so this is the way back
-    // to a question you waved off rather than the only way to reach it — a
-    // modal that can only be opened by leaving and returning is a trap.
-    if (atDock === 'raid') {
-      return { act: onShip ? 'Tie up and take the fishing boat' : 'Board your ship', hold: null }
-    }
-    if (atDock === 'voyage') return { act: 'Open the voyage board', hold: null }
     if (near && near.kind === 'port') {
+      // THE GUNWHARF SAYS WHAT IT DOES. "Go ashore at the Gunwharf" is true and
+      // useless; what you actually want to know standing off it is which hull
+      // you will be sailing when you leave.
+      if (near.id === 'gunwharf') {
+        return { act: onShip ? 'Tie her up at the Gunwharf' : 'Take out your ship', hold: null }
+      }
       // ITS OWN VERB. Every other port is somewhere you go ashore; this one is
       // a thing you DO from the deck, and "Go ashore at The Trawl Harbour"
       // would promise a page that does not exist.
@@ -3580,6 +3579,10 @@ export default function SeaMap({
   const enter = useCallback((p: Place) => {
     vibrate([18, 40, 24])
     if (p.id === 'mainland') { setAshore(true); return }
+    // THE GUNWHARF ASKS RATHER THAN GOING ANYWHERE. One of its two doors is
+    // not a page at all — it is changing the hull under you — so it cannot be
+    // an href, and the other one is. See GunwharfAshore.
+    if (p.id === 'gunwharf') { setWharf(true); return }
     // NOT A PAGE. The trawl panel opens over the water you are floating on,
     // because the crews you are sending are going into it.
     if (p.id === 'trawl_fleet') { setTrawlOpen(true); return }
@@ -4088,7 +4091,7 @@ export default function SeaMap({
           // ON THE FISHING BOAT. The rim clamp below is what actually stops
           // her; this only says why.
           refusedAt.current = now
-          setRefused('The open sea wants your expedition ship. She is at the raid dock.')
+          setRefused('The open sea wants your expedition ship. She is berthed at the Gunwharf.')
           vibrate(12)
         }
       }
@@ -4109,29 +4112,10 @@ export default function SeaMap({
         vibrate([14, 30, 18])
       }
 
-      // ── ALONGSIDE A DOCK ───────────────────────────────────────────
-      // Proximity only. What the prompt then offers depends on which hull you
-      // are in, and pressing it is the player's business.
-      if (sideRef.current && !sortieRef.current) {
-        const dr = Math.hypot(pos.current.x - RAID_DOCK.x, pos.current.y - RAID_DOCK.y)
-        const dv = Math.hypot(pos.current.x - VOYAGE_DOCK.x, pos.current.y - VOYAGE_DOCK.y)
-        const reach = DOCK_R + DOCK_MOOR
-        const near = dr < reach && dr <= dv ? 'raid' : dv < reach ? 'voyage' : null
-        if (near !== dockRef.current) {
-          dockRef.current = near
-          setAtDock(near)
-          // NO MODAL ON ARRIVAL. It used to open itself the moment you came
-          // alongside, and a dialog you did not ask for is an interruption
-          // wherever it appears — sailing past the dock on the way to the
-          // sortie meant closing a question you had not raised. The action
-          // pill and the warmed helm already announce the berth; pressing
-          // them is what asks. Same manners as every other place on the
-          // chart: nothing opens because you drifted near it.
-        }
-      } else if (dockRef.current) {
-        dockRef.current = null
-        setAtDock(null)
-      }
+      // THE TWO BERTHS USED TO BE MEASURED HERE, by hand, against their own
+      // reach. They are islands now and the chart's own `near` does it — the
+      // same test that moors you at the Mainland, with the same drawn berth
+      // and the same prompt. Nothing opens because you drifted near one.
 
       // ── INTO THE PORTAL'S EYE ──────────────────────────────────────
       // The EYE activates, not the mouth: the sheet used to pop on brushing
@@ -5177,9 +5161,9 @@ export default function SeaMap({
         <AnimatePresence>
           {portalCharge && !inAnchorage && <PortalBeam tier={portalTier} />}
         </AnimatePresence>
-        {/* The two berths either side of the throat. Only from inside the
-            harbour they belong to, like the sign. */}
-        {inAnchorage && <Docks shipOut={onShip} near={atDock} shipTier={shipTier} />}
+        {/* Your ship, lying in the Gunwharf's berth until you come for her.
+            Only from inside the harbour she is in, like the sign. */}
+        {inAnchorage && !onShip && <ShipAtBerth shipTier={shipTier} />}
 
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
@@ -5689,12 +5673,12 @@ hullRef={hullRefFor(t.key)} />
         )}
       </AnimatePresence>
 
-      {/* ── THE RAID DOCK ───────────────────────────────────────────────
+      {/* ── THE BERTH SHEET, at the Gunwharf ────────────────────────────
           Where the hull under you changes. It used to happen at the sortie's
           mouth, in open water, on a boat that was drifting — the most
           consequential thing you can do on this chart and you could fall into
-          it. Now you moor, and the boat you came in is tied up where you left
-          her until you come back.
+          it. Now you go ashore and are asked, and the hull you are not sailing
+          is visibly at her berth until you come back.
 
           The gate is no longer a decision at all: it is a rule. The ship may
           pass and the fishing boat may not, and both are told so. */}
@@ -5710,7 +5694,7 @@ hullRef={hullRefFor(t.key)} />
           }}>
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(196,169,106,0.8)', margin: 0,
-            }}>The Raid Dock</p>
+            }}>The Gunwharf</p>
             <h2 className="font-pirata" style={{
               fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0', lineHeight: 1.15,
             }}>{onShip ? 'Back to the fishing boat?' : 'Take out your ship?'}</h2>
@@ -5865,8 +5849,8 @@ hullRef={hullRefFor(t.key)} />
               fontSize: '0.8rem', color: 'rgba(214,226,236,0.72)', lineHeight: 1.5, margin: '0.85rem 0 0',
             }}>
               {onShip
-                ? 'Your fishing boat is tied up here. Take her back and you can sail south through the reef again, but the open sea is closed to her.'
-                : 'She is the only hull that can pass the sortie into the open sea, and she does not go south of the reef. Your fishing boat waits here until you come back for her.'}
+                ? 'Your fishing boat is moored at the Gunwharf. Take her back and you can sail south through the reef again, but the open sea is closed to her.'
+                : 'She is the only hull that can pass the sortie into the open sea, and she does not go south of the reef. Your fishing boat waits at the Gunwharf until you come back for her.'}
             </p>
 
             <div style={{ display: 'flex', gap: 8, marginTop: '1rem' }}>
@@ -6101,6 +6085,8 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
+      <GunwharfAshore open={wharf} onClose={() => setWharf(false)} onShip={onShip}
+        shipTier={shipTier} onSail={() => { setWharf(false); setSwapAsk(true) }} />
 
       {/* THE CONFIRM UNDER THE ARCH IS GONE. It asked "sail through to
           Expeditions?" and answered by navigating to a page, which was the
@@ -6196,8 +6182,6 @@ hullRef={hullRefFor(t.key)} />
           if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
           if (nearBottle) { take(nearBottle); return true }
           if (nearIsle) { void land(nearIsle); return true }
-          if (atDock === 'raid') { setSwapAsk(true); return true }
-          if (atDock === 'voyage') { vibrate([18, 40, 24]); router.push('/expeditions'); return true }
           const here = nearRef.current
           if (here && here.kind === 'port' && !locked(here)) { enter(here); return true }
           // A water is not a tap target: it is what a HOLD is for, and casting
@@ -7913,87 +7897,41 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * door in it is a bad chart.
  */
 /**
- * THE TWO DOCKS, and the boat left at one of them.
+ * YOUR SHIP AT HER BERTH.
  *
- * Drawn in the world like every other structure, and submerged by SeaMark's own
- * rule so the piles go into the water rather than standing on it.
+ * Whenever she is not out being sailed she is lying in the Gunwharf's berth —
+ * the same drawn circle off its shore that every island on this chart moors you
+ * in, so she is tied up somewhere that already exists rather than against a
+ * plank of art painted for her.
  *
- * THE MOORED FISHING BOAT is the point of the raid dock. Leaving her out of the
- * picture would make the swap a menu state — you would be told your boat was
- * waiting and have to take it on trust. Tied up where you left her, it is a
- * fact you can see from across the harbour.
+ * SHE HAS TO BE VISIBLE OR THE SWAP IS A MENU STATE. Without her you would be
+ * told your ship was waiting and have to take it on trust; lying at her berth,
+ * it is a fact you can see from across the harbour. She disappears the moment
+ * you board — she is your sprite then — and the berth simply stands empty.
+ *
+ * FULL SAILED SIZE, not the trawl fleet's moored 0.71. She is the same object
+ * you will be steering ten seconds after boarding, and the two renders can be
+ * seen within moments of each other: a hull that grows a third when you step
+ * onto it reads as a swap, not a boarding. The smacks get away with
+ * moored-scale because you never sail one.
  */
-const Docks = memo(function Docks({ shipOut, near, shipTier }: {
-  /** Is the expedition ship out being sailed? Her berth shows her only while
-   *  she is actually in it. */
-  shipOut: boolean
-  near: 'raid' | 'voyage' | null
-  shipTier: number
-}) {
+const ShipAtBerth = memo(function ShipAtBerth({ shipTier }: { shipTier: number }) {
+  const b = berthOf(GUNWHARF)
   return (
-    <>
-      {([['raid', RAID_DOCK, '/sea/dock-raids.png', 'Raids'],
-         ['voyage', VOYAGE_DOCK, '/sea/dock-voyages.png', 'Voyages']] as const).map(([id, d, art, label]) => (
-        <div key={id}>
-          {/* The raid dock draws a shade larger: it is the hub that houses
-              your ship, and the new art is built like one — the hierarchy
-              between the two berths should be readable at a glance. */}
-          <SeaMark m={{ art, x: d.x, y: d.y, size: DOCK_R * (id === 'raid' ? 3.0 : 2.6) }} i={id === 'raid' ? 1400 : 1401} />
-          {/* The name, counter-squashed and lifted clear like every label on
-              this chart. Brighter when you are alongside, because that is the
-              one moment it is telling you something you did not know. */}
-          <div aria-hidden style={{
-            position: 'absolute', left: d.x, top: d.y - DOCK_R * 0.9,
-            transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-            transformOrigin: 'bottom center', whiteSpace: 'nowrap', pointerEvents: 'none',
-          }}>
-            <p className="font-cinzel font-700" style={{
-              fontSize: '1rem', letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0,
-              textAlign: 'center', marginRight: '-0.18em',
-              color: near === id ? 'rgba(255,226,170,0.95)' : 'rgba(214,226,236,0.6)',
-              textShadow: '0 2px 14px rgba(0,0,0,0.98)',
-            }}>{label}</p>
-          </div>
-        </div>
-      ))}
-
-      {/* ── HER BERTH ─────────────────────────────────────────────────
-          The expedition ship, tied up in the wide berth her dock was painted
-          with, whenever she is not out being sailed. She disappears from here
-          the moment you board — she is your sprite now — and the berth simply
-          stands empty until you bring her back.
-
-          The fishing boat is deliberately NOT drawn here while you are out.
-
-          FULL SAILED SIZE, not the trawl fleet's moored 0.71. She is the same
-          object you will be steering ten seconds after boarding, and the two
-          renders can be seen within moments of each other — a hull that grows
-          a third when you step onto it reads as a swap, not a boarding. The
-          smacks get away with moored-scale because you never sail one. */}
-      {!shipOut && (
-        <div style={{
-          // AGAINST THE PIER. The dock's SeaMark anchors the art's BOTTOM (the
-          // pile feet) at RAID_DOCK.y; pulling her centre a quarter-radius
-          // NORTH of that lays her hull along the piles with her sails over
-          // the pier's front face — moored at the loading face, which faces
-          // the camera. Mocked against the real plates at 1:1 before the
-          // number was chosen. She paints after the dock in this fragment, so
-          // she reads in front of the planking she is tied to.
-          position: 'absolute', left: RAID_DOCK.x - DOCK_R * 0.05, top: RAID_DOCK.y - DOCK_R * 0.25,
-          transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
-          pointerEvents: 'none', opacity: 0.95,
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={getShip(shipTier).seaImageUrl} alt="" draggable={false} decoding="async"
-            width={640} height={640} style={{
-              width: WARSHIP_W, height: 'auto', display: 'block',
-              filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
-              // The berth shows her exactly as the helm will.
-              ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
-            }} />
-        </div>
-      )}
-    </>
+    <div style={{
+      position: 'absolute', left: b.x, top: b.y,
+      transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
+      pointerEvents: 'none', opacity: 0.95,
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={getShip(shipTier).seaImageUrl} alt="" draggable={false} decoding="async"
+        width={640} height={640} style={{
+          width: WARSHIP_W, height: 'auto', display: 'block',
+          filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
+          // The berth shows her exactly as the helm will.
+          ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
+        }} />
+    </div>
   )
 })
 
@@ -9824,6 +9762,141 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
   )
 }
 
+
+/**
+ * ASHORE AT THE GUNWHARF.
+ *
+ * TWO DOORS, and they are genuinely different kinds of thing, which is the
+ * whole reason this is a chooser rather than a link.
+ *
+ * SAIL HER changes the hull under you. It is not a page and cannot be one, so
+ * it opens the berth sheet — the muster, the mounts, and the confirm. That
+ * sheet is the decision; this card is only the door to it.
+ *
+ * MANAGE HER is the refit yard, and it IS a page. From out here it used to be
+ * reachable only through a small repair link buried in the berth sheet, and
+ * only when the ship was actually sunk — so the one place on the chart that is
+ * about your ship could not take you to the screen that is about your ship.
+ *
+ * The first card swaps its meaning with the hull you are in, because the
+ * question genuinely reverses: standing here in the fishing boat you are asking
+ * to take the ship out, and standing here in the ship you are asking to leave
+ * her and go back to fishing.
+ */
+function GunwharfAshore({ open, onClose, onSail, onShip, shipTier }: {
+  open: boolean; onClose: () => void; onSail: () => void
+  onShip: boolean; shipTier: number
+}) {
+  const router = useRouter()
+  const ship = getShip(shipTier)
+  const doors = [
+    {
+      key: 'sail',
+      art: ship.seaImageUrl,
+      flip: !!ship.seaFlip,
+      name: onShip ? 'Tie her up' : 'Sail her',
+      blurb: onShip ? 'Leave her here and take the fishing boat' : 'Muster the crew and take her out',
+      cta: onShip ? 'Moor' : 'Cast off',
+      accent: '#f0c040',
+      go: onSail,
+    },
+    {
+      key: 'manage',
+      art: '/sea/gunwharf.png',
+      flip: false,
+      name: 'Manage her',
+      blurb: 'Hull, refits, armament and repairs',
+      cta: 'Open',
+      accent: '#8fb4d8',
+      go: () => { onClose(); router.push('/expeditions/ship') },
+    },
+  ]
+  return (
+    // PopupShell does NOT portal, so it is a DOM child of the map — and the map
+    // steers on click. Without this, dismissing the chooser also puts the helm
+    // over. The same guard the Mainland's chooser carries.
+    <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+    <PopupShell open={open} onClose={onClose}>
+      <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 6 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+        style={{ margin: 'auto', width: '100%', maxWidth: 400 }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{
+              fontSize: '0.66rem', color: 'rgba(190,214,228,0.85)', textShadow: '0 1px 5px rgba(0,0,0,0.85)',
+            }}>Ashore at the Gunwharf</p>
+            <p className="font-cinzel font-700" style={{
+              fontSize: '1.26rem', color: '#f4ecd8', textShadow: '0 2px 8px rgba(0,0,0,0.85)',
+            }}>{ship.name}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close"
+            style={{
+              width: 30, height: 30, borderRadius: '50%', padding: 0,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+              color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+          {doors.map((d, i) => (
+            <motion.button key={d.key} type="button" className="tap"
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + i * 0.07, type: 'spring', stiffness: 380, damping: 28 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { vibrate([0, 16]); d.go() }}
+              style={{
+                position: 'relative', overflow: 'hidden',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                padding: '0.85rem 0.55rem 0.8rem', borderRadius: 16, cursor: 'pointer',
+                // A SOLID base under the tint, like every card that floats over
+                // the painted chart.
+                background: `linear-gradient(180deg, ${d.accent}24 0%, rgba(4,10,18,0.72) 48%, rgba(3,8,14,0.94) 100%), #06101a`,
+                border: `1px solid ${d.accent}5c`,
+                boxShadow: `0 0 22px ${d.accent}14`,
+              }}>
+              <div style={{
+                position: 'relative', width: '100%', height: 92,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+              }}>
+                <div aria-hidden style={{
+                  position: 'absolute', width: 104, height: 104, borderRadius: '50%',
+                  background: `radial-gradient(circle, ${d.accent}44, transparent 68%)`, filter: 'blur(3px)',
+                }} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={d.art} alt="" loading="eager" decoding="async" style={{
+                  position: 'relative', maxWidth: '94%', maxHeight: 90, objectFit: 'contain',
+                  transform: d.flip ? 'scaleX(-1)' : undefined,
+                  filter: `drop-shadow(0 8px 18px ${d.accent}4d) drop-shadow(0 4px 10px rgba(0,0,0,0.6))`,
+                }} />
+              </div>
+              <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1.12 }}>
+                {d.name}
+              </p>
+              <p className="font-karla font-600" style={{
+                fontSize: '0.68rem', color: `${d.accent}dd`, marginTop: 3, lineHeight: 1.32,
+              }}>{d.blurb}</p>
+              <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{
+                marginTop: 'auto', paddingTop: 9,
+                display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.68rem',
+                color: d.accent,
+              }}>
+                {d.cta}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
+              </span>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+    </PopupShell>
+    </div>
+  )
+}
 
 /**
  * GOING ASHORE AT THE MAINLAND.

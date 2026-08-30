@@ -1200,6 +1200,43 @@ asks first** — the arch is a hole in rock with more harbour behind it, sailed 
 boat you were already on. Past the sortie you are on the ship the expedition ladder sells,
 and the confirm names the hull and counts the crew actually in raid seats, including zero.
 
+### The two islands flanking it
+
+**The Gunwharf** (west, `-898, -5715`, r 340) and **The Charterhouse** (east, `+898`, same
+latitude) sit either side of the throat. They are ordinary `PLACES` ports — coastline, shore
+foam, a drawn berth, the mooring prompt, a minimap pin, all of it inherited.
+
+They were not. Until 2026-08-30 they were two horizontal jetties on piles, `dock-raids.png`
+and `dock-voyages.png`, with their own proximity radius, their own art colliders, their own
+waterlines and their own bespoke prompt. They read as furniture floating in the middle of a
+harbour: a plank of art laid on the water with nothing underneath it and nothing around it.
+Every other destination on this chart is an island, so the two most consequential doors in
+the game were the only two that looked like scenery, and people sailed past them.
+
+Their positions are **written down in `PLACES` and checked against the rim** in a
+module-load guard under `EXP_EDGE`. `PLACES` is a literal built before `EXP_ORIGIN` exists,
+so they cannot be derived there; the guard re-derives them from `ISLAND_ARC` (1,150) and
+`ISLAND_SETBACK` (740) and throws if they have drifted more than 2px, and also refuses a
+position that leaves under 200px beside the sortie or under 250px to the harbour wall.
+
+| | |
+|---|---|
+| **The Gunwharf** | Your ship: berthed, armed, taken out from here |
+| **The Charterhouse** | `/expeditions` — routes, crews and the day's voyage |
+
+**The Gunwharf is the one island whose `href` is never followed.** Going ashore opens a
+two-card chooser (`GunwharfAshore`), because its two doors are not the same kind of thing:
+*Manage her* is a page (`/expeditions/ship`), and *Sail her* is not a page at all — it opens
+the berth sheet, which is the muster, the mounts and the confirm that changes the hull under
+you. Both cards reverse their wording when you are already aboard.
+
+**The Charterhouse's berth is on its WEST shore**, against the chart's south-east default.
+Both islands should be moored at from the channel, which is the water anybody is actually
+sailing up; a default berth on this one would be round the back, facing the harbour wall.
+
+**Your ship is drawn lying in the Gunwharf's berth** whenever she is not out. Without her the
+swap would be a menu state — you would be told she was waiting and have to take it on trust.
+
 ### Sizing it
 
 Any change to `EXP_EDGE` has to clear the Crew Hall, whose shore reaches 2,124 from the

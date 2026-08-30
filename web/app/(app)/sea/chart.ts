@@ -284,6 +284,64 @@ export const PLACES: Place[] = [
     ],
   },
   {
+    /**
+     * ── THE GUNWHARF ─────────────────────────────────────────────────────
+     *
+     * West of the throat. Where your ship lives: armed, berthed, and taken out
+     * from here.
+     *
+     * IT WAS A JETTY, AND A JETTY WAS THE WRONG OBJECT. Two horizontal decks on
+     * piles flanked the sortie, and they read as furniture floating in the
+     * middle of a harbour — a plank of art laid on the water with nothing
+     * underneath it and nothing around it. Every other destination on this
+     * chart is an ISLAND: land, a shore, a berth off it, buildings standing on
+     * it. The two most consequential doors in the game were the only two that
+     * were not, so they looked like scenery you could sail past, which is
+     * exactly what people did.
+     *
+     * Now they are islands like everywhere else, and the whole apparatus the
+     * chart already owns comes with them for nothing: a coastline, shore foam,
+     * a drawn berth with its approach lights, the mooring prompt, the compass,
+     * the minimap pin.
+     *
+     * POSITION IS DERIVED, NOT CHOSEN. See the guard under EXP_EDGE: these two
+     * are placed off the anchorage rim exactly as the old docks were, far
+     * enough back that neither narrows the sortie's mouth and far enough in
+     * that a hull can still work round the outside of them.
+     */
+    id: 'gunwharf', name: 'The Gunwharf', blurb: 'Your ship, armed and berthed',
+    // Never followed. The chart intercepts this island by id and opens its own
+    // two-door chooser, because one of the doors is not a page at all — it is
+    // changing the hull you are sailing.
+    href: '/expeditions/ship', x: -898, y: -5715, r: 340, art: '/sea/gunwharf.png',
+    kind: 'port', minLevel: 0,
+    buildings: [
+      { art: '/sea/gunwharf.png', x: 50, y: 54, scale: 0.4 },
+    ],
+  },
+  {
+    /**
+     * ── THE CHARTERHOUSE ─────────────────────────────────────────────────
+     *
+     * East of the throat, and the Gunwharf's opposite number in every way that
+     * matters: one is where the ship is kept, the other is where the work is
+     * posted. Sitting them either side of the mouth means the last thing you
+     * pass on the way out is the choice between them.
+     *
+     * ITS BERTH IS ON THE WEST SHORE, against the chart's south-east default.
+     * Both islands should be moored at from the CHANNEL — that is the water
+     * anybody is actually sailing up — and a berth on this one's far side would
+     * be round the back, facing the harbour wall.
+     */
+    id: 'charterhouse', name: 'The Charterhouse', blurb: 'Routes, crews and the day’s voyage',
+    href: '/expeditions', x: 898, y: -5715, r: 340, art: '/sea/charterhouse.png',
+    kind: 'port', minLevel: 0,
+    berth: { dx: -340 * 0.85, dy: 340 * 0.6 },
+    buildings: [
+      { art: '/sea/charterhouse.png', x: 50, y: 54, scale: 0.4 },
+    ],
+  },
+  {
     // ── THE TRAWL HARBOUR ────────────────────────────────────────────────
     //
     // Where a crew is sent out and brought back in. It was three boats rafted
@@ -769,44 +827,64 @@ export function inSortie(x: number, y: number): boolean {
 }
 
 /**
- * THE TWO DOCKS, one either side of the sortie's throat.
+ * THE TWO ISLANDS EITHER SIDE OF THE THROAT, and where their positions come
+ * from.
  *
  * The swap used to happen AT the mouth: sail into the gap, get asked, change
  * ships in open water. That put the most consequential decision in the game
  * somewhere you arrive by drifting, and it left the fishing boat nowhere — she
  * simply stopped existing for as long as you were out.
  *
- * A dock fixes both. You moor, you are asked, and the boat you came in is tied
- * up where you left her, visibly, until you come back for her. The mouth itself
+ * Mooring fixes both. You tie up, you are asked, and the ship you are not
+ * sailing is visibly at her berth until you come back for her. The mouth itself
  * becomes what it should always have been: a gate the expedition ship may use
  * and the fishing boat may not.
  *
- * WEST IS RAIDS, east is voyages. They flank the throat far enough back that
- * neither narrows it — 969 from the mouth's centre against a 620 half-width —
- * and far enough from the headland stacks not to sit in the rock.
+ * WEST IS THE GUNWHARF, east is the Charterhouse, and both are entries in
+ * PLACES like every other island — which is the point, and why there is no
+ * dock geometry left in this file.
  *
- * Derived from the rim rather than written as coordinates, so moving EXP_EDGE
- * moves the sortie and both docks together and they cannot drift apart.
+ * WHAT IS STILL DERIVED IS WHERE THEY STAND. PLACES is a literal, and it is
+ * built before EXP_ORIGIN and EXP_EDGE exist, so the two coordinates are
+ * written down and CHECKED here rather than computed there. Moving the rim
+ * moves the sortie; if it stops agreeing with these two, this throws at module
+ * load rather than shipping a harbour whose islands have quietly drifted into
+ * the mouth they are supposed to flank.
  */
-const DOCK_ARC = 820
-const DOCK_SETBACK = 620
-export const DOCK_R = 240
+const ISLAND_ARC = 1150
+const ISLAND_SETBACK = 740
 
-function dockAt(side: -1 | 1): { x: number; y: number } {
+{
   const { from, to } = anchorageArc()
-  const th = (from + to) / 2 + side * (DOCK_ARC / EXP_EDGE)
-  const r = EXP_EDGE - DOCK_SETBACK
-  return { x: EXP_ORIGIN.x + Math.cos(th) * r, y: EXP_ORIGIN.y + Math.sin(th) * r }
+  const d = ISLAND_ARC / EXP_EDGE
+  const r = EXP_EDGE - ISLAND_SETBACK
+  for (const [id, side] of [['gunwharf', -1], ['charterhouse', 1]] as const) {
+    const th = (from + to) / 2 + side * d
+    const want = {
+      x: EXP_ORIGIN.x + Math.cos(th) * r,
+      y: EXP_ORIGIN.y + Math.sin(th) * r,
+    }
+    const p = PLACES.find(q => q.id === id)
+    if (!p) throw new Error(`chart: ${id} is missing from PLACES`)
+    if (Math.hypot(p.x - want.x, p.y - want.y) > 2) {
+      throw new Error(
+        `chart: ${id} is at ${p.x},${p.y} but the rim puts it at ` +
+        `${Math.round(want.x)},${Math.round(want.y)}`)
+    }
+    // AND IT MUST NOT CROWD THE GATE. The whole reason they sit this far back
+    // is that an island in the throat is a harbour with no way out of it.
+    const clear = Math.hypot(p.x - SORTIE.x, p.y - SORTIE.y) - p.r - SORTIE_HALF
+    if (clear < 200) throw new Error(`chart: ${id} leaves only ${Math.round(clear)}px beside the sortie`)
+    // Nor sit in the harbour wall.
+    const toRim = EXP_EDGE - Math.hypot(p.x - EXP_ORIGIN.x, p.y - EXP_ORIGIN.y) - p.r
+    if (toRim < 250) throw new Error(`chart: ${id} leaves only ${Math.round(toRim)}px to the rim`)
+  }
 }
 
-/** Where you change ships. Your fishing boat waits here while you are out. */
-export const RAID_DOCK = { ...dockAt(-1), r: DOCK_R }
-/** Where the voyage board is. */
-export const VOYAGE_DOCK = { ...dockAt(1), r: DOCK_R }
-
-/** How close you have to come to be asked. Generous, like a port's mooring
- *  ring: you are pulling alongside a jetty, not threading a needle. */
-export const DOCK_MOOR = 300
+/** The two of them by name, for the code that has to talk about one in
+ *  particular — the ship's berth is at the Gunwharf and nowhere else. */
+export const GUNWHARF = PLACES.find(p => p.id === 'gunwharf')!
+export const CHARTERHOUSE = PLACES.find(p => p.id === 'charterhouse')!
 
 /**
  * RAID WATER — everything beyond the anchorage rim.
