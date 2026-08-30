@@ -2,7 +2,7 @@
   "name": "Small Fishes: Seas the Booty",
   "short_name": "Small Fishes",
   "description": "Collect all 36 digital fish cards. Daily games, expeditions, and more.",
-  "start_url": "/tavern",
+  "start_url": "/sea",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
