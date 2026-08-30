@@ -33,7 +33,7 @@ import { PLACES } from './chart'
 import { markSeaTourSeen, setSeaTourStep } from './tourActions'
 
 export default function SeaFirstVoyage({
-  hasSeen, startAt, fishing, caught, nearId, ashore, cam, goal,
+  hasSeen, startAt, fishing, caught, nearId, ashore, blocked, cam, goal,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -41,6 +41,17 @@ export default function SeaFirstVoyage({
   startAt: number
   /** Whether the rod is currently out. Advances the `cast` beat. */
   fishing: boolean
+  /**
+   * WHY SHE CANNOT CAST, if she cannot.
+   *
+   * The cast beat has no Next on purpose — the button IS the thing they were
+   * asked to do — which means it deadlocks outright if the button is disabled.
+   * That is not hypothetical: a new account had no bait at all until the signup
+   * grant, and casting is gated on having some. A tour that can be stopped by
+   * an empty bait box has to be able to SAY so, rather than sitting there
+   * repeating an instruction the game will not accept.
+   */
+  blocked: 'bait' | 'hold' | null
   /** Rises by one every time a fish is landed, and never falls. Deliberately
    *  NOT the hold count: that is clamped to the hold's capacity, so a full hold
    *  catches a fish without the number moving, and it drops when you sell. */
@@ -170,12 +181,22 @@ export default function SeaFirstVoyage({
   // another route entirely, and this card is what they carry through the door.
   const waiting = beat.until !== 'next' && beat.until !== 'look'
 
+  // Said INSTEAD of the instruction, not after it: an instruction the game will
+  // refuse is worse than no instruction, because the captain tries it and
+  // concludes the game is broken rather than that they are missing something.
+  const stuck = beat.until === 'cast' && blocked
+  const text = stuck === 'bait'
+    ? 'You are out of *bait*, Captain. Claim your free worms from the Daily Bonus in the Tavern, on the Mainland.'
+    : stuck === 'hold'
+      ? 'Your *hold* is full. Nothing else fits until you sell what is in it — the market on the Mainland pays best.'
+      : beat.text
+
   return (
     <GuideCoach
       show
       portrait={beat.portrait}
       speaker={beat.speaker}
-      text={beat.text}
+      text={text}
       accent={SEA_ACCENT}
       onClose={finish}
       onNext={waiting ? undefined : next}

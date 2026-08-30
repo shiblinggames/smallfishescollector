@@ -39,12 +39,35 @@ create table if not exists user_collection (
 );
 
 -- Auto-create profile on signup
+-- ── A NEW CAPTAIN CAN ACTUALLY FISH ─────────────────────────────────────────
+--
+-- This used to insert a profiles row and nothing else, so a brand-new account
+-- had NO BAIT — and casting is gated on having some (`canCast` in FishingHere
+-- is `spritesReady && !holdFull && !outOfBait`). The game's entire core loop
+-- was unreachable until the captain found the Daily Bonus, which lives in the
+-- Tavern, behind a door on the Mainland nobody had told them about.
+--
+-- It showed: 34 of 81 accounts had never held a single bait, and 31 of those
+-- had never caught anything at all.
+--
+-- 25 WORMS — a little more than the Daily Bonus's 20, which is what the game
+-- already treats as a day's fishing. Enough to reach a first catch, a first
+-- sale and the tackle shop without a detour. Worms specifically: the plain
+-- all-purpose bait with no bite-speed bonus, so this is a starting line rather
+-- than an advantage.
 create or replace function handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id)
   values (new.id)
   on conflict (id) do nothing;
+
+  -- ON CONFLICT DO NOTHING rather than adding: this runs once per account, and
+  -- a row already existing means something else has already given them bait.
+  insert into public.bait_inventory (user_id, bait_type, quantity)
+  values (new.id, 'worm', 25)
+  on conflict (user_id, bait_type) do nothing;
+
   return new;
 end;
 $$ language plpgsql security definer;

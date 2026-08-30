@@ -6559,6 +6559,9 @@ hullRef={hullRefFor(t.key)} />
           hub had an intro scene of its own. */}
       <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
         caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
+        // The same two gates FishingHere puts on the Cast button. If it will
+        // not let them cast, the tour has to stop asking them to.
+        blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
         cam={tourCam} goal={tourGoal} />
       {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
