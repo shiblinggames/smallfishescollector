@@ -102,14 +102,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * reward is that somebody talks to you differently. A finished errand and a
  * friendship should not look the same.
  *
- * So the bar GOES at max and a line of their own colour takes its place, the
- * card takes their accent properly rather than a wash of it, and the whole
- * thing carries a slow breath. It reads as lit from inside, and in a grid of
- * nine it is instantly the one that is different — which is the point, because
- * this is a month of sailing per person and the roster is where you see it.
+ * So the bar GOES at max and a still gold rim takes its place.
  *
- * Their colour, not gold. Gold is the game's currency and would say "prize";
- * the accent is THEIRS, and what changed is your standing with them.
+ * ── AND IT DOES NOT GLOW, WHICH IT USED TO ──────────────────────────────────
+ *
+ * The first version breathed a slow halo in the person's own colour, on the
+ * argument that gold is the game's currency and would say "prize" where the
+ * accent says "your standing with THEM". The argument was about the wrong
+ * thing. Whatever a colour means, in this app a card that glows and pulses is a
+ * card with something waiting behind it: that is what an unclaimed reward does,
+ * what a new discovery does, what the dot in the corner of this very card does.
+ * Nine of them breathing in a grid read as nine unread notifications.
+ *
+ * Nothing about a finished friendship is waiting. It is the one state on this
+ * panel that wants no attention at all, and a rim that simply sits there is the
+ * only thing that says so. Gold, because the panel already uses a gold border
+ * for exactly this on the rival's card the moment his job is done — so the
+ * language was there and this was the outlier.
  */
 function PersonCard({ face, accent, name, sub, pct, dot, maxed, onOpen }: {
   face: Portrait; accent: string; name: string; sub: string
@@ -117,15 +126,15 @@ function PersonCard({ face, accent, name, sub, pct, dot, maxed, onOpen }: {
 }) {
   return (
     <button onClick={onOpen}
-      className={maxed ? 'folk-card-maxed' : undefined}
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14, cursor: 'pointer',
+        // The wash stays THEIRS even at max. Gold marks the edge; filling the
+        // card with it would be a solid gold panel, which this game does not do.
         background: maxed
-          ? `linear-gradient(180deg, ${accent}30 0%, ${accent}0e 55%, rgba(255,255,255,0.02) 100%)`
+          ? `linear-gradient(180deg, ${accent}22 0%, ${accent}0c 55%, rgba(255,255,255,0.02) 100%)`
           : `linear-gradient(180deg, ${accent}14 0%, rgba(255,255,255,0.02) 60%)`,
-        border: `1px solid ${maxed ? `${accent}96` : `${accent}3a`}`,
-        ['--folk-accent' as string]: accent,
+        border: maxed ? `1.5px solid ${GOLD}b0` : `1px solid ${accent}3a`,
         position: 'relative', overflow: 'hidden',
       }}>
       {dot && (
@@ -137,7 +146,10 @@ function PersonCard({ face, accent, name, sub, pct, dot, maxed, onOpen }: {
       )}
       <div style={{
         transform: face.mirrored ? 'scaleX(-1)' : 'none',
-        borderRadius: '50%', boxShadow: `0 0 ${maxed ? 26 : 16}px ${accent}${maxed ? '66' : '30'}`,
+        // The same soft halo every card's portrait gets. It was boosted at max,
+        // which put a second glowing thing on the card that is meant to be the
+        // quiet one.
+        borderRadius: '50%', boxShadow: `0 0 16px ${accent}30`,
       }}>
         <CharacterAvatar
           characterColor={face.characterColor}
@@ -161,7 +173,7 @@ function PersonCard({ face, accent, name, sub, pct, dot, maxed, onOpen }: {
       {maxed ? (
         <div aria-hidden style={{
           width: '62%', height: 2, borderRadius: 999, marginTop: 7,
-          background: accent, boxShadow: `0 0 10px ${accent}`,
+          background: `${GOLD}cc`,
         }} />
       ) : (
         <div style={{

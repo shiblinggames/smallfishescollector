@@ -87,7 +87,7 @@ against what he turns out to be.
 
 | | |
 |---|---|
-| Tiers | 5, named not numbered: a stranger / a known face / good company / trusted / one of their own |
+| Tiers | 5, named not numbered: a stranger / a known face / good company / trusted / thick as thieves |
 | Points | chat +1, own-water fish +2, **their one favourite +5**. Thresholds **4 / 14 / 34 / 70** |
 | Gate | one chat and one gift per regular per day (UTC, same as dailies) |
 | Reward | **story only.** No rate bumps, no unlocks, no items. A tier buys new dialogue |
@@ -189,7 +189,7 @@ crest sends three rings instead of one: the three below it are rungs and arrive 
 enough that flattering each would flatten all of them; the top happens once per person, ever.
 
 **Still planned, not built: maxing a friendship should feed a Homestead upgrade.** The intent is that
-"one of their own" across the cast unlocks something meaningful at home. Design it before
+"thick as thieves" across the cast unlocks something meaningful at home. Design it before
 building it, and do not bolt a currency onto rapport to get there.
 
 Adding a regular means: an entry in `FOLK` (with a face, role, accent and favourite), a position in

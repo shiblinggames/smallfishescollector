@@ -38,13 +38,23 @@ export type FolkId =
 
 export type FolkTier = 0 | 1 | 2 | 3 | 4
 
-/** What each tier is called, in their words rather than a number of hearts. */
+/**
+ * What each tier is called, in their words rather than a number of hearts.
+ *
+ * THE TOP RUNG IS ABOUT THE PAIR OF YOU. It read "One of their own", which puts
+ * them and their people on one side and you on the other, being let in — and
+ * that is a description of the tier BELOW this one. Read what they actually say
+ * when you cross into it: "you are the one who comes back", "there are two of us
+ * who know what is behind that door now", "I have you, and that is a thing I
+ * will be sorting out in my own time". None of that is admission to a circle.
+ * It is two people, and the name should be a word about both of them.
+ */
 export const TIER_NAME: Record<FolkTier, string> = {
   0: 'A stranger',
   1: 'A known face',
   2: 'Good company',
   3: 'Trusted',
-  4: 'One of their own',
+  4: 'Thick as thieves',
 }
 
 /**
