@@ -178,8 +178,17 @@ sheeeeesh, locked in, gucci, betty johnson, gyattt. He is deliberately the one v
 breaks the sea's register, and the Locked-In Rod is named after the way he says it rather
 than the other way round. Keep the mannerisms if his lines are ever extended.
 
-**Planned, not built: maxing a friendship should feed a Homestead upgrade.** Tier 4 currently
-ends in a line and nothing else, which is thin for a month of sailing. The intent is that
+**Tier 4 has an `afterMax` pool and a card of its own.** Five more lines per regular that
+only open once tier four's own five are spent, in a different register: tier four is the
+threshold, the thing they had never said, and `afterMax` is the ordinary days after being
+told it. Still story only. In the Salt Road roster a maxed card drops the progress bar (a
+full bar reads as a completed errand, and this is the one system whose whole reward is that
+somebody talks to you differently), takes their accent properly, and breathes in THEIR
+colour rather than gold, because gold is currency and would say prize. The final tier-up
+crest sends three rings instead of one: the three below it are rungs and arrive often
+enough that flattering each would flatten all of them; the top happens once per person, ever.
+
+**Still planned, not built: maxing a friendship should feed a Homestead upgrade.** The intent is that
 "one of their own" across the cast unlocks something meaningful at home. Design it before
 building it, and do not bolt a currency onto rapport to get there.
 

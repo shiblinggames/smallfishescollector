@@ -212,6 +212,22 @@ export type Folk = {
    * twenty times.
    */
   lines: [string[], string[], string[], string[], string[]]
+  /**
+   * WHAT THEY SAY ONCE THERE IS NO FURTHER TO GO.
+   *
+   * Reached only at the top tier, and only after that tier's own five are
+   * spent. The doc's own note is that tier four "ends in a line and nothing
+   * else, which is thin for a month of sailing"; this is the part of that a
+   * pool can answer. It is deliberately NOT a reward — the house rule for
+   * rapport is story only, no rates, no unlocks, no items — it is simply the
+   * conversation not running out.
+   *
+   * A DIFFERENT REGISTER FROM TIER FOUR. Those lines are the threshold: the
+   * confession, the thing they had never said. These are what comes after
+   * being told it. Quieter, more ordinary, sometimes funnier, often circling
+   * back to what they let slip. A friendship is mostly the days afterwards.
+   */
+  afterMax: string[]
   /** The moment the bond deepens. One per tier crossed into, so four. */
   tierUp: [string, string, string, string]
   /**
@@ -312,6 +328,13 @@ export const FOLK: Folk[] = [
         "I am going to be honest with you, which I am not, usually. I look forward to it. Do not make a thing of it.",
       ],
     ],
+    afterMax: [
+      "You are late. I am not asking why. I am noting it, because I note everything.",
+      "Somebody asked me who my best captain was. I said I did not keep a list. I do keep a list.",
+      "Sit a minute. The scale is not going anywhere and neither, apparently, are you.",
+      "I have started weighing yours last. It is the only part of the day I am in no hurry for.",
+      "We are past the part where I explain myself to you. That is restful. You have no idea.",
+    ],
     tierUp: [
       "You keep turning up. All right. Meg. That is what I go by, and now you know it.",
       "Pull alongside properly next time. You are not a queue, you are a regular.",
@@ -363,6 +386,13 @@ export const FOLK: Folk[] = [
         "If you are ever out here and something has gone badly wrong, come to me first. I am quick. That is the whole of what I am good for.",
       ],
     ],
+    afterMax: [
+      "Still looking for your sail. Still not making a thing of it.",
+      "I said I was quick. I have never told you what I am slow at. Ask me sometime and I might.",
+      "You did not come yesterday. I noticed at about the hour you usually do. That is all I am saying.",
+      "I have started leaving the good spot on the rail clear. It is not for you. It is for you.",
+      "Nothing has gone badly wrong yet. I keep being ready anyway. Old habit, and a useful one.",
+    ],
     tierUp: [
       "Right. You are not a stranger. You are a nuisance I recognise. Progress.",
       "You get the good rate and the short version. Both are compliments.",
@@ -413,6 +443,13 @@ export const FOLK: Folk[] = [
         "I have been out here so long the water is more of a home than the harbour was, and I was born in the harbour.",
         "You keep sailing out to an old buyer who charges you for the privilege. I stopped working out why and started being glad.",
       ],
+    ],
+    afterMax: [
+      "You are early. The water is flat. There is no reason for either of us to hurry, so we will not.",
+      "I told you about the wreck at the eastern edge. I have not moved what is in it. I want that understood.",
+      "Some days I do not weigh anything at all. Those are not the bad days. I used to think they were.",
+      "You have started sounding like somebody who lives out here. I am not sure that is a kindness.",
+      "Forty years of this and the sea still does something new every month. Stay long enough and it will show you.",
     ],
     tierUp: [
       "Marlow. Old Marlow if you like, everyone else does, and I stopped minding it a long time ago.",
@@ -469,6 +506,13 @@ export const FOLK: Folk[] = [
         "You are the only one who has never asked me why I am down here. I would tell you, if you did.",
       ],
     ],
+    afterMax: [
+      "You came back. That is the whole conversation, really. The rest is manners.",
+      "I would tell you now. You still have not asked. I have decided that is the point.",
+      "Nothing down there has changed. That is the most alarming thing I can tell you about it.",
+      "I talked to somebody else last week. Briefly. I did not care for it.",
+      "Go up. I know you know. I will say it every time regardless.",
+    ],
     tierUp: [
       "Fitch.",
       "You can stay a while. If you want.",
@@ -522,6 +566,13 @@ export const FOLK: Folk[] = [
         "I am old. Somebody has to keep weighing out here and it will not be me for much longer.",
         "I hope you are chasing it and it is not chasing you. I have seen it the other way round and I did not care for it.",
       ],
+    ],
+    afterMax: [
+      "You still come up when I say it. Most stop humouring an old woman eventually.",
+      "I have written some of it down. Not for the harbour. For whoever is out here after me.",
+      "Bring me nothing today. Sit there. That is a thing you are allowed to do.",
+      "I told you the deep takes whoever it likes. It has not taken you. I am not calling that luck out loud.",
+      "You will be the old one out here one day. Start noticing what you would want to pass on.",
     ],
     tierUp: [
       "Nance. Grey Nance to the harbour, just Nance to whoever comes back twice.",
@@ -598,6 +649,13 @@ export const FOLK: Folk[] = [
         "Everything's gucci out here when you're fishing like this. Gyattt. Don't tell the harbour I said gucci.",
       ],
     ],
+    afterMax: [
+      "You're locked in permanently at this point. Gyattt. It stopped being a streak and started being how you fish.",
+      "The rod's just a rod now, isn't it. Told you. Nobody believes that part until after.",
+      "Everything's gucci. Genuinely. I've got nothing left to teach you and I'm not even annoyed about it.",
+      "Sheeeeesh. I watched you land one from here and I still don't know how you read that water.",
+      "Come out here sometimes when you don't need anything. That's the whole ask. Betty Johnson.",
+    ],
     tierUp: [
       "Yoon. Might as well have the name if you're gonna keep mooring here.",
       "You stopped asking for a discount. Gucci. There was never gonna be one.",
@@ -658,6 +716,13 @@ export const FOLK: Folk[] = [
         "One day somebody green is going to pull alongside me and I will be the one who knows things. I think about that a lot.",
       ],
     ],
+    afterMax: [
+      "I fixed the leak myself. Took me four days and it is ugly and it holds.",
+      "Somebody green pulled alongside me last week. I knew the answer. I have never felt taller.",
+      "I do not grin like a fool any more when I land something. I do it on the inside now. Progress.",
+      "You waved at me once when I was about to quit. I have never told you which day it was and I never will.",
+      "I have started going a bit deeper. Not far. Further than last season, and that is the whole point.",
+    ],
     tierUp: [
       "Tam! Tam Brill. You asked my name. Nobody asks my name.",
       "Are we friends? Do not answer that. I am going to assume.",
@@ -709,6 +774,13 @@ export const FOLK: Folk[] = [
         "If you ever find my boat empty and my line still tied off, cut it. Do not follow it down. Promise me.",
       ],
     ],
+    afterMax: [
+      "The door is still shut. I go past it. I do not stop. That took two years to manage.",
+      "You never did ask what I found. I have got so used to that I would be thrown if you did.",
+      "My line is tied off the same way every time now. If you ever see it different, that is the signal.",
+      "I went down with somebody last month. First time since my sister. It was fine. It was strange and it was fine.",
+      "You are on the short list of people who would come looking. I have never had a short list before.",
+    ],
     tierUp: [
       "Cass. Turbot if you are being formal, and nobody out here is being formal.",
       "You can moor near me. Near, not over. I will show you where.",
@@ -759,6 +831,13 @@ export const FOLK: Folk[] = [
         "I have carried word for forty years and never once for myself. I would not know who to send it to.",
         "Yoon told me to tell you something once. Then he changed his mind. I have wondered ever since and so should you.",
       ],
+    ],
+    afterMax: [
+      "No word for you today. That is rarer than you would think and I thought you should hear it from me.",
+      "Cass asked after you. Did not ask me to say so. I am saying so.",
+      "I have started telling people what you are like out here. I hope that is all right. It is all good.",
+      "Forty years and I have finally worked out who I would send word to. Took a while.",
+      "Yoon changed his mind again about that message. I have stopped waiting. You should too, probably.",
     ],
     tierUp: [
       "Rue. Rue Bream. Now you are on my list, which is a real list and it is quite short.",
@@ -1014,10 +1093,23 @@ export function folkById(id: string): Folk | null { return BY_ID.get(id as FolkI
  * Silence would be the worst possible answer to a captain who sailed out to
  * talk to somebody.
  */
+/**
+ * EVERYTHING THEY CAN SAY AT A TIER.
+ *
+ * The tier's own pool, plus — at the top, where there is no next tier to
+ * unlock — the after-max lines behind it. One function so that `nextLine` and
+ * `knowsFavourite` walk the SAME list: the latter resolves a seen key back to
+ * its text, and if it looked somewhere the former can hand out, a captain
+ * could be told a favourite by a line the panel cannot find again.
+ */
+export function poolFor(folk: Folk, tier: FolkTier): string[] {
+  return tier === 4 ? [...folk.lines[4], ...folk.afterMax] : folk.lines[tier]
+}
+
 export function nextLine(folk: Folk, tier: FolkTier, seen: readonly string[]): {
   line: string; key: string
 } {
-  const pool = folk.lines[tier]
+  const pool = poolFor(folk, tier)
   const seenSet = new Set(seen)
   const idx = pool.findIndex((_, i) => !seenSet.has(`${folk.id}:${tier}:${i}`))
   const at = idx >= 0 ? idx : Math.floor(Math.random() * pool.length)
@@ -1042,7 +1134,7 @@ export function knowsFavourite(folk: Folk, seen: readonly string[]): boolean {
   for (const key of seen) {
     const [id, t, i] = key.split(':')
     if (id !== folk.id) continue
-    const line = folk.lines[Number(t)]?.[Number(i)]
+    const line = poolFor(folk, Number(t) as FolkTier)?.[Number(i)]
     if (line && line.toLowerCase().includes(needle)) return true
   }
   return false

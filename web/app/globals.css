@@ -3186,3 +3186,21 @@ body.hardcore-gauntlet::after {
 
 
 
+
+/* ── ONE OF THEIR OWN ────────────────────────────────────────────────────────
+   A regular whose rapport is maxed, in the Salt Road roster. A slow breath in
+   their OWN colour rather than gold: gold is currency and would read as a
+   prize, and what was won here is somebody's regard.
+
+   Long and shallow on purpose. Nine of these can end up on screen together and
+   the house rule on juice is subtle and localised; a card that pulses hard is
+   a notification, and this is meant to read as lit from inside. */
+@keyframes folk-maxed-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px transparent, 0 0 10px -2px var(--folk-accent); }
+  50%      { box-shadow: 0 0 0 1px transparent, 0 0 22px 1px var(--folk-accent); }
+}
+.folk-card-maxed { animation: folk-maxed-breathe 4.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .folk-card-maxed { animation: none; box-shadow: 0 0 16px -2px var(--folk-accent); }
+}

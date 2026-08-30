@@ -92,17 +92,40 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * everybody else now, in his own section and his own gold, which says the same
  * thing quietly and leaves the panel one idea instead of two.
  */
-function PersonCard({ face, accent, name, sub, pct, dot, onOpen }: {
+/**
+ * SOMEBODY ON THE ROAD, AND WHETHER YOU GOT THERE.
+ *
+ * ── THE MAXED CARD IS A DIFFERENT CARD ──────────────────────────────────────
+ *
+ * At the top tier the progress bar is the problem: a full bar says "complete",
+ * which is a task word, and this is the only system in the game whose entire
+ * reward is that somebody talks to you differently. A finished errand and a
+ * friendship should not look the same.
+ *
+ * So the bar GOES at max and a line of their own colour takes its place, the
+ * card takes their accent properly rather than a wash of it, and the whole
+ * thing carries a slow breath. It reads as lit from inside, and in a grid of
+ * nine it is instantly the one that is different — which is the point, because
+ * this is a month of sailing per person and the roster is where you see it.
+ *
+ * Their colour, not gold. Gold is the game's currency and would say "prize";
+ * the accent is THEIRS, and what changed is your standing with them.
+ */
+function PersonCard({ face, accent, name, sub, pct, dot, maxed, onOpen }: {
   face: Portrait; accent: string; name: string; sub: string
-  pct: number; dot?: boolean; onOpen: () => void
+  pct: number; dot?: boolean; maxed?: boolean; onOpen: () => void
 }) {
   return (
     <button onClick={onOpen}
+      className={maxed ? 'folk-card-maxed' : undefined}
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14, cursor: 'pointer',
-        background: `linear-gradient(180deg, ${accent}14 0%, rgba(255,255,255,0.02) 60%)`,
-        border: `1px solid ${accent}3a`,
+        background: maxed
+          ? `linear-gradient(180deg, ${accent}30 0%, ${accent}0e 55%, rgba(255,255,255,0.02) 100%)`
+          : `linear-gradient(180deg, ${accent}14 0%, rgba(255,255,255,0.02) 60%)`,
+        border: `1px solid ${maxed ? `${accent}96` : `${accent}3a`}`,
+        ['--folk-accent' as string]: accent,
         position: 'relative', overflow: 'hidden',
       }}>
       {dot && (
@@ -114,7 +137,7 @@ function PersonCard({ face, accent, name, sub, pct, dot, onOpen }: {
       )}
       <div style={{
         transform: face.mirrored ? 'scaleX(-1)' : 'none',
-        borderRadius: '50%', boxShadow: `0 0 16px ${accent}30`,
+        borderRadius: '50%', boxShadow: `0 0 ${maxed ? 26 : 16}px ${accent}${maxed ? '66' : '30'}`,
       }}>
         <CharacterAvatar
           characterColor={face.characterColor}
@@ -132,12 +155,22 @@ function PersonCard({ face, accent, name, sub, pct, dot, onOpen }: {
         fontSize: '0.5rem', letterSpacing: '0.14em', color: accent,
         margin: '3px 0 0', textAlign: 'center',
       }}>{sub}</p>
-      <div style={{
-        width: '100%', height: 3, borderRadius: 999, marginTop: 6,
-        background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
-      }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: accent, borderRadius: 999 }} />
-      </div>
+      {/* THE BAR IS FOR THE ROAD, not the arrival. At the top there is nothing
+          left to fill, and a bar sitting at 100% is a completed task rather
+          than somebody you know. */}
+      {maxed ? (
+        <div aria-hidden style={{
+          width: '62%', height: 2, borderRadius: 999, marginTop: 7,
+          background: accent, boxShadow: `0 0 10px ${accent}`,
+        }} />
+      ) : (
+        <div style={{
+          width: '100%', height: 3, borderRadius: 999, marginTop: 6,
+          background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
+        }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: accent, borderRadius: 999 }} />
+        </div>
+      )}
     </button>
   )
 }
@@ -751,6 +784,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
                               face={folk.face} accent={folk.accent} name={folk.short}
                               sub={TIER_NAME[r.tier]}
                               pct={Math.round((Math.min(r.points, TIER_AT[4]) / TIER_AT[4]) * 100)}
+                              maxed={r.tier >= 4}
                               dot={!r.chattedToday}
                               onOpen={() => { vibrate(6); setShowing(folk.id) }} />
                           ))}

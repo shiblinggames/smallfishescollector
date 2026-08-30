@@ -553,16 +553,27 @@ export default function FolkScene({
                     alignItems: 'center', justifyContent: 'center',
                     padding: '1.4rem 1.2rem', textAlign: 'center',
                   }}>
-                  {!reduced && (
-                    <motion.div
-                      initial={{ scale: 0.2, opacity: 0.9 }}
-                      animate={{ scale: 2.6, opacity: 0 }}
-                      transition={{ duration: 1.1, ease: 'easeOut' }}
-                      style={{
-                        position: 'absolute', width: 140, height: 140, borderRadius: '50%',
-                        border: `2px solid ${accent}`, pointerEvents: 'none',
-                      }} />
-                  )}
+                  {/* THE LAST ONE GETS THREE.
+                      Every tier crossed sends a ring out, which is right for
+                      the three on the way up: they are rungs, and they arrive
+                      often enough that a big moment each time would flatten all
+                      of them. The top is not a rung. It is the end of a month
+                      of sailing for ONE person, and it never happens again for
+                      them — so it gets a second and a third ring behind the
+                      first, slower and further, and nothing else changes. Same
+                      colour, same shape, same card: more of it, for longer. */}
+                  {!reduced && [0, 1, 2].map(i => (
+                    (i === 0 || (gain?.tier ?? tier) >= 4) && (
+                      <motion.div key={i}
+                        initial={{ scale: 0.2, opacity: 0.9 }}
+                        animate={{ scale: 2.6 + i * 0.5, opacity: 0 }}
+                        transition={{ duration: 1.1 + i * 0.45, ease: 'easeOut', delay: i * 0.22 }}
+                        style={{
+                          position: 'absolute', width: 140, height: 140, borderRadius: '50%',
+                          border: `2px solid ${accent}`, pointerEvents: 'none',
+                        }} />
+                    )
+                  ))}
                   <motion.p
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
