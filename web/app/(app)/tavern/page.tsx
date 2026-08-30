@@ -6,7 +6,7 @@ import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
 import ContestsHubCard from './ContestsHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
-import TheRoom from './TheRoom'
+import Gossip from './Gossip'
 import Group from './Group'
 import CrewDigest from './CrewDigest'
 import SaltRoadDigest from './SaltRoadDigest'
@@ -41,14 +41,21 @@ import { kingWeekStr } from './trivia/constants'
  * So: titled groups, and each one says how things STAND with a way through to
  * where they are managed.
  *
- *   THE ROOM      who is on the water right now
+ *   OVERHEARD     the room talking. Half of it is a hint, half is just talk
  *   YOUR CREW     counts, faces, anyone waiting on an answer → /social
  *   THE SALT ROAD where you stand with the nine, read-only
  *   THE DAY       the tot, the races, the free game
  *
- * The order is the argument: who is here, who you know, who knows you, and
- * then the things you collect on the way past. Anything that resets is LAST,
- * because it is not the reason to come.
+ * The order is the argument: the room first, then who you know, then who knows
+ * you, and then the things you collect on the way past. Anything that resets is
+ * LAST, because it is not the reason to come.
+ *
+ * OVERHEARD REPLACED A PRESENCE WALL that named the captains currently at sea.
+ * It worked and it was thin: on a small roster it was usually empty, and even
+ * full it only said that other people existed. Gossip is the same job done
+ * properly. It is never empty, it carries most of what this game never gets
+ * round to telling anybody, and it is the only thing on the page that makes the
+ * tavern sound like it has other people in it. See lib/tavernGossip.
  */
 
 export default async function TavernPage() {
@@ -81,8 +88,8 @@ export default async function TavernPage() {
           <TavernLeaderboardsCard />
         </Suspense>
 
-        {/* ── WHO IS HERE ── */}
-        <TheRoom />
+        {/* ── THE ROOM TALKING ── */}
+        <Gossip />
 
         {/* ── WHO YOU KNOW ── a digest. The list is /social. */}
         <Suspense fallback={<SkeletonBox height={132} radius={16} />}>

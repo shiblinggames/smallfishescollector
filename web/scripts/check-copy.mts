@@ -34,6 +34,7 @@ import { ISLES } from '../lib/seaIsles'
 import { DIG_SITES } from '../lib/seaDigs'
 import { FRAGMENTS } from '../lib/seaBottles'
 import { PERSONAS } from '../lib/seaTraders'
+import { GOSSIP } from '../lib/tavernGossip'
 import { HOTSPOTS, FURNITURE, PORTAL_REACH } from '../lib/homestead'
 
 let findings = 0
@@ -49,6 +50,10 @@ type Src = { label: string; strings: (string | null | undefined)[] }
 
 const SOURCES: Src[] = [
   { label: 'raid item',       strings: RAID_ITEMS.flatMap(i => [i.name, i.description, i.source]) },
+  // The tavern's overheard lines. Flavour rather than systems copy, but they
+  // are WRITTEN like systems copy is written and there are ninety of them, so
+  // they are exactly the pile a stray dash hides in.
+  { label: 'gossip',          strings: GOSSIP.flatMap(g => [...g.say, g.from]) },
   { label: 'badge',           strings: BADGES.flatMap(b => [b.name, b.description]) },
   { label: 'badge detail',    strings: Object.values(BADGE_DETAIL) },
   { label: 'crew class',      strings: Object.values(CLASSES).flatMap(c => [c.name, c.blurb, ...(c.milestones as { desc?: string }[]).map(m => m.desc)]) },

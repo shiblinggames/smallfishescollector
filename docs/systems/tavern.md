@@ -23,7 +23,7 @@ filing cabinet with a fireplace.
 
 | Group | What it holds |
 |---|---|
-| **The Room** | who is on the water right now |
+| **Overheard** | the room talking: 81 snatches of conversation, hints and pure talk |
 | **Your crew** | counts, a row of faces, anyone waiting on an answer → `/social` |
 | **The Salt Road** | where you stand with the nine, read-only, top three only |
 | **The day** | the tot, the races, Tide Run — everything that resets, and it is LAST |
@@ -39,7 +39,25 @@ week. It gets its own line and its own colour.
 
 ## Design rules
 
-- **PRESENCE IS NOT POSITION, and that is the line.** The chart answers where a captain
+- **GOSSIP IS HOW THIS GAME TEACHES ITSELF.** `lib/tavernGossip.ts`. The game has a forge,
+  a bunkhouse, weekly puzzles and a man in the deepest water selling a rod no shop stocks,
+  and none of them announce themselves. The obvious fix is a hints panel; a hints panel is
+  a manual, and it tells a player the game is a system rather than a place. A half caught
+  sentence at the next table is the same information wearing clothes. Six rules govern the
+  lines and they are written at the top of that file: **nobody is talking to you** (no
+  second person, no instructions), **every factual line is true** (vague is allowed, wrong
+  is not), **no numbers that live in code** (they get retuned and the line would not move
+  with them), **about a third carry nothing at all** (a room where every sentence is useful
+  is a briefing), **the nine regulars are subjects and never speakers** (they keep to the
+  water, which is the whole reason they are worth sailing to), and no em dashes. The lines
+  are in `check-copy.mts` so the last one is enforced.
+- **A PRESENCE WALL SHIPPED HERE FIRST AND WAS REPLACED.** It named the captains currently
+  at sea, off `sea_seen_at`. It worked; it was thin. On a small roster it was usually empty,
+  and even full it only said that other people existed. If it ever comes back, the rule it
+  ran on is worth keeping: presence is not position. Live position stays the Captain +
+  accepted-pact perk the chart enforces in Postgres; a mutual follow was the floor for the
+  weaker claim, and everyone else was counted, never named.
+- **The old presence rule, for reference.** The chart answers where a captain
   is, live, and gates it hard: both hold a membership AND have agreed a pact, enforced in
   Postgres, because following somebody back is not consent to be tracked. The tavern
   answers the weaker question and takes the weaker permission — a **mutual follow**, which
@@ -48,10 +66,10 @@ week. It gets its own line and its own colour.
 - **Everyone else is counted, never named.** "And fourteen other captains on the water"
   makes the room feel like a place without publishing a list of who is playing right now
   to anyone who asks.
-- **`sea_seen_at`, not `last_seen_at`.** The latter is stamped ONCE per app load for the
-  admin dashboard, so a five-minute window against it shows an empty room full of people.
-  `sea_seen_at` is a real heartbeat, flushed every 20s while on the chart. The honest
-  consequence: this counts captains ON THE WATER, not in a menu.
+- **`sea_seen_at`, never `last_seen_at`** for any live-presence work anywhere. The latter is
+  stamped ONCE per app load for the admin dashboard, so a short window against it shows an
+  empty room full of people. `sea_seen_at` is a real heartbeat, flushed every 20s while on
+  the chart, and it counts captains ON THE WATER rather than in a menu.
 - **The pact board is shared, not copied** (`components/PactBoard.tsx`). The chart's
   overlay and the tavern render the same component; two implementations of
   accept/withdraw/part-ways would drift and then disagree about a relationship inside one

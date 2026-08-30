@@ -53,7 +53,7 @@ export default async function CrewDigest() {
         <p className="font-karla" style={{
           fontSize: '0.76rem', color: 'rgba(214,198,166,0.6)', margin: 0, lineHeight: 1.5,
         }}>
-          Follow a few captains and they turn up in the room above when they sail.
+          Follow a few captains and you can agree to sail together, and see each other out on the water.
         </p>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
