@@ -34,6 +34,7 @@ import { markSeaTourSeen, setSeaTourStep } from './tourActions'
 
 export default function SeaFirstVoyage({
   hasSeen, startAt, fishing, caught, nearId, ashore, blocked, cam, goal,
+  holdCast, stowRod,
 }: {
   hasSeen: boolean
   /** Where the tour got to. It leaves the chart to sell a fish at the market,
@@ -65,6 +66,13 @@ export default function SeaFirstVoyage({
   cam: { current: { x: number; y: number } | null }
   /** And where it is sending her, for the guiding path on the water. */
   goal: { current: { x: number; y: number } | null }
+  /** Raised while the tour wants the rod stowed. The chart refuses to cast
+   *  while it is up, and says why rather than going quiet. */
+  holdCast: { current: boolean }
+  /** Bring the rod in. Called once when the first fish is landed: the tour has
+   *  somewhere to be, and leaving the captain in the fishing overlay is leaving
+   *  them where the next instruction is not. */
+  stowRod: () => void
 }) {
   const [step, setStep] = useState(hasSeen ? FIRST_VOYAGE.length : startAt)
   const beat = FIRST_VOYAGE[step]
@@ -156,8 +164,19 @@ export default function SeaFirstVoyage({
   const wantCatch = beat?.until === 'catch'
   useEffect(() => { if (!wantCatch) mark.current = caught }, [wantCatch, caught])
   useEffect(() => {
-    if (wantCatch && caught > mark.current) next()
-  }, [wantCatch, caught, next])
+    if (!wantCatch || caught <= mark.current) return
+    // IN COMES THE ROD. She has what she was sent for, and the next thing to do
+    // is somewhere else — a captain left staring at the water will cast again,
+    // and the card telling them where to go is behind the fishing overlay.
+    stowRod()
+    next()
+  }, [wantCatch, caught, next, stowRod])
+
+  // The chart reads this every time somebody reaches for Cast.
+  useEffect(() => {
+    holdCast.current = !!beat?.holdCast
+    return () => { holdCast.current = false }
+  }, [beat, holdCast])
 
   // Tied up where the beat asked.
   const wantMoor = beat?.until === 'moor'

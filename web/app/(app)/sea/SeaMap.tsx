@@ -1386,6 +1386,8 @@ export default function SeaMap({
   const tourCam = useRef<{ x: number; y: number } | null>(null)
   /** And where it is telling her to sail, for the guiding path. */
   const tourGoal = useRef<{ x: number; y: number } | null>(null)
+  /** Raised by the tour while the rod should stay stowed. */
+  const tourHoldCast = useRef(false)
 
   // Position, velocity and target live in refs, not state: they change every
   // frame and re-rendering React sixty times a second to move one sprite is how
@@ -3026,7 +3028,21 @@ export default function SeaMap({
    * sails you out of the water you just chose, and the dial comes up several
    * hundred pixels from where you asked for it.
    */
+  /** Bring the rod in and put her back on the water. The tour calls this the
+   *  moment the first fish lands, so the captain is looking at the sea and the
+   *  card that says where to go next rather than at a fishing overlay. */
+  const stowRod = useCallback(() => {
+    setFishingIn(null)
+    setFrame('rest')
+  }, [])
+
   const startFishing = useCallback(() => {
+    // THE FIRST VOYAGE CAN HOLD THE ROD DOWN. Once that first fish is landed
+    // the tour has somewhere to be, and a captain who casts again is a captain
+    // who fishes until the hold is full and never finds out what it was for.
+    // The refusal is silent HERE and explained by the card that caused it —
+    // see the holdCast beats in lib/seaOnboarding.
+    if (tourHoldCast.current) return false
     const here = nearRef.current
     if (!here || here.kind !== 'water' || locked(here)) return false
     target.current = { ...pos.current }
@@ -6562,7 +6578,8 @@ hullRef={hullRefFor(t.key)} />
         // The same two gates FishingHere puts on the Cast button. If it will
         // not let them cast, the tour has to stop asking them to.
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
-        cam={tourCam} goal={tourGoal} />
+        cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
+        stowRod={stowRod} />
       {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.

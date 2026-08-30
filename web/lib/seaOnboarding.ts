@@ -35,6 +35,18 @@
 // campaign and it belongs there because the campaign has earned the patience it
 // asks for. Say the thing, in as few words as it takes. One *asterisked* term
 // per line at most, and only on the word they have to remember.
+//
+// PLAIN IS NOT STIFF, which is what this file got wrong first time out.
+// "That is your first" and "you will want hands aboard" are not how anybody
+// speaks. Doby and Kat are two people talking to a captain, and people contract
+// their words; uncontracted prose in every line is the clearest tell that
+// nobody ever said it out loud.
+//
+// And NEVER explain the game against a version of itself the player has not
+// seen. A line here read "the *Cast* button comes up. No menus." — which is a
+// developer comparing this to the fishing screen it replaced. The captain has
+// never seen a menu. There is nothing there for them to be relieved about, and
+// the sentence only means anything to somebody who worked on it.
 
 import { GUIDES } from './onboardingScenes'
 
@@ -67,6 +79,16 @@ export type Beat = {
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
   target?: string
+  /**
+   * THE ROD STAYS STOWED THROUGH THIS BEAT.
+   *
+   * Once the first fish is landed the tour has somewhere to be, and a captain
+   * who casts again is a captain who fishes until the hold is full and never
+   * finds out what any of it was for. Casting is refused for these few beats
+   * and the reason is said out loud, which is the difference between a guided
+   * step and a button that mysteriously stopped working.
+   */
+  holdCast?: true
   /** Draw the guiding path to this place. Naming somewhere says WHAT; on a
    *  chart this size a new captain also needs WHICH WAY, and an instruction
    *  they cannot follow is worse than none. */
@@ -92,8 +114,8 @@ export const FIRST_VOYAGE: Beat[] = [
     // The steering line teaches the input they actually have. A fine pointer
     // means a mouse, and a mouse usually means keys under the other hand.
     text: typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
-      ? 'Welcome aboard, Captain. This is the whole sea. Hold *WASD* to steer.'
-      : 'Welcome aboard, Captain. This is the whole sea. Drag anywhere to steer.',
+      ? 'Welcome aboard, Captain. This is the whole sea. Hold *WASD* to steer her.'
+      : 'Welcome aboard, Captain. This is the whole sea. Drag anywhere to steer her.',
     until: 'next',
   },
   {
@@ -102,7 +124,7 @@ export const FIRST_VOYAGE: Beat[] = [
     // radius 617 and the Shallows do not begin until 1400, so they are sailing
     // OUT TO them — telling somebody to go past the first water they will
     // reach sends them through it and out the other side.
-    text: 'Take her south, out to the *Shallows*. Follow the lights.',
+    text: 'Head south, out to the *Shallows*. Follow the lights.',
     until: 'next',
     path: 'shallows',
   },
@@ -110,7 +132,7 @@ export const FIRST_VOYAGE: Beat[] = [
   // ── THE FIRST CAST ────────────────────────────────────────────────────
   {
     ...K,
-    text: 'Out on open water the *Cast* button comes up. No menus. The fish are where you are.',
+    text: 'Once you’re over open water the *Cast* button comes up. Fish are wherever you drop a line.',
     until: 'cast',
     target: 'cast',
     path: 'shallows',
@@ -119,13 +141,14 @@ export const FIRST_VOYAGE: Beat[] = [
     ...K,
     // The dial explanation used to live in the retired fishing hub's intro
     // scene. It belongs here now, at the moment the dial is on screen.
-    text: 'Stop the needle in the *green* to land it. The *gold* is a Perfect, and it pays more.',
+    text: 'Stop the needle in the *green* to land it. The *gold* is a Perfect, and it pays better.',
     until: 'catch',
   },
   {
     ...D,
-    text: 'That is your first. It goes in the *hold* until you sell it.',
+    text: 'There’s your first. It sits in the *hold* until you sell it.',
     until: 'next',
+    holdCast: true,
   },
 
   // ── AND WHAT IT IS WORTH ──────────────────────────────────────────────
@@ -136,62 +159,64 @@ export const FIRST_VOYAGE: Beat[] = [
   // explained to somebody who has not.
   {
     ...D,
-    text: 'A fish is worth nothing in the hold. Take her back to the *Mainland* — the market there pays full price.',
+    text: 'A fish in the hold is worth nothing. Take her home to the *Mainland*, where the market pays full price.',
     until: 'moor',
     at: 'mainland',
     path: 'mainland',
+    holdCast: true,
   },
   {
     ...K,
     text: 'Tie up and go *ashore*.',
     until: 'ashore',
     at: 'mainland',
+    holdCast: true,
   },
   {
     ...K,
-    text: 'The *Market*. That is where the hold turns into coin.',
+    text: 'The *Market*. That’s where the hold turns into coin.',
     until: 'sold',
     target: 'market',
   },
   {
     ...D,
-    text: 'That is the whole of it, Captain. Catch, sell, buy better tackle, catch more.',
+    text: 'That’s the whole trade, Captain. Catch, sell, buy better tackle, catch more.',
     until: 'next',
   },
 
   // ── AND WHAT ELSE IS OUT THERE ────────────────────────────────────────
   {
     ...D,
-    text: 'Now look where you are. Every island out here is somewhere you can tie up.',
+    text: 'Now have a look around. Every island out here is somewhere you can tie up.',
     until: 'next',
   },
   {
     ...K,
-    text: 'The *Homestead* is yours. It is not much yet. It gets better.',
+    text: 'The *Homestead* is yours. It isn’t much yet. It gets better.',
     until: 'look',
     at: 'home',
   },
   {
     ...D,
-    text: 'The *Shipyard*. Your rack, your loadout, and every upgrade you will ever buy for her.',
+    text: 'The *Shipyard*. Your rack, your loadout, and every upgrade you’ll ever buy her.',
     until: 'look',
     at: 'shipyard',
   },
   {
     ...K,
-    text: 'The *Tally House* posts the day’s orders — fish somebody wants, and what they pay for them.',
+    text: 'The *Tally House* posts the day’s orders. Fish somebody wants, and what they’ll pay.',
     until: 'look',
     at: 'trawl_docks',
   },
   {
     ...K,
-    text: 'And the *Crew Hall*, north. You will want hands aboard before long.',
+    text: 'And the *Crew Hall*, up north. You’ll want hands aboard before long.',
     until: 'look',
     at: 'crew_hall',
   },
   {
     ...D,
-    text: 'That is the sea, Captain. She is yours to sail.',
+    text: 'That’s the sea, Captain. She’s yours to sail.',
     until: 'next',
   },
 ]
