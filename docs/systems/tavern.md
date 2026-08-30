@@ -15,9 +15,27 @@ room with people in it, and social was the most scattered system in the game: th
 list on its own page behind a menu, sailing pacts in a panel on the chart, leaderboards a
 tab, contests a card in here, profiles somewhere else again. Six surfaces and no room.
 
-**Order on the page: the room, the door, the handshake.** Who is here → who you know →
-what you have agreed. Everything that resets sits underneath, because it is collected on
-the way past rather than the reason to come.
+## Four groups, and none of them is a list
+
+The first cut was five unlabelled cards at the same visual weight, two of which were full
+lists (every captain you follow, and the whole pact board). That is not a room, it is a
+filing cabinet with a fireplace.
+
+| Group | What it holds |
+|---|---|
+| **The Room** | who is on the water right now |
+| **Your crew** | counts, a row of faces, anyone waiting on an answer → `/social` |
+| **The Salt Road** | where you stand with the nine, read-only, top three only |
+| **The day** | the tot, the races, Tide Run — everything that resets, and it is LAST |
+
+**The rule: the tavern says how things STAND and links to where they are MANAGED.** The
+full follow list and the full pact board live on `/social`, which kept its page and lost
+its nav entries — the tavern's Crew group is the one door in. A digest with a way through
+beats a list every time on a page that is meant to be a room.
+
+**Anything waiting on an answer breaks the digest rule on purpose.** A pact request is a
+person, it goes stale, and burying it behind a count is how one sits unanswered for a
+week. It gets its own line and its own colour.
 
 ## Design rules
 
@@ -38,8 +56,14 @@ the way past rather than the reason to come.
   overlay and the tavern render the same component; two implementations of
   accept/withdraw/part-ways would drift and then disagree about a relationship inside one
   game.
-- **`/social` redirects here** and its nav entries are gone. The components stay in
-  `app/(app)/social/` and are imported by the tavern.
+- **`/social` is still a page** — the full follow list, the search and the whole pact
+  board — but it has no nav entry: the tavern's Crew group is the only door in. Two links
+  to two halves of the same thing is the arrangement this change was undoing.
+- **The Salt Road digest is READ-ONLY and stays that way.** Three faces and two counts. No
+  talking, no gifts, no tapping through: rapport moves by pulling alongside somebody on
+  the water, and the moment it can be worked from a menu, sailing out to find Meg stops
+  being the point of Meg. `components/SaltRoadCards.tsx` is the one card implementation,
+  shared with the chart's own panel.
 - **First-run setup does NOT live here any more.** `SetupModal` / `WelcomeModal` hang off
   `app/(app)/layout.tsx`. They were mounted on this page back when it was where a new
   captain landed; once `/sea` took the startup slot that meant nobody was ever asked to

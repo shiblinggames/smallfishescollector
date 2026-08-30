@@ -32,6 +32,7 @@ import {
   FINN_NAME, FINN_AVATAR, findNextEncounterBeat,
 } from '@/lib/finn'
 import { PLACES } from './chart'
+import { PersonCard, UnknownCard, type Portrait } from '@/components/SaltRoadCards'
 import { getCharacterSprites } from '@/lib/characters'
 import { HATS } from '@/lib/hats'
 import { FOLK, TIER_NAME, TIER_AT, toNextTier, knowsFavourite, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
@@ -44,10 +45,6 @@ const GOLD = '#f0c040'
 const SEA = 'rgba(180,214,232'
 
 /** A face, in the one shape both the regulars and the rival can be drawn from. */
-type Portrait = {
-  characterColor: string; hat: string | null
-  bg: string; ring: string; mirrored?: boolean
-}
 
 const FINN_FACE: Portrait = {
   characterColor: FINN_AVATAR.characterColor,
@@ -92,145 +89,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * everybody else now, in his own section and his own gold, which says the same
  * thing quietly and leaves the panel one idea instead of two.
  */
-/**
- * SOMEBODY ON THE ROAD, AND WHETHER YOU GOT THERE.
- *
- * ── THE MAXED CARD IS A DIFFERENT CARD ──────────────────────────────────────
- *
- * At the top tier the progress bar is the problem: a full bar says "complete",
- * which is a task word, and this is the only system in the game whose entire
- * reward is that somebody talks to you differently. A finished errand and a
- * friendship should not look the same.
- *
- * So the bar GOES at max and a still gold rim takes its place.
- *
- * ── AND IT DOES NOT GLOW, WHICH IT USED TO ──────────────────────────────────
- *
- * The first version breathed a slow halo in the person's own colour, on the
- * argument that gold is the game's currency and would say "prize" where the
- * accent says "your standing with THEM". The argument was about the wrong
- * thing. Whatever a colour means, in this app a card that glows and pulses is a
- * card with something waiting behind it: that is what an unclaimed reward does,
- * what a new discovery does, what the dot in the corner of this very card does.
- * Nine of them breathing in a grid read as nine unread notifications.
- *
- * Nothing about a finished friendship is waiting. It is the one state on this
- * panel that wants no attention at all, and a rim that simply sits there is the
- * only thing that says so. Gold, because the panel already uses a gold border
- * for exactly this on the rival's card the moment his job is done — so the
- * language was there and this was the outlier.
- */
-function PersonCard({ face, accent, name, sub, pct, dot, maxed, onOpen }: {
-  face: Portrait; accent: string; name: string; sub: string
-  pct: number; dot?: boolean; maxed?: boolean; onOpen: () => void
-}) {
-  return (
-    <button onClick={onOpen}
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14, cursor: 'pointer',
-        // The wash stays THEIRS even at max. Gold marks the edge; filling the
-        // card with it would be a solid gold panel, which this game does not do.
-        background: maxed
-          ? `linear-gradient(180deg, ${accent}22 0%, ${accent}0c 55%, rgba(255,255,255,0.02) 100%)`
-          : `linear-gradient(180deg, ${accent}14 0%, rgba(255,255,255,0.02) 60%)`,
-        border: maxed ? `1.5px solid ${GOLD}b0` : `1px solid ${accent}3a`,
-        position: 'relative', overflow: 'hidden',
-      }}>
-      {dot && (
-        <span aria-hidden style={{
-          position: 'absolute', top: 7, right: 7,
-          width: 8, height: 8, borderRadius: 999,
-          background: accent, boxShadow: `0 0 8px ${accent}`,
-        }} />
-      )}
-      <div style={{
-        transform: face.mirrored ? 'scaleX(-1)' : 'none',
-        // The same soft halo every card's portrait gets. It was boosted at max,
-        // which put a second glowing thing on the card that is meant to be the
-        // quiet one.
-        borderRadius: '50%', boxShadow: `0 0 16px ${accent}30`,
-      }}>
-        <CharacterAvatar
-          characterColor={face.characterColor}
-          equippedHat={face.hat}
-          bgColor={face.bg}
-          ringColor={face.ring}
-          size={62}
-        />
-      </div>
-      <p className="font-cinzel font-700" style={{
-        fontSize: '0.82rem', color: '#e8f2ea', margin: '7px 0 0',
-        textAlign: 'center', lineHeight: 1.15,
-      }}>{name}</p>
-      <p className="font-karla font-700 uppercase" style={{
-        fontSize: '0.5rem', letterSpacing: '0.14em', color: accent,
-        margin: '3px 0 0', textAlign: 'center',
-      }}>{sub}</p>
-      {/* THE BAR IS FOR THE ROAD, not the arrival. At the top there is nothing
-          left to fill, and a bar sitting at 100% is a completed task rather
-          than somebody you know. */}
-      {maxed ? (
-        <div aria-hidden style={{
-          width: '62%', height: 2, borderRadius: 999, marginTop: 7,
-          background: `${GOLD}cc`,
-        }} />
-      ) : (
-        <div style={{
-          width: '100%', height: 3, borderRadius: 999, marginTop: 6,
-          background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
-        }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: accent, borderRadius: 999 }} />
-        </div>
-      )}
-    </button>
-  )
-}
-
-/**
- * SOMEBODY OUT THERE YOU HAVE NOT MET.
- *
- * The roster was met-only for a while, on the reasoning that a list of
- * strangers is homework. That was true when it was a list; as CARDS it reads
- * the opposite way, because an empty slot in a set is an invitation rather than
- * a chore. The difference is entirely in the shape.
- *
- * It gives away the WATER and nothing else. That is the honest middle: it tells
- * you somebody is out there and roughly where to start looking, which is a
- * reason to sail, without handing over the name or the face, which are the
- * things worth finding.
- */
-function UnknownCard({ water }: { water: string }) {
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '0.7rem 0.5rem 0.6rem', borderRadius: 14,
-      background: 'rgba(255,255,255,0.018)',
-      border: `1px dashed ${SEA},0.18)`,
-    }}>
-      <div style={{
-        width: 62, height: 62, borderRadius: '50%',
-        background: 'rgba(255,255,255,0.04)',
-        border: `1px solid ${SEA},0.14)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <span className="font-cinzel font-700" style={{
-          fontSize: '1.5rem', color: `${SEA},0.3)`, lineHeight: 1,
-        }}>?</span>
-      </div>
-      <p className="font-cinzel font-700" style={{
-        fontSize: '0.82rem', color: `${SEA},0.32)`, margin: '7px 0 0',
-        textAlign: 'center', lineHeight: 1.15,
-      }}>???</p>
-      <p className="font-karla font-700 uppercase" style={{
-        fontSize: '0.5rem', letterSpacing: '0.14em', color: `${SEA},0.28)`,
-        margin: '3px 0 0', textAlign: 'center',
-      }}>{water}</p>
-      <div style={{ width: '100%', height: 3, marginTop: 6 }} />
-    </div>
-  )
-}
-
 /**
  * ONE ACT OF THE FISHING CAMPAIGN.
  *
