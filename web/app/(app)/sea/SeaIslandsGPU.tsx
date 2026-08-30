@@ -131,6 +131,12 @@ export type GpuHandle = {
     zoom: number
     frame: Frame
     stage: number
+    /** How far she is from the centre of the shot, in screen px. Zero almost
+     *  always — she sits at the middle because the camera follows her — and
+     *  non-zero while the first voyage flies the camera off to show an island,
+     *  when she has to travel with the world instead of being dragged along. */
+    offX: number
+    offY: number
   } | null): void
 }
 
@@ -751,8 +757,8 @@ export default function SeaIslandsGPU({
           // carries the zoom and the bob (scaled, since the bob sits inside the
           // zoom), the inner one carries the mirror and the heel.
           c.outer.position.set(
-            a.screen.width / 2,
-            a.screen.height / 2 + sk.zoom * sk.bob,
+            a.screen.width / 2 + sk.offX,
+            a.screen.height / 2 + sk.offY + sk.zoom * sk.bob,
           )
           c.outer.scale.set(sk.zoom)
           c.inner.scale.x = sk.facing

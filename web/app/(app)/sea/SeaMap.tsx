@@ -142,7 +142,7 @@ function folkRodSlug(folkId: string): string | null {
   return RODS.find(r => r.tier === tier)?.slug ?? null
 }
 import FolkPanel from './FolkPanel'
-import SeaTour from './SeaTour'
+import SeaFirstVoyage from './SeaFirstVoyage'
 import SeaLandfallHint from './SeaLandfallHint'
 import { pendingPacts } from './pactActions'
 import { coastClip, coastline } from '@/lib/islandShape'
@@ -1379,6 +1379,11 @@ export default function SeaMap({
    *  in front of her would swim. */
   const frontRef = useRef<HTMLDivElement | null>(null)
   const boatRef = useRef<HTMLDivElement | null>(null)
+  /** Where the camera is actually pointed. The boat, unless the first voyage
+   *  has taken it somewhere to show the captain an island. */
+  const camAt = useRef({ x: 0, y: 0 })
+  /** Set by the first-voyage tour to fly the camera; null gives it back. */
+  const tourCam = useRef<{ x: number; y: number } | null>(null)
 
   // Position, velocity and target live in refs, not state: they change every
   // frame and re-rendering React sixty times a second to move one sprite is how
@@ -4492,12 +4497,35 @@ export default function SeaMap({
         }
       }
 
+      // ── WHERE THE CAMERA IS LOOKING ───────────────────────────────
+      //
+      // The boat, almost always. The exception is the first voyage, where Doby
+      // and Kat fly it out to name each island — sailing to all six would be a
+      // genuinely long trip and the Crew Hall alone is four thousand pixels
+      // north, and arriving somewhere is not what makes a place stick.
+      //
+      // Eased rather than cut, because a cut is a different scene and a glide
+      // is the same sea seen from somewhere else, which is the whole point of
+      // showing it rather than listing it. It returns to the hull the moment
+      // the tour lets go, by the same ease, so nothing snaps.
+      const look = tourCam.current
+      if (look) {
+        const k = 1 - Math.exp(-2.1 * dt)
+        camAt.current.x += (look.x - camAt.current.x) * k
+        camAt.current.y += (look.y - camAt.current.y) * k
+      } else {
+        // Not eased back: while she is under way the camera IS the boat, and
+        // easing here would put the hull on a leash a frame behind itself.
+        camAt.current.x = pos.current.x
+        camAt.current.y = pos.current.y
+      }
+
       // Imperative writes. The whole reason this holds 60fps on a phone.
       const world = worldRef.current
       // scaleY LAST (CSS applies right to left), so the camera pan happens in
       // world units and only then meets the plane's foreshortening.
       if (world) {
-        const t = `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-pos.current.x}px, ${-pos.current.y}px, 0)`
+        const t = `scale(${zoomRef.current}) scaleY(${GROUND}) translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)`
         world.style.transform = t
         // THE SAME STRING, THE SAME FRAME. These two layers are one world drawn
         // in two passes; a transform written to one and not the other would put
@@ -4507,7 +4535,7 @@ export default function SeaMap({
         // for the same reason: the islands are on a canvas and the buildings
         // standing on them are not, so a camera written a frame late slides a
         // tavern off its own island. Null only on the ?gpu=0 fallback.
-        gpuRef.current?.camera(pos.current.x, pos.current.y, zoomRef.current)
+        gpuRef.current?.camera(camAt.current.x, camAt.current.y, zoomRef.current)
       }
       // The sea recoloured under the boat. One style write per frame, and the
       // reason there are no zone edges anywhere on the chart.
@@ -4770,9 +4798,18 @@ export default function SeaMap({
         // riding is one decision and it is made here. Null unless the flag is
         // on and she is the one being drawn, in which case the DOM sprite above
         // is not mounted and this transform is written to an empty div.
+        // OFFSET BY WHATEVER THE CAMERA IS NOT LOOKING AT. She sits at screen
+        // centre because the camera follows her; the moment it flies off to
+        // show an island she has to travel with the world like everything else,
+        // or the tour drags the boat along behind it.
+        const offX = (pos.current.x - camAt.current.x) * zoomRef.current
+        const offY = (pos.current.y - camAt.current.y) * zoomRef.current * GROUND
+        boat.style.marginLeft = `${offX}px`
+        boat.style.marginTop = `${offY}px`
         gpuRef.current?.skipper({
           bob, heel, facing: facing.current, zoom: zoomRef.current,
           frame: frameRef.current, stage: 0,
+          offX, offY,
         })
         // AND THE NEAR PASS, every frame. Which rocks are in front changes on
         // the proximity tick, but WHERE they are on the screen changes as fast
@@ -6498,7 +6535,12 @@ hullRef={hullRefFor(t.key)} />
           landfall hints explain each port as you pull up to it, which is the
           moment the knowledge is usable. Both sit above everything and neither
           blocks the wheel. */}
-      {!fishingIn && <SeaTour hasSeen={tour.seen} />}
+      {/* THE FIRST VOYAGE. Not hidden while fishing, unlike the old tour: two
+          of its beats are ABOUT fishing and one of them explains the dial while
+          the dial is on screen, which was the whole reason the retired fishing
+          hub had an intro scene of its own. */}
+      <SeaFirstVoyage hasSeen={tour.seen} fishing={!!fishingIn}
+        caught={holdCount} cam={tourCam} />
       {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
