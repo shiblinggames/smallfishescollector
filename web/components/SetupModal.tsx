@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { updateUsername, updateCharacterColor, updateAvatarColors } from '@/app/(app)/u/actions'
-import { markSetupSeen } from './welcomeActions'
+import { markSetupSeen } from '@/app/actions/firstRun'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { AVATAR_PALETTE, NONE_VALUE } from '@/lib/avatarColors'
 import CharacterAvatar from '@/components/CharacterAvatar'

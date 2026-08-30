@@ -104,7 +104,7 @@ export async function addCrewMember(targetUsername: string): Promise<{ error?: s
 
   if (error && error.code !== '23505') return { error: 'Something went wrong' }
 
-  revalidatePath('/social')
+  revalidatePath('/tavern')
   return {}
 }
 
@@ -163,6 +163,6 @@ export async function removeCrewMember(targetUsername: string): Promise<{ error?
     .eq('follower_id', user.id)
     .eq('following_id', target.id)
 
-  revalidatePath('/social')
+  revalidatePath('/tavern')
   return {}
 }

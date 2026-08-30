@@ -6,7 +6,7 @@ import StepTourModal, { type TourStep } from '@/components/StepTourModal'
 import GuideScene from '@/components/GuideScene'
 import { GUIDES } from '@/lib/onboardingScenes'
 import type { SceneLine } from '@/lib/raidMap'
-import { claimWelcomePack } from './welcomeActions'
+import { claimWelcomePack } from '@/app/actions/firstRun'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -17,9 +17,9 @@ interface BeforeInstallPromptEvent extends Event {
 // browser, not a PWA) the "add to home screen" step. Finishing grants the
 // welcome pack + marks has_seen_welcome.
 const WELCOME_SCENE: SceneLine[] = [
-  { ...GUIDES.doby, text: "Welcome aboard, Captain! This is the Tavern, your home base." },
+  { ...GUIDES.doby, text: "Welcome aboard, Captain. The sea out there is yours to sail." },
   { ...GUIDES.kat,  text: "The plan is simple: catch fish, sell them for coin, and build up a crew." },
-  { ...GUIDES.doby, text: "We'll guide you as you go. Let's get you out on the water." },
+  { ...GUIDES.doby, text: "We'll walk you through it. Let's get you on the water." },
 ]
 
 export default function WelcomeModal() {

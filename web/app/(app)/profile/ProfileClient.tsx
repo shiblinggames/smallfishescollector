@@ -518,7 +518,7 @@ export default function ProfileClient({
                 </button>
               )}
               <Link
-                href="/social"
+                href="/tavern"
                 className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,

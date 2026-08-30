@@ -359,14 +359,11 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     // on the mobile bottom tab bar (MobileTabBar.tsx) so duplicating it
     // here is just noise. Keep the desktopOnlyLinks entry below since
     // desktop has no bottom bar.
-    { href: '/social', label: 'Social', badge: false,
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
-        </svg>
-      )
-    },
+    // SOCIAL WAS HERE, AND IT WAS THE PROBLEM IT WAS SOLVING. A follow list on
+    // its own page, behind a menu, one link away from a Tavern that was a
+    // cupboard — two doors to two halves of the same thing. The tavern IS the
+    // social room now and the list is inside it, so a second entry pointing at
+    // the same place would only ask people to choose between them.
     // Admin-only — gated on profiles.is_admin (kingkong, mikel).
     // The Sea is the painted ocean hub, still being felt out. It lives here
     // rather than on the tab bar because five tabs is already the width of a
@@ -387,7 +384,6 @@ export default function Nav({ doubloons, gems, canSail = false }: {
   const desktopOnlyLinks = [
     { href: '/badges',       label: 'Badges',        badge: claimableBadges || null },
     { href: '/achievements', label: "Captain's Log", badge: null },
-    { href: '/social',       label: 'Social',        badge: null },
   ]
 
   // Desktop top-bar inline links. Canonical order: tavern, fishing,

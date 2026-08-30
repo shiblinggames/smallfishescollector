@@ -48,13 +48,49 @@ export const maxDuration = 20
 
 import Nav from '@/components/Nav'
 import MembershipModal from '@/components/MembershipModal'
+import SetupModal from '@/components/SetupModal'
+import WelcomeModal from '@/components/WelcomeModal'
 import { getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
+import { isPremiumActive } from '@/lib/premium'
+import { CHARACTER_COLORS } from '@/lib/characters'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile()
+  const freeColorIds = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
+  const unlockedColors = [...freeColorIds, ...((profile?.unlocked_character_colors as string[] | null) ?? [])]
   return (
     <>
+      {/* ── PICK A NAME AND A FACE, WHEREVER YOU LAND ────────────────────
+          This lived on /tavern, and it was reachable because /tavern was the
+          page you were dropped on. It is NOT any more: the sea took the
+          startup slot, so a brand new captain went straight to the water, got
+          the first voyage, and was never once asked what to call themselves —
+          they sailed off carrying an auto-assigned username they had not
+          chosen and could not tell was temporary.
+
+          It belongs to the account, not to a room, so it hangs off the shell
+          and fires on whichever page the session opens on.
+
+          `has_seen_setup` and `has_seen_welcome` are profile columns, which is
+          the house rule for anything one-time (never localStorage — a captain
+          who opens the game on their phone should not be set up twice). */}
+      {!profile?.has_seen_setup
+        ? <SetupModal
+            currentColor={profile?.character_color ?? 'default'}
+            unlockedColors={unlockedColors}
+            showWelcomeAfter={!profile?.has_seen_welcome}
+            // New accounts get an auto-assigned default username, so `username`
+            // is always set — gate the setup step on whether they have actually
+            // CHOSEN one (username_changed), matching updateUsername's one-time
+            // lock.
+            hasUsername={!!profile?.username_changed}
+            isPremium={isPremiumActive(profile)}
+          />
+        : !profile?.has_seen_welcome
+          ? <WelcomeModal />
+          : null
+      }
       <Nav
         packsAvailable={profile?.packs_available}
         doubloons={profile?.doubloons}
