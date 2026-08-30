@@ -18,13 +18,23 @@
 // There is no Next button on those two. A Next on "go and cast" is an invitation
 // to skip the game.
 //
-// ── AND IT CAN BE LEFT ──────────────────────────────────────────────────────
+// ── THE × DISMISSES A CARD, NOT THE VOYAGE ──────────────────────────────────
 //
-// The × closes the whole thing for good. Somebody replaying, or somebody who
-// simply does not want to be walked around, should not have to sit through it,
-// and the flag is written the moment they say so rather than at the end — a
-// tour you can escape but which comes back tomorrow is worse than one you
-// cannot escape at all.
+// It used to end the whole thing and write the flag, which is an enormous and
+// irreversible consequence for a button that looks like "hide this tip". The
+// captain who reported it had read Kat's line about heading south, closed the
+// card, and watched the lights on the water go out with it — the one piece of
+// help they still needed, taken away by the gesture that means "I have read
+// this".
+//
+// So it hides the card for the beat it was on and nothing else. The guiding
+// path stays, the camera stays, and the next beat brings Doby back. What it
+// DOES release is the cast hold: being blocked from fishing by a tour you have
+// just dismissed is the one combination with no way out of it.
+//
+// Nothing here is a cage. The tour blocks exactly one thing, for three beats,
+// and says why — so there is no need for an escape hatch that costs a captain
+// the help they were reading.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
@@ -78,16 +88,14 @@ export default function SeaFirstVoyage({
   const beat = FIRST_VOYAGE[step]
   const done = step >= FIRST_VOYAGE.length
 
-  // Written once, the moment the tour ends by ANY route — finished, skipped or
-  // unmounted mid-way. A guard rather than a check, because the action is a
-  // round trip and the component can end more than one way.
+  /** The beat whose card has been waved away. Cleared by moving on, so the
+   *  next one arrives normally. */
+  const [hidden, setHidden] = useState(-1)
+
+  // Written once, when the voyage is actually FINISHED. A guard rather than a
+  // check, because the action is a round trip and completion can be reached
+  // from more than one beat.
   const wrote = useRef(false)
-  const finish = useCallback(() => {
-    setStep(FIRST_VOYAGE.length)
-    if (wrote.current) return
-    wrote.current = true
-    void markSeaTourSeen()
-  }, [])
 
   const next = useCallback(() => {
     setStep(n => {
@@ -174,9 +182,12 @@ export default function SeaFirstVoyage({
 
   // The chart reads this every time somebody reaches for Cast.
   useEffect(() => {
-    holdCast.current = !!beat?.holdCast
+    // Released when the card is waved away: blocked from fishing BY a tour you
+    // have just dismissed, with nothing on screen saying so, is the one state
+    // there is no way out of.
+    holdCast.current = !!beat?.holdCast && step !== hidden
     return () => { holdCast.current = false }
-  }, [beat, holdCast])
+  }, [beat, step, hidden, holdCast])
 
   // Tied up where the beat asked.
   const wantMoor = beat?.until === 'moor'
@@ -190,7 +201,7 @@ export default function SeaFirstVoyage({
     if (wantAshore && ashore) next()
   }, [wantAshore, ashore, next])
 
-  if (done || !beat) return null
+  if (done || !beat || step === hidden) return null
 
   // A `look` beat holds while the camera flies and the captain reads; the two
   // waiting beats have no button at all, because the button IS the thing they
@@ -217,7 +228,7 @@ export default function SeaFirstVoyage({
       speaker={beat.speaker}
       text={text}
       accent={SEA_ACCENT}
-      onClose={finish}
+      onClose={() => setHidden(step)}
       onNext={waiting ? undefined : next}
       nextLabel={step === FIRST_VOYAGE.length - 1 ? 'Aye' : undefined}
     />
