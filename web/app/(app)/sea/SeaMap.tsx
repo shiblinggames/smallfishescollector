@@ -204,6 +204,9 @@ import { FINN_NAME, findNextEncounterBeat, type FinnSceneLine } from '@/lib/finn
 // fishing screen; this is the chart's version and it follows the chart's
 // conversation convention. See FinnTalk for why they are separate.
 const FinnTalk = dynamic(() => import('./FinnTalk'), { ssr: false })
+// THE VOYAGE BOARD, opened by mooring at the Charterhouse. Dynamic for the
+// same reason: it pulls in the whole expeditions voyage panel behind it.
+const VoyageBoard = dynamic(() => import('./VoyageBoard'), { ssr: false })
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
@@ -1860,6 +1863,8 @@ export default function SeaMap({
   /** The Gunwharf's chooser. Its own flag rather than a second use of
    *  `ashore`, which is the Mainland's. */
   const [wharf, setWharf] = useState(false)
+  /** The Charterhouse's voyage board, over the water. */
+  const [voyageOpen, setVoyageOpen] = useState(false)
 
   /** The GPU island layer's camera, filled in when it mounts. Null whenever the
    *  flag is off, which is why every call below is optional. */
@@ -2699,6 +2704,7 @@ export default function SeaMap({
       if (find) { setFind(null); return }
       if (ashore) { setAshore(false); return }
       if (wharf) { setWharf(false); return }
+      if (voyageOpen) { setVoyageOpen(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); return }
       if (trawlsPeek) { setTrawlsPeek(false); return }
@@ -2712,7 +2718,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, picking, crewOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, picking, crewOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -3137,6 +3143,9 @@ export default function SeaMap({
       // you will be sailing when you leave.
       if (near.id === 'gunwharf') {
         return { act: onShip ? 'Tie her up at the Gunwharf' : 'Take out your ship', hold: null }
+      }
+      if (near.id === 'charterhouse') {
+        return { act: voyageOpen ? null : 'Read the voyage board', hold: null }
       }
       // ITS OWN VERB. Every other port is somewhere you go ashore; this one is
       // a thing you DO from the deck, and "Go ashore at The Trawl Harbour"
@@ -3583,6 +3592,12 @@ export default function SeaMap({
     // not a page at all — it is changing the hull under you — so it cannot be
     // an href, and the other one is. See GunwharfAshore.
     if (p.id === 'gunwharf') { setWharf(true); return }
+    // AND THE CHARTERHOUSE OPENS THE BOARD ITSELF. It used to route to
+    // /expeditions, which is a hub of six cards one of which opens this — so
+    // mooring at the island whose whole purpose is voyages left you two taps
+    // and a page load away from a voyage, on a screen mostly about other
+    // things. The board is posted here; open it here.
+    if (p.id === 'charterhouse') { setVoyageOpen(true); return }
     // NOT A PAGE. The trawl panel opens over the water you are floating on,
     // because the crews you are sending are going into it.
     if (p.id === 'trawl_fleet') { setTrawlOpen(true); return }
@@ -6087,6 +6102,7 @@ hullRef={hullRefFor(t.key)} />
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
       <GunwharfAshore open={wharf} onClose={() => setWharf(false)} onShip={onShip}
         shipTier={shipTier} onSail={() => { setWharf(false); setSwapAsk(true) }} />
+      <VoyageBoard open={voyageOpen} onClose={() => setVoyageOpen(false)} />
 
       {/* THE CONFIRM UNDER THE ARCH IS GONE. It asked "sail through to
           Expeditions?" and answered by navigating to a page, which was the

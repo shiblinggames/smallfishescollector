@@ -1222,13 +1222,28 @@ position that leaves under 200px beside the sortie or under 250px to the harbour
 | | |
 |---|---|
 | **The Gunwharf** | Your ship: berthed, armed, taken out from here |
-| **The Charterhouse** | `/expeditions` — routes, crews and the day's voyage |
+| **The Charterhouse** | The voyage board, opened over the water |
 
-**The Gunwharf is the one island whose `href` is never followed.** Going ashore opens a
-two-card chooser (`GunwharfAshore`), because its two doors are not the same kind of thing:
-*Manage her* is a page (`/expeditions/ship`), and *Sail her* is not a page at all — it opens
-the berth sheet, which is the muster, the mounts and the confirm that changes the hull under
-you. Both cards reverse their wording when you are already aboard.
+**Neither island's `href` is ever followed**, which makes them the only two on the chart
+that are handled by id in `enter()`.
+
+The **Gunwharf** opens a two-card chooser (`GunwharfAshore`), because its doors are not the
+same kind of thing: *Manage her* is a page (`/expeditions/ship`), and *Sail her* is not a
+page at all — it opens the berth sheet, which is the muster, the mounts and the confirm that
+changes the hull under you. Both cards reverse their wording when you are already aboard.
+
+The **Charterhouse** opens `DailyVoyagePanel` itself, in a modal over the chart
+(`sea/VoyageBoard.tsx`). It routed to `/expeditions` first, which is a hub of six cards one
+of which opens this panel — so mooring at the island whose whole purpose is voyages left you
+two taps and a page load away from a voyage, on a screen mostly about other things.
+
+It is the **same panel**, imported as-is, not a second implementation: the one thing a second
+board must never do is disagree with the hub about what a voyage pays. Its data comes from
+`voyageBoard()` (`sea/voyageBoardActions.ts`) **when the modal opens, and on every open** —
+a crew roster, the day's voyage state and eight rows of history do not belong on the chart's
+own load for a panel most sessions never open, and a board cached from before a send would
+offer a route that is already at sea. The panel's `router.refresh()` on send and claim
+re-renders `/sea`; the map stays mounted, so the boat keeps her position, heading and fog.
 
 **The Charterhouse's berth is on its WEST shore**, against the chart's south-east default.
 Both islands should be moored at from the channel, which is the water anybody is actually

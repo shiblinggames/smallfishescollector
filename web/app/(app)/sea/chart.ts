@@ -334,6 +334,11 @@ export const PLACES: Place[] = [
      * be round the back, facing the harbour wall.
      */
     id: 'charterhouse', name: 'The Charterhouse', blurb: 'Routes, crews and the day’s voyage',
+    // NOT FOLLOWED EITHER. Mooring here opens the voyage board itself, over the
+    // water — the board is posted at this island, and routing to a hub of six
+    // cards so the captain can find the one that opens it is a door in front of
+    // a door. `href` is the honest answer to "where does this go" if anything
+    // ever falls through to it.
     href: '/expeditions', x: 898, y: -5715, r: 340, art: '/sea/charterhouse.png',
     kind: 'port', minLevel: 0,
     berth: { dx: -340 * 0.85, dy: 340 * 0.6 },
