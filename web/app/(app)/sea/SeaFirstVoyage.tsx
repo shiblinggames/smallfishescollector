@@ -40,7 +40,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { FIRST_VOYAGE, SEA_ACCENT } from '@/lib/seaOnboarding'
 import { PLACES, TOUR_SPOT, berthOf } from './chart'
-import { markSeaTourSeen, setSeaTourStep } from './tourActions'
+import { getSeaTourStep, markSeaTourSeen, setSeaTourStep } from './tourActions'
 
 /**
  * WHERE A BEAT IS POINTING.
@@ -116,6 +116,27 @@ export default function SeaFirstVoyage({
   const [step, setStep] = useState(hasSeen ? FIRST_VOYAGE.length : startAt)
   const beat = FIRST_VOYAGE[step]
   const done = step >= FIRST_VOYAGE.length
+
+  // ── AND NEVER BACKWARDS ───────────────────────────────────────────────────
+  //
+  // `startAt` comes from the server render, which can be a CACHED payload: the
+  // market advances the step and the captain returns with Back, onto a copy of
+  // the chart made before any of that happened. The symptom is a tour that
+  // rewinds — sell the catch, sail out, and be asked to go and fish again.
+  //
+  // revalidatePath on every write is the fix; this is the belt to its braces,
+  // because a resume point that can travel backwards will strand somebody in a
+  // loop and they will not know it is a loop. Asked for once, and only while a
+  // voyage is actually running.
+  useEffect(() => {
+    if (hasSeen) return
+    let dead = false
+    void getSeaTourStep().then(live => {
+      if (dead) return
+      setStep(now => (live > now ? live : now))
+    }).catch(() => {})
+    return () => { dead = true }
+  }, [hasSeen])
 
   /** The beat whose card has been waved away. Cleared by moving on, so the
    *  next one arrives normally. */

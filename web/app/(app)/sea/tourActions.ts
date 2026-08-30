@@ -6,8 +6,26 @@
 // a tour which replays after a reinstall, or on the captain's other device,
 // reads as a bug rather than as help.
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+
+/**
+ * THE CHART HAS TO BE TOLD THE STEP MOVED.
+ *
+ * /sea reads `sea_tour_step` on the server and hands it to the tour as its
+ * resume point. The market advances that step and the captain comes back with
+ * the browser's Back — which serves the CACHED payload of /sea, carrying the
+ * step as it was when they first loaded it.
+ *
+ * The symptom is a tour that goes backwards: sell the catch, sail out, and be
+ * asked to head south to the Shallows and fish again, because the page still
+ * believes they are on beat one. Every write here invalidates the chart for the
+ * same reason the fishing actions already do.
+ */
+function chartChanged() {
+  revalidatePath('/sea')
+}
 
 /** Shut the arrival walkthrough for good. */
 export async function markSeaTourSeen(): Promise<void> {
@@ -16,6 +34,7 @@ export async function markSeaTourSeen(): Promise<void> {
   if (!user) return
   await createAdminClient()
     .from('profiles').update({ has_seen_sea_tour: true }).eq('id', user.id)
+  chartChanged()
 }
 
 /**
@@ -40,6 +59,25 @@ export async function setSeaTourStep(step: number): Promise<void> {
     .from('profiles').select('sea_tour_step').eq('id', user.id).single()
   if ((data?.sea_tour_step ?? 0) >= n) return
   await admin.from('profiles').update({ sea_tour_step: n }).eq('id', user.id)
+  chartChanged()
+}
+
+/**
+ * THE STEP, STRAIGHT FROM THE DATABASE.
+ *
+ * Belt and braces for the resume point. The page's copy of it can be stale —
+ * a cached payload on a Back navigation is exactly how the tour was caught
+ * walking backwards — and this is the value that cannot be. Asked for ONCE on
+ * mount and only while a voyage is actually running, so a captain who has
+ * finished the tour never pays for it.
+ */
+export async function getSeaTourStep(): Promise<number> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+  const { data } = await createAdminClient()
+    .from('profiles').select('sea_tour_step').eq('id', user.id).single()
+  return Number(data?.sea_tour_step ?? 0)
 }
 
 /**
