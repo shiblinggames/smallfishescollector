@@ -13,6 +13,10 @@ import { MOOD_CONFIG } from '@/lib/fishMarket'
 import BoardClient from './BoardClient'
 import SwipeAction from '@/components/SwipeAction'
 import { hapticReward } from '@/lib/haptics'
+import GuideCoach from '@/components/GuideCoach'
+import { GUIDES } from '@/lib/onboardingScenes'
+import { SEA_ACCENT, SELL_STEP } from '@/lib/seaOnboarding'
+import { setSeaTourStep } from '@/app/(app)/sea/tourActions'
 
 // ── Palette ──────────────────────────────────────────────────────────────
 const UP = '#4ade80'
@@ -492,7 +496,12 @@ export default function MarketClient({
   exchangeUnveil = false,
   exchangeOpen = false,
   openContracts: initialOpenContracts = 0,
+  tourStep = null,
 }: {
+  /** Where the first voyage has got to, or null if it is not running. Doby
+   *  sends a new captain here with their first fish; this is the only surface
+   *  that knows whether they sold it. */
+  tourStep?: number | null
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
   marketState: MarketState
@@ -517,6 +526,10 @@ export default function MarketClient({
   // count would keep showing whatever this component was first mounted with.
   useEffect(() => { setOpenContracts(initialOpenContracts) }, [initialOpenContracts])
   const [selling, setSelling] = useState<number | null>(null)
+  /** The first voyage sent them in here to sell. Held in state rather than read
+   *  from the prop at sale time so the card goes the moment they do it, without
+   *  waiting for the page to be told. */
+  const [tourAtSell, setTourAtSell] = useState(tourStep === SELL_STEP)
   const [toast, setToast] = useState<string | null>(null)
   const [tradeFish, setTradeFish] = useState<MarketFishEntry | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -602,6 +615,15 @@ export default function MarketClient({
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       hapticReward()
       showToast(`+${res.earned.toLocaleString()} ⟡`)
+      // ── THE FIRST VOYAGE, IF ONE IS RUNNING ────────────────────────
+      // Doby sends a new captain in here with their first fish, and this is the
+      // only surface that knows the sale happened — the tour lives on the chart
+      // and the chart is a route away. Advancing the stored step is what lets
+      // it pick up where it left off when they sail back out.
+      if (tourAtSell) {
+        setTourAtSell(false)
+        void setSeaTourStep(SELL_STEP + 1)
+      }
     })
   }
 
@@ -661,6 +683,18 @@ export default function MarketClient({
 
   return (
     <MarketModeCtx.Provider value={colorMode}>
+    {/* KAT FOLLOWED THEM THROUGH THE DOOR. One line, only on the first voyage,
+        and only until the fish is sold — the beat that sent them here is still
+        up on the chart, and arriving to no instruction at all is where a guided
+        tour usually loses somebody. */}
+    <GuideCoach
+      show={tourAtSell}
+      portrait={GUIDES.kat.portrait}
+      speaker={GUIDES.kat.speaker}
+      text="Everything in your hold is here. Hit *Sell* on the fish you caught."
+      accent={SEA_ACCENT}
+      placement="bottom"
+    />
     <main className="min-h-screen pb-24 sm:pb-0">
       {/* THE HARBOURMASTER'S BOARD.
           A lantern over the top of the page, faint ledger ruling down it, and a

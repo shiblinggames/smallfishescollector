@@ -56,12 +56,21 @@ export type Beat = {
    *               a tour that taught nothing.
    *   'catch'   — waits for a fish in the hold.
    *   'look'    — the camera flies somewhere and holds while they read.
+   *   'moor'    — waits until they are actually tied up at `at`.
+   *   'ashore'  — waits until the island's door chooser is open.
+   *   'sold'    — waits until the hold has been emptied at the market. That
+   *               happens on ANOTHER ROUTE, which is why the tour's step is a
+   *               profile column rather than component state.
    */
-  until: 'next' | 'cast' | 'catch' | 'look'
+  until: 'next' | 'cast' | 'catch' | 'look' | 'moor' | 'ashore' | 'sold'
   /** For `look`: the place the camera flies to, by chart id. */
   at?: string
   /** Flash the real control rather than describing it. Matches `data-coach`. */
   target?: string
+  /** Draw the guiding path to this place. Naming somewhere says WHAT; on a
+   *  chart this size a new captain also needs WHICH WAY, and an instruction
+   *  they cannot follow is worse than none. */
+  path?: string
 }
 
 const D = GUIDES.doby
@@ -70,10 +79,11 @@ const K = GUIDES.kat
 /**
  * THE FIRST VOYAGE.
  *
- * Steering, then a fish, then the world. Eleven beats sounds like a lot and is
- * not, because only the first three arrive before the captain is doing
- * something — the rest are spread across an actual catch and a flight over the
- * chart, which is a tour of a place rather than a wall of text about one.
+ * Steer, catch, sell, and only then the rest of the world. It is a long list
+ * and almost none of it is reading: two beats arrive before the captain is
+ * doing something, and everything after that is spread across a real catch, a
+ * real sail home, a real sale, and a flight over the chart. A tour of a place
+ * rather than a wall of text about one.
  */
 export const FIRST_VOYAGE: Beat[] = [
   // ── THE BOAT ──────────────────────────────────────────────────────────
@@ -88,8 +98,13 @@ export const FIRST_VOYAGE: Beat[] = [
   },
   {
     ...K,
-    text: 'Take her out past the shallows. Anywhere off the dock will do.',
+    // NOT "past the shallows". A new captain starts in the Mainland's berth at
+    // radius 617 and the Shallows do not begin until 1400, so they are sailing
+    // OUT TO them — telling somebody to go past the first water they will
+    // reach sends them through it and out the other side.
+    text: 'Take her south, out to the *Shallows*. Follow the lights.',
     until: 'next',
+    path: 'shallows',
   },
 
   // ── THE FIRST CAST ────────────────────────────────────────────────────
@@ -98,6 +113,7 @@ export const FIRST_VOYAGE: Beat[] = [
     text: 'Out on open water the *Cast* button comes up. No menus. The fish are where you are.',
     until: 'cast',
     target: 'cast',
+    path: 'shallows',
   },
   {
     ...K,
@@ -112,17 +128,42 @@ export const FIRST_VOYAGE: Beat[] = [
     until: 'next',
   },
 
-  // ── AND WHAT IS OUT THERE ─────────────────────────────────────────────
+  // ── AND WHAT IT IS WORTH ──────────────────────────────────────────────
+  //
+  // The whole loop, closed, before anything else is mentioned. A captain who
+  // has caught a fish and sold it has done the thing the game is; every other
+  // building on the chart is a variation on it, and none of them can be
+  // explained to somebody who has not.
+  {
+    ...D,
+    text: 'A fish is worth nothing in the hold. Take her back to the *Mainland* — the market there pays full price.',
+    until: 'moor',
+    at: 'mainland',
+    path: 'mainland',
+  },
+  {
+    ...K,
+    text: 'Tie up and go *ashore*.',
+    until: 'ashore',
+    at: 'mainland',
+  },
+  {
+    ...K,
+    text: 'The *Market*. That is where the hold turns into coin.',
+    until: 'sold',
+    target: 'market',
+  },
+  {
+    ...D,
+    text: 'That is the whole of it, Captain. Catch, sell, buy better tackle, catch more.',
+    until: 'next',
+  },
+
+  // ── AND WHAT ELSE IS OUT THERE ────────────────────────────────────────
   {
     ...D,
     text: 'Now look where you are. Every island out here is somewhere you can tie up.',
     until: 'next',
-  },
-  {
-    ...D,
-    text: 'The *Mainland*. Tavern, market, tackle shop and more — the market is where that fish turns into coin.',
-    until: 'look',
-    at: 'mainland',
   },
   {
     ...K,
@@ -150,7 +191,13 @@ export const FIRST_VOYAGE: Beat[] = [
   },
   {
     ...D,
-    text: 'That is the sea, Captain. Go and sell that fish.',
+    text: 'That is the sea, Captain. She is yours to sail.',
     until: 'next',
   },
 ]
+
+/** The beat that waits on a sale. The MARKET advances past this one — it is on
+ *  a different route from the chart, and it is the only surface that knows a
+ *  sale happened. Derived rather than written down, so inserting a beat above
+ *  it cannot silently point the market at the wrong step. */
+export const SELL_STEP = FIRST_VOYAGE.findIndex(b => b.until === 'sold')

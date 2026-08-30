@@ -1148,7 +1148,7 @@ export default function SeaMap({
   userId: string
   /** What the captain has already been taught. Both latch on profile columns,
    *  so neither replays on another device or after a reinstall. */
-  tour: { seen: boolean; hints: string[] }
+  tour: { seen: boolean; step: number; hints: string[] }
   /** The player's own loadout, so the thing crossing the ocean is the captain
    *  they dressed in the boat they bought — not a marker. */
   characterColor: string
@@ -1384,6 +1384,8 @@ export default function SeaMap({
   const camAt = useRef({ x: 0, y: 0 })
   /** Set by the first-voyage tour to fly the camera; null gives it back. */
   const tourCam = useRef<{ x: number; y: number } | null>(null)
+  /** And where it is telling her to sail, for the guiding path. */
+  const tourGoal = useRef<{ x: number; y: number } | null>(null)
 
   // Position, velocity and target live in refs, not state: they change every
   // frame and re-rendering React sixty times a second to move one sprite is how
@@ -4816,6 +4818,9 @@ export default function SeaMap({
         const offY = (pos.current.y - camAt.current.y) * zoomRef.current * GROUND
         boat.style.marginLeft = `${offX}px`
         boat.style.marginTop = `${offY}px`
+        // THE WAY THERE, from wherever she actually is. Recomputed every frame
+        // rather than set once, because the near end of it is the hull.
+        gpuRef.current?.guide(tourGoal.current ? pos.current : null, tourGoal.current)
         gpuRef.current?.skipper({
           bob, heel, facing: facing.current, zoom: zoomRef.current,
           frame: frameRef.current, stage: 0,
@@ -6552,8 +6557,9 @@ hullRef={hullRefFor(t.key)} />
           of its beats are ABOUT fishing and one of them explains the dial while
           the dial is on screen, which was the whole reason the retired fishing
           hub had an intro scene of its own. */}
-      <SeaFirstVoyage hasSeen={tour.seen} fishing={!!fishingIn}
-        caught={caughtTick} cam={tourCam} />
+      <SeaFirstVoyage hasSeen={tour.seen} startAt={tour.step} fishing={!!fishingIn}
+        caught={caughtTick} nearId={near?.id ?? null} ashore={ashore}
+        cam={tourCam} goal={tourGoal} />
       {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
@@ -9788,7 +9794,11 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
  * so the card you tap is visibly the one you sailed past. That is the whole
  * reason this is a chooser and not a list of links.
  */
-const ASHORE: { href: string; art: string; name: string; blurb: string; cta: string; accent: string }[] = [
+const ASHORE: {
+  href: string; art: string; name: string; blurb: string; cta: string; accent: string
+  /** `data-coach` handle, for a tour that needs to point at this door. */
+  coach?: string
+}[] = [
   { href: '/tavern', art: '/sea/tavern.png', name: 'The Tavern',
     blurb: 'The day\u2019s tot, and whatever race is running', cta: 'Enter', accent: '#e0a545' },
   { href: '/tavern/casino', art: '/sea/den.png', name: 'The Den',
@@ -9798,7 +9808,10 @@ const ASHORE: { href: string; art: string; name: string; blurb: string; cta: str
   { href: '/tavern/trivia', art: '/sea/parlor.png', name: 'The Parlor',
     blurb: 'Trivia, and the Pirate King ladder', cta: 'Sit in', accent: '#dd8f79' },
   { href: '/tavern/market', art: '/sea/market.png', name: 'The Market',
-    blurb: 'Sell the hold at full price', cta: 'Trade', accent: '#7fd6a0' },
+    blurb: 'Sell the hold at full price', cta: 'Trade', accent: '#7fd6a0',
+    // The first voyage lights this one up when it sends a captain in to sell
+    // their first fish. See SeaFirstVoyage.
+    coach: 'market' },
   { href: '/marketplace/tackle-shop', art: '/sea/tackle.png', name: 'Tackle Shop',
     blurb: 'Rods, hooks, reels and bait', cta: 'Browse', accent: '#67d4e8' },
 ]
@@ -9846,6 +9859,7 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {ASHORE.map((d, i) => (
             <motion.button key={d.href} type="button" className="tap"
+              data-coach={d.coach}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 + i * 0.06, type: 'spring', stiffness: 380, damping: 28 }}
               whileTap={{ scale: 0.97 }}

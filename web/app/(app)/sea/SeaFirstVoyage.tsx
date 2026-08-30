@@ -30,23 +30,32 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import GuideCoach from '@/components/GuideCoach'
 import { FIRST_VOYAGE, SEA_ACCENT } from '@/lib/seaOnboarding'
 import { PLACES } from './chart'
-import { markSeaTourSeen } from './tourActions'
+import { markSeaTourSeen, setSeaTourStep } from './tourActions'
 
 export default function SeaFirstVoyage({
-  hasSeen, fishing, caught, cam,
+  hasSeen, startAt, fishing, caught, nearId, ashore, cam, goal,
 }: {
   hasSeen: boolean
+  /** Where the tour got to. It leaves the chart to sell a fish at the market,
+   *  so it has to be able to come back to the beat it was on. */
+  startAt: number
   /** Whether the rod is currently out. Advances the `cast` beat. */
   fishing: boolean
   /** Rises by one every time a fish is landed, and never falls. Deliberately
    *  NOT the hold count: that is clamped to the hold's capacity, so a full hold
    *  catches a fish without the number moving, and it drops when you sell. */
   caught: number
+  /** Where she is tied up, if anywhere. Advances the `moor` beat. */
+  nearId: string | null
+  /** Whether the island's door chooser is open. Advances the `ashore` beat. */
+  ashore: boolean
   /** The chart's camera override. Written while showing an island, cleared
    *  when the tour is done with it. */
   cam: { current: { x: number; y: number } | null }
+  /** And where it is sending her, for the guiding path on the water. */
+  goal: { current: { x: number; y: number } | null }
 }) {
-  const [step, setStep] = useState(hasSeen ? FIRST_VOYAGE.length : 0)
+  const [step, setStep] = useState(hasSeen ? FIRST_VOYAGE.length : startAt)
   const beat = FIRST_VOYAGE[step]
   const done = step >= FIRST_VOYAGE.length
 
@@ -66,6 +75,12 @@ export default function SeaFirstVoyage({
       const to = n + 1
       if (to >= FIRST_VOYAGE.length) {
         if (!wrote.current) { wrote.current = true; void markSeaTourSeen() }
+      } else {
+        // Written on every advance, because the very next beat may be the one
+        // that sends them off the chart. Fire and forget: the worst a lost
+        // write costs is one beat repeated, and blocking the tour on a round
+        // trip would cost every captain a stutter to prevent it.
+        void setSeaTourStep(to)
       }
       return to
     })
@@ -84,7 +99,41 @@ export default function SeaFirstVoyage({
     return () => { cam.current = null }
   }, [beat, cam])
 
-  // ── THE TWO BEATS THAT WAIT ───────────────────────────────────────────────
+  // ── AND THE THING ITSELF, LIT UP ──────────────────────────────────────────
+  //
+  // Found by DOM lookup, because the target is in a sibling component — the
+  // Market card lives in the ashore chooser and this has no reference to it.
+  // Retried for a moment: a beat that highlights the Market card comes up in
+  // the same breath as the chooser it is inside, and the first query can easily
+  // run before the modal has mounted.
+  useEffect(() => {
+    const want = beat?.target
+    const clear = () => document.querySelectorAll('.coach-flash')
+      .forEach(el => el.classList.remove('coach-flash', 'coach-flash-gold'))
+    clear()
+    if (!want) return
+    let tries = 0
+    const find = () => {
+      const el = document.querySelector(`[data-coach="${want}"]`)
+      if (el) { el.classList.add('coach-flash', 'coach-flash-gold'); return }
+      if (++tries < 20) window.setTimeout(find, 120)
+    }
+    find()
+    return clear
+  }, [beat])
+
+  // ── THE WAY THERE ─────────────────────────────────────────────────────────
+  //
+  // Same shape as the camera: set while a beat wants it, given back the moment
+  // it does not, so a path never outlives the instruction that drew it.
+  useEffect(() => {
+    if (!beat?.path) { goal.current = null; return }
+    const place = PLACES.find(p => p.id === beat.path)
+    goal.current = place ? { x: place.x, y: place.y } : null
+    return () => { goal.current = null }
+  }, [beat, goal])
+
+  // ── THE BEATS THAT WAIT ───────────────────────────────────────────────────
   const wantCast = beat?.until === 'cast'
   useEffect(() => {
     if (wantCast && fishing) next()
@@ -99,12 +148,27 @@ export default function SeaFirstVoyage({
     if (wantCatch && caught > mark.current) next()
   }, [wantCatch, caught, next])
 
+  // Tied up where the beat asked.
+  const wantMoor = beat?.until === 'moor'
+  useEffect(() => {
+    if (wantMoor && beat?.at && nearId === beat.at) next()
+  }, [wantMoor, beat, nearId, next])
+
+  // And through the door.
+  const wantAshore = beat?.until === 'ashore'
+  useEffect(() => {
+    if (wantAshore && ashore) next()
+  }, [wantAshore, ashore, next])
+
   if (done || !beat) return null
 
   // A `look` beat holds while the camera flies and the captain reads; the two
   // waiting beats have no button at all, because the button IS the thing they
   // were asked to do.
-  const waiting = beat.until === 'cast' || beat.until === 'catch'
+  // Anything the captain has to DO has no button: the button is the thing they
+  // were asked to do. `sold` is the extreme case — the market advances it from
+  // another route entirely, and this card is what they carry through the door.
+  const waiting = beat.until !== 'next' && beat.until !== 'look'
 
   return (
     <GuideCoach

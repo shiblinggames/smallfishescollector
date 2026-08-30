@@ -19,6 +19,30 @@ export async function markSeaTourSeen(): Promise<void> {
 }
 
 /**
+ * WHERE THE FIRST VOYAGE HAS GOT TO.
+ *
+ * The tour leaves the chart: it walks a new captain to the Mainland, ashore,
+ * and into the Market to sell their first fish. That is a different route, so
+ * the component driving it unmounts halfway through and a step held in state
+ * would drop them at the door they were sent through.
+ *
+ * Only ever forwards. Two surfaces write this — the chart and the market — and
+ * a stale render on either could otherwise walk the tour backwards into a beat
+ * the captain has already done.
+ */
+export async function setSeaTourStep(step: number): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const n = Math.max(0, Math.min(99, Math.floor(step)))
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('profiles').select('sea_tour_step').eq('id', user.id).single()
+  if ((data?.sea_tour_step ?? 0) >= n) return
+  await admin.from('profiles').update({ sea_tour_step: n }).eq('id', user.id)
+}
+
+/**
  * Remember that a port's first-landfall line has been shown.
  *
  * Read-then-append rather than a set union, because Postgres arrays have no

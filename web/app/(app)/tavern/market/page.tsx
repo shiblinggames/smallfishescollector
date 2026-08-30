@@ -46,7 +46,7 @@ export default async function MarketPage() {
   }
 
   const [{ data: profile }, market, inventoryRes, stateRes, collectionRes] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro, fishing_xp, has_seen_exchange_intro').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro, fishing_xp, has_seen_exchange_intro, has_seen_sea_tour, sea_tour_step').eq('id', user.id).single(),
     // Shared market snapshot from the cross-request cache (lib/fishMarket).
     getCachedFishMarketFull(),
     admin.from('fish_inventory')
@@ -114,6 +114,11 @@ export default async function MarketPage() {
         exchangeUnveil={exchangeUnveil}
         exchangeOpen={exchangeOpen}
         openContracts={openContracts ?? 0}
+        // Null unless a first voyage is actually in progress: a captain who has
+        // been shown around already gets no coaching in here.
+        tourStep={profile?.has_seen_sea_tour === true
+          ? null
+          : Number(profile?.sea_tour_step ?? 0)}
       />
     </>
   )

@@ -210,6 +210,9 @@ export default async function SeaPage() {
       userId={user.id}
       tour={{
         seen: profile?.has_seen_sea_tour === true,
+        // Where the first voyage got to. It leaves the chart for the market,
+        // so it has to resume rather than restart.
+        step: Number(profile?.sea_tour_step ?? 0),
         hints: (profile?.sea_hints_seen as string[] | null) ?? [],
       }}
       characterColor={(profile?.character_color as string | null) ?? 'default'}

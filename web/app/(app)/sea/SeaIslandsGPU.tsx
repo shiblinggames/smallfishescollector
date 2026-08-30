@@ -48,6 +48,7 @@ import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
 import { makeTowns, type Towns, type GpuTown } from './seaTown'
+import { makePath, type SeaPath } from './seaPath'
 import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
 
@@ -99,6 +100,10 @@ export type GpuHandle = {
   /** Which pieces of tall scenery are standing in front of the hull right now,
    *  as indices into `occluders`. Empty almost always. */
   front(list: number[]): void
+  /** The guiding path: from the hull to wherever the tour has sent her, or
+   *  null for neither. See seaPath — naming a place says WHAT, and on a chart
+   *  this size a new captain also needs WHICH WAY. */
+  guide(from: { x: number; y: number } | null, to: { x: number; y: number } | null): void
   /** Which berth she is standing in, or null. Eased on the far side, so this
    *  can be called every frame or only on change. */
   berth(id: string | null): void
@@ -314,6 +319,12 @@ export default function SeaIslandsGPU({
       // laid near a shore runs up under the sand rather than over it.
       const wake: Wake = makeWake(PIXI)
       world.addChild(wake.view)
+
+      // ── AND THE WAY THERE ─────────────────────────────────────────
+      // In the world, over the wake and under the land, because it is painted
+      // ON the water and an island is in front of it.
+      const guide: SeaPath = makePath(PIXI)
+      world.addChild(guide.view)
 
       // Other captains, IN the world: they have world positions and the camera
       // does not follow them. Added last so a boat is never behind the island
@@ -609,6 +620,7 @@ export default function SeaIslandsGPU({
         wake.lay(contacts)
         berthLayer.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
+        guide.advance(t)
         for (const sw of swayers) {
           // Generous margins: a landmark is anchored at its base and stands
           // well above it, so culling on the anchor alone pops the tall ones.
@@ -702,6 +714,7 @@ export default function SeaIslandsGPU({
         wake(w) {
           mine = w ? { id: 'me', ...w } : null
         },
+        guide(from, to) { guide.set(from, to) },
         berth(id) { berthLayer.setActive(id) },
         front(list) {
           nearWanted.clear()
