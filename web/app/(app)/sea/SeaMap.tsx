@@ -3074,6 +3074,12 @@ export default function SeaMap({
     if (!here || here.kind !== 'water' || locked(here)) return false
     target.current = { ...pos.current }
     vibrate([0, 30, 40, 30])
+    // THE WATER EMPTIES WHERE THE HOOK GOES IN. The shoals are drawn under the
+    // surface all the way out here, and this is the moment they stop being
+    // scenery: sailing across the chart to a patch and watching it bolt is most
+    // of the reason to have drawn them. Purely visual, and it does not touch
+    // what the cast is worth: that is server-side and it stays there.
+    gpuRef.current?.scatter(pos.current.x, pos.current.y)
     setFishingIn(here)
     return true
   }, [locked])

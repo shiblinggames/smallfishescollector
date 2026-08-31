@@ -40,6 +40,7 @@ import { GROUND, bakeIsland, requestGround } from './islandArt'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
+import { makeShoals, type Shoals } from './seaShoals'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -102,6 +103,15 @@ export type GpuHandle = {
   /** Which pieces of tall scenery are standing in front of the hull right now,
    *  as indices into `occluders`. Empty almost always. */
   front(list: number[]): void
+  /**
+   * SOMETHING HIT THE WATER HERE, in world coordinates. Every fish within reach
+   * bolts.
+   *
+   * The one moment the shoals stop being scenery: dropping a hook into a patch
+   * you crossed the chart to find, and watching it empty, is most of the reason
+   * to have drawn them at all.
+   */
+  scatter(x: number, y: number): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -326,6 +336,13 @@ export default function SeaIslandsGPU({
 
       const world = new PIXI.Container()
       a.stage.addChild(world)
+
+      // ── WHAT IS UNDER THE WATER ───────────────────────────────────
+      // FIRST into the world, so everything else on this chart is above them:
+      // the drift foam, the wake, the islands, every boat. A fish seen through
+      // water is under it, and the whole read depends on that ordering.
+      const shoals: Shoals = makeShoals(PIXI)
+      world.addChild(shoals.view)
 
       // ── WHERE THE CAPTAINS GO ─────────────────────────────────────
       // Above the world, because a boat is on the water rather than under it,
@@ -626,6 +643,7 @@ export default function SeaIslandsGPU({
         for (const c of crewRef.current.values()) c.cap.update(dt)
         water?.frame(t, camX, camY, camZoom, dark, warm, rush)
         drift.advance(camX, camY, halfW, halfH, t, dt)
+        shoals.advance(camX, camY, halfW, halfH, t, dt)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
@@ -728,6 +746,9 @@ export default function SeaIslandsGPU({
           // a fact about the light.
           for (const c of crewRef.current.values()) c.cap.setNight(tint)
           drift.night(tint)
+          // Underwater, so it takes the hour HARDER than the surface does: the
+          // last thing to still be visible after dark is not the thing below it.
+          shoals.night(nightTint(Math.min(1, d * 1.25), w))
           wake.night(tint)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
@@ -812,6 +833,8 @@ export default function SeaIslandsGPU({
           c.cap.setFrame(sk.frame)
           c.cap.setStage(sk.stage)
         },
+        scatter(x, y) { shoals.scatter(x, y) },
+
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom
           world.scale.set(zoom, zoom * GROUND)

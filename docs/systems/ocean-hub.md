@@ -1263,6 +1263,44 @@ arch-to-sortie sail is 5,100, which is a leg rather than a voyage.
 so moving it moves them together. `RAID_EDGE` (13,000) does not — that is the open water
 beyond, and it is deliberately its own number.
 
+## The shoals
+
+**There are fish in the water now** (`sea/seaShoals.ts`). Dark shapes under the surface,
+moving in schools of 13, thicker where the fishing is better, and they bolt when a hook
+lands among them.
+
+It exists because the two halves of the game never met: fishing was a dial that appeared
+over the sea, and the sea underneath was empty. You sailed to coordinates because the UI
+told you to, not because you could see anything there.
+
+**Density is the mechanic made visible, and it changes nothing.** Every payout, rarity roll
+and hotspot effect stays exactly where it is, server-side. What changes is that "the Deep is
+better" and "there is a shoal over there" stop being sentences.
+
+| Water | Fish drawn, of a school of 13 |
+|---|---|
+| The Shallows | 5 |
+| Open Waters | 6 |
+| The Deep | 7 |
+| The Abyss / The Ancient Deep | 9 |
+| Inside a **shoal** hotspot | 13, from about 1.5 radii in |
+
+Only a `shoal` hotspot pulls fish. A trench and a flotsam patch do other things, and drawing
+fish over them would say the wrong thing about what they are.
+
+**Density is spent on COUNT before brightness**, and the slot span is 1.6 rather than 1. At
+1 the count saturated by the Deep, so the Abyss, the Ancient Deep and a hotspot were all
+thirteen fish differing only in alpha, which is the one thing this is meant to make visible.
+Size reads the BAND and is clamped: a patch may summon more fish and may never grow them.
+
+They are **first into the world container**, so everything else is above them: the drift
+foam, the wake, the islands, every hull. They take the night tint harder than the surface
+does, and they are dim on purpose. A fish seen through water is a suggestion of a fish; the
+moment they read as crisp sprites they read as floating ON it.
+
+**The scatter is the point.** `gpu.scatter(x, y)` fires from `startFishing`, and sailing
+across the chart to a patch and watching it empty is most of the reason to have drawn them.
+
 ## How the minimap is read
 
 **Shape carries the meaning; colour only reinforces it.** Everything on the chart used to be
