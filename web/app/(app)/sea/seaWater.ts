@@ -34,6 +34,8 @@
 // and unlit rather than merely darker. That is the thing a flat gradient could
 // never do and the reason this exists at all.
 
+import { PLACES } from './chart'
+
 export type WaterUniforms = {
   /** Seconds. The only thing that animates. */
   uTime: number
@@ -64,6 +66,14 @@ export type WaterUniforms = {
    *  horizon. See seaClock. */
   uWarm: number
 }
+
+/**
+ * WHERE THE SHELF RUNS, in world pixels: the inner edge of the first fishable
+ * band and the outer edge of the last. Derived from PLACES so the depth the
+ * shader draws and the bands the game runs on are the same fact.
+ */
+const SHELF_IN = Math.min(...PLACES.filter(p => p.inner !== undefined).map(p => p.inner!))
+const SHELF_OUT = Math.max(...PLACES.map(p => p.outer ?? 0))
 
 // ── THE SHADERS ─────────────────────────────────────────────────────────────
 //
@@ -124,6 +134,10 @@ uniform vec2  uLight;
 uniform float uSwell;
 uniform float uRush;
 uniform float uWarm;
+// Where the fishable sea starts and stops, in world pixels. Uploaded from
+// PLACES rather than written here, so the shelf can never disagree with the
+// bands it is a picture of.
+uniform vec2  uShelf;
 
 // The plane's foreshortening. Sampling noise without it makes the swell look
 // like it is standing up out of the water rather than lying on it.
@@ -206,9 +220,30 @@ void main(void) {
   float fine = 0.35 * (1.0 - 0.55 * uRush);
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
+  // ── THE SHELF ─────────────────────────────────────────────────────
+  //
+  // The colour of the water already changes with the band, but it changes ALL
+  // AT ONCE: seaAt blends the palette for wherever the CAMERA is and hands the
+  // whole screen one answer, so crossing from the Deep into the Abyss is the
+  // entire view shifting together. The sea had no depth ACROSS it.
+  //
+  // This is the same fact drawn per pixel. Distance from the origin, against
+  // the real inner and outer radii of the fishable sea, so the far side of the
+  // screen is genuinely deeper than the near side and sailing out is something
+  // you can watch happen rather than something you read off a band name.
+  //
+  // BRIGHTNESS ONLY. Hue is the zone blend's business and this may not touch
+  // it — the same law the swell obeys three lines down. Deep water is not a
+  // different colour here, it is less lit, which is also what deep water is.
+  float shelf = smoothstep(uShelf.x, uShelf.y, length(world));
+
   // Brightness only. Hue is the zone blend's business and nothing here may
   // touch it.
   float shade = 1.0 + swell * 0.20 * uSwell;
+  // Gentle: at the far edge the water gives up about a fifth of its light. Any
+  // more and the Ancient Deep goes black on its own, which the palette is
+  // already responsible for saying.
+  shade *= 1.0 - shelf * 0.22;
   float facing = dot(normalize(vec2(swell, swell * 0.6) + vec2(0.0001)), normalize(uLight));
   shade += facing * 0.035 * uSwell;
   col *= shade;
@@ -225,6 +260,51 @@ void main(void) {
   // moves with the island because it is AT the island, the same way the
   // contact shadow is, and no camera enters into it.
 
+  // ── CAUSTICS ──────────────────────────────────────────────────────
+  //
+  // The bright filaments light makes on a shallow bottom. RIDGED noise, not
+  // ordinary noise: 1 - abs(2n-1) folds the field at its midpoint so what was a
+  // smooth hill becomes a crease, and creases are what a caustic is. Two
+  // octaves crossing at different rates so the web moves without repeating.
+  //
+  // SHALLOW WATER ONLY, and that is the whole point of having them. They are
+  // strongest at the coast and gone by the Deep, which makes the shelf above
+  // legible in a second way: the near water is not just brighter, it is
+  // patterned, and the far water is plain.
+  //
+  // And they need the sun. A caustic is refracted sunlight, so it goes out
+  // with the light rather than lingering into the night, and it stands down at
+  // speed with everything else fine-grained.
+  float caust = 0.0;
+  if (shelf < 0.62 && uDark < 0.9) {
+    vec2 cw = w * 3.1;
+    float c1 = vnoise(cw + vec2(uTime * 0.035, uTime * 0.021));
+    float c2 = vnoise(cw * 1.7 - vec2(uTime * 0.026, uTime * -0.033));
+    float ridged = (1.0 - abs(c1 * 2.0 - 1.0)) * (1.0 - abs(c2 * 2.0 - 1.0));
+    caust = pow(ridged, 3.4)
+      * (1.0 - smoothstep(0.10, 0.62, shelf))
+      * (1.0 - uDark)
+      * (1.0 - 0.7 * uRush);
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.30 * uSwell;
+  }
+
+  // ── THE MOON'S PATH ───────────────────────────────────────────────
+  //
+  // At night the light stops scattering off every wave and lays a single road
+  // across the water instead, and the sea outside it goes flat. The glints
+  // below already do the sun's version of this; this is the one that only
+  // exists after dark, and it is most of why a night sea reads as a night sea
+  // rather than as a dim day.
+  //
+  // Measured along the light's own axis, so it points wherever the clock says
+  // the light is coming from and turns with it through the night.
+  float across = abs(dot(normalize(vec2(px.x, px.y / GROUND)), vec2(uLight.y, -uLight.x)));
+  float road = (1.0 - smoothstep(0.0, 0.34, across));
+  // Broken by the swell, because a reflection on moving water is not a stripe,
+  // it is a column of separate bright pieces.
+  float broken = smoothstep(0.42, 0.86, d1) * (0.55 + 0.45 * smoothstep(0.4, 0.9, d2));
+  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.24 * uDark * uSwell * (1.0 - 0.6 * uRush);
+
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);
   // 6.0, NOT 9.0. At 9 a glint cell is about seventy world pixels across, so
@@ -240,13 +320,13 @@ void main(void) {
   sparkle = smoothstep(lo, 0.995, sparkle) * smoothstep(0.30, 0.75, d1);
   // Weighted to the horizon like the warmth is, because that is where a low
   // sun's reflection actually is.
-  float road = mix(1.0, 1.0 + horizon * 1.6, uWarm);
+  float sunRoad = mix(1.0, 1.0 + horizon * 1.6, uWarm);
   // The road is the colour of the sun making it, not white.
   vec3 glintCol = mix(vec3(1.0), vec3(1.0, 0.62, 0.28), uWarm);
   // AND THEY FADE AS SHE DRIVES. Glare is the highest-contrast thing on the
   // water and the most expensive to sweep past; under way it gives up most of
   // itself, and comes back the moment you slow down and look.
-  col += sparkle * glintCol * 0.16 * road * uSwell * (1.0 - uDark) * (1.0 - 0.7 * uRush);
+  col += sparkle * glintCol * 0.16 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.7 * uRush);
 
   finalColor = vec4(col, 1.0);
 }
@@ -286,6 +366,9 @@ export async function makeWater(PIXI: typeof import('pixi.js'), initial: WaterUn
       uSwell: { value: initial.uSwell, type: 'f32' },
       uRush: { value: initial.uRush, type: 'f32' },
       uWarm: { value: initial.uWarm, type: 'f32' },
+      // Read off PLACES, so the shelf is a picture of the real bands rather
+      // than of two numbers somebody typed into a shader.
+      uShelf: { value: new Float32Array([SHELF_IN, SHELF_OUT]), type: 'vec2<f32>' },
     })
 
     const filter = new PIXI.Filter({
