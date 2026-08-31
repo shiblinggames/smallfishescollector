@@ -65,6 +65,7 @@ import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { levelCatchBonus } from '@/lib/fishingLevel'
 import { vibrate } from '@/lib/haptics'
 import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
+import { getSetting } from '@/lib/seaSettings'
 import type { FishSizeTier } from '@/lib/fishSize'
 import { getBait } from '@/lib/bait'
 import { streakMult, STREAK_XP_CAP } from '@/lib/perfectStreak'
@@ -139,13 +140,32 @@ function rollSweep(catchDifficulty: number, reelMult: number): number {
  *  enough to show the snap and the gold burst, and the card comes after. */
 /** The elapsed-wait readout. Isolated so its interval re-renders a single <p>
  *  and not the dial, the bait row or anything else on screen. */
+/**
+ * THE RUNNING COUNT WHILE YOU WAIT, and the one thing on this overlay a
+ * captain can switch off.
+ *
+ * It is here because the wait is three to twelve seconds and it is NOT a fixed
+ * number: bait, rod and level all move it, so a running count is the only way
+ * anybody can tell that their tackle is doing something. That is a real
+ * argument and it does not apply to everybody. Once you know your gear works,
+ * a stopwatch on a fishing trip is a stopwatch on a fishing trip, and watching
+ * a number climb is the opposite of waiting on a bite.
+ *
+ * Off means the dots and the words, which is the version somebody who is not
+ * measuring anything wants. See the settings disc, top right of the chart.
+ */
 function WaitTimer() {
   const [ms, setMs] = useState(0)
+  const [show, setShow] = useState(true)
+  // Read on mount rather than at module load: this remounts on every cast, and
+  // a captain who turned it off mid-session should see that on the next one.
+  useEffect(() => { setShow(getSetting('biteTimer')) }, [])
   useEffect(() => {
     const startedAt = Date.now()
     const id = window.setInterval(() => setMs(Date.now() - startedAt), 100)
     return () => clearInterval(id)
   }, [])
+  if (!show) return null
   return (
     <p className="font-karla font-700" style={{
       fontSize: '0.816rem', color: 'rgba(190,212,228,0.55)', marginTop: 2,

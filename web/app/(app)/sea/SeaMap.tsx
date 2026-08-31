@@ -207,6 +207,13 @@ const FinnTalk = dynamic(() => import('./FinnTalk'), { ssr: false })
 // THE VOYAGE BOARD, opened by mooring at the Charterhouse. Dynamic for the
 // same reason: it pulls in the whole expeditions voyage panel behind it.
 const VoyageBoard = dynamic(() => import('./VoyageBoard'), { ssr: false })
+// THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
+// of destinations down the left. Dynamic, like everything else the chart does
+// not need in order to draw a sea.
+const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
+// And the soundtrack, which the chart lost when /fishing was retired. See
+// SeaAudio: it starts on the first press, not on mount.
+const SeaAudio = dynamic(() => import('./SeaAudio'), { ssr: false })
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
@@ -6206,6 +6213,21 @@ hullRef={hullRefFor(t.key)} />
         }
         return null
       })()}
+
+      {/* ── SETTINGS ────────────────────────────────────────────────────
+          Top RIGHT, alone, and deliberately not on the end of the HUD's run
+          down the left. Everything in that run is a place you are going or a
+          thing waiting for you; this is the knobs on the outside of the game,
+          and sitting it at the end of that row would say it was another
+          destination. Same disc size and same vertical, so it reads as part of
+          the same furniture without joining the queue. */}
+      <SeaSettings size={hudSize} top={18} />
+
+      {/* THE SOUNDTRACK. Starts on the first press rather than on mount, both
+          because no browser will play it before one and because it is a 1.6MB
+          fetch nobody should pay for opening the chart to look at it. The track
+          follows the water the boat is in. */}
+      <SeaAudio zoneId={near?.kind === 'water' ? near.id : null} />
 
       {/* ── THE TRAWLS ──────────────────────────────────────────────────
           Fifth in the row, and a READOUT: what is out, and how long. Sending
