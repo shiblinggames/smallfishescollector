@@ -213,10 +213,31 @@ export default function SeaIslandsGPU({
   const listRef = useRef(islands)
   const marksRef = useRef(marks)
 
+  /**
+   * ── A LOST CONTEXT USED TO BE PERMANENT ───────────────────────────────────
+   *
+   * Nothing anywhere listened for `webglcontextlost`, so when the browser took
+   * this context away the chart went blank and STAYED blank: your own boat,
+   * every trader, every island and every wake gone, while the DOM over the top
+   * carried on working and the helm still steered. It was reported exactly like
+   * that, and it was caused by a second WebGL context on the fishing dial, which
+   * is gone. But a browser can take a context for its own reasons at any time
+   * (a background tab reclaimed on a phone is the common one), so the hole was
+   * always there and the dial only found it.
+   *
+   * Two halves. `preventDefault` on the loss is what makes the context
+   * RESTORABLE at all: without it the browser never bothers. And a restore
+   * bumps this counter, which is in the effect's dependencies, so the whole
+   * renderer is torn down and rebuilt from the chart data it is all derived
+   * from anyway.
+   */
+  const [gen, setGen] = useState(0)
+
   useEffect(() => {
     let dead = false
     let app: import('pixi.js').Application | null = null
     let cleanup: (() => void) | null = null
+    let lostOff: (() => void) | null = null
 
     ;(async () => {
       const PIXI = await import('pixi.js')
@@ -267,6 +288,12 @@ export default function SeaIslandsGPU({
       el.appendChild(a.canvas)
       // Input belongs to the DOM chart underneath. This canvas is scenery.
       a.canvas.style.pointerEvents = 'none'
+
+      // See the note on `gen`. preventDefault is not optional here: it is what
+      // tells the browser this canvas wants the context back.
+      const onLost = (e: Event) => { e.preventDefault(); setGen(g => g + 1) }
+      a.canvas.addEventListener('webglcontextlost', onLost, false)
+      lostOff = () => a.canvas.removeEventListener('webglcontextlost', onLost)
 
       // ── THE WATER, UNDER EVERYTHING ───────────────────────────────
       //
@@ -803,6 +830,7 @@ export default function SeaIslandsGPU({
 
     return () => {
       dead = true
+      lostOff?.()
       cleanup?.()
       handle.current = null
       // The app destroys her children with it; dropping the reference first is
@@ -815,7 +843,7 @@ export default function SeaIslandsGPU({
       app?.destroy(true, { children: true })
       app = null
     }
-  }, [handle])
+  }, [handle, gen])
 
   // ── THE CAPTAIN, REBUILT ONLY WHEN SHE CHANGES ────────────────────────────
   //
