@@ -465,8 +465,12 @@ export default function Minimap({
     const fit = () => {
       const roomy = window.innerWidth >= 1024
       setWide(roomy)
-      // Header and padding, plus the stacked key on a narrow screen.
-      const chrome = roomy ? 104 : 210
+      // Header and padding, plus the stacked key on a narrow screen. The
+      // narrow figure is the honest one: a 54px header, the gap, and three
+      // key groups which at this width run two columns and about 200px. It
+      // read 210 for the header AND the key together, which only ever came up
+      // on a short screen, and came up as a chart running off the bottom.
+      const chrome = roomy ? 104 : 268
       const panel = Math.min(window.innerWidth, PANEL_MAX)
       const across = panel - gutter(roomy) - (roomy ? KEY_W + KEY_GAP : 0)
       setW(Math.round(Math.min(
@@ -498,7 +502,15 @@ export default function Minimap({
           style={{
             position: 'fixed', inset: 0, zIndex: 9200,
             background: 'rgba(3,8,14,0.86)', backdropFilter: 'blur(3px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex',
+            // CENTRED BY `margin: auto` ON THE PANEL, not by align-items, and
+            // the difference only shows when the panel is taller than the
+            // screen. A flex box centring an oversized child pushes its top
+            // out past the scroll origin, so the header becomes unreachable;
+            // auto margins centre exactly the same way and give the overflow
+            // back. It comes up on a phone held sideways, where the chart is
+            // height-bound and the key still wants its two hundred pixels.
+            overflowY: 'auto',
             padding: wide ? SHELL_PAD.wide : SHELL_PAD.narrow,
           }}>
           <motion.div
@@ -506,6 +518,7 @@ export default function Minimap({
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
+              margin: 'auto',
               background: 'rgba(8,14,22,0.98)',
               border: '1px solid rgba(180,214,232,0.28)',
               borderRadius: 18, padding: wide ? PANEL_PAD.wide : PANEL_PAD.narrow,
@@ -540,7 +553,28 @@ export default function Minimap({
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: wide ? KEY_GAP : 0, alignItems: 'flex-start' }}>
+            {/* ── TWO LAYOUTS, AND THEY ARE GENUINELY DIFFERENT ──────────
+                WIDE:   chart and key side by side, which is what buys the
+                        chart most of the window on a desktop.
+                NARROW: chart on top, key UNDERNEATH, full width.
+
+                `flexDirection` is the whole of it and it was missing. This was
+                a bare `display: flex` in both cases, so on a phone the key did
+                not stack under the chart, it sat BESIDE it as a flex sibling.
+                Both carry a fixed width of `w`, so the row came out 2w across
+                inside a panel sized for w, and a centred panel wider than the
+                screen loses the same slice off each side: the chart's labels
+                were cut off on the left and the key was cut off on the right,
+                with nothing to scroll to reach either.
+
+                The old `marginTop: wide ? 0 : 10` on the key is the tell. It
+                was written by somebody who believed the key was below. */}
+            <div style={{
+              display: 'flex',
+              flexDirection: wide ? 'row' : 'column',
+              gap: wide ? KEY_GAP : 10,
+              alignItems: 'flex-start',
+            }}>
             <canvas ref={canvasRef}
               style={{
                 width: w, height: h, display: 'block', borderRadius: 12,
@@ -556,9 +590,9 @@ export default function Minimap({
                 thing it is a swatch for. */}
             <div style={{
               width: wide ? KEY_W : w,
-              marginTop: wide ? 0 : 10,
               // Beside a tall chart the key can run past the bottom of it.
               // Scrolling the key is right and scrolling the chart is not.
+              // Underneath it there is nothing to run past, so it simply ends.
               ...(wide ? { maxHeight: h, overflowY: 'auto' as const } : null),
             }}>
               <KeyGroup title="Places">
