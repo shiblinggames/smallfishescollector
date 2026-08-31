@@ -277,246 +277,163 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained,
         </motion.div>
       )}
 
-      {/* Compact banner row — perfect / double / jackpot / gem / trophy /
-          large / PB all collapse into a single flex-wrap row of slim pills
-          so they never push the cast button or bottom nav off the screen.
-          Each pill keeps its own accent color + the same gradient + top-
-          accent chrome as before, just at ~32px tall instead of ~80px.
-          Size-tier pills (Trophy / Large) and the PB pill render first so
-          they catch the eye on the dopamine moments. */}
-      {(tierPill || isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || lockedStage > 0 || catchQty > 1) && (
-        <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
-          {/* Size tier leads the row — it is the rarest thing on most cards. */}
-          {tierPill && (() => {
-            const tc = TIER_COLOR[tierPill]
-            const rgb = isTrophyCatch ? '251,191,36' : '96,165,250'
-            return (
-              <div style={{ position: 'relative', display: 'inline-flex' }}>
-                {/* Trophy alone gets the burst. Large is common enough (15%)
-                    that ringing it every time would cheapen both. */}
-                {isTrophyCatch && [0, 0.1, 0.2].map((delay, i) => (
-                  <motion.div key={i}
-                    initial={{ scale: 0.85, opacity: 0.75 - i * 0.2 }}
-                    animate={{ scale: 2.3 - i * 0.25, opacity: 0 }}
-                    transition={{ duration: 0.6, ease: 'easeOut', delay }}
-                    style={{ position: 'absolute', inset: 0, borderRadius: 999,
-                      border: `${1.5 - i * 0.3}px solid rgba(${rgb},${0.75 - i * 0.2})`, pointerEvents: 'none' }} />
-                ))}
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    background: `linear-gradient(180deg, rgba(${rgb},0.22) 0%, rgba(${rgb},0.06) 100%), #0d1320`,
-                    border: `1px solid rgba(${rgb},0.5)`,
-                    borderTop: `1px solid rgba(${rgb},0.8)`,
-                    borderRadius: 999,
-                    boxShadow: isTrophyCatch ? `0 0 16px rgba(${rgb},0.4)` : `0 0 9px rgba(${rgb},0.24)`,
-                    padding: '0.36rem 0.72rem',
-                    fontSize: '0.62rem', letterSpacing: '0.14em', color: tc,
-                  }}>
-                  {isTrophyCatch && <TrophyMark size={11} color={tc} />}
-                  {TIER_LABEL[tierPill]}
-                </motion.div>
-              </div>
-            )
-          })()}
-          {isPerfect && (() => {
-            const isOnFire = perfectStreak >= 3
-            const isIgnition = perfectStreak === 3
-            const s = Math.min(perfectStreak, 6)
-            const accent = isOnFire ? '#fb923c' : '#fbbf24'
-            const accentRgb = isOnFire ? '251,146,60' : '251,191,36'
-            const glow = `0 0 ${10 + (s - 1) * 3}px rgba(${accentRgb},${0.30 + (s - 1) * 0.04})`
-            return (
-              <div style={{ position: 'relative', display: 'inline-flex' }}>
-                {/* Ignition burst rings — fire on first time hitting streak 3 */}
-                {isIgnition && [0, 0.1, 0.2].map((delay, i) => (
-                  <motion.div key={i}
-                    initial={{ scale: 0.85, opacity: 0.7 - i * 0.2 }}
-                    animate={{ scale: 2.2 - i * 0.25, opacity: 0 }}
-                    transition={{ duration: 0.55, ease: 'easeOut', delay }}
-                    style={{
-                      position: 'absolute', inset: 0, borderRadius: 999,
-                      border: `${1.5 - i * 0.3}px solid rgba(251,146,60,${0.7 - i * 0.2})`,
-                      pointerEvents: 'none',
-                    }}
-                  />
-                ))}
-                <motion.div
-                  key={perfectStreak}
-                  initial={{ opacity: 0, y: -6, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    background: `linear-gradient(180deg, rgba(${accentRgb},0.22) 0%, rgba(${accentRgb},0.06) 100%), #0d1320`,
-                    border: `1px solid rgba(${accentRgb},0.48)`,
-                    borderTop: `1px solid rgba(${accentRgb},0.78)`,
-                    borderRadius: 999,
-                    boxShadow: glow,
-                    padding: '0.36rem 0.72rem',
-                    fontSize: '0.62rem',
-                    letterSpacing: '0.14em',
-                    color: accent,
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <span style={{ display: 'flex' }}>{isOnFire ? <IconFlame size={12} /> : <IconStar size={12} />}</span>
-                  <span>{isOnFire ? 'On Fire' : 'Perfect'}</span>
-                  {perfectStreak >= 2 && (
-                    <span style={{ color: accent, letterSpacing: 0, textShadow: `0 0 8px rgba(${accentRgb},0.6)` }}>×{perfectStreak}</span>
-                  )}
-                  {baitSaved && <span style={{ color: '#86efac', letterSpacing: 0 }}>+bait</span>}
-                </motion.div>
-              </div>
-            )
-          })()}
+      {/* ── WHAT ELSE HAPPENED, RANKED ─────────────────────────────────
+          This was NINE PILLS IN A CENTRED ROW and every one of them was the
+          same object: borderRadius 999, the same 180deg gradient at the same
+          two stops, the same border and lit top edge, the same glow, the same
+          padding, the same tracked caps, the same spring. Only the hue changed.
 
-          {/* Perfect Rod — ×N XP callout so the doubled-XP bonus is visible
-              (only shows on a Perfect, which is the only time it applies). */}
-          {isPerfect && perfectXpMult > 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-              className="font-karla font-700 uppercase"
-              style={{
-                background: 'linear-gradient(180deg, rgba(147,197,253,0.22) 0%, rgba(147,197,253,0.06) 100%), #0a1020',
-                border: '1px solid rgba(147,197,253,0.5)',
-                borderTop: '1px solid rgba(147,197,253,0.8)',
-                borderRadius: 999, padding: '0.36rem 0.72rem', fontSize: '0.62rem',
-                letterSpacing: '0.12em', color: '#bfe3ff',
-                display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-                boxShadow: '0 0 12px rgba(147,197,253,0.28)',
-              }}
-            >
-              ×{perfectXpMult} XP
-            </motion.div>
-          )}
+          Nine things built identically have no hierarchy, so a ×2 haul, a
+          1-in-100 jackpot and a challenge gem all shouted at exactly the same
+          volume and the eye had nowhere to land. That is what made it read as
+          generated rather than designed: not any one piece, but the fact that
+          every piece was the same piece.
 
-          {/* Locked-In Rod — the active stage this catch. Cyan (speed) → gold
-              (triple) → prismatic (LOCKED IN), matching the rod glow. */}
-          {lockedStage > 0 && (() => {
-            const c = lockedStage >= 3 ? '#e879f9' : lockedStage === 2 ? '#f0c040' : '#22d3ee'
-            const rgb = lockedStage >= 3 ? '232,121,249' : lockedStage === 2 ? '240,192,64' : '34,211,238'
-            const label = lockedStage >= 3 ? 'Locked In' : lockedStage === 2 ? 'Locked In · Triple' : 'Locked In · Fast'
-            return (
+          They are not the same KIND of thing, so they no longer look it:
+
+            A BADGE for the one categorical fact about the fish — its size
+            tier. Rare, and now the only pill on the card, which is what makes
+            a pill mean something again.
+
+            A LINE for the verdict on how you fished. Perfect, the streak
+            behind it, whether the rod fired. That is a sentence about the cast
+            and it belongs in type, not in a lozenge.
+
+            A LEDGER for everything that is a NUMBER. A double, a haul, a
+            jackpot, an XP multiplier, a gem. Numbers in identical pills are
+            unreadable; numbers in an aligned row under their own labels are a
+            receipt, which is what they are. Tabular figures, hairline rules
+            between, no chrome at all. */}
+
+      {tierPill && (() => {
+        const tc = TIER_COLOR[tierPill]
+        const rgb = isTrophyCatch ? '251,191,36' : '96,165,250'
+        return (
+          <div className="mb-2 flex justify-center">
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              {/* Trophy alone gets the burst. Large is common enough (15%) that
+                  ringing it every time would cheapen both. */}
+              {isTrophyCatch && [0, 0.1, 0.2].map((delay, i) => (
+                <motion.div key={i}
+                  initial={{ scale: 0.85, opacity: 0.75 - i * 0.2 }}
+                  animate={{ scale: 2.3 - i * 0.25, opacity: 0 }}
+                  transition={{ duration: 0.6, ease: 'easeOut', delay }}
+                  style={{ position: 'absolute', inset: 0, borderRadius: 999,
+                    border: `${1.5 - i * 0.3}px solid rgba(${rgb},${0.75 - i * 0.2})`, pointerEvents: 'none' }} />
+              ))}
               <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                initial={{ opacity: 0, y: -6, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 22 }}
                 className="font-karla font-700 uppercase"
                 style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
                   background: `linear-gradient(180deg, rgba(${rgb},0.22) 0%, rgba(${rgb},0.06) 100%), #0d1320`,
-                  border: `1px solid rgba(${rgb},0.5)`, borderTop: `1px solid rgba(${rgb},0.82)`,
-                  borderRadius: 999, padding: '0.36rem 0.72rem', fontSize: '0.62rem',
-                  letterSpacing: '0.14em', color: c,
-                  display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-                  boxShadow: `0 0 ${8 + lockedStage * 4}px rgba(${rgb},0.32)`,
-                }}
-              >
-                <IconFlame size={11} /> {label}
+                  border: `1px solid rgba(${rgb},0.5)`,
+                  borderTop: `1px solid rgba(${rgb},0.8)`,
+                  borderRadius: 999,
+                  boxShadow: isTrophyCatch ? `0 0 16px rgba(${rgb},0.4)` : `0 0 9px rgba(${rgb},0.24)`,
+                  padding: '0.36rem 0.72rem',
+                  fontSize: '0.62rem', letterSpacing: '0.14em', color: tc,
+                }}>
+                {isTrophyCatch && <TrophyMark size={11} color={tc} />}
+                {TIER_LABEL[tierPill]}
               </motion.div>
-            )
-          })()}
+            </div>
+          </div>
+        )
+      })()}
 
-          {/* Locked-In triple haul (guaranteed ×3 at streak 5+). */}
-          {catchQty > 1 && !doubleCatch && (!jackpotMultiplier || jackpotMultiplier <= 1) && (
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-              className="font-karla font-700 uppercase"
-              style={{
-                background: 'linear-gradient(180deg, rgba(240,192,64,0.22) 0%, rgba(240,192,64,0.06) 100%), #1a1304',
-                border: '1px solid rgba(240,192,64,0.5)', borderTop: '1px solid rgba(240,192,64,0.82)',
-                borderRadius: 999, padding: '0.36rem 0.72rem', fontSize: '0.62rem',
-                letterSpacing: '0.12em', color: '#f0c040',
-                display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-                boxShadow: '0 0 12px rgba(240,192,64,0.24)',
-              }}
-            >
-              ×{catchQty} Haul
-            </motion.div>
-          )}
+      {/* ── THE VERDICT ── one line, in type. */}
+      {(isPerfect || lockedStage > 0) && (() => {
+        const onFire = isPerfect && perfectStreak >= 3
+        const accent = onFire ? '#fb923c' : isPerfect ? '#fbbf24' : '#22d3ee'
+        const lockLabel = lockedStage >= 3 ? 'Locked In'
+          : lockedStage === 2 ? 'Locked In · Triple'
+          : lockedStage === 1 ? 'Locked In · Fast' : null
+        const lockColor = lockedStage >= 3 ? '#e879f9' : lockedStage === 2 ? '#f0c040' : '#22d3ee'
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+            className="mb-2"
+            style={{
+              display: 'flex', alignItems: 'baseline', justifyContent: 'center',
+              gap: 8, flexWrap: 'wrap',
+            }}>
+            {isPerfect && (
+              <span className="font-cinzel font-800 uppercase" style={{
+                fontSize: '0.9rem', letterSpacing: '0.2em', color: accent,
+                // The glow grows with the streak and nothing else does. It is
+                // the one number on this card that is a running total, so it is
+                // the one thing allowed to keep getting louder.
+                textShadow: `0 0 ${9 + Math.min(perfectStreak, 8) * 2.5}px ${accent}`,
+              }}>Perfect</span>
+            )}
+            {isPerfect && perfectStreak > 1 && (
+              <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)' }}>
+                <span className="font-cinzel font-800 tabular-nums" style={{ fontSize: '0.95rem', color: accent }}>
+                  {perfectStreak}
+                </span>{' '}in a row
+              </span>
+            )}
+            {lockLabel && (
+              <span className="font-karla font-700 uppercase" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: '0.6rem', letterSpacing: '0.16em', color: lockColor,
+              }}>
+                <IconFlame size={10} /> {lockLabel}
+              </span>
+            )}
+          </motion.div>
+        )
+      })()}
 
-          {doubleCatch && (
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-              className="font-karla font-700 uppercase"
-              style={{
-                background: 'linear-gradient(180deg, rgba(251,191,36,0.22) 0%, rgba(251,191,36,0.06) 100%), #1a1304',
-                border: '1px solid rgba(251,191,36,0.50)',
-                borderTop: '1px solid rgba(251,191,36,0.80)',
-                borderRadius: 999,
-                boxShadow: '0 0 12px rgba(251,191,36,0.22)',
-                padding: '0.36rem 0.72rem',
-                fontSize: '0.62rem',
-                letterSpacing: '0.14em',
-                color: '#fbbf24',
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span>✦</span>
-              <span>Double</span>
-              <span style={{ color: '#fde68a', letterSpacing: 0, textShadow: '0 0 8px rgba(251,191,36,0.55)' }}>×2</span>
-            </motion.div>
-          )}
-
-          {jackpotMultiplier && jackpotMultiplier > 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-              className="font-karla font-700 uppercase"
-              style={{
-                background: 'linear-gradient(180deg, rgba(249,115,22,0.24) 0%, rgba(249,115,22,0.06) 100%), #1a0c04',
-                border: '1px solid rgba(249,115,22,0.55)',
-                borderTop: '1px solid rgba(249,115,22,0.85)',
-                borderRadius: 999,
-                boxShadow: '0 0 14px rgba(249,115,22,0.32)',
-                padding: '0.36rem 0.72rem',
-                fontSize: '0.62rem',
-                letterSpacing: '0.14em',
-                color: '#fb923c',
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span>★</span>
-              <span>Jackpot</span>
-              <span style={{ color: '#fdba74', letterSpacing: 0, textShadow: '0 0 8px rgba(249,115,22,0.55)' }}>×{jackpotMultiplier}</span>
-            </motion.div>
-          )}
-
-          {gemEarned && (
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.15 }}
-              className="font-karla font-700 uppercase"
-              style={{
-                background: 'linear-gradient(180deg, rgba(99,226,183,0.20) 0%, rgba(99,226,183,0.04) 100%), #04141a',
-                border: '1px solid rgba(99,226,183,0.50)',
-                borderTop: '1px solid rgba(99,226,183,0.78)',
-                borderRadius: 999,
-                boxShadow: '0 0 12px rgba(99,226,183,0.22)',
-                padding: '0.36rem 0.72rem',
-                fontSize: '0.62rem',
-                letterSpacing: '0.14em',
-                color: '#63e2b7',
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span>◆</span>
-              <span>Challenge</span>
-              <span style={{ color: '#9af3cf', letterSpacing: 0 }}>+1 Gem</span>
-            </motion.div>
-          )}
-        </div>
-      )}
+      {/* ── THE LEDGER ── everything that is a number. */}
+      {(() => {
+        const rows: { v: string; l: string; c: string }[] = []
+        if (doubleCatch) rows.push({ v: '×2', l: 'Double', c: '#fbbf24' })
+        // Kept exactly as it was: the triple haul only shows when neither of
+        // the two bigger multipliers is already on the card.
+        if (catchQty > 1 && !doubleCatch && (!jackpotMultiplier || jackpotMultiplier <= 1)) {
+          rows.push({ v: `×${catchQty}`, l: 'Haul', c: '#f0c040' })
+        }
+        if (jackpotMultiplier && jackpotMultiplier > 1) rows.push({ v: `×${jackpotMultiplier}`, l: 'Jackpot', c: '#fb923c' })
+        if (isPerfect && perfectXpMult > 1) rows.push({ v: `×${perfectXpMult}`, l: 'XP', c: '#bfe3ff' })
+        if (gemEarned) rows.push({ v: '◆1', l: 'Challenge', c: '#63e2b7' })
+        if (!rows.length) return null
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 24, delay: 0.06 }}
+            className="mb-2"
+            style={{
+              display: 'flex', alignItems: 'stretch', justifyContent: 'center',
+              // HAIRLINES BETWEEN, no box around. A receipt does not need a
+              // frame; the alignment is the structure.
+              borderTop: '1px solid rgba(255,255,255,0.07)',
+              borderBottom: '1px solid rgba(255,255,255,0.07)',
+              padding: '0.42rem 0',
+            }}>
+            {rows.map((row, i) => (
+              <div key={row.l} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                padding: '0 0.85rem',
+                borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)',
+              }}>
+                <span className="font-cinzel font-800 tabular-nums" style={{
+                  fontSize: '1.02rem', lineHeight: 1.05, color: row.c,
+                  textShadow: `0 0 10px ${row.c}55`,
+                }}>{row.v}</span>
+                <span className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.5rem', letterSpacing: '0.16em',
+                  color: 'rgba(255,255,255,0.34)', marginTop: 3,
+                }}>{row.l}</span>
+              </div>
+            ))}
+          </motion.div>
+        )
+      })()}
 
       {/* Card + all its effects in one relative container */}
       <div style={{ position: 'relative' }}>
