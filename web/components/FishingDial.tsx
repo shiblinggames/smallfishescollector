@@ -21,6 +21,66 @@ export const CX = 110, CY = 110
 export const OUTER_R = 96, INNER_R = 66
 const GAP = 1.0
 
+/**
+ * ── THE DIAL IS THE REEL ────────────────────────────────────────────────────
+ *
+ * It was a black disc with flat coloured wedges on it and a two pixel line for
+ * a needle, which read as a UI widget rather than as a thing in the captain's
+ * hands. The renderer was never the problem: every surface in here was a flat
+ * fill, and drawing the same flat shapes on a GPU would have looked identical.
+ * What it had no trace of was MATERIAL.
+ *
+ * So it is the reel, seen face on, because that is literally what you are
+ * doing. The side plate is the bezel, its gear teeth are the graduations, the
+ * spool of wound line is the face, and the needle is the crank arm going round.
+ * The art is `/deepseareel.png` and its eight siblings: cast metal with dark ink
+ * linework, spoked plate, fine teeth on the rim, screws, a knurled grip.
+ *
+ * ── AND IT IS *YOUR* REEL ───────────────────────────────────────────────────
+ *
+ * The plate takes the equipped reel's own colour (lib/reels), so buying the
+ * Tidecaller's Reel changes the instrument you spend the whole game looking at.
+ * Nine reels, nine coloured plates, for one prop. The finale passes nothing and
+ * gets the steel default, which is right: that is not your reel, it is a fight.
+ *
+ * DRAWN, NOT PAINTED. A plate would have to be nine plates, would blur at the
+ * 300px cap on a desktop, and could not be tinted. The reel is a machined
+ * object, so it is all circles, radial ticks and screws, which is exactly what
+ * SVG is good at. Every one of these paths is memoised: they depend on nothing
+ * that changes while a fish is on.
+ */
+const PLATE_R = 103          // outer edge of the side plate
+const TEETH_R = 99           // the gear ring's root
+const TEETH = 68             // fine, like the art
+const SCREWS = 4
+const SPOKES = 6
+
+/** The gear ring, as one path. Trapezoid teeth so they read as cut metal at
+ *  300px and as a milled edge at 120. */
+function teethPath(): string {
+  const out: string[] = []
+  const tip = PLATE_R - 0.5, root = TEETH_R
+  const step = 360 / TEETH
+  for (let i = 0; i < TEETH; i++) {
+    const c = i * step
+    const a0 = polar(root, c - step * 0.34), a1 = polar(tip, c - step * 0.17)
+    const a2 = polar(tip, c + step * 0.17), a3 = polar(root, c + step * 0.34)
+    out.push(`M ${a0.x.toFixed(2)} ${a0.y.toFixed(2)} L ${a1.x.toFixed(2)} ${a1.y.toFixed(2)}`
+      + ` L ${a2.x.toFixed(2)} ${a2.y.toFixed(2)} L ${a3.x.toFixed(2)} ${a3.y.toFixed(2)} Z`)
+  }
+  return out.join(' ')
+}
+
+/** Wound line on the spool: concentric grooves, tightening inward the way a
+ *  filled spool actually looks. Not evenly spaced, or it reads as a target. */
+function spoolGrooves(): { r: number; o: number }[] {
+  const out: { r: number; o: number }[] = []
+  for (let r = INNER_R - 5; r > 12; r -= 3.1 + (r / INNER_R) * 1.6) {
+    out.push({ r, o: 0.05 + (r / INNER_R) * 0.07 })
+  }
+  return out
+}
+
 
 export function polar(r: number, deg: number) {
   const rad = (deg - 90) * (Math.PI / 180)
@@ -45,7 +105,7 @@ export function arcPath(startDeg: number, endDeg: number): string {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 export function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ancientBoss = false, needleRef, zonesGroupRef, needleStyle = 'hand', turnMark = false,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, ancientBoss = false, needleRef, zonesGroupRef, needleStyle = 'hand', turnMark = false, plateTint = '#8fa0a8',
 }: {
   zones: ZoneDef[]
   angle: number
@@ -55,6 +115,12 @@ export function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
+  /**
+   * THE METAL THE PLATE IS CAST IN. Pass the equipped reel's `color` and the
+   * instrument becomes that reel. The default is a plain steel, which is what
+   * the raid finale should have: that dial is not your tackle.
+   */
+  plateTint?: string
   /** When true this is one of the 6 Ancient trophy fights — the dial wears a
    *  breathing void/cyan aura so it reads as a boss the instant it appears. */
   ancientBoss?: boolean
@@ -89,6 +155,13 @@ export function DialSVG({
   const perfectZone  = useMemo(() => zones.find(z => z.type === 'perfect'), [zones])
   const penaltyZones = useMemo(() => zones.filter(z => z.type === 'penalty'), [zones])
   const zonePaths    = useMemo(() => zones.map(z => arcPath(z.from, z.to)), [zones])
+  // The plate. None of it depends on anything that moves, so it is built once
+  // for the life of the component rather than once per zone crossing.
+  const teeth   = useMemo(teethPath, [])
+  const grooves = useMemo(spoolGrooves, [])
+  const screws  = useMemo(() => Array.from({ length: SCREWS }, (_, i) =>
+    polar(PLATE_R - 8.5, 45 + i * (360 / SCREWS))), [])
+  const spokes  = useMemo(() => Array.from({ length: SPOKES }, (_, i) => i * (360 / SPOKES)), [])
 
   // Perfect-hit flash on the needle — short gold burst with a thicker
   // stroke so the needle reads as the thing the player nailed. Tied to
@@ -157,8 +230,53 @@ export function DialSVG({
             <stop offset="55%"  stopColor="#0d1a26" stopOpacity="1" />
             <stop offset="100%" stopColor="#050c14" stopOpacity="1" />
           </radialGradient>
+          {/* THE LIGHT COMES FROM THE UPPER LEFT, on everything, the way it
+              does in every painted plate in this game. One light source is
+              most of what separates an object from a diagram. */}
+          <radialGradient id="plateGrad" cx="34%" cy="26%" r="78%">
+            <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.34" />
+            <stop offset="46%"  stopColor="#ffffff" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.42" />
+          </radialGradient>
+          {/* The channel the zones are lit in is CUT INTO the plate, so it is
+              darker than the metal around it and shades at its own rim. */}
+          <radialGradient id="channelGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="#000000" stopOpacity="0.55" />
+            <stop offset="86%"  stopColor="#000000" stopOpacity="0.72" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
+          </radialGradient>
         </defs>
-        <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+
+        {/* ── THE SIDE PLATE ────────────────────────────────────────────
+            Cast metal in the reel's own colour, with the gear ring cut round
+            its edge and four screws holding it on. This is the whole of the
+            "it looks like a UI widget" fix: a rim with teeth and screws in it
+            is an OBJECT, and a black circle is a shape. */}
+        <g>
+          <path d={teeth} fill={plateTint} fillOpacity={0.62} />
+          <path d={teeth} fill="none" stroke="#0b1116" strokeWidth="0.7" strokeOpacity={0.55} />
+          <circle cx={CX} cy={CY} r={TEETH_R} fill={plateTint} fillOpacity={0.5} />
+          <circle cx={CX} cy={CY} r={TEETH_R} fill="url(#plateGrad)" />
+          {/* Ink line, the house style's own edge. Every painted thing in this
+              game is outlined and the dial was the one that was not. */}
+          <circle cx={CX} cy={CY} r={TEETH_R} fill="none" stroke="#0b1116" strokeWidth="1.4" strokeOpacity={0.7} />
+          {/* A raised inner lip where the plate steps down into the channel. */}
+          <circle cx={CX} cy={CY} r={OUTER_R + 2.5} fill="none" stroke="#0b1116" strokeWidth="1.2" strokeOpacity={0.55} />
+          <circle cx={CX} cy={CY} r={OUTER_R + 3.6} fill="none" stroke="#ffffff" strokeWidth="0.8" strokeOpacity={0.16} />
+          {screws.map((sc, i) => (
+            <g key={i}>
+              <circle cx={sc.x} cy={sc.y} r="3.1" fill={plateTint} fillOpacity={0.85} stroke="#0b1116" strokeWidth="0.9" strokeOpacity={0.7} />
+              {/* The slot. It is two pixels of line and it is the difference
+                  between a screw and a dot. */}
+              <line x1={sc.x - 1.9} y1={sc.y - 1.9} x2={sc.x + 1.9} y2={sc.y + 1.9}
+                stroke="#0b1116" strokeWidth="0.9" strokeOpacity={0.75} strokeLinecap="round" />
+            </g>
+          ))}
+        </g>
+
+        {/* ── THE CHANNEL ── the recess the zones are lit in. */}
+        <circle cx={CX} cy={CY} r={OUTER_R + 1} fill="#05090e" />
+        <circle cx={CX} cy={CY} r={OUTER_R + 1} fill="url(#channelGrad)" />
 <g ref={zonesGroupRef} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             // data-zone-arc lets the parent's rAF tick repaint
@@ -202,7 +320,33 @@ export function DialSVG({
               stroke="#f8fafc" strokeWidth="6" strokeOpacity="0.18" strokeLinecap="round" />
           </g>
         )}
+        {/* ── THE SPOOL ──────────────────────────────────────────────────
+            Wound line, seen through the plate's open spokes. The grooves
+            tighten inward the way a full spool actually does; even spacing
+            reads as a target, which is the last thing this should look like. */}
         <circle cx={CX} cy={CY} r={INNER_R - 2} fill="url(#innerGrad)" />
+        <circle cx={CX} cy={CY} r={INNER_R - 2} fill="none" stroke="#0b1116" strokeWidth="1.2" strokeOpacity={0.8} />
+        <g aria-hidden>
+          {grooves.map((g, i) => (
+            <circle key={i} cx={CX} cy={CY} r={g.r} fill="none"
+              stroke="#cfe0ec" strokeWidth="0.7" strokeOpacity={g.o} />
+          ))}
+          {/* THE SPOKES OF THE PLATE, crossing in front of the wound line.
+              Drawn as light bars rather than cut-outs because the plate is
+              nearer the eye than the spool, and it is what makes the face read
+              as two parts at different depths instead of one flat disc. */}
+          {spokes.map(a => {
+            const o = polar(INNER_R - 3, a), i2 = polar(15, a)
+            return (
+              <g key={a}>
+                <line x1={o.x} y1={o.y} x2={i2.x} y2={i2.y}
+                  stroke={plateTint} strokeWidth="5.5" strokeOpacity={0.16} strokeLinecap="round" />
+                <line x1={o.x} y1={o.y} x2={i2.x} y2={i2.y}
+                  stroke="#0b1116" strokeWidth="6.6" strokeOpacity={0.2} strokeLinecap="round" />
+              </g>
+            )
+          })}
+        </g>
         {/* Reel-in ripple */}
         {rippleKey > 0 && (
           <motion.circle key={rippleKey} cx={CX} cy={CY}
@@ -292,10 +436,50 @@ export function DialSVG({
               <line x1={CX} y1={CY - OUTER_R + 1} x2={CX} y2={CY - INNER_R - 1} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 3.8 : snapAnim ? 5.4 : 2.8} strokeLinecap="butt" style={{ transition: 'stroke-width 0.16s ease-out' }} />
             </g>
           ) : (
+          // ── THE CRANK ARM ──────────────────────────────────────────────
+          //
+          // A hand on a gauge is a hand on a gauge. This is the handle you are
+          // turning: a tapered arm off the hub, a counterweight on the short
+          // side the way a real crank is balanced, and a knurled grip at the
+          // tip. It is the same line at the same angle doing the same job, and
+          // it now looks like the reason the spool turns.
+          //
+          // EVERYTHING HERE IS CHEAP ON PURPOSE. This subtree lives inside the
+          // needle's own composited layer, which the parent spins with a
+          // compositor-thread WAAPI rotation so main-thread jank cannot make it
+          // skip. Nothing here animates per frame, nothing carries a standing
+          // filter, and the only filter at all is the perfect flash, which
+          // lasts 450ms. See the note on needleRef.
           <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
-            <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
-            <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
-            <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
+            {/* The soft trail, kept from the old needle: it is what stops a
+                fast sweep strobing into separate positions. */}
+            <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor}
+              strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
+            {/* THE COUNTERWEIGHT, on the far side of the hub. Three pixels of
+                metal, and the whole reason the arm reads as balanced hardware
+                rather than as a pointer. */}
+            <line x1={CX} y1={CY + 15} x2={CX} y2={CY - 2} stroke="#0b1116"
+              strokeWidth="7.4" strokeOpacity={0.55} strokeLinecap="round" />
+            <line x1={CX} y1={CY + 14} x2={CX} y2={CY - 2} stroke={liveNeedleColor}
+              strokeWidth="5.4" strokeOpacity={0.72} strokeLinecap="round" />
+            {/* The arm. Ink line under, metal over, the way every painted
+                object in this game is built. */}
+            <line x1={CX} y1={CY} x2={CX} y2={needleTipY + 4} stroke="#0b1116"
+              strokeWidth={liveNeedleStroke + 2.6} strokeOpacity={0.6} strokeLinecap="round" />
+            <line x1={CX} y1={CY} x2={CX} y2={needleTipY + 4} stroke={liveNeedleColor}
+              strokeWidth={liveNeedleStroke} strokeLinecap="round" />
+            {/* THE GRIP. A knurled barrel rather than a dot: two stacked
+                strokes, the outer one the ink line, and one highlight down the
+                lit side. It sits ON the zone band, which is what you are
+                actually aiming with. */}
+            <g>
+              <line x1={CX} y1={needleTipY - 5} x2={CX} y2={needleTipY + 6}
+                stroke="#0b1116" strokeWidth={liveTipRadius * 2 + 2.2} strokeOpacity={0.62} strokeLinecap="round" />
+              <line x1={CX} y1={needleTipY - 5} x2={CX} y2={needleTipY + 6}
+                stroke={liveNeedleColor} strokeWidth={liveTipRadius * 2} strokeLinecap="round" />
+              <line x1={CX - 1.6} y1={needleTipY - 3.4} x2={CX - 1.6} y2={needleTipY + 4}
+                stroke="#ffffff" strokeWidth="1.1" strokeOpacity={0.4} strokeLinecap="round" />
+            </g>
           </g>
           )}
         </svg>
@@ -305,12 +489,31 @@ export function DialSVG({
       {needleStyle !== 'marker' && (
       <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
-          <motion.circle cx={CX} cy={CY} r="8"
-            fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
+          {/* Its own copy: gradients do not cross an <svg> boundary, and this
+              overlay is a separate root so the nut sits above the crank. */}
+          <defs>
+            <radialGradient id="hubGrad" cx="34%" cy="26%" r="78%">
+              <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.34" />
+              <stop offset="46%"  stopColor="#ffffff" stopOpacity="0.05" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.42" />
+            </radialGradient>
+          </defs>
+          {/* THE SPINDLE NUT the crank turns on. It was a black dot with a
+              grey ring, which is what a joint looks like when nobody decided
+              what it was. Now it is a machined boss with a nut on it: the
+              plate's own metal, an ink line, and a lit rim. It keeps the snap
+              bounce it always had, which is the whole tactile hit of a reel in
+              and is not something to get clever with. */}
+          <motion.g
             animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
             transition={{ duration: 0.32, ease: 'easeOut' }}
             style={{ transformOrigin: `${CX}px ${CY}px` }}
-          />
+          >
+            <circle cx={CX} cy={CY} r="9.4" fill={plateTint} fillOpacity={0.7} stroke="#0b1116" strokeWidth="1.3" strokeOpacity={0.75} />
+            <circle cx={CX} cy={CY} r="9.4" fill="url(#hubGrad)" />
+            <circle cx={CX} cy={CY} r="5.2" fill="#0d141b" stroke="#0b1116" strokeWidth="1" strokeOpacity={0.8} />
+            <circle cx={CX} cy={CY} r="5.2" fill="none" stroke="#ffffff" strokeWidth="0.8" strokeOpacity={0.2} />
+          </motion.g>
         </svg>
       </div>
       )}
