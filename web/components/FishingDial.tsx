@@ -27,6 +27,26 @@ export function polar(r: number, deg: number) {
   return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) }
 }
 
+/**
+ * ── THE LIT EDGE OF A BAND ──────────────────────────────────────────────────
+ *
+ * The arcs were one flat fill each, which is why the dial read as a diagram: a
+ * flat wedge is a region on a chart, and light in a channel is a thing. This is
+ * a stroked line running along the OUTER edge of a band in its own colour, so
+ * the band has a bright lip where it meets the rim and falls away inward.
+ *
+ * A stroke rather than a gradient because there would have to be one gradient
+ * def per zone per fish, and a gradient cannot follow an arc anyway. One extra
+ * path per band, memoised with the fill it belongs to, and no per-frame cost.
+ */
+export function arcRim(startDeg: number, endDeg: number, r: number): string {
+  const s0 = startDeg + GAP, e0 = endDeg - GAP
+  if (e0 - s0 <= 0) return ''
+  const la = e0 - s0 > 180 ? 1 : 0
+  const p1 = polar(r, s0), p2 = polar(r, e0)
+  return `M ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${r} ${r} 0 ${la} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
+}
+
 export function arcPath(startDeg: number, endDeg: number): string {
   const s0 = startDeg + GAP, e0 = endDeg - GAP
   const span = e0 - s0
@@ -89,6 +109,10 @@ export function DialSVG({
   const perfectZone  = useMemo(() => zones.find(z => z.type === 'perfect'), [zones])
   const penaltyZones = useMemo(() => zones.filter(z => z.type === 'penalty'), [zones])
   const zonePaths    = useMemo(() => zones.map(z => arcPath(z.from, z.to)), [zones])
+  // The lit lip and the shaded foot of each band. Memoised on the same
+  // identity as the fills, so they cost nothing per crossing.
+  const zoneRims     = useMemo(() => zones.map(z => arcRim(z.from, z.to, OUTER_R - 2.5)), [zones])
+  const zoneFeet     = useMemo(() => zones.map(z => arcRim(z.from, z.to, INNER_R + 2)), [zones])
 
   // Perfect-hit flash on the needle — short gold burst with a thicker
   // stroke so the needle reads as the thing the player nailed. Tied to
@@ -165,6 +189,30 @@ export function DialSVG({
             // fill-opacity imperatively on zone crossings (no re-render).
             <path key={i} data-zone-arc={i} d={zonePaths[i]} fill={zone.color}
               fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
+          ))}
+          {/* ── THE LIGHT IN THE CHANNEL ──────────────────────────────
+              A bright lip along each band's outer edge and a dark foot along
+              its inner one. Two strokes per zone and it is the whole
+              difference between a coloured region and a lit one: the eye reads
+              a lighter top and a darker bottom as a surface catching light,
+              and a flat fill as a label.
+
+              DELIBERATELY NOT INSIDE the fill paths and deliberately not
+              carrying data-zone-arc: the parent writes fill-opacity on those
+              imperatively every crossing, and the lip has to stay put while
+              the fill under it brightens. Painted after them so a band being
+              crossed still keeps its edge. */}
+          {zones.map((zone, i) => (
+            <path key={`rim${i}`} d={zoneRims[i]} fill="none" stroke={zone.color}
+              strokeWidth="3.4" strokeOpacity="0.95" strokeLinecap="butt" />
+          ))}
+          {zones.map((zone, i) => (
+            <path key={`lip${i}`} d={zoneRims[i]} fill="none" stroke="#ffffff"
+              strokeWidth="1.1" strokeOpacity="0.42" strokeLinecap="butt" />
+          ))}
+          {zones.map((_, i) => (
+            <path key={`foot${i}`} d={zoneFeet[i]} fill="none" stroke="#000000"
+              strokeWidth="2.6" strokeOpacity="0.34" strokeLinecap="butt" />
           ))}
           {perfectZone && (() => {
             const midDeg = (perfectZone.from + perfectZone.to) / 2

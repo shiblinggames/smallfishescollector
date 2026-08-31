@@ -33,6 +33,10 @@ import { AUTO_RECAST_MS, AUTO_CRATE_TOTAL_MS } from '@/lib/autoFishing'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DialSVG } from '@/components/FishingDial'
+// THE FIRE, on its own Pixi layer BEHIND the dial. Dynamic and never loaded
+// until a streak is actually running: a player who never chains two perfects
+// never pays for a second WebGL context. See components/DialFire.
+const DialFire = dynamic(() => import('@/components/DialFire'), { ssr: false })
 import { ResultCard } from '@/components/CatchResultCard'
 import { XPBarDisplay } from '@/components/FishingXPBar'
 import CrateOpening, { type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
@@ -1750,7 +1754,12 @@ export default function FishingHere({
                  at 300 and has to be given the room to reach that cap — I had
                  it in a 260px box, which quietly made the map's dial a
                  different instrument to the one every player has learned. */
-              style={{ pointerEvents: 'none', width: '100%', maxWidth: 300 }}>
+              style={{ pointerEvents: 'none', width: '100%', maxWidth: 300, position: 'relative' }}>
+              {/* BEHIND THE INSTRUMENT, and it grows with the streak rather
+                  than stepping between two states. The dial's own fire rings
+                  stay: they are the ring GLOWING, and this is what comes off
+                  it. See components/DialFire. */}
+              <DialFire streak={streak} burstKey={burstKey} />
               {/* needleRef hands the needle's own composited layer to the
                   WAAPI rotation above. `angle` is only the RESTING position
                   now — it changes at a bite, at a retry and at the freeze, and
