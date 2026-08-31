@@ -43,6 +43,7 @@ import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { makeShoals, type Shoals } from './seaShoals'
 import { makeGulls, type Gulls } from './seaGulls'
 import { makeSplash, type Splash } from './seaSplash'
+import { makeLights, type Lights } from './seaLights'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -393,6 +394,15 @@ export default function SeaIslandsGPU({
       world.addChild(crewLayer)
       crewLayerRef.current = crewLayer
 
+      // ── WHAT IS STILL LIT AFTER DARK ──────────────────────────────
+      //
+      // The world half goes over the water and UNDER everything solid, because
+      // a pool of lamplight is on the sea and an island is in front of it. The
+      // lantern goes on the STAGE with the player, because the camera follows
+      // her: relative to the screen she never moves and only the sea does.
+      const lights: Lights = makeLights(PIXI)
+      world.addChild(lights.world)
+
       // ── WHAT COMES OUT OF THE WATER ───────────────────────────────
       // Over the wake and the crew, because a fish clearing the surface is in
       // front of everything the surface has on it. In the world, because it
@@ -410,6 +420,8 @@ export default function SeaIslandsGPU({
       // great deal cheaper than sorting the world container forever.
       const gulls: Gulls = makeGulls(PIXI)
       a.stage.addChild(gulls.view)
+      // Under the captain, over everything else on the stage.
+      a.stage.addChild(lights.screen)
 
       const boats = new PIXI.Container()
       a.stage.addChild(boats)
@@ -677,6 +689,10 @@ export default function SeaIslandsGPU({
         // The chart's rAF loop returns early while the dial is up, so nothing
         // driven from there animates during a catch; this one is not.
         splash.advance(dt)
+        // The last two are the screen centre, which is where the hull is: the
+        // camera follows her, so her lantern is a fixed point on the stage.
+        lights.advance(camX, camY, halfW, halfH,
+          a.screen.width / 2, a.screen.height / 2, t, dt)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
@@ -787,6 +803,10 @@ export default function SeaIslandsGPU({
           // the water under it.
           gulls.night(nightTint(d * 0.72, w))
           splash.night(nightTint(d * 0.55, w))
+          // NOT a tint. Everything else on this canvas is multiplied toward the
+          // hour; these are the things that answer it by emitting, so they take
+          // the darkness itself and get BRIGHTER as it deepens.
+          lights.night(d)
           wake.night(tint)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
@@ -828,6 +848,10 @@ export default function SeaIslandsGPU({
         },
         fleet(list) {
           fleetAt = list
+          // A LAMP PER BOAT, off the same list the hulls come from, so a light
+          // can never burn where there is nobody. `cx`/`cy` is where the hull
+          // actually sits, which is what the rings at rest use too.
+          lights.lamps(list.map(f => ({ x: f.cx, y: f.cy })))
           const seen = crewRef.current
           for (const c of seen.values()) c.holder.visible = false
           for (const e of list) {

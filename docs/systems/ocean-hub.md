@@ -1301,6 +1301,40 @@ moment they read as crisp sprites they read as floating ON it.
 **The scatter is the point.** `gpu.scatter(x, y)` fires from `startFishing`, and sailing
 across the chart to a patch and watching it empty is most of the reason to have drawn them.
 
+## Night
+
+**The day/night cycle is a TINT, and a tint cannot light anything.** Every sprite is
+multiplied toward a cold blue as the hour turns, which says the sun has gone and says
+nothing about night. What makes night night is that a few things start EMITTING while
+everything else stops. `sea/seaLights.ts`, and each of the three answers a different
+question:
+
+| | | |
+|---|---|---|
+| **Your lantern** | a warm pool travelling under the hull | *can I see* |
+| **Every other boat** | a smaller lamp on each trader, regular and friend | *is anyone about* |
+| **The deep** | cold specks, Abyss 0.6 and Ancient Deep 1.0 | *where am I* |
+
+**These take the darkness itself, not the night tint.** Everything else on the canvas is
+multiplied toward the hour; these get BRIGHTER as it deepens. That inversion is the whole
+feature.
+
+**Additive, and flat on the plane.** Light adds, it does not cover: a pool painted over the
+sea would hide the swell inside it, which is the opposite of what a lamp does to water, and
+it is the same reasoning the berths' harbour lights already carry. Every pool is squashed by
+`GROUND` like the berth rings and the island shadows, because it is a shape the water makes.
+
+**The lantern is on the STAGE, the rest is in the WORLD.** The camera follows the hull, so
+relative to the screen she never moves and only the sea does; her lamp is a fixed point.
+Everyone else's has a world position the camera does not follow.
+
+**Lamps come from the same `fleet` list the hulls are drawn from**, off each boat's `cx`/`cy`,
+so a light can never burn where there is nobody.
+
+**It costs one visibility test by day.** Everything multiplies by darkness and the whole
+layer is skipped under 0.02. About half of a real day has some darkness in it, so this is
+seen often rather than being a rare treat.
+
 ## The gulls
 
 **Birds working over a patch** (`sea/seaGulls.ts`), which is the half of "you can see the
