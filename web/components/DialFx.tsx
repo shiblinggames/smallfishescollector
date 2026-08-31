@@ -57,7 +57,16 @@ import { useEffect, useRef } from 'react'
  *  against the 220 viewBox, so embers leave the rim rather than the paint. */
 const RING = (96 + 6) / 220
 
-const CAP_EMBER = 300
+/**
+ * THE POOL HAS TO COVER THE PEAK, and it did not.
+ *
+ * Alive at once is spawn rate x lifetime, and at the top of the ladder that is
+ * about 570. At 300 the fire recycled embers that were still on screen: a
+ * particle vanishing mid-arc and reappearing at the rim, which reads as the
+ * effect glitching rather than as a number being too small. It was already
+ * true before the curve grew and would only have got louder.
+ */
+const CAP_EMBER = 600
 const CAP_SMOKE = 70
 const CAP_MOTE = 44
 /** The baked sprite's own size. Every scale is divided by it. */
@@ -175,27 +184,31 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
     const takeEmber = () => { const e = embers[ne]; ne = (ne + 1) % CAP_EMBER; return e }
     const takeSmoke = () => { const e = smoke[ns]; ns = (ns + 1) % CAP_SMOKE; return e }
 
-    // ── THE LADDER ────────────────────────────────────────────────────
+    // ── THE LADDER, ANCHORED AT TEN ───────────────────────────────────
     //
-    // Everything the fire does is one number, and it never quite stops growing:
-    // sqrt keeps a streak of thirty visibly bigger than a streak of fifteen
-    // without any streak filling the screen.
+    // Everything the fire does is one number, and getting its SHAPE right took
+    // two passes in opposite directions.
     //
-    // IT WAS FAR TOO EAGER. The first version divided inside the root, which
-    // put it at 0.67 on the very first rung and DOUBLED it by streak three:
-    // 43 embers a second at a streak of two, 86 at three, 173 at five. Smoke
-    // arrived at three and the whole thing went hot-orange at six, so by the
-    // time you had chained a handful you were already at the top of the ladder
-    // and everything after that looked the same.
+    // The first divided inside a square root, so it opened at 0.67 and DOUBLED
+    // by streak three. Chaining a handful of perfects already put you at the
+    // top of the ladder, and everything above it looked identical.
     //
-    // The coefficient is outside the root now, which is what actually slows the
-    // early climb: 17 embers a second at a streak of two, 34 at three, 67 at
-    // five, and it keeps opening out all the way to thirty. Smoke waits for six
-    // and the hot colour waits for fourteen, so both stay news rather than
-    // being the default state of a good session.
+    // The second slowed the early climb and undershot the other end. Ten is the
+    // number people actually chase and it has to LOOK like it; at 0.42*sqrt it
+    // was still a modest fire there.
+    //
+    // So it is ANCHORED rather than tuned. A streak of ten is 2.0, which is
+    // where the version people liked put "big"; the exponent is picked so the
+    // first rung still opens small, and the cap at 2.8 leaves somewhere for
+    // fifteen and twenty to go. Smoke arrives at five and the hot colour at
+    // seven, both far enough up to stay news.
+    //
+    //   streak    2    3    4    5    7   10   15   20+
+    //   i      0.45 0.72 0.95 1.15 1.52 2.00 2.70 2.80
+    //   e/s      29   58   88  118  178  269  422  445
     const intensity = () => {
       const s = live.current.streak
-      return s < 2 ? 0 : Math.min(2.4, 0.42 * Math.sqrt(s - 1))
+      return s < 2 ? 0 : Math.min(2.8, 2 * Math.pow((s - 1) / 9, 0.68))
     }
 
     for (const m of motes) {
@@ -283,12 +296,19 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
       // visible steps at the low end and the first rung looks like a stutter
       // instead of a flame.
       if (i > 0) {
-        emberDebt += i * i * 95 * dt
+        // ^1.5, NOT SQUARED. The curve above already grows, and squaring it on
+        // top made the count climb as roughly the fourth power of the streak,
+        // which is how the first version managed to be at its ceiling by three.
+        // This lets the count rise WITH the fire rather than ahead of it, and
+        // leaves size, height and the wash to carry the rest.
+        emberDebt += Math.pow(i, 1.5) * 95 * dt
         while (emberDebt >= 1) { emberDebt -= 1; spawnEmber(i, false, cx, cy, r) }
         // SMOKE ONLY ONCE IT IS A REAL FIRE. A wisp off a small flame reads as
         // something going out.
-        if (i > 0.9) {
-          smokeDebt += (i - 0.9) * 14 * dt
+        // 1.15 is a streak of five. Smoke is the "this is a real fire" tell and
+        // it should not arrive while the fire is still a flicker.
+        if (i > 1.15) {
+          smokeDebt += (i - 1.15) * 14 * dt
           while (smokeDebt >= 1) { smokeDebt -= 1; spawnSmoke(i, cx, cy, r) }
         }
       }

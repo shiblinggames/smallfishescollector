@@ -467,6 +467,44 @@ export default function FishingHere({
   const [err, setErr] = useState('')
   const [hooked, setHooked] = useState<Hooked | null>(null)
   const [caught, setCaught] = useState<Caught | null>(null)
+
+  /**
+   * HOW MUCH THIS ONE IS WORTH SHOUTING ABOUT, 0 to 1.
+   *
+   * Read off the same facts the card already themes itself with, so the
+   * arrival and the card can never disagree about how big a moment this is.
+   * Deliberately NOT a sum of everything: a personal best on a legendary is
+   * one loud arrival, not two stacked, and `max` is what says that.
+   */
+  const punch = (() => {
+    if (!caught || caught.kind !== 'fish') return 0
+    const c = caught.card
+    if (c.isShiny) return 1
+    // The six Ancients. Same discriminator the card uses: a trophy has no
+    // sell value, which is what separates them from the twelve regulars that
+    // also live down there.
+    if (c.fish.habitat === 'ancient_deep' && (c.fish.sell_value ?? 0) === 0) return 1
+    const rarity = c.fish.bite_rarity ?? 1
+    return Math.max(
+      rarity >= 5 ? 0.85 : rarity === 4 ? 0.6 : rarity === 3 ? 0.32 : 0,
+      c.isPB ? 0.5 : 0,
+      // A jackpot is a number moment rather than a fish moment, so it earns a
+      // landing without earning the top of the scale.
+      (c.jackpotMultiplier ?? 1) > 1 ? 0.6 : 0,
+    )
+  })()
+  /** The ring takes the catch's own colour, so the shockwave and the card's
+   *  palette are the same event. */
+  const punchColor = (() => {
+    if (!caught || caught.kind !== 'fish') return 'transparent'
+    const c = caught.card
+    if (c.isShiny) return 'rgba(240,192,64,0.85)'
+    if (c.fish.habitat === 'ancient_deep' && (c.fish.sell_value ?? 0) === 0) return 'rgba(225,29,72,0.8)'
+    const rarity = c.fish.bite_rarity ?? 1
+    return rarity >= 5 ? 'rgba(251,191,36,0.8)'
+      : rarity === 4 ? 'rgba(167,139,250,0.75)'
+      : 'rgba(96,165,250,0.7)'
+  })()
   const [angle, setAngle] = useState(0)
   // THE TACTILE HIT, and it was here the whole time. DialSVG already draws the
   // snap-and-ripple on reel and the gold burst on a perfect — it just needs to
@@ -1799,10 +1837,51 @@ export default function FishingHere({
             </motion.div>
           ) : phase === 'result' && caught ? (
           <motion.div key="result"
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            // ── HOW HARD IT LANDS ────────────────────────────────────────
+            //
+            // Every catch arrived the same way: sixteen pixels up, fade in,
+            // 220ms. A sardine and a legendary were the same event with
+            // different words on them.
+            //
+            // The card's CONTENT has always known the difference — palettes,
+            // halos, the trophy pill, the golden theme, the boss chrome for
+            // the six Ancients — and none of that helps, because by the time
+            // you are reading it the arrival is over. The one part of the
+            // moment that is pure feel was the one part that said nothing.
+            //
+            // So the entrance is scaled by what you actually pulled up. A
+            // common still slides in plainly, which matters: this is the most
+            // repeated screen in the game and a routine catch that announced
+            // itself would be exhausting inside an hour. What changes is that
+            // the rare ones now LAND — dropped from higher, undersized on
+            // arrival, and springing rather than easing, so the card overshoots
+            // and settles instead of gliding to a stop.
+            //
+            // It also pairs with the splash: something breaks the water, and a
+            // beat later the card hits. Two halves of one event.
+            initial={{ opacity: 0, y: 16 + punch * 14, scale: 1 - punch * 0.07 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, transition: { duration: 0.12 } }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            style={{ pointerEvents: 'auto', width: '100%', maxWidth: 380, minHeight: 0 }}>
+            transition={punch > 0
+              ? { type: 'spring', stiffness: 420 - punch * 90, damping: 17 + punch * 5 }
+              : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'relative', pointerEvents: 'auto', width: '100%', maxWidth: 380, minHeight: 0 }}>
+            {/* THE SHOCKWAVE. One ring, behind the card, thrown outward on
+                arrival and gone in under half a second. Only on a catch worth
+                the noise, in that catch's own colour, and `pointerEvents: none`
+                so it can never eat the tap that dismisses the card. */}
+            {punch > 0 && (
+              <motion.span aria-hidden
+                initial={{ opacity: 0.5 * punch, scale: 0.86 }}
+                animate={{ opacity: 0, scale: 1.14 + punch * 0.12 }}
+                transition={{ duration: 0.42 + punch * 0.16, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute', inset: -6, borderRadius: 22, zIndex: -1,
+                  border: `2px solid ${punchColor}`,
+                  boxShadow: `0 0 26px ${punchColor}`,
+                  pointerEvents: 'none',
+                }} />
+            )}
             <div data-no-steer ref={cardScrollRef} style={{
               // SCROLLING IS OFF UNTIL THE CARD HAS SETTLED, then on only if it
               // is genuinely needed.
