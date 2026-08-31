@@ -1301,6 +1301,48 @@ moment they read as crisp sprites they read as floating ON it.
 **The scatter is the point.** `gpu.scatter(x, y)` fires from `startFishing`, and sailing
 across the chart to a patch and watching it empty is most of the reason to have drawn them.
 
+## Weather
+
+**Squalls you SAIL INTO, not weather that happens to you** (`lib/seaWeather.ts`, drawn by
+`sea/seaSqualls.ts`). That distinction is the house rule made concrete: a storm on a timer
+is an event you caught or missed, and nothing in this game does that to anybody. A squall is
+a PLACE. It is somewhere on the chart, it is drifting, and it is yours to steer into or
+around exactly like a hotspot or an island.
+
+**Derived, never stored** — a hash of (window, slot), same as the traders, the bottles and
+the hotspots. The window is **14 minutes**, deliberately not the hotspots' ten or the
+bottles' eleven: two systems refreshing on the same beat make the whole sea blink at once.
+
+**It changes the weather and NOTHING else.** No payout, no bite rate, no rarity roll, no
+crate chance. That is a decision, not an omission: the hotspots already own "this water pays
+differently", they are sized against a server that takes the player's position on trust, and
+a second multiplier on weather would double that exposure and make a squall something you
+have to chase. If weather should ever pay, that belongs next to `hotspotEffect` with its own
+numbers.
+
+| | |
+|---|---|
+| Windows with weather somewhere | 82% |
+| Squalls at once | 1.19 mean, 2 max |
+| Radius | 2,200 to 4,100 world px (about 10s to cross) |
+| Drift | 1.5 to 4.5 px/s, so 1,200 to 3,800 px in a window |
+
+**Three layers, and the order is the illusion.** The cloud shadow lies ON the water, squashed
+by `GROUND` like every flat thing here, and it MULTIPLIES rather than washing grey — a wash
+flattens the palette under it and every band starts looking like the same slate. The rain
+falls THROUGH the air above, so it takes no squash at all; a rain streak with the plane's
+foreshortening would be lying down on the water. And each drop leaves a dimple where it
+lands, back on the plane and squashed again, which is the difference between a screen effect
+and rain hitting something.
+
+The rain layer is a **sibling of the world** taking its transform, like the gulls, so a
+late-baking island cannot end up in front of it.
+
+**And the sea gets heavier**, which is the half you feel: a longer, slower heave on top of
+the chop and a slow roll on top of the drive's heel, eased in over a couple of seconds so
+sailing into weather is the sea building rather than a switch. `rough` is a ref, because
+re-rendering the chart to record that the sea is slightly heavier would undo the loop.
+
 ## Night
 
 **The day/night cycle is a TINT, and a tint cannot light anything.** Every sprite is

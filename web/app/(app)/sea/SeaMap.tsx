@@ -67,6 +67,7 @@ import { claimFishingLevelRewards } from '../fishing/actions'
 import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS } from './helm'
 import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
+import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
@@ -2047,6 +2048,10 @@ export default function SeaMap({
    */
   // Seeded from the save, not always false. Both northern states are restored
   // together with the position they belong to — see saveSeaPosition.
+  /** HOW ROUGH IT IS WHERE SHE IS, 0 to 1, eased. A ref because the frame loop
+   *  owns it and re-rendering the chart sixty times a second to record that the
+   *  sea is slightly heavier would undo the whole reason that loop exists. */
+  const rough = useRef(0)
   const [inAnchorage, setInAnchorage] = useState(startSide !== 'fishing')
   const sideRef = useRef(startSide !== 'fishing')
   /** THE BERTH SHEET, and the second half of the Gunwharf's chooser: the
@@ -4842,7 +4847,24 @@ export default function SeaMap({
         // Screen-space only: the bob, the heel and which way it faces. Position
         // is not this element's business any more.
         const t = now / 1000
-        const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
+        // ── THE SEA GETS HEAVIER IN A SQUALL ──────────────────────────
+        //
+        // The rain and the cloud shadow are what you SEE; this is the half you
+        // feel, and it is the reason a squall is a place rather than a filter.
+        // She rides higher and lower and leans harder inside one, and it eases
+        // in and out over a couple of seconds so sailing into weather is the
+        // sea building rather than a switch being thrown.
+        //
+        // EPOCH, not the loop's `now`. That is a requestAnimationFrame stamp,
+        // and handing it to a window function is exactly how every bottle in
+        // the game broke; seaWeather throws in dev if it is given one.
+        const wx = squallAt(pos.current.x, pos.current.y, epoch)
+        rough.current += ((wx?.deep ?? 0) - rough.current) * Math.min(1, dt * 0.55)
+        const gust = rough.current
+        const bob = (Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1) * (1 + gust * 1.35)
+          // A second, slower heave that only exists in weather: a swell has a
+          // longer period than a chop and it is what makes a sea look big.
+          + Math.sin(t * 0.72) * 7.5 * gust
         // ── THE BOW LIFTS, WHICHEVER WAY SHE IS POINTING ──────────────
         //
         // This was `vel.x / SPEED`, a SIGNED number, and the rotate below sits
@@ -4876,7 +4898,10 @@ export default function SeaMap({
         // reads as rising. The art decides this, not the matrix, which is why
         // it is settled by sailing east and then west and looking at her.
         const mag = Math.min(hullNow.heel, (drive / SPEED) * hullNow.heel)
-        const heel = mag * facing.current
+        // AND SHE LEANS INTO IT. A slow roll on top of the drive's heel, so a
+        // hull sitting still in a squall is still working, which a heel that
+        // only came from speed could never say.
+        const heel = mag * facing.current + Math.sin(t * 0.9) * 3.4 * gust
         boat.style.transform =
           `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
         // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is

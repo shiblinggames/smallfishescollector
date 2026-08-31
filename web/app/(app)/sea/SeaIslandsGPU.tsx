@@ -44,6 +44,7 @@ import { makeShoals, type Shoals } from './seaShoals'
 import { makeGulls, type Gulls } from './seaGulls'
 import { makeSplash, type Splash } from './seaSplash'
 import { makeLights, type Lights } from './seaLights'
+import { makeSqualls, type Squalls } from './seaSqualls'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -394,6 +395,16 @@ export default function SeaIslandsGPU({
       world.addChild(crewLayer)
       crewLayerRef.current = crewLayer
 
+      // ── THE WEATHER ───────────────────────────────────────────────
+      //
+      // TWO HALVES IN TWO PLACES, and that split is the illusion. The cloud
+      // shadow and the dimples are ON the water, so they go in the world under
+      // everything solid; the rain is in the AIR, so it goes on the stage over
+      // the lot, taking the world's transform the way the gulls do. Rain drawn
+      // under an island would be falling behind it.
+      const squalls: Squalls = makeSqualls(PIXI)
+      world.addChild(squalls.water)
+
       // ── WHAT IS STILL LIT AFTER DARK ──────────────────────────────
       //
       // The world half goes over the water and UNDER everything solid, because
@@ -422,6 +433,7 @@ export default function SeaIslandsGPU({
       a.stage.addChild(gulls.view)
       // Under the captain, over everything else on the stage.
       a.stage.addChild(lights.screen)
+      a.stage.addChild(squalls.air)
 
       const boats = new PIXI.Container()
       a.stage.addChild(boats)
@@ -693,6 +705,7 @@ export default function SeaIslandsGPU({
         // camera follows her, so her lantern is a fixed point on the stage.
         lights.advance(camX, camY, halfW, halfH,
           a.screen.width / 2, a.screen.height / 2, t, dt)
+        squalls.advance(camX, camY, halfW, halfH, dt)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
@@ -807,6 +820,7 @@ export default function SeaIslandsGPU({
           // hour; these are the things that answer it by emitting, so they take
           // the darkness itself and get BRIGHTER as it deepens.
           lights.night(d)
+          squalls.night(tint)
           wake.night(tint)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
@@ -910,6 +924,11 @@ export default function SeaIslandsGPU({
           // a late-baking island can never end up in front of a bird.
           gulls.view.scale.copyFrom(world.scale)
           gulls.view.position.copyFrom(world.position)
+          // The rain rides the same transform, for the same reason: it is a
+          // sibling of the world so a late-baking island cannot end up in
+          // front of it.
+          squalls.air.scale.copyFrom(world.scale)
+          squalls.air.position.copyFrom(world.position)
         },
       }
       if (!dead) setReady(n => n + 1)
