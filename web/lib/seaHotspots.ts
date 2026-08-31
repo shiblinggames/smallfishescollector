@@ -69,9 +69,9 @@ export const HOTSPOT_DEFS: Record<HotspotKind, HotspotDef> = {
   shoal: {
     kind: 'shoal', color: '#5fd4a0', family: 'Faster bites',
     tiers: {
-      1: { name: 'Scattered Shoal', effect: 'Fish bite about 12% faster here.' },
-      2: { name: 'Running Shoal',   effect: 'Fish bite about 22% faster here.' },
-      3: { name: 'Boiling Shoal',   effect: 'Fish bite about 35% faster here.' },
+      1: { name: 'Scattered Shoal', effect: 'Fish bite about 5% faster here.' },
+      2: { name: 'Running Shoal',   effect: 'Fish bite about 7% faster here.' },
+      3: { name: 'Boiling Shoal',   effect: 'Fish bite about 10% faster here.' },
     },
   },
   trench: {
@@ -256,8 +256,21 @@ export function hotspotEffect(
   tier: HotspotTier = 1,
 ): HotspotEffect {
   switch (kind) {
+    // ── THE SHOAL IS DELIBERATELY THE SMALLEST OF THE THREE ────────────
+    //
+    // 5, 7 and 10 percent, capped there on purpose. Waiting is the one thing
+    // in this loop that every other system already buys down: bait, the rod,
+    // Angler's Patience and Fishing renown all shorten it, and they stack. A
+    // patch handing out another third on top of all of that stopped being a
+    // reason to steer and became the only place worth casting, which is the
+    // opposite of what hotspots are for.
+    //
+    // It reads smaller than the trench and the flotsam and that is correct
+    // rather than an oversight. Those two change WHAT you pull up; this one
+    // changes how long you wait for it, and a second saved is worth less than a
+    // better fish however the arithmetic is written.
     case 'shoal':
-      return { waitMult: ({ 1: 0.88, 2: 0.78, 3: 0.65 } as const)[tier], rarityBonus: 0, crateChanceMult: 1 }
+      return { waitMult: ({ 1: 0.95, 2: 0.93, 3: 0.9 } as const)[tier], rarityBonus: 0, crateChanceMult: 1 }
     // Fed through tierWeightedPick, which scales each tier by
     // (1 + bonus * (rarity - 1)) — so commons are never boosted, only diluted,
     // and the top of the table lifts hardest. That shape was always right; it
