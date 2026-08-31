@@ -178,12 +178,24 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
     // ── THE LADDER ────────────────────────────────────────────────────
     //
     // Everything the fire does is one number, and it never quite stops growing:
-    // sqrt keeps a streak of twenty visibly bigger than a streak of ten without
-    // a streak of a hundred filling the screen. 2 is the first rung, so it
-    // starts at a real fire rather than a wisp.
+    // sqrt keeps a streak of thirty visibly bigger than a streak of fifteen
+    // without any streak filling the screen.
+    //
+    // IT WAS FAR TOO EAGER. The first version divided inside the root, which
+    // put it at 0.67 on the very first rung and DOUBLED it by streak three:
+    // 43 embers a second at a streak of two, 86 at three, 173 at five. Smoke
+    // arrived at three and the whole thing went hot-orange at six, so by the
+    // time you had chained a handful you were already at the top of the ladder
+    // and everything after that looked the same.
+    //
+    // The coefficient is outside the root now, which is what actually slows the
+    // early climb: 17 embers a second at a streak of two, 34 at three, 67 at
+    // five, and it keeps opening out all the way to thirty. Smoke waits for six
+    // and the hot colour waits for fourteen, so both stay news rather than
+    // being the default state of a good session.
     const intensity = () => {
       const s = live.current.streak
-      return s < 2 ? 0 : Math.min(2.6, Math.sqrt((s - 1) / 2.2))
+      return s < 2 ? 0 : Math.min(2.4, 0.42 * Math.sqrt(s - 1))
     }
 
     for (const m of motes) {

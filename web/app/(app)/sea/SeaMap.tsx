@@ -6603,6 +6603,13 @@ hullRef={hullRefFor(t.key)} />
             setBaitLeft(baitBag.find(b => b.type === t)?.quantity ?? 0)
           }}
           onPose={setFrame}
+          // OUT IN FRONT OF THE BOW, not under the hull: the line went out
+          // that way and a fish surfacing inside your own boat is a strange
+          // thing to draw. Far enough ahead to clear the sprite, near enough
+          // to plainly be on your line.
+          onLanded={perfect => gpuRef.current?.splash(
+            pos.current.x + facing.current * 150, pos.current.y + 70,
+            facing.current, perfect)}
           onBusy={setDialUp}
           onCanLeave={setCanLeaveFishing}
           spritesReady={spritesReady}

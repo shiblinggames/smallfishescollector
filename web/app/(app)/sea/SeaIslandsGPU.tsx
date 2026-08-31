@@ -42,6 +42,7 @@ import { nightTint, makeWater } from './seaWater'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { makeShoals, type Shoals } from './seaShoals'
 import { makeGulls, type Gulls } from './seaGulls'
+import { makeSplash, type Splash } from './seaSplash'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -113,6 +114,14 @@ export type GpuHandle = {
    * to have drawn them at all.
    */
   scatter(x: number, y: number): void
+  /**
+   * A FISH BREAKS THE SURFACE HERE, in world coordinates.
+   *
+   * `dir` is which way the boat is facing, so it leaves the water heading away
+   * from the hull. Timed to be back down as the result card arrives: see
+   * seaSplash, and the hold in FishingHere it is built to sit inside.
+   */
+  splash(x: number, y: number, dir: number, perfect: boolean): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -383,6 +392,13 @@ export default function SeaIslandsGPU({
       const crewLayer = new PIXI.Container()
       world.addChild(crewLayer)
       crewLayerRef.current = crewLayer
+
+      // ── WHAT COMES OUT OF THE WATER ───────────────────────────────
+      // Over the wake and the crew, because a fish clearing the surface is in
+      // front of everything the surface has on it. In the world, because it
+      // happens at a place on the sea and stays there.
+      const splash: Splash = makeSplash(PIXI)
+      world.addChild(splash.view)
 
       // ── WHAT IS IN THE AIR ────────────────────────────────────────
       //
@@ -657,6 +673,10 @@ export default function SeaIslandsGPU({
         drift.advance(camX, camY, halfW, halfH, t, dt)
         shoals.advance(camX, camY, halfW, halfH, t, dt)
         gulls.advance(camX, camY, halfW, halfH, t, dt)
+        // ADVANCED ON PIXI'S OWN TICKER, which is the whole reason this works.
+        // The chart's rAF loop returns early while the dial is up, so nothing
+        // driven from there animates during a catch; this one is not.
+        splash.advance(dt)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
@@ -766,6 +786,7 @@ export default function SeaIslandsGPU({
           // still catching light at dusk, so it gives up less to the hour than
           // the water under it.
           gulls.night(nightTint(d * 0.72, w))
+          splash.night(nightTint(d * 0.55, w))
           wake.night(tint)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
@@ -851,6 +872,7 @@ export default function SeaIslandsGPU({
           c.cap.setStage(sk.stage)
         },
         scatter(x, y) { shoals.scatter(x, y) },
+        splash(x, y, dir, perfect) { splash.fire(x, y, dir, perfect) },
 
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom

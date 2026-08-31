@@ -358,7 +358,7 @@ export default function FishingHere({
   zone, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
   seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
-  onBaitSpent, onPose, onBusy, onCanLeave,
+  onBaitSpent, onPose, onBusy, onCanLeave, onLanded,
   spritesReady, onClose,
 }: {
   zone: string
@@ -442,6 +442,13 @@ export default function FishingHere({
    */
   onReel?: (r: { perfectStreak: number; caught: number }) => void
   onPose: (pose: 'rest' | 'wait' | 'cast') => void
+  /**
+   * SOMETHING CAME UP. Fired the instant the needle is judged a catch, not
+   * when the card lands: the map puts a fish through the surface out on the
+   * water and it has to be back down by the time the card arrives. See
+   * seaSplash for the timing, and the hold below for the window it sits in.
+   */
+  onLanded: (perfect: boolean) => void
   /** Told when the dial is up, so the map can stop moving entirely behind it.
    *  See the note on the freeze in SeaMap. */
   onBusy: (busy: boolean) => void
@@ -1161,6 +1168,15 @@ export default function FishingHere({
       setTimeout(() => setPerfectFlash(false), 1400)
     }
     else vibrate(6)
+    // ── AND OUT ON THE WATER ──────────────────────────────────────────
+    // On the tap's own tick, alongside the sound and the haptic, because those
+    // three are the ones a player reads as simultaneous. The arc runs for 520ms
+    // (700 on a perfect) inside a hold of 620 (900), so the fish is back under
+    // as the card comes up rather than fighting it for attention.
+    //
+    // A MISS AND A PENALTY GET NOTHING, which is the point: the splash has to
+    // mean you landed it, or it is just weather.
+    if (result === 'perfect' || result === 'catch') onLanded(perfect)
     setSnapKey(k => k + 1)
     setPhase('reeling')
     onPose('rest')
