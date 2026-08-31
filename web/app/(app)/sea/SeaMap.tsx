@@ -3799,6 +3799,22 @@ export default function SeaMap({
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
 
+      // ── TWO CLOCKS, AND ONLY ONE OF THEM IS SHARED WITH THE SERVER ──
+      //
+      // `now` is a DOMHighResTimeStamp: milliseconds since the PAGE LOADED. It
+      // is the right clock for everything cosmetic — waves, bob, drift phase,
+      // the trader patrol — because all of those only ever need to be
+      // self-consistent within this tab.
+      //
+      // It is the WRONG clock for anything the server will re-derive, and the
+      // bottles were using it. Their key carries a window number computed as
+      // `floor(t / 11 minutes)`, so a whole session minted keys for window 0
+      // while the server checked against 2,709,000-odd from Date.now(). Not one
+      // of them ever matched, so every bottle in the game answered "The tide
+      // took it". lib/seaBottles now throws in dev if it is handed the wrong
+      // one.
+      const epoch = Date.now()
+
       // THE STICK OUTRANKS EVERYTHING. While it is held the boat runs its
       // bearing directly rather than chasing a target point, so the course is
       // whatever direction the thumb is pushing and nothing else.
@@ -4457,7 +4473,11 @@ export default function SeaMap({
       // THE DRIFT. Every bottle nudged along its own slow wander. Transform
       // only, like the patrols: React never hears about it.
       if (bottleRefs.current.size) {
-        const ts2 = now / 1000
+        // EPOCH, because the server positions the same bottle from Date.now()
+        // when it checks you were actually alongside it. Drawing it from a
+        // different clock put the two drifts out of phase; the reach check
+        // survived that only because it is three times generous.
+        const ts2 = epoch / 1000
         for (const b of bottlesRef.current) {
           const el = bottleRefs.current.get(b.key)
           if (!el) continue
@@ -5002,7 +5022,7 @@ export default function SeaMap({
         let bot: Bottle | null = null
         for (const b of bottlesRef.current) {
           if (takenRef.current.has(b.key)) continue
-          const at = bottlePos(b, now / 1000)
+          const at = bottlePos(b, epoch / 1000)
           if (Math.hypot(pos.current.x - at.x, pos.current.y - at.y) < BOTTLE_REACH) { bot = b; break }
         }
         setNearBottle(prev => (prev?.key === bot?.key ? prev : bot))
@@ -5010,10 +5030,10 @@ export default function SeaMap({
         // A NEW SET OF BOTTLES when the boat crosses a cell or the tide turns.
         // Keyed on both, so a window rolling over while you sit still still
         // brings you different water.
-        const bk = `${Math.floor(pos.current.x / BOTTLE_CELL)}:${Math.floor(pos.current.y / BOTTLE_CELL)}|${bottleWindow(now)}`
+        const bk = `${Math.floor(pos.current.x / BOTTLE_CELL)}:${Math.floor(pos.current.y / BOTTLE_CELL)}|${bottleWindow(epoch)}`
         if (bk !== bottleCell.current) {
           bottleCell.current = bk
-          setBottles(bottlesAround(pos.current.x, pos.current.y, 5200, now))
+          setBottles(bottlesAround(pos.current.x, pos.current.y, 5200, epoch))
         }
 
         // OVER SOMETHING BURIED, and the wider ring where the water looks odd.

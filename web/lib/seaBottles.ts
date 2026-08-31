@@ -94,8 +94,29 @@ function hash(a: number, b: number): number {
   return h
 }
 
-/** Which window we are in. Exported so the map can refresh on the boundary. */
+/**
+ * Which window we are in. Exported so the map can refresh on the boundary.
+ *
+ * ── `now` IS EPOCH MILLISECONDS AND THE GUARD IS NOT DECORATION ─────────────
+ *
+ * The chart's frame loop is `(now: number) => ...` off requestAnimationFrame,
+ * where `now` is a DOMHighResTimeStamp: milliseconds since the PAGE LOADED. It
+ * was handed straight to this function, so a whole session computed window 0
+ * (or 1, after eleven minutes) while the server computed 2,709,000-odd from
+ * `Date.now()`. Every key the client minted was therefore a window the server
+ * refused, `bottleFromKey` returned null, and every single bottle in the game
+ * answered "The tide took it."
+ *
+ * Nothing caught it because both numbers are plausible milliseconds. So this
+ * asserts the one thing that tells them apart: epoch is past 1e12 and has been
+ * since 2001, and no page has been open for thirty years.
+ */
 export function bottleWindow(now: number = Date.now()): number {
+  if (process.env.NODE_ENV !== 'production' && now < 1e12) {
+    throw new Error(
+      `bottleWindow needs epoch ms, got ${now}. This is almost certainly a `
+      + 'requestAnimationFrame timestamp, which is milliseconds since page load.')
+  }
   return Math.floor(now / BOTTLE_WINDOW_MS)
 }
 
