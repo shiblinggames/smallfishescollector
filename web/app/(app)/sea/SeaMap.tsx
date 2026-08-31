@@ -6271,8 +6271,22 @@ hullRef={hullRefFor(t.key)} />
           thing waiting for you; this is the knobs on the outside of the game,
           and sitting it at the end of that row would say it was another
           destination. Same disc size and same vertical, so it reads as part of
-          the same furniture without joining the queue. */}
-      <SeaSettings size={hudSize} top={18} />
+          the same furniture without joining the queue.
+
+          AND IT GOES AWAY WITH THE ROD OUT. The HUD's own run already clears
+          itself while you are fishing — the chart, the orders, the trawls and
+          the Salt Road all stand down — because the dial, the bar and the
+          catch card want the screen and none of those are things you do
+          mid-cast. This is the same argument only more so: nothing about
+          sound, or a bite timer, is a decision anybody makes with a fish on
+          the line, and a gear icon sitting over the water during the one
+          moment the water is worth looking at is furniture in the way.
+
+          NO `|| wide` HERE, unlike the left-hand run. Those earn their
+          exception because they are places you might want to go and a wide
+          window has room for both; this one is a menu, and a menu has nothing
+          to say while you are fishing however much room there is. */}
+      {!fishingIn && <SeaSettings size={hudSize} top={18} />}
 
       {/* THE SOUNDTRACK. Starts on the first press rather than on mount, both
           because no browser will play it before one and because it is a 1.6MB
