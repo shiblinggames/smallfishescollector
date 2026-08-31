@@ -41,6 +41,7 @@ import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { makeShoals, type Shoals } from './seaShoals'
+import { makeGulls, type Gulls } from './seaGulls'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
 import { coastline } from '@/lib/islandShape'
 import { SUBMERGE } from './submerge'
@@ -383,6 +384,17 @@ export default function SeaIslandsGPU({
       world.addChild(crewLayer)
       crewLayerRef.current = crewLayer
 
+      // ── WHAT IS IN THE AIR ────────────────────────────────────────
+      //
+      // ON THE STAGE, NOT IN THE WORLD, and given the world's own transform
+      // every frame instead. Islands bake asynchronously and add themselves to
+      // the world long after this line runs, so anything added here would end
+      // up UNDER a headland that finished baking a second later. Birds are
+      // above everything by definition, and copying two numbers a frame is a
+      // great deal cheaper than sorting the world container forever.
+      const gulls: Gulls = makeGulls(PIXI)
+      a.stage.addChild(gulls.view)
+
       const boats = new PIXI.Container()
       a.stage.addChild(boats)
       pixiRef.current = PIXI
@@ -644,6 +656,7 @@ export default function SeaIslandsGPU({
         water?.frame(t, camX, camY, camZoom, dark, warm, rush)
         drift.advance(camX, camY, halfW, halfH, t, dt)
         shoals.advance(camX, camY, halfW, halfH, t, dt)
+        gulls.advance(camX, camY, halfW, halfH, t, dt)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
@@ -749,6 +762,10 @@ export default function SeaIslandsGPU({
           // Underwater, so it takes the hour HARDER than the surface does: the
           // last thing to still be visible after dark is not the thing below it.
           shoals.night(nightTint(Math.min(1, d * 1.25), w))
+          // A gull is a pale thing against a dark sea and it is the LAST thing
+          // still catching light at dusk, so it gives up less to the hour than
+          // the water under it.
+          gulls.night(nightTint(d * 0.72, w))
           wake.night(tint)
           // A harbour lamp is the one light out here that is NOT the sun, so it
           // gives up much less to the hour than the water around it. Most of
@@ -842,6 +859,11 @@ export default function SeaIslandsGPU({
             a.screen.width / 2 - zoom * x,
             a.screen.height / 2 - zoom * GROUND * y,
           )
+          // The air rides the same transform as the water under it. See where
+          // it is added: it is a sibling of the world rather than a child, so
+          // a late-baking island can never end up in front of a bird.
+          gulls.view.scale.copyFrom(world.scale)
+          gulls.view.position.copyFrom(world.position)
         },
       }
       if (!dead) setReady(n => n + 1)

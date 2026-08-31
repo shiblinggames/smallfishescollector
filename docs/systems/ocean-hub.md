@@ -1301,6 +1301,32 @@ moment they read as crisp sprites they read as floating ON it.
 **The scatter is the point.** `gpu.scatter(x, y)` fires from `startFishing`, and sailing
 across the chart to a patch and watching it empty is most of the reason to have drawn them.
 
+## The gulls
+
+**Birds working over a patch** (`sea/seaGulls.ts`), which is the half of "you can see the
+fish" that works at a distance. The shoals are dim on purpose and only read up close; a
+hotspot needs to be something you can decide to sail to from most of a screen away, and the
+only thing announcing one was a badge that appears once you are already in it.
+
+**Over a shoal and a flotsam patch, never a trench, and the omission is the information.**
+Those two are surface things: fish near the top, and scraps floating on it. A trench is the
+one that is about depth. So the chart quietly teaches the most useful rule it has, which is
+that birds mean fish near the surface. Checked against the real generator rather than the
+filter: every window holds exactly one of each kind, so there are always birds somewhere and
+the trench never has any.
+
+**They are in the AIR, which the projection has to be told.** Altitude is divided by `GROUND`
+before it is applied, the same counter-squash every label and standing building uses, so a
+bird 80px up is 80 SCREEN px up. Each drops a shadow on the water directly below it, and
+that shadow is the entire reason the altitude reads: without it a gull is a bird-shaped mark
+lying on the sea. Higher is a fainter, wider shadow, which is the only cue for how high.
+
+**The layer is a SIBLING of the world container, not a child**, given the world's transform
+each frame in `camera()`. Islands bake asynchronously and add themselves to the world long
+after init, so anything added in the world at init would end up behind a headland that
+finished baking a second later. Birds are above everything by definition, and copying two
+numbers a frame beats sorting the world container forever.
+
 ## How the minimap is read
 
 **Shape carries the meaning; colour only reinforces it.** Everything on the chart used to be
