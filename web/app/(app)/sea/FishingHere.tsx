@@ -1767,11 +1767,6 @@ export default function FishingHere({
                 needleColor="rgba(255,255,255,0.35)" zoneOpacityFn={() => 1}
                 zonesGroupRef={zonesGroupEl}
                 needleRef={needleRef}
-                // THE PLATE IS YOUR REEL. Nine reels, nine colours, and the
-                // instrument you spend the whole game looking at becomes the
-                // one you actually bought. See the note at the top of
-                // FishingDial: the dial IS the reel, seen face on.
-                plateTint={getReel(mods.reelTier).color}
                 snapKey={snapKey} perfectBurstKey={burstKey} />
             </motion.div>
           ) : phase === 'result' && caught ? (
