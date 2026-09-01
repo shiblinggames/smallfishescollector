@@ -130,8 +130,17 @@ export const HOTSPOT_BY_ID: Record<HotspotId, Hotspot> =
 // lib/seaPortal, it is the ring on the water, and it has always been the only
 // one that anybody sails to.
 
-/** How many furniture slots the house opens, by house tier. */
-export const HOUSE_SLOTS = [2, 3, 4, 5, 6] as const
+/**
+ * How many furniture slots the house opens, by house tier.
+ *
+ * One per rung now that the window is the room's rather than yours: five slots,
+ * five steps, and the top of the ladder opens the last one. It used to run to
+ * six against six slots, which was the same shape — the shape is what matters,
+ * because a house rung that opens nothing is a house rung nobody buys.
+ *
+ * A lean-to with only a fire is right. It is a lean-to.
+ */
+export const HOUSE_SLOTS = [1, 2, 3, 4, 5] as const
 
 /**
  * FURNITURE — the inside, and the deepest part of the flex.
@@ -144,7 +153,21 @@ export const HOUSE_SLOTS = [2, 3, 4, 5, 6] as const
  *
  * `id` values are stored in a row and must never change. The label can.
  */
-export type FurnitureSlot = 'hearth' | 'floor' | 'mount' | 'table' | 'window' | 'corner'
+/**
+ * FIVE SLOTS. `window` is gone.
+ *
+ * A window is a HOLE IN A WALL, and the wall is painted. Every other furnishing
+ * sits in front of the picture and only has to stand in about the right place;
+ * a window has to line up with an opening that already exists, at that room's
+ * exact perspective, in all five shells. Nothing else in here is asked to match
+ * geometry it did not draw, and it is the one slot where being two percent out
+ * reads as a mistake rather than as a choice.
+ *
+ * So the window belongs to the ROOM now: each shell was painted with its own,
+ * and a bigger house simply has a better one. Nothing to buy, nothing to place,
+ * and no way for it to be wrong.
+ */
+export type FurnitureSlot = 'hearth' | 'floor' | 'mount' | 'table' | 'corner'
 
 export type Furnishing = {
   id: string
@@ -211,15 +234,6 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
       { id: 'table-chart', name: 'Chart table', cost: 18_000 , art: '/sea/table-chart.png' },
       { id: 'table-captain', name: "Captain's desk", cost: 80_000 , art: '/sea/table-captain.png' },
       { id: 'table-starglass', name: 'A star-glass table', cost: 0 , art: '/sea/table-starglass.png', found: { isle: 'ancient_deep-3' } },
-    ],
-  },
-  {
-    slot: 'window', label: 'The window',
-    options: [
-      { id: 'window-shutter', name: 'Plain shutters', cost: 0 , art: '/sea/window-shutter.png' },
-      { id: 'window-lead', name: 'Leaded glass', cost: 16_000 , art: '/sea/window-lead.png' },
-      { id: 'window-stained', name: 'Stained glass', cost: 90_000 , art: '/sea/window-stained.png' },
-      { id: 'window-seaglass', name: 'A wall of sea-glass', cost: 0 , art: '/sea/window-seaglass.png', found: { isle: 'abyss-1' } },
     ],
   },
   {
@@ -301,30 +315,39 @@ export type RoomDef = {
    * the whole difference between them.
    */
   spots?: Record<FurnitureSlot, SlotSpot>[]
+  /**
+   * WHERE THE ROOM'S OWN CONTENTS SIT.
+   *
+   * The gallery, the menagerie and the trophy room are not furnished, but what
+   * fills them still has to land somewhere: a badge wall too low is badges on
+   * the skirting board, and pets floating a third of the way up the glass is
+   * worse. One box per room, dragged on the bench like everything else.
+   *
+   * `x` and `y` are the box's CENTRE and `w` its width, all percent of the room.
+   * A box rather than a point because these hold a grid of things whose count
+   * changes — eighteen badges or one pet — and what has to be placed is the
+   * area they flow inside.
+   */
+  content?: { x: number; y: number; w: number }
 }
 
 /** Placed against the empty shells. `y` is the BOTTOM of the piece. */
 const MAIN_SPOTS: Record<FurnitureSlot, SlotSpot>[] = [
   // The lean-to: low roof, dirt floor high in the frame, everything small.
   { floor: { x: 50, y: 99, w: 46 }, hearth: { x: 33, y: 86, w: 20 },
-    mount: { x: 33, y: 62, w: 15 }, table: { x: 66, y: 88, w: 24 },
-    window: { x: 87, y: 52, w: 14 }, corner: { x: 90, y: 92, w: 15 } },
+    mount: { x: 33, y: 62, w: 15 }, table: { x: 66, y: 88, w: 24 }, corner: { x: 90, y: 92, w: 15 } },
   // The cottage: taller walls, a proper board floor, window right.
   { floor: { x: 50, y: 99, w: 48 }, hearth: { x: 34, y: 84, w: 21 },
-    mount: { x: 34, y: 58, w: 16 }, table: { x: 66, y: 87, w: 25 },
-    window: { x: 88, y: 50, w: 14 }, corner: { x: 90, y: 91, w: 15 } },
+    mount: { x: 34, y: 58, w: 16 }, table: { x: 66, y: 87, w: 25 }, corner: { x: 90, y: 91, w: 15 } },
   // The longhouse: wide and dark, more floor showing.
   { floor: { x: 50, y: 99, w: 52 }, hearth: { x: 33, y: 83, w: 22 },
-    mount: { x: 33, y: 56, w: 17 }, table: { x: 67, y: 87, w: 26 },
-    window: { x: 88, y: 48, w: 15 }, corner: { x: 91, y: 91, w: 16 } },
+    mount: { x: 33, y: 56, w: 17 }, table: { x: 67, y: 87, w: 26 }, corner: { x: 91, y: 91, w: 16 } },
   // The great hall: high stone, the floor line drops away.
   { floor: { x: 50, y: 99, w: 54 }, hearth: { x: 33, y: 82, w: 23 },
-    mount: { x: 33, y: 53, w: 18 }, table: { x: 67, y: 86, w: 27 },
-    window: { x: 88, y: 46, w: 15 }, corner: { x: 91, y: 90, w: 16 } },
+    mount: { x: 33, y: 53, w: 18 }, table: { x: 67, y: 86, w: 27 }, corner: { x: 91, y: 90, w: 16 } },
   // The estate: panelled, flagged, and the tallest of them.
   { floor: { x: 50, y: 99, w: 56 }, hearth: { x: 34, y: 81, w: 23 },
-    mount: { x: 34, y: 52, w: 18 }, table: { x: 67, y: 86, w: 27 },
-    window: { x: 88, y: 45, w: 15 }, corner: { x: 91, y: 90, w: 16 } },
+    mount: { x: 34, y: 52, w: 18 }, table: { x: 67, y: 86, w: 27 }, corner: { x: 91, y: 90, w: 16 } },
 ]
 
 export const ROOMS: RoomDef[] = [
@@ -340,14 +363,17 @@ export const ROOMS: RoomDef[] = [
   {
     id: 'gallery', name: 'The gallery', blurb: 'Your badges, and every fish you have logged.',
     needsHouse: 2, art: '/sea/room-gallery.jpg',
+    content: { x: 50, y: 48, w: 72 },
   },
   {
     id: 'menagerie', name: 'The menagerie', blurb: 'Every pet you have ever taken in.',
     needsHouse: 3, art: '/sea/room-menagerie.jpg',
+    content: { x: 50, y: 82, w: 80 },
   },
   {
     id: 'trophy', name: 'The trophy room', blurb: 'The giants, and what they cost you.',
     needsHouse: 4, art: '/sea/room-trophy.jpg',
+    content: { x: 50, y: 44, w: 74 },
   },
 ]
 

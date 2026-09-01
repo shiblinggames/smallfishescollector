@@ -38,7 +38,7 @@ const GOLD = '#f0c040'
 
 /** Back to front. A hearth is against the wall, a table stands in front of it,
  *  and the corner piece is nearest the camera. */
-const ROOM_ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'window', 'table', 'corner']
+const ROOM_ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'table', 'corner']
 
 export default function RoomView({ home, unlocked, pets, species, giants, guest }: {
   home: Homestead
@@ -107,9 +107,12 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
               position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
             }} />
             {room.id === 'main' && <Furnished home={home} room={room} houseTier={houseTier} />}
-            {room.id === 'gallery' && <GalleryWall unlocked={unlocked} species={species} />}
-            {room.id === 'menagerie' && <Menagerie pets={pets} />}
-            {room.id === 'trophy' && <TrophyWall giants={giants} />}
+            {/* THE THREE CONTENT ROOMS all flow their things inside a box that
+                was placed on the bench, so a badge wall is never on the
+                skirting board and pets are never floating up the glass. */}
+            {room.id === 'gallery' && <Box at={room.content}><GalleryWall unlocked={unlocked} species={species} /></Box>}
+            {room.id === 'menagerie' && <Box at={room.content}><Menagerie pets={pets} /></Box>}
+            {room.id === 'trophy' && <Box at={room.content}><TrophyWall giants={giants} /></Box>}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -120,6 +123,20 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
         </p>
       )}
     </div>
+  )
+}
+
+/** The placed area a room's contents flow inside. Centre-anchored, because what
+ *  is being positioned is a region rather than a thing that stands on a floor. */
+function Box({ at, children }: {
+  at?: { x: number; y: number; w: number }; children: React.ReactNode
+}) {
+  const a = at ?? { x: 50, y: 50, w: 76 }
+  return (
+    <div style={{
+      position: 'absolute', left: `${a.x}%`, top: `${a.y}%`, width: `${a.w}%`,
+      transform: 'translate(-50%, -50%)',
+    }}>{children}</div>
   )
 }
 
@@ -187,8 +204,7 @@ function GalleryWall({ unlocked, species }: {
   return (
     <>
       <div style={{
-        position: 'absolute', left: '13%', right: '13%', top: '30%',
-        display: 'flex', flexWrap: 'wrap', gap: '1.4%', justifyContent: 'center',
+        display: 'flex', flexWrap: 'wrap', gap: '2%', justifyContent: 'center',
       }}>
         {badges.map(id => {
           const b = BADGE_MAP[id]
@@ -201,8 +217,7 @@ function GalleryWall({ unlocked, species }: {
         })}
       </div>
       <p className="font-karla font-700" style={{
-        position: 'absolute', left: 0, right: 0, bottom: '7%', textAlign: 'center',
-        fontSize: '0.8rem', color: '#6a5f4c',
+        textAlign: 'center', marginTop: '4%', fontSize: '0.8rem', color: '#6a5f4c',
       }}>
         {unlocked.length} badges · {species.logged} of {species.total} species logged
       </p>
@@ -222,14 +237,13 @@ function Menagerie({ pets }: { pets: string[] }) {
   if (owned.length === 0) {
     return (
       <p className="font-karla" style={{
-        position: 'absolute', left: 0, right: 0, bottom: '12%', textAlign: 'center',
+        textAlign: 'center',
         fontSize: '0.82rem', color: '#7c8a80',
       }}>Nobody has moved in yet.</p>
     )
   }
   return (
     <div style={{
-      position: 'absolute', left: '8%', right: '8%', bottom: '9%',
       display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end',
       justifyContent: 'center', gap: '2%',
     }}>
@@ -247,14 +261,13 @@ function TrophyWall({ giants }: { giants: { name: string; art: string }[] }) {
   if (giants.length === 0) {
     return (
       <p className="font-karla" style={{
-        position: 'absolute', left: 0, right: 0, bottom: '12%', textAlign: 'center',
+        textAlign: 'center',
         fontSize: '0.82rem', color: '#9a8875',
       }}>Nothing on these walls yet. They are down there.</p>
     )
   }
   return (
     <div style={{
-      position: 'absolute', left: '12%', right: '12%', top: '26%',
       display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2%',
     }}>
       {giants.map(g => (

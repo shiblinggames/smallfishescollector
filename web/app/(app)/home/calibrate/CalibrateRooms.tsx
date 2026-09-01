@@ -37,21 +37,33 @@ import {
 } from '@/lib/homestead'
 
 /** Back to front, the same order the room paints in. */
-const ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'window', 'table', 'corner']
+const ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'table', 'corner']
 
 const HOUSE_NAMES = ['Lean-to', 'Cottage', 'Longhouse', 'Great hall', 'Estate']
 
 type Row = Record<FurnitureSlot, SlotSpot>
 
-export default function CalibrateRooms({ initial }: { initial: Row[] }) {
+type Content = { x: number; y: number; w: number }
+
+export default function CalibrateRooms({ initial, contentInitial }: {
+  initial: Row[]
+  /** The content box for each of the three rooms that are not furnished. */
+  contentInitial: Record<string, Content>
+}) {
   const [rows, setRows] = useState<Row[]>(initial)
+  const [content, setContent] = useState<Record<string, Content>>(contentInitial)
+  /** Which room is on the bench. The main room also picks a shell below. */
+  const [roomId, setRoomId] = useState<string>('main')
   const [tier, setTier] = useState(1)
   const [slot, setSlot] = useState<FurnitureSlot>('hearth')
-  const [held, setHeld] = useState<FurnitureSlot | null>(null)
+  const [held, setHeld] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   const row = rows[tier]
   const main = ROOM_BY_ID.main
+  const room = ROOMS.find(r => r.id === roomId) ?? main
+  const isMain = room.id === 'main'
+  const box = content[room.id] ?? { x: 50, y: 50, w: 76 }
 
   /** Which art to show for a slot. The first option with a picture, so the
    *  bench is placing a REAL piece rather than an outline: a hearth is a
@@ -73,6 +85,32 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
       x: Math.round(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100))),
       y: Math.round(Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100))),
     })
+  }
+
+  const setBox = (patch: Partial<Content>) =>
+    setContent(prev => ({ ...prev, [room.id]: { ...box, ...patch } }))
+
+  /** The content box drags from its CENTRE, because what is being placed is a
+   *  region rather than something standing on a floor. */
+  const moveBox = (e: React.PointerEvent) => {
+    const el = (e.currentTarget as HTMLElement).closest('[data-room]') as HTMLElement | null
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    setBox({
+      x: Math.round(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100))),
+      y: Math.round(Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100))),
+    })
+  }
+
+  const nudgeBox = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 5 : 1
+    const d: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
+    }
+    const m = d[e.key]
+    if (!m) return
+    e.preventDefault()
+    setBox({ x: Math.max(0, Math.min(100, box.x + m[0])), y: Math.max(0, Math.min(100, box.y + m[1])) })
   }
 
   const nudge = (e: React.KeyboardEvent, s: FurnitureSlot) => {
@@ -100,11 +138,16 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
       + ` hearth: { x: ${pad(r.hearth.x, 2)}, y: ${pad(r.hearth.y, 2)}, w: ${pad(r.hearth.w, 2)} },\n`
       + `    mount: { x: ${pad(r.mount.x, 2)}, y: ${pad(r.mount.y, 2)}, w: ${pad(r.mount.w, 2)} },`
       + ` table: { x: ${pad(r.table.x, 2)}, y: ${pad(r.table.y, 2)}, w: ${pad(r.table.w, 2)} },\n`
-      + `    window: { x: ${pad(r.window.x, 2)}, y: ${pad(r.window.y, 2)}, w: ${pad(r.window.w, 2)} },`
-      + ` corner: { x: ${pad(r.corner.x, 2)}, y: ${pad(r.corner.y, 2)}, w: ${pad(r.corner.w, 2)} } },`
+      + `    corner: { x: ${pad(r.corner.x, 2)}, y: ${pad(r.corner.y, 2)}, w: ${pad(r.corner.w, 2)} } },`
     ).join('\n')
-    + '\n]\n'
-  ), [rows])
+    + '\n]\n\n'
+    // AND THE THREE CONTENT BOXES, as the line to paste into each RoomDef.
+    + ROOMS.filter(r => r.id !== 'main').map(r => {
+      const b = content[r.id] ?? { x: 50, y: 50, w: 76 }
+      return `// ${r.name}\ncontent: { x: ${b.x}, y: ${b.y}, w: ${b.w} },`
+    }).join('\n')
+    + '\n'
+  ), [rows, content])
 
   const copy = async () => {
     try {
@@ -132,8 +175,22 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
         When it looks right, copy the table into <code>lib/homestead.ts</code>.
       </p>
 
-      {/* ── WHICH SHELL ── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+      {/* ── WHICH ROOM ── */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+        {ROOMS.map(r => (
+          <button key={r.id} type="button" onClick={() => setRoomId(r.id)}
+            className="font-karla font-700"
+            style={{
+              padding: '0.36rem 0.7rem', borderRadius: 999, fontSize: '0.76rem', cursor: 'pointer',
+              color: roomId === r.id ? '#0d1520' : 'rgba(214,232,240,0.82)',
+              background: roomId === r.id ? '#8fd0e8' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${roomId === r.id ? '#8fd0e8' : 'rgba(255,255,255,0.14)'}`,
+            }}>{r.name}</button>
+        ))}
+      </div>
+
+      {/* ── WHICH SHELL ── only the main room has five of them. */}
+      {isMain && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
         {HOUSE_NAMES.map((n, i) => (
           <button key={n} type="button" onClick={() => setTier(i)}
             className="font-karla font-700"
@@ -144,7 +201,7 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
               border: `1px solid ${tier === i ? '#f0c464' : 'rgba(255,255,255,0.14)'}`,
             }}>{n}</button>
         ))}
-      </div>
+      </div>}
 
       {/* ── THE ROOM ── */}
       <div data-room style={{
@@ -153,10 +210,10 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
         touchAction: 'none',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={roomArt(main, tier)} alt="" draggable={false} style={{
+        <img src={roomArt(room, tier)} alt="" draggable={false} style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
         }} />
-        {ORDER.map(s => {
+        {isMain && ORDER.map(s => {
           const art = artFor(s)
           const spot = row[s]
           const on = slot === s
@@ -175,10 +232,47 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
             </div>
           )
         })}
+        {/* ── THE CONTENT BOX ── for the three rooms that are not furnished.
+            Drawn as its actual rectangle rather than a dot, because what is
+            being placed is the AREA a grid of things flows inside and its width
+            is most of the decision. */}
+        {!isMain && (
+          <div style={{
+            position: 'absolute', left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`,
+            transform: 'translate(-50%, -50%)',
+            aspectRatio: '3 / 1',
+            border: '2px dashed rgba(240,196,100,0.9)',
+            background: 'rgba(240,196,100,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#f0c464' }}>
+              {room.name}
+            </span>
+          </div>
+        )}
+        {!isMain && (
+          <button type="button" aria-label="Content box handle"
+            onPointerDown={e => {
+              e.preventDefault()
+              ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+              setHeld('box')
+            }}
+            onPointerMove={e => { if (held === 'box') moveBox(e) }}
+            onPointerUp={() => setHeld(null)}
+            onPointerCancel={() => setHeld(null)}
+            onKeyDown={nudgeBox}
+            style={{
+              position: 'absolute', left: `${box.x}%`, top: `${box.y}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 18, height: 18, borderRadius: '50%', padding: 0, cursor: 'grab',
+              background: '#f0c464', border: '2px solid rgba(10,16,22,0.85)',
+            }} />
+        )}
+
         {/* THE HANDLES, over the art rather than in it: a drag target the size
             of a rug is a drag target you cannot aim, and the piece under it has
             to stay visible while you move it. */}
-        {ORDER.map(s => {
+        {isMain && ORDER.map(s => {
           const spot = row[s]
           const on = slot === s
           return (
@@ -206,7 +300,7 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
       </div>
 
       {/* ── THE PIECE ── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '12px 0 8px' }}>
+      {isMain && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '12px 0 8px' }}>
         {ORDER.map(s => (
           <button key={s} type="button" onClick={() => setSlot(s)}
             className="font-karla font-700"
@@ -217,23 +311,30 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
               border: `1px solid ${slot === s ? '#8fd0e8' : 'rgba(255,255,255,0.14)'}`,
             }}>{FURNITURE_BY_SLOT[s].label}</button>
         ))}
-      </div>
+      </div>}
 
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         padding: '0.7rem 0.8rem', borderRadius: 12,
         background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
       }}>
+        {/* ONE READOUT AND ONE SLIDER, pointed at whatever is selected — the
+            furniture piece in the main room, the content box in the others. Two
+            sets of controls for the same three numbers would be two places to
+            look for the same answer. */}
         <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0c464', minWidth: 92 }}>
-          {FURNITURE_BY_SLOT[slot].label}
+          {isMain ? FURNITURE_BY_SLOT[slot].label : room.name}
         </span>
         <span className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(190,212,228,0.7)', fontVariantNumeric: 'tabular-nums' }}>
-          x {cur.x} · y {cur.y} · w {cur.w}
+          x {isMain ? cur.x : box.x} · y {isMain ? cur.y : box.y} · w {isMain ? cur.w : box.w}
         </span>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200 }}>
           <span className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(190,212,228,0.55)' }}>Width</span>
-          <input type="range" min={4} max={70} value={cur.w} style={{ flex: 1 }}
-            onChange={e => set(slot, { w: Number(e.target.value) })} />
+          <input type="range" min={4} max={100} value={isMain ? cur.w : box.w} style={{ flex: 1 }}
+            onChange={e => {
+              const w = Number(e.target.value)
+              if (isMain) set(slot, { w }); else setBox({ w })
+            }} />
         </label>
       </div>
 
@@ -254,9 +355,10 @@ export default function CalibrateRooms({ initial }: { initial: Row[] }) {
       }}>{source}</pre>
 
       <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(190,212,228,0.45)', marginTop: 10, lineHeight: 1.5 }}>
-        Only the main room is furnished. The gallery, the menagerie and the trophy room are filled
-        by what you have done rather than what you bought, so they have nothing to place.
-        {' '}Rooms open at house tier {ROOMS.filter(r => r.needsHouse > 0).map(r => `${r.needsHouse} ${r.name}`).join(', ')}.
+        The main room places FURNITURE, one piece at a time. The other three place a single BOX —
+        the area their contents flow inside, since a badge wall holds however many badges you have
+        earned and a menagerie however many pets. Drag its dot to move it, the slider to size it.
+        {' '}Rooms open at house tier {ROOMS.filter(r => r.needsHouse > 0).map(r => `${r.needsHouse} for ${r.name.toLowerCase()}`).join(', ')}.
       </p>
     </div>
   )

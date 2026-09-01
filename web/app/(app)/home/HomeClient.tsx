@@ -517,28 +517,6 @@ function Stand({ art, h, label, highlight }: {
   )
 }
 
-/**
- * THE ROOM, AS IT ACTUALLY IS.
- *
- * The shell comes from the house tier and everything in it is a layer at a
- * position that shell carries — see ROOMS, which is why the coordinates are per
- * room rather than shared: the fire is in the left corner of a lean-to and dead
- * centre in a hall, and one set of numbers would have put it on a wall.
- *
- * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────
- *
- * Inside used to be a list of buttons with prices on them. Six slots and 22
- * furnishings, six million doubloons of them, and buying the 1.1M giant changed
- * a label from "Nothing yet" to "An Ancient Deep giant". Everything in here is
- * bought for how it looks, so not drawing it was not a gap in the art, it was
- * the whole feature missing.
- *
- * Painted back to front: the rug goes under the fire, the fire in front of the
- * wall, the trophy over the fire, and the table and the corner in front of all
- * of it. That order is fixed and is the only thing here that is not data.
- */
-const ROOM_ORDER: FurnitureSlot[] = ['floor', 'window', 'hearth', 'mount', 'table', 'corner']
-
 // TheRoom LIVED HERE. Replaced by RoomView, which draws four rooms instead of
 // one and steps between them.
 

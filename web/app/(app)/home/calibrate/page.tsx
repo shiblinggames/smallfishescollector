@@ -14,7 +14,7 @@
 
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
-import { ROOM_BY_ID, type FurnitureSlot, type SlotSpot } from '@/lib/homestead'
+import { ROOMS, ROOM_BY_ID, type FurnitureSlot, type SlotSpot } from '@/lib/homestead'
 import CalibrateRooms from './CalibrateRooms'
 
 export const metadata = { title: 'Room bench' }
@@ -29,6 +29,10 @@ export default async function RoomBenchPage() {
   // drawing rather than on a blank grid. Whatever comes out of it is the same
   // shape going back in.
   const initial = (ROOM_BY_ID.main.spots ?? []) as Record<FurnitureSlot, SlotSpot>[]
+  const contentInitial = Object.fromEntries(
+    ROOMS.filter(r => r.id !== 'main')
+      .map(r => [r.id, r.content ?? { x: 50, y: 50, w: 76 }]),
+  )
 
-  return <CalibrateRooms initial={initial} />
+  return <CalibrateRooms initial={initial} contentInitial={contentInitial} />
 }
