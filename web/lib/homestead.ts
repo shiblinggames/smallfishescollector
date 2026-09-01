@@ -461,11 +461,26 @@ export const ROOMS: RoomDef[] = [
  * in a room. Nearer the bottom should mean bigger, because nearer the bottom
  * means nearer the camera; nothing enforces that, the eye does.
  *
+ * ── AND `flip` IS A PLACEMENT, NOT A BEHAVIOUR ──────────────────────────────
+ *
+ * A pass had them turning round on a timer. It went the same way the wandering
+ * did and for a related reason: a room where the animals turn to face nothing,
+ * on no cue, is a room of things twitching. Every pet is painted facing right,
+ * so which way one should face is a fact about WHERE IT STANDS — an animal on
+ * the right of the room looking back into it, one by the door looking out — and
+ * a fact about where something stands belongs in the table beside its position,
+ * decided once by eye on the bench.
+ *
+ * So it is a flag, it never changes at runtime, and the room is completely
+ * still. Absent means facing right, as drawn.
+ *
  * A pet with no entry falls back to the middle of the floor, so adding a species
  * never puts a broken room in front of anybody. It does put two animals in the
  * same spot, which is what the bench is for.
  */
-export const MENAGERIE_SPOTS: Record<string, SlotSpot> = {
+export type PetSpot = SlotSpot & { flip?: boolean }
+
+export const MENAGERIE_SPOTS: Record<string, PetSpot> = {
   'parrot_red': { x: 12, y: 64, w: 7 },
   'parrot_blue': { x: 29, y: 64, w: 7 },
   'parrot_green': { x: 46, y: 64, w: 7 },
@@ -488,7 +503,7 @@ export const MENAGERIE_SPOTS: Record<string, SlotSpot> = {
   'plesiosaur_baby': { x: 87, y: 97, w: 10 },
 }
 
-export const MENAGERIE_FALLBACK: SlotSpot = { x: 50, y: 88, w: 9 }
+export const MENAGERIE_FALLBACK: PetSpot = { x: 50, y: 88, w: 9 }
 
 export const ROOM_BY_ID: Record<RoomId, RoomDef> =
   Object.fromEntries(ROOMS.map(r => [r.id, r])) as Record<RoomId, RoomDef>

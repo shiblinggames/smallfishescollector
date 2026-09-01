@@ -34,7 +34,7 @@ import Link from 'next/link'
 import {
   ROOMS, ROOM_BY_ID, FURNITURE, FURNITURE_BY_SLOT, roomArt,
   MENAGERIE_SPOTS, MENAGERIE_FALLBACK,
-  type FurnitureSlot, type SlotSpot,
+  type FurnitureSlot, type SlotSpot, type PetSpot,
 } from '@/lib/homestead'
 import { PETS } from '@/lib/pets'
 
@@ -65,7 +65,7 @@ export default function CalibrateRooms({ initial, contentInitial }: {
    * All twenty are on the bench whether or not anybody owns them, since the
    * table has to work for the captain who owns the lot.
    */
-  const [spots, setSpots] = useState<Record<string, SlotSpot>>(
+  const [spots, setSpots] = useState<Record<string, PetSpot>>(
     () => Object.fromEntries(PETS.map(p => [p.id, MENAGERIE_SPOTS[p.id] ?? MENAGERIE_FALLBACK])))
   const [petId, setPetId] = useState<string>(PETS[0].id)
   /** Which room is on the bench. The main room also picks a shell below. */
@@ -83,7 +83,7 @@ export default function CalibrateRooms({ initial, contentInitial }: {
   const box = content[room.id] ?? { x: 50, y: 50, w: 76 }
   const pet = spots[petId] ?? MENAGERIE_FALLBACK
 
-  const setPet = (patch: Partial<SlotSpot>) =>
+  const setPet = (patch: Partial<PetSpot>) =>
     setSpots(prev => ({ ...prev, [petId]: { ...(prev[petId] ?? MENAGERIE_FALLBACK), ...patch } }))
 
   const movePet = (e: React.PointerEvent, id: string) => {
@@ -213,12 +213,13 @@ export default function CalibrateRooms({ initial, contentInitial }: {
       const b = content[r.id] ?? { x: 50, y: 50, w: 76 }
       return `// ${r.name}\ncontent: { x: ${b.x}, y: ${b.y}, w: ${b.w} },`
     }).join('\n')
-    + '\n\nexport const MENAGERIE_SPOTS: Record<string, SlotSpot> = {\n'
+    + '\n\nexport const MENAGERIE_SPOTS: Record<string, PetSpot> = {\n'
     + PETS.map(p => {
       const sp = spots[p.id] ?? MENAGERIE_FALLBACK
       // Quoted and padded exactly as the file has it, so the paste is a paste.
       return `  '${p.id}':${' '.repeat(Math.max(1, 18 - p.id.length))}`
-        + `{ x: ${pad(sp.x, 2)}, y: ${pad(sp.y, 2)}, w: ${pad(sp.w, 2)} },`
+        + `{ x: ${pad(sp.x, 2)}, y: ${pad(sp.y, 2)}, w: ${pad(sp.w, 2)}`
+        + `${sp.flip ? ', flip: true' : ''} },`
     }).join('\n')
     + '\n}\n'
   ), [rows, content, spots])
@@ -386,7 +387,8 @@ export default function CalibrateRooms({ initial, contentInitial }: {
               <img key={p.id} src={p.restImageUrl} alt="" draggable={false} style={{
                 position: 'absolute',
                 left: `${sp.x}%`, top: `${sp.y}%`, width: `${sp.w}%`,
-                transform: 'translate(-50%, -100%)',
+                transform: `translate(-50%, -100%) scaleX(${sp.flip ? -1 : 1})`,
+                transformOrigin: 'center bottom',
                 filter: on
                   ? 'drop-shadow(0 0 6px rgba(240,196,100,0.95)) drop-shadow(0 3px 6px rgba(0,0,0,0.35))'
                   : 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
@@ -508,6 +510,23 @@ export default function CalibrateRooms({ initial, contentInitial }: {
               if (isMain) set(slot, { w }); else if (isPets) setPet({ w }); else setBox({ w })
             }} />
         </label>
+        {/* WHICH WAY IT LOOKS. A placement rather than a behaviour: the room
+            never turns anything, so this is decided here, once, by eye.
+            `|| undefined` rather than `false`, so an unflipped pet emits no
+            flip key at all and the table stays readable. */}
+        {isPets && (
+          <button type="button"
+            onClick={() => setPet({ flip: !pet.flip || undefined })}
+            className="font-karla font-700"
+            style={{
+              padding: '0.3rem 0.66rem', borderRadius: 999, fontSize: '0.74rem', cursor: 'pointer',
+              color: pet.flip ? '#0d1520' : 'rgba(214,232,240,0.8)',
+              background: pet.flip ? '#f0c464' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${pet.flip ? '#f0c464' : 'rgba(255,255,255,0.14)'}`,
+            }}>
+            {pet.flip ? 'Facing left' : 'Facing right'}
+          </button>
+        )}
       </div>
 
       {/* ── THE TABLE ── */}

@@ -23,7 +23,7 @@
 // eight share one vanishing point and one horizon, so a piece placed at 34% of
 // the way across sits on the same spot of back wall in every one of them.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import {
@@ -234,28 +234,27 @@ function GalleryWall({ unlocked, species }: {
  * that one would be a room with nothing in it you could not see from the water.
  * The whole collection is the reason to open the door.
  *
- * ── THEY STAND. THEY DO NOT WALK. ───────────────────────────────────────────
+ * ── THEY STAND STILL. ALL OF THEM. ─────────────────────────────────────────
  *
- * A first pass had them wandering the floor, and it was wrong for a reason worth
- * writing down: these sprites have no walk cycle. An animal sliding across a
- * floor at a constant speed with its feet not moving is a chess piece being
- * pushed, and the smoother the slide the more obviously wrong it is. Motion has
- * to be motion the ART can back up.
+ * Two passes got this wrong before it got it right, and both failures were the
+ * same failure: motion the art cannot back up.
  *
- * What a still sprite CAN do honestly is turn round, because a mirrored still
- * sprite is a real pose rather than an interpolation between two poses it does
- * not have. So each animal has its own patch of floor and its own slow, unshared
- * rhythm of looking one way and then the other, and the room reads as alive
- * because nothing in it is synchronised, not because anything is travelling.
+ * First they WANDERED, which is wrong because these sprites have no walk cycle.
+ * An animal crossing a floor at a constant speed with its feet not moving is a
+ * chess piece being pushed, and the smoother the glide the more obviously wrong
+ * it is. Then they stood still and TURNED on a timer, which is wrong because an
+ * animal turning to face nothing, on no cue, is a thing twitching. A mirrored
+ * sprite is an honest pose; a mirrored sprite for no reason is a glitch.
  *
- * Placed by hand on /home/calibrate. See MENAGERIE_SPOTS.
+ * So the room is completely still, and it is better for it. What makes it read
+ * as a place is that twenty animals are standing in twenty chosen spots facing
+ * chosen directions, which is a composition — the thing a wall of thumbnails
+ * could never be, and the thing neither of the moving versions actually was.
+ *
+ * Every pet is drawn facing right, so `flip` mirrors the ones that should be
+ * looking the other way. Set once by eye, on /home/calibrate. See
+ * MENAGERIE_SPOTS.
  */
-
-/** Seconds between one turn and the next. Wide and randomised per pet, so no
- *  two ever fall into step: a room where every animal turns on the same beat is
- *  a room of clockwork, which is worse than a room of statues. */
-const TURN_MIN = 3.5
-const TURN_MAX = 11
 
 function Menagerie({ pets, at }: {
   pets: string[]
@@ -282,52 +281,29 @@ function Menagerie({ pets, at }: {
           it. Sorting here rather than storing a z-order keeps the bench honest:
           drag something forward and it comes forward. */}
       {[...owned]
-        .sort((a, b) => (spotFor(a.id).y - spotFor(b.id).y))
-        .map(p => <Pet key={p.id} id={p.id} name={p.name} art={p.restImageUrl} />)}
+        .sort((a, b) => spotFor(a.id).y - spotFor(b.id).y)
+        .map(p => {
+          const spot = spotFor(p.id)
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={p.id} src={p.restImageUrl} alt={p.name} title={p.name} draggable={false}
+              style={{
+                position: 'absolute',
+                left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.w}%`,
+                // ANCHORED AT THE FEET, like every other thing placed in a room,
+                // and mirrored about that same point so a flipped pet stands
+                // exactly where an unflipped one would.
+                transform: `translate(-50%, -100%) scaleX(${spot.flip ? -1 : 1})`,
+                transformOrigin: 'center bottom',
+                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+              }} />
+          )
+        })}
     </>
   )
 }
 
 const spotFor = (id: string) => MENAGERIE_SPOTS[id] ?? MENAGERIE_FALLBACK
-
-/** One animal, standing on its spot, turning round on its own clock. */
-function Pet({ id, name, art }: { id: string; name: string; art: string }) {
-  const spot = spotFor(id)
-  const [face, setFace] = useState(1)
-
-  useEffect(() => {
-    if (typeof window !== 'undefined'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    // A CHAIN OF TIMEOUTS, not an interval. Each wait is a different length, so
-    // there is no shared beat for a pet to be on or off — and a timeout that
-    // reschedules itself cannot pile up in a backgrounded tab the way a repeating
-    // interval can.
-    let t: ReturnType<typeof setTimeout>
-    const tick = () => {
-      t = setTimeout(() => {
-        setFace(f => -f)
-        tick()
-      }, (TURN_MIN + Math.random() * (TURN_MAX - TURN_MIN)) * 1000)
-    }
-    tick()
-    return () => clearTimeout(t)
-  }, [])
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={art} alt={name} title={name} draggable={false}
-      style={{
-        position: 'absolute',
-        left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.w}%`,
-        // ANCHORED AT THE FEET, like every other thing placed in a room, and
-        // mirrored about that same point so a pet turning round does not also
-        // shuffle sideways. The art all faces right, so face 1 is as drawn.
-        transform: `translate(-50%, -100%) scaleX(${face})`,
-        transformOrigin: 'center bottom',
-        filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
-      }} />
-  )
-}
 
 /** THE TROPHY ROOM: the six giants, and only the ones actually landed. */
 function TrophyWall({ giants }: { giants: { name: string; art: string }[] }) {
