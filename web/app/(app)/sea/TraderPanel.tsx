@@ -267,7 +267,7 @@ export default function TraderPanel({
               you could get to know or somebody passing through. Their own class
               line settles it, and it is the same words their card carries on
               the Salt Road. */}
-          {folk ? folk.role : KIND_LABEL[trader.kind]}
+          {trader.roleLabel ?? (folk ? folk.role : KIND_LABEL[trader.kind])}
           {/* WHO THEY ARE, not what they are about to hand you.
               This used to read "Knows something useful" or "Heard something",
               which labelled the CONTENT and quietly turned every stranger into

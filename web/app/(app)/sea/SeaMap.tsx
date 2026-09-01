@@ -2902,11 +2902,19 @@ export default function SeaMap({
       characterColor: KIP.look.characterColor,
       boatId: KIP.look.boatId,
       hatId: KIP.look.hatId,
-      rodSlug: null,
+      // A ROD IN HIS HANDS. Every other hull on this water carries one, and a
+      // man with empty hands reads as an unfinished sprite rather than as a
+      // character. Plain and unglowing on purpose: a glow is something a player
+      // earned, and he is meant to look like somebody who sails rather than
+      // somebody with a quest marker over him.
+      rodSlug: KIP.look.rodSlug,
       hook: null,
     },
     deal: 'talk' as const, topic: 'chat' as const,
-    mood: 'Wants a word', lines: [KIP.line],
+    // NOT "An old hand", which is what KIND_LABEL calls every talker. He is the
+    // only door into a game mode and the plate should say so.
+    roleLabel: 'Tide Run',
+    mood: 'Tide Run', lines: [KIP.line],
   }), [])
 
   // Mirrored for the loop, which must not be re-created every time the list
@@ -7396,7 +7404,7 @@ const TraderBoat = memo(function TraderBoat({ trader, done, isNear, quiet = fals
           color: done ? 'rgba(160,176,186,0.55)'
             : folk ? folk.accent : 'rgba(255,214,150,0.85)',
           textShadow: '0 1px 9px rgba(0,0,0,0.9)',
-        }}>{done ? 'Traded today' : folk ? folk.role : KIND_LABEL[trader.kind]}</p>
+        }}>{done ? 'Traded today' : trader.roleLabel ?? (folk ? folk.role : KIND_LABEL[trader.kind])}</p>
       </div>}
     </div>
   )

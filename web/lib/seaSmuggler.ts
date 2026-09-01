@@ -62,6 +62,9 @@ export const KIP = {
     characterColor: 'gray',
     boatId: 'charcoal',
     hatId: 'midnight',
+    /** Plain and unglowing. A glowing rod is something a player earned, and the
+     *  sea's own NPC pool excludes them for exactly that reason. */
+    rodSlug: 'rod_driftwood',
   },
   /** What floats over him on the water, before you have said a word. */
   line: 'Keep your voice down.',
@@ -117,11 +120,20 @@ export const KIP_WARNING = {
   rule: 'Rocks you jump. Beacons you smash. Never jump a beacon.',
 } as const
 
-/** What he says on every visit after the first. He has told you the story; he
- *  is not going to tell it again while people are watching. */
+/**
+ * WHAT HE SAYS ON EVERY VISIT AFTER THE FIRST.
+ *
+ * Two lines and a question. He has told you the story and he is not telling it
+ * again while people are watching — and by the third run you are not there for
+ * the story, you are there to go. A speech you cannot skip is a speech you
+ * resent by the fourth time, and the run is the point of coming back.
+ *
+ * It ends on the ASK, so the buttons under it are an answer rather than a
+ * menu: another run, or not now.
+ */
 export const KIP_AGAIN: string[] = [
   "Still here. Still nervous.",
-  "Whenever you are ready. The further out you get her, the colder the trail.",
+  "Another run? The further out you get her, the colder the trail.",
 ]
 
 /** The last thing before the run starts. */

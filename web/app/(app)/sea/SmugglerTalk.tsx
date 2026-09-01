@@ -33,6 +33,7 @@ import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
 import { KIP, KIP_INTRO, KIP_WARNING, KIP_AGAIN, KIP_CAST_OFF } from '@/lib/seaSmuggler'
 import { moorBesideSmuggler } from './smugglerActions'
+import { getTopTideRunHolder, getPlayerTideRunRank } from '@/app/(app)/tavern/tide-run/actions'
 
 /** His colour. Cold and low-contrast on purpose: everything else that opens a
  *  mode out here is gold, and he is a man actively trying not to be looked at. */
@@ -76,12 +77,37 @@ export default function SmugglerTalk({ open, onClose }: {
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
   const [met, setMet] = useState(false)
+  /**
+   * THE TWO NUMBERS THAT MAKE A REPEAT RUN A DECISION.
+   *
+   * Tide Run is a distance you are trying to beat, and the door to it said
+   * nothing about distance at all — so a captain deciding whether to go had the
+   * story, which they had already heard, and nothing else. Your best is the
+   * target you are actually chasing; the board's best is why the target moves.
+   *
+   * Fetched when the card opens rather than with the chart, and drawn only when
+   * they arrive: a scoreboard is worth showing and never worth making somebody
+   * wait for, and the run is one tap away the whole time.
+   */
+  const [scores, setScores] = useState<{ mine: number; top: number; topName: string } | null>(null)
 
   useEffect(() => {
     if (!open) return
     setStep(0)
     setBusy(false)
     try { setMet(window.localStorage.getItem(MET_KEY) === 'true') } catch { setMet(false) }
+    let alive = true
+    void Promise.all([getPlayerTideRunRank(), getTopTideRunHolder()])
+      .then(([mine, top]) => {
+        if (!alive || !top) return
+        setScores({
+          mine: Number(mine?.yourDistance ?? 0),
+          top: Number(top.distance ?? 0),
+          topName: top.username,
+        })
+      })
+      .catch(() => {})
+    return () => { alive = false }
   }, [open])
 
   const lines = useMemo(() => (met ? KIP_AGAIN : KIP_INTRO), [met])
@@ -131,7 +157,9 @@ export default function SmugglerTalk({ open, onClose }: {
             }}>{KIP.name}</p>
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.54rem', letterSpacing: '0.2em', color: KIP_ACCENT, marginTop: 3,
-            }}>{step === 0 ? 'Keeping his head down' : 'Telling you the one rule'}</p>
+            }}>{step > 0 ? 'Telling you the one rule'
+              : met ? 'Tide Run'
+              : 'Keeping his head down'}</p>
           </div>
         </div>
 
@@ -170,6 +198,37 @@ export default function SmugglerTalk({ open, onClose }: {
           )}
         </div>
 
+        {/* ── HOW FAR ANYONE HAS GOT ──────────────────────────────────
+            Only once the numbers are in, and never a reserved empty box: a
+            placeholder for a scoreboard is worse than no scoreboard, because it
+            says something is missing rather than that something is coming. */}
+        {scores && (
+          <div style={{
+            display: 'flex', marginTop: 12, borderRadius: 12, overflow: 'hidden',
+            background: 'rgba(255,255,255,0.035)',
+            border: '1px solid rgba(255,255,255,0.09)',
+          }}>
+            {[
+              { k: 'Your best', v: scores.mine, c: '#f0c040' },
+              { k: `Best afloat · ${scores.topName}`, v: scores.top, c: KIP_ACCENT },
+            ].map((row, i) => (
+              <div key={row.k} style={{
+                flex: 1, minWidth: 0, textAlign: 'center', padding: '0.5rem 0.3rem',
+                borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+              }}>
+                <p className="font-cinzel font-800" style={{
+                  fontSize: '1.05rem', lineHeight: 1.05, color: row.c,
+                  fontVariantNumeric: 'tabular-nums',
+                }}>{row.v.toFixed(1)}<span style={{ fontSize: '0.66rem', opacity: 0.7 }}> m</span></p>
+                <p className="font-karla font-700 uppercase truncate" style={{
+                  fontSize: '0.48rem', letterSpacing: '0.12em',
+                  color: `${SEA},0.42)`, marginTop: 2,
+                }}>{row.k}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           <button type="button" data-no-steer disabled={busy}
             onClick={e => { e.stopPropagation(); onClose() }}
@@ -197,7 +256,11 @@ export default function SmugglerTalk({ open, onClose }: {
               color: '#f0c040', cursor: busy ? 'default' : 'pointer',
               opacity: busy ? 0.65 : 1,
             }}>
-            {busy ? 'Casting off…' : step < lastStep ? 'Go on' : 'Take the wheel'}
+            {/* IT SAYS WHERE IT GOES. "Take the wheel" is a nice line and a
+                poor button: the thing on the other side of it is called Tide
+                Run, and a returning captain is picking a mode rather than
+                accepting an offer. The story beat keeps its "Go on". */}
+            {busy ? 'Casting off…' : step < lastStep ? 'Go on' : 'Tide Run'}
           </button>
         </div>
 

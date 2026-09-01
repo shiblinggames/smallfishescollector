@@ -110,6 +110,16 @@ export type Trader = {
    * you are getting to know.
    */
   folkId?: FolkId
+  /**
+   * WHAT THE NAMEPLATE CALLS THEM, when the kind is the wrong answer.
+   *
+   * The plate reads `folk.role` for a regular and KIND_LABEL for everyone else,
+   * which is right for the dozens of wanderers and wrong for anybody who rides
+   * the talker plumbing without being one. Kip Ledger is a talker so he is
+   * drawn, named and hailed by machinery that already works — and "An old hand"
+   * is a poor thing to call the only door into a game mode. He says "Tide run".
+   */
+  roleLabel?: string
 } & TraderOffer
 
 export type TraderOffer =
