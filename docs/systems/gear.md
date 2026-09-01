@@ -57,3 +57,34 @@ the 21 rods are sellable.
 
 Selling the EQUIPPED rod is allowed; the server auto-equips the free Bamboo and returns the
 tier it landed on, which the client mirrors rather than assumes.
+
+## The rod rack is removed (2026-09-01)
+
+**You carry every rod you own and swap freely from the loadout sheet at sea.**
+
+The rack was a four-rung ladder (40k / 140k / 450k ⟡) that bought SLOTS, and only rods in
+a slot could be swapped on the water. Its argument is still in the git history and it was
+a real one — "there is no decision at all if the answer is always everything" — but it
+taxed a convenience rather than gating a power: every rod in a berth was already bought
+and already owned, so the rack sold access to your own inventory, and the only outcome it
+could produce was being out in the Ancient Deep holding the wrong rod.
+
+**Nobody bought it.** Two profiles in the whole game ever raised a rung, one of them the
+developer's. 79 of 81 captains never touched it.
+
+Gone with it: `RACK_SLOTS`, `RACK_COSTS`, `MAX_RACK_TIER`, `rackSlots`, `nextRackCost`, the
+`buyRackBerth` and `setRodsAboard` server actions, and the whole Rod rack band and berth
+picker in `ShipyardClient`. `rodsAboard` survives but now takes the inventory instead of a
+tier. The `rod_rack_tier` and `rods_aboard` columns are LEFT IN PLACE and simply unread —
+they carry history and one player's 630,000 ⟡ of purchases.
+
+`ownedRodTiers` in `lib/rods.ts` is the one rule for what a captain owns: `rod_inventory`
+holds only PURCHASED rods, so free tiers have to be added back or a new captain owns
+nothing. That rule used to live inside `setRodsAboard` and nowhere else.
+
+**The Shipyard is now the boat**: hull, rudder, acceleration, hold, and which boat you sail.
+
+**The loadout sheet** (`sea/LoadoutBody`) draws `components/PreviewStage` — the same stage
+the Shipyard uses, moved out of the shipyard folder when the third consumer appeared. The
+rod grid shows sprites rather than a column of names, because the sprite is how a rod is
+actually recognised.

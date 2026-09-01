@@ -298,6 +298,33 @@ export function lockedInState(rod: RodDef | { lockedIn?: boolean }, streak: numb
   return s
 }
 
+/**
+ * EVERY ROD TIER A CAPTAIN OWNS.
+ *
+ * ── FREE RODS ARE NOT IN THE TABLE ──────────────────────────────────────────
+ *
+ * `rod_inventory` only records rods that were BOUGHT. The starter tiers cost
+ * nothing and everybody has them, so they were never written, and any code that
+ * treats the table as the whole answer decides a captain owns no starter rod.
+ *
+ * That rule lived inside one server action and nowhere else, which was fine
+ * while one place needed it. Removing the rod rack means the sea now has to
+ * work out the same set, and two copies of a rule like this is how one of them
+ * quietly goes wrong.
+ *
+ * `earnedOnly` and `traderOnly` rods are excluded from the free grant for the
+ * obvious reason: they cost nothing because they are not for sale, not because
+ * they are given away.
+ */
+export function ownedRodTiers(purchased: number[], equippedTier: number): number[] {
+  const owned = new Set(purchased.map(Number).filter(Number.isInteger))
+  for (const r of RODS) if (r.cost === 0 && !r.earnedOnly && !r.traderOnly) owned.add(r.tier)
+  // Whatever is in your hands counts, whatever the table says. A rod granted by
+  // any path other than a purchase would otherwise vanish from your own loadout.
+  owned.add(Number(equippedTier))
+  return [...owned].sort((a, b) => b - a)
+}
+
 export function getRod(tier: number): RodDef {
   return RODS.find(r => r.tier === tier) ?? RODS[0]
 }

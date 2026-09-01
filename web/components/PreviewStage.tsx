@@ -2,12 +2,16 @@
 
 // THE PREVIEW BOX — the boat, the water under it, and the empty shelf beneath.
 //
-// Its own component because two screens draw it: the shipyard, and the callout
-// bench that tunes the labels. The callout positions are percentages OF THIS
-// BOX, so if the bench's box were a different shape from the shipyard's — one
-// pixel of padding, a different shelf — every number tuned on one would be
-// wrong on the other, and wrong in a way that looks like a bad eye rather than
-// a bad rectangle.
+// Its own component because THREE screens draw it now: the shipyard, the callout
+// bench that tunes the labels, and the loadout sheet out at sea. The callout
+// positions are percentages OF THIS BOX, so if the bench's box were a different
+// shape from the shipyard's — one pixel of padding, a different shelf — every
+// number tuned on one would be wrong on the other, and wrong in a way that looks
+// like a bad eye rather than a bad rectangle.
+//
+// It lived under app/(app)/shipyard until the sea needed it. Moved to components/
+// rather than reached for across route groups, because a shared thing filed under
+// one of its consumers is a shared thing somebody will copy instead of import.
 
 import FisherPose from '@/components/FisherPose'
 

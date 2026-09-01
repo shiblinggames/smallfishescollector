@@ -9,7 +9,6 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RODS } from '@/lib/rods'
 import {
-  rackSlots, nextRackCost, MAX_RACK_TIER,
   nextHullCost, MAX_HULL_TIER,
   nextHandlingCost, MAX_HANDLING_TIER,
   nextAccelCost, MAX_ACCEL_TIER,
@@ -39,42 +38,15 @@ async function me() {
   return user
 }
 
-export async function buyRackBerth(): Promise<Res> {
-  const user = await me()
-  if (!user) return { error: 'Unauthorized' }
-  const admin = createAdminClient()
-
-  const { data: p } = await admin
-    .from('profiles').select('rod_rack_tier').eq('id', user.id).single()
-  const tier = Number(p?.rod_rack_tier ?? 0)
-  if (tier >= MAX_RACK_TIER) return { error: 'Your rack is already full.' }
-
-  const cost = nextRackCost(tier)
-  if (cost == null) return { error: 'Your rack is already full.' }
-
-  const bal = await spend(admin, user.id, cost, `Shipyard: rod berth ${tier + 2}`)
-  if (bal == null) return { error: `That berth costs ${cost.toLocaleString()} and you have not got it.` }
-
-  // Re-read rather than trusting `tier` — two taps landing together would both
-  // have read the same tier and both have paid, and this way the second one
-  // lands on the tier the first produced.
-  const { data: after } = await admin
-    .from('profiles').select('rod_rack_tier').eq('id', user.id).single()
-  await admin.from('profiles')
-    .update({ rod_rack_tier: Math.min(MAX_RACK_TIER, Number(after?.rod_rack_tier ?? tier) + 1) })
-    .eq('id', user.id)
-  // THE CHART IS A CACHED PAGE, and this changed what is standing on it.
-  //
-  // /sea is rendered on the server from the profile, and the shipyard returns to
-  // it with router.back() — which restores the CACHED entry rather than asking
-  // for a new one. Nothing here invalidated it, so a captain could equip a boat,
-  // sail away, and still be in the old one. Worse than a stale render: it looked
-  // like the equip had silently failed, and it stuck on whichever boat happened
-  // to be current when that cache entry was made.
-  revalidatePath('/sea')
-  return { ok: true, doubloons: bal }
-}
-
+// ── buyRackBerth AND setRodsAboard ARE GONE ─────────────────────────────────
+//
+// The rod rack is removed: you carry every rod you own and swap freely from the
+// loadout screen at sea. See the note at the top of lib/shipyard for why, and
+// docs/systems/gear.md for what the Shipyard is for now.
+//
+// Both actions took money or wrote `rods_aboard`, and both are deleted rather
+// than left exported. A dead server action that still spends doubloons is one
+// import away from being live again.
 export async function buyHullTier(): Promise<Res> {
   const user = await me()
   if (!user) return { error: 'Unauthorized' }
@@ -164,50 +136,6 @@ export async function buyHandlingTier(): Promise<Res> {
 export async function buyAccelTier(): Promise<Res> {
   return buyTier('hull_accel_tier', MAX_ACCEL_TIER, nextAccelCost,
     'rig', 'Her rig is as fine as it gets.')
-}
-
-/**
- * LOAD THE RACK.
- *
- * Takes the whole list rather than one rod at a time, because it is a loadout:
- * you are saying what the boat carries, not adding to a pile. Validated hard —
- * every tier must be a real rod the player actually owns, duplicates are
- * dropped, and the list is clamped to the berths they have paid for.
- */
-export async function setRodsAboard(tiers: number[]): Promise<{ ok: true; aboard: number[] } | { error: string }> {
-  const user = await me()
-  if (!user) return { error: 'Unauthorized' }
-  const admin = createAdminClient()
-
-  const { data: p } = await admin
-    .from('profiles').select('rod_rack_tier, rod_tier').eq('id', user.id).single()
-  const slots = rackSlots(Number(p?.rod_rack_tier ?? 0))
-  const equipped = Number(p?.rod_tier ?? 0)
-
-  const { data: owned } = await admin
-    .from('rod_inventory').select('rod_tier').eq('user_id', user.id)
-  const ownedSet = new Set((owned ?? []).map(r => Number(r.rod_tier)))
-  // Free rods are owned by everybody and never appear in rod_inventory.
-  for (const r of RODS) if (r.cost === 0 && !r.earnedOnly && !r.traderOnly) ownedSet.add(r.tier)
-  ownedSet.add(equipped)
-
-  const clean = [...new Set(tiers.map(Number))]
-    .filter(t => Number.isInteger(t) && ownedSet.has(t))
-    // The equipped rod is in your hands, not in the rack — it is always aboard
-    // and must not eat a berth.
-    .filter(t => t !== equipped)
-    .slice(0, Math.max(0, slots - 1))
-
-  // THE CHART IS A CACHED PAGE, and this changed what stands on it.
-  //
-  // /sea renders on the server from the profile, and the shipyard returns to it
-  // with router.back() — which restores the CACHED entry rather than asking for
-  // a fresh one. Nothing invalidated it, so a captain could equip a boat, sail
-  // away and still be in the old one. It did not read as a stale render; it read
-  // as the equip having silently failed.
-  revalidatePath('/sea')
-  await admin.from('profiles').update({ rods_aboard: clean }).eq('id', user.id)
-  return { ok: true, aboard: clean }
 }
 
 /** Equip a rod. The Shipyard is where this happens now — see docs/systems. */

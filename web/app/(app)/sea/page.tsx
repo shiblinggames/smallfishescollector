@@ -20,6 +20,7 @@ import { PETS } from '@/lib/pets'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getFishHold } from '@/lib/fishHold'
 import { rodsAboard, hullSpeed } from '@/lib/shipyard'
+import { ownedRodTiers } from '@/lib/rods'
 import { MIN_SHIP_TIER } from '@/lib/ships'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import { classSlotBonuses } from '@/lib/shipClasses'
@@ -175,15 +176,21 @@ export default async function SeaPage() {
   const holdCapacity = getFishHold(holdTier).capacity
 
   // ── WHAT IS ON THE BOAT ───────────────────────────────────────────────
-  // The rack, resolved. Only these rods can be swapped to at sea — that is the
-  // whole point of the Shipyard, and it is enforced here rather than trusted
-  // from the client. Every entry is a rod the player owns; the equipped one is
-  // always first because it is in their hands rather than in a berth.
+  // ── EVERY ROD YOU OWN SAILS WITH YOU ──────────────────────────────────
+  //
+  // This used to be the RACK: the equipped rod plus whatever fitted in the
+  // berths bought at the Shipyard, clamped server-side. The rack is gone (see
+  // lib/shipyard for why), so the list is now simply the inventory.
+  //
+  // Still resolved HERE rather than sent up from the client, for the reason the
+  // old note gave and which has not changed: what a rod does to the dial is a
+  // server fact, and a client that names its own rods names its own bonuses.
   const rodTierNow = Number(profile?.rod_tier ?? 0)
+  const { data: rodRows } = await admin
+    .from('rod_inventory').select('rod_tier').eq('user_id', user.id)
   const aboardTiers = rodsAboard(
     rodTierNow,
-    (profile?.rods_aboard as number[] | null) ?? null,
-    Number(profile?.rod_rack_tier ?? 0),
+    ownedRodTiers((rodRows ?? []).map(r => Number(r.rod_tier)), rodTierNow),
   )
   const rack = aboardTiers.map(t => {
     const r = getEffectiveRod(t, (profile?.completionist_effects as number[] | null) ?? null)
@@ -236,6 +243,11 @@ export default async function SeaPage() {
         hook: getHook(Number(profile?.hook_tier ?? 0)).imageUrl ?? null,
         pet: pet?.species ?? null,
         petArt: pet?.restImageUrl ?? null,
+        // THE ID, not the species. FisherPose keys its overlay off the
+        // equipped id, and the loadout preview at sea draws the same pose
+        // the Shipyard does. See sea/FishingHere's loadout sheet.
+        petId: equippedPet,
+        petBow: (profile?.equipped_pet_bow as string | null) ?? null,
       }}
       bait={baitType}
       // THE WHOLE BAG, not just the one type the page picked. The bait row lets

@@ -36,6 +36,7 @@ import { DialSVG } from '@/components/FishingDial'
 import DialButton from '@/components/DialButton'
 import HoldSheetBody from './HoldSheetBody'
 import HoldFlight, { type Flight } from '@/components/HoldFlight'
+import LoadoutBody from './LoadoutBody'
 // EVERYTHING THE DIAL DOES THAT SVG CANNOT, on its own Pixi layer BEHIND it:
 // the fire, the light it casts, its smoke, and the Ancient's breathing aura.
 // Dynamic and never loaded until one of those is actually wanted, so a player
@@ -359,7 +360,7 @@ const MENU_VAL: React.CSSProperties = {
 
 export default function FishingHere({
   zone, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
-  seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
+  seaPhase, baitBag, onBaitChange, rack, look, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
   onBaitSpent, onPose, onBusy, onCanLeave, onLanded, onGolden, goldenPending,
   spritesReady, onClose,
@@ -429,6 +430,15 @@ export default function FishingHere({
   /** THE RACK — the rods you brought. Swapping is limited to these, which is
    *  the entire mechanic: your loadout is a decision made ashore. */
   rack: { tier: number; name: string; slug: string | null; image: string | null; catchZoneBonus: number }[]
+  /** Everything the loadout preview needs to draw the captain. The same kit the
+   *  Shipyard's PreviewStage takes, so the two screens cannot diverge. */
+  look: {
+    characterColor: string
+    hatId: string | null
+    boatId: string | null
+    petId: string | null
+    petBow: string | null
+  }
   activeRod: number
   onRodChange: (tier: number) => void
   /** How many fish this catch actually banked, so the hold ticks up as you
@@ -2344,57 +2354,22 @@ export default function FishingHere({
               blurb="What you sailed with, and what it is doing to the dial."
               onClose={() => setLoadoutOpen(false)}>
 
-              <SheetLabel>{rack.length > 1 ? 'Rods on deck' : 'Your rod'}</SheetLabel>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
-                {rack.map(r => {
-                  const on = r.tier === activeRod
-                  return (
-                    <button key={r.tier}
-                      onClick={e => {
-                        e.stopPropagation()
-                        if (!locked && !on) { vibrate(10); onRodChange(r.tier); setLoadoutOpen(false) }
-                      }}
-                      disabled={locked || on}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '0.5rem 0.7rem', borderRadius: 12, width: '100%',
-                        background: on ? 'rgba(240,192,64,0.14)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${on ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                        cursor: locked || on ? 'default' : 'pointer', textAlign: 'left',
-                        opacity: locked && !on ? 0.45 : 1,
-                      }}>
-                      {r.slug && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={`/${r.slug}_thumb.png`} alt="" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
-                      )}
-                      <span className="font-cinzel font-700 truncate" style={{ flex: 1, fontSize: '0.96rem', color: '#f2ead8' }}>
-                        {r.name}
-                      </span>
-                      {on ? (
-                        <span className="font-karla font-700 uppercase" style={{
-                          fontSize: '0.63rem', letterSpacing: '0.1em', color: '#f0c040', flexShrink: 0,
-                        }}>In hand</span>
-                      ) : r.catchZoneBonus > 0 ? (
-                        <span className="font-karla font-700" style={{ fontSize: '0.696rem', color: '#7fd6a0', flexShrink: 0 }}>
-                          +{r.catchZoneBonus}°
-                        </span>
-                      ) : null}
-                    </button>
-                  )
-                })}
-              </div>
-              {locked && rack.length > 1 && (
-                <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: 'rgba(232,201,138,0.85)', marginTop: 6 }}>
-                  Rods stay put while a line is in the water.
-                </p>
-              )}
-
-              <SheetLabel>The rest of your kit</SheetLabel>
-              <div style={{ marginTop: 4 }}>
-                <StatRow k="Reel" v={getReel(mods.reelTier).name} />
-                <StatRow k="Line" v={getLine(mods.lineTier).name} />
-                <StatRow k="Hook" v={getHook(mods.hookTier).name} />
-              </div>
+              {/* THE PREVIEW AND THE GRID. This was a column of rod names at
+                  26px each, where the rod you were holding looked exactly like
+                  the rod you were not. The Shipyard had already solved it; this
+                  is the same stage. See sea/LoadoutBody. */}
+              <LoadoutBody
+                rack={rack}
+                activeRod={activeRod}
+                locked={locked}
+                onPick={t => { onRodChange(t) }}
+                look={look}
+                reelTier={mods.reelTier}
+                hookTier={mods.hookTier}
+                reelName={getReel(mods.reelTier).name}
+                lineName={getLine(mods.lineTier).name}
+                hookName={getHook(mods.hookTier).name}
+              />
 
               <SheetLabel>On the dial</SheetLabel>
               <div style={{ marginTop: 4 }}>

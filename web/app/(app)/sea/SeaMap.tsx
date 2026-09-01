@@ -6706,6 +6706,13 @@ hullRef={hullRefFor(t.key)} />
           seaPhase={phase}
           baitBag={baitBag}
           rack={rack}
+          look={{
+            characterColor,
+            hatId,
+            boatId,
+            petId: gear.petId ?? null,
+            petBow: gear.petBow ?? null,
+          }}
           activeRod={activeRod}
           onRodChange={setActiveRod}
           hold={{ count: holdCount, capacity: hold.capacity, tier: hold.tier }}
@@ -6834,6 +6841,10 @@ export type Gear = {
   hook: string | null
   pet: string | null
   petArt: string | null
+  /** The equipped pet's ID and its bow-side twin. Only the loadout preview
+   *  reads these; the boat sprite above uses the species and its art. */
+  petId?: string | null
+  petBow?: string | null
 }
 
 /** Overlay coordinates, lifted verbatim from FishingGame. Every rod, reel and

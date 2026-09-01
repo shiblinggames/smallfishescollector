@@ -6,44 +6,29 @@
 // point, because a price the client can name and the server cannot verify is
 // not a price.
 //
-// ── WHY THIS EXISTS ─────────────────────────────────────────────────────────
+// ── THE ROD RACK IS GONE ────────────────────────────────────────────────────
 //
-// On the fishing page your whole collection was always to hand: every rod you
-// had ever bought, one tap away, mid-session. That is fine for a menu you open.
-// It is wrong for a sea you sail, where the interesting question is what you
-// decided to bring — and there is no decision at all if the answer is always
-// "everything".
+// It was a four-rung ladder — 40k, 140k, 450k — that bought SLOTS, and only the
+// rods in those slots could be swapped at sea. The argument for it was written
+// here and it was a real one: "the interesting question is what you decided to
+// bring, and there is no decision at all if the answer is always everything."
 //
-// So the loadout is committed ashore, and only what is ON the boat can be
-// swapped at sea. By default that is one rod: the one you are holding.
-
-/** Rods you can carry, by rack tier. Tier 0 is the rod in your hands. */
-export const RACK_SLOTS = [1, 2, 3, 4] as const
-
-/**
- * FOUR IS THE CAP, on purpose.
- *
- * Enough to carry a workhorse, something for jackpots and one specialist, which
- * is a real loadout with real trade-offs. Past four you are carrying most of
- * your collection again and the decision quietly stops existing, which is the
- * exact thing this mechanic is here to create.
- *
- * The curve is steep — each berth is roughly three times the last — so the
- * fourth is a genuine late-game purchase rather than something you drift into.
- */
-export const RACK_COSTS = [0, 40_000, 140_000, 450_000] as const
-
-export const MAX_RACK_TIER = RACK_COSTS.length - 1
-
-export function rackSlots(tier: number): number {
-  return RACK_SLOTS[Math.max(0, Math.min(MAX_RACK_TIER, tier))]
-}
-
-/** Cost of the NEXT berth, or null when the rack is full. */
-export function nextRackCost(tier: number): number | null {
-  const t = tier + 1
-  return t > MAX_RACK_TIER ? null : RACK_COSTS[t]
-}
+// Two things were wrong with it in practice.
+//
+// It taxed a CONVENIENCE rather than gating a power. Every rod in the rack is a
+// rod already bought and already owned; the rack sold you access to your own
+// inventory, and the only thing it could produce was the moment you are out in
+// the Ancient Deep holding the wrong rod with no way to fix it but sailing home.
+// That is not a decision, it is a trip.
+//
+// And nobody bought it. Two players in the whole game ever raised a rung, and
+// one of those is the developer. A mechanic that 79 of 81 captains never touched
+// was not creating the tension it was written to create; it was just a wall
+// nobody walked into because nobody found the door.
+//
+// So you carry everything you own and swap freely from the loadout screen. What
+// remains at the Shipyard is what the Shipyard should have been about all along:
+// the boat, the hull, the rudder and the hold.
 
 /**
  * THE HULL — sailing speed, and nothing else.
@@ -109,21 +94,18 @@ export function nextHullCost(tier: number): number | null {
 }
 
 /**
- * WHAT IS ACTUALLY ABOARD.
+ * EVERY ROD YOU OWN, with the one in your hands first.
  *
- * `rods_aboard` is stored as the rod TIERS loaded into the rack. The equipped
- * rod is always aboard whether or not it is in the list — it is in your hands,
- * not in the rack — so this normalises that rather than making every caller
- * remember it.
+ * Used to take a rack tier and clamp to it. It takes the inventory now and
+ * clamps to nothing: the whole collection sails with you.
+ *
+ * The equipped rod stays at the head of the list because it is the one you are
+ * holding rather than one of the ones you have, and the sea picks `[0]` as the
+ * rod in hand on load.
  */
-export function rodsAboard(equippedTier: number, aboard: number[] | null, rackTier: number): number[] {
-  const slots = rackSlots(rackTier)
-  const rest = (aboard ?? []).filter(t => t !== equippedTier)
-  // The equipped rod first, then the rack, clamped to what the rack can hold.
-  // Clamped on READ as well as on write: a rack that shrinks (it cannot today,
-  // but nothing stops a future refund) must not leave rods aboard that there is
-  // no longer room for.
-  return [equippedTier, ...rest].slice(0, slots)
+export function rodsAboard(equippedTier: number, owned: number[]): number[] {
+  const rest = [...new Set(owned)].filter(t => t !== equippedTier).sort((a, b) => b - a)
+  return [equippedTier, ...rest]
 }
 
 

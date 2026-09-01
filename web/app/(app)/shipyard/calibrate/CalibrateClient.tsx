@@ -13,7 +13,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import PreviewStage, { type PoseKit } from '../PreviewStage'
+import PreviewStage, { type PoseKit } from '@/components/PreviewStage'
 import { CalloutChip, CalloutLines } from '../CalloutLayer'
 import { CALLOUTS, type Callout } from '../callouts'
 import { BOATS, getBoat } from '@/lib/boats'
