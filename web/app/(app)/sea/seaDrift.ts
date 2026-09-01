@@ -35,6 +35,7 @@
 // when you stop, which is what a current looks like.
 
 import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
+import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 
 /** How many flecks are alive at once. Sized so a viewport holds a SCATTERING
  *  rather than a crowd: the eye wants a few things to track, not confetti, and
@@ -102,6 +103,37 @@ export type Drift = {
 }
 
 export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
+  /**
+   * HAS THE PLAYER ASKED THE SYSTEM FOR LESS MOVEMENT.
+   *
+   * Read once at build rather than per frame — it is a display preference, and
+   * somebody who changes it mid-session gets it on the next chart load, which
+   * is the same deal every other setting here offers.
+   *
+   * This is the honest place to answer it. A full-screen field of bright specks
+   * travelling at five hundred pixels a second is the single most motion-sick
+   * thing the chart does, and the OS switch for exactly that complaint already
+   * exists on every platform this runs on.
+   */
+  const osReduced = typeof window !== 'undefined'
+    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+  /**
+   * EITHER SWITCH COUNTS, and the in-game one is the important half.
+   *
+   * `prefers-reduced-motion` is the right thing to honour and the wrong thing
+   * to rely on: it is a system setting most people have never opened, and
+   * "sailing makes me feel ill" is a complaint that deserves an answer inside
+   * the game. Sea motion lives beside music and sound effects in the chart's
+   * own settings — see lib/seaSettings.
+   *
+   * LIVE, not read once. This is a comfort setting: somebody reaches for it
+   * because they are uncomfortable NOW, and telling them to reload is telling
+   * them to sit with it. The listener is removed with the layer.
+   */
+  let reduced = osReduced || !getSetting('motion')
+  const onSetting = () => { reduced = osReduced || !getSetting('motion') }
+  if (typeof window !== 'undefined') window.addEventListener(SEA_SETTINGS_EVENT, onSetting)
+
   const view: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
   })
@@ -174,7 +206,30 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
       // and the eye stops trying to track individual specks.
       const smear = 1 + Math.min(3.4, camSpeed / 210)
       const streakAng = camSpeed > 12 ? Math.atan2(vy, vx) : 0
-      const busy = 1 / (1 + camSpeed / 620)
+      // ── AND MOSTLY THEY GET OUT OF THE WAY ────────────────────────
+      //
+      // This was `1 / (1 + camSpeed / 620)`, which at a base 300px/s cruise
+      // still left them at 67% and at full sail 54% — two thirds of the field,
+      // smeared three times its own length, crossing the whole screen. Reported
+      // as nauseating over time, which is exactly the failure the note at the
+      // top of this file warns about and then did not price steeply enough.
+      //
+      // The curve is the argument. Flecks exist so there is something to TRACK
+      // when you are slow enough to track it; at speed nothing is trackable and
+      // the wake, the swell and the islands are already carrying the motion, so
+      // the flecks are contributing nothing but strobe. Falling off as a power
+      // rather than a ratio keeps them whole while manoeuvring and takes them
+      // to a fifth at full sail.
+      //
+      //   0   60  120  200  300  420  525 px/s
+      //   1.0 .91 .76  .58  .41  .28  .21
+      const busy = reduced
+        // REDUCED MOTION IS NOT A DIMMER. Somebody who has asked the OS for
+        // less movement is not asking for the same field slightly fainter; the
+        // whole point of these is that they stream past. Gone the moment the
+        // boat is properly under way.
+        ? 1 / (1 + Math.pow(camSpeed / 90, 2))
+        : 1 / (1 + Math.pow(camSpeed / 240, 1.7))
 
       for (const f of flecks) {
         f.x += f.vx * d
@@ -204,6 +259,11 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
 
     night(next) { tint = next },
 
-    destroy() { view.destroy({ children: true }) },
+    destroy() {
+      // The listener goes with the layer, or a chart that has been opened and
+      // left five times has five of them updating a flag on a dead field.
+      if (typeof window !== 'undefined') window.removeEventListener(SEA_SETTINGS_EVENT, onSetting)
+      view.destroy({ children: true })
+    },
   }
 }
