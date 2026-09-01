@@ -3134,6 +3134,22 @@ export default function SeaMap({
   const gpuTowns = useMemo<GpuTown[]>(() => {
     if (!GPU_ISLANDS) return []
     return PLACES
+      // ── THE HOMESTEAD IS BUILT AT RENDER TIME, NOT IN THE TABLE ──────
+      //
+      // Its PLACES entry carries `buildings: []` on purpose: what stands on
+      // your island is a function of what you have paid for, so `homeFor`
+      // projects it from the homestead row. That projection was only ever
+      // applied on the DOM path (PlaceIsland), and this list — the one the
+      // canvas actually draws — read PLACES raw.
+      //
+      // So under the GPU renderer, which is the live default, NOTHING was ever
+      // drawn on the homestead. Not "nothing yet": a fresh homestead already
+      // has a lean-to and a fallen ring of stones, and neither had appeared for
+      // anybody since the port. Reported as the island looking empty, which is
+      // exactly what it was.
+      //
+      // Same projection, same function, both paths.
+      .map(p => homeFor(p, visiting?.homestead ?? homestead, visiting?.username))
       .filter(p => p.kind !== 'water' && p.buildings && p.buildings.length > 0)
       .map(p => ({
         id: p.id, x: p.x, y: p.y, r: p.r, locked: locked(p),
@@ -3142,7 +3158,7 @@ export default function SeaMap({
         })),
       }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked])
+  }, [locked, homestead, visiting])
 
 
   /**
