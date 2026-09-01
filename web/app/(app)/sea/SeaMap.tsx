@@ -218,6 +218,8 @@ const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
 // The door to Tide Run, which used to be a card in the Tavern. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
+// Which way the rival is, and why you would go. See sea/FinnCompass.
+const FinnCompass = dynamic(() => import('./FinnCompass'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
 // SeaAudio: it starts on the first press, not on mount.
 const SeaAudio = dynamic(() => import('./SeaAudio'), { ssr: false })
@@ -2368,6 +2370,20 @@ export default function SeaMap({
   const finnRef = useRef<FinnSeaState | null>(null)
   finnRef.current = finn
   const [nearFinn, setNearFinn] = useState(false)
+  /**
+   * THE BOAT'S POSITION, AT THE PROXIMITY TICK'S PACE.
+   *
+   * `pos` is a ref written every frame, which is right for the loop and useless
+   * to React. The compass needs a bearing, and a bearing that only moved when
+   * something else happened to re-render would lag the boat visibly.
+   *
+   * So it rides the proximity tick — a few times a second, which is already the
+   * cadence everything else on the HUD updates at — and is QUANTISED to 40px
+   * before it is stored. A bearing does not change usefully inside a boat
+   * length, and rounding here means a slow drift does not re-render the chart
+   * dozens of times a second for a needle that would not visibly turn.
+   */
+  const [boatAt, setBoatAt] = useState({ x: 0, y: 0 })
   /** The conversation, while it is open. */
   /** The scene, and the lines the server last handed back for it. */
   const [finnOpen, setFinnOpen] = useState(false)
@@ -3201,14 +3217,45 @@ export default function SeaMap({
    */
   const [wide, setWide] = useState(false)
 
+  /**
+   * IS THERE A BEARING TO SHOW, and what would it mean.
+   *
+   * Derived once here rather than at the mount, because the HUD run has to know
+   * whether the slot exists before it can lay the row out — and a disc that
+   * appears a frame after the row is measured shunts everything left of it.
+   *
+   * `questReady` is the server's own derivation (see FinnSeaState, where it is
+   * commented as driving "every indicator that points a captain at him"), so
+   * this reads it rather than re-deciding what finished means.
+   */
+  const finnBearing = useMemo(() => {
+    if (!finn || inAnchorage || onSortie || nearFinn) return null
+    return {
+      at: finn.at,
+      state: finn.questReady ? 'ready' as const
+        : finn.quest ? 'working' as const
+        : 'offering' as const,
+      progress: finn.quest && !finn.questReady
+        ? { done: finn.quest.have, total: finn.quest.target }
+        : null,
+    }
+  }, [finn, inAnchorage, onSortie, nearFinn])
+
   const hudRow = useMemo(() => {
     const on: string[] = ['clock']
     if (!fishingIn || wide) on.push('chart')
     if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
     if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
     if (!inAnchorage && (!fishingIn || wide)) on.push('folk')
+    // THE RIVAL'S BEARING, last in the run and only when it would say
+    // something. Not in the anchorage (he is moored out in the Shallows), not
+    // past the sortie (drawing him on the expeditions chart would be a pin
+    // through a reef), and not once you are close enough to see him — an arrow
+    // pointing at something already on your screen is furniture, and the action
+    // bar is already saying his name by then.
+    if (finnBearing && (!fishingIn || wide)) on.push('finn')
     return on
-  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady])
+  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady, finnBearing])
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width: 900px)')
     if (!mq) return
@@ -5132,6 +5179,14 @@ export default function SeaMap({
         const fn = finnRef.current
         const finnHit = !!fn && Math.hypot(pos.current.x - fn.at.x, pos.current.y - fn.at.y) < FINN_REACH
         setNearFinn(prev => (prev === finnHit ? prev : finnHit))
+        // AND WHERE SHE IS, quantised. See boatAt: this is the compass's only
+        // source, and rounding is what keeps a drifting boat from re-rendering
+        // the chart for a needle that would not move.
+        {
+          const qx = Math.round(pos.current.x / 40) * 40
+          const qy = Math.round(pos.current.y / 40) * 40
+          setBoatAt(prev => (prev.x === qx && prev.y === qy ? prev : { x: qx, y: qy }))
+        }
 
         // WITHIN REACH OF AN ISLE. Compared by id: `isleNear` returns the same
         // object every time, but comparing ids keeps this honest if the table
@@ -6400,6 +6455,21 @@ hullRef={hullRefFor(t.key)} />
           Laid out from the corner inwards, and the gear keeps the corner
           because it is the one that was already there — a control that moves
           when a badge appears next to it is a control people mis-tap. */}
+      {/* WHICH WAY THE RIVAL IS. Sits in the left run with the rest of the
+          HUD, because it is a place you are going — which is what that whole
+          column is for. See sea/FinnCompass. */}
+      {finnBearing && (
+        <FinnCompass
+          size={hudSize}
+          top={18}
+          left={hudAt('finn')}
+          at={finnBearing.at}
+          me={{ x: boatAt.x, y: boatAt.y }}
+          state={finnBearing.state}
+          progress={finnBearing.progress}
+          onOpen={() => setFolkOpen(true)}
+        />
+      )}
       {!fishingIn && <SeaBonus size={hudSize} top={18} right={12 + hudSize + 8} />}
       {!fishingIn && <SeaSettings size={hudSize} top={18} />}
 
