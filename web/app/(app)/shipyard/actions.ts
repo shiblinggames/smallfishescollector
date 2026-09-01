@@ -47,37 +47,16 @@ async function me() {
 // Both actions took money or wrote `rods_aboard`, and both are deleted rather
 // than left exported. A dead server action that still spends doubloons is one
 // import away from being live again.
+// HULL GOES THROUGH THE SHARED HELPER TOO. It was a hand-copied version of
+// buyTier, which is exactly why it was the one ladder that did not get the
+// error check below — the note on buyTier already warned that "three
+// near-identical ladders is exactly where a fix gets applied to two of them",
+// and then this one sat outside the helper and was the one that broke.
+// ASYNC, even though it only forwards. A 'use server' file may export nothing
+// but async functions — the usual symptom is the export being silently dropped;
+// here the compiler refuses outright, which is the better failure.
 export async function buyHullTier(): Promise<Res> {
-  const user = await me()
-  if (!user) return { error: 'Unauthorized' }
-  const admin = createAdminClient()
-
-  const { data: p } = await admin
-    .from('profiles').select('hull_speed_tier').eq('id', user.id).single()
-  const tier = Number(p?.hull_speed_tier ?? 0)
-  if (tier >= MAX_HULL_TIER) return { error: 'Your hull is as fine as it gets.' }
-
-  const cost = nextHullCost(tier)
-  if (cost == null) return { error: 'Your hull is as fine as it gets.' }
-
-  const bal = await spend(admin, user.id, cost, `Shipyard: hull tier ${tier + 1}`)
-  if (bal == null) return { error: `That refit costs ${cost.toLocaleString()} and you have not got it.` }
-
-  const { data: after } = await admin
-    .from('profiles').select('hull_speed_tier').eq('id', user.id).single()
-  await admin.from('profiles')
-    .update({ hull_speed_tier: Math.min(MAX_HULL_TIER, Number(after?.hull_speed_tier ?? tier) + 1) })
-    .eq('id', user.id)
-  // THE CHART IS A CACHED PAGE, and this changed what is standing on it.
-  //
-  // /sea is rendered on the server from the profile, and the shipyard returns to
-  // it with router.back() — which restores the CACHED entry rather than asking
-  // for a new one. Nothing here invalidated it, so a captain could equip a boat,
-  // sail away, and still be in the old one. Worse than a stale render: it looked
-  // like the equip had silently failed, and it stuck on whichever boat happened
-  // to be current when that cache entry was made.
-  revalidatePath('/sea')
-  return { ok: true, doubloons: bal }
+  return buyTier('hull_speed_tier', MAX_HULL_TIER, nextHullCost, 'hull tier', 'Your hull is as fine as it gets.')
 }
 
 /**
@@ -92,7 +71,7 @@ export async function buyHullTier(): Promise<Res> {
  * is exactly where a fix gets applied to two of them.
  */
 async function buyTier(
-  col: 'hull_handling_tier' | 'hull_accel_tier',
+  col: 'hull_speed_tier' | 'hull_handling_tier' | 'hull_accel_tier',
   maxTier: number,
   cost: (t: number) => number | null,
   label: string,
@@ -113,9 +92,31 @@ async function buyTier(
   if (bal == null) return { error: `That refit costs ${price.toLocaleString()} and you have not got it.` }
 
   const { data: after } = await admin.from('profiles').select(col).eq('id', user.id).single()
-  await admin.from('profiles')
+  // ── THE WRITE IS CHECKED, AND A FAILURE GIVES THE MONEY BACK ──────────
+  //
+  // This used to be an unread `await`. `profiles_hull_speed_tier_range` was
+  // still CHECK (<= 3) from when the hull had four rungs; the ladder grew to
+  // six, so Postgres rejected every refit past tier 3 — AFTER `spend()` had
+  // taken the coin. supabase-js returns errors in the result object rather than
+  // throwing, so it failed in total silence: two captains paid sixteen times
+  // between them for refits that never landed, and the yard cheerfully offered
+  // the same upgrade again on the next visit.
+  //
+  // Widening that constraint fixes today's bug. Reading the error is what stops
+  // the next one, whatever it turns out to be: an upgrade that cannot be
+  // written must not be an upgrade that was paid for.
+  const { error: writeErr } = await admin.from('profiles')
     .update({ [col]: Math.min(maxTier, Number((after as Record<string, unknown> | null)?.[col] ?? tier) + 1) })
     .eq('id', user.id)
+  if (writeErr) {
+    // Straight back. A negative deduct is the house refund, the same shape the
+    // crew bunks and the homestead already use.
+    await admin.rpc('deduct_doubloons', { uid: user.id, amount: -price })
+    await admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: price, reason: `Refunded: ${label} ${tier + 1} could not be fitted`,
+    })
+    return { error: 'The yard could not fit that. Your coin is back in your purse.' }
+  }
   // THE CHART IS A CACHED PAGE, and this changed what is standing on it.
   //
   // /sea is rendered on the server from the profile, and the shipyard returns to
