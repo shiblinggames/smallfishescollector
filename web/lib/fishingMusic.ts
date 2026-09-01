@@ -1,3 +1,5 @@
+import type { SeaPhase } from './seaClock'
+
 // Module-level audio singleton for the fishing soundtrack.
 //
 // Architecture:
@@ -61,24 +63,40 @@ let handoffCoarseTimer: ReturnType<typeof setTimeout> | null = null
 let handoffPreRollDone = false
 let handoffResetTimer: ReturnType<typeof setTimeout> | null = null
 const PRE_ROLL_LEAD_MS = 200
-// fishingsoundtrack.ogg is the SHALLOWS track — it was the first one
-// written, and back when Shallows was the only fishing zone it was the
-// whole soundtrack, so it doubles as the fallback for any zone we
-// haven't given its own track yet. If we ever decouple Shallows from
-// "the default," move it to ZONE_TRACKS like Open Waters / Deep.
+// The first track written, back when Shallows was the only fishing zone and
+// this was the whole soundtrack. It is the bright one, so it is the day.
 const DEFAULT_TRACK = '/fishingsoundtrack.ogg'
 
-// Per-zone soundtracks. A zone not listed here falls back to
-// DEFAULT_TRACK (today: Shallows + Abyss; Shallows by design, Abyss
-// until it gets its own track).
-const ZONE_TRACKS: Record<string, string> = {
-  open_waters: '/fishingsoundtrackopen.ogg',
-  deep:        '/fishingsoundtrackdeep.ogg',
+/**
+ * ── THE SOUNDTRACK FOLLOWS THE LIGHT, NOT THE WATER ─────────────────────────
+ *
+ * These three were written as per-ZONE tracks and swapped on the band the boat
+ * was in. That is the wrong axis for the chart, for a reason that only shows up
+ * once the zones are somewhere you SAIL rather than somewhere you pick off a
+ * list: bands are a few hundred pixels apart out here, so an ordinary run of
+ * fishing crosses them constantly and the music was re-cueing every time. A
+ * soundtrack that restarts whenever you drift over a line is not a soundtrack,
+ * it is a stinger, and it made the sea feel chopped up rather than scored.
+ *
+ * The day/night cycle is the axis that was always right for this. It turns four
+ * times in forty-eight minutes on a clock everybody shares, it is already what
+ * the water, the light and the traders answer to, and a piece of music has room
+ * to actually play before anything asks it to change.
+ *
+ * DUSK AND DAWN SHARE ONE. They are the same geometry running opposite ways —
+ * seaClock says so where warmth is defined — and no listener is going to hear a
+ * difference the light is already telling them.
+ */
+const PHASE_TRACKS: Record<SeaPhase, string> = {
+  day:   DEFAULT_TRACK,
+  dusk:  '/fishingsoundtrackopen.ogg',
+  night: '/fishingsoundtrackdeep.ogg',
+  dawn:  '/fishingsoundtrackopen.ogg',
 }
 
-/** Resolve the soundtrack URL for a fishing zone (null / unknown = default). */
-export function fishingTrackForZone(zone: string | null | undefined): string {
-  return (zone && ZONE_TRACKS[zone]) || DEFAULT_TRACK
+/** Resolve the soundtrack URL for a phase of the sea's day. */
+export function fishingTrackForPhase(phase: SeaPhase): string {
+  return PHASE_TRACKS[phase] ?? DEFAULT_TRACK
 }
 
 // Which track the <audio> elements are currently bound to. makeAudio() reads

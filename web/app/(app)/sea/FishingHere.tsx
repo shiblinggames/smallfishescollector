@@ -69,7 +69,7 @@ import { castLine, reelIn, reelCrate, useTideTurnerSkip, rerollWormhole, sellGol
 import { gauntletAutoCatchMaxRarity } from '@/lib/gauntletUpgrades'
 import { levelCatchBonus } from '@/lib/fishingLevel'
 import { vibrate } from '@/lib/haptics'
-import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx } from '@/lib/fishingMusic'
+import { unlockFishingAudio, playCastSfx, playCast2Sfx, playPerfectSfx, startDialLoop, stopDialLoop } from '@/lib/fishingMusic'
 import { getSetting } from '@/lib/seaSettings'
 import type { FishSizeTier } from '@/lib/fishSize'
 import { getBait } from '@/lib/bait'
@@ -586,6 +586,28 @@ export default function FishingHere({
     // screen rather than copied — see lib/ancientDial.
     return ancientFight ? applyAncientPalette(base, hooked.vigilRank) : base
   }, [hooked, zone, mods, baitBonus, ancientFight, log.allFishSpecies])
+
+  // ── THE REEL, TICKING ─────────────────────────────────────────────────
+  //
+  // Lost in the port and nothing anywhere called it. lib/fishingMusic has had
+  // startDialLoop/stopDialLoop the whole time; the old fishing screen ran them
+  // off exactly this phase and out here they were simply never wired up, so the
+  // dial has been spinning in silence since the chart replaced /fishing.
+  //
+  // The RATE carries the difficulty, which is the point of it being a loop
+  // rather than a sound: a difficulty 5 fish ticks half again as fast as a
+  // difficulty 1, so the ear is told the needle is quick at the same moment the
+  // eye is. Same 1.00x to 1.60x ramp the fishing screen used.
+  //
+  // Stopping is handled TWICE on purpose. Here, for every way out of the phase
+  // that is not a tap, and by hand inside the reel handler, because a stop that
+  // waits for React to notice the phase changed arrives after the hit.
+  useEffect(() => {
+    if (phase !== 'hooked' || !hooked) { stopDialLoop(); return }
+    const diff = Math.max(1, Math.min(5, hooked.catchDifficulty))
+    startDialLoop(1 + (diff - 1) * 0.15)
+    return () => stopDialLoop()
+  }, [phase, hooked])
 
   // THE DIAL IS THE ONLY THING THAT MATTERS while it is up. Announced to the
   // map so it can stop its whole loop rather than competing for frames with the
@@ -1206,11 +1228,23 @@ export default function FishingHere({
     // perfect is a distinct three-pulse buzz and everything else is a single
     // short tick that only says "registered". Two different signals is the
     // whole point, and the map had been giving three vague ones.
+    // THE DIAL STOPS ON THE TAP, not on the phase change. The phase is set
+    // twenty lines below and React has to get there; the ticking has to be
+    // gone the instant the glass is touched or the whole hit feels late. Same
+    // reason the old fishing screen called this here by hand.
+    stopDialLoop()
     if (perfect) {
       playPerfectSfx(); vibrate([40, 60, 80]); setBurstKey(k => k + 1)
       setPerfectFlash(true)
       setTimeout(() => setPerfectFlash(false), 1400)
     }
+    // AND AN ORDINARY CATCH GETS A SOUND OF ITS OWN. It had none — a perfect
+    // rang and everything else landed in silence, so most catches in the game
+    // made no noise at all. The splash is the one the cast already uses when
+    // the lure hits the water, which is exactly the right noise for a fish
+    // coming back up through it, and it is deliberately not the chime: the
+    // chime has to keep meaning perfect.
+    else if (isCatch) { playCast2Sfx(); vibrate(6) }
     else vibrate(6)
     // ── AND OUT ON THE WATER ──────────────────────────────────────────
     // On the tap's own tick, alongside the sound and the haptic, because those

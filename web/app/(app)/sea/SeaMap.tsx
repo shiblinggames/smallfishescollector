@@ -6334,7 +6334,7 @@ hullRef={hullRefFor(t.key)} />
           because no browser will play it before one and because it is a 1.6MB
           fetch nobody should pay for opening the chart to look at it. The track
           follows the water the boat is in. */}
-      <SeaAudio zoneId={near?.kind === 'water' ? near.id : null} />
+      <SeaAudio />
 
       {/* ── THE TRAWLS ──────────────────────────────────────────────────
           Fifth in the row, and a READOUT: what is out, and how long. Sending
