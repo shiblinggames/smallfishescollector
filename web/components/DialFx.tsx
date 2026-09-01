@@ -53,9 +53,32 @@
 
 import { useEffect, useRef } from 'react'
 
-/** Where the dial's rim is, as a fraction of the box. Matches OUTER_R+6
+/** Where the dial's rim is, as a fraction of THE DIAL'S box. Matches OUTER_R+6
  *  against the 220 viewBox, so embers leave the rim rather than the paint. */
 const RING = (96 + 6) / 220
+
+/**
+ * HOW FAR THE CANVAS REACHES PAST THE DIAL, as a fraction of the dial's box on
+ * each side. The holder is `inset: -SPILL`, so the canvas is (1 + 2 x SPILL)
+ * dial-widths across and its half-extent is (0.5 + SPILL) of one.
+ *
+ * ── IT IS A CONSTANT BECAUSE IT WAS TWO NUMBERS THAT DISAGREED ─────────────
+ *
+ * The spill was a bare `-46%` in the style and nothing in the maths knew about
+ * it, so `r` was measured against the CANVAS: `min(w,h) * RING`. RING is
+ * calibrated against the dial, so r came out 1.92x too big and every size
+ * derived from it went with it. The wash at a streak of ten worked out around
+ * 1,600px wide inside a 576px canvas — the whole soft falloff fell outside the
+ * bitmap and what was left was the flat bright middle of the gradient, cut off
+ * square by the canvas edge. A visible warm BOX behind the dial, which is
+ * exactly how it was reported.
+ *
+ * So the two live together now and everything is measured off the dial. The
+ * value has to leave room for the largest thing drawn — the wash at the top of
+ * the ladder, at 1.04 dial-widths from centre — with margin for the smoke,
+ * which rises furthest.
+ */
+const SPILL = 0.75
 
 /**
  * THE POOL HAS TO COVER THE PEAK, and it did not.
@@ -157,6 +180,10 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
     // edge to keep sharp, and the fill rate is the only thing it spends.
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
     let w = 0, h = 0
+    /** Width of the boundary fade. Set with the canvas, not once beside it: a
+     *  rotation or a resize changes the bitmap and a snapshot taken next to
+     *  the draw call would go stale against it. */
+    let edgeFade = 24
     const resize = () => {
       const r = el.getBoundingClientRect()
       w = Math.max(1, Math.round(r.width))
@@ -164,6 +191,7 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
       cv.width = Math.round(w * dpr)
       cv.height = Math.round(h * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      edgeFade = Math.max(24, Math.min(w, h) * 0.08)
     }
     resize()
     const ro = new ResizeObserver(resize)
@@ -266,9 +294,29 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
     }
 
     /** One soft sprite, centred, at a diameter and an alpha. */
+    // ── NOTHING IS ALLOWED TO MEET THE EDGE AT FULL STRENGTH ──────────
+    //
+    // Sizing the canvas so every particle fits is a losing game: the wash and
+    // the aura scale with the streak, the embers are thrown by physics with no
+    // closed form, and the ladder has no ceiling anybody wants to write down.
+    // Get it wrong and the failure mode is not subtle — it is a visible BOX,
+    // because a soft gradient cut by a rectangle stops being soft.
+    //
+    // So the boundary is a fade rather than a wall. Anything approaching it
+    // dims to nothing over the last band of pixels, which makes clipping
+    // impossible by construction rather than by arithmetic that has to be
+    // redone every time the fire is retuned.
+    //
+    // The big centred blobs — the wash, the aura — sit at the middle and never
+    // touch this. It costs one min and one multiply per particle.
     const blob = (img: HTMLCanvasElement, x: number, y: number, d: number, alpha: number) => {
       if (alpha <= 0.004 || d <= 0.5) return
-      ctx.globalAlpha = alpha
+      const edge = Math.min(x, y, w - x, h - y)
+      if (edge <= 0) return
+      const k = edge < edgeFade ? edge / edgeFade : 1
+      const a = alpha * k
+      if (a <= 0.004) return
+      ctx.globalAlpha = a
       ctx.drawImage(img, x - d / 2, y - d / 2, d, d)
     }
 
@@ -279,7 +327,10 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
       clock += dt
       const i = intensity()
       const cx = w / 2, cy = h / 2
-      const r = Math.min(w, h) * RING
+      // BACK OUT THE DIAL FROM THE CANVAS. The canvas is deliberately bigger
+      // than the instrument; the rim is a fact about the instrument.
+      const dial = Math.min(w, h) / (1 + 2 * SPILL)
+      const r = dial * RING
 
       ctx.clearRect(0, 0, w, h)
 
@@ -337,8 +388,12 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
       // never sits as a flat disc of light behind the instrument.
       if (i > 0) {
         const flick = 0.9 + Math.sin(clock * 7.3) * 0.05 + Math.sin(clock * 11.7) * 0.05
+        // FITS INSIDE THE CANVAS AT THE TOP OF THE LADDER, which is the whole
+        // point: at the cap this reaches 1.04 dial-widths and the canvas holds
+        // 1.25, so the falloff lands on the bitmap and the light has an edge
+        // made of gradient rather than of rectangle.
         blob(i > 1.5 ? washHot : washWarm, cx, cy,
-          r * (1.9 + i * 0.55) * 2, Math.min(0.5, i * 0.17) * flick)
+          r * (1.4 + i * 0.3) * 2, Math.min(0.5, i * 0.17) * flick)
       }
 
       // ── THE ANCIENT ── breathing, which is the whole point of moving it off
@@ -347,7 +402,8 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
       if (live.current.ancientBoss) {
         const b1 = 0.5 + 0.5 * Math.sin(clock * 0.9)
         const b2 = 0.5 + 0.5 * Math.sin(clock * 1.37 + 1.1)
-        blob(voidDot, cx, cy, r * (2.5 + b1 * 0.34) * 2, 0.16 + b1 * 0.13)
+        // Same reasoning as the wash: it has to fit the bitmap it is on.
+        blob(voidDot, cx, cy, r * (1.9 + b1 * 0.26) * 2, 0.16 + b1 * 0.13)
         blob(rimDot, cx, cy, r * (1.28 + b2 * 0.07) * 2, 0.1 + b2 * 0.1)
         for (const m of motes) {
           m.spin += m.vx * dt
@@ -403,7 +459,10 @@ export default function DialFx({ streak, burstKey, ancientBoss = false }: {
       // OVERSPILL. The dial's own box stops at the rim and this has to reach
       // well past it, so the canvas is grown around the instrument and pushed
       // behind it. Nothing here is interactive and nothing here is layout.
-      inset: '-46%',
+      //
+      // FROM THE SAME CONSTANT THE MATHS USES. These were independent numbers
+      // and they disagreed; see SPILL for what that cost.
+      inset: `-${SPILL * 100}%`,
       pointerEvents: 'none',
       zIndex: 0,
     }} />
