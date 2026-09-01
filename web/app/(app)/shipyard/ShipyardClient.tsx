@@ -37,9 +37,10 @@ import CalloutLayer from './CalloutLayer'
 import PreviewStage from '@/components/PreviewStage'
 import { SPECIAL_ITEMS, effectiveSpecialDef } from '@/lib/specialItems'
 import {
-  nextHullCost, MAX_HULL_TIER, hullSpeed, HULL_NAMES,
-  nextHandlingCost, MAX_HANDLING_TIER, handlingRate, HANDLING_NAMES,
-  nextAccelCost, MAX_ACCEL_TIER, accelRate, ACCEL_NAMES,
+  nextHullCost, MAX_HULL_TIER,
+  nextHandlingCost, MAX_HANDLING_TIER,
+  nextAccelCost, MAX_ACCEL_TIER,
+  hullMetresPerSec, turnDegreesPerSec, secondsToTopSpeed,
 } from '@/lib/shipyard'
 import { buyHullTier, buyHandlingTier, buyAccelTier, equipRod as equipRodAction } from './actions'
 import { upgradeFishHold } from '../fishing/holdActions'
@@ -75,32 +76,36 @@ type Buyable = 'hull' | 'handling' | 'accel' | 'hold'
  *  confirm modal still shows it — a page of five paragraphs is how a shipyard
  *  becomes a wall of text, and the number beside the tag is doing most of the
  *  explaining anyway. */
+// ONE LINE, PLAIN, ABOUT THE STAT. These sit under the reading on each tile and
+// they are the only prose a player reads before deciding. Written to the house
+// rule for mechanics copy — literal, no metaphor — and about what the number
+// does for you rather than about the part of the boat that provides it.
 const TAG: Record<Buyable, string> = {
-  hull: 'Faster across the chart',
-  handling: 'Comes round quicker',
-  accel: 'Quicker off the mark',
-  hold: 'Land more before it fills up',
+  hull: 'Get everywhere sooner. Does not change your fishing.',
+  handling: 'Steer tighter. Easier to pull alongside things.',
+  accel: 'Less waiting every time you set off again.',
+  hold: 'Fish more before you have to go and sell.',
 }
 
 const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
   hull: {
-    does: 'Refits the hull, so the boat sails faster across the whole chart.',
+    does: 'Raises your top speed, so you cross the chart in less time.',
     why: 'It changes nothing about fishing. Bites, catch zones and rarity are '
        + 'untouched. It only shortens the sail to the deep water and back.',
   },
   handling: {
-    does: 'A better rudder, so the bow comes round faster when you turn.',
+    does: 'Turns the boat faster, so she comes round in fewer degrees of drift.',
     why: 'Top speed is the long haul out. This is everything you do once you '
        + 'are there: pulling alongside a drifting trader, threading a wreck '
        + 'field, holding a line through a hotspot.',
   },
   accel: {
-    does: 'A taller rig, so she picks up speed harder from a standstill.',
+    does: 'Reaches top speed sooner after every stop.',
     why: 'Every stop and start — after a cast, after a hail, coming off a dock. '
        + 'It does not raise your top speed, only how quickly you reach it.',
   },
   hold: {
-    does: 'Enlarges the fish hold, so you can land more before it is full.',
+    does: 'Holds more fish, so you can stay out longer before selling.',
     why: 'A full hold stops you casting. Selling to a zone buyer or at the '
        + 'market ashore is what empties it.',
   },
@@ -306,34 +311,63 @@ export default function ShipyardClient(p: {
   /** The three upgrades' current and next state, derived once. The cards and
    *  the confirm modal both read this, so they cannot disagree about what you
    *  are buying or what it costs. */
+  /**
+   * WHAT EACH UPGRADE IS, IN UNITS, AND WHAT THE NEXT ONE BUYS YOU.
+   *
+   * Three changes from the version this replaces, and they are all the same
+   * change: say the thing rather than a proxy for it.
+   *
+   * THE TITLE IS THE STAT. It was the tier's name — "Greyhound Hull", "Spade
+   * Rudder" — which is charming and tells a player nothing about what they are
+   * buying, on the one screen whose whole job is to answer that. It is "Speed"
+   * and "Turning" now.
+   *
+   * THE READING IS A UNIT. "140% sailing speed" is only a number if you know
+   * what 100% was, and nobody does. 10.0 m/s is a speed.
+   *
+   * AND `gain` IS NEW. The old tile showed the next rung's absolute figure and
+   * left you to subtract, which is exactly the arithmetic a shop should be
+   * doing for you. This says "+1.2 m/s faster" and the tile leads with it.
+   */
   const DETAIL: Record<Buyable, {
-    title: string; accent: string; now: string; unit: string; next: string | null; cost: number | null
+    title: string; accent: string; now: string; unit: string
+    next: string | null; gain: string | null; cost: number | null
   }> = {
     hull: {
-      title: HULL_NAMES[Math.min(hull + 1, MAX_HULL_TIER)], accent: '#9fc9e8',
+      title: 'Speed', accent: '#9fc9e8',
       // The HULL only. The boat's own trim multiplies this and is shown beside
       // it rather than folded in, because they are bought in different places
       // and one of them is a trade-off rather than an upgrade.
-      now: `${Math.round(hullSpeed(hull) * 100)}%`, unit: 'sailing speed',
-      next: hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`,
+      now: `${hullMetresPerSec(hull).toFixed(1)} m/s`, unit: 'top speed',
+      next: hull >= MAX_HULL_TIER ? null : `${hullMetresPerSec(hull + 1).toFixed(1)} m/s`,
+      gain: hull >= MAX_HULL_TIER ? null
+        : `+${(hullMetresPerSec(hull + 1) - hullMetresPerSec(hull)).toFixed(1)} m/s faster`,
       cost: hullCost,
     },
     handling: {
-      title: HANDLING_NAMES[Math.min(handling + 1, MAX_HANDLING_TIER)], accent: '#7dd3fc',
-      now: `${Math.round(handlingRate(handling) * 100)}%`, unit: 'turn rate',
-      next: handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`,
+      title: 'Turning', accent: '#7dd3fc',
+      now: `${Math.round(turnDegreesPerSec(handling))}°/s`, unit: 'how fast she turns',
+      next: handling >= MAX_HANDLING_TIER ? null : `${Math.round(turnDegreesPerSec(handling + 1))}°/s`,
+      gain: handling >= MAX_HANDLING_TIER ? null
+        : `+${Math.round(turnDegreesPerSec(handling + 1) - turnDegreesPerSec(handling))}°/s sharper`,
       cost: handlingCost,
     },
     accel: {
-      title: ACCEL_NAMES[Math.min(accel + 1, MAX_ACCEL_TIER)], accent: '#a7f3d0',
-      now: `${Math.round(accelRate(accel) * 100)}%`, unit: 'pick-up',
-      next: accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`,
+      title: 'Pick-up', accent: '#a7f3d0',
+      // SECONDS, and LOWER IS BETTER — which is why the gain says "quicker"
+      // rather than showing a signed number. A "-0.2s" on a shop tile reads as
+      // something being taken away.
+      now: `${secondsToTopSpeed(accel).toFixed(1)}s`, unit: 'to reach top speed',
+      next: accel >= MAX_ACCEL_TIER ? null : `${secondsToTopSpeed(accel + 1).toFixed(1)}s`,
+      gain: accel >= MAX_ACCEL_TIER ? null
+        : `${(secondsToTopSpeed(accel) - secondsToTopSpeed(accel + 1)).toFixed(1)}s quicker`,
       cost: accelCost,
     },
     hold: {
-      title: holdNext?.name ?? getFishHold(hold).name, accent: '#f0c040',
-      now: `${cap} fish`, unit: 'fish in the hold',
+      title: 'Fish hold', accent: '#f0c040',
+      now: `${cap} fish`, unit: 'before you have to sell',
       next: holdNext ? `${holdNext.capacity} fish` : null,
+      gain: holdNext ? `+${holdNext.capacity - cap} more fish` : null,
       cost: holdNext?.cost ?? null,
     },
   }
@@ -428,48 +462,44 @@ export default function ShipyardClient(p: {
           ))}
         </div>
 
-        {/* ── YOUR BOAT ── what the boat IS, rather than what is on it.
-            OUT FROM BEHIND A TAB. These five were the back half of a two-tab
-            strip, so the things you come to a shipyard to buy were the things
-            you could not see. They are the first thing under the picture now. */}
-        <Band title="Your boat" />
+        {/* ── HOW SHE SAILS ── the three movement upgrades, together,
+            because they are the same purchase in three flavours: they all buy
+            you less time holding a helm and none of them touch fishing.
+
+            EVERY TILE READS FROM `DETAIL`, which is also what the confirm modal
+            reads. They used to build their own strings from the same functions,
+            which is two places to get "what am I buying" right and one of them
+            silently drifting the day either changed.
+
+            The headings are the STAT now — Speed, Turning, Pick-up — not the
+            part that provides it. A player who wants to go faster was being
+            asked to know that a hull is the thing that does that. */}
+        <Band title="How she sails" />
         <div className="sy-boat-grid">
-          <BoatTile
-            label="Hull" name={HULL_NAMES[Math.min(hull, MAX_HULL_TIER)]} accent="#9fc9e8"
-            now={`${Math.round(hullSpeed(hull) * 100)}%`} unit="sailing speed"
-            does={TAG.hull}
-            next={hull >= MAX_HULL_TIER ? null : `${Math.round(hullSpeed(hull + 1) * 100)}%`}
-            cost={hullCost}
+          <BoatTile which="hull" d={DETAIL.hull} does={TAG.hull}
             busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('hull') }}
-          />
-          <BoatTile
-            label="Rudder" name={HANDLING_NAMES[Math.min(handling, MAX_HANDLING_TIER)]} accent="#7dd3fc"
-            now={`${Math.round(handlingRate(handling) * 100)}%`} unit="turn rate"
-            does={TAG.handling}
-            next={handling >= MAX_HANDLING_TIER ? null : `${Math.round(handlingRate(handling + 1) * 100)}%`}
-            cost={handlingCost}
+            onBuy={() => { setErr(''); setConfirm('hull') }} />
+          <BoatTile which="handling" d={DETAIL.handling} does={TAG.handling}
             busy={busy === 'handling'} disabled={!!busy || doubloons < (handlingCost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('handling') }}
-          />
-          <BoatTile
-            label="Rig" name={ACCEL_NAMES[Math.min(accel, MAX_ACCEL_TIER)]} accent="#a7f3d0"
-            now={`${Math.round(accelRate(accel) * 100)}%`} unit="pick-up"
-            does={TAG.accel}
-            next={accel >= MAX_ACCEL_TIER ? null : `${Math.round(accelRate(accel + 1) * 100)}%`}
-            cost={accelCost}
+            onBuy={() => { setErr(''); setConfirm('handling') }} />
+          <BoatTile which="accel" d={DETAIL.accel} does={TAG.accel}
             busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('accel') }}
-          />
-          <BoatTile
-            label="Fish hold" name={getFishHold(hold).name} accent="#f0c040"
-            now={String(cap)} unit="fish aboard"
-            does={TAG.hold}
-            next={holdNext ? `${holdNext.capacity} fish` : null}
-            cost={holdNext?.cost ?? null}
+            onBuy={() => { setErr(''); setConfirm('accel') }} />
+        </div>
+
+        {/* ── AND THE HOLD, ON ITS OWN ────────────────────────────────
+            It was the fourth tile in a grid of movement upgrades, which put
+            "how much can I carry" beside "how fast do I turn" as though they
+            answered the same question. They do not, and the hold is the one
+            that ends sessions: a full hold is the reason you stop fishing and
+            sail home, and it is the only upgrade on this page that changes how
+            long you can stay out. Its own band, full width, so it reads as the
+            other thing this yard sells rather than the runt of the first. */}
+        <Band title="What she carries" />
+        <div style={{ padding: '0 0.1rem' }}>
+          <BoatTile which="hold" d={DETAIL.hold} does={TAG.hold} wide
             busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
-            onBuy={() => { setErr(''); setConfirm('hold') }}
-          />
+            onBuy={() => { setErr(''); setConfirm('hold') }} />
         </div>
 
         {/* THE ROD RACK IS GONE. It bought BERTHS, and only rods in a berth
@@ -887,50 +917,85 @@ function Band({ title }: { title: string }) {
  * modal read them, so the game explained a purchase after you decided to make
  * it. The long version still lives there; this is the short one.
  */
-function BoatTile({ label, name, accent, now, unit, does, next, cost, busy, disabled, onBuy }: {
-  label: string; name: string; accent: string; now: string; unit: string; does: string
-  next: string | null; cost: number | null
+/**
+ * ONE UPGRADE, READ OFF `DETAIL`.
+ *
+ * It used to take eleven loose props and build its own strings, which meant the
+ * tile and the confirm modal each assembled "what am I buying" separately from
+ * the same functions. Two places to get right, one of them drifting the day
+ * either changed. It takes the derived row now, so the tile and the modal
+ * cannot disagree by construction.
+ *
+ * ── WHAT IT LEADS WITH ──────────────────────────────────────────────────────
+ *
+ * The name of the tier used to be the biggest text here, which put the thing
+ * that meant least at the top. The order now is: what stat this is, what it is
+ * at right now in a real unit, what that unit measures, what the upgrade does
+ * in plain words, and then the offer — which states the GAIN first, because
+ * "+1.2 m/s faster" is the question and "11.2 m/s" is only the answer to it.
+ */
+function BoatTile({ which, d, does, busy, disabled, onBuy, wide = false }: {
+  which: string
+  d: {
+    title: string; accent: string; now: string; unit: string
+    next: string | null; gain: string | null; cost: number | null
+  }
+  does: string
   busy: boolean; disabled: boolean; onBuy: () => void
+  /** Full width, for the hold — it stands alone under its own band. */
+  wide?: boolean
 }) {
-  const maxed = next === null || cost === null
+  // Narrowed here rather than asserted below: `maxed` is what the JSX branches
+  // on, and a `!` on d.cost would be a promise the type system cannot check.
+  const offer = d.next !== null && d.cost !== null && d.gain !== null
+    ? { next: d.next, cost: d.cost, gain: d.gain }
+    : null
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+    <motion.div key={which} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
       style={{
-        display: 'flex', flexDirection: 'column',
+        display: 'flex', flexDirection: wide ? 'row' : 'column',
+        alignItems: wide ? 'center' : undefined,
+        gap: wide ? 14 : undefined,
         padding: '0.7rem 0.75rem 0.65rem', borderRadius: 14,
-        background: `linear-gradient(180deg, ${accent}10 0%, rgba(255,255,255,0.015) 100%), #0b1620`,
-        border: `1px solid ${accent}33`,
+        background: `linear-gradient(180deg, ${d.accent}10 0%, rgba(255,255,255,0.015) 100%), #0b1620`,
+        border: `1px solid ${d.accent}33`,
       }}>
-      <p className="font-karla font-700 uppercase truncate" style={{
-        fontSize: 'var(--sy-1)', letterSpacing: '0.12em', color: `${accent}b0`,
-      }}>{label}</p>
+      <div style={{ flex: wide ? 1 : undefined, minWidth: 0 }}>
+        {/* THE STAT IS THE HEADING. Not the part that provides it — a player
+            who wants to go faster should not have to know that a hull is the
+            thing that does that. */}
+        <p className="font-karla font-700 uppercase truncate" style={{
+          fontSize: 'var(--sy-1)', letterSpacing: '0.12em', color: `${d.accent}b0`,
+        }}>{d.title}</p>
 
-      {/* THE READING, big. What the boat is right now is what you came to
-          check; what it could be is the offer at the bottom. */}
-      <p className="font-cinzel font-700" style={{
-        fontSize: 'var(--sy-7)', color: '#f2ead8', lineHeight: 1.05, marginTop: 2,
-      }}>{now}</p>
-      <p className="font-karla font-600" style={{
-        fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.5)', lineHeight: 1.25,
-      }}>{unit}</p>
+        {/* THE READING, big, in a unit rather than a percentage of a number
+            nobody was ever told. */}
+        <p className="font-cinzel font-700" style={{
+          fontSize: 'var(--sy-7)', color: '#f2ead8', lineHeight: 1.05, marginTop: 2,
+        }}>{d.now}</p>
+        <p className="font-karla font-600" style={{
+          fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.5)', lineHeight: 1.25,
+        }}>{d.unit}</p>
 
-      <p className="font-karla font-600 truncate" style={{
-        fontSize: 'var(--sy-2)', color: 'rgba(190,212,228,0.4)', marginTop: 5,
-      }}>{name}</p>
-      <p className="font-karla font-600" style={{
-        fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.72)', marginTop: 4, lineHeight: 1.4,
-      }}>{does}</p>
+        <p className="font-karla font-600" style={{
+          fontSize: 'var(--sy-3)', color: 'rgba(190,212,228,0.72)', marginTop: 6, lineHeight: 1.4,
+        }}>{does}</p>
+      </div>
 
-      {maxed ? (
+      {!offer ? (
         <p className="font-karla font-700" style={{
-          fontSize: 'var(--sy-2)', color: '#7fd6a0', marginTop: 'auto', paddingTop: 9,
+          fontSize: 'var(--sy-2)', color: '#7fd6a0',
+          marginTop: wide ? 0 : 'auto', paddingTop: wide ? 0 : 9,
+          flexShrink: wide ? 0 : undefined,
         }}>Fully upgraded</p>
       ) : (
         <button onClick={onBuy} disabled={disabled} className="font-karla font-700"
           style={{
-            marginTop: 'auto', width: '100%', padding: '0.42rem 0.5rem', borderRadius: 10,
-            display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6,
-            flexWrap: 'wrap',
+            marginTop: wide ? 0 : 'auto',
+            width: wide ? 'auto' : '100%',
+            minWidth: wide ? 150 : undefined, flexShrink: wide ? 0 : undefined,
+            padding: '0.5rem 0.6rem', borderRadius: 10,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
             fontSize: 'var(--sy-2)', lineHeight: 1.3,
             color: disabled ? 'rgba(242,234,216,0.38)' : '#f2ead8',
             background: 'rgba(240,192,64,0.12)',
@@ -939,9 +1004,12 @@ function BoatTile({ label, name, accent, now, unit, does, next, cost, busy, disa
           }}>
           {busy ? <span>Working…</span> : (
             <>
-              <span>{next}</span>
+              {/* THE GAIN FIRST. The old button offered the next rung's
+                  absolute figure and left the player to subtract, which is
+                  exactly the arithmetic a shop should be doing for them. */}
+              <span style={{ color: disabled ? 'rgba(242,234,216,0.38)' : '#a7e8c0' }}>{offer.gain}</span>
               <span style={{ color: disabled ? 'rgba(240,192,64,0.45)' : '#f0c040' }}>
-                {cost.toLocaleString()} ⟡
+                {offer.cost.toLocaleString()} ⟡
               </span>
             </>
           )}

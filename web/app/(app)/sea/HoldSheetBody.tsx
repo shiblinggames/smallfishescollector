@@ -32,7 +32,7 @@ import { motion } from 'framer-motion'
 // asking for the fat type would make the panel refuse the cached species table
 // that every caller actually has.
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
-import { FISH_HOLD_TIERS, getFishHold } from '@/lib/fishHold'
+import { FISH_HOLD_TIERS } from '@/lib/fishHold'
 
 /** How many species get a line of their own before the rest are folded away.
  *  Five is about what fits without scrolling on a phone, and past the fifth the
@@ -85,7 +85,6 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
   const fill = capacity > 0 ? Math.min(1, count / capacity) : 0
   const nearFull = fill >= 0.9
   const next = tier < FISH_HOLD_TIERS.length - 1 ? FISH_HOLD_TIERS[tier + 1] : null
-  const nowTier = getFishHold(tier)
 
   return (
     <>
@@ -108,8 +107,11 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
             }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+          {/* THE NUMBER, NOT THE TIER'S NAME. "Leviathan Hold" is charming and
+              tells you nothing; the capacity beside it is the whole fact. Same
+              call as the Shipyard, which stopped naming its rungs too. */}
           <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: `${SEA},0.55)` }}>
-            {nowTier.name}
+            {Math.round(fill * 100)}% full
           </span>
           <span className="font-karla font-700" style={{
             fontSize: '0.72rem', fontVariantNumeric: 'tabular-nums',
@@ -210,15 +212,16 @@ export default function HoldSheetBody({ rows, species, count, capacity, tier }: 
         <p className="font-karla font-600" style={{
           fontSize: '0.792rem', color: `${SEA},0.62)`, marginTop: 6, lineHeight: 1.65,
         }}>
-          The Shipyard on the Mainland fits the next one up: the{' '}
-          <span style={{ color: '#f2ead8' }}>{next.name}</span>, {next.capacity} fish,{' '}
+          The Shipyard on the Mainland fits a bigger one:{' '}
+          <span style={{ color: '#f2ead8' }}>+{next.capacity - capacity} fish</span>, taking you to{' '}
+          {next.capacity}, for{' '}
           <span style={{ color: GOLD, fontVariantNumeric: 'tabular-nums' }}>⟡ {next.cost.toLocaleString()}</span>.
         </p>
       ) : (
         <p className="font-karla font-600" style={{
           fontSize: '0.792rem', color: `${SEA},0.62)`, marginTop: 6, lineHeight: 1.65,
         }}>
-          The {nowTier.name} is the largest ever built. Nothing at the Shipyard will better it.
+          {capacity} fish is the biggest hold there is. Nothing at the Shipyard will better it.
         </p>
       )}
     </>

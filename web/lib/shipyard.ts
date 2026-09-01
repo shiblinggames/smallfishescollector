@@ -42,10 +42,6 @@
  * It stacks with the BOAT's own trim and grade (lib/boats) — the hull tier is
  * the ladder everyone climbs, the boat is which one you climb it in.
  */
-export const HULL_NAMES = [
-  'Stock Hull', 'Trimmed Hull', 'Raked Hull',
-  'Clipper Hull', 'Blackwall Hull', 'Greyhound Hull',
-] as const
 export const HULL_COSTS = [0, 2_000, 8_000, 20_000, 50_000, 100_000] as const
 /**
  * A MULTIPLIER ON THE BASE, and the base is a whole boat.
@@ -125,7 +121,6 @@ export function rodsAboard(equippedTier: number, owned: number[]): number[] {
 
 /** Multiplier on how fast the bow comes round. */
 export const HANDLING_SPEED = [1, 1.16, 1.34, 1.55] as const
-export const HANDLING_NAMES = ['Fixed Rudder', 'Balanced Rudder', 'Deep Rudder', 'Spade Rudder'] as const
 export const HANDLING_COSTS = [0, 8_000, 20_000, 50_000] as const
 export const MAX_HANDLING_TIER = HANDLING_COSTS.length - 1
 
@@ -139,7 +134,6 @@ export function nextHandlingCost(tier: number): number | null {
 
 /** Multiplier on how hard she picks up from a standstill. */
 export const ACCEL_RATE = [1, 1.18, 1.4, 1.65] as const
-export const ACCEL_NAMES = ['Stock Rig', 'Trimmed Rig', 'Tall Rig', 'Racing Rig'] as const
 export const ACCEL_COSTS = [0, 8_000, 20_000, 50_000] as const
 export const MAX_ACCEL_TIER = ACCEL_COSTS.length - 1
 
@@ -149,4 +143,71 @@ export function accelRate(tier: number): number {
 export function nextAccelCost(tier: number): number | null {
   const t = tier + 1
   return t > MAX_ACCEL_TIER ? null : ACCEL_COSTS[t]
+}
+
+
+// ── WHAT THE BOAT ACTUALLY DOES, IN UNITS PEOPLE READ ───────────────────────
+//
+// The Shipyard used to sell these as multipliers against a name: "Clipper Hull,
+// 140% sailing speed". Both halves fail the same way.
+//
+// A PERCENTAGE OF WHAT. 140% is only a number if you know what 100% was, and
+// nobody does — it is a figure this file made up. "10 m/s" is a speed; "140%"
+// is homework.
+//
+// AND THE NAME WAS DOING NOTHING. A Greyhound Hull, a Spade Rudder and a Tall
+// Rig are lovely words that tell a player nothing about what they are buying,
+// on a screen whose entire job is to answer exactly that. Worse, they were the
+// biggest text on each tile, so the thing that meant least was the thing that
+// read first. The names are deleted rather than demoted: an upgrade path does
+// not need a name, it needs a number and a delta.
+//
+// ── THE BASE CONSTANTS LIVE HERE NOW ────────────────────────────────────────
+//
+// SPEED, TURN and ACCEL were local constants inside SeaMap, and this file
+// multiplied a tier against numbers it could not see. That is the exact shape of
+// the bug that has bitten twice this week — a ratio kept in one place and the
+// thing it is a ratio OF kept in another — and here it would be silent: the
+// Shipyard would advertise a speed the sea does not sail at, and nothing would
+// ever disagree out loud. The sea imports them from here.
+
+/** World pixels per second at hull tier 0, before the boat's own trim. */
+export const BASE_SPEED_PX = 300
+/** Radians per second the bow comes round at rudder tier 0. */
+export const BASE_TURN_RAD = 2.4
+/** How hard she picks up, as the rate of an exponential approach to top speed. */
+export const BASE_ACCEL = 2.6
+
+/**
+ * HOW MANY WORLD PIXELS MAKE A METRE.
+ *
+ * Chosen so the ladder reads as a boat: 10.0 m/s at the bottom and 17.5 at the
+ * top, which is a fast launch rather than a jet. There is no physical truth to
+ * recover here — the chart is 45,000 pixels of painted sea — so the honest thing
+ * is to pick the scale that makes the HUD legible and say so. This is the only
+ * place it is used, and nothing in the simulation reads it.
+ */
+const PX_PER_METRE = 30
+
+/** Top speed in metres per second, for the label. */
+export function hullMetresPerSec(tier: number): number {
+  return (BASE_SPEED_PX * hullSpeed(tier)) / PX_PER_METRE
+}
+
+/** How fast the bow comes round, in degrees per second. A player can watch a
+ *  boat turn and check this; nobody can check a radian. */
+export function turnDegreesPerSec(tier: number): number {
+  return BASE_TURN_RAD * handlingRate(tier) * (180 / Math.PI)
+}
+
+/**
+ * SECONDS TO TOP SPEED, which is what acceleration MEANS to somebody holding a
+ * helm — not a multiplier, and not a made-up unit.
+ *
+ * The sea approaches top speed exponentially (`1 - exp(-k*dt)`), so there is no
+ * moment it technically arrives. Three time constants is 95% of the way there,
+ * which is the point it stops feeling like it is still gathering.
+ */
+export function secondsToTopSpeed(tier: number): number {
+  return 3 / (BASE_ACCEL * accelRate(tier))
 }

@@ -51,7 +51,7 @@ import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
-import { handlingRate, accelRate } from '@/lib/shipyard'
+import { handlingRate, accelRate, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
@@ -244,9 +244,13 @@ const GoldenChoice = dynamic(() => import('@/components/GoldenChoice'), { ssr: f
  * was tuned rather than the one that fell out of a label change, and the whole
  * six-tier ladder still multiplies cleanly off it.
  */
-const SPEED = 300
+// FROM lib/shipyard, not from here. The Shipyard multiplies tiers against these
+// to print "10.0 m/s" on a tile; when they lived in this file it was doing that
+// against numbers it could not see, so the yard could have advertised a speed
+// the sea does not sail at and nothing would ever have disagreed out loud.
+const SPEED = BASE_SPEED_PX
 /** Low is heavy. A boat should take a moment to get going. */
-const ACCEL = 2.6
+const ACCEL = BASE_ACCEL
 
 /**
  * HOW FAST THE BOW COMES ROUND, in radians per second, before the rudder tier
@@ -256,7 +260,7 @@ const ACCEL = 2.6
  * turn is near enough instant. Slower than that and holding a heading with a
  * thumb feels like arguing with the boat.
  */
-const TURN = 2.4
+const TURN = BASE_TURN_RAD
 
 /**
  * HOW FAST SIDEWAYS VELOCITY BLEEDS OFF — the grip of the hull in the water,
