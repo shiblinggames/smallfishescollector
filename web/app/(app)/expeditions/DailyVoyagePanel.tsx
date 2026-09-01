@@ -342,10 +342,25 @@ function RouteCard({
             style={{
               width: '100%', borderRadius: 9, padding: '0.6rem 0.9rem',
               transition: 'background 0.15s, opacity 0.15s, border-color 0.15s',
+              // ── TINTED, NOT FILLED ────────────────────────────────────
+              //
+              // Every route owns a colour, and every Set Sail was a full
+              // saturated gradient in it with a matching glow. One is handsome;
+              // a board of them is five different brights stacked down the
+              // screen, each shouting as loudly as the last, and the eye has
+              // nowhere to rest. Reported as distracting, which is the polite
+              // word for it.
+              //
+              // The route colour stays — it is how you tell one card from
+              // another — but as a tint and an edge rather than a fill. That is
+              // the house rule for gold and it holds for every other hue on the
+              // same reasoning: a translucent tint reads as "this belongs to
+              // that route", a solid fill reads as "press me before the others".
+              // They are five equal choices and they should look it.
               ...(ready
-                ? { background: `linear-gradient(180deg, ${rco.color} 0%, ${rco.color}d0 100%)`, border: `1px solid ${rco.color}`, color: '#0d1410', cursor: 'pointer', boxShadow: `0 3px 13px ${rco.color}3d, inset 0 1px 0 rgba(255,255,255,0.35)` }
+                ? { background: `${rco.color}1f`, border: `1px solid ${rco.color}88`, color: rco.color, cursor: 'pointer' }
                 : sending
-                  ? { background: `linear-gradient(180deg, ${rco.color}aa 0%, ${rco.color}70 100%)`, border: `1px solid ${rco.color}88`, color: 'rgba(13,20,16,0.72)', cursor: 'default' }
+                  ? { background: `${rco.color}14`, border: `1px solid ${rco.color}55`, color: `${rco.color}aa`, cursor: 'default' }
                   : { background: 'rgba(80,100,120,0.10)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.34)', cursor: 'default' }),
             }}
           >

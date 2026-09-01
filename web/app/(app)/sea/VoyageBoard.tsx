@@ -72,7 +72,12 @@ export default function VoyageBoard({ open, onClose }: { open: boolean; onClose:
             // content and PopupShell owns the scroll. See the note on the
             // hub's copy of this shell — an inner scroll layer here made the
             // bottom of an expanded voyage log unreachable.
-            margin: 'auto', width: '100%', maxWidth: 480,
+            // 680, not 480. This is a BOARD — several routes with a crew
+            // muster, a reward line and a button each — and at 480 on a desktop
+            // it was a column the width of a phone stranded in the middle of a
+            // monitor, with every card wrapping to three lines it did not need
+            // to. The phone is unaffected: the shell's padding caps it there.
+            margin: 'auto', width: '100%', maxWidth: 680,
             background: 'linear-gradient(180deg, rgba(6,12,22,0.34) 0%, rgba(6,11,20,0.48) 45%, rgba(5,9,16,0.44) 100%), url(/voyages-modal-bg.jpg) center / cover no-repeat',
             border: '1px solid rgba(240,192,64,0.28)',
             borderRadius: 20,

@@ -218,8 +218,6 @@ const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
 // The door to Tide Run, which used to be a card in the Tavern. See seaSmuggler.
 const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
-// Which way the rival is, and why you would go. See sea/FinnCompass.
-const FinnCompass = dynamic(() => import('./FinnCompass'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
 // SeaAudio: it starts on the first press, not on mount.
 const SeaAudio = dynamic(() => import('./SeaAudio'), { ssr: false })
@@ -3240,17 +3238,19 @@ export default function SeaMap({
    * this reads it rather than re-deciding what finished means.
    */
   const finnBearing = useMemo(() => {
-    if (!finn || inAnchorage || onSortie || nearFinn) return null
+    // Not in the anchorage — he is moored out in the Shallows — and not past
+    // the sortie, where an arrow to him would point across a reef at a chart he
+    // is not on. It does NOT drop out as you close on him: the compass already
+    // hides a mark once its place is on screen, and an arrow that vanishes the
+    // moment you get near is the one thing that would make it untrustworthy.
+    if (!finn || inAnchorage || onSortie) return null
     return {
-      at: finn.at,
+      x: finn.at.x, y: finn.at.y,
       state: finn.questReady ? 'ready' as const
         : finn.quest ? 'working' as const
         : 'offering' as const,
-      progress: finn.quest && !finn.questReady
-        ? { done: finn.quest.have, total: finn.quest.target }
-        : null,
     }
-  }, [finn, inAnchorage, onSortie, nearFinn])
+  }, [finn, inAnchorage, onSortie])
 
   const hudRow = useMemo(() => {
     const on: string[] = ['clock']
@@ -3258,15 +3258,8 @@ export default function SeaMap({
     if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
     if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
     if (!inAnchorage && (!fishingIn || wide)) on.push('folk')
-    // THE RIVAL'S BEARING, last in the run and only when it would say
-    // something. Not in the anchorage (he is moored out in the Shallows), not
-    // past the sortie (drawing him on the expeditions chart would be a pin
-    // through a reef), and not once you are close enough to see him — an arrow
-    // pointing at something already on your screen is furniture, and the action
-    // bar is already saying his name by then.
-    if (finnBearing && (!fishingIn || wide)) on.push('finn')
     return on
-  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady, finnBearing])
+  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady])
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width: 900px)')
     if (!mq) return
@@ -6321,6 +6314,7 @@ hullRef={hullRefFor(t.key)} />
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!fishingIn && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
+          finn={finnBearing}
           // The harbour IS a place now, so the compass can raise it again when
           // a crew is in — which is the whole reason the compass sorts by this.
           waitingAt={id => (id === 'trawl_fleet' ? trawlsReady : 0)} />
@@ -6478,21 +6472,6 @@ hullRef={hullRefFor(t.key)} />
           Laid out from the corner inwards, and the gear keeps the corner
           because it is the one that was already there — a control that moves
           when a badge appears next to it is a control people mis-tap. */}
-      {/* WHICH WAY THE RIVAL IS. Sits in the left run with the rest of the
-          HUD, because it is a place you are going — which is what that whole
-          column is for. See sea/FinnCompass. */}
-      {finnBearing && (
-        <FinnCompass
-          size={hudSize}
-          top={18}
-          left={hudAt('finn')}
-          at={finnBearing.at}
-          me={{ x: boatAt.x, y: boatAt.y }}
-          state={finnBearing.state}
-          progress={finnBearing.progress}
-          onOpen={() => setFolkOpen(true)}
-        />
-      )}
       {!fishingIn && <SeaBonus size={hudSize} top={18} right={12 + hudSize + 8} />}
       {!fishingIn && <SeaSettings size={hudSize} top={18} />}
 
@@ -8254,8 +8233,24 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  * onto it reads as a swap, not a boarding. The smacks get away with
  * moored-scale because you never sail one.
  */
+/**
+ * ── AND SHE LIES OFF THE BERTH, NOT IN IT ───────────────────────────────────
+ *
+ * She used to be drawn AT `berthOf(GUNWHARF)`, which is the circle you have to
+ * sail into to go ashore — so the one thing you came to the Gunwharf to do was
+ * behind three hundred and forty pixels of your own warship. Visible, and in
+ * the way, which is the worst combination: it looked deliberate.
+ *
+ * Moored off the island's top-right shoulder instead. Her hull clears the berth
+ * circle by ninety-four pixels — measured against WARSHIP_W rather than eyed,
+ * because "next to it" is exactly the reasoning that put her on top of it — and
+ * she sits 439 from the island's centre against its 340 radius, so she is
+ * floating just off the shore rather than parked on the grass.
+ */
+const SHIP_BERTH_OFF = { dx: 300, dy: -320 }
+
 const ShipAtBerth = memo(function ShipAtBerth({ shipTier }: { shipTier: number }) {
-  const b = berthOf(GUNWHARF)
+  const b = { x: GUNWHARF.x + SHIP_BERTH_OFF.dx, y: GUNWHARF.y + SHIP_BERTH_OFF.dy }
   return (
     <div style={{
       position: 'absolute', left: b.x, top: b.y,
@@ -9814,8 +9809,22 @@ const COMPASS_MAX = 4
  *  was 96) let two centres pass while the words lay on each other. */
 const COMPASS_KEEP = { x: 120, y: 42 }
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn }: {
   frozen: boolean
+  /**
+   * THE RIVAL, AND WHAT HE IS HOLDING.
+   *
+   * He is the fishing campaign's only delivery route and one boat on a
+   * forty-five thousand pixel sea, so "which way is Finn" is a heading in
+   * exactly the sense the nearest port and the zone's buyer are — the compass
+   * is already the answer to that question and he belongs in it rather than in
+   * a disc of his own at the top of the screen.
+   *
+   * `state` is what makes him worth a slot over a fourth port: an arrow that
+   * only says which way is a map feature, and one that says a job is finished
+   * is a reason to turn the boat round.
+   */
+  finn: { x: number; y: number; state: 'ready' | 'working' | 'offering' } | null
   /** Crew waiting at a given port, so a dock with a haul on it can jump the
    *  queue. Zero for everywhere else. */
   waitingAt: (id: string) => number
@@ -9894,9 +9903,39 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
     id: string; name: string; dim: boolean; dist: boolean
     /** Somebody, not somewhere. Drawn as a mark, never as a name — see below. */
     mystery?: boolean
+    /** Overrides the plate's colour. Only Finn uses it, and only to say whether
+     *  he is holding a finished job. */
+    accent?: string
+    /** Breathes. Reserved for the one state that is asking for something. */
+    urgent?: boolean
     sx: number; sy: number; world: number
   }
   const marks: Mark[] = []
+
+  // ── THE RIVAL, AHEAD OF EVERYTHING WHEN HE IS HOLDING SOMETHING ──────
+  //
+  // Slots on this compass are assigned by ROLE rather than won by distance (see
+  // the note above), and a finished job is the strongest role there is: it is
+  // the only heading on the chart with a reward already earned sitting at the
+  // end of it. Working or offering, he queues after the ports like anybody
+  // else — the way home still outranks a man with a suggestion.
+  if (finn) {
+    const f = project(finn.x, finn.y)
+    marks.push({
+      id: 'finn',
+      name: finn.state === 'ready' ? `${FINN_NAME} · ready` : FINN_NAME,
+      dim: false,
+      // A DISTANCE ON ALL THREE. The other marks earn one by being somewhere
+      // you act on; he is a single boat rather than a coastline, so how far is
+      // the difference between "go now" and "on the way back".
+      dist: true,
+      accent: finn.state === 'ready' ? '#f0c040'
+        : finn.state === 'working' ? 'rgba(190,214,228,0.75)'
+        : '#e8564a',
+      urgent: finn.state === 'ready',
+      sx: f.sx, sy: f.sy, world: f.world,
+    })
+  }
 
   const ports = PLACES.filter(p => p.kind === 'port')
     .map(p => ({ p, ...project(p.x, p.y) }))
@@ -10063,7 +10102,11 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
               width: 0, height: 0,
               transform: `rotate(${a + Math.PI / 2}rad)`,
               borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
-              borderBottom: `9px solid rgba(190,214,228,${dim ? 0.28 : lead ? 0.75 : 0.5})`,
+              borderBottom: `9px solid ${m.accent ?? `rgba(190,214,228,${dim ? 0.28 : lead ? 0.75 : 0.5})`}`,
+              // ONLY THE FINISHED JOB BREATHES. Same limit every pulse on this
+              // chart is held to: it may ask for attention because there is an
+              // answer waiting, and it stops the moment there is not.
+              animation: m.urgent ? 'seaMarkPulse 2.4s ease-in-out infinite' : undefined,
             }} />
             {/* NAME FIRST, then distance. An arrow with only a number on it
                 tells you something is 340m away and leaves you to sail there to
@@ -10083,7 +10126,7 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends }: {
             ) : (
               <span className="font-cinzel font-700" style={{
                 fontSize: lead ? '0.6rem' : '0.54rem', whiteSpace: 'nowrap',
-                color: `rgba(214,232,240,${dim ? 0.4 : lead ? 0.9 : 0.62})`,
+                color: m.accent ?? `rgba(214,232,240,${dim ? 0.4 : lead ? 0.9 : 0.62})`,
                 textShadow: '0 1px 6px rgba(0,0,0,0.9)',
               }}>{m.name}</span>
             )}

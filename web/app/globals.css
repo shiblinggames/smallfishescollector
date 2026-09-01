@@ -3191,3 +3191,12 @@ body.hardcore-gauntlet::after {
    own colour. It is gone, and the reasoning is in FolkPanel's PersonCard: in
    this app a thing that glows and pulses is a thing waiting to be tapped, and
    nothing about a finished friendship is waiting. A still gold rim says done. */
+
+
+/* The compass arrow for a finished job. Opacity only, so it composites and can
+   never cost the chart a frame — the marks are repositioned five times a second
+   already and this runs on top of that. */
+@keyframes seaMarkPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
