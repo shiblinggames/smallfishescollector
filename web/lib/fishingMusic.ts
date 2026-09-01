@@ -165,8 +165,21 @@ function ensureElements(): void {
     if (elB && isFinite(elB.duration) && elB.duration > 0) trackDuration = elB.duration
   })
   // 'ended' as a final safety net in case our scheduled swap somehow misses.
+  //
+  // AND IT MUST NOT FIRE WHEN THE SWAP IS ALREADY RUNNING. `current` is not
+  // promoted to partner until the reset timer, 80ms AFTER the boundary — so at
+  // the moment current actually ends, this still saw `current === just` and ran
+  // a second, competing handoff. Its first act is `partner.currentTime = 0`,
+  // and partner is by then already audible part-way into the track, so the
+  // safety net yanked the music backwards at the exact moment it was supposed
+  // to be seamless. A race that only ever fires on a correct loop.
+  //
+  // `handoffPreRollDone` is true from the pre-roll until the reset, which is
+  // precisely the window where a scheduled swap is in flight and this must
+  // stand down.
   const onEndedFactory = (just: HTMLAudioElement, partner: HTMLAudioElement) => () => {
     if (current !== just) return // already handed off
+    if (handoffPreRollDone) return // a scheduled swap is mid-flight; leave it alone
     try { just.currentTime = 0 } catch {}
     try { partner.currentTime = 0 } catch {}
     partner.play().catch(() => {})
@@ -176,6 +189,27 @@ function ensureElements(): void {
   }
   elA.addEventListener('ended', onEndedFactory(elA, elB))
   elB.addEventListener('ended', onEndedFactory(elB, elA))
+
+  // ── AND RE-ARM WHEN THE TAB COMES BACK ────────────────────────────────
+  //
+  // The handoff is a setTimeout up to two minutes long, and a BACKGROUND TAB
+  // clamps timers hard — Chrome to a second, then to about one a minute once
+  // the tab has been hidden a while. Which is desktop's problem specifically:
+  // a phone with the screen on is looking at the page, and a laptop has the
+  // game in a tab behind six others for half an hour.
+  //
+  // The audio keeps playing (browsers do not throttle media), so what actually
+  // happens is the pre-roll never lands, the track runs to its end, and the
+  // 'ended' net catches it with a hard cut instead of a crossfade. Recoverable,
+  // audibly worse, and once a loop.
+  //
+  // Recomputing on the way back costs one comparison and puts the schedule back
+  // on the real clock rather than on whatever the browser let us have.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return
+    if (!current || current.paused) return
+    scheduleHandoffChain()
+  })
 }
 
 function setupWebAudio(): boolean {
@@ -289,19 +323,33 @@ function doPreRollAndSwap(remainingMs: number) {
   const partner = current === elA ? elB : elA
   const curGain = current === elA ? gainA : gainB
   const partnerGain = current === elA ? gainB : gainA
-  // Pre-roll partner: start playing while its gain is 0 (silent). When the
-  // gain swap fires below, partner is already running so there's no
-  // play()-startup latency at the boundary.
+  // ── THE PRE-ROLL, AND WHY IT HAS TO BE A CROSSFADE ────────────────────
+  //
+  // Partner starts LEAD ms before current ends, silently, so there is no
+  // play()-startup latency at the boundary. That part was right.
+  //
+  // What was wrong is what happened AT the boundary: two `setValueAtTime`
+  // calls, a hard step from current to partner. By then partner has been
+  // running for LEAD ms — so every loop after the first began 200ms into the
+  // track. The first play started at 0 and sounded correct; every repeat lost
+  // its opening. On a two minute track that is a wrong-sounding loop every two
+  // minutes, which is exactly how it was reported.
+  //
+  // A ramp across the overlap is what the two-element design was reaching for
+  // all along: current's tail fades out while partner's head fades in, both
+  // playing, so nothing is cut off either end. 200ms is short enough to be
+  // inaudible as a fade and long enough to cover the latency it exists for.
   try { partner.currentTime = 0 } catch {}
   partner.play().catch(() => {})
-  // Schedule the gain swap exactly at the moment current ends.
-  const swapTime = audioCtx.currentTime + remainingMs / 1000
-  curGain.gain.cancelScheduledValues(audioCtx.currentTime)
-  partnerGain.gain.cancelScheduledValues(audioCtx.currentTime)
-  curGain.gain.setValueAtTime(curGain.gain.value, audioCtx.currentTime)
-  partnerGain.gain.setValueAtTime(0, audioCtx.currentTime)
-  curGain.gain.setValueAtTime(0, swapTime)
-  partnerGain.gain.setValueAtTime(1, swapTime)
+  const t0 = audioCtx.currentTime
+  const swapTime = t0 + remainingMs / 1000
+  curGain.gain.cancelScheduledValues(t0)
+  partnerGain.gain.cancelScheduledValues(t0)
+  curGain.gain.setValueAtTime(curGain.gain.value, t0)
+  partnerGain.gain.setValueAtTime(0, t0)
+  // linearRamp, not setValueAtTime. The step is the bug.
+  curGain.gain.linearRampToValueAtTime(0, swapTime)
+  partnerGain.gain.linearRampToValueAtTime(1, swapTime)
   // After the swap, promote partner to current and reset the old one.
   const old = current
   handoffResetTimer = setTimeout(() => {
