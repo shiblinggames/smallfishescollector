@@ -165,3 +165,21 @@ Leaving: `SmugglerTalk` stamps `profiles.sea_x/sea_y` to his bow via `moorBeside
 before routing to `/tavern/tide-run?from=sea`, and that flag is the only thing the run does
 differently — it puts a "Back to Kip" exit on the wreck screen, which otherwise restarts on
 a tap anywhere and has no way out.
+
+## The Tavern is not a tab (2026-09-01)
+
+Removed from the mobile tab bar, the mobile hamburger menu and the desktop top bar. The
+only way in is to sail to the Mainland and go ashore — the island's `href` in
+`sea/chart.ts` is `/tavern`, and that is now its front door rather than one of two.
+
+Same argument that retired quick-sell and moved the Daily Haul onto the water: reaching a
+place should be a trip with a decision in it, and a nav link is a hole straight through
+that. The tab bar is four now — Fishing, Expeditions, Badges, Profile — and Fishing leads,
+which is the honest order.
+
+`canSail` is OPEN to everybody, so nothing is stranded by this. If the sea is ever re-gated,
+the `redirect('/tavern')` fallbacks in the four sea routes still work and become the way in
+for anyone off the list.
+
+Back links from the tavern's own sub-pages (casino, trivia, contests) are unchanged — those
+are returns, not doors.

@@ -296,16 +296,11 @@ export default function Nav({ doubloons, gems, canSail = false }: {
   }
 
   const mobileLinks = [
-    { href: '/tavern', label: 'Tavern', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 3h14l-1 9H6L5 3z"/>
-          <path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/>
-          <path d="M6 21h12M8 17v4M16 17v4"/>
-          <path d="M6 12c0 3 2 5 6 5s6-2 6-5"/>
-        </svg>
-      )
-    },
+    // THE TAVERN IS NOT A TAB. It is a building on the Mainland, and the only
+    // way in is to sail there and go ashore — see the Mainland's `href` in
+    // sea/chart. A link here would be a second door into a place whose whole
+    // point is that reaching it is a trip, which is the same argument that
+    // retired quick-sell and moved the Daily Haul onto the water.
     { href: '/sea', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -386,21 +381,11 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     { href: '/achievements', label: "Captain's Log", badge: null },
   ]
 
-  // Desktop top-bar inline links. Canonical order: tavern, fishing,
-  // expeditions, leaderboard, market — then achievements + social from
+  // Desktop top-bar inline links. Canonical order: fishing, expeditions,
+  // leaderboard, market — then achievements + social from
   // desktopOnlyLinks. Profile is the avatar button on the far right,
   // so it doesn't appear here.
   const links = [
-    { href: '/tavern', label: 'Tavern', badge: null,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 3h14l-1 9H6L5 3z"/>
-          <path d="M18 6h2a1 1 0 011 1v3a1 1 0 01-1 1h-2"/>
-          <path d="M6 21h12M8 17v4M16 17v4"/>
-          <path d="M6 12c0 3 2 5 6 5s6-2 6-5"/>
-        </svg>
-      )
-    },
     { href: '/sea', label: 'Fishing', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
