@@ -393,8 +393,9 @@ export const PLACES: Place[] = [
     id: 'shipyard', name: 'The Shipyard', blurb: 'Loadout, rack and upgrades',
     href: '/shipyard', x: 700, y: -900, r: 265, art: '/sea/shipyard.png',
     kind: 'port', minLevel: 0,
+    // Placed on /sea/calibrate, against the real coastline.
     buildings: [
-      { art: '/sea/shipyard.png', x: 50, y: 57, scale: 0.294 },
+      { art: '/sea/shipyard.png', x: 53, y: 61, scale: 0.30 },
     ],
   },
   {
