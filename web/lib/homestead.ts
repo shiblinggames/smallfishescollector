@@ -434,6 +434,54 @@ export const ROOMS: RoomDef[] = [
   },
 ]
 
+/**
+ * ── WHERE EACH ANIMAL STANDS ────────────────────────────────────────────────
+ *
+ * The menagerie's pets were wandering, and it looked wrong: an animal gliding
+ * across a floor at a constant speed with its feet not moving is a chess piece
+ * being slid, not a creature walking. Sprites that have no walk cycle should not
+ * be asked to walk. What they CAN do honestly is stand somewhere and turn round,
+ * so that is all they do now.
+ *
+ * Which means every pet needs a place of its own, and a placed room beats a
+ * generated one anyway: you can put the crabs down by the front, the parrots up
+ * on the shelf side, and the plesiosaur where there is room for it. Placed on
+ * /home/calibrate with the menagerie room selected.
+ *
+ * `x`, `y` is the pet's FEET and `w` is its width, both as a percent of the room
+ * box — the same three numbers, in the same units, as every other thing placed
+ * in a room. Nearer the bottom should mean bigger, because nearer the bottom
+ * means nearer the camera; nothing enforces that, the eye does.
+ *
+ * A pet with no entry falls back to the middle of the floor, so adding a species
+ * never puts a broken room in front of anybody. It does put two animals in the
+ * same spot, which is what the bench is for.
+ */
+export const MENAGERIE_SPOTS: Record<string, SlotSpot> = {
+  'parrot_red': { x: 12, y: 64, w: 7 },
+  'parrot_blue': { x: 29, y: 64, w: 7 },
+  'parrot_green': { x: 46, y: 64, w: 7 },
+  'parrot_charcoal': { x: 63, y: 64, w: 7 },
+  'parrot_sand': { x: 80, y: 64, w: 7 },
+  'parrot_gold': { x: 19, y: 75, w: 8 },
+  'monkey_brown': { x: 36, y: 75, w: 8 },
+  'monkey_golden': { x: 53, y: 75, w: 8 },
+  'seal_brown': { x: 70, y: 75, w: 8 },
+  'seal_gray': { x: 87, y: 75, w: 8 },
+  'seal_gold': { x: 12, y: 86, w: 9 },
+  'lizard_green': { x: 29, y: 86, w: 9 },
+  'lizard_indigo': { x: 46, y: 86, w: 9 },
+  'lizard_white': { x: 63, y: 86, w: 9 },
+  'raccoon_beige': { x: 80, y: 86, w: 9 },
+  'raccoon_black': { x: 19, y: 97, w: 10 },
+  'crab_orange': { x: 36, y: 97, w: 10 },
+  'crab_blue': { x: 53, y: 97, w: 10 },
+  'crab_gold': { x: 70, y: 97, w: 10 },
+  'plesiosaur_baby': { x: 87, y: 97, w: 10 },
+}
+
+export const MENAGERIE_FALLBACK: SlotSpot = { x: 50, y: 88, w: 9 }
+
 export const ROOM_BY_ID: Record<RoomId, RoomDef> =
   Object.fromEntries(ROOMS.map(r => [r.id, r])) as Record<RoomId, RoomDef>
 

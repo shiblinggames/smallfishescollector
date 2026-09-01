@@ -33,8 +33,10 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   ROOMS, ROOM_BY_ID, FURNITURE, FURNITURE_BY_SLOT, roomArt,
+  MENAGERIE_SPOTS, MENAGERIE_FALLBACK,
   type FurnitureSlot, type SlotSpot,
 } from '@/lib/homestead'
+import { PETS } from '@/lib/pets'
 
 /** Back to front, the same order the room paints in. */
 const ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'cornerL', 'cornerR']
@@ -52,6 +54,20 @@ export default function CalibrateRooms({ initial, contentInitial }: {
 }) {
   const [rows, setRows] = useState<Row[]>(initial)
   const [content, setContent] = useState<Record<string, Content>>(contentInitial)
+  /**
+   * ── AND THE ANIMALS ─────────────────────────────────────────────────────
+   *
+   * The menagerie does not get a content box like the gallery and the trophy
+   * room do. Those flow a grid of things inside a rectangle; this one places
+   * TWENTY named animals individually, because a pet standing somewhere chosen
+   * is the whole difference between a room and a shelf.
+   *
+   * All twenty are on the bench whether or not anybody owns them, since the
+   * table has to work for the captain who owns the lot.
+   */
+  const [spots, setSpots] = useState<Record<string, SlotSpot>>(
+    () => Object.fromEntries(PETS.map(p => [p.id, MENAGERIE_SPOTS[p.id] ?? MENAGERIE_FALLBACK])))
+  const [petId, setPetId] = useState<string>(PETS[0].id)
   /** Which room is on the bench. The main room also picks a shell below. */
   const [roomId, setRoomId] = useState<string>('main')
   const [tier, setTier] = useState(1)
@@ -63,7 +79,34 @@ export default function CalibrateRooms({ initial, contentInitial }: {
   const main = ROOM_BY_ID.main
   const room = ROOMS.find(r => r.id === roomId) ?? main
   const isMain = room.id === 'main'
+  const isPets = room.id === 'menagerie'
   const box = content[room.id] ?? { x: 50, y: 50, w: 76 }
+  const pet = spots[petId] ?? MENAGERIE_FALLBACK
+
+  const setPet = (patch: Partial<SlotSpot>) =>
+    setSpots(prev => ({ ...prev, [petId]: { ...(prev[petId] ?? MENAGERIE_FALLBACK), ...patch } }))
+
+  const movePet = (e: React.PointerEvent, id: string) => {
+    const el = (e.currentTarget as HTMLElement).closest('[data-room]') as HTMLElement | null
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    setSpots(prev => ({ ...prev, [id]: {
+      ...(prev[id] ?? MENAGERIE_FALLBACK),
+      x: Math.round(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100))),
+      y: Math.round(Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100))),
+    } }))
+  }
+
+  const nudgePet = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 5 : 1
+    const d: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
+    }
+    const m = d[e.key]
+    if (!m) return
+    e.preventDefault()
+    setPet({ x: Math.max(0, Math.min(100, pet.x + m[0])), y: Math.max(0, Math.min(100, pet.y + m[1])) })
+  }
 
   /** Which art to show for a slot. The first option with a picture, so the
    *  bench is placing a REAL piece rather than an outline: a hearth is a
@@ -164,13 +207,21 @@ export default function CalibrateRooms({ initial, contentInitial }: {
       + `    cornerR: { x: ${pad(r.cornerR.x, 2)}, y: ${pad(r.cornerR.y, 2)}, w: ${pad(r.cornerR.w, 2)} } },`
     ).join('\n')
     + '\n]\n\n'
-    // AND THE THREE CONTENT BOXES, as the line to paste into each RoomDef.
-    + ROOMS.filter(r => r.id !== 'main').map(r => {
+    // AND THE TWO CONTENT BOXES, as the line to paste into each RoomDef. The
+    // menagerie has none any more: it places its animals one at a time, below.
+    + ROOMS.filter(r => r.id !== 'main' && r.id !== 'menagerie').map(r => {
       const b = content[r.id] ?? { x: 50, y: 50, w: 76 }
       return `// ${r.name}\ncontent: { x: ${b.x}, y: ${b.y}, w: ${b.w} },`
     }).join('\n')
-    + '\n'
-  ), [rows, content])
+    + '\n\nexport const MENAGERIE_SPOTS: Record<string, SlotSpot> = {\n'
+    + PETS.map(p => {
+      const sp = spots[p.id] ?? MENAGERIE_FALLBACK
+      // Quoted and padded exactly as the file has it, so the paste is a paste.
+      return `  '${p.id}':${' '.repeat(Math.max(1, 18 - p.id.length))}`
+        + `{ x: ${pad(sp.x, 2)}, y: ${pad(sp.y, 2)}, w: ${pad(sp.w, 2)} },`
+    }).join('\n')
+    + '\n}\n'
+  ), [rows, content, spots])
 
   const copy = async () => {
     try {
@@ -287,7 +338,7 @@ export default function CalibrateRooms({ initial, contentInitial }: {
             Drawn as its actual rectangle rather than a dot, because what is
             being placed is the AREA a grid of things flows inside and its width
             is most of the decision. */}
-        {!isMain && (
+        {!isMain && !isPets && (
           <div style={{
             position: 'absolute', left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`,
             transform: 'translate(-50%, -50%)',
@@ -301,7 +352,7 @@ export default function CalibrateRooms({ initial, contentInitial }: {
             </span>
           </div>
         )}
-        {!isMain && (
+        {!isMain && !isPets && (
           <button type="button" aria-label="Content box handle"
             onPointerDown={e => {
               e.preventDefault()
@@ -319,6 +370,54 @@ export default function CalibrateRooms({ initial, contentInitial }: {
               background: '#f0c464', border: '2px solid rgba(10,16,22,0.85)',
             }} />
         )}
+
+        {/* ── THE ANIMALS ──────────────────────────────────────────────
+            Drawn with the room's own transform, feet-anchored, sorted back to
+            front by y. What you see here is what RoomView renders, minus the
+            turning: a bench that previewed them mirrored at random would make
+            placing them a game of chance. */}
+        {isPets && [...PETS]
+          .sort((a, b) => (spots[a.id] ?? MENAGERIE_FALLBACK).y - (spots[b.id] ?? MENAGERIE_FALLBACK).y)
+          .map(p => {
+            const sp = spots[p.id] ?? MENAGERIE_FALLBACK
+            const on = petId === p.id
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={p.id} src={p.restImageUrl} alt="" draggable={false} style={{
+                position: 'absolute',
+                left: `${sp.x}%`, top: `${sp.y}%`, width: `${sp.w}%`,
+                transform: 'translate(-50%, -100%)',
+                filter: on
+                  ? 'drop-shadow(0 0 6px rgba(240,196,100,0.95)) drop-shadow(0 3px 6px rgba(0,0,0,0.35))'
+                  : 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+                opacity: on ? 1 : 0.85,
+              }} />
+            )
+          })}
+        {isPets && PETS.map(p => {
+          const sp = spots[p.id] ?? MENAGERIE_FALLBACK
+          const on = petId === p.id
+          return (
+            <button key={p.id} type="button" aria-label={`${p.name} handle`}
+              onPointerDown={e => {
+                e.preventDefault()
+                ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                setPetId(p.id); setHeld(p.id)
+              }}
+              onPointerMove={e => { if (held === p.id) movePet(e, p.id) }}
+              onPointerUp={() => setHeld(null)}
+              onPointerCancel={() => setHeld(null)}
+              onFocus={() => setPetId(p.id)}
+              onKeyDown={nudgePet}
+              style={{
+                position: 'absolute', left: `${sp.x}%`, top: `${sp.y}%`,
+                transform: 'translate(-50%, -50%)',
+                width: 13, height: 13, borderRadius: '50%', padding: 0, cursor: 'grab',
+                background: on ? '#f0c464' : 'rgba(240,196,100,0.35)',
+                border: '2px solid rgba(10,16,22,0.85)',
+              }} />
+          )
+        })}
 
         {/* THE HANDLES, over the art rather than in it: a drag target the size
             of a rug is a drag target you cannot aim, and the piece under it has
@@ -350,6 +449,20 @@ export default function CalibrateRooms({ initial, contentInitial }: {
         })}
       </div>
 
+      {/* ── WHICH ANIMAL ── */}
+      {isPets && <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', margin: '12px 0 8px' }}>
+        {PETS.map(p => (
+          <button key={p.id} type="button" onClick={() => setPetId(p.id)}
+            className="font-karla font-700"
+            style={{
+              padding: '0.28rem 0.56rem', borderRadius: 999, fontSize: '0.7rem', cursor: 'pointer',
+              color: petId === p.id ? '#0d1520' : 'rgba(214,232,240,0.78)',
+              background: petId === p.id ? '#8fd0e8' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${petId === p.id ? '#8fd0e8' : 'rgba(255,255,255,0.14)'}`,
+            }}>{p.name}</button>
+        ))}
+      </div>}
+
       {/* ── THE PIECE ── */}
       {isMain && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '12px 0 8px' }}>
         {ORDER.map(s => (
@@ -374,17 +487,25 @@ export default function CalibrateRooms({ initial, contentInitial }: {
             sets of controls for the same three numbers would be two places to
             look for the same answer. */}
         <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0c464', minWidth: 92 }}>
-          {isMain ? FURNITURE_BY_SLOT[slot].label : room.name}
+          {isMain ? FURNITURE_BY_SLOT[slot].label
+            : isPets ? (PETS.find(p => p.id === petId)?.name ?? petId)
+              : room.name}
         </span>
         <span className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(190,212,228,0.7)', fontVariantNumeric: 'tabular-nums' }}>
-          x {isMain ? cur.x : box.x} · y {isMain ? cur.y : box.y} · w {isMain ? cur.w : box.w}
+          x {isMain ? cur.x : isPets ? pet.x : box.x}
+          {' · '}y {isMain ? cur.y : isPets ? pet.y : box.y}
+          {' · '}w {isMain ? cur.w : isPets ? pet.w : box.w}
         </span>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200 }}>
           <span className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(190,212,228,0.55)' }}>Width</span>
-          <input type="range" min={4} max={100} value={isMain ? cur.w : box.w} style={{ flex: 1 }}
+          {/* A PET TOPS OUT AT 30. The slider running to 100 for an animal makes
+              the useful range a third of its travel, and every pet in this room
+              lives between 5 and 15. */}
+          <input type="range" min={isPets ? 2 : 4} max={isPets ? 30 : 100}
+            value={isMain ? cur.w : isPets ? pet.w : box.w} style={{ flex: 1 }}
             onChange={e => {
               const w = Number(e.target.value)
-              if (isMain) set(slot, { w }); else setBox({ w })
+              if (isMain) set(slot, { w }); else if (isPets) setPet({ w }); else setBox({ w })
             }} />
         </label>
       </div>
