@@ -142,3 +142,26 @@ this purse — never its own balance, never doubloons directly.
 
 - [trivia.md](trivia.md), [chart-room.md](chart-room.md) — separate systems behind
   tavern doors. [fish-economy.md](fish-economy.md) — the Exchange ticker lives here too.
+
+## Tide Run starts with a person (2026-09-01)
+
+Tide Run is **no longer reachable from the Tavern**. Its hub card is deleted and
+`app/(app)/tavern/TideRunCard.tsx` is gone. The route still lives at
+`/tavern/tide-run`, which is now an implementation detail rather than a place.
+
+The entrance is **Kip Ledger**, a smuggler moored east of the Mainland at 1700,925 —
+`web/lib/seaSmuggler.ts` for who he is and what he says, `sea/SmugglerTalk.tsx` for the
+scene, `scripts/check-smuggler.mts` (in `npm run check`) for the assertion that his hail
+is clear of every other prompt on the chart. He is the only door on purpose: a second one
+would skip both the story and the way back to the water.
+
+**The beacons were always the story.** `TideRunGame` describes them as disguised detection
+devices you must smash grounded rather than jump, built to trick the see-rock-jump reflex —
+a whole mechanic about not being SEEN in a game where nobody had said who was looking. Kip
+is who they are looking for, and his warning is that mechanic explained by the one person
+who would know it.
+
+Leaving: `SmugglerTalk` stamps `profiles.sea_x/sea_y` to his bow via `moorBesideSmuggler`
+before routing to `/tavern/tide-run?from=sea`, and that flag is the only thing the run does
+differently — it puts a "Back to Kip" exit on the wreck screen, which otherwise restarts on
+a tap anywhere and has no way out.

@@ -315,9 +315,23 @@ interface TideRunGameProps {
    *  screen re-fetches this after each death so PB-driven rank shifts
    *  land live. */
   initialRank?: PlayerTideRunRank | null
+  /**
+   * THE RUN WAS STARTED FROM THE SEA, by Kip.
+   *
+   * He is the door to this mode now (see lib/seaSmuggler), and a door you
+   * cannot walk back out of is a trap. The wreck screen restarts on a tap
+   * anywhere and has no exit of its own — leaving meant finding the tab bar,
+   * which on a full-bleed canvas is not an obvious thing to look for. So when
+   * the run came from the water, the wreck screen offers the way back to it.
+   *
+   * The chart reopens exactly where the conversation happened: SmugglerTalk
+   * stamps profiles.sea_x/sea_y to his bow before it routes here, rather than
+   * trusting the chart's periodic position sync to have caught up.
+   */
+  fromSea?: boolean
 }
 
-export default function TideRunGame({ initialBestDistance = 0, initialBoatId = 'original', initialSeaId = 'home', adapter = serverAdapter, hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
+export default function TideRunGame({ initialBestDistance = 0, initialBoatId = 'original', initialSeaId = 'home', adapter = serverAdapter, hasSeenTour = false, topHolder = null, initialRank = null, fromSea = false }: TideRunGameProps) {
   // ── Boats ────────────────────────────────────────────────────────────────
   const [boatId, setBoatId] = useState(initialBoatId)
   const [seaId, setSeaId] = useState(initialSeaId)
@@ -2341,6 +2355,29 @@ export default function TideRunGame({ initialBestDistance = 0, initialBoatId = '
               <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.82rem', color: '#bda05a' }}>
                 Tap to try again
               </p>
+
+              {/* ── AND THE WAY BACK ────────────────────────────────────
+                  Only when the run came from the water, because only then is
+                  there somewhere specific to go back TO. stopPropagation is
+                  load-bearing: this card sits inside a screen that restarts on
+                  a tap anywhere, so without it the exit would start a run and
+                  then navigate out of it. */}
+              {fromSea && (
+                <a href="/sea"
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={e => e.stopPropagation()}
+                  className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{
+                    display: 'block', marginTop: 14, padding: '0.6rem',
+                    borderRadius: 11, fontSize: '0.68rem',
+                    background: 'rgba(143,179,196,0.1)',
+                    border: '1px solid rgba(143,179,196,0.34)',
+                    color: '#a9c6d4', pointerEvents: 'auto',
+                    textDecoration: 'none', touchAction: 'manipulation',
+                  }}>
+                  Back to Kip
+                </a>
+              )}
             </div>
 
             {/* Floating "+N coin" payload — phantom number that rises

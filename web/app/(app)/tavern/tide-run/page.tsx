@@ -4,7 +4,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import TideRunGame from './TideRunGame'
 import { getTopTideRunHolder, getPlayerTideRunRank } from './actions'
 
-export default async function TideRunPage() {
+export default async function TideRunPage({ searchParams }: {
+  searchParams: Promise<{ from?: string }>
+}) {
+  // `?from=sea` is set by Kip when he sends you out (see sea/SmugglerTalk). It
+  // only decides whether the wreck screen offers a way back to the water.
+  const { from } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -45,6 +50,7 @@ export default async function TideRunPage() {
           hasSeenTour={hasSeenTour}
           topHolder={topHolder}
           initialRank={initialRank}
+          fromSea={from === 'sea'}
         />
       </main>
     </>

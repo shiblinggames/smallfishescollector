@@ -199,6 +199,7 @@ if (typeof window !== 'undefined') {
 }
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
+import { KIP } from '@/lib/seaSmuggler'
 import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, turnInFinnQuest, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
 import { FINN_NAME, findNextEncounterBeat, type FinnSceneLine } from '@/lib/finn'
 
@@ -215,6 +216,8 @@ const VoyageBoard = dynamic(() => import('./VoyageBoard'), { ssr: false })
 const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 // The Daily Haul, which used to be a page under the Tavern. See sea/SeaBonus.
 const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
+// The door to Tide Run, which used to be a card in the Tavern. See seaSmuggler.
+const SmugglerTalk = dynamic(() => import('./SmugglerTalk'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
 // SeaAudio: it starts on the first press, not on mount.
 const SeaAudio = dynamic(() => import('./SeaAudio'), { ssr: false })
@@ -2723,6 +2726,9 @@ export default function SeaMap({
   /** Mirrors `landing` for the callback, which is built once. */
   const landingRef = useRef(false)
   const [hailing, setHailing] = useState<Trader | null>(null)
+  /** Kip's own conversation. He is hailed like a talker and then handled here
+   *  instead, because what he offers is a game mode rather than a deal. */
+  const [kipOpen, setKipOpen] = useState(false)
 
   /**
    * ESC CLOSES THE TOP-MOST PANEL, one per press, most recent first.
@@ -2744,6 +2750,7 @@ export default function SeaMap({
       if (trawlsPeek) { setTrawlsPeek(false); return }
       if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
       if (finnTalk) { setFinnTalk(null); return }
+      if (kipOpen) { setKipOpen(false); return }
       if (hailing) { setHailing(null); return }
       if (picking) { setPicking(false); return }
       if (crewOpen) { setCrewOpen(false); return }
@@ -2752,7 +2759,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, picking, crewOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -2827,6 +2834,38 @@ export default function SeaMap({
       mood: 'One of the regulars', lines: [r.line],
     }
   }), [])
+
+  /**
+   * KIP, ON THE WATER.
+   *
+   * Built as a talker so he is drawn, named, drifted and hailed by exactly the
+   * machinery everybody else out here uses — a bespoke sprite and a bespoke
+   * proximity test would be a second implementation of a solved problem, and
+   * the one that drifts. What is bespoke is only what happens when you hail
+   * him: his key is caught below and opens his own scene instead of the trader
+   * panel, the same way Finn's hail does.
+   */
+  const smuggler = useMemo<Trader>(() => ({
+    key: KIP.key,
+    kind: 'talker' as const,
+    name: KIP.name,
+    x: KIP.x, y: KIP.y,
+    line: KIP.line,
+    // Barely moving. Everyone else out here bobs on an 88 second orbit; a man
+    // trying not to be noticed sits still, and on a chart where every other
+    // hull is swinging, stillness is the thing that catches the eye.
+    driftR: 12, driftRate: (Math.PI * 2) / 150, driftPhase: 1.7,
+    look: {
+      characterColor: KIP.look.characterColor,
+      boatId: KIP.look.boatId,
+      hatId: KIP.look.hatId,
+      rodSlug: null,
+      hook: null,
+    },
+    deal: 'talk' as const, topic: 'chat' as const,
+    mood: 'Wants a word', lines: [KIP.line],
+  }), [])
+
   // Mirrored for the loop, which must not be re-created every time the list
   // changes or the whole sail restarts.
   const tradersRef = useRef<Trader[]>([])
@@ -2881,7 +2920,7 @@ export default function SeaMap({
   }, [])
 
   const yoon = useMemo(() => yoonTrader(), [])
-  useEffect(() => { allTradersRef.current = [yoon, ...residents, ...socials, ...traders] }, [yoon, residents, socials, traders])
+  useEffect(() => { allTradersRef.current = [yoon, smuggler, ...residents, ...socials, ...traders] }, [yoon, smuggler, residents, socials, traders])
 
   /**
    * EVERYONE ELSE, FOR THE CANVAS.
@@ -2909,7 +2948,7 @@ export default function SeaMap({
 
   const gpuFleet = useMemo(() => {
     if (!GPU_ISLANDS) return []
-    const out = [yoon, ...residents, ...socials, ...traders]
+    const out = [yoon, smuggler, ...residents, ...socials, ...traders]
       .map(t => ({ key: t.key, look: captainFromTrader(t.look) }))
     if (finn) out.push({ key: 'finn', look: captainFromTrader(FINN_LOOK) })
     // AND THE PEOPLE YOU ACTUALLY KNOW. Same builder, same slot: a friend's
@@ -5297,7 +5336,7 @@ export default function SeaMap({
         {/* THE SALT ROAD. Other captains, out working. They are drawn from the
             same parts the player's own captain is, so they are house-style by
             construction rather than by anyone remembering to match it. */}
-        {[yoon, ...residents, ...socials, ...traders].map(t => (
+        {[yoon, smuggler, ...residents, ...socials, ...traders].map(t => (
           <TraderBoat key={t.key} trader={t}
             // The boats stay — they are part of the sea and the sea is the
             // backdrop. Their NAME PLATES go: you cannot hail anyone with a
@@ -6284,6 +6323,10 @@ hullRef={hullRefFor(t.key)} />
           // button would be lying about what the thumb is about to do.
           if (tourFishOnly.current) return false
           if (nearFinn && !finnTalk) { vibrate(14); void hailFinn(); return true }
+          // KIP FIRST, and by key. He rides the talker plumbing so he is drawn
+          // and hailed like everybody else, but the trader panel has nothing to
+          // say for a man offering a run rather than a price.
+          if (nearTrader?.key === KIP.key && !kipOpen) { vibrate(14); setKipOpen(true); return true }
           if (nearTrader && !hailing) { vibrate(14); setHailing(nearTrader); return true }
           if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
           if (nearBottle) { take(nearBottle); return true }
@@ -6705,6 +6748,8 @@ hullRef={hullRefFor(t.key)} />
       {levelGrant && (
         <LevelRewardsGrant granted={levelGrant} onDone={() => setLevelGrant(null)} />
       )}
+
+      <SmugglerTalk open={kipOpen} onClose={() => setKipOpen(false)} />
 
       {hailing && (
         <TraderPanel

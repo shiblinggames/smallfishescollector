@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { isPremiumActive } from '@/lib/premium'
-import TideRunCard from './TideRunCard'
 import ContestsHubCard from './ContestsHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import Gossip from './Gossip'
@@ -101,14 +100,18 @@ export default async function TavernPage() {
               nobody opens for it. It is a disc on the sea chart now, and it
               flashes while something is unclaimed. See sea/SeaBonus. */}
           <ContestsHubCard hasNew={profile?.has_seen_contests !== true} />
-          {/* TIDE RUN, HERE, ON PURPOSE. It is not a chip game — the Den's
-              tables are blackjack, roulette and slots, and its wallet and daily
-              cap are all about buy-ins — so filing it under the Den would put a
-              free arcade run behind a gambling door. This is its only entrance,
-              and an orphaned minigame is worse than a slightly wider group. */}
-          <div style={{ marginTop: 12 }}>
-            <TideRunCard />
-          </div>
+          {/* TIDE RUN IS NOT HERE ANY MORE. The old note said this was its only
+              entrance and that an orphaned minigame is worse than a slightly
+              wider group, which was right at the time — but a card under a
+              heading about things that reset is not an entrance, it is a
+              filing. You tapped it and became a boat fleeing something, with no
+              idea who you were or why the rocks mattered.
+
+              It starts with Kip Ledger now: a smuggler moored east of the
+              Mainland who tells you what he is carrying and what the beacons
+              are. See lib/seaSmuggler. Deliberately the only door, because two
+              doors would mean one of them skips the story AND skips the way
+              back to the water. */}
         </Group>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
