@@ -1934,18 +1934,20 @@ export default function FishingHere({
                    deliberately the only implementation of this in the app and
                    the map is not going to become the second. It opens itself
                    here rather than borrowing the action slot, because out on
-                   the water that slot has a boat to steer back to. */
-                <div style={{
-                  borderRadius: 20, padding: '1.15rem 1.25rem 1.05rem', textAlign: 'center',
-                  background: 'rgba(6,14,22,0.96)', border: '1px solid rgba(255,255,255,0.1)',
-                }}>
-                  <CrateOpening
-                    tier={caught.tier as CrateTierId}
-                    loot={caught.loot}
-                    headline="You reeled up a"
-                    autoOpenMs={700}
-                  />
-                </div>
+                   the water that slot has a boat to steer back to.
+
+                   NO WRAPPER. This used to sit in a card of its own — a
+                   different background, a different radius and a white hairline
+                   where the catch card wears its rarity — so a crate and a fish
+                   landing seconds apart on the same screen looked like they
+                   came from two different games. CrateOpening now carries the
+                   catch card's own surface, tinted by the crate's tier. */
+                <CrateOpening
+                  tier={caught.tier as CrateTierId}
+                  loot={caught.loot}
+                  headline="You reeled up a"
+                  autoOpenMs={700}
+                />
               ) : caught.kind === 'fish' ? (
                 /* THE SAME CARD. Not a summary of it — the component the
                    fishing screen renders, handed the same payload. See

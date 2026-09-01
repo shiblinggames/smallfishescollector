@@ -206,7 +206,9 @@ function CrateCard({ isPremium, crateName, phase, loot, claimed, loading, onClai
           press a second button would be a step backwards. */}
       {loot && phase !== 'idle' ? (
         <div style={{ marginTop: 8 }}>
-          <CrateOpening tier={tier} loot={loot as CrateLootView} autoOpenMs={250} />
+          {/* Bare: this is already inside the Weekly Crate panel, so the
+              crate's own card surface would be a card in a card. */}
+          <CrateOpening tier={tier} loot={loot as CrateLootView} autoOpenMs={250} framed={false} />
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

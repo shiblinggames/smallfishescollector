@@ -42,6 +42,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import SpinReel from './SpinReel'
+import CrateFx from './CrateFx'
 import { getBait } from '@/lib/bait'
 import { hapticTap, vibrate } from '@/lib/haptics'
 
@@ -94,8 +95,30 @@ export function isRareLoot(loot: CrateLootView): boolean {
 // daily challenge drawer at ~328px on a small phone) with room to spare.
 const TILE_W = 220
 const TILE_H = 72
-const SPIN_MS = 1500
 const LAND_MS = 760
+
+/**
+ * HOW LONG THE STRIP RUNS, per tier.
+ *
+ * The other half of the juice ladder (the particles are in CrateFx). A single
+ * 1500ms spin for every crate meant a Wooden took exactly as long to resolve as
+ * an Ancient, which is backwards twice over: the common one is the one you open
+ * dozens of times and want out of the way, and the rare one is the only one
+ * anybody wants drawn out.
+ *
+ * Wooden is now well under a second. Ancient is more than twice that, and the
+ * charge field building around it the whole way is what makes the extra time
+ * read as tension rather than as lag.
+ */
+const SPIN_MS: Record<CrateTierId, number> = {
+  wooden: 850, metal: 1100, gold: 1400, diamond: 1750, ancient: 2200,
+}
+
+/** How hard each tier MOVES. Feeds the crate's shake, its landing pop and the
+ *  haptic together, so a tier cannot end up looking heavy and feeling light. */
+const SHAKE: Record<CrateTierId, number> = {
+  wooden: 0.55, metal: 0.75, gold: 1, diamond: 1.25, ancient: 1.5,
+}
 
 /** What the strip flashes past on the way to the reward.
  *
@@ -285,6 +308,7 @@ export default function CrateOpening({
   onOpened,
   onSettled,
   footer,
+  framed = true,
 }: {
   tier: CrateTierId
   /** The already-granted loot. The spin lands on this. */
@@ -310,6 +334,16 @@ export default function CrateOpening({
   onSettled?: () => void
   /** Host-supplied action row (Claim, Close), shown only after the reveal. */
   footer?: React.ReactNode
+  /**
+   * Draw the card surface, or sit bare inside the host's own panel.
+   *
+   * True out on the water, where this IS the card and has to match the one
+   * every fish lands on. False in the Tavern, where it is already inside the
+   * Weekly Crate panel and a second frame would be a card in a card. The
+   * particles run either way; only the background, border and padding are
+   * conditional.
+   */
+  framed?: boolean
 }) {
   const [phase, setPhase] = useState<'closed' | 'rolling' | 'revealed'>('closed')
   const [showRare, setShowRare] = useState(false)
@@ -319,6 +353,12 @@ export default function CrateOpening({
   useEffect(() => { setMounted(true) }, [])
   const t = CRATE_TIERS[tier]
   const rare = isRareLoot(loot)
+  /** Bumped once, on the frame the strip settles. CrateFx watches it rather
+   *  than the phase, so the burst fires exactly when the lid gives. */
+  const [landKey, setLandKey] = useState(0)
+  /** How hard this tier moves, 0.5 to 1.5. One number so the shake, the pop and
+   *  the spin blur cannot drift apart per tier. */
+  const shake = SHAKE[tier]
 
   // 17 fillers then the reward, so the strip decelerates onto the real thing.
   const [strip] = useState<CrateLootView[]>(() => {
@@ -347,7 +387,33 @@ export default function CrateOpening({
   }, [openSignal])
 
   return (
-    <div style={{ textAlign: 'center' }}>
+    // ── THE SAME SURFACE THE CATCH CARD USES ────────────────────────────
+    //
+    // This was `rgba(6,14,22,0.96)` with a white hairline, which is a DIFFERENT
+    // card from the one every fish lands on, on the same screen, seconds apart.
+    // Flat, opaque, one hairline in the crate's own accent: the fish card's
+    // rule, and the reason it reads as part of the game rather than as a
+    // drawer that happened to open.
+    //
+    // `position: relative` because the FX layer fills it. The particles are
+    // behind the content and inside the rounded corners, so a burst lights the
+    // panel rather than spraying over the sea.
+    <div style={{
+      position: 'relative', width: '100%', textAlign: 'center',
+      ...(framed ? {
+        borderRadius: 16,
+        // The particles stay inside the corners rather than spraying over
+        // whatever the card is sitting on, which out on the water is the sea.
+        overflow: 'hidden',
+        background: '#080e15',
+        border: `1px solid ${t.accent}55`,
+        padding: '0.9rem 0.85rem 0.85rem',
+      } : { paddingTop: '0.5rem' }),
+    }}>
+      <CrateFx tier={tier} phase={phase} landKey={landKey} box={92} />
+
+      {/* Everything above the particles. */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
       {/* The crate. One fixed slot across all three phases so the art never
           jumps when the content below it changes height. */}
       <div style={{ height: 92, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.6rem' }}>
@@ -357,15 +423,18 @@ export default function CrateOpening({
           width={92}
           height={92}
           onClick={phase === 'closed' ? open : undefined}
+          // THE SHAKE IS ON THE LADDER TOO. A Wooden box rattles; an Ancient
+          // chest fights the lid. Same keyframes scaled by one number, so the
+          // tiers cannot drift into having different motions.
           animate={
-            phase === 'rolling'  ? { rotate: [-5, 5, -4, 4, -3, 3, 0], scale: [1, 1.05, 1] }
-            : phase === 'revealed' ? { scale: [0.85, 1.12, 1], rotate: 0 }
+            phase === 'rolling'  ? { rotate: [-5 * shake, 5 * shake, -4 * shake, 4 * shake, -3 * shake, 3 * shake, 0], scale: [1, 1 + 0.05 * shake, 1] }
+            : phase === 'revealed' ? { scale: [0.85, 1 + 0.12 * shake, 1], rotate: 0 }
             // Idle bob while shut. Transform only, so it composites and costs
             // nothing per frame.
             : { y: [0, -4, 0], rotate: 0, scale: 1 }
           }
           transition={
-            phase === 'rolling'  ? { duration: 0.3, repeat: Infinity, ease: 'easeInOut' }
+            phase === 'rolling'  ? { duration: 0.34 - 0.06 * shake, repeat: Infinity, ease: 'easeInOut' }
             : phase === 'revealed' ? { duration: 0.42, ease: [0.34, 1.56, 0.64, 1] }
             : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
           }
@@ -439,11 +508,13 @@ export default function CrateOpening({
                 renderItem={(item) => <CrateTile loot={item} />}
                 tileMain={TILE_W}
                 tileCross={TILE_H}
-                spinMs={SPIN_MS}
+                spinMs={SPIN_MS[tier]}
                 landMs={LAND_MS}
                 onSettle={() => {
-                  // The landing gets its own haptic, longer for a rare drop.
-                  vibrate(rare ? 30 : 12)
+                  // The landing gets its own haptic, longer for a rare drop,
+                  // and scaled by the tier so the phone agrees with the screen.
+                  vibrate(Math.round((rare ? 30 : 12) * shake))
+                  setLandKey(k => k + 1)
                   setPhase('revealed')
                   // A cosmetic or a pet takes over the screen. The inline card
                   // still resolves underneath, so dismissing the overlay leaves
@@ -470,35 +541,50 @@ export default function CrateOpening({
                 </p>
               )}
 
+              {/* THE CATCH CARD'S ANATOMY: the lit thing on the left at a
+                  fixed size, the words beside it, left-aligned. It used to
+                  centre the pair and swap the image between 48 and 58px, so a
+                  rare drop shifted the whole row sideways as it resolved. */}
               <div style={{
                 position: 'relative',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: 12,
+                display: 'flex', alignItems: 'center', gap: 12,
+                textAlign: 'left',
               }}>
-                {loot.type === 'skin' ? (
-                  <SkinSwatch skinId={loot.skinId} size={rare ? 58 : 48} ring={`${lootTint(loot)}59`} />
-                ) : (
-                  <motion.img
-                    src={lootArt(loot)} alt=""
-                    width={rare ? 58 : 48} height={rare ? 58 : 48}
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.1 }}
-                    style={{
-                      height: rare ? 58 : 48, width: rare ? 58 : 48,
-                      objectFit: 'contain', flexShrink: 0,
-                    }}
-                  />
-                )}
-                <div style={{ textAlign: 'left', minWidth: 0 }}>
-                  <p className="font-cinzel font-700" style={{
-                    fontSize: rare ? '1.25rem' : '1.5rem',
+                {/* ── THE ONE LIT THING ── the reward, in the catch card's
+                    86px slot, with the same soft accent pool behind it. */}
+                <motion.div
+                  initial={{ scale: 0.62, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 17, delay: 0.08 }}
+                  style={{
+                    position: 'relative', width: 66, height: 66, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                  <span aria-hidden style={{
+                    position: 'absolute', inset: -6, borderRadius: '50%',
+                    background: `radial-gradient(circle, ${lootTint(loot)}3a 0%, transparent 68%)`,
+                  }} />
+                  {loot.type === 'skin' ? (
+                    <SkinSwatch skinId={loot.skinId} size={52} ring={`${lootTint(loot)}59`} />
+                  ) : (
+                    <img src={lootArt(loot)} alt="" width={66} height={66}
+                      style={{
+                        position: 'relative', maxWidth: '100%', maxHeight: '100%',
+                        objectFit: 'contain',
+                        filter: `drop-shadow(0 3px 10px ${lootTint(loot)}55)`,
+                      }} />
+                  )}
+                </motion.div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-cinzel font-800" style={{
+                    fontSize: '1.4rem',
                     color: lootTint(loot), lineHeight: 1.1,
                   }}>
                     {loot.type === 'doubloons' ? `+${lootTitle(loot)}` : lootTitle(loot)}
                   </p>
-                  <p className="font-karla font-600" style={{
-                    fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', marginTop: 3,
+                  <p className="font-karla font-700 uppercase" style={{
+                    fontSize: '0.56rem', letterSpacing: '0.16em',
+                    color: 'rgba(255,255,255,0.42)', marginTop: 4,
                   }}>
                     {lootSubtitle(loot)}
                   </p>
@@ -522,6 +608,8 @@ export default function CrateOpening({
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
       </div>
 
       {mounted && createPortal(
