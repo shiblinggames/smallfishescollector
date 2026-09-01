@@ -12,6 +12,7 @@ import {
   nextHullCost, MAX_HULL_TIER,
   nextHandlingCost, MAX_HANDLING_TIER,
   nextAccelCost, MAX_ACCEL_TIER,
+  nextLanternCost, MAX_LANTERN_TIER,
 } from '@/lib/shipyard'
 
 type Ok = { ok: true; doubloons: number }
@@ -71,7 +72,7 @@ export async function buyHullTier(): Promise<Res> {
  * is exactly where a fix gets applied to two of them.
  */
 async function buyTier(
-  col: 'hull_speed_tier' | 'hull_handling_tier' | 'hull_accel_tier',
+  col: 'hull_speed_tier' | 'hull_handling_tier' | 'hull_accel_tier' | 'lantern_tier',
   maxTier: number,
   cost: (t: number) => number | null,
   label: string,
@@ -132,6 +133,10 @@ async function buyTier(
 export async function buyHandlingTier(): Promise<Res> {
   return buyTier('hull_handling_tier', MAX_HANDLING_TIER, nextHandlingCost,
     'rudder', 'Her rudder is as fine as it gets.')
+}
+
+export async function buyLanternTier(): Promise<Res> {
+  return buyTier('lantern_tier', MAX_LANTERN_TIER, nextLanternCost, 'lantern', 'Your lantern is as bright as they come.')
 }
 
 export async function buyAccelTier(): Promise<Res> {

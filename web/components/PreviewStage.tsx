@@ -36,6 +36,23 @@ export default function PreviewStage({ kit, children, style }: {
   return (
     <div style={{
       position: 'relative', borderRadius: 22,
+      // ── CAPPED, AND CENTRED ───────────────────────────────────────────
+      //
+      // The box is sized as a share of its own WIDTH (see the shelf below), so
+      // in the shipyard's 980px column it grew to 980 wide and proportionally
+      // tall — most of a desktop screen for a picture of a boat, with the
+      // things you came to buy pushed under the fold.
+      //
+      // Capping the width scales the whole box uniformly, and every callout is
+      // a percentage of that box, so the labels and their hairlines land
+      // exactly where /shipyard/calibrate put them. A cap on HEIGHT would not
+      // have that property: it would change the rectangle and slide every label
+      // off the thing it points at.
+      //
+      // 520 also sits just inside the sea's loadout modal (560 less its
+      // padding), so one number serves both surfaces and neither is a special
+      // case of the other.
+      maxWidth: 520, marginLeft: 'auto', marginRight: 'auto',
       // MUST clip. FisherPose's overlays are positioned in percentages of this
       // box and genuinely run past it — the hook alone is 204.5% wide at left
       // -10.5% — so without this the widest child sets the page's scroll width

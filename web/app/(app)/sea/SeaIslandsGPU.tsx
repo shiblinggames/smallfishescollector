@@ -74,6 +74,10 @@ export type GpuHandle = {
    *  sprite on this canvas — see nightTint for why this is a tint and
    *  emphatically not a filter. */
   night(dark: number, warm: number): void
+  /** How much lantern the captain has bought, 0.34 to 1 — see lanternGlow.
+   *  Its own call rather than a night() argument: the hour changes every frame
+   *  and this changes when somebody buys something. */
+  lantern(glow: number): void
   /** The three blended stops out of seaAt, 0..255, deep first. Called on the
    *  chart's own deadband rather than every frame: the colour of the sea does
    *  not change sixty times a second and the shader does not need telling that
@@ -818,6 +822,8 @@ export default function SeaIslandsGPU({
       cleanup = () => ro.disconnect()
 
       handle.current = {
+        lantern(glow) { lights.lantern(glow) },
+
         night(d, w) {
           dark = d
           warm = w

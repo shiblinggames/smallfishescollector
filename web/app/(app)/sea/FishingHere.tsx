@@ -281,7 +281,15 @@ function Sheet({ title, blurb, onClose, children }: {
         initial={{ y: 26 }} animate={{ y: 0 }} exit={{ y: 20 }}
         transition={{ type: 'spring', stiffness: 320, damping: 28 }}
         style={{
-          position: 'relative', width: '100%', maxWidth: 380,
+          // ── THE SAME WIDTH AS THE LOG ─────────────────────────────
+          //
+          // 560, which is FishCollectionDrawer's. Bait, Loadout and the Hold
+          // are the three buttons either side of Log in the same row, and they
+          // opened at 380 while Log opened at 560 — so on a desktop the panel
+          // under your cursor changed size depending on which of four adjacent
+          // buttons you pressed. On a phone the 1.25rem padding caps all four
+          // at the viewport, so this only ever differed where it was visible.
+          position: 'relative', width: '100%', maxWidth: 560,
           maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
           borderRadius: 18, padding: '1rem',
           background: 'rgba(10,16,22,0.98)',

@@ -211,3 +211,54 @@ export function turnDegreesPerSec(tier: number): number {
 export function secondsToTopSpeed(tier: number): number {
   return 3 / (BASE_ACCEL * accelRate(tier))
 }
+
+
+// ── THE LANTERN ─────────────────────────────────────────────────────────────
+//
+// Night on the chart is not a filter, it is a few things that start EMITTING
+// while everything else stops (see sea/seaLights). Yours is the pool under the
+// hull, and it was a constant: every captain sailed the dark with exactly the
+// same circle of light around them from their first hour.
+//
+// That is the one thing on this screen that upgrades into a different EXPERIENCE
+// rather than a better number. A hull that is 40% faster is the same sail in
+// less time; a lantern that reaches twice as far is a night you can navigate
+// rather than one you creep through. So the ladder starts genuinely dim — a
+// candle in a jar, enough to see the water you are already in — and the top of
+// it is what the sea has been handing out for free.
+//
+// FIVE RUNGS, and the numbers are a fraction of the light seaLights already
+// draws, so tier 4 is exactly today's night and nothing about the existing
+// scene needs re-tuning. Anyone playing now is topped out by definition, which
+// is the honest way to add a ladder under a thing people already have: nobody
+// wakes up worse off.
+export const LANTERN_GLOW = [0.34, 0.5, 0.68, 0.84, 1] as const
+
+/** Priced off the rudder's ladder rather than the hull's — it is a comfort
+ *  upgrade with four rungs, not the six-rung headline. */
+export const LANTERN_COSTS = [0, 6_000, 18_000, 45_000, 110_000] as const
+export const MAX_LANTERN_TIER = LANTERN_COSTS.length - 1
+
+/** How much of the full lantern this tier lights, 0.34 to 1. Read by
+ *  sea/seaLights for both the radius and the brightness, so a dim lantern is
+ *  genuinely a smaller pool rather than the same pool faded out. */
+export function lanternGlow(tier: number): number {
+  return LANTERN_GLOW[Math.max(0, Math.min(MAX_LANTERN_TIER, tier))]
+}
+
+export function nextLanternCost(tier: number): number | null {
+  const t = tier + 1
+  return t > MAX_LANTERN_TIER ? null : LANTERN_COSTS[t]
+}
+
+/**
+ * HOW FAR THE LANTERN REACHES, in metres, for the shop label.
+ *
+ * The same 30px-to-the-metre scale the speeds are printed with. seaLights draws
+ * the pool at 132 + 46 world px of radius at full dark; this is that radius at
+ * a given tier, as a diameter, because "lights 12 m of water" is a thing you
+ * can picture and a radius is a thing you have to double.
+ */
+export function lanternMetres(tier: number): number {
+  return ((132 + 46) * lanternGlow(tier) * 2) / 30
+}

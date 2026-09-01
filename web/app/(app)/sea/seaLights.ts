@@ -125,6 +125,8 @@ export type Lights = {
   /** How far into the night, 0 to 1. Everything here reads it and at zero the
    *  whole layer is invisible and skipped. */
   night(dark: number): void
+  /** How much lantern the captain has bought, 0.34 to 1. See lanternGlow. */
+  lantern(glow: number): void
   destroy(): void
 }
 
@@ -191,6 +193,9 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
   }
 
   let dark = 0
+  /** Full until told otherwise: a chart that has not yet heard the tier should
+   *  draw the light everyone had before this was a ladder, not the dimmest. */
+  let glow = 1
   let boats: { x: number; y: number }[] = []
   let seeded = false
 
@@ -211,10 +216,21 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
       // flame in a glass box on a moving boat is never quite steady.
       const flick = 0.94 + Math.sin(t * 3.1) * 0.03 + Math.sin(t * 5.7) * 0.03
       lantern.position.set(cx, cy + 6)
-      const lr = 132 + dark * 46
+      // ── AND IT IS A LADDER NOW ────────────────────────────────────
+      //
+      // `glow` is 0.34 at the first rung and 1 at the last, so a full lantern
+      // is exactly the light this drew before the upgrade existed and nobody
+      // loses a night they already had. See lib/shipyard.
+      //
+      // BOTH THE RADIUS AND THE BRIGHTNESS. A dim lantern that lit the same
+      // circle would read as a fault in the art rather than as a smaller lamp;
+      // a small circle at full brightness would read as a spotlight. Light
+      // falls off with distance, so a weaker one is smaller AND fainter, and
+      // scaling the pair together is the only version that looks like a lamp.
+      const lr = (132 + dark * 46) * glow
       lantern.width = lr * 2
       lantern.height = lr * 2 * GROUND
-      lantern.alpha = dark * 0.34 * flick
+      lantern.alpha = dark * 0.34 * glow * flick
 
       // ── EVERY OTHER BOAT ── smaller, and it is the one thing out here that
       // is worth steering toward on sight.
@@ -270,6 +286,8 @@ export function makeLights(PIXI: typeof import('pixi.js')): Lights {
     },
 
     night(next) { dark = next },
+
+    lantern(next) { glow = next },
 
     destroy() {
       world.destroy({ children: true })

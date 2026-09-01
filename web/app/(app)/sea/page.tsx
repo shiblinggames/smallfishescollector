@@ -283,6 +283,7 @@ export default async function SeaPage() {
       // that sum here and half there is how the two drift apart.
       handlingTier={Number(profile?.hull_handling_tier ?? 0)}
       accelTier={Number(profile?.hull_accel_tier ?? 0)}
+      lanternTier={Number(profile?.lantern_tier ?? 0)}
       // WHERE YOU LEFT OFF. Null on a profile that has never sailed, and the
       // map falls back to HOME — which is also what happens if either half is
       // missing, because half a position is not one.

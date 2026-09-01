@@ -51,7 +51,7 @@ import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
 import { PET_OVERLAYS, PETS, type PetSpecies } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
-import { handlingRate, accelRate, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '@/lib/shipyard'
+import { handlingRate, accelRate, lanternGlow, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
 import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
@@ -1163,7 +1163,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
   auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
@@ -1221,6 +1221,9 @@ export default function SeaMap({
   /** Rudder and rig tiers, from the Shipyard. */
   handlingTier: number
   accelTier: number
+  /** Which rung of the lantern ladder is fitted. Drives the pool of light under
+   *  the hull at night — see lib/shipyard and sea/seaLights. */
+  lanternTier: number
   /** Where the boat was when you last left. Null = never sailed. */
   start: Vec | null
   /** WHICH SEA that position is in. Restored together with it, so a captain
@@ -4906,6 +4909,18 @@ export default function SeaMap({
         // A tint, not a filter: see nightTint for why that distinction is the
         // whole reason the islands can be lit at all after what the filter did.
         gpuRef.current.night(raw, clk.warmth)
+        // ── AND HOW MUCH LANTERN WAS PAID FOR ─────────────────────────
+        //
+        // Here rather than in an effect on the tier, and the reason is the
+        // handshake: the renderer is built asynchronously, so `gpuRef.current`
+        // is null for the first frames and an effect that fired on mount would
+        // push the tier into nothing and never try again. The layer's default
+        // is a FULL lantern, so that failure looks like everybody owning the
+        // top rung — the most expensive possible way to be wrong.
+        //
+        // The setter is one assignment. Doing it every frame costs nothing and
+        // cannot miss.
+        gpuRef.current.lantern(lanternGlow(lanternTier))
       }
       // THE SURFACE, moved rather than repainted. Each layer is wrapped to its
       // own tile so the offsets stay small however far you sail, and the two

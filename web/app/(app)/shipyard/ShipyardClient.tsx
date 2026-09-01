@@ -38,11 +38,12 @@ import PreviewStage from '@/components/PreviewStage'
 import { SPECIAL_ITEMS, effectiveSpecialDef } from '@/lib/specialItems'
 import {
   nextHullCost, MAX_HULL_TIER,
+  nextLanternCost, MAX_LANTERN_TIER, lanternMetres,
   nextHandlingCost, MAX_HANDLING_TIER,
   nextAccelCost, MAX_ACCEL_TIER,
   hullMetresPerSec, turnDegreesPerSec, secondsToTopSpeed,
 } from '@/lib/shipyard'
-import { buyHullTier, buyHandlingTier, buyAccelTier, equipRod as equipRodAction } from './actions'
+import { buyHullTier, buyLanternTier, buyHandlingTier, buyAccelTier, equipRod as equipRodAction } from './actions'
 import { upgradeFishHold } from '../fishing/holdActions'
 import {
   equipBoat, buyBoat, equipHat, buyHat, equipPet,
@@ -57,7 +58,7 @@ import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
 
 type BaitItem = { bait_type: string; quantity: number }
 
-type Buyable = 'hull' | 'handling' | 'accel' | 'hold'
+type Buyable = 'hull' | 'handling' | 'accel' | 'hold' | 'lantern'
 
 /**
  * WHAT YOU ARE ABOUT TO BUY, in plain words.
@@ -85,6 +86,7 @@ const TAG: Record<Buyable, string> = {
   handling: 'Steer tighter. Easier to pull alongside things.',
   accel: 'Less waiting every time you set off again.',
   hold: 'Fish more before you have to go and sell.',
+  lantern: 'See further after dark. Nothing changes by day.',
 }
 
 const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
@@ -109,6 +111,12 @@ const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
     why: 'A full hold stops you casting. Selling to a zone buyer or at the '
        + 'market ashore is what empties it.',
   },
+  lantern: {
+    does: 'Widens the pool of light your boat casts at night.',
+    why: 'It changes nothing at all by day, and nothing about fishing at any '
+       + 'hour. What it changes is how much of the water ahead you can see '
+       + 'once the sun is down.',
+  },
 }
 
 
@@ -129,6 +137,7 @@ export default function ShipyardClient(p: {
   hullTier: number
   handlingTier: number
   accelTier: number
+  lanternTier: number
   holdTier: number
   holdCapacity: number
 
@@ -174,6 +183,7 @@ export default function ShipyardClient(p: {
   const [hull, setHull] = useState(p.hullTier)
   const [handling, setHandling] = useState(p.handlingTier)
   const [accel, setAccel] = useState(p.accelTier)
+  const [lantern, setLantern] = useState(p.lanternTier)
   const [hold, setHold] = useState(p.holdTier)
   const [cap, setCap] = useState(p.holdCapacity)
 
@@ -245,6 +255,7 @@ export default function ShipyardClient(p: {
   const hullCost = nextHullCost(hull)
   const handlingCost = nextHandlingCost(handling)
   const accelCost = nextAccelCost(accel)
+  const lanternCost = nextLanternCost(lantern)
   const holdNext = hold < FISH_HOLD_TIERS.length - 1 ? FISH_HOLD_TIERS[hold + 1] : null
 
   // Shop dots: is there a better one of these, and can you pay for it right now.
@@ -276,6 +287,10 @@ export default function ShipyardClient(p: {
         const r = await buyHandlingTier()
         if ('error' in r) setErr(r.error)
         else { bank(r.doubloons); setHandling(t => t + 1); vibrate([0, 30, 40, 60]) }
+      } else if (what === 'lantern') {
+        const r = await buyLanternTier()
+        if ('error' in r) setErr(r.error)
+        else { bank(r.doubloons); setLantern(t => t + 1); vibrate([0, 30, 40, 60]) }
       } else if (what === 'accel') {
         const r = await buyAccelTier()
         if ('error' in r) setErr(r.error)
@@ -362,6 +377,16 @@ export default function ShipyardClient(p: {
       gain: accel >= MAX_ACCEL_TIER ? null
         : `${(secondsToTopSpeed(accel) - secondsToTopSpeed(accel + 1)).toFixed(1)}s quicker`,
       cost: accelCost,
+    },
+    lantern: {
+      title: 'Lantern', accent: '#ffc07a',
+      // METRES ACROSS, not a percentage of a number nobody was told. The pool
+      // is a circle on the water and its diameter is the thing you can picture.
+      now: `${lanternMetres(lantern).toFixed(1)} m`, unit: 'lit after dark',
+      next: lantern >= MAX_LANTERN_TIER ? null : `${lanternMetres(lantern + 1).toFixed(1)} m`,
+      gain: lantern >= MAX_LANTERN_TIER ? null
+        : `+${(lanternMetres(lantern + 1) - lanternMetres(lantern)).toFixed(1)} m of light`,
+      cost: lanternCost,
     },
     hold: {
       title: 'Fish hold', accent: '#f0c040',
@@ -462,19 +487,19 @@ export default function ShipyardClient(p: {
           ))}
         </div>
 
-        {/* ── HOW SHE SAILS ── the three movement upgrades, together,
-            because they are the same purchase in three flavours: they all buy
-            you less time holding a helm and none of them touch fishing.
+        {/* ── WHAT SHE IS ── the four things you buy for the boat, in one
+            grid. The hold briefly had a band of its own on the reasoning that
+            "how much can I carry" is a different question from "how fast do I
+            turn" — true, and not worth a full-width row: it made the hold look
+            like the headline and left three tiles above it looking like its
+            footnotes. Four equal tiles is the honest shape, because they are
+            four equal purchases out of one purse.
 
             EVERY TILE READS FROM `DETAIL`, which is also what the confirm modal
-            reads. They used to build their own strings from the same functions,
-            which is two places to get "what am I buying" right and one of them
-            silently drifting the day either changed.
-
-            The headings are the STAT now — Speed, Turning, Pick-up — not the
-            part that provides it. A player who wants to go faster was being
-            asked to know that a hull is the thing that does that. */}
-        <Band title="How she sails" />
+            reads, so the tile and the modal cannot disagree about what is being
+            bought. The headings are the STAT — Speed, Turning, Pick-up, Fish
+            hold, Lantern — not the part that provides it. */}
+        <Band title="Your boat" />
         <div className="sy-boat-grid">
           <BoatTile which="hull" d={DETAIL.hull} does={TAG.hull}
             busy={busy === 'hull'} disabled={!!busy || doubloons < (hullCost ?? Infinity)}
@@ -485,21 +510,12 @@ export default function ShipyardClient(p: {
           <BoatTile which="accel" d={DETAIL.accel} does={TAG.accel}
             busy={busy === 'accel'} disabled={!!busy || doubloons < (accelCost ?? Infinity)}
             onBuy={() => { setErr(''); setConfirm('accel') }} />
-        </div>
-
-        {/* ── AND THE HOLD, ON ITS OWN ────────────────────────────────
-            It was the fourth tile in a grid of movement upgrades, which put
-            "how much can I carry" beside "how fast do I turn" as though they
-            answered the same question. They do not, and the hold is the one
-            that ends sessions: a full hold is the reason you stop fishing and
-            sail home, and it is the only upgrade on this page that changes how
-            long you can stay out. Its own band, full width, so it reads as the
-            other thing this yard sells rather than the runt of the first. */}
-        <Band title="What she carries" />
-        <div style={{ padding: '0 0.1rem' }}>
-          <BoatTile which="hold" d={DETAIL.hold} does={TAG.hold} wide
+          <BoatTile which="hold" d={DETAIL.hold} does={TAG.hold}
             busy={busy === 'hold'} disabled={!!busy || doubloons < (holdNext?.cost ?? Infinity)}
             onBuy={() => { setErr(''); setConfirm('hold') }} />
+          <BoatTile which="lantern" d={DETAIL.lantern} does={TAG.lantern}
+            busy={busy === 'lantern'} disabled={!!busy || doubloons < (lanternCost ?? Infinity)}
+            onBuy={() => { setErr(''); setConfirm('lantern') }} />
         </div>
 
         {/* THE ROD RACK IS GONE. It bought BERTHS, and only rods in a berth
