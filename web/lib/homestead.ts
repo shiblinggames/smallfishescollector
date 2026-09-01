@@ -145,7 +145,7 @@ export const HOUSE_SLOTS = [1, 2, 3, 4, 5] as const
 /**
  * FURNITURE — the inside, and the deepest part of the flex.
  *
- * Six slots, each with a handful of options, all purely visual and permanent
+ * Five slots, each with a handful of options, all purely visual and permanent
  * once bought. Costs climb hard toward the top of a slot on purpose: the cheap
  * pieces make the room yours early, and the last one in a slot is six figures
  * and is for a captain who has run out of other things to want. Nothing here
@@ -307,8 +307,8 @@ export type SlotSpot = { x: number; y: number; w: number }
  *
  * THE GRID IS THE POINT. All eight were painted to one vanishing point with the
  * back wall parallel to the picture plane, so the same broad positions work in
- * every room: the fire sits left of centre on the back wall, the mount hangs
- * above it, and a corner piece stands in each of the two bottom corners. Per-room
+ * every room: the fire sits DEAD CENTRE on the back wall, the mount hangs
+ * directly above it, and a corner piece stands either side of the pair. Per-room
  * numbers still exist because the floor line and the ceiling height differ, but
  * they are variations on one layout rather than six unrelated ones.
  *
@@ -351,22 +351,43 @@ export type RoomDef = {
 }
 
 /** Placed against the empty shells. `y` is the BOTTOM of the piece. */
+/*
+ * PLACED ON THE BENCH, not written from the art. Every number below came off
+ * /home/calibrate with the shell on screen, which is the only way any of it was
+ * ever going to be right — see the bench's own header for why.
+ *
+ * Read the table sideways and the house is legible: the hearth sits DEAD CENTRE
+ * in all five and shrinks as the room grows (23 down to 15), because the walls
+ * get further away rather than the fire getting smaller. The corners close in
+ * from x 28/73 to x 32/70 for the same reason. The floor line climbs from y 100
+ * to y 95 and back to y 100 as the shells change what you are standing on.
+ *
+ * The corners are inboard rather than at the frame edge, which the blind pass
+ * had wrong. At x 10 a piece stands in the wall: the room's floor does not reach
+ * the edge of the picture, so the corners of the ROOM are nowhere near the
+ * corners of the IMAGE.
+ */
 const MAIN_SPOTS: Record<FurnitureSlot, SlotSpot>[] = [
-  // The lean-to: low roof, dirt floor high in the frame, everything small.
-  { floor: { x: 50, y: 99, w: 46 }, hearth: { x: 33, y: 86, w: 20 },
-    mount: { x: 33, y: 62, w: 15 }, cornerL: { x: 10, y: 88, w: 24 }, cornerR: { x: 90, y: 92, w: 15 } },
-  // The cottage: taller walls, a proper board floor, window right.
-  { floor: { x: 50, y: 99, w: 48 }, hearth: { x: 34, y: 84, w: 21 },
-    mount: { x: 34, y: 58, w: 16 }, cornerL: { x: 10, y: 87, w: 25 }, cornerR: { x: 90, y: 91, w: 15 } },
-  // The longhouse: wide and dark, more floor showing.
-  { floor: { x: 50, y: 99, w: 52 }, hearth: { x: 33, y: 83, w: 22 },
-    mount: { x: 33, y: 56, w: 17 }, cornerL: { x: 10, y: 87, w: 26 }, cornerR: { x: 91, y: 91, w: 16 } },
-  // The great hall: high stone, the floor line drops away.
-  { floor: { x: 50, y: 99, w: 54 }, hearth: { x: 33, y: 82, w: 23 },
-    mount: { x: 33, y: 53, w: 18 }, cornerL: { x: 10, y: 86, w: 27 }, cornerR: { x: 91, y: 90, w: 16 } },
-  // The estate: panelled, flagged, and the tallest of them.
-  { floor: { x: 50, y: 99, w: 56 }, hearth: { x: 34, y: 81, w: 23 },
-    mount: { x: 34, y: 52, w: 18 }, cornerL: { x: 10, y: 86, w: 27 }, cornerR: { x: 91, y: 90, w: 16 } },
+  // Lean-to
+  { floor: { x: 50, y: 100, w: 46 }, hearth: { x: 50, y: 79, w: 23 },
+    mount: { x: 50, y: 49, w: 15 }, cornerL: { x: 28, y: 79, w: 12 },
+    cornerR: { x: 73, y: 79, w: 14 } },
+  // Cottage
+  { floor: { x: 50, y: 99, w: 48 }, hearth: { x: 50, y: 79, w: 22 },
+    mount: { x: 50, y: 47, w: 14 }, cornerL: { x: 28, y: 79, w: 10 },
+    cornerR: { x: 73, y: 79, w: 12 } },
+  // Longhouse
+  { floor: { x: 50, y: 95, w: 50 }, hearth: { x: 50, y: 70, w: 17 },
+    mount: { x: 50, y: 48, w: 11 }, cornerL: { x: 32, y: 70, w:  8 },
+    cornerR: { x: 69, y: 70, w: 10 } },
+  // Great hall
+  { floor: { x: 50, y: 97, w: 52 }, hearth: { x: 50, y: 70, w: 16 },
+    mount: { x: 50, y: 47, w: 11 }, cornerL: { x: 32, y: 70, w:  8 },
+    cornerR: { x: 70, y: 70, w: 10 } },
+  // Estate
+  { floor: { x: 50, y: 100, w: 43 }, hearth: { x: 50, y: 76, w: 15 },
+    mount: { x: 50, y: 53, w: 10 }, cornerL: { x: 32, y: 77, w:  7 },
+    cornerR: { x: 70, y: 77, w:  9 } },
 ]
 
 export const ROOMS: RoomDef[] = [
@@ -382,17 +403,17 @@ export const ROOMS: RoomDef[] = [
   {
     id: 'gallery', name: 'The gallery', blurb: 'Your badges, and every fish you have logged.',
     needsHouse: 2, art: '/sea/room-gallery.jpg',
-    content: { x: 50, y: 44, w: 84 },
+    content: { x: 50, y: 45, w: 88 },
   },
   {
     id: 'menagerie', name: 'The menagerie', blurb: 'Every pet you have ever taken in.',
     needsHouse: 3, art: '/sea/room-menagerie.jpg',
-    content: { x: 50, y: 82, w: 80 },
+    content: { x: 46, y: 79, w: 80 },
   },
   {
     id: 'trophy', name: 'The trophy room', blurb: 'The giants, and what they cost you.',
     needsHouse: 4, art: '/sea/room-trophy.jpg',
-    content: { x: 50, y: 40, w: 84 },
+    content: { x: 50, y: 40, w: 88 },
   },
 ]
 

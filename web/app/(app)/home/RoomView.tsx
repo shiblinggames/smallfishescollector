@@ -36,9 +36,10 @@ import { BADGE_MAP } from '@/lib/badges'
 const SEA = 'rgba(180,214,232'
 const GOLD = '#f0c040'
 
-/** Back to front. A hearth is against the wall, a table stands in front of it,
- *  and the corner piece is nearest the camera. */
-const ROOM_ORDER: FurnitureSlot[] = ['floor', 'cornerL', 'hearth', 'mount', 'cornerR']
+/** Back to front. The rug is underneath everything, the hearth stands against
+ *  the back wall with its mount hanging above it, and the two corner pieces are
+ *  level with the fire on either side of it. */
+const ROOM_ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'cornerL', 'cornerR']
 
 export default function RoomView({ home, unlocked, pets, species, giants, guest }: {
   home: Homestead

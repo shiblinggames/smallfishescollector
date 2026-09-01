@@ -37,7 +37,7 @@ import {
 } from '@/lib/homestead'
 
 /** Back to front, the same order the room paints in. */
-const ORDER: FurnitureSlot[] = ['floor', 'cornerL', 'hearth', 'mount', 'cornerR']
+const ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'cornerL', 'cornerR']
 
 const HOUSE_NAMES = ['Lean-to', 'Cottage', 'Longhouse', 'Great hall', 'Estate']
 
