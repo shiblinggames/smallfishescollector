@@ -1,0 +1,267 @@
+'use client'
+
+// ── THE INSIDE, ONE ROOM AT A TIME ──────────────────────────────────────────
+//
+// The house used to be a single room that swapped shell as it grew. It is a set
+// of rooms now, stepped through with arrows, and the house tier decides how many
+// doors there are — which is what makes a bigger house feel bigger from INSIDE
+// rather than only better decorated.
+//
+// ── THREE OF THEM ARE NOT FURNISHED, AND THAT IS THE POINT ──────────────────
+//
+// The main room is filled with what you BOUGHT. The other three are filled with
+// what you DID: every badge and every species in the gallery, every pet you ever
+// took in standing about the menagerie, every giant you ever landed on the
+// trophy room wall. That is the whole difference between them, and it is why
+// they are worth walking to rather than being three more shopping tabs.
+//
+// ── AND THE SHELLS ARE EMPTY ────────────────────────────────────────────────
+//
+// Every room was regenerated bare. The old art had its fixtures painted in — a
+// stone fireplace in the cottage, a carved mantel in the estate — so the hearth
+// ladder was drawn on top of a fireplace that was already part of the wall. All
+// eight share one vanishing point and one horizon, so a piece placed at 34% of
+// the way across sits on the same spot of back wall in every one of them.
+
+import { useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { vibrate } from '@/lib/haptics'
+import {
+  openRooms, roomArt, roomSpots, openSlots, furnishingIn,
+  type Homestead, type RoomDef, type FurnitureSlot,
+} from '@/lib/homestead'
+import { PETS } from '@/lib/pets'
+import { BADGE_MAP } from '@/lib/badges'
+
+const SEA = 'rgba(180,214,232'
+const GOLD = '#f0c040'
+
+/** Back to front. A hearth is against the wall, a table stands in front of it,
+ *  and the corner piece is nearest the camera. */
+const ROOM_ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'window', 'table', 'corner']
+
+export default function RoomView({ home, unlocked, pets, species, giants, guest }: {
+  home: Homestead
+  /** Badge ids earned, for the gallery wall. */
+  unlocked: string[]
+  /** Pet ids owned, for the menagerie. Every one, not the equipped one — a room
+   *  that shows the pet already following your boat is a room with nothing in it
+   *  you could not see from the water. */
+  pets: string[]
+  /** Species logged and the total, for the gallery's other half. */
+  species: { logged: number; total: number }
+  /** Ancient giants landed, for the trophy room. */
+  giants: { name: string; art: string }[]
+  guest?: string | null
+}) {
+  const rooms = useMemo(() => openRooms(home), [home])
+  const [i, setI] = useState(0)
+  const room = rooms[Math.min(i, rooms.length - 1)]
+  const houseTier = home.spots.house ?? 0
+
+  const go = (d: number) => {
+    vibrate(6)
+    setI(prev => (prev + d + rooms.length) % rooms.length)
+  }
+
+  return (
+    <div>
+      {/* ── THE DOOR YOU ARE STANDING IN ──────────────────────────────
+          Name, what it is for, and the arrows. The count is on the arrows
+          rather than as dots: at four rooms dots are a decoration, and "2 of 4"
+          answers the question dots are pretending to. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f2ede2', lineHeight: 1.1 }}>
+            {room.name}
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.76rem', color: `${SEA},0.6)`, marginTop: 2 }}>
+            {room.blurb}
+          </p>
+        </div>
+        {rooms.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <Arrow dir="left" onClick={() => go(-1)} />
+            <span className="font-karla font-700" style={{
+              fontSize: '0.7rem', color: `${SEA},0.55)`, fontVariantNumeric: 'tabular-nums',
+              minWidth: 34, textAlign: 'center',
+            }}>{i + 1} / {rooms.length}</span>
+            <Arrow dir="right" onClick={() => go(1)} />
+          </div>
+        )}
+      </div>
+
+      <div style={{
+        position: 'relative', width: '100%', aspectRatio: '1008 / 666',
+        borderRadius: 14, overflow: 'hidden',
+        border: '1px solid rgba(180,214,232,0.18)',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+      }}>
+        <AnimatePresence mode="wait">
+          <motion.div key={room.id}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{ position: 'absolute', inset: 0 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={roomArt(room, houseTier)} alt="" draggable={false} style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+            }} />
+            {room.id === 'main' && <Furnished home={home} room={room} houseTier={houseTier} />}
+            {room.id === 'gallery' && <GalleryWall unlocked={unlocked} species={species} />}
+            {room.id === 'menagerie' && <Menagerie pets={pets} />}
+            {room.id === 'trophy' && <TrophyWall giants={giants} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {guest && (
+        <p className="font-karla" style={{ fontSize: '0.74rem', color: `${SEA},0.5)`, marginTop: 8 }}>
+          You are looking at {guest}&rsquo;s rooms.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function Arrow({ dir, onClick }: { dir: 'left' | 'right'; onClick: () => void }) {
+  return (
+    <motion.button type="button" onClick={onClick} whileTap={{ scale: 0.9 }}
+      aria-label={dir === 'left' ? 'Previous room' : 'Next room'}
+      style={{
+        width: 30, height: 30, borderRadius: '50%', padding: 0, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(255,255,255,0.06)', border: `1px solid ${SEA},0.24)`,
+        color: `${SEA},0.85)`,
+      }}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d={dir === 'left' ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'} />
+      </svg>
+    </motion.button>
+  )
+}
+
+/** The main room: what you bought, standing where the shell says it stands. */
+function Furnished({ home, room, houseTier }: { home: Homestead; room: RoomDef; houseTier: number }) {
+  const spots = roomSpots(room, houseTier)
+  const open = openSlots(home)
+  if (!spots) return null
+  return (
+    <>
+      {ROOM_ORDER.map(slot => {
+        // A slot the house has no room for yet shows nothing, even if a
+        // furnishing is recorded against it from a bigger house.
+        if (!open.includes(slot)) return null
+        const item = furnishingIn(home, slot)
+        if (!item.art) return null
+        const spot = spots[slot]
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={slot} src={item.art} alt="" draggable={false} style={{
+            position: 'absolute',
+            left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.w}%`,
+            // Anchored at its BOTTOM CENTRE, because everything in a room sits
+            // on something. Anchoring the middle makes a piece float the moment
+            // its art is a different height from the last one.
+            transform: 'translate(-50%, -100%)',
+          }} />
+        )
+      })}
+    </>
+  )
+}
+
+/**
+ * THE GALLERY: badges on the rail, and the Almanac's count under them.
+ *
+ * Hung on the picture rail the shell was painted with, which is why the room
+ * needed its own art rather than a redressed cottage — badges pinned to a
+ * plastered wall look like stickers.
+ */
+function GalleryWall({ unlocked, species }: {
+  unlocked: string[]; species: { logged: number; total: number }
+}) {
+  // Newest first: a wall that grows from the left is a wall where the thing you
+  // just earned is buried at the end of a queue.
+  const badges = unlocked.slice(-18).reverse()
+  return (
+    <>
+      <div style={{
+        position: 'absolute', left: '13%', right: '13%', top: '30%',
+        display: 'flex', flexWrap: 'wrap', gap: '1.4%', justifyContent: 'center',
+      }}>
+        {badges.map(id => {
+          const b = BADGE_MAP[id]
+          if (!b) return null
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={id} src={b.imageUrl} alt={b.name} title={b.name} draggable={false}
+              style={{ width: '10%', filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.4))' }} />
+          )
+        })}
+      </div>
+      <p className="font-karla font-700" style={{
+        position: 'absolute', left: 0, right: 0, bottom: '7%', textAlign: 'center',
+        fontSize: '0.8rem', color: '#6a5f4c',
+      }}>
+        {unlocked.length} badges · {species.logged} of {species.total} species logged
+      </p>
+    </>
+  )
+}
+
+/**
+ * THE MENAGERIE: every pet you ever took in, not the one that is out.
+ *
+ * The equipped pet already swims beside the hull, so a room that showed only
+ * that one would be a room with nothing in it you could not see from the water.
+ * The whole collection standing about is the reason to open the door.
+ */
+function Menagerie({ pets }: { pets: string[] }) {
+  const owned = PETS.filter(p => pets.includes(p.id))
+  if (owned.length === 0) {
+    return (
+      <p className="font-karla" style={{
+        position: 'absolute', left: 0, right: 0, bottom: '12%', textAlign: 'center',
+        fontSize: '0.82rem', color: '#7c8a80',
+      }}>Nobody has moved in yet.</p>
+    )
+  }
+  return (
+    <div style={{
+      position: 'absolute', left: '8%', right: '8%', bottom: '9%',
+      display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end',
+      justifyContent: 'center', gap: '2%',
+    }}>
+      {owned.map(p => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={p.id} src={p.restImageUrl} alt={p.name} title={p.name} draggable={false}
+          style={{ width: `${Math.max(9, 22 - owned.length)}%`, filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))' }} />
+      ))}
+    </div>
+  )
+}
+
+/** THE TROPHY ROOM: the six giants, and only the ones actually landed. */
+function TrophyWall({ giants }: { giants: { name: string; art: string }[] }) {
+  if (giants.length === 0) {
+    return (
+      <p className="font-karla" style={{
+        position: 'absolute', left: 0, right: 0, bottom: '12%', textAlign: 'center',
+        fontSize: '0.82rem', color: '#9a8875',
+      }}>Nothing on these walls yet. They are down there.</p>
+    )
+  }
+  return (
+    <div style={{
+      position: 'absolute', left: '12%', right: '12%', top: '26%',
+      display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2%',
+    }}>
+      {giants.map(g => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={g.name} src={g.art} alt={g.name} title={g.name} draggable={false}
+          style={{ width: '26%', filter: `drop-shadow(0 3px 8px rgba(0,0,0,0.5)) drop-shadow(0 0 10px ${GOLD}33)` }} />
+      ))}
+    </div>
+  )
+}

@@ -5,9 +5,11 @@
 
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCachedFishSpecies } from '@/lib/fishSpecies'
+import { fishImageUrl } from '@/components/CatchResultCard'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
-import { getHomestead, portalDestinations } from './actions'
+import { getHomestead } from './actions'
 import { homesteadOf } from './visitActions'
 import HomeClient from './HomeClient'
 
@@ -33,25 +35,45 @@ export default async function HomePage({ searchParams }: {
   const visit = who ? await homesteadOf(who) : null
 
   const admin = createAdminClient()
-  const [homestead, destinations, { data: row }] = await Promise.all([
+  // WHOSE ROOMS ARE BEING DRAWN. A visit shows their island and their rooms, so
+  // the three room feeds have to follow the same owner the homestead does or you
+  // would be standing in somebody else's gallery looking at your own badges.
+  const owner = visit ? visit.userId : user.id
+
+  const [homestead, { data: row }, { data: petRows }, { data: logRows }, species] = await Promise.all([
     getHomestead(),
-    portalDestinations(),
     // The gallery hangs what the captain has actually unlocked. `badge_unlocked_at`
     // carries the dates, which is what turns a wall of icons into a record of
     // when you did each thing.
     admin.from('profiles')
-      .select('doubloons, unlocked_badges, badge_unlocked_at')
+      .select('doubloons, unlocked_badges, badge_unlocked_at, unlocked_pets')
       .eq('id', user.id).single(),
+    // THE MENAGERIE SHOWS EVERY PET EVER TAKEN IN, not the equipped one. The
+    // equipped pet already swims beside the hull, so a room showing only that
+    // would hold nothing you could not see from the water.
+    admin.from('profiles').select('unlocked_pets').eq('id', owner).single(),
+    // The trophy room, and the gallery's species count, both come off the log.
+    admin.from('fish_collection').select('fish_id').eq('user_id', owner),
+    getCachedFishSpecies(),
   ])
+
+  const logged = new Set((logRows ?? []).map(r => Number(r.fish_id)))
+  // The six giants, and only the ones actually landed. Same discriminator the
+  // server routes an ancient on: ancient_deep with no sell value.
+  const giants = species
+    .filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0 && logged.has(f.id))
+    .map(f => ({ name: f.name, art: fishImageUrl(f.name) }))
 
   // A VISIT SHOWS THEIRS, not yours: their island, their room, their badges.
   // The doubloons stay YOURS and are simply never spent — nothing on the page
   // offers to spend them while `guest` is set.
   return (
     <HomeClient
+      pets={(petRows?.unlocked_pets as string[] | null) ?? []}
+      species={{ logged: logged.size, total: species.length }}
+      giants={giants}
       homestead={visit ? visit.homestead : homestead}
       guest={visit?.username ?? null}
-      destinations={visit ? [] : destinations}
       doubloons={Number(row?.doubloons ?? 0)}
       unlocked={visit ? visit.unlocked : ((row?.unlocked_badges as string[] | null) ?? [])}
       stamps={visit ? visit.stamps : ((row?.badge_unlocked_at as Record<string, string | null> | null) ?? {})}

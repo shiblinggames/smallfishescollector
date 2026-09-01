@@ -34,6 +34,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {
   HOTSPOT_BY_ID, FURNISHING_BY_ID, EMPTY_HOMESTEAD, PINNED_MAX,
   openSlots, builtAt,
+  ROOM_BY_ID,
   type Homestead, type HotspotId, type FurnitureSlot,
 } from '@/lib/homestead'
 import { PLACES } from '../sea/chart'
@@ -47,28 +48,26 @@ export type BuildResult =
 
 /** Rows come back as loose json; this is the one place that is tidied up. */
 function rowToHomestead(row: {
-  house: number; portal: number; gallery: number; dock: number; garden: number; beacon: number
+  house: number; garden: number; beacon: number
   furniture: unknown; owned: string[] | null; pinned: string[] | null
-  layout?: unknown
 } | null): Homestead {
   if (!row) return EMPTY_HOMESTEAD
   const furniture = (row.furniture ?? {}) as Partial<Record<FurnitureSlot, string>>
   return {
-    spots: {
-      house: row.house ?? 0, portal: row.portal ?? 0, gallery: row.gallery ?? 0,
-      dock: row.dock ?? 0, garden: row.garden ?? 0, beacon: row.beacon ?? 0,
-    },
+    // THREE SPOTS. `portal`, `gallery`, `dock` and `layout` are still COLUMNS —
+    // dropping a column is a migration that can only lose data, and these hold
+    // what people paid — but nothing reads them any more. See HotspotId.
+    spots: { house: row.house ?? 0, garden: row.garden ?? 0, beacon: row.beacon ?? 0 },
     furniture,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),
-    layout: (row.layout ?? {}) as Homestead['layout'],
   }
 }
 
 // ONE STRING LITERAL, never a concatenation — supabase-js infers the row type
 // from the literal text of this argument and a joined expression degrades the
 // whole result to an error type.
-const COLS = 'house, portal, gallery, dock, garden, beacon, furniture, owned, pinned, layout'
+const COLS = 'house, garden, beacon, furniture, owned, pinned'
 
 /**
  * THE CAPTAIN'S HOMESTEAD, creating the row on first look.
@@ -264,7 +263,12 @@ export async function pinBadges(ids: string[]): Promise<{ ok: boolean; error?: s
   if (!user) return { ok: false, error: 'Not signed in.' }
   const admin = createAdminClient()
   const current = await loadFor(user.id)
-  if (current.spots.gallery < 2) return { ok: false, error: 'Nowhere to hang them yet.' }
+  // THE GALLERY IS A ROOM NOW, opened by the house rather than bought as its
+  // own building — so what gates pinning is having the room at all. Same gate,
+  // read off the thing that actually grants it.
+  if ((current.spots.house ?? 0) < ROOM_BY_ID.gallery.needsHouse) {
+    return { ok: false, error: 'Nowhere to hang them yet.' }
+  }
   const pinned = [...new Set(ids)].slice(0, PINNED_MAX)
   // A plain UPDATE, touching only what changed. The upsert-the-whole-row shape
   // this used to have would happily write back a stale copy of every other
@@ -277,139 +281,15 @@ export async function pinBadges(ids: string[]): Promise<{ ok: boolean; error?: s
 
 export type Destination = { id: string; name: string; x: number; y: number; note: string }
 
-/**
- * WHERE THE STONES WILL TAKE YOU, for this captain, right now.
- *
- * Computed on the SERVER from the portal tier and the fishing level, so the
- * list the client renders is the list the client is allowed to have. A tier 1
- * portal offering a band it cannot reach would be a button that lies.
- */
-export async function portalDestinations(): Promise<Destination[]> {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return []
-  const admin = createAdminClient()
-  const [{ data: profile }, home] = await Promise.all([
-    admin.from('profiles').select('fishing_xp').eq('id', session.user.id).single(),
-    loadFor(session.user.id),
-  ])
-  const tier = home.spots.portal ?? 0
-  if (tier < 1) return []
-
-  const out: Destination[] = []
-  if (tier >= 2) {
-    for (const p of PLACES) {
-      if (p.kind !== 'port' || p.id === 'home') continue
-      out.push({ id: p.id, name: p.name, x: p.x, y: p.y, note: p.blurb })
-    }
-  }
-  if (tier >= 3) {
-    // THE OUTER EDGE OF EACH BAND, not its middle. The middle is where the
-    // fishing is the same as anywhere else in the ring; the outer edge is the
-    // part that costs the most to sail to, which is the part worth skipping.
-    const level = getLevelFromXP(Number(profile?.fishing_xp ?? 0))
-    for (const p of PLACES) {
-      if (p.outer === undefined || level < p.minLevel) continue
-      out.push({
-        id: p.id, name: p.name,
-        x: 0, y: p.outer - 400,
-        note: `The far edge, ${Math.round((p.outer - 400) / 10).toLocaleString()}m out`,
-      })
-    }
-  }
-  return out
-}
-
-/**
- * STEP THROUGH.
- *
- * Writes the boat's position and nothing else. The destination is re-derived
- * here rather than taken from the client, so the only places the stones can put
- * you are the ones `portalDestinations` was willing to offer.
- *
- * There is no cooldown and no fee. The portal removes the sail you have already
- * done; charging for that would just be a tax on having finished something.
- */
-export async function stepThrough(destId: string): Promise<{ ok: boolean; error?: string; x?: number; y?: number }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'Not signed in.' }
-
-  const home = await loadFor(user.id)
-  if ((home.spots.portal ?? 0) < 1) return { ok: false, error: 'The stones are down.' }
-
-  // Home is always reachable once the stones are up, and is not in the list.
-  let target: { x: number; y: number } | null = null
-  if (destId === 'home') {
-    const h = PLACES.find(p => p.id === 'home')
-    if (h) target = { x: h.x, y: h.y + h.r + 120 }
-  } else {
-    const allowed = await portalDestinations()
-    const d = allowed.find(a => a.id === destId)
-    if (d) target = { x: d.x, y: d.y }
-  }
-  if (!target) return { ok: false, error: 'The stones will not reach there.' }
-
-  const admin = createAdminClient()
-  await admin.from('profiles')
-    .update({ sea_x: target.x, sea_y: target.y }).eq('id', user.id)
-  return { ok: true, x: target.x, y: target.y }
-}
-
-/**
- * MOVE ONE OF YOUR BUILDINGS.
- *
- * The six spots ship with designed positions and those stay the default. This
- * writes an override into `homesteads.layout`, so a homestead nobody has
- * rearranged reads exactly the way it was laid out, and a spot with no override
- * falls through to the default even after a seventh is added later.
- *
- * ── THE SERVER DECIDES WHAT IS ON THE LAND ──────────────────────────────
- *
- * The drag happens in a browser and a browser belongs to its player, so the
- * position arriving here is a request rather than a fact. It is checked against
- * `lib/islandShape` — the SAME module the chart draws the coastline from and
- * the build check polices it with — so there is no second opinion about where
- * the grass is. That mattered: for months there WAS a second opinion, the
- * checker's, and it was 35% too generous.
- *
- * Checked against the WIDEST build on the spot, not the one standing there
- * today. Otherwise a captain parks a lean-to on a headland it just fits, buys
- * the Estate, and the Estate is in the sea with no way to move it back that the
- * game ever offered them.
- */
-export async function moveBuilding(spotId: string, x: number, y: number): Promise<
-  { ok: true; homestead: Homestead } | { ok: false; error: string }
-> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'Not signed in.' }
-
-  const spot = HOTSPOT_BY_ID[spotId as HotspotId]
-  if (!spot) return { ok: false, error: 'No such spot.' }
-
-  // Reject NaN and Infinity before they reach the geometry, where they would
-  // quietly pass every comparison and be written to the row.
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, error: 'Nowhere in particular.' }
-  const nx = Math.round(Math.max(0, Math.min(100, x)))
-  const ny = Math.round(Math.max(0, Math.min(100, y)))
-
-  const widest = Math.max(...spot.builds.map(b => b.scale))
-  if (!standsOnLand(coastline('home'), nx, ny, widest)) {
-    return { ok: false, error: 'It would not stand there.' }
-  }
-
-  const admin = createAdminClient()
-  const { data: row, error } = await admin
-    .from('homesteads').select(COLS).eq('user_id', user.id).maybeSingle()
-  if (error) throw new Error(error.message)
-
-  const home = rowToHomestead(row as Parameters<typeof rowToHomestead>[0])
-  const layout = { ...home.layout, [spot.id]: { x: nx, y: ny } }
-
-  const { error: wErr } = await admin.from('homesteads')
-    .upsert({ user_id: user.id, layout }, { onConflict: 'user_id' })
-  if (wErr) throw new Error(wErr.message)
-
-  return { ok: true, homestead: { ...home, layout } }
-}
+// ── portalDestinations, stepThrough AND moveBuilding ARE GONE ───────────────
+//
+// THE FIRST TWO WERE A SECOND PORTAL. `homesteads.portal` had its own ladder,
+// its own reach and its own teleport, and `profiles.portal_tier` had the ring on
+// the water off the same island. Two portals, both working, both moving your
+// boat, and only one of them was ever somewhere you sailed to. lib/seaPortal is
+// the portal now; this one is deleted rather than left exported, because a dead
+// teleport is one import away from being live again.
+//
+// AND moveBuilding WAS "ARRANGE THE ISLAND". With three spots rather than six
+// there is nothing to arrange, and an island that reads as designed from a
+// passing boat is worth more than one every captain has nudged slightly left.

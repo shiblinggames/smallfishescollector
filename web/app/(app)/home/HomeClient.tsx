@@ -23,19 +23,22 @@ import { BADGE_MAP } from '@/lib/badges'
 import { ISLES } from '@/lib/seaIsles'
 import { vibrate } from '@/lib/haptics'
 import {
-  HOTSPOTS, HOTSPOT_BY_ID, FURNITURE, PORTAL_REACH, PINNED_MAX,
-  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, roomFor, HOUSE_SLOTS,
+  HOTSPOTS, HOTSPOT_BY_ID, FURNITURE, PINNED_MAX,
+  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, HOUSE_SLOTS, ROOMS,
   type Homestead, type HotspotId, type FurnitureSlot, type Hotspot,
 } from '@/lib/homestead'
-import { build, furnish, moveBuilding, stepThrough, type Destination } from './actions'
-import IslandPlan from './IslandPlan'
+import { build, furnish } from './actions'
+import RoomView from './RoomView'
 
-type Room = 'island' | 'inside' | 'gallery' | 'stones'
+// TWO TABS, DOWN FROM FOUR. "The stones" went with the duplicate portal and the
+// gallery moved indoors — it is a room where things hang on walls, which is a
+// room and not a building. What is left is the island and the inside of it.
+type Room = 'island' | 'inside'
 
 const GOLD = '#f0c464'
 
 export default function HomeClient({
-  homestead: initial, destinations, doubloons: initialCoin, unlocked, stamps, guest = null,
+  homestead: initial, doubloons: initialCoin, unlocked, stamps, pets, species, giants, guest = null,
 }: {
   homestead: Homestead
   /**
@@ -47,10 +50,15 @@ export default function HomeClient({
    * those buttons would need its own server-side no anyway.
    */
   guest?: string | null
-  destinations: Destination[]
   doubloons: number
   unlocked: string[]
   stamps: Record<string, string | null>
+  /** Every pet owned, for the menagerie. */
+  pets: string[]
+  /** Species logged and the total, for the gallery. */
+  species: { logged: number; total: number }
+  /** Ancient giants landed, for the trophy room. */
+  giants: { name: string; art: string }[]
 }) {
   const router = useRouter()
   const [home, setHome] = useState(initial)
@@ -58,7 +66,6 @@ export default function HomeClient({
   const [room, setRoom] = useState<Room>('island')
   /** Drag mode for the island plan. Off by default: the common visit is to
    *  look at the place, not to redecorate it. */
-  const [arranging, setArranging] = useState(false)
   const [almanac, setAlmanac] = useState(false)
   const [busy, startBusy] = useTransition()
   const [note, setNote] = useState<string | null>(null)
@@ -98,15 +105,6 @@ export default function HomeClient({
       say(r.spent > 0 ? `${r.built}, bought and placed.` : `${r.built}, back out.`)
     })
   }, [say])
-
-  const go = useCallback((id: string) => {
-    startBusy(async () => {
-      const r = await stepThrough(id)
-      if (!r.ok) { say(r.error ?? 'The stones will not reach.'); return }
-      vibrate(22)
-      router.push('/sea')
-    })
-  }, [router, say])
 
   const slots = openSlots(home)
   const standing = homeBuildings(home)
@@ -158,51 +156,11 @@ export default function HomeClient({
           </div>
         </div>
 
-        {/* ── THE ISLAND AS IT STANDS ──────────────────────────────────
-            A plan view of the six spots at the positions they actually occupy
-            out on the chart, so the building you see here is the one you see
-            from the water — and, while arranging, the one you drag.
-
-            A SQUARE BOX, because that is what the buildings' numbers mean:
-            `scale` and the x,y percentages are shares of the ISLAND BOX out on
-            the chart, which is square. This was once a 190px-tall strip the
-            full width of the page, so `scale * 150%` of its WIDTH came out at
-            568px for the Estate — four times the height of the box it was in,
-            with the top of every building cut off. */}
-        <IslandPlan
-          home={home}
-          guest={!!guest}
-          arranging={arranging}
-          onMove={async (id, x, y) => {
-            const res = await moveBuilding(id, x, y)
-            if (!res.ok) { setNote(res.error); return false }
-            setHome(res.homestead)
-            return true
-          }}
-        />
-
-        {!guest && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-            <button type="button"
-              onClick={() => { vibrate(8); setArranging(v => !v) }}
-              className="font-karla font-700 uppercase"
-              style={{
-                padding: '0.4rem 0.95rem', borderRadius: 999, fontSize: '0.66rem',
-                letterSpacing: '0.14em', cursor: 'pointer',
-                color: arranging ? '#0d1a10' : 'rgba(226,238,246,0.8)',
-                background: arranging ? '#a8d98a' : 'rgba(255,255,255,0.06)',
-                border: `1px solid ${arranging ? 'rgba(168,217,138,0.9)' : 'rgba(180,214,232,0.24)'}`,
-              }}>
-              {arranging ? 'Done arranging' : 'Arrange the island'}
-            </button>
-          </div>
-        )}
-
         {/* ── THE ROOMS ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>
-          {(guest
-            ? ([['island', 'The island'], ['inside', 'Inside'], ['gallery', 'The gallery']] as const)
-            : ([['island', 'The island'], ['inside', 'Inside'], ['gallery', 'The gallery'], ['stones', 'The stones']] as const))
+          {/* THE GALLERY IS NOT A TAB. It is a room, reached with the arrows
+              inside — see RoomView. */}
+          {([['island', 'The island'], ['inside', 'Inside']] as const)
             .map(([id, label]) => (
               <button key={id} type="button" onClick={() => { vibrate(6); setRoom(id) }}
                 className="font-karla font-700"
@@ -254,7 +212,8 @@ export default function HomeClient({
         {/* ── INSIDE ────────────────────────────────────────────────── */}
         {room === 'inside' && (
           <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-            <TheRoom home={home} />
+            <RoomView home={home} unlocked={unlocked} pets={pets}
+              species={species} giants={giants} guest={guest} />
             {!guest && (
               <p className="font-karla" style={{
                 fontSize: '0.8rem', color: 'rgba(196,214,228,0.66)', margin: 0,
@@ -369,33 +328,9 @@ export default function HomeClient({
           </div>
         )}
 
-        {/* ── THE GALLERY ───────────────────────────────────────────── */}
-        {room === 'gallery' && (
-          <Gallery home={home} unlocked={unlocked} stamps={stamps} />
-        )}
-
-        {/* ── THE STONES ────────────────────────────────────────────── */}
-        {room === 'stones' && (
-          <div style={{ marginTop: 14 }}>
-            <p className="font-karla" style={{ fontSize: '0.86rem', color: 'rgba(196,214,228,0.75)', margin: 0 }}>
-              {PORTAL_REACH[home.spots.portal ?? 0]}
-            </p>
-            {home.spots.portal >= 1 ? (
-              <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
-                <PortalRow name="The Homestead" note="Where you are standing" onGo={() => go('home')} busy={busy} here />
-                {destinations.map(d => (
-                  <PortalRow key={d.id} name={d.name} note={d.note} onGo={() => go(d.id)} busy={busy} />
-                ))}
-              </div>
-            ) : (
-              <p className="font-karla" style={{
-                fontSize: '0.82rem', color: 'rgba(180,200,214,0.55)', margin: '0.6rem 0 0',
-              }}>
-                Stand the stones up on the island first.
-              </p>
-            )}
-          </div>
-        )}
+        {/* THE GALLERY AND THE STONES BOTH LEFT THIS LEVEL. The gallery is a
+            room you walk to with the arrows inside; the stones were a second
+            portal and are deleted outright. See RoomView and lib/seaPortal. */}
       </div>
 
       {/* ── CONFIRM. Everything here is permanent and most of it is six
@@ -466,6 +401,12 @@ const SpotCard = memo(function SpotCard({ spot, home, coin, busy, guest, lead, o
   const next = nextBuild(home, spot.id)
   const afford = !!next && coin >= next.cost
   const H = lead ? 132 : 92
+  /** The room this rung would open, if it opens one. The house is the only
+   *  thing that does, and "and the menagerie" is a far better reason to spend
+   *  a million doubloons than "and a bigger room inside". */
+  const opensRoom = spot.id === 'house'
+    ? ROOMS.find(r => r.needsHouse === (home.spots.house ?? 0) + 1)?.name.replace(/^The /, 'the ') ?? null
+    : null
 
   return (
     <div style={{
@@ -507,16 +448,16 @@ const SpotCard = memo(function SpotCard({ spot, home, coin, busy, guest, lead, o
         color: 'rgba(206,222,234,0.72)', margin: '0.6rem 0 0',
       }}>{next && !guest ? next.blurb : now.blurb}</p>
 
-      {/* WHAT IT ACTUALLY DOES, for the two spots where that is not "look
-          nice". Said on the card rather than in a note underneath it. */}
-      {!guest && next && (spot.id === 'house' || spot.id === 'portal') && (
+      {/* WHAT IT ACTUALLY DOES, for the one spot where that is not "look
+          nice". The house is the only thing on this island that changes
+          anything, and it changes two: a furniture slot, and sometimes a whole
+          new room. Both are said here rather than in a note underneath. */}
+      {!guest && next && spot.id === 'house' && (
         <p className="font-karla font-700" style={{
-          fontSize: '0.8rem', margin: '0.4rem 0 0',
-          color: spot.id === 'house' ? '#f0c464' : 'rgba(150,206,172,0.95)',
+          fontSize: '0.8rem', margin: '0.4rem 0 0', color: '#f0c464',
         }}>
-          {spot.id === 'house'
-            ? `Opens furniture slot ${HOUSE_SLOTS[home.spots.house] + 1} of ${FURNITURE.length}, and a bigger room inside.`
-            : PORTAL_REACH[home.spots.portal + 1]}
+          {`Opens furniture slot ${HOUSE_SLOTS[home.spots.house] + 1} of ${FURNITURE.length}`}
+          {opensRoom ? `, and ${opensRoom}.` : ', and a bigger room inside.'}
         </p>
       )}
 
@@ -598,132 +539,11 @@ function Stand({ art, h, label, highlight }: {
  */
 const ROOM_ORDER: FurnitureSlot[] = ['floor', 'window', 'hearth', 'mount', 'table', 'corner']
 
-const TheRoom = memo(function TheRoom({ home }: { home: Homestead }) {
-  const shell = roomFor(home)
-  const open = openSlots(home)
+// TheRoom LIVED HERE. Replaced by RoomView, which draws four rooms instead of
+// one and steps between them.
 
-  return (
-    <div style={{
-      position: 'relative', width: '100%', aspectRatio: '1008 / 666',
-      borderRadius: 14, overflow: 'hidden',
-      border: '1px solid rgba(180,214,232,0.18)',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-    }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={shell.art} alt="" draggable={false} style={{
-        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-      }} />
-      {ROOM_ORDER.map(slot => {
-        // A slot the house has no room for yet shows nothing, even if a
-        // furnishing is recorded against it from a bigger house.
-        if (!open.includes(slot)) return null
-        const item = furnishingIn(home, slot)
-        if (!item.art) return null
-        const spot = shell.spots[slot]
-        return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={slot} src={item.art} alt="" draggable={false} style={{
-            position: 'absolute',
-            left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.w}%`,
-            // Anchored at its BOTTOM CENTRE, because everything in a room sits
-            // on something. Anchoring the middle makes a piece float the moment
-            // its art is a different height from the last one.
-            transform: 'translate(-50%, -100%)',
-          }} />
-        )
-      })}
-    </div>
-  )
-})
-
-function PortalRow({ name, note, onGo, busy, here }: {
-  name: string; note: string; onGo: () => void; busy: boolean; here?: boolean
-}) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-      borderRadius: 12, padding: '0.7rem 0.85rem',
-      background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(180,214,232,0.14)',
-    }}>
-      <div style={{ minWidth: 0 }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f2ead8', margin: 0 }}>{name}</p>
-        <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(196,214,228,0.62)', margin: 0 }}>{note}</p>
-      </div>
-      <button type="button" onClick={onGo} disabled={busy} className="font-cinzel font-700"
-        style={{
-          padding: '0.44rem 0.9rem', borderRadius: 999, fontSize: '0.88rem', flexShrink: 0,
-          color: '#dff0e6', background: 'rgba(10,24,20,0.9)',
-          border: '1px solid rgba(150,206,172,0.5)', cursor: busy ? 'default' : 'pointer',
-        }}>{here ? 'Stay' : 'Step through'}</button>
-    </div>
-  )
-}
-
-/**
- * THE GALLERY.
- *
- * Every badge the captain has unlocked, at a size that depends on what they
- * built. It never hides one: the bare wall shows the same badges the Captain's
- * Wing does, just smaller and without the case around them. Paying for a room
- * to look at your own things in is fine; paying to be allowed to look is not.
- */
-function Gallery({ home, unlocked, stamps }: {
-  home: Homestead; unlocked: string[]; stamps: Record<string, string | null>
-}) {
-  const tier = home.spots.gallery ?? 0
-  const size = [58, 72, 88, 104][tier]
-  const got = unlocked.map(id => BADGE_MAP[id]).filter(Boolean)
-
-  return (
-    <div style={{ marginTop: 14 }}>
-      <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(196,214,228,0.72)', margin: 0 }}>
-        {got.length} up. {builtAt(home, 'gallery').blurb}
-      </p>
-      {got.length === 0 ? (
-        <p className="font-karla" style={{
-          fontSize: '0.82rem', color: 'rgba(180,200,214,0.5)', margin: '0.8rem 0 0',
-        }}>Nothing to hang yet.</p>
-      ) : (
-        <div style={{
-          display: 'grid', gap: tier >= 2 ? 14 : 9, marginTop: 12,
-          gridTemplateColumns: `repeat(auto-fill, minmax(${size}px, 1fr))`,
-        }}>
-          {got.map(b => (
-            <div key={b.id} title={`${b.name} — ${b.description}`} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              // The case IS the upgrade. A bare wall is a bare wall.
-              padding: tier >= 1 ? 8 : 0,
-              borderRadius: tier >= 1 ? 10 : 0,
-              background: tier >= 1 ? 'rgba(255,255,255,0.045)' : 'transparent',
-              border: tier >= 1 ? '1px solid rgba(180,214,232,0.16)' : 'none',
-              boxShadow: tier >= 2 ? '0 6px 18px rgba(0,0,0,0.35), inset 0 -12px 20px -14px rgba(240,196,100,0.5)' : 'none',
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={b.imageUrl} alt={b.name} draggable={false}
-                style={{ width: '100%', maxWidth: size, display: 'block' }} />
-              {tier >= 2 && (
-                <p className="font-karla font-700" style={{
-                  fontSize: '0.66rem', textAlign: 'center', margin: 0,
-                  color: 'rgba(226,238,246,0.78)', lineHeight: 1.25,
-                }}>{b.name}</p>
-              )}
-              {tier >= 3 && stamps[b.id] && (
-                <p className="font-karla" style={{
-                  fontSize: '0.6rem', margin: 0, color: 'rgba(180,200,214,0.5)',
-                }}>{new Date(stamps[b.id] as string).toLocaleDateString()}</p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      {tier >= 2 && (
-        <p className="font-karla" style={{
-          fontSize: '0.74rem', color: 'rgba(180,200,214,0.42)', margin: '0.9rem 0 0',
-        }}>Room to hang {PINNED_MAX} of them large is coming with the wing.</p>
-      )}
-    </div>
-  )
-}
+// PortalRow AND Gallery LIVED HERE. The portal was a duplicate of the one on
+// the water; the gallery is a room inside now. See RoomView.
 
 function ConfirmBuy({ confirm, home, coin, onCancel, onYes, busy }: {
   confirm: { kind: 'build'; spot: HotspotId } | { kind: 'furnish'; id: string }

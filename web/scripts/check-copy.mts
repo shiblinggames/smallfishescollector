@@ -35,7 +35,7 @@ import { DIG_SITES } from '../lib/seaDigs'
 import { FRAGMENTS } from '../lib/seaBottles'
 import { PERSONAS } from '../lib/seaTraders'
 import { GOSSIP } from '../lib/tavernGossip'
-import { HOTSPOTS, FURNITURE, PORTAL_REACH } from '../lib/homestead'
+import { HOTSPOTS, FURNITURE, ROOMS } from '../lib/homestead'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -78,7 +78,8 @@ const SOURCES: Src[] = [
   { label: 'homestead', strings: [
     ...HOTSPOTS.flatMap(h => [h.label, h.note, ...h.builds.flatMap(b => [b.name, b.blurb])]),
     ...FURNITURE.flatMap(f => [f.label, ...f.options.map(o => o.name)]),
-    ...PORTAL_REACH,
+    ...ROOMS.map(r => r.blurb),
+    ...ROOMS.map(r => r.name),
   ] },
 ]
 

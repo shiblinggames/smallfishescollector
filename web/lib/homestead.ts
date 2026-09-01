@@ -42,7 +42,24 @@
 // are there from the first minute; what money buys is a better room to look at
 // them in.
 
-export type HotspotId = 'house' | 'portal' | 'gallery' | 'dock' | 'garden' | 'beacon'
+/**
+ * ── THREE SPOTS ON THE ISLAND, DOWN FROM SIX ────────────────────────────────
+ *
+ * `dock` is gone: it was a jetty that did nothing, on the shoreline where the
+ * berth ring already is, so it was 360,000 doubloons of planks under a circle
+ * that already told you where to tie up.
+ *
+ * `gallery` moved INSIDE. It is a room where things hang on walls, which is a
+ * room and not a building — and putting it indoors means the badges and the
+ * Almanac are somewhere you stand rather than something the island implies.
+ *
+ * `portal` is gone from here because it was never the portal. There were TWO:
+ * this one, with its own ladder and its own `stepThrough` teleport, and the ring
+ * on the water off the island driven by `profiles.portal_tier`. Both worked;
+ * both moved your boat. The one on the water is the real one — it is a place you
+ * sail into — so the stones are removed and lib/seaPortal is the only portal.
+ */
+export type HotspotId = 'house' | 'garden' | 'beacon'
 
 export type Build = {
   name: string
@@ -76,22 +93,12 @@ export type Hotspot = {
  */
 export const HOTSPOTS: Hotspot[] = [
   {
-    id: 'beacon', label: 'The point', x: 64, y: 32,
+    id: 'beacon', label: 'The lighthouse', x: 64, y: 32,
     note: 'Visible a long way off. That is the whole of it.',
     builds: [
       { name: 'Bare rock', cost: 0, art: null, scale: 0, blurb: 'Somewhere to stand and look out.' },
       { name: 'A brazier', cost: 220_000, art: '/sea/home-brazier.png', scale: 0.052, blurb: 'A fire that somebody has to keep lit.' },
       { name: 'A lighthouse', cost: 950_000, art: '/sea/home-lighthouse.png', scale: 0.074, blurb: 'They can see you coming from the Abyss.' },
-    ],
-  },
-  {
-    id: 'gallery', label: 'The gallery', x: 41, y: 45,
-    note: 'Where the badges hang. A bare wall shows every one of them already.',
-    builds: [
-      { name: 'A bare wall', cost: 0, art: null, scale: 0, blurb: 'They are up, at least.' },
-      { name: 'A strongroom', cost: 90_000, art: '/sea/home-strongroom.png', scale: 0.077, blurb: 'Under glass, lit from below, and dusted.' },
-      { name: 'A gallery hall', cost: 420_000, art: '/sea/home-gallery.png', scale: 0.128, blurb: 'Room to hang your best six large.' },
-      { name: "The Captain's Wing", cost: 1_400_000, art: '/sea/home-wing.png', scale: 0.176, blurb: 'A whole wing of it, and a bench for whoever came to look.' },
     ],
   },
   {
@@ -114,53 +121,14 @@ export const HOTSPOTS: Hotspot[] = [
       { name: 'A walled garden', cost: 450_000, art: '/sea/home-walled.png', scale: 0.14, blurb: 'Trees, at this latitude. People will ask.' },
     ],
   },
-  {
-    id: 'portal', label: 'The stones', x: 38, y: 53,
-    note: 'THE ONE THING HERE THAT DOES SOMETHING. See PORTAL_REACH.',
-    builds: [
-      // FOUR PICTURES, NOT ONE AT THREE SIZES. The first pass pointed all three
-      // paid tiers at the same arch and grew it 15% and 30%, which is 450,000 ⟡
-      // of upgrades you cannot see — and this is the one spot on the island
-      // where the upgrade actually does something, so it is the worst place to
-      // have nothing to show for it. The stones go up, then get flanked, then
-      // get a whole ring, and the light in the gate deepens each time.
-      { name: 'Fallen stones', cost: 0, art: '/sea/portal-fallen.png', scale: 0.181, blurb: 'Somebody stood these up once.' },
-      { name: 'The Way Home', cost: 150_000, art: '/sea/portal-way.png', scale: 0.072, blurb: 'Come home from anywhere on the water, as often as you like.' },
-      { name: 'The Wider Ways', cost: 175_000, art: '/sea/portal-wider.png', scale: 0.161, blurb: 'And go back out to any port you have made.' },
-      { name: 'The Deep Ways', cost: 275_000, art: '/sea/portal-deep.png', scale: 0.221, blurb: 'And out to any water your licence covers, however far.' },
-    ],
-  },
-  {
-    id: 'dock', label: 'The landing', x: 55, y: 72,
-    note: 'Where you tie up. It does not make you faster.',
-    builds: [
-      { name: 'A shingle beach', cost: 0, art: null, scale: 0, blurb: 'Run her up and hope.' },
-      { name: 'A jetty', cost: 60_000, art: '/sea/home-jetty.png', scale: 0.124, blurb: 'Planks, posts, and dry feet.' },
-      { name: 'A stone pier', cost: 300_000, art: '/sea/home-pier.png', scale: 0.121, blurb: 'Cut stone and a crane. Built to outlast you.' },
-    ],
-  },
 ]
 
 export const HOTSPOT_BY_ID: Record<HotspotId, Hotspot> =
   Object.fromEntries(HOTSPOTS.map(h => [h.id, h])) as Record<HotspotId, Hotspot>
 
-/**
- * WHERE THE PORTAL WILL PUT YOU, by tier.
- *
- * ── WHAT IT DELIBERATELY NEVER REACHES ──────────────────────────────────────
- *
- * Dig sites, and isles you have not already been ashore at. Sailing to those IS
- * the discovery, and a portal that skipped it would be selling the answer to
- * the game's own question. Everything it does reach is somewhere you have
- * already been and already proved you can get to: it removes the repetition,
- * never the first time.
- */
-export const PORTAL_REACH = [
-  'Nowhere. The stones are down.',
-  'Home, from anywhere on the water.',
-  'Home, and out to any port.',
-  'Home, any port, and the edge of any water you are licensed for.',
-] as const
+// PORTAL_REACH LIVED HERE and went with the stones. The portal is
+// lib/seaPortal, it is the ring on the water, and it has always been the only
+// one that anybody sails to.
 
 /** How many furniture slots the house opens, by house tier. */
 export const HOUSE_SLOTS = [2, 3, 4, 5, 6] as const
@@ -284,88 +252,124 @@ export const FURNISHING_BY_ID: Record<string, { slot: FurnitureSlot; item: Furni
 export type SlotSpot = { x: number; y: number; w: number }
 
 /**
- * THE INSIDE, one shell per house tier.
+ * ── THE ROOMS ───────────────────────────────────────────────────────────────
  *
- * ── WHY THE COORDINATES ARE PER ROOM ────────────────────────────────────────
+ * The house used to be ONE room that changed shell as it grew. It is a set of
+ * rooms now, stepped through with arrows, and the house tier decides how many
+ * you have — which is what makes a bigger house feel bigger from the inside
+ * rather than just better decorated.
  *
- * The five shells were painted as one home growing, not as one room redressed,
- * so the fireplace is far left in the lean-to, centre-right in the cottage and
- * centre in the hall, and the floor line climbs as the rooms get taller. One
- * shared set of slot positions would have put the fire on a wall in some of them
- * and the table through the floor in others.
+ * THE MAIN ROOM still swaps shell with the tier: a lean-to becomes a cottage
+ * becomes an estate, and that is the same progression as before. What is new is
+ * that the tier ALSO opens doors:
  *
- * So each shell carries its own. It is more numbers, and it is the only way the
- * house tier can pay off INSIDE as well as out — which is the whole reason the
- * shell changes with the house rather than staying one room forever.
+ *   tier 0-1  the main room, and nothing else
+ *   tier 2    the gallery
+ *   tier 3    the menagerie
+ *   tier 4    the trophy room
+ *
+ * ── AND EVERY SHELL IS EMPTY NOW ────────────────────────────────────────────
+ *
+ * The old art had its fixtures painted in — a stone fireplace in the cottage, a
+ * carved marble mantel in the estate — so the hearth ladder was drawn on top of
+ * a fireplace that was part of the wall. Every shell was regenerated bare, which
+ * is why all the spot coordinates below are new: they are placed against rooms
+ * with nothing in them, on a shared perspective grid.
+ *
+ * THE GRID IS THE POINT. All eight were painted to one vanishing point with the
+ * back wall parallel to the picture plane, so the same broad positions work in
+ * every room: the fire sits left of centre on the back wall, the mount hangs
+ * above it, the table stands right of centre on the floor, the corner piece goes
+ * bottom right. Per-room numbers still exist because the floor line and the
+ * ceiling height differ, but they are variations on one layout rather than six
+ * unrelated ones.
  */
-export const ROOMS: { art: string; spots: Record<FurnitureSlot, SlotSpot> }[] = [
+export type RoomId = 'main' | 'gallery' | 'menagerie' | 'trophy'
+
+export type RoomDef = {
+  id: RoomId
+  name: string
+  /** What it is for, in one line, shown under the name. */
+  blurb: string
+  /** House tier that opens the door. The main room is always open. */
+  needsHouse: number
+  /** The shell. The main room takes one per house tier; the rest have one. */
+  art: string | string[]
+  /**
+   * Where furniture stands. Only the main room is furnished — the other three
+   * are filled by what you have DONE rather than what you have bought, which is
+   * the whole difference between them.
+   */
+  spots?: Record<FurnitureSlot, SlotSpot>[]
+}
+
+/** Placed against the empty shells. `y` is the BOTTOM of the piece. */
+const MAIN_SPOTS: Record<FurnitureSlot, SlotSpot>[] = [
+  // The lean-to: low roof, dirt floor high in the frame, everything small.
+  { floor: { x: 50, y: 99, w: 46 }, hearth: { x: 33, y: 86, w: 20 },
+    mount: { x: 33, y: 62, w: 15 }, table: { x: 66, y: 88, w: 24 },
+    window: { x: 87, y: 52, w: 14 }, corner: { x: 90, y: 92, w: 15 } },
+  // The cottage: taller walls, a proper board floor, window right.
+  { floor: { x: 50, y: 99, w: 48 }, hearth: { x: 34, y: 84, w: 21 },
+    mount: { x: 34, y: 58, w: 16 }, table: { x: 66, y: 87, w: 25 },
+    window: { x: 88, y: 50, w: 14 }, corner: { x: 90, y: 91, w: 15 } },
+  // The longhouse: wide and dark, more floor showing.
+  { floor: { x: 50, y: 99, w: 52 }, hearth: { x: 33, y: 83, w: 22 },
+    mount: { x: 33, y: 56, w: 17 }, table: { x: 67, y: 87, w: 26 },
+    window: { x: 88, y: 48, w: 15 }, corner: { x: 91, y: 91, w: 16 } },
+  // The great hall: high stone, the floor line drops away.
+  { floor: { x: 50, y: 99, w: 54 }, hearth: { x: 33, y: 82, w: 23 },
+    mount: { x: 33, y: 53, w: 18 }, table: { x: 67, y: 86, w: 27 },
+    window: { x: 88, y: 46, w: 15 }, corner: { x: 91, y: 90, w: 16 } },
+  // The estate: panelled, flagged, and the tallest of them.
+  { floor: { x: 50, y: 99, w: 56 }, hearth: { x: 34, y: 81, w: 23 },
+    mount: { x: 34, y: 52, w: 18 }, table: { x: 67, y: 86, w: 27 },
+    window: { x: 88, y: 45, w: 15 }, corner: { x: 91, y: 90, w: 16 } },
+]
+
+export const ROOMS: RoomDef[] = [
   {
-    // The lean-to. Fire crammed in the left corner, dirt floor, one window.
-    art: '/sea/room-leanto.jpg',
-    spots: {
-      floor: { x: 50, y: 99, w: 40 },
-      hearth: { x: 21, y: 88, w: 24 },
-      mount: { x: 21, y: 58, w: 16 },
-      table: { x: 62, y: 94, w: 26 },
-      window: { x: 88, y: 40, w: 15 },
-      corner: { x: 90, y: 94, w: 14 },
-    },
+    id: 'main', name: 'The house', blurb: 'The room you actually live in.',
+    needsHouse: 0,
+    art: [
+      '/sea/room-leanto.jpg', '/sea/room-cottage.jpg', '/sea/room-longhouse.jpg',
+      '/sea/room-hall.jpg', '/sea/room-estate.jpg',
+    ],
+    spots: MAIN_SPOTS,
   },
   {
-    // The cottage. Fire centre-right, proper boards underfoot.
-    art: '/sea/room-cottage.jpg',
-    spots: {
-      floor: { x: 50, y: 99, w: 40 },
-      hearth: { x: 57, y: 77, w: 20 },
-      mount: { x: 57, y: 52, w: 15 },
-      table: { x: 26, y: 95, w: 28 },
-      window: { x: 87, y: 42, w: 15 },
-      corner: { x: 11, y: 95, w: 14 },
-    },
+    id: 'gallery', name: 'The gallery', blurb: 'Your badges, and every fish you have logged.',
+    needsHouse: 2, art: '/sea/room-gallery.jpg',
   },
   {
-    // The longhouse. Panelled, fire dead centre, room either side of it.
-    art: '/sea/room-longhouse.jpg',
-    spots: {
-      floor: { x: 50, y: 99, w: 42 },
-      hearth: { x: 48, y: 82, w: 22 },
-      mount: { x: 48, y: 52, w: 17 },
-      table: { x: 78, y: 95, w: 26 },
-      window: { x: 85, y: 45, w: 15 },
-      corner: { x: 13, y: 95, w: 14 },
-    },
+    id: 'menagerie', name: 'The menagerie', blurb: 'Every pet you have ever taken in.',
+    needsHouse: 3, art: '/sea/room-menagerie.jpg',
   },
   {
-    // The great hall. Two storeys, so the chimney breast runs up past the
-    // gallery rail and the trophy hangs high.
-    art: '/sea/room-hall.jpg',
-    spots: {
-      floor: { x: 50, y: 99, w: 40 },
-      hearth: { x: 52, y: 88, w: 20 },
-      mount: { x: 52, y: 58, w: 15 },
-      table: { x: 22, y: 96, w: 26 },
-      window: { x: 88, y: 52, w: 12 },
-      corner: { x: 80, y: 96, w: 13 },
-    },
-  },
-  {
-    // The Estate. Carved panelling, stone floor, and a proper mantel to hang
-    // the best thing you own over.
-    art: '/sea/room-estate.jpg',
-    spots: {
-      floor: { x: 50, y: 99, w: 42 },
-      hearth: { x: 53, y: 90, w: 20 },
-      mount: { x: 53, y: 62, w: 15 },
-      table: { x: 76, y: 96, w: 26 },
-      window: { x: 86, y: 58, w: 12 },
-      corner: { x: 16, y: 96, w: 14 },
-    },
+    id: 'trophy', name: 'The trophy room', blurb: 'The giants, and what they cost you.',
+    needsHouse: 4, art: '/sea/room-trophy.jpg',
   },
 ]
 
-/** The room a captain is currently standing in. */
-export function roomFor(h: Homestead) {
-  return ROOMS[Math.max(0, Math.min(ROOMS.length - 1, h.spots.house ?? 0))]
+export const ROOM_BY_ID: Record<RoomId, RoomDef> =
+  Object.fromEntries(ROOMS.map(r => [r.id, r])) as Record<RoomId, RoomDef>
+
+/** The rooms this house is big enough to have, in order. Always at least one. */
+export function openRooms(h: Homestead): RoomDef[] {
+  const tier = h.spots.house ?? 0
+  return ROOMS.filter(r => tier >= r.needsHouse)
+}
+
+/** The shell for a room at this house tier. */
+export function roomArt(room: RoomDef, houseTier: number): string {
+  if (typeof room.art === 'string') return room.art
+  return room.art[Math.max(0, Math.min(room.art.length - 1, houseTier))]
+}
+
+/** Where furniture stands in the main room at this house tier. */
+export function roomSpots(room: RoomDef, houseTier: number): Record<FurnitureSlot, SlotSpot> | null {
+  if (!room.spots) return null
+  return room.spots[Math.max(0, Math.min(room.spots.length - 1, houseTier))]
 }
 
 /** What a captain's homestead currently is. Mirrors the `homesteads` row. */
@@ -385,22 +389,17 @@ export type Homestead = {
   owned: string[]
   /** Badge ids hung large. Only read once the gallery is a hall or better. */
   pinned: string[]
-  /**
-   * WHERE THE CAPTAIN PUT THINGS, overriding the designed positions.
-   *
-   * Partial on purpose: a spot with no entry uses the default from HOTSPOTS, so
-   * an untouched homestead reads exactly as designed and adding a seventh
-   * hotspot later does not need every existing row migrating.
-   */
-  layout: Partial<Record<HotspotId, { x: number; y: number }>>
+  // `layout` LIVED HERE. Arranging the island by dragging buildings around is
+  // gone: with three spots rather than six there is nothing to arrange, and a
+  // homestead that reads as designed from a passing boat is worth more than one
+  // every captain has nudged two percent to the left.
 }
 
 export const EMPTY_HOMESTEAD: Homestead = {
-  spots: { house: 0, portal: 0, gallery: 0, dock: 0, garden: 0, beacon: 0 },
+  spots: { house: 0, garden: 0, beacon: 0 },
   furniture: {},
   owned: [],
   pinned: [],
-  layout: {},
 }
 
 /** How many badges the gallery lets you hang large. */
@@ -431,20 +430,15 @@ export function homeBuildings(h: Homestead): { art: string; x: number; y: number
   return HOTSPOTS
     .map(spot => ({ spot, build: builtAt(h, spot.id) }))
     .filter(({ build }) => build.art !== null)
-    // Back to front by where the building ACTUALLY is. Sorting on the designed
-    // y would paint a dragged building in its old place in the stack, so a
-    // house moved to the front of the island would still be drawn behind the
-    // beacon it now stands in front of.
-    .sort((a, b) => ((h.layout?.[a.spot.id]?.y ?? a.spot.y) - (h.layout?.[b.spot.id]?.y ?? b.spot.y)))
-    .map(({ spot, build }) => {
-      const at = h.layout?.[spot.id]
-      return {
-        art: build.art as string,
-        x: at?.x ?? spot.x,
-        y: at?.y ?? spot.y,
-        scale: build.scale,
-      }
-    })
+    // Back to front, so a lighthouse behind the house is painted first. The
+    // designed y IS the position now that nothing can be dragged.
+    .sort((a, b) => a.spot.y - b.spot.y)
+    .map(({ spot, build }) => ({
+      art: build.art as string,
+      x: spot.x,
+      y: spot.y,
+      scale: build.scale,
+    }))
 }
 
 /** Slots the house is currently big enough to hold, in order. */
@@ -476,10 +470,12 @@ export function furnishingIn(h: Homestead, slot: FurnitureSlot): Furnishing {
 const sum = (ns: readonly number[]) => ns.reduce((a, b) => a + b, 0)
 const spotCost = (id: HotspotId) => sum(HOTSPOT_BY_ID[id].builds.map(b => b.cost))
 
-export const HOMESTEAD_HOUSE = spotCost('house') + spotCost('portal')
+// THE HOUSE IS THE HOUSE, and the portal is no longer part of this budget: it
+// is bought on the water now, out of lib/seaPortal's own ladder.
+export const HOMESTEAD_HOUSE = spotCost('house')
 
 export const HOMESTEAD_FLEX =
-  sum((['gallery', 'dock', 'garden', 'beacon'] as HotspotId[]).map(spotCost))
+  sum((['garden', 'beacon'] as HotspotId[]).map(spotCost))
   + sum(FURNITURE.map(f => Math.max(...f.options.map(o => o.cost))))
 
 export const HOMESTEAD_FINISHED = HOMESTEAD_HOUSE + HOMESTEAD_FLEX

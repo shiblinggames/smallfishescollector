@@ -43,7 +43,6 @@ export type Visitable = {
 type Row = {
   house: number; portal: number; gallery: number; dock: number; garden: number; beacon: number
   furniture: unknown; owned: string[] | null; pinned: string[] | null
-  layout: unknown
 }
 
 const COLS = 'user_id, house, portal, gallery, dock, garden, beacon, furniture, owned, pinned, layout'
@@ -51,16 +50,12 @@ const COLS = 'user_id, house, portal, gallery, dock, garden, beacon, furniture, 
 function toHomestead(row: Row | null): Homestead {
   if (!row) return EMPTY_HOMESTEAD
   return {
-    spots: {
-      house: row.house ?? 0, portal: row.portal ?? 0, gallery: row.gallery ?? 0,
-      dock: row.dock ?? 0, garden: row.garden ?? 0, beacon: row.beacon ?? 0,
-    },
+    spots: { house: row.house ?? 0, garden: row.garden ?? 0, beacon: row.beacon ?? 0 },
     furniture: (row.furniture ?? {}) as Partial<Record<FurnitureSlot, string>>,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),
     // A VISITOR SEES THE ARRANGEMENT TOO. Half the point of being allowed to
     // move things is that somebody else comes and sees where you put them.
-    layout: (row.layout ?? {}) as Homestead['layout'],
   }
 }
 
@@ -150,6 +145,10 @@ export async function visitableHomesteads(): Promise<Visitable[]> {
 
 export type Visit = {
   username: string
+  /** Their id. The rooms inside are filled from what the OWNER has done — their
+   *  pets, their log, their giants — so the page needs to know whose feeds to
+   *  read or you would stand in their gallery looking at your own badges. */
+  userId: string
   homestead: Homestead
   /** Their badges, for the gallery. Read here so the page cannot ask for more
    *  of somebody's profile than the gallery needs. */
@@ -194,6 +193,7 @@ export async function homesteadOf(username: string): Promise<Visit | null> {
   if (!row) return null
 
   return {
+    userId: host.id as string,
     username: (host.username as string) ?? clean,
     homestead: toHomestead(row as Row),
     unlocked: (host.unlocked_badges as string[] | null) ?? [],
