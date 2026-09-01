@@ -9298,9 +9298,9 @@ function crewHallFor(p: Place, tiers: { hall: number; drill: number; stores: num
     // tighter than the east, which is why the drill yard sits further in than
     // the stores rather than mirroring it.
     buildings: [
-      { art: `/crew/hall_${t(tiers.hall)}.png`, x: 50, y: 50, scale: 0.28 },
-      { art: `/crew/drill_${t(tiers.drill)}.png`, x: 36, y: 60, scale: 0.15 },
-      { art: `/crew/stores_${t(tiers.stores)}.png`, x: 64, y: 60, scale: 0.15 },
+      { art: `/crew/hall_${t(tiers.hall)}.png`, x: 54, y: 67, scale: 0.28 },
+      { art: `/crew/drill_${t(tiers.drill)}.png`, x: 36, y: 60, scale: 0.12 },
+      { art: `/crew/stores_${t(tiers.stores)}.png`, x: 73, y: 60, scale: 0.11 },
     ],
   }
 }

@@ -206,7 +206,7 @@ export const PLACES: Place[] = [
       // cottage and wrong for a port. A town is built out to the water it
       // exists for. At scrub width this came out as a village marooned in the
       // middle of a green field.
-      { art: '/sea/mainland-town.png', x: 47, y: 51, scale: 0.62, toShore: true },
+      { art: '/sea/mainland-town.png', x: 48, y: 66, scale: 0.65, toShore: true },
     ],
   },
   {
@@ -253,7 +253,7 @@ export const PLACES: Place[] = [
     href: '/trawl-docks', x: -1150, y: -780, r: 265, art: '/page-tavern.jpg',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/harbour.png', x: 48, y: 55, scale: 0.333 },
+      { art: '/sea/harbour.png', x: 53, y: 58, scale: 0.27 },
     ],
   },
   {
@@ -278,9 +278,9 @@ export const PLACES: Place[] = [
     // owned; these are what the checker measures and what a captain with no
     // profile would see.
     buildings: [
-      { art: '/crew/hall_1.png', x: 50, y: 50, scale: 0.28 },
-      { art: '/crew/drill_1.png', x: 36, y: 60, scale: 0.15 },
-      { art: '/crew/stores_1.png', x: 64, y: 60, scale: 0.15 },
+      { art: '/crew/hall_1.png', x: 54, y: 67, scale: 0.28 },
+      { art: '/crew/drill_1.png', x: 36, y: 60, scale: 0.12 },
+      { art: '/crew/stores_1.png', x: 73, y: 60, scale: 0.11 },
     ],
   },
   {
@@ -316,7 +316,7 @@ export const PLACES: Place[] = [
     href: '/expeditions/ship', x: -898, y: -5715, r: 340, art: '/sea/gunwharf.png',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/gunwharf.png', x: 50, y: 54, scale: 0.4 },
+      { art: '/sea/gunwharf.png', x: 53, y: 59, scale: 0.36 },
     ],
   },
   {
@@ -343,7 +343,7 @@ export const PLACES: Place[] = [
     kind: 'port', minLevel: 0,
     berth: { dx: -340 * 0.85, dy: 340 * 0.6 },
     buildings: [
-      { art: '/sea/charterhouse.png', x: 50, y: 54, scale: 0.4 },
+      { art: '/sea/charterhouse.png', x: 51, y: 62, scale: 0.34 },
     ],
   },
   {
@@ -385,7 +385,7 @@ export const PLACES: Place[] = [
     href: '/sea', x: -2050, y: -820, r: 210, art: '/sea/trawl-shed.png',
     kind: 'port', minLevel: 0,
     buildings: [
-      { art: '/sea/trawl-shed.png', x: 46, y: 52, scale: 0.34 },
+      { art: '/sea/trawl-shed.png', x: 49, y: 54, scale: 0.33 },
     ],
   },
   {

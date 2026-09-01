@@ -91,7 +91,20 @@ export type Build = {
    *  rung is a picture, because a homestead with nothing on it is still a place
    *  somebody lives. */
   art: string
-  /** Width as a share of the island box, matching PLACES.buildings. */
+  /**
+   * WHERE IT STANDS AND HOW BIG, in the same units and the same shape as
+   * PLACES.buildings: x and y are percentages of the island box and mark the
+   * painting's BOTTOM CENTRE, scale is a share of the island's diameter.
+   *
+   * PER RUNG, not shared. A single HOUSE_AT for all five was the tidier data and
+   * the wrong data: these are five separate paintings, and the point their
+   * ground meets the island is in a slightly different place in each one. Sharing
+   * the anchor meant the only way to line the settlement up was to compromise
+   * every rung, which is how you get a lean-to that floats and an Estate whose
+   * jetty is buried in the sand.
+   */
+  x: number
+  y: number
   scale: number
   blurb: string
   /** What arrived with this rung besides the house itself, for the ladder card.
@@ -112,36 +125,31 @@ export type Build = {
  */
 export const HOUSE: Build[] = [
   {
-    name: 'A lean-to', cost: 0, art: '/sea/home-isle-1.png', scale: 0.28,
+    name: 'A lean-to', cost: 0, art: '/sea/home-isle-1.png', x: 54, y: 60, scale: 0.28,
     blurb: 'Salvage, canvas and stubbornness.',
     adds: '',
   },
   {
-    name: 'A cottage', cost: 60_000, art: '/sea/home-isle-2.png', scale: 0.33,
+    name: 'A cottage', cost: 60_000, art: '/sea/home-isle-2.png', x: 54, y: 60, scale: 0.33,
     blurb: 'One room, one chimney, and a door that shuts.',
     adds: 'A kitchen garden, and a path worn between the two.',
   },
   {
-    name: 'A longhouse', cost: 300_000, art: '/sea/home-isle-3.png', scale: 0.38,
+    name: 'A longhouse', cost: 300_000, art: '/sea/home-isle-3.png', x: 54, y: 60, scale: 0.38,
     blurb: 'Long enough to hang the nets indoors.',
     adds: 'A walled garden, a drying rack and a woodpile.',
   },
   {
-    name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', scale: 0.43,
+    name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', x: 54, y: 60, scale: 0.43,
     blurb: 'Two storeys, and a fire that never quite goes out.',
     adds: 'A brazier up on the headland, and a boathouse below it.',
   },
   {
-    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', scale: 0.46,
+    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', x: 54, y: 60, scale: 0.46,
     blurb: 'Nobody mistakes it for anywhere else.',
     adds: 'A working lighthouse. They can see you coming from the Abyss.',
   },
 ]
-
-/** Where the painting sits on the island box. Dead centre and a little south,
- *  so the settlement reads as standing ON the land with beach in front of it
- *  rather than filling the circle to its edges. */
-export const HOUSE_AT = { x: 54, y: 60 }
 
 // PORTAL_REACH LIVED HERE and went with the stones. The portal is
 // lib/seaPortal, it is the ring on the water, and it has always been the only
@@ -573,8 +581,8 @@ export function nextBuild(h: Homestead): Build | null {
  * light it at night. A homestead is a town with one building in it.
  */
 export function homeBuildings(h: Homestead): { art: string; x: number; y: number; scale: number }[] {
-  const build = builtAt(h)
-  return [{ art: build.art, x: HOUSE_AT.x, y: HOUSE_AT.y, scale: build.scale }]
+  const b = builtAt(h)
+  return [{ art: b.art, x: b.x, y: b.y, scale: b.scale }]
 }
 
 /** Slots the house is currently big enough to hold, in order. */

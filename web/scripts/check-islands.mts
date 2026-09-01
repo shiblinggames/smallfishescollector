@@ -13,7 +13,7 @@
  */
 import { PLACES } from '../app/(app)/sea/chart'
 import { coastline, grassAt, outBy, GRASS, BUILDABLE, SHORE } from '../lib/islandShape'
-import { HOUSE, HOUSE_AT } from '../lib/homestead'
+import { HOUSE } from '../lib/homestead'
 
 /* The coastline and the grass both come from lib/islandShape now — the same
    module PlaceIsland draws from, so this cannot drift from what is on screen
@@ -63,7 +63,7 @@ for (const p of PLACES) {
     // the Estate is not automatically the one that overhangs first.
     bad += check(p.id, `${p.name} (every rung of the house)`, HOUSE.map(b => ({
       label: b.name,
-      x: HOUSE_AT.x, y: HOUSE_AT.y,
+      x: b.x, y: b.y,
       scale: b.scale,
     })))
   } else {
