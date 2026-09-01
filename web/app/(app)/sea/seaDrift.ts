@@ -35,7 +35,6 @@
 // when you stop, which is what a current looks like.
 
 import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
-import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 
 /** How many flecks are alive at once. Sized so a viewport holds a SCATTERING
  *  rather than a crowd: the eye wants a few things to track, not confetti, and
@@ -117,22 +116,11 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
    */
   const osReduced = typeof window !== 'undefined'
     && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
-  /**
-   * EITHER SWITCH COUNTS, and the in-game one is the important half.
-   *
-   * `prefers-reduced-motion` is the right thing to honour and the wrong thing
-   * to rely on: it is a system setting most people have never opened, and
-   * "sailing makes me feel ill" is a complaint that deserves an answer inside
-   * the game. Sea motion lives beside music and sound effects in the chart's
-   * own settings — see lib/seaSettings.
-   *
-   * LIVE, not read once. This is a comfort setting: somebody reaches for it
-   * because they are uncomfortable NOW, and telling them to reload is telling
-   * them to sit with it. The listener is removed with the layer.
-   */
-  let reduced = osReduced || !getSetting('motion')
-  const onSetting = () => { reduced = osReduced || !getSetting('motion') }
-  if (typeof window !== 'undefined') window.addEventListener(SEA_SETTINGS_EVENT, onSetting)
+  // THE OS SWITCH ONLY. There was an in-game "Sea motion" toggle beside it and
+  // it is gone: the speed curve and the shader's own damping do the work now,
+  // and a settings row that duplicates what the defaults already do is a choice
+  // nobody needs to make.
+  const reduced = osReduced
 
   const view: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
@@ -259,11 +247,6 @@ export function makeDrift(PIXI: typeof import('pixi.js')): Drift {
 
     night(next) { tint = next },
 
-    destroy() {
-      // The listener goes with the layer, or a chart that has been opened and
-      // left five times has five of them updating a flag on a dead field.
-      if (typeof window !== 'undefined') window.removeEventListener(SEA_SETTINGS_EVENT, onSetting)
-      view.destroy({ children: true })
-    },
+    destroy() { view.destroy({ children: true }) },
   }
 }

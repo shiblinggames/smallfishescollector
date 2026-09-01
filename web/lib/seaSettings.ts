@@ -25,7 +25,7 @@
 // private window all land on the same answer, which is the one somebody who has
 // never opened the settings would expect.
 
-export type SeaSetting = 'music' | 'sfx' | 'biteTimer' | 'motion'
+export type SeaSetting = 'music' | 'sfx' | 'biteTimer'
 
 const KEY: Record<SeaSetting, string> = {
   // SFX keeps its original key and its original INVERTED sense, because
@@ -34,17 +34,6 @@ const KEY: Record<SeaSetting, string> = {
   sfx: 'fishingSfxMuted',
   music: 'seaMusicOff',
   biteTimer: 'seaBiteTimerOff',
-  /**
-   * THE DRIFTING FOAM, AND ANYTHING ELSE THAT STREAMS PAST.
-   *
-   * Stored as OFF like the others, so leaving it alone gives you the sea as
-   * designed. Turning it off is the comfort switch: a full-screen field of
-   * bright specks travelling at five hundred pixels a second is the single most
-   * motion-sick thing the chart does, and `prefers-reduced-motion` is honoured
-   * too — but that is a system setting most people have never opened, and
-   * "this makes me feel ill" deserves an answer inside the game.
-   */
-  motion: 'seaMotionOff',
 }
 
 /** Fired whenever anything here changes, so a panel and whatever the setting
@@ -70,8 +59,5 @@ export function setSetting(s: SeaSetting, on: boolean): void {
 
 /** Read all three at once, for a panel that draws them together. */
 export function allSettings(): Record<SeaSetting, boolean> {
-  return {
-    music: getSetting('music'), sfx: getSetting('sfx'),
-    biteTimer: getSetting('biteTimer'), motion: getSetting('motion'),
-  }
+  return { music: getSetting('music'), sfx: getSetting('sfx'), biteTimer: getSetting('biteTimer') }
 }

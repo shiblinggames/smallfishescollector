@@ -220,7 +220,9 @@ void main(void) {
   // 0.85, not 0.55. The high-frequency term is what the eye tries to track and
   // cannot, and at a cruise this was still leaving three quarters of it up. See
   // the note on uRush's curve in SeaIslandsGPU.
-  float fine = 0.35 * (1.0 - 0.85 * uRush);
+  // 0.21, down from 0.35. The whole high-frequency field is at 60% of what it
+  // was even standing still — see the note on the amplitudes below.
+  float fine = 0.21 * (1.0 - 0.85 * uRush);
   float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
   // ── THE SHELF ─────────────────────────────────────────────────────
@@ -288,7 +290,7 @@ void main(void) {
       * (1.0 - smoothstep(0.10, 0.62, shelf))
       * (1.0 - uDark)
       * (1.0 - 0.92 * uRush);
-    col += caust * vec3(0.72, 0.92, 0.86) * 0.30 * uSwell;
+    col += caust * vec3(0.72, 0.92, 0.86) * 0.18 * uSwell;
   }
 
   // ── THE MOON'S PATH ───────────────────────────────────────────────
@@ -340,7 +342,17 @@ void main(void) {
   // 0.96 takes them almost entirely out at speed and leaves them untouched at
   // rest, which is when they are worth having: a glint is light catching a wave
   // you are sitting on, not scenery you are overtaking.
-  col += sparkle * glintCol * 0.16 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.96 * uRush);
+  // ── AND THE WHOLE FIELD IS QUIETER AT REST ────────────────────────
+  //
+  // Glints 0.16 to 0.096, caustics 0.30 to 0.18, the fine chop 0.35 to 0.21 —
+  // 60% of each, together, so the relationship between them is unchanged and
+  // the water is the same water with the contrast down.
+  //
+  // The speed damping above was the fix for sailing. This is the other half of
+  // the same complaint: it was too busy STILL, which is most of what a fishing
+  // session is. A sea you are staring at for two minutes waiting on a bite has
+  // a much lower budget for glitter than one you are crossing.
+  col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.96 * uRush);
 
   finalColor = vec4(col, 1.0);
 }

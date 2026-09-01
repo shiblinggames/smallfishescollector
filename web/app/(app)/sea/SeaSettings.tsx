@@ -164,8 +164,6 @@ export default function SeaSettings({ size, top }: {
               on={s.sfx} onToggle={() => flip('sfx')} />
             <Switch label="Bite timer" note="The running count while you wait on a bite."
               on={s.biteTimer} onToggle={() => flip('biteTimer')} />
-            <Switch label="Sea motion" note="Foam and spray streaming past as you sail. Turn it off if the movement is too much."
-              on={s.motion} onToggle={() => flip('motion')} />
           </motion.div>
         )}
       </AnimatePresence>

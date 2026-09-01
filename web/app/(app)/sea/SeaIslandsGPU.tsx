@@ -56,7 +56,6 @@ import { makeTowns, type Towns, type GpuTown } from './seaTown'
 import { makePath, type SeaPath } from './seaPath'
 import { BOATS } from '@/lib/boats'
 import type { Frame } from './skiffArt'
-import { getSetting, SEA_SETTINGS_EVENT } from '@/lib/seaSettings'
 
 export type GpuIsland = { id: string; r: number; x: number; y: number; locked: boolean }
 export type GpuMark = {
@@ -263,10 +262,6 @@ export default function SeaIslandsGPU({
   useEffect(() => {
     let dead = false
     let app: import('pixi.js').Application | null = null
-    /** The Sea motion listener. Registered inside the async init with the frame
-     *  loop it feeds, removed in the teardown below — two different closures,
-     *  so the handle lives out here where both can see it. */
-    let calmListener: (() => void) | null = null
     let cleanup: (() => void) | null = null
     let lostOff: (() => void) | null = null
 
@@ -653,21 +648,6 @@ export default function SeaIslandsGPU({
       let camX = 0, camY = 0, camZoom = 1
       let dark = 0, warm = 0
       let lastCamX = 0, lastCamY = 0, rush = 0
-      /**
-       * THE COMFORT SWITCH, AND IT HAS TO REACH THE SHADER.
-       *
-       * It was wired only into the foam field, which turned out to be the
-       * sparse half of the problem: the water itself is world-anchored, so its
-       * glints, caustics and fine chop scroll at exactly the camera's speed
-       * across the whole screen. Turning the foam down while that carried on
-       * is why the toggle read as doing nothing.
-       *
-       * Live, and the listener goes with the app below — a comfort setting is
-       * reached for because somebody is uncomfortable now.
-       */
-      let calm = !getSetting('motion')
-      calmListener = () => { calm = !getSetting('motion') }
-      window.addEventListener(SEA_SETTINGS_EVENT, calmListener)
       /** The viewport in world units, as of the last frame. Written by the
        *  ticker and read by `fleet`, which runs before it. */
       let lastHalfW = 1, lastHalfH = 1
@@ -720,14 +700,22 @@ export default function SeaIslandsGPU({
         // high-frequency detail up. A power curve gets there sooner: 0.72 at
         // cruise, and pinned at the top by the time the hull is fully refitted.
         //
-        // With Sea motion off it is simply 1 whenever the boat is moving at
-        // all. Somebody who has asked for less movement is not asking for a
-        // gentler curve, they are asking for the detail to stop travelling.
         const speed = Math.hypot(rvx, rvy)
-        const raw = calm
-          ? (speed > 12 ? 1 : 0)
-          : Math.min(1, Math.pow(speed / 380, 1.3))
-        rush += (raw - rush) * Math.min(1, dt * 5)
+        const raw = Math.min(1, Math.pow(speed / 380, 1.3))
+        // ── FAST TO DAMP, SLOW TO COME BACK ───────────────────────────
+        //
+        // One rate for both directions meant the detail snapped back the
+        // instant the boat stopped: come off the helm and the water flashed to
+        // full brightness in about a fifth of a second, which reads as a light
+        // being switched on rather than as a wake settling.
+        //
+        // Asymmetric now, and the asymmetry is what a real sea does. Detail
+        // goes as soon as you are moving, because that is when it turns into
+        // strobe and there is nothing to be gained by easing into removing it.
+        // It comes back over a couple of seconds, because water that has been
+        // disturbed takes a moment to lie flat and the eye knows it.
+        const settling = raw < rush
+        rush += (raw - rush) * Math.min(1, dt * (settling ? 0.9 : 6))
         capRef.current?.cap.update(dt)
         for (const c of crewRef.current.values()) c.cap.update(dt)
         water?.frame(t, camX, camY, camZoom, dark, warm, rush)
@@ -989,9 +977,6 @@ export default function SeaIslandsGPU({
       crewLayerRef.current = null
       pixiRef.current = null
       boatsRef.current = null
-      // Registered inside the async init below, torn down here — hence the
-      // handle in the effect's own scope rather than a const beside the loop.
-      if (calmListener) { window.removeEventListener(SEA_SETTINGS_EVENT, calmListener); calmListener = null }
       app?.destroy(true, { children: true })
       app = null
     }
