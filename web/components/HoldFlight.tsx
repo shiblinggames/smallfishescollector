@@ -2,6 +2,27 @@
 
 // ── THE CATCH GOING INTO THE HOLD ───────────────────────────────────────────
 //
+// ── IT STARTS IN THE WATER NOW, NOT ON THE CARD ─────────────────────────────
+//
+// There were two animations telling the same beat and disagreeing about how it
+// ended. seaSplash arced a dark shape out of the water and dropped it BACK IN
+// with a second splash — which is what a jumping fish does and the exact wrong
+// story for one you just caught — and then this flew a second fish off the
+// result card a beat later.
+//
+// One motion now. The water bursts where the line was, the fish comes out of
+// that burst, and it carries across into the Hold, where the number ticks. The
+// splash keeps the water; this keeps the fish.
+//
+// ── AND IT IS A SILHOUETTE ──────────────────────────────────────────────────
+//
+// Not the species plate, for the two reasons seaSplash already wrote down: the
+// plates are 140KB and the name does not arrive until `reelIn` answers, so
+// drawing the real fish here would be a fetch and a race in the one moment that
+// must not stutter. A dark shape is also what you SEE when a fish clears the
+// water — the card is where it gets identified, and doing that twice takes the
+// reveal off the card without giving it anywhere else.
+//
 // A fish was landed, a card appeared, and somewhere off in the corner a number
 // silently became one bigger. Those three facts were never joined up, so the
 // hold read as a counter that happened to be near the fishing rather than as
@@ -31,14 +52,13 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FishImg } from './CatchResultCard'
-import { SHINY_FISH_FILTER } from '@/lib/shiny'
 
 export type Flight = {
   /** Bumped per catch, so two fish in a row each get their own trip. */
   key: number
-  name: string
   qty: number
+  /** A golden catches the light on the way over. The only thing about the fish
+   *  this knows, and the only one worth knowing before the card says the rest. */
   shiny: boolean
   from: { x: number; y: number }
   to: { x: number; y: number }
@@ -98,10 +118,17 @@ export default function HoldFlight({ flight, onArrive }: {
             pointerEvents: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-          <FishImg name={flight.name} style={{
-            maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
-            filter: flight.shiny ? SHINY_FISH_FILTER : 'drop-shadow(0 3px 8px rgba(0,0,0,0.6))',
-          }} />
+          {/* THE SAME SHAPE THE WATER THREW UP. Drawn rather than fetched, so
+              it is on screen on the frame the burst happens — a sprite that
+              arrives one network round trip late would miss its own splash. */}
+          <svg viewBox="0 0 64 40" width="100%" height="100%" aria-hidden
+            style={{ filter: flight.shiny
+              ? 'drop-shadow(0 0 10px rgba(240,192,64,0.9))'
+              : 'drop-shadow(0 3px 8px rgba(0,0,0,0.55))' }}>
+            <path d="M2 20c10-13 26-17 38-13 7 2 12 7 15 13-3 6-8 11-15 13-12 4-28 0-38-13z"
+              fill={flight.shiny ? '#f0c040' : '#0d1a24'} />
+            <path d="M52 8 62 2v36l-10-6z" fill={flight.shiny ? '#d9a52c' : '#0a141c'} />
+          </svg>
           {/* A HAUL SAYS SO. One sprite for eight fish would undercount the
               moment; a number on it is cheaper than eight sprites and reads
               faster than eight sprites would. */}

@@ -124,6 +124,8 @@ type Drop = {
 
 type Burst = {
   ring: Particle
+  /** Kept in the pool so the layer's shape does not change; never drawn. See
+   *  the note in the frame loop about where the fish went. */
   fish: Particle
   x: number; y: number
   /** Which way the fish leaves and returns. */
@@ -249,35 +251,19 @@ export function makeSplash(PIXI: typeof import('pixi.js')): Splash {
         b.ring.tint = b.perfect ? 0xfde68a : tint
         b.ring.alpha = Math.max(0, (1 - b.age) * 0.5)
 
-        if (b.age >= 1) { b.fish.alpha = 0; continue }
-
-        // ── THE ARC ── out of the water, over, and back in. A parabola in
-        // HEIGHT with a steady lean in x, which is what a fish coming up
-        // actually does; anything symmetrical in both axes reads as a lob.
-        const k = b.age
-        const h = Math.sin(k * Math.PI) * (b.perfect ? 118 : 86)
-        const lean = (k - 0.12) * (b.perfect ? 92 : 70) * b.dir
-        b.fish.x = b.x + lean
-        // Height is SCREEN space, so it is divided by GROUND on the way in,
-        // the same counter-squash the gulls and every standing thing use.
-        b.fish.y = b.y - h / GROUND
-        const sc = (b.perfect ? 0.62 : 0.5) * (0.82 + Math.sin(k * Math.PI) * 0.3)
-        // Nose up on the way out, nose down on the way back: the rotation is
-        // the derivative of the arc, which is the one thing that stops it
-        // looking like a sprite sliding along a path.
-        b.fish.rotation = Math.atan2(-Math.cos(k * Math.PI) * 2.4, 1.6 * b.dir) + (b.dir < 0 ? Math.PI : 0)
-        b.fish.scaleX = sc * b.dir
-        b.fish.scaleY = sc
-        // DARK. It is a silhouette against the water, not a lit object, and it
-        // brightens a touch at the top of the arc where it clears the surface.
-        b.fish.tint = 0x0d1a24
-        b.fish.alpha = k < 0.06 ? k / 0.06 : 0.9
-
-        // ── AND BACK IN ── a second, smaller throw where it re-enters.
-        if (!b.splashed && k > 0.9) {
-          b.splashed = true
-          throwWater(b.fish.x, b.y, b.perfect ? 16 : 11, 0.6, b.perfect)
-        }
+        // ── THE FISH IS NOT DRAWN HERE ANY MORE ──────────────────────
+        //
+        // It used to arc out of the water, over, and BACK IN, with a second
+        // splash where it re-entered. Which is what a fish jumping does — and
+        // it is the wrong story. You just caught it: the one thing it must not
+        // look like is going back in the sea.
+        //
+        // So this layer keeps the part that was always right, the water
+        // bursting where the line was, and the fish itself is handed to
+        // components/HoldFlight, which carries it out of the burst and into the
+        // Hold where the count then ticks. One motion, one ending, and the
+        // ending is the hold rather than the water.
+        b.fish.alpha = 0
       }
 
       for (const p of drops) {

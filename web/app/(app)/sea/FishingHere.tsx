@@ -1418,33 +1418,37 @@ export default function FishingHere({
 
         // ── AND IT GOES IN THE HOLD, VISIBLY ──────────────────────────
         //
-        // Next frame, because the card has only just been asked for and has no
-        // box to be measured from until React has put it on the screen. Both
-        // ends are read live: the card is centred in a column whose height
-        // depends on what was landed, and the chip moves with the safe-area
-        // inset. See components/HoldFlight.
+        // ── OUT OF THE WATER, NOT OFF THE CARD ────────────────────────
         //
-        // An ancient trophy does not make the trip — it never enters the hold,
-        // it goes on the wall, and a fish flying into a barrel it is not in
+        // It used to leave the result card, which meant two animations for one
+        // beat: seaSplash threw a silhouette out of the sea and dropped it back
+        // IN, and then a second fish flew off the card a moment later. The
+        // first of those is the story of a fish getting away.
+        //
+        // So the fish now leaves the burst the splash makes. The origin is the
+        // BOAT, which the camera keeps at the centre of the map, because that
+        // is where the line went in and where the water just broke — and it is
+        // a viewport constant rather than an element, so there is nothing to
+        // measure and nothing to wait a frame for.
+        //
+        // An ancient trophy does not make the trip. It never enters the hold —
+        // it goes on the wall — and a fish flying into a barrel it is not in
         // would be a lie told with an animation.
         {
           const qty = res.catchQty ?? 1
           const fishNow2 = res.fish as FishSpecies | undefined
           const trophy = fishNow2?.habitat === 'ancient_deep' && (fishNow2?.sell_value ?? 0) === 0
           if (qty > 0 && fishNow2 && !trophy) {
-            requestAnimationFrame(() => {
-              const card = cardScrollRef.current?.getBoundingClientRect()
-              const chip = holdChipRef.current?.getBoundingClientRect()
-              if (!card || !chip) return
+            const chip = holdChipRef.current?.getBoundingClientRect()
+            if (chip) {
               setFlight({
                 key: Date.now(),
-                name: fishNow2.name,
                 qty,
                 shiny: res.isShiny === true,
-                from: { x: card.left + card.width / 2, y: card.top + card.height / 2 },
+                from: { x: window.innerWidth / 2, y: window.innerHeight * 0.42 },
                 to: { x: chip.left + chip.width / 2, y: chip.top + chip.height / 2 },
               })
-            })
+            }
           }
         }
 
