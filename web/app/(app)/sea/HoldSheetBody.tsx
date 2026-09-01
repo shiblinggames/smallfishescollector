@@ -20,11 +20,11 @@
 // ── THE LANE COPY WAS WRONG ─────────────────────────────────────────────────
 //
 // It advertised three lanes and led with "a quick sell from wherever you float
-// gives you 75%". That lane does not exist out here. `quickSellAllFish` is
-// still in fishing/actions.ts and is called from NOWHERE — it went when
-// /fishing did, because selling from anywhere is exactly the thing the ocean
-// hub charges for. So the panel was telling people about a button that is not
-// in the game, and understating the buyer they can actually reach.
+// gives you 75%". That lane does not exist. It went when /fishing did, because
+// selling from anywhere is exactly the thing the ocean hub charges for — so the
+// panel was describing a button that is not in the game and understating the
+// buyer people can actually reach. `sellFish` and `quickSellAllFish` have since
+// been deleted outright; see the note where they used to be in fishing/actions.
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'

@@ -71,7 +71,7 @@ export default function DialButton({
   return (
     <motion.button key={motionKey}
       onPointerDown={e => { e.preventDefault(); onPress() }}
-      className="font-cinzel font-800 uppercase flex items-center justify-center"
+      className="font-karla font-700 uppercase flex items-center justify-center"
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       whileTap={lit ? { scale: 0.985, y: 1 } : undefined}
@@ -102,28 +102,34 @@ export default function DialButton({
           `0 10px 24px rgba(0,0,0,0.55)`,
           lit ? `0 0 26px ${glow}` : '0 0 0 rgba(0,0,0,0)',
         ].join(', '),
-        // ── THE LABEL IS THE POINT OF THE BUTTON ──────────────────────
+        // ── THE SAME TYPE AS EVERYTHING ELSE ON THIS SCREEN ───────────
         //
-        // I had this at 0.077 of the diameter, which on a 112px helm is 8.6px —
-        // SMALLER than the 13.8px it replaced, on the one control you have to
-        // find without looking while a needle is spinning. Sized off the face
-        // rather than the outer edge, so the bezel cannot squeeze it, and set
-        // in Cinzel at 800 to match the weight of everything else on this
-        // screen that is shouting.
+        // Karla 700 uppercase at 0.84rem on 0.18em, which is the "Waiting on a
+        // bite" line verbatim. The action and the status now read as the same
+        // voice, which they did not when this was Cinzel: a second display face
+        // in the middle of a screen that already has one is not emphasis, it is
+        // a different game talking.
         //
-        // The letter-spacing came down with the size going up. 0.14em is right
-        // for a small quiet label and it is what pushed "Cast Again" onto two
-        // cramped lines; at this size the word carries itself.
-        fontSize: `${Math.round(face * 0.175)}px`,
-        letterSpacing: '0.04em',
-        lineHeight: 1.08,
-        color: lit ? '#ffffff' : `${accent}77`,
-        // The label sits ON the glass, so it gets the same treatment anything
-        // under glass gets rather than floating in front of it. Tinted by the
-        // action rather than coloured with it: white reads at a glance and the
-        // glow is what says which action this is.
+        // Two wrong sizes preceded it and both are worth writing down. It went
+        // out at 0.077 of the diameter — 8.6px, SMALLER than the 13.8px it
+        // replaced, on the one control you have to find without looking while a
+        // needle spins. Correcting that overshot to 18px, which is bigger than
+        // anything else on the screen. This is the size the rest of the screen
+        // already agreed on.
+        //
+        // A LITERAL, NOT A RATIO. The point is that it matches a specific line
+        // of text elsewhere, and a ratio of the button would drift off it the
+        // moment either changed.
+        fontSize: '0.84rem',
+        letterSpacing: '0.18em',
+        lineHeight: 1.2,
+        // WHITE, GLOWED IN THE ACTION'S COLOUR. The one thing kept from the
+        // oversized pass: accent-coloured text on a dark glass face is dim, and
+        // white on a coloured glow is legible without the label having to be
+        // large. The colour still says which action this is.
+        color: lit ? '#f4f9ff' : `${accent}77`,
         textShadow: lit
-          ? `0 1px 3px rgba(0,0,0,0.95), 0 0 14px ${accent}, 0 0 26px ${glow}`
+          ? `0 1px 3px rgba(0,0,0,0.95), 0 0 12px ${accent}, 0 0 22px ${glow}`
           : 'none',
       }}>
       {/* THE GLASS ITSELF. A crescent of reflection across the upper third,

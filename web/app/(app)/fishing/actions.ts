@@ -1711,122 +1711,24 @@ export async function quickBuyWorms(): Promise<{ qty: number; doubloons: number 
   return { qty: QUICK_BUY_WORMS_QTY, doubloons: newDoubloons }
 }
 
-// Sell fish from inventory
-export async function sellFish(
-  fishId: number,
-  quantity: number,
-): Promise<{ earned: number; doubloons: number } | { error: string }> {
-  if (quantity <= 0) return { error: 'Invalid quantity' }
+// ── QUICK-SELL IS GONE ──────────────────────────────────────────────────────
+//
+// `sellFish` (per species) and `quickSellAllFish` (the lot) both sold at 75%
+// from wherever you happened to be floating, and both are deleted here. They
+// were already dead: nothing had called either since /fishing was retired, and
+// nothing could, because selling from anywhere is precisely the cost the ocean
+// hub exists to charge. The hold panel was still describing the lane to people.
+//
+// Two lanes now, and neither lives in this file:
+//   sea/traderActions.sellToResident  — 78 to 86%, sail to the buyer in your
+//                                       water, deeper bands pay more
+//   tavern/market/actions.sellEntireHold — 100% less the 3% non-Captain fee,
+//                                       ashore at the Mainland
+//
+// Deleted rather than left for a future caller. A 75% sell-from-anywhere is an
+// economy decision that was reversed, not a utility that lost its button, and
+// leaving it exported is how it quietly comes back.
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-
-  const [{ data: invRow }, { data: fish }, { data: profile }] = await Promise.all([
-    admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
-    admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid').eq('id', user.id).single(),
-  ])
-
-  if (!invRow || !fish || !profile) return { error: 'Data not found' }
-  if (invRow.quantity < quantity) return { error: 'Not enough fish' }
-
-  const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
-  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult * eyeFromProfile(profile).sellMult
-  // Quick-sell at 75% (was 65%) — gives new players a softer floor so one bad
-  // early sell doesn't lock them out of their next rod tier.
-  //
-  // THIS LANE IS THE ONE THAT NEVER MOVES. The ladder is priced on DISTANCE
-  // now: 75% wherever you happen to be floating, 78-86% from a zone buyer you
-  // sail over to, 100% at the market ashore. The delayed 87% lane in between
-  // is gone — it was charging an hour to stand in for a journey the chart did
-  // not used to make you take, and now does. See sellEntireHold.
-  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.75) * renownSellMult) * quantity
-  const newDoubloons = (profile.doubloons ?? 0) + earned
-
-  await Promise.all([
-    admin.from('fish_inventory')
-      .update({ quantity: invRow.quantity - quantity })
-      .eq('user_id', user.id).eq('fish_id', fishId),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: earned, reason: 'Sold fish (quick-sell)',
-    }),
-    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: earned }),
-    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_count', n: quantity }),
-    admin.rpc('bump_profile_max', { uid: user.id, col: 'biggest_fish_sale', v: earned }),
-    ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
-  ])
-
-  return { earned, doubloons: newDoubloons }
-}
-
-/** Quick-sell the player's ENTIRE hold in one shot — same 75% rate (100% on a
- *  full moon) and per-species floor as sellFish, just batched so the UI gets a
- *  single lump sum instead of selling stack-by-stack. One doubloon update + one
- *  transaction row for the whole sweep. */
-export async function quickSellAllFish(): Promise<
-  { earned: number; fishSold: number; doubloons: number } | { error: string }
-> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-
-  const [inventoryRes, { data: profile }] = await Promise.all([
-    admin.from('fish_inventory')
-      .select('fish_id, quantity, fish_species(sell_value)')
-      .eq('user_id', user.id)
-      .gt('quantity', 0),
-    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc, equipped_special_2, has_anglers_patience, anglers_patience_xp, finn_spoil_free, finn_spoil_paid').eq('id', user.id).single(),
-  ])
-
-  if (!profile) return { error: 'Profile not found' }
-
-  type InvRow = { fish_id: number; quantity: number; fish_species: { sell_value: number } | null }
-  const inventory = (inventoryRes.data ?? []) as unknown as InvRow[]
-  if (inventory.length === 0) return { error: 'Nothing to sell' }
-
-  const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
-  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult * eyeFromProfile(profile).sellMult
-  const rate = (fullPrice ? 1.0 : 0.75) * renownSellMult
-
-  let totalEarned = 0
-  let totalFishSold = 0
-  for (const item of inventory) {
-    const sellValue = item.fish_species?.sell_value ?? 0
-    // Per-species floor mirrors sellFish exactly so the total is identical to
-    // looping it — this is purely a batching change, no economy change.
-    totalEarned += Math.floor(sellValue * rate) * item.quantity
-    totalFishSold += item.quantity
-  }
-
-  if (totalEarned <= 0) return { error: 'Nothing to sell' }
-
-  const newDoubloons = (profile.doubloons ?? 0) + totalEarned
-
-  await Promise.all([
-    ...inventory.map(item =>
-      admin.from('fish_inventory')
-        .update({ quantity: 0 })
-        .eq('user_id', user.id)
-        .eq('fish_id', item.fish_id)
-    ),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id, amount: totalEarned, reason: `Sold ${totalFishSold} fish (quick-sell)`,
-    }),
-    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_doubloons', n: totalEarned }),
-    admin.rpc('bump_profile_stat', { uid: user.id, col: 'fish_sold_count', n: totalFishSold }),
-    admin.rpc('bump_profile_max', { uid: user.id, col: 'biggest_fish_sale', v: totalEarned }),
-    ...(newDoubloons >= 1_000_000 ? [grantBadgeDirect(user.id, 'deep_pockets')] : []),
-  ])
-
-  return { earned: totalEarned, fishSold: totalFishSold, doubloons: newDoubloons }
-}
 
 // Perfect streak is fully server-authoritative inside reelIn now (it tracks the
 // live streak in current_perfect_streak, computes the XP bonus, and updates the

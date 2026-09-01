@@ -2,16 +2,21 @@
 
 How caught fish become doubloons, and the leveraged casino on top.
 
-## The market and the three sell lanes
+## The market and the two sell lanes
 
 `web/lib/fishMarket.ts` + hold actions in `web/app/(app)/fishing/holdActions.ts`.
 
-- **Quick-sell pays a deliberate haircut (65%) and must never be removed.** The two-lane
-  design (instant at a discount vs delayed at full price) is the whole tension. Players
-  asked why; the answer is in the lane, not a bug.
-- **Delayed liquidation** books a `pending_sales` row and settles later with a toast.
-  Three lanes total: quick-sell, delayed full-price, and market-order variants. When
-  touching settlement, check all three — they share the pending machinery.
+- **There are TWO lanes and they ladder on DISTANCE.** See the section below for the
+  table. Both are instant; what you are paid for is how far you carried the catch.
+- **Quick-sell is gone.** It paid 75% from wherever you were floating and it is the one
+  thing the ocean hub cannot have: selling from anywhere is exactly the cost this
+  economy charges for. `sellFish` and `quickSellAllFish` were both deleted from
+  `fishing/actions.ts` on 2026-09-01, having been dead since /fishing was retired.
+  Do not reintroduce a sell-from-anywhere lane without deciding that question again;
+  it is an economy decision, not a missing convenience.
+- **Delayed liquidation** booked a `pending_sales` row and settled later. Also retired —
+  see the note under the table. `settlePendingSales` and the table stay to honour rows
+  still in the wild; nothing new is written there.
 
 ## The Exchange
 
@@ -46,11 +51,13 @@ The rebuilt free-floating-index board is live: `web/app/(app)/tavern/market/`
 
 ## The sell lanes ladder on DISTANCE (2026-08-26)
 
-| lane | pays | where | wait |
-|---|---|---|---|
-| Quick-sell | 75% (100% on Full Moon) | anywhere, without moving | none |
-| Zone buyer | 78–86%, deeper pays more | where you are fishing, if you sail to them | none |
-| The market | **100%**, less the 3% non-Captain fee | ashore at the Mainland | none |
+| lane | pays | where | wait | action |
+|---|---|---|---|---|
+| Zone buyer | 78–86%, deeper pays more | where you are fishing, if you sail to them | none | `sea/traderActions.sellToResident` |
+| The market | **100%**, less the 3% non-Captain fee | ashore at the Mainland | none | `tavern/market/actions.sellEntireHold` |
+
+The quick-sell row that used to head this table is gone, code and all. The hold panel on
+the water describes exactly these two and nothing else — see `sea/HoldSheetBody`.
 
 **The 1-hour delayed liquidate at ~87% is retired.** `liquidateAllFish` became
 `sellEntireHold`: instant, full market price, no `pending_sales` row, and the lane is gone
