@@ -49,6 +49,29 @@ export type FolkTier = 0 | 1 | 2 | 3 | 4
  * will be sorting out in my own time". None of that is admission to a circle.
  * It is two people, and the name should be a word about both of them.
  */
+/**
+ * WHAT TO CALL SOMEBODY, once you actually know them.
+ *
+ * Every regular carries a `role` — "Someone to know", "The salter", and so on —
+ * which is what they are TO A STRANGER. It is the right line on a nameplate you
+ * are reading for the first time and the wrong one at the top of the ladder: a
+ * captain who has spent weeks getting to Thick as thieves was still being told
+ * this person is someone to know, as though they had never met.
+ *
+ * So the top rung takes the role's place wherever the role is printed. Only the
+ * top rung: the middle tiers are progress toward something and the role is
+ * still the more useful fact, whereas tier 4 IS the fact.
+ */
+export function folkRoleFor(role: string, tier: FolkTier): string {
+  return tier === 4 ? TIER_NAME[4] : role
+}
+
+/** At the top of the ladder, and nowhere else. What every surface that draws a
+ *  regular checks before it decides how to draw them. */
+export function isMaxRapport(tier: FolkTier): boolean {
+  return tier === 4
+}
+
 export const TIER_NAME: Record<FolkTier, string> = {
   0: 'A stranger',
   1: 'A known face',

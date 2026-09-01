@@ -35,7 +35,7 @@ import { PLACES } from './chart'
 import { PersonCard, UnknownCard, type Portrait } from '@/components/SaltRoadCards'
 import { getCharacterSprites } from '@/lib/characters'
 import { HATS } from '@/lib/hats'
-import { FOLK, TIER_NAME, TIER_AT, toNextTier, knowsFavourite, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
+import { FOLK, TIER_NAME, TIER_AT, toNextTier, knowsFavourite, tierFor, folkRoleFor, isMaxRapport, GIFT_FAVOURITE_POINTS, type Folk } from '@/lib/seaFolk'
 import { folkState, type Rapport } from './folkActions'
 import { finnState } from './finnActions'
 import { finnChapters, finnWaitingOn, type FinnChapterView } from '@/lib/finnQuests'
@@ -171,14 +171,22 @@ function BackTo({ onBack }: { onBack: () => void }) {
   )
 }
 
-function Head({ face, accent, role, name, water }: {
+function Head({ face, accent, role, name, water, maxed = false }: {
   face: Portrait; accent: string; role: string; name: string; water?: string
+  /** Thick as thieves. The ring goes solid and the role line becomes the tier —
+   *  see folkRoleFor for why the top rung takes the role's place. */
+  maxed?: boolean
 }) {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       <div style={{
         transform: face.mirrored ? 'scaleX(-1)' : 'none',
-        flexShrink: 0, borderRadius: '50%', boxShadow: `0 0 20px ${accent}40`,
+        flexShrink: 0, borderRadius: '50%',
+        // A SOLID RING AT THE TOP, not a brighter glow. The house rule from the
+        // Salt Road cards: a maxed friendship is finished, and finished things
+        // get an outline rather than something that pulses or blooms — a glow
+        // reads as "there is more here", which is the opposite of what this is.
+        boxShadow: maxed ? `0 0 0 2px ${accent}, 0 0 20px ${accent}55` : `0 0 20px ${accent}40`,
       }}>
         <CharacterAvatar
           characterColor={face.characterColor} equippedHat={face.hat}
@@ -188,7 +196,19 @@ function Head({ face, accent, role, name, water }: {
       <div style={{ flex: 1, minWidth: 0 }}>
         <p className="font-karla font-700 uppercase" style={{
           fontSize: '0.52rem', letterSpacing: '0.2em', color: accent, margin: 0,
-        }}>{role}</p>
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
+          {maxed && (
+            // A drawn mark, never an emoji. Two links of chain: the shortest
+            // thing that says "tied to this person" without a word for it.
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.4" strokeLinecap="round" aria-hidden style={{ flexShrink: 0 }}>
+              <path d="M9.5 14.5a4 4 0 0 1 0-5l1.5-1.5" />
+              <path d="M14.5 9.5a4 4 0 0 1 0 5L13 16" />
+            </svg>
+          )}
+          {role}
+        </p>
         <p className="font-cinzel font-700" style={{
           fontSize: '1.24rem', color: '#f0ede8', margin: '2px 0 0', lineHeight: 1.1,
         }}>{name}</p>
@@ -209,7 +229,10 @@ function FolkDetail({ folk, rap, onBack }: { folk: Folk; rap: Rapport; onBack: (
   return (
     <>
       <BackTo onBack={onBack} />
-      <Head face={folk.face} accent={folk.accent} role={folk.role} name={folk.short} water={water} />
+      <Head face={folk.face} accent={folk.accent}
+        role={folkRoleFor(folk.role, tierFor(rap.points))}
+        maxed={isMaxRapport(tierFor(rap.points))}
+        name={folk.short} water={water} />
 
       <p className="font-karla" style={{
         fontSize: '0.78rem', color: `${SEA},0.75)`, lineHeight: 1.5, margin: '0.8rem 0 0',

@@ -17,7 +17,7 @@ import { vibrate } from '@/lib/haptics'
 import { KIND_LABEL, type Trader } from '@/lib/seaTraders'
 import { strikeDeal, sellToResident, wagerForRunnerRod } from './traderActions'
 import { RODS } from '@/lib/rods'
-import { folkById, knowsFavourite } from '@/lib/seaFolk'
+import { folkById, knowsFavourite, folkRoleFor, type FolkTier } from '@/lib/seaFolk'
 import { folkState, talkToFolk, giftToFolk, holdForGifting, buyFolkRod, type Rapport } from './folkActions'
 import FolkScene, { type SceneGain } from './FolkScene'
 
@@ -267,7 +267,10 @@ export default function TraderPanel({
               you could get to know or somebody passing through. Their own class
               line settles it, and it is the same words their card carries on
               the Salt Road. */}
-          {trader.roleLabel ?? (folk ? folk.role : KIND_LABEL[trader.kind])}
+          {/* THE TIER TAKES OVER AT THE TOP. See folkRoleFor: "Someone to
+              know" is what a stranger reads, and somebody who got here has long
+              since stopped being one. */}
+          {trader.roleLabel ?? (folk ? folkRoleFor(folk.role, (rap?.tier ?? 0) as FolkTier) : KIND_LABEL[trader.kind])}
           {/* WHO THEY ARE, not what they are about to hand you.
               This used to read "Knows something useful" or "Heard something",
               which labelled the CONTENT and quietly turned every stranger into

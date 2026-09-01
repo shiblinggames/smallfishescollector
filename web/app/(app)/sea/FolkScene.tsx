@@ -32,7 +32,7 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import { TypedBody, useTypewriter, prefersReducedMotion } from '@/components/cutscene'
 import { vibrate } from '@/lib/haptics'
 import {
-  TIER_NAME, TIER_AT, tierFor, ASKS, GIFT_FAVOURITE_POINTS,
+  TIER_NAME, TIER_AT, tierFor, folkRoleFor, isMaxRapport, ASKS, GIFT_FAVOURITE_POINTS,
   type Folk, type FolkTier,
 } from '@/lib/seaFolk'
 
@@ -334,9 +334,23 @@ export default function FolkScene({
                 />
               </motion.div>
               <div style={{ flex: 1, minWidth: 0 }}>
+                {/* AT THE TOP OF THE LADDER THIS IS THE TIER, not the role.
+                    "Someone to know" is what a stranger reads; somebody you got
+                    to Thick as thieves has long since stopped being that. See
+                    folkRoleFor. */}
                 <p className="font-karla font-700 uppercase" style={{
                   fontSize: '0.53rem', color: accent, letterSpacing: '0.2em', marginBottom: 2,
-                }}>{folk.role}</p>
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  {isMaxRapport(tier) && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth="2.4" strokeLinecap="round" aria-hidden style={{ flexShrink: 0 }}>
+                      <path d="M9.5 14.5a4 4 0 0 1 0-5l1.5-1.5" />
+                      <path d="M14.5 9.5a4 4 0 0 1 0 5L13 16" />
+                    </svg>
+                  )}
+                  {folkRoleFor(folk.role, tier)}
+                </p>
                 <p className="font-cinzel font-700" style={{
                   fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1,
                 }}>{folk.short}</p>
