@@ -662,16 +662,40 @@ export default function TrawlIndicator({
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           onClick={() => { if (dock) { closeDock(); return } setOpen(false); setPicking(null) }}
-          style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(4,8,14,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-          <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+          // ── THE SAME SHELL EVERY CONVERSATION ON THIS GAME USES ────────
+          //
+          // This was a bottom sheet in warm brown with only its top corners
+          // rounded, and the people you talk to out here open as centred cards
+          // on a cool dark ground with an accent hairline. Two different kinds
+          // of window for two things that are both "a panel over the world",
+          // reachable within seconds of each other.
+          //
+          // Centred, fully rounded, opaque and cool now. The gold stays as the
+          // hairline, because that is what says trawls rather than what says
+          // panel — the accent is the identity and the shell is the house.
+          //
+          // `--tabbar-safe` on a phone: this centres, and the mobile tab bar
+          // would otherwise eat the bottom rows. See the note in globals.css.
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9100,
+            background: 'rgba(3,6,10,0.86)', backdropFilter: 'blur(3px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem', overflowY: 'auto',
+          }}>
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
               // RELATIVE, so the close button can pin itself to the panel.
               position: 'relative',
-              width: '100%', maxWidth: 470, maxHeight: '86vh', overflowY: 'auto',
-              background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)',
-              borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)',
-              padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))',
+              margin: 'auto',
+              width: '100%', maxWidth: 470,
+              maxHeight: 'calc(86vh - var(--tabbar-safe))',
+              overflowY: 'auto', overscrollBehavior: 'contain',
+              background: 'rgba(9,13,19,0.98)',
+              borderRadius: 18, border: '1px solid rgba(196,169,106,0.34)',
+              boxShadow: '0 22px 60px rgba(0,0,0,0.7)',
+              padding: '1.15rem 1.05rem 1.2rem',
             }}>
             {/* OUT, and the FIRST thing in the panel.
                 It used to live in the "Trawls" header row, which sits BELOW

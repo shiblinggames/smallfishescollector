@@ -2724,6 +2724,10 @@ export default function SeaMap({
    */
   const [orders, setOrders] = useState<DailyChallengeState | null>(null)
   const [ordersOpen, setOrdersOpen] = useState(false)
+  /** Opened by mooring at the Tally House rather than from the HUD disc, which
+   *  is the whole difference between reading the day's orders and being paid
+   *  for them. See DailyOrders' note on canClaim. */
+  const [ordersAshore, setOrdersAshore] = useState(false)
   /** The trawls readout. Never claims anything; the fleet does that. */
   const [trawlsPeek, setTrawlsPeek] = useState(false)
   const readOrders = useCallback(() => {
@@ -2790,7 +2794,7 @@ export default function SeaMap({
       if (wharf) { setWharf(false); return }
       if (voyageOpen) { setVoyageOpen(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
-      if (ordersOpen) { setOrdersOpen(false); return }
+      if (ordersOpen) { setOrdersOpen(false); setOrdersAshore(false); return }
       if (trawlsPeek) { setTrawlsPeek(false); return }
       if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
       if (finnTalk) { setFinnTalk(null); return }
@@ -3761,6 +3765,16 @@ export default function SeaMap({
     // NOT A PAGE. The trawl panel opens over the water you are floating on,
     // because the crews you are sending are going into it.
     if (p.id === 'trawl_fleet') { setTrawlOpen(true); return }
+    // AND THE TALLY HOUSE SETTLES UP IN PLACE. It was a whole route for one
+    // panel — the same panel the chart already shows from the HUD — whose only
+    // difference ashore was that the Claim buttons worked. A page load, a
+    // remount of the chart on the way back, and a scroll container, to turn a
+    // button on.
+    //
+    // The rule it exists to protect is untouched: read anywhere, settle up
+    // ashore. You still have to sail here. What changed is that arriving hands
+    // you the panel instead of a URL.
+    if (p.id === 'trawl_docks') { setOrdersAshore(true); setOrdersOpen(true); return }
     // WHOSE DOOR. The Homestead is one island showing one of several
     // homesteads, so the route has to carry whose you are standing on.
     if (p.id === 'home' && visiting) {
@@ -6694,7 +6708,7 @@ hullRef={hullRefFor(t.key)} />
           backdrop to dismiss would otherwise also put the helm over. */}
       {ordersOpen && (
         <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-          <PopupShell open onClose={() => setOrdersOpen(false)}>
+          <PopupShell open onClose={() => { setOrdersOpen(false); setOrdersAshore(false) }}>
             <div onClick={e => e.stopPropagation()} style={{
               margin: 'auto', width: '100%', maxWidth: 440,
               borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
@@ -6705,7 +6719,7 @@ hullRef={hullRefFor(t.key)} />
               maxHeight: '80vh', overflowY: 'auto',
             }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                <button type="button" onClick={() => setOrdersOpen(false)} aria-label="Close"
+                <button type="button" onClick={() => { setOrdersOpen(false); setOrdersAshore(false) }} aria-label="Close"
                   style={{
                     width: 30, height: 30, borderRadius: '50%', padding: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -6716,7 +6730,7 @@ hullRef={hullRefFor(t.key)} />
                     strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
                 </button>
               </div>
-              <DailyOrders initial={orders} canClaim={false} />
+              <DailyOrders initial={orders} canClaim={ordersAshore} />
             </div>
           </PopupShell>
         </div>
