@@ -38,7 +38,7 @@ const GOLD = '#f0c040'
 
 /** Back to front. A hearth is against the wall, a table stands in front of it,
  *  and the corner piece is nearest the camera. */
-const ROOM_ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'table', 'corner']
+const ROOM_ORDER: FurnitureSlot[] = ['floor', 'cornerL', 'hearth', 'mount', 'cornerR']
 
 export default function RoomView({ home, unlocked, pets, species, giants, guest }: {
   home: Homestead

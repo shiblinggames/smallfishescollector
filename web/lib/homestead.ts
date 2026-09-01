@@ -167,7 +167,21 @@ export const HOUSE_SLOTS = [1, 2, 3, 4, 5] as const
  * and a bigger house simply has a better one. Nothing to buy, nothing to place,
  * and no way for it to be wrong.
  */
-export type FurnitureSlot = 'hearth' | 'floor' | 'mount' | 'table' | 'corner'
+/**
+ * ── THE TABLE WENT AND A SECOND CORNER TOOK ITS PLACE ───────────────────────
+ *
+ * A table stands in the MIDDLE of a room, which on a one-point-perspective shell
+ * means directly between the camera and the back wall — so the better the table
+ * got, the more of the fireplace it hid. The hearth is the most expensive ladder
+ * in the room and the one thing every shell is built around; a slot whose upper
+ * rungs obscure it is a slot fighting the room.
+ *
+ * Corners do not have that problem. They are at the edges by definition, they
+ * frame the fire rather than blocking it, and two of them give the room a left
+ * and a right to balance — which is also the only symmetry a straight-on room
+ * can offer.
+ */
+export type FurnitureSlot = 'hearth' | 'floor' | 'mount' | 'cornerL' | 'cornerR'
 
 export type Furnishing = {
   id: string
@@ -228,18 +242,19 @@ export const FURNITURE: { slot: FurnitureSlot; label: string; options: Furnishin
     ],
   },
   {
-    slot: 'table', label: 'The table',
+    slot: 'cornerL', label: 'The left corner',
     options: [
-      { id: 'table-plank', name: 'Plank and trestle', cost: 0 , art: '/sea/table-plank.png' },
-      { id: 'table-chart', name: 'Chart table', cost: 18_000 , art: '/sea/table-chart.png' },
-      { id: 'table-captain', name: "Captain's desk", cost: 80_000 , art: '/sea/table-captain.png' },
-      { id: 'table-starglass', name: 'A star-glass table', cost: 0 , art: '/sea/table-starglass.png', found: { isle: 'ancient_deep-3' } },
+      { id: 'cornerl-none', name: 'Empty', cost: 0 , art: null },
+      { id: 'cornerl-chest', name: 'A sea chest', cost: 9_000 , art: '/sea/cornerl-chest.png' },
+      { id: 'cornerl-rods', name: 'A rod rack', cost: 70_000 , art: '/sea/cornerl-rods.png' },
+      { id: 'cornerl-glass', name: 'A standing glass', cost: 300_000 , art: '/sea/cornerl-glass.png' },
+      { id: 'cornerl-anchor', name: 'An anchor off something older', cost: 0 , art: '/sea/cornerl-anchor.png', found: { isle: 'abyss-1' } },
     ],
   },
   {
-    slot: 'corner', label: 'The corner',
+    slot: 'cornerR', label: 'The right corner',
     options: [
-      { id: 'corner-none', name: 'Empty', cost: 0 , art: null },
+      { id: 'cornerr-none', name: 'Empty', cost: 0 , art: null },
       { id: 'corner-net', name: 'Nets and floats', cost: 8_000 , art: '/sea/corner-net.png' },
       { id: 'corner-figure', name: "A ship's figurehead", cost: 75_000 , art: '/sea/corner-figure.png' },
       { id: 'corner-lamp', name: 'A drowned lamp, still lit', cost: 320_000 , art: '/sea/corner-lamp.png' },
@@ -293,10 +308,14 @@ export type SlotSpot = { x: number; y: number; w: number }
  * THE GRID IS THE POINT. All eight were painted to one vanishing point with the
  * back wall parallel to the picture plane, so the same broad positions work in
  * every room: the fire sits left of centre on the back wall, the mount hangs
- * above it, the table stands right of centre on the floor, the corner piece goes
- * bottom right. Per-room numbers still exist because the floor line and the
- * ceiling height differ, but they are variations on one layout rather than six
- * unrelated ones.
+ * above it, and a corner piece stands in each of the two bottom corners. Per-room
+ * numbers still exist because the floor line and the ceiling height differ, but
+ * they are variations on one layout rather than six unrelated ones.
+ *
+ * THE MIDDLE OF THE FLOOR IS DELIBERATELY EMPTY. On a one-point grid the centre
+ * of the room is the line between the camera and the back wall, which is where
+ * the hearth is — so anything standing there hides the most expensive thing in
+ * the room. That is what the table did and why it is gone.
  */
 export type RoomId = 'main' | 'gallery' | 'menagerie' | 'trophy'
 
@@ -335,19 +354,19 @@ export type RoomDef = {
 const MAIN_SPOTS: Record<FurnitureSlot, SlotSpot>[] = [
   // The lean-to: low roof, dirt floor high in the frame, everything small.
   { floor: { x: 50, y: 99, w: 46 }, hearth: { x: 33, y: 86, w: 20 },
-    mount: { x: 33, y: 62, w: 15 }, table: { x: 66, y: 88, w: 24 }, corner: { x: 90, y: 92, w: 15 } },
+    mount: { x: 33, y: 62, w: 15 }, cornerL: { x: 10, y: 88, w: 24 }, cornerR: { x: 90, y: 92, w: 15 } },
   // The cottage: taller walls, a proper board floor, window right.
   { floor: { x: 50, y: 99, w: 48 }, hearth: { x: 34, y: 84, w: 21 },
-    mount: { x: 34, y: 58, w: 16 }, table: { x: 66, y: 87, w: 25 }, corner: { x: 90, y: 91, w: 15 } },
+    mount: { x: 34, y: 58, w: 16 }, cornerL: { x: 10, y: 87, w: 25 }, cornerR: { x: 90, y: 91, w: 15 } },
   // The longhouse: wide and dark, more floor showing.
   { floor: { x: 50, y: 99, w: 52 }, hearth: { x: 33, y: 83, w: 22 },
-    mount: { x: 33, y: 56, w: 17 }, table: { x: 67, y: 87, w: 26 }, corner: { x: 91, y: 91, w: 16 } },
+    mount: { x: 33, y: 56, w: 17 }, cornerL: { x: 10, y: 87, w: 26 }, cornerR: { x: 91, y: 91, w: 16 } },
   // The great hall: high stone, the floor line drops away.
   { floor: { x: 50, y: 99, w: 54 }, hearth: { x: 33, y: 82, w: 23 },
-    mount: { x: 33, y: 53, w: 18 }, table: { x: 67, y: 86, w: 27 }, corner: { x: 91, y: 90, w: 16 } },
+    mount: { x: 33, y: 53, w: 18 }, cornerL: { x: 10, y: 86, w: 27 }, cornerR: { x: 91, y: 90, w: 16 } },
   // The estate: panelled, flagged, and the tallest of them.
   { floor: { x: 50, y: 99, w: 56 }, hearth: { x: 34, y: 81, w: 23 },
-    mount: { x: 34, y: 52, w: 18 }, table: { x: 67, y: 86, w: 27 }, corner: { x: 91, y: 90, w: 16 } },
+    mount: { x: 34, y: 52, w: 18 }, cornerL: { x: 10, y: 86, w: 27 }, cornerR: { x: 91, y: 90, w: 16 } },
 ]
 
 export const ROOMS: RoomDef[] = [
@@ -363,7 +382,7 @@ export const ROOMS: RoomDef[] = [
   {
     id: 'gallery', name: 'The gallery', blurb: 'Your badges, and every fish you have logged.',
     needsHouse: 2, art: '/sea/room-gallery.jpg',
-    content: { x: 50, y: 48, w: 72 },
+    content: { x: 50, y: 44, w: 84 },
   },
   {
     id: 'menagerie', name: 'The menagerie', blurb: 'Every pet you have ever taken in.',
@@ -373,7 +392,7 @@ export const ROOMS: RoomDef[] = [
   {
     id: 'trophy', name: 'The trophy room', blurb: 'The giants, and what they cost you.',
     needsHouse: 4, art: '/sea/room-trophy.jpg',
-    content: { x: 50, y: 44, w: 74 },
+    content: { x: 50, y: 40, w: 84 },
   },
 ]
 

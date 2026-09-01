@@ -37,7 +37,7 @@ import {
 } from '@/lib/homestead'
 
 /** Back to front, the same order the room paints in. */
-const ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'table', 'corner']
+const ORDER: FurnitureSlot[] = ['floor', 'cornerL', 'hearth', 'mount', 'cornerR']
 
 const HOUSE_NAMES = ['Lean-to', 'Cottage', 'Longhouse', 'Great hall', 'Estate']
 
@@ -113,6 +113,29 @@ export default function CalibrateRooms({ initial, contentInitial }: {
     setBox({ x: Math.max(0, Math.min(100, box.x + m[0])), y: Math.max(0, Math.min(100, box.y + m[1])) })
   }
 
+  /**
+   * ── SEEDING ONE FROM ANOTHER ────────────────────────────────────────────
+   *
+   * The five shells are one house growing and the four rooms share a vanishing
+   * point, so the numbers are always CLOSE and never equal: the estate's hearth
+   * is the cottage's hearth a few percent lower and a little wider. Placing each
+   * from scratch means finding the same answer five times and getting five
+   * slightly different ones, which reads as furniture that drifts about as you
+   * upgrade rather than a house that grew around it.
+   *
+   * So copy the neighbour and correct it. That is the difference between five
+   * placements and one placement plus four adjustments.
+   */
+  const copyFromShell = (from: number) => {
+    setRows(prev => prev.map((r, i) => i === tier ? { ...prev[from] } : r))
+  }
+
+  const copyFromRoom = (from: string) => {
+    const src = content[from]
+    if (!src) return
+    setContent(prev => ({ ...prev, [room.id]: { ...src } }))
+  }
+
   const nudge = (e: React.KeyboardEvent, s: FurnitureSlot) => {
     const step = e.shiftKey ? 5 : 1
     const d: Record<string, [number, number]> = {
@@ -137,8 +160,8 @@ export default function CalibrateRooms({ initial, contentInitial }: {
       + `  { floor: { x: ${pad(r.floor.x, 2)}, y: ${pad(r.floor.y, 2)}, w: ${pad(r.floor.w, 2)} },`
       + ` hearth: { x: ${pad(r.hearth.x, 2)}, y: ${pad(r.hearth.y, 2)}, w: ${pad(r.hearth.w, 2)} },\n`
       + `    mount: { x: ${pad(r.mount.x, 2)}, y: ${pad(r.mount.y, 2)}, w: ${pad(r.mount.w, 2)} },`
-      + ` table: { x: ${pad(r.table.x, 2)}, y: ${pad(r.table.y, 2)}, w: ${pad(r.table.w, 2)} },\n`
-      + `    corner: { x: ${pad(r.corner.x, 2)}, y: ${pad(r.corner.y, 2)}, w: ${pad(r.corner.w, 2)} } },`
+      + ` cornerL: { x: ${pad(r.cornerL.x, 2)}, y: ${pad(r.cornerL.y, 2)}, w: ${pad(r.cornerL.w, 2)} },\n`
+      + `    cornerR: { x: ${pad(r.cornerR.x, 2)}, y: ${pad(r.cornerR.y, 2)}, w: ${pad(r.cornerR.w, 2)} } },`
     ).join('\n')
     + '\n]\n\n'
     // AND THE THREE CONTENT BOXES, as the line to paste into each RoomDef.
@@ -202,6 +225,34 @@ export default function CalibrateRooms({ initial, contentInitial }: {
             }}>{n}</button>
         ))}
       </div>}
+
+      {/* ── COPY FROM ── the same three numbers, one shell or one room over.
+          Buttons rather than a dropdown: there are at most four of them, and a
+          menu for four things is a click you did not need. */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+        <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(190,212,228,0.45)' }}>
+          Copy from
+        </span>
+        {isMain
+          ? HOUSE_NAMES.map((n, i) => i === tier ? null : (
+            <button key={n} type="button" onClick={() => copyFromShell(i)}
+              className="font-karla font-700"
+              style={{
+                padding: '0.28rem 0.6rem', borderRadius: 999, fontSize: '0.72rem', cursor: 'pointer',
+                color: 'rgba(214,232,240,0.7)', background: 'rgba(255,255,255,0.04)',
+                border: '1px dashed rgba(255,255,255,0.2)',
+              }}>{n}</button>
+          ))
+          : ROOMS.filter(r => r.id !== 'main' && r.id !== room.id).map(r => (
+            <button key={r.id} type="button" onClick={() => copyFromRoom(r.id)}
+              className="font-karla font-700"
+              style={{
+                padding: '0.28rem 0.6rem', borderRadius: 999, fontSize: '0.72rem', cursor: 'pointer',
+                color: 'rgba(214,232,240,0.7)', background: 'rgba(255,255,255,0.04)',
+                border: '1px dashed rgba(255,255,255,0.2)',
+              }}>{r.name}</button>
+          ))}
+      </div>
 
       {/* ── THE ROOM ── */}
       <div data-room style={{

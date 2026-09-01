@@ -142,20 +142,22 @@ const NOTES: Record<string, IsleNote> = {
 /**
  * WHAT EACH ISLE IS HOLDING, beyond coin.
  *
- * Six caches hold the only copy of a homestead furnishing (lib/homestead.ts,
- * `found`). Kept HERE rather than only on the furnishing so the isle table
- * reads as a complete manifest of what is out there, and so the ashore code has
- * one place to look.
+ * ONE PER SLOT. Five caches hold the only copy of a homestead furnishing
+ * (lib/homestead.ts, `found`), and there are exactly five furniture slots, so
+ * every slot in the house has one piece that is not for sale at any price.
+ * Kept HERE rather than only on the furnishing so the isle table reads as a
+ * complete manifest of what is out there, and so the ashore code has one place
+ * to look. `npm run check` walks both directions and fails on a disagreement —
+ * which is how the window and the table were caught when their slots went.
  *
- * All six sit in the Abyss or the Ancient Deep. The point is that the finest
+ * All five sit in the Abyss or the Ancient Deep. The point is that the finest
  * things in a captain's house are things they sailed a long way for.
  */
 export const ISLE_FURNISHING: Record<string, string> = {
-  'abyss-1': 'window-seaglass',
+  'abyss-1': 'cornerl-anchor',
   'abyss-2': 'floor-abyssal',
   'ancient_deep-0': 'hearth-firestone',
   'ancient_deep-2': 'mount-giant',
-  'ancient_deep-3': 'table-starglass',
   'ancient_deep-4': 'corner-orrery',
 }
 
