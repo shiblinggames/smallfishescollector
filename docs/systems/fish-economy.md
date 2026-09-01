@@ -74,3 +74,22 @@ never be the worse choice — it *is* the per-species market, in one tap instead
 
 `settlePendingSales` and the `pending_sales` table **stay and still run**: there are rows in
 the wild with an hour left on them and they have to be honoured. Nothing new is written there.
+
+## Simple and Advanced market (2026-09-01)
+
+The Hold side of `/tavern/market` defaults to a **simple** view and keeps the full one
+behind an **Advanced** switch at the top of the page.
+
+What Advanced adds back: the mood ticker, the red/green colour-mode legend, the hero's
+delta and curve, per-row sparklines and percentages, Today's Movers, and the sortable price
+table of every discovered fish.
+
+What simple always shows: hold value, Sell all, pending sales, and one row per species with
+what the stack is worth and a Sell button. Pending sales are never hidden — that is money
+owed, not analysis.
+
+The switch is remembered in `localStorage` under `marketAdvanced`, on the DEVICE rather than
+the profile, same call as the sea's sound switches. It defaults to simple for everybody
+including existing players: grandfathering would mean a flag, a migration and two
+behaviours to reason about forever, to save one tap once for the players most able to find
+a toggle.

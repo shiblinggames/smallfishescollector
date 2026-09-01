@@ -236,12 +236,16 @@ function portfolioCurve(portfolio: MarketFishEntry[], fee: number): number[] {
 // "Sell" button on the right sells the WHOLE stack of that species at the
 // current market price in one tap — brought back per player feedback that the
 // per-fish quick-sell went missing when the market replaced the old hold.
-function HoldingRow({ entry, fee, onOpen, onQuickSell, selling }: {
+function HoldingRow({ entry, fee, onOpen, onQuickSell, selling, simple = false }: {
   entry: MarketFishEntry
   fee: number
   onOpen: (e: MarketFishEntry) => void
   onQuickSell: (e: MarketFishEntry) => void
   selling: boolean
+  /** Drop the sparkline and the percentage. Somebody selling a haul wants the
+   *  name, how many, what it pays and a button; the trend line is a second,
+   *  quieter story about a number that is already on the row. */
+  simple?: boolean
 }) {
   const { up, pct } = marketSignal(entry, useContext(MarketModeCtx))
   const priceEach = Math.floor(entry.sell_value * entry.multiplier * fee)
@@ -263,17 +267,30 @@ function HoldingRow({ entry, fee, onOpen, onQuickSell, selling }: {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{entry.name}</p>
           <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7774', ...TNUM }}>
-            ×{entry.quantity} · {value.toLocaleString()} ⟡
+            {simple ? `${entry.quantity} aboard` : `×${entry.quantity} · ${value.toLocaleString()} ⟡`}
           </p>
         </div>
-        <div style={{ width: 50, flexShrink: 0 }}>
-          <Sparkline data={[...entry.history, entry.multiplier]} up={up} height={26} />
-        </div>
+        {!simple && (
+          <div style={{ width: 50, flexShrink: 0 }}>
+            <Sparkline data={[...entry.history, entry.multiplier]} up={up} height={26} />
+          </div>
+        )}
         <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 70 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.9rem', color: '#fff', ...TNUM }}>{priceEach.toLocaleString()} ⟡</p>
-          <p className="font-karla font-700 flex items-center justify-end gap-1" style={{ fontSize: '0.64rem', color: up ? UP : DOWN, ...TNUM }}>
-            <ChangeArrow up={up} />{fmtPct(pct)}
+          {/* SIMPLE SHOWS THE STACK, ADVANCED SHOWS THE UNIT PRICE. A seller
+              asking "what do I get for these" means all of them; a trader
+              reading a ticker means each. Same row, different question. */}
+          <p className="font-karla font-700" style={{ fontSize: '0.9rem', color: '#fff', ...TNUM }}>
+            {(simple ? value : priceEach).toLocaleString()} ⟡
           </p>
+          {simple ? (
+            <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7774', ...TNUM }}>
+              {priceEach.toLocaleString()} each
+            </p>
+          ) : (
+            <p className="font-karla font-700 flex items-center justify-end gap-1" style={{ fontSize: '0.64rem', color: up ? UP : DOWN, ...TNUM }}>
+              <ChangeArrow up={up} />{fmtPct(pct)}
+            </p>
+          )}
         </div>
       </button>
 
@@ -592,6 +609,42 @@ export default function MarketClient({
       return 'out'
     })
   }, [])
+  /**
+   * ── SIMPLE OR ADVANCED ──────────────────────────────────────────────────
+   *
+   * The Hold side grew into a trading terminal: a mood ticker, a colour-mode
+   * toggle explaining what red and green mean, sparklines per row, a movers
+   * board and a sortable price table of every fish in the game. Every piece
+   * earns its place for somebody reading the market. None of it is what the
+   * other ninety percent came here to do, which is turn a full hold into coin
+   * and get back on the water.
+   *
+   * So the terminal is still all there, behind a switch, and the default is the
+   * short version: what you are carrying, what it pays, and one button that
+   * takes the lot.
+   *
+   * DEFAULTS TO SIMPLE, INCLUDING FOR PEOPLE WHO ALREADY USE THE FULL VIEW.
+   * The alternative is remembering who had seen the old one and grandfathering
+   * them in, which means a flag, a migration, and two behaviours to reason
+   * about forever — to save one tap, once, for the players most able to find a
+   * toggle. The switch is at the top of the page and it is remembered.
+   *
+   * ON THE DEVICE, not the profile. Same call as the sea's sound switches: this
+   * is how somebody wants to read a screen on the thing they are holding, and a
+   * phone on a bus and a desk at home are allowed different answers.
+   */
+  const [advanced, setAdvanced] = useState(false)
+  useEffect(() => {
+    try { setAdvanced(window.localStorage.getItem('marketAdvanced') === 'true') } catch { /* private mode */ }
+  }, [])
+  const flipAdvanced = useCallback(() => {
+    setAdvanced(v => {
+      const next = !v
+      try { window.localStorage.setItem('marketAdvanced', String(next)) } catch { /* noop */ }
+      return next
+    })
+  }, [])
+
   const [toast, setToast] = useState<string | null>(null)
   const [tradeFish, setTradeFish] = useState<MarketFishEntry | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -843,6 +896,46 @@ export default function MarketClient({
         {side === 'exchange' && <BoardClient onDoubloons={setDoubloons} onOpenContracts={setOpenContracts} />}
 
         {side === 'hold' && <>
+
+        {/* ── THE SWITCH ──────────────────────────────────────────────
+            Top of the room, before anything it changes, so the answer to "why
+            can I not see the prices" is the first thing on screen rather than
+            something to hunt for. One control with the state written on it, not
+            a pair of tabs: there is a plain version and a full version, and
+            "Advanced" is the word for the second one. */}
+        <button type="button" onClick={flipAdvanced}
+          className="tap"
+          style={{
+            alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 8,
+            padding: '0.34rem 0.6rem', borderRadius: 999,
+            background: advanced ? 'rgba(240,192,64,0.12)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${advanced ? 'rgba(240,192,64,0.4)' : 'rgba(255,255,255,0.13)'}`,
+            cursor: 'pointer',
+          }}>
+          <span className="font-karla font-700 uppercase" style={{
+            fontSize: '0.56rem', letterSpacing: '0.14em',
+            color: advanced ? GOLD : 'rgba(190,212,228,0.6)',
+          }}>Advanced</span>
+          <span aria-hidden style={{
+            position: 'relative', width: 30, height: 17, borderRadius: 999,
+            background: advanced ? 'rgba(240,192,64,0.3)' : 'rgba(255,255,255,0.08)',
+            border: `1px solid ${advanced ? 'rgba(240,192,64,0.65)' : 'rgba(255,255,255,0.18)'}`,
+            transition: 'background 0.16s, border-color 0.16s',
+          }}>
+            <span style={{
+              position: 'absolute', top: 2, left: advanced ? 14 : 2,
+              width: 11, height: 11, borderRadius: '50%',
+              background: advanced ? GOLD : 'rgba(200,214,224,0.55)',
+              transition: 'left 0.16s ease, background 0.16s',
+            }} />
+          </span>
+        </button>
+
+        {/* ── THE TERMINAL, BEHIND THE SWITCH ─────────────────────────
+            The mood ticker and the red/green legend are for reading the
+            market. Somebody emptying a hold is not reading the market,
+            and these were the first two things they met. */}
+        {advanced && (<>
         {/* ── Market status ticker ── */}
         <div style={{
           background: 'rgba(11,13,18,0.96)', border: `1px solid ${mood.border}`,
@@ -892,6 +985,7 @@ export default function MarketClient({
           </div>
         </div>
 
+        </>)}
         {/* ── Portfolio hero ── */}
         {portfolio.length > 0 && (
           <div style={{
@@ -903,6 +997,11 @@ export default function MarketClient({
             <p className="font-karla font-700" style={{ fontSize: '2.4rem', color: '#fff', lineHeight: 1.05, ...TNUM }}>
               {totalMarketValue.toLocaleString()} <span style={{ fontSize: '1.1rem', color: '#9a9488' }}>⟡</span>
             </p>
+            {/* THE DELTA AND THE CURVE ARE THE MARKET TALKING. In simple the
+                hero is one number and what it is made of — a captain who has
+                just filled a hold wants "this is worth 4,200", not a comparison
+                against a baseline nobody explained. */}
+            {advanced && (<>
             <div className="flex items-center gap-2 mt-1">
               <span className="font-karla font-700 flex items-center gap-1" style={{ fontSize: '0.82rem', color: heroUp ? UP : DOWN, ...TNUM }}>
                 <ChangeArrow up={heroUp} />{heroUp ? '+' : ''}{heroDelta.toLocaleString()} ⟡ ({fmtPct(heroPct)})
@@ -912,6 +1011,7 @@ export default function MarketClient({
             <div style={{ margin: '0.6rem -0.3rem 0.3rem' }}>
               <Sparkline data={heroCurve} up={heroUp} height={56} fill />
             </div>
+            </>)}
             <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a9488', paddingTop: '0.35rem', ...TNUM }}>
               {totalCount} fish · {portfolio.length} species
             </p>
@@ -1050,6 +1150,7 @@ export default function MarketClient({
                       onOpen={setTradeFish}
                       onQuickSell={(e) => handleSell(e.fish_id, e.quantity)}
                       selling={selling !== null}
+                    simple={!advanced}
                     />
                   </div>
                 </SwipeAction>
@@ -1058,6 +1159,11 @@ export default function MarketClient({
           )}
         </div>
 
+        {/* ── THE REST OF THE TERMINAL ───────────────────────────────
+            Today's movers and the price table for every fish in the game.
+            Genuinely useful if you are deciding what to go and catch;
+            pure noise between a full hold and a Sell all button. */}
+        {advanced && (<>
         {/* ── Today's Movers ── */}
         {(movers.riser || movers.faller) && (
           <div>
@@ -1127,6 +1233,7 @@ export default function MarketClient({
           </div>
         )}
 
+        </>)}
         </>}
 
         {/* Wallet — outside the Hold fragment on purpose: your purse is your
