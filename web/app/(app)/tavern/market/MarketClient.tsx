@@ -633,10 +633,27 @@ export default function MarketClient({
    * is how somebody wants to read a screen on the thing they are holding, and a
    * phone on a bus and a desk at home are allowed different answers.
    */
-  const [advanced, setAdvanced] = useState(false)
+  const [advancedPref, setAdvanced] = useState(false)
   useEffect(() => {
     try { setAdvanced(window.localStorage.getItem('marketAdvanced') === 'true') } catch { /* private mode */ }
   }, [])
+  /**
+   * THE TUTORIAL GETS THE BARE ROOM, whatever the preference says.
+   *
+   * Kat walks a brand new captain in here holding one fish and says "Sell all
+   * takes the lot in one go". Putting a mood ticker, a red/green legend and a
+   * price table of every fish in the game between that sentence and the button
+   * is how a guided tour loses somebody — and the switch itself is worse,
+   * because it is a control offering to make the room MORE complicated at the
+   * exact moment the room is trying to teach one thing.
+   *
+   * So during the first voyage the market is simple and the switch is not
+   * there. It is a suppression rather than a write: nothing touches the stored
+   * preference, so somebody who had turned Advanced on and later reset their
+   * tour gets their terminal back the moment the tour is done.
+   */
+  const inTour = tourAt !== null
+  const advanced = advancedPref && !inTour
   const flipAdvanced = useCallback(() => {
     setAdvanced(v => {
       const next = !v
@@ -903,6 +920,7 @@ export default function MarketClient({
             something to hunt for. One control with the state written on it, not
             a pair of tabs: there is a plain version and a full version, and
             "Advanced" is the word for the second one. */}
+        {!inTour && (
         <button type="button" onClick={flipAdvanced}
           className="tap"
           style={{
@@ -930,6 +948,7 @@ export default function MarketClient({
             }} />
           </span>
         </button>
+        )}
 
         {/* ── THE TERMINAL, BEHIND THE SWITCH ─────────────────────────
             The mood ticker and the red/green legend are for reading the
