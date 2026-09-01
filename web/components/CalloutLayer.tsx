@@ -16,13 +16,37 @@ import { CALLOUTS, type Callout } from '@/lib/callouts'
 import type { SlotKey } from '@/app/(app)/fishing/GearScreen'
 import { vibrate } from '@/lib/haptics'
 
-/** The chip, drawn identically here and in the calibrator. Exported so the two
- *  cannot drift into looking like different controls. */
-export function CalloutChip({ label, name, dim }: { label: string; name: string; dim?: boolean }) {
+/**
+ * The chip, drawn identically here and in the calibrator. Exported so the two
+ * cannot drift into looking like different controls.
+ *
+ * ── TWO SIZES, AND THE SMALL ONE IS NOT A PREFERENCE ────────────────────────
+ *
+ * These were sized in `var(--sy-1)` and `var(--sy-2)`, which are declared on
+ * `.sea-shipyard` and nowhere else. That was fine while the shipyard page was
+ * the only thing drawing them; the sea's loadout sheet is not inside that class,
+ * so both vars resolved to NOTHING out there and the chips fell back to whatever
+ * font-size they happened to inherit. Not smaller — unspecified, which is worse,
+ * because it is a different answer per surface.
+ *
+ * So the var still drives the page, with a fallback that is now the real value
+ * rather than a hope, and `compact` is the sea's explicit scale: the loadout is
+ * a modal inside a chart, several hundred pixels narrower than a full page, and
+ * a label sized for a page crowds the boat it is pointing at.
+ */
+export function CalloutChip({ label, name, dim, compact = false }: {
+  label: string; name: string; dim?: boolean
+  /** For the sea's loadout, which draws this inside a modal rather than on a
+   *  full page. See the note above. */
+  compact?: boolean
+}) {
+  const labelSize = compact ? '0.48rem' : 'var(--sy-1, 0.7rem)'
+  const nameSize = compact ? '0.62rem' : 'var(--sy-2, 0.78rem)'
   return (
     <span style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '0.3rem 0.55rem', borderRadius: 10,
+      padding: compact ? '0.2rem 0.4rem' : '0.3rem 0.55rem',
+      borderRadius: compact ? 8 : 10,
       // An opaque floor. These sit on painted art, where a translucent chip
       // reads as a smear — the house rule for anything drawn over the world.
       background: 'rgba(6,14,22,0.88)',
@@ -30,12 +54,12 @@ export function CalloutChip({ label, name, dim }: { label: string; name: string;
       whiteSpace: 'nowrap',
     }}>
       <span className="font-karla font-700 uppercase" style={{
-        fontSize: 'var(--sy-1)', letterSpacing: '0.12em', lineHeight: 1.1,
+        fontSize: labelSize, letterSpacing: '0.12em', lineHeight: 1.1,
         color: 'rgba(190,212,228,0.6)',
       }}>{label}</span>
       <span className="font-cinzel font-700" style={{
-        maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
-        fontSize: 'var(--sy-2)', lineHeight: 1.25, color: '#e6e2dc',
+        maxWidth: compact ? 78 : 120, overflow: 'hidden', textOverflow: 'ellipsis',
+        fontSize: nameSize, lineHeight: 1.25, color: '#e6e2dc',
       }}>{name}</span>
     </span>
   )
@@ -61,9 +85,11 @@ export function CalloutLines({ list = CALLOUTS }: { list?: Callout[] }) {
   )
 }
 
-export default function CalloutLayer({ nameFor, onPick }: {
+export default function CalloutLayer({ nameFor, onPick, compact = false }: {
   nameFor: (slot: SlotKey) => string
   onPick: (slot: SlotKey) => void
+  /** Smaller labels, for the sea's loadout modal. See CalloutChip. */
+  compact?: boolean
 }) {
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
@@ -78,7 +104,7 @@ export default function CalloutLayer({ nameFor, onPick }: {
             pointerEvents: 'auto', cursor: 'pointer', padding: 0,
             background: 'none', border: 'none',
           }}>
-          <CalloutChip label={c.label} name={nameFor(c.slot)} />
+          <CalloutChip label={c.label} name={nameFor(c.slot)} compact={compact} />
         </button>
       ))}
     </div>

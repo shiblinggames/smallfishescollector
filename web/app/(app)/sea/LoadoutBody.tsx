@@ -178,7 +178,11 @@ export default function LoadoutBody({
           reelTier,
           hookTier,
         }}>
-          <CalloutLayer nameFor={nameFor} onPick={s => { vibrate(8); setSlot(s) }} />
+          {/* COMPACT. This is a modal inside a chart, a few hundred pixels
+              narrower than the Shipyard's page, and the shipyard's own type
+              scale is scoped to `.sea-shipyard` so it does not even reach
+              here. See CalloutChip. */}
+          <CalloutLayer compact nameFor={nameFor} onPick={s => { vibrate(8); setSlot(s) }} />
         </PreviewStage>
       </div>
 
