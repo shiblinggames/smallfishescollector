@@ -19,8 +19,7 @@ import { RODS } from '@/lib/rods'
 import { getFishHold } from '@/lib/fishHold'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import { earnedLevelColors, earnedAchievementColors } from '@/lib/characters'
-import { earnedAchievementBoats } from '@/lib/boats'
+import { unlockedCosmetics } from '@/lib/cosmeticUnlocks'
 import { getUserAchievementPoints } from '@/lib/achievementPoints'
 import ShipyardClient from './ShipyardClient'
 
@@ -51,19 +50,15 @@ export default async function ShipyardPage() {
   const fishingLevel = getLevelFromXP(Number(profile?.fishing_xp ?? 0))
   const holdTier = Number(profile?.fish_hold_tier ?? 0)
 
-  // Earned-but-ungranted skins and boats are unioned into the pickers, exactly
-  // as the fishing page does it — equipping one is what persists the unlock.
-  // Without this, crossing Nav 50 through raids leaves a skin you have earned
-  // invisible on whichever of the two screens forgot to do the union.
-  const storedColors = (profile?.unlocked_character_colors as string[] | null) ?? []
-  const unlockedCharacterColors = [...storedColors, ...earnedLevelColors({
-    fishingLevel,
-    navLevel: navLevelFromXP(profile?.expedition_xp ?? 0),
-    maxPrestige: Math.max(0, ...Object.values((profile?.prestige_levels as Record<string, number> | null) ?? {})),
-  }, storedColors), ...earnedAchievementColors(achievementPoints, storedColors)]
-
-  const storedBoats = (profile?.unlocked_boats as string[] | null) ?? []
-  const unlockedBoats = [...storedBoats, ...earnedAchievementBoats(achievementPoints, storedBoats)]
+  // Earned-but-ungranted skins and boats are unioned into the pickers —
+  // equipping one is what persists the unlock, so the stored column is always a
+  // subset of what the player is entitled to. This used to be spelled out here
+  // with a comment warning that a second screen would forget it; the sea's
+  // loadout became that second screen, so it lives in lib/cosmeticUnlocks now
+  // and both call it.
+  const unlocked = unlockedCosmetics(profile as never, achievementPoints)
+  const unlockedCharacterColors = unlocked.colors
+  const unlockedBoats = unlocked.boats
 
   const todayStr = new Date().toISOString().split('T')[0]
   const hasTideTurner = profile?.has_tide_turner === true

@@ -360,7 +360,7 @@ const MENU_VAL: React.CSSProperties = {
 
 export default function FishingHere({
   zone, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
-  seaPhase, baitBag, onBaitChange, rack, look, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
+  seaPhase, baitBag, onBaitChange, rack, look, onLookChange, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
   onBaitSpent, onPose, onBusy, onCanLeave, onLanded, onGolden, goldenPending,
   spritesReady, onClose,
@@ -439,6 +439,9 @@ export default function FishingHere({
     petId: string | null
     petBow: string | null
   }
+  /** Equipping a cosmetic from the loadout has to move the boat on the chart
+   *  behind the sheet, not only the picture inside it. */
+  onLookChange: (patch: Partial<{ characterColor: string; hatId: string | null; boatId: string | null; petId: string | null }>) => void
   activeRod: number
   onRodChange: (tier: number) => void
   /** How many fish this catch actually banked, so the hold ticks up as you
@@ -2364,6 +2367,7 @@ export default function FishingHere({
                 locked={locked}
                 onPick={t => { onRodChange(t) }}
                 look={look}
+                onLookChange={onLookChange}
                 reelTier={mods.reelTier}
                 hookTier={mods.hookTier}
                 reelName={getReel(mods.reelTier).name}

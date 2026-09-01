@@ -33,7 +33,7 @@ import { fishingGearLevelReq } from '@/lib/gearGating'
 import { vibrate } from '@/lib/haptics'
 import LoadoutStats from '@/components/LoadoutStats'
 import GearScreen, { type SlotKey } from '../fishing/GearScreen'
-import CalloutLayer from './CalloutLayer'
+import CalloutLayer from '@/components/CalloutLayer'
 import PreviewStage from '@/components/PreviewStage'
 import { SPECIAL_ITEMS, effectiveSpecialDef } from '@/lib/specialItems'
 import {

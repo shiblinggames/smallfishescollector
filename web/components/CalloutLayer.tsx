@@ -12,8 +12,8 @@
 // Which is what makes /shipyard/calibrate possible: it renders this same layer
 // with both ends draggable and prints the table back out.
 
-import { CALLOUTS, type Callout } from './callouts'
-import type { SlotKey } from '../fishing/GearScreen'
+import { CALLOUTS, type Callout } from '@/lib/callouts'
+import type { SlotKey } from '@/app/(app)/fishing/GearScreen'
 import { vibrate } from '@/lib/haptics'
 
 /** The chip, drawn identically here and in the calibrator. Exported so the two

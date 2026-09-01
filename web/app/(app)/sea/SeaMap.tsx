@@ -49,7 +49,7 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getCharacterSprites } from '@/lib/characters'
 import { BOATS, boatSpeed, boatAgility } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
-import { PET_OVERLAYS, type PetSpecies } from '@/lib/pets'
+import { PET_OVERLAYS, PETS, type PetSpecies } from '@/lib/pets'
 import { getBait } from '@/lib/bait'
 import { handlingRate, accelRate, BASE_SPEED_PX, BASE_TURN_RAD, BASE_ACCEL } from '@/lib/shipyard'
 import { rodGlowClass } from '@/lib/rods'
@@ -1161,7 +1161,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor, boatId, hatId, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
   auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
@@ -1302,6 +1302,29 @@ export default function SeaMap({
    * off your own ship. See saveSeaPosition — the position now carries the side
    * it belongs to, which is what makes storing a northern one safe.
    */
+  /**
+   * WHAT THE CAPTAIN IS WEARING, and it can change without leaving the water.
+   *
+   * The three used to be server props read straight through. The loadout sheet
+   * equips hats, boats, skins and pets now (see sea/LoadoutBody), and the boat
+   * standing on the chart behind that sheet has to change with them — swapping
+   * a hull and watching the old one sail away would read as the equip having
+   * failed, which is exactly how the boat-equip cache bug was reported before.
+   *
+   * Seeded from the props and resynced when they change, because a server prop
+   * into useState without a resync keeps whatever it first mounted with.
+   */
+  const [characterColor, setCharacterColor] = useState(characterColor0)
+  const [boatId, setBoatId] = useState(boatId0)
+  const [hatId, setHatId] = useState(hatId0)
+  const [petId, setPetId] = useState<string | null>(gear.petId ?? null)
+  /** The equipped pet's definition, or null. Read off the live id so a swap in
+   *  the loadout changes what is swimming beside the hull. */
+  const petNow = useMemo(() => PETS.find(p => p.id === petId) ?? null, [petId])
+  useEffect(() => { setCharacterColor(characterColor0) }, [characterColor0])
+  useEffect(() => { setBoatId(boatId0) }, [boatId0])
+  useEffect(() => { setHatId(hatId0) }, [hatId0])
+
   const [onSortie, setOnSortie] = useState(startSide === 'open')
   const sortieRef = useRef(startSide === 'open')
   /**
@@ -3011,8 +3034,11 @@ export default function SeaMap({
       characterColor,
       boatId: boatId ?? null,
       hatId: hatId ?? null,
-      petArt: gear.petArt,
-      petSpecies: gear.pet,
+      // FROM THE LIVE PET, not the server prop. Equipping one from the loadout
+      // has to change what is swimming beside the hull, not only the picture in
+      // the sheet.
+      petArt: petNow?.restImageUrl ?? null,
+      petSpecies: (petNow?.species ?? null) as PetSpecies | null,
       // The rod in your hands is the rod you are holding, out of the rack.
       rodSlug: rodNow?.slug ?? gear.rodSlug,
       rodImage: rodNow?.image ?? gear.rod,
@@ -3023,7 +3049,7 @@ export default function SeaMap({
       // The hook arrives as a url, so its glow is looked up rather than passed.
       hookGlowType: HOOKS.find(h => h.imageUrl === gear.hook)?.glowType ?? null,
     }
-  }, [onShip, characterColor, boatId, hatId, gear, rodNow])
+  }, [onShip, characterColor, boatId, hatId, petNow, gear, rodNow])
 
   /** WHAT IS IN THE HOLD, live. Seeded from the server on load and then kept in
    *  step here: it climbs as you catch and empties the moment you sell to a
@@ -6714,8 +6740,14 @@ hullRef={hullRefFor(t.key)} />
             characterColor,
             hatId,
             boatId,
-            petId: gear.petId ?? null,
+            petId,
             petBow: gear.petBow ?? null,
+          }}
+          onLookChange={patch => {
+            if (patch.characterColor !== undefined) setCharacterColor(patch.characterColor)
+            if (patch.boatId !== undefined) setBoatId(patch.boatId)
+            if (patch.hatId !== undefined) setHatId(patch.hatId)
+            if (patch.petId !== undefined) setPetId(patch.petId)
           }}
           activeRod={activeRod}
           onRodChange={setActiveRod}
