@@ -23,16 +23,17 @@ import { BADGE_MAP } from '@/lib/badges'
 import { ISLES } from '@/lib/seaIsles'
 import { vibrate } from '@/lib/haptics'
 import {
-  HOTSPOTS, HOTSPOT_BY_ID, FURNITURE, PINNED_MAX,
-  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, HOUSE_SLOTS, ROOMS,
-  type Homestead, type HotspotId, type FurnitureSlot, type Hotspot,
+  HOUSE, FURNITURE, PINNED_MAX,
+  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, houseTier, HOUSE_SLOTS, ROOMS,
+  type Homestead, type FurnitureSlot,
 } from '@/lib/homestead'
 import { build, furnish } from './actions'
 import RoomView from './RoomView'
 
 // TWO TABS, DOWN FROM FOUR. "The stones" went with the duplicate portal and the
 // gallery moved indoors — it is a room where things hang on walls, which is a
-// room and not a building. What is left is the island and the inside of it.
+// room and not a building. What is left is the island and the inside of it, and
+// the island tab is now one card: see HOUSE in lib/homestead.
 type Room = 'island' | 'inside'
 
 const GOLD = '#f0c464'
@@ -72,16 +73,16 @@ export default function HomeClient({
   /** What is being confirmed. Everything here is permanent and most of it is
    *  six figures, so nothing is one tap. */
   const [confirm, setConfirm] = useState<
-    { kind: 'build'; spot: HotspotId } | { kind: 'furnish'; id: string } | null>(null)
+    { kind: 'build' } | { kind: 'furnish'; id: string } | null>(null)
 
   const say = useCallback((msg: string) => {
     setNote(msg)
     setTimeout(() => setNote(n => (n === msg ? null : n)), 3200)
   }, [])
 
-  const doBuild = useCallback((spot: HotspotId) => {
+  const doBuild = useCallback(() => {
     startBusy(async () => {
-      const r = await build(spot)
+      const r = await build()
       setConfirm(null)
       if (!r.ok) { say(r.error); return }
       setHome(r.homestead)
@@ -123,10 +124,10 @@ export default function HomeClient({
             }}>{guest ? `${guest}'s Homestead` : 'The Homestead'}</p>
             <p className="font-cinzel font-700" style={{
               fontSize: '1.6rem', color: '#f2ead8', margin: '0.1rem 0 0',
-            }}>{builtAt(home, 'house').name}</p>
+            }}>{builtAt(home).name}</p>
             <p className="font-karla" style={{
               fontSize: '0.86rem', color: 'rgba(196,214,228,0.7)', margin: '0.15rem 0 0',
-            }}>{builtAt(home, 'house').blurb}</p>
+            }}>{builtAt(home).blurb}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             {!guest && (
@@ -183,29 +184,14 @@ export default function HomeClient({
         {/* ── THE ISLAND ROOM ───────────────────────────────────────── */}
         {room === 'island' && (
           <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
-            {/* THE HOUSE FIRST, AND BIGGER THAN THE REST.
-                It was one of six identical rows in island order, so the thing
-                that opens furniture slots, changes the room you stand in and
-                holds the best art in the set was indistinguishable from a
-                garden. It is the headline now, and it says what it does. */}
-            <SpotCard
-              spot={HOTSPOT_BY_ID.house} home={home} coin={coin} busy={busy} guest={guest}
-              lead onBuy={() => setConfirm({ kind: 'build', spot: 'house' })}
-            />
-
-            {!guest && (
-              <p className="font-karla font-700 uppercase" style={{
-                fontSize: '0.58rem', letterSpacing: '0.16em', margin: '0.4rem 0 -0.2rem',
-                color: 'rgba(180,214,232,0.55)',
-              }}>The rest of the island</p>
-            )}
-
-            {HOTSPOTS.filter(h => h.id !== 'house').map(spot => (
-              <SpotCard
-                key={spot.id} spot={spot} home={home} coin={coin} busy={busy} guest={guest}
-                onBuy={() => setConfirm({ kind: 'build', spot: spot.id })}
-              />
-            ))}
+            {/* ONE CARD, BECAUSE THERE IS ONE THING TO BUY.
+                There were three: the house, then a "rest of the island" heading
+                over a plot and a lighthouse. Two of those bought nothing but a
+                sprite in a fixed position, and the three of them together never
+                looked like one place. What upgrading buys now is the whole
+                island, so there is one offer and it is the page. */}
+            <HouseCard home={home} coin={coin} busy={busy} guest={guest}
+              onBuy={() => setConfirm({ kind: 'build' })} />
           </div>
         )}
 
@@ -224,8 +210,8 @@ export default function HomeClient({
             )}
             <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(196,214,228,0.7)', margin: 0 }}>
               {guest
-                ? `${builtAt(home, 'house').name}, with ${slots.length} of ${FURNITURE.length} slots in use.`
-                : `${builtAt(home, 'house').name} has room for ${slots.length} of ${FURNITURE.length}. Build the house up for the rest. Nothing in here does anything.`}
+                ? `${builtAt(home).name}, with ${slots.length} of ${FURNITURE.length} slots in use.`
+                : `${builtAt(home).name} has room for ${slots.length} of ${FURNITURE.length}. Build the house up for the rest. Nothing in here does anything.`}
             </p>
             {FURNITURE.map(f => {
               const open = slots.includes(f.slot)
@@ -340,7 +326,7 @@ export default function HomeClient({
           <ConfirmBuy
             confirm={confirm} home={home} coin={coin}
             onCancel={() => setConfirm(null)}
-            onYes={() => confirm.kind === 'build' ? doBuild(confirm.spot) : doFurnish(confirm.id)}
+            onYes={() => confirm.kind === 'build' ? doBuild() : doFurnish(confirm.id)}
             busy={busy}
           />
         )}
@@ -388,39 +374,35 @@ export default function HomeClient({
  * actually does, because it is the only spot on the island that changes
  * anything other than the view.
  */
-const SpotCard = memo(function SpotCard({ spot, home, coin, busy, guest, lead, onBuy }: {
-  spot: Hotspot
+const HouseCard = memo(function HouseCard({ home, coin, busy, guest, onBuy }: {
   home: Homestead
   coin: number
   busy: boolean
   guest: string | null
-  lead?: boolean
   onBuy: () => void
 }) {
-  const now = builtAt(home, spot.id)
-  const next = nextBuild(home, spot.id)
+  const now = builtAt(home)
+  const next = nextBuild(home)
   const afford = !!next && coin >= next.cost
-  const H = lead ? 132 : 92
-  /** The room this rung would open, if it opens one. The house is the only
-   *  thing that does, and "and the menagerie" is a far better reason to spend
-   *  a million doubloons than "and a bigger room inside". */
-  const opensRoom = spot.id === 'house'
-    ? ROOMS.find(r => r.needsHouse === (home.spots.house ?? 0) + 1)?.name.replace(/^The /, 'the ') ?? null
-    : null
+  const H = 132
+  /** The room this rung would open, if it opens one. "and the menagerie" is a
+   *  far better reason to spend a million doubloons than "a bigger room". */
+  const opensRoom =
+    ROOMS.find(r => r.needsHouse === houseTier(home) + 1)?.name.replace(/^The /, 'the ') ?? null
 
   return (
     <div style={{
-      borderRadius: 16, padding: lead ? '1rem' : '0.8rem 0.9rem',
-      background: lead ? 'rgba(240,196,100,0.06)' : 'rgba(255,255,255,0.035)',
-      border: `1px solid ${lead ? 'rgba(240,196,100,0.3)' : 'rgba(180,214,232,0.14)'}`,
+      borderRadius: 16, padding: '1rem',
+      background: 'rgba(240,196,100,0.06)',
+      border: '1px solid rgba(240,196,100,0.3)',
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <p className="font-karla font-700 uppercase" style={{
           fontSize: '0.58rem', letterSpacing: '0.16em', margin: 0,
-          color: lead ? 'rgba(240,196,100,0.85)' : 'rgba(180,214,232,0.6)',
-        }}>{spot.label}</p>
+          color: 'rgba(240,196,100,0.85)',
+        }}>The homestead</p>
         <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(180,214,232,0.5)', margin: 0 }}>
-          {home.spots[spot.id]} of {spot.builds.length - 1}
+          {houseTier(home)} of {HOUSE.length - 1}
         </p>
       </div>
 
@@ -444,19 +426,30 @@ const SpotCard = memo(function SpotCard({ spot, home, coin, busy, guest, lead, o
       </div>
 
       <p className="font-karla" style={{
-        fontSize: lead ? '0.86rem' : '0.8rem', lineHeight: 1.45,
+        fontSize: '0.86rem', lineHeight: 1.45,
         color: 'rgba(206,222,234,0.72)', margin: '0.6rem 0 0',
       }}>{next && !guest ? next.blurb : now.blurb}</p>
+
+      {/* AND WHAT ELSE COMES WITH IT. The house is not the only thing in the
+          picture any more. The garden and the lighthouse arriving on their own
+          rungs is what makes the ladder worth climbing past the point where the
+          rooms stop opening, so it is said plainly. It is the offer. */}
+      {!guest && next && next.adds && (
+        <p className="font-karla" style={{
+          fontSize: '0.82rem', lineHeight: 1.45,
+          color: 'rgba(180,214,232,0.62)', margin: '0.3rem 0 0',
+        }}>{next.adds}</p>
+      )}
 
       {/* WHAT IT ACTUALLY DOES, for the one spot where that is not "look
           nice". The house is the only thing on this island that changes
           anything, and it changes two: a furniture slot, and sometimes a whole
           new room. Both are said here rather than in a note underneath. */}
-      {!guest && next && spot.id === 'house' && (
+      {!guest && next && (
         <p className="font-karla font-700" style={{
           fontSize: '0.8rem', margin: '0.4rem 0 0', color: '#f0c464',
         }}>
-          {`Opens furniture slot ${HOUSE_SLOTS[home.spots.house] + 1} of ${FURNITURE.length}`}
+          {`Opens furniture slot ${HOUSE_SLOTS[houseTier(home)] + 1} of ${FURNITURE.length}`}
           {opensRoom ? `, and ${opensRoom}.` : ', and a bigger room inside.'}
         </p>
       )}
@@ -466,8 +459,8 @@ const SpotCard = memo(function SpotCard({ spot, home, coin, busy, guest, lead, o
           className="font-cinzel font-700"
           style={{
             width: '100%', marginTop: '0.7rem',
-            padding: lead ? '0.66rem' : '0.52rem', borderRadius: 12,
-            fontSize: lead ? '1rem' : '0.92rem',
+            padding: '0.66rem', borderRadius: 12,
+            fontSize: '1rem',
             color: afford ? '#0d1520' : 'rgba(210,180,180,0.8)',
             background: afford ? GOLD : 'rgba(255,255,255,0.06)',
             border: `1px solid ${afford ? GOLD : 'rgba(255,255,255,0.14)'}`,
@@ -486,7 +479,7 @@ const SpotCard = memo(function SpotCard({ spot, home, coin, busy, guest, lead, o
 
 /** One thing on its own patch of ground, with its name under it. */
 function Stand({ art, h, label, highlight }: {
-  art: string | null; h: number; label: string; highlight?: boolean
+  art: string; h: number; label: string; highlight?: boolean
 }) {
   return (
     <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
@@ -497,17 +490,15 @@ function Stand({ art, h, label, highlight }: {
           ? 'radial-gradient(ellipse at 50% 92%, rgba(240,196,100,0.2) 0%, rgba(240,196,100,0.05) 55%, transparent 78%)'
           : 'radial-gradient(ellipse at 50% 92%, rgba(110,140,90,0.22) 0%, rgba(80,110,70,0.08) 55%, transparent 78%)',
       }}>
-        {art ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={art} alt="" draggable={false} style={{
-            maxHeight: h - 8, maxWidth: '92%', objectFit: 'contain',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
-          }} />
-        ) : (
-          <p className="font-karla" style={{
-            fontSize: '0.72rem', color: 'rgba(200,216,228,0.45)', margin: '0 0 0.6rem',
-          }}>empty</p>
-        )}
+        {/* THE "EMPTY" BRANCH IS GONE. It was for the plot and the lighthouse
+            before anything stood on them; every rung of the house is a picture,
+            including the first, because a bare headland with a lean-to on it is
+            a place somebody lives rather than an absence. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={art} alt="" draggable={false} style={{
+          maxHeight: h - 8, maxWidth: '92%', objectFit: 'contain',
+          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
+        }} />
       </div>
       <p className="font-karla font-700" style={{
         fontSize: '0.74rem', margin: '0.3rem 0 0', lineHeight: 1.25,
@@ -524,11 +515,11 @@ function Stand({ art, h, label, highlight }: {
 // the water; the gallery is a room inside now. See RoomView.
 
 function ConfirmBuy({ confirm, home, coin, onCancel, onYes, busy }: {
-  confirm: { kind: 'build'; spot: HotspotId } | { kind: 'furnish'; id: string }
+  confirm: { kind: 'build' } | { kind: 'furnish'; id: string }
   home: Homestead; coin: number; onCancel: () => void; onYes: () => void; busy: boolean
 }) {
   const target = confirm.kind === 'build'
-    ? nextBuild(home, confirm.spot)
+    ? nextBuild(home)
     : FURNITURE.flatMap(f => f.options).find(o => o.id === confirm.id) ?? null
   if (!target) return null
   const cost = target.cost

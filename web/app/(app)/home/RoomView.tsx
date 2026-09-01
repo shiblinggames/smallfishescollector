@@ -27,7 +27,7 @@ import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import {
-  openRooms, roomArt, roomSpots, openSlots, furnishingIn,
+  openRooms, roomArt, roomSpots, openSlots, furnishingIn, houseTier,
   type Homestead, type RoomDef, type FurnitureSlot,
 } from '@/lib/homestead'
 import { PETS } from '@/lib/pets'
@@ -58,7 +58,7 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
   const rooms = useMemo(() => openRooms(home), [home])
   const [i, setI] = useState(0)
   const room = rooms[Math.min(i, rooms.length - 1)]
-  const houseTier = home.spots.house ?? 0
+  const tier = houseTier(home)
 
   const go = (d: number) => {
     vibrate(6)
@@ -104,10 +104,10 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
             transition={{ duration: 0.18 }}
             style={{ position: 'absolute', inset: 0 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={roomArt(room, houseTier)} alt="" draggable={false} style={{
+            <img src={roomArt(room, tier)} alt="" draggable={false} style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
             }} />
-            {room.id === 'main' && <Furnished home={home} room={room} houseTier={houseTier} />}
+            {room.id === 'main' && <Furnished home={home} room={room} houseTier={tier} />}
             {/* THE THREE CONTENT ROOMS all flow their things inside a box that
                 was placed on the bench, so a badge wall is never on the
                 skirting board and pets are never floating up the glass. */}

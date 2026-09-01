@@ -232,7 +232,7 @@ export const PLACES: Place[] = [
      * for everybody, which is the entire point of it.
      */
     id: 'home', name: 'The Homestead', blurb: 'Yours. Such as it is.',
-    href: '/home', x: 1500, y: -200, r: 460, art: '/sea/home-cottage.png',
+    href: '/home', x: 1500, y: -200, r: 460, art: '/sea/home-isle-2.png',
     kind: 'port', minLevel: 0,
     buildings: [],
   },

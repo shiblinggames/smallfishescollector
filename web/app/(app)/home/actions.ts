@@ -32,10 +32,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  HOTSPOT_BY_ID, FURNISHING_BY_ID, EMPTY_HOMESTEAD, PINNED_MAX,
-  openSlots, builtAt,
+  HOUSE, FURNISHING_BY_ID, EMPTY_HOMESTEAD, PINNED_MAX,
+  openSlots, builtAt, houseTier,
   ROOM_BY_ID,
-  type Homestead, type HotspotId, type FurnitureSlot,
+  type Homestead, type FurnitureSlot,
 } from '@/lib/homestead'
 import { PLACES } from '../sea/chart'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -54,10 +54,10 @@ function rowToHomestead(row: {
   if (!row) return EMPTY_HOMESTEAD
   const furniture = (row.furniture ?? {}) as Partial<Record<FurnitureSlot, string>>
   return {
-    // THREE SPOTS. `portal`, `gallery`, `dock` and `layout` are still COLUMNS —
-    // dropping a column is a migration that can only lose data, and these hold
-    // what people paid — but nothing reads them any more. See HotspotId.
-    spots: { house: row.house ?? 0, garden: row.garden ?? 0, beacon: row.beacon ?? 0 },
+    // ONE LADDER. `garden` and `beacon` joined `portal`, `gallery`, `dock` and
+    // `layout` as columns nothing reads: dropping a column is the one migration
+    // that can only lose data, and these hold what people paid. See Homestead.
+    house: row.house ?? 0,
     furniture,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),
@@ -67,7 +67,7 @@ function rowToHomestead(row: {
 // ONE STRING LITERAL, never a concatenation — supabase-js infers the row type
 // from the literal text of this argument and a joined expression degrades the
 // whole result to an error type.
-const COLS = 'house, garden, beacon, furniture, owned, pinned'
+const COLS = 'house, furniture, owned, pinned'
 
 /**
  * THE CAPTAIN'S HOMESTEAD, creating the row on first look.
@@ -124,19 +124,16 @@ async function loadFor(userId: string): Promise<Homestead> {
  * which tier. A tier from the client is a number somebody can edit, and the
  * cheapest way to make that meaningless is to never read it.
  */
-export async function build(spotId: string): Promise<BuildResult> {
+export async function build(): Promise<BuildResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not signed in.' }
 
-  const spot = HOTSPOT_BY_ID[spotId as HotspotId]
-  if (!spot) return { ok: false, error: 'No such spot.' }
-
   const admin = createAdminClient()
   const current = await loadFor(user.id)
-  const tier = current.spots[spot.id] ?? 0
-  const next = spot.builds[tier + 1]
-  if (!next) return { ok: false, error: `${spot.label} is finished.` }
+  const tier = houseTier(current)
+  const next = HOUSE[tier + 1]
+  if (!next) return { ok: false, error: 'The Estate is finished.' }
 
   // THE ROW HAS TO EXIST BEFORE IT CAN BE GUARDED. A first-time builder has no
   // homestead row, and there is nothing to put a conditional update against.
@@ -157,8 +154,8 @@ export async function build(spotId: string): Promise<BuildResult> {
   // filter both would then write N+1 and one of those payments would buy
   // nothing. Only one update can match, and the loser gets refunded.
   const { data: done } = await admin.from('homesteads')
-    .update({ [spot.id]: tier + 1, updated_at: new Date().toISOString() })
-    .eq('user_id', user.id).eq(spot.id, tier)
+    .update({ house: tier + 1, updated_at: new Date().toISOString() })
+    .eq('user_id', user.id).eq('house', tier)
     .select('user_id')
 
   if (!done?.length) {
@@ -172,7 +169,7 @@ export async function build(spotId: string): Promise<BuildResult> {
 
   return {
     ok: true, spent: next.cost, built: next.name,
-    homestead: { ...current, spots: { ...current.spots, [spot.id]: tier + 1 } },
+    homestead: { ...current, house: tier + 1 },
   }
 }
 
@@ -199,7 +196,7 @@ export async function furnish(furnishingId: string): Promise<BuildResult> {
   // THE HOUSE HAS TO BE BIG ENOUGH. Slots open with the house, and a slot that
   // is not open is not a slot you can put anything in.
   if (!openSlots(current).includes(slot)) {
-    return { ok: false, error: `${builtAt(current, 'house').name} has no room for that yet.` }
+    return { ok: false, error: `${builtAt(current).name} has no room for that yet.` }
   }
   const prev = current.furniture[slot]
   if (prev === item.id) return { ok: false, error: 'That is already there.' }
@@ -266,7 +263,7 @@ export async function pinBadges(ids: string[]): Promise<{ ok: boolean; error?: s
   // THE GALLERY IS A ROOM NOW, opened by the house rather than bought as its
   // own building — so what gates pinning is having the room at all. Same gate,
   // read off the thing that actually grants it.
-  if ((current.spots.house ?? 0) < ROOM_BY_ID.gallery.needsHouse) {
+  if (houseTier(current) < ROOM_BY_ID.gallery.needsHouse) {
     return { ok: false, error: 'Nowhere to hang them yet.' }
   }
   const pinned = [...new Set(ids)].slice(0, PINNED_MAX)

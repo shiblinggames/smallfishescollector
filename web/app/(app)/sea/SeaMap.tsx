@@ -9314,7 +9314,7 @@ function homeFor(p: Place, h: Homestead, guest?: string): Place {
     // the water or you are standing on somebody else's lighthouse wondering
     // when you built it.
     name: guest ? `${guest}'s Homestead` : p.name,
-    blurb: guest ? builtAt(h, 'house').name : p.blurb,
+    blurb: guest ? builtAt(h).name : p.blurb,
   }
 }
 

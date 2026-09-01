@@ -35,7 +35,7 @@ import { DIG_SITES } from '../lib/seaDigs'
 import { FRAGMENTS } from '../lib/seaBottles'
 import { PERSONAS } from '../lib/seaTraders'
 import { GOSSIP } from '../lib/tavernGossip'
-import { HOTSPOTS, FURNITURE, ROOMS } from '../lib/homestead'
+import { HOUSE, FURNITURE, ROOMS } from '../lib/homestead'
 
 let findings = 0
 const fail = (where: string, why: string, text?: string) => {
@@ -74,9 +74,9 @@ const SOURCES: Src[] = [
   // largest single body of prose in the game and the newest, so the likeliest
   // place for a stray dash to get in.
   { label: 'sea NPC', strings: PERSONAS.flatMap(p => [p.mood, ...p.lines]) },
-  // The homestead: every build, every furnishing, and what the stones reach.
+  // The homestead: every rung of the house and every furnishing.
   { label: 'homestead', strings: [
-    ...HOTSPOTS.flatMap(h => [h.label, h.note, ...h.builds.flatMap(b => [b.name, b.blurb])]),
+    ...HOUSE.flatMap(b => [b.name, b.blurb, b.adds]),
     ...FURNITURE.flatMap(f => [f.label, ...f.options.map(o => o.name)]),
     ...ROOMS.map(r => r.blurb),
     ...ROOMS.map(r => r.name),

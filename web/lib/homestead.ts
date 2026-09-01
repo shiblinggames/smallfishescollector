@@ -5,32 +5,31 @@
 // currently stands), by the homestead page, and by the server actions that take
 // the money, and all three have to agree, so there is exactly one table.
 //
-// ── BUILD SPOTS, NOT A TIER NUMBER ──────────────────────────────────────────
+// ── ONE LADDER, AND THE ISLAND IS THE REWARD ────────────────────────────────
 //
-// The island is a set of HOTSPOTS: fixed positions with nothing on them until
-// you build there, each with its own ladder. A first pass made the whole island
-// one "house tier", which is a progress bar wearing a hat — every captain at
-// tier 3 has the identical island and the only decision is whether to pay.
+// The island used to be a set of HOTSPOTS: fixed positions, each with its own
+// ladder, so a captain could put everything into the lighthouse and nothing into
+// the gardens. The argument was that spots make the island a set of CHOICES
+// rather than a progress bar wearing a hat.
 //
-// Spots make the island a set of CHOICES instead. Somebody who put everything
-// into the lighthouse and the gardens has a visibly different home from
-// somebody who built the gallery out, at the same total spend, and both are
-// legible from a boat sailing past. That is the whole reason to put a house on
-// a map rather than on a page.
+// It did not survive contact with the art. Three ladders meant three sprites
+// dropped at three coordinates, and three paintings near each other are not a
+// place. What you got was a lighthouse whose light disagreed with the house's,
+// standing on ground that did not meet the garden's, and no amount of moving
+// them fixes a composition that was never composed.
+//
+// So: one ladder, and every rung repaints the WHOLE island. See HOUSE below.
 //
 // ── TWO BUDGETS ─────────────────────────────────────────────────────────────
 //
-// THE HOUSE spot is 2,000,000 all in and is meant to be FINISHED. It holds the
-// best art in the set, and art nobody reaches is art nobody drew for them.
+// THE HOUSE is 3,660,000 all in and is meant to be FINISHED, eventually. It
+// carries the plot and the lighthouse now, so it carries what those cost too:
+// the fold was a simplification of the interface, not a sale.
 //
-// EVERYTHING ELSE is flex and is priced to last: the gallery, the lighthouse,
-// the gardens and the furniture inside run to several million more. Those exist
-// to be seen by somebody who came to look, so their job is to be hard, and
-// nothing is hard at house prices to a captain sitting on 2.4M.
-//
-// The PORTAL is priced with the house rather than the flex. It is the one thing
-// here that changes how the game plays, and pricing a mechanic like an ornament
-// makes it the thing everybody grinds first and then resents.
+// THE FURNITURE is the flex, and is priced to last: the best piece in each of
+// the five slots runs to millions more. It exists to be seen by somebody who
+// came to look, so its job is to be hard, and nothing is hard at house prices
+// to a captain sitting on 2.4M.
 //
 // ── WHAT MONEY NEVER BUYS ───────────────────────────────────────────────────
 //
@@ -43,88 +42,106 @@
 // them in.
 
 /**
- * ── THREE SPOTS ON THE ISLAND, DOWN FROM SIX ────────────────────────────────
+ * ── ONE LADDER, AND ONE PICTURE ─────────────────────────────────────────────
  *
- * `dock` is gone: it was a jetty that did nothing, on the shoreline where the
- * berth ring already is, so it was 360,000 doubloons of planks under a circle
- * that already told you where to tie up.
+ * There were six spots on this island, then three, and now there is one.
  *
- * `gallery` moved INSIDE. It is a room where things hang on walls, which is a
- * room and not a building — and putting it indoors means the badges and the
- * Almanac are somewhere you stand rather than something the island implies.
+ * `dock` went first: a jetty that did nothing, on the shoreline where the berth
+ * ring already is, so it was 360,000 doubloons of planks under a circle that
+ * already told you where to tie up. `gallery` moved INSIDE, because a room where
+ * things hang on walls is a room and not a building. `portal` went because it
+ * was never the portal — there were two, and the real one is the ring on the
+ * water that you sail into.
  *
- * `portal` is gone from here because it was never the portal. There were TWO:
- * this one, with its own ladder and its own `stepThrough` teleport, and the ring
- * on the water off the island driven by `profiles.portal_tier`. Both worked;
- * both moved your boat. The one on the water is the real one — it is a place you
- * sail into — so the stones are removed and lib/seaPortal is the only portal.
+ * ── AND NOW THE PLOT AND THE LIGHTHOUSE ─────────────────────────────────────
+ *
+ * Those two were separate ladders with separate art dropped at fixed points on
+ * the island, and the result never looked like one place. A lighthouse sprite at
+ * 64,32 and a walled garden sprite at 68,55 are two paintings that happen to be
+ * near each other: their light does not agree, their ground does not meet, and
+ * nothing about the composition says the same person built both. You cannot fix
+ * that by nudging the coordinates, because the problem is that they were drawn
+ * apart.
+ *
+ * So the island is ONE PAINTING PER RUNG now, the way the Mainland is one town
+ * rather than a scatter of shops. Upgrading the house repaints the whole
+ * homestead, and what arrives is not only a bigger house: the kitchen garden
+ * comes with the cottage, the walled garden with the longhouse, a brazier with
+ * the great hall, and the lighthouse with the Estate. Each picture contains
+ * everything the one before it had, so the island only ever grows.
+ *
+ * The trade is real and worth naming: you no longer choose to be the captain
+ * with a great lighthouse and no garden. That choice was the argument for spots
+ * in the first place. It bought a differentiation nobody could see, because at
+ * chart scale a homestead reads as a silhouette, and a coherent silhouette that
+ * grows says more about a captain than a legible-in-theory permutation of three
+ * ladders that never composed.
+ *
+ * ── AND IT COSTS WHAT THE THREE COST ────────────────────────────────────────
+ *
+ * 3.66M all in, against 3.7M across the ladders it replaces. The homestead is
+ * this game's one real doubloon sink — the richest captain is holding 2.4M and
+ * the whole progression ladder pays 200k — so folding three ladders into one is
+ * a simplification of the INTERFACE and must not become a 46% discount.
  */
-export type HotspotId = 'house' | 'garden' | 'beacon'
-
 export type Build = {
   name: string
   cost: number
-  /** The art that stands here, or null for a spot with nothing on it yet. */
-  art: string | null
+  /** The whole island at this rung, as one painting. Never null: even the first
+   *  rung is a picture, because a homestead with nothing on it is still a place
+   *  somebody lives. */
+  art: string
   /** Width as a share of the island box, matching PLACES.buildings. */
   scale: number
   blurb: string
-}
-
-export type Hotspot = {
-  id: HotspotId
-  label: string
-  /** Where it stands, in percent of the island box — the same coordinate space
-   *  the Mainland's buildings use, so PlaceIsland needs no new concepts. */
-  x: number
-  y: number
-  /** What it does beyond looking like something. Most of them do nothing, and
-   *  saying so plainly beats implying otherwise. */
-  note: string
-  builds: Build[]
+  /** What arrived with this rung besides the house itself, for the ladder card.
+   *  Empty on the first, which is the point of the first. */
+  adds: string
 }
 
 /**
- * THE SPOTS, listed back to front.
+ * THE HOUSE LADDER — five rungs, and the only thing on this island you buy.
  *
- * `homeBuildings` sorts by `y` before handing them over, because the island
- * paints in array order and a lighthouse behind the house has to be drawn
- * first. Anything added here only needs a sensible `y`.
+ * Each rung's `art` is the entire homestead at that stage, so `homeBuildings`
+ * hands PlaceIsland exactly one sprite and the composition is whatever the
+ * painter composed rather than whatever the coordinates happened to allow.
+ *
+ * `scale` climbs because the settlement spreads, and it is bounded by the land:
+ * scripts/check-islands measures the widest rung against the seeded coastline
+ * and fails if the Estate's outbuildings would stand in the surf.
  */
-export const HOTSPOTS: Hotspot[] = [
+export const HOUSE: Build[] = [
   {
-    id: 'beacon', label: 'The lighthouse', x: 64, y: 32,
-    note: 'Visible a long way off. That is the whole of it.',
-    builds: [
-      { name: 'Bare rock', cost: 0, art: null, scale: 0, blurb: 'Somewhere to stand and look out.' },
-      { name: 'A brazier', cost: 220_000, art: '/sea/home-brazier.png', scale: 0.052, blurb: 'A fire that somebody has to keep lit.' },
-      { name: 'A lighthouse', cost: 950_000, art: '/sea/home-lighthouse.png', scale: 0.074, blurb: 'They can see you coming from the Abyss.' },
-    ],
+    name: 'A lean-to', cost: 0, art: '/sea/home-isle-1.png', scale: 0.28,
+    blurb: 'Salvage, canvas and stubbornness.',
+    adds: '',
   },
   {
-    id: 'house', label: 'The house', x: 50, y: 64,
-    note: 'How much room the inside has. Every step opens another furniture slot.',
-    builds: [
-      { name: 'A lean-to', cost: 0, art: '/sea/home-leanto.png', scale: 0.099, blurb: 'Salvage, canvas and stubbornness.' },
-      { name: 'A cottage', cost: 40_000, art: '/sea/home-cottage.png', scale: 0.11, blurb: 'One room, one chimney, and a door that shuts.' },
-      { name: 'A longhouse', cost: 160_000, art: '/sea/home-longhouse.png', scale: 0.21, blurb: 'Long enough to hang the nets indoors.' },
-      { name: 'A great hall', cost: 500_000, art: '/sea/home-hall.png', scale: 0.189, blurb: 'Two storeys, and a fire that never quite goes out.' },
-      { name: 'The Estate', cost: 1_300_000, art: '/sea/home-estate.png', scale: 0.241, blurb: 'A tower with a light on it. Nobody mistakes it for anywhere else.' },
-    ],
+    name: 'A cottage', cost: 60_000, art: '/sea/home-isle-2.png', scale: 0.33,
+    blurb: 'One room, one chimney, and a door that shuts.',
+    adds: 'A kitchen garden, and a path worn between the two.',
   },
   {
-    id: 'garden', label: 'The plot', x: 68, y: 55,
-    note: 'Nothing grows fast enough out here to be worth eating. It is for looking at.',
-    builds: [
-      { name: 'Scrub', cost: 0, art: null, scale: 0, blurb: 'Whatever got here on its own.' },
-      { name: 'A kitchen garden', cost: 80_000, art: '/sea/home-kitchen.png', scale: 0.138, blurb: 'Four beds and a losing argument with the salt.' },
-      { name: 'A walled garden', cost: 450_000, art: '/sea/home-walled.png', scale: 0.14, blurb: 'Trees, at this latitude. People will ask.' },
-    ],
+    name: 'A longhouse', cost: 300_000, art: '/sea/home-isle-3.png', scale: 0.38,
+    blurb: 'Long enough to hang the nets indoors.',
+    adds: 'A walled garden, a drying rack and a woodpile.',
+  },
+  {
+    name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', scale: 0.43,
+    blurb: 'Two storeys, and a fire that never quite goes out.',
+    adds: 'A brazier up on the headland, and a boathouse below it.',
+  },
+  {
+    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', scale: 0.46,
+    blurb: 'Nobody mistakes it for anywhere else.',
+    adds: 'A working lighthouse. They can see you coming from the Abyss.',
   },
 ]
 
-export const HOTSPOT_BY_ID: Record<HotspotId, Hotspot> =
-  Object.fromEntries(HOTSPOTS.map(h => [h.id, h])) as Record<HotspotId, Hotspot>
+/** Where the painting sits on the island box. Dead centre and a little south,
+ *  so the settlement reads as standing ON the land with beach in front of it
+ *  rather than filling the circle to its edges. */
+export const HOUSE_AT = { x: 54, y: 60 }
 
 // PORTAL_REACH LIVED HERE and went with the stones. The portal is
 // lib/seaPortal, it is the ring on the water, and it has always been the only
@@ -422,7 +439,7 @@ export const ROOM_BY_ID: Record<RoomId, RoomDef> =
 
 /** The rooms this house is big enough to have, in order. Always at least one. */
 export function openRooms(h: Homestead): RoomDef[] {
-  const tier = h.spots.house ?? 0
+  const tier = houseTier(h)
   return ROOMS.filter(r => tier >= r.needsHouse)
 }
 
@@ -440,8 +457,16 @@ export function roomSpots(room: RoomDef, houseTier: number): Record<FurnitureSlo
 
 /** What a captain's homestead currently is. Mirrors the `homesteads` row. */
 export type Homestead = {
-  /** hotspot id -> how far up its ladder they have built. */
-  spots: Record<HotspotId, number>
+  /**
+   * How far up the house ladder they have built, 0..4.
+   *
+   * WAS `spots: Record<HotspotId, number>`. A record of one key is a shape that
+   * says a second key is coming, and the `homesteads` row still carries the
+   * `garden` and `beacon` columns it used to fill. Those are dead now and are
+   * deliberately not read: the columns stay because dropping columns is the one
+   * migration that cannot be undone, and nothing costs anything to ignore them.
+   */
+  house: number
   /** slot -> furnishing id. Absent means the free default for that slot. */
   furniture: Partial<Record<FurnitureSlot, string>>
   /**
@@ -462,7 +487,7 @@ export type Homestead = {
 }
 
 export const EMPTY_HOMESTEAD: Homestead = {
-  spots: { house: 0, garden: 0, beacon: 0 },
+  house: 0,
   furniture: {},
   owned: [],
   pinned: [],
@@ -471,45 +496,42 @@ export const EMPTY_HOMESTEAD: Homestead = {
 /** How many badges the gallery lets you hang large. */
 export const PINNED_MAX = 6
 
-/** What stands on a spot right now. Clamped, so a row from a future version of
- *  this table cannot index off the end of a ladder that has since been cut. */
-export function builtAt(h: Homestead, id: HotspotId): Build {
-  const spot = HOTSPOT_BY_ID[id]
-  return spot.builds[Math.max(0, Math.min(spot.builds.length - 1, h.spots[id] ?? 0))]
+/** Which rung the house is on. Clamped, so a row from a future version of this
+ *  table cannot index off the end of a ladder that has since been cut. */
+export const houseTier = (h: Homestead) =>
+  Math.max(0, Math.min(HOUSE.length - 1, h.house ?? 0))
+
+/** What stands on the island right now. */
+export function builtAt(h: Homestead): Build {
+  return HOUSE[houseTier(h)]
 }
 
-/** The next build on a spot, or null when it is finished. */
-export function nextBuild(h: Homestead, id: HotspotId): Build | null {
-  const spot = HOTSPOT_BY_ID[id]
-  const t = (h.spots[id] ?? 0) + 1
-  return t < spot.builds.length ? spot.builds[t] : null
+/** The next rung, or null once the Estate is up. */
+export function nextBuild(h: Homestead): Build | null {
+  const t = houseTier(h) + 1
+  return t < HOUSE.length ? HOUSE[t] : null
 }
 
 /**
  * WHAT THE ISLAND LOOKS LIKE, in PlaceIsland's own `buildings` shape.
  *
- * Sorted back to front. Empty spots contribute nothing at all rather than an
- * invisible element, so a fresh homestead is genuinely a bare rock with one
- * lean-to on it.
+ * ONE SPRITE. It used to be up to three, sorted back to front so a lighthouse
+ * behind the house painted first — sorting that only ever mattered because the
+ * pieces were drawn separately and had to be stacked into something resembling a
+ * scene. A single painting has its own depth already.
+ *
+ * Still a `buildings` array rather than a new concept, because PlaceIsland and
+ * the GPU baker both already know how to stand a sprite up out of the plane and
+ * light it at night. A homestead is a town with one building in it.
  */
 export function homeBuildings(h: Homestead): { art: string; x: number; y: number; scale: number }[] {
-  return HOTSPOTS
-    .map(spot => ({ spot, build: builtAt(h, spot.id) }))
-    .filter(({ build }) => build.art !== null)
-    // Back to front, so a lighthouse behind the house is painted first. The
-    // designed y IS the position now that nothing can be dragged.
-    .sort((a, b) => a.spot.y - b.spot.y)
-    .map(({ spot, build }) => ({
-      art: build.art as string,
-      x: spot.x,
-      y: spot.y,
-      scale: build.scale,
-    }))
+  const build = builtAt(h)
+  return [{ art: build.art, x: HOUSE_AT.x, y: HOUSE_AT.y, scale: build.scale }]
 }
 
 /** Slots the house is currently big enough to hold, in order. */
 export function openSlots(h: Homestead): FurnitureSlot[] {
-  const n = HOUSE_SLOTS[Math.max(0, Math.min(HOUSE_SLOTS.length - 1, h.spots.house ?? 0))]
+  const n = HOUSE_SLOTS[Math.max(0, Math.min(HOUSE_SLOTS.length - 1, h.house ?? 0))]
   return FURNITURE.slice(0, n).map(f => f.slot)
 }
 
@@ -527,25 +549,27 @@ export function furnishingIn(h: Homestead, slot: FurnitureSlot): Furnishing {
  * that: it summed every furnishing in every slot, called that the total, and
  * came out 50% over a budget it was actually under.
  *
- *   HOUSE   the house spot and the portal. Meant to be finished.
- *   FLEX    every other spot, plus the best piece in each of the six slots.
- *           Meant not to be, quickly.
+ *   HOUSE   the ladder itself. Meant to be finished.
+ *   FLEX    the best piece in each of the five furniture slots. Meant not to
+ *           be, quickly.
  *   EVERY   also the pieces you passed over on the way up. Changes nothing
  *           visible at the end; completionism, not the goal.
+ *
+ * The plot and the lighthouse used to be FLEX and are now inside HOUSE, which
+ * is a real change of character: what used to be optional and endless is now on
+ * the one ladder everybody finishes. The furniture is what carries the flex
+ * budget on its own, and it is deep enough to.
  */
 const sum = (ns: readonly number[]) => ns.reduce((a, b) => a + b, 0)
-const spotCost = (id: HotspotId) => sum(HOTSPOT_BY_ID[id].builds.map(b => b.cost))
 
-// THE HOUSE IS THE HOUSE, and the portal is no longer part of this budget: it
-// is bought on the water now, out of lib/seaPortal's own ladder.
-export const HOMESTEAD_HOUSE = spotCost('house')
+// THE HOUSE IS THE ISLAND now, and the portal is no longer part of this budget:
+// it is bought on the water, out of lib/seaPortal's own ladder.
+export const HOMESTEAD_HOUSE = sum(HOUSE.map(b => b.cost))
 
 export const HOMESTEAD_FLEX =
-  sum((['garden', 'beacon'] as HotspotId[]).map(spotCost))
-  + sum(FURNITURE.map(f => Math.max(...f.options.map(o => o.cost))))
+  sum(FURNITURE.map(f => Math.max(...f.options.map(o => o.cost))))
 
 export const HOMESTEAD_FINISHED = HOMESTEAD_HOUSE + HOMESTEAD_FLEX
 
 export const HOMESTEAD_EVERY_PIECE =
-  sum(HOTSPOTS.map(h => sum(h.builds.map(b => b.cost))))
-  + sum(FURNITURE.map(f => sum(f.options.map(o => o.cost))))
+  HOMESTEAD_HOUSE + sum(FURNITURE.map(f => sum(f.options.map(o => o.cost))))

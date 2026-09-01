@@ -24,7 +24,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EMPTY_HOMESTEAD, builtAt, type Homestead, type HotspotId, type FurnitureSlot } from '@/lib/homestead'
+import { EMPTY_HOMESTEAD, builtAt, houseTier, type Homestead, type FurnitureSlot } from '@/lib/homestead'
 import { PINNED_MAX } from '@/lib/homestead'
 import { isPremiumActive } from '@/lib/premium'
 import { getEffectiveRod } from '@/lib/rods'
@@ -36,21 +36,26 @@ export type Visitable = {
   username: string
   /** What their house is, so the list says something before you sail. */
   house: string
-  /** How much of the island they have built on, out of six spots. */
+  /** Which rung their house is on, 0..4. Sorts the list, so the captains
+   *  worth the sail are at the top of it. */
   built: number
 }
 
+// ONE COLUMN OF THE SIX. `portal`, `gallery`, `dock`, `garden`, `beacon` and
+// `layout` are all still there and all dead: each was a ladder that got folded
+// into something else, and a column is never dropped here because dropping one
+// is the only migration that cannot be undone. Nothing selects them.
 type Row = {
-  house: number; portal: number; gallery: number; dock: number; garden: number; beacon: number
+  house: number
   furniture: unknown; owned: string[] | null; pinned: string[] | null
 }
 
-const COLS = 'user_id, house, portal, gallery, dock, garden, beacon, furniture, owned, pinned, layout'
+const COLS = 'user_id, house, furniture, owned, pinned'
 
 function toHomestead(row: Row | null): Homestead {
   if (!row) return EMPTY_HOMESTEAD
   return {
-    spots: { house: row.house ?? 0, garden: row.garden ?? 0, beacon: row.beacon ?? 0 },
+    house: row.house ?? 0,
     furniture: (row.furniture ?? {}) as Partial<Record<FurnitureSlot, string>>,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),
@@ -136,8 +141,8 @@ export async function visitableHomesteads(): Promise<Visitable[]> {
   return ((rows ?? []) as (Row & { user_id: string })[])
     .map(r => {
       const h = toHomestead(r)
-      const built = (Object.keys(h.spots) as HotspotId[]).filter(k => (h.spots[k] ?? 0) > 0).length
-      return { username: name[r.user_id] ?? '', house: builtAt(h, 'house').name, built }
+      const built = houseTier(h)
+      return { username: name[r.user_id] ?? '', house: builtAt(h).name, built }
     })
     .filter(v => v.username && v.built > 0)
     .sort((a, b) => b.built - a.built || a.username.localeCompare(b.username))
