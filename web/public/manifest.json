@@ -3,6 +3,7 @@
   "short_name": "Small Fishes",
   "description": "Collect all 36 digital fish cards. Daily games, expeditions, and more.",
   "start_url": "/sea",
+  "id": "/sea",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
