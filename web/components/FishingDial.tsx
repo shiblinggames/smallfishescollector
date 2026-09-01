@@ -17,6 +17,33 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import type { ZoneDef } from '@/app/(app)/fishing/depths'
 
+/**
+ * ── THE INSTRUMENT'S MATERIALS ──────────────────────────────────────────────
+ *
+ * Exported so the action buttons can be made of the same thing rather than of
+ * an approximation of it. They were a flat teal or gold wash with a hard 6px
+ * offset shadow — a chunky toy button sitting under a machined gauge, which is
+ * exactly the "outdated and out of place" it was reported as.
+ *
+ * These are the same values the SVG below uses; they are up here so there is
+ * one set. See components/DialButton.
+ */
+export const DIAL_MATERIAL = {
+  /** The domed glass face, lit from just above centre. The dial fills its
+   *  inner circle with these three stops. */
+  glass: 'radial-gradient(circle at 50% 42%, #1e2d3e 0%, #0d1a26 55%, #050c14 100%)',
+  /** The bezel the whole instrument sits in. */
+  bezel: 'rgba(0,0,0,0.78)',
+  /** The hairline around that bezel, which is the only thing separating the
+   *  instrument from the water behind it. */
+  hairline: 'rgba(255,255,255,0.08)',
+  /** The specular on the top of the dome, and the shadow pooling at its foot.
+   *  The pair is what reads as a curved surface — the same "lighter top, darker
+   *  bottom" that makes the zone bands look lit rather than labelled. */
+  crown: 'rgba(255,255,255,0.16)',
+  foot: 'rgba(0,0,0,0.65)',
+} as const
+
 export const CX = 110, CY = 110
 export const OUTER_R = 96, INNER_R = 66
 const GAP = 1.0

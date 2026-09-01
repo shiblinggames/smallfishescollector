@@ -33,6 +33,7 @@ import { AUTO_RECAST_MS, AUTO_CRATE_TOTAL_MS } from '@/lib/autoFishing'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DialSVG } from '@/components/FishingDial'
+import DialButton from '@/components/DialButton'
 // EVERYTHING THE DIAL DOES THAT SVG CANNOT, on its own Pixi layer BEHIND it:
 // the fire, the light it casts, its smoke, and the Ancient's breathing aura.
 // Dynamic and never loaded until one of those is actually wanted, so a player
@@ -2570,51 +2571,28 @@ export default function FishingHere({
             moves and nothing resizes underneath it. HELM_D is exported from the
             chart so the two cannot drift apart. */}
         <div style={{ width: HELM_D, height: HELM_D, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* BUILT LIKE THE DIAL ABOVE THEM. These were a flat wash with a hard
+              `0 6px 0` drop — a plastic slab six pixels under a machined gauge.
+              See components/DialButton; the materials come from FishingDial so
+              the instrument and its controls cannot drift apart. */}
           {(phase === 'idle' || phase === 'result') && (
-            <motion.button key="cast"
-              onPointerDown={e => { e.preventDefault(); if (phase === 'result') castAgain(); else cast() }}
-              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-              style={{
-                width: HELM_D, height: HELM_D, borderRadius: '50%',
-                // A FLOOR UNDER THE TINT. This was a teal wash over whatever
-                // happened to be behind it, so on pale water or a lit sprite
-                // the sea read straight through the one control you need to
-                // find without looking. The colour is still a translucent
-                // gradient; what changed is that it now sits on something.
-                background: 'radial-gradient(ellipse at 40% 35%, rgba(18,138,168,0.6), rgba(12,84,104,0.42)), rgba(5,13,20,0.97)',
-                border: '1px solid rgba(52,190,220,0.62)', cursor: 'pointer',
-                fontSize: '0.864rem', touchAction: 'manipulation', lineHeight: 1.15,
-                color: canCast ? '#67d4e8' : 'rgba(103,212,232,0.4)',
-                boxShadow: '0 6px 0 rgba(0,0,0,0.7), 0 0 28px rgba(14,116,144,0.35), inset 0 1px 0 rgba(255,255,255,0.14)',
-              }}
-              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-              whileTap={canCast ? { scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.6)' } : undefined}
-              transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
-              {/* "Rigging" is only ever seen on a cold load: the frames are
-                  fetched the moment the map mounts, and you have to sail to a
-                  zone before this button exists at all. */}
-              {!spritesReady ? 'Rigging'
+            <DialButton motionKey="cast" size={HELM_D}
+              accent="#67d4e8" glow="rgba(14,116,144,0.4)"
+              disabled={!canCast}
+              onPress={() => { if (phase === 'result') castAgain(); else cast() }}
+              /* "Rigging" is only ever seen on a cold load: the frames are
+                 fetched the moment the map mounts, and you have to sail to a
+                 zone before this button exists at all. */
+              label={!spritesReady ? 'Rigging'
                 : holdFull ? <>Hold<br />Full</>
                   : outOfBait ? <>No<br />Bait</>
-                    : phase === 'result' ? <>Cast<br />Again</> : 'Cast'}
-            </motion.button>
+                    : phase === 'result' ? <>Cast<br />Again</> : 'Cast'} />
           )}
           {phase === 'hooked' && (
-            <motion.button key="reel"
-              onPointerDown={e => { e.preventDefault(); strike() }}
-              className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-              style={{
-                width: HELM_D, height: HELM_D, borderRadius: '50%',
-                background: 'radial-gradient(ellipse at 40% 35%, rgba(240,192,64,0.34), rgba(150,112,24,0.2)), rgba(9,10,14,0.97)',
-                border: '1px solid rgba(240,192,64,0.58)', cursor: 'pointer',
-                fontSize: '0.864rem', color: '#f0c040', touchAction: 'manipulation',
-                boxShadow: '0 6px 0 rgba(0,0,0,0.7), 0 0 22px rgba(240,192,64,0.26), inset 0 1px 0 rgba(255,255,255,0.12)',
-              }}
-              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-              whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-              transition={{ type: 'spring', stiffness: 600, damping: 22 }}>
-              Reel In
-            </motion.button>
+            <DialButton motionKey="reel" size={HELM_D}
+              accent="#f0c040" glow="rgba(240,192,64,0.3)"
+              onPress={() => strike()}
+              label="Reel In" />
           )}
           {(phase === 'waiting' || phase === 'reeling') && (
             // The slot holds itself open rather than collapsing — the same
