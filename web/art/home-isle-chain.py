@@ -183,12 +183,13 @@ RUNGS = [
      "short flight of steps up to it."),
 ]
 
-prev = None
-for name, keep, body in RUNGS:
-    print("===", name)
-    prompt = ((keep + body) if keep else body) + "\n\n" + STYLE + "\n\nAvoid: " + AVOID
-    url = generate(prompt, str(OUT / (name + ".png")), refs=[prev] if prev else None)
-    if not url:
-        print("  GAVE UP on", name); break
-    prev = url
-print("done")
+if __name__ == "__main__":
+    prev = None
+    for name, keep, body in RUNGS:
+        print("===", name)
+        prompt = ((keep + body) if keep else body) + "\n\n" + STYLE + "\n\nAvoid: " + AVOID
+        url = generate(prompt, str(OUT / (name + ".png")), refs=[prev] if prev else None)
+        if not url:
+            print("  GAVE UP on", name); break
+        prev = url
+    print("done")
