@@ -171,7 +171,8 @@ export default async function SeaPage() {
   // about before it happens.
   const holdCount = ((holdRows ?? []) as { quantity: number }[])
     .reduce((n, r) => n + (r.quantity ?? 0), 0)
-  const holdCapacity = getFishHold(Number(profile?.fish_hold_tier ?? 0)).capacity
+  const holdTier = Number(profile?.fish_hold_tier ?? 0)
+  const holdCapacity = getFishHold(holdTier).capacity
 
   // ── WHAT IS ON THE BOAT ───────────────────────────────────────────────
   // The rack, resolved. Only these rods can be swapped to at sea — that is the
@@ -239,7 +240,7 @@ export default async function SeaPage() {
       bait={baitType}
       // THE WHOLE BAG, not just the one type the page picked. The bait row lets
       // you switch mid-session, so it needs everything aboard.
-      hold={{ count: holdCount, capacity: holdCapacity }}
+      hold={{ count: holdCount, capacity: holdCapacity, tier: holdTier }}
       rack={rack}
       // The hull tier only ever changes how fast you cross the chart.
       hullSpeed={hullSpeed(Number(profile?.hull_speed_tier ?? 0))}

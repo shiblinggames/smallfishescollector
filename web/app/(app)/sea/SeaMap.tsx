@@ -1177,7 +1177,7 @@ export default function SeaMap({
    *  hook, and the bait row lets that change mid-session. */
   baitQty: number
   baitBag: { type: string; quantity: number }[]
-  hold: { count: number; capacity: number }
+  hold: { count: number; capacity: number; tier: number }
   /** THE RACK — the only rods that can be changed to at sea. Resolved on the
    *  server from what the Shipyard loaded, so a client cannot fish with a rod
    *  it did not bring. */
@@ -6665,7 +6665,7 @@ hullRef={hullRefFor(t.key)} />
           rack={rack}
           activeRod={activeRod}
           onRodChange={setActiveRod}
-          hold={{ count: holdCount, capacity: hold.capacity }}
+          hold={{ count: holdCount, capacity: hold.capacity, tier: hold.tier }}
           at={pos}
           log={log}
           renownPoints={renownState ? renownPoints : undefined}

@@ -34,6 +34,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DialSVG } from '@/components/FishingDial'
 import DialButton from '@/components/DialButton'
+import HoldSheetBody from './HoldSheetBody'
+import HoldFlight, { type Flight } from '@/components/HoldFlight'
 // EVERYTHING THE DIAL DOES THAT SVG CANNOT, on its own Pixi layer BEHIND it:
 // the fire, the light it casts, its smoke, and the Ancient's breathing aura.
 // Dynamic and never loaded until one of those is actually wanted, so a player
@@ -410,7 +412,10 @@ export default function FishingHere({
   onBaitChange: (type: string) => void
   /** What is aboard and what it can take. The hold is the reason a session
    *  ends, so it belongs on screen while you are filling it. */
-  hold: { count: number; capacity: number }
+  /** `tier` is which rung of FISH_HOLD_TIERS is fitted. The sheet needs it to
+   *  name the current hold and price the next one, which is the question a full
+   *  hold actually raises. */
+  hold: { count: number; capacity: number; tier: number }
   /** Where the boat is, in world pixels — read fresh at every cast so a
    *  hotspot is judged on where the line ACTUALLY went in rather than on
    *  where you were when the rod came out. */
@@ -672,6 +677,29 @@ export default function FishingHere({
   /** Does the result card actually need to scroll? Measured, and only after it
    *  has finished arriving — see the note on the container. */
   const cardScrollRef = useRef<HTMLDivElement | null>(null)
+  /** The hold chip, so a landed fish knows where it is flying TO. Measured at
+   *  the moment of flight rather than stored: the row it sits in moves with the
+   *  safe-area inset and the card above it changes height per catch. */
+  const holdChipRef = useRef<HTMLButtonElement | null>(null)
+  const [flight, setFlight] = useState<Flight | null>(null)
+  /** Bumped when a fish actually lands in the barrel. Drives the chip's knock,
+   *  and starts at 0 so a freshly opened rod does not pop for nothing. */
+  const [landedKey, setLandedKey] = useState(0)
+  /**
+   * THE NUMBER ON THE CHIP, which deliberately LAGS the truth.
+   *
+   * `hold.count` is right the instant the server answers. This is what the chip
+   * shows, and it only catches up when the fish lands in it — a counter that
+   * ticks on a network response is reporting, and one that ticks when something
+   * arrives is showing you where your catch went. It re-syncs unconditionally
+   * on any change so a flight that never runs (no card, a fast stow, a miss
+   * that still moved the count) can never strand it behind.
+   */
+  const [shownHold, setShownHold] = useState(hold.count)
+  useEffect(() => {
+    if (flight) return
+    setShownHold(hold.count)
+  }, [hold.count, flight])
   /** The flexible area the card lives in, measured so the cap is a real number
    *  of pixels. `maxHeight: 100%` was never doing anything: the percentage
    *  resolves against a parent whose own height is auto, which makes it
@@ -1366,6 +1394,38 @@ export default function FishingHere({
             vigilRankUp: res.vigilRankUp ?? null,
           },
         })
+
+        // ── AND IT GOES IN THE HOLD, VISIBLY ──────────────────────────
+        //
+        // Next frame, because the card has only just been asked for and has no
+        // box to be measured from until React has put it on the screen. Both
+        // ends are read live: the card is centred in a column whose height
+        // depends on what was landed, and the chip moves with the safe-area
+        // inset. See components/HoldFlight.
+        //
+        // An ancient trophy does not make the trip — it never enters the hold,
+        // it goes on the wall, and a fish flying into a barrel it is not in
+        // would be a lie told with an animation.
+        {
+          const qty = res.catchQty ?? 1
+          const fishNow2 = res.fish as FishSpecies | undefined
+          const trophy = fishNow2?.habitat === 'ancient_deep' && (fishNow2?.sell_value ?? 0) === 0
+          if (qty > 0 && fishNow2 && !trophy) {
+            requestAnimationFrame(() => {
+              const card = cardScrollRef.current?.getBoundingClientRect()
+              const chip = holdChipRef.current?.getBoundingClientRect()
+              if (!card || !chip) return
+              setFlight({
+                key: Date.now(),
+                name: fishNow2.name,
+                qty,
+                shiny: res.isShiny === true,
+                from: { x: card.left + card.width / 2, y: card.top + card.height / 2 },
+                to: { x: chip.left + chip.width / 2, y: chip.top + chip.height / 2 },
+              })
+            })
+          }
+        }
 
         // ── THE GIANT GOES DOWN ───────────────────────────────────────
         //
@@ -2397,76 +2457,17 @@ export default function FishingHere({
             A hold that fills is the reason a session ends, and "12/40" says
             when but not what — so the decision it forces (sell to whom, or sail
             home) was being made blind. */}
-        {holdOpen && (() => {
-          const byId = new Map(log.allFishSpecies.map(f => [f.id, f]))
-          const rows = (holdRows ?? [])
-            .map(r => ({ ...r, sp: byId.get(r.fishId) }))
-            .filter(r => r.sp)
-            .sort((a, b) => (b.sp!.sell_value * b.qty) - (a.sp!.sell_value * a.qty))
-          const total = rows.reduce((n, r) => n + r.sp!.sell_value * r.qty, 0)
-          return (
-            <Sheet key="hold" title="The hold"
-              blurb={`${hold.count} of ${hold.capacity} aboard.`}
-              onClose={() => setHoldOpen(false)}>
-              {holdRows === null ? (
-                <p className="font-karla font-600" style={{ fontSize: '0.816rem', color: 'rgba(190,212,228,0.5)', marginTop: 16 }}>
-                  Counting the barrels…
-                </p>
-              ) : rows.length === 0 ? (
-                <p className="font-karla font-600" style={{ fontSize: '0.816rem', color: 'rgba(190,212,228,0.55)', marginTop: 16, lineHeight: 1.6 }}>
-                  Empty. Everything you land goes in here until you sell it.
-                </p>
-              ) : (
-                <>
-                  <div style={{ marginTop: 10 }}>
-                    {rows.map(r => (
-                      <div key={r.fishId} style={{
-                        display: 'flex', alignItems: 'baseline', gap: 8,
-                        padding: '0.38rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      }}>
-                        <span className="font-karla font-700" style={{
-                          flexShrink: 0, fontSize: '0.792rem', color: 'rgba(190,212,228,0.6)',
-                          fontVariantNumeric: 'tabular-nums', minWidth: 26,
-                        }}>×{r.qty}</span>
-                        <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', color: '#f2ead8' }}>
-                          {r.sp!.name}
-                        </span>
-                        <span className="font-karla font-700" style={{
-                          flexShrink: 0, fontSize: '0.816rem', color: '#f0c040', fontVariantNumeric: 'tabular-nums',
-                        }}>⟡ {(r.sp!.sell_value * r.qty).toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {/* MARKET value, and it says so. What the hold actually fetches
-                      depends on who buys it, so a single "worth" number would be
-                      wrong everywhere except one counter. */}
-                  <div style={{
-                    display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10,
-                    paddingTop: 10, borderTop: '1px solid rgba(240,192,64,0.28)',
-                  }}>
-                    <span className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.96rem', color: '#f2ead8' }}>
-                      At full market
-                    </span>
-                    <span className="font-cinzel font-700" style={{
-                      fontSize: '1.08rem', color: '#f0c040', fontVariantNumeric: 'tabular-nums',
-                    }}>⟡ {total.toLocaleString()}</span>
-                  </div>
-
-                  <SheetLabel>Where to sell it</SheetLabel>
-                  <p className="font-karla font-600" style={{
-                    fontSize: '0.792rem', color: 'rgba(190,212,228,0.62)', marginTop: 6, lineHeight: 1.65,
-                  }}>
-                    Three ways to sell, and they pay by how far you carry it.
-                    A quick sell from wherever you float gives you 75%. A buyer
-                    you sail over to pays 74% to 86%, and the deeper the water
-                    the better the rate. The Market ashore pays the full amount
-                    above, but you have to bring the catch home yourself.
-                  </p>
-                </>
-              )}
-            </Sheet>
-          )
-        })()}
+        {holdOpen && (
+          <Sheet key="hold" title="The hold"
+            blurb={`${hold.count} of ${hold.capacity} aboard.`}
+            onClose={() => setHoldOpen(false)}>
+            {/* THE BODY LIVES IN ITS OWN FILE. It listed every species one row
+                each, which at a Leviathan Hold is a spreadsheet you scroll past
+                thirty minnows to read. See sea/HoldSheetBody. */}
+            <HoldSheetBody rows={holdRows} species={log.allFishSpecies}
+              count={hold.count} capacity={hold.capacity} tier={hold.tier} />
+          </Sheet>
+        )}
 
       </AnimatePresence>
 
@@ -2486,6 +2487,17 @@ export default function FishingHere({
           }}
         />
       )}
+
+      {/* THE TRIP TO THE BARREL. Portalled to the body from inside — the chart
+          root's `touch-action: none` reaches any fixed box left in its tree. */}
+      <HoldFlight flight={flight} onArrive={() => {
+        setFlight(null)
+        setShownHold(hold.count)
+        setLandedKey(k => k + 1)
+        // A small knock, not a catch buzz. The catch already had its haptic;
+        // this is the lid closing.
+        vibrate(8)
+      }} />
 
       {finnBeat && <FinnScene beat={finnBeat} onComplete={() => setFinnBeat(null)} />}
 
@@ -2657,12 +2669,19 @@ export default function FishingHere({
             opens now: "12/40" tells you to stop fishing but not what you are
             carrying or what it is worth, which is the decision actually being
             made when a hold fills. */}
-        <button
+        <motion.button
+          ref={holdChipRef}
           onClick={e => {
             e.stopPropagation(); vibrate(8)
             setHoldRows(null); setHoldOpen(true)
             void holdContents().then(r => { if ('ok' in r) setHoldRows(r.rows); else setHoldRows([]) }).catch(() => setHoldRows([]))
           }}
+          // THE BARREL TAKES THE WEIGHT. Keyed on the count it is SHOWING, so
+          // the knock lands on the frame the fish arrives rather than on the
+          // frame the server answered.
+          animate={landedKey > 0 ? { scale: [1, 1.14, 1] } : {}}
+          key={`holdchip-${landedKey}`}
+          transition={{ duration: 0.34, ease: [0.34, 1.56, 0.64, 1] }}
           style={{
             ...MENU_BTN,
             border: `1px solid ${holdFull ? 'rgba(248,113,113,0.55)' : 'rgba(255,255,255,0.16)'}`,
@@ -2671,8 +2690,8 @@ export default function FishingHere({
           <span className="font-karla font-700" style={{
             ...MENU_VAL, fontVariantNumeric: 'tabular-nums',
             color: holdFull ? '#f87171' : '#dfeaf2',
-          }}>{hold.count}/{hold.capacity}</span>
-        </button>
+          }}>{shownHold}/{hold.capacity}</span>
+        </motion.button>
       </div>
 
       {/* THE "STOW ROD" LINE IS GONE. Tapping the water stows the rod and

@@ -71,7 +71,7 @@ export default function DialButton({
   return (
     <motion.button key={motionKey}
       onPointerDown={e => { e.preventDefault(); onPress() }}
-      className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+      className="font-cinzel font-800 uppercase flex items-center justify-center"
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       whileTap={lit ? { scale: 0.985, y: 1 } : undefined}
@@ -102,12 +102,29 @@ export default function DialButton({
           `0 10px 24px rgba(0,0,0,0.55)`,
           lit ? `0 0 26px ${glow}` : '0 0 0 rgba(0,0,0,0)',
         ].join(', '),
-        fontSize: `${size * 0.077}px`,
-        lineHeight: 1.15,
-        color: lit ? accent : `${accent}66`,
+        // ── THE LABEL IS THE POINT OF THE BUTTON ──────────────────────
+        //
+        // I had this at 0.077 of the diameter, which on a 112px helm is 8.6px —
+        // SMALLER than the 13.8px it replaced, on the one control you have to
+        // find without looking while a needle is spinning. Sized off the face
+        // rather than the outer edge, so the bezel cannot squeeze it, and set
+        // in Cinzel at 800 to match the weight of everything else on this
+        // screen that is shouting.
+        //
+        // The letter-spacing came down with the size going up. 0.14em is right
+        // for a small quiet label and it is what pushed "Cast Again" onto two
+        // cramped lines; at this size the word carries itself.
+        fontSize: `${Math.round(face * 0.175)}px`,
+        letterSpacing: '0.04em',
+        lineHeight: 1.08,
+        color: lit ? '#ffffff' : `${accent}77`,
         // The label sits ON the glass, so it gets the same treatment anything
-        // under glass gets rather than floating in front of it.
-        textShadow: lit ? `0 1px 2px rgba(0,0,0,0.9), 0 0 12px ${glow}` : 'none',
+        // under glass gets rather than floating in front of it. Tinted by the
+        // action rather than coloured with it: white reads at a glance and the
+        // glow is what says which action this is.
+        textShadow: lit
+          ? `0 1px 3px rgba(0,0,0,0.95), 0 0 14px ${accent}, 0 0 26px ${glow}`
+          : 'none',
       }}>
       {/* THE GLASS ITSELF. A crescent of reflection across the upper third,
           which is the one thing that says "there is something transparent in
