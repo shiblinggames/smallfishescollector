@@ -90,6 +90,18 @@ systems already multiply it down and the old bases predate most of them.
   slow. Don't re-dynamic it.
 - Random events, crate encounters (`components/CrateOpening.tsx` is THE crate moment),
   and giant/ancient trophies layer on top of the base loop without changing dial rules.
+- **A golden is a forced choice, and the CHART owns it, not the catch card.** Landing one
+  writes `shiny_catches` at `status: 'hold'`; sell or mount resolves it. The prompt is
+  `components/GoldenChoice.tsx`, mounted from `SeaMap` with no backdrop tap, no Escape and
+  no close button, and `SeaMap` calls `heldGolden()` on load so an unanswered one comes
+  back. It used to live inside the catch card, where dismissing the card left the fish on
+  the Almanac wall but the sell button unreachable forever.
+- **`status` is not the whole truth about a golden — `fish_collection.is_golden` is the
+  other half.** `mountGoldenTrophy` writes both, and for three months the status half
+  violated the table's CHECK (`mounted` was not in it) while the error was swallowed by an
+  `await Promise.all([...])`. Both resolve paths now write the status FIRST, conditionally
+  on `'hold'`, and check the error, so the update is the claim and two taps cannot both
+  pay out. If these two tables ever disagree again, that disagreement is the bug.
 
 ## Connects to
 

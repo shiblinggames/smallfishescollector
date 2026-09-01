@@ -358,7 +358,7 @@ export default function FishingHere({
   zone, bait, baitBonus, baitLeft, mods, fishingXP, auto, tideTurner, at,
   seaPhase, baitBag, onBaitChange, rack, activeRod, onRodChange, hold, log, renownPoints, onOpenRenown, onCaught,
   onReel,
-  onBaitSpent, onPose, onBusy, onCanLeave, onLanded,
+  onBaitSpent, onPose, onBusy, onCanLeave, onLanded, onGolden, goldenPending,
   spritesReady, onClose,
 }: {
   zone: string
@@ -449,6 +449,18 @@ export default function FishingHere({
    * seaSplash for the timing, and the hold below for the window it sits in.
    */
   onLanded: (perfect: boolean) => void
+  /**
+   * A GOLDEN CAME UP AND HAS TO BE ANSWERED.
+   *
+   * Handed to the chart rather than drawn here, because this overlay goes away
+   * when the rod is stowed and the decision must not go with it. The chart owns
+   * the modal; see components/GoldenChoice for why it blocks.
+   */
+  onGolden: (held: { id: number; name: string; alreadyMounted: boolean }) => void
+  /** Whether a golden is still waiting on an answer, per the CHART. Gates the
+   *  auto-caster: the loop must not cast over an unresolved choice, and the
+   *  flag has to come from the surface that outlives this one. */
+  goldenPending: boolean
   /** Told when the dial is up, so the map can stop moving entirely behind it.
    *  See the note on the freeze in SeaMap. */
   onBusy: (busy: boolean) => void
@@ -799,11 +811,6 @@ export default function FishingHere({
   const canCast = spritesReady && !holdFull && !outOfBait
   const [retryFlash, setRetryFlash] = useState(false)
   const [sigilPaid, setSigilPaid] = useState(0)
-  /** A SHINY MUST BE RESOLVABLE WHERE IT WAS CAUGHT — sellGoldenTrophy and
-   *  mountGoldenTrophy exist only on the fishing screen, so a golden fish
-   *  landed out here would otherwise sit in shiny_catches with no surface
-   *  anywhere in the app to sell or mount it. */
-  const [shiny, setShiny] = useState<{ id: number; alreadyMounted: boolean } | null>(null)
   /** The Galaxy Rod's one-shot reroll, offered by the server on eligible
    *  catches and simply never surfaced out here. */
   const [wormhole, setWormhole] = useState(false)
@@ -1036,7 +1043,6 @@ export default function FishingHere({
     setCastAnimDone(false)
     if (animRef.current) clearTimeout(animRef.current)
     animRef.current = setTimeout(() => setCastAnimDone(true), 1500)
-    setShiny(null)
     setWormhole(false)
     setChoiceNote('')
     setPhase('waiting')
@@ -1266,7 +1272,14 @@ export default function FishingHere({
           setTimeout(() => setSigilPaid(0), 2600)
         }
         if (res.isShiny && res.shinyId != null) {
-          setShiny({ id: res.shinyId, alreadyMounted: res.alreadyMounted === true })
+          // UP, not into local state. The overlay this is inside disappears the
+          // moment the rod is stowed, and a decision that vanishes with its own
+          // panel is how forty of these ended up stranded.
+          onGolden({
+            id: res.shinyId,
+            name: (res.fish as FishSpecies | undefined)?.name ?? 'A golden fish',
+            alreadyMounted: res.alreadyMounted === true,
+          })
         }
         setWormhole(res.wormhole === true && !res.isShiny)
         // Displaying what the server said, never counting it here — the streak
@@ -1397,13 +1410,18 @@ export default function FishingHere({
     // A SHINY IS A DECISION. Sell it or mount it, and the loop casting over the
     // top of that card takes the choice away from you while you are looking at
     // it. The fishing screen has always refused to auto-cast past one.
-    if (shiny) return
+    //
+    // Read from the CHART now rather than from a local copy. The choice outlives
+    // this overlay — that is the whole point of moving it up — so a local flag
+    // would clear itself the moment the rod was stowed and let the loop cast
+    // straight over an unanswered golden.
+    if (goldenPending) return
     // The tempo lives in lib/autoFishing, shared with the fishing screen —
     // the same item must not run at two rhythms depending on the surface.
     const t = setTimeout(() => { castRef.current?.(true) },
       caught?.kind === 'crate' ? AUTO_CRATE_TOTAL_MS : AUTO_RECAST_MS)
     return () => clearTimeout(t)
-  }, [phase, auto.tier, autoOn, baitLeft, holdFull, shiny, caught?.kind])
+  }, [phase, auto.tier, autoOn, baitLeft, holdFull, goldenPending, caught?.kind])
 
   // ── AUTO CATCHER ────────────────────────────────────────────────────────
   // Watches the needle and taps the instant it is about to enter a green catch
@@ -1951,66 +1969,16 @@ export default function FishingHere({
               )}
             </div>
 
-            {/* ── DECISIONS THE CATCH CAN HAND YOU ──────────────────────
-                Both of these are server-offered and were being dropped. A
-                shiny in particular MUST be resolvable here: it is already
-                written into shiny_catches by the time you see it, and the
-                sell/mount actions exist nowhere else in the app. */}
-            {shiny && (
-              <div style={{
-                marginTop: 10, padding: '0.8rem', borderRadius: 12, textAlign: 'center',
-                background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.4)',
-              }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.032rem', color: '#f0c040' }}>
-                  A golden one
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.864rem', color: '#c8b590', marginTop: 4, lineHeight: 1.5 }}>
-                  {shiny.alreadyMounted
-                    ? 'You have one of these on the wall already. This one can only be sold.'
-                    : 'Sell it, or mount it in your Logbook. One of each species only.'}
-                </p>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                  <button disabled={busyChoice}
-                    onClick={async e => {
-                      e.stopPropagation(); setBusyChoice(true)
-                      const r = await sellGoldenTrophy(shiny.id).catch(() => ({ error: 'It slipped away.' }))
-                      setBusyChoice(false)
-                      if ('error' in r) { setChoiceNote(r.error); return }
-                      // Same as the traders: the coin is already banked, but
-                      // the header reads its balance once at render and never
-                      // asks again unless it is told.
-                      if (typeof r.doubloons === 'number') {
-                        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.doubloons }))
-                      }
-                      setChoiceNote(`Sold for ${r.earned.toLocaleString()} ⟡`)
-                      setShiny(null)
-                    }}
-                    className="font-cinzel font-700"
-                    style={{
-                      flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.96rem',
-                      color: '#f2ead8', background: 'rgba(240,192,64,0.18)',
-                      border: '1px solid rgba(240,192,64,0.5)', cursor: 'pointer',
-                    }}>Sell</button>
-                  {!shiny.alreadyMounted && (
-                    <button disabled={busyChoice}
-                      onClick={async e => {
-                        e.stopPropagation(); setBusyChoice(true)
-                        const r = await mountGoldenTrophy(shiny.id).catch(() => ({ error: 'It slipped away.' }))
-                        setBusyChoice(false)
-                        if ('error' in r) { setChoiceNote(r.error); return }
-                        setChoiceNote('Mounted in your Logbook')
-                        setShiny(null)
-                      }}
-                      className="font-karla font-700"
-                      style={{
-                        flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.96rem',
-                        color: '#cfe0ec', background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer',
-                      }}>Mount</button>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* ── THE GOLDEN CHOICE IS NOT IN HERE ANY MORE ─────────────
+                It was: a panel inside this card, which meant dismissing the
+                card dismissed the decision and stranded the fish on hold with
+                nothing in the app able to reach it again. Forty of them, across
+                nine captains, before anybody noticed.
+
+                It is a blocking modal now (components/GoldenChoice), mounted by
+                the chart rather than by this overlay, so it survives the card
+                being closed, the rod being stowed and the page being reloaded.
+                See the note at the top of that file. */}
 
           </motion.div>
           ) : phase === 'waiting' && castAnimDone ? (

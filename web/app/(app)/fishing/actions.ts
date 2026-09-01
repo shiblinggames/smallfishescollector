@@ -2390,6 +2390,65 @@ export async function buyHat(hatId: string): Promise<{ ok: true; doubloons: numb
 // final per-trophy by design: the moment is meant to land with
 // weight, not be deferred into a hold list.
 
+/**
+ * ── A GOLDEN STILL WAITING TO BE ANSWERED ───────────────────────────────────
+ *
+ * A shiny is written into `shiny_catches` at status 'hold' the moment it is
+ * caught, and it stays there until you sell it or mount it. The choice lived
+ * INSIDE the catch card, so dismissing the card — a tap anywhere, a refresh, a
+ * navigation, closing the tab — left the row on hold with nothing anywhere in
+ * the app able to reach it again. The fish was never lost; it was stranded, and
+ * from the deck the two are the same thing.
+ *
+ * It was not a rare accident either. When this was written there were FORTY
+ * held rows against seventeen ever resolved, across nine captains, the oldest
+ * from June: seventy percent of every golden ever caught. Not one had ever been
+ * mounted, by anybody.
+ *
+ * So the choice is now recoverable rather than a moment you have to catch. This
+ * returns whatever is still on hold, the chart asks on load, and the modal
+ * cannot be dismissed without answering it. A stranded golden comes back the
+ * next time its captain opens the sea.
+ */
+export async function heldGolden(): Promise<{ id: number; name: string; fishId: number; sizeIn: number; alreadyMounted: boolean } | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const admin = createAdminClient()
+  const { data: row } = await admin
+    .from('shiny_catches')
+    .select('id, fish_id, size_in, fish_species(name)')
+    .eq('user_id', user.id)
+    .eq('status', 'hold')
+    // OLDEST FIRST. Somebody with a backlog works through it in the order they
+    // caught them, which is the only order that is not arbitrary.
+    .order('caught_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  type Row = { id: number; fish_id: number; size_in: number | null; fish_species: { name: string } | null }
+  const held = row as unknown as Row | null
+  if (!held) return null
+
+  // Whether this species is already on the wall, which is what decides if
+  // Mount is even offered. Read here rather than trusted from the catch, since
+  // a held row can be days old and the wall may have changed since.
+  const { data: existing } = await admin
+    .from('fish_collection')
+    .select('is_golden')
+    .eq('user_id', user.id)
+    .eq('fish_id', held.fish_id)
+    .maybeSingle()
+
+  return {
+    id: held.id,
+    name: held.fish_species?.name ?? 'A golden fish',
+    fishId: held.fish_id,
+    sizeIn: Number(held.size_in ?? 0),
+    alreadyMounted: existing?.is_golden === true,
+  }
+}
+
 export async function sellGoldenTrophy(
   shinyId: number,
 ): Promise<{ earned: number; doubloons: number } | { error: string }> {
@@ -2424,10 +2483,32 @@ export async function sellGoldenTrophy(
 
   const newDoubloons = (profile?.doubloons ?? 0) + earned
 
+  // ── CLAIM THE ROW BEFORE PAYING FOR IT ────────────────────────────────────
+  //
+  // The status check above is a read, and a read is not a claim: two taps that
+  // both read 'hold' before either writes would both pay out for one fish. The
+  // window is small and the modal's busy flag usually covers it, which is
+  // exactly the kind of "usually" that produces one baffling ledger entry a
+  // year.
+  //
+  // `.eq('status', 'hold')` makes the update itself the claim — Postgres will
+  // only match the row once — and `.select()` reports whether this call was the
+  // one that got it. No row back means somebody else resolved it first, so this
+  // caller pays nothing.
+  //
+  // And it runs BEFORE the doubloons rather than alongside them, for the same
+  // reason mounting does: a write whose failure is not allowed to matter is a
+  // write nobody checks, and this file has already paid for that lesson once.
+  const { data: claimed, error: claimErr } = await admin
+    .from('shiny_catches')
+    .update({ status: 'sold', sold_at: new Date().toISOString(), sold_for: earned })
+    .eq('id', shinyId)
+    .eq('status', 'hold')
+    .select('id')
+  if (claimErr) return { error: 'Could not sell that one. Try again.' }
+  if (!claimed?.length) return { error: 'Trophy already resolved' }
+
   await Promise.all([
-    admin.from('shiny_catches')
-      .update({ status: 'sold', sold_at: new Date().toISOString(), sold_for: earned })
-      .eq('id', shinyId),
     admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id, amount: earned,
@@ -2465,18 +2546,34 @@ export async function mountGoldenTrophy(
     .maybeSingle()
   if (existing?.is_golden) return { error: 'Already mounted' }
 
-  await Promise.all([
-    admin.from('shiny_catches')
-      .update({ status: 'mounted', sold_at: new Date().toISOString() })
-      .eq('id', shinyId),
-    // fish_collection row always exists by this point (the catch action
-    // upserts it before reaching the shiny resolve), so we update rather
-    // than upsert.
-    admin.from('fish_collection')
-      .update({ is_golden: true })
-      .eq('user_id', user.id)
-      .eq('fish_id', row.fish_id),
-  ])
+  // ── THE STATUS FIRST, AND ITS ERROR CHECKED ───────────────────────────────
+  //
+  // These two used to run together in a Promise.all with neither result read.
+  // supabase-js hands errors back in the result object instead of throwing, so
+  // a rejected write is indistinguishable from a successful one unless someone
+  // looks — and for three months nobody did. `status: 'mounted'` violated the
+  // table's CHECK on every single mount ever made, while the is_golden write
+  // beside it succeeded. The fish went on the wall, the plate appeared, and the
+  // row sat on 'hold' as though the choice had never been made.
+  //
+  // So: sequential, status first, and it is the gate. The status is what marks
+  // this trophy resolved, which is what stops it being offered up and sold a
+  // second time. If it cannot be written, nothing else should happen either —
+  // an unmarked row with is_golden set is precisely the state that took a
+  // migration to clean up.
+  const { error: statusErr } = await admin
+    .from('shiny_catches')
+    .update({ status: 'mounted', sold_at: new Date().toISOString() })
+    .eq('id', shinyId)
+    .eq('status', 'hold')
+  if (statusErr) return { error: 'Could not mount that one. Try again.' }
+
+  // fish_collection row always exists by this point (the catch action upserts
+  // it before reaching the shiny resolve), so we update rather than upsert.
+  await admin.from('fish_collection')
+    .update({ is_golden: true })
+    .eq('user_id', user.id)
+    .eq('fish_id', row.fish_id)
   return { ok: true, fishId: row.fish_id }
 }
 

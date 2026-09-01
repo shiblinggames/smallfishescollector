@@ -146,6 +146,7 @@ import FolkPanel from './FolkPanel'
 import SeaFirstVoyage from './SeaFirstVoyage'
 import SeaLandfallHint from './SeaLandfallHint'
 import { pendingPacts } from './pactActions'
+import { heldGolden } from '../fishing/actions'
 import { coastClip, coastline } from '@/lib/islandShape'
 // The island painting itself, which used to live in this file. See islandArt
 // for why it moved and why the move is a pure one.
@@ -215,6 +216,10 @@ const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
 // SeaAudio: it starts on the first press, not on mount.
 const SeaAudio = dynamic(() => import('./SeaAudio'), { ssr: false })
+// THE ONE DECISION THAT CANNOT BE DISMISSED. Owned by the chart rather than by
+// the fishing overlay, because the overlay unmounts the moment the rod is
+// stowed and this must not go with it. See components/GoldenChoice.
+const GoldenChoice = dynamic(() => import('@/components/GoldenChoice'), { ssr: false })
 
 /** Metres-per-second in world pixels. Sets how big the chart may be: the longest
  *  crossing anyone tolerates is about ten seconds, and the far zone is ~3,600px
@@ -1871,6 +1876,21 @@ export default function SeaMap({
   /** The Gunwharf's chooser. Its own flag rather than a second use of
    *  `ashore`, which is the Mainland's. */
   const [wharf, setWharf] = useState(false)
+  /**
+   * A GOLDEN FISH WAITING ON AN ANSWER.
+   *
+   * Raised two ways, and the second is the fix. A catch pushes it up through
+   * FishingHere's `onGolden`; and the chart ASKS on load, because the sell and
+   * mount buttons used to live inside the catch card and dismissing that card
+   * left the row unreachable. The fish stayed on the Almanac wall, but the
+   * doubloons for it could never be taken again.
+   */
+  const [golden, setGolden] = useState<{ id: number; name: string; alreadyMounted: boolean } | null>(null)
+  useEffect(() => {
+    let alive = true
+    void heldGolden().then(h => { if (alive && h) setGolden(h) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
   /** The Charterhouse's voyage board, over the water. */
   const [voyageOpen, setVoyageOpen] = useState(false)
 
@@ -6162,6 +6182,16 @@ hullRef={hullRefFor(t.key)} />
         shipTier={shipTier} onSail={() => { setWharf(false); setSwapAsk(true) }} />
       <VoyageBoard open={voyageOpen} onClose={() => setVoyageOpen(false)} />
 
+      {/* ── THE GOLDEN CHOICE ──────────────────────────────────────────
+          Above everything, dismissable by nothing, and asked again on the next
+          load if it is still unanswered. Answering may free the NEXT one:
+          heldGolden serves a backlog oldest first, so somebody with several
+          waiting works through them one at a time. */}
+      <GoldenChoice held={golden} onDone={() => {
+        setGolden(null)
+        void heldGolden().then(h => { if (h) setGolden(h) }).catch(() => {})
+      }} />
+
       {/* THE CONFIRM UNDER THE ARCH IS GONE. It asked "sail through to
           Expeditions?" and answered by navigating to a page, which was the
           right shape while there was nothing on the other side of the reef.
@@ -6646,6 +6676,8 @@ hullRef={hullRefFor(t.key)} />
           // that way and a fish surfacing inside your own boat is a strange
           // thing to draw. Far enough ahead to clear the sprite, near enough
           // to plainly be on your line.
+          onGolden={setGolden}
+          goldenPending={golden !== null}
           onLanded={perfect => gpuRef.current?.splash(
             pos.current.x + facing.current * 150, pos.current.y + 70,
             facing.current, perfect)}
