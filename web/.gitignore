@@ -75,3 +75,7 @@ public/badgebatch*.png
 # building art instead, which absolutely must ship. The rule stayed behind after
 # the pivot and silently swallowed the first five plates dropped into it.
 # If the Godot export ever comes back it needs its own path.
+
+# Nano-banana prompt sources for generated art. The PNG/JPG that comes out is
+# committed; the prompt that made it is kept locally so a regeneration starts
+# from the same words rather than from memory.
