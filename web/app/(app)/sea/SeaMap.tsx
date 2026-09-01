@@ -213,6 +213,8 @@ const VoyageBoard = dynamic(() => import('./VoyageBoard'), { ssr: false })
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
 const SeaSettings = dynamic(() => import('./SeaSettings'), { ssr: false })
+// The Daily Haul, which used to be a page under the Tavern. See sea/SeaBonus.
+const SeaBonus = dynamic(() => import('./SeaBonus'), { ssr: false })
 // And the soundtrack, which the chart lost when /fishing was retired. See
 // SeaAudio: it starts on the first press, not on mount.
 const SeaAudio = dynamic(() => import('./SeaAudio'), { ssr: false })
@@ -6316,6 +6318,16 @@ hullRef={hullRefFor(t.key)} />
           exception because they are places you might want to go and a wide
           window has room for both; this one is a menu, and a menu has nothing
           to say while you are fishing however much room there is. */}
+      {/* ── THE RIGHT-HAND PAIR ────────────────────────────────────────
+          The haul first, then the settings gear in the corner. Both hide
+          while the rod is out: zoomed into a cast, the chart's furniture is
+          in the way of the one thing on screen that matters, and a disc
+          quietly asking to be tapped mid-cast is worse than in the way.
+
+          Laid out from the corner inwards, and the gear keeps the corner
+          because it is the one that was already there — a control that moves
+          when a badge appears next to it is a control people mis-tap. */}
+      {!fishingIn && <SeaBonus size={hudSize} top={18} right={12 + hudSize + 8} />}
       {!fishingIn && <SeaSettings size={hudSize} top={18} />}
 
       {/* THE SOUNDTRACK. Starts on the first press rather than on mount, both

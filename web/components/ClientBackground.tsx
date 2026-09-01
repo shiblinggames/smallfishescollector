@@ -31,7 +31,6 @@ const ROUTE_BG: [string, BgConfig][] = [
   ['/tavern/chart-room',       { src: '/page-chartroom.jpg',  overlay: TAV }],
   ['/tavern/trivia',           { src: '/page-parlor.jpg',     overlay: TAV }],
   ['/tavern/contests',         { src: '/page-contests.jpg',   overlay: TAV }],
-  ['/tavern/daily-bonus',      { src: '/page-dailybonus.jpg', overlay: TAV }],
   ['/tavern/tide-run',         { src: '/page-tiderun.jpg',    overlay: TAV }],
   // THE MARKET IS NOT A PLACE, it is a board. Every other tavern route is a
   // painted room you walk into; this one is a trading screen, and a blurred

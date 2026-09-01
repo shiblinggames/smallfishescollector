@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { isPremiumActive } from '@/lib/premium'
 import TideRunCard from './TideRunCard'
-import DailyBonusCard from './DailyBonusCard'
 import ContestsHubCard from './ContestsHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import Gossip from './Gossip'
@@ -13,7 +12,6 @@ import SaltRoadDigest from './SaltRoadDigest'
 import SupportStudioCard from '@/components/SupportStudioCard'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
-import { kingWeekStr } from './trivia/constants'
 
 /**
  * ── THE TAVERN IS THE SOCIAL ROOM ───────────────────────────────────────────
@@ -63,15 +61,6 @@ export default async function TavernPage() {
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
 
-  // Login Bonus card shows a reset timer once the player has claimed everything
-  // available right now: today's gems + bait AND this week's crate. The soonest
-  // thing to return is the daily gems/bait (UTC midnight), so it's a daily timer.
-  const today = new Date().toISOString().split('T')[0]
-  const dailyClaimed =
-    profile?.last_daily_claim === today &&
-    profile?.last_worm_claim === today &&
-    profile?.last_crate_claim_week === kingWeekStr()
-
   return (
     <main className="min-h-screen">
       {/* The setup and welcome modals used to be mounted here, on the reasoning
@@ -107,10 +96,11 @@ export default async function TavernPage() {
             free at the same weight as everything above them; they have one
             thing in common (they come back tomorrow) and now they say so. */}
         <Group title="The day">
-          <div className="grid grid-cols-2 gap-3">
-            <DailyBonusCard claimed={dailyClaimed} />
-            <ContestsHubCard hasNew={profile?.has_seen_contests !== true} />
-          </div>
+          {/* THE LOGIN BONUS IS NOT HERE ANY MORE. It was a card leading to a
+              page, which put free daily currency three taps deep behind a hub
+              nobody opens for it. It is a disc on the sea chart now, and it
+              flashes while something is unclaimed. See sea/SeaBonus. */}
+          <ContestsHubCard hasNew={profile?.has_seen_contests !== true} />
           {/* TIDE RUN, HERE, ON PURPOSE. It is not a chip game — the Den's
               tables are blackjack, roulette and slots, and its wallet and daily
               cap are all about buy-ins — so filing it under the Den would put a

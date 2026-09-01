@@ -101,3 +101,44 @@ export async function claimWeeklyCrate(): Promise<
 
   return { claimed: true, tier, loot }
 }
+
+/**
+ * WHAT IS STILL WAITING, for the disc on the sea.
+ *
+ * The Daily Haul used to be a page, and a page gets its state from its own
+ * server component. It is a modal hanging off a HUD disc now, and the disc has
+ * to know whether to flash before anybody opens it — so this is the same three
+ * stamps the page read, fetched by the button itself.
+ *
+ * Read-only and cheap on purpose: it runs on every chart load, and the disc is
+ * one of the first things drawn.
+ */
+export async function bonusState(): Promise<{
+  isPremium: boolean
+  gemsClaimed: boolean
+  baitClaimed: boolean
+  crateClaimed: boolean
+} | null> {
+  const supabase = await createClient()
+  // getSession, not getUser: this is a read of the caller's own row and the
+  // session is enough to name them. See the note in lib/supabase.
+  const { data: { session } } = await supabase.auth.getSession()
+  const uid = session?.user?.id
+  if (!uid) return null
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('is_premium, premium_expires_at, last_daily_claim, last_worm_claim, last_crate_claim_week')
+    .eq('id', uid)
+    .single()
+  if (!profile) return null
+
+  const today = new Date().toISOString().split('T')[0]
+  return {
+    isPremium: isPremiumActive(profile),
+    gemsClaimed: profile.last_daily_claim === today,
+    baitClaimed: profile.last_worm_claim === today,
+    crateClaimed: profile.last_crate_claim_week === kingWeekStr(),
+  }
+}

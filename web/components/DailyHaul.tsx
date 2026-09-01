@@ -1,12 +1,27 @@
 'use client'
 
+// ── THE DAILY HAUL ──────────────────────────────────────────────────────────
+//
+// Three claims: gems and bait daily, a crate on Mondays. This was a PAGE under
+// the Tavern, reached by opening the Tavern, finding the card in "The day" and
+// tapping through — three navigations to press two buttons, and nothing
+// anywhere else in the app ever mentioned that something was waiting.
+//
+// It is a modal off a HUD disc on the chart now (see sea/SeaBonus), which is
+// where people actually are. The body did not have to change to make that work
+// and mostly did not: what left was the page chrome, the back button and the
+// heading, because a modal has its own title and its own way out.
+//
+// It still owns nothing. Every claim is a server action that grants and stamps;
+// this only reflects what came back, which is why closing the modal mid-spin
+// cannot cost anybody a crate.
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions/dailyBonus'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import CrateOpening, { crateArt, type CrateTierId, type CrateLootView } from '@/components/CrateOpening'
-import BackButton from '@/components/BackButton'
 import ResetCountdown from '@/components/ResetCountdown'
 
 const GEM = '#a78bfa'
@@ -22,11 +37,14 @@ type GoodLoot = Exclude<Loot, { error: string }>
 type CratePhase = 'idle' | 'rolling' | 'revealed'
 
 
-export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaimed: b0, crateClaimed: c0 }: {
+export default function DailyHaul({ isPremium, gemsClaimed: g0, baitClaimed: b0, crateClaimed: c0, onClaimed }: {
   isPremium: boolean
   gemsClaimed: boolean
   baitClaimed: boolean
   crateClaimed: boolean
+  /** Fired after any successful claim, so the disc that opened this can stop
+   *  flashing the moment the last one is gone rather than on the next load. */
+  onClaimed?: (all: boolean) => void
 }) {
   const router = useRouter()
   const [gemsClaimed, setGemsClaimed] = useState(g0)
@@ -51,6 +69,7 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
     if (r.claimed) {
       setGemsClaimed(true)
       if (r.gems !== undefined) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.gems }))
+      onClaimed?.(baitClaimed && crateClaimed)
     }
     setLoading(null)
   }
@@ -59,7 +78,10 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
     if (baitClaimed || loading) return
     setLoading('bait')
     const r = await claimDailyBait()
-    if (r.claimed) setBaitClaimed(true)
+    if (r.claimed) {
+      setBaitClaimed(true)
+      onClaimed?.(gemsClaimed && crateClaimed)
+    }
     setLoading(null)
   }
 
@@ -70,6 +92,7 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
     setLoading(null)
     if (!r.claimed) return
     setCrateClaimed(true)
+    onClaimed?.(gemsClaimed && baitClaimed)
 
     const loot = r.loot
     if ('error' in loot) { setCratePhase('revealed'); router.refresh(); return }
@@ -89,17 +112,19 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <BackButton href="/tavern" label="Tavern" />
+      <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f5f0e6', lineHeight: 1.1 }}>Daily Haul</h2>
         {isPremium && (
-          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: GOLD, background: `${GOLD}16`, border: `1px solid ${GOLD}44`, borderRadius: 999, padding: '0.2rem 0.5rem' }}>Captain</span>
+          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{
+            display: 'inline-block', marginTop: 6,
+            fontSize: '0.5rem', color: GOLD, background: `${GOLD}16`,
+            border: `1px solid ${GOLD}44`, borderRadius: 999, padding: '0.2rem 0.5rem',
+          }}>Captain</span>
         )}
+        <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 8 }}>
+          {allDone ? "You've claimed it all. Fair winds tomorrow." : 'Stop by every day. The crate refreshes each Monday.'}
+        </p>
       </div>
-      <h1 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f5f0e6', textAlign: 'center', marginBottom: 2 }}>Daily Haul</h1>
-      <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', textAlign: 'center', marginBottom: 20 }}>
-        {allDone ? "You've claimed it all. Fair winds tomorrow." : 'Stop by every day. The crate refreshes each Monday.'}
-      </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <ClaimCard
