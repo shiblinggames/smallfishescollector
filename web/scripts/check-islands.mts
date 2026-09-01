@@ -19,7 +19,63 @@ import { HOUSE } from '../lib/homestead'
    module PlaceIsland draws from, so this cannot drift from what is on screen
    the way it did before. */
 
-type Item = { label: string; x: number; y: number; scale: number; toShore?: boolean }
+type Item = { label: string; art: string; x: number; y: number; scale: number; toShore?: boolean }
+
+/**
+ * ── IT MEASURES THE FOOTPRINT, NOT THE BOUNDING BOX ─────────────────────────
+ *
+ * This checker used to test the sprite's full width: x - scale*50 and
+ * x + scale*50, on the reasoning that those are the corners of its base. They
+ * are not. They are the corners of its BOX, and the corners of a box are usually
+ * transparent — the Estate's ground only spans 17% to 81% of its plate, and the
+ * mainland town's 22% to 79%. So the two points the gate cared most about were
+ * empty pixels hanging in the air beside the art, and it was failing placements
+ * that were visibly correct on the island.
+ *
+ * A false failure is worse than no check: it teaches you to override the gate,
+ * and then the gate is not there for the real one.
+ *
+ * So the base is READ OFF THE ART — the leftmost and rightmost opaque pixels in
+ * the bottom band of the paint. `top`/`bot` scan past any transparent padding
+ * first, so the band is a share of what is DRAWN rather than of the file.
+ */
+const BAND = 0.15
+const ALPHA = 24
+
+const feet = new Map<string, { l: number; r: number }>()
+
+async function footprint(art: string): Promise<{ l: number; r: number }> {
+  const hit = feet.get(art)
+  if (hit) return hit
+  // A plate that cannot be read falls back to the whole box, which is the old
+  // behaviour and the cautious direction to be wrong in.
+  let out = { l: 0, r: 1 }
+  try {
+    const sharp = (await import('sharp')).default
+    const { data, info } = await sharp(`public${art}`).ensureAlpha().raw()
+      .toBuffer({ resolveWithObject: true })
+    const { width: w, height: h } = info
+    const rowInk = (y: number) => {
+      for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] > ALPHA) return true
+      return false
+    }
+    let top = 0, bot = h - 1
+    while (top < h && !rowInk(top)) top++
+    while (bot > top && !rowInk(bot)) bot--
+    const band = Math.max(1, Math.round((bot - top) * BAND))
+    let L = w, R = 0
+    for (let y = bot - band; y <= bot; y++) {
+      for (let x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] > ALPHA) { if (x < L) L = x; if (x > R) R = x }
+      }
+    }
+    if (R > L) out = { l: L / w, r: (R + 1) / w }
+  } catch {
+    console.log(`    (could not read public${art}, measuring its whole box)`)
+  }
+  feet.set(art, out)
+  return out
+}
 
 /** How far outside its own band a point is. outBy measures against the green;
  *  the scrub and the shore are further out, so each is the same number scaled.
@@ -29,18 +85,22 @@ const K_SHORE = SHORE / GRASS
 const outByLand = (rs: number[], x: number, y: number, toShore = false) =>
   Math.hypot(x - 50, y - 50) - grassAt(rs, Math.atan2(y - 50, x - 50)) * (toShore ? K_SHORE : K)
 
-function check(id: string, name: string, items: Item[]) {
+async function check(id: string, name: string, items: Item[]) {
   const rs = coastline(id)
   const lo = Math.min(...rs) * BUILDABLE, hi = Math.max(...rs) * BUILDABLE
   console.log(`\n  ${name}  (buildable land reaches ${lo.toFixed(1)}%..${hi.toFixed(1)}% from centre)`)
   let bad = 0
   for (const it of items) {
-    const hw = it.scale * 50            // half the sprite's width, in box-percent
-    // The base it stands on: centre and both bottom corners.
+    const w = it.scale * 100            // the sprite's width, in box-percent
+    const f = await footprint(it.art)
+    // WHERE THE ART ACTUALLY MEETS THE GROUND. The sprite is anchored at its
+    // bottom CENTRE, so a fraction f across the plate sits (f - 0.5) of the
+    // width from x. Rarely symmetric: the Estate's ground reaches further left
+    // than right, and that asymmetry is most of the reason to read it at all.
     const pts: [string, number, number][] = [
-      ['centre', it.x, it.y],
-      ['left', it.x - hw, it.y],
-      ['right', it.x + hw, it.y],
+      ['centre', it.x + ((f.l + f.r) / 2 - 0.5) * w, it.y],
+      ['left', it.x + (f.l - 0.5) * w, it.y],
+      ['right', it.x + (f.r - 0.5) * w, it.y],
     ]
     const worst = pts.reduce((w, [tag, px, py]) => {
       const d = outByLand(rs, px, py, it.toShore)
@@ -48,8 +108,9 @@ function check(id: string, name: string, items: Item[]) {
     }, { tag: '', d: -Infinity })
     const ok = worst.d < -1.5           // 1.5% of margin, so nothing sits on the surf
     if (!ok) bad++
-    console.log(`    ${ok ? 'ok  ' : 'OFF '} ${it.label.padEnd(20)} at ${String(it.x).padStart(3)},${String(it.y).padStart(3)} w${(hw * 2).toFixed(0).padStart(3)}` +
-      `   worst ${worst.tag.padEnd(6)} ${worst.d > 0 ? '+' : ''}${worst.d.toFixed(1)}%${it.toShore ? '   (to shore)' : ''}`)
+    console.log(`    ${ok ? 'ok  ' : 'OFF '} ${it.label.padEnd(20)} at ${String(it.x).padStart(3)},${String(it.y).padStart(3)}`
+      + ` w${w.toFixed(0).padStart(3)} foot${((f.r - f.l) * w).toFixed(0).padStart(3)}`
+      + `   worst ${worst.tag.padEnd(6)} ${worst.d > 0 ? '+' : ''}${worst.d.toFixed(1)}%${it.toShore ? '   (to shore)' : ''}`)
   }
   return bad
 }
@@ -61,14 +122,14 @@ for (const p of PLACES) {
     // ONE SPRITE PER RUNG, all at the same spot, so every rung is checked
     // rather than only the widest: they are the same painting growing, and
     // the Estate is not automatically the one that overhangs first.
-    bad += check(p.id, `${p.name} (every rung of the house)`, HOUSE.map(b => ({
-      label: b.name,
+    bad += await check(p.id, `${p.name} (every rung of the house)`, HOUSE.map(b => ({
+      label: b.name, art: b.art,
       x: b.x, y: b.y,
       scale: b.scale,
     })))
   } else {
-    bad += check(p.id, p.name, (p.buildings ?? []).map(b => ({
-      label: b.art.split('/').pop()!.replace('.png', ''),
+    bad += await check(p.id, p.name, (p.buildings ?? []).map(b => ({
+      label: b.art.split('/').pop()!.replace('.png', ''), art: b.art,
       x: b.x, y: b.y, scale: b.scale, toShore: b.toShore,
     })))
   }

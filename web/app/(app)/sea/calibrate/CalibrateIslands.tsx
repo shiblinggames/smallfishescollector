@@ -61,10 +61,13 @@ const ISLANDS = PLACES.filter(p => p.kind !== 'water' && p.inner === undefined)
  * houses are supposed to stand on the sand. Both are drawn, and the one that
  * applies is the solid one.
  *
- * It is a BASE test, not a silhouette test: it takes the sprite's full width as
- * if it were solid along its footing, which for a town of irregular houses with
- * transparent margins is pessimistic. Read a small overhang as a warning rather
- * than a verdict, and a large one as the verdict it is.
+ * And it measures the FOOTPRINT, not the bounding box. Taking the sprite's full
+ * width as its base was the gate's old mistake and it was a bad one: the corners
+ * of a plate are transparent, so the two points it cared most about were empty
+ * pixels hanging in the air beside the art. The Estate's ground spans 17% to 81%
+ * of its plate. The bench reads the alpha of the bottom band the same way
+ * scripts/check-islands does, and the drawn outline of the base shows what it
+ * found.
  */
 const K = BUILDABLE / GRASS
 const K_SHORE = SHORE / GRASS
@@ -77,15 +80,68 @@ function outByLand(rs: number[], x: number, y: number, toShore: boolean) {
     - grassAt(rs, Math.atan2(y - 50, x - 50)) * (toShore ? K_SHORE : K)
 }
 
-/** The worst of the three points the gate checks: the centre of the base and
- *  both of its corners. */
-function worstOut(rs: number[], b: Item) {
-  const hw = b.scale * 50
-  return Math.max(
-    outByLand(rs, b.x, b.y, !!b.toShore),
-    outByLand(rs, b.x - hw, b.y, !!b.toShore),
-    outByLand(rs, b.x + hw, b.y, !!b.toShore),
-  )
+/** Where a plate's paint actually meets the ground, as fractions across it.
+ *  Measured once per art path and kept: it never changes. */
+const FEET = new Map<string, { l: number; r: number }>()
+const BAND = 0.15
+const ALPHA = 24
+
+function measureFoot(art: string): Promise<{ l: number; r: number }> {
+  const hit = FEET.get(art)
+  if (hit) return Promise.resolve(hit)
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      let out = { l: 0, r: 1 }
+      try {
+        const cv = document.createElement('canvas')
+        // Read at a modest width. The footprint is a fraction of the plate, so
+        // it is scale invariant, and 400 columns is finer than a percent.
+        const w = 400, h = Math.max(1, Math.round((img.height / img.width) * w))
+        cv.width = w; cv.height = h
+        const g = cv.getContext('2d', { willReadFrequently: true })!
+        g.drawImage(img, 0, 0, w, h)
+        const { data } = g.getImageData(0, 0, w, h)
+        const rowInk = (y: number) => {
+          for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] > ALPHA) return true
+          return false
+        }
+        let top = 0, bot = h - 1
+        while (top < h && !rowInk(top)) top++
+        while (bot > top && !rowInk(bot)) bot--
+        const band = Math.max(1, Math.round((bot - top) * BAND))
+        let L = w, R = 0
+        for (let y = bot - band; y <= bot; y++) {
+          for (let x = 0; x < w; x++) {
+            if (data[(y * w + x) * 4 + 3] > ALPHA) { if (x < L) L = x; if (x > R) R = x }
+          }
+        }
+        if (R > L) out = { l: L / w, r: (R + 1) / w }
+      } catch { /* a plate that will not read falls back to its whole box */ }
+      FEET.set(art, out)
+      resolve(out)
+    }
+    // An image that never loads measures as its whole box, which is the
+    // cautious direction to be wrong in.
+    img.onerror = () => { FEET.set(art, { l: 0, r: 1 }); resolve({ l: 0, r: 1 }) }
+    img.src = art
+  })
+}
+
+/** The three points the gate checks, in island-box percent: the centre of the
+ *  base and both of its ends. The sprite is anchored bottom CENTRE, so a
+ *  fraction f across the plate sits (f - 0.5) of the width from x. */
+function basePoints(b: Item, f: { l: number; r: number }) {
+  const w = b.scale * 100
+  return [
+    b.x + ((f.l + f.r) / 2 - 0.5) * w,
+    b.x + (f.l - 0.5) * w,
+    b.x + (f.r - 0.5) * w,
+  ]
+}
+
+function worstOut(rs: number[], b: Item, f: { l: number; r: number }) {
+  return Math.max(...basePoints(b, f).map(px => outByLand(rs, px, b.y, !!b.toShore)))
 }
 
 /** One band's outline as an SVG polygon, in the island box's own percent. */
@@ -134,6 +190,10 @@ export default function CalibrateIslands() {
   const k = VIEW / full
 
   const rs = useMemo(() => coastline(place.id), [place.id])
+
+  /** Bumped as each plate finishes measuring, so the verdict appears as soon as
+   *  the art is decoded rather than a drag later. */
+  const [measured, setMeasured] = useState(0)
 
   const island = useMemo(() => {
     if (typeof window === 'undefined') return null
@@ -195,6 +255,22 @@ export default function CalibrateIslands() {
         + `${b.toShore ? ', toShore: true' : ''} },`).join('\n')
       + '\n],\n'
   }, [isHome, house, rows, place.id])
+
+  // MEASURE WHATEVER IS ON THE BENCH. Cheap and cached, and it has to happen
+  // before the verdict means anything: an unmeasured plate reads as solid to its
+  // corners, which is exactly the wrong answer the gate used to give.
+  useEffect(() => {
+    let dead = false
+    for (const b of items) {
+      if (FEET.has(b.art)) continue
+      void measureFoot(b.art).then(() => { if (!dead) setMeasured(n => n + 1) })
+    }
+    return () => { dead = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.map(b => b.art).join(',')])
+
+  const foot = (art: string) => FEET.get(art) ?? { l: 0, r: 1 }
+  void measured
 
   const copy = async () => {
     try {
@@ -313,6 +389,30 @@ export default function CalibrateIslands() {
               strokeWidth={cur?.toShore ? 0.4 : 0.25}
               strokeDasharray={cur?.toShore ? undefined : '1 1.4'}
               vectorEffect="non-scaling-stroke" />
+
+            {/* ── THE BASE THE GATE ACTUALLY MEASURES ───────────────────
+                The bar under the selected building is the span of its paint
+                where it meets the ground, read off the plate's alpha. Drawn
+                because the difference between it and the sprite's width is the
+                entire reason the old check was failing correct placements, and
+                a number in a readout does not make that visible the way a line
+                sitting well inside the art does. */}
+            {cur && (() => {
+              const [c, l, r] = basePoints(cur, foot(cur.art))
+              const bad = worstOut(rs, cur, foot(cur.art)) >= -1.5
+              const ink = bad ? 'rgba(255,140,120,0.95)' : 'rgba(120,240,170,0.95)'
+              return (
+                <g>
+                  <line x1={l} y1={cur.y} x2={r} y2={cur.y}
+                    stroke={ink} strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
+                  {[l, c, r].map((px, i) => (
+                    <circle key={i} cx={px} cy={cur.y} r={i === 1 ? 0.7 : 1}
+                      fill={i === 1 ? ink : 'none'} stroke={ink}
+                      strokeWidth={0.4} vectorEffect="non-scaling-stroke" />
+                  ))}
+                </g>
+              )
+            })()}
           </svg>
 
           {items.map((b, i) => (
@@ -388,7 +488,7 @@ export default function CalibrateIslands() {
               than after. The gate wants 1.5% of margin so nothing sits on the
               surf, so that is the number quoted. */}
           {(() => {
-            const out = worstOut(rs, cur)
+            const out = worstOut(rs, cur, foot(cur.art))
             const ok = out < -1.5
             return (
               <span className="font-karla font-700" style={{
@@ -399,6 +499,7 @@ export default function CalibrateIslands() {
                 border: `1px solid ${ok ? 'rgba(120,240,170,0.4)' : 'rgba(255,120,100,0.45)'}`,
               }}>
                 {ok ? `on the land, ${(-out).toFixed(1)}% clear` : `OFF the land by ${(out + 1.5).toFixed(1)}%`}
+                {' · '}foot {((foot(cur.art).r - foot(cur.art).l) * cur.scale * 100).toFixed(0)}%
               </span>
             )
           })()}

@@ -125,27 +125,27 @@ export type Build = {
  */
 export const HOUSE: Build[] = [
   {
-    name: 'A lean-to', cost: 0, art: '/sea/home-isle-1.png', x: 54, y: 60, scale: 0.28,
+    name: 'A lean-to', cost: 0, art: '/sea/home-isle-1.png', x: 53, y: 56, scale: 0.28,
     blurb: 'Salvage, canvas and stubbornness.',
     adds: '',
   },
   {
-    name: 'A cottage', cost: 60_000, art: '/sea/home-isle-2.png', x: 54, y: 60, scale: 0.33,
+    name: 'A cottage', cost: 60_000, art: '/sea/home-isle-2.png', x: 53, y: 59, scale: 0.36,
     blurb: 'One room, one chimney, and a door that shuts.',
     adds: 'A kitchen garden, and a path worn between the two.',
   },
   {
-    name: 'A longhouse', cost: 300_000, art: '/sea/home-isle-3.png', x: 54, y: 60, scale: 0.38,
+    name: 'A longhouse', cost: 300_000, art: '/sea/home-isle-3.png', x: 54, y: 61, scale: 0.41,
     blurb: 'Long enough to hang the nets indoors.',
     adds: 'A walled garden, a drying rack and a woodpile.',
   },
   {
-    name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', x: 54, y: 60, scale: 0.43,
+    name: 'A great hall', cost: 900_000, art: '/sea/home-isle-4.png', x: 54, y: 63, scale: 0.45,
     blurb: 'Two storeys, and a fire that never quite goes out.',
     adds: 'A brazier up on the headland, and a boathouse below it.',
   },
   {
-    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', x: 54, y: 60, scale: 0.46,
+    name: 'The Estate', cost: 2_400_000, art: '/sea/home-isle-5.png', x: 54, y: 66, scale: 0.50,
     blurb: 'Nobody mistakes it for anywhere else.',
     adds: 'A working lighthouse. They can see you coming from the Abyss.',
   },
