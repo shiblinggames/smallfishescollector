@@ -25,15 +25,54 @@ export const ZONE_MIN_LEVEL: Record<string, number> = {
 import { CRATE_PET_CHANCE } from '@/lib/pets'
 import type { CrateTier } from '@/lib/crateLoot'
 
-// Base bite-wait band per zone (ms): [fastest common, slowest rare]. The actual
-// wait interpolates within by catch_score and is cut by bait + fishing level +
-// rod. Shared by castLine (fishWaitMs) and the zone-selector Details readout.
+/**
+ * ── HOW LONG A BITE TAKES, BY ZONE ──────────────────────────────────────────
+ *
+ * A band in milliseconds, rolled uniformly per cast. The zone is the whole of
+ * it: further out is a longer wait, and nothing else moves the base number.
+ *
+ * ── IT USED TO TELL YOU WHAT YOU HAD CAUGHT ─────────────────────────────────
+ *
+ * The wait was interpolated across this band by the fish's `catch_score`, so a
+ * long wait meant a high-score fish. And catch_score climbs with rarity in
+ * every zone, which made the delay a RELIABLE TELL: a Shallows legendary
+ * averaged 7.4s against a common's 3.2s, so by the time the needle came up you
+ * already knew roughly what was on the line. The reveal was over before the
+ * dial started.
+ *
+ * It is a roll now. Nothing about the wait knows anything about the fish, and
+ * the fish is picked by the rarity table exactly as it always was. Two systems
+ * that were quietly coupled, uncoupled.
+ *
+ * (`catch_score` was this and only this. It is still on the row and still
+ * selected, and it now drives nothing — left in place because it is real data
+ * somebody may want, but it is no longer a mechanic.)
+ *
+ * ── AND THE BANDS ARE TIGHTER AND LONGER ────────────────────────────────────
+ *
+ * The spread was about four to one inside a single zone, so "the Shallows" was
+ * not a wait, it was a lottery between three and twelve seconds. Now it is
+ * roughly 1.6 to 1: still varied enough that no two casts are identical, tight
+ * enough that a zone has a rhythm you can learn.
+ *
+ * Longer, too. Every base is up 20-40% on its old midpoint, because five
+ * separate systems already multiply this number DOWN — bait, level, renown, the
+ * rod and Angler's Patience — and the old bases were set before most of them
+ * existed. A fully kitted captain still fishes the Shallows at the 3s floor.
+ *
+ *   zone           was              now             spread    mean
+ *   shallows        3-12s (4.00x)    8-13s (1.63x)            +40%
+ *   open_waters     5-20s (4.00x)   13-21s (1.62x)            +36%
+ *   deep            8-35s (4.38x)   21-33s (1.57x)            +26%
+ *   abyss          12-45s (3.75x)   30-46s (1.53x)            +33%
+ *   ancient_deep   45-120s (2.67x)  80-120s (1.50x)           +21%
+ */
 export const ZONE_WAIT_BASE: Record<string, [number, number]> = {
-  shallows:     [3000,  12000],
-  open_waters:  [5000,  20000],
-  deep:         [8000,  35000],
-  abyss:        [12000, 45000],
-  ancient_deep: [45000, 120000],
+  shallows:     [8000,  13000],
+  open_waters:  [13000, 21000],
+  deep:         [21000, 33000],
+  abyss:        [30000, 46000],
+  ancient_deep: [80000, 120000],
 }
 
 // Chance of hooking a crate on a cast (before rod crateChanceMult). Ancient Deep

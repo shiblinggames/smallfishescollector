@@ -22,6 +22,39 @@ fish. Streaks of perfect catches build "on fire" state with escalating rewards.
   `web/app/(app)/fishing/zoneData.ts`, `web/lib/fishSpecies.ts`.
 - Server verdicts: `reelIn` in `web/app/(app)/fishing/actions.ts`.
 
+## The bite wait
+
+**The zone sets a band and the cast rolls uniformly inside it.** That is the whole base
+number; nothing about the fish enters into it.
+
+| zone | band | spread |
+|---|---|---|
+| shallows | 8-13s | 1.63x |
+| open_waters | 13-21s | 1.62x |
+| deep | 21-33s | 1.57x |
+| abyss | 30-46s | 1.53x |
+| ancient_deep | 80-120s | 1.50x |
+
+Then five multipliers, all of which pull the same number DOWN and all of which stack: bait
+(worm x1 to golden x0.55), fishing level (a flat 33% across the ladder), fishing renown, the
+rod (`min(rodWaitMult, lockedInState.waitMult)` — the Locked-In streak REPLACES the rod's own
+rather than adding to it), and Angler's Patience x the shoal hotspot. 3s floor, no ceiling.
+The Lightsaber's `instantBiteChance` bypasses the lot and clamps to 700ms.
+
+**THE WAIT USED TO TELL YOU WHAT YOU HAD CAUGHT.** It was interpolated across the band by the
+fish's `catch_score`, and score climbs with rarity in every zone, so the delay was a reliable
+tell: a Shallows legendary averaged 7.4s against a common's 3.2s, a 2.31x spread. You knew
+roughly what was on the line before the needle appeared, which takes the reveal off the dial
+AND off the card and hands it to a progress bar. Measured after the change: 1.002x, i.e.
+nothing.
+
+**`catch_score` was that and only that.** It is still on the row and still selected, and it
+now drives nothing. Left in place as real data somebody may want; it is not a mechanic.
+
+**The bands were also four-to-one wide and are now about 1.6-to-1**, so a zone has a rhythm
+you can learn instead of being a lottery, and every base is 20-40% longer because five
+systems already multiply it down and the old bases predate most of them.
+
 ## Rules that differ from what you'd assume
 
 - **A perfect streak is NOT bound to a zone.** It used to break the moment you cast in

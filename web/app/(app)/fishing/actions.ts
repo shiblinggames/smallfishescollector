@@ -48,19 +48,29 @@ export type FishSpecies = {
 
 import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL, ZONE_WAIT_BASE, ZONE_CRATE_TIERS, zoneCrateChance } from './zoneData'
 
-// Wait time: zone sets the range, catch_score positions within it (higher score = longer wait)
-function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1, rodMult = 1): number {
-  const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
-  const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
-  const base = zMin + frac * (zMax - zMin)
+/**
+ * HOW LONG THE BITE TAKES. The zone sets a band and the cast rolls inside it.
+ *
+ * IT TOOK A `catchScore` AND THAT WAS THE BUG IN IT. The wait was interpolated
+ * across the band by the fish's own score, and score climbs with rarity in
+ * every zone, so the delay told you what was coming: a Shallows legendary
+ * averaged 7.4s against a common's 3.2s. You knew roughly what you had before
+ * the needle appeared, which takes the reveal off the dial and off the card and
+ * gives it to a progress bar.
+ *
+ * Uniform inside the band now. Nothing here knows which fish was picked, and
+ * the picking is untouched — the rarity table still decides that, on its own.
+ */
+function fishWaitMs(habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1, rodMult = 1): number {
+  const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [13000, 21000]
+  const base = zMin + Math.random() * (zMax - zMin)
   const baitMult = getBait(baitType).waitMult
   const levelMult = 1 - ((fishingLevel - 1) / 99) * 0.33
-  // No upper cap — zone band + catch_score + bait multiplier all need
-  // to actually land where they land. The cap was a legacy sanity rail
-  // from before Ancient Deep's 45-120s band; it was squashing every
-  // worm-baited cast in that zone to a flat 60s and erasing the bait
-  // choice the player just made. 3s floor stays as a sanity check
-  // against negative-wait pathologies from stacked future buffs.
+  // No upper cap — the zone band and the multipliers need to land where they
+  // land. The cap was a legacy sanity rail from before the Ancient Deep had a
+  // band measured in minutes; it squashed every worm-baited cast out there to a
+  // flat 60s and erased the bait choice the player had just made. The 3s floor
+  // stays as a guard against negative waits from stacked buffs.
   return Math.max(3000, Math.round(base * baitMult * levelMult * renownWaitMult * rodMult))
 }
 
@@ -568,7 +578,9 @@ export async function castLine(
   }
   // Locked-In quickens bites at streak 3+ (−20%) / 10+ (−35%); take the faster of
   // the rod's base speed and the streak stage.
-  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult) * patienceWaitMult * hs.waitMult)
+  // NOT GIVEN THE FISH. See fishWaitMs: the wait used to be derived from what
+  // was on the line and therefore announced it. It is a roll on the zone now.
+  let waitMs = fishWaitMs(habitat, baitType, fishingLevel, renownWaitMult, Math.min(rodWaitMult(rod), locked.waitMult) * patienceWaitMult * hs.waitMult)
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
   // the only rod stat that actually changes the bite wait (biteIntervalMs is
