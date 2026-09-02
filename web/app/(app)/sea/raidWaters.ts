@@ -281,6 +281,83 @@ export function openGaps(b: Basin, cleared: Set<string> | string[]): BasinGap[] 
   return basinGaps(b).filter(g => straitOpen(g.strait, cleared))
 }
 
+/**
+ * ── WHAT IS IN THE WATER ────────────────────────────────────────────────────
+ *
+ * A node from the campaign, standing somewhere in a basin. That is all an
+ * encounter is: the node already knows its own art, its route, its label, its
+ * flavour and — for a fight — its raidId, so nothing about the campaign is
+ * re-authored out here. `lib/raidMap.ts` stays the source of truth and this is
+ * only a place to meet it.
+ *
+ * ── POSITIONS ARE RELATIVE TO THE BASIN ─────────────────────────────────────
+ *
+ * `dx`/`dy` from the basin's centre, not world coordinates. Basins are still
+ * being tuned, and absolute positions would mean re-placing every encounter by
+ * hand each time one moves — which is exactly the trap the homestead's furniture
+ * fell into before it got a bench. Move a basin and its contents go with it.
+ *
+ * ── CHALLENGE VARIANTS ARE NOT ENCOUNTERS ───────────────────────────────────
+ *
+ * `pete_challenge` and `krust_challenge` are deliberately absent. raidMap keeps
+ * them off the map spine because "the boss's own Normal/Challenge switch is
+ * meant to be the single door", and putting a second Pete in the water a few
+ * hundred pixels from the first would undo that decision by drawing it. You sail
+ * to Pete; Pete asks which way you want him.
+ */
+export type Encounter = {
+  /** A RaidNode id. Everything else about it comes from the node. */
+  node: string
+  /** Which basin it stands in. */
+  basin: string
+  /** Offset from that basin's centre, world px. Negative y is north. */
+  dx: number
+  dy: number
+}
+
+/**
+ * CHAPTER I, laid out as a run.
+ *
+ * You come in at the south mouth and leave by the north-east one, and the order
+ * of the chain is the order you meet things if you sail the basin the obvious
+ * way round. That is the whole reason to put a campaign in water: the sequence
+ * stops being a list and becomes a route, and a captain who has done it once
+ * knows where Pete is without being told.
+ *
+ * The story beats sit BETWEEN the fights rather than beside them, so the thing
+ * that explains why you are about to fight somebody is on the way to them.
+ */
+export const ENCOUNTERS: Encounter[] = [
+  // Inside the south mouth and 900px off it. The first pass put this at 650 so
+  // it would be "just inside", and the check refused it: a thing you meet while
+  // still in the mouth is a thing you collide with on the way in.
+  { node: 'intro', basin: 'thread', dx: 0, dy: 1000 },
+  { node: 'skirmish', basin: 'thread', dx: -800, dy: 400 },
+  { node: 'pete', basin: 'thread', dx: -1150, dy: -350 },
+  { node: 'syndicate', basin: 'thread', dx: -700, dy: -1000 },
+  { node: 'krust_reveal', basin: 'thread', dx: 0, dy: -1350 },
+  { node: 'krust', basin: 'thread', dx: 800, dy: -850 },
+  // NOT on the way out, which is where the chapter's closing beat wants to be
+  // and cannot go: everything near the north-east mouth is also near Krust, and
+  // one of them ends up either in the doorway or on top of the other.
+  //
+  // Mid-basin instead, and it is better there. It is gated behind the whole
+  // chapter, so it sits dark in the middle of the water you are working — a
+  // thing you sail past all afternoon and cannot open until the rest is done.
+  { node: 'chapter_1_close', basin: 'thread', dx: 250, dy: -450 },
+]
+
+/** An encounter's place on the chart. */
+export function encounterAt(e: Encounter): { x: number; y: number } | null {
+  const b = BASIN_BY_ID[e.basin]
+  return b ? { x: b.x + e.dx, y: b.y + e.dy } : null
+}
+
+/** Everything standing in one basin. */
+export function encountersIn(basinId: string): Encounter[] {
+  return ENCOUNTERS.filter(e => e.basin === basinId)
+}
+
 /** The first basin's mouth is the sortie. Kept as a function so the caller does
  *  not have to know that, and so it can move. */
 export function basinEntry(): { x: number; y: number } {

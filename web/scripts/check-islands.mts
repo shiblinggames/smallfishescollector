@@ -235,3 +235,79 @@ if (bad) process.exitCode = 1
   console.log(`\n  Basins: ${BASINS.length} placed, ${bad === 0 ? 'chain intact' : `${bad} problem(s)`}.`)
   if (bad) process.exit(1)
 }
+
+// ── WHAT STANDS IN THE CAMPAIGN'S WATER ──────────────────────────────────
+//
+// An encounter is a campaign node placed in a basin, and four things can be
+// quietly wrong about one:
+//
+//   1. It names a node that does not exist — a rename in raidMap and the water
+//      points at nothing, silently, because a missing node just does not draw.
+//   2. It is outside its own basin's wall, so it is unreachable behind rock.
+//   3. It sits ON a mouth, so entering the basin means colliding with content.
+//   4. It sits on top of another encounter, so one hides the other and the
+//      prompt flickers between them.
+{
+  const { BASINS, BASIN_BY_ID, ENCOUNTERS, encounterAt, basinGaps } =
+    await import('../app/(app)/sea/raidWaters')
+  const { RAID_MAP } = await import('../lib/raidMap')
+
+  let bad = 0
+  /** Nothing may sit closer than this to another encounter, or to a mouth. */
+  const APART = 420
+  const OFF_MOUTH = 700
+
+  console.log(`\n  Encounters  (${ENCOUNTERS.length} placed)`)
+  for (const e of ENCOUNTERS) {
+    const node = RAID_MAP.find(n => n.id === e.node)
+    const b = BASIN_BY_ID[e.basin]
+    if (!node) { console.error(`  ✗ '${e.node}' is not a node in RAID_MAP`); bad++; continue }
+    if (!b) { console.error(`  ✗ '${e.node}' is in basin '${e.basin}', which does not exist`); bad++; continue }
+
+    const p = encounterAt(e)!
+    const d = Math.hypot(e.dx, e.dy)
+    const room = b.r - d
+    const inside = room > 260
+    if (!inside) bad++
+
+    // How near the nearest mouth is, measured along the rim.
+    let nearMouth = Infinity
+    for (const g of basinGaps(b)) {
+      const gx = b.x + Math.cos(g.bearing) * b.r, gy = b.y + Math.sin(g.bearing) * b.r
+      nearMouth = Math.min(nearMouth, Math.hypot(p.x - gx, p.y - gy))
+    }
+    const clearOfMouth = nearMouth > OFF_MOUTH
+    if (!clearOfMouth) bad++
+
+    console.log(`    ${inside && clearOfMouth ? 'ok  ' : 'OFF '} ${node.type.padEnd(10)} ${e.node.padEnd(18)}`
+      + ` ${room.toFixed(0).padStart(4)}px inside the wall, ${nearMouth.toFixed(0).padStart(4)}px off the nearest mouth`)
+  }
+
+  for (let i = 0; i < ENCOUNTERS.length; i++) {
+    for (let j = i + 1; j < ENCOUNTERS.length; j++) {
+      const a = encounterAt(ENCOUNTERS[i]), c = encounterAt(ENCOUNTERS[j])
+      if (!a || !c) continue
+      const d = Math.hypot(a.x - c.x, a.y - c.y)
+      if (d < APART) {
+        console.error(`  ✗ ${ENCOUNTERS[i].node} and ${ENCOUNTERS[j].node} are ${d.toFixed(0)}px apart`)
+        bad++
+      }
+    }
+  }
+
+  // Every basin that has content should have a way to finish it: the chapter's
+  // own boss. A basin with story and no fight cannot be cleared from the water.
+  for (const b of BASINS) {
+    const here = ENCOUNTERS.filter(e => e.basin === b.id)
+    if (here.length === 0) continue
+    const fights = here.filter(e => {
+      const n = RAID_MAP.find(x => x.id === e.node)
+      return n && (n.type === 'raid' || n.type === 'skirmish')
+    })
+    console.log(`    ${b.name}: ${here.length} placed, ${fights.length} of them fights`)
+    if (fights.length === 0) { console.error(`  ✗ ${b.name} has no fight in it`); bad++ }
+  }
+
+  console.log(`\n  Encounters: ${bad === 0 ? 'all placed cleanly' : `${bad} problem(s)`}.`)
+  if (bad) process.exit(1)
+}
