@@ -178,6 +178,16 @@ export type GpuHandle = {
      *  when she has to travel with the world instead of being dragged along. */
     offX: number
     offY: number
+    /**
+     * HOW FAR GONE SHE IS, 0 to 1, while the portal has her.
+     *
+     * The boat lives on this canvas, so a DOM effect drawn over the chart can
+     * cover her but cannot make her DISSOLVE — and a captain who stays solid
+     * while the water takes her is a captain standing behind an effect rather
+     * than in one. One number, applied as alpha on the same node the bob and
+     * the heel already ride.
+     */
+    fade?: number
   } | null): void
 }
 
@@ -960,6 +970,8 @@ export default function SeaIslandsGPU({
           if (!c) return
           if (!sk) { c.outer.visible = false; return }
           c.outer.visible = true
+          // GOING, OR COMING BACK. See `fade` on the spec.
+          c.outer.alpha = 1 - Math.max(0, Math.min(1, sk.fade ?? 0))
           // TWO CONTAINERS, because the DOM transform is
           // `translate(-50%,-50%) scale(zoom) translateY(bob) scaleX(facing) rotate(heel)`
           // and a matrix reads right to left: the heel is applied INSIDE the

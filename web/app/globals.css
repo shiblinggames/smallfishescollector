@@ -3236,31 +3236,45 @@ body.hardcore-gauntlet::after {
 }
 
 /* ── STEPPING THROUGH THE PORTAL ───────────────────────────────────────────
-   Two halves of one gesture, on one timeline: the water closes over you, and
-   then it opens again somewhere else. The boat is moved at the seam — the
-   midpoint, where the veil is at full — so the jump itself is never seen and
-   what a captain experiences is a passage rather than a cut.
+   It happens to the BOAT, not to the screen. A full-screen flash says the game
+   cut away; what actually happened is that a hull was taken out of the water
+   and put back somewhere else, so all of this is anchored on the middle of the
+   shot — which is where she always is, because the camera follows her.
 
-   The rings collapse to nothing on the way in and open out of nothing on the
-   way back, which is the same shape mirrored: whatever swallowed you is what
-   spits you out, and that is what makes the far end read as an ARRIVAL rather
-   than as a second unrelated effect.
+   One timeline, two halves, mirrored about the seam at 50%: she is moved at the
+   midpoint, where the core is at full and covering her. Whatever swallows her
+   is visibly what puts her down, and that is what makes the far end read as an
+   arrival rather than a second unrelated effect.
 
-   Opacity and transform only, so the whole thing composites and never costs
-   the chart a frame while it is running. */
-@keyframes warpVeil {
-  0%   { opacity: 0; }
-  38%  { opacity: 1; }
-  62%  { opacity: 1; }
-  100% { opacity: 0; }
+   Transform and opacity only, so the whole thing composites and never costs the
+   chart a frame while it runs. */
+
+/* The core: small, because it only has to cover a hull. */
+@keyframes warpCore {
+  0%   { transform: scale(0.1); opacity: 0; }
+  42%  { transform: scale(1);   opacity: 1; }
+  58%  { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(0.1); opacity: 0; }
 }
 
-@keyframes warpRing {
-  0%   { transform: scale(1);    opacity: 0; }
-  35%  { transform: scale(0.06); opacity: 0.9; }
-  50%  { transform: scale(0.02); opacity: 0.35; }
-  65%  { transform: scale(0.06); opacity: 0.9; }
-  100% { transform: scale(1);    opacity: 0; }
+/* The motes fall in along their own bearing and are thrown back out along it.
+   `--wx`/`--wy` carry the bearing, so sixteen particles share one keyframe. */
+@keyframes warpMote {
+  0%   { transform: translate(var(--wx), var(--wy)) scale(0.6); opacity: 0; }
+  22%  { opacity: 1; }
+  47%  { transform: translate(0, 0) scale(1.5); opacity: 1; }
+  53%  { transform: translate(0, 0) scale(1.5); opacity: 1; }
+  78%  { opacity: 1; }
+  100% { transform: translate(var(--wx), var(--wy)) scale(0.6); opacity: 0; }
+}
+
+/* A hoop, so the swallow has an edge to it rather than being a soft blob. */
+@keyframes warpHoop {
+  0%   { transform: scale(1.25); opacity: 0; }
+  35%  { transform: scale(0.5);  opacity: 0.85; }
+  50%  { transform: scale(0.18); opacity: 0.2; }
+  65%  { transform: scale(0.5);  opacity: 0.85; }
+  100% { transform: scale(1.25); opacity: 0; }
 }
 
 /* THE WAY HOME, breathing. Opacity only, and slow: a hole in the sea with

@@ -245,6 +245,8 @@ const Almanac = dynamic(() => import('../fishing/Almanac'), { ssr: false })
  *  drags GearScreen and the whole forge bench behind it, and a captain who
  *  never moors there never fetches a byte of it. */
 const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
+/** The portal's chart. Only fetched once somebody actually steps into one. */
+const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
@@ -979,9 +981,29 @@ const FAR_MS = 20_000
 
 const SEA_STEP = 96
 
-/** Half a passage, in milliseconds: the veil closes over this long, the boat is
- *  moved at the seam, and it opens again over the same again. */
+/** Half a passage, in milliseconds: she goes over this long, the boat is moved
+ *  at the seam, and she comes back over the same again. */
 const WARP_MS = 480
+
+/**
+ * HOW FAR GONE SHE IS RIGHT NOW.
+ *
+ * A module-level clock rather than state, because the frame loop mounts once
+ * with `[]` deps and reads this sixty times a second — a state value would be
+ * pinned to whatever it was when the loop was built, and a ref threaded through
+ * would be one more thing to remember to reset.
+ *
+ * Nought normally. Rises to one across the first half of a passage and falls
+ * back across the second, so the same number says "dissolving" and "arriving"
+ * without anything having to know which half it is in.
+ */
+let warpStart = 0
+function warpFade(): number {
+  if (!warpStart) return 0
+  const t = performance.now() - warpStart
+  if (t < 0 || t > WARP_MS * 2) { warpStart = 0; return 0 }
+  return t < WARP_MS ? t / WARP_MS : 1 - (t - WARP_MS) / WARP_MS
+}
 
 /**
  * ── NIGHT ON EVERYTHING THAT IS NOT WATER ───────────────────────────────────
@@ -2560,6 +2582,7 @@ export default function SeaMap({
   const jumpTo = useCallback((x: number, y: number, accent: string) => {
     setPortalOpen(false)
     vibrate([14, 60, 22, 60, 30])
+    warpStart = performance.now()
     setWarping({ x, y, accent })
   }, [])
 
@@ -5723,6 +5746,7 @@ export default function SeaMap({
           bob, heel, facing: facing.current, zoom: zoomRef.current,
           frame: frameRef.current, stage: 0,
           offX, offY,
+          fade: warpFade(),
         })
         // AND THE NEAR PASS, every frame. Which rocks are in front changes on
         // the proximity tick, but WHERE they are on the screen changes as fast
@@ -6835,219 +6859,42 @@ hullRef={hullRefFor(t.key)} />
       {portalOpen && (
         <PopupShell open onClose={() => setPortalOpen(false)}>
           <div onClick={e => e.stopPropagation()} style={{
-            // ── TWO COLUMNS WHEN THERE IS ROOM FOR TWO ──────────────────
-            //
-            // The waters and the berths are not a sequence, they are a CHOICE,
-            // and a choice you have to flip a tab to see half of is a choice
-            // made on memory. On a desktop both lists stand side by side and
-            // the whole of what this portal can do is one glance; on a phone
-            // there is no room for that, so it is tabbed and the tabs say which
-            // half you are looking at.
-            margin: 'auto', width: '100%', maxWidth: wide ? 780 : 420,
+            margin: 'auto', width: '100%', maxWidth: wide ? 720 : 460,
             borderRadius: 20, padding: '1.2rem 1.05rem 1.05rem',
             background: 'linear-gradient(180deg, rgba(24,20,34,0.75) 0%, rgba(10,12,20,0.85) 100%), rgba(8,10,18,0.98)',
             border: '1px solid rgba(150,130,240,0.35)',
             boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
-            maxHeight: '86vh', overflowY: 'auto',
+            maxHeight: '88vh', overflowY: 'auto',
           }}>
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(168,146,255,0.85)', margin: 0,
             }}>The Homestead Portal</p>
             <h2 className="font-pirata" style={{
-              fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0', lineHeight: 1.15,
-            }}>Step through?</h2>
+              fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0.8rem', lineHeight: 1.15,
+            }}>Where to?</h2>
 
-            {/* THE TABS, on a phone only. On a desktop both columns are up and
-                a tab rail would be two buttons that do nothing. */}
-            {!wide && (
-              <div style={{ display: 'flex', gap: 6, marginTop: '0.9rem' }}>
-                {([['waters', 'Waters'], ['berths', 'Berths']] as const).map(([id, label]) => (
-                  <button key={id} type="button" data-no-steer
-                    onClick={() => setPortalTab(id)}
-                    className="font-karla font-700"
-                    style={{
-                      flex: 1, padding: '0.44rem 0.6rem', borderRadius: 999, fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      color: portalTab === id ? '#0d1520' : 'rgba(214,232,240,0.82)',
-                      background: portalTab === id ? 'rgba(168,146,255,0.9)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${portalTab === id ? 'rgba(168,146,255,0.9)' : 'rgba(255,255,255,0.14)'}`,
-                    }}>{label}</button>
-                ))}
-              </div>
-            )}
-
-            <div style={{
-              display: wide ? 'grid' : 'block',
-              gridTemplateColumns: wide ? '1fr 1fr' : undefined,
-              gap: wide ? 18 : undefined,
-              marginTop: '0.9rem',
-            }}>
-
-              {/* ── THE WATERS ── the band ladder, gated on stones. */}
-              {(wide || portalTab === 'waters') && (
-                <div>
-                  {wide && (
-                    <p className="font-karla font-700 uppercase" style={{
-                      fontSize: '0.56rem', letterSpacing: '0.18em',
-                      color: 'rgba(168,146,255,0.75)', margin: '0 0 0.5rem',
-                    }}>Waters</p>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {PORTAL_TIERS.map(t => {
-                      const owned = t.tier <= portalTier
-                      const isNext = t.tier === portalTier + 1
-                      return (
-                        <div key={t.tier} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '0.6rem 0.7rem', borderRadius: 12,
-                          background: owned ? `${t.accent}14` : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${owned ? `${t.accent}55` : isNext ? 'rgba(240,192,64,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                          opacity: owned || isNext ? 1 : 0.45,
-                        }}>
-                          <div aria-hidden style={{
-                            width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
-                            background: t.accent, boxShadow: owned ? `0 0 10px ${t.accent}` : 'none',
-                            opacity: owned ? 1 : 0.4,
-                          }} />
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <p className="font-cinzel font-700" style={{
-                              fontSize: '0.9rem', margin: 0,
-                              color: owned ? '#ecdcbd' : 'rgba(214,226,236,0.75)',
-                            }}>{t.name}</p>
-                            {isNext && (
-                              <p className="font-karla" style={{
-                                fontSize: '0.7rem', margin: '1px 0 0', color: 'rgba(214,226,236,0.65)',
-                              }}>
-                                {t.cost.toLocaleString()} ⟡
-                                {stoneFor(t.tier) ? ' · stone in hand' : ` · needs the stone from ${t.name}`}
-                              </p>
-                            )}
-                          </div>
-                          {owned ? (
-                            <button type="button" data-no-steer
-                              onClick={() => { const w = warpPoint(t); jumpTo(w.x, w.y, t.accent) }}
-                              className="tap font-cinzel font-700" style={{
-                                flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 10, cursor: 'pointer',
-                                background: `${t.accent}22`, border: `1px solid ${t.accent}66`,
-                                color: '#eef4f8', fontSize: '0.8rem',
-                              }}>
-                              Sail
-                            </button>
-                          ) : isNext ? (
-                            // NO STONE, NO BUTTON. Offering Build and then
-                            // refusing it is a worse answer than saying what is
-                            // missing, which the line above already does.
-                            <button type="button" data-no-steer onClick={() => void buyTier()}
-                              disabled={portalBusy || !stoneFor(t.tier)}
-                              className="tap font-karla font-700" style={{
-                                flexShrink: 0, padding: '0.45rem 0.7rem', borderRadius: 10,
-                                cursor: portalBusy || !stoneFor(t.tier) ? 'default' : 'pointer',
-                                opacity: stoneFor(t.tier) ? 1 : 0.45,
-                                background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.5)',
-                                color: '#f6dfa0', fontSize: '0.74rem',
-                              }}>
-                              {portalBusy ? 'Working…' : stoneFor(t.tier) ? 'Build' : 'No stone'}
-                            </button>
-                          ) : null}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  <p className="font-karla" style={{
-                    fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)', lineHeight: 1.5, margin: '0.7rem 0 0',
-                  }}>
-                    Every stage wants its own stone, and each one is in a cache chest out in the
-                    water that stage reaches. The portal cannot take you anywhere you have not
-                    already sailed to — {STONE_ISLE_IDS.size} chests out there hold one.
-                  </p>
-                </div>
-              )}
-
-              {/* ── THE BERTHS ── islands, bought outright. */}
-              {(wide || portalTab === 'berths') && (
-                <div style={{ marginTop: wide ? 0 : '0.9rem' }}>
-                  <p className="font-karla font-700 uppercase" style={{
-                    fontSize: '0.56rem', letterSpacing: '0.18em',
-                    color: 'rgba(168,146,255,0.75)', margin: '0 0 0.5rem',
-                  }}>Berths</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {PORTAL_PORTS.map(pt => {
-                      const owned = portalPorts.includes(pt.id)
-                      return (
-                        <div key={pt.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '0.6rem 0.7rem', borderRadius: 12,
-                          background: owned ? `${pt.accent}14` : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${owned ? `${pt.accent}55` : 'rgba(255,255,255,0.08)'}`,
-                        }}>
-                          <div aria-hidden style={{
-                            width: 12, height: 12, borderRadius: 3, flexShrink: 0,
-                            background: pt.accent, boxShadow: owned ? `0 0 10px ${pt.accent}` : 'none',
-                            opacity: owned ? 1 : 0.4,
-                          }} />
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <p className="font-cinzel font-700" style={{
-                              fontSize: '0.9rem', margin: 0,
-                              color: owned ? '#ecdcbd' : 'rgba(214,226,236,0.75)',
-                            }}>{pt.name}</p>
-                            {!owned && (
-                              <p className="font-karla" style={{
-                                fontSize: '0.7rem', margin: '1px 0 0',
-                                color: 'rgba(214,226,236,0.65)', fontVariantNumeric: 'tabular-nums',
-                              }}>
-                                {pt.cost.toLocaleString()} ⟡
-                                {pt.id === 'gunwharf' ? ' · the far side of the reef' : ''}
-                              </p>
-                            )}
-                          </div>
-                          {owned ? (
-                            <button type="button" data-no-steer
-                              onClick={() => jumpTo(pt.to.x, pt.to.y, pt.accent)}
-                              className="tap font-cinzel font-700" style={{
-                                flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 10, cursor: 'pointer',
-                                background: `${pt.accent}22`, border: `1px solid ${pt.accent}66`,
-                                color: '#eef4f8', fontSize: '0.8rem',
-                              }}>
-                              Sail
-                            </button>
-                          ) : (
-                            // NO AFFORD CHECK, because the chart does not hold
-                            // the purse — it dispatches doubloon changes for the
-                            // nav to read and never keeps a copy. The ladder
-                            // takes the same line: offer it, and let the server
-                            // say the price if it cannot be paid.
-                            <button type="button" data-no-steer onClick={() => void buyPort(pt.id)}
-                              disabled={portalBusy}
-                              className="tap font-karla font-700" style={{
-                                flexShrink: 0, padding: '0.45rem 0.7rem', borderRadius: 10,
-                                cursor: portalBusy ? 'default' : 'pointer',
-                                background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.5)',
-                                color: '#f6dfa0', fontSize: '0.74rem',
-                              }}>
-                              {portalBusy ? 'Working…' : 'Teach it'}
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  <p className="font-karla" style={{
-                    fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)', lineHeight: 1.5, margin: '0.7rem 0 0',
-                  }}>
-                    A berth is bought outright and needs no stone: these are places you already
-                    moor at by name. The Gunwharf is the only one on the far side of the reef.
-                  </p>
-                </div>
-              )}
-            </div>
+            {/* IT IS A CHART, NOT A LIST. Every destination in here already has
+                a position on a sea this captain has spent hours crossing — see
+                PortalMap for why a ring beats a word. */}
+            <PortalMap
+              tier={portalTier} ports={portalPorts} stoneFor={stoneFor} busy={portalBusy}
+              onSail={(x, y, accent) => jumpTo(x, y, accent)}
+              onBuyTier={() => void buyTier()}
+              onBuyPort={id => void buyPort(id)} />
 
             {portalErr && (
               <p className="font-karla font-600" style={{
                 fontSize: '0.74rem', color: '#e6a0a0', margin: '0.7rem 0 0', lineHeight: 1.45,
               }}>{portalErr}</p>
             )}
+
+            <p className="font-karla" style={{
+              fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)', lineHeight: 1.5, margin: '0.7rem 0 0',
+            }}>
+              A water wants its stone, and each one is in a cache chest out in the water it
+              reaches — {STONE_ISLE_IDS.size} chests hold one. A berth is bought outright and
+              needs no stone: those are places you already moor at by name.
+            </p>
           </div>
         </PopupShell>
       )}
@@ -7224,25 +7071,65 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       {/* ── THE PASSAGE ──────────────────────────────────────────────
-          Over everything, including the action button, because for one second
-          you are not steering anything. */}
+          IT HAPPENS TO HER, NOT TO THE SCREEN.
+          
+          The first pass at this was a full-screen veil that went white and came
+          back. That is not a teleport, it is a scene transition — it says the
+          GAME cut away, when what actually happened is that a boat was taken
+          out of the water and put back somewhere else.
+          
+          So it is anchored on the hull, which is always at the middle of the
+          shot because the camera follows her. Motes fall inward and are
+          swallowed, a core swells just enough to cover the boat at the seam,
+          and on the far side the same motes are thrown back out. The sea around
+          it stays visible the whole way through, which is what makes it read as
+          something happening IN the world.
+          
+          The hull itself dissolves with it — see `fade` on the GPU skipper —
+          so the thing being taken is the thing you are steering, not a shape
+          behind a light.
+          
+          DOM and CSS: one element, three keyframes, transform and opacity only.
+          This is drawn over a chart that owns a WebGL context and must never
+          ask for a second one. See the note in DialFx. */}
       {warping && (
         <div aria-hidden style={{
-          position: 'fixed', inset: 0, zIndex: 2000, pointerEvents: 'none',
-          animation: `warpVeil ${WARP_MS * 2}ms ease-in-out forwards`,
-          background: `radial-gradient(circle at 50% 50%, ${warping.accent} 0%, ${warping.accent}cc 28%, rgba(10,8,20,0.96) 72%)`,
+          position: 'fixed', left: '50%', top: '50%', zIndex: 2000,
+          width: 0, height: 0, pointerEvents: 'none',
         }}>
-          {/* Three rings: they collapse into the middle on the way in and open
-              out of it on the way back, so the two halves are the same gesture
-              mirrored and the seam between them is the moment they are smallest. */}
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{
-              position: 'absolute', left: '50%', top: '50%',
-              width: '140vmax', height: '140vmax', marginLeft: '-70vmax', marginTop: '-70vmax',
-              borderRadius: '50%', border: `2px solid ${warping.accent}`,
-              animation: `warpRing ${WARP_MS * 2}ms ease-in-out ${i * 90}ms forwards`,
-            }} />
-          ))}
+          {/* THE CORE. Small: it only has to cover a hull, and a glow the size
+              of the screen is the flash this replaced. */}
+          <span style={{
+            position: 'absolute', left: -170, top: -170, width: 340, height: 340,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, #ffffff 0%, ${warping.accent} 34%, ${warping.accent}00 70%)`,
+            animation: `warpCore ${WARP_MS * 2}ms ease-in-out forwards`,
+          }} />
+          {/* THE MOTES. Sixteen, each on its own bearing, falling in and thrown
+              back out — the same path run backwards, so whatever swallowed her
+              is visibly what puts her down. */}
+          {Array.from({ length: 16 }, (_, i) => {
+            const th = (i / 16) * Math.PI * 2
+            const far = 210 + (i % 4) * 34
+            return (
+              <span key={i} style={{
+                position: 'absolute', left: -4, top: -4, width: 8, height: 8,
+                borderRadius: '50%', background: warping.accent,
+                boxShadow: `0 0 10px ${warping.accent}`,
+                // The bearing rides on a custom property so one keyframe serves
+                // all sixteen: only the direction differs.
+                ['--wx' as string]: `${Math.cos(th) * far}px`,
+                ['--wy' as string]: `${Math.sin(th) * far}px`,
+                animation: `warpMote ${WARP_MS * 2}ms cubic-bezier(0.4, 0, 0.4, 1) ${(i % 4) * 40}ms forwards`,
+              }} />
+            )
+          })}
+          {/* AND ONE RING, to give the swallow an edge. */}
+          <span style={{
+            position: 'absolute', left: -190, top: -190, width: 380, height: 380,
+            borderRadius: '50%', border: `2px solid ${warping.accent}`,
+            animation: `warpHoop ${WARP_MS * 2}ms ease-in-out forwards`,
+          }} />
         </div>
       )}
 
