@@ -2454,6 +2454,15 @@ body.hardcore-gauntlet::after {
    header is 44px with a 60px tab bar under it, and the desktop header is 60px
    with no bar at all. Hardcoding the mobile pair left a 60px dead strip along
    the bottom of every desktop view. */
+/* ── THE FIGHT'S LEVEL BAR SITS ON THE CHART'S OWN HUD LINE ─────────────────
+   The sea surface starts below the site header — 44 on a phone, 60 once there
+   is room for the wide nav — and hangs its HUD icons 18 into that. A fight
+   overlays the whole viewport, so its bar has to add those two together itself
+   or it lands on the header. Same numbers as .sea-surface below, deliberately:
+   if that moves, this moves with it. */
+.raid-oversea-bar { top: 62px; }
+@media (min-width: 640px) { .raid-oversea-bar { top: 78px; } }
+
 .sea-surface {
   position: fixed;
   top: 44px;

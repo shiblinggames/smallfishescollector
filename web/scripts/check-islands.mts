@@ -306,6 +306,7 @@ if (bad) process.exitCode = 1
   const {
     BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, WALLS, ISLE_BY_ID,
     encounterAt, ENCOUNTER_REACH, CACHE_REACH, opensBay,
+    dockAt, isleAt, bayCentre, inChapterWater,
     RETURN_PORTALS, PORTAL_REACH, PORTAL_HOME, portalOpensOn,
   } = await import('../app/(app)/sea/raidWaters')
   const { RAID_MAP } = await import('../lib/raidMap')
@@ -335,6 +336,45 @@ if (bad) process.exitCode = 1
 
   console.log(`\n  In the water  (${ENCOUNTERS.length} ships, ${CACHES.length} caches,`
     + ` ${BEATS.length} beats, ${RAID_ISLES.length} isles)`)
+
+  // -- IS THERE ANYWHERE TO STAND AND FIGHT? --------------------------------
+  //
+  // A fight moors at a fixed world offset off the boss's port quarter (DOCK)
+  // and both hulls are framed from there, so a boss with rock in that corner is
+  // a boss you cannot take on without being shoved through stone on the way in.
+  // That is a property of WHERE THE BOSS WAS PUT, which makes it this file's
+  // business rather than something to find out mid-broadside.
+  //
+  // WHAT THIS CANNOT SEE, said plainly: the loose rock a bay is scattered with
+  // is generated inside SeaMap and is not importable here, so this measures the
+  // dock against the bay's coast and its isles only. The chart dodges the rest
+  // at runtime by walking variations of the same formation; this check is what
+  // keeps that fallback from being load-bearing.
+  const DOCK_HULL = 120
+  const DOCK_WANT = 220
+  for (const e of ENCOUNTERS) {
+    const bb = BAY_BY_ID[e.bay]
+    const d = dockAt(e)
+    if (!bb || !d) continue
+    const cc = bayCentre(bb)
+    const coast = bb.r - Math.hypot(d.x - cc.x, d.y - cc.y)
+    let isleGap = Infinity, who = 'nothing'
+    for (const i of RAID_ISLES) {
+      const ip = isleAt(i)
+      if (!ip) continue
+      const gap = Math.hypot(d.x - ip.x, d.y - ip.y) - (i.r + DOCK_HULL)
+      if (gap < isleGap) { isleGap = gap; who = i.id }
+    }
+    if (!inChapterWater(bb, d.x, d.y)) {
+      console.error(`  x ${e.node}: its docking spot is outside the bay`); bad++
+    } else if (coast < DOCK_WANT) {
+      console.error(`  x ${e.node}: docking spot is ${Math.round(coast)}px off the coast, wants ${DOCK_WANT} - move the boss off the shore`); bad++
+    } else if (isleGap < 0) {
+      console.error(`  x ${e.node}: docking spot is inside isle '${who}'`); bad++
+    } else {
+      console.log(`    ok   dock    ${e.node.padEnd(18)} ${Math.round(coast)}px of coast, ${Math.round(isleGap)}px off ${who}`)
+    }
+  }
 
   // A CACHE AND A BEAT ARE BOTH ATTACHED TO A ROCK, so they are checked by
   // whether that rock exists rather than by where they sit — the rock's own

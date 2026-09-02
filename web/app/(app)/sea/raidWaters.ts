@@ -715,7 +715,45 @@ export function beatNear(x: number, y: number): Beat | null {
  * ship rather than arriving at a shore, and this is what "alongside" means for a
  * hull 210 long.
  */
-export const ENCOUNTER_REACH = 420
+/**
+ * ── THE DOCKING SPOT ────────────────────────────────────────────────────────
+ *
+ * Where you stand to fight, as a WORLD offset from the hull you are taking on:
+ * off her port quarter, down and to the left, which is the arrangement the
+ * fight is drawn for.
+ *
+ * IN WORLD UNITS, AND THAT IS THE POINT. This used to be derived from screen
+ * fractions and the live zoom, which meant the place you ended up standing
+ * depended on the size of your window — a different spot on a phone than on a
+ * monitor, and neither of them anywhere the chart could be checked against. A
+ * fixed world offset is a PLACE: it can be drawn, it can be sailed to, and the
+ * checker can prove there is water at it.
+ *
+ * The vertical is smaller than the horizontal because up-screen is squashed by
+ * GROUND — 250 world px of "south" reads as about 145 on screen, against 340
+ * of "west" reading as 340. Roughly the diagonal the fight wants.
+ */
+export const DOCK = { x: -340, y: 250 }
+
+/** Where you moor to fight this hull. */
+export function dockAt(e: Encounter): { x: number; y: number } | null {
+  const p = encounterAt(e)
+  return p ? { x: p.x + DOCK.x, y: p.y + DOCK.y } : null
+}
+
+/**
+ * HOW CLOSE TO THE DOCKING SPOT, not to the ship.
+ *
+ * Measured from the mooring rather than from the hull, so accepting a fight is
+ * a promise you have already kept: you are standing where the duel happens, and
+ * the shove into position is a few boat-lengths rather than a haul across the
+ * bay. Sailing up on the wrong side of a boss used to start a fight that then
+ * dragged you round it.
+ *
+ * Wider than it is deep for the same reason the dock is: this is a circle in
+ * world units seen on a squashed plane.
+ */
+export const ENCOUNTER_REACH = 300
 
 /** And how close to reach into a cache. Measured from the ISLE'S EDGE rather
  *  than from its middle, because the chest stands on a rock you cannot sail
@@ -729,7 +767,7 @@ export function encounterNear(x: number, y: number): Encounter | null {
   let best: Encounter | null = null
   let bestD = ENCOUNTER_REACH
   for (const e of ENCOUNTERS) {
-    const p = encounterAt(e)
+    const p = dockAt(e)
     if (!p) continue
     const d = Math.hypot(x - p.x, y - p.y)
     if (d < bestD) { bestD = d; best = e }

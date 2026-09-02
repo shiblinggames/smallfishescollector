@@ -47,7 +47,7 @@ import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
   WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
-  encounterNear, cacheNear, hullFor,
+  encounterNear, cacheNear, hullFor, DOCK,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
@@ -404,10 +404,14 @@ export type SeaLog = {
  * projection, so an enemy placed above you is an enemy standing off — the same
  * fact the whole chart runs on, borrowed for a fight.
  */
-const FIGHT_FRAME = {
-  p: { x: 0.30, y: 0.64 },
-  e: { x: 0.71, y: 0.36 },
-}
+/**
+ * HOW MUCH THE CAMERA LOOKS PAST THE PAIR, in world px.
+ *
+ * The two hulls are framed on the midpoint between them, then the whole shot is
+ * lifted so they sit above centre: the deck owns the foot of the screen, and a
+ * duel composed on the middle of the window puts the enemy behind the log.
+ */
+const FIGHT_CAM_LIFT = 200
 
 const Z = {
   /** The water's colour, and the two moving surface layers over it. */
@@ -2981,6 +2985,8 @@ export default function SeaMap({
   const [yardOpen, setYardOpen] = useState(false)
   /** The raid being fought over the chart, by raidId. */
   const [fightId, setFightId] = useState<string | null>(null)
+  /** The same fact, for the render: the HUD stands down in a fight. */
+  const fightOn = fightId !== null
   // ── THE FIGHT IS THESE TWO HULLS ─────────────────────────────────────────
   //
   // Not a scene of them. The chart is already drawing your man-o-war and the
@@ -3026,15 +3032,7 @@ export default function SeaMap({
    * the ideal out of whatever it landed in. Ordered nearest-to-ideal first, so
    * a clear sea always yields exactly the intended shot.
    */
-  const pickStation = useCallback((ex: number, ey: number, z: number, W: number, H: number) => {
-    const pS = { x: W * FIGHT_FRAME.p.x, y: H * FIGHT_FRAME.p.y }
-    const eS = { x: W * FIGHT_FRAME.e.x, y: H * FIGHT_FRAME.e.y }
-    // The world gap that reads as that screen gap. Divided by GROUND on the
-    // vertical, because up-screen is squashed and a raw px offset would put
-    // her far closer than it looks.
-    const dx = (eS.x - pS.x) / z
-    const dy = (eS.y - pS.y) / (z * GROUND)
-
+  const pickStation = useCallback((ex: number, ey: number) => {
     /** Is this point inside anything solid? */
     const fouled = (x: number, y: number) => {
       for (const o of allObstacles()) {
@@ -3051,8 +3049,11 @@ export default function SeaMap({
       return false
     }
 
-    // Nearest to the intended shot first. `s` is how far off she stands, `lift`
-    // slides the engagement up or down the bay without changing its shape.
+    // Nearest to the intended mooring first. `s` is how far off she stands,
+    // `lift` slides the engagement along the bay without changing its shape.
+    // The chart is authored so the first of these is clear at every boss (see
+    // the dock check in check-islands); the rest are what stops a fight ever
+    // being impossible if a rock is moved and the check is skipped.
     const tries: [number, number][] = [
       [1, 0], [0.86, 0], [1.16, 0],
       [1, -0.22], [1, 0.22],
@@ -3060,16 +3061,16 @@ export default function SeaMap({
       [0.72, 0], [1.34, 0],
       [0.86, 0.34], [1.16, -0.34],
     ]
-    for (const [s, lift] of tries) {
-      const x = ex - dx * s
-      const y = ey - dy * s + Math.abs(dy) * lift
+    for (const [sc, lift] of tries) {
+      const x = ex + DOCK.x * sc
+      const y = ey + DOCK.y * sc + Math.abs(DOCK.y) * lift
       if (!fouled(x, y)) return { x, y }
     }
 
     // EVERY SHAPE IS FOULED, which means she is fighting in a pocket. Push the
     // ideal out of whatever it is sitting in and take that: off the mark, but
     // on water.
-    let x = ex - dx, y = ey - dy
+    let x = ex + DOCK.x, y = ey + DOCK.y
     for (let pass = 0; pass < 6; pass++) {
       let moved = false
       for (const o of allObstacles()) {
@@ -3733,17 +3734,16 @@ export default function SeaMap({
     // The same widths EncounterMark draws at, so an effect hung on the enemy is
     // the size of the ship it is happening to.
     fightHullRef.current = { at, encW: node?.type === 'raid' ? 260 : 185 }
-    const z = zoomFor(box.width) * wheelZoom.current * 1.5
-    const W = box.width, H = box.height
-    const station = pickStation(at.x, at.y, z, W, H)
+    const station = pickStation(at.x, at.y)
     fightStation.current = station
-    // THE CAMERA IS PINNED TO THE STATION, not to her. Anchored on where she
-    // is GOING, the engagement is framed from the first frame and she is the
-    // only thing that moves — which is what pulling alongside looks like from
-    // a camera already holding the shot.
+    // THE CAMERA FRAMES THE PAIR, not the captain. Held on the midpoint between
+    // the two hulls and lifted so they sit above the deck, it is a shot of an
+    // ENGAGEMENT — and because it is anchored on where she is GOING rather than
+    // where she is, the enemy is composed from the first frame and she is the
+    // only thing that moves into place.
     fightCam.current = {
-      x: station.x - (W * FIGHT_FRAME.p.x - W / 2) / z,
-      y: station.y - (H * FIGHT_FRAME.p.y - H / 2) / (z * GROUND),
+      x: (station.x + at.x) / 2,
+      y: (station.y + at.y) / 2 + FIGHT_CAM_LIFT,
     }
   }, [fightId, pickStation])
 
@@ -3919,6 +3919,14 @@ export default function SeaMap({
 
   const hudRow = useMemo(() => {
     const on: string[] = []
+    // ── NOT WHILE THE GUNS ARE OUT ────────────────────────────────────────
+    //
+    // A fight owns the corners: the enemy's card takes the top left and the
+    // level bar runs across the same line. None of these doors is any use
+    // mid-broadside — the crew hall, the almanac and the trawl docks are all
+    // places you go BETWEEN fights — so they stand down rather than being
+    // stacked under a card you cannot move.
+    if (fightOn) return on
     // THE LIGHT HOLDS THE LEFT ON THE FISHING SIDE and the RIGHT out in the
     // expeditions, where the left corner belongs to the crew. It was pushed
     // here unconditionally before and drawn only on the fishing side, so the
@@ -3935,7 +3943,7 @@ export default function SeaMap({
     if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
     if (!inAnchorage && (!fishingIn || wide)) on.push('folk')
     return on
-  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady])
+  }, [fishingIn, wide, inAnchorage, orders, trawlsOut.length, trawlsReady, fightOn])
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width: 900px)')
     if (!mq) return

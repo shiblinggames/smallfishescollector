@@ -1640,7 +1640,7 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
             with framer-motion compositing inside RaidCombat, iOS Safari PWA
             mis-handles position:fixed for Nav header + MobileTabBar.
             See memory: feedback_pagetransition_ios_pwa.md */}
-        <div style={{
+        <div className={overSea ? 'raid-oversea-bar' : undefined} style={{
           width: '100%', flexShrink: 0,
           // ── OVER THE SEA IT SITS WHERE FISHING'S BAR SITS ───────────────
           //
@@ -1656,13 +1656,19 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
           // that turns the sea into a scene, so it gets the same bar in the
           // same place; 52 is the clearance the chart's own HUD uses for the
           // header it has to sit under.
+          // `top` comes from .raid-oversea-bar, which needs a media query to
+          // follow the header's two heights and so cannot live inline.
           ...(overSea ? {
-            position: 'fixed', left: 0, right: 0, top: 52, zIndex: 6,
+            position: 'fixed', left: 0, right: 0, zIndex: 6,
             pointerEvents: 'none',
           } : null),
         }}>
+          {/* The fishing overlay's own column — 448 centred — but WITHOUT its
+              1rem of top padding: there the padding is what clears the header,
+              and here `top` has already done that. Keeping both put the bar a
+              row below the HUD icons it is meant to line up with. */}
           <div style={overSea
-            ? { maxWidth: 448, margin: '0 auto', padding: '1rem 1rem 0.6rem' }
+            ? { maxWidth: 448, margin: '0 auto', padding: '0 1rem' }
             : undefined}>
             <NavLevelBar xp={navXP} />
           </div>

@@ -2222,14 +2222,27 @@ export default function RaidCombat({
     // whole screen stuttering to measure it every frame was plainly visible.
     const remeasure = setInterval(measurePlates, 500)
 
-    const placePlate = (el: HTMLElement | null, a: ShipAnchor | undefined, pw: number, ph: number) => {
-      if (!el || !a) return
-      const x = Math.max(8, Math.min(window.innerWidth - pw - 8, a.x - pw / 2))
-      // WELL CLEAR OF THE RIGGING. At 0.60 it sat in the topsails; a ship of
-      // the line is most of its own height above the waterline.
-      const y = Math.max(8, a.y - a.w * 0.86 - ph)
-      el.style.left = `${x - box.left}px`
-      el.style.top = `${y - box.top}px`
+    /**
+     * THE ENEMY'S CARD HOLDS THE TOP LEFT.
+     *
+     * It rode above its own hull for a while, on the reasoning that the card
+     * should say which ship it belongs to. In a duel that question does not
+     * arise — there are two ships and one of them is yours — and a card that
+     * moves is a card you have to find again every time you look up. Pinned, it
+     * is somewhere you learn once.
+     *
+     * BELOW THE SITE HEADER, which is the whole reason this is not just `top:
+     * 10`. The chart's own surface begins at 44 on a phone and 60 on a desktop
+     * and hangs its HUD 18 into that; a fixed card measured from the viewport
+     * lands on the nav instead. Same two numbers, so the fight's furniture
+     * lines up with the chart's.
+     */
+    const dockEnemyPlate = () => {
+      const el = enemyPlateRef.current
+      if (!el) return
+      const top = (window.innerWidth >= 640 ? 60 : 44) + 18
+      el.style.left = `${12 - box.left}px`
+      el.style.top = `${top - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }
@@ -2270,7 +2283,7 @@ export default function RaidCombat({
         lastAnchors = asig
         place(playerShipRef.current, at.player)
         place(enemyShipRef.current, at.enemy)
-        placePlate(enemyPlateRef.current, at.enemy, dim.ew, dim.eh)
+        dockEnemyPlate()
         dockPlayerPlate()
       }
 
@@ -7297,8 +7310,17 @@ export default function RaidCombat({
             onClick={riskyFlee ? () => promptFlee(() => onLeave?.()) : onLeave}
             aria-label={riskyFlee ? 'Flee raid' : 'Leave raid'}
             style={{
-              position: 'absolute', top: 10, right: 10, zIndex: 5,
-              width: 32, height: 32, borderRadius: '50%',
+              // OVER THE SEA THE STAGE'S CORNER IS THE WINDOW'S CORNER, so a
+              // 10px inset put the only way out of a fight on top of the site
+              // header — visually on the nav, and under it for a thumb. Dropped
+              // to the chart's own HUD line (surface at 44/60, hung 18 in) and
+              // given a bit more size, because "leave" should not be the
+              // smallest target on the screen.
+              position: 'absolute', zIndex: 5,
+              ...(overSea
+                ? { top: 'calc(44px + 18px)', right: 12, width: 38, height: 38 }
+                : { top: 10, right: 10, width: 32, height: 32 }),
+              borderRadius: '50%',
               background: 'rgba(6,12,20,0.78)',
               border: '1px solid rgba(122,138,160,0.4)',
               color: '#94a3b8',
@@ -7317,8 +7339,20 @@ export default function RaidCombat({
 
         {/* Flee confirmation — leaving a real raid is a gamble, not a free exit.
             Fixed overlay so it blocks the action panel too while it's open. */}
-        {fleeOpen && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,7,12,0.82)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+        {/* ── THE FLEE ROLL, ON THE VIEWPORT ──────────────────────────────
+            Portalled to <body>, and that is load-bearing rather than tidy. It
+            is `position: fixed`, but the stage above it is a motion.div that
+            framer-motion keeps a transform on for the camera shake — and a
+            transformed ancestor becomes the containing block for anything
+            fixed inside it. So this centred itself inside the STAGE: over the
+            sea, a band of scrim across the upper part of the screen with the
+            dice sitting in it. See feedback_transform_breaks_fixed.
+
+            No backdrop blur either: behind this the chart is still running,
+            and a backdrop filter over a live canvas is a full-screen blur pass
+            every frame. The scrim is 82% opaque and does the job alone. */}
+        {fleeOpen && typeof document !== 'undefined' && createPortal(
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(3,7,12,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
             <div style={{ width: '100%', maxWidth: 320, background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
               {fleeResult ? (
                 <>
@@ -7393,7 +7427,7 @@ export default function RaidCombat({
               )}
             </div>
           </div>
-        )}
+        , document.body)}
 
         {/* Enemy HP nameplate — top-left, with circular portrait badge.
             Elite encounters paint with a purple-violet accent (border,
