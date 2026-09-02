@@ -318,22 +318,44 @@ function GalleryWall({ unlocked, species }: {
  * that one would be a room with nothing in it you could not see from the water.
  * The whole collection is the reason to open the door.
  *
- * ── THEY STAND STILL. ALL OF THEM. ─────────────────────────────────────────
+ * ── THEY BREATHE, AND THEY TURN ────────────────────────────────────────────
  *
- * Two passes got this wrong before it got it right, and both failures were the
- * same failure: motion the art cannot back up.
+ * Two passes got this wrong before, and both failures were the same failure:
+ * motion the art cannot back up.
  *
  * First they WANDERED, which is wrong because these sprites have no walk cycle.
  * An animal crossing a floor at a constant speed with its feet not moving is a
  * chess piece being pushed, and the smoother the glide the more obviously wrong
- * it is. Then they stood still and TURNED on a timer, which is wrong because an
- * animal turning to face nothing, on no cue, is a thing twitching. A mirrored
- * sprite is an honest pose; a mirrored sprite for no reason is a glitch.
+ * it is. That one is still wrong and is still not here: every pet stands in the
+ * spot it was placed in and never leaves it.
  *
- * So the room is completely still, and it is better for it. What makes it read
- * as a place is that twenty animals are standing in twenty chosen spots facing
- * chosen directions, which is a composition — the thing a wall of thumbnails
- * could never be, and the thing neither of the moving versions actually was.
+ * Then they stood still and FLIPPED on a timer — and the note that replaced it
+ * had the diagnosis half right. It said an animal turning to face nothing is a
+ * thing twitching. The real fault was narrower than that: it was not TURNING.
+ * `scaleX(-1)` applied between one frame and the next is not a pivot, it is a
+ * sprite being replaced by its own mirror, and no amount of motivation would
+ * have rescued a cut that hard.
+ *
+ * So a turn is a turn. The sprite narrows to nothing about its own middle and
+ * comes back the other way — which is what a side-on animal pivoting on the
+ * spot actually looks like, and it costs one keyframe. The instant mirror was
+ * the glitch; the mirror is fine.
+ *
+ * AND THEY ROCK, a degree and a half either side of upright, on their feet.
+ * That is the whole of "alive" here: a room of twenty things at perfect rest is
+ * a diorama, and a room of twenty things shifting their weight is a room with
+ * twenty animals in it.
+ *
+ * ── NOTHING IS IN STEP, AND NOTHING IS ON A TIMER ──────────────────────────
+ *
+ * Every period and every phase is derived from the pet's own id, so no two
+ * animals rock together and no two turn together — twenty things breathing in
+ * unison is one thing breathing, which is worse than stillness.
+ *
+ * It is CSS, so there is no interval, no state and no re-render: the room is
+ * painted once and the compositor does the rest. Twenty timers ticking behind a
+ * page nobody has open is exactly the sort of thing that is invisible until it
+ * is a battery complaint.
  *
  * Every pet is drawn facing right, so `flip` mirrors the ones that should be
  * looking the other way. Set once by eye, on /home/calibrate. See
@@ -368,19 +390,42 @@ function Menagerie({ pets, at }: {
         .sort((a, b) => spotFor(a.id).y - spotFor(b.id).y)
         .map(p => {
           const spot = spotFor(p.id)
+          const beat = petBeat(p.id)
           return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.id} src={p.restImageUrl} alt={p.name} title={p.name} draggable={false}
-              style={{
-                position: 'absolute',
-                left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.w}%`,
-                // ANCHORED AT THE FEET, like every other thing placed in a room,
-                // and mirrored about that same point so a flipped pet stands
-                // exactly where an unflipped one would.
-                transform: `translate(-50%, -100%) scaleX(${spot.flip ? -1 : 1})`,
+            // THREE NESTED TRANSFORMS, and they have to be nested rather than
+            // multiplied into one: `transform` is a single property, so a pet
+            // that placed itself, turned and rocked in one string would need all
+            // three animated together, and the two animations have different
+            // periods on purpose.
+            //
+            //   outer — where it stands, and which way it was PLACED facing
+            //   middle — the turn, which flips about that authored facing
+            //   inner — the rock
+            <div key={p.id} style={{
+              position: 'absolute',
+              left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.w}%`,
+              // ANCHORED AT THE FEET, like every other thing placed in a room,
+              // and mirrored about that same point so a flipped pet stands
+              // exactly where an unflipped one would.
+              transform: `translate(-50%, -100%) scaleX(${spot.flip ? -1 : 1})`,
+              transformOrigin: 'center bottom',
+              pointerEvents: 'none',
+            }}>
+              <div style={{
+                animation: `petTurn ${beat.turn}s ease-in-out ${-beat.turnAt}s infinite`,
                 transformOrigin: 'center bottom',
-                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
-              }} />
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.restImageUrl} alt={p.name} title={p.name} draggable={false}
+                  style={{
+                    display: 'block', width: '100%',
+                    animation: `petRock ${beat.rock}s ease-in-out ${-beat.rockAt}s infinite`,
+                    transformOrigin: 'center bottom',
+                    filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+                    pointerEvents: 'auto',
+                  }} />
+              </div>
+            </div>
           )
         })}
     </>
@@ -388,6 +433,31 @@ function Menagerie({ pets, at }: {
 }
 
 const spotFor = (id: string) => MENAGERIE_SPOTS[id] ?? MENAGERIE_FALLBACK
+
+/**
+ * HOW THIS ONE MOVES, from its own name.
+ *
+ * Derived rather than random, so a pet rocks at the same rate every time you
+ * open the door — a room that reshuffles its own rhythms on every visit is a
+ * room you can never learn — and derived from the ID rather than the index, so
+ * taking in a new animal does not re-time every animal you already had.
+ *
+ * The two periods are deliberately coprime-ish and neither divides the other:
+ * the rock is a few seconds and the turn is most of a minute, so a turn lands
+ * somewhere different in the rock every time and the pair never settles into a
+ * pattern you can predict.
+ */
+function petBeat(id: string) {
+  let h = 0x811c9dc5
+  for (let i = 0; i < id.length; i++) h = (Math.imul(h ^ id.charCodeAt(i), 0x01000193) >>> 0)
+  const a = (h & 0xff) / 255
+  const b = ((h >> 8) & 0xff) / 255
+  const c = ((h >> 16) & 0xff) / 255
+  const d = ((h >> 24) & 0xff) / 255
+  const rock = 3.4 + a * 2.2          // 3.4s – 5.6s
+  const turn = 34 + b * 26            // 34s – 60s, so a turn is an event
+  return { rock, turn, rockAt: c * rock, turnAt: d * turn }
+}
 
 /** THE TROPHY ROOM: the six giants, and only the ones actually landed. */
 function TrophyWall({ giants }: { giants: { name: string; art: string }[] }) {

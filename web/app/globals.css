@@ -3192,6 +3192,42 @@ body.hardcore-gauntlet::after {
    Opacity only, like every other call on this chart, so it composites and can
    never cost a frame. Slow and shallow: this is a light on a rock a hundred
    metres off, not an alarm. It stops the moment the beat is read. */
+/* ── THE MENAGERIE ─────────────────────────────────────────────────────────
+   A pet shifting its weight, and a pet turning round.
+
+   THE TURN IS THE POINT. `scaleX(-1)` between one frame and the next is not a
+   pivot, it is a sprite swapped for its own mirror, and that hard cut is what
+   made an earlier pass at this read as a glitch rather than as an animal. So
+   the sprite narrows to nothing about its middle and comes back the other way,
+   which is what a side-on animal turning on the spot actually looks like.
+
+   Held long at each end and turned quickly: 3% of the period per turn, on a
+   period of most of a minute, so a turn is something you catch out of the
+   corner of your eye rather than a thing the room is doing.
+
+   Transforms only, so both of these composite and neither costs a layout. */
+@keyframes petTurn {
+  0%, 47%    { transform: scaleX(1); }
+  48.5%      { transform: scaleX(0.06); }
+  50%, 97%   { transform: scaleX(-1); }
+  98.5%      { transform: scaleX(0.06); }
+  100%       { transform: scaleX(1); }
+}
+
+/* A degree and a half either side of upright, on the feet. Any more and twenty
+   animals are swaying like a boat; this is breathing. */
+@keyframes petRock {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50%      { transform: rotate(1.5deg); }
+}
+
+/* ANYBODY WHO ASKED FOR STILLNESS GETS IT. A room of twenty things moving is
+   exactly the case the setting exists for, and the composition was designed to
+   stand up without any of this — see the note in RoomView. */
+@media (prefers-reduced-motion: reduce) {
+  [style*="petTurn"], [style*="petRock"] { animation: none !important; }
+}
+
 /* THE WAY HOME, breathing. Opacity only, and slow: a hole in the sea with
    light coming out of it is already the loudest thing in an empty bay, and a
    fast pulse on top of that reads as an alarm rather than as an offer. */
