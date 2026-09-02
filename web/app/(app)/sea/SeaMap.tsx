@@ -52,6 +52,7 @@ import {
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
 import { RAID_MAP, type RaidNode } from '@/lib/raidMap'
+import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -245,6 +246,10 @@ const Almanac = dynamic(() => import('../fishing/Almanac'), { ssr: false })
  *  drags GearScreen and the whole forge bench behind it, and a captain who
  *  never moors there never fetches a byte of it. */
 const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
+/** THE FIGHT, over the water it is happening on. Dynamic and enormous — the
+ *  whole combat engine hangs off it — so nothing of it is fetched until a
+ *  captain actually takes something on. */
+const RaidSheet = dynamic(() => import('./RaidSheet'), { ssr: false })
 /** The portal's chart. Only fetched once somebody actually steps into one. */
 const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
@@ -2947,6 +2952,8 @@ export default function SeaMap({
   const [almanacOpen, setAlmanacOpen] = useState(false)
   /** The locker, open or shut. */
   const [yardOpen, setYardOpen] = useState(false)
+  /** The raid being fought over the chart, by raidId. */
+  const [fightId, setFightId] = useState<string | null>(null)
   /** Which half of the portal is showing, on a phone. Both are up on a desktop
    *  and this is not read. */
   const [portalTab, setPortalTab] = useState<'waters' | 'berths'>('waters')
@@ -7167,6 +7174,11 @@ hullRef={hullRefFor(t.key)} />
       {/* THE LOCKER, over the water you are moored in. */}
       <ShipyardSheet open={yardOpen} onClose={() => setYardOpen(false)} />
 
+      {/* AND THE FIGHT, over the water it is happening on. `router.refresh()`
+          on the way out is what re-reads nodeStatus, so a boss you just sank
+          comes back cleared and whatever he was gating opens. */}
+      <RaidSheet raidId={fightId} onClose={() => { setFightId(null); router.refresh() }} />
+
       {/* THE COMPASS. Its mount was deleted in an over-broad slice edit and the
           component sat unreferenced for a dozen commits, which is why the
           arrows "disappeared" — nothing was wrong with them, nothing was
@@ -7341,11 +7353,25 @@ hullRef={hullRefFor(t.key)} />
             const n = RAID_MAP.find(x => x.id === nearEnc.node)
             if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked' && n.route) {
               vibrate(14)
-              // THE EXISTING SCREENS, unchanged. A raid is its own route and
-              // must stay one — the FX layer coming later is safe only because
-              // the chart is unmounted while you are fighting, and an encounter
-              // that opened the fight as an overlay would take the sea's WebGL
-              // context down with it. See DialFx.
+              // ── THE FIGHT HAPPENS HERE ─────────────────────────────
+              //
+              // A raid with a config opens as a SHEET over the chart: you sailed
+              // up to that hull and the guns open where you are, the same shape
+              // fishing has always had. See RaidSheet.
+              //
+              // The note that used to live here said a raid must stay its own
+              // route because the FX layer would take the sea's WebGL context
+              // down. That is still true OF A PIXI FX LAYER, and it has never
+              // been built — RaidCombat is DOM and framer-motion end to end, so
+              // this mount costs no context at all. The rule moved to RaidSheet,
+              // where anybody adding that layer will actually be standing.
+              //
+              // Anything WITHOUT a config — the practice skirmish — keeps its
+              // route, because there is no config for the sheet to fight.
+              if (n.raidId && getRaidConfigById(n.raidId)) {
+                setFightId(n.raidId)
+                return true
+              }
               router.push(n.route)
               return true
             }

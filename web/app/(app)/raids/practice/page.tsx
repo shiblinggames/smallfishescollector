@@ -18,8 +18,12 @@ export default async function PracticeRaidPage() {
 
   return (
     <>
-      <main className="min-h-screen pt-6">
-        <div className="page-col pb-12">
+      <main className="min-h-screen pt-6" style={{ width: '100%' }}>
+        {/* NO page-col. A fight is a scene, not a document: boxing it in the
+          app's reading column put the battle in a strip down the middle of
+          its own sea on anything wider than a phone. RaidCombat caps its
+          own control deck; the scene takes the screen. */}
+        <div className="pb-12" style={{ width: '100%' }}>
           <PracticeRaidGame
             shipImageUrl={stats.shipImageUrl}
             shipName={stats.shipName}

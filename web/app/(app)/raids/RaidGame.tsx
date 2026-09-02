@@ -306,9 +306,21 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ config, equippedShipSkin, shipSkins, equippedItems,
+export default function RaidGame({ onLeave, config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
   ownedSpecialItems = [],
+  /**
+   * SHUT THE FIGHT WHERE IT STANDS, rather than navigating out of it.
+   *
+   * Set when this is mounted as a SHEET over the chart — see RaidSheet. There
+   * is nowhere to navigate back to then, because the sea never went anywhere:
+   * every road out of a fight (fleeing, the pop-state guard, the buttons after
+   * it ends) closes the overlay and puts the captain back on the water they
+   * were floating on.
+   *
+   * Absent, this is a /raids/* route and leaving means a navigation, which is
+   * what every one of those calls did before this existed.
+   */
   classDamageMult,
   classDoubloonMult,
   shipClasses,
@@ -321,6 +333,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   legendaryLootMult = 1,
   dialAim,
 }: {
+  /** Close instead of navigate. See the note on the destructure above. */
+  onLeave?: () => void
   config: BossRaidConfig
   /** Fishing gear widening the dial bands. Only the Finn finale passes it. */
   dialAim?: DialAimBonus
@@ -368,6 +382,20 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   legendaryLootMult?: number
 }) {
   const router            = useRouter()
+  /**
+   * OUT OF THE FIGHT, whichever way it is mounted.
+   *
+   * Every road out used to be its own `router.push('/expeditions')` — fleeing,
+   * the pop-state guard, the buttons after it ends. As a sheet on the chart
+   * there is nowhere to push to: the sea is still there, and navigating would
+   * take a captain off the water they are floating on to a menu about it.
+   *
+   * One function, so a road out added later cannot forget which mount it is in.
+   */
+  const leaveRaid = useCallback(() => {
+    if (onLeave) { onLeave(); return }
+    router.push('/expeditions')
+  }, [onLeave, router])
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
   const shipFilter        = shipSkinDef?.filter ?? 'none'
   // Pre-built set of every unique the player already owns. rollLootIndex
@@ -825,12 +853,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       if (href.split(/[?#]/)[0] === window.location.pathname) return // same page
       e.preventDefault()
       e.stopPropagation()
-      signal(() => router.push(href))
+      signal(() => { if (onLeave) leaveRaid(); else router.push(href) })
     }
     const onPop = () => {
       if (fledRef.current) return                                // escape already won
       window.history.pushState(null, '', window.location.href)   // re-arm; stay put
-      signal(() => router.push('/expeditions'))
+      signal(() => leaveRaid())
     }
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (fledRef.current) return   // don't warn about leaving a fight already fled
@@ -1695,7 +1723,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 onNoShotKill={() => { unlockBadge('not_a_shot_fired').catch(() => {}); window.dispatchEvent(new Event('badges-may-have-changed')) }}
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
-                onLeave={grantFlee(() => router.push('/expeditions'))}
+                onLeave={grantFlee(() => leaveRaid())}
                 riskyFlee
                 fleeSignal={fleeTick}
                 fleeNav={fleeNavRef.current}
@@ -2022,7 +2050,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               if (lootResultRef.current) {
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: lootResultRef.current.newDoubloonTotal }))
               }
-              router.push('/expeditions')
+              leaveRaid()
             }}
           />
         </div>
@@ -2150,7 +2178,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                     </motion.button>
                   )}
                   <motion.button
-                    onPointerDown={() => router.push('/expeditions')}
+                    onPointerDown={() => leaveRaid()}
                     whileTap={{ scale: 0.96 }}
                     className="font-karla font-600"
                     style={{ padding: '12px 0', borderRadius: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#6a6764', fontSize: '0.82rem', letterSpacing: '0.04em' }}>
@@ -2188,7 +2216,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               </p>
             </motion.div>
             <motion.button
-              onPointerDown={() => router.push('/expeditions')}
+              onPointerDown={() => leaveRaid()}
               whileTap={{ scale: 0.97 }}
               className="font-cinzel font-700 uppercase tracking-[0.12em]"
               style={{
