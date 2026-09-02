@@ -1,6 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { BADGE_MAP, badgeReward, badgeDetail } from '@/lib/badges'
 import { vigilFor, vigilTotal, ANCIENT_IDS, VIGIL_MAX_RANK, VIGIL_MAX_TOTAL, type VigilState } from '@/lib/ancientVigil'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
@@ -575,12 +574,10 @@ export default async function BadgesPage() {
     <>
       <main className="min-h-screen pt-8" style={{ position: 'relative', zIndex: 1 }}>
         <div className="page-col pb-16">
-          <div className="mb-4 flex items-baseline justify-between gap-3">
+          <div className="mb-4">
+            {/* The Captain's Log link lived here. It is not offered anywhere in
+                the app now — the page still renders for anyone who has the URL. */}
             <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>Badges</h1>
-            {/* Story moved out of here — a quiet link back to the Captain's Log. */}
-            <Link href="/achievements" className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Captain&apos;s Log →
-            </Link>
           </div>
 
           <AchievementsClient groups={groups} doneCount={doneCount} totalCount={allGoals.length} />

@@ -14,10 +14,11 @@ const PAGE_TINTS: [string, string][] = [
 ]
 
 // Order: fishing, expeditions, badges, profile. "Badges" (the
-// goals / trophy shelf at /badges) sits before Profile. The Captain's Log
-// (story recap, /achievements) is reachable from the Badges page header +
-// the desktop nav. Leaderboard moved off the bar; market + social live in
-// the mobile hamburger menu (in Nav.tsx).
+// goals / trophy shelf at /badges) sits before Profile. Leaderboard moved off
+// the bar; market + social live in the mobile hamburger menu (in Nav.tsx).
+//
+// The Captain's Log used to be reachable from the Badges page header and the
+// desktop nav. Both are gone: the page stands, nothing links to it.
 const LINKS = [
   // THE TAVERN IS NOT A TAB ANY MORE. It is a building on the Mainland and the
   // only way in is to sail there and go ashore. Four tabs rather than five, and

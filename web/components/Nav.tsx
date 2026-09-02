@@ -338,8 +338,8 @@ export default function Nav({ doubloons, gems, canSail = false }: {
   // reached from the hub's Crew/Ship/Items/Forge bar, next to the ship it
   // crews and the raids it fights. A second door in a global menu made it
   // look like a top-level destination of its own.
-  // Captain's Log is intentionally NOT here — it has its own slot on the
-  // bottom tab bar as "Log", so duplicating it would just be noise.
+  // The Captain's Log is not here, and is not anywhere now: it has no link in
+  // the shell at all. The page is still there to be reached directly.
   const mobileMenuLinks = [
     { href: '/leaderboard', label: 'Leaderboard', badge: false,
       icon: (
@@ -350,10 +350,6 @@ export default function Nav({ doubloons, gems, canSail = false }: {
         </svg>
       )
     },
-    // Captain's Log intentionally NOT in this list — it lives as "Log"
-    // on the mobile bottom tab bar (MobileTabBar.tsx) so duplicating it
-    // here is just noise. Keep the desktopOnlyLinks entry below since
-    // desktop has no bottom bar.
     // SOCIAL WAS HERE, AND IT WAS THE PROBLEM IT WAS SOLVING. A follow list on
     // its own page, behind a menu, one link away from a Tavern that was a
     // cupboard — two doors to two halves of the same thing. The tavern IS the
@@ -376,13 +372,16 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     }] : []),
   ]
 
+  // THE CAPTAIN'S LOG IS NOT A DOOR ANY MORE. It was the last link to
+  // /achievements anywhere in the shell; the page still exists and still
+  // renders, it simply is not something the nav offers. One entry fewer on a
+  // row that already had to learn to scroll sideways.
   const desktopOnlyLinks = [
-    { href: '/badges',       label: 'Badges',        badge: claimableBadges || null },
-    { href: '/achievements', label: "Captain's Log", badge: null },
+    { href: '/badges', label: 'Badges', badge: claimableBadges || null },
   ]
 
   // Desktop top-bar inline links. Canonical order: fishing, expeditions,
-  // leaderboard, market — then achievements + social from
+  // leaderboard, market — then badges from
   // desktopOnlyLinks. Profile is the avatar button on the far right,
   // so it doesn't appear here.
   const links = [
@@ -439,8 +438,8 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             small laptop, half of a big monitor) the chips got pushed off the
             right edge of the screen. Now the tabs scroll sideways under a
             hidden scrollbar, and the chips — the thing a captain checks most —
-            always stay on screen. whitespace-nowrap keeps a two-word tab
-            ("Captain's Log") from folding into two lines mid-scroll. */}
+            always stay on screen. whitespace-nowrap keeps any two-word tab
+            from folding into two lines mid-scroll. */}
         <div className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-hide whitespace-nowrap ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
           {[...links, ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
             <Link key={href} href={href}

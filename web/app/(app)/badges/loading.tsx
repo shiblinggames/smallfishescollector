@@ -1,4 +1,4 @@
-// Route-level Suspense fallback for /achievements (the Captain's Log). The page
+// Route-level Suspense fallback for /badges (the goals and trophy shelf). The page
 // is a vertical spine of journey entries + Finn/raid recap rows, so skeleton
 // out a header and a long stack of entry cards.
 
