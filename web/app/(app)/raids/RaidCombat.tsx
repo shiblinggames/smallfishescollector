@@ -6563,7 +6563,25 @@ export default function RaidCombat({
       // goes fully transparent so that single scene shows through instead.
       background: transparentBackdrop ? 'transparent' : stageGradient,
       overflow: 'hidden',
-      maxWidth: 580, margin: '0 auto',
+      /**
+       * ── FULL BLEED, LIKE THE SEA IT CAME FROM ──────────────────────────
+       *
+       * This whole fight was a 580px column centred on a full-screen backdrop:
+       * a phone layout on a desk, with the battle happening in a strip down
+       * the middle of its own sky. That was defensible while a raid was a page
+       * you opened from a menu. It is not defensible now that you sail up to a
+       * ship on open water and the sea does not narrow when you do.
+       *
+       * The cap moves DOWN to the control deck rather than being deleted. The
+       * scene wants the screen — everything in it is placed in percentages, so
+       * it scales rather than stretching — and the deck emphatically does not:
+       * a button a metre wide is harder to hit than one you can see all of, and
+       * a log line running the width of a monitor is a line nobody finishes.
+       *
+       * Scene full width, controls a readable column. Which is the same split
+       * the chart makes: the sea is the whole window and the HUD is small and
+       * in a corner.
+       */
       width: '100%',
     }}>
       {/* Zone image backdrop (a fishing-zone photo, or the Gauntlet's abyss) — on
@@ -8132,8 +8150,18 @@ export default function RaidCombat({
         // through — one continuous scene, no solid control slab, no divider frame.
         background: 'linear-gradient(180deg, rgba(4,8,14,0.42) 0%, rgba(3,6,12,0.72) 100%)',
         padding: '0.7rem 0.85rem 0.95rem',
-        display: 'flex', flexDirection: 'column', gap: 8,
+        // The wash spans the whole width; see the column inside.
       }}>
+        {/* THE CONTROLS, IN A COLUMN. The wash above spans the whole width
+            because the deck is a BAND across the foot of the scene, and a
+            floating panel with sky either side of it would put back the frame
+            that going full bleed just removed. What is capped is what is IN
+            it: reading a log line and hitting a button are not helped by more
+            room, and 580 is the width both were designed at. */}
+        <div style={{
+          width: '100%', maxWidth: 580, marginLeft: 'auto', marginRight: 'auto',
+          display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
         {subPhase === 'aiming' ? (
           /* THE FINN FINALE aims on the DIAL, which is presented the way the
              fishing screen presents it: overlaid, centred, front and centre.
@@ -8282,6 +8310,7 @@ export default function RaidCombat({
             })()}
           />
         )}
+        </div>
       </div>
 
       {/* Crew abilities restored — a one-shot banner so the refresh is obvious

@@ -32,6 +32,9 @@ import { renownLevel } from '@/lib/renown'
 import TapToContinueGate from '@/components/TapToContinueGate'
 import { StatLevelBar } from '@/components/StatLevelBar'
 import { lockBodyScroll } from '@/lib/bodyScrollLock'
+// WHERE THIS FIGHT IS. The bay a raid belongs to owns the water it happens
+// on — see bayOfRaid.
+import { bayOfRaid, bayWaterCss } from '@/app/(app)/sea/raidWaters'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
@@ -1512,6 +1515,23 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     // location/boss backdrops are keyed by the BASE id, so resolve it first or
     // challenge fights fall through to the procedural zone backdrop.
     const bgRaidId = baseRaidIdOf(config.raidId)
+    /**
+     * ── THE WATER THIS FIGHT IS ACTUALLY ON ─────────────────────────────
+     *
+     * Ahead of every stock backdrop except a boss's own phase, because it is
+     * the only one of them that is TRUE: you sailed up to this hull in a named
+     * bay and the sea does not change on the way into the fight.
+     *
+     * A phase backdrop still wins. When Finn turns the sea under him that is
+     * the whole point of the beat, and "where you are" stops being the most
+     * important thing the picture has to say.
+     *
+     * Null for anything with no bay — the practice skirmish, the gauntlets,
+     * anything opened from the node map — and those keep what they had.
+     */
+    const bay = bayOfRaid(bgRaidId)
+    const bayBg = bay && !phaseBg ? bayWaterCss(bay) : null
+
     const raidBg =
       // A boss phase backdrop (Finn) outranks everything: it is the whole point
       // that the sea changes under him as he escalates.
@@ -1533,7 +1553,18 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       {/* Phase backdrop cross-fade: the new sea comes up over the old, slow
           enough to read as weather turning rather than a cut. */}
       <style>{`@keyframes rg-bg-in { from { opacity: 0 } to { opacity: 1 } } .rg-bg-fade { animation: rg-bg-in 1.1s ease-out both; }`}</style>
-      {raidBg && (
+      {/* THE BAY'S OWN WATER, when the fight is in one. A gradient rather than
+          a photograph, because it is the same gradient the chart paints and a
+          photograph of somewhere else is exactly what this replaces. */}
+      {bayBg && (
+        <div aria-hidden style={{
+          position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
+          background: bayBg,
+        }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(4,8,14,0.18) 0%, rgba(4,8,14,0.34) 46%, rgba(3,5,10,0.66) 100%)' }} />
+        </div>
+      )}
+      {!bayBg && raidBg && (
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
           {/* keyed on src so a phase swap mounts a NEW image and fades it up
               over the old one instead of hard-cutting the sea */}
@@ -1623,7 +1654,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 // whole combat region (above), so RaidCombat's own container stays
                 // transparent and that single backdrop shows through — no boxed
                 // second image.
-                transparentBackdrop={!!raidBg}
+                transparentBackdrop={!!raidBg || !!bayBg}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}

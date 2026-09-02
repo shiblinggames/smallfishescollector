@@ -792,6 +792,52 @@ export function hullFor(e: Encounter): string | null {
   return null
 }
 
+/**
+ * ── THE WATER A FIGHT HAPPENS ON ────────────────────────────────────────────
+ *
+ * A raid used to paint a FISHING ZONE PHOTO behind itself, picked by chapter:
+ * chapter one fought on a picture of the Shallows. That was a reasonable answer
+ * while a raid was a card you opened from a menu and the fight happened
+ * nowhere in particular.
+ *
+ * It happens somewhere now. You sail up to a hull in the Loose Thread and the
+ * guns open, and the sea does not become a different sea on the way into the
+ * fight — so the backdrop is the water you are floating on, painted from the
+ * same three stops the chart paints it from.
+ *
+ * Falls back to null for anything with no bay: the practice skirmish, the
+ * gauntlets, and any raid reached from the node map rather than from the water.
+ * Those keep the backdrop they always had.
+ */
+export function bayOfRaid(raidId: string): Bay | null {
+  for (const e of ENCOUNTERS) {
+    const n = RAID_MAP.find(m => m.id === e.node)
+    if (n?.raidId === raidId) return BAY_BY_ID[e.bay] ?? null
+  }
+  return null
+}
+
+/**
+ * A BAY'S WATER AS ONE CSS GRADIENT.
+ *
+ * The same ellipse, the same stops and the same percentages `seaAt` writes and
+ * the water shader reproduces at swell zero — so a fight in the Loose Thread is
+ * on the Loose Thread's water, not on an approximation of it. If the chart's
+ * gradient is ever re-cut, this is the second place that has to know, and this
+ * comment is the note saying so.
+ */
+export function bayWaterCss(b: Bay): string {
+  const dim = (hex: string, k: number) => {
+    const n = parseInt(hex.slice(1), 16)
+    const r = Math.round(((n >> 16) & 255) * k)
+    const g = Math.round(((n >> 8) & 255) * k)
+    const bl = Math.round((n & 255) * k)
+    return `rgb(${r}, ${g}, ${bl})`
+  }
+  return `radial-gradient(ellipse 130% 104% at 50% -10%, `
+    + `${b.sea[2]} 0%, ${b.sea[1]} 24%, ${b.sea[0]} 60%, ${dim(b.sea[0], 0.62)} 100%)`
+}
+
 /** Kept so callers do not have to know the sortie owns the way in. */
 export function hubEntry(): { x: number; y: number } {
   return { x: SORTIE.x, y: SORTIE.y }
