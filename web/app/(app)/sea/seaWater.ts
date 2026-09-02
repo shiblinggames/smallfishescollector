@@ -333,7 +333,12 @@ void main(void) {
   // Broken by the swell, because a reflection on moving water is not a stripe,
   // it is a column of separate bright pieces.
   float broken = smoothstep(0.42, 0.86, d1) * (0.55 + 0.45 * smoothstep(0.4, 0.9, d2));
-  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.24 * uDark * uSwell * (1.0 - 0.88 * uRush);
+  // 0.13, DOWN FROM 0.24. The road was reading as a lit strip laid ON the sea
+  // rather than a reflection in it — bright enough that the eye went to it and
+  // stayed, which is the opposite of what a night sea should do to attention.
+  // Halved, and it still does the job it is here for: the water outside it goes
+  // flat and the night stops reading as a dim day.
+  col += road * broken * vec3(0.62, 0.74, 0.95) * 0.13 * uDark * uSwell * (1.0 - 0.88 * uRush);
 
   // ── GLINTS ────────────────────────────────────────────────────────
   vec2 gv = vec2(uLight.y, -uLight.x);

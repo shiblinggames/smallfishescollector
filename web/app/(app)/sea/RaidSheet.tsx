@@ -77,9 +77,13 @@ export default function RaidSheet({ raidId, anchors, onShipFx, onClose }: {
         position: 'fixed', inset: 0, zIndex: 113,
         // NO BACKDROP OF ITS OWN. That is the whole point: what is behind this
         // is the sea, still running, still the water you sailed here across.
-        // A wash at the foot keeps the deck's controls legible over bright
-        // water without putting a lid on the scene.
-        background: 'linear-gradient(180deg, rgba(4,8,14,0.10) 0%, rgba(4,8,14,0.22) 55%, rgba(3,5,10,0.62) 100%)',
+        //
+        // BARELY A WASH NOW. It used to carry the deck's legibility, and it had
+        // to be heavy at the foot to do it — which put a dark band across the
+        // bottom of the water. The deck has its own base now, so this is only a
+        // slight settling of the whole scene: enough to say the guns are out,
+        // not enough to be a lid.
+        background: 'linear-gradient(180deg, rgba(4,8,14,0.08) 0%, rgba(4,8,14,0.14) 60%, rgba(3,5,10,0.26) 100%)',
         overflowY: 'auto', overscrollBehavior: 'contain',
       }}>
       {state ? (

@@ -163,7 +163,12 @@ export default function BossDialogueModal({
       data-any-key
       onClick={tap}
       style={{
-        position: 'fixed', inset: 0, zIndex: 100, overflow: 'hidden',
+        // ABOVE THE FIGHT, WHEREVER THE FIGHT IS. This portals to <body>, so it
+        // escapes the stacking context of whatever mounted it — and over the
+        // sea that mount is RaidSheet, itself a <body> portal sitting higher
+        // than this was. The cutscene ended up UNDER the fight: no button could
+        // be pressed, and every tap meant for it went to the chart instead.
+        position: 'fixed', inset: 0, zIndex: 130, overflow: 'hidden',
         background: 'radial-gradient(ellipse at 50% 38%, #171208 0%, #0a0705 62%, #040303 100%)',
         cursor: 'pointer', WebkitTapHighlightColor: 'transparent', userSelect: 'none',
       }}

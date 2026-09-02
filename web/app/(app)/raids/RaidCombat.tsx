@@ -2139,6 +2139,11 @@ export default function RaidCombat({
     p: { ox: 0, orot: 0, sx: 0, sy: 0, srot: 0, rx: 0, ry: 0 },
     e: { ox: 0, orot: 0, sx: 0, sy: 0, srot: 0 },
   })
+  // The two nameplates. Over the sea they leave the stage corners and ride
+  // above their own hull, so whose health you are reading is answered by where
+  // it is rather than by which side of the screen it went to.
+  const enemyPlateRef = useRef<HTMLButtonElement | null>(null)
+  const playerPlateRef = useRef<HTMLButtonElement | null>(null)
   const onShipFxRef = useRef(onShipFx)
   useEffect(() => { onShipFxRef.current = onShipFx }, [onShipFx])
 
@@ -2181,6 +2186,24 @@ export default function RaidCombat({
       el.style.maxWidth = 'none'
     }
 
+    /**
+     * A NAMEPLATE RIDES ITS OWN SHIP. In the corners you had to work out which
+     * bar belonged to whom; above the hull it is not a question. Centred on the
+     * ship and lifted clear of the mast, clamped to the window so a plate never
+     * walks off the edge with the hull it belongs to.
+     */
+    const placePlate = (el: HTMLElement | null, a: ShipAnchor | undefined) => {
+      if (!el || !a) return
+      const pw = el.offsetWidth || 160
+      const ph = el.offsetHeight || 48
+      const x = Math.max(8, Math.min(window.innerWidth - pw - 8, a.x - pw / 2))
+      const y = Math.max(8, a.y - a.w * 0.60 - ph)
+      el.style.left = `${x - box.left}px`
+      el.style.top = `${y - box.top}px`
+      el.style.right = 'auto'
+      el.style.bottom = 'auto'
+    }
+
     let raf = 0
     let last = ''
     const tick = () => {
@@ -2190,6 +2213,8 @@ export default function RaidCombat({
       if (at) {
         place(playerShipRef.current, at.player)
         place(enemyShipRef.current, at.enemy)
+        placePlate(enemyPlateRef.current, at.enemy)
+        placePlate(playerPlateRef.current, at.player)
       }
 
       const { p, e } = shipFxRef.current
@@ -7329,7 +7354,11 @@ export default function RaidCombat({
           aria-label={`${enemy.name} — view stats`}
           className={enemyPhase >= 2 ? 'rc-phase2-pulse' : undefined}
           animate={enemyNameplateAnim}
+          ref={enemyPlateRef}
           style={{
+            // Over the sea the frame loop moves this onto the enemy's own hull;
+            // the corner is where it sits on a /raids/* route, and where it
+            // starts here before the first frame places it.
             position: 'absolute', top: 10, left: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
             background: 'rgba(6,12,20,0.9)',
@@ -8285,7 +8314,9 @@ export default function RaidCombat({
           onClick={() => setShowStats(true)}
           aria-label={`${nameplate} — view stats`}
           animate={playerNameplateAnim}
+          ref={playerPlateRef}
           style={{
+            // See the enemy's: placed on her own hull over the sea.
             position: 'absolute', bottom: 10, right: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
             background: 'rgba(6,12,20,0.9)',
@@ -8358,22 +8389,57 @@ export default function RaidCombat({
           aim minigame to a body portal; matching heights lets it sit
           inline where the player's eye already is. */}
       <div ref={actionPanelRef} style={{
-        position: 'relative', zIndex: 1,
+        // ── OVER THE SEA THE DECK IS A HUD, NOT A BAND ────────────────────
+        //
+        // In flow it sat wherever the stage's height left it, which on a
+        // desktop is the middle of the screen, on a wash spanning the window —
+        // a control slab across the water you are fighting on. Pinned to the
+        // foot instead, it covers nothing and reads the way the chart's own
+        // HUD does: small, at an edge, over the sea rather than instead of it.
+        //
+        // THE `position` NOTE BELOW STILL STANDS EVERYWHERE ELSE. A compositing
+        // ancestor here breaks the fixed Nav and MobileTabBar in the iOS PWA
+        // (see feedback_pagetransition_ios_pwa), which is why this is relative
+        // on a /raids/* route. Over the sea neither of those is on screen: the
+        // fight is a full-viewport portal above both, so there is nothing left
+        // for a compositing ancestor to break.
+        position: overSea ? 'fixed' : 'relative',
+        ...(overSea ? { left: 0, right: 0, bottom: 0, zIndex: 6 } : null),
         // Translucent so the container backdrop (gradient + any zone image) reads
         // through — one continuous scene, no solid control slab, no divider frame.
-        background: 'linear-gradient(180deg, rgba(4,8,14,0.42) 0%, rgba(3,6,12,0.72) 100%)',
-        padding: '0.7rem 0.85rem 0.95rem',
-        // The wash spans the whole width; see the column inside.
+        // NONE over the sea: the backing belongs to the panel, not the window.
+        background: overSea ? 'none' : 'linear-gradient(180deg, rgba(4,8,14,0.42) 0%, rgba(3,6,12,0.72) 100%)',
+        padding: overSea
+          ? '0 0.7rem calc(env(safe-area-inset-bottom, 0px) + 0.7rem)'
+          : '0.7rem 0.85rem 0.95rem',
+        pointerEvents: overSea ? 'none' : undefined,
       }}>
         {/* THE CONTROLS, IN A COLUMN. The wash above spans the whole width
             because the deck is a BAND across the foot of the scene, and a
             floating panel with sky either side of it would put back the frame
             that going full bleed just removed. What is capped is what is IN
             it: reading a log line and hitting a button are not helped by more
-            room, and 580 is the width both were designed at. */}
+            room, and 580 is the width both were designed at.
+
+            Over the sea that reasoning inverts: there is no frame to put back,
+            because the scene behind is the actual chart. So the column becomes
+            the panel — its own dark base, its own edge — and the water either
+            side of it is the point rather than a gap. Opaque enough to read a
+            log line over bright water; see the house rule on panels standing on
+            painted art. */}
         <div style={{
           width: '100%', maxWidth: 580, marginLeft: 'auto', marginRight: 'auto',
           display: 'flex', flexDirection: 'column', gap: 8,
+          pointerEvents: overSea ? 'auto' : undefined,
+          ...(overSea ? {
+            padding: '0.6rem 0.7rem 0.7rem',
+            borderRadius: 16,
+            background: 'linear-gradient(180deg, rgba(9,15,24,0.90) 0%, rgba(5,9,16,0.95) 100%)',
+            border: '1px solid rgba(122,138,160,0.28)',
+            boxShadow: '0 -6px 34px rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+          } : null),
         }}>
         {subPhase === 'aiming' ? (
           /* THE FINN FINALE aims on the DIAL, which is presented the way the

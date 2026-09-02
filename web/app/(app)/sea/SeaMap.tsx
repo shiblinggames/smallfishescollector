@@ -4484,6 +4484,14 @@ export default function SeaMap({
       }
       return
     }
+    // ── AND WITH THE GUNS OUT IT IS NOT A HELM EITHER ────────────────────
+    //
+    // Same law as the rod above, and it needs saying here rather than being
+    // left to the overlay, because a React PORTAL bubbles along the React
+    // tree, not the DOM one. The fight is portalled to <body> and is nowhere
+    // near this element on screen, yet every press inside it still arrives
+    // here — which is why tapping a cutscene sailed the ship around behind it.
+    if (fightOnRef.current) return
     dragFrom.current = { x: e.clientX, y: e.clientY }
     holdAt.current = { x: e.clientX, y: e.clientY }
     dragging.current = false
