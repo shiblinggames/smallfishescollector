@@ -294,7 +294,11 @@ export type Gate = {
 
 export const GATES: Gate[] = [
   {
-    bay: 'thread', node: 'krust_reveal', at: 4200,
+    // 4400, NOT 4200. The beat that opens it happens at the Wax Shoal, and a
+    // trigger circle 630 wide centred 3,650 up the bay reached across a line at
+    // 4,200 — so the scene could fire from the far side of the gate that scene
+    // is supposed to open. `npm run check` measures exactly that.
+    bay: 'thread', node: 'krust_reveal', at: 4400,
     shut: 'The water past here is nobody you know yet',
   },
 ]
@@ -340,26 +344,61 @@ export type Encounter = {
 }
 
 /**
- * A CACHE: a story beat, or one of the campaign's own caches, in a chest or a
- * bottle. A beat is something you FIND out here rather than something you are
- * handed — which is what the bays are for, and why the beats sit on the isles
- * and in the corners rather than in a line down the middle.
+ * A CACHE: one of the campaign's own caches, in a chest, ON AN ISLE.
+ *
+ * Always on an isle, never floating. A chest bobbing in open water is a thing
+ * with nothing under it — it reads as a bug, and it was one. A cache is
+ * somewhere somebody LEFT something, which means land.
+ *
+ * Only the campaign's actual caches are here now. Story beats used to be chests
+ * and bottles too, and they should never have been: see BEATS.
  */
 export type Cache = {
   node: string
   bay: string
-  along: number
-  across: number
-  /** A chest sits on an isle; a bottle floats. Bottles carry the small beats
-   *  and chests carry the ones with something in them. */
-  kind: 'chest' | 'bottle'
+  /** The isle it sits on. Its position comes from there, so moving the rock
+   *  moves the chest and the two can never drift apart. */
+  isle: string
+}
+
+/**
+ * ── A STORY BEAT: SOMETHING THAT HAPPENS, NOT SOMETHING YOU PICK UP ─────────
+ *
+ * A beat opens a CUTSCENE. Wrapping that in a bottle you sail up to and press
+ * was wrong in two ways at once. It promised loot and delivered a conversation,
+ * and it asked for a decision that does not exist — nobody has ever declined to
+ * read the next page of the story they are sailing through, so the press was a
+ * toll rather than a choice.
+ *
+ * So a beat is a TRIGGER. An invisible circle in the water that fires once, the
+ * first time you are inside it and the chain allows it. You round a headland
+ * and the scene starts, which is what the whole bay is for.
+ *
+ * AND IT IS ATTACHED TO SOMETHING YOU CAN SEE. An invisible trigger in open
+ * water is a quest marker nobody can find; an invisible trigger AROUND AN ISLE
+ * is a place. The isle is the marker, the beat is what is there, and "sail over
+ * and see what is at the Wax Shoal" is a thing a captain can decide to do.
+ *
+ * Only `intro` sits loose, in the doorway, where it cannot be missed — it is the
+ * one beat that has to fire before you know anything at all.
+ */
+export type Beat = {
+  node: string
+  bay: string
+  /** The isle it happens at. */
+  isle?: string
+  /** Or a loose point in bay space, for the ones that are not at a rock. */
+  along?: number
+  across?: number
+  /** How close fires it. */
+  r: number
 }
 
 /**
  * AN ISLE: land, exactly as the fishing sea's isles are land — same generator,
  * same rock, same reason. Something to come across, sail round, and find a chest
  * against. They carry no reward of their own; what is worth having on one is a
- * cache, and the cache is a campaign node.
+ * cache or a beat, and both of those are campaign nodes.
  */
 export type RaidIsle = {
   id: string
@@ -375,14 +414,15 @@ export type RaidIsle = {
  *
  * The chain's order survives as distance up the water, but nothing is on the
  * axis: the skirmish is off to one side, Pete is round the other, the
- * quartermaster's cache is in a corner you have to go looking in. You can sail
- * straight up the middle and miss half of it, which is the difference between a
- * bay and a corridor.
+ * quartermaster's cache is on a rock in a corner you have to go looking in. You
+ * can sail straight up the middle and miss half of it, which is the difference
+ * between a bay and a corridor.
  *
- * The gate is `krust_reveal` — the wax with his name on it. Everything before it
- * is the front half of the water; Krust and the closing beat are behind it.
+ * The gate is `krust_reveal` — the wax with his name on it, which happens at the
+ * Wax Shoal. Everything before it is the front half of the water; Krust and the
+ * closing beat are behind it.
  *
- * NOT PLACED: `bilge_milestone`, `quartermaster`'s counter and
+ * NOT PLACED: `bilge_milestone`, the quartermaster's own counter and
  * `chapter_1_class`. Management belongs at a mooring, which is what the
  * Anchorage is for — chart.ts calls it "things you moor at, not things you
  * fight" and that is still the right line. Challenge variants are not placed
@@ -397,22 +437,30 @@ export const ENCOUNTERS: Encounter[] = [
 ]
 
 export const CACHES: Cache[] = [
-  { node: 'intro', bay: 'thread', along: 900, across: -800, kind: 'bottle' },
-  { node: 'quartermaster', bay: 'thread', along: 2300, across: -1600, kind: 'chest' },
-  { node: 'syndicate', bay: 'thread', along: 3000, across: 1200, kind: 'chest' },
-  { node: 'krust_reveal', bay: 'thread', along: 3600, across: -1300, kind: 'bottle' },
-  { node: 'chapter_1_close', bay: 'thread', along: 5350, across: 640, kind: 'bottle' },
+  { node: 'quartermaster', bay: 'thread', isle: 'thread-purse' },
+]
+
+export const BEATS: Beat[] = [
+  // IN THE DOORWAY. The one beat that cannot be missed, because until it has
+  // played you do not know what any of the rest of this water is for.
+  { node: 'intro', bay: 'thread', along: 800, across: 0, r: 560 },
+  { node: 'syndicate', bay: 'thread', isle: 'thread-ledger', r: 470 },
+  { node: 'krust_reveal', bay: 'thread', isle: 'thread-wax', r: 470 },
+  { node: 'chapter_1_close', bay: 'thread', isle: 'thread-watch', r: 470 },
 ]
 
 export const RAID_ISLES: RaidIsle[] = [
   { id: 'thread-tangle', bay: 'thread', name: 'The Tangle', along: 1050, across: -1150, r: 210 },
   { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 2350, across: -1950, r: 175 },
   { id: 'thread-ledger', bay: 'thread', name: "The Ledger's Rest", along: 3150, across: 1550, r: 195 },
-  // Kept well short of the gate line at 4200. An isle ON a gate is a rock you
+  // Kept well short of the gate line at 4200. Something ON a gate is a rock you
   // can see, cannot reach, and cannot be told why — the check catches it.
   { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 3650, across: -1650, r: 160 },
   { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 5100, across: 700, r: 170 },
 ]
+
+export const ISLE_BY_ID: Record<string, RaidIsle> =
+  Object.fromEntries(RAID_ISLES.map(i => [i.id, i]))
 
 /** Where a thing in bay space actually is. */
 function placeIn(bayId: string, along: number, across: number): { x: number; y: number } | null {
@@ -421,8 +469,47 @@ function placeIn(bayId: string, along: number, across: number): { x: number; y: 
 }
 
 export function encounterAt(e: Encounter) { return placeIn(e.bay, e.along, e.across) }
-export function cacheAt(c: Cache) { return placeIn(c.bay, c.along, c.across) }
 export function isleAt(i: RaidIsle) { return placeIn(i.bay, i.along, i.across) }
+
+/** A cache is wherever its isle is, so the rock and the chest cannot drift. */
+export function cacheAt(c: Cache) {
+  const i = ISLE_BY_ID[c.isle]
+  return i ? isleAt(i) : null
+}
+
+/** And how big the isle under it is, which is what the chest is drawn against —
+ *  a fixed-size box on a small rock looks like a shipping container. */
+export function cacheIsle(c: Cache): RaidIsle | null {
+  return ISLE_BY_ID[c.isle] ?? null
+}
+
+/** Where a beat fires, and how wide its circle is. Around an isle the circle is
+ *  the rock plus the reach, so the trigger sits off the shore rather than
+ *  somewhere inside a rock you cannot sail into. */
+export function beatAt(b: Beat): { x: number; y: number; r: number } | null {
+  if (b.isle) {
+    const i = ISLE_BY_ID[b.isle]
+    if (!i) return null
+    const p = isleAt(i)
+    return p ? { x: p.x, y: p.y, r: b.r + i.r } : null
+  }
+  const p = placeIn(b.bay, b.along ?? 0, b.across ?? 0)
+  return p ? { x: p.x, y: p.y, r: b.r } : null
+}
+
+/** The beat you are standing in, if any. Nearest wins, so two that overlap fire
+ *  in the order the water puts them rather than in table order. */
+export function beatHere(x: number, y: number): Beat | null {
+  let best: Beat | null = null
+  let bestD = Infinity
+  for (const b of BEATS) {
+    const p = beatAt(b)
+    if (!p) continue
+    const d = Math.hypot(x - p.x, y - p.y)
+    if (d <= p.r && d < bestD) { bestD = d; best = b }
+  }
+  return best
+}
 
 /**
  * HOW CLOSE YOU HAVE TO BE TO TAKE SOMETHING ON.
@@ -433,10 +520,11 @@ export function isleAt(i: RaidIsle) { return placeIn(i.bay, i.along, i.across) }
  */
 export const ENCOUNTER_REACH = 420
 
-/** And how close to reach into a cache. Tighter: a chest on a rock is a thing
- *  you pull up beside, and a reach as wide as a ship's would let you claim one
- *  from clean across a channel. */
-export const CACHE_REACH = 300
+/** And how close to reach into a cache. Measured from the ISLE'S EDGE rather
+ *  than from its middle, because the chest stands on a rock you cannot sail
+ *  over: a flat radius from the centre of a big isle would be unreachable, and
+ *  from a small one would be claimable out of open water. */
+export const CACHE_REACH = 240
 
 /** The encounter within reach, if any. Nearest wins, so two close together
  *  cannot flicker as the swell moves the boat. */
@@ -455,12 +543,13 @@ export function encounterNear(x: number, y: number): Encounter | null {
 /** The cache within reach, if any. */
 export function cacheNear(x: number, y: number): Cache | null {
   let best: Cache | null = null
-  let bestD = CACHE_REACH
+  let bestD = Infinity
   for (const c of CACHES) {
     const p = cacheAt(c)
-    if (!p) continue
-    const d = Math.hypot(x - p.x, y - p.y)
-    if (d < bestD) { bestD = d; best = c }
+    const i = cacheIsle(c)
+    if (!p || !i) continue
+    const d = Math.hypot(x - p.x, y - p.y) - i.r
+    if (d < CACHE_REACH && d < bestD) { bestD = d; best = c }
   }
   return best
 }

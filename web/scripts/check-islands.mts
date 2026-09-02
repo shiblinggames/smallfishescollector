@@ -302,8 +302,8 @@ if (bad) process.exitCode = 1
 //      see, cannot reach, and cannot tell why.
 {
   const {
-    BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, RAID_ISLES, GATES,
-    encounterAt, cacheAt, isleAt, ENCOUNTER_REACH,
+    BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, GATES, ISLE_BY_ID,
+    encounterAt, ENCOUNTER_REACH,
   } = await import('../app/(app)/sea/raidWaters')
   const { RAID_MAP } = await import('../lib/raidMap')
 
@@ -327,12 +327,51 @@ if (bad) process.exitCode = 1
   type Thing = { id: string; kind: string; bay: string; along: number; across: number; r: number }
   const things: Thing[] = [
     ...ENCOUNTERS.map(e => ({ id: e.node, kind: 'ship', bay: e.bay, along: e.along, across: e.across, r: 0 })),
-    ...CACHES.map(c => ({ id: c.node, kind: c.kind, bay: c.bay, along: c.along, across: c.across, r: 0 })),
     ...RAID_ISLES.map(i => ({ id: i.id, kind: 'isle', bay: i.bay, along: i.along, across: i.across, r: i.r })),
   ]
 
   console.log(`\n  In the water  (${ENCOUNTERS.length} ships, ${CACHES.length} caches,`
-    + ` ${RAID_ISLES.length} isles, ${GATES.length} gate(s))`)
+    + ` ${BEATS.length} beats, ${RAID_ISLES.length} isles, ${GATES.length} gate(s))`)
+
+  // A CACHE AND A BEAT ARE BOTH ATTACHED TO A ROCK, so they are checked by
+  // whether that rock exists rather than by where they sit — the rock's own
+  // placement is already measured above, and a chest cannot be anywhere its
+  // isle is not. This is the fix for chests floating in open water: there is no
+  // longer a coordinate on a cache that could disagree with an isle.
+  for (const c of CACHES) {
+    if (!ISLE_BY_ID[c.isle]) {
+      console.error(`  ✗ cache '${c.node}' sits on '${c.isle}', which is not an isle`); bad++
+    } else if (!RAID_MAP.some(n => n.id === c.node)) {
+      console.error(`  ✗ cache '${c.node}' is not a node in RAID_MAP`); bad++
+    } else {
+      console.log(`    ok   cache   ${c.node.padEnd(18)} on ${c.isle}`)
+    }
+  }
+
+  for (const t of BEATS) {
+    if (!RAID_MAP.some(n => n.id === t.node)) {
+      console.error(`  ✗ beat '${t.node}' is not a node in RAID_MAP`); bad++; continue
+    }
+    // A BEAT NEEDS SOMETHING YOU CAN SEE, or it is a trigger in open water that
+    // fires for no reason a captain can name. The only exception is a beat in
+    // the doorway, which cannot be missed by construction.
+    const i = t.isle ? ISLE_BY_ID[t.isle] : null
+    if (t.isle && !i) {
+      console.error(`  ✗ beat '${t.node}' happens at '${t.isle}', which is not an isle`); bad++; continue
+    }
+    const along = i ? i.along : (t.along ?? 0)
+    // AND IT MUST NOT REACH THROUGH A GATE. A trigger whose circle crosses a
+    // shut line fires from the wrong side of it, which would hand you the scene
+    // that opens the gate while the gate is still refusing you.
+    const reach = t.r + (i?.r ?? 0)
+    const g = GATES.find(x => x.bay === t.bay && Math.abs(x.at - along) < reach)
+    if (g) {
+      console.error(`  ✗ beat '${t.node}' reaches through the '${g.node}' gate`); bad++
+    } else {
+      console.log(`    ok   beat    ${t.node.padEnd(18)}`
+        + ` ${i ? `at ${t.isle}` : `${along}px up ${t.bay}`}, fires within ${reach}`)
+    }
+  }
 
   for (const t of things) {
     const b = BAY_BY_ID[t.bay]
@@ -357,11 +396,7 @@ if (bad) process.exitCode = 1
       const a = things[i], b = things[j]
       if (a.bay !== b.bay) continue
       const d = Math.hypot(a.along - b.along, a.across - b.across) - a.r - b.r
-      // An isle is where a chest BELONGS, so a chest against one is the point
-      // rather than a clash. Everything else has to keep its distance.
-      const pair = [a.kind, b.kind]
-      const chestOnIsle = pair.includes('isle') && (pair.includes('chest') || pair.includes('bottle'))
-      const need = chestOnIsle ? 40 : APART
+      const need = APART
       if (d < need) {
         console.error(`  ✗ ${a.id} and ${b.id} are ${d.toFixed(0)}px apart (wants ${need})`)
         bad++
@@ -377,10 +412,20 @@ if (bad) process.exitCode = 1
     }
     // The thing that OPENS a gate has to be in front of it, or the bay cannot
     // be finished from inside itself.
-    const opener = things.find(t => t.id === g.node)
-    if (!opener) {
+    // WHAT OPENS IT HAS TO BE IN FRONT OF IT, or the bay cannot be finished
+    // from inside itself. The opener can be a ship, a chest on a rock or a story
+    // beat, so all three are searched — and each resolves to a distance up the
+    // bay, which is the only thing this test needs of it.
+    const beat = BEATS.find(x => x.node === g.node)
+    const cache = CACHES.find(x => x.node === g.node)
+    const openerAt = beat
+      ? (beat.isle ? ISLE_BY_ID[beat.isle]?.along : beat.along)
+      : cache
+        ? ISLE_BY_ID[cache.isle]?.along
+        : things.find(t => t.id === g.node)?.along
+    if (openerAt == null) {
       console.error(`  ✗ gate '${g.node}' has nothing in the water to open it`); bad++
-    } else if (opener.along >= g.at) {
+    } else if (openerAt >= g.at) {
       console.error(`  ✗ gate '${g.node}' is opened by something BEHIND it`); bad++
     }
     let clash = 0

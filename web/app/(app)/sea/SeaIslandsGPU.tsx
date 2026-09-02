@@ -517,6 +517,19 @@ export default function SeaIslandsGPU({
             const k = m.size / cv.width
             sp.scale.set(k, k / GROUND)
             sp.anchor.set(0.5, 1)
+            // ── AND IT TAKES THE HOUR, like everything else on this canvas ──
+            //
+            // This layer was never tinted. `night()` walks the baked islands and
+            // the swayers and stopped there, so the near pass painted at full
+            // noon whatever the sky was doing — and the near pass is not a
+            // separate set of scenery, it is the SAME rock drawn a second time
+            // over the hull. So a rock lit up as it passed in front of the boat
+            // and went dark again the moment it dropped behind her, which reads
+            // as the world flashing rather than as a copy that was missed.
+            //
+            // A sprite built after dusk starts at the current tint; the loop
+            // below in night() keeps the ones already standing.
+            sp.tint = lastTint < 0 ? 0xffffff : lastTint
             node.addChild(sp)
           }
           put(wet)
@@ -838,6 +851,14 @@ export default function SeaIslandsGPU({
           for (const sw of swayers) {
             for (const child of sw.holder.children) {
               (child as import('pixi.js').Sprite).tint = tint
+            }
+          }
+          // THE NEAR PASS TOO. It is the same rock as the world copy under it,
+          // so it has to be the same colour — see the note in nearSprite.
+          for (const node of nearBuilt.values()) {
+            for (const child of node.children) {
+              const sp = child as import('pixi.js').Sprite
+              if (sp.tint !== undefined) sp.tint = tint
             }
           }
           // She takes the hour at just over half strength, which is what the

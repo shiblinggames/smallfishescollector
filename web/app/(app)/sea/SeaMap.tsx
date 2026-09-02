@@ -46,7 +46,7 @@ import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/hom
 import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
-  GATES, gateShut, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, isleAt,
+  GATES, gateShut, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatHere, BEATS,
   encounterNear, cacheNear, hullFor,
   type Bay, type Encounter, type Cache, type Gate,
 } from './raidWaters'
@@ -1416,6 +1416,10 @@ export default function SeaMap({
    *  session would leave its strait shut until a reload. */
   const clearedRef = useRef<string[]>(clearedNodes)
   useEffect(() => { clearedRef.current = clearedNodes }, [clearedNodes])
+  /** And the same for the campaign's statuses, which the beat triggers read to
+   *  tell "not yet" from "already played". */
+  const statusRef = useRef<Record<string, string>>(nodeStatus)
+  useEffect(() => { statusRef.current = nodeStatus }, [nodeStatus])
   /**
    * WHICH HULL IS UNDER YOU, which is now a separate question from which water
    * you are in.
@@ -2742,10 +2746,20 @@ export default function SeaMap({
   const [nearIsle, setNearIsle] = useState<Isle | null>(null)
   /** The campaign encounter alongside, if any. */
   const [nearEnc, setNearEnc] = useState<Encounter | null>(null)
-  /** The chest or bottle within arm's reach, and the gate refusing her, if any.
-   *  Both set from the frame loop and read by the helm. */
+  /** The chest within arm's reach, and the gate refusing her, if any. Both set
+   *  from the frame loop and read by the helm. */
   const [nearCache, setNearCache] = useState<Cache | null>(null)
   const [heldBy, setHeldBy] = useState<Gate | null>(null)
+  /**
+   * BEATS ALREADY FIRED THIS SESSION.
+   *
+   * A trigger fires on ENTRY and the entry lasts as long as you are inside the
+   * circle, so without this the same scene would be pushed sixty times a second
+   * for as long as the boat sat on the rock. The server's own `nodeStatus` is
+   * the real record — a beat that has played comes back cleared — and this is
+   * only what stops it re-firing in the seconds before the route change lands.
+   */
+  const firedBeats = useRef<Set<string>>(new Set())
   // ── WHAT THE SEA IS HANDING YOU ───────────────────────────────────────
   //
   // Bottles are derived, not fetched: the same cell hash the server runs, so
@@ -2975,6 +2989,24 @@ export default function SeaMap({
   /** Kip's own conversation. He is hailed like a talker and then handled here
    *  instead, because what he offers is a game mode rather than a deal. */
   const [kipOpen, setKipOpen] = useState(false)
+
+  /**
+   * IS ANYTHING OPEN OVER THE WATER?
+   *
+   * The same list Esc walks, as one boolean, for the frame loop. A story beat
+   * fires on its own and must never fire THROUGH something: a cutscene arriving
+   * over an open panel is a scene nobody asked for on top of something they did,
+   * and the drift of a boat left idle under a panel is exactly how it would
+   * happen.
+   *
+   * A ref, because this is read sixty times a second and changes a few times an
+   * hour.
+   */
+  const panelUp = !!(find || ashore || wharf || voyageOpen || trawlOpen || ordersOpen
+    || trawlsPeek || finnOpen || finnTalk || kipOpen || hailing || picking
+    || crewOpen || crewHubOpen || folkOpen || mapOpen || landed || swapAsk)
+  const panelUpRef = useRef(panelUp)
+  useEffect(() => { panelUpRef.current = panelUp }, [panelUp])
 
   /**
    * ESC CLOSES THE TOP-MOST PANEL, one per press, most recent first.
@@ -3569,13 +3601,10 @@ export default function SeaMap({
       const n = RAID_MAP.find(x => x.id === nearCache.node)
       if (n) {
         const st = nodeStatus[n.id] ?? 'locked'
-        const what = nearCache.kind === 'chest' ? 'cache' : 'bottle'
-        if (st === 'locked') return { act: null, hold: `A ${what}, sealed` }
+        if (st === 'locked') return { act: null, hold: 'A cache, sealed' }
         if (!n.route) return { act: null, hold: n.label }
         return {
-          act: st === 'cleared'
-            ? `Read ${n.label} again`
-            : nearCache.kind === 'chest' ? `Open the ${n.label}` : `Take the bottle — ${n.label}`,
+          act: st === 'cleared' ? `Open ${n.label} again` : `Open the ${n.label}`,
           hold: null,
         }
       }
@@ -5641,11 +5670,36 @@ export default function SeaMap({
         const enc = encounterNear(pos.current.x, pos.current.y)
         setNearEnc(prev => (prev?.node === enc?.node ? prev : enc))
 
-        // AND THE CAMPAIGN'S CHESTS AND BOTTLES, which are how the story is
-        // FOUND out here rather than handed over. Tighter reach than a ship:
-        // you pull up beside a chest on a rock, you do not hail it.
+        // AND THE CAMPAIGN'S CHESTS, which sit on the rocks. Tighter reach than
+        // a ship and measured off the rock's edge: you pull up beside a chest,
+        // you do not hail it.
         const cch = cacheNear(pos.current.x, pos.current.y)
         setNearCache(prev => (prev?.node === cch?.node ? prev : cch))
+
+        // ── AND THE STORY, WHICH JUST HAPPENS ──────────────────────────
+        //
+        // A beat is a cutscene, and a cutscene is not something you press a
+        // button to collect. You round the Wax Shoal and the scene starts. See
+        // BEATS: the press was a toll on a decision nobody has ever made
+        // differently, and the bottle it was wrapped in promised loot.
+        //
+        // Only out on the expedition side, only for a beat that is AVAILABLE —
+        // locked means the chain has not reached it and cleared means it has
+        // already played — and only when nothing else is open, because a
+        // cutscene arriving over a panel is a scene nobody asked for on top of
+        // something they did.
+        if (sortieRef.current && !panelUpRef.current) {
+          const beat = beatHere(pos.current.x, pos.current.y)
+          if (beat && !firedBeats.current.has(beat.node)) {
+            const n = RAID_MAP.find(x => x.id === beat.node)
+            const st = statusRef.current[beat.node] ?? 'locked'
+            if (n?.route && st === 'available') {
+              firedBeats.current.add(beat.node)
+              vibrate(14)
+              router.push(n.route)
+            }
+          }
+        }
 
         // WHAT IS DRIFTING NEARBY. Against the drifted position, not the
         // anchor — same reason the traders test theirs.
@@ -8252,48 +8306,95 @@ const ANCHORAGE_WALL = anchorageRocks()
  * Hand, drowned masonry and money in the Coffers, black glass in the Last
  * Fathom. You should be able to tell which bay you are in from any one rock.
  *
- * ALL OF IT IS LOW AND WIDE. The chart's original boulders are as tall as they
- * are broad, which is right for a reef you are meant to feel walled in by and
- * wrong for a coast you are meant to sail along: a rim of them reads as a fence
- * and hides the water behind it. Everything here is between 1.2 and 2.6 times
- * wider than it is high, so a bay's edge is a shore rather than a palisade.
+ * ── SIZED AGAINST THE SHIP, NOT AGAINST THE OLD ROCKS ───────────────────────
+ *
+ * These were first sized by copying the numbers the chart's own boulders use,
+ * which was wrong in the one way that matters: those numbers describe a
+ * BOULDER, and half of this art is not boulders. A rowboat wreck at 430 wide is
+ * a rowboat as long as a man-o-war, and a set of mooring bollards at 690 is a
+ * bollard you could moor the man-o-war TO. Everything read as comically large
+ * because the sizes had been copied from a shape rather than measured against
+ * anything.
+ *
+ * The unit is the hull. WARSHIP_W * beam is about 205px of ship, so:
+ * a rowboat is half a hull, a rock is one, a shelf is one and a half, and only
+ * a whale's ribcage — which really is bigger than a sloop — goes past two.
  *
  * `SeaMark` treats `size` as WIDTH and lets the sprite set its own height, so
- * the ranges are per shape — a shelf and a ribcage want different numbers to
- * come out the same size.
+ * these are all widths, and the art is low: between 1.2 and 2.6 times wider
+ * than it is high. The chart's original boulders are as tall as they are broad,
+ * which is right for a reef you are meant to feel walled in by and wrong for a
+ * coast you are meant to sail along.
  */
-const CHAPTER_ROCKS: Record<Bay['rocks'], readonly { art: string; min: number; max: number }[]> = {
-  // The Loose Thread. A working pirate coast: wave-cut stone, wrecked boats,
-  // rotting mooring posts, a jetty somebody stopped maintaining.
-  reef: [
-    { art: '/sea/rock-reef-1.png', min: 520, max: 860 },   // layered shelf
-    { art: '/sea/rock-reef-2.png', min: 300, max: 430 },   // a swamped rowboat
-    { art: '/sea/rock-reef-3.png', min: 400, max: 660 },   // mossy rocks, posts
-    { art: '/sea/rock-reef-4.png', min: 300, max: 430 },   // the other rowboat
-    { art: '/sea/rock-reef-5.png', min: 400, max: 660 },   // rocks and rope
-    { art: '/sea/rock-reef-6.png', min: 420, max: 690 },   // pilings and chain
-  ],
+type RockArt = { art: string; min: number; max: number }
+
+/** The coast, and the loose things floating about in the bay. Split because
+ *  they are not the same job: a wall is built of the first and the second is
+ *  scenery you come across. A wall made of rowboats is not a wall. */
+type RockSet = { wall: readonly RockArt[]; props: readonly RockArt[] }
+
+const CHAPTER_ROCKS: Record<Bay['rocks'], RockSet> = {
+  // The Loose Thread. A working pirate coast: wave-cut stone, rotting mooring
+  // posts, a jetty somebody stopped maintaining, and the boats that lost.
+  reef: {
+    wall: [
+      { art: '/sea/rock-reef-1.png', min: 240, max: 330 },   // layered shelf
+      { art: '/sea/rock-reef-3.png', min: 175, max: 245 },   // mossy rocks, posts
+      { art: '/sea/rock-reef-5.png', min: 175, max: 245 },   // rocks and rope
+      { art: '/sea/rock-reef-6.png', min: 195, max: 275 },   // pilings and chain
+    ],
+    props: [
+      { art: '/sea/rock-reef-2.png', min: 88, max: 118 },    // a swamped rowboat
+      { art: '/sea/rock-reef-4.png', min: 88, max: 118 },    // and another
+    ],
+  },
   // A Bigger Fish. Everything out here has been eaten by something.
-  bones: [
-    { art: '/sea/rock-bones-1.png', min: 480, max: 760 },  // the ribcage
-    { art: '/sea/rock-bones-2.png', min: 420, max: 680 },  // a jaw in the sand
-    { art: '/sea/rock-bones-3.png', min: 380, max: 600 },  // kelp over black rock
-    { art: '/sea/rock-bones-4.png', min: 440, max: 700 },  // a run of vertebrae
-  ],
+  bones: {
+    wall: [
+      { art: '/sea/rock-bones-1.png', min: 360, max: 470 },  // the ribcage
+      { art: '/sea/rock-bones-2.png', min: 250, max: 340 },  // a jaw in the sand
+      { art: '/sea/rock-bones-3.png', min: 165, max: 235 },  // kelp over black rock
+      { art: '/sea/rock-bones-4.png', min: 200, max: 285 },  // a run of vertebrae
+    ],
+    props: [{ art: '/sea/rock-bones-3.png', min: 95, max: 130 }],
+  },
   // The Coffers. A counting house at the bottom of the sea.
-  coffers: [
-    { art: '/sea/rock-coffers-1.png', min: 460, max: 720 }, // vault wall
-    { art: '/sea/rock-coffers-2.png', min: 460, max: 720 }, // toppled columns
-    { art: '/sea/rock-coffers-3.png', min: 420, max: 660 }, // reef over a strongbox
-    { art: '/sea/rock-coffers-4.png', min: 440, max: 690 }, // bollards and chain
-  ],
+  coffers: {
+    wall: [
+      { art: '/sea/rock-coffers-1.png', min: 230, max: 320 }, // vault wall
+      { art: '/sea/rock-coffers-2.png', min: 230, max: 320 }, // toppled columns
+      { art: '/sea/rock-coffers-3.png', min: 195, max: 270 }, // reef over a strongbox
+      { art: '/sea/rock-coffers-4.png', min: 150, max: 205 }, // bollards and chain
+    ],
+    props: [{ art: '/sea/rock-coffers-4.png', min: 90, max: 120 }],
+  },
   // The Last Fathom. No warmth in any of it.
-  fathom: [
-    { art: '/sea/rock-fathom-1.png', min: 460, max: 730 },  // basalt columns
-    { art: '/sea/rock-fathom-2.png', min: 420, max: 640 },  // a drowned arch
-    { art: '/sea/rock-fathom-3.png', min: 420, max: 660 },  // obsidian shards
-    { art: '/sea/rock-fathom-4.png', min: 460, max: 730 },  // a lava shelf
-  ],
+  fathom: {
+    wall: [
+      { art: '/sea/rock-fathom-1.png', min: 230, max: 320 },  // basalt columns
+      { art: '/sea/rock-fathom-2.png', min: 250, max: 340 },  // a drowned arch
+      { art: '/sea/rock-fathom-3.png', min: 175, max: 250 },  // obsidian shards
+      { art: '/sea/rock-fathom-4.png', min: 250, max: 340 },  // a lava shelf
+    ],
+    props: [{ art: '/sea/rock-fathom-3.png', min: 90, max: 125 }],
+  },
+}
+
+/**
+ * HOW CLOSE TOGETHER A SET'S ROCKS HAVE TO STAND.
+ *
+ * DERIVED FROM THE ART, not a constant. The reef's own REEF_STEP of 700 was set
+ * against boulders 400-800 wide; drop the same step onto rock half that size and
+ * the coast becomes a dotted line with a boat-width of open water between every
+ * piece — which is not a coast, it is a hint of one, and the arithmetic wall
+ * behind it then reads as invisible.
+ *
+ * A shade over the mean width, so with the jitter each piece just meets its
+ * neighbour. Halve the art and the step halves itself.
+ */
+function rockStep(set: RockSet): number {
+  const mean = set.wall.reduce((a, k) => a + (k.min + k.max) / 2, 0) / set.wall.length
+  return Math.round(mean * 1.05)
 }
 
 /**
@@ -8319,6 +8420,7 @@ const CHAPTER_ROCKS: Record<Bay['rocks'], readonly { art: string; min: number; m
 function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[] {
   const out: { art: string; x: number; y: number; size: number }[] = []
   const KIND = CHAPTER_ROCKS[b.rocks]
+  const STEP = rockStep(KIND)
   let seed = 0x9e3779b9
   for (let i = 0; i < b.id.length; i++) seed = (Math.imul(seed ^ b.id.charCodeAt(i), 0x85ebca6b) >>> 0)
   const nx = () => {
@@ -8327,7 +8429,7 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
     seed ^= seed << 5; seed >>>= 0
     return seed / 0x100000000
   }
-  const pick = () => KIND[Math.min(KIND.length - 1, Math.floor(nx() * KIND.length))]
+  const pick = () => KIND.wall[Math.min(KIND.wall.length - 1, Math.floor(nx() * KIND.wall.length))]
 
   // ── THE RIM ──
   // Two rows round the whole circle, minus the doorway. The angle a given
@@ -8341,13 +8443,13 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
   const doorHalf = ang(b.half + 420)
 
   for (const row of [0, 1]) {
-    const R = b.r + (row ? 150 : 30)
-    for (let t = 0; t < Math.PI * 2; t += ang(REEF_STEP)) {
+    const R = b.r + (row ? STEP * 0.5 : 20)
+    for (let t = row * ang(STEP) * 0.5; t < Math.PI * 2; t += ang(STEP)) {
       const off = ((t - door + Math.PI * 3) % (Math.PI * 2)) - Math.PI
       if (Math.abs(off) < doorHalf) continue
       const k = pick()
-      const th = t + (nx() - 0.5) * ang(REEF_STEP) * 0.35
-      const rr = R + (nx() - 0.5) * 130
+      const th = t + (nx() - 0.5) * ang(STEP) * 0.35
+      const rr = R + (nx() - 0.5) * STEP * 0.4
       out.push({
         art: k.art, x: c.x + Math.cos(th) * rr, y: c.y + Math.sin(th) * rr,
         size: k.min + nx() * (k.max - k.min),
@@ -8365,10 +8467,10 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
     const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
     const r = nx()
     const th = t + (nx() - 0.5) * ang(PEBBLE_STEP * 2) * 0.8
-    const rr = b.r + 40 + (nx() - 0.5) * 300
+    const rr = b.r + 20 + (nx() - 0.5) * 220
     out.push({
       art: pa.art, x: c.x + Math.cos(th) * rr, y: c.y + Math.sin(th) * rr,
-      size: pa.min + r * r * (pa.max - pa.min),
+      size: pa.min * 0.7 + r * r * (pa.max - pa.min) * 0.7,
     })
   }
 
@@ -8380,10 +8482,10 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
   const L = straitLen(b)
   for (const side of [-1, 1]) {
     for (const row of [0, 1]) {
-      for (let a = (row * REEF_STEP) / 2; a <= L; a += REEF_STEP) {
+      for (let a = (row * STEP) / 2; a <= L; a += STEP) {
         const k = pick()
-        put(a + (nx() - 0.5) * REEF_STEP * 0.3,
-          side * (b.half + (row ? 150 : 30) + (nx() - 0.5) * 130),
+        put(a + (nx() - 0.5) * STEP * 0.3,
+          side * (b.half + (row ? STEP * 0.5 : 20) + (nx() - 0.5) * STEP * 0.4),
           k.art, k.min + nx() * (k.max - k.min))
       }
     }
@@ -8400,8 +8502,28 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
   // Either side of the mouth, framing it. A gap in a run of rock is a gap you
   // might have imagined; two stones standing either side of it is a door — and
   // out here it is the door to a whole chapter.
-  put(-40, -(b.half + 260), '/sea/rock-gate-w.png', 700)
-  put(-40, b.half + 260, '/sea/rock-gate-e.png', 700)
+  put(-40, -(b.half + 200), '/sea/rock-gate-w.png', 420)
+  put(-40, b.half + 200, '/sea/rock-gate-e.png', 420)
+
+  // ── THE FLOTSAM ──
+  // The loose things: a wrecked boat, a fallen bollard, a knot of kelp, out in
+  // the water rather than on the coast. They are what makes a bay feel like a
+  // place somebody has been rather than a walled pond, and they are small — a
+  // wreck is half a hull, which is what a wreck is.
+  //
+  // SCATTERED IN BAY SPACE and kept off the axis, so nothing lands in the
+  // doorway or in the middle of the run to the boss.
+  for (let i = 0; i < 14 && KIND.props.length > 0; i++) {
+    const k = KIND.props[Math.min(KIND.props.length - 1, Math.floor(nx() * KIND.props.length))]
+    // A ring between a third and nine-tenths of the way out, so the middle of
+    // the bay stays open water and the edge stays sailable.
+    const rr = b.r * (0.34 + nx() * 0.56)
+    const th = nx() * Math.PI * 2
+    out.push({
+      art: k.art, x: c.x + Math.cos(th) * rr, y: c.y + Math.sin(th) * rr,
+      size: k.min + nx() * (k.max - k.min),
+    })
+  }
 
   // Painter's order: further south is nearer, so it draws last and overlaps
   // what is behind it. Without this a big rock at the back sits on top of a
@@ -8468,7 +8590,8 @@ function outOfWater(b: Bay, x: number, y: number): { x: number; y: number } {
 const MOUTH_PLUGS: Record<string, { art: string; x: number; y: number; size: number }[]> =
   Object.fromEntries(BAYS.map(b => {
     const out: { art: string; x: number; y: number; size: number }[] = []
-    const KIND = CHAPTER_ROCKS[b.rocks]
+    const KIND = CHAPTER_ROCKS[b.rocks].wall
+    const STEP = rockStep(CHAPTER_ROCKS[b.rocks])
     let seed = 0x2545f491
     for (let i = 0; i < b.id.length; i++) seed = (Math.imul(seed ^ b.id.charCodeAt(i), 0xc2b2ae35) >>> 0)
     const nx = () => {
@@ -8482,10 +8605,10 @@ const MOUTH_PLUGS: Record<string, { art: string; x: number; y: number; size: num
       out.push({ art, x: p.x, y: p.y, size })
     }
     for (const row of [0, 1]) {
-      for (let x = -b.half; x <= b.half; x += REEF_STEP) {
+      for (let x = -b.half; x <= b.half; x += STEP) {
         const k = KIND[Math.min(KIND.length - 1, Math.floor(nx() * KIND.length))]
-        put(60 - (row ? 150 : 0) + (nx() - 0.5) * 120,
-          x + (nx() - 0.5) * REEF_STEP * 0.3,
+        put(60 - (row ? STEP * 0.5 : 0) + (nx() - 0.5) * 120,
+          x + (nx() - 0.5) * STEP * 0.3,
           k.art, k.min + nx() * (k.max - k.min))
       }
     }
@@ -8519,8 +8642,22 @@ const MOUTH_PLUGS: Record<string, { art: string; x: number; y: number; size: num
  * Only tall scenery. A flat shelf awash at the waterline never covers anything,
  * and every extra candidate is one more distance test on the proximity tick.
  */
+// ── THE BAY COASTS ARE NOT IN HERE, AND THAT IS DELIBERATE ──────────────────
+//
+// This layer is drawn ABOVE the whole world, which is fine when the only thing
+// under it is the hull — that is what it is for. It is not fine when there is
+// anything else standing in the water, because a rock that qualifies jumps over
+// ALL of it, not just the boat: sail up on a boss and the coast behind her
+// suddenly draws in front of her, then drops back the moment you pass. Reported
+// as exactly that, and it is only possible in the bays, because the bays are
+// the only water with big painted objects standing in it.
+//
+// The fishing sea keeps the near pass unchanged. Out here the trade is the
+// other way round: the hull occasionally drawing over a rim rock she is south
+// of costs a glance, and a boulder teleporting over a man-o-war costs the whole
+// illusion that these things are IN a place.
 const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
-  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL, ...BAY_WALLS]
+  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL]
     .filter(m => m.size >= 300)
     .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size }))
 
@@ -9818,10 +9955,16 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
   const locked = status === 'locked'
   const cleared = status === 'cleared'
 
-  // A FLAGSHIP IS BIGGER THAN A ROWBOAT. Sized against the player's own 210,
-  // which is the only object out here whose scale anybody already knows: a boss
-  // out-masses you, a skirmisher is a fair match.
-  const w = node.type === 'raid' ? 340 : 230
+  // A FLAGSHIP IS BIGGER THAN A ROWBOAT, and neither of them is bigger than the
+  // chart. Measured against the hull you are ACTUALLY sailing, which is
+  // WARSHIP_W * beam — about 205px of ship at the Man-o-War, not the 340px box
+  // it is drawn in. These were 340 and 230 against that box, so a boss came out
+  // half again the length of the biggest ship in the game and a mob matched it.
+  //
+  // The enemy art fills about nine tenths of its own frame, so a boss at 260
+  // puts roughly 235px of hull beside your 205: bigger than you, and plausibly
+  // so. A skirmisher at 185 is smaller than you, which is what a mob is.
+  const w = node.type === 'raid' ? 260 : 185
 
   // The bob, phased off its own position so a bay full of hulls is never in
   // step. Ships rising and falling together read as one object.
@@ -9866,17 +10009,21 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
 })
 
 /**
- * ── A CACHE: THE STORY, FOUND RATHER THAN HANDED OVER ───────────────────────
+ * ── A CACHE, STANDING ON ITS ROCK ───────────────────────────────────────────
  *
- * A chest on a rock or a bottle riding the swell, with a chapter's beat inside
- * it. The chest art is the chart's own — the same box the fishing isles are
- * scattered with — because a captain has already learned what one of those
- * means, and a second visual language for "there is something in this" would be
- * two lessons for one idea.
+ * The campaign's own caches — the Quartermaster's, the Driftwood, the Sunken —
+ * as a chest on an isle. On, not beside: these were floating in open water,
+ * which reads as a bug because it is one. A cache is somewhere somebody LEFT
+ * something, and that means land.
  *
- * Deliberately SMALL. A chest is a third of the boat and a bottle a tenth, and
- * the point of a bay is that you can sail past one and not see it. Something
- * you cannot miss is not something you found.
+ * SIZED OFF ITS ISLE, exactly as the fishing sea's chests are — see IsleRock,
+ * which takes 0.30 of the rock's radius and explains why: a fixed size makes a
+ * chest on a small rock look like a shipping container, and the boat moored a
+ * few lengths off is the only scale anybody has.
+ *
+ * The chest art is the chart's own, because a captain has already learned what
+ * one of those means and a second visual language for "there is something in
+ * this" would be two lessons for one idea.
  */
 const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
   cache: Cache
@@ -9884,17 +10031,12 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
   isNear: boolean
 }) {
   const at = cacheAt(cache)
-  if (!at) return null
+  const isle = cacheIsle(cache)
+  if (!at || !isle) return null
 
   const locked = status === 'locked'
   const cleared = status === 'cleared'
-  const chest = cache.kind === 'chest'
-  const w = chest ? 78 : 30
-
-  const art = chest
-    ? (cleared ? '/sea/isle-chest-open.png' : '/sea/isle-chest.png')
-    : '/sea/sea-bottle.png'
-  const phase = ((Math.abs(at.x) * 3 + Math.abs(at.y)) % 1000) / 1000
+  const w = isle.r * 0.34
 
   return (
     <div aria-hidden style={{
@@ -9902,32 +10044,28 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
       transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
       transformOrigin: 'bottom center',
     }}>
+      {/* A SHADOW ON THE ROCK, not a pool in the water. The chest is standing on
+          something now, so what belongs under it is the shade it casts. */}
       <div aria-hidden style={{
-        position: 'absolute', left: '50%', bottom: -w * 0.05,
-        width: w * 1.5, height: w * 0.5,
+        position: 'absolute', left: '50%', bottom: -w * 0.06,
+        width: w * 1.25, height: w * 0.4,
         transform: `translate(-50%, 0) scaleY(${GROUND})`,
         borderRadius: '50%',
         background: locked || cleared
-          ? 'radial-gradient(ellipse, rgba(6,12,18,0.4) 0%, transparent 70%)'
+          ? 'radial-gradient(ellipse, rgba(6,12,18,0.45) 0%, transparent 70%)'
           : 'radial-gradient(ellipse, rgba(240,192,64,0.22) 0%, transparent 72%)',
       }} />
-      <div style={{
-        // A bottle rides the swell harder than a chest on a rock does, so it
-        // takes the bob and the chest does not.
-        animation: chest ? undefined : `encBob 4.2s ease-in-out ${(-phase * 4.2).toFixed(2)}s infinite`,
-        transformOrigin: 'bottom center',
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={art} alt="" draggable={false} decoding="async" style={{
-          width: w, height: 'auto', display: 'block',
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={cleared ? '/sea/isle-chest-open.png' : '/sea/isle-chest.png'}
+        alt="" draggable={false} decoding="async" style={{
+          width: w, height: 'auto', display: 'block', position: 'relative',
           filter: locked
             ? 'grayscale(0.9) brightness(0.55) drop-shadow(0 4px 8px rgba(0,0,0,0.6))'
             : isNear && !cleared
               ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 14px rgba(240,192,64,0.7))'
               : 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))',
-          opacity: cleared ? 0.7 : 1,
+          opacity: cleared ? 0.75 : 1,
         }} />
-      </div>
     </div>
   )
 })
