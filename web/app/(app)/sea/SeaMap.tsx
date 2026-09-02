@@ -50,7 +50,7 @@ import {
   encounterNear, cacheNear, hullFor,
   type Bay, type Encounter, type Cache, type Beat, type Gate,
 } from './raidWaters'
-import { RAID_MAP } from '@/lib/raidMap'
+import { RAID_MAP, type RaidNode } from '@/lib/raidMap'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -224,6 +224,10 @@ const CrewHub = dynamic(() => import('./CrewHub'), { ssr: false })
  *  see SeaStory. A captain who never leaves the fishing grounds never fetches
  *  a byte of it. */
 const SeaStory = dynamic(() => import('./SeaStory'), { ssr: false })
+/** The toll, the cache and the Captain's Choice — the three campaign nodes
+ *  whose interaction is more than reading. Same treatment: nothing is fetched
+ *  until one is actually opened. */
+const SeaNodeSheet = dynamic(() => import('./SeaNodeSheet'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
@@ -2754,6 +2758,28 @@ export default function SeaMap({
    *  the water. */
   const [nearBeat, setNearBeat] = useState<Beat | null>(null)
   const [reading, setReading] = useState<string | null>(null)
+  /**
+   * A NODE'S OWN SHEET, AND THE INTRO THAT RUNS BEFORE IT.
+   *
+   * On a milestone or an event the scene is an INTRO: it explains what you have
+   * sailed into, and the claim or the choice AFTER it is what actually clears
+   * the node. So the scene plays with no write, and finishing it opens the
+   * sheet — which is exactly what the campaign map does with the same nodes.
+   *
+   * `seenIntros` is per session, like the map's own: having watched it once,
+   * coming back to the rock goes straight to the sheet.
+   */
+  const [sheetNode, setSheetNode] = useState<string | null>(null)
+  const [introNode, setIntroNode] = useState<string | null>(null)
+  const seenIntros = useRef<Set<string>>(new Set())
+
+  /** Open a campaign node that is not a fight: the scene first if it has one and
+   *  this captain has not seen it, then whatever the node actually asks. */
+  const openNode = useCallback((n: RaidNode, cleared: boolean) => {
+    if (readableAtSea(n)) { setReading(n.id); return }
+    if (n.scene && !cleared && !seenIntros.current.has(n.id)) { setIntroNode(n.id); return }
+    setSheetNode(n.id)
+  }, [])
   // ── WHAT THE SEA IS HANDING YOU ───────────────────────────────────────
   //
   // Bottles are derived, not fetched: the same cell hash the server runs, so
@@ -3010,12 +3036,14 @@ export default function SeaMap({
       if (crewOpen) { setCrewOpen(false); return }
       if (crewHubOpen) { setCrewHubOpen(false); return }
       if (reading) { setReading(null); return }
+      if (sheetNode) { setSheetNode(null); return }
+      if (introNode) { setIntroNode(null); return }
       if (folkOpen) { setFolkOpen(false); return }
       if (mapOpen) { setMapOpen(false); return }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -3586,21 +3614,10 @@ export default function SeaMap({
         // to learn there is a name — and naming the thing you cannot do yet is
         // the honest half of refusing it. Silence would read as broken.
         if (st === 'locked') return { act: null, hold: `${n.label} — not yet` }
-        // A STORY BEAT PLAYS HERE. Not "anything with a scene": a milestone and
-        // an event both carry one, but on those the scene is an INTRO and the
-        // claim or the choice after it is what actually clears the node —
-        // `markStoryNodeRead` refuses anything that is not a story or a berth,
-        // and rightly. Playing one of those out here would run the cutscene and
-        // then fail to record it, which is worse than not offering it.
-        //
-        // So the rest of the chain is named and sent to the sheet that can
-        // finish it. Those sheets are the next thing this water wants.
-        return {
-          act: readableAtSea(n)
-            ? (st === 'cleared' ? `Read ${n.label} again` : `Read ${n.label}`)
-            : `${n.label} — on the campaign map`,
-          hold: null,
-        }
+        // A BEAT IS READ, A TOLL IS SETTLED, A CHOICE IS MADE. See verbFor: the
+        // helm is the last thing read before the thumb moves, and only one of
+        // those three can be undone.
+        return { act: `${verbFor(n, st)} ${n.label}`, hold: null }
       }
     }
     if (nearCache) {
@@ -3608,11 +3625,7 @@ export default function SeaMap({
       if (n) {
         const st = nodeStatus[n.id] ?? 'locked'
         if (st === 'locked') return { act: null, hold: 'A cache, sealed' }
-        if (!n.route) return { act: null, hold: n.label }
-        return {
-          act: st === 'cleared' ? `Open ${n.label} again` : `Open the ${n.label}`,
-          hold: null,
-        }
+        return { act: `${verbFor(n, st)} ${n.label}`, hold: null }
       }
     }
     if (nearDig && !dug.has(nearDig.id)) return { act: 'Dig here', hold: null }
@@ -6985,6 +6998,28 @@ hullRef={hullRefFor(t.key)} />
         ) : null
       })()}
 
+      {/* AN INTRO, which writes nothing and hands you on to the sheet. */}
+      {(() => {
+        const n = introNode ? RAID_MAP.find(x => x.id === introNode) : null
+        return n ? (
+          <SeaStory node={n} cleared intro
+            onDone={() => {
+              seenIntros.current.add(n.id)
+              setIntroNode(null)
+              setSheetNode(n.id)
+            }} />
+        ) : null
+      })()}
+
+      {/* AND THE SHEET: the toll, the cache, the Captain's Choice. */}
+      {(() => {
+        const n = sheetNode ? RAID_MAP.find(x => x.id === sheetNode) : null
+        return n ? (
+          <SeaNodeSheet node={n} cleared={(nodeStatus[n.id] ?? 'locked') === 'cleared'}
+            onClose={() => setSheetNode(null)} />
+        ) : null
+      })()}
+
       <CrewHub
         open={crewHubOpen}
         onClose={() => { setCrewHubOpen(false); pollCrew() }}
@@ -7051,21 +7086,19 @@ hullRef={hullRefFor(t.key)} />
             const n = RAID_MAP.find(x => x.id === nearBeat.node)
             if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked') {
               vibrate(14)
-              // THE SCENE PLAYS HERE, over the water, with the campaign's own
-              // kit and the campaign's own write — see SeaStory. A node whose
-              // interaction is a claim or a choice has a sheet this surface has
-              // not been taught yet, and goes to the map that has it.
-              if (readableAtSea(n)) setReading(n.id)
-              else router.push('/expeditions')
+              // THE SCENE, THE TOLL OR THE CHOICE, whichever this node is, over
+              // the water — see openNode. Nothing on a rock out here sends you to
+              // another screen any more.
+              openNode(n, (nodeStatus[n.id] ?? 'locked') === 'cleared')
               return true
             }
             return false
           }
           if (nearCache) {
             const n = RAID_MAP.find(x => x.id === nearCache.node)
-            if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked' && n.route) {
+            if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked') {
               vibrate(14)
-              router.push(n.route)
+              openNode(n, (nodeStatus[n.id] ?? 'locked') === 'cleared')
               return true
             }
             return false
@@ -10187,6 +10220,21 @@ const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
  */
 function readableAtSea(n: { type: string; scene?: unknown }): boolean {
   return !!n.scene && (n.type === 'story' || n.type === 'berth')
+}
+
+/**
+ * WHAT PRESSING THIS ACTUALLY DOES, in one word.
+ *
+ * "Open" would cover a scene, a price and a permanent decision alike, and only
+ * one of those three can be undone. The helm is the last thing read before the
+ * thumb moves, so it has to say which of them is about to happen.
+ */
+function verbFor(n: RaidNode, status: string): string {
+  if (status === 'cleared') return readableAtSea(n) ? 'Read again:' : 'Look again at'
+  if (n.type === 'milestone') return 'Settle with'
+  if (n.choice) return 'Open the'
+  if (n.classPick) return 'Make'
+  return 'Read'
 }
 
 const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId, nearBeatId }: {

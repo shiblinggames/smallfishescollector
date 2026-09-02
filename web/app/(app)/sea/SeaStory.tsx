@@ -24,11 +24,21 @@ import StoryScene from '@/app/(app)/expeditions/StoryScene'
 import { markStoryNodeRead } from '@/app/(app)/expeditions/raidMapActions'
 import { SCENE_BACKDROPS, type RaidNode } from '@/lib/raidMap'
 
-export default function SeaStory({ node, cleared, onDone }: {
+export default function SeaStory({ node, cleared, intro = false, onDone }: {
   node: RaidNode
   /** Already read. A replay: the closing button just shuts it, and Skip is
    *  allowed, because the beat has already been earned once. */
   cleared: boolean
+  /**
+   * AN INTRO, NOT THE BEAT ITSELF.
+   *
+   * On a milestone or an event the scene explains what you have sailed into and
+   * the claim or the choice after it is the real clear. So this one writes
+   * NOTHING — the caller opens the sheet when it finishes — and Skip stays off
+   * for a first watch, because the scene is still the first time you are told
+   * what the thing in front of you is.
+   */
+  intro?: boolean
   onDone: () => void
 }) {
   const router = useRouter()
@@ -36,9 +46,10 @@ export default function SeaStory({ node, cleared, onDone }: {
   const [err, setErr] = useState<string | null>(null)
 
   function finish() {
-    // A REPLAY WRITES NOTHING. It is already read; the only thing left to do
-    // with it is close it.
-    if (cleared) { onDone(); return }
+    // A REPLAY WRITES NOTHING, and neither does an intro. One is already read;
+    // the other has not been earned yet and the sheet behind it is what earns
+    // it. In both cases the only thing left to do here is close.
+    if (cleared || intro) { onDone(); return }
     startTransition(async () => {
       const res = await markStoryNodeRead(node.id)
       if (res && 'error' in res) { setErr(res.error); return }
@@ -67,7 +78,7 @@ export default function SeaStory({ node, cleared, onDone }: {
         // is the payoff for everything that led to it, and a one-tap Skip in the
         // top bar from line one is easy to hit by accident and impossible to
         // undo in the moment.
-        allowSkip={cleared}
+        allowSkip={cleared && !intro}
       />
       {err && (
         <p role="alert" className="font-karla font-600" style={{
