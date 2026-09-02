@@ -1467,7 +1467,28 @@ export default function SeaMap({
   /** WHERE SHE WAS LAST FRAME. The wall test is a crossing test — see the note
    *  in the loop — so it needs the segment she travelled, not just where she
    *  ended up. */
+  /**
+   * WHERE SHE WAS LAST FRAME, and whether that is yet a real answer.
+   *
+   * The wall test is a CROSSING test — it asks whether the segment she
+   * travelled this frame cut across a wall — so on the very first frame it has
+   * no honest previous position to use. It started at 0,0, which is the
+   * Mainland, so a captain resuming inside a bay was tested as having travelled
+   * in a straight line from the middle of the fishing sea to wherever they
+   * were: a line that crosses half the route's rock, and the rule then put them
+   * back at whichever wall it hit first.
+   *
+   * That is the whole of "it always spawns me in a new place". The position was
+   * saved correctly, restored correctly, and then shoved by a rule reading a
+   * journey the boat never made — and WHICH wall it hit depended on where you
+   * were, which is why it was somewhere new every time.
+   *
+   * `known` is the same guard `basinKnown` uses for the bay coasts, for exactly
+   * the same reason, and it is cleared on a warp too: a teleport is not travel
+   * and must never be tested as though it were.
+   */
   const lastPos = useRef({ x: 0, y: 0 })
+  const lastKnown = useRef(false)
   /** Mirrored for the frame loop, which mounts once and would otherwise hold
    *  whatever was cleared when the page loaded — so a chapter finished in this
    *  session would leave its strait shut until a reload. */
@@ -2546,6 +2567,10 @@ export default function SeaMap({
     // her straight back in. Clearing this makes the next frame ADOPT wherever
     // she now is, which is the same thing it does when the chart first loads.
     basinKnown.current = false
+    // AND THE WALLS FORGET THE JOURNEY. A teleport is not travel: tested as a
+    // crossing it is a line from the old place to the new one, straight through
+    // everything in between, and the route's own rock would refuse the arrival.
+    lastKnown.current = false
     portalIn.current = false
     setPortalOpen(false)
     vibrate([16, 40, 24])
@@ -4028,6 +4053,10 @@ export default function SeaMap({
     }
     target.current = { ...pos.current }
     vel.current = { x: 0, y: 0 }
+    // AND THE WALLS START FROM HERE, not from wherever the ref was born. This
+    // is a restore, not a voyage.
+    lastPos.current = { ...pos.current }
+    lastKnown.current = false
     // The refs and the chrome, seeded together with the position they belong
     // to. A position restored without its state is the bug this effect had.
     sideRef.current = north
@@ -4981,8 +5010,13 @@ export default function SeaMap({
       // she is doing when it matters. Ask instead whether the segment she
       // travelled this frame crossed the segment the wall is, and there is no
       // speed that beats it.
+      // NOTHING TO TEST UNTIL SHE HAS ACTUALLY MOVED. See lastKnown: with no
+      // previous position, "the segment she travelled" is a line from wherever
+      // this ref happened to start, and a route full of rock will always find
+      // something to refuse.
       const from = lastPos.current
       for (const w of WALLS) {
+        if (!lastKnown.current) break
         if (!wallUp(w, clearedRef.current)) continue
         const e = wallSeg(w)
         if (!e) continue
@@ -5010,6 +5044,7 @@ export default function SeaMap({
       }
       basinKnown.current = nowOut
       lastPos.current = { x: pos.current.x, y: pos.current.y }
+      lastKnown.current = true
 
       // Only when it CHANGES. This runs every frame and setState does not.
       if ((held?.node ?? null) !== gateRef.current) {
