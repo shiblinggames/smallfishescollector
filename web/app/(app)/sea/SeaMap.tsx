@@ -43,6 +43,7 @@ import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
+import { BASINS, basinGaps, type Basin } from './raidWaters'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -612,7 +613,7 @@ function artShapes(art: string, x: number, y: number, size: number, fallbackR: n
 let obstaclesAll: Obstacle[] | null = null
 function allObstacles(): Obstacle[] {
   if (obstaclesAll) return obstaclesAll
-  const stacks = [...REEF, ...ANCHORAGE_WALL]
+  const stacks = [...REEF, ...ANCHORAGE_WALL, ...BASIN_WALLS]
     .filter(m => m.art.includes('rock-gate'))
     .flatMap(m => {
       const c = ART_COLLIDERS[markKind(m.art)]
@@ -1972,6 +1973,7 @@ export default function SeaMap({
       ...LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i })),
       ...REEF.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 500 })),
       ...ANCHORAGE_WALL.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 1200 })),
+      ...BASIN_WALLS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 4000 })),
     ]
     : [], [])
 
@@ -5520,6 +5522,7 @@ export default function SeaMap({
         {/* The harbour's own shore, north of the reef. Always drawn: from the
             fishing grounds it is the far wall you can see beyond the arch. */}
         <AnchorageWall />
+        <BasinWalls />
 
         {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
             through the opening is what takes you to expeditions, so the opening
@@ -7831,6 +7834,97 @@ function anchorageRocks() {
 const ANCHORAGE_WALL = anchorageRocks()
 
 /**
+ * ── THE CAMPAIGN'S BASIN WALLS ──────────────────────────────────────────────
+ *
+ * `anchorageRocks` with the four things it hardcodes turned into arguments:
+ * where the ring is, how big, which way it is open, and how wide those openings
+ * are. Deliberately the same boulders, the same two-row stagger, the same
+ * shingle and the same painter's sort — a basin has to read as the SAME COAST
+ * the arch and the sortie are made of, because a player learns "rock like that
+ * is a wall with a gap in it" once and should never have to learn it again.
+ *
+ * WHAT DIFFERS FROM THE ANCHORAGE, and only this:
+ *
+ *   FULL CIRCLE. The anchorage's wall covers ~229 degrees because south of the
+ *   reef the fishing grounds take over and the reef is already its shore. A
+ *   basin has no such neighbour, so it is walled the whole way round.
+ *
+ *   TWO GAPS, not one. The way in and the way on. The last basin has one,
+ *   which is what makes it the end of the road rather than a room with a door
+ *   nobody has opened.
+ *
+ *   ITS OWN SEED. Five basins built from one seed would be five identical
+ *   coastlines at different coordinates, and the eye reads repetition faster
+ *   than it reads anything else on a chart.
+ */
+function basinRocks(b: Basin): { art: string; x: number; y: number; size: number }[] {
+  const out: { art: string; x: number; y: number; size: number }[] = []
+  // Seeded off the id so each coast is its own, and stable across reloads.
+  let seed = 0x9e3779b9
+  for (let i = 0; i < b.id.length; i++) { seed = (Math.imul(seed ^ b.id.charCodeAt(i), 0x85ebca6b) >>> 0) }
+  const nx = () => {
+    seed ^= seed << 13; seed >>>= 0
+    seed ^= seed >>> 17
+    seed ^= seed << 5; seed >>>= 0
+    return seed / 0x100000000
+  }
+
+  const at = (th: number, off: number) => ({
+    x: b.x + Math.cos(th) * (b.r + off),
+    y: b.y + Math.sin(th) * (b.r + off),
+  })
+  const ang = (px: number) => px / b.r
+  const gaps = basinGaps(b)
+
+  /** Is this bearing inside one of the openings? Compared as a shortest angular
+   *  distance, so a gap that straddles the seam at ±PI is still one gap. */
+  const inGap = (th: number, pad: number) => gaps.some(g => {
+    let d = Math.abs(((th - g.bearing + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
+    return d < g.half + pad
+  })
+
+  // ── THE BOULDERS ──
+  const skip = ang(520)
+  const step = ang(REEF_STEP)
+  for (const row of [0, 1]) {
+    for (let th = (row * step) / 2; th < Math.PI * 2; th += step) {
+      if (inGap(th, skip)) continue
+      const k = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
+      const p = at(th + (nx() - 0.5) * step * 0.22, (row ? 1 : -1) * 110 + (nx() - 0.5) * 150)
+      out.push({ art: k.art, x: p.x, y: p.y, size: k.min + nx() * (k.max - k.min) })
+    }
+  }
+
+  // ── THE HEADLANDS ──
+  // The same pair that frames the arch and the sortie, framing every mouth. A
+  // gap in a run of boulders is a gap you might have imagined; two stones
+  // standing either side of it is a door.
+  for (const g of gaps) {
+    const off = g.half + ang(370)
+    const w = at(g.bearing - off, 40), e = at(g.bearing + off, 40)
+    out.push({ art: '/sea/rock-gate-w.png', x: w.x, y: w.y, size: 700 })
+    out.push({ art: '/sea/rock-gate-e.png', x: e.x, y: e.y, size: 700 })
+  }
+
+  // ── THE SHINGLE ──
+  const pstep = ang(PEBBLE_STEP)
+  const pskip = ang(300)
+  for (let th = 0; th < Math.PI * 2; th += pstep) {
+    if (inGap(th, pskip)) continue
+    const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
+    const r = nx()
+    const p = at(th + (nx() - 0.5) * pstep * 0.8, (nx() - 0.5) * 330)
+    out.push({ art: pa.art, x: p.x, y: p.y, size: pa.min + r * r * (pa.max - pa.min) })
+  }
+
+  return out.sort((p, q) => p.y - q.y)
+}
+
+/** Every basin's coast, in one list, sorted together — so a rock in the basin
+ *  behind never draws over one in the basin in front where two rims meet. */
+const BASIN_WALLS = BASINS.flatMap(basinRocks).sort((p, q) => p.y - q.y)
+
+/**
  * EVERYTHING THAT CAN STAND IN FRONT OF THE BOAT.
  *
  * The hull is drawn on the SCREEN layer, at dead centre, above the whole world
@@ -7852,7 +7946,7 @@ const ANCHORAGE_WALL = anchorageRocks()
  * and every extra candidate is one more distance test on the proximity tick.
  */
 const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
-  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL]
+  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL, ...BASIN_WALLS]
     .filter(m => m.size >= 300)
     .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size }))
 
@@ -7883,6 +7977,13 @@ const ReefLine = memo(function ReefLine() {
 const AnchorageWall = memo(function AnchorageWall() {
   if (GPU_ISLANDS) return null
   return <>{ANCHORAGE_WALL.map((m, i) => <SeaMark key={`anch${i}`} m={m} i={i + 1200} />)}</>
+})
+
+/** The campaign's coasts. Same treatment as the reef and the harbour wall, for
+ *  the same reason: five more module constants that can never change. */
+const BasinWalls = memo(function BasinWalls() {
+  if (GPU_ISLANDS) return null
+  return <>{BASIN_WALLS.map((m, i) => <SeaMark key={`basin${i}`} m={m} i={i + 4000} />)}</>
 })
 
 /** Crew card art lives in Supabase storage, same bucket the crew hall reads. */

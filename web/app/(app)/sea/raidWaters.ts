@@ -198,6 +198,44 @@ export function opensStrait(b: Basin): string | null {
   return RAID_CHAPTERS.find(c => c.id === b.id)?.lastNodeId ?? null
 }
 
+/**
+ * WHERE THE WALL IS OPEN, as bearings from the basin's centre.
+ *
+ * Two gaps for a basin in the middle of the chain, one for the first and one
+ * for the last. The first basin's way in faces the SORTIE rather than another
+ * basin, because the sortie is what you arrive through — and the last has no way
+ * on, which is what makes it the end of the campaign rather than a room with a
+ * door nobody opened yet.
+ *
+ * Derived from the neighbours, like the straits themselves. A basin does not
+ * store which way its gaps face because that is a fact about the chain, and a
+ * stored copy is a thing that can disagree with the chain after a nudge.
+ */
+export function basinGaps(b: Basin): { bearing: number; half: number }[] {
+  const i = BASINS.indexOf(b)
+  const prev = BASINS[i - 1]
+  const next = BASINS[i + 1]
+  const out: { bearing: number; half: number }[] = []
+
+  // THE WAY IN. Toward the previous basin, or toward the sortie for the first.
+  const from = prev ?? { x: SORTIE.x, y: SORTIE.y, gateHalf: b.gateHalf }
+  out.push({
+    bearing: Math.atan2(from.y - b.y, from.x - b.x),
+    // A mouth is one size from both sides: the gap you leave by is the gap you
+    // came in through, so it takes the width of whichever basin owns it.
+    half: (prev?.gateHalf ?? b.gateHalf) / b.r,
+  })
+
+  // THE WAY ON.
+  if (next) {
+    out.push({
+      bearing: Math.atan2(next.y - b.y, next.x - b.x),
+      half: b.gateHalf / b.r,
+    })
+  }
+  return out
+}
+
 /** The first basin's mouth is the sortie. Kept as a function so the caller does
  *  not have to know that, and so it can move. */
 export function basinEntry(): { x: number; y: number } {
