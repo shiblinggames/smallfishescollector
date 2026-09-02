@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import GoogleButton from '@/components/GoogleButton'
+import AppleButton from '@/components/AppleButton'
 
 export default function LoginForm() {
   const searchParams = useSearchParams()
@@ -76,6 +77,9 @@ export default function LoginForm() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Primary action */}
       <GoogleButton next={next} />
+      {/* Renders nothing until NEXT_PUBLIC_APPLE_SSO is set — see AppleButton
+          for why a sign-in door that cannot open is worse than no door. */}
+      <AppleButton next={next} />
 
       {/* Email fallback */}
       {!showEmail ? (
