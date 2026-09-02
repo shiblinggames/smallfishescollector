@@ -21,7 +21,7 @@ import {
 import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
 import { isUniqueLoot } from '@/lib/bossRaids'
-import RaidCombat from './RaidCombat'
+import RaidCombat, { type ShipAnchor, type ShipFx } from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
 import TideModal from './TideModal'
@@ -306,7 +306,7 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ onLeave, overSea = false, config, equippedShipSkin, shipSkins, equippedItems,
+export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
   ownedSpecialItems = [],
   /**
@@ -349,6 +349,10 @@ export default function RaidGame({ onLeave, overSea = false, config, equippedShi
    * is the beat, and it is a change to the water rather than a picture of it.
    */
   overSea?: boolean
+  /** Live handle to where the chart's two hulls are. See RaidCombat. */
+  anchors?: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
+  /** What those hulls are doing, sent back for the chart to draw. */
+  onShipFx?: (fx: { player: ShipFx; enemy: ShipFx }) => void
   config: BossRaidConfig
   /** Fishing gear widening the dial bands. Only the Finn finale passes it. */
   dialAim?: DialAimBonus
@@ -1708,6 +1712,9 @@ export default function RaidGame({ onLeave, overSea = false, config, equippedShi
                 // the fight, RaidCombat's own stage gradient and its scenery
                 // chain would be the opaque layer instead.
                 transparentBackdrop={!!raidBg || !!bayBg || overSea}
+                overSea={overSea}
+                anchors={anchors}
+                onShipFx={onShipFx}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}

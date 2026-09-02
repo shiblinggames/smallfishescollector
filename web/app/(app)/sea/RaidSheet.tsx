@@ -29,13 +29,19 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import RaidGame from '@/app/(app)/raids/RaidGame'
+import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 
-export default function RaidSheet({ raidId, onClose }: {
+export default function RaidSheet({ raidId, anchors, onShipFx, onClose }: {
   /** Which fight. Resolved to a config through the registry, so this cannot
    *  drift from the raid the node map opens. */
   raidId: string | null
+  /** Live handle to where the chart's two hulls are on screen. The chart owns
+   *  it and writes into it every frame; the fight reads it on its own. */
+  anchors?: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
+  /** What the fight is doing to those hulls, for the chart to draw. */
+  onShipFx?: (fx: { player: ShipFx; enemy: ShipFx }) => void
   onClose: () => void
 }) {
   const [state, setState] = useState<RaidSheetState | null>(null)
@@ -110,6 +116,8 @@ export default function RaidSheet({ raidId, onClose }: {
           // the same function, opaque and still. That is what made an overlay
           // read as a page.
           overSea
+          anchors={anchors}
+          onShipFx={onShipFx}
           raidMods={state.raidMods}
           bonusChargeSlots={state.bonusChargeSlots}
           manowarAugment={state.manowarAugment}

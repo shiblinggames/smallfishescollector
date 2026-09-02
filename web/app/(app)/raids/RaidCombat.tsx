@@ -417,6 +417,23 @@ export interface CombatStatDelta {
   dmgTaken?: number; dmgHealed?: number; dmgAbsorbed?: number; dodgesWon?: number; dodgesLost?: number
 }
 
+/**
+ * WHERE A HULL IS ON SCREEN, in viewport px. `w` is how wide the ship reads at
+ * the current zoom, so an effect hung on it stays the right size relative to
+ * the ship rather than to the window.
+ */
+export type ShipAnchor = { x: number; y: number; w: number }
+
+/**
+ * WHAT A HULL IS DOING, for a renderer that is not this one.
+ *
+ * Offsets in px at the anchor's scale, rotation in degrees, `sink` 0 to 1.
+ * Deliberately a flat bag of numbers: the chart applies these to a DOM
+ * transform or to Pixi's `skipper()` (which already takes heel and an offset)
+ * without knowing anything about the fight that produced them.
+ */
+export type ShipFx = { x: number; y: number; rot: number; sink: number }
+
 export interface RaidCombatProps {
   enemy: BroadsideEnemy
   /** Challenge-mode elite affix for this encounter. When set, the enemy
@@ -594,6 +611,51 @@ export interface RaidCombatProps {
    *  through behind the ships AND the control deck. The ships/HP/log keep their
    *  own translucent backings for legibility. */
   transparentBackdrop?: boolean
+  /**
+   * ── THE FIGHT HAPPENS ON HULLS THAT ARE ALREADY THERE ────────────────────
+   *
+   * Set when this is mounted over the sea chart (RaidSheet). The chart is
+   * already drawing your man-o-war and the enemy's flagship, in the water, at
+   * an honest scale against each other. Drawing them a SECOND time on a
+   * painted horizon is the thing this mode exists to stop.
+   *
+   * WHAT ACTUALLY CHANGES IS SMALL, and deliberately so. The stage is one
+   * coordinate space with two ship anchors in it, and every effect in this
+   * file — hitsplats, cannon shots, auras, ability casts, the railgun, the
+   * nuke arc — is placed relative to those anchors or to the stage they sit
+   * in. So the anchors MOVE to where the real hulls are on screen and the two
+   * <img> sprites are hidden. Forty effects follow their anchors for free;
+   * none of them had to be rewritten, and none of them can drift out of sync
+   * with the fight, because they are still the same elements.
+   *
+   * `anchors` is in VIEWPORT px and converted to stage-local here, so the
+   * stage keeps whatever box the layout gives it.
+   */
+  overSea?: boolean
+  /**
+   * Where the chart's two hulls are right now, in viewport px: the centre of
+   * each, and how wide it reads at the current zoom so effects scale with the
+   * ship rather than with the window.
+   *
+   * A LIVE HANDLE, NOT A VALUE, and that is the whole reason it is shaped like
+   * this. Both hulls move every frame — the sea heaves, the camera breathes,
+   * the boat bobs — and a prop that changes every frame would re-render this
+   * entire file at 60fps to slide two anchors a few pixels. The chart writes
+   * into the handle, this reads it on its own frame and moves the anchors with
+   * direct style writes. Nothing re-renders.
+   */
+  anchors?: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
+  /**
+   * THE MOTIONS THAT CANNOT FOLLOW AN ANCHOR, sent back to the chart.
+   *
+   * Recoil, shake, list and sinking animate the ship ELEMENT, and in this mode
+   * that element is invisible — the real hull is a chart sprite (a DOM mark for
+   * the enemy, and for the player either a DOM boat or a Pixi one, depending on
+   * the mount). Those are published here as plain numbers for the chart to
+   * apply to whichever it is drawing. Fires on a frame, only while something is
+   * actually moving.
+   */
+  onShipFx?: (fx: { player: ShipFx; enemy: ShipFx }) => void
   /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
    *  so RaidCombat can derive each crew's class + current milestone via
    *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
@@ -649,6 +711,7 @@ export default function RaidCombat({
   contractsWon = [],
   aimStyle = 'bar',
   dialAim,
+  overSea = false, anchors, onShipFx,
   onPhaseBg,
   critStreakCfg,
   defeatSequence,
@@ -2059,6 +2122,110 @@ export default function RaidCombat({
   const enemyShakeCtrl  = useAnimation()
   const playerShakeCtrl = useAnimation()
   const playerRecoilCtrl = useAnimation()
+
+  // ── WHAT THE HULLS ARE DOING, FOR A RENDERER THAT IS NOT THIS ONE ─────────
+  //
+  // Over the sea the ship sprites here are hidden and the real hulls are the
+  // chart's. An anchor carries WHERE, so every effect follows it; these carry
+  // HOW IT IS MOVING, which an anchor cannot.
+  //
+  // Each animated wrapper reports into its own slot rather than one shared
+  // number, because they compose: an outer list, a shake on top of it and a
+  // recoil on top of that are three separate things happening at once, and
+  // summing them at the end is the only way to get what the eye would have
+  // seen. Written to a ref and drained on a frame — a setState per wrapper per
+  // frame would re-render the whole fight to move a boat three pixels.
+  const shipFxRef = useRef({
+    p: { ox: 0, orot: 0, sx: 0, sy: 0, srot: 0, rx: 0, ry: 0 },
+    e: { ox: 0, orot: 0, sx: 0, sy: 0, srot: 0 },
+  })
+  const onShipFxRef = useRef(onShipFx)
+  useEffect(() => { onShipFxRef.current = onShipFx }, [onShipFx])
+
+  // Sinking is state rather than an animation, so it has to be mirrored for the
+  // frame loop below to see it (the loop closes over its first render).
+  const sinkingRef = useRef(false)
+  useEffect(() => { sinkingRef.current = enemySinking }, [enemySinking])
+
+  // ── ONE FRAME, BOTH DIRECTIONS ────────────────────────────────────────────
+  //
+  // Out: the two anchors are moved onto the chart's hulls, so every effect in
+  // this file lands on the water. In: what those hulls are doing goes back to
+  // the chart, which is drawing them.
+  //
+  // The stage's own rect is measured on a resize rather than per frame. It is
+  // the frame of reference the anchors are converted into, it only moves when
+  // the window does, and reading it every frame would force a layout sixty
+  // times a second for a number that almost never changes.
+  useEffect(() => {
+    if (!overSea) return
+    const stage = stageRef.current
+    if (!stage) return
+
+    let box = stage.getBoundingClientRect()
+    const ro = new ResizeObserver(() => { box = stage.getBoundingClientRect() })
+    ro.observe(stage)
+    const onScroll = () => { box = stage.getBoundingClientRect() }
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+
+    /** Put one anchor on one hull. Left/top and width only: the transform is
+     *  framer-motion's, and every animation in this file rides it. */
+    const place = (el: HTMLElement | null, a: ShipAnchor | undefined) => {
+      if (!el || !a) return
+      el.style.left = `${a.x - box.left - a.w / 2}px`
+      el.style.top = `${a.y - box.top - a.w / 2}px`
+      el.style.right = 'auto'
+      el.style.bottom = 'auto'
+      el.style.width = `${a.w}px`
+      el.style.maxWidth = 'none'
+    }
+
+    let raf = 0
+    let last = ''
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+
+      const at = anchors?.current
+      if (at) {
+        place(playerShipRef.current, at.player)
+        place(enemyShipRef.current, at.enemy)
+      }
+
+      const { p, e } = shipFxRef.current
+      const fx = {
+        player: {
+          x: p.ox + p.sx + p.rx,
+          y: p.sy + p.ry,
+          rot: p.orot + p.srot,
+          sink: 0,
+        },
+        enemy: {
+          x: e.ox + e.sx,
+          y: e.sy,
+          rot: e.orot + e.srot,
+          // A hull going down is the one motion here that is not an animation
+          // to sum: it is a state the chart holds until the wreck is gone.
+          sink: sinkingRef.current ? 1 : 0,
+        },
+      }
+      // Rounded before comparing, or floating-point noise in a settling spring
+      // counts as movement forever and the loop never goes quiet.
+      const sig = `${fx.player.x | 0}${fx.player.y | 0}${fx.player.rot.toFixed(1)}`
+        + `${fx.enemy.x | 0}${fx.enemy.y | 0}${fx.enemy.rot.toFixed(1)}${fx.enemy.sink}`
+      if (sig === last) return
+      last = sig
+      onShipFxRef.current?.(fx)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [overSea, anchors])
+
   // Camera shake — jolts the whole battle SCENE (not the action menu / log) on
   // big impacts. Crit also starts with a brief "hold then erupt" (a hit-stop
   // beat) + a tiny scale punch; volley is a smaller pure shake. Only crit /
@@ -6562,7 +6729,9 @@ export default function RaidCombat({
       // caller paints a full-screen backdrop (transparentBackdrop), the container
       // goes fully transparent so that single scene shows through instead.
       background: transparentBackdrop ? 'transparent' : stageGradient,
-      overflow: 'hidden',
+      // Same reason as the stage below: over the sea the ships are placed on
+      // the chart's hulls, which are not inside this container's box.
+      overflow: overSea ? 'visible' : 'hidden',
       /**
        * ── FULL BLEED, LIKE THE SEA IT CAME FROM ──────────────────────────
        *
@@ -6625,7 +6794,11 @@ export default function RaidCombat({
         // transparent and just holds the scene + ships over that shared backdrop.
         background: 'transparent',
         zIndex: 1,
-        overflow: 'hidden',
+        // OVER THE SEA THE ANCHORS LEAVE THE BOX. They are placed on hulls that
+        // are wherever the chart put them, which is routinely outside whatever
+        // rectangle the layout handed this stage — and a clipped hitsplat is a
+        // hit that did not register.
+        overflow: overSea ? 'visible' : 'hidden',
       }}>
         {/* Hit-stop impact flash — a quick white bloom over the stage on a heavy
             landing (crit / Mega / kill), lit via 'screen' so it brightens the
@@ -7330,12 +7503,24 @@ export default function RaidCombat({
           initial={{ x: 80, opacity: 0 }}
           animate={{ x: 0, opacity: 1, rotate: enemyTilt }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          onUpdate={overSea ? (l) => {
+            const e = shipFxRef.current.e
+            e.ox = Number(l.x) || 0
+            e.orot = Number(l.rotate) || 0
+          } : undefined}
           style={{
             position: 'absolute', right: '7%', top: '42%', zIndex: 2,
             width: '38%', maxWidth: 185, transformOrigin: 'bottom center',
           }}
         >
-          <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
+          <motion.div animate={enemyShakeCtrl}
+            onUpdate={overSea ? (l) => {
+              const e = shipFxRef.current.e
+              e.sx = Number(l.x) || 0
+              e.sy = Number(l.y) || 0
+              e.srot = Number(l.rotate) || 0
+            } : undefined}
+            style={{ position: 'relative' }}>
             <ShipDamageFX hpPct={enemyHpPctLive} />
             {/* Elite halo — STACKED drop-shadows on the ship sprite itself
                 so the glow follows the PNG alpha silhouette rather than a
@@ -7360,6 +7545,9 @@ export default function RaidCombat({
                 : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
               style={{
                 width: '100%', display: 'block', position: 'relative', zIndex: 1,
+                // See the player hull: the chart draws this one over the sea,
+                // and the box stays so the effects keep their geometry.
+                visibility: overSea ? 'hidden' : 'visible',
                 transform: 'scaleX(-1)',  // face the player
                 // Just a grounding drop-shadow now. The elite (violet) +
                 // wounded-boss (crimson) halos, the boss/non-boss hue-rotate hull
@@ -7430,13 +7618,31 @@ export default function RaidCombat({
           initial={{ x: -60, opacity: 0 }}
           animate={{ x: 0, opacity: 1, rotate: playerTilt }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          onUpdate={overSea ? (l) => {
+            const p = shipFxRef.current.p
+            p.ox = Number(l.x) || 0
+            p.orot = Number(l.rotate) || 0
+          } : undefined}
           style={{
             position: 'absolute', left: '0%', bottom: '4%', zIndex: 3,
             width: '68%', maxWidth: 340, transformOrigin: 'bottom center',
           }}
         >
-          <motion.div animate={playerShakeCtrl} style={{ position: 'relative' }}>
-            <motion.div animate={playerRecoilCtrl} style={{ position: 'relative' }}>
+          <motion.div animate={playerShakeCtrl}
+            onUpdate={overSea ? (l) => {
+              const p = shipFxRef.current.p
+              p.sx = Number(l.x) || 0
+              p.sy = Number(l.y) || 0
+              p.srot = Number(l.rotate) || 0
+            } : undefined}
+            style={{ position: 'relative' }}>
+            <motion.div animate={playerRecoilCtrl}
+              onUpdate={overSea ? (l) => {
+                const p = shipFxRef.current.p
+                p.rx = Number(l.x) || 0
+                p.ry = Number(l.y) || 0
+              } : undefined}
+              style={{ position: 'relative' }}>
               <ShipDamageFX hpPct={playerHpPctLive} flip />
               <motion.img
                 src={shipImageUrl}
@@ -7445,6 +7651,13 @@ export default function RaidCombat({
                 transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
                   width: '100%', display: 'block',
+                  // OVER THE SEA THE CHART IS DRAWING THIS SHIP. Hidden rather
+                  // than removed, on purpose: it still holds the anchor's box
+                  // open, so every effect measuring this hull for a trajectory
+                  // or an origin gets the same geometry it always did.
+                  // `visibility`, not `opacity` — opacity is animated on these
+                  // sprites and the two would fight.
+                  visibility: overSea ? 'hidden' : 'visible',
                   // Combine the equipped-skin recolor with the standard
                   // drop-shadow so both apply. shipFilter is the bare
                   // recolor string from getShipSkin().filter; we prepend

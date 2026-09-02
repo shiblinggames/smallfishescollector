@@ -250,6 +250,9 @@ const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
  *  whole combat engine hangs off it — so nothing of it is fetched until a
  *  captain actually takes something on. */
 const RaidSheet = dynamic(() => import('./RaidSheet'), { ssr: false })
+// The two channels a fight on the water runs on: where the hulls are, and what
+// is happening to them. Types only, so the fight is not pulled into this bundle.
+import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
 /** The portal's chart. Only fetched once somebody actually steps into one. */
 const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
@@ -2491,6 +2494,10 @@ export default function SeaMap({
   const hull = useMemo(() => {
     if (!onShip) return {
       scale: 1, keelY: WATERLINE_Y, heel: HEEL_MAX, weight: 0,
+      // Never actually read: a fight happens past the sortie, where the thing
+      // on the water is a warship. Here so both hulls answer the same
+      // questions and the loop never has to ask which one it is holding.
+      beamW: FISHING_HULL_W,
       // The cutwater as OFFSETS from the sprite's centre, resolved once here so
       // the frame loop never does this arithmetic sixty times a second.
       bowX: (FISHING_BOW.x - 0.5) * SKIPPER_W,
@@ -2502,6 +2509,10 @@ export default function SeaMap({
     const keel = d.seaKeel ?? 0.75
     return {
       scale: (WARSHIP_W * beam) / FISHING_HULL_W,
+      // HOW MUCH SHIP THERE ACTUALLY IS, in world px. WARSHIP_W is the box the
+      // art is drawn in; this is the hull inside it, which is what a fight
+      // needs to know to hang its effects on her at the right size.
+      beamW: WARSHIP_W * beam,
       // From the sprite's centre down to the keel. The sprite is drawn centred
       // on the boat node, so this is the distance from where the camera is
       // looking to where the water actually is.
@@ -2954,6 +2965,26 @@ export default function SeaMap({
   const [yardOpen, setYardOpen] = useState(false)
   /** The raid being fought over the chart, by raidId. */
   const [fightId, setFightId] = useState<string | null>(null)
+  // ── THE FIGHT IS THESE TWO HULLS ─────────────────────────────────────────
+  //
+  // Not a scene of them. The chart is already drawing your man-o-war and the
+  // enemy's flagship, in the water, at an honest scale against each other, and
+  // the fight borrows them rather than painting its own pair on a horizon.
+  //
+  // Two channels, both refs, because both change every frame and neither may
+  // touch React: `anchors` goes OUT (where the hulls are on screen, so the
+  // fight can hang its effects on them) and `shipFx` comes BACK (what the fight
+  // is doing to them, so the loop below can draw it).
+  const fightEncRef = useRef<Encounter | null>(null)
+  /** Whether the guns are out, for the frame loop (which must not read state). */
+  const fightOnRef = useRef(false)
+  const anchorsRef = useRef<{ player: ShipAnchor; enemy: ShipAnchor } | null>(null)
+  const shipFxRef = useRef<{ player: ShipFx; enemy: ShipFx } | null>(null)
+  /** The enemy's hull on the chart, so the fight's blows can land on it. */
+  const enemyHullRef = useRef<HTMLDivElement | null>(null)
+  /** The chart's own box. Refreshed on the proximity tick rather than per
+   *  frame: it moves when the window does and not otherwise. */
+  const wrapBoxRef = useRef<DOMRect | null>(null)
   /** Which half of the portal is showing, on a phone. Both are up on a desktop
    *  and this is not read. */
   const [portalTab, setPortalTab] = useState<'waters' | 'berths'>('waters')
@@ -4535,6 +4566,19 @@ export default function SeaMap({
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
 
+      // ── IN A FIGHT SHE HOLDS STATION ──────────────────────────────────────
+      //
+      // The helm is dropped and her way comes off, so the two hulls stay
+      // alongside for as long as the guns are out. NOT the dial's freeze above,
+      // which stops the whole loop: the sea has to keep running here, because
+      // the fight is hanging its shot and its hitsplats on where these ships
+      // are, and a frozen chart would nail them to a dead frame.
+      if (fightOnRef.current) {
+        cmdDir.current = null
+        vel.current.x -= vel.current.x * Math.min(1, 3.2 * dt)
+        vel.current.y -= vel.current.y * Math.min(1, 3.2 * dt)
+      }
+
       // ── TWO CLOCKS, AND ONLY ONE OF THEM IS SHARED WITH THE SERVER ──
       //
       // `now` is a DOMHighResTimeStamp: milliseconds since the PAGE LOADED. It
@@ -5766,8 +5810,21 @@ export default function SeaMap({
         // hull sitting still in a squall is still working, which a heel that
         // only came from speed could never say.
         const heel = mag * facing.current + Math.sin(t * 0.9) * 3.4 * gust
+        // ── AND WHAT THE FIGHT IS DOING TO HER ────────────────────────────
+        //
+        // Recoil when she fires, a shake when she is hit, a list as she goes
+        // down. Added to how she is riding rather than replacing it, because
+        // both are true at once: a ship taking a broadside is still a ship in
+        // a swell. Zero whenever there is no fight, so this costs a read.
+        const pfx = shipFxRef.current?.player
+        const fxX = pfx ? pfx.x : 0
+        const fxY = pfx ? pfx.y : 0
+        const fxRot = pfx ? pfx.rot : 0
         boat.style.transform =
-          `translate(-50%, -50%) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel}deg)`
+          // The nudge sits OUTSIDE the zoom, not inside it: it arrives in
+          // screen px at the size the hull actually reads, and scaling it
+          // again would make a recoil grow every time the camera pushed in.
+          `translate(-50%, -50%) translate(${fxX}px, ${fxY}px) scale(${zoomRef.current}) translateY(${bob}px) scaleX(${facing.current}) rotate(${heel + fxRot}deg)`
         // THE SAME NUMBERS, HANDED TO THE CANVAS. Not recomputed: how she is
         // riding is one decision and it is made here. Null unless the flag is
         // on and she is the one being drawn, in which case the DOM sprite above
@@ -5785,11 +5842,61 @@ export default function SeaMap({
         gpuRef.current?.guide(
           tourGoal.current ? pos.current : null, tourGoal.current, tourGoal.current?.r)
         gpuRef.current?.skipper({
-          bob, heel, facing: facing.current, zoom: zoomRef.current,
+          // THE SAME BLOWS, ON THE CANVAS HULL. `heel` and the offset are
+          // already this call's language, so a fight's list and recoil are
+          // said in it rather than bolted on: whichever renderer is drawing
+          // her, she takes the hit the same way.
+          bob, heel: heel + fxRot, facing: facing.current, zoom: zoomRef.current,
           frame: frameRef.current, stage: 0,
-          offX, offY,
+          offX: offX + fxX, offY: offY + fxY,
           fade: warpFade(),
         })
+
+        // ── WHERE THE TWO HULLS ARE, FOR THE FIGHT TO AIM AT ──────────────
+        //
+        // The projection this whole chart runs on, applied to the two ships
+        // that matter: centre + zoom × (world − camera), squashed by GROUND
+        // going up-screen. Written to a ref the fight reads on its own frame,
+        // so neither side re-renders to keep a hitsplat over a hull.
+        if (fightEncRef.current) {
+          const box = wrapBoxRef.current
+          const at = encounterAt(fightEncRef.current)
+          if (box && at) {
+            const z = zoomRef.current
+            const cx = box.left + box.width / 2
+            const cy = box.top + box.height / 2
+            const node = RAID_MAP.find(x => x.id === fightEncRef.current!.node)
+            // The same widths EncounterMark draws at, so an effect hung on the
+            // enemy is the size of the ship it is happening to.
+            const encW = node?.type === 'raid' ? 260 : 185
+            anchorsRef.current = {
+              player: { x: cx + offX, y: cy + offY, w: hullNow.beamW * z },
+              enemy: {
+                x: cx + (at.x - camAt.current.x) * z,
+                y: cy + (at.y - camAt.current.y) * z * GROUND,
+                w: encW * z,
+              },
+            }
+            // AND THE BLOWS THE ENEMY TAKES. Its hull is a DOM mark in both
+            // mounts (the canvas layer draws islands and boats, never the
+            // campaign), so there is one place to write this.
+            const efx = shipFxRef.current?.enemy
+            const el = enemyHullRef.current
+            if (el && efx) {
+              el.style.transform = `translate(${efx.x}px, ${efx.y}px) rotate(${efx.rot}deg)`
+              // GOING DOWN. The fight says when; how it looks is the chart's,
+              // because it is the chart's ship: she settles, rolls off the
+              // wind and is gone, rather than blinking out.
+              el.style.opacity = efx.sink ? '0' : '1'
+              el.style.transition = efx.sink
+                ? 'opacity 1.3s ease-in, transform 1.3s ease-in'
+                : 'none'
+              if (efx.sink) {
+                el.style.transform = `translate(${efx.x}px, ${efx.y + 42}px) rotate(${efx.rot - 13}deg)`
+              }
+            }
+          }
+        }
         // AND THE NEAR PASS, every frame. Which rocks are in front changes on
         // the proximity tick, but WHERE they are on the screen changes as fast
         // as the camera does, and they are drawn in screen space because the
@@ -5802,6 +5909,10 @@ export default function SeaMap({
       sinceState += dt
       if (sinceState > 0.12) {
         sinceState = 0
+        // The chart's box, for the fight's anchors. Here rather than in the
+        // frame body: it changes when the window does, and measuring it sixty
+        // times a second forces a layout for a number that almost never moves.
+        if (fightEncRef.current) wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
         let found: Place | null = null
         // Ports are discs; waters are rings. inBand answers the ring case, and
         // the bands do not overlap, so the first match is the only match.
@@ -6191,7 +6302,9 @@ export default function SeaMap({
         {/* The campaign, standing in its own water. */}
         <EncounterField status={nodeStatus} nearId={nearEnc?.node ?? null}
           nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null}
-          cleared={clearedNodes} nearHomeId={nearWayHome?.bay ?? null} />
+          cleared={clearedNodes} nearHomeId={nearWayHome?.bay ?? null}
+          fightNode={fightId ? fightEncRef.current?.node ?? null : null}
+          hullRef={enemyHullRef} />
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -7177,7 +7290,27 @@ hullRef={hullRefFor(t.key)} />
       {/* AND THE FIGHT, over the water it is happening on. `router.refresh()`
           on the way out is what re-reads nodeStatus, so a boss you just sank
           comes back cleared and whatever he was gating opens. */}
-      <RaidSheet raidId={fightId} onClose={() => { setFightId(null); router.refresh() }} />
+      <RaidSheet
+        raidId={fightId}
+        anchors={anchorsRef}
+        // Straight into the ref the loop reads. No setState: this arrives on
+        // a frame, and re-rendering the chart to move a hull three pixels is
+        // the one thing that would make a fight on the water cost more than a
+        // fight on a page.
+        onShipFx={fx => { shipFxRef.current = fx }}
+        onClose={() => {
+          setFightId(null)
+          fightEncRef.current = null
+          fightOnRef.current = false
+          shipFxRef.current = null
+          anchorsRef.current = null
+          // THE HULL GOES BACK TO BEING A HULL. The fight wrote a transform
+          // straight onto the mark; leaving it there would strand a listing,
+          // half-sunk ship on the chart for anyone who sails past next.
+          const el = enemyHullRef.current
+          if (el) { el.style.transform = ''; el.style.opacity = ''; el.style.transition = '' }
+          router.refresh()
+        }} />
 
       {/* THE COMPASS. Its mount was deleted in an over-broad slice edit and the
           component sat unreferenced for a dozen commits, which is why the
@@ -7369,6 +7502,12 @@ hullRef={hullRefFor(t.key)} />
               // Anything WITHOUT a config — the practice skirmish — keeps its
               // route, because there is no config for the sheet to fight.
               if (n.raidId && getRaidConfigById(n.raidId)) {
+                // WHICH HULL YOU ARE FIGHTING. The fight hangs everything it
+                // draws on this ship's place on the chart, so it is recorded
+                // before the sheet opens rather than looked up from inside it.
+                fightEncRef.current = nearEnc
+                fightOnRef.current = true
+                wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
                 setFightId(n.raidId)
                 return true
               }
@@ -10406,10 +10545,13 @@ const AshoreTick = memo(function AshoreTick() {
  * Counter-squashed like everything with height, because a hull stands ON the
  * plane rather than being painted onto it.
  */
-const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
+const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef }: {
   enc: Encounter
   status: string
   isNear: boolean
+  /** Handed in only for the hull currently being fought, so the fight over the
+   *  chart can shake, list and sink the ship you actually sailed up to. */
+  hullRef?: React.Ref<HTMLDivElement>
 }) {
   const node = RAID_MAP.find(n => n.id === enc.node)
   const at = encounterAt(enc)
@@ -10453,6 +10595,12 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
           : 'radial-gradient(ellipse, rgba(190,70,55,0.32) 0%, transparent 72%)',
       }} />
 
+      {/* THE FIGHT'S OWN LAYER, and the reason it is separate from the bob
+          below: a CSS animation beats an inline transform, so a shake written
+          onto the bobbing node would simply be ignored. This one carries what
+          the fight does to her — the shudder of a hit, the list, the long roll
+          as she goes down — while the bob underneath goes on being the sea. */}
+      <div ref={hullRef} style={{ transformOrigin: 'bottom center' }}>
       <div style={{
         animation: `encBob 5.5s ease-in-out ${(-phase * 5.5).toFixed(2)}s infinite`,
         transformOrigin: 'bottom center',
@@ -10467,6 +10615,7 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
               : 'drop-shadow(0 8px 18px rgba(0,0,0,0.6))',
           opacity: cleared ? 0.85 : 1,
         }} />
+      </div>
       </div>
     </div>
   )
@@ -10706,7 +10855,7 @@ function verbFor(n: RaidNode, status: string): string {
   return 'Read'
 }
 
-const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId }: {
+const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId, fightNode, hullRef }: {
   status: Record<string, string>
   nearId: string | null
   nearCacheId: string | null
@@ -10714,6 +10863,10 @@ const EncounterField = memo(function EncounterField({ status, nearId, nearCacheI
   /** Which ways home have been earned. */
   cleared: string[]
   nearHomeId: string | null
+  /** The node whose hull is currently in a fight, if any. Only that one gets
+   *  the ref: the rest are scenery and must stay untouched by it. */
+  fightNode: string | null
+  hullRef: React.Ref<HTMLDivElement>
 }) {
   const all = useMemo(() => [
     ...ENCOUNTERS.map(e => ({ kind: 'ship' as const, e, y: encounterAt(e)?.y ?? 0 })),
@@ -10723,7 +10876,8 @@ const EncounterField = memo(function EncounterField({ status, nearId, nearCacheI
 
   return <>{all.map(it => it.kind === 'ship'
     ? <EncounterMark key={it.e.node} enc={it.e}
-        status={status[it.e.node] ?? 'locked'} isNear={nearId === it.e.node} />
+        status={status[it.e.node] ?? 'locked'} isNear={nearId === it.e.node}
+        hullRef={fightNode === it.e.node ? hullRef : undefined} />
     : it.kind === 'cache'
       ? <CacheMark key={it.c.node} cache={it.c}
           status={status[it.c.node] ?? 'locked'} isNear={nearCacheId === it.c.node} />
