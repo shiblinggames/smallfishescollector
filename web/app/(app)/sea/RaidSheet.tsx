@@ -105,6 +105,11 @@ export default function RaidSheet({ raidId, onClose }: {
           shipClasses={state.shipClasses}
           equippedRepairKit={state.equippedRepairKit}
           initialExpeditionXP={state.expeditionXP}
+          // PAINT NOTHING OVER THE WATER. Without this the fight lays its own
+          // bay-water gradient across the screen — the chart's own water, from
+          // the same function, opaque and still. That is what made an overlay
+          // read as a page.
+          overSea
           raidMods={state.raidMods}
           bonusChargeSlots={state.bonusChargeSlots}
           manowarAugment={state.manowarAugment}

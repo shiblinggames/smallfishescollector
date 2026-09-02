@@ -306,7 +306,7 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ onLeave, config, equippedShipSkin, shipSkins, equippedItems,
+export default function RaidGame({ onLeave, overSea = false, config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
   ownedSpecialItems = [],
   /**
@@ -335,6 +335,20 @@ export default function RaidGame({ onLeave, config, equippedShipSkin, shipSkins,
 }: {
   /** Close instead of navigate. See the note on the destructure above. */
   onLeave?: () => void
+  /**
+   * THE SEA IS ALREADY BEHIND THIS, so paint nothing over it.
+   *
+   * Set when mounted as a sheet on the chart. Every backdrop below is a
+   * stand-in for water that is not there on a /raids/* route — the bay's
+   * gradient most of all, which is the chart's OWN water recreated from the
+   * same function. Painting it over the live chart is the exact failure this
+   * flag exists to stop: an opaque imitation of the sea on top of the real one
+   * looks like a new screen, because visually it is one.
+   *
+   * A boss PHASE backdrop still paints. When Finn turns the sea under him that
+   * is the beat, and it is a change to the water rather than a picture of it.
+   */
+  overSea?: boolean
   config: BossRaidConfig
   /** Fishing gear widening the dial bands. Only the Finn finale passes it. */
   dialAim?: DialAimBonus
@@ -1558,15 +1572,23 @@ export default function RaidGame({ onLeave, config, equippedShipSkin, shipSkins,
      * anything opened from the node map — and those keep what they had.
      */
     const bay = bayOfRaid(bgRaidId)
-    const bayBg = bay && !phaseBg ? bayWaterCss(bay) : null
+    // OVER THE CHART, THE BAY PAINTS ITSELF. `bayWaterCss` exists to recreate
+    // the chart's water where the chart is not; where it IS, the real thing is
+    // already there, moving, with the boat on it.
+    const bayBg = bay && !phaseBg && !overSea ? bayWaterCss(bay) : null
 
-    const raidBg =
-      // A boss phase backdrop (Finn) outranks everything: it is the whole point
-      // that the sea changes under him as he escalates.
-      phaseBg
-      ?? (isBoss ? RAID_BOSS_BG[bgRaidId] : undefined)
-      ?? RAID_LOCATION_BG[bgRaidId]
-      ?? (config.zone ? RAID_ZONE_BG[config.zone] : null)
+    const raidBg = overSea
+      // A phase backdrop is the only one that still paints on the water: it is
+      // the sea CHANGING, not a photograph of a different one.
+      ? phaseBg ?? null
+      : (
+        // A boss phase backdrop (Finn) outranks everything: it is the whole point
+        // that the sea changes under him as he escalates.
+        phaseBg
+        ?? (isBoss ? RAID_BOSS_BG[bgRaidId] : undefined)
+        ?? RAID_LOCATION_BG[bgRaidId]
+        ?? (config.zone ? RAID_ZONE_BG[config.zone] : null)
+      )
     return (
       <>
       {/* Full-screen battle backdrop — the raid's location painted across the
@@ -1682,7 +1704,10 @@ export default function RaidGame({ onLeave, config, equippedShipSkin, shipSkins,
                 // whole combat region (above), so RaidCombat's own container stays
                 // transparent and that single backdrop shows through — no boxed
                 // second image.
-                transparentBackdrop={!!raidBg || !!bayBg}
+                // `overSea` on its own is enough: with nothing painted behind
+                // the fight, RaidCombat's own stage gradient and its scenery
+                // chain would be the opaque layer instead.
+                transparentBackdrop={!!raidBg || !!bayBg || overSea}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}
