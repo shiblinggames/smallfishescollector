@@ -6873,9 +6873,10 @@ hullRef={hullRefFor(t.key)} />
               fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0.8rem', lineHeight: 1.15,
             }}>Where to?</h2>
 
-            {/* IT IS A CHART, NOT A LIST. Every destination in here already has
-                a position on a sea this captain has spent hours crossing — see
-                PortalMap for why a ring beats a word. */}
+            {/* NODES, not a list of names and not a map. See PortalMap: the
+                sea is not laid out for a picker, and a true-scale plan of it
+                collapsed the near waters to a thread and stacked six berths in
+                a pile too small to hit. */}
             <PortalMap
               tier={portalTier} ports={portalPorts} stoneFor={stoneFor} busy={portalBusy}
               onSail={(x, y, accent) => jumpTo(x, y, accent)}
