@@ -43,7 +43,7 @@ import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
-import { BASINS, basinGaps, type Basin } from './raidWaters'
+import { BASINS, basinGaps, openGaps, straitOpen, type Basin } from './raidWaters'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -1162,7 +1162,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, dealtToday,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, clearedNodes, dealtToday,
   auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
@@ -1253,6 +1253,9 @@ export default function SeaMap({
   /** What stands on the Crew Hall's island: the tiers this captain has bought.
    *  Hall, drill yard, stores, each 1..6. */
   crewTiers: { hall: number; drill: number; stores: number }
+  /** Campaign nodes already cleared, from the same `buildClearedSet` the node
+   *  map reads. Drives which straits out in the raid water are open. */
+  clearedNodes: string[]
   dealtToday: string[]
   /** The specials the CLIENT has to drive. See FishingHere for why these three
    *  are the only ones that needed carrying out here. */
@@ -1336,6 +1339,11 @@ export default function SeaMap({
    *  on screen reads them. */
   const basinIn = useRef<boolean[]>(BASINS.map(() => false))
   const basinKnown = useRef(false)
+  /** Mirrored for the frame loop, which mounts once and would otherwise hold
+   *  whatever was cleared when the page loaded — so a chapter finished in this
+   *  session would leave its strait shut until a reload. */
+  const clearedRef = useRef<string[]>(clearedNodes)
+  useEffect(() => { clearedRef.current = clearedNodes }, [clearedNodes])
   /**
    * WHICH HULL IS UNDER YOU, which is now a separate question from which water
    * you are in.
@@ -1973,14 +1981,33 @@ export default function SeaMap({
    * sway phase, so keeping them means the reef breathes in exactly the pattern
    * it always did rather than being reshuffled by the move.
    */
+  /**
+   * THE ROCK ACROSS EVERY STRAIT THIS CAPTAIN HAS NOT EARNED.
+   *
+   * Sorted with the coast rather than appended to it, or a plug in a basin
+   * behind would draw over the wall of the basin in front where two rims meet —
+   * the same painter's problem the coast itself solves, and it does not stop
+   * being a problem because the rocks arrived from somewhere else.
+   */
+  const shutPlugs = useMemo(() => BASINS
+    .flatMap(b => basinGaps(b))
+    .filter(g => g.strait !== 'sortie' && !straitOpen(g.strait, clearedNodes))
+    .flatMap(g => BASIN_PLUGS[g.strait] ?? [])
+    .sort((p, q) => p.y - q.y), [clearedNodes])
+
   const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
     ? [
       ...LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i })),
       ...REEF.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 500 })),
       ...ANCHORAGE_WALL.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 1200 })),
       ...BASIN_WALLS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 4000 })),
+      // The straits this captain has not opened, filled in. Keyed off the
+      // cleared list so a chapter finished this session drops its plug on the
+      // next render rather than on the next reload.
+      ...shutPlugs.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 9000 })),
     ]
-    : [], [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    : [], [shutPlugs])
 
   /**
    * GO ASHORE AT AN ISLE.
@@ -4528,8 +4555,12 @@ export default function SeaMap({
         }
         if (inside === basinIn.current[i]) continue
 
+        // OPEN GAPS ONLY. A strait whose chapter is unfinished is wall like any
+        // other stretch of the rim — which is the whole of the campaign's
+        // linearity, enforced by the same arithmetic that draws the coast rather
+        // than by a rule bolted on beside it.
         const th = Math.atan2(by, bx)
-        const open = basinGaps(b).some(g =>
+        const open = openGaps(b, clearedRef.current).some(g =>
           Math.abs(((th - g.bearing + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < g.half)
 
         if (open) { basinIn.current[i] = inside; continue }
@@ -5580,6 +5611,7 @@ export default function SeaMap({
             fishing grounds it is the far wall you can see beyond the arch. */}
         <AnchorageWall />
         <BasinWalls />
+        <BasinPlugs rocks={shutPlugs} />
 
         {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
             through the opening is what takes you to expeditions, so the opening
@@ -7982,6 +8014,62 @@ function basinRocks(b: Basin): { art: string; x: number; y: number; size: number
 const BASIN_WALLS = BASINS.flatMap(basinRocks).sort((p, q) => p.y - q.y)
 
 /**
+ * ── WHAT A SHUT STRAIT LOOKS LIKE ───────────────────────────────────────────
+ *
+ * Rock. The same rock, filling the gap, so an unfinished chapter is not a way
+ * on that mysteriously refuses you — it is a coast that does not have a way on
+ * yet. Sailing hard at a plainly open mouth and bouncing off nothing is the
+ * invisible wall this chart spends several hundred lines avoiding everywhere
+ * else, and it would be worse here because the gap is FRAMED: two gate stones
+ * standing either side of solid water is a door drawn onto a wall.
+ *
+ * Built for every strait at module scope and drawn per captain. The walls
+ * cannot be per-player — they are a module constant and that is most of why the
+ * coast is cheap — so the part that varies is this, and it is five small
+ * batches rather than five whole coastlines.
+ *
+ * No new art and no gate: when the chapter falls the rock is simply not drawn,
+ * which reads as the sea opening rather than as a barrier being unlocked.
+ */
+const BASIN_PLUGS: Record<string, { art: string; x: number; y: number; size: number }[]> =
+  Object.fromEntries(BASINS.flatMap(b => basinGaps(b)
+    .filter(g => g.strait !== 'sortie')
+    .map(g => {
+      const out: { art: string; x: number; y: number; size: number }[] = []
+      let seed = 0x2545f491
+      for (let i = 0; i < g.strait.length; i++) seed = (Math.imul(seed ^ g.strait.charCodeAt(i), 0x27d4eb2f) >>> 0)
+      const nx = () => {
+        seed ^= seed << 13; seed >>>= 0
+        seed ^= seed >>> 17
+        seed ^= seed << 5; seed >>>= 0
+        return seed / 0x100000000
+      }
+      const at = (th: number, off: number) => ({
+        x: b.x + Math.cos(th) * (b.r + off),
+        y: b.y + Math.sin(th) * (b.r + off),
+      })
+      const step = REEF_STEP / b.r
+      // Across the mouth and a little past each side, so the plug MEETS the
+      // wall rather than leaving two seams where the eye can see it was added.
+      for (const row of [0, 1]) {
+        for (let d = -g.half - step; d <= g.half + step; d += step) {
+          const k = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
+          const q = at(g.bearing + d + (nx() - 0.5) * step * 0.22,
+            (row ? 1 : -1) * 110 + (nx() - 0.5) * 150)
+          out.push({ art: k.art, x: q.x, y: q.y, size: k.min + nx() * (k.max - k.min) })
+        }
+      }
+      const pstep = PEBBLE_STEP / b.r
+      for (let d = -g.half; d <= g.half; d += pstep) {
+        const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
+        const r = nx()
+        const q = at(g.bearing + d + (nx() - 0.5) * pstep * 0.8, (nx() - 0.5) * 330)
+        out.push({ art: pa.art, x: q.x, y: q.y, size: pa.min + r * r * (pa.max - pa.min) })
+      }
+      return [g.strait, out.sort((p2, q2) => p2.y - q2.y)] as const
+    })))
+
+/**
  * EVERYTHING THAT CAN STAND IN FRONT OF THE BOAT.
  *
  * The hull is drawn on the SCREEN layer, at dead centre, above the whole world
@@ -8041,6 +8129,15 @@ const AnchorageWall = memo(function AnchorageWall() {
 const BasinWalls = memo(function BasinWalls() {
   if (GPU_ISLANDS) return null
   return <>{BASIN_WALLS.map((m, i) => <SeaMark key={`basin${i}`} m={m} i={i + 4000} />)}</>
+})
+
+/** The shut straits, on the DOM path. Takes its rocks as a prop because this is
+ *  the one part of the coast that differs per captain. */
+const BasinPlugs = memo(function BasinPlugs({ rocks }: {
+  rocks: { art: string; x: number; y: number; size: number }[]
+}) {
+  if (GPU_ISLANDS) return null
+  return <>{rocks.map((m, i) => <SeaMark key={`plug${i}`} m={m} i={i + 9000} />)}</>
 })
 
 /** Crew card art lives in Supabase storage, same bucket the crew hall reads. */

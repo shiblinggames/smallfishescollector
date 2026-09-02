@@ -11,6 +11,7 @@
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { buildClearedSet } from '@/lib/raidProgress'
 import { canSail } from '@/lib/seaAccess'
 import { getEffectiveRod } from '@/lib/rods'
 import { getLine } from '@/lib/lines'
@@ -59,6 +60,8 @@ export default async function SeaPage() {
   const line = getLine(Number(profile?.line_tier ?? 0))
 
   const admin = createAdminClient()
+  // The campaign's progress, for the straits out in the raid water.
+  const clearedNodes = await buildClearedSet(admin, user.id, profile ?? {})
 
   // THE SHIP'S CAPACITY, worked out once and shared: the party loader caps by
   // it, and the dock draws the empty seats — the whole point of a muster is
@@ -300,6 +303,13 @@ export default async function SeaPage() {
         drill: Number(profile?.crew_drill_level ?? 1),
         stores: Number(profile?.crew_stores_level ?? 1),
       }}
+      // WHICH STRAITS ARE OPEN, as the campaign nodes already cleared.
+      //
+      // `buildClearedSet` is the SAME function /expeditions reads to draw the
+      // node map, called with the same arguments — so the water and the map
+      // cannot disagree about whether a chapter is finished. Handed over as an
+      // array because a Set does not survive the server/client boundary.
+      clearedNodes={[...clearedNodes]}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,

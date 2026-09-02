@@ -211,11 +211,26 @@ export function opensStrait(b: Basin): string | null {
  * store which way its gaps face because that is a fact about the chain, and a
  * stored copy is a thing that can disagree with the chain after a nudge.
  */
-export function basinGaps(b: Basin): { bearing: number; half: number }[] {
+export type BasinGap = {
+  bearing: number
+  half: number
+  /**
+   * WHICH STRAIT THIS IS, named for the basin it leads OUT of — so the gap on
+   * Ch I's north rim and the gap on Ch II's south rim are the same strait seen
+   * from either end, and both open on the same fact.
+   *
+   * `'sortie'` is the way into the first basin. It is never shut: the campaign
+   * cannot have a locked front door, and the sortie already asks its own
+   * question about which boat you are on.
+   */
+  strait: string
+}
+
+export function basinGaps(b: Basin): BasinGap[] {
   const i = BASINS.indexOf(b)
   const prev = BASINS[i - 1]
   const next = BASINS[i + 1]
-  const out: { bearing: number; half: number }[] = []
+  const out: BasinGap[] = []
 
   // THE WAY IN. Toward the previous basin, or toward the sortie for the first.
   const from = prev ?? { x: SORTIE.x, y: SORTIE.y, gateHalf: b.gateHalf }
@@ -224,6 +239,7 @@ export function basinGaps(b: Basin): { bearing: number; half: number }[] {
     // A mouth is one size from both sides: the gap you leave by is the gap you
     // came in through, so it takes the width of whichever basin owns it.
     half: (prev?.gateHalf ?? b.gateHalf) / b.r,
+    strait: prev ? prev.id : 'sortie',
   })
 
   // THE WAY ON.
@@ -231,9 +247,38 @@ export function basinGaps(b: Basin): { bearing: number; half: number }[] {
     out.push({
       bearing: Math.atan2(next.y - b.y, next.x - b.x),
       half: b.gateHalf / b.r,
+      strait: b.id,
     })
   }
   return out
+}
+
+/**
+ * IS THIS STRAIT OPEN?
+ *
+ * A strait opens when the chapter BEHIND it is finished — its own chapter's
+ * `lastNodeId`, which is the same fact `/expeditions` reads to draw the chapter
+ * as complete. One source, so a captain who finished a chapter on the node map
+ * sails out and finds the water already open, and neither surface can be right
+ * about a thing the other is wrong about.
+ *
+ * The way in from the sortie is always open. A campaign whose front door is
+ * locked is a campaign nobody starts.
+ */
+export function straitOpen(strait: string, clearedNodeIds: Set<string> | string[]): boolean {
+  if (strait === 'sortie') return true
+  const b = BASIN_BY_ID[strait]
+  if (!b) return false
+  const gate = opensStrait(b)
+  if (!gate) return false
+  return Array.isArray(clearedNodeIds)
+    ? clearedNodeIds.includes(gate)
+    : clearedNodeIds.has(gate)
+}
+
+/** The gaps a captain may actually pass through, given what they have cleared. */
+export function openGaps(b: Basin, cleared: Set<string> | string[]): BasinGap[] {
+  return basinGaps(b).filter(g => straitOpen(g.strait, cleared))
 }
 
 /** The first basin's mouth is the sortie. Kept as a function so the caller does
