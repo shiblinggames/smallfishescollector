@@ -459,6 +459,52 @@ export default function SeaIslandsGPU({
       // above everything by definition, and copying two numbers a frame is a
       // great deal cheaper than sorting the world container forever.
       const gulls: Gulls = makeGulls(PIXI)
+      /**
+       * ── THE DEPTH HAZE ──────────────────────────────────────────────
+       *
+       * Air. Not much of it, but the thing that has been missing from this
+       * chart since it got its tilt: GROUND squashes the plane so it recedes
+       * up-screen, and then every rock at the top of the view was drawn as
+       * crisply as the one under the bow. Distance with no atmosphere in it is
+       * not distance, it is a map.
+       *
+       * ONE SPRITE, ABOVE THE PLANE AND BELOW THE HULL. Everything standing on
+       * the water is seen through it and gets hazier the further off it is;
+       * the boat, the gulls and the rain are in front of it and stay clear —
+       * which is right, because they are here rather than there.
+       *
+       * WHY NOT TINT EVERY SPRITE. Because that is two and a half thousand
+       * per-frame writes to say a thing one gradient says for free, and this
+       * layer exists precisely to avoid paying that before we know it is
+       * needed. A veil in front is also what haze physically IS.
+       *
+       * IT WEARS THE WATER'S OWN COLOUR — see `palette` — so it can never
+       * disagree with the sea it is thickening, at any hour or in any band.
+       */
+      const hazeTex = (() => {
+        const cv = document.createElement('canvas')
+        cv.width = 1; cv.height = 128
+        const cx = cv.getContext('2d')!
+        const g = cx.createLinearGradient(0, 0, 0, 128)
+        // Strongest at the very top and gone by two thirds down, so the near
+        // water — where a captain is actually looking — is untouched.
+        g.addColorStop(0, 'rgba(255,255,255,1)')
+        g.addColorStop(0.28, 'rgba(255,255,255,0.55)')
+        g.addColorStop(0.66, 'rgba(255,255,255,0)')
+        g.addColorStop(1, 'rgba(255,255,255,0)')
+        cx.fillStyle = g
+        cx.fillRect(0, 0, 1, 128)
+        return PIXI.Texture.from(cv)
+      })()
+      const haze = new PIXI.Sprite(hazeTex)
+      haze.alpha = 0.34
+      const sizeHaze = () => {
+        haze.width = a.screen.width
+        haze.height = a.screen.height
+      }
+      sizeHaze()
+      a.stage.addChild(haze)
+
       a.stage.addChild(gulls.view)
       // Under the captain, over everything else on the stage.
       a.stage.addChild(lights.screen)
@@ -843,7 +889,9 @@ export default function SeaIslandsGPU({
       // The water's quad is screen space, so it has to follow the surface it is
       // drawn on. `resizeTo` handles the renderer; this handles the shader.
       const ro = new ResizeObserver(() => {
-        if (!dead) water?.size(a.screen.width, a.screen.height)
+        if (dead) return
+        water?.size(a.screen.width, a.screen.height)
+        sizeHaze()
       })
       ro.observe(el)
       cleanup = () => ro.disconnect()
@@ -854,6 +902,12 @@ export default function SeaIslandsGPU({
         night(d, w) {
           dark = d
           warm = w
+          // AIR THINS AFTER DARK. Haze is light scattered off it, and at night
+          // there is far less light to scatter — a far rock does not go misty
+          // in the dark, it goes invisible, which the palette is already
+          // responsible for saying. Left at a third of itself rather than
+          // nothing, so a moonlit sea still has some depth in it.
+          haze.alpha = 0.34 * (1 - d * 0.66)
           const tint = nightTint(d, w)
           if (tint === lastTint) return
           lastTint = tint
@@ -913,6 +967,14 @@ export default function SeaIslandsGPU({
           if (!water || stops.length < 3) return
           const f = (c: number[]) => new Float32Array([c[0] / 255, c[1] / 255, c[2] / 255])
           water.set({ uDeep: f(stops[0]), uMid: f(stops[1]), uShallow: f(stops[2]) })
+          // THE HAZE IS THE WATER, THINNED. Taken from the PALE stop and lifted
+          // toward white, because air over a sea takes its colour from the sea
+          // and gives back a little of the sky. Any other colour and the far
+          // water would be a different sea from the near.
+          const p = stops[2]
+          haze.tint = (Math.round(Math.min(255, p[0] * 0.72 + 74)) << 16)
+            | (Math.round(Math.min(255, p[1] * 0.72 + 82)) << 8)
+            | Math.round(Math.min(255, p[2] * 0.72 + 92))
         },
         wake(w) {
           mine = w ? { id: 'me', ...w } : null

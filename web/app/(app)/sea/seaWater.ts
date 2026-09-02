@@ -203,7 +203,29 @@ void main(void) {
   // plane as it is along it.
   vec2 px = (uv - 0.5) * uRes;
   vec2 world = uCam + vec2(px.x, px.y / GROUND) / uZoom;
-  vec2 w = world * 0.0016;
+
+  // ── AND IT RECEDES ────────────────────────────────────────────────
+  //
+  // GROUND tilts this plane and nothing else about the picture knew. An
+  // orthographic squash turns circles into ellipses and stops there: every
+  // wave, near or far, was the same size on screen, which is exactly what a
+  // flat wall looks like.
+  //
+  // A receding surface does two things and this does both. Its texture
+  // COMPRESSES with distance — the same swell subtends less as it goes away —
+  // and it FLATTENS, because at a shallow angle you see the tops of waves
+  // rather than their faces.
+  //
+  // uv.y is 0 at the top of the view and 1 at the bottom, and up-screen is
+  // genuinely further off however you are pointed: the plane recedes upward
+  // whatever heading you sail, which is the whole meaning of the squash. So
+  // this is honest depth rather than a gradient painted on.
+  float depth = 1.0 - uv.y;
+  // Squared, so the near half of the screen is almost untouched and the
+  // compression arrives where the eye expects it. Linear made the whole sea
+  // look like it was being sucked upward.
+  float recede = depth * depth;
+  vec2 w = world * (0.0016 * (1.0 + recede * 1.5));
 
   // Two octaves, the second dragged around by the first. One drifts across the
   // swell and the other along it, so the pattern never repeats visibly.
@@ -244,7 +266,10 @@ void main(void) {
 
   // Brightness only. Hue is the zone blend's business and nothing here may
   // touch it.
-  float shade = 1.0 + swell * 0.20 * uSwell;
+  // THE SWELL LIES DOWN AS IT GOES AWAY. Same reason the texture compresses:
+  // at a shallow angle a wave presents its top, not its face, so the far water
+  // is calmer-looking without being any calmer.
+  float shade = 1.0 + swell * 0.20 * uSwell * (1.0 - recede * 0.55);
   // Gentle: at the far edge the water gives up about a fifth of its light. Any
   // more and the Ancient Deep goes black on its own, which the palette is
   // already responsible for saying.
