@@ -304,6 +304,7 @@ if (bad) process.exitCode = 1
   const {
     BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, GATES, ISLE_BY_ID,
     encounterAt, ENCOUNTER_REACH, CACHE_REACH, opensBay,
+    RETURN_PORTALS, PORTAL_REACH, PORTAL_HOME, portalOpensOn,
   } = await import('../app/(app)/sea/raidWaters')
   const { RAID_MAP } = await import('../lib/raidMap')
 
@@ -504,6 +505,59 @@ if (bad) process.exitCode = 1
     })
     console.log(`    ${b.name}: ${here.length} placed, ${fights.length} of them fights`)
     if (fights.length === 0) { console.error(`  ✗ ${b.name} has no fight in it`); bad++ }
+  }
+
+  /**
+   * ── THE WAY HOME ────────────────────────────────────────────────────────
+   *
+   * Four things, and every one of them is silent when it is wrong:
+   *
+   *   1. A portal in a bay with no raid in it can never open, and nothing on
+   *      screen would ever say so — it simply would not be there.
+   *   2. One that is not BEHIND its boss is a shortcut past the fight it is
+   *      supposed to be the reward for.
+   *   3. One inside the coast, or on top of something, is a mouth you cannot
+   *      reach or one that swallows a chest.
+   *   4. And the far end has to be somewhere a boat can actually float: inside
+   *      the harbour and out of every berth ring, or arriving would either
+   *      leave you in rock or open a panel you did not ask for.
+   */
+  for (const pt of RETURN_PORTALS) {
+    const b = BAY_BY_ID[pt.bay]
+    if (!b) { console.error(`  ✗ a way home is in bay '${pt.bay}', which does not exist`); bad++; continue }
+    const boss = portalOpensOn(pt.bay)
+    if (!boss) { console.error(`  ✗ ${b.name}'s way home has no raid to open it`); bad++; continue }
+    const at = ENCOUNTERS.find(e => e.node === boss)!
+    const room = b.r - Math.hypot(pt.along - b.r, pt.across)
+    let ok = room > PORTAL_REACH && pt.along > at.along
+    if (pt.along <= at.along) {
+      console.error(`  ✗ ${b.name}'s way home sits in front of ${boss} — that is a way past the fight`)
+    }
+    for (const t of things) {
+      if (t.bay !== pt.bay) continue
+      const d = Math.hypot(t.along - pt.along, t.across - pt.across) - t.r - PORTAL_REACH
+      if (d < 0) { console.error(`  ✗ ${b.name}'s way home overlaps ${t.id}`); ok = false }
+    }
+    if (!ok) bad++
+    console.log(`    ${ok ? 'ok  ' : 'OFF '} home    ${pt.bay.padEnd(18)} opens on ${boss.padEnd(10)}`
+      + ` ${pt.along}px up, ${room.toFixed(0)}px off the coast`)
+  }
+
+  {
+    const { PLACES, EXP_ORIGIN, EXP_EDGE } = await import('../app/(app)/sea/chart')
+    const fromHarbour = Math.hypot(PORTAL_HOME.x - EXP_ORIGIN.x, PORTAL_HOME.y - EXP_ORIGIN.y)
+    let ok = fromHarbour < EXP_EDGE - 200
+    if (!ok) console.error(`  ✗ the way home lands ${fromHarbour.toFixed(0)}px out, past the harbour's ${EXP_EDGE}`)
+    let nearest = Infinity, who = ''
+    for (const p of PLACES) {
+      if (p.kind !== 'port' || p.y > -1500) continue
+      const d = Math.hypot(PORTAL_HOME.x - p.x, PORTAL_HOME.y - p.y) - p.r
+      if (d < nearest) { nearest = d; who = p.name }
+      if (d < 120) { console.error(`  ✗ the way home lands inside ${p.name}`); ok = false }
+    }
+    if (!ok) bad++
+    console.log(`    ${ok ? 'ok  ' : 'OFF '} landing ${`${PORTAL_HOME.x},${PORTAL_HOME.y}`.padEnd(18)}`
+      + ` ${fromHarbour.toFixed(0)}px into the harbour, ${nearest.toFixed(0)}px off ${who}`)
   }
 
   // AND THE ART EACH COAST IS BUILT FROM HAS TO BE ON DISK. A missing sprite is

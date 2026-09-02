@@ -14,7 +14,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from './chart'
+import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SORTIE } from './chart'
+import {
+  HUB, HUB_R, BAYS, bayCentre, mouthOf, entryOf, straitLen, bayOpen,
+} from './raidWaters'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
 import {
@@ -167,6 +170,7 @@ function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number)
 
 export default function Minimap({
   open, onClose, fog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
+  cleared = [],
 }: {
   /** The rival, if he is on this half of the world. `ready` doubles his mark:
    *  a job of his is finished and he is holding your pay. */
@@ -193,6 +197,10 @@ export default function Minimap({
    *  discoveries, and hiding a friend until you have swept their water would
    *  defeat the only thing this mark is for. */
   friends: { username: string; x: number; y: number }[]
+  /** The campaign nodes this captain has cleared, which is what decides whether
+   *  a bay's door is drawn open or rocked shut. Only read on the expedition
+   *  halves; the fishing chart never asks. */
+  cleared?: string[]
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [w, setW] = useState(0)
@@ -289,6 +297,118 @@ export default function Minimap({
     else ctx.arc(tx(hf.cx), ty(hf.cy), hf.r * s, Math.PI - lift, lift)
     ctx.stroke()
     ctx.setLineDash([])
+
+    // ── THE CAMPAIGN'S WATER ─────────────────────────────────────────────
+    //
+    // Out past the sortie the fog grid does not reach — it stops at the reef —
+    // so this half of the world was drawn as a dashed rim, a boat, and nothing
+    // else at all. A captain three bays deep could not see where she was, which
+    // of the four roads she had come up, or which way home was, and those are
+    // the only three questions a map is ever asked.
+    //
+    // So it is drawn as the SHAPE it actually is: a junction with four straits
+    // off it, each opening into a bay, and the way back to the harbour marked.
+    // Not fogged. The bays are the campaign, and a campaign you cannot find is
+    // not a campaign — the same reason the ports are never fogged either.
+    if (side !== 'fishing') {
+      // THE WAY HOME, first and underneath everything. A dashed run from the
+      // junction down to the sortie and on to the harbour: the one line on this
+      // map that answers "which way is back".
+      ctx.strokeStyle = 'rgba(240,192,64,0.30)'
+      ctx.lineWidth = 1.4
+      ctx.setLineDash([5, 5])
+      ctx.beginPath()
+      ctx.moveTo(tx(HUB.x), ty(HUB.y))
+      ctx.lineTo(tx(SORTIE.x), ty(SORTIE.y))
+      ctx.lineTo(tx(EXP_ORIGIN.x), ty(EXP_ORIGIN.y))
+      ctx.stroke()
+      ctx.setLineDash([])
+
+      // THE HARBOUR, as a ring rather than a dot. It is 7,200 across and the
+      // thing you are trying to get back to; a 4px square would say "somewhere
+      // about here" when the answer is "all of this".
+      ctx.strokeStyle = 'rgba(196,169,106,0.34)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(tx(EXP_ORIGIN.x), ty(EXP_ORIGIN.y), EXP_EDGE * s, 0, Math.PI * 2)
+      ctx.stroke()
+
+      // THE JUNCTION. Open water with no wall on it, so it is drawn as a wash
+      // with no edge — a soft disc rather than a ring, because a ring would
+      // promise a shore that is not there.
+      const hub = ctx.createRadialGradient(
+        tx(HUB.x), ty(HUB.y), 0, tx(HUB.x), ty(HUB.y), HUB_R * s)
+      hub.addColorStop(0, 'rgba(120,170,196,0.26)')
+      hub.addColorStop(1, 'rgba(120,170,196,0)')
+      ctx.fillStyle = hub
+      ctx.beginPath()
+      ctx.arc(tx(HUB.x), ty(HUB.y), HUB_R * s, 0, Math.PI * 2)
+      ctx.fill()
+
+      for (const b of BAYS) {
+        const openDoor = bayOpen(b, cleared)
+        const c = bayCentre(b)
+        const m = mouthOf(b), e = entryOf(b)
+
+        // THE STRAIT, as the passage it is: a line of its real width, so a road
+        // reads as something you sail THROUGH rather than as an arrow.
+        ctx.strokeStyle = openDoor ? 'rgba(180,214,232,0.34)' : 'rgba(180,214,232,0.14)'
+        ctx.lineWidth = Math.max(1.5, b.half * 2 * s)
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(tx(m.x), ty(m.y))
+        ctx.lineTo(tx(e.x), ty(e.y))
+        ctx.stroke()
+        ctx.lineCap = 'butt'
+
+        // AND THE ROCK ACROSS IT, when the chapter behind it has not fallen. A
+        // bar at the mouth, which is where the boulders actually are — a shut
+        // road you can see the length of, with the reason it is shut drawn at
+        // the one end that is shut.
+        if (!openDoor) {
+          const ux = Math.cos(b.bearing), uy = Math.sin(b.bearing)
+          const px = -uy, py = ux
+          ctx.strokeStyle = 'rgba(226,138,120,0.75)'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(tx(m.x + px * b.half), ty(m.y + py * b.half))
+          ctx.lineTo(tx(m.x - px * b.half), ty(m.y - py * b.half))
+          ctx.stroke()
+        }
+
+        // THE BAY. Its own water colour, which is the colour it actually is out
+        // there — the four are painted apart on purpose and the map should not
+        // undo that by making them all one blue.
+        ctx.fillStyle = openDoor ? `${b.sea[1]}cc` : `${b.sea[0]}99`
+        ctx.beginPath()
+        ctx.arc(tx(c.x), ty(c.y), b.r * s, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = openDoor ? 'rgba(196,169,106,0.5)' : 'rgba(196,169,106,0.2)'
+        ctx.lineWidth = 1
+        ctx.stroke()
+
+        // ITS NAME, and the numeral, because "chapter two" is how a captain
+        // thinks about it and "A Bigger Fish" is how the water is signed.
+        ctx.textAlign = 'center'
+        ctx.fillStyle = openDoor ? 'rgba(244,236,216,0.94)' : 'rgba(244,236,216,0.42)'
+        ctx.font = '600 10px Karla, system-ui, sans-serif'
+        ctx.fillText(b.name.replace(/^The /, ''), tx(c.x), ty(c.y) + 3)
+        ctx.fillStyle = openDoor ? 'rgba(196,169,106,0.8)' : 'rgba(196,169,106,0.36)'
+        ctx.font = '700 8px Karla, system-ui, sans-serif'
+        ctx.fillText(openDoor ? `CHAPTER ${b.chapter}` : 'SHUT', tx(c.x), ty(c.y) - 8)
+      }
+
+      // THE SORTIE, named. It is the one gap in the harbour wall and therefore
+      // the whole answer to "how do I get home" — a mark that is not labelled
+      // is a mark you have to already know.
+      const sx = tx(SORTIE.x), sy = ty(SORTIE.y)
+      ctx.fillStyle = INK.port
+      ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = 'rgba(244,236,216,0.9)'
+      ctx.font = '600 10px Karla, system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('The Sortie — home', sx, sy + 14)
+    }
 
     // ── THE PORTS, always ────────────────────────────────────────────────
     // Never fogged. A chart whose own harbours are hidden until you have been
@@ -435,7 +555,7 @@ export default function Minimap({
       ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn])
+  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn, side, cleared])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 
@@ -612,6 +732,17 @@ export default function Minimap({
                 <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
               </KeyGroup>
 
+              {/* ONLY OUT PAST THE REEF. On the fishing chart none of this is
+                  drawn, and a key to marks that are not on the map is three
+                  more rows to read past. */}
+              {side !== 'fishing' && (
+                <KeyGroup title="The campaign">
+                  <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="A chapter's bay" />
+                  <Key mark={<Bar c="rgba(226,138,120,0.85)" />} label="Rocked shut" />
+                  <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="The way home" />
+                </KeyGroup>
+              )}
+
               <KeyGroup title="The chart">
                 <Key mark={<Dot c={INK.you} r={4} ring="rgba(240,250,255,0.55)" />} label="You" />
                 <Key mark={<Swatch c={INK.fog} />} label="Not sailed" />
@@ -712,10 +843,31 @@ function Cross({ c, thin }: { c: string; thin?: boolean }) {
   )
 }
 
-function Swatch({ c }: { c: string }) {
+function Swatch({ c, round = false }: { c: string; round?: boolean }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-      <rect x="2" y="2" width="12" height="12" rx="2" fill={c} stroke="rgba(180,214,232,0.2)" strokeWidth="1" />
+      {round
+        ? <circle cx="8" cy="8" r="6" fill={c} stroke="rgba(196,169,106,0.5)" strokeWidth="1" />
+        : <rect x="2" y="2" width="12" height="12" rx="2" fill={c} stroke="rgba(180,214,232,0.2)" strokeWidth="1" />}
+    </svg>
+  )
+}
+
+/** The bar across a shut strait's mouth, and the dashed run home. Drawn the
+ *  same way the canvas draws them, so the key cannot say a different thing from
+ *  the map it is a key to. */
+function Bar({ c }: { c: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      <line x1="8" y1="2.5" x2="8" y2="13.5" stroke={c} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function Dash({ c }: { c: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      <line x1="1.5" y1="8" x2="14.5" y2="8" stroke={c} strokeWidth="1.6" strokeDasharray="4 4" />
     </svg>
   )
 }

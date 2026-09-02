@@ -493,6 +493,81 @@ export const RAID_ISLES: RaidIsle[] = [
 export const ISLE_BY_ID: Record<string, RaidIsle> =
   Object.fromEntries(RAID_ISLES.map(i => [i.id, i]))
 
+/**
+ * ── THE WAY HOME, ONCE THE BOSS IS DOWN ─────────────────────────────────────
+ *
+ * A bay is a long way out. The furthest of them is eighteen thousand pixels
+ * from the harbour, down a strait, across a junction and through the sortie —
+ * which is the right shape for SAILING OUT to a chapter, and the wrong shape
+ * entirely for coming back from one you have already finished. The trip home
+ * has no decisions in it: you have beaten the thing you came for, and every
+ * rock between you and the wharf is scenery you have already read.
+ *
+ * So beating a bay's boss opens a way back at the far end of its own water. It
+ * appears where you beat him, which is the point — the reward for the fight is
+ * standing right there, and it is the shortest possible answer to "now what".
+ *
+ * IT ONLY EVER GOES ONE WAY. Out is still sailed, every time, including on a
+ * re-farm: the voyage out is the part with the water in it. This is the road
+ * back, and a road back is not a shortcut to anywhere.
+ *
+ * WHAT OPENS IT is derived, not declared: the last raid up that bay. Name the
+ * boss twice and the two names drift, and the one that is wrong is the one
+ * nobody looks at.
+ */
+export type ReturnPortal = {
+  bay: string
+  along: number
+  across: number
+}
+
+export const RETURN_PORTALS: ReturnPortal[] = [
+  { bay: 'thread', along: 5100, across: 1450 },
+]
+
+/** The fight that opens a bay's way home: the furthest raid up it. */
+export function portalOpensOn(bayId: string): string | null {
+  const raids = ENCOUNTERS
+    .filter(e => e.bay === bayId)
+    .filter(e => RAID_MAP.find(n => n.id === e.node)?.type === 'raid')
+    .sort((a, b) => b.along - a.along)
+  return raids[0]?.node ?? null
+}
+
+export function portalOpen(pt: ReturnPortal, cleared: Set<string> | string[]): boolean {
+  const gate = portalOpensOn(pt.bay)
+  if (!gate) return false
+  return Array.isArray(cleared) ? cleared.includes(gate) : cleared.has(gate)
+}
+
+/**
+ * WHERE IT PUTS YOU DOWN: a short pull off the Gunwharf.
+ *
+ * The wharf is where an expedition begins — it is where the warship is, and it
+ * is what "the base" means to anybody who has sailed one. Not ON it, because
+ * arriving inside a berth ring would open the wharf's own panel the instant you
+ * landed, and being handed a screen you did not ask for is not an arrival.
+ */
+export const PORTAL_HOME = { x: -500, y: -5150 }
+
+/** How close you have to be to use one. A portal is a place you sail INTO, so
+ *  it is wider than a chest and narrower than a ship's hail. */
+export const PORTAL_REACH = 340
+
+export function portalAt(pt: ReturnPortal) { return placeIn(pt.bay, pt.along, pt.across) }
+
+export function portalNear(x: number, y: number): ReturnPortal | null {
+  let best: ReturnPortal | null = null
+  let bestD = PORTAL_REACH
+  for (const pt of RETURN_PORTALS) {
+    const p = portalAt(pt)
+    if (!p) continue
+    const d = Math.hypot(x - p.x, y - p.y)
+    if (d < bestD) { bestD = d; best = pt }
+  }
+  return best
+}
+
 /** Where a thing in bay space actually is. */
 function placeIn(bayId: string, along: number, across: number): { x: number; y: number } | null {
   const b = BAY_BY_ID[bayId]

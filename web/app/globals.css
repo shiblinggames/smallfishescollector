@@ -3192,6 +3192,14 @@ body.hardcore-gauntlet::after {
    Opacity only, like every other call on this chart, so it composites and can
    never cost a frame. Slow and shallow: this is a light on a rock a hundred
    metres off, not an alarm. It stops the moment the beat is read. */
+/* THE WAY HOME, breathing. Opacity only, and slow: a hole in the sea with
+   light coming out of it is already the loudest thing in an empty bay, and a
+   fast pulse on top of that reads as an alarm rather than as an offer. */
+@keyframes wayHome {
+  0%, 100% { opacity: 0.62; }
+  50%      { opacity: 1; }
+}
+
 @keyframes beatCall {
   0%, 100% { opacity: 0.45; }
   50%      { opacity: 1; }

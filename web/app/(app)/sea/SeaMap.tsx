@@ -48,6 +48,7 @@ import {
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
   GATES, gateShut, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor,
+  RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   type Bay, type Encounter, type Cache, type Beat, type Gate,
 } from './raidWaters'
 import { RAID_MAP, type RaidNode } from '@/lib/raidMap'
@@ -2429,6 +2430,14 @@ export default function SeaMap({
     pos.current = { x, y }
     target.current = { x, y }
     vel.current = { x: 0, y: 0 }
+    // ── AND SHE FORGETS WHICH SIDE OF EVERY COAST SHE WAS ON ──────────
+    //
+    // The bay walls work off which side of the shape she was on LAST FRAME, so
+    // a boat lifted out of a bay reads as having crossed its coast without
+    // passing the mouth — and the wall would do exactly what it is for and shove
+    // her straight back in. Clearing this makes the next frame ADOPT wherever
+    // she now is, which is the same thing it does when the chart first loads.
+    basinKnown.current = false
     portalIn.current = false
     portalHold.current = 0
     setPortalOpen(false)
@@ -2757,6 +2766,8 @@ export default function SeaMap({
   /** The story post within arm's reach, and the scene currently playing over
    *  the water. */
   const [nearBeat, setNearBeat] = useState<Beat | null>(null)
+  /** The way home, if you are floating on one that has opened. */
+  const [nearWayHome, setNearWayHome] = useState<ReturnPortal | null>(null)
   const [reading, setReading] = useState<string | null>(null)
   /**
    * A NODE'S OWN SHEET, AND THE INTRO THAT RUNS BEFORE IT.
@@ -3573,6 +3584,13 @@ export default function SeaMap({
     // A GATE OUTRANKS EVERYTHING. She is stopped against it; nothing else she
     // could be offered matters while the water is refusing to let her past.
     if (heldBy) return { act: null, hold: heldBy.shut }
+
+    // THE WAY HOME, when you are floating in one. Above the campaign: nothing
+    // else in this water is within three hundred pixels of it, and a captain
+    // sitting in the mouth of a portal has already decided.
+    if (nearWayHome && wayHomeOpen(nearWayHome, clearedNodes)) {
+      return { act: 'Take the way home', hold: null }
+    }
 
     // THE CAMPAIGN OUTRANKS THE SCENERY. An encounter is what you came out here
     // for; a dig site is something you happened to sail over.
@@ -5701,6 +5719,10 @@ export default function SeaMap({
         const bt = beatNear(pos.current.x, pos.current.y)
         setNearBeat(prev => (prev?.node === bt?.node ? prev : bt))
 
+        // AND THE WAY HOME, which only exists in a bay whose boss is down.
+        const wh = portalNear(pos.current.x, pos.current.y)
+        setNearWayHome(prev => (prev?.bay === wh?.bay ? prev : wh))
+
         // WHAT IS DRIFTING NEARBY. Against the drifted position, not the
         // anchor — same reason the traders test theirs.
         let bot: Bottle | null = null
@@ -5948,7 +5970,8 @@ export default function SeaMap({
 
         {/* The campaign, standing in its own water. */}
         <EncounterField status={nodeStatus} nearId={nearEnc?.node ?? null}
-          nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null} />
+          nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null}
+          cleared={clearedNodes} nearHomeId={nearWayHome?.bay ?? null} />
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -7082,6 +7105,11 @@ hullRef={hullRefFor(t.key)} />
             // happens to be in reach.
             return false
           }
+          if (nearWayHome && wayHomeOpen(nearWayHome, clearedNodes)) {
+            vibrate([12, 50, 18, 50, 26])
+            warpTo(PORTAL_HOME.x, PORTAL_HOME.y)
+            return true
+          }
           if (nearBeat) {
             const n = RAID_MAP.find(x => x.id === nearBeat.node)
             if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked') {
@@ -7421,6 +7449,10 @@ hullRef={hullRefFor(t.key)} />
       <Minimap
         key={fogVersion}
         open={mapOpen}
+        // WHICH DOORS ARE OPEN TO THIS CAPTAIN. The same list the water itself
+        // reads, so the chart cannot draw a strait open that the coast has
+        // rocked shut.
+        cleared={clearedNodes}
         onClose={() => setMapOpen(false)}
         fog={fogRef.current}
         at={pos}
@@ -10206,6 +10238,55 @@ const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
  * exactly the moment two things overlap.
  */
 /**
+ * ── THE WAY HOME, ON THE WATER ──────────────────────────────────────────────
+ *
+ * A hole in the sea with light coming up out of it. Painted rather than lit: a
+ * dark well with a bright rim, foreshortened with the plane like the berth pools
+ * and the homestead's portal, so it lies IN the water instead of floating on it.
+ *
+ * It is only ever drawn open. A bay whose boss is still standing has nothing
+ * here at all — not a locked ring, nothing — because this is not a thing you
+ * work toward, it is what the fight leaves behind, and a greyed-out one would
+ * turn a reward into a chore you can see from the start.
+ */
+const WayHomeMark = memo(function WayHomeMark({ pt, isNear }: {
+  pt: ReturnPortal
+  isNear: boolean
+}) {
+  const at = portalAt(pt)
+  if (!at) return null
+  const d = PORTAL_REACH * 1.5
+
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: at.x, top: at.y, pointerEvents: 'none',
+      width: d, height: d * GROUND, marginLeft: -d / 2, marginTop: -(d * GROUND) / 2,
+    }}>
+      {/* THE WELL. Multiply-dark in the middle so it reads as depth rather than
+          as a disc lying on the surface. */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(4,8,14,0.85) 0%, rgba(6,14,24,0.5) 46%, transparent 70%)',
+      }} />
+      {/* THE LIGHT COMING UP. */}
+      <div style={{
+        position: 'absolute', inset: '14%', borderRadius: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(150,214,255,0.55) 0%, rgba(110,180,240,0.22) 40%, transparent 72%)',
+        animation: 'wayHome 3.4s ease-in-out infinite',
+      }} />
+      {/* THE RIM, which is what makes it a mouth rather than a stain. */}
+      <div style={{
+        position: 'absolute', inset: '6%', borderRadius: '50%',
+        border: `2px solid ${isNear ? 'rgba(190,232,255,0.9)' : 'rgba(150,208,244,0.55)'}`,
+        boxShadow: isNear
+          ? '0 0 26px rgba(150,208,244,0.7), inset 0 0 22px rgba(150,208,244,0.45)'
+          : '0 0 16px rgba(150,208,244,0.4), inset 0 0 14px rgba(150,208,244,0.28)',
+      }} />
+    </div>
+  )
+})
+
+/**
  * CAN THIS NODE BE FINISHED FROM THE WATER?
  *
  * `markStoryNodeRead` — the campaign's own write, and the only one this surface
@@ -10237,11 +10318,14 @@ function verbFor(n: RaidNode, status: string): string {
   return 'Read'
 }
 
-const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId, nearBeatId }: {
+const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId }: {
   status: Record<string, string>
   nearId: string | null
   nearCacheId: string | null
   nearBeatId: string | null
+  /** Which ways home have been earned. */
+  cleared: string[]
+  nearHomeId: string | null
 }) {
   const all = useMemo(() => [
     ...ENCOUNTERS.map(e => ({ kind: 'ship' as const, e, y: encounterAt(e)?.y ?? 0 })),
@@ -10257,7 +10341,12 @@ const EncounterField = memo(function EncounterField({ status, nearId, nearCacheI
           status={status[it.c.node] ?? 'locked'} isNear={nearCacheId === it.c.node} />
       : <BeatMark key={it.b.node} beat={it.b}
           status={status[it.b.node] ?? 'locked'} isNear={nearBeatId === it.b.node} />
-  )}</>
+  )}
+  {/* UNDER EVERYTHING, because it is a hole in the water rather than a thing
+      standing in it, and nothing should ever be hidden behind one. */}
+  {RETURN_PORTALS.filter(pt => wayHomeOpen(pt, cleared)).map(pt => (
+    <WayHomeMark key={pt.bay} pt={pt} isNear={nearHomeId === pt.bay} />
+  ))}</>
 })
 
 const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
