@@ -3235,6 +3235,34 @@ body.hardcore-gauntlet::after {
   [style*="petTurn"], [style*="petRock"] { animation: none !important; }
 }
 
+/* ── STEPPING THROUGH THE PORTAL ───────────────────────────────────────────
+   Two halves of one gesture, on one timeline: the water closes over you, and
+   then it opens again somewhere else. The boat is moved at the seam — the
+   midpoint, where the veil is at full — so the jump itself is never seen and
+   what a captain experiences is a passage rather than a cut.
+
+   The rings collapse to nothing on the way in and open out of nothing on the
+   way back, which is the same shape mirrored: whatever swallowed you is what
+   spits you out, and that is what makes the far end read as an ARRIVAL rather
+   than as a second unrelated effect.
+
+   Opacity and transform only, so the whole thing composites and never costs
+   the chart a frame while it is running. */
+@keyframes warpVeil {
+  0%   { opacity: 0; }
+  38%  { opacity: 1; }
+  62%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes warpRing {
+  0%   { transform: scale(1);    opacity: 0; }
+  35%  { transform: scale(0.06); opacity: 0.9; }
+  50%  { transform: scale(0.02); opacity: 0.35; }
+  65%  { transform: scale(0.06); opacity: 0.9; }
+  100% { transform: scale(1);    opacity: 0; }
+}
+
 /* THE WAY HOME, breathing. Opacity only, and slow: a hole in the sea with
    light coming out of it is already the loudest thing in an empty bay, and a
    fast pulse on top of that reads as an alarm rather than as an offer. */
