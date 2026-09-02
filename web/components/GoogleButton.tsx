@@ -2,13 +2,34 @@
 
 import { createClient } from '@/lib/supabase/client'
 
-export default function GoogleButton({ next }: { next?: string }) {
+export default function GoogleButton({ next = '/sea' }: { next?: string }) {
   async function signInWithGoogle() {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback?next=%2Ftavern`,
+        /**
+         * ── THE `next` PROP WAS ACCEPTED AND THEN IGNORED ──────────────────
+         *
+         * This read `?next=%2Ftavern`, hardcoded, from when the tavern was the
+         * front door. The login form works out the right destination and passes
+         * it in — it has done for as long as the prop has existed — and this
+         * dropped it on the floor and sent everybody to the tavern instead.
+         *
+         * Which is why the callback looked innocent: its `?? '/sea'` fallback
+         * was never reached. It was being TOLD to go to the tavern, and doing
+         * exactly as it was told. A hardcoded value beside a parameter for the
+         * same thing is worse than no parameter at all, because the parameter
+         * makes the call site look correct.
+         *
+         * The magic link had the other half of this: an apex fallback against a
+         * site that serves on www, so a PKCE round trip crossed hosts and left
+         * its code verifier behind. Same fix, and for the same reason —
+         * `window.location.origin` cannot be wrong about where you started, on
+         * any domain, on previews, or on localhost.
+         */
+        redirectTo: `${window.location.origin}/auth/callback`
+          + `?next=${encodeURIComponent(next)}`,
         queryParams: { prompt: 'select_account' },
       },
     })
