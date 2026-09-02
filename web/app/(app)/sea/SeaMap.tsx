@@ -37,7 +37,7 @@ import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
-import { PORTAL, PORTAL_TIERS, PORTAL_DWELL, hasPortalStone, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
+import { PORTAL, PORTAL_TIERS, PORTAL_DWELL, hasPortalStone, hasStoneFor, STONE_ISLE_IDS, inPortal, inPortalEye, warpPoint } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
@@ -1215,7 +1215,7 @@ export default function SeaMap({
   raidRepairOwed: number
   /** The Homestead Portal: highest tier owned, and components in hand —
    *  cache chests opened minus components already spent. */
-  portal: { tier: number; components: number }
+  portal: { tier: number }
   /** Rudder and rig tiers, from the Shipyard. */
   handlingTier: number
   accelTier: number
@@ -2139,7 +2139,17 @@ export default function SeaMap({
    * the portal wakes on the same beat the stone is pulled out of the sand, with
    * no refetch and nothing to keep in step.
    */
-  const portalStone = useMemo(() => hasPortalStone([...found]), [found])
+  const portalStone = useMemo(() =>
+    // A BUILT PORTAL IS NEVER DEAD WATER. The first stone is what wakes it, but
+    // anybody who already owns a rung above the first built it under older
+    // rules, and showing them a dormant well beside a ladder they can still
+    // sail from would be the chart contradicting itself. Nobody live is in that
+    // state; it costs one condition to make sure nobody ever is.
+    hasPortalStone([...found]) || portalTier > 1, [found, portalTier])
+  /** Does this captain hold the stone for a given rung? Off the same live set,
+   *  so buying one and opening the next chest both land without a refetch. */
+  const stoneFor = useCallback(
+    (tier: number) => hasStoneFor(tier, [...found]), [found])
   /** Mirrored, because the frame loop mounts with [] deps and would otherwise
    *  hold whichever answer was true when the page loaded. */
   const portalStoneRef = useRef(portalStone)
@@ -2178,8 +2188,6 @@ export default function SeaMap({
     gpuRef.current?.portal(gpuPortal, inPortal(pos.current.x, pos.current.y), 0)
   }, [gpuPortal])
   useEffect(() => { setPortalTier(portal.tier) }, [portal.tier])
-  const [portalComponents, setPortalComponents] = useState(portal.components)
-  useEffect(() => { setPortalComponents(portal.components) }, [portal.components])
   const [portalBusy, setPortalBusy] = useState(false)
   const [portalErr, setPortalErr] = useState<string | null>(null)
 
@@ -2316,7 +2324,6 @@ export default function SeaMap({
       if ('error' in res) setPortalErr(res.error)
       else {
         setPortalTier(res.tier)
-        setPortalComponents(res.components)
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
         vibrate([0, 30, 40, 60])
       }
@@ -6301,7 +6308,7 @@ hullRef={hullRefFor(t.key)} />
                           fontSize: '0.7rem', margin: '1px 0 0', color: 'rgba(214,226,236,0.65)',
                         }}>
                           {t.cost.toLocaleString()} ⟡
-                          {t.components > 0 && ` + ${t.components} components (you hold ${portalComponents})`}
+                          {stoneFor(t.tier) ? ' · stone in hand' : ` · needs the stone from ${t.name}`}
                         </p>
                       )}
                     </div>
@@ -6316,13 +6323,19 @@ hullRef={hullRefFor(t.key)} />
                         Sail
                       </button>
                     ) : isNext ? (
-                      <button type="button" data-no-steer onClick={() => void buyTier()} disabled={portalBusy}
+                      // NO STONE, NO BUTTON. Offering Build and then refusing it
+                      // is a worse answer than saying what is missing, which the
+                      // line above already does.
+                      <button type="button" data-no-steer onClick={() => void buyTier()}
+                        disabled={portalBusy || !stoneFor(t.tier)}
                         className="tap font-karla font-700" style={{
-                          flexShrink: 0, padding: '0.45rem 0.7rem', borderRadius: 10, cursor: 'pointer',
+                          flexShrink: 0, padding: '0.45rem 0.7rem', borderRadius: 10,
+                          cursor: portalBusy || !stoneFor(t.tier) ? 'default' : 'pointer',
+                          opacity: stoneFor(t.tier) ? 1 : 0.45,
                           background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.5)',
                           color: '#f6dfa0', fontSize: '0.74rem',
                         }}>
-                        {portalBusy ? 'Working…' : 'Build'}
+                        {portalBusy ? 'Working…' : stoneFor(t.tier) ? 'Build' : 'No stone'}
                       </button>
                     ) : null}
                   </div>
@@ -6339,8 +6352,9 @@ hullRef={hullRefFor(t.key)} />
             <p className="font-karla" style={{
               fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)', lineHeight: 1.5, margin: '0.8rem 0 0',
             }}>
-              The last stages take components as well as coin. Every cache chest you crack
-              open on the sea's small isles holds one — {CACHE_ISLE_IDS.size} are out there.
+              Every stage wants its own stone, and each one is in a cache chest out in the
+              water that stage reaches. The portal cannot take you anywhere you have not
+              already sailed to — {STONE_ISLE_IDS.size} chests out there hold one.
             </p>
           </div>
         </PopupShell>
@@ -8445,7 +8459,7 @@ const PortalName = memo(function PortalName({ tier, stone }: { tier: number; sto
           fontSize: '0.82rem', marginTop: 1,
           color: 'rgba(196,214,228,0.66)',
           textShadow: '0 1px 10px rgba(0,0,0,0.92)',
-        }}>There is one in a chest, out in the Shallows.</p>
+        }}>There is one in the cache chest out in the Shallows.</p>
       )}
     </div>
   )
@@ -9308,12 +9322,17 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
                 }}>A portal stone</p>
                 <p className="font-cinzel font-700" style={{
                   fontSize: '1.05rem', color: '#f6e6c6', margin: 0,
-                }}>The Home Portal is awake</p>
+                }}>
+                  {won.stone.tier === 1
+                    ? 'The Home Portal is awake'
+                    : `The portal can reach ${won.stone.name}`}
+                </p>
                 <p className="font-karla" style={{
                   fontSize: '0.78rem', color: 'rgba(226,214,186,0.86)', margin: '4px 0 0', lineHeight: 1.4,
                 }}>
-                  That dead water off your homestead is not dead any more. Sail into
-                  the middle of it and hold there.
+                  {won.stone.tier === 1
+                    ? 'That dead water off your homestead is not dead any more. Sail into the middle of it and hold there.'
+                    : 'Take it to the portal and build the next stage. It only ever remembers roads you have already sailed.'}
                 </p>
               </div>
             )}

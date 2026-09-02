@@ -26,7 +26,6 @@ import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import { loadDeployedParty } from '@/lib/crewData'
 import { getRaidItem } from '@/lib/raidItems'
-import { componentsAvailable } from '@/lib/seaPortal'
 import { RODS } from '@/lib/rods'
 import SeaMap from './SeaMap'
 import { dealtToday } from './traderActions'
@@ -272,12 +271,10 @@ export default async function SeaPage() {
       // Sailing a sunk ship is refused at the raid screen; the DOCK is where
       // that should be discovered, not past the sortie.
       raidRepairOwed={Number(profile?.raid_repair_owed ?? 0)}
-      // THE HOMESTEAD PORTAL. Components are chests already opened — derived
-      // from the same discoveries list the chart is already being handed.
-      portal={{
-        tier: Number(profile?.portal_tier ?? 1),
-        components: componentsAvailable(discovered, Number(profile?.portal_components_spent ?? 0)),
-      }}
+      // THE HOMESTEAD PORTAL. Only the tier: which stones this captain holds is
+      // derived on the chart from the discoveries it is already handed, so there
+      // is nothing here for the two to disagree about.
+      portal={{ tier: Number(profile?.portal_tier ?? 1) }}
       // The two new movement ladders. Passed as TIERS rather than as computed
       // rates: the map multiplies them by the boat's own trim, and doing half
       // that sum here and half there is how the two drift apart.

@@ -11,10 +11,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { hasPortalStone, PORTAL_TIERS, CACHE_ISLE_IDS, componentsAvailable } from '@/lib/seaPortal'
+import { hasStoneFor, PORTAL_TIERS } from '@/lib/seaPortal'
 
 export async function buyPortalTier(): Promise<
-  | { ok: true; tier: number; components: number; doubloons: number }
+  | { ok: true; tier: number; doubloons: number }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -37,21 +37,17 @@ export async function buyPortalTier(): Promise<
   const discovered = ((found ?? []) as { isle_id: string }[]).map(r => r.isle_id)
 
   // ── NO STONE, NO LADDER ───────────────────────────────────────────────
-  // The sheet cannot be opened without one, because the water will not take a
-  // boat that has not found it. This is the guard that actually matters: the
-  // other one is a client deciding not to show a button, and this one takes
-  // money. Same derivation from the same table, so the two cannot disagree.
-  if (!hasPortalStone(discovered)) {
-    return { error: 'The portal is dead water until you find a stone for it. There is one in a chest, out in the Shallows.' }
-  }
-
-  const spent = Number(profile.portal_components_spent ?? 0)
-  const have = componentsAvailable(discovered, spent)
-  if (have < next.components) {
-    const opened = discovered.filter(id => CACHE_ISLE_IDS.has(id)).length
+  // ── THE STONE FOR THE RUNG BEING BOUGHT ───────────────────────────────
+  //
+  // Each tier's stone is in a chest in the band that tier reaches, so this is
+  // the whole rule stated once: the portal cannot take you anywhere you have
+  // not already been. The client hides the button, but this is the guard that
+  // matters, because this is the one that takes money — and it derives from the
+  // same table the client does, so the two cannot disagree.
+  if (!hasStoneFor(next.tier, discovered)) {
     return {
-      error: `This stage needs ${next.components} components and you hold ${have}. ` +
-        `They come from the sea's cache chests — you have opened ${opened} of ${CACHE_ISLE_IDS.size}.`,
+      error: `No stone for ${next.name} yet. There is one in a chest out in ${next.name} — `
+        + 'sail it the long way first, then the portal will remember the road.',
     }
   }
   if (Number(profile.doubloons ?? 0) < next.cost) {
@@ -65,7 +61,7 @@ export async function buyPortalTier(): Promise<
   // back — the opposite order risks money gone with no tier to show for it
   // only in the crash window, which the ledger row makes auditable.
   const { data: claimed } = await admin.from('profiles')
-    .update({ portal_tier: next.tier, portal_components_spent: spent + next.components })
+    .update({ portal_tier: next.tier })
     .eq('id', user.id).eq('portal_tier', current)
     .select('id').maybeSingle()
   if (!claimed) return { error: 'The portal is already being worked on. Look again.' }
@@ -74,7 +70,7 @@ export async function buyPortalTier(): Promise<
     .rpc('deduct_doubloons', { uid: user.id, amount: next.cost })
   if (payErr || newDoubloons == null) {
     await admin.from('profiles')
-      .update({ portal_tier: current, portal_components_spent: spent })
+      .update({ portal_tier: current })
       .eq('id', user.id)
     return { error: 'The payment did not go through.' }
   }
@@ -87,7 +83,6 @@ export async function buyPortalTier(): Promise<
   return {
     ok: true,
     tier: next.tier,
-    components: have - next.components,
     doubloons: Number(newDoubloons),
   }
 }

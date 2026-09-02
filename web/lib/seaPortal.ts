@@ -34,8 +34,6 @@ export type PortalTier = {
   name: string
   /** ⟡ to buy this tier. 0 for the base tier everyone has. */
   cost: number
-  /** Cache chests that must have been opened (cumulative spend, see actions). */
-  components: number
   /** The FALLBACK landing: due south in the band's middle water, verified
    *  clear of everything. Real warps roll a spot — see warpPoint — and this
    *  is what a run of unlucky rolls falls back to. */
@@ -48,62 +46,82 @@ export type PortalTier = {
 /** Band middles from chart.ts: shallows 1400-3800, open 3800-6900,
  *  deep 6900-10900, abyss 10900-16000, ancient 16000-22600. */
 export const PORTAL_TIERS: PortalTier[] = [
-  { tier: 1, band: 'shallows',     name: 'The Shallows',     cost: 0,       components: 0, to: { x: 0, y: 2600 },  accent: '#7fc8de' },
-  { tier: 2, band: 'open_waters',  name: 'Open Waters',      cost: 8_000,   components: 0, to: { x: 0, y: 5350 },  accent: '#5aa8cc' },
-  { tier: 3, band: 'deep',         name: 'The Deep',         cost: 40_000,  components: 0, to: { x: 0, y: 8900 },  accent: '#4a7fb8' },
-  { tier: 4, band: 'abyss',        name: 'The Abyss',        cost: 120_000, components: 3, to: { x: 0, y: 13450 }, accent: '#6a5acd' },
-  { tier: 5, band: 'ancient_deep', name: 'The Ancient Deep', cost: 300_000, components: 6, to: { x: 0, y: 19300 }, accent: '#8b4a8b' },
+  { tier: 1, band: 'shallows',     name: 'The Shallows',     cost: 0,       to: { x: 0, y: 2600 },  accent: '#7fc8de' },
+  { tier: 2, band: 'open_waters',  name: 'Open Waters',      cost: 8_000,   to: { x: 0, y: 5350 },  accent: '#5aa8cc' },
+  { tier: 3, band: 'deep',         name: 'The Deep',         cost: 40_000,  to: { x: 0, y: 8900 },  accent: '#4a7fb8' },
+  { tier: 4, band: 'abyss',        name: 'The Abyss',        cost: 120_000, to: { x: 0, y: 13450 }, accent: '#6a5acd' },
+  { tier: 5, band: 'ancient_deep', name: 'The Ancient Deep', cost: 300_000, to: { x: 0, y: 19300 }, accent: '#8b4a8b' },
 ]
 
 /**
- * ── THE PORTAL STONE ────────────────────────────────────────────────────────
+ * ── ONE STONE PER TIER, AND IT IS WHERE THAT TIER GOES ──────────────────────
  *
  * The portal used to work from the first minute, because tier 1 costs nothing.
- * A free teleport handed to a captain who has not yet sailed anywhere is the
+ * A free teleport handed to a captain who has not sailed anywhere is the
  * cheapest possible answer to a sea whose whole point is crossing it.
  *
- * So it is dead water until you find the stone that wakes it, and the stone is
- * in a CHEST. That puts the one thing that shortens sailing behind the one
- * activity that is sailing, which is the right way round.
+ * So every rung wants a PORTAL STONE, and each one is in a chest in the band
+ * that rung reaches. The tiers already name their destination band, so this
+ * needs no new table and states one rule:
  *
- * ── ANY OF THE NEAR CACHES, NOT A PARTICULAR ONE ────────────────────────────
+ *     THE PORTAL CANNOT TAKE YOU ANYWHERE YOU HAVE NOT ALREADY BEEN.
  *
- * Five cache isles sit in the Shallows and Open Waters, and opening ANY of them
- * yields the stone. A single named isle would be a checklist entry everybody
- * looks up; five means the reward lands in whatever direction you happened to
- * choose, which is what exploring is. It is guaranteed rather than rolled: a
- * gate on a dice throw is a gate that reads as broken to whoever loses.
+ * Which is the honest version of a warp. You are not buying a shortcut to
+ * unseen water, you are buying back a crossing you have already made — and the
+ * only way to extend its reach is to go out there the long way first, one band
+ * at a time, in the order the sea gets deeper.
  *
- * NOT LEVEL-LOCKED beyond the water itself. The Shallows are open at Fishing 1
- * and Cormorant Rock is 3,100px out, so the stone is reachable on day one by
- * anybody willing to go and look. That is the whole bar: willingness, not rank.
+ * It replaces the component count, which asked for the same activity twice: the
+ * top rungs wanted three and six cache chests from anywhere, on top of a stone.
+ * One requirement that means something beats two that mean the same thing.
  *
- * ── AND IT IS DERIVED, NOT STORED ───────────────────────────────────────────
+ * ── ANY CACHE IN THE BAND, NOT A NAMED ISLE ─────────────────────────────────
  *
- * `sea_discoveries` already records every chest ever opened, so having the
- * stone is a question that table can answer. No column, no migration, no second
- * grant path to drift out of step with the isles — and every captain who has
- * already been ashore at one of these keeps a portal that has always worked for
- * them. A stored flag would have had to be backfilled and could be wrong; this
- * cannot be.
+ * Open ANY of the band's chests and the stone is in it. A named isle would be a
+ * checklist entry everybody looks up; a band means the reward lands in whatever
+ * direction you happened to choose, which is what exploring is. Guaranteed
+ * rather than rolled — a gate on a dice throw reads as broken to whoever loses.
+ *
+ * The Shallows hold exactly one cache and the rest hold four or five, so the
+ * first stone is a single known landfall and every stone after it is a choice.
+ * That is the right shape: the tutorial one should be findable, and the Ancient
+ * Deep's should be somewhere you went looking.
+ *
+ * NOT LEVEL-LOCKED beyond the water itself. Each band's own minLevel already
+ * says who may be there, and a stone you cannot reach is not a second gate, it
+ * is the same gate seen twice.
+ *
+ * ── DERIVED, NOT STORED ─────────────────────────────────────────────────────
+ *
+ * `sea_discoveries` already records every chest ever opened, so "which stones
+ * does this captain hold" is a question that table answers. No column, no
+ * migration, no second grant path to drift out of step with the isles, and it
+ * cannot be wrong about history the way a backfilled flag could.
  */
-export const PORTAL_STONE_ISLES: ReadonlySet<string> = new Set(
-  ISLES.filter(i => i.kind === 'cache' && (i.band === 'shallows' || i.band === 'open_waters'))
-    .map(i => i.id))
+const CACHES_IN: Record<string, ReadonlySet<string>> = Object.fromEntries(
+  PORTAL_TIERS.map(t => [t.band, new Set(
+    ISLES.filter(i => i.kind === 'cache' && i.band === t.band).map(i => i.id))]))
 
-/** Has this captain woken the portal? */
-export function hasPortalStone(discoveredIsleIds: string[]): boolean {
-  return discoveredIsleIds.some(id => PORTAL_STONE_ISLES.has(id))
+/** Every isle whose chest holds a stone, for the "N are out there" line. */
+export const STONE_ISLE_IDS: ReadonlySet<string> = new Set(
+  Object.values(CACHES_IN).flatMap(set => [...set]))
+
+/** Does this captain hold the stone for this tier? */
+export function hasStoneFor(tier: number, discoveredIsleIds: string[]): boolean {
+  const t = PORTAL_TIERS.find(p => p.tier === tier)
+  if (!t) return false
+  const caches = CACHES_IN[t.band]
+  return !!caches && discoveredIsleIds.some(id => caches.has(id))
 }
 
-/** Every isle whose chest counts as a component. */
-export const CACHE_ISLE_IDS: ReadonlySet<string> = new Set(
-  ISLES.filter(i => i.kind === 'cache').map(i => i.id))
+/** The band a tier's stone is in, by name, for telling somebody where to look. */
+export function stoneBandName(tier: number): string {
+  return PORTAL_TIERS.find(p => p.tier === tier)?.name ?? 'the deep'
+}
 
-/** Chests opened minus components already spent on tiers. */
-export function componentsAvailable(discoveredIsleIds: string[], spent: number): number {
-  const opened = discoveredIsleIds.filter(id => CACHE_ISLE_IDS.has(id)).length
-  return Math.max(0, opened - spent)
+/** Is the portal awake at all? The first stone is the one that lights it. */
+export function hasPortalStone(discoveredIsleIds: string[]): boolean {
+  return hasStoneFor(1, discoveredIsleIds)
 }
 
 /**

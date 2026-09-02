@@ -20,8 +20,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { ISLE_BY_ID, type IsleNote } from '@/lib/seaIsles'
-import { PORTAL_STONE_ISLES } from '@/lib/seaPortal'
+import { ISLE_BY_ID, ISLES, type IsleNote } from '@/lib/seaIsles'
+import { PORTAL_TIERS } from '@/lib/seaPortal'
 import { ISLE_FURNISHING } from '@/lib/seaIsles'
 import { FURNISHING_BY_ID } from '@/lib/homestead'
 import { PLACES } from './chart'
@@ -32,15 +32,18 @@ export type AshoreResult =
       /** A furnishing that was in the chest. The only way to own one. */
       salvage: { id: string; name: string } | null
       /**
-       * THE PORTAL STONE, and true only on the landing that WAKES the portal.
+       * A PORTAL STONE, and only on the landing that actually wins one.
        *
        * Derived rather than granted: nothing is written anywhere for this. The
-       * discovery row that this landing just inserted is itself the stone, and
-       * the flag exists purely so the chest sheet can say so out loud. Finding
-       * the one thing that changes how the map works and being told nothing
-       * would be the whole reward landing silently.
+       * discovery row this landing just inserted IS the stone, and the flag
+       * exists so the chest sheet can say so out loud — finding the thing that
+       * changes how the map works and being told nothing would be the whole
+       * reward landing silently.
+       *
+       * Carries the rung it opens, because "a portal stone" means little and
+       * "the portal can reach the Abyss now" means everything.
        */
-      stone: boolean }
+      stone: { tier: number; name: string } | null }
   | { ok: true; already: true; name: string; note: IsleNote | null }
   | { ok: false; error: string }
 
@@ -162,17 +165,25 @@ export async function goAshore(isleId: string): Promise<AshoreResult> {
     salvage = item ? { id: fid, name: item.item.name } : null
   }
 
-  // ── DID THIS ONE WAKE THE PORTAL? ─────────────────────────────────────
-  // True on the FIRST of the near caches and never again, so the announcement
-  // is a moment rather than a label on every chest in the Shallows. Read back
-  // from the table so it counts the row we have just written.
-  let stone = false
-  if (PORTAL_STONE_ISLES.has(isle.id)) {
+  // ── DID THIS CHEST HOLD A STONE? ──────────────────────────────────────
+  //
+  // Every band that the portal reaches has its stone in that band's caches, so
+  // a cache in `isle.band` wins the rung that band belongs to — but only the
+  // FIRST one opened there. The rest of the band's chests still pay coin and
+  // gems; they simply are not news, and a stone announced on all five would be
+  // a label rather than a moment.
+  //
+  // Read back from the table so it counts the row this landing just wrote.
+  let stone: { tier: number; name: string } | null = null
+  const rung = PORTAL_TIERS.find(t => t.band === isle.band)
+  if (rung && isle.kind === 'cache') {
     const { data: rows } = await admin
       .from('sea_discoveries').select('isle_id').eq('user_id', user.id)
+    const here = new Set(ISLES
+      .filter(i => i.kind === 'cache' && i.band === isle.band).map(i => i.id))
     const opened = ((rows ?? []) as { isle_id: string }[])
-      .filter(r => PORTAL_STONE_ISLES.has(r.isle_id))
-    stone = opened.length === 1
+      .filter(r => here.has(r.isle_id))
+    if (opened.length === 1) stone = { tier: rung.tier, name: rung.name }
   }
 
   return { ok: true, already: false, name: isle.name, gems, doubloons, note: isle.note ?? null, salvage, stone }
