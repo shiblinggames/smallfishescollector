@@ -895,15 +895,26 @@ export const CHARTERHOUSE = PLACES.find(p => p.id === 'charterhouse')!
 /**
  * RAID WATER — everything beyond the anchorage rim.
  *
- * Empty on purpose for now: this is the trial, and the thing being tried is the
- * SWAP, not the content. What goes out here later is the campaign, so the
- * radius is generous enough that raid islands have somewhere to be, and finite
- * so the trial cannot be mistaken for a bug where the sea forgot to stop.
+ * No longer empty: the campaign's five basins are out here. See
+ * `sea/raidWaters.ts`, which owns their placement.
  *
  * Measured from EXP_ORIGIN like the anchorage, so the two are concentric and
  * "how far out am I" is one subtraction rather than two coordinate systems.
+ *
+ * ── IT HAS TO HOLD THE BASINS, AND A CHECK SAYS SO ──────────────────────────
+ *
+ * This was 13,000, chosen when there was nothing out here — which left 9,400px
+ * of water for five walled basins when the anchorage alone is 3,600 across. The
+ * furthest basin's far rim now reaches 19,100, so this is 20,000.
+ *
+ * It is a CONSTANT rather than a call to `raidReach()`, and deliberately: this
+ * module is the bottom of the import graph and raidWaters reads SORTIE from it,
+ * so importing back would be a cycle. Instead `npm run check` asserts that this
+ * number still covers what the basin table asks for. Same shape as the salvage
+ * manifest — two tables that must agree, and a checker that fails when they do
+ * not, rather than a silent sail limit that clips the last chapter off the map.
  */
-export const RAID_EDGE = 13000
+export const RAID_EDGE = 20000
 
 /** Is this point on the expedition side of the reef? */
 export function inExpeditions(y: number): boolean {

@@ -159,3 +159,79 @@ if (bad) process.exitCode = 1
   console.log(`\n  Salvage: ${fromItems.size} piece(s) findable, ${bad === 0 ? 'both tables agree' : `${bad} disagreement(s)`}.`)
   if (bad) process.exit(1)
 }
+
+// ── THE CAMPAIGN'S BASINS ────────────────────────────────────────────────
+//
+// Four things that can each be true on their own and wrong together, so each is
+// measured rather than trusted:
+//
+//   1. RAID_EDGE has to hold the basins. It is a hand-set constant and the table
+//      is hand-authored; nothing but this stops the last chapter being sailed
+//      off the edge of its own water.
+//   2. Consecutive basins must TOUCH, or the strait between them spans open
+//      water and is not a strait.
+//   3. NON-consecutive basins must NOT touch, or there is a way north that skips
+//      a chapter — which is the one thing a linear campaign cannot have, and the
+//      easiest thing to introduce by nudging a centre.
+//   4. Every basin must name a chapter that exists, and every chapter a basin,
+//      or a strait opens on a node id nothing will ever clear.
+{
+  const { BASINS, straitAfter, raidReach, opensStrait } = await import('../app/(app)/sea/raidWaters')
+  const { RAID_EDGE, EXP_ORIGIN, SORTIE } = await import('../app/(app)/sea/chart')
+  const { RAID_CHAPTERS } = await import('../lib/raidMap')
+
+  let bad = 0
+  const need = Math.round(raidReach(EXP_ORIGIN.y))
+  console.log(`\n  Raid water  (sail limit ${RAID_EDGE}, basins reach ${need})`)
+  if (need > RAID_EDGE) {
+    console.error(`  ✗ RAID_EDGE is ${RAID_EDGE} but the basins need ${need}`)
+    bad++
+  }
+
+  for (let i = 0; i < BASINS.length; i++) {
+    const b = BASINS[i]
+    const chapter = RAID_CHAPTERS.find(c => c.id === b.id)
+    if (!chapter) { console.error(`  ✗ basin '${b.id}' is not a chapter`); bad++ }
+    if (!opensStrait(b)) { console.error(`  ✗ basin '${b.id}' has no node to open on`); bad++ }
+
+    const next = BASINS[i + 1]
+    if (next) {
+      const d = Math.hypot(next.x - b.x, next.y - b.y)
+      const overlap = b.r + next.r - d
+      const s = straitAfter(b)
+      const ok = overlap > 0
+      if (!ok) bad++
+      console.log(`    ${ok ? 'ok  ' : 'GAP '} ${b.name.padEnd(18)} -> ${next.name.padEnd(18)}`
+        + ` overlap ${overlap.toFixed(0).padStart(4)}   strait ${s!.x.toFixed(0)},${s!.y.toFixed(0)}`)
+    }
+
+    // The skip test. Anything two or more along the chain that reaches this one
+    // is a shortcut past a boss.
+    for (let j = i + 2; j < BASINS.length; j++) {
+      const far = BASINS[j]
+      if (Math.hypot(far.x - b.x, far.y - b.y) < b.r + far.r) {
+        console.error(`  ✗ ${b.name} touches ${far.name} — that is a way north that skips a chapter`)
+        bad++
+      }
+    }
+  }
+
+  for (const c of RAID_CHAPTERS) {
+    if (!BASINS.some(b => b.id === c.id)) {
+      console.error(`  ✗ chapter '${c.id}' has no basin`); bad++
+    }
+  }
+
+  // The first basin's mouth is the sortie, so the sortie must be OUTSIDE it —
+  // otherwise you arrive already through the wall and the strait means nothing.
+  const first = BASINS[0]
+  const fromSortie = Math.hypot(SORTIE.x - first.x, SORTIE.y - first.y)
+  if (fromSortie < first.r) {
+    console.error(`  ✗ the sortie is inside ${first.name}`); bad++
+  } else {
+    console.log(`    ok   sortie sits ${(fromSortie - first.r).toFixed(0)} px short of ${first.name}`)
+  }
+
+  console.log(`\n  Basins: ${BASINS.length} placed, ${bad === 0 ? 'chain intact' : `${bad} problem(s)`}.`)
+  if (bad) process.exit(1)
+}
