@@ -121,36 +121,53 @@ const D = (deg: number) => (deg * Math.PI) / 180
 export const BAYS: Bay[] = [
   {
     id: 'thread', chapter: 1, name: 'The Loose Thread',
-    // West of the junction, and the shortest run to reach: the first water
-    // anybody sails should be the one that is hardest to miss.
-    // WIDER THAN THE OTHERS, because the whole of chapter one has to fit
-    // BEHIND its gate as well as in front of it: Krust, the closing beat and
-    // the Captain's Choice all sit past the line, and at 2,900 the last of them
-    // was hanging over the coast. `npm run check` measures every one of them.
-    bearing: D(195), at: BAY_AT, r: 3200, half: 460,
+    // DUE WEST, and huge. Nearly ten thousand across.
+    bearing: D(169), at: 12158, r: 4941, half: 460,
     sea: ['#12242c', '#26454e', '#5c7f84'],
     rocks: 'reef',
   },
   {
     id: 'sunken_hand', chapter: 2, name: 'A Bigger Fish',
-    // North-north-west and further out. The Gullet is fought up here, and the
-    // coast is bone.
-    bearing: D(247), at: BAY_AT, r: 3100, half: 440,
+    // North-west. The Gullet is fought up here, and the coast is bone.
+    bearing: D(-139), at: 10361, r: 4445, half: 440,
     sea: ['#0f1f2a', '#20404e', '#4e7480'],
     rocks: 'bones',
   },
   {
     id: 'the_coffers', chapter: 3, name: 'The Coffers',
-    // The widest water of the four. A fleet action needs room to turn in.
-    bearing: D(299), at: BAY_AT, r: 3100, half: 480,
+    // North-east, and a fleet action has room to turn in it.
+    bearing: D(-50), at: 9922, r: 4391, half: 480,
     sea: ['#0c1a26', '#1b3648', '#456b7c'],
     rocks: 'coffers',
   },
   {
     id: 'the_last_fathom', chapter: 4, name: 'The Last Fathom',
-    // East, and the darkest. The deepest water there is.
-    bearing: D(351), at: BAY_AT, r: 2900, half: 440,
+    // DUE EAST, and the biggest water on the chart at twelve thousand across.
+    // The deepest there is, and the darkest.
+    bearing: D(6), at: 12718, r: 5928, half: 440,
     sea: ['#08131d', '#152b3c', '#385a6e'],
+    rocks: 'fathom',
+  },
+  {
+    id: 'one_last_ride', chapter: 5, name: 'One Last Ride',
+    /**
+     * DUE NORTH, PAST EVERYTHING, AND SMALL.
+     *
+     * The coda is one fight. It does not want a chapter's worth of water and it
+     * should not get one — a bay you sail into looking for isles and caches and
+     * find nothing in but him is the right shape for this, and the longest
+     * strait on the chart is the right way in.
+     *
+     * Its door opens on chapter IV's tail, which falls out of the array order
+     * rather than being written down: see opensBay.
+     */
+    bearing: D(-94), at: 11210, r: 2245, half: 460,
+    // Violet-black. Not one of the four, because it is not one of the four —
+    // there is no chapter after this and the water should not look like there
+    // is.
+    sea: ['#120e18', '#241c2e', '#4a3f58'],
+    // The Fathom's black glass, for now. This water wants its own rock and it
+    // is the one thing here still borrowed.
     rocks: 'fathom',
   },
 ]

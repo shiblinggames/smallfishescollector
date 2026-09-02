@@ -197,7 +197,9 @@ if (bad) process.exitCode = 1
     console.error(`  ✗ RAID_EDGE is ${RAID_EDGE} but the bays need ${need}`)
     bad++
   }
-  console.log(`    junction at ${HUB.x},${HUB.y}, ${HUB_R * 2} across, bays ${BAY_AT} out`)
+  // BAY_AT is only the default a new bay starts at now; each carries its own.
+  console.log(`    junction at ${HUB.x},${HUB.y}, ${HUB_R * 2} across`
+    + `   (a new bay starts at ${BAY_AT})`)
 
   for (const b of BAYS) {
     if (!RAID_CHAPTERS.some(x => x.id === b.id)) {

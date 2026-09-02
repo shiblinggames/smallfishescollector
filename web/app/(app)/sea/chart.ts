@@ -914,7 +914,7 @@ export const CHARTERHOUSE = PLACES.find(p => p.id === 'charterhouse')!
  * manifest — two tables that must agree, and a checker that fails when they do
  * not, rather than a silent sail limit that clips the last chapter off the map.
  */
-export const RAID_EDGE = 20000
+export const RAID_EDGE = 21000
 
 /** Is this point on the expedition side of the reef? */
 export function inExpeditions(y: number): boolean {

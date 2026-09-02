@@ -426,10 +426,10 @@ export default function ChartBench() {
         <circle cx={hub.x} cy={hub.y} r={hub.r}
           fill="rgba(120,170,196,0.16)" stroke="rgba(120,170,196,0.5)" strokeWidth={50} strokeDasharray="240 200" />
         <circle cx={hub.x} cy={hub.y} r={300} fill="rgba(150,208,244,0.9)"
-          style={{ cursor: 'grab' }}
+          style={{ cursor: 'grab', pointerEvents: tool === 'move' ? undefined : 'none' }}
           onPointerDown={e => { e.stopPropagation(); drag.current = { kind: 'hub' } }} />
         <circle cx={hub.x + hub.r} cy={hub.y} r={220} fill="rgba(150,208,244,0.6)"
-          style={{ cursor: 'ew-resize' }}
+          style={{ cursor: 'ew-resize', pointerEvents: tool === 'move' ? undefined : 'none' }}
           onPointerDown={e => { e.stopPropagation(); drag.current = { kind: 'hubR' } }} />
         <text x={hub.x} y={hub.y - hub.r - 260} fill="rgba(190,232,255,0.85)" fontSize={400} textAnchor="middle">
           the junction
@@ -440,7 +440,18 @@ export default function ChartBench() {
           const ux = Math.cos(RAD(b.bearing)), uy = Math.sin(RAD(b.bearing))
           const px = -uy, py = ux
           return (
-            <g key={b.id}>
+            // ── A BAY DOES NOT TAKE THE POINTER UNLESS YOU ARE MOVING ONE ──
+            //
+            // The bays cover most of the water, so with a pin or a wall in hand
+            // every click that mattered landed on a bay and selected it instead
+            // — the two tools were unusable anywhere you would actually want to
+            // use them, which is inside a bay.
+            //
+            // Turning the whole group off is the fix rather than guarding each
+            // handler: a shape with pointer-events none is not merely ignored,
+            // it is not hit-tested at all, so the click reaches the canvas
+            // underneath and lands exactly where the cursor says it will.
+            <g key={b.id} style={{ pointerEvents: tool === 'move' ? undefined : 'none' }}>
               {/* The strait, as its real box. */}
               <polygon
                 points={[
@@ -480,7 +491,7 @@ export default function ChartBench() {
 
         {/* WALLS YOU HAVE DRAWN. */}
         {walls.map(wl => (
-          <g key={wl.id}>
+          <g key={wl.id} style={{ pointerEvents: tool === 'move' ? undefined : 'none' }}>
             <line x1={wl.x1} y1={wl.y1} x2={wl.x2} y2={wl.y2}
               stroke="rgba(226,138,120,0.9)" strokeWidth={120} strokeLinecap="round" />
             <circle cx={wl.x1} cy={wl.y1} r={220} fill="rgba(226,138,120,0.9)" style={{ cursor: 'grab' }}
@@ -501,7 +512,7 @@ export default function ChartBench() {
           const c = boss ? 'rgba(232,86,74,0.95)' : 'rgba(150,232,180,0.9)'
           const R = boss ? 420 : 260
           return (
-            <g key={p.id}>
+            <g key={p.id} style={{ pointerEvents: tool === 'move' ? undefined : 'none' }}>
               {/* A BOSS IS A DIAMOND AND EVERYTHING ELSE IS A ROUND DOT, on the
                   chart's own rule: shape carries the meaning and colour only
                   reinforces it, because at a glance two colours of the same
