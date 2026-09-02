@@ -2460,8 +2460,28 @@ body.hardcore-gauntlet::after {
    overlays the whole viewport, so its bar has to add those two together itself
    or it lands on the header. Same numbers as .sea-surface below, deliberately:
    if that moves, this moves with it. */
-.raid-oversea-bar { top: 62px; }
+/* ON A PHONE IT CANNOT SHARE THAT LINE. The bar is a full-width column and the
+   enemy's card and the leave button are already on the HUD line at either end
+   of it, so at 62 all three sit on top of each other. It drops below the card
+   instead; there is no width on a phone where those three fit side by side. */
+.raid-oversea-bar { top: 148px; }
 @media (min-width: 640px) { .raid-oversea-bar { top: 78px; } }
+
+/* ── THE FIGHT'S OWN BOX, EXACTLY WHERE THE CHART'S IS ──────────────────────
+   Same insets as .sea-surface below, and for the same reason: on a phone the
+   MobileTabBar owns the last 60px of the window. The deck sits at the FOOT of
+   this box in normal flow rather than being fixed to the viewport — see the
+   note in RaidCombat. Keep these two rules in step. */
+.raid-oversea-stage {
+  position: fixed;
+  top: 44px;
+  right: 0;
+  bottom: 60px;
+  left: 0;
+}
+@media (min-width: 640px) {
+  .raid-oversea-stage { top: 60px; bottom: 0; }
+}
 
 .sea-surface {
   position: fixed;

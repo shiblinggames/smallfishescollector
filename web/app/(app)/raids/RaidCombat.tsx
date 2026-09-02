@@ -2208,13 +2208,16 @@ export default function RaidCombat({
     // The plates' own sizes, and the deck's height. These change when a status
     // chip appears or a name gets longer — not on a frame — so they are read
     // when something might have changed and cached in between.
-    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, deck: 0 }
+    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, deckTop: window.innerHeight }
     const measurePlates = () => {
       const e = enemyPlateRef.current
       const p = playerPlateRef.current
       if (e) { dim.ew = e.offsetWidth || dim.ew; dim.eh = e.offsetHeight || dim.eh }
       if (p) { dim.pw = p.offsetWidth || dim.pw; dim.ph = p.offsetHeight || dim.ph }
-      dim.deck = actionPanelRef.current?.offsetHeight ?? dim.deck
+      // WHERE THE DECK'S TOP EDGE IS, not how tall it is. Over the sea the deck
+      // no longer sits on the bottom of the window — on a phone it stops above
+      // the tab bar — so measuring up from the window put the card inside it.
+      dim.deckTop = actionPanelRef.current?.getBoundingClientRect().top ?? dim.deckTop
     }
     measurePlates()
     // Twice a second is far more often than a nameplate changes shape and far
@@ -2261,7 +2264,7 @@ export default function RaidCombat({
       const colW = Math.min(580, window.innerWidth - 22)
       const right = window.innerWidth / 2 + colW / 2
       el.style.left = `${right - dim.pw - box.left}px`
-      el.style.top = `${window.innerHeight - dim.deck - dim.ph - 10 - box.top}px`
+      el.style.top = `${dim.deckTop - dim.ph - 10 - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }
@@ -6815,9 +6818,13 @@ export default function RaidCombat({
                                 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)'
 
   return (
-    <div style={{
+    <div className={overSea ? 'raid-oversea-stage' : undefined} style={{
       display: 'flex', flexDirection: 'column',
-      position: 'relative',
+      // OVER THE SEA THIS IS THE FIGHT'S BOX, and it is the one positioned
+      // thing in here. `.raid-oversea-stage` gives it the chart's own insets,
+      // so on a phone it stops where the MobileTabBar starts.
+      position: overSea ? undefined : 'relative',
+      ...(overSea ? { zIndex: 1 } : null),
       // Frameless + ONE continuous backdrop: the per-raid gradient (and a zone
       // image, if set) live on the CONTAINER so they span the stage AND the
       // translucent control deck below — one scene, no boxed-in frame. When the
@@ -6875,7 +6882,11 @@ export default function RaidCombat({
       <motion.div ref={stageRef} animate={stageShakeCtrl} style={{
         position: 'relative',
         flex: 1,
-        minHeight: 400,
+        // NO FLOOR OVER THE SEA. The 400 is there so the scene keeps its shape
+        // on a short viewport when the stage is what you are looking at; here
+        // the scene is the chart behind, and a floor this tall on a phone
+        // pushes the deck off the bottom of its own box.
+        minHeight: overSea ? 0 : 400,
         transformOrigin: 'center center',
         willChange: 'transform',
         // Sky/sea gradient + inner backdrop elements switch on the raid's
@@ -8494,8 +8505,21 @@ export default function RaidCombat({
         // on a /raids/* route. Over the sea neither of those is on screen: the
         // fight is a full-viewport portal above both, so there is nothing left
         // for a compositing ancestor to break.
-        position: overSea ? 'fixed' : 'relative',
-        ...(overSea ? { left: 0, right: 0, bottom: 0, zIndex: 6 } : null),
+        // ── IN FLOW, AT THE FOOT OF THE BOX ──────────────────────────────
+        //
+        // This was `position: fixed; bottom: 0`, and on an iOS PWA that is the
+        // exact combination this file already carries a warning about: a fixed
+        // element beside framer-motion's compositing gets its viewport wrong,
+        // and the deck's buttons were laid out below the visible window. I read
+        // that warning, decided it did not apply because the nav and tab bar
+        // are covered here, and missed that it is about the FIXED ELEMENT, not
+        // about what it might overlap.
+        //
+        // No second fixed element now. The container above is the fight's box
+        // and ends where the tab bar begins; `marginTop: auto` puts the deck on
+        // its floor. Flow cannot be wrong about where the bottom is.
+        position: 'relative',
+        ...(overSea ? { marginTop: 'auto', zIndex: 6 } : null),
         // Translucent so the container backdrop (gradient + any zone image) reads
         // through — one continuous scene, no solid control slab, no divider frame.
         // NONE over the sea: the backing belongs to the panel, not the window.
@@ -8503,9 +8527,9 @@ export default function RaidCombat({
         // OFF THE EDGE, NOT ON IT. Flush to the bottom the deck read as part of
         // the window frame rather than as something floating on the water, and
         // on a desktop there is plenty of sea to spare.
-        padding: overSea
-          ? '0 0.7rem calc(env(safe-area-inset-bottom, 0px) + 1.6rem)'
-          : '0.7rem 0.85rem 0.95rem',
+        // The box already stops above the tab bar, so this is breathing room
+        // rather than clearance for something underneath.
+        padding: overSea ? '0 0.7rem 0.7rem' : '0.7rem 0.85rem 0.95rem',
         pointerEvents: overSea ? 'none' : undefined,
       }}>
         {/* THE CONTROLS, IN A COLUMN. The wash above spans the whole width
