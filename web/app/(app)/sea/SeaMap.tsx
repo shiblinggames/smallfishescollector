@@ -6915,7 +6915,11 @@ hullRef={hullRefFor(t.key)} />
           all it has to do is keep saying "still here". Full size on the chart,
           one line while fishing, and out of the row the catch card's jackpot
           and double-catch pills use. */}
-      <HotspotBadge spot={inSpot} compact={!!fishingIn} />
+      {/* HANDED THE ROW GEOMETRY RATHER THAN GUESSING AT IT. Both of this
+          badge's offsets used to be constants, and constants cannot know that
+          a HUD disc is 26px on a phone and 40px on a monitor. See its note. */}
+      <HotspotBadge spot={inSpot} compact={!!fishingIn}
+        hudSize={hudSize} lowered={hudSize === 26} />
 
       {fishingIn && (
         <FishingHere
@@ -9719,7 +9723,33 @@ const HotspotRing = memo(function HotspotRing({ h }: { h: Hotspot }) {
 })
 
 /** The badge that says what you are standing in. */
-function HotspotBadge({ spot, compact }: { spot: Hotspot | null; compact: boolean }) {
+/**
+ * ── IT SAT ON TOP OF THINGS, ON BOTH ENDS OF THE RANGE ──────────────────────
+ *
+ * Two hard-coded offsets, 52 and 62, and neither could be right everywhere:
+ *
+ *   COMPACT was `top: 52` and described as sitting under the phase glyph. The
+ *   disc row starts at 18 and a disc is `hudSize` tall, which is 26 on a phone
+ *   but 40 on a monitor — so the row runs to 58 on the surface with the most
+ *   room, and the badge printed six pixels INTO it. It only ever cleared on the
+ *   screen it was measured on.
+ *
+ *   FULL was `top: 62`, under a water name at `top: 18`. But the name drops to
+ *   56 on a phone (WaterBanner's `lowered`, which exists because the name and
+ *   the discs collide down there), and the badge did not drop with it, so on a
+ *   phone the pill printed over the name of the water it was describing.
+ *
+ * Both are derived now, from the same two numbers the things above them are
+ * built out of. A layout constant that encodes the size of something else is a
+ * collision waiting for a breakpoint.
+ */
+function HotspotBadge({ spot, compact, hudSize, lowered }: {
+  spot: Hotspot | null; compact: boolean
+  /** A HUD disc's diameter, which is what sets how far down the row reaches. */
+  hudSize: number
+  /** Whether the water's name has been pushed to the second row. */
+  lowered: boolean
+}) {
   const [left, setLeft] = useState('')
   useEffect(() => {
     if (!spot) return
@@ -9733,6 +9763,17 @@ function HotspotBadge({ spot, compact }: { spot: Hotspot | null; compact: boolea
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [spot])
+
+  /** The underside of the HUD disc row, which both placements have to clear. */
+  const hudBottom = 18 + hudSize
+  /** And of the water's name, which only the centred one sits under. The name
+   *  is 1.35rem of Cinzel over a 1px rule at +5, so a shade under 34px. */
+  const bannerBottom = (lowered ? 56 : 18) + 34
+  const below = compact
+    ? hudBottom + 8
+    // The centred one is under BOTH: it shares the middle with the name and the
+    // left corner is only a disc-row away on a narrow screen.
+    : Math.max(bannerBottom + 10, hudBottom + 8)
 
   return (
     <AnimatePresence>
@@ -9748,9 +9789,10 @@ function HotspotBadge({ spot, compact }: { spot: Hotspot | null; compact: boolea
             // column entirely — the catch card, the jackpot pill and the reroll
             // button all live down the middle and there is no room there.
             // Full size is centred under the water's name, where you meet it.
-            ...(compact
-              ? { top: 52, left: 12, display: 'flex' }
-              : { top: 62, left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 1rem' }),
+            ...(compact ? { top: below, left: 12, display: 'flex' } : {
+              top: below, left: 0, right: 0,
+              display: 'flex', justifyContent: 'center', padding: '0 1rem',
+            }),
           }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: compact ? 7 : 9,
