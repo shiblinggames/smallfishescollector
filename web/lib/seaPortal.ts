@@ -14,10 +14,18 @@ import { ISLES } from './seaIsles'
 import { PLACES } from '@/app/(app)/sea/chart'
 import { clearOfSolids, BOAT_CLEAR } from './seaSolid'
 
-/** Where the ring floats. Beside the Homestead (1900,-250 r460), outside its
- *  mooring prompt (ends at 880 from centre; this is 1,097 out), south of the
- *  reef, in Shallows water a new captain can actually reach. */
-export const PORTAL = { x: 2900, y: -700, r: 230 }
+/**
+ * Where the well lies. OFF THE HOMESTEAD'S OWN BEACH, which is what it is for.
+ *
+ * It sat 1,487px out, far enough that it read as a thing in open water that
+ * happened to be nearest your island rather than as YOURS. 1,224px now, on the
+ * same bearing: close enough to see the two together, and still 114px clear of
+ * the homestead's mooring prompt, which ends 880 from the island's centre. Any
+ * nearer and docking and warping start competing for the same water.
+ *
+ * The old note said 1,900,-250 and 1,097 out. Both were stale.
+ */
+export const PORTAL = { x: 2650, y: -620, r: 230 }
 
 export type PortalTier = {
   /** 1-based; profiles.portal_tier holds the highest owned. */

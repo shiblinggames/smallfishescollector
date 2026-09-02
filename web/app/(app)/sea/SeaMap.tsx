@@ -5459,7 +5459,15 @@ export default function SeaMap({
             drawn with the berths in seaPortalWell — see its header for why a
             painted neon sigil was the wrong object on this chart. The BEAM
             below stays: that is the warp firing, which is an event and not a
-            place, and it was never the part that looked wrong. */}
+            place, and it was never the part that looked wrong.
+
+            ITS NAME DID NOT GO WITH IT. A hole in the water is legible as
+            SOMETHING from a distance and as nothing in particular; every other
+            place out here carries a name board and this one has to as well, or
+            it is scenery you learn by bumping into. Sized and shadowed like the
+            ports' name plates, one step quieter, because it is a feature of the
+            water rather than somewhere you go ashore. */}
+        {!inAnchorage && <PortalName tier={portalTier} />}
         {/* The charge stands on the RING, not the hull: the painted band is
             the cylinder's footprint, so the ring itself is what flares. */}
         <AnimatePresence>
@@ -8334,6 +8342,35 @@ const ShipAtBerth = memo(function ShipAtBerth({ shipTier }: { shipTier: number }
           // The berth shows her exactly as the helm will.
           ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
         }} />
+    </div>
+  )
+})
+
+/** THE PORTAL'S NAME BOARD. DOM rather than canvas, like every other label on
+ *  this chart, and counter-squashed for the same reason theirs are: it sits in
+ *  the world layer so it travels with the water, but it is a sign and not a
+ *  thing lying on the surface. */
+const PortalName = memo(function PortalName({ tier }: { tier: number }) {
+  const t = PORTAL_TIERS.find(p => p.tier === tier) ?? PORTAL_TIERS[0]
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: PORTAL.x, top: PORTAL.y + PORTAL.r * GROUND,
+      pointerEvents: 'none',
+      transform: `translate(-50%, 10px) scaleY(${1 / GROUND})`,
+      transformOrigin: 'top center',
+      textAlign: 'center', whiteSpace: 'nowrap',
+    }}>
+      <p className="font-cinzel font-700" style={{
+        fontSize: '1.5rem', lineHeight: 1.1, margin: 0, color: '#eef4f8',
+        textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
+      }}>Home Portal</p>
+      {/* HOW FAR IT REACHES, which is the only thing about it worth knowing
+          from the water and the thing every tier changes. */}
+      <p className="font-karla font-600" style={{
+        fontSize: '0.95rem', marginTop: 2,
+        color: `${t.accent}cc`,
+        textShadow: '0 1px 10px rgba(0,0,0,0.92)',
+      }}>Reaches {t.name}</p>
     </div>
   )
 })
