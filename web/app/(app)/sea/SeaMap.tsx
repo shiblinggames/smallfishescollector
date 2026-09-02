@@ -241,6 +241,10 @@ const SeaNodeSheet = dynamic(() => import('./SeaNodeSheet'), { ssr: false })
  * sessions never open it.
  */
 const Almanac = dynamic(() => import('../fishing/Almanac'), { ssr: false })
+/** The Shipyard, as a sheet. Dynamic for the same reason the Almanac is: it
+ *  drags GearScreen and the whole forge bench behind it, and a captain who
+ *  never moors there never fetches a byte of it. */
+const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
@@ -1933,11 +1937,41 @@ export default function SeaMap({
       zoomRef.current = z * wheelZoom.current * fishZoom.current
     }
     fitRef.current = fit
+    /**
+     * ── IS THE POINTER OVER SOMETHING THAT IS NOT THE SEA? ─────────────────
+     *
+     * Most of this chart's panels are rendered INSIDE the wrapper — fixed to
+     * the viewport, but still DOM children of it — so a wheel over an open
+     * sheet reached this listener, which called preventDefault and zoomed the
+     * water. On a desktop that meant a modal with a long list in it could not
+     * be scrolled at all: the wheel went to the sea behind it every time.
+     *
+     * Walk up from whatever the pointer is over and stop at the wrapper. A
+     * FIXED ancestor means an overlay of some kind, and a SCROLLABLE one means
+     * a thing whose whole job is to answer this gesture. Either way the sea is
+     * not what the wheel is for.
+     *
+     * No markers, no allow-list: a panel added tomorrow gets this for free,
+     * which is the only version of this rule that stays true.
+     */
+    const overPanel = (start: EventTarget | null) => {
+      let n = start instanceof Element ? start : null
+      while (n && n !== el && n !== document.body) {
+        const st = getComputedStyle(n)
+        if (st.position === 'fixed') return true
+        if ((st.overflowY === 'auto' || st.overflowY === 'scroll')
+          && n.scrollHeight > n.clientHeight + 1) return true
+        n = n.parentElement
+      }
+      return false
+    }
+
     const onWheel = (e: WheelEvent) => {
+      if (overPanel(e.target)) return
       // Only plain wheel — pinch-zoom on trackpads arrives as ctrl+wheel and
       // should zoom too, but browser-page zoom (ctrl+wheel on a mouse) is a
       // user setting this must not eat. Taking both is the lesser evil: the
-      // page has nothing of its own to scroll.
+      // chart itself has nothing of its own to scroll.
       e.preventDefault()
       wheelZoom.current = Math.max(0.55, Math.min(1.6,
         wheelZoom.current * Math.exp(-e.deltaY * 0.0012)))
@@ -2818,6 +2852,8 @@ export default function SeaMap({
   const [nearWayHome, setNearWayHome] = useState<ReturnPortal | null>(null)
   /** The book, open or shut. */
   const [almanacOpen, setAlmanacOpen] = useState(false)
+  /** The locker, open or shut. */
+  const [yardOpen, setYardOpen] = useState(false)
   const [reading, setReading] = useState<string | null>(null)
   /**
    * A NODE'S OWN SHEET, AND THE INTRO THAT RUNS BEFORE IT.
@@ -3097,6 +3133,7 @@ export default function SeaMap({
       if (crewOpen) { setCrewOpen(false); return }
       if (crewHubOpen) { setCrewHubOpen(false); return }
       if (almanacOpen) { setAlmanacOpen(false); return }
+      if (yardOpen) { setYardOpen(false); return }
       if (reading) { setReading(null); return }
       if (sheetNode) { setSheetNode(null); return }
       if (introNode) { setIntroNode(null); return }
@@ -3105,7 +3142,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -4183,6 +4220,13 @@ export default function SeaMap({
     // NOT A PAGE. The trawl panel opens over the water you are floating on,
     // because the crews you are sending are going into it.
     if (p.id === 'trawl_fleet') { setTrawlOpen(true); return }
+    // AND THE SHIPYARD OPENS OVER THE WATER TOO. It was a route, and it never
+    // needed to be one: the screen it renders is ALREADY a full-bleed overlay
+    // with a close in the corner, so the only thing being a page bought it was
+    // a navigation out of the chart and a remount of the whole sea on the way
+    // back. Same component, same read — see shipyardState — opened where you
+    // are moored.
+    if (p.id === 'shipyard') { setYardOpen(true); return }
     // AND THE TALLY HOUSE SETTLES UP IN PLACE. It was a whole route for one
     // panel — the same panel the chart already shows from the HUD — whose only
     // difference ashore was that the Claim buttons worked. A page load, a
@@ -7086,6 +7130,9 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       <Almanac open={almanacOpen} onClose={() => setAlmanacOpen(false)} />
+
+      {/* THE LOCKER, over the water you are moored in. */}
+      <ShipyardSheet open={yardOpen} onClose={() => setYardOpen(false)} />
 
       {/* THE COMPASS. Its mount was deleted in an over-broad slice edit and the
           component sat unreferenced for a dozen commits, which is why the

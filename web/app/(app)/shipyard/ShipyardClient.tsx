@@ -121,6 +121,18 @@ const EXPLAIN: Record<Buyable, { does: string; why: string }> = {
 
 
 export default function ShipyardClient(p: {
+  /**
+   * SHUT IT WHERE IT STANDS, rather than navigating away.
+   *
+   * The Shipyard is a sheet on the chart now: you moor at its island and it
+   * opens over the water you are sitting in. When it is mounted that way there
+   * is nowhere to go back TO — the sea is still there underneath — so the
+   * close and the foot button just dismiss it.
+   *
+   * Absent, this is the /shipyard route and leaving means a navigation, which
+   * is what `leave` does.
+   */
+  onClose?: () => void
   doubloons: number
   gems: number
   fishingLevel: number
@@ -215,6 +227,9 @@ export default function ShipyardClient(p: {
    * the site on a deep link.
    */
   const leave = useCallback(() => {
+    // MOUNTED AS A SHEET: there is nothing to navigate back to, because the
+    // chart never went anywhere.
+    if (p.onClose) { p.onClose(); return }
     let cameFromChart = false
     try {
       cameFromChart = sessionStorage.getItem('sea:came-from-chart') === '1'
@@ -222,7 +237,7 @@ export default function ShipyardClient(p: {
     } catch { /* private mode — fall through to the push */ }
     if (cameFromChart) router.back()
     else router.push('/sea')
-  }, [router])
+  }, [router, p])
 
   /**
    * NOTHING IS BOUGHT ON ONE TAP.
@@ -773,14 +788,20 @@ export default function ShipyardClient(p: {
           boatId={boat} hullTier={hull} handlingTier={handling} accelTier={accel}
         />
 
-        <Link href="/sea" className="font-cinzel font-700 block text-center"
+        {/* THE SAME DOOR AS THE X ABOVE, at the bottom of a long scroll — and
+            it has to be a button when this is a sheet, because a <Link> to /sea
+            from a panel already floating ON /sea is a page load to where you
+            already are. */}
+        <button type="button" onClick={leave}
+          className="font-cinzel font-700 block text-center"
           style={{
-            marginTop: 18, padding: '0.75rem', borderRadius: 12, fontSize: 'var(--sy-5)',
+            width: '100%', marginTop: 18, padding: '0.75rem', borderRadius: 12,
+            fontSize: 'var(--sy-5)', cursor: 'pointer',
             color: '#f2ead8', background: 'rgba(180,214,232,0.14)',
             border: '1px solid rgba(180,214,232,0.4)',
           }}>
           Back to the water
-        </Link>
+        </button>
       </div>
 
       {/* ── CONFIRM THE PURCHASE ────────────────────────────────────────
