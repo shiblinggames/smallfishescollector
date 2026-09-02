@@ -37,7 +37,7 @@ import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
-import { PORTAL, PORTAL_TIERS, PORTAL_PORTS, hasPortalStone, hasStoneFor, STONE_ISLE_IDS, inPortal, warpPoint } from '@/lib/seaPortal'
+import { PORTAL, PORTAL_TIERS, PORTAL_PORTS, hasPortalStone, hasStoneFor, inPortal, warpPoint } from '@/lib/seaPortal'
 import { buyPortalTier, buyPortalPort } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
@@ -6889,13 +6889,6 @@ hullRef={hullRefFor(t.key)} />
               }}>{portalErr}</p>
             )}
 
-            <p className="font-karla" style={{
-              fontSize: '0.72rem', color: 'rgba(190,212,228,0.55)', lineHeight: 1.5, margin: '0.7rem 0 0',
-            }}>
-              A water wants its stone, and each one is in a cache chest out in the water it
-              reaches — {STONE_ISLE_IDS.size} chests hold one. A berth is bought outright and
-              needs no stone: those are places you already moor at by name.
-            </p>
           </div>
         </PopupShell>
       )}

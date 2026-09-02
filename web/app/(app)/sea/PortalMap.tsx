@@ -25,7 +25,30 @@
 // a word.
 
 import { useState } from 'react'
+import { PLACES } from './chart'
 import { PORTAL_TIERS, PORTAL_PORTS, type PortalTier, type PortalPort } from '@/lib/seaPortal'
+
+/**
+ * WHAT A BERTH LOOKS LIKE, from the island itself.
+ *
+ * Every one of these is a place with a painting already: the shed, the wharf,
+ * the town. A coloured square beside its name was a label for a thing that has
+ * a face — and the face is what a captain actually recognises, because it is
+ * what they have been sailing up to for hours.
+ *
+ * The BUILDING rather than the island plate where there is one. An island plate
+ * is mostly grass with a small thing on it, which at 56px is a green blob; the
+ * building is the bit you would point at. The Homestead has no separate
+ * building — its house is a ladder of five paintings, one per rung — so it
+ * falls back to the isle, which is the right picture for it anyway.
+ *
+ * Derived from PLACES rather than written down again, so a re-drawn island
+ * arrives here on its own.
+ */
+function berthArt(id: string): string | null {
+  const p = PLACES.find(x => x.id === id)
+  return p?.buildings?.[0]?.art ?? (p?.art?.startsWith('/sea/') ? p.art : null)
+}
 
 type Pick =
   | { kind: 'band'; tier: PortalTier }
@@ -74,6 +97,7 @@ export default function PortalMap({
           <Node key={p.id}
             label={p.name}
             accent={p.accent}
+            art={berthArt(p.id)}
             owned={portOwned(p)}
             dim={false}
             on={sel?.kind === 'port' && sel.port.id === p.id}
@@ -83,22 +107,22 @@ export default function PortalMap({
       </Board>
 
       {/* ── WHAT YOU HAVE PICKED ──
-          One footer rather than a button on every node. Eleven buttons is a
-          wall of buttons; eleven places and one verb is a choice. */}
+          One footer rather than a button on every node: eleven buttons is a
+          wall of buttons, eleven places and one verb is a choice.
+
+          AND NOTHING UNTIL SOMETHING IS PICKED. It used to hold seventy pixels
+          open to say "pick where you are going" — a caption on a board of
+          eleven labelled buttons, telling a captain what they can already
+          see. */}
+      {sel && (
       <div style={{
-        marginTop: 12, minHeight: 70,
+        marginTop: 12,
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '0.6rem 0.75rem', borderRadius: 12,
         background: 'rgba(255,255,255,0.04)',
         border: '1px solid rgba(255,255,255,0.09)',
       }}>
-        {!sel ? (
-          <p className="font-karla" style={{
-            margin: 0, fontSize: '0.8rem', color: 'rgba(190,212,228,0.6)', lineHeight: 1.5,
-          }}>
-            Pick where you are going.
-          </p>
-        ) : sel.kind === 'band' ? (
+        {sel.kind === 'band' ? (
           <Foot
             accent={sel.tier.accent} round
             name={sel.tier.name}
@@ -131,6 +155,7 @@ export default function PortalMap({
               : { label: busy ? 'Working…' : 'Teach it', gold: true, disabled: busy, onClick: () => onBuyPort(sel.port.id) }} />
         )}
       </div>
+      )}
     </div>
   )
 }
@@ -161,9 +186,12 @@ function Board({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Node({ label, accent, note, owned, dim, on, round, onClick }: {
+function Node({ label, accent, art, note, owned, dim, on, round, onClick }: {
   label: string
   accent: string
+  /** The island's own painting, for the berths. The waters have none — they are
+   *  water — so those keep the coloured mark. */
+  art?: string | null
   /** Price, or "Locked". Null once it is yours — a node you own needs no line. */
   note: string | null
   owned: boolean
@@ -184,13 +212,40 @@ function Node({ label, accent, note, owned, dim, on, round, onClick }: {
         opacity: dim ? 0.5 : 1,
         WebkitTapHighlightColor: 'transparent',
       }}>
-      <span aria-hidden style={{
-        width: 30, height: 30, flexShrink: 0,
-        borderRadius: round ? '50%' : 7,
-        background: owned ? accent : 'transparent',
-        border: `2px solid ${owned ? accent : 'rgba(160,176,192,0.55)'}`,
-        boxShadow: owned ? `0 0 14px ${accent}88` : 'none',
-      }} />
+      {art ? (
+        // A LIT PLATE UNDER IT, so a building with a lot of sky in its plate
+        // still reads as a thing standing on something. Untaught berths go
+        // grey and dim: the picture is still the answer to "which one is
+        // that", and greying it is how it says "not yet" without a second
+        // symbol.
+        <span aria-hidden style={{
+          position: 'relative', width: '100%', height: 54, flexShrink: 0,
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }}>
+          <span aria-hidden style={{
+            position: 'absolute', left: '50%', bottom: 0, width: 54, height: 14,
+            transform: 'translateX(-50%)', borderRadius: '50%',
+            background: owned
+              ? `radial-gradient(ellipse, ${accent}55 0%, transparent 70%)`
+              : 'radial-gradient(ellipse, rgba(6,12,18,0.5) 0%, transparent 70%)',
+          }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={art} alt="" draggable={false} decoding="async" style={{
+            position: 'relative', maxWidth: '100%', maxHeight: 54, objectFit: 'contain',
+            filter: owned
+              ? `drop-shadow(0 3px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 10px ${accent}55)`
+              : 'grayscale(0.85) brightness(0.6) drop-shadow(0 3px 6px rgba(0,0,0,0.55))',
+          }} />
+        </span>
+      ) : (
+        <span aria-hidden style={{
+          width: 30, height: 30, flexShrink: 0,
+          borderRadius: round ? '50%' : 7,
+          background: owned ? accent : 'transparent',
+          border: `2px solid ${owned ? accent : 'rgba(160,176,192,0.55)'}`,
+          boxShadow: owned ? `0 0 14px ${accent}88` : 'none',
+        }} />
+      )}
       <span className="font-cinzel font-700" style={{
         fontSize: '0.74rem', lineHeight: 1.15, textAlign: 'center',
         color: owned ? '#ecdcbd' : 'rgba(214,226,236,0.78)',
