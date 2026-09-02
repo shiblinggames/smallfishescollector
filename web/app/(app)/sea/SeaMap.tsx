@@ -393,6 +393,22 @@ export type SeaLog = {
  * Anything the player can READ or PRESS belongs above the world. The world is
  * scenery; the button that gets you into it is not.
  */
+/**
+ * ── WHERE THE TWO SHIPS STAND IN A DUEL ─────────────────────────────────────
+ *
+ * As fractions of the chart. Taken from the arrangement the fight was drawn
+ * for and has always used: your hull low and to the left and large, theirs
+ * high and to the right and smaller, because it is further off.
+ *
+ * The vertical gap is the load-bearing half. Up-screen is further away on this
+ * projection, so an enemy placed above you is an enemy standing off — the same
+ * fact the whole chart runs on, borrowed for a fight.
+ */
+const FIGHT_FRAME = {
+  p: { x: 0.30, y: 0.64 },
+  e: { x: 0.71, y: 0.36 },
+}
+
 const Z = {
   /** The water's colour, and the two moving surface layers over it. */
   backdrop: 0,
@@ -2978,6 +2994,8 @@ export default function SeaMap({
   const fightEncRef = useRef<Encounter | null>(null)
   /** Whether the guns are out, for the frame loop (which must not read state). */
   const fightOnRef = useRef(false)
+  /** Where the camera holds while the guns are out. See FIGHT_FRAME. */
+  const fightCam = useRef<{ x: number; y: number } | null>(null)
   const anchorsRef = useRef<{ player: ShipAnchor; enemy: ShipAnchor } | null>(null)
   const shipFxRef = useRef<{ player: ShipFx; enemy: ShipFx } | null>(null)
   /** The enemy's hull on the chart, so the fight's blows can land on it. */
@@ -3585,7 +3603,13 @@ export default function SeaMap({
   // boat is clearly the subject and the water around it has moved, not so much
   // that the islands you were sailing past leave the frame entirely. The
   // captain should still know where they are.
-  useEffect(() => { fishZoomTarget.current = fishingIn ? 1.42 : 1 }, [fishingIn])
+  // THE SAME PUSH-IN THE ROD GETS. A fight is the other thing that stops being
+  // a voyage and starts being a scene, so it arrives the way casting does:
+  // the camera leans in, the sea stays exactly where it was, and you never
+  // travelled. One channel for both, so they can never ease differently.
+  useEffect(() => {
+    fishZoomTarget.current = fishingIn ? 1.42 : fightId ? 1.5 : 1
+  }, [fishingIn, fightId])
 
   const locked = useCallback((p: Place) => level < p.minLevel, [level])
 
@@ -4583,8 +4607,55 @@ export default function SeaMap({
       // are, and a frozen chart would nail them to a dead frame.
       if (fightOnRef.current) {
         cmdDir.current = null
-        vel.current.x -= vel.current.x * Math.min(1, 3.2 * dt)
-        vel.current.y -= vel.current.y * Math.min(1, 3.2 * dt)
+        vel.current.x = 0
+        vel.current.y = 0
+        // ── AND SHE TAKES HER STATION ─────────────────────────────────────
+        //
+        // THE DUEL HAS A SHAPE, and it is the one the fight was drawn for: your
+        // hull low and to the left, theirs high and to the right. Sailing up on
+        // any heading you like puts the two ships in an arbitrary arrangement,
+        // and half the time the enemy is behind you or on top of you — which is
+        // what "both cards stacked in the middle" actually was.
+        //
+        // Placed by SOLVING for it rather than by nudging: the camera is chosen
+        // so the enemy lands exactly on its mark, and her station is whatever
+        // world point puts her on hers. Both fall out of the projection, so the
+        // framing is right at any zoom and on any window.
+        //
+        // She glides in rather than cutting, because a cut is a different scene
+        // and this is the same sea from a better angle.
+        const enc = fightEncRef.current
+        const at = enc ? encounterAt(enc) : null
+        const box = wrapBoxRef.current
+        if (at && box) {
+          const z = zoomRef.current
+          const W = box.width, H = box.height
+          const pS = { x: W * FIGHT_FRAME.p.x, y: H * FIGHT_FRAME.p.y }
+          const eS = { x: W * FIGHT_FRAME.e.x, y: H * FIGHT_FRAME.e.y }
+          // The world gap that reads as that screen gap. Divided by GROUND on
+          // the vertical, because up-screen is squashed and a raw px offset
+          // would put her far closer than it looks.
+          const station = {
+            x: at.x - (eS.x - pS.x) / z,
+            y: at.y - (eS.y - pS.y) / (z * GROUND),
+          }
+          const k = 1 - Math.exp(-2.6 * dt)
+          pos.current.x += (station.x - pos.current.x) * k
+          pos.current.y += (station.y - pos.current.y) * k
+          // THE CAMERA IS PINNED TO THE STATION, not to her. Anchored on where
+          // she is GOING, the enemy is framed correctly from the first frame
+          // and she is the only thing that moves — which is what pulling
+          // alongside looks like from a camera holding the engagement.
+          fightCam.current = {
+            x: station.x - (pS.x - W / 2) / z,
+            y: station.y - (pS.y - H / 2) / (z * GROUND),
+          }
+          // GUNS TO STARBOARD. The art faces right unmirrored (the enemy's is
+          // flipped to face back at you), and the enemy is up and to the right.
+          facing.current = 1
+        }
+      } else if (fightCam.current) {
+        fightCam.current = null
       }
 
       // ── TWO CLOCKS, AND ONLY ONE OF THEM IS SHARED WITH THE SERVER ──
@@ -5076,6 +5147,12 @@ export default function SeaMap({
       const from = lastPos.current
       for (const w of WALLS) {
         if (!lastKnown.current) break
+        // NOT WHILE THE GUNS ARE OUT. In a fight she is not sailing: the loop
+        // is easing her onto her station in the duel, and a crossing test reads
+        // that as a captain trying to run a gate. She holds a few hundred
+        // pixels off a hull that is itself in open water, so there is nothing
+        // out there for her to end up inside.
+        if (fightOnRef.current) break
         if (!wallUp(w, clearedRef.current)) continue
         const e = wallSeg(w)
         if (!e) continue
@@ -5502,7 +5579,9 @@ export default function SeaMap({
       // is the same sea seen from somewhere else, which is the whole point of
       // showing it rather than listing it. It returns to the hull the moment
       // the tour lets go, by the same ease, so nothing snaps.
-      const look = tourCam.current
+      // The fight's camera outranks the tour's: you cannot be on the first
+      // voyage and in a duel, and if you somehow were, the guns win.
+      const look = fightCam.current ?? tourCam.current
       if (look) {
         const k = 1 - Math.exp(-2.1 * dt)
         camAt.current.x += (look.x - camAt.current.x) * k

@@ -1640,8 +1640,23 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
             with framer-motion compositing inside RaidCombat, iOS Safari PWA
             mis-handles position:fixed for Nav header + MobileTabBar.
             See memory: feedback_pagetransition_ios_pwa.md */}
-        <div style={{ width: '100%', flexShrink: 0 }}>
-          <NavLevelBar xp={navXP} />
+        <div style={{
+          width: '100%', flexShrink: 0,
+          // OVER THE SEA IT IS A PILL, NOT A STRIP. Full-bleed it ran the whole
+          // width of the window along the very top edge, which reads as part of
+          // the browser chrome rather than part of the game. Capped to the
+          // deck's own column and centred, so the fight's two readouts — level
+          // at the top, controls at the foot — are plainly one HUD.
+          ...(overSea ? {
+            position: 'fixed', left: 0, right: 0, top: 10, zIndex: 6,
+            padding: '0 0.7rem', pointerEvents: 'none',
+          } : null),
+        }}>
+          <div style={overSea
+            ? { maxWidth: 580, marginLeft: 'auto', marginRight: 'auto' }
+            : undefined}>
+            <NavLevelBar xp={navXP} />
+          </div>
           <AnimatePresence>
             {xpPopup && (
               <motion.p

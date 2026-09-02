@@ -2197,9 +2197,34 @@ export default function RaidCombat({
       const pw = el.offsetWidth || 160
       const ph = el.offsetHeight || 48
       const x = Math.max(8, Math.min(window.innerWidth - pw - 8, a.x - pw / 2))
-      const y = Math.max(8, a.y - a.w * 0.60 - ph)
+      // WELL CLEAR OF THE RIGGING. At 0.60 it sat in the topsails; a ship of
+      // the line is most of its own height above the waterline.
+      const y = Math.max(8, a.y - a.w * 0.86 - ph)
       el.style.left = `${x - box.left}px`
       el.style.top = `${y - box.top}px`
+      el.style.right = 'auto'
+      el.style.bottom = 'auto'
+    }
+
+    /**
+     * YOUR OWN CARD DOES NOT FLOAT. It docks on the right of the deck, just
+     * above the log — where it has always been, and where you already look for
+     * it. The enemy's is the one that has to be found, because which ship it
+     * belongs to is the question; yours never moves and never needs asking.
+     */
+    const dockPlayerPlate = () => {
+      const el = playerPlateRef.current
+      const deck = actionPanelRef.current
+      if (!el) return
+      const pw = el.offsetWidth || 160
+      const ph = el.offsetHeight || 48
+      const dh = deck?.offsetHeight ?? 0
+      // Right edge of the deck's capped column, so the card lines up with the
+      // panel under it rather than with the window.
+      const colW = Math.min(580, window.innerWidth - 22)
+      const right = window.innerWidth / 2 + colW / 2
+      el.style.left = `${right - pw - box.left}px`
+      el.style.top = `${window.innerHeight - dh - ph - 10 - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }
@@ -2214,7 +2239,7 @@ export default function RaidCombat({
         place(playerShipRef.current, at.player)
         place(enemyShipRef.current, at.enemy)
         placePlate(enemyPlateRef.current, at.enemy)
-        placePlate(playerPlateRef.current, at.player)
+        dockPlayerPlate()
       }
 
       const { p, e } = shipFxRef.current
@@ -8409,8 +8434,11 @@ export default function RaidCombat({
         // through — one continuous scene, no solid control slab, no divider frame.
         // NONE over the sea: the backing belongs to the panel, not the window.
         background: overSea ? 'none' : 'linear-gradient(180deg, rgba(4,8,14,0.42) 0%, rgba(3,6,12,0.72) 100%)',
+        // OFF THE EDGE, NOT ON IT. Flush to the bottom the deck read as part of
+        // the window frame rather than as something floating on the water, and
+        // on a desktop there is plenty of sea to spare.
         padding: overSea
-          ? '0 0.7rem calc(env(safe-area-inset-bottom, 0px) + 0.7rem)'
+          ? '0 0.7rem calc(env(safe-area-inset-bottom, 0px) + 1.6rem)'
           : '0.7rem 0.85rem 0.95rem',
         pointerEvents: overSea ? 'none' : undefined,
       }}>

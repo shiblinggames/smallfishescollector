@@ -110,8 +110,20 @@ export default function BossDialogueModal({
         default: { type: 'spring', stiffness: 220, damping: 26 },
       }}
       style={{
-        position: 'absolute', bottom: 0, [side]: '2%',
-        width: 'min(44vw, 200px)', aspectRatio: '1 / 1',
+        // ── THE BUSTS STAND IN A ROOM, NOT IN THE CORNERS ─────────────────
+        //
+        // Capped at 200px and pinned 2% from each screen edge, a desktop put
+        // two small figures a metre apart with a field of empty scene between
+        // them — a conversation held across a car park. `clamp` grows them with
+        // the window instead of stopping dead, and the offset pulls them into a
+        // centred band once the window is wider than that band, so the two
+        // speakers stay in the same room however wide the monitor is.
+        //
+        // Both fall back to the old numbers on a phone, where 2% and 44vw were
+        // right all along: `max` picks the 2% and the clamp picks its floor.
+        position: 'absolute', bottom: 0,
+        [side]: 'max(2%, calc(50% - 540px))',
+        width: 'clamp(170px, 27vw, 360px)', aspectRatio: '1 / 1',
         zIndex: lit ? 2 : 1, pointerEvents: 'none',
         transformOrigin: side === 'left' ? 'bottom left' : 'bottom right',
       }}
@@ -146,7 +158,10 @@ export default function BossDialogueModal({
           equippedHat={playerEquippedHat}
           bgColor={playerAvatarBg ?? undefined}
           ringColor={isPlayer ? '#4ade80' : (playerAvatarBorder ?? undefined)}
-          size={168}
+          // Grows with the busts opposite it. A fixed 168 beside a portrait
+          // that now reaches 360 makes the captain the small one in their own
+          // scene. Read once, at open: a cutscene is not resized mid-line.
+          size={typeof window !== 'undefined' && window.innerWidth >= 900 ? 260 : 168}
         />
       </div>
     )
