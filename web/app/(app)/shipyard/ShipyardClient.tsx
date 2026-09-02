@@ -420,7 +420,21 @@ export default function ShipyardClient(p: {
     // at phone sizes, which is a column of six-point type down the middle of a
     // 27-inch screen.
     <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0 overflow-y-auto sea-shipyard"
-      style={{ background: '#08121c' }}>
+      style={{
+        background: '#08121c',
+        // ── IT HAS TO OUTRANK THE CHART IT IS OPENED OVER ─────────────
+        //
+        // As a route this needed no z-index: it was the only thing on the
+        // screen. As a SHEET it is portalled over /sea, whose own layers run
+        // from the world up to the helm at 14 — and a positioned element with
+        // `z-index: auto` paints below every one of them. So the locker opened
+        // perfectly and rendered underneath the entire sea, which from the
+        // deck looks exactly like nothing happening.
+        //
+        // 111 is what the Almanac uses to sit over the same chart; this is one
+        // above it, so the two can never argue about which is on top.
+        zIndex: 112,
+      }}>
       <div className="page-col" style={{ paddingBottom: '2rem' }}>
 
         {/* ── THE HERO ────────────────────────────────

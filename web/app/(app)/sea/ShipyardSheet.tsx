@@ -51,7 +51,7 @@ export default function ShipyardSheet({ open, onClose }: {
         <ShipyardClient {...state} onClose={onClose} />
       ) : (
         <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
-          style={{ background: '#08121c', display: 'grid', placeItems: 'center' }}>
+          style={{ background: '#08121c', zIndex: 112, display: 'grid', placeItems: 'center' }}>
           <p className="font-karla font-600 uppercase tracking-[0.16em]"
             style={{ fontSize: '0.62rem', color: err ? '#f87171' : '#8fb8cf' }}>
             {err ?? 'Opening the locker…'}
