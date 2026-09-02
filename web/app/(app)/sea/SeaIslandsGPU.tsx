@@ -747,6 +747,58 @@ export default function SeaIslandsGPU({
        *  frame and is written through forever after. */
       const pooled: Contact[] = []
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+      /**
+       * ── TIER TWO: THINGS GET SMALLER AS THEY GO AWAY ────────────────
+       *
+       * The last cue the chart was missing, and the strongest. Tier one gave
+       * the plane a receding SURFACE — compressed swell, air in front of the
+       * far water — but every rock on it was still drawn at the same size
+       * wherever it stood, which is the one thing that says "flat" out loud.
+       *
+       * ── POSITIONS ARE UNTOUCHED, AND THAT IS THE WHOLE TRICK ────────
+       *
+       * Only the SCALE varies with depth. A true perspective projection would
+       * move things as well, and the moment a world point stops mapping to a
+       * fixed screen point every collider, hit test, placement bench and the
+       * minimap has to learn the new mapping. Size alone buys most of the cue
+       * and costs none of that: a rock is still exactly where the arithmetic
+       * says it is, and everything that asks where it is still gets the same
+       * answer it always did.
+       *
+       * ── AND IT IS CHEAPER THAN IT LOOKED ────────────────────────────
+       *
+       * The estimate that deferred this was "2,500 sprites ride one container
+       * transform for free". They do not: the swayer loop below already walks
+       * every one of them each frame to cull it. The loop exists, the cull has
+       * already narrowed it to what is on screen, and the only new work is one
+       * scale write on the marks a captain can actually see — a few dozen,
+       * not thousands.
+       *
+       * Measured against the camera's OWN ROW, so the hull is always 1.0 and
+       * the world grows and shrinks around a fixed boat rather than the boat
+       * appearing to change size. Above her is further and smaller; below her
+       * is nearer and larger, which is what perspective does in both
+       * directions.
+       *
+       * `?depth=0` turns it off, for looking at the two side by side.
+       * `?depth=debug` prints what the loop actually costs.
+       */
+      const depthFlag = new URLSearchParams(window.location.search).get('depth')
+      const DEPTH_ON = depthFlag !== '0'
+      const DEPTH_DEBUG = depthFlag === 'debug'
+      /** How much a mark gains or loses across half a screen of depth. 0.18
+       *  reads as distance; past about a quarter the far rocks start looking
+       *  like different, smaller rocks rather than the same ones further off. */
+      const DEPTH = 0.18
+      let depthCost = 0, depthFrames = 0, depthSeen = 0, depthLogged = 0
+
+      /** How big a thing at `wy` is, seen from a camera at `camY`. One at the
+       *  camera's own row, smaller above it, larger below. Clamped, because the
+       *  cull margins let a mark sit some way off screen and an unclamped ramp
+       *  would grow the ones just past the bottom edge without limit. */
+      const depthScale = (wy: number, cy: number, halfH: number) =>
+        1 + Math.max(-1, Math.min(1, (wy - cy) / halfH)) * DEPTH
       a.ticker.add(() => {
         const t = performance.now() / 1000
         const dt = a.ticker.deltaMS / 1000
@@ -844,13 +896,25 @@ export default function SeaIslandsGPU({
         portalWell.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
         guide.advance(t)
+        const depthT0 = DEPTH_DEBUG ? performance.now() : 0
+        let onScreen = 0
         for (const sw of swayers) {
           // Generous margins: a landmark is anchored at its base and stands
           // well above it, so culling on the anchor alone pops the tall ones.
           const on = Math.abs(sw.x - camX) < halfW + sw.half * 2
             && Math.abs(sw.y - camY) < halfH + sw.half * 3
           sw.node.visible = on
-          if (!on || !sw.sway || reduce) continue
+          if (!on) continue
+          onScreen++
+          if (DEPTH_ON) {
+            // Half a viewport up is a full step of depth; the same below is a
+            // full step the other way. Clamped, because the margins let a mark
+            // sit some way outside the screen and an unclamped ramp would grow
+            // the ones just below the bottom edge without limit.
+            const k = depthScale(sw.y, camY, halfH)
+            sw.node.scale.set(k, k / GROUND)
+          }
+          if (!sw.sway || reduce) continue
           if (sw.sway === 'bob') {
             // markBob: 3.6s, translateY 0 to -5, rotate -3.2 to 3.2.
             const u = Math.sin(((t + sw.phase) / 3.6) * Math.PI * 2)
@@ -860,6 +924,19 @@ export default function SeaIslandsGPU({
             // A wreck is thousands of tons of waterlogged timber: slower, less.
             const u = Math.sin(((t + sw.phase) / 9) * Math.PI * 2)
             sw.holder.rotation = (1.1 * Math.PI / 180) * u
+          }
+        }
+        if (DEPTH_DEBUG) {
+          depthCost += performance.now() - depthT0
+          depthSeen += onScreen
+          depthFrames++
+          if (t - depthLogged > 5) {
+            depthLogged = t
+            // eslint-disable-next-line no-console
+            console.log(`[depth] ${swayers.length} marks · ${(depthSeen / depthFrames).toFixed(0)} on screen`
+              + ` · ${(depthCost / depthFrames * 1000).toFixed(0)}µs a frame`
+              + ` (${((depthCost / depthFrames) / 16.7 * 100).toFixed(1)}% of a 60fps budget)`)
+            depthCost = 0; depthFrames = 0; depthSeen = 0
           }
         }
       })
@@ -997,7 +1074,14 @@ export default function SeaIslandsGPU({
               a.screen.width / 2 + camZoom * (m.x - camX),
               a.screen.height / 2 + camZoom * GROUND * (m.y - camY),
             )
-            node.scale.set(camZoom, camZoom * GROUND)
+            // THE SAME DEPTH THE WORLD COPY HAS. This is the SAME ROCK drawn a
+            // second time over the hull, so if the two disagree about size it
+            // jumps the moment it crosses in front of her — which is exactly
+            // the frame anybody is looking straight at it. The near pass is
+            // only ever things SOUTH of the boat, so this is always the
+            // growing half of the ramp.
+            const k = DEPTH_ON ? depthScale(m.y, camY, lastHalfH) : 1
+            node.scale.set(camZoom * k, camZoom * GROUND * k)
           }
         },
         fleet(list) {
