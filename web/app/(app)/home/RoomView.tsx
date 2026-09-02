@@ -329,22 +329,25 @@ function GalleryWall({ unlocked, species }: {
  * it is. That one is still wrong and is still not here: every pet stands in the
  * spot it was placed in and never leaves it.
  *
- * Then they stood still and FLIPPED on a timer — and the note that replaced it
- * had the diagnosis half right. It said an animal turning to face nothing is a
- * thing twitching. The real fault was narrower than that: it was not TURNING.
- * `scaleX(-1)` applied between one frame and the next is not a pivot, it is a
- * sprite being replaced by its own mirror, and no amount of motivation would
- * have rescued a cut that hard.
+ * Then they stood still and FLIPPED on a timer, which was pulled for reading as
+ * a glitch. Putting it back, the obvious fix was to make the flip a real turn:
+ * narrow the sprite to nothing about its middle and bring it back the other
+ * way. That is what a pivot looks like in three dimensions, and these animals
+ * are not: a flat sprite rotating about its vertical axis is, precisely, a
+ * sheet of paper turning edge-on, and two frames of it show that the thing has
+ * no thickness. Worse than the glitch, and wrong in a way that is hard to
+ * un-see once seen.
  *
- * So a turn is a turn. The sprite narrows to nothing about its own middle and
- * comes back the other way — which is what a side-on animal pivoting on the
- * spot actually looks like, and it costs one keyframe. The instant mirror was
- * the glitch; the mirror is fine.
+ * So the turn is a CUT. One frame facing left, the next facing right, which is
+ * what every side-on sprite in every 2D game has always done and what the eye
+ * reads as "it is facing the other way now" rather than as "it rotated". The
+ * mirror was never the problem; the transition was, in both directions.
  *
  * AND THEY ROCK, a degree and a half either side of upright, on their feet.
- * That is the whole of "alive" here: a room of twenty things at perfect rest is
- * a diorama, and a room of twenty things shifting their weight is a room with
- * twenty animals in it.
+ * That is the whole of "alive" here, and it is also what carries the cut: a
+ * hard mirror on a thing that is already moving reads as the animal shifting,
+ * where the same cut on a thing at perfect rest reads as a frame dropping. The
+ * rock is why the flip works now and did not the first time.
  *
  * ── NOTHING IS IN STEP, AND NOTHING IS ON A TIMER ──────────────────────────
  *
@@ -412,7 +415,12 @@ function Menagerie({ pets, at }: {
               pointerEvents: 'none',
             }}>
               <div style={{
-                animation: `petTurn ${beat.turn}s ease-in-out ${-beat.turnAt}s infinite`,
+                // STEP-END, not ease. It is what makes the mirror a CUT: any
+                // easing at all and the browser interpolates the scale, the
+                // sprite narrows through nothing on its way over, and a flat
+                // thing rotating about its vertical axis is a sheet of paper.
+                // See the note above, and petTurn in globals.css.
+                animation: `petTurn ${beat.turn}s step-end ${-beat.turnAt}s infinite`,
                 transformOrigin: 'center bottom',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -455,7 +463,21 @@ function petBeat(id: string) {
   const c = ((h >> 16) & 0xff) / 255
   const d = ((h >> 24) & 0xff) / 255
   const rock = 3.4 + a * 2.2          // 3.4s – 5.6s
-  const turn = 34 + b * 26            // 34s – 60s, so a turn is an event
+  /**
+   * ── A TURN IS RARE, AND "RARE" IS A ROOM NUMBER, NOT A PET NUMBER ────────
+   *
+   * Every pet turns TWICE a period — out and back — and there are twenty of
+   * them, so the rate the room turns at is forty divided by the average period,
+   * not one divided by it. At the 34–60s this started on, something in the room
+   * flipped every two seconds: rare for any one animal and a room full of
+   * twitching.
+   *
+   * Two and a half to six minutes puts a single animal's turn well past the
+   * point anybody is still watching it, and the room's own rate down to
+   * something you notice a few times while you are in there. Which is what it
+   * is for: proof the place is not a photograph, not an event.
+   */
+  const turn = 150 + b * 210          // 2m30 – 6m
   return { rock, turn, rockAt: c * rock, turnAt: d * turn }
 }
 

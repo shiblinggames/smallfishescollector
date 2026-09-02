@@ -3195,23 +3195,30 @@ body.hardcore-gauntlet::after {
 /* ── THE MENAGERIE ─────────────────────────────────────────────────────────
    A pet shifting its weight, and a pet turning round.
 
-   THE TURN IS THE POINT. `scaleX(-1)` between one frame and the next is not a
-   pivot, it is a sprite swapped for its own mirror, and that hard cut is what
-   made an earlier pass at this read as a glitch rather than as an animal. So
-   the sprite narrows to nothing about its middle and comes back the other way,
-   which is what a side-on animal turning on the spot actually looks like.
+   THE TURN IS A CUT, and it took two goes to land on that. It was an instant
+   mirror first, which read as a glitch. Then it was a SWEEP — the sprite
+   narrowing to nothing about its middle and coming back the other way, on the
+   reasoning that this is what a pivot looks like. It is what a pivot looks like
+   in three dimensions, and these animals are not: a flat sprite rotating about
+   its vertical axis is, precisely and unavoidably, a sheet of paper turning
+   edge-on. Two frames of it and you can see the thing has no thickness.
 
-   Held long at each end and turned quickly: 3% of the period per turn, on a
-   period of most of a minute, so a turn is something you catch out of the
-   corner of your eye rather than a thing the room is doing.
+   So: a hard cut, which is what every side-on sprite in every 2D game has
+   always done, and what the eye reads as "it is facing the other way now"
+   rather than as "it rotated". The mirror was never the problem. `step-end` is
+   what makes it a cut — without it the browser interpolates the scale and the
+   paper comes back.
+
+   Held long at each end: half a period each way, on a period of minutes. And
+   the period is set from the ROOM rather than from one animal — twenty pets
+   turning twice a period each is forty turns a period, so a number that feels
+   rare for one of them is a room that never stops moving. See petBeat.
 
    Transforms only, so both of these composite and neither costs a layout. */
 @keyframes petTurn {
-  0%, 47%    { transform: scaleX(1); }
-  48.5%      { transform: scaleX(0.06); }
-  50%, 97%   { transform: scaleX(-1); }
-  98.5%      { transform: scaleX(0.06); }
-  100%       { transform: scaleX(1); }
+  0%   { transform: scaleX(1); }
+  50%  { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
 }
 
 /* A degree and a half either side of upright, on the feet. Any more and twenty
