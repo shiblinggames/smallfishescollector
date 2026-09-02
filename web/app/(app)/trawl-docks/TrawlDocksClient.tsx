@@ -68,7 +68,10 @@ export default function TrawlDocksClient({ daily }: { daily: DailyChallengeState
           at the fleet on the water now, so what is left here is the work you
           came to read. It is laid onto the page rather than opened as a sheet,
           which is also why this stopped feeling slower than the Shipyard. */}
-      <div className="page-col" style={{ padding: '1rem 1rem 2rem' }}>
+      {/* Long-hand, so `.page-col` keeps its own padding-inline. The shorthand
+          here was writing 1rem on both sides, which matches the class on a
+          phone and quietly cancels its 1.5rem step on anything wider. */}
+      <div className="page-col" style={{ paddingTop: '1rem', paddingBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
           <button type="button" onClick={leave} aria-label="Back to the water" title="Back to the water"
             style={{

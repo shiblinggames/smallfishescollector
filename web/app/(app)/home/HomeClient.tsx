@@ -127,7 +127,14 @@ export default function HomeClient({
         position: 'fixed', inset: 0, zIndex: -1,
         background: 'radial-gradient(ellipse 120% 90% at 50% 0%, #1b2436 0%, #101725 55%, #080d16 100%)',
       }} />
-      <div className="page-col" style={{ padding: '1rem 0 4rem' }}>
+      {/* ── THE SHORTHAND WAS EATING THE MARGINS ──────────────────────
+          `.page-col` carries `padding-inline: 1rem`, stepping to 1.5rem on a
+          wider screen — that is the whole reason to use it. This set `padding:
+          '1rem 0 4rem'`, and a SHORTHAND writes all four sides, so an inline
+          style beat the class and set the horizontal padding to zero. Every
+          card and every line of text on the homestead ran to the glass.
+          Long-hand top and bottom only, so the column keeps its own sides. */}
+      <div className="page-col" style={{ paddingTop: '1rem', paddingBottom: '4rem' }}>
 
         {/* ── THE HEADER ────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
