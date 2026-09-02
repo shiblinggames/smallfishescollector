@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { LOOT_RARITY_TIER } from '@/lib/raidLoot'
 import { motion } from 'framer-motion'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR, isUniqueLoot } from '@/lib/bossRaids'
@@ -232,11 +233,59 @@ export default function RaidLootStage(props: Props) {
     }, ANTICIPATION_MS)
   }
 
-  return (
-    <div style={{
+  const stage = (
+    /**
+     * ── THE HAUL IS A MOMENT, NOT A PANEL ────────────────────────────────
+     *
+     * This was a block in the page's flow, so where it landed was whatever the
+     * layout above it happened to leave — near the top of a tall screen, and
+     * plainly not the thing the screen was about. Sinking a boss is the payoff
+     * of a twenty-minute fight and it should arrive the way the crate moment
+     * arrives when a fish pays out: everything else goes dark, and the chest is
+     * in the middle of the screen.
+     *
+     * The beats inside were already right — the lid straining, the crack, the
+     * burst, the drop rising out — so none of them changed. What changed is
+     * that they now happen somewhere you are looking.
+     *
+     * NO BACKDROP BLUR, unlike the fishing crate's. Over the sea this scrim
+     * covers a chart that is still animating, and a backdrop filter there is a
+     * full-screen blur pass every frame for something already 86% opaque. The
+     * same reason the fight's deck lost its own.
+     */
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1200,
+        background: 'rgba(2,4,8,0.86)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem',
+      }}>
+      {/* THE RAYS. The crate moment's own signature — a slow conic sweep behind
+          the chest in the drop's colour, so a legendary is already reading as
+          one before the lid is off. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
+        animate={{ opacity: 0.5, scale: 1, rotate: 360 }}
+        transition={{
+          opacity: { duration: 0.5 }, scale: { duration: 0.6 },
+          rotate: { duration: 24, repeat: Infinity, ease: 'linear' },
+        }}
+        style={{
+          position: 'absolute', width: 520, height: 520, borderRadius: '50%', pointerEvents: 'none',
+          background: `conic-gradient(from 0deg, ${accent}00, ${accent}33, ${accent}00, ${accent}33, ${accent}00, ${accent}33, ${accent}00)`,
+        }} />
+    <motion.div
+      initial={{ scale: 0.86, y: 14 }} animate={{ scale: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+      style={{
+      position: 'relative',
       display: 'flex', flexDirection: 'column',
       background: '#04080e', border: '2px solid #1f2e42', borderRadius: 18,
-      overflow: 'hidden', maxWidth: 580, margin: '0 auto', flex: 1, minHeight: 0, width: '100%',
+      overflow: 'hidden', maxWidth: 460, width: '100%',
+      // Tall enough for a full crew's XP list, never taller than the window.
+      maxHeight: 'min(88vh, 760px)',
+      boxShadow: `0 24px 70px rgba(0,0,0,0.7), 0 0 40px ${accent}1f`,
     }}>
       {/* Dark treasure-hold stage — the haul sits over a deep, glowing dark so
           the chest + reward pop (mirrors the Gauntlet cash-out's abyss). */}
@@ -413,6 +462,13 @@ export default function RaidLootStage(props: Props) {
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
+    </motion.div>
   )
+
+  // TO <body>, like every other full-screen moment in the game. Rendered where
+  // it sits in the tree, this overlay anchors to a transformed ancestor instead
+  // of the viewport — the fight's own region is one — and a "centred" modal
+  // ends up centred on something else. See feedback_transform_breaks_fixed.
+  return typeof document !== 'undefined' ? createPortal(stage, document.body) : null
 }
