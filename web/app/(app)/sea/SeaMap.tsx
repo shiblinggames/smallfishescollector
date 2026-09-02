@@ -46,9 +46,9 @@ import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/hom
 import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
-  GATES, gateShut, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatHere, BEATS,
+  GATES, gateShut, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor,
-  type Bay, type Encounter, type Cache, type Gate,
+  type Bay, type Encounter, type Cache, type Beat, type Gate,
 } from './raidWaters'
 import { RAID_MAP } from '@/lib/raidMap'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
@@ -220,6 +220,10 @@ const FinnTalk = dynamic(() => import('./FinnTalk'), { ssr: false })
 // same reason: it pulls in the whole expeditions voyage panel behind it.
 const VoyageBoard = dynamic(() => import('./VoyageBoard'), { ssr: false })
 const CrewHub = dynamic(() => import('./CrewHub'), { ssr: false })
+/** The campaign's own cutscene kit, held back until a post is actually read —
+ *  see SeaStory. A captain who never leaves the fishing grounds never fetches
+ *  a byte of it. */
+const SeaStory = dynamic(() => import('./SeaStory'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
@@ -1416,10 +1420,6 @@ export default function SeaMap({
    *  session would leave its strait shut until a reload. */
   const clearedRef = useRef<string[]>(clearedNodes)
   useEffect(() => { clearedRef.current = clearedNodes }, [clearedNodes])
-  /** And the same for the campaign's statuses, which the beat triggers read to
-   *  tell "not yet" from "already played". */
-  const statusRef = useRef<Record<string, string>>(nodeStatus)
-  useEffect(() => { statusRef.current = nodeStatus }, [nodeStatus])
   /**
    * WHICH HULL IS UNDER YOU, which is now a separate question from which water
    * you are in.
@@ -2750,16 +2750,10 @@ export default function SeaMap({
    *  from the frame loop and read by the helm. */
   const [nearCache, setNearCache] = useState<Cache | null>(null)
   const [heldBy, setHeldBy] = useState<Gate | null>(null)
-  /**
-   * BEATS ALREADY FIRED THIS SESSION.
-   *
-   * A trigger fires on ENTRY and the entry lasts as long as you are inside the
-   * circle, so without this the same scene would be pushed sixty times a second
-   * for as long as the boat sat on the rock. The server's own `nodeStatus` is
-   * the real record — a beat that has played comes back cleared — and this is
-   * only what stops it re-firing in the seconds before the route change lands.
-   */
-  const firedBeats = useRef<Set<string>>(new Set())
+  /** The story post within arm's reach, and the scene currently playing over
+   *  the water. */
+  const [nearBeat, setNearBeat] = useState<Beat | null>(null)
+  const [reading, setReading] = useState<string | null>(null)
   // ── WHAT THE SEA IS HANDING YOU ───────────────────────────────────────
   //
   // Bottles are derived, not fetched: the same cell hash the server runs, so
@@ -2991,24 +2985,6 @@ export default function SeaMap({
   const [kipOpen, setKipOpen] = useState(false)
 
   /**
-   * IS ANYTHING OPEN OVER THE WATER?
-   *
-   * The same list Esc walks, as one boolean, for the frame loop. A story beat
-   * fires on its own and must never fire THROUGH something: a cutscene arriving
-   * over an open panel is a scene nobody asked for on top of something they did,
-   * and the drift of a boat left idle under a panel is exactly how it would
-   * happen.
-   *
-   * A ref, because this is read sixty times a second and changes a few times an
-   * hour.
-   */
-  const panelUp = !!(find || ashore || wharf || voyageOpen || trawlOpen || ordersOpen
-    || trawlsPeek || finnOpen || finnTalk || kipOpen || hailing || picking
-    || crewOpen || crewHubOpen || folkOpen || mapOpen || landed || swapAsk)
-  const panelUpRef = useRef(panelUp)
-  useEffect(() => { panelUpRef.current = panelUp }, [panelUp])
-
-  /**
    * ESC CLOSES THE TOP-MOST PANEL, one per press, most recent first.
    *
    * The order is the stacking order a captain actually sees: results and
@@ -3033,12 +3009,13 @@ export default function SeaMap({
       if (picking) { setPicking(false); return }
       if (crewOpen) { setCrewOpen(false); return }
       if (crewHubOpen) { setCrewHubOpen(false); return }
+      if (reading) { setReading(null); return }
       if (folkOpen) { setFolkOpen(false); return }
       if (mapOpen) { setMapOpen(false); return }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -3597,6 +3574,35 @@ export default function SeaMap({
     // AND WHAT THE CAMPAIGN LEFT LYING ABOUT. Under the ships, over the
     // scenery: a chest with a chapter's story in it is worth more than a dig
     // site and less than the man you came to sink.
+    // A STORY POST. Above a chest for the same reason a ship is: the chain is
+    // what you are actually here to advance, and the cache is a thing you
+    // happen to be beside.
+    if (nearBeat) {
+      const n = RAID_MAP.find(x => x.id === nearBeat.node)
+      if (n) {
+        const st = nodeStatus[n.id] ?? 'locked'
+        // LOCKED STILL SAYS ITS NAME. The campaign's order is the point — you
+        // cannot read the wax that names Krust before you have been up the line
+        // to learn there is a name — and naming the thing you cannot do yet is
+        // the honest half of refusing it. Silence would read as broken.
+        if (st === 'locked') return { act: null, hold: `${n.label} — not yet` }
+        // A STORY BEAT PLAYS HERE. Not "anything with a scene": a milestone and
+        // an event both carry one, but on those the scene is an INTRO and the
+        // claim or the choice after it is what actually clears the node —
+        // `markStoryNodeRead` refuses anything that is not a story or a berth,
+        // and rightly. Playing one of those out here would run the cutscene and
+        // then fail to record it, which is worse than not offering it.
+        //
+        // So the rest of the chain is named and sent to the sheet that can
+        // finish it. Those sheets are the next thing this water wants.
+        return {
+          act: readableAtSea(n)
+            ? (st === 'cleared' ? `Read ${n.label} again` : `Read ${n.label}`)
+            : `${n.label} — on the campaign map`,
+          hold: null,
+        }
+      }
+    }
     if (nearCache) {
       const n = RAID_MAP.find(x => x.id === nearCache.node)
       if (n) {
@@ -5676,30 +5682,11 @@ export default function SeaMap({
         const cch = cacheNear(pos.current.x, pos.current.y)
         setNearCache(prev => (prev?.node === cch?.node ? prev : cch))
 
-        // ── AND THE STORY, WHICH JUST HAPPENS ──────────────────────────
-        //
-        // A beat is a cutscene, and a cutscene is not something you press a
-        // button to collect. You round the Wax Shoal and the scene starts. See
-        // BEATS: the press was a toll on a decision nobody has ever made
-        // differently, and the bottle it was wrapped in promised loot.
-        //
-        // Only out on the expedition side, only for a beat that is AVAILABLE —
-        // locked means the chain has not reached it and cleared means it has
-        // already played — and only when nothing else is open, because a
-        // cutscene arriving over a panel is a scene nobody asked for on top of
-        // something they did.
-        if (sortieRef.current && !panelUpRef.current) {
-          const beat = beatHere(pos.current.x, pos.current.y)
-          if (beat && !firedBeats.current.has(beat.node)) {
-            const n = RAID_MAP.find(x => x.id === beat.node)
-            const st = statusRef.current[beat.node] ?? 'locked'
-            if (n?.route && st === 'available') {
-              firedBeats.current.add(beat.node)
-              vibrate(14)
-              router.push(n.route)
-            }
-          }
-        }
+        // AND THE STORY POSTS, which are read the same way a chest is opened:
+        // you pull alongside and press. See BEATS for why they are not triggers
+        // that fire as you sail into them.
+        const bt = beatNear(pos.current.x, pos.current.y)
+        setNearBeat(prev => (prev?.node === bt?.node ? prev : bt))
 
         // WHAT IS DRIFTING NEARBY. Against the drifted position, not the
         // anchor — same reason the traders test theirs.
@@ -5948,7 +5935,7 @@ export default function SeaMap({
 
         {/* The campaign, standing in its own water. */}
         <EncounterField status={nodeStatus} nearId={nearEnc?.node ?? null}
-          nearCacheId={nearCache?.node ?? null} />
+          nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null} />
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -6988,6 +6975,16 @@ hullRef={hullRefFor(t.key)} />
 
       <FolkPanel open={folkOpen} onClose={() => setFolkOpen(false)} finn={finn} />
 
+      {/* A BEAT, PLAYING OVER THE CHART. StoryScene portals itself to the body,
+          so the map does not have to know anything about where it lands. */}
+      {(() => {
+        const n = reading ? RAID_MAP.find(x => x.id === reading) : null
+        return n ? (
+          <SeaStory node={n} cleared={(nodeStatus[n.id] ?? 'locked') === 'cleared'}
+            onDone={() => setReading(null)} />
+        ) : null
+      })()}
+
       <CrewHub
         open={crewHubOpen}
         onClose={() => { setCrewHubOpen(false); pollCrew() }}
@@ -7048,6 +7045,20 @@ hullRef={hullRefFor(t.key)} />
             // Locked, or a node with nowhere to go. The prompt already said so;
             // swallowing the tap keeps it from falling through to whatever else
             // happens to be in reach.
+            return false
+          }
+          if (nearBeat) {
+            const n = RAID_MAP.find(x => x.id === nearBeat.node)
+            if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked') {
+              vibrate(14)
+              // THE SCENE PLAYS HERE, over the water, with the campaign's own
+              // kit and the campaign's own write — see SeaStory. A node whose
+              // interaction is a claim or a choice has a sheet this surface has
+              // not been taught yet, and goes to the map that has it.
+              if (readableAtSea(n)) setReading(n.id)
+              else router.push('/expeditions')
+              return true
+            }
             return false
           }
           if (nearCache) {
@@ -10071,6 +10082,89 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
 })
 
 /**
+ * ── A STORY POST, ON ITS ROCK ───────────────────────────────────────────────
+ *
+ * The chart's own note post, which the fishing sea already uses for exactly
+ * this: something on a rock with writing on it. A captain has learned that
+ * shape, and reusing it means a story beat and a cache read apart at a glance
+ * without a word between them — a post is something to read, a chest is
+ * something to take.
+ *
+ * ── AND THE UNREAD ONE IS MARKED ────────────────────────────────────────────
+ *
+ * A lit halo behind the post, pulsing, while there is a scene here you have not
+ * seen. That is the whole quest marker: not a floating glyph, which would be a
+ * second language and a HUD element standing in the water, but the light of the
+ * thing itself. It stops the moment it is read, and the post stays.
+ *
+ * READ, IT STAYS AND DIMS. The story is not consumable. A beat that vanished
+ * when it was done would leave the bay a little emptier every time you sailed
+ * it, and re-reading is the only way back into a scene you have already had.
+ *
+ * LOCKED, IT IS DRAWN COLD. The chain is the campaign — you cannot read the wax
+ * that names Krust before you have been up the line to learn there is a name —
+ * and a post you can SEE and cannot yet read is the reason to come back. The
+ * helm names it and refuses; silence would read as broken.
+ */
+const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
+  beat: Beat
+  status: string
+  isNear: boolean
+}) {
+  const at = beatAt(beat)
+  const isle = beatIsle(beat)
+  if (!at || !isle) return null
+
+  const locked = status === 'locked'
+  const cleared = status === 'cleared'
+  // The post art is TALL — a little over half as wide as it is high — so it
+  // takes a smaller share of the rock than a chest does for the same apparent
+  // size. IsleRock makes the same split, for the same reason.
+  const w = isle.r * 0.26
+
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: at.x, top: at.y, pointerEvents: 'none',
+      transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+      transformOrigin: 'bottom center',
+    }}>
+      {/* THE MARKER. Behind the post and foreshortened with the plane, so it
+          reads as light lying on the rock rather than as a ring painted on the
+          screen. Only while there is something unread here. */}
+      {!locked && !cleared && (
+        <div aria-hidden style={{
+          position: 'absolute', left: '50%', bottom: -w * 0.1,
+          width: w * 4.2, height: w * 2.4,
+          transform: `translate(-50%, 0) scaleY(${GROUND})`,
+          borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(240,192,64,0.42) 0%, rgba(240,192,64,0.14) 45%, transparent 72%)',
+          animation: 'beatCall 2.6s ease-in-out infinite',
+        }} />
+      )}
+      <div aria-hidden style={{
+        position: 'absolute', left: '50%', bottom: -w * 0.04,
+        width: w * 1.5, height: w * 0.5,
+        transform: `translate(-50%, 0) scaleY(${GROUND})`,
+        borderRadius: '50%',
+        background: 'radial-gradient(ellipse, rgba(6,12,18,0.45) 0%, transparent 70%)',
+      }} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/sea/isle-note.png" alt="" draggable={false} decoding="async" style={{
+        width: w, height: 'auto', display: 'block', position: 'relative',
+        filter: locked
+          ? 'grayscale(0.9) brightness(0.5) drop-shadow(0 4px 8px rgba(0,0,0,0.6))'
+          : cleared
+            ? 'brightness(0.82) drop-shadow(0 4px 10px rgba(0,0,0,0.6))'
+            : isNear
+              ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(240,192,64,0.8))'
+              : 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(240,192,64,0.45))',
+        opacity: cleared ? 0.8 : 1,
+      }} />
+    </div>
+  )
+})
+
+/**
  * Everything the campaign has standing in the water, drawn back to front so a
  * hull further south overlaps one behind it — the chart's rule everywhere.
  *
@@ -10078,21 +10172,43 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
  * front of a brigantine would draw behind it and the bay would go flat at
  * exactly the moment two things overlap.
  */
-const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId }: {
+/**
+ * CAN THIS NODE BE FINISHED FROM THE WATER?
+ *
+ * `markStoryNodeRead` — the campaign's own write, and the only one this surface
+ * calls — takes a story or a berth and refuses everything else, because on a
+ * milestone or an event the scene is an intro and the claim after it is the real
+ * clear. So this is the exact set whose whole interaction is "read it".
+ *
+ * Everything else on a rock out here is named and sent to the sheet that can
+ * finish it. Teaching this surface those sheets is the next piece of work; until
+ * then, offering a verb that runs a cutscene and then cannot record it would be
+ * worse than the trip to the map.
+ */
+function readableAtSea(n: { type: string; scene?: unknown }): boolean {
+  return !!n.scene && (n.type === 'story' || n.type === 'berth')
+}
+
+const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId, nearBeatId }: {
   status: Record<string, string>
   nearId: string | null
   nearCacheId: string | null
+  nearBeatId: string | null
 }) {
   const all = useMemo(() => [
     ...ENCOUNTERS.map(e => ({ kind: 'ship' as const, e, y: encounterAt(e)?.y ?? 0 })),
     ...CACHES.map(c => ({ kind: 'cache' as const, c, y: cacheAt(c)?.y ?? 0 })),
+    ...BEATS.map(b => ({ kind: 'beat' as const, b, y: beatAt(b)?.y ?? 0 })),
   ].sort((a, b) => a.y - b.y), [])
 
   return <>{all.map(it => it.kind === 'ship'
     ? <EncounterMark key={it.e.node} enc={it.e}
         status={status[it.e.node] ?? 'locked'} isNear={nearId === it.e.node} />
-    : <CacheMark key={it.c.node} cache={it.c}
-        status={status[it.c.node] ?? 'locked'} isNear={nearCacheId === it.c.node} />
+    : it.kind === 'cache'
+      ? <CacheMark key={it.c.node} cache={it.c}
+          status={status[it.c.node] ?? 'locked'} isNear={nearCacheId === it.c.node} />
+      : <BeatMark key={it.b.node} beat={it.b}
+          status={status[it.b.node] ?? 'locked'} isNear={nearBeatId === it.b.node} />
   )}</>
 })
 

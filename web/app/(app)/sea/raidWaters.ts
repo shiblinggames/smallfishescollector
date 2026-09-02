@@ -114,7 +114,11 @@ export const BAYS: Bay[] = [
     id: 'thread', chapter: 1, name: 'The Loose Thread',
     // West of the junction, and the shortest run to reach: the first water
     // anybody sails should be the one that is hardest to miss.
-    bearing: D(195), r: 2900, half: 460,
+    // WIDER THAN THE OTHERS, because the whole of chapter one has to fit
+    // BEHIND its gate as well as in front of it: Krust, the closing beat and
+    // the Captain's Choice all sit past the line, and at 2,900 the last of them
+    // was hanging over the coast. `npm run check` measures every one of them.
+    bearing: D(195), r: 3200, half: 460,
     sea: ['#12242c', '#26454e', '#5c7f84'],
     rocks: 'reef',
   },
@@ -362,36 +366,38 @@ export type Cache = {
 }
 
 /**
- * ── A STORY BEAT: SOMETHING THAT HAPPENS, NOT SOMETHING YOU PICK UP ─────────
+ * ── A STORY BEAT: A POST ON A ROCK, WITH SOMETHING TO READ ON IT ────────────
  *
- * A beat opens a CUTSCENE. Wrapping that in a bottle you sail up to and press
- * was wrong in two ways at once. It promised loot and delivered a conversation,
- * and it asked for a decision that does not exist — nobody has ever declined to
- * read the next page of the story they are sailing through, so the press was a
- * toll rather than a choice.
+ * A beat opens a cutscene, and it was briefly a BOTTLE you pressed — which was
+ * wrong, because a bottle promises loot and delivers a conversation. It was then
+ * briefly an invisible TRIGGER that fired as you sailed into it, which was wrong
+ * the other way: a marker that says "there is something here" and then plays
+ * itself without being touched is not a marker, and you cannot go back to a
+ * scene you never chose to start.
  *
- * So a beat is a TRIGGER. An invisible circle in the water that fires once, the
- * first time you are inside it and the chain allows it. You round a headland
- * and the scene starts, which is what the whole bay is for.
+ * So it is a NOTE POST, standing on an isle, that you sail up to and read. The
+ * chart already speaks this language — the fishing sea's note isles are a post
+ * on a rock and every captain has learned what one means — and it splits cleanly
+ * from the chests beside it: a chest is something to take, a post is something
+ * to read.
  *
- * AND IT IS ATTACHED TO SOMETHING YOU CAN SEE. An invisible trigger in open
- * water is a quest marker nobody can find; an invisible trigger AROUND AN ISLE
- * is a place. The isle is the marker, the beat is what is there, and "sail over
- * and see what is at the Wax Shoal" is a thing a captain can decide to do.
+ * UNREAD IT IS LIT AND IT PULSES. Read, it stays exactly where it was, dimmed,
+ * and you can pull alongside and read it again — the story is not consumable and
+ * a beat that vanished when it was done would leave the bay emptier every time
+ * you sailed it.
  *
- * Only `intro` sits loose, in the doorway, where it cannot be missed — it is the
- * one beat that has to fire before you know anything at all.
+ * LOCKED IT IS STILL DRAWN, and refused by name. The chain is what makes the
+ * campaign a campaign: you cannot read the wax that names Krust before you have
+ * been up the line to find out there is a name. That order is `requiresNode` in
+ * raidMap and it is resolved by `computeRaidMap`, so the water and the node map
+ * cannot disagree about what is open.
  */
 export type Beat = {
   node: string
   bay: string
-  /** The isle it happens at. */
-  isle?: string
-  /** Or a loose point in bay space, for the ones that are not at a rock. */
-  along?: number
-  across?: number
-  /** How close fires it. */
-  r: number
+  /** The isle it stands on. Its position comes from there, so moving the rock
+   *  moves the post and the two can never drift apart. */
+  isle: string
 }
 
 /**
@@ -432,31 +438,56 @@ export type RaidIsle = {
  */
 export const ENCOUNTERS: Encounter[] = [
   { node: 'skirmish', bay: 'thread', along: 1500, across: 400 },
-  { node: 'pete', bay: 'thread', along: 2600, across: -600 },
-  { node: 'krust', bay: 'thread', along: 4900, across: 0 },
+  { node: 'pete', bay: 'thread', along: 2100, across: -700 },
+  { node: 'krust', bay: 'thread', along: 5000, across: 0 },
 ]
 
 export const CACHES: Cache[] = [
   { node: 'quartermaster', bay: 'thread', isle: 'thread-purse' },
 ]
 
+/**
+ * EVERY BEAT IN THE CHAIN, INCLUDING THE ONES THAT ARE NOT STORIES.
+ *
+ * `bilge_milestone` and `chapter_1_class` are a milestone and a class pick, not
+ * story nodes — but they are IN the chain, between beats that are, and the chain
+ * is what makes the campaign a campaign. Leaving them off the water left the bay
+ * dead-ending at `syndicate`: quartermaster requires the milestone, the wax
+ * requires the quartermaster, Krust requires the wax, and chapter II's door
+ * requires the Captain's Choice. Four fifths of chapter one and the whole rest
+ * of the campaign, behind two rocks that were not there.
+ *
+ * `npm run check` now refuses any placement whose requirement is not also
+ * placed, which is how that was found.
+ */
 export const BEATS: Beat[] = [
-  // IN THE DOORWAY. The one beat that cannot be missed, because until it has
-  // played you do not know what any of the rest of this water is for.
-  { node: 'intro', bay: 'thread', along: 800, across: 0, r: 560 },
-  { node: 'syndicate', bay: 'thread', isle: 'thread-ledger', r: 470 },
-  { node: 'krust_reveal', bay: 'thread', isle: 'thread-wax', r: 470 },
-  { node: 'chapter_1_close', bay: 'thread', isle: 'thread-watch', r: 470 },
+  { node: 'intro', bay: 'thread', isle: 'thread-tangle' },
+  { node: 'syndicate', bay: 'thread', isle: 'thread-ledger' },
+  { node: 'bilge_milestone', bay: 'thread', isle: 'thread-bilge' },
+  { node: 'krust_reveal', bay: 'thread', isle: 'thread-wax' },
+  { node: 'chapter_1_close', bay: 'thread', isle: 'thread-watch' },
+  { node: 'chapter_1_class', bay: 'thread', isle: 'thread-choice' },
 ]
 
 export const RAID_ISLES: RaidIsle[] = [
-  { id: 'thread-tangle', bay: 'thread', name: 'The Tangle', along: 1050, across: -1150, r: 210 },
-  { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 2350, across: -1950, r: 175 },
-  { id: 'thread-ledger', bay: 'thread', name: "The Ledger's Rest", along: 3150, across: 1550, r: 195 },
-  // Kept well short of the gate line at 4200. Something ON a gate is a rock you
-  // can see, cannot reach, and cannot be told why — the check catches it.
-  { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 3650, across: -1650, r: 160 },
-  { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 5100, across: 700, r: 170 },
+  // THE FIRST ROCK INSIDE THE DOOR, and it carries the opening beat. Near
+  // enough that a captain arriving with nothing on the chart can see it from
+  // the doorway, off the axis so it is somewhere you turn toward rather than
+  // something you run into.
+  // ONE THING ON EACH ROCK, and the rocks run up the bay in the chain's own
+  // order, so sailing outward is doing the chapter — without ever being a line,
+  // because they are scattered either side of the axis and you have to turn for
+  // each of them.
+  { id: 'thread-tangle', bay: 'thread', name: 'The Tangle', along: 900, across: -820, r: 200 },
+  { id: 'thread-ledger', bay: 'thread', name: "The Ledger's Rest", along: 2650, across: 1250, r: 195 },
+  { id: 'thread-bilge', bay: 'thread', name: 'Bilge Bank', along: 3050, across: -1550, r: 180 },
+  { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 3600, across: 900, r: 175 },
+  // Kept short of the gate line at 4400, and short of it by more than the reach
+  // you can read it from: the scene here is the one that OPENS that gate, and a
+  // post readable from the far side of its own gate is a gate that never was.
+  { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 3850, across: -1400, r: 160 },
+  { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 5600, across: 700, r: 170 },
+  { id: 'thread-choice', bay: 'thread', name: "The Captain's Rest", along: 5750, across: -650, r: 150 },
 ]
 
 export const ISLE_BY_ID: Record<string, RaidIsle> =
@@ -483,30 +514,27 @@ export function cacheIsle(c: Cache): RaidIsle | null {
   return ISLE_BY_ID[c.isle] ?? null
 }
 
-/** Where a beat fires, and how wide its circle is. Around an isle the circle is
- *  the rock plus the reach, so the trigger sits off the shore rather than
- *  somewhere inside a rock you cannot sail into. */
-export function beatAt(b: Beat): { x: number; y: number; r: number } | null {
-  if (b.isle) {
-    const i = ISLE_BY_ID[b.isle]
-    if (!i) return null
-    const p = isleAt(i)
-    return p ? { x: p.x, y: p.y, r: b.r + i.r } : null
-  }
-  const p = placeIn(b.bay, b.along ?? 0, b.across ?? 0)
-  return p ? { x: p.x, y: p.y, r: b.r } : null
+/** A beat is wherever its isle is, so the rock and the post cannot drift. */
+export function beatAt(b: Beat) {
+  const i = ISLE_BY_ID[b.isle]
+  return i ? isleAt(i) : null
 }
 
-/** The beat you are standing in, if any. Nearest wins, so two that overlap fire
- *  in the order the water puts them rather than in table order. */
-export function beatHere(x: number, y: number): Beat | null {
+export function beatIsle(b: Beat): RaidIsle | null {
+  return ISLE_BY_ID[b.isle] ?? null
+}
+
+/** The beat within reach, measured off its rock's edge for the same reason a
+ *  cache is: you pull up beside a post, you do not hail it from open water. */
+export function beatNear(x: number, y: number): Beat | null {
   let best: Beat | null = null
   let bestD = Infinity
   for (const b of BEATS) {
     const p = beatAt(b)
-    if (!p) continue
-    const d = Math.hypot(x - p.x, y - p.y)
-    if (d <= p.r && d < bestD) { bestD = d; best = b }
+    const i = beatIsle(b)
+    if (!p || !i) continue
+    const d = Math.hypot(x - p.x, y - p.y) - i.r
+    if (d < CACHE_REACH && d < bestD) { bestD = d; best = b }
   }
   return best
 }

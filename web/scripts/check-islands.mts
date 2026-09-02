@@ -303,7 +303,7 @@ if (bad) process.exitCode = 1
 {
   const {
     BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, GATES, ISLE_BY_ID,
-    encounterAt, ENCOUNTER_REACH,
+    encounterAt, ENCOUNTER_REACH, CACHE_REACH, opensBay,
   } = await import('../app/(app)/sea/raidWaters')
   const { RAID_MAP } = await import('../lib/raidMap')
 
@@ -352,25 +352,77 @@ if (bad) process.exitCode = 1
     if (!RAID_MAP.some(n => n.id === t.node)) {
       console.error(`  ✗ beat '${t.node}' is not a node in RAID_MAP`); bad++; continue
     }
-    // A BEAT NEEDS SOMETHING YOU CAN SEE, or it is a trigger in open water that
-    // fires for no reason a captain can name. The only exception is a beat in
-    // the doorway, which cannot be missed by construction.
-    const i = t.isle ? ISLE_BY_ID[t.isle] : null
-    if (t.isle && !i) {
-      console.error(`  ✗ beat '${t.node}' happens at '${t.isle}', which is not an isle`); bad++; continue
+    const i = ISLE_BY_ID[t.isle]
+    if (!i) {
+      console.error(`  ✗ beat '${t.node}' stands on '${t.isle}', which is not an isle`); bad++; continue
     }
-    const along = i ? i.along : (t.along ?? 0)
-    // AND IT MUST NOT REACH THROUGH A GATE. A trigger whose circle crosses a
-    // shut line fires from the wrong side of it, which would hand you the scene
-    // that opens the gate while the gate is still refusing you.
-    const reach = t.r + (i?.r ?? 0)
-    const g = GATES.find(x => x.bay === t.bay && Math.abs(x.at - along) < reach)
+    // AND IT MUST NOT BE READABLE THROUGH A GATE. You come alongside a post from
+    // CACHE_REACH off its rock, so a post that close to a gate line can be read
+    // from the wrong side of it — and the beat at the Wax Shoal is the one that
+    // OPENS its gate, which would make that gate a thing that never happened.
+    const reach = CACHE_REACH + i.r
+    const g = GATES.find(x => x.bay === t.bay && Math.abs(x.at - i.along) < reach)
     if (g) {
-      console.error(`  ✗ beat '${t.node}' reaches through the '${g.node}' gate`); bad++
+      console.error(`  ✗ beat '${t.node}' is readable through the '${g.node}' gate`); bad++
     } else {
-      console.log(`    ok   beat    ${t.node.padEnd(18)}`
-        + ` ${i ? `at ${t.isle}` : `${along}px up ${t.bay}`}, fires within ${reach}`)
+      console.log(`    ok   beat    ${t.node.padEnd(18)} at ${t.isle.padEnd(14)}`
+        + ` ${i.along}px up, read from ${reach} out`)
     }
+  }
+
+  /**
+   * ── AND THE CHAIN HAS TO BE WALKABLE FROM THE WATER ─────────────────────
+   *
+   * `requiresNode` is what makes the campaign a campaign: you cannot read the
+   * wax that names Krust before you have been up the line to learn there is a
+   * name. Every placed node therefore needs its REQUIREMENT placed too, or the
+   * bay dead-ends at a locked thing with nothing out here that could ever
+   * unlock it.
+   *
+   * This is not hypothetical. Chapter one's chain runs
+   *   syndicate → bilge_milestone → quartermaster → krust_reveal → krust
+   *              → chapter_1_close → chapter_1_class
+   * and the milestone and the class pick were both left off the water as
+   * "management". So four fifths of the chapter was unreachable, and so was
+   * every chapter after it — chapter II's door opens on chapter_1_class.
+   *
+   * A requirement that is CLEARED BY SOMETHING ELSE PLACED is fine: a boss
+   * clears its own challenge variant's requirement, and challenge variants are
+   * deliberately not on the water.
+   */
+  {
+    const placed = new Set<string>([
+      ...ENCOUNTERS.map(e => e.node),
+      ...CACHES.map(c => c.node),
+      ...BEATS.map(b => b.node),
+    ])
+    let broken = 0
+    for (const id of placed) {
+      const n = RAID_MAP.find(x => x.id === id)
+      const req = n?.requiresNode
+      if (!req || placed.has(req)) continue
+      console.error(`  ✗ '${id}' needs '${req}', which is nowhere in the water`)
+      broken++; bad++
+    }
+    // AND THE CHAPTER'S OWN TAIL, which is what opens the NEXT bay's door.
+    //
+    // ONLY FOR A BAY THAT HAS BEEN BUILT. An empty bay is not a dead end, it is
+    // a chapter nobody has laid out yet, and failing on it would mean the gate
+    // shouted at every step of building this water instead of at the one thing
+    // that is actually broken. A bay with content in it and no tail, though, is
+    // a chapter you can finish and still find the next door rocked shut.
+    for (let i = 1; i < BAYS.length; i++) {
+      const prev = BAYS[i - 1]
+      const built = [...ENCOUNTERS, ...CACHES, ...BEATS].some(t => t.bay === prev.id)
+      if (!built) continue
+      const gate = opensBay(BAYS[i])
+      if (gate && !placed.has(gate)) {
+        console.error(`  ✗ ${BAYS[i].name}'s door opens on '${gate}', which is nowhere in ${prev.name}`)
+        broken++; bad++
+      }
+    }
+    console.log(`    ${broken === 0 ? 'ok  ' : 'OFF '} chain   ${placed.size} node(s) placed,`
+      + ` ${broken === 0 ? 'every requirement reachable' : `${broken} dead end(s)`}`)
   }
 
   for (const t of things) {
@@ -419,7 +471,7 @@ if (bad) process.exitCode = 1
     const beat = BEATS.find(x => x.node === g.node)
     const cache = CACHES.find(x => x.node === g.node)
     const openerAt = beat
-      ? (beat.isle ? ISLE_BY_ID[beat.isle]?.along : beat.along)
+      ? ISLE_BY_ID[beat.isle]?.along
       : cache
         ? ISLE_BY_ID[cache.isle]?.along
         : things.find(t => t.id === g.node)?.along
