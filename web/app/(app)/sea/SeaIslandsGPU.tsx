@@ -39,6 +39,7 @@ import { useEffect, useRef, useState } from 'react'
 import { GROUND, bakeIsland, requestGround } from './islandArt'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
+import { makeClouds } from './seaClouds'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { makeShoals, type Shoals } from './seaShoals'
 import { makeGulls, type Gulls } from './seaGulls'
@@ -432,6 +433,20 @@ export default function SeaIslandsGPU({
       // the lot, taking the world's transform the way the gulls do. Rain drawn
       // under an island would be falling behind it.
       const squalls: Squalls = makeSqualls(PIXI)
+      /**
+       * FAIR-WEATHER CLOUD. Two layers and they go to two different places:
+       * the shadows onto the PLANE with everything else that lies on it, and
+       * the bodies onto the STAGE, above the world, because they are between
+       * the camera and the sea. See seaClouds — the split is the whole point,
+       * and it is what makes the parallax honest rather than a sliding
+       * texture.
+       *
+       * Under the squalls, so real weather always wins: a fair-weather puff
+       * has no business lightening a storm.
+       */
+      const clouds = makeClouds(PIXI)
+      world.addChild(clouds.water)
+
       world.addChild(squalls.water)
 
       // ── WHAT IS STILL LIT AFTER DARK ──────────────────────────────
@@ -503,6 +518,15 @@ export default function SeaIslandsGPU({
         haze.height = a.screen.height
       }
       sizeHaze()
+
+      // THE BODIES, above the plane and BELOW the haze — added first, because
+      // the display list is painted in order. A cloud is in front of the sea,
+      // and a cloud far up the view is behind the air between it and the
+      // camera, so the haze has to be able to veil it like everything else out
+      // there. Put the other way round the distant sky stayed crisp over
+      // hazed water, which reads as the haze being a filter on the sea rather
+      // than air in the world.
+      a.stage.addChild(clouds.air)
       a.stage.addChild(haze)
 
       a.stage.addChild(gulls.view)
@@ -867,6 +891,9 @@ export default function SeaIslandsGPU({
         lights.advance(camX, camY, halfW, halfH,
           a.screen.width / 2, a.screen.height / 2, t, dt)
         squalls.advance(camX, camY, halfW, halfH, dt)
+        // The sky. Needs the screen as well as the world, because half of it is
+        // drawn in screen space — that is what the parallax IS.
+        clouds.advance(t, camX, camY, halfW, halfH, camZoom, a.screen.width, a.screen.height)
         townLayer?.cull(camX, camY, halfW, halfH)
         // ── EVERY HULL ON THE WATER, ONCE A FRAME ─────────────────────
         // The player and the whole Salt Road go in together, because the wake
@@ -985,6 +1012,10 @@ export default function SeaIslandsGPU({
           // responsible for saying. Left at a third of itself rather than
           // nothing, so a moonlit sea still has some depth in it.
           haze.alpha = 0.34 * (1 - d * 0.66)
+          // AND THE SKY GOES OUT WITH IT. A cloud is a lit thing; after dark
+          // there is no sun to light it and no sun to cast it, and a shadow
+          // with nothing making it is a stain on the water.
+          clouds.night(d)
           const tint = nightTint(d, w)
           if (tint === lastTint) return
           lastTint = tint
