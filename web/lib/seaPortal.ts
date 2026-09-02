@@ -77,6 +77,24 @@ export function componentsAvailable(discoveredIsleIds: string[], spent: number):
  */
 export const PORTAL_CORE = 80
 
+/**
+ * AND YOU HAVE TO STAY THERE. Seconds held inside the eye before it takes you.
+ *
+ * Reaching the centre used to be the whole gesture: the frame you crossed into
+ * the eye, the boat stopped dead and the flourish began. At speed that is a
+ * tripwire one radius smaller than the old one — you sail across the middle on
+ * your way somewhere and the sea grabs you.
+ *
+ * A hold fixes it without a prompt or a button, and it is the more honest
+ * gesture anyway: you are not pressing something, you are holding station over
+ * a hole in the water until it notices. Crossing the eye at speed now costs you
+ * nothing, which means the ring can sit in open water without being an obstacle.
+ *
+ * Drifting out of the eye resets it to nothing. There is no partial credit for
+ * circling.
+ */
+export const PORTAL_DWELL = 1
+
 /** Inside the small activating centre? */
 export function inPortalEye(x: number, y: number): boolean {
   return Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL_CORE

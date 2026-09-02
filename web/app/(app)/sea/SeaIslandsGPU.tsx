@@ -142,7 +142,7 @@ export type GpuHandle = {
   berth(id: string | null): void
   /** The portal's tier can change mid-session (you buy one), and whether
    *  you are standing in it changes every frame you cross the rim. */
-  portal(spec: PortalWellSpec, inside: boolean): void
+  portal(spec: PortalWellSpec, inside: boolean, hold: number): void
   /**
    * EVERYONE ELSE ON THE WATER, every frame.
    *
@@ -888,7 +888,7 @@ export default function SeaIslandsGPU({
         },
         guide(from, to, radius) { guide.set(from, to, radius) },
         berth(id) { berthLayer.setActive(id) },
-        portal(spec, inside) { portalWell.setSpec(spec); portalWell.setActive(inside) },
+        portal(spec, inside, hold) { portalWell.setSpec(spec); portalWell.setActive(inside, hold) },
         front(list) {
           nearWanted.clear()
           for (const i of list) nearWanted.add(i)

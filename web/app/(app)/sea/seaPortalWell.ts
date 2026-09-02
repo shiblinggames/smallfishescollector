@@ -162,8 +162,13 @@ export type PortalWellSpec = {
 
 export type PortalWell = {
   view: Container
-  /** True while the captain is inside the ring. The well answers by opening. */
-  setActive(on: boolean): void
+  /**
+   * `inside` is the whole mouth; `hold` is 0..1 of the dwell the eye is
+   * counting. The well answers to both, and it has to: a second of nothing
+   * happening is indistinguishable from a second of it not working, so holding
+   * station has to visibly wind the water up.
+   */
+  setActive(inside: boolean, hold: number): void
   /** Swap tier without rebuilding: buying one should deepen the water you are
    *  floating in, not pop a new object into it. */
   setSpec(spec: PortalWellSpec): void
@@ -328,7 +333,14 @@ export function makePortalWell(
   return {
     view,
 
-    setActive(next) { want = next ? 1 : 0 },
+    setActive(inside, hold) {
+      // ONE NUMBER FOR BOTH. Entering the mouth wakes it a third of the way;
+      // the dwell carries it the rest. Everything downstream already scales off
+      // `on`, so the wind-up costs nothing but this line: the well deepens, the
+      // rim tightens, the fall quickens and the spray thickens together, which
+      // is what a thing gathering itself looks like.
+      want = inside ? 0.34 + 0.66 * Math.max(0, Math.min(1, hold)) : 0
+    },
 
     setSpec(next) {
       spec = next
@@ -342,7 +354,9 @@ export function makePortalWell(
       view.visible = seen
       if (!seen) return
 
-      on += (want - on) * Math.min(1, d * 3.4)
+      // Faster ON than off. Winding up has to track the hold closely enough to
+      // feel caused by it; letting go can relax.
+      on += (want - on) * Math.min(1, d * (want > on ? 7 : 3))
 
       // ── THE WELL ──
       // Breathing slowly, for the reason the berth's pool breathes: a constant

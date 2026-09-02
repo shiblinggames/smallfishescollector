@@ -37,7 +37,7 @@ import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
-import { PORTAL, PORTAL_TIERS, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
+import { PORTAL, PORTAL_TIERS, PORTAL_DWELL, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
@@ -2121,6 +2121,8 @@ export default function SeaMap({
    */
   const [portalOpen, setPortalOpen] = useState(false)
   const portalIn = useRef(false)
+  /** Seconds held inside the eye. Reset by leaving it, and by being taken. */
+  const portalHold = useRef(0)
   /** The charge: the beat between being taken and being asked. While it runs
    *  the flourish plays and the helm is dead weight — the portal has her. */
   const [portalCharge, setPortalCharge] = useState(false)
@@ -2155,9 +2157,9 @@ export default function SeaMap({
   const gpuPortalRef = useRef(gpuPortal)
   useEffect(() => {
     gpuPortalRef.current = gpuPortal
-    // And push it straight away rather than waiting for the next proximity
-    // tick, so the well deepens on the frame the purchase lands.
-    gpuRef.current?.portal(gpuPortal, inPortal(pos.current.x, pos.current.y))
+    // Pushed straight away rather than waiting for the next frame, so the well
+    // deepens on the beat the purchase lands. The frame loop owns it after that.
+    gpuRef.current?.portal(gpuPortal, inPortal(pos.current.x, pos.current.y), 0)
   }, [gpuPortal])
   useEffect(() => { setPortalTier(portal.tier) }, [portal.tier])
   const [portalComponents, setPortalComponents] = useState(portal.components)
@@ -2282,6 +2284,7 @@ export default function SeaMap({
     target.current = { x, y }
     vel.current = { x: 0, y: 0 }
     portalIn.current = false
+    portalHold.current = 0
     setPortalOpen(false)
     vibrate([16, 40, 24])
     void saveSeaPosition(x, y, [...fogPending.current])
@@ -4370,30 +4373,64 @@ export default function SeaMap({
       // same test that moors you at the Mainland, with the same drawn berth
       // and the same prompt. Nothing opens because you drifted near one.
 
-      // ── INTO THE PORTAL'S EYE ──────────────────────────────────────
-      // The EYE activates, not the mouth: the sheet used to pop on brushing
-      // the rim, which made the ring a tripwire to steer around. Now the boat
-      // has to be sailed into the CENTRE — a deliberate threading, not a graze
-      // — and the moment it is, the portal takes her: all stop, the flourish
-      // plays, and only then the sheet. Leaving the whole mouth is what arms
-      // it again, so floating inside cannot re-trigger it.
+      // ── HOLDING STATION OVER THE EYE ───────────────────────────────
+      //
+      // Two narrowings, in order. First the EYE rather than the mouth, because
+      // brushing the rim used to pop the sheet and that made the ring a
+      // tripwire to steer around. Then a HOLD, because reaching the eye was
+      // still a tripwire — just a smaller one: cross the middle at speed on
+      // your way somewhere and the sea grabbed you.
+      //
+      // So it counts. Stay in the eye for PORTAL_DWELL and the portal takes
+      // her; leave early and it is nothing, with no partial credit for
+      // circling. Sailing straight across now costs you exactly nothing, which
+      // is what lets the ring sit in open water without being an obstacle.
+      //
+      // Leaving the whole MOUTH is still what re-arms it, so the sheet cannot
+      // reopen the frame after it is dismissed.
+      const inEye = inPortalEye(pos.current.x, pos.current.y)
+      const inMouth = inPortal(pos.current.x, pos.current.y)
+
+      // THE COUNT is gated: you cannot be taken with a rod out or a sheet up.
       if (!sideRef.current && !fishingIn) {
-        if (!portalIn.current && inPortalEye(pos.current.x, pos.current.y)) {
-          portalIn.current = true
-          // THE PORTAL HAS HER. Course and way both die here, which is what
-          // separates being taken by something from tapping a button on it.
-          vel.current.x = 0; vel.current.y = 0
-          target.current = { ...pos.current }
-          setPortalCharge(true)
-          vibrate([12, 50, 18, 50, 26])
-          chargeTimer.current = setTimeout(() => {
-            setPortalCharge(false)
-            setPortalOpen(true)
-          }, 1050)
-        } else if (portalIn.current && !inPortal(pos.current.x, pos.current.y)) {
-          portalIn.current = false
+        if (portalIn.current) {
+          // Taken already. Waiting to leave.
+          if (!inMouth) portalIn.current = false
+          portalHold.current = 0
+        } else if (inEye) {
+          portalHold.current += dt
+          if (portalHold.current >= PORTAL_DWELL) {
+            portalIn.current = true
+            portalHold.current = 0
+            // THE PORTAL HAS HER. Course and way both die here, which is what
+            // separates being taken by something from tapping a button on it.
+            vel.current.x = 0; vel.current.y = 0
+            target.current = { ...pos.current }
+            setPortalCharge(true)
+            vibrate([12, 50, 18, 50, 26])
+            chargeTimer.current = setTimeout(() => {
+              setPortalCharge(false)
+              setPortalOpen(true)
+            }, 1050)
+          }
+        } else {
+          portalHold.current = 0
         }
+      } else {
+        portalHold.current = 0
       }
+
+      // THE PICTURE IS NOT. Published outside the gate and every frame, for two
+      // separate reasons: a second of nothing happening is indistinguishable
+      // from a second of it not working, so the wind-up has to be visible and
+      // the four-a-second proximity tick is far too coarse to read as one; and
+      // if it only published while you could be taken, casting a line inside the
+      // ring would leave the water frozen mid-gather with nothing counting.
+      gpuRef.current?.portal(
+        gpuPortalRef.current,
+        inMouth,
+        Math.min(1, portalHold.current / PORTAL_DWELL),
+      )
 
       if (R > rim) {
         const nx2 = (pos.current.x - home.x) / R, ny2 = (pos.current.y - home.y) / R
@@ -5164,9 +5201,6 @@ export default function SeaMap({
         // proximity tick rather than every frame: this changes when you arrive
         // somewhere, which is not sixty times a second.
         gpuRef.current?.berth(found?.kind === 'port' ? found.id : null)
-        // AND THE WELL. Same tick and the same reason: whether you are floating
-        // in the portal changes when you sail into it, not sixty times a second.
-        gpuRef.current?.portal(gpuPortalRef.current, inPortal(pos.current.x, pos.current.y))
 
         // ── WHAT IS IN FRONT OF HER RIGHT NOW ──────────────────────────
         // `m.y` is a mark's BASE — SeaMark anchors at translate(-50%,-100%) —
