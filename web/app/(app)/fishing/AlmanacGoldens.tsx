@@ -57,7 +57,7 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
       {/* The tally. Held vs sold matters here in a way it does not anywhere
           else: a sold golden still counts as caught, and the doubloons it
           fetched are part of the story. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', marginBottom: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))', marginBottom: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
         <Tally label="Mounted" value={`${mounted.length}`} accent={GOLD} />
         <Tally label="Species" value={`${speciesCount}`} />
         <Tally label="Ever landed" value={`${goldens.length}`} />
@@ -77,7 +77,7 @@ export default function AlmanacGoldens({ data }: { data: AlmanacData }) {
       {/* No frames. A golden is the brightest thing in the book and it was
           sitting in a brown box; it stands in its own light now, with the
           date and the water as fine print under it. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.5rem 0.3rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(228px, 1fr))', gap: '0.5rem 0.3rem' }}>
         {mounted.map((g, i) => {
           const zc = ZONE_COLOR[g.habitat] ?? GOLD
           return (

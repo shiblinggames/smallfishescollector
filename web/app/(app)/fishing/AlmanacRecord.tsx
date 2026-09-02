@@ -85,7 +85,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, #6d5bb0, ${ACCENT})` }} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', marginBottom: '1.6rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))', marginBottom: '1.6rem', borderTop: '1px solid rgba(255,255,255,0.09)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
         <Stat label="Catches" value={compact(totalCatches)} />
         <Stat label="Casts" value={compact(data.stats.casts)} />
         <Stat label="Perfects" value={compact(data.stats.perfects)} accent="#7dd3fc" />
@@ -95,7 +95,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
       {/* ── The career ── no longer hidden behind a disclosure, because this
           tab exists to hold exactly this. */}
       <Section title="The Career" note="Everything the log has kept on you" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 16, rowGap: 5, marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(215px, 1fr))', columnGap: 16, rowGap: 5, marginBottom: '1.5rem' }}>
         <Line label="Best perfect streak" value={data.stats.bestPerfectStreak.toLocaleString()} accent="#7dd3fc" />
         <Line label="Crates opened" value={compact(data.stats.cratesOpened)} />
         <Line label="Double catches" value={compact(data.stats.doubleCatches)} />
@@ -109,7 +109,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
       {ZONE_ORDER.some(z => (data.prestige[z] ?? 0) > 0) && (
         <>
           <Section title="Prestige" note="Waters you have cleared and started over" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 16, rowGap: 5, marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(215px, 1fr))', columnGap: 16, rowGap: 5, marginBottom: '1.5rem' }}>
             {ZONE_ORDER.filter(z => (data.prestige[z] ?? 0) > 0).map(z => (
               <Line key={z} label={ZONE_LABEL[z]} value={`✦ ${data.prestige[z]}`} accent={GOLD} />
             ))}
@@ -162,7 +162,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
           ? `${compact(data.stats.cratesOpened)} opened all time, ${compact(crateCounted)} of them counted by tier`
           : `${compact(data.stats.cratesOpened)} opened all time. Tiers are counted from now on`} />
       {crateRows.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 7, marginBottom: '1.4rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(215px, 1fr))', gap: 7, marginBottom: '1.4rem' }}>
           {crateRows.map(({ t, n }) => {
             const c = CRATE_TIERS[t]
             return (
@@ -201,7 +201,7 @@ export default function AlmanacRecord({ data }: { data: AlmanacData }) {
 
       {/* ── The ledger ── */}
       <Section title="The Ledger" note="What all of it has been worth" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 7, marginBottom: '1.4rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(215px, 1fr))', gap: 7, marginBottom: '1.4rem' }}>
         <Panel label="Worth landed" value={`${compact(worthLanded)} ⟡`} accent={GOLD}
           note="Everything ever caught, at list price" />
         <Panel label="Earned selling" value={`${compact(data.stats.doubloonsFromFish)} ⟡`} accent={GOLD}

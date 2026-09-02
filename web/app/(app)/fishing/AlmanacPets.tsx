@@ -44,7 +44,7 @@ export default function AlmanacPets({ data }: { data: AlmanacData }) {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.5rem 0.4rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(228px, 1fr))', gap: '0.5rem 0.4rem' }}>
               {list.map((p, i) => {
                 const has = owned.has(p.id)
                 return (

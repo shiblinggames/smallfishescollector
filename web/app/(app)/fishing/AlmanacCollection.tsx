@@ -207,7 +207,7 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
                 every other row. minmax(0, ...) lets the tracks actually be
                 equal and hands the overflow to the ellipsis already waiting
                 for it. */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem 0.2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: '0.35rem 0.2rem' }}>
               {list.map(e => <SpeciesCard key={e.id} entry={e} goldMounted={mountedGolden.has(e.id)} onOpen={() => e.everCaught && setDetail(e)} />)}
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function AlmanacCollection({ data }: { data: AlmanacData }) {
                 : 'Nothing here yet. Go and land some.'}
             </p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem 0.2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: '0.35rem 0.2rem' }}>
               {flat.list.map(e => (
                 <SpeciesCard key={e.id} entry={e} goldMounted={mountedGolden.has(e.id)}
                   note={flat.note(e)}
@@ -464,7 +464,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           )}
 
           {/* Your record with this fish. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 6, marginBottom: 12 }}>
             <Cell label="Caught" value={`${entry.count}`} />
             <Cell label="Goldens" value={`${mine.length}`} accent={mine.length ? GOLD : undefined} />
             <Cell label="Worth" value={`${entry.sellValue.toLocaleString()} ⟡`} accent={GOLD} />
@@ -497,7 +497,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
             <p className="font-karla font-400 italic" style={{ fontSize: '0.74rem', color: '#a8a0c0', lineHeight: 1.45, marginBottom: 10 }}>{entry.funFact}</p>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16, rowGap: 5 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(215px, 1fr))', columnGap: 16, rowGap: 5 }}>
             <Row label="Difficulty" value={`${entry.difficulty}/10`} />
             {entry.sizeCategory && <Row label="Size class" value={cap(entry.sizeCategory)} />}
             {entry.dietType && <Row label="Diet" value={cap(entry.dietType)} />}

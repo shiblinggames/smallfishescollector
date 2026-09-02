@@ -56,7 +56,11 @@ export default function AlmanacGiants({ data, giants }: { data: AlmanacData; gia
           : 'Six things that should not still be down there. They fetch nothing at market because nobody would dare buy one.'}
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: '1.6rem' }}>
+      {/* THE SIX, one per row on a phone and TWO ACROSS once there is room.
+          They are wide banners with the giant's art inset on the right, so a
+          single column on a desktop leaves each of them stretched to a metre of
+          nothing between the words and the picture. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 9, marginBottom: '1.6rem' }}>
         {giants.map((g, i) => {
           const caught = g.everCaught
           const entry = unlocked ? vigil[String(g.id)] : undefined

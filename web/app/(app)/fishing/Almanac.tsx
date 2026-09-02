@@ -43,6 +43,31 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
   const [error, setError] = useState('')
   const [room, setRoom] = useState<Room>('collection')
 
+  /**
+   * ── IS THERE ROOM TO OPEN THE BOOK FLAT? ──────────────────────────────────
+   *
+   * The Almanac was a 512px column whatever it was opened on: a phone layout
+   * centred in a fourteen-hundred-pixel window with darkness either side of it.
+   * That is the wrong shape for the one surface in this game that is nothing
+   * but a lot of things to look through.
+   *
+   * TWO LAYOUTS, rather than one that stretches. Narrow keeps the rail of tabs
+   * across the top, which is right when the tabs are most of the width there
+   * is. Wide moves them to a column down the LEFT, the way a book's contents
+   * page has always looked, and gives every pixel that saves to the shelves —
+   * which is the actual win, because those grids gain COLUMNS rather than
+   * growing their cards.
+   */
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia?.('(min-width: 900px)')
+    if (!mq) return
+    const sync = () => setWide(mq.matches)
+    sync()
+    mq.addEventListener?.('change', sync)
+    return () => mq.removeEventListener?.('change', sync)
+  }, [])
+
   // Load once per open. Kept after close so reopening in the same session is
   // instant; a catch made in between is picked up on the next page load, which
   // is the same freshness the collection log always had.
@@ -87,7 +112,13 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
   return createPortal(
     <div role="dialog" aria-modal
       style={{ position: 'fixed', inset: 0, zIndex: 111, background: '#0a090d', display: 'flex', justifyContent: 'center' }}>
-      <div className="relative w-full max-w-lg" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="relative w-full" style={{
+        // 1,240 is roomy enough for five shelves of species and still a BOOK
+        // rather than a wall: past about that the eye stops tracking a row back
+        // to the start of the next, and a collection becomes a spreadsheet.
+        maxWidth: wide ? 1240 : 512,
+        height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
 
         {/* The page you are writing on. Dark cotton-rag stock: fibre grain,
             damp bloom, a couple of ring marks, edges gone darker with handling.
@@ -128,34 +159,58 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
             </p>
           </div>
         ) : (
-          <>
-            {/* ── Room tabs ── the header is nothing but these now. Every
-                number that used to sit above them lives in the Record, where
-                it has the space to be read rather than glanced past on the way
-                to somewhere else. */}
-            <div style={{ position: 'relative', zIndex: 2, flexShrink: 0, display: 'flex', gap: 4, padding: '0.6rem 0.7rem', background: 'linear-gradient(180deg, rgba(10,9,13,0.72) 0%, rgba(10,9,13,0.40) 100%)', borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+          <div style={{
+            position: 'relative', zIndex: 1, flex: 1, minHeight: 0,
+            display: 'flex', flexDirection: wide ? 'row' : 'column',
+          }}>
+            {/* ── THE CONTENTS ──
+                Across the top on a phone, where the tabs are most of the width
+                there is. Down the left on a desktop, which is what a book's
+                contents page has always looked like, and which stops five tabs
+                being stretched into five banners.
+
+                Every number that used to sit above them lives in the Record,
+                where it has the space to be read rather than glanced past on
+                the way to somewhere else. */}
+            <div style={{
+              position: 'relative', zIndex: 2, flexShrink: 0,
+              display: 'flex', flexDirection: wide ? 'column' : 'row', gap: 4,
+              width: wide ? 208 : undefined,
+              padding: wide ? '0.9rem 0.7rem' : '0.6rem 0.7rem',
+              background: wide
+                ? 'linear-gradient(90deg, rgba(10,9,13,0.74) 0%, rgba(10,9,13,0.34) 100%)'
+                : 'linear-gradient(180deg, rgba(10,9,13,0.72) 0%, rgba(10,9,13,0.40) 100%)',
+              borderRight: wide ? '1px solid rgba(255,255,255,0.09)' : undefined,
+              borderBottom: wide ? undefined : '1px solid rgba(255,255,255,0.09)',
+            }}>
               {TABS.map(t => {
                 const on = room === t.key
                 return (
                   <button key={t.key} type="button" onClick={() => setRoom(t.key)}
                     className="font-karla font-700"
                     style={{
-                      flex: 1, minWidth: 0, padding: '0.42rem 0.12rem 0.38rem', borderRadius: 9,
+                      flex: wide ? undefined : 1, minWidth: 0, borderRadius: 9,
+                      padding: wide ? '0.5rem 0.7rem' : '0.42rem 0.12rem 0.38rem',
+                      textAlign: wide ? 'left' : 'center',
                       // Translucent tint, never a solid fill.
                       background: on ? `${ACCENT}22` : 'transparent',
                       border: `1px solid ${on ? ACCENT + '66' : 'transparent'}`,
                       color: on ? '#efe9ff' : '#a49dc0', cursor: 'pointer',
                       WebkitTapHighlightColor: 'transparent',
+                      display: wide ? 'flex' : undefined,
+                      alignItems: wide ? 'baseline' : undefined,
+                      justifyContent: wide ? 'space-between' : undefined,
+                      gap: wide ? 8 : undefined,
                     }}>
-                    <span style={{ display: 'block', fontSize: '0.6rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
-                    <span style={{ display: 'block', fontSize: '0.62rem', color: on ? ACCENT : '#9a93b8', fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>{t.badge}</span>
+                    <span style={{ display: 'block', fontSize: wide ? '0.84rem' : '0.6rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
+                    <span style={{ display: 'block', fontSize: wide ? '0.72rem' : '0.62rem', color: on ? ACCENT : '#9a93b8', fontVariantNumeric: 'tabular-nums', marginTop: wide ? 0 : 1 }}>{t.badge}</span>
                   </button>
                 )
               })}
             </div>
 
             {/* ── The room ── */}
-            <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0.9rem 0.9rem calc(env(safe-area-inset-bottom, 0px) + 2.5rem)' }}>
+            <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: wide ? '1.1rem 1.3rem 2rem' : '0.9rem 0.9rem calc(env(safe-area-inset-bottom, 0px) + 2.5rem)' }}>
               <AnimatePresence mode="wait">
                 <motion.div key={room}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -168,7 +223,7 @@ export default function Almanac({ open, onClose }: { open: boolean; onClose: () 
                 </motion.div>
               </AnimatePresence>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>,
