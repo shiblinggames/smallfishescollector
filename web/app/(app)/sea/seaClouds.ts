@@ -217,10 +217,23 @@ export function makeClouds(PIXI: typeof import('pixi.js')): Clouds {
         // foreshortening.
         c.body.width = c.r * 2 * zoom
         c.body.height = c.r * 2 * zoom
-        // Fainter than its own shadow. Looking through thin cloud at a dark sea
-        // is mostly sea, and a body as solid as the shade it casts reads as
-        // fog on the lens.
-        c.body.alpha = c.a * 0.42 * lit
+        /**
+         * 0.12, DOWN FROM 0.42, AND THE ARITHMETIC IS WHY.
+         *
+         * A body is `r * 2 * zoom` across and `r` runs to 2300, so one cloud is
+         * up to 4600 world px wide — larger than the screen at any normal zoom.
+         * At 0.42 its peak alpha was 0.21, which is not a cloud passing over,
+         * it is a white film laid across the whole window. Seven of them meant
+         * one was almost always overhead, so the film never lifted: a permanent
+         * haze that read as a filter on the game rather than as weather.
+         *
+         * The SHADOWS are the parallax cue and they are untouched. They are on
+         * the water, they are the size of a shadow, and they were what this
+         * layer was added for. The bodies exist so the shadows have something
+         * casting them, and at this weight they still do that without being the
+         * brightest thing on screen.
+         */
+        c.body.alpha = c.a * 0.12 * lit
       }
     },
   }

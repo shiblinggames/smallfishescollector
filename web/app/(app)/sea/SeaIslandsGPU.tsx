@@ -512,7 +512,13 @@ export default function SeaIslandsGPU({
         return PIXI.Texture.from(cv)
       })()
       const haze = new PIXI.Sprite(hazeTex)
-      haze.alpha = 0.34
+      // 0.20, DOWN FROM 0.34. This is the OTHER film on the screen: a static
+      // one over the upper third, where the cloud bodies were a moving one over
+      // all of it. At a third of full white it was doing more than air does
+      // over a few thousand pixels of water, and it washed the far sea toward
+      // grey rather than veiling it. Distance still reads; it is no longer the
+      // first thing the eye finds.
+      haze.alpha = 0.20
       const sizeHaze = () => {
         haze.width = a.screen.width
         haze.height = a.screen.height
@@ -935,7 +941,7 @@ export default function SeaIslandsGPU({
           // in the dark, it goes invisible, which the palette is already
           // responsible for saying. Left at a third of itself rather than
           // nothing, so a moonlit sea still has some depth in it.
-          haze.alpha = 0.34 * (1 - d * 0.66)
+          haze.alpha = 0.20 * (1 - d * 0.66)
           // AND THE SKY GOES OUT WITH IT. A cloud is a lit thing; after dark
           // there is no sun to light it and no sun to cast it, and a shadow
           // with nothing making it is a stain on the water.
