@@ -2996,6 +2996,105 @@ export default function SeaMap({
   const fightOnRef = useRef(false)
   /** Where the camera holds while the guns are out. See FIGHT_FRAME. */
   const fightCam = useRef<{ x: number; y: number } | null>(null)
+  /** The world point she takes up in a duel. Chosen once, when the guns come
+   *  out, against the rocks that are actually there. */
+  const fightStation = useRef<{ x: number; y: number } | null>(null)
+  /** The enemy's place and drawn width, resolved once. Both are fixed for the
+   *  length of a fight, and the frame loop should not be re-deriving them. */
+  const fightHullRef = useRef<{ at: { x: number; y: number }; encW: number } | null>(null)
+
+  /**
+   * ── FINDING SOMEWHERE TO STAND ──────────────────────────────────────────
+   *
+   * The duel's shape says where she ought to be: a fixed screen offset down
+   * and to the left of the hull she is taking on. The sea does not care about
+   * the composition — a bay is scattered with rock precisely so that sailing
+   * it is steering — so that point is sometimes inside a boulder, and easing
+   * her into it parked a ship of the line in a rock.
+   *
+   * WHY NOT JUST PUSH HER OUT. Because a push is the last resort, not the
+   * plan: it moves her the shortest distance to open water, which is off the
+   * mark by exactly as much as the rock is deep, and it can leave her behind
+   * the very thing she is meant to be shooting at. Far better to first ask
+   * whether a slightly different engagement is clear, since almost always one
+   * is — stand off a little further, close a little nearer, come at it from a
+   * shade higher or lower. All of those are the same fight; none of them are
+   * a ship inside a rock.
+   *
+   * So: walk a handful of honest variations of the same formation, take the
+   * first that is clear, and only if every one is fouled fall back to pushing
+   * the ideal out of whatever it landed in. Ordered nearest-to-ideal first, so
+   * a clear sea always yields exactly the intended shot.
+   */
+  const pickStation = useCallback((ex: number, ey: number, z: number, W: number, H: number) => {
+    const pS = { x: W * FIGHT_FRAME.p.x, y: H * FIGHT_FRAME.p.y }
+    const eS = { x: W * FIGHT_FRAME.e.x, y: H * FIGHT_FRAME.e.y }
+    // The world gap that reads as that screen gap. Divided by GROUND on the
+    // vertical, because up-screen is squashed and a raw px offset would put
+    // her far closer than it looks.
+    const dx = (eS.x - pS.x) / z
+    const dy = (eS.y - pS.y) / (z * GROUND)
+
+    /** Is this point inside anything solid? */
+    const fouled = (x: number, y: number) => {
+      for (const o of allObstacles()) {
+        const ax = o.x, ay = o.y
+        const bx = o.x2 ?? o.x, by = o.y2 ?? o.y
+        const sx = bx - ax, sy = by - ay
+        const len2 = sx * sx + sy * sy
+        const t = len2 > 0
+          ? Math.max(0, Math.min(1, ((x - ax) * sx + (y - ay) * sy) / len2))
+          : 0
+        const cx = ax + sx * t, cy = ay + sy * t
+        if (Math.hypot(x - cx, y - cy) < o.r) return true
+      }
+      return false
+    }
+
+    // Nearest to the intended shot first. `s` is how far off she stands, `lift`
+    // slides the engagement up or down the bay without changing its shape.
+    const tries: [number, number][] = [
+      [1, 0], [0.86, 0], [1.16, 0],
+      [1, -0.22], [1, 0.22],
+      [0.86, -0.28], [1.16, 0.28],
+      [0.72, 0], [1.34, 0],
+      [0.86, 0.34], [1.16, -0.34],
+    ]
+    for (const [s, lift] of tries) {
+      const x = ex - dx * s
+      const y = ey - dy * s + Math.abs(dy) * lift
+      if (!fouled(x, y)) return { x, y }
+    }
+
+    // EVERY SHAPE IS FOULED, which means she is fighting in a pocket. Push the
+    // ideal out of whatever it is sitting in and take that: off the mark, but
+    // on water.
+    let x = ex - dx, y = ey - dy
+    for (let pass = 0; pass < 6; pass++) {
+      let moved = false
+      for (const o of allObstacles()) {
+        const ax = o.x, ay = o.y
+        const bx = o.x2 ?? o.x, by = o.y2 ?? o.y
+        const sx = bx - ax, sy = by - ay
+        const len2 = sx * sx + sy * sy
+        const t = len2 > 0
+          ? Math.max(0, Math.min(1, ((x - ax) * sx + (y - ay) * sy) / len2))
+          : 0
+        const cx = ax + sx * t, cy = ay + sy * t
+        let nx = x - cx, ny = y - cy
+        let d = Math.hypot(nx, ny)
+        if (d >= o.r) continue
+        // Dead centre of a circle has no direction to leave by. Any is as good
+        // as any other; picking one is what stops a NaN.
+        if (d < 0.001) { nx = 1; ny = 0; d = 1 }
+        x = cx + (nx / d) * o.r
+        y = cy + (ny / d) * o.r
+        moved = true
+      }
+      if (!moved) break
+    }
+    return { x, y }
+  }, [])
   const anchorsRef = useRef<{ player: ShipAnchor; enemy: ShipAnchor } | null>(null)
   const shipFxRef = useRef<{ player: ShipFx; enemy: ShipFx } | null>(null)
   /** The enemy's hull on the chart, so the fight's blows can land on it. */
@@ -3610,6 +3709,43 @@ export default function SeaMap({
   useEffect(() => {
     fishZoomTarget.current = fishingIn ? 1.42 : fightId ? 1.5 : 1
   }, [fishingIn, fightId])
+
+  /**
+   * WHERE THE ENGAGEMENT HAPPENS, settled the moment the guns come out.
+   *
+   * Solved against the zoom the fight is HEADING for rather than the one it
+   * starts at, so the framing is the settled one and the camera ease is what
+   * carries you into it. Recomputing per frame would have the target chasing
+   * its own transition, and would put the rock search in the hot path.
+   */
+  useEffect(() => {
+    if (!fightId) {
+      fightStation.current = null
+      fightCam.current = null
+      fightHullRef.current = null
+      return
+    }
+    const enc = fightEncRef.current
+    const at = enc ? encounterAt(enc) : null
+    const box = wrapRef.current?.getBoundingClientRect()
+    if (!at || !box) return
+    const node = RAID_MAP.find(x => x.id === enc!.node)
+    // The same widths EncounterMark draws at, so an effect hung on the enemy is
+    // the size of the ship it is happening to.
+    fightHullRef.current = { at, encW: node?.type === 'raid' ? 260 : 185 }
+    const z = zoomFor(box.width) * wheelZoom.current * 1.5
+    const W = box.width, H = box.height
+    const station = pickStation(at.x, at.y, z, W, H)
+    fightStation.current = station
+    // THE CAMERA IS PINNED TO THE STATION, not to her. Anchored on where she
+    // is GOING, the engagement is framed from the first frame and she is the
+    // only thing that moves — which is what pulling alongside looks like from
+    // a camera already holding the shot.
+    fightCam.current = {
+      x: station.x - (W * FIGHT_FRAME.p.x - W / 2) / z,
+      y: station.y - (H * FIGHT_FRAME.p.y - H / 2) / (z * GROUND),
+    }
+  }, [fightId, pickStation])
 
   const locked = useCallback((p: Place) => level < p.minLevel, [level])
 
@@ -4624,38 +4760,19 @@ export default function SeaMap({
         //
         // She glides in rather than cutting, because a cut is a different scene
         // and this is the same sea from a better angle.
-        const enc = fightEncRef.current
-        const at = enc ? encounterAt(enc) : null
-        const box = wrapBoxRef.current
-        if (at && box) {
-          const z = zoomRef.current
-          const W = box.width, H = box.height
-          const pS = { x: W * FIGHT_FRAME.p.x, y: H * FIGHT_FRAME.p.y }
-          const eS = { x: W * FIGHT_FRAME.e.x, y: H * FIGHT_FRAME.e.y }
-          // The world gap that reads as that screen gap. Divided by GROUND on
-          // the vertical, because up-screen is squashed and a raw px offset
-          // would put her far closer than it looks.
-          const station = {
-            x: at.x - (eS.x - pS.x) / z,
-            y: at.y - (eS.y - pS.y) / (z * GROUND),
-          }
+        // Chosen once, when the guns come out — see the effect that sets it.
+        // Not recomputed here: it is a fixed place in the world, the camera
+        // ease carries the transition, and solving it against every rock on
+        // the chart is not something to do sixty times a second.
+        const station = fightStation.current
+        if (station) {
           const k = 1 - Math.exp(-2.6 * dt)
           pos.current.x += (station.x - pos.current.x) * k
           pos.current.y += (station.y - pos.current.y) * k
-          // THE CAMERA IS PINNED TO THE STATION, not to her. Anchored on where
-          // she is GOING, the enemy is framed correctly from the first frame
-          // and she is the only thing that moves — which is what pulling
-          // alongside looks like from a camera holding the engagement.
-          fightCam.current = {
-            x: station.x - (pS.x - W / 2) / z,
-            y: station.y - (pS.y - H / 2) / (z * GROUND),
-          }
           // GUNS TO STARBOARD. The art faces right unmirrored (the enemy's is
           // flipped to face back at you), and the enemy is up and to the right.
           facing.current = 1
         }
-      } else if (fightCam.current) {
-        fightCam.current = null
       }
 
       // ── TWO CLOCKS, AND ONLY ONE OF THEM IS SHARED WITH THE SERVER ──
@@ -5396,8 +5513,20 @@ export default function SeaMap({
         // At the hull's own waterline and at the hull's own size, or a
         // Man-o-War sits at anchor inside a rowboat's ring of ripples.
         const hull = hullRef.current
+        // ── THE WATER SHE STANDS IN GOES WHERE SHE GOES ─────────────────
+        //
+        // This layer sits at the middle of the screen because that is where the
+        // hull is — while the camera is following her. A fight frames the
+        // ENGAGEMENT instead, and she takes a station low and to the left of
+        // it, so without this the heave stayed behind: a ring of standing water
+        // in the middle of the screen with nothing in it.
+        //
+        // The same offset the boat itself is given a few hundred lines down,
+        // for the same reason and out of the same two numbers.
+        const rOffX = (pos.current.x - camAt.current.x) * z
+        const rOffY = (pos.current.y - camAt.current.y) * z * GROUND
         ripples.style.transform =
-          `translate(${WATERLINE_X * z}px, ${hull.keelY * z}px) scale(${z * hull.scale})`
+          `translate(${rOffX + WATERLINE_X * z}px, ${rOffY + hull.keelY * z}px) scale(${z * hull.scale})`
       }
 
       // ── OTHER PEOPLE'S BOATS ──────────────────────────────────────
@@ -5945,17 +6074,17 @@ export default function SeaMap({
         // that matter: centre + zoom × (world − camera), squashed by GROUND
         // going up-screen. Written to a ref the fight reads on its own frame,
         // so neither side re-renders to keep a hitsplat over a hull.
-        if (fightEncRef.current) {
+        if (fightHullRef.current) {
           const box = wrapBoxRef.current
-          const at = encounterAt(fightEncRef.current)
-          if (box && at) {
+          // WHERE THE ENEMY IS AND HOW BIG SHE IS, resolved when the guns came
+          // out rather than here. Neither changes during a fight, and this was
+          // scanning all of RAID_MAP and re-projecting the encounter on every
+          // frame to arrive at the same two numbers it had last frame.
+          const { at, encW } = fightHullRef.current
+          if (box) {
             const z = zoomRef.current
             const cx = box.left + box.width / 2
             const cy = box.top + box.height / 2
-            const node = RAID_MAP.find(x => x.id === fightEncRef.current!.node)
-            // The same widths EncounterMark draws at, so an effect hung on the
-            // enemy is the size of the ship it is happening to.
-            const encW = node?.type === 'raid' ? 260 : 185
             anchorsRef.current = {
               player: { x: cx + offX, y: cy + offY, w: hullNow.beamW * z },
               enemy: {

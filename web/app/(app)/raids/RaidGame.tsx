@@ -1642,18 +1642,27 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
             See memory: feedback_pagetransition_ios_pwa.md */}
         <div style={{
           width: '100%', flexShrink: 0,
-          // OVER THE SEA IT IS A PILL, NOT A STRIP. Full-bleed it ran the whole
-          // width of the window along the very top edge, which reads as part of
-          // the browser chrome rather than part of the game. Capped to the
-          // deck's own column and centred, so the fight's two readouts — level
-          // at the top, controls at the foot — are plainly one HUD.
+          // ── OVER THE SEA IT SITS WHERE FISHING'S BAR SITS ───────────────
+          //
+          // Full-bleed at the top of the viewport it ran the whole width of the
+          // window ABOVE the site header, which reads as browser chrome rather
+          // than as part of the game.
+          //
+          // Casting on the chart already solved this. The fishing overlay puts
+          // its XP bar in a 448px centred column padded `1rem 1rem 0.6rem`,
+          // below the header, and those numbers are not arbitrary — they are
+          // the fishing screen's own, so the bar reads identically whether you
+          // cast from the page or from the water. A fight is the other thing
+          // that turns the sea into a scene, so it gets the same bar in the
+          // same place; 52 is the clearance the chart's own HUD uses for the
+          // header it has to sit under.
           ...(overSea ? {
-            position: 'fixed', left: 0, right: 0, top: 10, zIndex: 6,
-            padding: '0 0.7rem', pointerEvents: 'none',
+            position: 'fixed', left: 0, right: 0, top: 52, zIndex: 6,
+            pointerEvents: 'none',
           } : null),
         }}>
           <div style={overSea
-            ? { maxWidth: 580, marginLeft: 'auto', marginRight: 'auto' }
+            ? { maxWidth: 448, margin: '0 auto', padding: '1rem 1rem 0.6rem' }
             : undefined}>
             <NavLevelBar xp={navXP} />
           </div>

@@ -227,6 +227,11 @@ export default function SeaIslandsGPU({
   // to hang her on.
   const pixiRef = useRef<typeof import('pixi.js') | null>(null)
   const boatsRef = useRef<import('pixi.js').Container | null>(null)
+  /** Where the hull is on the stage relative to its centre. Zero whenever the
+   *  camera is following her, which is nearly always; non-zero while something
+   *  else owns the framing. Anything drawn ON her reads this rather than
+   *  assuming the middle of the screen. */
+  const hullOff = useRef({ x: 0, y: 0 })
   const capRef = useRef<{
     outer: import('pixi.js').Container
     inner: import('pixi.js').Container
@@ -841,10 +846,14 @@ export default function SeaIslandsGPU({
         // The chart's rAF loop returns early while the dial is up, so nothing
         // driven from there animates during a catch; this one is not.
         splash.advance(dt)
-        // The last two are the screen centre, which is where the hull is: the
-        // camera follows her, so her lantern is a fixed point on the stage.
+        // The last two are where the HULL is on the stage — usually the screen
+        // centre, because the camera follows her, but not always. A fight frames
+        // the engagement rather than the captain, and she sits low and to the
+        // left of it; with the centre hardcoded her lantern stayed behind in the
+        // middle of the screen, a pool of light on empty water.
         lights.advance(camX, camY, halfW, halfH,
-          a.screen.width / 2, a.screen.height / 2, t, dt)
+          a.screen.width / 2 + hullOff.current.x,
+          a.screen.height / 2 + hullOff.current.y, t, dt)
         squalls.advance(camX, camY, halfW, halfH, dt)
         // The sky. Needs the screen as well as the world, because half of it is
         // drawn in screen space — that is what the parallax IS.
@@ -1083,6 +1092,12 @@ export default function SeaIslandsGPU({
             a.screen.width / 2 + sk.offX,
             a.screen.height / 2 + sk.offY + sk.zoom * sk.bob,
           )
+          // WHERE SHE ACTUALLY IS, kept for anything else drawn ON her. The
+          // lantern used to assume screen centre — true only while the camera
+          // is following her, which it stops doing the moment a fight frames
+          // the engagement instead. See the note at lights.advance.
+          hullOff.current.x = sk.offX
+          hullOff.current.y = sk.offY + sk.zoom * sk.bob
           c.outer.scale.set(sk.zoom)
           c.inner.scale.x = sk.facing
           c.inner.rotation = (sk.heel * Math.PI) / 180

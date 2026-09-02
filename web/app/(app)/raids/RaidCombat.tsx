@@ -2168,11 +2168,24 @@ export default function RaidCombat({
     if (!stage) return
 
     let box = stage.getBoundingClientRect()
-    const ro = new ResizeObserver(() => { box = stage.getBoundingClientRect() })
+    // ── EVERY MEASUREMENT IN HERE IS CACHED, AND THAT IS THE POINT ─────────
+    //
+    // Reading a rect or an offsetWidth forces the browser to lay the page out
+    // THERE AND THEN, before it can answer. Do it inside a frame that is also
+    // writing styles and you get read-write-read-write — a full layout per
+    // read, sixty times a second, on top of the chart's own loop and the aim
+    // bar's. That is felt on a phone immediately, and it is felt as the aim
+    // bar stuttering, because the aim bar is the thing you are watching.
+    //
+    // So: measure on the events that can actually change a measurement, and
+    // let the frame do nothing but write.
+    const ro = new ResizeObserver(() => {
+      box = stage.getBoundingClientRect()
+      measurePlates()
+    })
     ro.observe(stage)
-    const onScroll = () => { box = stage.getBoundingClientRect() }
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
+    const onResize = () => { box = stage.getBoundingClientRect(); measurePlates() }
+    window.addEventListener('resize', onResize)
 
     /** Put one anchor on one hull. Left/top and width only: the transform is
      *  framer-motion's, and every animation in this file rides it. */
@@ -2192,10 +2205,25 @@ export default function RaidCombat({
      * ship and lifted clear of the mast, clamped to the window so a plate never
      * walks off the edge with the hull it belongs to.
      */
-    const placePlate = (el: HTMLElement | null, a: ShipAnchor | undefined) => {
+    // The plates' own sizes, and the deck's height. These change when a status
+    // chip appears or a name gets longer — not on a frame — so they are read
+    // when something might have changed and cached in between.
+    const dim = { ew: 160, eh: 48, pw: 160, ph: 48, deck: 0 }
+    const measurePlates = () => {
+      const e = enemyPlateRef.current
+      const p = playerPlateRef.current
+      if (e) { dim.ew = e.offsetWidth || dim.ew; dim.eh = e.offsetHeight || dim.eh }
+      if (p) { dim.pw = p.offsetWidth || dim.pw; dim.ph = p.offsetHeight || dim.ph }
+      dim.deck = actionPanelRef.current?.offsetHeight ?? dim.deck
+    }
+    measurePlates()
+    // Twice a second is far more often than a nameplate changes shape and far
+    // less often than a frame. Nobody can see a plate settle 200ms late; the
+    // whole screen stuttering to measure it every frame was plainly visible.
+    const remeasure = setInterval(measurePlates, 500)
+
+    const placePlate = (el: HTMLElement | null, a: ShipAnchor | undefined, pw: number, ph: number) => {
       if (!el || !a) return
-      const pw = el.offsetWidth || 160
-      const ph = el.offsetHeight || 48
       const x = Math.max(8, Math.min(window.innerWidth - pw - 8, a.x - pw / 2))
       // WELL CLEAR OF THE RIGGING. At 0.60 it sat in the topsails; a ship of
       // the line is most of its own height above the waterline.
@@ -2214,31 +2242,35 @@ export default function RaidCombat({
      */
     const dockPlayerPlate = () => {
       const el = playerPlateRef.current
-      const deck = actionPanelRef.current
       if (!el) return
-      const pw = el.offsetWidth || 160
-      const ph = el.offsetHeight || 48
-      const dh = deck?.offsetHeight ?? 0
       // Right edge of the deck's capped column, so the card lines up with the
       // panel under it rather than with the window.
       const colW = Math.min(580, window.innerWidth - 22)
       const right = window.innerWidth / 2 + colW / 2
-      el.style.left = `${right - pw - box.left}px`
-      el.style.top = `${window.innerHeight - dh - ph - 10 - box.top}px`
+      el.style.left = `${right - dim.pw - box.left}px`
+      el.style.top = `${window.innerHeight - dim.deck - dim.ph - 10 - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }
 
     let raf = 0
     let last = ''
+    let lastAnchors = ''
     const tick = () => {
       raf = requestAnimationFrame(tick)
 
       const at = anchors?.current
-      if (at) {
+      // NOTHING MOVED, NOTHING WRITTEN. The hulls are still between frames far
+      // more often than not — she holds station in a duel — and a style write
+      // that changes nothing still dirties the element and costs a layout.
+      const asig = at
+        ? `${at.player.x | 0},${at.player.y | 0},${at.player.w | 0},${at.enemy.x | 0},${at.enemy.y | 0},${at.enemy.w | 0}`
+        : ''
+      if (at && asig !== lastAnchors) {
+        lastAnchors = asig
         place(playerShipRef.current, at.player)
         place(enemyShipRef.current, at.enemy)
-        placePlate(enemyPlateRef.current, at.enemy)
+        placePlate(enemyPlateRef.current, at.enemy, dim.ew, dim.eh)
         dockPlayerPlate()
       }
 
@@ -2271,8 +2303,8 @@ export default function RaidCombat({
     return () => {
       cancelAnimationFrame(raf)
       ro.disconnect()
-      window.removeEventListener('scroll', onScroll, true)
-      window.removeEventListener('resize', onScroll)
+      clearInterval(remeasure)
+      window.removeEventListener('resize', onResize)
     }
   }, [overSea, anchors])
 
@@ -8465,8 +8497,11 @@ export default function RaidCombat({
             background: 'linear-gradient(180deg, rgba(9,15,24,0.90) 0%, rgba(5,9,16,0.95) 100%)',
             border: '1px solid rgba(122,138,160,0.28)',
             boxShadow: '0 -6px 34px rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(6px)',
-            WebkitBackdropFilter: 'blur(6px)',
+            // NO BACKDROP BLUR. It was here out of habit and it was costing a
+            // full-screen blur pass every frame, composited over a live canvas,
+            // for an effect nothing can see: this panel is already 90% opaque,
+            // so there is almost no backdrop left to blur. On a phone that pass
+            // is real money and the aim bar is what pays for it.
           } : null),
         }}>
         {subPhase === 'aiming' ? (
