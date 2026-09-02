@@ -42,7 +42,10 @@ const GOLD = '#f0c040'
  *  level with the fire on either side of it. */
 const ROOM_ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'cornerL', 'cornerR']
 
-export default function RoomView({ home, unlocked, pets, species, giants, guest }: {
+export default function RoomView({
+  home, unlocked, pets, species, giants, guest,
+  onIsland, onInside, atIsland = false,
+}: {
   home: Homestead
   /** Badge ids earned, for the gallery wall. */
   unlocked: string[]
@@ -55,6 +58,25 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
   /** Ancient giants landed, for the trophy room. */
   giants: { name: string; art: string }[]
   guest?: string | null
+  /**
+   * THE ISLAND IS THE FIRST DOOR, and it is passed in rather than owned here.
+   *
+   * It used to be a pill in a SECOND rail above this one — island / inside /
+   * almanac — so the page carried two rows of pills stacked on each other and
+   * eight things to choose between before you had chosen anything. They are all
+   * the same choice: which part of your homestead am I looking at. One rail.
+   *
+   * Outside is outside, so it cannot be a room in `ROOMS` and it cannot be
+   * rendered by this component. It is a door with a callback on it.
+   */
+  onIsland?: () => void
+  /** Back in from the island, fired when any ROOM door is pressed — otherwise
+   *  pressing one from outside would change which room is selected and leave
+   *  the island still on screen. */
+  onInside?: () => void
+  /** True while the island is showing, so no room door reads as current:
+   *  something has to be selected, and out there it is not one of these. */
+  atIsland?: boolean
 }) {
   const rooms = useMemo(() => openRooms(home), [home])
   const [i, setI] = useState(0)
@@ -82,13 +104,23 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
           problem, and the locked entries are the only place in the game that
           says out loud what a bigger house is FOR. */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {onIsland && (
+          <button type="button" onClick={() => { vibrate(6); onIsland() }}
+            className="font-karla font-700"
+            style={{
+              padding: '0.4rem 0.72rem', borderRadius: 999, fontSize: '0.76rem', cursor: 'pointer',
+              color: atIsland ? '#0d1520' : 'rgba(214,232,240,0.82)',
+              background: atIsland ? '#8fd0e8' : 'rgba(255,255,255,0.06)',
+              border: '1px solid ' + (atIsland ? '#8fd0e8' : `${SEA},0.24)`),
+            }}>Outside</button>
+        )}
         {ROOMS.map(r => {
           const at = rooms.indexOf(r)
           const open = at >= 0
           const here = open && at === i
           return (
             <button key={r.id} type="button" disabled={!open}
-              onClick={() => { vibrate(6); setI(at) }}
+              onClick={() => { vibrate(6); setI(at); onInside?.() }}
               className="font-karla font-700"
               style={{
                 padding: '0.4rem 0.72rem', borderRadius: 999, fontSize: '0.76rem',
@@ -116,6 +148,13 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
         })}
       </div>
 
+      {/* ── AND NOTHING BELOW THE RAIL WHILE YOU ARE OUTSIDE ──────────
+          The rail is always up, because it is the page's navigation and
+          navigation that disappears when you use it is not navigation. What it
+          navigates BETWEEN is the part that swaps, and outside is drawn by the
+          page rather than by this component — so out there this renders the
+          doors and stops. */}
+      {!atIsland && (<>
       <div style={{ marginBottom: 8 }}>
         <p className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f2ede2', lineHeight: 1.1 }}>
           {room.name}
@@ -188,6 +227,7 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
           You are looking at {guest}&rsquo;s rooms.
         </p>
       )}
+      </>)}
     </div>
   )
 }

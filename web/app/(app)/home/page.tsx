@@ -40,7 +40,7 @@ export default async function HomePage({ searchParams }: {
   // would be standing in somebody else's gallery looking at your own badges.
   const owner = visit ? visit.userId : user.id
 
-  const [homestead, { data: row }, { data: petRows }, { data: logRows }, species] = await Promise.all([
+  const [homestead, { data: row }, { data: petRows }, { data: logRows }, { data: ancientRow }, species] = await Promise.all([
     getHomestead(),
     // The gallery hangs what the captain has actually unlocked. `badge_unlocked_at`
     // carries the dates, which is what turns a wall of icons into a record of
@@ -52,16 +52,36 @@ export default async function HomePage({ searchParams }: {
     // equipped pet already swims beside the hull, so a room showing only that
     // would hold nothing you could not see from the water.
     admin.from('profiles').select('unlocked_pets').eq('id', owner).single(),
-    // The trophy room, and the gallery's species count, both come off the log.
+    // The gallery's species count comes off the log. The TROPHY ROOM does not,
+    // and reading it from here is why it was empty — see below.
     admin.from('fish_collection').select('fish_id').eq('user_id', owner),
+    admin.from('profiles').select('ancient_catches').eq('id', owner).single(),
     getCachedFishSpecies(),
   ])
 
   const logged = new Set((logRows ?? []).map(r => Number(r.fish_id)))
-  // The six giants, and only the ones actually landed. Same discriminator the
-  // server routes an ancient on: ancient_deep with no sell value.
+
+  /**
+   * ── THE SIX GIANTS, FROM THE RECORD THAT ACTUALLY HOLDS THEM ──────────────
+   *
+   * This read `fish_collection` and the trophy room was therefore ALWAYS empty,
+   * for everybody, since the day it shipped. An Ancient never goes in there: the
+   * catch path routes it straight to `profiles.ancient_catches` and skips the
+   * hold, the collection and the bounty entirely — reelIn says so in a comment,
+   * a few hundred lines above the code that does it.
+   *
+   * So there are two records of "which giants have you landed" and this wall was
+   * reading the one that is never written. `ancient_catches` is the real one: it
+   * is what gates the finale, it is append-only, and it survives a prestige,
+   * which is right for a trophy — a wall you have to re-earn is not a wall.
+   *
+   * The species table is still what turns an id into a name and a picture; the
+   * discriminator stays as a guard so a sellable ancient_deep fish can never
+   * find its way onto the wall if the ids are ever renumbered.
+   */
+  const landed = new Set(((ancientRow?.ancient_catches as number[] | null) ?? []).map(Number))
   const giants = species
-    .filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0 && logged.has(f.id))
+    .filter(f => f.habitat === 'ancient_deep' && (f.sell_value ?? 0) === 0 && landed.has(f.id))
     .map(f => ({ name: f.name, art: fishImageUrl(f.name) }))
 
   // A VISIT SHOWS THEIRS, not yours: their island, their room, their badges.

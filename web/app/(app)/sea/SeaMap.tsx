@@ -229,6 +229,18 @@ const SeaStory = dynamic(() => import('./SeaStory'), { ssr: false })
  *  whose interaction is more than reading. Same treatment: nothing is fetched
  *  until one is actually opened. */
 const SeaNodeSheet = dynamic(() => import('./SeaNodeSheet'), { ssr: false })
+/**
+ * THE ALMANAC, FROM THE WATER.
+ *
+ * It lived on the Homestead, behind a pill in that page's header — which is
+ * where it ended up rather than where it belongs: a reference book about fish
+ * is not a part of your house. It is about the thing you are doing when you are
+ * out here, so it opens from out here.
+ *
+ * Dynamic, because it drags the whole collection view behind it and most
+ * sessions never open it.
+ */
+const Almanac = dynamic(() => import('../fishing/Almanac'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
@@ -2768,6 +2780,8 @@ export default function SeaMap({
   const [nearBeat, setNearBeat] = useState<Beat | null>(null)
   /** The way home, if you are floating on one that has opened. */
   const [nearWayHome, setNearWayHome] = useState<ReturnPortal | null>(null)
+  /** The book, open or shut. */
+  const [almanacOpen, setAlmanacOpen] = useState(false)
   const [reading, setReading] = useState<string | null>(null)
   /**
    * A NODE'S OWN SHEET, AND THE INTRO THAT RUNS BEFORE IT.
@@ -3046,6 +3060,7 @@ export default function SeaMap({
       if (picking) { setPicking(false); return }
       if (crewOpen) { setCrewOpen(false); return }
       if (crewHubOpen) { setCrewHubOpen(false); return }
+      if (almanacOpen) { setAlmanacOpen(false); return }
       if (reading) { setReading(null); return }
       if (sheetNode) { setSheetNode(null); return }
       if (introNode) { setIntroNode(null); return }
@@ -3054,7 +3069,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -3544,6 +3559,11 @@ export default function SeaMap({
     if (!inAnchorage) on.push('clock')
     if (inAnchorage && (!fishingIn || wide)) on.push('crew')
     if (!fishingIn || wide) on.push('chart')
+    // THE BOOK, on the fishing side only. It is a reference about FISH, and out
+    // past the reef there are none — a door to it standing in the campaign's
+    // water would be the busiest thing in that corner and about the other half
+    // of the game.
+    if (!inAnchorage && (!fishingIn || wide)) on.push('almanac')
     if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
     if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
     if (!inAnchorage && (!fishingIn || wide)) on.push('folk')
@@ -6917,6 +6937,35 @@ hullRef={hullRefFor(t.key)} />
           </svg>
         </button>
       )}
+
+      {/* THE ALMANAC, next to the chart, because they are the same kind of
+          thing: a reference you open, read, and shut again. */}
+      {!inAnchorage && (!fishingIn || wide) && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(10); setAlmanacOpen(true) }}
+          aria-label="Open the almanac"
+          title="The almanac"
+          style={{
+            position: 'absolute', top: 18, left: hudAt('almanac'), zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
+            background: 'rgba(6,12,18,0.7)',
+            border: '1px solid rgba(180,214,232,0.22)',
+            color: 'rgba(214,232,240,0.85)', cursor: 'pointer',
+          }}>
+          {/* An open book. Not a fish: there is a fish on half the things in
+              this game and none of them mean "the record of them". */}
+          <svg width={Math.round(hudSize * 0.55)} height={Math.round(hudSize * 0.55)}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 6.5C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 2 1.5-1.5 3.5-2 8-2v-13c-4.5 0-6.5.5-8 2z" />
+            <path d="M12 6.5v13" />
+          </svg>
+        </button>
+      )}
+
+      <Almanac open={almanacOpen} onClose={() => setAlmanacOpen(false)} />
 
       {/* THE COMPASS. Its mount was deleted in an over-broad slice edit and the
           component sat unreferenced for a dozen commits, which is why the

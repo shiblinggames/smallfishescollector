@@ -2,7 +2,7 @@
 
 // THE HOMESTEAD, from the inside.
 //
-// Four rooms behind one header, the same shape the Almanac already uses,
+// Four rooms behind one header,
 // because they are the same kind of thing: a set of places that read too
 // differently to be sections of one long page.
 //
@@ -18,7 +18,6 @@
 import { memo, useCallback, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import Almanac from '../fishing/Almanac'
 import { BADGE_MAP } from '@/lib/badges'
 import { ISLES } from '@/lib/seaIsles'
 import { vibrate } from '@/lib/haptics'
@@ -67,7 +66,6 @@ export default function HomeClient({
   const [room, setRoom] = useState<Room>('island')
   /** Drag mode for the island plan. Off by default: the common visit is to
    *  look at the place, not to redecorate it. */
-  const [almanac, setAlmanac] = useState(false)
   const [busy, startBusy] = useTransition()
   const [note, setNote] = useState<string | null>(null)
   /** What is being confirmed. Everything here is permanent and most of it is
@@ -173,12 +171,11 @@ export default function HomeClient({
               fontSize: '0.86rem', color: 'rgba(196,214,228,0.7)', margin: '0.15rem 0 0',
             }}>{builtAt(home).blurb}</p>
           </div>
+          {/* NO PURSE HERE. The app header carries the doubloon count on every
+              page including this one, so a second copy in the corner was the
+              same number twice on one screen — and the two were not even the
+              same element, so a purchase updated one of them first. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            {!guest && (
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: GOLD, margin: 0 }}>
-                ⟡ {coin.toLocaleString()}
-              </p>
-            )}
             {guest && (
               <button type="button" onClick={() => router.push('/home')}
                 className="font-karla font-700"
@@ -201,28 +198,27 @@ export default function HomeClient({
           </div>
         </div>
 
-        {/* ── THE ROOMS ─────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>
-          {/* THE GALLERY IS NOT A TAB. It is a room, reached with the arrows
-              inside — see RoomView. */}
-          {([['island', 'The island'], ['inside', 'Inside']] as const)
-            .map(([id, label]) => (
-              <button key={id} type="button" onClick={() => { vibrate(6); setRoom(id) }}
-                className="font-karla font-700"
-                style={{
-                  padding: '0.44rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer',
-                  color: room === id ? '#0d1520' : 'rgba(214,232,240,0.82)',
-                  background: room === id ? GOLD : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${room === id ? GOLD : 'rgba(255,255,255,0.14)'}`,
-                }}>{label}</button>
-            ))}
-          {!guest && <button type="button" onClick={() => { vibrate(6); setAlmanac(true) }}
-            className="font-karla font-700"
-            style={{
-              padding: '0.44rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer',
-              color: 'rgba(214,232,240,0.82)', background: 'rgba(167,139,250,0.14)',
-              border: '1px solid rgba(167,139,250,0.4)',
-            }}>The Almanac</button>}
+        {/* ── ONE RAIL OF DOORS ─────────────────────────────────────
+            It was two rows of pills stacked: island / inside / the Almanac on
+            top, and the four room doors underneath. Eight things to choose
+            between, in two ranks, for what is one question — which part of my
+            homestead am I looking at.
+
+            So the room rail took the island as its first door and the second
+            row is gone. The Almanac went with it: a reference book about fish
+            is not a part of your house, and it was in here because this page
+            happened to have a header with room on it.
+
+            RoomView owns the rail because it owns which room is open; the
+            island is handed to it as a door with a callback, because outside is
+            not a room and this component is what knows about outside. */}
+
+        <div style={{ marginTop: 14 }}>
+          <RoomView home={home} unlocked={unlocked} pets={pets}
+            species={species} giants={giants} guest={guest}
+            onIsland={() => { vibrate(6); setRoom('island') }}
+            onInside={() => setRoom('inside')}
+            atIsland={room === 'island'} />
         </div>
 
         {/* ── THE ISLAND ROOM ───────────────────────────────────────── */}
@@ -242,8 +238,6 @@ export default function HomeClient({
         {/* ── INSIDE ────────────────────────────────────────────────── */}
         {room === 'inside' && (
           <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-            <RoomView home={home} unlocked={unlocked} pets={pets}
-              species={species} giants={giants} guest={guest} />
             {!guest && (
               <p className="font-karla" style={{
                 fontSize: '0.8rem', color: 'rgba(196,214,228,0.66)', margin: 0,
@@ -416,7 +410,6 @@ export default function HomeClient({
         )}
       </AnimatePresence>
 
-      <Almanac open={almanac} onClose={() => setAlmanac(false)} />
     </div>
   )
 }
