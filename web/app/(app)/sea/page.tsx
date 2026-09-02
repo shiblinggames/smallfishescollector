@@ -279,7 +279,10 @@ export default async function SeaPage() {
       // THE HOMESTEAD PORTAL. Only the tier: which stones this captain holds is
       // derived on the chart from the discoveries it is already handed, so there
       // is nothing here for the two to disagree about.
-      portal={{ tier: Number(profile?.portal_tier ?? 1) }}
+      portal={{
+        tier: Number(profile?.portal_tier ?? 1),
+        ports: (profile?.portal_ports as string[] | null) ?? [],
+      }}
       // The two new movement ladders. Passed as TIERS rather than as computed
       // rates: the map multiplies them by the boat's own trim, and doing half
       // that sum here and half there is how the two drift apart.

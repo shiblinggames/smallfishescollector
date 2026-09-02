@@ -43,7 +43,7 @@ const GOLD = '#f0c040'
 const ROOM_ORDER: FurnitureSlot[] = ['floor', 'hearth', 'mount', 'cornerL', 'cornerR']
 
 export default function RoomView({
-  home, unlocked, pets, species, giants, guest,
+  home, unlocked, stamps, pets, species, giants, guest,
   onIsland, onInside, atIsland = false,
 }: {
   home: Homestead
@@ -57,6 +57,9 @@ export default function RoomView({
   species: { logged: number; total: number }
   /** Ancient giants landed, for the trophy room. */
   giants: { name: string; art: string }[]
+  /** When each badge was earned, so the gallery can hang the newest rather than
+   *  whatever happens to be at the end of the array. */
+  stamps: Record<string, string | null>
   guest?: string | null
   /**
    * THE ISLAND IS THE FIRST DOOR, and it is passed in rather than owned here.
@@ -117,7 +120,11 @@ export default function RoomView({
         {ROOMS.map(r => {
           const at = rooms.indexOf(r)
           const open = at >= 0
-          const here = open && at === i
+          // NOT LIT WHILE YOU ARE OUTSIDE. Something always has to read as
+          // current, and out there it is the Outside door — with this missing
+          // both it and the house came up highlighted, which says the house is
+          // already open and makes the door look like it does nothing.
+          const here = open && at === i && !atIsland
           return (
             <button key={r.id} type="button" disabled={!open}
               onClick={() => { vibrate(6); setI(at); onInside?.() }}
@@ -198,7 +205,7 @@ export default function RoomView({
             {/* THE THREE CONTENT ROOMS all flow their things inside a box that
                 was placed on the bench, so a badge wall is never on the
                 skirting board and pets are never floating up the glass. */}
-            {room.id === 'gallery' && <Box at={room.content}><GalleryWall unlocked={unlocked} species={species} /></Box>}
+            {room.id === 'gallery' && <Box at={room.content}><GalleryWall unlocked={unlocked} stamps={stamps} species={species} /></Box>}
             {room.id === 'menagerie' && <Menagerie pets={pets} at={room.content} />}
             {room.id === 'trophy' && <Box at={room.content}><TrophyWall giants={giants} /></Box>}
           </motion.div>
@@ -321,12 +328,31 @@ function Furnished({ home, room, houseTier }: { home: Homestead; room: RoomDef; 
  * needed its own art rather than a redressed cottage — badges pinned to a
  * plastered wall look like stickers.
  */
-function GalleryWall({ unlocked, species }: {
-  unlocked: string[]; species: { logged: number; total: number }
+function GalleryWall({ unlocked, stamps, species }: {
+  unlocked: string[]
+  /** When each badge was earned. */
+  stamps: Record<string, string | null>
+  species: { logged: number; total: number }
 }) {
-  // Newest first: a wall that grows from the left is a wall where the thing you
-  // just earned is buried at the end of a queue.
-  const badges = unlocked.slice(-18).reverse()
+  /**
+   * THE EIGHTEEN YOU EARNED MOST RECENTLY — by DATE, which it was not.
+   *
+   * This took `unlocked.slice(-18)`, the tail of the raw `unlocked_badges`
+   * column, on the assumption that the array is in the order things were
+   * earned. It is not: badges are appended by a dozen different grant paths,
+   * several of them back-fills that re-check state rather than a crossing, so a
+   * badge earned months ago can be appended today and one earned this morning
+   * can sit in the middle. The wall came out looking like eighteen arbitrary
+   * picks, because that is what it was.
+   *
+   * `badge_unlocked_at` is the record that actually knows. It was already being
+   * loaded and handed to this page for the Captain's Log; the wall just never
+   * asked for it. Anything with no stamp sorts last rather than being dropped —
+   * an old badge with a missing date is still a badge you earned.
+   */
+  const badges = useMemo(() => [...unlocked]
+    .sort((a, b) => (stamps[b] ?? '').localeCompare(stamps[a] ?? ''))
+    .slice(0, 18), [unlocked, stamps])
   return (
     <>
       <div style={{

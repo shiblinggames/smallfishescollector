@@ -54,6 +54,72 @@ export const PORTAL_TIERS: PortalTier[] = [
 ]
 
 /**
+ * ── AND THE ISLAND BERTHS ───────────────────────────────────────────────────
+ *
+ * The band ladder answers "get me back out to deep water". It does not answer
+ * the other half of a long sail, which is getting back IN — you finish in the
+ * Ancient Deep with a full hold and twenty thousand pixels of empty ocean
+ * between you and anywhere that will take it.
+ *
+ * So the portal also learns berths: one per island, bought outright, in
+ * whatever order you want them.
+ *
+ * ── A SET, NOT A LADDER ─────────────────────────────────────────────────────
+ *
+ * The bands are a sequence and owning the Abyss implies owning everything
+ * shallower, which is why they are one number. Islands are not a sequence. They
+ * are places, and a captain who lives at the Tally House and never uses the
+ * Shipyard should not have to buy the Shipyard on the way. `portal_ports` is an
+ * array for exactly that reason.
+ *
+ * ── AND NO STONE ────────────────────────────────────────────────────────────
+ *
+ * A stone says "you have been to this water". Every one of these is somewhere
+ * you have not merely been but MOOR at, repeatedly, by name — the rule the
+ * stones enforce is already true of an island by the time you can afford one.
+ * What gates a berth is the price, and the price is the whole gate.
+ *
+ * THE GUNWHARF IS LAST AND DEAREST because it is the only one on the other side
+ * of the reef. Every other berth here saves you a sail; that one saves you the
+ * arch, the anchorage and the swap into your warship, which is the longest
+ * errand in the game.
+ */
+export type PortalPort = {
+  /** A PLACES id. The berth's name and position both come from there, so this
+   *  table cannot drift from the island it points at. */
+  id: string
+  name: string
+  cost: number
+  /** Where it sets you down: off the island, never on it. Arriving inside a
+   *  berth ring would open that island's own panel the instant you landed, and
+   *  being handed a screen you did not ask for is not an arrival. */
+  to: { x: number; y: number }
+  accent: string
+}
+
+export const PORTAL_PORTS: PortalPort[] = [
+  { id: 'mainland', name: 'The Mainland', cost: 15_000, to: { x: 0, y: 760 }, accent: '#e0b062' },
+  { id: 'home', name: 'The Homestead', cost: 35_000, to: { x: 1500, y: 520 }, accent: '#7fc8de' },
+  { id: 'trawl_docks', name: 'The Tally House', cost: 70_000, to: { x: -1150, y: -320 }, accent: '#8fd0e8' },
+  { id: 'trawl_fleet', name: 'The Trawl Harbour', cost: 120_000, to: { x: -2050, y: -400 }, accent: '#6fd39a' },
+  { id: 'shipyard', name: 'The Shipyard', cost: 200_000, to: { x: 700, y: -420 }, accent: '#c9a227' },
+  {
+    id: 'gunwharf', name: 'The Gunwharf', cost: 500_000,
+    // THE FAR SIDE OF THE REEF. Set down a short pull off the wharf, in the
+    // same water the expedition way home lands in — see PORTAL_HOME.
+    to: { x: -500, y: -5150 }, accent: '#a78bfa',
+  },
+]
+
+export const PORT_BY_ID: Record<string, PortalPort> =
+  Object.fromEntries(PORTAL_PORTS.map(p => [p.id, p]))
+
+/** Has this captain taught the portal that berth? */
+export function hasPort(id: string, owned: string[] | null | undefined): boolean {
+  return (owned ?? []).includes(id)
+}
+
+/**
  * ── ONE STONE PER TIER, AND IT IS WHERE THAT TIER GOES ──────────────────────
  *
  * The portal used to work from the first minute, because tier 1 costs nothing.

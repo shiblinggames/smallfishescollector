@@ -37,8 +37,8 @@ import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
-import { PORTAL, PORTAL_TIERS, PORTAL_DWELL, hasPortalStone, hasStoneFor, STONE_ISLE_IDS, inPortal, inPortalEye, warpPoint } from '@/lib/seaPortal'
-import { buyPortalTier } from './portalActions'
+import { PORTAL, PORTAL_TIERS, PORTAL_PORTS, hasPortalStone, hasStoneFor, STONE_ISLE_IDS, inPortal, warpPoint } from '@/lib/seaPortal'
+import { buyPortalTier, buyPortalPort } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
@@ -1303,7 +1303,9 @@ export default function SeaMap({
   raidRepairOwed: number
   /** The Homestead Portal: highest tier owned, and components in hand —
    *  cache chests opened minus components already spent. */
-  portal: { tier: number }
+  /** The portal, as this captain has built it: how far the band ladder
+   *  reaches, and which island berths it has been taught. */
+  portal: { tier: number; ports: string[] }
   /** Rudder and rig tiers, from the Shipyard. */
   handlingTier: number
   accelTier: number
@@ -2264,11 +2266,15 @@ export default function SeaMap({
    */
   const [portalOpen, setPortalOpen] = useState(false)
   const portalIn = useRef(false)
+  /** The same fact, where the helm can read it. */
+  const [inPortalNow, setInPortalNow] = useState(false)
   /** Seconds held inside the eye. Reset by leaving it, and by being taken. */
-  const portalHold = useRef(0)
   /** The charge: the beat between being taken and being asked. While it runs
    *  the flourish plays and the helm is dead weight — the portal has her. */
   const [portalCharge, setPortalCharge] = useState(false)
+  /** The island berths this captain has taught the portal. Local, so a purchase
+   *  lands in the sheet without a reload — same shape as the tier. */
+  const [portalPorts, setPortalPorts] = useState<string[]>(portal.ports)
   const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (chargeTimer.current) clearTimeout(chargeTimer.current) }, [])
   const [portalTier, setPortalTier] = useState(portal.tier)
@@ -2313,9 +2319,12 @@ export default function SeaMap({
       x: PORTAL.x, y: PORTAL.y, r: PORTAL.r,
       accent: parseInt(t.accent.slice(1), 16),
       tier: t.tier,
-      locked: !portalStone,
+      // DEAD WATER only when the portal can reach NOTHING. A stone is no longer
+      // the whole story: a captain with a berth and no stone has somewhere to
+      // go, and water that reads as dead while it works is worse than no cue.
+      locked: !portalStone && portalPorts.length === 0,
     }
-  }, [portalTier, portalStone])
+  }, [portalTier, portalStone, portalPorts])
 
   /**
    * MIRRORED, because the frame loop below is mounted with `[]` deps and never
@@ -2459,12 +2468,31 @@ export default function SeaMap({
     // she now is, which is the same thing it does when the chart first loads.
     basinKnown.current = false
     portalIn.current = false
-    portalHold.current = 0
     setPortalOpen(false)
     vibrate([16, 40, 24])
     void saveSeaPosition(x, y, [...fogPending.current])
     fogPending.current.clear()
   }, [saveSeaPosition])
+
+  /** Teaching the portal a berth. Same shape as buyTier, and deliberately not
+   *  folded into it: one is a rung on a ladder and the other is one of a set,
+   *  and a single function taking a discriminator would have to re-explain that
+   *  difference at every call site. */
+  const buyPort = useCallback(async (id: string) => {
+    if (portalBusy) return
+    setPortalBusy(true)
+    setPortalErr(null)
+    try {
+      const res = await buyPortalPort(id)
+      if ('error' in res) setPortalErr(res.error)
+      else {
+        setPortalPorts(res.ports)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+        vibrate([0, 30, 40, 60])
+      }
+    } catch { setPortalErr('That did not go through. Try again.') }
+    setPortalBusy(false)
+  }, [portalBusy])
 
   const buyTier = useCallback(async () => {
     if (portalBusy) return
@@ -3613,6 +3641,18 @@ export default function SeaMap({
     // could be offered matters while the water is refusing to let her past.
     if (heldBy) return { act: null, hold: heldBy.shut ?? 'The way is shut' }
 
+    // THE PORTAL, when you are floating in it. Above the campaign for the same
+    // reason the way home is: nothing else is inside that ring, and a captain
+    // sitting in the middle of one has already decided.
+    // NO STONE GATE ON THE DOOR ANY MORE. It used to refuse to open at all
+    // without one, which was right while the only thing inside was the band
+    // ladder. The berths need no stone — see PORTAL_PORTS — so a stoneless
+    // captain standing in their own portal was being locked out of the half of
+    // it that was for sale.
+    if (inPortalNow && !inAnchorage) {
+      return { act: 'Step through the portal', hold: null }
+    }
+
     // THE WAY HOME, when you are floating in one. Above the campaign: nothing
     // else in this water is within three hundred pixels of it, and a captain
     // sitting in the mouth of a portal has already decided.
@@ -4700,66 +4740,33 @@ export default function SeaMap({
       // same test that moors you at the Mainland, with the same drawn berth
       // and the same prompt. Nothing opens because you drifted near one.
 
-      // ── HOLDING STATION OVER THE EYE ───────────────────────────────
+      // ── ARE YOU STANDING IN THE PORTAL? ────────────────────────────
       //
-      // Two narrowings, in order. First the EYE rather than the mouth, because
-      // brushing the rim used to pop the sheet and that made the ring a
-      // tripwire to steer around. Then a HOLD, because reaching the eye was
-      // still a tripwire — just a smaller one: cross the middle at speed on
-      // your way somewhere and the sea grabbed you.
+      // That is the whole of it now, and both halves of what it used to be
+      // were wrong.
       //
-      // So it counts. Stay in the eye for PORTAL_DWELL and the portal takes
-      // her; leave early and it is nothing, with no partial credit for
-      // circling. Sailing straight across now costs you exactly nothing, which
-      // is what lets the ring sit in open water without being an obstacle.
+      // IT TOOK YOU BY ITSELF. Hold station in the middle for a second and the
+      // sea simply grabbed you and opened a sheet. A thing that acts on you
+      // without being asked has to be either unmissable or avoidable, and this
+      // was neither: sailing across your own portal on the way somewhere else
+      // took you somewhere else again.
       //
-      // Leaving the whole MOUTH is still what re-arms it, so the sheet cannot
-      // reopen the frame after it is dismissed.
-      const inEye = inPortalEye(pos.current.x, pos.current.y)
+      // AND THE PART THAT COUNTED WAS TINY. An 80px eye inside a 230px ring, on
+      // a boat 210 long — most of the painted ring did nothing, so the thing
+      // you could see and the thing that worked were different sizes and only
+      // one of them was drawn.
+      //
+      // So: the whole mouth counts, and it offers. See the helm.
       const inMouth = inPortal(pos.current.x, pos.current.y)
-
-      // THE COUNT is gated: you cannot be taken with a rod out, a sheet up, or
-      // no stone. Holding station over dead water counts nothing and says so by
-      // the water not answering — see the well's `locked`.
-      if (!sideRef.current && !fishingIn && portalStoneRef.current) {
-        if (portalIn.current) {
-          // Taken already. Waiting to leave.
-          if (!inMouth) portalIn.current = false
-          portalHold.current = 0
-        } else if (inEye) {
-          portalHold.current += dt
-          if (portalHold.current >= PORTAL_DWELL) {
-            portalIn.current = true
-            portalHold.current = 0
-            // THE PORTAL HAS HER. Course and way both die here, which is what
-            // separates being taken by something from tapping a button on it.
-            vel.current.x = 0; vel.current.y = 0
-            target.current = { ...pos.current }
-            setPortalCharge(true)
-            vibrate([12, 50, 18, 50, 26])
-            chargeTimer.current = setTimeout(() => {
-              setPortalCharge(false)
-              setPortalOpen(true)
-            }, 1050)
-          }
-        } else {
-          portalHold.current = 0
-        }
-      } else {
-        portalHold.current = 0
+      if (inMouth !== portalIn.current) {
+        portalIn.current = inMouth
+        setInPortalNow(inMouth)
       }
 
-      // THE PICTURE IS NOT. Published outside the gate and every frame, for two
-      // separate reasons: a second of nothing happening is indistinguishable
-      // from a second of it not working, so the wind-up has to be visible and
-      // the four-a-second proximity tick is far too coarse to read as one; and
-      // if it only published while you could be taken, casting a line inside the
-      // ring would leave the water frozen mid-gather with nothing counting.
-      gpuRef.current?.portal(
-        gpuPortalRef.current,
-        inMouth,
-        Math.min(1, portalHold.current / PORTAL_DWELL),
-      )
+      // THE WATER STILL ANSWERS, it just does not take you. Standing in the
+      // ring gathers it; that is the cue that the thing is live and that the
+      // helm has something for you.
+      gpuRef.current?.portal(gpuPortalRef.current, inMouth, inMouth ? 1 : 0)
 
       if (R > rim) {
         const nx2 = (pos.current.x - home.x) / R, ny2 = (pos.current.y - home.y) / R
@@ -6812,6 +6819,84 @@ hullRef={hullRefFor(t.key)} />
               })}
             </div>
 
+            {/* ── AND THE BERTHS ────────────────────────────────────────
+                The bands answer "get me back OUT to deep water". These answer
+                the other half of a long sail, which is getting back IN: you
+                finish in the Ancient Deep with a full hold and twenty thousand
+                pixels of ocean between you and anywhere that will take it.
+
+                A set rather than a ladder, so they are bought in whatever order
+                a captain actually wants them, and no stone — see PORTAL_PORTS
+                for why the price is the whole gate. */}
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.56rem', letterSpacing: '0.18em',
+              color: 'rgba(168,146,255,0.75)', margin: '1.1rem 0 0.5rem',
+            }}>Berths</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {PORTAL_PORTS.map(pt => {
+                const owned = portalPorts.includes(pt.id)
+                return (
+                  <div key={pt.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '0.6rem 0.7rem', borderRadius: 12,
+                    background: owned ? `${pt.accent}14` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${owned ? `${pt.accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}>
+                    <div aria-hidden style={{
+                      width: 12, height: 12, borderRadius: 3, flexShrink: 0,
+                      background: pt.accent, boxShadow: owned ? `0 0 10px ${pt.accent}` : 'none',
+                      opacity: owned ? 1 : 0.4,
+                    }} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p className="font-cinzel font-700" style={{
+                        fontSize: '0.9rem', margin: 0,
+                        color: owned ? '#ecdcbd' : 'rgba(214,226,236,0.75)',
+                      }}>{pt.name}</p>
+                      {!owned && (
+                        <p className="font-karla" style={{
+                          fontSize: '0.7rem', margin: '1px 0 0',
+                          color: 'rgba(214,226,236,0.65)',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}>
+                          {pt.cost.toLocaleString()} ⟡
+                          {pt.id === 'gunwharf' ? ' · the far side of the reef' : ''}
+                        </p>
+                      )}
+                    </div>
+                    {owned ? (
+                      <button type="button" data-no-steer
+                        onClick={() => warpTo(pt.to.x, pt.to.y)}
+                        className="tap font-cinzel font-700" style={{
+                          flexShrink: 0, padding: '0.45rem 0.85rem', borderRadius: 10, cursor: 'pointer',
+                          background: `${pt.accent}22`, border: `1px solid ${pt.accent}66`,
+                          color: '#eef4f8', fontSize: '0.8rem',
+                        }}>
+                        Sail
+                      </button>
+                    ) : (
+                      // NO AFFORD CHECK, because the chart does not hold the
+                      // purse — it dispatches doubloon changes for the nav to
+                      // read and never keeps a copy. The ladder above takes the
+                      // same line: offer it, and let the server say the price
+                      // if it cannot be paid. One number, on the server, which
+                      // is the one that decides anyway.
+                      <button type="button" data-no-steer onClick={() => void buyPort(pt.id)}
+                        disabled={portalBusy}
+                        className="tap font-karla font-700" style={{
+                          flexShrink: 0, padding: '0.45rem 0.7rem', borderRadius: 10,
+                          cursor: portalBusy ? 'default' : 'pointer',
+                          background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.5)',
+                          color: '#f6dfa0', fontSize: '0.74rem',
+                        }}>
+                        {portalBusy ? 'Working…' : 'Teach it'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
             {portalErr && (
               <p className="font-karla font-600" style={{
                 fontSize: '0.74rem', color: '#e6a0a0', margin: '0.6rem 0 0', lineHeight: 1.45,
@@ -7188,6 +7273,15 @@ hullRef={hullRefFor(t.key)} />
             // swallowing the tap keeps it from falling through to whatever else
             // happens to be in reach.
             return false
+          }
+          if (inPortalNow && !inAnchorage) {
+            vibrate([12, 50, 18])
+            // Course and way both die here, which is what separates stepping
+            // into something from tapping a button beside it.
+            vel.current.x = 0; vel.current.y = 0
+            target.current = { ...pos.current }
+            setPortalOpen(true)
+            return true
           }
           if (nearWayHome && wayHomeOpen(nearWayHome, clearedNodes)) {
             vibrate([12, 50, 18, 50, 26])

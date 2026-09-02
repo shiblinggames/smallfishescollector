@@ -214,7 +214,7 @@ export default function HomeClient({
             not a room and this component is what knows about outside. */}
 
         <div style={{ marginTop: 14 }}>
-          <RoomView home={home} unlocked={unlocked} pets={pets}
+          <RoomView home={home} unlocked={unlocked} stamps={stamps} pets={pets}
             species={species} giants={giants} guest={guest}
             onIsland={() => { vibrate(6); setRoom('island') }}
             onInside={() => setRoom('inside')}
