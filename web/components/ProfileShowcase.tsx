@@ -19,6 +19,7 @@ import { getRaidItem, isAbyssalForgedItem, type RaidItemDef } from '@/lib/raidIt
 import { SPECIAL_ITEMS, type SpecialItemDef } from '@/lib/specialItems'
 import { SHINY_THEME, SHINY_FISH_FILTER } from '@/lib/shiny'
 import { PRESTIGE_MAX } from '@/lib/zoneRewards'
+import { fishImageUrl } from '@/lib/fishArt'
 
 // Prestige badge chrome — translucent tinted gold (no solid fill; max is set
 // apart by a brighter gold + soft glow, staying in theme with the rest).
@@ -40,9 +41,6 @@ export interface RarestFish {
   sell_value?: number
 }
 
-function fishImageUrl(name: string) {
-  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
-}
 
 /** Rarity accent + label, with the Ancient Deep giants getting their own violet. */
 function rarityMeta(fish: RarestFish): { color: string; label: string; ancient: boolean } {

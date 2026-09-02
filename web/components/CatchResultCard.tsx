@@ -29,9 +29,13 @@ export const RARITY: Record<number, { label: string; color: string; hookedText: 
   5: { label: 'Legendary', color: '#f59e0b', hookedText: "SOMETHING MASSIVE IS ON THE LINE!" },
 }
 
-export function fishImageUrl(name: string) {
-  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
-}
+/** RE-EXPORTED, NOT DEFINED. It lives in lib/fishArt now, because a pure string
+ *  function in a 'use client' file cannot be called from a server component and
+ *  the Homestead was doing exactly that. Kept here so the client components that
+ *  already import it from this file keep working; anything on the server must
+ *  import it from the lib. */
+import { fishImageUrl } from '@/lib/fishArt'
+export { fishImageUrl }
 
 export function FishImg({ name, style }: { name: string; style?: React.CSSProperties }) {
   return (

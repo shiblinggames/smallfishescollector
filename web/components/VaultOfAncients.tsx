@@ -17,13 +17,11 @@
 // the entire endgame ladder, and it is the thing worth showing off.
 
 import { VIGIL_FRAME, VIGIL_MAX_RANK, vigilNumeral, type VigilState } from '@/lib/ancientVigil'
+import { fishImageUrl } from '@/lib/fishArt'
 
 const CARD_RADIUS = 18
 
 /** Full-size fish art, matching the profile's own path convention. */
-function fishImageUrl(name: string) {
-  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
-}
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI']
 const ANCIENT_GIANTS: { id: number; name: string; epithet: string; accent: string }[] = [

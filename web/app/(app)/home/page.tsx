@@ -6,7 +6,7 @@
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCachedFishSpecies } from '@/lib/fishSpecies'
-import { fishImageUrl } from '@/components/CatchResultCard'
+import { fishImageUrl } from '@/lib/fishArt'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { canSail } from '@/lib/seaAccess'
 import { getHomestead } from './actions'

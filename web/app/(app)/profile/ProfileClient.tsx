@@ -32,6 +32,7 @@ import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS, effectiveSpecialDef, type SpecialItemId } from '@/lib/specialItems'
 import PopupShell from '@/components/PopupShell'
+import { fishImageUrl } from '@/lib/fishArt'
 
 interface Props {
   email: string
@@ -84,9 +85,6 @@ function avatarColor(str: string) {
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 
-function fishImageUrl(name: string) {
-  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
-}
 
 // ── Vault of the Ancients ────────────────────────────────────────────────────
 // The trophy case for the 6 Ancient Deep giants. Once the first is landed, ALL six
