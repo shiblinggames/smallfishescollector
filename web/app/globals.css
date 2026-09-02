@@ -2587,33 +2587,12 @@ body.hardcore-gauntlet::after {
   100% { transform: scale(1.85); opacity: 0; }
 }
 
-/* ── THE HOMESTEAD PORTAL ────────────────────────────────────────────────────
-   Flat on the water, so no counter-squash — the ellipse the plane makes of it
-   is correct. The swirl breathes and the inner rim turns; both are transforms
-   on their own elements, so the loop never has to know they exist. */
-.sea-portal-swirl { animation: seaPortalBreathe 5.2s ease-in-out infinite; }
-.sea-portal-core  { animation: seaPortalBreathe 3.4s ease-in-out infinite; }
-
-/* ── THE PORTAL'S FLAMES ─────────────────────────────────────────────────────
-   A teardrop in two gradients: a white core low in the shape, the accent's
-   glow around it. The flicker is scale and opacity ONLY, hinged at the base
-   like a real flame, so a dozen of them cost the compositor a dozen tiny
-   transforms and nothing ever repaints. */
-.sea-flame {
-  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
-  background:
-    radial-gradient(ellipse 42% 34% at 50% 68%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 74%),
-    radial-gradient(ellipse 50% 50% at 50% 55%, var(--flame, #a78bfa) 0%, transparent 78%);
-  filter: none;
-  transform-origin: 50% 100%;
-  animation: seaFlameFlicker 2.1s ease-in-out infinite;
-}
-@keyframes seaFlameFlicker {
-  0%, 100% { transform: scale(1, 1); opacity: 0.85; }
-  28%      { transform: scale(0.92, 1.12) rotate(-2deg); opacity: 1; }
-  55%      { transform: scale(1.06, 0.94) rotate(1.6deg); opacity: 0.78; }
-  80%      { transform: scale(0.96, 1.06); opacity: 0.95; }
-}
+/* THE PORTAL'S RING, ITS CORE AND ITS TWELVE FLAMES lived here. All three
+   belonged to a painted neon sigil that has been replaced by a hole in the
+   water, drawn with the berths on the canvas — see seaPortalWell. Nothing on
+   this chart needs a CSS flame any more, and the well breathes on the frame
+   loop rather than on a keyframe, because a thing the water is doing should
+   answer to the same clock the water does. */
 
 /* The charge beam's rising light: one doubled layer sliding half its own
    height, so the loop is seamless and the only thing that moves is a
@@ -2623,13 +2602,8 @@ body.hardcore-gauntlet::after {
   from { transform: translateY(-50%); }
   to   { transform: translateY(0); }
 }
-@keyframes seaPortalBreathe {
-  0%, 100% { transform: scale(1); opacity: 0.85; }
-  50%      { transform: scale(1.05); opacity: 1; }
-}
 @media (prefers-reduced-motion: reduce) {
-  .sea-portal-swirl, .sea-portal-core, .sea-beam-streaks { animation: none; }
-  .sea-flame { animation: none; opacity: 0.9; }
+  .sea-beam-streaks { animation: none; }
 }
 
 /* THE HELM is a thumb control. A mouse has the whole window to point at and

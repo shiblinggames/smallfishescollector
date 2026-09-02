@@ -52,6 +52,7 @@ import { makeCaptain, makeShip, lookKey, type Captain, type CaptainLook } from '
 import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
+import { makePortalWell, type PortalWell, type PortalWellSpec } from './seaPortalWell'
 import { makeTowns, type Towns, type GpuTown } from './seaTown'
 import { makePath, type SeaPath } from './seaPath'
 import { BOATS } from '@/lib/boats'
@@ -139,6 +140,9 @@ export type GpuHandle = {
   /** Which berth she is standing in, or null. Eased on the far side, so this
    *  can be called every frame or only on change. */
   berth(id: string | null): void
+  /** The portal's tier can change mid-session (you buy one), and whether
+   *  you are standing in it changes every frame you cross the rim. */
+  portal(spec: PortalWellSpec, inside: boolean): void
   /**
    * EVERYONE ELSE ON THE WATER, every frame.
    *
@@ -178,7 +182,7 @@ export type GpuHandle = {
 }
 
 export default function SeaIslandsGPU({
-  islands, marks, captain, ship, fleet, berths, towns, occluders, handle,
+  islands, marks, captain, ship, fleet, berths, portal, towns, occluders, handle,
 }: {
   islands: GpuIsland[]
   marks: GpuMark[]
@@ -192,6 +196,8 @@ export default function SeaIslandsGPU({
   ship: { url: string; flip: boolean } | null
   /** Where a boat can be tied up. Static, so read once. */
   berths: BerthSpec[]
+  /** The homestead portal, as a place on the water. One per chart. */
+  portal: PortalWellSpec
   /** The tall scenery that can stand between the camera and the hull. Static,
    *  and a subset of `marks` — see the note where the front pass is built. */
   occluders: GpuMark[]
@@ -234,6 +240,7 @@ export default function SeaIslandsGPU({
   // Read once. Both lists are derived from static chart data, so re-baking on a
   // parent render would be pure waste.
   const berthRef = useRef(berths)
+  const portalRef = useRef(portal)
   const townRef = useRef(towns)
   const occRef = useRef(occluders)
   const listRef = useRef(islands)
@@ -378,6 +385,14 @@ export default function SeaIslandsGPU({
       // DOM's too, and for the same reason.
       const berthLayer: Berths = makeBerths(PIXI, berthRef.current)
       world.addChild(berthLayer.view)
+
+      // ── AND THE ONE THAT IS NOT A MOORING ─────────────────────────
+      // Beside the berths, in the same slot in the display list and for the
+      // same reason: it lies on the water and the land paints over it. It
+      // borrows the berth's whole vocabulary and inverts every part of it, so
+      // sitting them next to each other here is the honest arrangement.
+      const portalWell: PortalWell = makePortalWell(PIXI, portalRef.current)
+      world.addChild(portalWell.view)
 
       // ── AND WHAT SHE LEAVES BEHIND ────────────────────────────────
       // In the world for the same reason the flecks are: a wake that travels
@@ -757,6 +772,7 @@ export default function SeaIslandsGPU({
         }
         wake.lay(contacts)
         berthLayer.advance(t, dt, camX, camY, halfW, halfH)
+        portalWell.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
         guide.advance(t)
         for (const sw of swayers) {
@@ -853,6 +869,9 @@ export default function SeaIslandsGPU({
           // gives up much less to the hour than the water around it. Most of
           // the point of a lit berth is that it is still lit after dark.
           berthLayer.night(nightTint(d * 0.3, w))
+          // A hole in the water takes the hour like the water does. It is
+          // not a lamp and it should not stay bright when nothing else is.
+          portalWell.night(tint)
           // The buildings take the hour at the same strength the land does —
           // they are standing on it. The second number is the town's own lights
           // coming up, which is the one thing on the chart that gets BRIGHTER
@@ -869,6 +888,7 @@ export default function SeaIslandsGPU({
         },
         guide(from, to, radius) { guide.set(from, to, radius) },
         berth(id) { berthLayer.setActive(id) },
+        portal(spec, inside) { portalWell.setSpec(spec); portalWell.setActive(inside) },
         front(list) {
           nearWanted.clear()
           for (const i of list) nearWanted.add(i)

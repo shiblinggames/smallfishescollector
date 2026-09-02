@@ -2127,6 +2127,38 @@ export default function SeaMap({
   const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (chargeTimer.current) clearTimeout(chargeTimer.current) }, [])
   const [portalTier, setPortalTier] = useState(portal.tier)
+
+  /**
+   * WHAT THE WELL IS DRAWN FROM. Memoised on the tier, because the layer keeps
+   * whatever object it is handed and a fresh one every render would be a new
+   * spec sixty times a second for a fact that changes when you buy something.
+   *
+   * The accent is the destination band's own colour, parsed out of the hex the
+   * tier table already carries: Pixi tints are numbers, and keeping one source
+   * of that colour beats a second table that can disagree with the first.
+   */
+  const gpuPortal = useMemo(() => {
+    const t = PORTAL_TIERS.find(p => p.tier === portalTier) ?? PORTAL_TIERS[0]
+    return {
+      x: PORTAL.x, y: PORTAL.y, r: PORTAL.r,
+      accent: parseInt(t.accent.slice(1), 16),
+      tier: t.tier,
+    }
+  }, [portalTier])
+
+  /**
+   * MIRRORED, because the frame loop below is mounted with `[]` deps and never
+   * re-runs. Reading `gpuPortal` from its closure would pin the well to
+   * whatever tier you logged in on: buy the Abyss and the water would not
+   * deepen until you reloaded. The house trap, and the house answer.
+   */
+  const gpuPortalRef = useRef(gpuPortal)
+  useEffect(() => {
+    gpuPortalRef.current = gpuPortal
+    // And push it straight away rather than waiting for the next proximity
+    // tick, so the well deepens on the frame the purchase lands.
+    gpuRef.current?.portal(gpuPortal, inPortal(pos.current.x, pos.current.y))
+  }, [gpuPortal])
   useEffect(() => { setPortalTier(portal.tier) }, [portal.tier])
   const [portalComponents, setPortalComponents] = useState(portal.components)
   useEffect(() => { setPortalComponents(portal.components) }, [portal.components])
@@ -5132,6 +5164,9 @@ export default function SeaMap({
         // proximity tick rather than every frame: this changes when you arrive
         // somewhere, which is not sixty times a second.
         gpuRef.current?.berth(found?.kind === 'port' ? found.id : null)
+        // AND THE WELL. Same tick and the same reason: whether you are floating
+        // in the portal changes when you sail into it, not sixty times a second.
+        gpuRef.current?.portal(gpuPortalRef.current, inPortal(pos.current.x, pos.current.y))
 
         // ── WHAT IS IN FRONT OF HER RIGHT NOW ──────────────────────────
         // `m.y` is a mark's BASE — SeaMark anchors at translate(-50%,-100%) —
@@ -5334,7 +5369,7 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
-            ship={gpuShip} fleet={gpuFleet} berths={gpuBerths} towns={gpuTowns}
+            ship={gpuShip} fleet={gpuFleet} berths={gpuBerths} portal={gpuPortal} towns={gpuTowns}
             occluders={gpuOccluders} handle={gpuRef} />
         </div>
       )}
@@ -5420,7 +5455,11 @@ export default function SeaMap({
             grounds it would be a sign for a door behind a wall. */}
         {inAnchorage && <SortieSign />}
         {/* The Homestead Portal, wearing the deepest band it can reach. */}
-        {!inAnchorage && <PortalRing tier={portalTier} />}
+        {/* PortalRing LIVED HERE. The portal is a place on the water now,
+            drawn with the berths in seaPortalWell — see its header for why a
+            painted neon sigil was the wrong object on this chart. The BEAM
+            below stays: that is the warp firing, which is an event and not a
+            place, and it was never the part that looked wrong. */}
         {/* The charge stands on the RING, not the hull: the painted band is
             the cylinder's footprint, so the ring itself is what flares. */}
         <AnimatePresence>
@@ -8299,102 +8338,12 @@ const ShipAtBerth = memo(function ShipAtBerth({ shipTier }: { shipTier: number }
   )
 })
 
-/**
- * THE HOMESTEAD PORTAL'S RING, on the water.
- *
- * A hotspot, not a building: it lies ON the plane (no counter-squash — it is
- * a shape the water makes, like the fishing hotspots), you can sail straight
- * through it, and doing so is what opens it.
- *
- * It wears the deepest band it can reach: each tier's accent is the
- * destination band's own palette, so an upgraded portal visibly deepens. The
- * standing stones at the rim are the only vertical part, and they carry the
- * counter-squash the flat ring must not have.
- */
-const PortalRing = memo(function PortalRing({ tier }: { tier: number }) {
-  const t = PORTAL_TIERS.find(p => p.tier === tier) ?? PORTAL_TIERS[0]
-  /**
-   * PAINTED, one plate per tier, and every plate is a HOLLOW ring.
-   *
-   * The art is a top-down sigil lying on the water — no arch, no standing
-   * stones, nothing vertical — because the one thing this structure must
-   * never look like is a wall. The centre is open in the PNG itself, so the
-   * boat visibly sails INTO the ring, floats inside it while the sheet is up,
-   * and out the far side. The world layer's squash turns the flat circle into
-   * the right ellipse for free.
-   *
-   * Each tier is its own painting, escalating from a pale ring of lights to
-   * the Ancient Deep's glyph-dense masterwork — the upgrade is the art now,
-   * not a tint on one shape. The CSS keeps only two jobs: the slow breathe,
-   * and the tier-5 core light, which reads better as living glow than as
-   * paint.
-   *
-   * The CROSSING radius stays PORTAL.r whatever the plate looks like — a
-   * hitbox that grows with cosmetics is how cosmetics stop being cosmetic.
-   */
-  return (
-    <div aria-hidden style={{ position: 'absolute', left: PORTAL.x, top: PORTAL.y, pointerEvents: 'none' }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/sea/portal-t${t.tier}.png`} alt="" draggable={false}
-        width={640} height={640} decoding="async" loading="lazy"
-        className="sea-portal-swirl"
-        style={{
-          position: 'absolute', left: -PORTAL.r * 1.15, top: -PORTAL.r * 1.15,
-          width: PORTAL.r * 2.3, height: 'auto', maxWidth: 'none', display: 'block',
-        }} />
-      {tier >= 5 && (
-        <div className="sea-portal-core" style={{
-          position: 'absolute', left: -22, top: -22, width: 44, height: 44, borderRadius: '50%',
-          background: `radial-gradient(circle, ${t.accent}ee 0%, ${t.accent}55 55%, transparent 75%)`,
-          boxShadow: `0 0 26px ${t.accent}aa`,
-        }} />
-      )}
-      {/* ── THE RIM FLAMES, tiers 4 and 5 — and they burn ──────────────
-          Drawn by the chart, not painted into the plates: paint cannot
-          flicker, and a flame that does not move is a lamp. CSS, not a
-          sprite, after the sprite route came back with the model's own
-          transparency checkerboard baked through the glow — at this size a
-          two-gradient flame is indistinguishable from paint, tints itself
-          from the tier's accent, and cannot come back dithered.
-
-          Each stands at the rim, counter-squashed like everything vertical,
-          flickering on transform and opacity only, with a prime-ish delay
-          stride so no two ever sync up — twelve flames breathing in step is
-          machinery. */}
-      {tier >= 4 && Array.from({ length: tier >= 5 ? 12 : 8 }, (_, k) => {
-        const count = tier >= 5 ? 12 : 8
-        const rad = ((k / count) * 360 - 90) * (Math.PI / 180)
-        const size = tier >= 5 ? 30 : 22
-        return (
-          <div key={k} style={{
-            position: 'absolute',
-            left: Math.cos(rad) * PORTAL.r, top: Math.sin(rad) * PORTAL.r,
-            transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-            transformOrigin: 'bottom center',
-          }}>
-            <div className="sea-flame" style={{
-              width: size * 0.62, height: size,
-              ['--flame' as string]: t.accent,
-              animationDelay: `${(k * 0.53) % 2.1}s`,
-            }} />
-          </div>
-        )
-      })}
-      <div style={{
-        position: 'absolute', left: 0, top: -PORTAL.r - 30,
-        transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
-        transformOrigin: 'bottom center', whiteSpace: 'nowrap',
-      }}>
-        <p className="font-cinzel font-700" style={{
-          fontSize: '1rem', letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0,
-          textAlign: 'center', marginRight: '-0.18em',
-          color: `${t.accent}dd`,
-          textShadow: '0 2px 14px rgba(0,0,0,0.98)',
-        }}>The Portal</p>
-      </div>
-    </div>
-  )
-})
+// PortalRing LIVED HERE, and it was five painted neon sigils: a glowing runic
+// circle per tier, cyan through magenta, escalating to a glyph-dense
+// masterwork. On a chart drawn in soft gouache with warm brown ink, over a
+// sea whose whole palette is muted blue-green, it read as an arcane monument
+// from a different game. It is a place on the water now, built out of the
+// berth's own vocabulary and inverting every part of it: see seaPortalWell.
 
 /**
  * THE CHARGE — the ring become a cylinder.
