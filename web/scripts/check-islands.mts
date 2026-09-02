@@ -160,199 +160,270 @@ if (bad) process.exitCode = 1
   if (bad) process.exit(1)
 }
 
-// ── THE CAMPAIGN'S CHANNELS ──────────────────────────────────────────────
+// ── THE CAMPAIGN'S BAYS ──────────────────────────────────────────────────
 //
-// Four roads out of one piece of open water. Four things that can each be true
-// on their own and wrong together, so each is measured rather than trusted:
+// Four bays off one junction, each behind its own strait. Five things that can
+// each be true on their own and wrong together, so each is measured:
 //
 //   1. RAID_EDGE has to hold them. It is a hand-set constant and the table is
-//      hand-authored; nothing but this stops the longest channel's head sitting
-//      past the sail limit with its boss unreachable behind it.
-//   2. NO TWO CHANNELS MAY OVERLAP. Two corridors that cross share water, and
-//      shared water is a way from an open road into a shut one without passing
-//      its mouth — the one thing a linear campaign cannot have, and the easiest
-//      thing to introduce by nudging a bearing.
-//   3. The hub, and the sortie you arrive through, have to be OUTSIDE every
-//      road, or you arrive already through a wall and its gate means nothing.
-//   4. Every channel must name a chapter that exists, and every chapter but the
-//      coda must have a road, or a mouth opens on a node id nothing will clear.
+//      hand-authored; nothing but this stops the furthest bay sitting past the
+//      sail limit with its boss unreachable behind the edge of the chart.
+//   2. NO TWO BAYS MAY TOUCH, and no strait may cross another bay. Shared water
+//      is a way from an open chapter into a shut one without passing its mouth
+//      — the one thing a linear campaign cannot have, and the easiest thing to
+//      introduce by nudging a bearing.
+//   3. The junction and the sortie have to be OUTSIDE every chapter's water, or
+//      you arrive already through a wall and its gate means nothing.
+//   4. A strait must actually REACH its bay. It is derived, so this can only go
+//      wrong by someone making a bay bigger than the run out to it — but that
+//      leaves a corridor stopping in open sea, which is not a thing to find out
+//      from a screenshot.
+//   5. Every bay must name a chapter that exists, and every chapter but the coda
+//      must have a bay, or a mouth opens on a node id nothing will ever clear.
 {
   const {
-    HUB, CHANNELS, mouthOf, headOf, raidReach, opensChannel, inChannel, toChannel,
+    HUB, HUB_R, BAY_AT, BAYS, bayCentre, mouthOf, entryOf, straitLen, raidReach,
+    opensBay, inChapterWater, toStrait,
   } = await import('../app/(app)/sea/raidWaters')
   const { RAID_EDGE, EXP_ORIGIN, SORTIE } = await import('../app/(app)/sea/chart')
   const { RAID_CHAPTERS, RAID_MAP } = await import('../lib/raidMap')
 
-  type Chan = (typeof CHANNELS)[number]
+  type B = (typeof BAYS)[number]
   let bad = 0
 
   const need = Math.round(raidReach(EXP_ORIGIN.y))
-  console.log(`\n  Raid water  (sail limit ${RAID_EDGE}, channels reach ${need})`)
+  console.log(`\n  Raid water  (sail limit ${RAID_EDGE}, bays reach ${need})`)
   if (need > RAID_EDGE) {
-    console.error(`  ✗ RAID_EDGE is ${RAID_EDGE} but the channels need ${need}`)
+    console.error(`  ✗ RAID_EDGE is ${RAID_EDGE} but the bays need ${need}`)
     bad++
   }
+  console.log(`    junction at ${HUB.x},${HUB.y}, ${HUB_R * 2} across, bays ${BAY_AT} out`)
 
-  /** A channel's four corners, in world space. Everything below is rectangles. */
-  const corners = (c: Chan) => {
-    const m = mouthOf(c)
-    const ux = Math.cos(c.bearing), uy = Math.sin(c.bearing)
-    const pt = (a: number, r: number) => ({ x: m.x + ux * a - uy * r, y: m.y + uy * a + ux * r })
-    return [pt(0, -c.half), pt(0, c.half), pt(c.length, c.half), pt(c.length, -c.half)]
+  for (const b of BAYS) {
+    if (!RAID_CHAPTERS.some(x => x.id === b.id)) {
+      console.error(`  ✗ bay '${b.id}' is not a chapter`); bad++
+    }
+    const gate = opensBay(b)
+    if (gate && !RAID_MAP.some(n => n.id === gate)) {
+      console.error(`  ✗ '${b.id}' opens on '${gate}', which is not a node`); bad++
+    }
+    const L = straitLen(b)
+    if (L < 400) {
+      console.error(`  ✗ ${b.name}'s strait is only ${L.toFixed(0)} long — the bay has eaten it`)
+      bad++
+    }
+    const c = bayCentre(b)
+    console.log(`    ${gate ? 'shut' : 'open'} ${b.name.padEnd(18)}`
+      + ` bearing ${Math.round((b.bearing * 180) / Math.PI).toString().padStart(4)}°`
+      + `  bay ${(b.r * 2).toString().padStart(4)} across at ${c.x.toFixed(0)},${c.y.toFixed(0)}`
+      + `  strait ${L.toFixed(0)}x${b.half * 2}`)
   }
 
   /**
-   * SEPARATING AXIS, on the four edge normals.
+   * DO TWO CHAPTERS SHARE ANY WATER?
    *
-   * Two convex rectangles miss each other if and only if some axis exists on
-   * which their shadows do not touch, and for rectangles only their own edge
-   * normals can be that axis. Corner containment alone would not do: two long
-   * thin boxes can cross in an X with every corner of each outside the other,
-   * which is exactly the shape a fan of channels is most likely to make.
+   * Each region is a disc and a box, so the honest test is a sweep: walk one
+   * bay's rim and its strait's outline and ask the other whether it owns any of
+   * those points, then the same the other way round. Discs and boxes have a
+   * closed-form answer each; the UNION of a disc and a box does not have a tidy
+   * one, and a wrong tidy one here reads as a working campaign right up until
+   * somebody sails through a shut door.
    */
-  const overlap = (a: Chan, b: Chan) => {
-    const ca = corners(a), cb = corners(b)
-    const axes = [
-      [Math.cos(a.bearing), Math.sin(a.bearing)], [-Math.sin(a.bearing), Math.cos(a.bearing)],
-      [Math.cos(b.bearing), Math.sin(b.bearing)], [-Math.sin(b.bearing), Math.cos(b.bearing)],
-    ]
-    for (const [ux, uy] of axes) {
-      const pa = ca.map(p => p.x * ux + p.y * uy)
-      const pb = cb.map(p => p.x * ux + p.y * uy)
-      if (Math.max(...pa) < Math.min(...pb) || Math.max(...pb) < Math.min(...pa)) return false
+  const outline = (b: B) => {
+    const pts: { x: number; y: number }[] = []
+    const c = bayCentre(b)
+    for (let t = 0; t < Math.PI * 2; t += Math.PI / 90) {
+      pts.push({ x: c.x + Math.cos(t) * b.r, y: c.y + Math.sin(t) * b.r })
     }
-    return true
+    const L = straitLen(b)
+    const m = mouthOf(b)
+    const ux = Math.cos(b.bearing), uy = Math.sin(b.bearing)
+    for (let a = 0; a <= L; a += 40) {
+      for (const s of [-1, 1]) {
+        pts.push({ x: m.x + ux * a - uy * s * b.half, y: m.y + uy * a + ux * s * b.half })
+      }
+    }
+    return pts
   }
 
-  for (const c of CHANNELS) {
-    if (!RAID_CHAPTERS.some(x => x.id === c.id)) {
-      console.error(`  ✗ channel '${c.id}' is not a chapter`); bad++
-    }
-    const gate = opensChannel(c)
-    if (gate && !RAID_MAP.some(n => n.id === gate)) {
-      console.error(`  ✗ '${c.id}' opens on '${gate}', which is not a node`); bad++
-    }
-    const h = headOf(c)
-    console.log(`    ${gate ? 'shut' : 'open'} ${c.name.padEnd(18)}`
-      + ` bearing ${Math.round((c.bearing * 180) / Math.PI).toString().padStart(4)}°`
-      + `  ${c.length}px long, ${c.half * 2} wide`
-      + `  head ${h.x.toFixed(0)},${h.y.toFixed(0)}`)
-  }
-
-  // The crossing test.
-  for (let i = 0; i < CHANNELS.length; i++) {
-    for (let j = i + 1; j < CHANNELS.length; j++) {
-      if (overlap(CHANNELS[i], CHANNELS[j])) {
-        console.error(`  ✗ ${CHANNELS[i].name} and ${CHANNELS[j].name} share water`
-          + ` — that is a way into a shut road without its mouth`)
+  for (let i = 0; i < BAYS.length; i++) {
+    for (let j = i + 1; j < BAYS.length; j++) {
+      const a = BAYS[i], b = BAYS[j]
+      const clash = outline(a).some(p => inChapterWater(b, p.x, p.y))
+        || outline(b).some(p => inChapterWater(a, p.x, p.y))
+      if (clash) {
+        console.error(`  ✗ ${a.name} and ${b.name} share water`
+          + ` — that is a way into a shut chapter without its mouth`)
         bad++
       }
     }
   }
 
-  // How much open water is left between neighbouring mouths. A junction whose
-  // mouths touch reads as one shape with slots cut in it rather than four roads.
-  for (let i = 0; i + 1 < CHANNELS.length; i++) {
-    const a = CHANNELS[i], b = CHANNELS[i + 1]
-    const ma = mouthOf(a), mb = mouthOf(b)
-    const between = Math.hypot(mb.x - ma.x, mb.y - ma.y) - a.half - b.half
-    console.log(`    ${between > 200 ? 'ok   ' : 'TIGHT'} ${between.toFixed(0).padStart(4)}px of open water`
+  // How much open sea is left between neighbouring coasts. Not a failure on its
+  // own, but bays that nearly touch read as one shape with slots cut in it.
+  for (let i = 0; i + 1 < BAYS.length; i++) {
+    const a = BAYS[i], b = BAYS[i + 1]
+    const ca = bayCentre(a), cb = bayCentre(b)
+    const between = Math.hypot(cb.x - ca.x, cb.y - ca.y) - a.r - b.r
+    console.log(`    ${between > 600 ? 'ok   ' : 'TIGHT'} ${between.toFixed(0).padStart(5)}px of open sea`
       + ` between ${a.name} and ${b.name}`)
     if (between <= 0) bad++
   }
 
-  for (const c of CHANNELS) {
-    if (inChannel(c, HUB.x, HUB.y)) { console.error(`  ✗ the hub is inside ${c.name}`); bad++ }
-    if (inChannel(c, SORTIE.x, SORTIE.y)) { console.error(`  ✗ the sortie is inside ${c.name}`); bad++ }
+  for (const b of BAYS) {
+    if (inChapterWater(b, HUB.x, HUB.y)) { console.error(`  ✗ the junction is inside ${b.name}`); bad++ }
+    if (inChapterWater(b, SORTIE.x, SORTIE.y)) { console.error(`  ✗ the sortie is inside ${b.name}`); bad++ }
   }
-  const back = CHANNELS.map(c => -toChannel(c, HUB.x, HUB.y).along)
-  console.log(`    ok    the hub sits ${Math.min(...back).toFixed(0)}px short of the nearest mouth`)
+  const back = BAYS.map(b => -toStrait(b, HUB.x, HUB.y).along)
+  console.log(`    ok    the junction's middle is ${Math.min(...back).toFixed(0)}px off the nearest mouth`)
 
   for (const ch of RAID_CHAPTERS) {
-    if (ch.coda) continue                       // the coda has no road of its own
-    if (!CHANNELS.some(c => c.id === ch.id)) {
-      console.error(`  ✗ chapter '${ch.id}' has no channel`); bad++
+    if (ch.coda) continue                       // the coda has no water of its own
+    if (!BAYS.some(b => b.id === ch.id)) {
+      console.error(`  ✗ chapter '${ch.id}' has no bay`); bad++
     }
   }
 
-  console.log(`\n  Channels: ${CHANNELS.length} placed, ${bad === 0 ? 'the fan is clean' : `${bad} problem(s)`}.`)
+  console.log(`\n  Bays: ${BAYS.length} placed, ${bad === 0 ? 'the fan is clean' : `${bad} problem(s)`}.`)
   if (bad) process.exit(1)
 }
 
 // ── WHAT STANDS IN THE CAMPAIGN'S WATER ──────────────────────────────────
 //
-// An encounter is a campaign node standing in a channel, and four things can be
+// Ships, chests, bottles, isles and gates, all placed in bay space. What can be
 // quietly wrong about one:
 //
 //   1. It names a node that does not exist — a rename in raidMap and the water
 //      points at nothing, silently, because a missing node just does not draw.
-//   2. It is in a wall, or past the head, so it is unreachable behind rock.
-//   3. It sits IN THE MOUTH, so entering the road means colliding with content.
-//   4. It sits on top of another, so one hides the other and the helm prompt
-//      flickers between them.
+//   2. It is in the coast, or past the back of the bay, so it is behind rock.
+//   3. It sits IN THE DOORWAY, so arriving means colliding with content.
+//   4. It sits on top of something else, or on an isle, so one hides the other.
+//   5. A GATE has content sitting on the line, which would leave a chest you can
+//      see, cannot reach, and cannot tell why.
 {
-  const { CHANNELS, CHANNEL_BY_ID, ENCOUNTERS, encounterAt, ENCOUNTER_REACH } =
-    await import('../app/(app)/sea/raidWaters')
+  const {
+    BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, RAID_ISLES, GATES,
+    encounterAt, cacheAt, isleAt, ENCOUNTER_REACH,
+  } = await import('../app/(app)/sea/raidWaters')
   const { RAID_MAP } = await import('../lib/raidMap')
 
   let bad = 0
   /**
    * HOW FAR APART TWO THINGS IN THE WATER HAVE TO SIT.
    *
-   * Not twice the reach. `encounterNear` takes the NEAREST, so two inside one
-   * reach ring do not flicker — the prompt just changes as you pass. What is
-   * actually at stake is that they read as two ships rather than one pile: a
-   * hull is 210 long, and one reach is the closest two of them can moor and
-   * still have open water between them.
+   * `encounterNear` takes the NEAREST, so two inside one reach ring do not
+   * flicker — the prompt just changes as you pass. What is at stake is that they
+   * read as two things rather than one pile: a hull is 210 long, and one reach
+   * is the closest two can moor with open water still between them.
    */
   const APART = ENCOUNTER_REACH
-  /** Nor closer than this to the mouth you come in through. */
-  const OFF_MOUTH = 400
-  /** Nor to a wall or the head. A boat is 210 long and comes alongside. */
-  const OFF_WALL = 260
+  /** Nor closer than this to the doorway you come in through. */
+  const OFF_DOOR = 500
+  /** Nor to the coast. A boat is 210 long and comes alongside. */
+  const OFF_COAST = 300
+  /** Nor to a gate, either side of it. */
+  const OFF_GATE = 380
 
-  console.log(`\n  Encounters  (${ENCOUNTERS.length} placed)`)
-  for (const e of ENCOUNTERS) {
-    const node = RAID_MAP.find(n => n.id === e.node)
-    const c = CHANNEL_BY_ID[e.channel]
-    if (!node) { console.error(`  ✗ '${e.node}' is not a node in RAID_MAP`); bad++; continue }
-    if (!c) { console.error(`  ✗ '${e.node}' is in channel '${e.channel}', which does not exist`); bad++; continue }
+  type Thing = { id: string; kind: string; bay: string; along: number; across: number; r: number }
+  const things: Thing[] = [
+    ...ENCOUNTERS.map(e => ({ id: e.node, kind: 'ship', bay: e.bay, along: e.along, across: e.across, r: 0 })),
+    ...CACHES.map(c => ({ id: c.node, kind: c.kind, bay: c.bay, along: c.along, across: c.across, r: 0 })),
+    ...RAID_ISLES.map(i => ({ id: i.id, kind: 'isle', bay: i.bay, along: i.along, across: i.across, r: i.r })),
+  ]
 
-    const room = c.half - Math.abs(e.across)
-    const ahead = c.length - e.along
-    const ok = room > OFF_WALL && ahead > OFF_WALL && e.along > OFF_MOUTH
+  console.log(`\n  In the water  (${ENCOUNTERS.length} ships, ${CACHES.length} caches,`
+    + ` ${RAID_ISLES.length} isles, ${GATES.length} gate(s))`)
+
+  for (const t of things) {
+    const b = BAY_BY_ID[t.bay]
+    if (!b) { console.error(`  ✗ '${t.id}' is in bay '${t.bay}', which does not exist`); bad++; continue }
+    if (t.kind !== 'isle' && !RAID_MAP.some(n => n.id === t.id)) {
+      console.error(`  ✗ '${t.id}' is not a node in RAID_MAP`); bad++; continue
+    }
+
+    // How far inside the coast it sits. The bay is a disc whose centre is `r`
+    // up the axis from the door, so this is one hypot.
+    const room = b.r - Math.hypot(t.along - b.r, t.across) - t.r
+    const ok = room > OFF_COAST && t.along > OFF_DOOR
     if (!ok) bad++
 
-    console.log(`    ${ok ? 'ok  ' : 'OFF '} ${node.type.padEnd(10)} ${e.node.padEnd(18)}`
-      + ` ${e.along.toString().padStart(4)}px up ${c.id.padEnd(16)}`
-      + ` ${room.toFixed(0).padStart(4)}px off the wall, ${ahead.toFixed(0).padStart(4)}px short of the head`)
+    console.log(`    ${ok ? 'ok  ' : 'OFF '} ${t.kind.padEnd(7)} ${t.id.padEnd(18)}`
+      + ` ${t.along.toString().padStart(4)}px up ${t.bay.padEnd(14)}`
+      + ` ${room.toFixed(0).padStart(4)}px off the coast`)
   }
 
-  for (let i = 0; i < ENCOUNTERS.length; i++) {
-    for (let j = i + 1; j < ENCOUNTERS.length; j++) {
-      const a = encounterAt(ENCOUNTERS[i]), b = encounterAt(ENCOUNTERS[j])
-      if (!a || !b) continue
-      const d = Math.hypot(a.x - b.x, a.y - b.y)
-      if (d < APART) {
-        console.error(`  ✗ ${ENCOUNTERS[i].node} and ${ENCOUNTERS[j].node} are ${d.toFixed(0)}px apart`)
+  for (let i = 0; i < things.length; i++) {
+    for (let j = i + 1; j < things.length; j++) {
+      const a = things[i], b = things[j]
+      if (a.bay !== b.bay) continue
+      const d = Math.hypot(a.along - b.along, a.across - b.across) - a.r - b.r
+      // An isle is where a chest BELONGS, so a chest against one is the point
+      // rather than a clash. Everything else has to keep its distance.
+      const pair = [a.kind, b.kind]
+      const chestOnIsle = pair.includes('isle') && (pair.includes('chest') || pair.includes('bottle'))
+      const need = chestOnIsle ? 40 : APART
+      if (d < need) {
+        console.error(`  ✗ ${a.id} and ${b.id} are ${d.toFixed(0)}px apart (wants ${need})`)
         bad++
       }
     }
   }
 
-  // Every road that has content needs a way to finish it: the chapter's own
-  // boss. A channel of story and no fight cannot be cleared from the water.
-  for (const c of CHANNELS) {
-    const here = ENCOUNTERS.filter(e => e.channel === c.id)
+  for (const g of GATES) {
+    const b = BAY_BY_ID[g.bay]
+    if (!b) { console.error(`  ✗ gate '${g.node}' is in bay '${g.bay}', which does not exist`); bad++; continue }
+    if (!RAID_MAP.some(n => n.id === g.node)) {
+      console.error(`  ✗ gate opens on '${g.node}', which is not a node`); bad++; continue
+    }
+    // The thing that OPENS a gate has to be in front of it, or the bay cannot
+    // be finished from inside itself.
+    const opener = things.find(t => t.id === g.node)
+    if (!opener) {
+      console.error(`  ✗ gate '${g.node}' has nothing in the water to open it`); bad++
+    } else if (opener.along >= g.at) {
+      console.error(`  ✗ gate '${g.node}' is opened by something BEHIND it`); bad++
+    }
+    let clash = 0
+    for (const t of things) {
+      if (t.bay !== g.bay) continue
+      if (Math.abs(t.along - g.at) - t.r < OFF_GATE) {
+        console.error(`  ✗ ${t.id} sits on the '${g.node}' gate line`); bad++; clash++
+      }
+    }
+    const behind = things.filter(t => t.bay === g.bay && t.along > g.at).length
+    console.log(`    ${clash === 0 ? 'ok  ' : 'OFF '} gate    ${g.node.padEnd(18)}`
+      + ` at ${g.at}, ${behind} thing(s) behind it`)
+    if (behind === 0) { console.error(`  ✗ nothing is behind the '${g.node}' gate — it gates empty water`); bad++ }
+  }
+
+  // Every bay with content needs a way to finish it: the chapter's own boss.
+  // A bay of story and no fight cannot be cleared from the water.
+  for (const b of BAYS) {
+    const here = things.filter(t => t.bay === b.id)
     if (here.length === 0) continue
-    const fights = here.filter(e => {
+    const fights = ENCOUNTERS.filter(e => e.bay === b.id).filter(e => {
       const n = RAID_MAP.find(x => x.id === e.node)
       return n && (n.type === 'raid' || n.type === 'skirmish')
     })
-    console.log(`    ${c.name}: ${here.length} placed, ${fights.length} of them fights`)
-    if (fights.length === 0) { console.error(`  ✗ ${c.name} has no fight in it`); bad++ }
+    console.log(`    ${b.name}: ${here.length} placed, ${fights.length} of them fights`)
+    if (fights.length === 0) { console.error(`  ✗ ${b.name} has no fight in it`); bad++ }
   }
 
-  console.log(`\n  Encounters: ${bad === 0 ? 'all placed cleanly' : `${bad} problem(s)`}.`)
+  // AND THE ART EACH COAST IS BUILT FROM HAS TO BE ON DISK. A missing sprite is
+  // not an error anywhere — it simply does not draw — and a coast with holes in
+  // it looks exactly like a coast with ways through it.
+  const { readdir } = await import('node:fs/promises')
+  const files = new Set(await readdir('public/sea'))
+  for (const b of BAYS) {
+    const n = [...files].filter(f => f.startsWith(`rock-${b.rocks}-`) && f.endsWith('.png')).length
+    if (n < 3) {
+      console.error(`  ✗ ${b.name} is built from 'rock-${b.rocks}-*' and only ${n} exist`)
+      bad++
+    } else {
+      console.log(`    ok   ${b.name.padEnd(18)} ${n} rock(s) of its own`)
+    }
+  }
+
+  console.log(`\n  In the water: ${bad === 0 ? 'all placed cleanly' : `${bad} problem(s)`}.`)
   if (bad) process.exit(1)
 }
