@@ -30,17 +30,19 @@
 // isles you come across rather than pass, caches on them, and the boss's water
 // at the far end. The campaign stays strictly ordered and stops being a queue.
 //
-// ── AND THE ORDER IS KEPT BY GATES, NOT BY WALLS ────────────────────────────
+// ── AND A BAY IS A ROUTE, NOT AN ARENA ──────────────────────────────────────
 //
-// Inside a bay the order comes from GATES: lines across the water you cannot
-// cross until the thing that opens them is done. A puzzle is a gate — that is
-// what a puzzle IS out here, an invisible chain across the bay — and so is the
-// note that finally gives you the name of the man you are hunting. There is no
-// rock on a gate. You sail into it, the water refuses you, and the helm tells
-// you what is still owed.
+// Rock runs THROUGH a bay, not just around it: two long chains carve a lane out
+// along one side, round the far end, and back down the other. Sailing a bay is
+// following that lane past everything on it to the boss at the tip, rounding
+// him, and coming home past the second.
 //
-// So a bay reads: come in, wander, find things, hit the gate, go and do the
-// thing the gate wants, come back, and the boss's water is open.
+// That is what makes a bay linear without making it a corridor. A corridor is
+// linear because there is nowhere else to be; this is linear because somebody
+// drew a road through open water, and the water either side of the road is
+// still there and still sailable at the ends. See WALLS.
+//
+// A GATE IS A WALL WITH A NAME ON IT — one mechanism, not two. See Wall.
 
 import { SORTIE } from './chart'
 import { RAID_CHAPTERS, RAID_MAP } from '@/lib/raidMap'
@@ -296,49 +298,113 @@ export function bayOpen(b: Bay, cleared: Set<string> | string[]): boolean {
 }
 
 /**
- * ── THE GATES INSIDE A BAY ──────────────────────────────────────────────────
+ * ── THE WALLS INSIDE A BAY ──────────────────────────────────────────────────
  *
- * A line straight across the water at `at` pixels up the bay, which you cannot
- * cross until `node` is done. NO ROCK ON IT. That is the point: rock says "there
- * is no way through here" and a gate says "not yet", and those are different
- * sentences. You sail into it, the water pushes back, and the helm names what is
- * owed.
+ * A bay is not an arena with the campaign scattered in it. It is a ROAD folded
+ * up inside a circle: rock runs through the water in two long chains that carve
+ * a lane out and a lane back, and sailing the bay is following that lane past
+ * everything on it until you reach the boss at the far end, round the tip, and
+ * come back down the other side to the second.
  *
- * A PUZZLE IS A GATE. That is what the chart room's boards are doing out here —
- * a chain across the bay that comes down when the board is solved. So is a note
- * that finally gives you a name: you cannot go looking for Krust in the back of
- * his own water before you have learned he exists.
+ * That is what makes a bay linear WITHOUT being a corridor, which the fan of
+ * channels never managed. A corridor is linear because there is nowhere else to
+ * be. This is linear because somebody drew a route through open water — and the
+ * water either side of the route is still there, still sailable at the ends,
+ * still a place rather than a queue.
  *
- * Placed with a good margin either side of anything else, so the refusal is
- * never confused with bumping into something.
+ * ── A GATE IS A WALL WITH A NAME ON IT ──────────────────────────────────────
+ *
+ * There were two mechanisms here: walls, which are rock, and gates, which were
+ * a line clean across the bay at a distance up it. The second was too crude the
+ * moment the water had a shape — "across the bay at along 4400" means nothing
+ * in a lane that doubles back, and it would have cut the return leg as well as
+ * the outbound one.
+ *
+ * So there is one thing. A wall is a segment you cannot cross; a wall carrying
+ * a `node` is a wall that is only there until that node is done. Same list,
+ * same collision, same drawing, and the difference is one field.
+ *
+ * ── IN BAY SPACE, BOTH ENDS ─────────────────────────────────────────────────
+ *
+ * `[along, across]` from the bay's entry, like everything else out here, so the
+ * whole route moves and turns with the bay it belongs to.
  */
-export type Gate = {
+export type Wall = {
   bay: string
-  /** The node that opens it. */
-  node: string
-  /** How far up the bay it lies. */
-  at: number
-  /** What the helm says while it is shut. Short: it is read at speed. */
-  shut: string
+  a: [number, number]
+  b: [number, number]
+  /** Set on a gate: the node that takes it down. */
+  node?: string
+  /** What the helm says while it is up. Short: it is read at speed. */
+  shut?: string
 }
 
-export const GATES: Gate[] = [
+/**
+ * ── THE LOOSE THREAD'S ROUTE ────────────────────────────────────────────────
+ *
+ * Two chains. The OUTER one is the coast of the whole route, running from the
+ * entry out along the western side, round the far end and back along the
+ * eastern. The INNER one is a finger that reaches out from beside the entry to
+ * the far end and folds back on itself, which is what splits the route into a
+ * leg out and a leg home.
+ *
+ * The gap between the finger's tip and the outer wall is the TURN, and it is
+ * where the chapter's first boss stops being optional.
+ */
+export const WALLS: Wall[] = [
+  // ── THE OUTER COAST OF THE ROUTE ──
+  { bay: 'thread', a: [160, -925], b: [1676, -3143] },
+  { bay: 'thread', a: [1736, -3131], b: [4518, -4514] },
+  { bay: 'thread', a: [4702, -4664], b: [7598, -3760] },
+  { bay: 'thread', a: [7735, -3671], b: [9192, -1589] },
+  { bay: 'thread', a: [9139, -1475], b: [9137, 448] },
+  { bay: 'thread', a: [9144, 573], b: [8241, 2507] },
+  { bay: 'thread', a: [8026, 2496], b: [6057, 4005] },
+  { bay: 'thread', a: [6081, 4042], b: [2922, 4016] },
+
+  // ── THE FINGER, out ──
+  { bay: 'thread', a: [526, 386], b: [2701, -276] },
+  { bay: 'thread', a: [2737, -300], b: [3867, -1011] },
+  { bay: 'thread', a: [3933, -1029], b: [4854, -1936] },
+  { bay: 'thread', a: [4955, -1979], b: [6397, -1574] },
+  { bay: 'thread', a: [6481, -1526], b: [7222, -390] },
+  // ── and back ──
+  { bay: 'thread', a: [7084, -323], b: [5703, -561] },
+  { bay: 'thread', a: [5728, -526], b: [3248, 265] },
+  { bay: 'thread', a: [3271, 300], b: [1186, 1135] },
+
+  /**
+   * THE TURN, SHUT UNTIL PETE IS DOWN.
+   *
+   * Across the gap between the finger's tip and the outer wall, which is the
+   * one place the route narrows to a door. Everything before it is the leg out
+   * and Pete at the end of it; everything after is the way home past Krust.
+   *
+   * One gate, not four. The chain already refuses to let you READ or FIGHT
+   * anything out of order — this is only here so the second half of the bay is
+   * not water you can go and look at before you have earned it.
+   */
   {
-    // 4400, NOT 4200. The beat that opens it happens at the Wax Shoal, and a
-    // trigger circle 630 wide centred 3,650 up the bay reached across a line at
-    // 4,200 — so the scene could fire from the far side of the gate that scene
-    // is supposed to open. `npm run check` measures exactly that.
-    bay: 'thread', node: 'krust_reveal', at: 4400,
-    shut: 'The water past here is nobody you know yet',
+    bay: 'thread', a: [7222, -390], b: [9138, -300],
+    node: 'pete',
+    shut: 'Pete is still afloat, and this is still his water',
   },
 ]
 
-/** The first shut gate between the boat and the back of the bay, if any. */
-export function gateShut(b: Bay, along: number, cleared: Set<string> | string[]): Gate | null {
-  const has = (id: string) => Array.isArray(cleared) ? cleared.includes(id) : cleared.has(id)
-  return GATES
-    .filter(g => g.bay === b.id && g.at >= along && !has(g.node))
-    .sort((p, q) => p.at - q.at)[0] ?? null
+/** Both ends of a wall, in world coordinates. */
+export function wallEnds(w: Wall): { ax: number; ay: number; bx: number; by: number } | null {
+  const b = BAY_BY_ID[w.bay]
+  if (!b) return null
+  const p = fromBay(b, w.a[0], w.a[1])
+  const q = fromBay(b, w.b[0], w.b[1])
+  return { ax: p.x, ay: p.y, bx: q.x, by: q.y }
+}
+
+/** Is this wall standing, for this captain? A plain wall always is; a gate is
+ *  only there until the thing that opens it is done. */
+export function wallUp(w: Wall, cleared: Set<string> | string[]): boolean {
+  if (!w.node) return true
+  return !(Array.isArray(cleared) ? cleared.includes(w.node) : cleared.has(w.node))
 }
 
 /**
@@ -442,50 +508,37 @@ export type RaidIsle = {
 }
 
 /**
- * CHAPTER I, IN ITS OWN BAY.
+ * CHAPTER I, STRUNG ALONG ITS OWN ROAD.
  *
- * The chain's order survives as distance up the water, but nothing is on the
- * axis: the skirmish is off to one side, Pete is round the other, the
- * quartermaster's cache is on a rock in a corner you have to go looking in. You
- * can sail straight up the middle and miss half of it, which is the difference
- * between a bay and a corridor.
+ * The chain's order IS the route's order now, which is the whole point of
+ * walling a bay: you meet the campaign in the order it was written because
+ * that is the order the water lets you reach it in, and not because anything
+ * refused you.
  *
- * The gate is `krust_reveal` — the wax with his name on it, which happens at the
- * Wax Shoal. Everything before it is the front half of the water; Krust and the
- * closing beat are behind it.
+ *   out along the western leg   intro · the skirmish · PETE
+ *   round the finger's tip      the syndicate · the Bilge Eels
+ *   home down the eastern leg   the quartermaster · the wax · KRUST
+ *   and back toward the door    Between Watches · the Captain's Choice
  *
- * NOT PLACED: `bilge_milestone`, the quartermaster's own counter and
- * `chapter_1_class`. Management belongs at a mooring, which is what the
- * Anchorage is for — chart.ts calls it "things you moor at, not things you
- * fight" and that is still the right line. Challenge variants are not placed
- * either: raidMap keeps them off the map spine because the boss's own
- * Normal/Challenge switch is meant to be the single door, and standing a second
- * Pete a few hundred pixels from the first would undo that by drawing it.
+ * TWO BOSSES, one at each end of the fold. Pete stands at the far tip with the
+ * gate behind him; Krust stands on the way home, which is the right shape for
+ * a man whose whole arc is that you did not know he existed on the way out.
+ *
+ * Challenge variants are not placed: raidMap keeps them off the map spine
+ * because the boss's own Normal/Challenge switch is meant to be the single
+ * door, and standing a second Pete a few hundred pixels from the first would
+ * undo that by drawing it.
  */
 export const ENCOUNTERS: Encounter[] = [
-  { node: 'skirmish', bay: 'thread', along: 1500, across: 400 },
-  { node: 'pete', bay: 'thread', along: 2100, across: -700 },
-  { node: 'krust', bay: 'thread', along: 5000, across: 0 },
+  { node: 'skirmish', bay: 'thread', along: 4775, across: -3285 },
+  { node: 'pete', bay: 'thread', along: 6803, across: -2705 },
+  { node: 'krust', bay: 'thread', along: 2801, across: 2721 },
 ]
 
 export const CACHES: Cache[] = [
   { node: 'quartermaster', bay: 'thread', isle: 'thread-purse' },
 ]
 
-/**
- * EVERY BEAT IN THE CHAIN, INCLUDING THE ONES THAT ARE NOT STORIES.
- *
- * `bilge_milestone` and `chapter_1_class` are a milestone and a class pick, not
- * story nodes — but they are IN the chain, between beats that are, and the chain
- * is what makes the campaign a campaign. Leaving them off the water left the bay
- * dead-ending at `syndicate`: quartermaster requires the milestone, the wax
- * requires the quartermaster, Krust requires the wax, and chapter II's door
- * requires the Captain's Choice. Four fifths of chapter one and the whole rest
- * of the campaign, behind two rocks that were not there.
- *
- * `npm run check` now refuses any placement whose requirement is not also
- * placed, which is how that was found.
- */
 export const BEATS: Beat[] = [
   { node: 'intro', bay: 'thread', isle: 'thread-tangle' },
   { node: 'syndicate', bay: 'thread', isle: 'thread-ledger' },
@@ -495,25 +548,22 @@ export const BEATS: Beat[] = [
   { node: 'chapter_1_class', bay: 'thread', isle: 'thread-choice' },
 ]
 
+/**
+ * ONE ROCK PER STOP, laid on the route in the order you sail it.
+ *
+ * Everything here is ON the road rather than beside it. The two after Krust sit
+ * on the last stretch back toward the door, so the chapter finishes where it
+ * started — which is what a loop is for, and what stops the way home being the
+ * only reason the end of a bay exists.
+ */
 export const RAID_ISLES: RaidIsle[] = [
-  // THE FIRST ROCK INSIDE THE DOOR, and it carries the opening beat. Near
-  // enough that a captain arriving with nothing on the chart can see it from
-  // the doorway, off the axis so it is somewhere you turn toward rather than
-  // something you run into.
-  // ONE THING ON EACH ROCK, and the rocks run up the bay in the chain's own
-  // order, so sailing outward is doing the chapter — without ever being a line,
-  // because they are scattered either side of the axis and you have to turn for
-  // each of them.
-  { id: 'thread-tangle', bay: 'thread', name: 'The Tangle', along: 900, across: -820, r: 200 },
-  { id: 'thread-ledger', bay: 'thread', name: "The Ledger's Rest", along: 2650, across: 1250, r: 195 },
-  { id: 'thread-bilge', bay: 'thread', name: 'Bilge Bank', along: 3050, across: -1550, r: 180 },
-  { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 3600, across: 900, r: 175 },
-  // Kept short of the gate line at 4400, and short of it by more than the reach
-  // you can read it from: the scene here is the one that OPENS that gate, and a
-  // post readable from the far side of its own gate is a gate that never was.
-  { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 3850, across: -1400, r: 160 },
-  { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 5600, across: 700, r: 170 },
-  { id: 'thread-choice', bay: 'thread', name: "The Captain's Rest", along: 5750, across: -650, r: 150 },
+  { id: 'thread-tangle', bay: 'thread', name: 'The Tangle', along: 3009, across: -2016, r: 200 },
+  { id: 'thread-ledger', bay: 'thread', name: "The Ledger's Rest", along: 7464, across: -1801, r: 195 },
+  { id: 'thread-bilge', bay: 'thread', name: 'Bilge Bank', along: 8105, across: 651, r: 180 },
+  { id: 'thread-purse', bay: 'thread', name: 'Cutpurse Rock', along: 6458, across: 1943, r: 175 },
+  { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 4238, across: 2194, r: 160 },
+  { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 1750, across: 2500, r: 170 },
+  { id: 'thread-choice', bay: 'thread', name: "The Captain's Rest", along: 900, across: 1750, r: 150 },
 ]
 
 export const ISLE_BY_ID: Record<string, RaidIsle> =
@@ -548,16 +598,34 @@ export type ReturnPortal = {
 }
 
 export const RETURN_PORTALS: ReturnPortal[] = [
-  { bay: 'thread', along: 5100, across: 1450 },
+  // At the END OF THE LOOP, on the last stretch back toward the door. You have
+  // sailed the whole road by the time you reach it, which is the only moment a
+  // way home is a reward rather than a shortcut.
+  { bay: 'thread', along: 1200, across: 2200 },
 ]
 
-/** The fight that opens a bay's way home: the furthest raid up it. */
+/**
+ * THE FIGHT THAT OPENS A BAY'S WAY HOME: the LAST raid in the chain.
+ *
+ * It used to be the furthest one up the bay, which was true only while a bay
+ * was a straight run. On a route that folds back, the second boss is NEARER the
+ * door than the first — Krust stands at along 2,801 and Pete at 6,803 — so
+ * "furthest up" picked the wrong man and would have opened the way home before
+ * the chapter was finished.
+ *
+ * Chain order cannot be wrong about this. RAID_MAP is the campaign, in order,
+ * and the last of a bay's raids to appear in it is the one that ends the bay.
+ */
 export function portalOpensOn(bayId: string): string | null {
-  const raids = ENCOUNTERS
-    .filter(e => e.bay === bayId)
-    .filter(e => RAID_MAP.find(n => n.id === e.node)?.type === 'raid')
-    .sort((a, b) => b.along - a.along)
-  return raids[0]?.node ?? null
+  let best: string | null = null
+  let bestAt = -1
+  for (const e of ENCOUNTERS) {
+    if (e.bay !== bayId) continue
+    const i = RAID_MAP.findIndex(n => n.id === e.node)
+    if (i < 0 || RAID_MAP[i].type !== 'raid') continue
+    if (i > bestAt) { bestAt = i; best = e.node }
+  }
+  return best
 }
 
 export function portalOpen(pt: ReturnPortal, cleared: Set<string> | string[]): boolean {

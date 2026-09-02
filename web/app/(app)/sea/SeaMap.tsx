@@ -46,10 +46,10 @@ import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/hom
 import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
-  GATES, gateShut, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
+  WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
-  type Bay, type Encounter, type Cache, type Beat, type Gate,
+  type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
 import { RAID_MAP, type RaidNode } from '@/lib/raidMap'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
@@ -1432,6 +1432,10 @@ export default function SeaMap({
   /** Which gate is holding her, if any. A ref beside the state so the loop can
    *  tell a change from a repeat without reading state it does not own. */
   const gateRef = useRef<string | null>(null)
+  /** WHERE SHE WAS LAST FRAME. The wall test is a crossing test — see the note
+   *  in the loop — so it needs the segment she travelled, not just where she
+   *  ended up. */
+  const lastPos = useRef({ x: 0, y: 0 })
   /** Mirrored for the frame loop, which mounts once and would otherwise hold
    *  whatever was cleared when the page loaded — so a chapter finished in this
    *  session would leave its strait shut until a reload. */
@@ -2091,10 +2095,14 @@ export default function SeaMap({
    * the hub — the same painter's problem the walls themselves solve, and it does
    * not stop being a problem because the rocks arrived from somewhere else.
    */
-  const shutPlugs = useMemo(() => BAYS
-    .filter(b => !bayOpen(b, clearedNodes))
-    .flatMap(b => MOUTH_PLUGS[b.id] ?? [])
-    .sort((p, q) => p.y - q.y), [clearedNodes])
+  const shutPlugs = useMemo(() => [
+    ...BAYS.filter(b => !bayOpen(b, clearedNodes)).flatMap(b => MOUTH_PLUGS[b.id] ?? []),
+    // AND EVERY GATE STILL STANDING. Same list and the same reason: this is the
+    // rock that differs from captain to captain, so it is sorted in with the
+    // coast rather than appended to it — a gate drawn after the coast would sit
+    // on top of whatever coast is south of it.
+    ...WALLS.filter(w => w.node && wallUp(w, clearedNodes)).flatMap(w => GATE_ROCKS[w.node!] ?? []),
+  ].sort((p, q) => p.y - q.y), [clearedNodes])
 
   const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
     ? [
@@ -2774,7 +2782,7 @@ export default function SeaMap({
   /** The chest within arm's reach, and the gate refusing her, if any. Both set
    *  from the frame loop and read by the helm. */
   const [nearCache, setNearCache] = useState<Cache | null>(null)
-  const [heldBy, setHeldBy] = useState<Gate | null>(null)
+  const [heldBy, setHeldBy] = useState<Wall | null>(null)
   /** The story post within arm's reach, and the scene currently playing over
    *  the water. */
   const [nearBeat, setNearBeat] = useState<Beat | null>(null)
@@ -3603,7 +3611,7 @@ export default function SeaMap({
     }
     // A GATE OUTRANKS EVERYTHING. She is stopped against it; nothing else she
     // could be offered matters while the water is refusing to let her past.
-    if (heldBy) return { act: null, hold: heldBy.shut }
+    if (heldBy) return { act: null, hold: heldBy.shut ?? 'The way is shut' }
 
     // THE WAY HOME, when you are floating in one. Above the campaign: nothing
     // else in this water is within three hundred pixels of it, and a captain
@@ -4809,7 +4817,7 @@ export default function SeaMap({
         }
       }
 
-      let held: Gate | null = null
+      let held: Wall | null = null
       for (let i = 0; i < BAYS.length; i++) {
         const b = BAYS[i]
         const px = pos.current.x, py = pos.current.y
@@ -4836,23 +4844,50 @@ export default function SeaMap({
           continue
         }
 
-        // ── AND INSIDE A BAY, THE GATES ────────────────────────────────
-        //
-        // A line straight across the water with no rock on it. Rock says "there
-        // is no way through here"; a gate says "not yet", and those are
-        // different sentences that must not be drawn the same way. She is
-        // stopped, the helm names what is still owed, and the moment it is paid
-        // the line is simply gone.
-        if (!inside) continue
-        const bay = toBay(b, px, py)
-        const g = gateShut(b, bay.along - GATE_SKIN, clearedRef.current)
-        if (!g || bay.along < g.at - GATE_SKIN) continue
+      }
 
-        held = g
-        const back = fromBay(b, g.at - GATE_SKIN, bay.across)
-        shove(back.x, back.y)
+      // ── AND YOU CANNOT CROSS A WALL ────────────────────────────────
+      //
+      // The rock inside a bay is a ROUTE — two chains carving a lane out and a
+      // lane back — so this is the rule that makes the route a route rather
+      // than a drawing of one.
+      //
+      // TESTED AS A CROSSING, not as a distance. A boat under way covers
+      // eighty pixels in a frame and a wall is a line with no thickness: ask
+      // "how close am I" and she tunnels straight through anything she is
+      // moving fast enough to clear in one step, which is exactly the speed
+      // she is doing when it matters. Ask instead whether the segment she
+      // travelled this frame crossed the segment the wall is, and there is no
+      // speed that beats it.
+      const from = lastPos.current
+      for (const w of WALLS) {
+        if (!wallUp(w, clearedRef.current)) continue
+        const e = wallSeg(w)
+        if (!e) continue
+        const hit = segHit(from.x, from.y, pos.current.x, pos.current.y, e.ax, e.ay, e.bx, e.by)
+        if (hit == null) continue
+
+        // Put her back a hair on the side she came from, and take away only the
+        // speed that was carrying her INTO the wall — so she slides along it and
+        // follows the lane rather than stopping dead against it, which is what
+        // makes a walled route feel like a road instead of a maze.
+        const wx = e.bx - e.ax, wy = e.by - e.ay
+        const wl = Math.hypot(wx, wy) || 1
+        let nx3 = -wy / wl, ny3 = wx / wl
+        // The normal that points back the way she came.
+        if ((from.x - pos.current.x) * nx3 + (from.y - pos.current.y) * ny3 < 0) { nx3 = -nx3; ny3 = -ny3 }
+        pos.current.x = hit.x + nx3 * WALL_SKIN
+        pos.current.y = hit.y + ny3 * WALL_SKIN
+        const into = vel.current.x * nx3 + vel.current.y * ny3
+        if (into < 0) {
+          vel.current.x -= nx3 * into
+          vel.current.y -= ny3 * into
+        }
+        target.current = { ...pos.current }
+        if (w.node) held = w
       }
       basinKnown.current = nowOut
+      lastPos.current = { x: pos.current.x, y: pos.current.y }
 
       // Only when it CHANGES. This runs every frame and setState does not.
       if ((held?.node ?? null) !== gateRef.current) {
@@ -8656,7 +8691,111 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
   return out.sort((p, q) => p.y - q.y)
 }
 
-const BAY_WALLS = BAYS.flatMap(bayRocks).sort((p, q) => p.y - q.y)
+/**
+ * ── AND THE ROCK ALONG A ROUTE'S WALLS ──────────────────────────────────────
+ *
+ * The same rock the bay's own coast is built from, laid down a line instead of
+ * round a circle. Which is the whole reason a route reads: a captain has spent
+ * the last hour learning that rock like that is a wall, and this is that rock.
+ *
+ * TWO ROWS AND SHINGLE, offset either side of the line so a wall has a width
+ * and a bit of shore rather than being a hairline of boulders. The arithmetic
+ * wall is the segment itself — see the crossing test in the frame loop — so
+ * these are allowed to wander a little; that is what stops a hand-drawn route
+ * looking like a hand-drawn diagram.
+ */
+function wallRocks(w: Wall): { art: string; x: number; y: number; size: number }[] {
+  const e = wallEnds(w)
+  const bay = BAY_BY_ID[w.bay]
+  if (!e || !bay) return []
+  const KIND = CHAPTER_ROCKS[bay.rocks]
+  const STEP = rockStep(KIND)
+
+  let seed = 0x27d4eb2f ^ Math.imul(Math.round(w.a[0]), 0x9e3779b1) ^ Math.round(w.b[1])
+  seed >>>= 0
+  const nx = () => {
+    seed ^= seed << 13; seed >>>= 0
+    seed ^= seed >>> 17
+    seed ^= seed << 5; seed >>>= 0
+    return seed / 0x100000000
+  }
+
+  const dx = e.bx - e.ax, dy = e.by - e.ay
+  const L = Math.hypot(dx, dy) || 1
+  const ux = dx / L, uy = dy / L
+  const px = -uy, py = ux
+  const out: { art: string; x: number; y: number; size: number }[] = []
+
+  for (const side of [-1, 1]) {
+    for (let t = 0; t <= L; t += STEP) {
+      const k = KIND.wall[Math.min(KIND.wall.length - 1, Math.floor(nx() * KIND.wall.length))]
+      const off = side * (STEP * 0.32 + nx() * STEP * 0.3)
+      const a = t + (nx() - 0.5) * STEP * 0.4
+      out.push({
+        art: k.art, x: e.ax + ux * a + px * off, y: e.ay + uy * a + py * off,
+        size: k.min + nx() * (k.max - k.min),
+      })
+    }
+    for (let t = 0; t <= L; t += PEBBLE_STEP) {
+      const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
+      const r = nx()
+      const off = side * (STEP * 0.2 + nx() * STEP * 0.5)
+      const a = t + (nx() - 0.5) * PEBBLE_STEP * 0.8
+      out.push({
+        art: pa.art, x: e.ax + ux * a + px * off, y: e.ay + uy * a + py * off,
+        size: pa.min * 0.7 + r * r * (pa.max - pa.min) * 0.7,
+      })
+    }
+  }
+  return out
+}
+
+/** The permanent rock: every bay's coast, and every wall that is not a gate. */
+const BAY_WALLS = [
+  ...BAYS.flatMap(bayRocks),
+  ...WALLS.filter(w => !w.node).flatMap(wallRocks),
+].sort((p, q) => p.y - q.y)
+
+/** And the gates, per gate, so one can come down without rebuilding the rest. */
+const GATE_ROCKS: Record<string, { art: string; x: number; y: number; size: number }[]> =
+  Object.fromEntries(WALLS.filter(w => w.node).map(w => [w.node!, wallRocks(w).sort((p, q) => p.y - q.y)]))
+
+/** How far off a wall a refused hull is set down. A shade under a boat's beam,
+ *  so she rides against it rather than bouncing off it. */
+const WALL_SKIN = 26
+
+/**
+ * EVERY WALL'S TWO ENDS, IN WORLD SPACE, WORKED OUT ONCE.
+ *
+ * The walls are written in bay space and never move, so converting them on
+ * every frame for every wall would be a few hundred trig calls a frame to
+ * arrive at the same numbers as last time.
+ */
+const WALL_SEGS = new Map(WALLS.map(w => [w, wallEnds(w)]))
+const wallSeg = (w: Wall) => WALL_SEGS.get(w) ?? null
+
+/**
+ * DID THIS FRAME'S TRAVEL CROSS THIS WALL, AND WHERE?
+ *
+ * Two segments, the standard cross-product test, returning the point of
+ * intersection or null. Nothing clever, and that is the point: a boat under way
+ * covers eighty pixels in a frame, and any test that asks "how near the wall am
+ * I" lets her tunnel through anything she can clear in one step — which is
+ * exactly the speed she is doing when it matters most.
+ */
+function segHit(
+  px: number, py: number, qx: number, qy: number,
+  ax: number, ay: number, bx: number, by: number,
+): { x: number; y: number } | null {
+  const rx = qx - px, ry = qy - py
+  const sx = bx - ax, sy = by - ay
+  const d = rx * sy - ry * sx
+  if (Math.abs(d) < 1e-9) return null          // parallel, or she did not move
+  const t = ((ax - px) * sy - (ay - py) * sx) / d
+  const u = ((ax - px) * ry - (ay - py) * rx) / d
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null
+  return { x: px + rx * t, y: py + ry * t }
+}
 
 /** How far short of a gate the water gives out. Enough that the boat is plainly
  *  stopped by something rather than nosing into an invisible line. */
