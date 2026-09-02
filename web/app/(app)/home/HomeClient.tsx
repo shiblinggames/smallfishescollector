@@ -24,10 +24,10 @@ import { ISLES } from '@/lib/seaIsles'
 import { vibrate } from '@/lib/haptics'
 import {
   HOUSE, FURNITURE, PINNED_MAX,
-  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, houseTier, offers,
+  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, houseTier, offers, homesteadName,
   type Homestead, type FurnitureSlot,
 } from '@/lib/homestead'
-import { build, furnish } from './actions'
+import { build, furnish, renameHomestead } from './actions'
 import RoomView from './RoomView'
 
 // TWO TABS, DOWN FROM FOUR. "The stones" went with the duplicate portal and the
@@ -72,6 +72,9 @@ export default function HomeClient({
   const [note, setNote] = useState<string | null>(null)
   /** What is being confirmed. Everything here is permanent and most of it is
    *  six figures, so nothing is one tap. */
+  /** The rename sheet, and the box's live contents. */
+  const [naming, setNaming] = useState(false)
+
   const [confirm, setConfirm] = useState<
     { kind: 'build' } | { kind: 'furnish'; id: string } | null>(null)
 
@@ -141,7 +144,28 @@ export default function HomeClient({
           <div style={{ minWidth: 0 }}>
             <p className="font-karla font-700 uppercase" style={{
               fontSize: '0.62rem', letterSpacing: '0.16em', color: 'rgba(180,214,232,0.7)', margin: 0,
-            }}>{guest ? `${guest}'s Homestead` : 'The Homestead'}</p>
+            }}>
+              {homesteadName(home, guest)}
+              {/* THE PENCIL IS THE WHOLE AFFORDANCE. A name you can change is
+                  worth nothing if nobody finds out they can change it, and a
+                  button captioned "Rename" beside a heading is furniture. Not
+                  offered to a visitor: it is not their island. */}
+              {!guest && (
+                <button type="button" onClick={() => { vibrate(6); setNaming(true) }}
+                  aria-label="Rename the homestead"
+                  style={{
+                    marginLeft: 6, padding: 2, background: 'none', border: 'none',
+                    cursor: 'pointer', color: 'rgba(180,214,232,0.7)',
+                    verticalAlign: '-2px',
+                  }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                  </svg>
+                </button>
+              )}
+            </p>
             <p className="font-cinzel font-700" style={{
               fontSize: '1.6rem', color: '#f2ead8', margin: '0.1rem 0 0',
             }}>{builtAt(home).name}</p>
@@ -352,6 +376,28 @@ export default function HomeClient({
         )}
       </AnimatePresence>
 
+      {/* ── WHAT TO CALL IT ──────────────────────────────────────────── */}
+      <AnimatePresence>
+        {naming && (
+          <NameSheet
+            current={home.name ?? ''}
+            busy={busy}
+            onCancel={() => setNaming(false)}
+            onSave={n => startBusy(async () => {
+              const r = await renameHomestead(n)
+              if (!r.ok) { say(r.error); return }
+              setHome(r.homestead)
+              setNaming(false)
+              vibrate(10)
+              say(`She's the ${r.built} now.`)
+              // The chart draws this island's name from the same row, so it has
+              // to be told. Nothing else on this page reads from the server.
+              router.refresh()
+            })}
+          />
+        )}
+      </AnimatePresence>
+
       {/* A line that says what happened. Never blocks a tap. */}
       <AnimatePresence>
         {note && (
@@ -537,6 +583,87 @@ function Offer({ label, value }: { label: string; value: string }) {
 
 // PortalRow AND Gallery LIVED HERE. The portal was a duplicate of the one on
 // the water; the gallery is a room inside now. See RoomView.
+
+/**
+ * THE NAME BOX.
+ *
+ * Its own sheet rather than an inline input on the heading, because the heading
+ * is the thing being edited and swapping it for a field mid-page makes the
+ * page jump under whatever you were reading.
+ *
+ * Seeded from what is already set, empty when nothing is — and clearing it and
+ * saving is how you get the default back, which is said out loud under the box
+ * rather than left to be discovered.
+ */
+function NameSheet({ current, busy, onCancel, onSave }: {
+  current: string; busy: boolean
+  onCancel: () => void; onSave: (name: string) => void
+}) {
+  const [text, setText] = useState(current)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onCancel}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(3,8,14,0.8)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+      }}>
+      <motion.form
+        initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.97 }}
+        onClick={e => e.stopPropagation()}
+        onSubmit={e => { e.preventDefault(); if (!busy) onSave(text) }}
+        style={{
+          width: '100%', maxWidth: 380, borderRadius: 18, padding: '1.15rem',
+          background: 'rgba(10,16,22,0.98)', border: '1px solid rgba(180,214,232,0.28)',
+          boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
+        }}>
+        <p className="font-karla font-700 uppercase" style={{
+          fontSize: '0.6rem', letterSpacing: '0.16em', color: 'rgba(255,206,138,0.72)', margin: 0,
+        }}>Name your island</p>
+        <p className="font-karla" style={{
+          fontSize: '0.86rem', lineHeight: 1.5, color: 'rgba(212,226,236,0.8)', margin: '0.35rem 0 0.8rem',
+        }}>
+          It goes on the chart, so anybody sailing past reads it.
+        </p>
+
+        <input
+          autoFocus
+          value={text}
+          onChange={e => setText(e.target.value)}
+          maxLength={24}
+          placeholder="The Homestead"
+          className="font-cinzel font-700"
+          style={{
+            width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10,
+            fontSize: '1.05rem', color: '#f2ead8',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(180,214,232,0.28)',
+          }} />
+        <p className="font-karla" style={{
+          fontSize: '0.74rem', color: 'rgba(180,200,214,0.5)', margin: '0.4rem 0 0',
+        }}>
+          Two to twenty four characters. Leave it empty to go back to The Homestead.
+        </p>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: '1rem' }}>
+          <button type="button" onClick={onCancel} className="font-karla font-700"
+            style={{
+              flex: 1, padding: '0.6rem', borderRadius: 999, fontSize: '0.9rem',
+              color: 'rgba(214,226,236,0.8)', background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer',
+            }}>Leave it</button>
+          <button type="submit" disabled={busy} className="font-cinzel font-700"
+            style={{
+              flex: 1.2, padding: '0.6rem', borderRadius: 999, fontSize: '0.92rem',
+              color: '#0d1520', background: GOLD, border: `1px solid ${GOLD}`,
+              cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+            }}>{busy ? 'Working' : 'Name her'}</button>
+        </div>
+      </motion.form>
+    </motion.div>
+  )
+}
 
 /**
  * THE SECOND LOOK.

@@ -42,7 +42,7 @@ import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
-import { homeBuildings, builtAt, type Homestead } from '@/lib/homestead'
+import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -3206,7 +3206,20 @@ export default function SeaMap({
       // exactly what it was.
       //
       // Same projection, same function, both paths.
+      //
+      // ── AND THE CREW HALL IS THE SAME STORY ─────────────────────────
+      //
+      // Missed the first time this was fixed. `crewHallFor` swaps the hall, the
+      // drill yard and the stores for the tier actually built, and it was on
+      // the DOM path only — so the canvas drew the tier-1 placeholders that
+      // chart.ts carries for the land checker, and a captain who had paid all
+      // the way up saw the same three huts they started with.
+      //
+      // Both projections, both paths, one chain. Anything that projects a place
+      // from a profile belongs in THIS map and PlaceIsland's, and the two lists
+      // are the thing to keep in step.
       .map(p => homeFor(p, visiting?.homestead ?? homestead, visiting?.username))
+      .map(p => crewHallFor(p, crewTiers))
       .filter(p => p.kind !== 'water' && p.buildings && p.buildings.length > 0)
       .map(p => ({
         id: p.id, x: p.x, y: p.y, r: p.r, locked: locked(p),
@@ -3214,8 +3227,11 @@ export default function SeaMap({
           x: b.x, y: b.y, scale: b.scale, art: b.art,
         })),
       }))
+    // crewTiers included, or the canvas would keep whichever hall you logged in
+    // with — the same staleness the projection itself was suffering from, moved
+    // one level out.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked, homestead, visiting])
+  }, [locked, homestead, visiting, crewTiers])
 
 
   /**
@@ -9421,8 +9437,10 @@ function homeFor(p: Place, h: Homestead, guest?: string): Place {
     buildings: homeBuildings(h),
     // WHOSE IT IS, on the island's own label. Visiting has to be legible from
     // the water or you are standing on somebody else's lighthouse wondering
-    // when you built it.
-    name: guest ? `${guest}'s Homestead` : p.name,
+    // when you built it — and a captain who has NAMED the place gets their name
+    // on the chart, which is most of the reason to let them name it. One helper
+    // so the page and the water cannot end up calling it different things.
+    name: homesteadName(h, guest),
     blurb: guest ? builtAt(h).name : p.blurb,
   }
 }

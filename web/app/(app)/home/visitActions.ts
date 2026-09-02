@@ -46,16 +46,17 @@ export type Visitable = {
 // into something else, and a column is never dropped here because dropping one
 // is the only migration that cannot be undone. Nothing selects them.
 type Row = {
-  house: number
+  house: number; name: string | null
   furniture: unknown; owned: string[] | null; pinned: string[] | null
 }
 
-const COLS = 'user_id, house, furniture, owned, pinned'
+const COLS = 'user_id, house, name, furniture, owned, pinned'
 
 function toHomestead(row: Row | null): Homestead {
   if (!row) return EMPTY_HOMESTEAD
   return {
     house: row.house ?? 0,
+    name: row.name ?? null,
     furniture: (row.furniture ?? {}) as Partial<Record<FurnitureSlot, string>>,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),

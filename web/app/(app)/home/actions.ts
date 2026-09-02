@@ -48,7 +48,7 @@ export type BuildResult =
 
 /** Rows come back as loose json; this is the one place that is tidied up. */
 function rowToHomestead(row: {
-  house: number; garden: number; beacon: number
+  house: number; name: string | null
   furniture: unknown; owned: string[] | null; pinned: string[] | null
 } | null): Homestead {
   if (!row) return EMPTY_HOMESTEAD
@@ -58,6 +58,7 @@ function rowToHomestead(row: {
     // `layout` as columns nothing reads: dropping a column is the one migration
     // that can only lose data, and these hold what people paid. See Homestead.
     house: row.house ?? 0,
+    name: row.name ?? null,
     furniture,
     owned: row.owned ?? [],
     pinned: (row.pinned ?? []).slice(0, PINNED_MAX),
@@ -67,7 +68,7 @@ function rowToHomestead(row: {
 // ONE STRING LITERAL, never a concatenation — supabase-js infers the row type
 // from the literal text of this argument and a joined expression degrades the
 // whole result to an error type.
-const COLS = 'house, furniture, owned, pinned'
+const COLS = 'house, name, furniture, owned, pinned'
 
 /**
  * THE CAPTAIN'S HOMESTEAD, creating the row on first look.
@@ -171,6 +172,65 @@ export async function build(): Promise<BuildResult> {
     ok: true, spent: next.cost, built: next.name,
     homestead: { ...current, house: tier + 1 },
   }
+}
+
+/**
+ * NAME YOUR OWN ISLAND.
+ *
+ * Free, unlimited and not unique. A house name is not a handle: two captains
+ * may both call theirs the Rookery, and somebody who mistypes it should be able
+ * to fix it rather than living with it the way `updateUsername` makes you live
+ * with a username.
+ *
+ * ── WHAT IS ALLOWED, AND WHY IT IS NOT THE USERNAME RULE ────────────────────
+ *
+ * Usernames are `[a-z0-9_]` because they go in a URL. This goes on a signboard,
+ * so it wants the things a place name actually has — spaces, an apostrophe, a
+ * hyphen — and it keeps its capitals, because "the rookery" is not a name.
+ *
+ * Everything else is refused rather than stripped. Silently deleting half of
+ * what somebody typed is worse than telling them: they cannot tell whether it
+ * saved wrong or they typed wrong.
+ *
+ * ── AND IT IS SEEN BY STRANGERS ─────────────────────────────────────────────
+ *
+ * This is drawn on the chart for anybody who sails past, so it is user text on
+ * another player's screen. The character class is most of the defence — no
+ * markup, no links, no zero-width tricks — and the length cap is repeated as a
+ * CHECK on the column, because an action is not the only thing that can ever
+ * write there.
+ */
+export async function renameHomestead(name: string): Promise<BuildResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  // Collapse runs of whitespace first, so "The   Rookery" and "The Rookery" are
+  // the same name and neither can be used to fake indentation on the chart.
+  const clean = name.replace(/\s+/g, ' ').trim()
+
+  const admin = createAdminClient()
+  const current = await loadFor(user.id)
+
+  // AN EMPTY BOX MEANS "GO BACK TO THE DEFAULT", which is a thing people expect
+  // to be able to do and is otherwise unreachable once a name is set.
+  if (clean === '') {
+    await admin.from('homesteads')
+      .upsert({ user_id: user.id, name: null }, { onConflict: 'user_id' })
+    return { ok: true, spent: 0, built: 'The Homestead', homestead: { ...current, name: null } }
+  }
+
+  if (clean.length < 2 || clean.length > 24) {
+    return { ok: false, error: 'A name wants between 2 and 24 characters.' }
+  }
+  if (!/^[\p{L}\p{N} '\-&]+$/u.test(clean)) {
+    return { ok: false, error: 'Letters, numbers, spaces, apostrophes and hyphens only.' }
+  }
+
+  await admin.from('homesteads')
+    .upsert({ user_id: user.id, name: clean }, { onConflict: 'user_id' })
+
+  return { ok: true, spent: 0, built: clean, homestead: { ...current, name: clean } }
 }
 
 /**

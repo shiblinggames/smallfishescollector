@@ -213,8 +213,20 @@ function Arrow({ dir, onClick }: { dir: 'left' | 'right'; onClick: () => void })
     <motion.button type="button" onClick={onClick} whileTap={{ scale: 0.88 }}
       aria-label={dir === 'left' ? 'Previous room' : 'Next room'}
       style={{
-        position: 'absolute', top: '50%', [dir]: 8,
-        transform: 'translateY(-50%)',
+        // ── CENTRED WITHOUT A TRANSFORM ─────────────────────────────
+        //
+        // This was `top: 50%` plus `translateY(-50%)`, which is correct CSS and
+        // wrong on a motion component: `whileTap` makes framer-motion take over
+        // `transform` and rebuild it from its OWN parts — x, y, scale, rotate —
+        // and a hand-written `translateY(-50%)` is not one of them, so it is
+        // dropped the moment the button is pressed. The arrow you tapped fell
+        // half its own height and stopped lining up with the other one.
+        //
+        // `top: 0; bottom: 0; margin-block: auto` with a fixed height centres
+        // on the box model instead, so the transform belongs entirely to the
+        // animation and there is nothing for it to clobber. The house rule, and
+        // this is exactly the case it is written for.
+        position: 'absolute', top: 0, bottom: 0, marginBlock: 'auto', [dir]: 8,
         width: 38, height: 38, borderRadius: '50%', padding: 0, cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         // A SOLID BASE. These sit over painted rooms running from chalk-white

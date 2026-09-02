@@ -538,6 +538,15 @@ export type Homestead = {
    * migration that cannot be undone, and nothing costs anything to ignore them.
    */
   house: number
+  /**
+   * WHAT THEY CALL IT. Null is the default, "The Homestead".
+   *
+   * A house name rather than a handle: not unique, freely changed, and spaces
+   * and apostrophes are the point. It is shown on the chart to anybody sailing
+   * past, which is the whole reason to have one — an island with your own name
+   * on it is yours in a way a tier number never manages.
+   */
+  name: string | null
   /** slot -> furnishing id. Absent means the free default for that slot. */
   furniture: Partial<Record<FurnitureSlot, string>>
   /**
@@ -559,9 +568,24 @@ export type Homestead = {
 
 export const EMPTY_HOMESTEAD: Homestead = {
   house: 0,
+  name: null,
   furniture: {},
   owned: [],
   pinned: [],
+}
+
+/**
+ * WHAT TO CALL A HOMESTEAD, from anywhere.
+ *
+ * One helper so the page, the chart and a visitor's view cannot drift: a named
+ * island keeps its name for everybody, and an unnamed one falls back to the
+ * possessive when somebody else is looking at it. "Kong's Homestead" is only
+ * the right answer when they have not chosen anything better.
+ */
+export function homesteadName(h: Homestead, guest?: string | null): string {
+  const chosen = (h.name ?? '').trim()
+  if (chosen) return chosen
+  return guest ? `${guest}'s Homestead` : 'The Homestead'
 }
 
 /** How many badges the gallery lets you hang large. */
