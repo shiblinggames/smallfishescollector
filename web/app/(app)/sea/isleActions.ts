@@ -21,6 +21,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ISLE_BY_ID, type IsleNote } from '@/lib/seaIsles'
+import { PORTAL_STONE_ISLES } from '@/lib/seaPortal'
 import { ISLE_FURNISHING } from '@/lib/seaIsles'
 import { FURNISHING_BY_ID } from '@/lib/homestead'
 import { PLACES } from './chart'
@@ -29,7 +30,17 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 export type AshoreResult =
   | { ok: true; already: false; name: string; gems: number; doubloons: number; note: IsleNote | null
       /** A furnishing that was in the chest. The only way to own one. */
-      salvage: { id: string; name: string } | null }
+      salvage: { id: string; name: string } | null
+      /**
+       * THE PORTAL STONE, and true only on the landing that WAKES the portal.
+       *
+       * Derived rather than granted: nothing is written anywhere for this. The
+       * discovery row that this landing just inserted is itself the stone, and
+       * the flag exists purely so the chest sheet can say so out loud. Finding
+       * the one thing that changes how the map works and being told nothing
+       * would be the whole reward landing silently.
+       */
+      stone: boolean }
   | { ok: true; already: true; name: string; note: IsleNote | null }
   | { ok: false; error: string }
 
@@ -151,5 +162,18 @@ export async function goAshore(isleId: string): Promise<AshoreResult> {
     salvage = item ? { id: fid, name: item.item.name } : null
   }
 
-  return { ok: true, already: false, name: isle.name, gems, doubloons, note: isle.note ?? null, salvage }
+  // ── DID THIS ONE WAKE THE PORTAL? ─────────────────────────────────────
+  // True on the FIRST of the near caches and never again, so the announcement
+  // is a moment rather than a label on every chest in the Shallows. Read back
+  // from the table so it counts the row we have just written.
+  let stone = false
+  if (PORTAL_STONE_ISLES.has(isle.id)) {
+    const { data: rows } = await admin
+      .from('sea_discoveries').select('isle_id').eq('user_id', user.id)
+    const opened = ((rows ?? []) as { isle_id: string }[])
+      .filter(r => PORTAL_STONE_ISLES.has(r.isle_id))
+    stone = opened.length === 1
+  }
+
+  return { ok: true, already: false, name: isle.name, gems, doubloons, note: isle.note ?? null, salvage, stone }
 }

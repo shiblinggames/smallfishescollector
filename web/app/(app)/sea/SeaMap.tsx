@@ -37,7 +37,7 @@ import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
-import { PORTAL, PORTAL_TIERS, PORTAL_DWELL, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
+import { PORTAL, PORTAL_TIERS, PORTAL_DWELL, hasPortalStone, inPortal, inPortalEye, warpPoint, CACHE_ISLE_IDS } from '@/lib/seaPortal'
 import { buyPortalTier } from './portalActions'
 import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type Bottle } from '@/lib/seaBottles'
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
@@ -2130,6 +2130,21 @@ export default function SeaMap({
   useEffect(() => () => { if (chargeTimer.current) clearTimeout(chargeTimer.current) }, [])
   const [portalTier, setPortalTier] = useState(portal.tier)
 
+  const [found, setFound] = useState<Set<string>>(() => new Set(discovered))
+
+  /**
+   * THE STONE, derived from the chests already opened rather than stored.
+   *
+   * `found` is the live set — goAshore adds to it the moment a chest opens — so
+   * the portal wakes on the same beat the stone is pulled out of the sand, with
+   * no refetch and nothing to keep in step.
+   */
+  const portalStone = useMemo(() => hasPortalStone([...found]), [found])
+  /** Mirrored, because the frame loop mounts with [] deps and would otherwise
+   *  hold whichever answer was true when the page loaded. */
+  const portalStoneRef = useRef(portalStone)
+  useEffect(() => { portalStoneRef.current = portalStone }, [portalStone])
+
   /**
    * WHAT THE WELL IS DRAWN FROM. Memoised on the tier, because the layer keeps
    * whatever object it is handed and a fresh one every render would be a new
@@ -2145,8 +2160,9 @@ export default function SeaMap({
       x: PORTAL.x, y: PORTAL.y, r: PORTAL.r,
       accent: parseInt(t.accent.slice(1), 16),
       tier: t.tier,
+      locked: !portalStone,
     }
-  }, [portalTier])
+  }, [portalTier, portalStone])
 
   /**
    * MIRRORED, because the frame loop below is mounted with `[]` deps and never
@@ -2602,7 +2618,6 @@ export default function SeaMap({
   // No ref shadow: nothing in the 60fps loop reads it. Whether an isle is
   // already claimed changes what the BUTTON says and which chest is painted,
   // both of which are render-time questions, and `isleNear` does not care.
-  const [found, setFound] = useState<Set<string>>(() => new Set(discovered))
   const [nearIsle, setNearIsle] = useState<Isle | null>(null)
   // ── WHAT THE SEA IS HANDING YOU ───────────────────────────────────────
   //
@@ -4391,8 +4406,10 @@ export default function SeaMap({
       const inEye = inPortalEye(pos.current.x, pos.current.y)
       const inMouth = inPortal(pos.current.x, pos.current.y)
 
-      // THE COUNT is gated: you cannot be taken with a rod out or a sheet up.
-      if (!sideRef.current && !fishingIn) {
+      // THE COUNT is gated: you cannot be taken with a rod out, a sheet up, or
+      // no stone. Holding station over dead water counts nothing and says so by
+      // the water not answering — see the well's `locked`.
+      if (!sideRef.current && !fishingIn && portalStoneRef.current) {
         if (portalIn.current) {
           // Taken already. Waiting to leave.
           if (!inMouth) portalIn.current = false
@@ -5501,7 +5518,7 @@ export default function SeaMap({
             it is scenery you learn by bumping into. Sized and shadowed like the
             ports' name plates, one step quieter, because it is a feature of the
             water rather than somewhere you go ashore. */}
-        {!inAnchorage && <PortalName tier={portalTier} />}
+        {!inAnchorage && <PortalName tier={portalTier} stone={portalStone} />}
         {/* The charge stands on the RING, not the hull: the painted band is
             the cylinder's footprint, so the ring itself is what flares. */}
         <AnimatePresence>
@@ -8388,7 +8405,7 @@ const ShipAtBerth = memo(function ShipAtBerth({ shipTier }: { shipTier: number }
  *  this chart, and counter-squashed for the same reason theirs are: it sits in
  *  the world layer so it travels with the water, but it is a sign and not a
  *  thing lying on the surface. */
-const PortalName = memo(function PortalName({ tier }: { tier: number }) {
+const PortalName = memo(function PortalName({ tier, stone }: { tier: number; stone: boolean }) {
   const t = PORTAL_TIERS.find(p => p.tier === tier) ?? PORTAL_TIERS[0]
   return (
     <div aria-hidden style={{
@@ -8399,16 +8416,29 @@ const PortalName = memo(function PortalName({ tier }: { tier: number }) {
       textAlign: 'center', whiteSpace: 'nowrap',
     }}>
       <p className="font-cinzel font-700" style={{
-        fontSize: '1.5rem', lineHeight: 1.1, margin: 0, color: '#eef4f8',
+        fontSize: '1.5rem', lineHeight: 1.1, margin: 0,
+        color: stone ? '#eef4f8' : 'rgba(202,214,222,0.7)',
         textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.7)',
       }}>Home Portal</p>
-      {/* HOW FAR IT REACHES, which is the only thing about it worth knowing
-          from the water and the thing every tier changes. */}
+      {/* WHAT IT WANTS, or how far it reaches. The board is the only thing out
+          here that can explain dead water, and it has to do it in one line
+          without a quest log: what is missing, and where to look for it. A
+          player who sails up to a hole that does nothing and is told nothing
+          concludes the game is broken, not that there is something to find. */}
       <p className="font-karla font-600" style={{
         fontSize: '0.95rem', marginTop: 2,
-        color: `${t.accent}cc`,
+        color: stone ? `${t.accent}cc` : 'rgba(230,196,140,0.92)',
         textShadow: '0 1px 10px rgba(0,0,0,0.92)',
-      }}>Reaches {t.name}</p>
+      }}>
+        {stone ? `Reaches ${t.name}` : 'Dead water. It wants a portal stone.'}
+      </p>
+      {!stone && (
+        <p className="font-karla" style={{
+          fontSize: '0.82rem', marginTop: 1,
+          color: 'rgba(196,214,228,0.66)',
+          textShadow: '0 1px 10px rgba(0,0,0,0.92)',
+        }}>There is one in a chest, out in the Shallows.</p>
+      )}
     </div>
   )
 })
@@ -9249,6 +9279,34 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
                 <p className="font-karla" style={{
                   fontSize: '0.74rem', color: 'rgba(196,222,206,0.8)', margin: '3px 0 0',
                 }}>Nobody sells one. It is waiting at the Homestead.</p>
+              </div>
+            )}
+
+            {/* ── AND THE ONE THAT CHANGES THE MAP ─────────────────────
+                Gold rather than the salvage green, above it rather than beside
+                it, and it says what it DOES rather than what it is. A stone in
+                a list of loot is a stone; a stone that tells you the water off
+                your own island just woke up is the reason you sailed out. */}
+            {won?.stone && (
+              <div style={{
+                margin: '0 auto 0.9rem', maxWidth: 320,
+                padding: '0.7rem 0.85rem', borderRadius: 12,
+                background: 'rgba(44,34,10,0.92)',
+                border: '1px solid rgba(240,192,64,0.55)',
+              }}>
+                <p className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.54rem', letterSpacing: '0.18em', margin: '0 0 3px',
+                  color: 'rgba(240,192,64,0.9)',
+                }}>A portal stone</p>
+                <p className="font-cinzel font-700" style={{
+                  fontSize: '1.05rem', color: '#f6e6c6', margin: 0,
+                }}>The Home Portal is awake</p>
+                <p className="font-karla" style={{
+                  fontSize: '0.78rem', color: 'rgba(226,214,186,0.86)', margin: '4px 0 0', lineHeight: 1.4,
+                }}>
+                  That dead water off your homestead is not dead any more. Sail into
+                  the middle of it and hold there.
+                </p>
               </div>
             )}
 

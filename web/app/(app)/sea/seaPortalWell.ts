@@ -158,6 +158,16 @@ export type PortalWellSpec = {
   accent: number
   /** 1..5. Deepens the well and quickens the fall. */
   tier: number
+  /**
+   * NO STONE YET. Dead water: a faint stain and a dim rim, and none of the
+   * things that make it a portal — nothing falls, nothing ripples, nothing
+   * breaks at the lip, nothing burns underneath.
+   *
+   * Still DRAWN, and that is the point. A hole you cannot see is not a reason
+   * to go looking for anything; a hole that is visibly asleep is. The name
+   * board says what it wants.
+   */
+  locked?: boolean
 }
 
 export type PortalWell = {
@@ -358,6 +368,8 @@ export function makePortalWell(
       // feel caused by it; letting go can relax.
       on += (want - on) * Math.min(1, d * (want > on ? 7 : 3))
 
+      const dead = spec.locked === true
+
       // ── THE WELL ──
       // Breathing slowly, for the reason the berth's pool breathes: a constant
       // one reads as a decal. Slower than a harbour's, because this is not
@@ -367,12 +379,15 @@ export function makePortalWell(
       wellS.width = size
       wellS.height = size
       wellS.tint = wellTint()
+      // Asleep it is a stain on the water rather than a depth in it. Not
+      // hidden: half-there is what makes it a question.
+      wellS.alpha = dead ? 0.45 : 1
 
       // ── THE RIM ──
       // The band's own colour, and it TIGHTENS as you enter, exactly as a berth
       // does. That gesture is worth keeping unchanged: it is the chart saying
       // "I have you", and it should mean the same thing wherever it happens.
-      rimS.alpha = 0.16 + on * 0.30
+      rimS.alpha = dead ? 0.09 : 0.16 + on * 0.30
       rimS.tint = shade(spec.accent)
       const tighten = 2.1 - on * 0.06
       rimS.width = spec.r * tighten
@@ -383,6 +398,8 @@ export function makePortalWell(
       // fading as it goes so it is water thinning into the dark rather than a
       // dot arriving somewhere. Deeper tiers fall faster.
       const speed = 0.13 + spec.tier * 0.021 + on * 0.06
+      // NOTHING FALLS INTO A DEAD WELL.
+      for (const m of motes) m.visible = !dead
       for (let i = 0; i < motes.length; i++) {
         phase[i] = (phase[i] + d * speed) % 1
         const p = phase[i]
@@ -405,7 +422,7 @@ export function makePortalWell(
       // Inward and shrinking. Fade in off the rim and out before the middle,
       // so they are the surface being drawn down rather than rings arriving
       // somewhere.
-      const rippling = spec.tier >= 3
+      const rippling = !dead && spec.tier >= 3
       for (let i = 0; i < ripples.length; i++) {
         const s = ripples[i]
         s.visible = rippling
@@ -422,7 +439,7 @@ export function makePortalWell(
       // ── TIER 4: THE LIP ──
       // Two out-of-step sines on the shimmer, because a band pulsing on one is
       // a band pulsing, and foam does not do that.
-      const breaking = spec.tier >= 4
+      const breaking = !dead && spec.tier >= 4
       lipS.visible = breaking
       if (breaking) {
         const shimmer = 0.62 + 0.22 * Math.sin(t * 2.3) + 0.16 * Math.sin(t * 3.7 + 1.1)
@@ -438,7 +455,7 @@ export function makePortalWell(
       // ── TIER 5: THE LIGHT DOWN THERE ──
       // Slow, and never steady: two periods again, and a long one so it swells
       // over several seconds rather than blinking.
-      const deep = spec.tier >= 5
+      const deep = !dead && spec.tier >= 5
       coreS.visible = deep
       if (deep) {
         const pulse = 0.55 + 0.3 * Math.sin(t * 0.72) + 0.15 * Math.sin(t * 1.31)

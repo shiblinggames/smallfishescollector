@@ -55,6 +55,47 @@ export const PORTAL_TIERS: PortalTier[] = [
   { tier: 5, band: 'ancient_deep', name: 'The Ancient Deep', cost: 300_000, components: 6, to: { x: 0, y: 19300 }, accent: '#8b4a8b' },
 ]
 
+/**
+ * ── THE PORTAL STONE ────────────────────────────────────────────────────────
+ *
+ * The portal used to work from the first minute, because tier 1 costs nothing.
+ * A free teleport handed to a captain who has not yet sailed anywhere is the
+ * cheapest possible answer to a sea whose whole point is crossing it.
+ *
+ * So it is dead water until you find the stone that wakes it, and the stone is
+ * in a CHEST. That puts the one thing that shortens sailing behind the one
+ * activity that is sailing, which is the right way round.
+ *
+ * ── ANY OF THE NEAR CACHES, NOT A PARTICULAR ONE ────────────────────────────
+ *
+ * Five cache isles sit in the Shallows and Open Waters, and opening ANY of them
+ * yields the stone. A single named isle would be a checklist entry everybody
+ * looks up; five means the reward lands in whatever direction you happened to
+ * choose, which is what exploring is. It is guaranteed rather than rolled: a
+ * gate on a dice throw is a gate that reads as broken to whoever loses.
+ *
+ * NOT LEVEL-LOCKED beyond the water itself. The Shallows are open at Fishing 1
+ * and Cormorant Rock is 3,100px out, so the stone is reachable on day one by
+ * anybody willing to go and look. That is the whole bar: willingness, not rank.
+ *
+ * ── AND IT IS DERIVED, NOT STORED ───────────────────────────────────────────
+ *
+ * `sea_discoveries` already records every chest ever opened, so having the
+ * stone is a question that table can answer. No column, no migration, no second
+ * grant path to drift out of step with the isles — and every captain who has
+ * already been ashore at one of these keeps a portal that has always worked for
+ * them. A stored flag would have had to be backfilled and could be wrong; this
+ * cannot be.
+ */
+export const PORTAL_STONE_ISLES: ReadonlySet<string> = new Set(
+  ISLES.filter(i => i.kind === 'cache' && (i.band === 'shallows' || i.band === 'open_waters'))
+    .map(i => i.id))
+
+/** Has this captain woken the portal? */
+export function hasPortalStone(discoveredIsleIds: string[]): boolean {
+  return discoveredIsleIds.some(id => PORTAL_STONE_ISLES.has(id))
+}
+
 /** Every isle whose chest counts as a component. */
 export const CACHE_ISLE_IDS: ReadonlySet<string> = new Set(
   ISLES.filter(i => i.kind === 'cache').map(i => i.id))

@@ -11,7 +11,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { PORTAL_TIERS, CACHE_ISLE_IDS, componentsAvailable } from '@/lib/seaPortal'
+import { hasPortalStone, PORTAL_TIERS, CACHE_ISLE_IDS, componentsAvailable } from '@/lib/seaPortal'
 
 export async function buyPortalTier(): Promise<
   | { ok: true; tier: number; components: number; doubloons: number }
@@ -35,6 +35,16 @@ export async function buyPortalTier(): Promise<
   if (!next) return { error: 'The portal already reaches the Ancient Deep.' }
 
   const discovered = ((found ?? []) as { isle_id: string }[]).map(r => r.isle_id)
+
+  // ── NO STONE, NO LADDER ───────────────────────────────────────────────
+  // The sheet cannot be opened without one, because the water will not take a
+  // boat that has not found it. This is the guard that actually matters: the
+  // other one is a client deciding not to show a button, and this one takes
+  // money. Same derivation from the same table, so the two cannot disagree.
+  if (!hasPortalStone(discovered)) {
+    return { error: 'The portal is dead water until you find a stone for it. There is one in a chest, out in the Shallows.' }
+  }
+
   const spent = Number(profile.portal_components_spent ?? 0)
   const have = componentsAvailable(discovered, spent)
   if (have < next.components) {
