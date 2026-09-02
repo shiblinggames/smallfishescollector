@@ -6793,7 +6793,11 @@ hullRef={hullRefFor(t.key)} />
                     strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
                 </button>
               </div>
-              <DailyOrders initial={orders} canClaim={ordersAshore} />
+              {/* onChange, because this sheet UNMOUNTS on close. Without it the
+                  chart kept the snapshot it fetched on load, so reopening the
+                  Tally House showed every finished order as Ready again and the
+                  gold dot stayed lit on the HUD after everything was paid. */}
+              <DailyOrders initial={orders} canClaim={ordersAshore} onChange={setOrders} />
             </div>
           </PopupShell>
         </div>

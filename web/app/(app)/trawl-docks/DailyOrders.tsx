@@ -24,7 +24,7 @@ import { flyCoinsToPurse } from '@/lib/coinFly'
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 
-export default function DailyOrders({ initial, canClaim = true }: {
+export default function DailyOrders({ initial, canClaim = true, onChange }: {
   initial: DailyChallengeState | null
   /**
    * FALSE ON THE WATER.
@@ -35,8 +35,34 @@ export default function DailyOrders({ initial, canClaim = true }: {
    * the island a formality. So: read anywhere, settle up ashore.
    */
   canClaim?: boolean
+  /**
+   * WHAT WAS JUST CLAIMED, HANDED BACK UP.
+   *
+   * This panel is opened from a modal that UNMOUNTS when you close it, so its
+   * local state does not survive the close. Whoever owns `initial` fetched it
+   * once and had no way of learning that anything was claimed, so reopening
+   * rebuilt the panel out of a snapshot taken before the claim: every finished
+   * order said Ready again, the button offered to pay you a second time, and
+   * pressing it got you "already claimed" from the server.
+   *
+   * The server was right the whole way through and nothing was ever paid twice.
+   * It was the picture that was stale, which is worse than a bug that loses
+   * money in one specific way: it teaches you not to trust the screen.
+   */
+  onChange?: (next: DailyChallengeState) => void
 }) {
   const [state, setState] = useState(initial)
+
+  /**
+   * AND IF THE OWNER RE-READS, ADOPT IT.
+   *
+   * A server prop seeded into useState is frozen at first render — the house
+   * trap — so a parent that re-fetches would be ignored. Paired with `onChange`
+   * above this is a loop that settles: we hand up what we claimed, the owner
+   * stores it, it comes back as the same object, and React bails on the
+   * identical value.
+   */
+  useEffect(() => { if (initial) setState(initial) }, [initial])
   const [busy, setBusy] = useState<number | 'sweep' | null>(null)
   /**
    * THE MOMENT A CLAIM LANDS.
@@ -90,7 +116,12 @@ export default function DailyOrders({ initial, canClaim = true }: {
         vibrate([0, 20, 40, 30])
       }
       setPaid({ i, amount: c?.reward ?? 0 })
-      setState(s => (s ? { ...s, claimed: s.claimed.map((cl, k) => (k === i ? true : cl)) } : s))
+      setState(s => {
+        if (!s) return s
+        const next = { ...s, claimed: s.claimed.map((cl, k) => (k === i ? true : cl)) }
+        onChange?.(next)
+        return next
+      })
     })
   }
 
@@ -112,7 +143,15 @@ export default function DailyOrders({ initial, canClaim = true }: {
       vibrate([0, 25, 45, 35, 20, 60])
       window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.gems }))
       setPaid({ i: 'sweep', amount: DAILY_SWEEP_GEMS, gems: true })
-      setState(s => (s ? { ...s, sweepClaimed: true } : s))
+      // The sweep too: it is the same stale-picture bug one row further down,
+      // and it pays 10 gems, so a panel offering it again is offering the most
+      // valuable button on the sheet.
+      setState(s => {
+        if (!s) return s
+        const next = { ...s, sweepClaimed: true }
+        onChange?.(next)
+        return next
+      })
     })
   }
 
