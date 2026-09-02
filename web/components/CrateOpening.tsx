@@ -541,14 +541,18 @@ export default function CrateOpening({
                 </p>
               )}
 
-              {/* THE CATCH CARD'S ANATOMY: the lit thing on the left at a
-                  fixed size, the words beside it, left-aligned. It used to
-                  centre the pair and swap the image between 48 and 58px, so a
-                  rare drop shifted the whole row sideways as it resolved. */}
+              {/* THE CATCH CARD'S ANATOMY, and it moved with it: the lit thing
+                  centred, the words under it. A reward is the subject of this
+                  screen, not a row in a list.
+
+                  Centring the pair was tried once and abandoned because the
+                  image swapped between 48 and 58px as the roll resolved, so a
+                  rare drop shoved the row sideways in front of you. The slot is
+                  a fixed 66 now, so there is nothing left to shift. */}
               <div style={{
                 position: 'relative',
-                display: 'flex', alignItems: 'center', gap: 12,
-                textAlign: 'left',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                textAlign: 'center',
               }}>
                 {/* ── THE ONE LIT THING ── the reward, in the catch card's
                     86px slot, with the same soft accent pool behind it. */}
@@ -575,7 +579,7 @@ export default function CrateOpening({
                       }} />
                   )}
                 </motion.div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ width: '100%', minWidth: 0 }}>
                   <p className="font-cinzel font-800" style={{
                     fontSize: '1.4rem',
                     color: lootTint(loot), lineHeight: 1.1,
@@ -592,7 +596,10 @@ export default function CrateOpening({
                       chest still paid what it paid, and this only explains that
                       something rarer was in the water and you already had it. */}
                   {loot.dupePet && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      gap: 5, marginTop: 6,
+                    }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={loot.dupePet.petImageUrl} alt="" width={16} height={16}
                         style={{ height: 16, width: 16, objectFit: 'contain', flexShrink: 0, opacity: 0.7 }} />

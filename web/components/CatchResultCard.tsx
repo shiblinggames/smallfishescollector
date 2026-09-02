@@ -199,7 +199,17 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
       background: '#080e15',
       border: `1px solid ${accent}66`,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 0.85rem' }}>
+      {/* ── STACKED AND CENTRED ────────────────────────────────────────
+          It was a row: the fish at a fixed 86px on the left and the words in a
+          flex:1 column beside it, hard against the left edge. The card's own
+          tally strip underneath has been centred all along, so the head was the
+          one part of it reading as a list item — and a reveal is not a list
+          item. The fish is the subject; it belongs in the middle with its name
+          under it. */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        padding: '0.85rem 0.85rem 0.8rem', textAlign: 'center',
+      }}>
         {/* ── THE ONE LIT THING ── */}
         <motion.div
           initial={{ scale: 0.62, opacity: 0 }}
@@ -219,7 +229,7 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
           }} />
         </motion.div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ width: '100%', minWidth: 0 }}>
           <p className="font-cinzel font-800" style={{
             fontSize: '1.12rem', lineHeight: 1.12, color: '#f2ece0',
             overflow: 'hidden', textOverflow: 'ellipsis',
@@ -227,7 +237,8 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
 
           <p className="font-karla font-700 uppercase" style={{
             fontSize: '0.56rem', letterSpacing: '0.16em', color: accent, marginTop: 3,
-            display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 6, flexWrap: 'wrap',
           }}>
             <span>{label}</span>
             {tier && (
@@ -242,7 +253,10 @@ export function ResultCard({ fish, baitSaved, isNewSpecies, xpGained, doubleCatc
           </p>
 
           {hasSize && !isShiny && (
-            <p style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 5 }}>
+            <p style={{
+              display: 'flex', alignItems: 'baseline', justifyContent: 'center',
+              gap: 7, marginTop: 5,
+            }}>
               <span className="font-cinzel font-700 tabular-nums" style={{
                 fontSize: '1.28rem', lineHeight: 1, color: '#f0ede8',
               }}>{formatFishLength(displaySize)}</span>
