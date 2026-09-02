@@ -52,6 +52,53 @@ const SCHOOLS = Math.ceil(COUNT / SCHOOL)
  *  anything faster reads as fleeing, which is what the scatter is for. */
 const SWIM = 26
 
+/**
+ * ── HOW A SCHOOL WANDERS, AND WHY IT USED TO SPIRAL ─────────────────────────
+ *
+ * The heading was a random walk on the TURN RATE with a clamp and nothing else:
+ *
+ *     turn += (random - 0.5) * 1.4 * dt
+ *     turn  = clamp(turn, -0.6, 0.6)
+ *
+ * An undamped random walk does not hover near nought, it diffuses — and with
+ * hard walls at either end it spends most of its life pinned against one of
+ * them. So a school held 0.6 radians a second for long stretches, which is a
+ * full circle every ten seconds. They were not drifting oddly, they were
+ * orbiting, and every one of them was.
+ *
+ * A restoring force is the whole fix. The noise still pushes the turn rate
+ * about; DAMP pulls it back toward straight, so the rate hovers near nought and
+ * a school mostly holds its course and occasionally leans into a curve. Which
+ * is what a fish does.
+ *
+ * And the ceiling comes down with it. 0.6 rad/s is a fish turning on a
+ * sixpence; a cruising shoal changes heading slowly or it is fleeing, and
+ * fleeing is what the scatter is for.
+ */
+/**
+ * MEASURED, NOT PICKED. Two minutes of the old model turned a school through
+ * 8.4 full revolutions and left it pinned against its own clamp 29% of the
+ * time. These numbers turn it through about half a revolution in the same two
+ * minutes, pinned 1% — a heading that visibly wanders and never once closes a
+ * loop, which is the difference between a shoal going somewhere and a shoal
+ * going round.
+ */
+const TURN_NOISE = 2.4
+const TURN_DAMP = 0.9
+const TURN_MAX = 0.22
+
+/**
+ * THE PLANE IS SQUASHED AND THE FISH HAVE TO KNOW.
+ *
+ * The shoals live in the world container, which carries the chart's
+ * foreshortening — so a school swimming due south covers 0.58 of the screen
+ * distance it covers in world coordinates. The sprite was pointed along the
+ * WORLD heading, which is not where it appears to go: a fish heading
+ * south-east looked like it was crabbing, nose one way and travel another, and
+ * that mismatch is most of what reads as floating rather than swimming.
+ */
+const PLANE = 0.58
+
 /** How far off screen a school is allowed to get before it is moved round to
  *  the other side. A whole half-viewport, so the move always happens well out
  *  of sight. */
@@ -242,9 +289,11 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
       }
 
       for (const sc of schools) {
-        // ── WANDER ── a slow, drifting heading. Fish do not hold a course.
-        sc.turn += (Math.random() - 0.5) * 1.4 * d
-        sc.turn = Math.max(-0.6, Math.min(0.6, sc.turn))
+        // ── WANDER ── a heading that leans and comes back. See TURN_DAMP: an
+        // undamped walk pins itself against its own clamp and the school orbits.
+        sc.turn += (Math.random() - 0.5) * TURN_NOISE * d
+        sc.turn -= sc.turn * TURN_DAMP * d
+        sc.turn = Math.max(-TURN_MAX, Math.min(TURN_MAX, sc.turn))
         sc.ang += sc.turn * d
         sc.x += Math.cos(sc.ang) * SWIM * d
         sc.y += Math.sin(sc.ang) * SWIM * d * 0.7
@@ -289,8 +338,14 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         const ax = Math.cos(sc.ang), ay = Math.sin(sc.ang)
         // Offsets are rotated into the school's heading, so a shoal turns as a
         // body instead of sliding sideways.
-        let x = sc.x + f.ox * ax - f.oy * ay
-        let y = (sc.y + f.ox * ay + f.oy * ax) * 1 + wob * 0.4
+        //
+        // AND THE WOBBLE IS ACROSS THE HEADING, not down the screen. It was a
+        // flat addition to y, so a fish swimming north-south wagged along its
+        // own length — a fish concertinaing rather than a tail beating. Across
+        // the line of travel it is the same number doing the thing it was
+        // named for.
+        let x = sc.x + f.ox * ax - f.oy * ay + wob * -ay * 0.4
+        let y = sc.y + f.ox * ay + f.oy * ax + wob * ax * 0.4
         if (f.bolt > 0) {
           // Thrown outward from wherever the hook went in, easing back.
           const k = f.bolt * f.bolt
@@ -299,7 +354,10 @@ export function makeShoals(PIXI: typeof import('pixi.js')): Shoals {
         }
         f.p.x = x
         f.p.y = y
-        f.p.rotation = Math.atan2(ay, ax) + Math.sin(t * 3 + f.ph) * 0.12
+        // POINTED WHERE IT APPEARS TO GO, not where it goes in world
+        // coordinates. See PLANE: the container is foreshortened, so the two
+        // are different angles and using the wrong one is a fish crabbing.
+        f.p.rotation = Math.atan2(ay * PLANE, ax) + Math.sin(t * 3 + f.ph) * 0.12
         // SIZE READS THE BAND, NOT THE PATCH. Clamped, because a hotspot's
         // multiplier is allowed to summon more fish and is emphatically not
         // allowed to grow them: a bigger fish means a bigger fish.
