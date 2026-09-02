@@ -62,9 +62,9 @@ export const HUB = { x: 0, y: -9200 }
  *  starts being a door. */
 export const HUB_R = 3800
 
-/** How far the bay centres sit from the middle of the junction. Set so the
- *  straits come out around 2,000 long — a passage you thread in a few seconds,
- *  not a road you sail down. */
+/** THE DEFAULT distance from the junction to a bay's middle. Each bay carries
+ *  its own now — see `Bay.at` — and this is only the number they were all laid
+ *  out at, kept because it is the sane starting point for a new one. */
 export const BAY_AT = 8800
 
 /** How far a strait pokes past a bay's rim, so the two shapes genuinely overlap
@@ -78,6 +78,15 @@ export type Bay = {
   name: string
   /** Which way it lies from the junction. atan2 radians, -PI/2 is due north. */
   bearing: number
+  /**
+   * AND HOW FAR OUT, which is per bay rather than one shared radius.
+   *
+   * They were all at 8,800, which put four bays on one arc and left the water
+   * due east and due west of the harbour completely empty — a chart that is
+   * mostly margin. A bearing and a distance can put a bay anywhere in the raid
+   * water, and the strait re-fits itself to whatever gap is left.
+   */
+  at: number
   /** The bay's radius. Its water is a disc; the strait enters at one point on
    *  the rim and everything else is coast. */
   r: number
@@ -118,7 +127,7 @@ export const BAYS: Bay[] = [
     // BEHIND its gate as well as in front of it: Krust, the closing beat and
     // the Captain's Choice all sit past the line, and at 2,900 the last of them
     // was hanging over the coast. `npm run check` measures every one of them.
-    bearing: D(195), r: 3200, half: 460,
+    bearing: D(195), at: BAY_AT, r: 3200, half: 460,
     sea: ['#12242c', '#26454e', '#5c7f84'],
     rocks: 'reef',
   },
@@ -126,21 +135,21 @@ export const BAYS: Bay[] = [
     id: 'sunken_hand', chapter: 2, name: 'A Bigger Fish',
     // North-north-west and further out. The Gullet is fought up here, and the
     // coast is bone.
-    bearing: D(247), r: 3100, half: 440,
+    bearing: D(247), at: BAY_AT, r: 3100, half: 440,
     sea: ['#0f1f2a', '#20404e', '#4e7480'],
     rocks: 'bones',
   },
   {
     id: 'the_coffers', chapter: 3, name: 'The Coffers',
     // The widest water of the four. A fleet action needs room to turn in.
-    bearing: D(299), r: 3100, half: 480,
+    bearing: D(299), at: BAY_AT, r: 3100, half: 480,
     sea: ['#0c1a26', '#1b3648', '#456b7c'],
     rocks: 'coffers',
   },
   {
     id: 'the_last_fathom', chapter: 4, name: 'The Last Fathom',
     // East, and the darkest. The deepest water there is.
-    bearing: D(351), r: 2900, half: 440,
+    bearing: D(351), at: BAY_AT, r: 2900, half: 440,
     sea: ['#08131d', '#152b3c', '#385a6e'],
     rocks: 'fathom',
   },
@@ -152,8 +161,8 @@ export const BAY_BY_ID: Record<string, Bay> =
 /** The middle of a bay's water. */
 export function bayCentre(b: Bay): { x: number; y: number } {
   return {
-    x: HUB.x + Math.cos(b.bearing) * BAY_AT,
-    y: HUB.y + Math.sin(b.bearing) * BAY_AT,
+    x: HUB.x + Math.cos(b.bearing) * b.at,
+    y: HUB.y + Math.sin(b.bearing) * b.at,
   }
 }
 
@@ -173,15 +182,15 @@ export function mouthOf(b: Bay): { x: number; y: number } {
  * is the whole reason the layout is three numbers and a bearing.
  */
 export function straitLen(b: Bay): number {
-  return BAY_AT - HUB_R - b.r + POKE
+  return b.at - HUB_R - b.r + POKE
 }
 
 /** Where the strait meets the bay's rim: the point everything inside a bay is
  *  measured from, because it is where you always arrive. */
 export function entryOf(b: Bay): { x: number; y: number } {
   return {
-    x: HUB.x + Math.cos(b.bearing) * (BAY_AT - b.r),
-    y: HUB.y + Math.sin(b.bearing) * (BAY_AT - b.r),
+    x: HUB.x + Math.cos(b.bearing) * (b.at - b.r),
+    y: HUB.y + Math.sin(b.bearing) * (b.at - b.r),
   }
 }
 

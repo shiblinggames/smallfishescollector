@@ -286,9 +286,16 @@ export default function CalibrateIslands() {
         <h1 className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#e6e2dc' }}>
           Island bench
         </h1>
-        <Link href="/sea" className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#8fb8cf' }}>
-          To the chart
-        </Link>
+        <span style={{ display: 'flex', gap: 14, flexShrink: 0 }}>
+          {/* The other bench. This one places buildings ON an island; that one
+              places the whole shape of the expedition water. */}
+          <Link href="/sea/calibrate/chart" className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#8fb8cf' }}>
+            Chart bench
+          </Link>
+          <Link href="/sea" className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#8fb8cf' }}>
+            To the chart
+          </Link>
+        </span>
       </div>
       <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(190,212,228,0.6)', margin: '4px 0 14px', lineHeight: 1.5 }}>
         This is the real island, baked by the same function the chart bakes it with, and the
