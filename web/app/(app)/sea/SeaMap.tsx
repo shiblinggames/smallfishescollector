@@ -43,7 +43,7 @@ import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
-import { BASINS, basinGaps, openGaps, straitOpen, ENCOUNTERS, encounterAt, encounterNear, type Basin, type Encounter } from './raidWaters'
+import { CHANNELS, CHANNEL_BY_ID, mouthOf, fromChannel, toChannel, inChannel, channelOpen, ENCOUNTERS, encounterAt, encounterNear, hullFor, type Channel, type Encounter } from './raidWaters'
 import { RAID_MAP } from '@/lib/raidMap'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
@@ -614,7 +614,7 @@ function artShapes(art: string, x: number, y: number, size: number, fallbackR: n
 let obstaclesAll: Obstacle[] | null = null
 function allObstacles(): Obstacle[] {
   if (obstaclesAll) return obstaclesAll
-  const stacks = [...REEF, ...ANCHORAGE_WALL, ...BASIN_WALLS]
+  const stacks = [...REEF, ...ANCHORAGE_WALL, ...CHANNEL_WALLS]
     .filter(m => m.art.includes('rock-gate'))
     .flatMap(m => {
       const c = ART_COLLIDERS[markKind(m.art)]
@@ -830,6 +830,26 @@ const WATER_RGB: { mid: number; half: number; c: [number, number, number][] }[] 
       c: (p.sea as [string, string, string]).map(rgb) as [number, number, number][],
     }))
 
+/**
+ * THE CAMPAIGN'S ROADS, AS COLOURS.
+ *
+ * The fishing waters are rings and answer to one radius. A channel is a
+ * corridor pointing off somewhere, so its distance is measured in its own
+ * space — how far outside the box, along and across — and then fed into the
+ * same blend with the same falloff. Sailing up one is a colour change, and
+ * turning back down it is the reverse, on exactly the same machinery that makes
+ * the Shallows shade into the Abyss.
+ *
+ * WHICH IS THE POINT. Four identical corridors fanned off one junction is a
+ * menu with a compass drawn on it. From the mouth of the hub you should be able
+ * to see that the second road is colder than the first and the fourth is nearly
+ * black, before you have committed to sailing any of them.
+ */
+const CHANNEL_RGB = CHANNELS.map(c => ({
+  c,
+  rgb: c.sea.map(rgb) as [number, number, number][],
+}))
+
 /** Are we in this water? A band is a ring around the Mainland, south only. */
 export function inBand(p: Vec, place: Place): boolean {
   if (place.kind !== 'water' || place.inner == null || place.outer == null) return false
@@ -985,6 +1005,26 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
       for (let ch = 0; ch < 3; ch++) acc[k][ch] += w.c[k][ch] * weight
     }
   }
+  // AND THE CAMPAIGN'S ROADS. Distance from the channel's BODY rather than
+  // from a centre point: a corridor 4,300 long has no middle worth measuring
+  // from, and clamping into the box first gives the whole length of it the same
+  // claim on the colour. Outside, it falls off across roughly one channel width
+  // — so the hub is open blue with four different waters showing at its edges,
+  // which is what tells you they are four different places.
+  for (const { c, rgb: cc } of CHANNEL_RGB) {
+    const q = toChannel(c, p.x, p.y)
+    const oa = Math.max(0, Math.abs(q.along - c.length / 2) - c.length / 2)
+    const oc = Math.max(0, Math.abs(q.across) - c.half)
+    const d = Math.hypot(oa, oc) / c.half
+    const d2 = d * d
+    const weight = 1 / (1 + d2 * d2)
+    if (weight < 0.004) continue
+    wSum += weight
+    for (let k = 0; k < 3; k++) {
+      for (let ch = 0; ch < 3; ch++) acc[k][ch] += cc[k][ch] * weight
+    }
+  }
+
   // UNROUNDED. The css string rounds when it writes the colours, because that
   // is what a css colour is; the numbers themselves do not have to be integers
   // and the canvas is happier if they are not. Rounding here quantises the
@@ -1341,7 +1381,7 @@ export default function SeaMap({
   /** Which side of each basin's coast she was on last frame, and whether that
    *  has been established yet. Both refs: the frame loop owns them and nothing
    *  on screen reads them. */
-  const basinIn = useRef<boolean[]>(BASINS.map(() => false))
+  const basinIn = useRef<boolean[]>(CHANNELS.map(() => false))
   const basinKnown = useRef(false)
   /** Mirrored for the frame loop, which mounts once and would otherwise hold
    *  whatever was cleared when the page loaded — so a chapter finished in this
@@ -1986,17 +2026,16 @@ export default function SeaMap({
    * it always did rather than being reshuffled by the move.
    */
   /**
-   * THE ROCK ACROSS EVERY STRAIT THIS CAPTAIN HAS NOT EARNED.
+   * THE ROCK ACROSS EVERY ROAD THIS CAPTAIN HAS NOT EARNED.
    *
-   * Sorted with the coast rather than appended to it, or a plug in a basin
-   * behind would draw over the wall of the basin in front where two rims meet —
-   * the same painter's problem the coast itself solves, and it does not stop
-   * being a problem because the rocks arrived from somewhere else.
+   * Sorted with the coast rather than appended to it, or a plug in a channel
+   * behind would draw over the wall of the one in front where the fan closes at
+   * the hub — the same painter's problem the walls themselves solve, and it does
+   * not stop being a problem because the rocks arrived from somewhere else.
    */
-  const shutPlugs = useMemo(() => BASINS
-    .flatMap(b => basinGaps(b))
-    .filter(g => g.strait !== 'sortie' && !straitOpen(g.strait, clearedNodes))
-    .flatMap(g => BASIN_PLUGS[g.strait] ?? [])
+  const shutPlugs = useMemo(() => CHANNELS
+    .filter(c => !channelOpen(c, clearedNodes))
+    .flatMap(c => CHANNEL_PLUGS[c.id] ?? [])
     .sort((p, q) => p.y - q.y), [clearedNodes])
 
   const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
@@ -2004,7 +2043,7 @@ export default function SeaMap({
       ...LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i })),
       ...REEF.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 500 })),
       ...ANCHORAGE_WALL.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 1200 })),
-      ...BASIN_WALLS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 4000 })),
+      ...CHANNEL_WALLS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 4000 })),
       // The straits this captain has not opened, filled in. Keyed off the
       // cleared list so a chapter finished this session drops its plug on the
       // next render rather than on the next reload.
@@ -4553,59 +4592,70 @@ export default function SeaMap({
         setAtEdge(false)
       }
 
-      // ── AND YOU CANNOT SAIL THROUGH A BASIN'S COAST ────────────────
+      // ── AND YOU CANNOT SAIL THROUGH A CHANNEL'S WALLS ──────────────
       //
       // The rocks are SCENERY. Every wall on this chart is really a piece of
       // arithmetic — the reef is the north wall, the harbour and the raid water
-      // are radius clamps against a rim — and the boulders are what makes the
-      // maths legible. So drawing five rings of rock bought five rings of rock
-      // and nothing else: you sailed straight through your own coastline.
+      // are radius clamps — and the boulders are what make the maths legible.
+      // Drawing walls buys walls you can see and sail straight through.
       //
-      // A rim is crossable ONLY THROUGH A GAP, in either direction. Not "you
-      // cannot get out", which would let you enter a basin through the back of
-      // its wall and then be sealed in by the way you came.
+      // A channel is a closed box with ONE opening, at its mouth. So the rule is
+      // simply: you may only change which side of it you are on while you are in
+      // the mouth, and only if that road is open to you. Sides and head are
+      // solid always; the mouth is solid until the chapter behind it falls.
       //
-      // It works off which side she was on LAST frame rather than off the sign
-      // of her speed. A boat drifting at half a pixel a frame has a radial
-      // component that flips with the swell, and a wall that reads it would let
-      // her wobble through. Which side of a line you are on does not flicker.
+      // Which side she was on LAST FRAME, not the sign of her speed: a boat
+      // drifting at half a pixel a frame has a component that flips with the
+      // swell, and a wall reading that would let her wobble through.
       const nowOut = sortieRef.current
-      for (let i = 0; i < BASINS.length; i++) {
-        const b = BASINS[i]
-        const bx = pos.current.x - b.x, by = pos.current.y - b.y
-        const bd = Math.hypot(bx, by) || 1
-        const inside = bd < b.r
+      for (let i = 0; i < CHANNELS.length; i++) {
+        const c = CHANNELS[i]
+        const inside = inChannel(c, pos.current.x, pos.current.y)
 
-        // FIRST FRAME, or the first frame out here: adopt where she actually is
-        // rather than assuming she started outside. The sea position persists,
-        // so a captain who quit inside a basin comes back inside it, and a wall
-        // that believed otherwise would push her out through her own coast.
-        if (!basinKnown.current || !nowOut) {
+        // FIRST FRAME OUT HERE: adopt where she actually is. Sea position
+        // persists, so a captain who quit up a channel comes back up it, and a
+        // wall that assumed otherwise would shove her out through the side.
+        if (!basinKnown.current || !nowOut) { basinIn.current[i] = inside; continue }
+        if (inside === basinIn.current[i]) continue
+
+        const q = toChannel(c, pos.current.x, pos.current.y)
+        // THROUGH THE MOUTH, which is the only opening: near the near end, and
+        // between the two gate stones rather than round the outside of one.
+        const atMouth = q.along < 160 && Math.abs(q.across) < c.half
+        if (atMouth && channelOpen(c, clearedRef.current)) {
           basinIn.current[i] = inside
           continue
         }
-        if (inside === basinIn.current[i]) continue
 
-        // OPEN GAPS ONLY. A strait whose chapter is unfinished is wall like any
-        // other stretch of the rim — which is the whole of the campaign's
-        // linearity, enforced by the same arithmetic that draws the coast rather
-        // than by a rule bolted on beside it.
-        const th = Math.atan2(by, bx)
-        const open = openGaps(b, clearedRef.current).some(g =>
-          Math.abs(((th - g.bearing + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < g.half)
-
-        if (open) { basinIn.current[i] = inside; continue }
-
-        // Back to the side she was on, and the radial component goes. What was
-        // carrying her sideways survives, so she scrapes along the coast and
-        // finds the mouth rather than stopping dead — the same courtesy the
-        // island shoreline and the chart's own edge both extend.
-        const keep = basinIn.current[i] ? b.r - 12 : b.r + 12
-        pos.current.x = b.x + (bx / bd) * keep
-        pos.current.y = b.y + (by / bd) * keep
-        const rn = vel.current.x * (bx / bd) + vel.current.y * (by / bd)
-        vel.current.x -= (bx / bd) * rn
-        vel.current.y -= (by / bd) * rn
+        // Back to the side she was on. Clamped in channel space, which is what
+        // makes a corridor easy: the two constraints are a distance along and a
+        // distance across, and both are one Math.min away from being obeyed.
+        const M = 14
+        let a = q.along, r = q.across
+        if (basinIn.current[i]) {
+          a = Math.min(Math.max(a, M), c.length - M)
+          r = Math.max(-c.half + M, Math.min(c.half - M, r))
+        } else {
+          // Outside and about to cross a wall. Push back out the way she came:
+          // past the head if she was beyond it, otherwise through the nearer
+          // side, and only out of the mouth if she is genuinely at that end.
+          if (a > c.length) a = c.length + M
+          else if (a < 0) a = -M
+          else r = r >= 0 ? c.half + M : -c.half - M
+        }
+        const back = fromChannel(c, a, r)
+        // Only the component INTO the wall is removed, so what was carrying her
+        // sideways survives and she scrapes along it and finds the mouth — the
+        // same courtesy the island shorelines and the chart's own edge extend.
+        const nxv = back.x - pos.current.x, nyv = back.y - pos.current.y
+        const nl = Math.hypot(nxv, nyv) || 1
+        pos.current.x = back.x
+        pos.current.y = back.y
+        const into = vel.current.x * (nxv / nl) + vel.current.y * (nyv / nl)
+        if (into < 0) {
+          vel.current.x -= (nxv / nl) * into
+          vel.current.y -= (nyv / nl) * into
+        }
       }
       basinKnown.current = nowOut
 
@@ -5647,8 +5697,8 @@ export default function SeaMap({
         {/* The harbour's own shore, north of the reef. Always drawn: from the
             fishing grounds it is the far wall you can see beyond the arch. */}
         <AnchorageWall />
-        <BasinWalls />
-        <BasinPlugs rocks={shutPlugs} />
+        <ChannelWalls />
+        <ChannelPlugs rocks={shutPlugs} />
 
         {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
             through the opening is what takes you to expeditions, so the opening
@@ -7982,151 +8032,130 @@ function anchorageRocks() {
 const ANCHORAGE_WALL = anchorageRocks()
 
 /**
- * ── THE CAMPAIGN'S BASIN WALLS ──────────────────────────────────────────────
+ * ── A CHANNEL'S TWO WALLS ───────────────────────────────────────────────────
  *
- * `anchorageRocks` with the four things it hardcodes turned into arguments:
- * where the ring is, how big, which way it is open, and how wide those openings
- * are. Deliberately the same boulders, the same two-row stagger, the same
- * shingle and the same painter's sort — a basin has to read as the SAME COAST
- * the arch and the sortie are made of, because a player learns "rock like that
- * is a wall with a gap in it" once and should never have to learn it again.
+ * The same boulders, stagger and shingle the reef and the harbour are built
+ * from, run along both sides of a corridor instead of round a ring. A road out
+ * here has to read as the SAME COAST the arch and the sortie are made of,
+ * because you learn "rock like that is a wall" once and should never have to
+ * learn it again.
  *
- * WHAT DIFFERS FROM THE ANCHORAGE, and only this:
+ * Built in CHANNEL SPACE and converted at the end, so a road can be re-aimed or
+ * lengthened without a single number in here changing.
  *
- *   FULL CIRCLE. The anchorage's wall covers ~229 degrees because south of the
- *   reef the fishing grounds take over and the reef is already its shore. A
- *   basin has no such neighbour, so it is walled the whole way round.
- *
- *   TWO GAPS, not one. The way in and the way on. The last basin has one,
- *   which is what makes it the end of the road rather than a room with a door
- *   nobody has opened.
- *
- *   ITS OWN SEED. Five basins built from one seed would be five identical
- *   coastlines at different coordinates, and the eye reads repetition faster
- *   than it reads anything else on a chart.
+ * The mouth is left open; whether you may pass it is a question about the
+ * chapter behind it, answered per captain in `shutMouths`. The HEAD is capped —
+ * a corridor that simply stops in open water is a corridor you sail out of the
+ * end of.
  */
-function basinRocks(b: Basin): { art: string; x: number; y: number; size: number }[] {
+function channelRocks(c: Channel): { art: string; x: number; y: number; size: number }[] {
   const out: { art: string; x: number; y: number; size: number }[] = []
-  // Seeded off the id so each coast is its own, and stable across reloads.
   let seed = 0x9e3779b9
-  for (let i = 0; i < b.id.length; i++) { seed = (Math.imul(seed ^ b.id.charCodeAt(i), 0x85ebca6b) >>> 0) }
+  for (let i = 0; i < c.id.length; i++) seed = (Math.imul(seed ^ c.id.charCodeAt(i), 0x85ebca6b) >>> 0)
   const nx = () => {
     seed ^= seed << 13; seed >>>= 0
     seed ^= seed >>> 17
     seed ^= seed << 5; seed >>>= 0
     return seed / 0x100000000
   }
+  const put = (along: number, across: number, art: string, size: number) => {
+    const p = fromChannel(c, along, across)
+    out.push({ art, x: p.x, y: p.y, size })
+  }
 
-  const at = (th: number, off: number) => ({
-    x: b.x + Math.cos(th) * (b.r + off),
-    y: b.y + Math.sin(th) * (b.r + off),
-  })
-  const ang = (px: number) => px / b.r
-  const gaps = basinGaps(b)
-
-  /** Is this bearing inside one of the openings? Compared as a shortest angular
-   *  distance, so a gap that straddles the seam at ±PI is still one gap. */
-  const inGap = (th: number, pad: number) => gaps.some(g => {
-    let d = Math.abs(((th - g.bearing + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
-    return d < g.half + pad
-  })
-
-  // ── THE BOULDERS ──
-  const skip = ang(520)
-  const step = ang(REEF_STEP)
-  for (const row of [0, 1]) {
-    for (let th = (row * step) / 2; th < Math.PI * 2; th += step) {
-      if (inGap(th, skip)) continue
-      const k = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
-      const p = at(th + (nx() - 0.5) * step * 0.22, (row ? 1 : -1) * 110 + (nx() - 0.5) * 150)
-      out.push({ art: k.art, x: p.x, y: p.y, size: k.min + nx() * (k.max - k.min) })
+  // ── THE TWO SIDES ──
+  for (const side of [-1, 1]) {
+    for (const row of [0, 1]) {
+      for (let a = (row * REEF_STEP) / 2; a <= c.length; a += REEF_STEP) {
+        const k = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
+        put(a + (nx() - 0.5) * REEF_STEP * 0.3,
+          side * (c.half + (row ? 150 : 30) + (nx() - 0.5) * 130),
+          k.art, k.min + nx() * (k.max - k.min))
+      }
     }
   }
 
-  // ── THE HEADLANDS ──
-  // The same pair that frames the arch and the sortie, framing every mouth. A
-  // gap in a run of boulders is a gap you might have imagined; two stones
-  // standing either side of it is a door.
-  for (const g of gaps) {
-    const off = g.half + ang(370)
-    const w = at(g.bearing - off, 40), e = at(g.bearing + off, 40)
-    out.push({ art: '/sea/rock-gate-w.png', x: w.x, y: w.y, size: 700 })
-    out.push({ art: '/sea/rock-gate-e.png', x: e.x, y: e.y, size: 700 })
+  // ── THE HEAD ──
+  // Across the far end, plus a little round each corner so the cap MEETS the
+  // sides rather than leaving two seams the eye can find.
+  for (const row of [0, 1]) {
+    for (let x = -c.half - REEF_STEP; x <= c.half + REEF_STEP; x += REEF_STEP) {
+      const k = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
+      put(c.length + (row ? 150 : 30) + (nx() - 0.5) * 130,
+        x + (nx() - 0.5) * REEF_STEP * 0.3,
+        k.art, k.min + nx() * (k.max - k.min))
+    }
   }
 
+  // ── THE GATE STONES ──
+  // Either side of the mouth, framing it. A gap in a run of rock is a gap you
+  // might have imagined; two stones standing either side of it is a door — and
+  // out here it is the door to a whole chapter.
+  put(-40, -(c.half + 260), '/sea/rock-gate-w.png', 760)
+  put(-40, c.half + 260, '/sea/rock-gate-e.png', 760)
+
   // ── THE SHINGLE ──
-  const pstep = ang(PEBBLE_STEP)
-  const pskip = ang(300)
-  for (let th = 0; th < Math.PI * 2; th += pstep) {
-    if (inGap(th, pskip)) continue
-    const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
-    const r = nx()
-    const p = at(th + (nx() - 0.5) * pstep * 0.8, (nx() - 0.5) * 330)
-    out.push({ art: pa.art, x: p.x, y: p.y, size: pa.min + r * r * (pa.max - pa.min) })
+  for (const side of [-1, 1]) {
+    for (let a = 0; a <= c.length; a += PEBBLE_STEP) {
+      const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
+      const r = nx()
+      put(a + (nx() - 0.5) * PEBBLE_STEP * 0.8,
+        side * (c.half + (nx() - 0.2) * 300),
+        pa.art, pa.min + r * r * (pa.max - pa.min))
+    }
   }
 
   return out.sort((p, q) => p.y - q.y)
 }
 
-/** Every basin's coast, in one list, sorted together — so a rock in the basin
- *  behind never draws over one in the basin in front where two rims meet. */
-const BASIN_WALLS = BASINS.flatMap(basinRocks).sort((p, q) => p.y - q.y)
+/** Every road's walls, sorted together — so rock in the channel behind never
+ *  draws over rock in the one in front where two fan close at the hub. */
+const CHANNEL_WALLS = CHANNELS.flatMap(channelRocks).sort((p, q) => p.y - q.y)
 
 /**
- * ── WHAT A SHUT STRAIT LOOKS LIKE ───────────────────────────────────────────
+ * ── WHAT A SHUT MOUTH LOOKS LIKE ────────────────────────────────────────────
  *
- * Rock. The same rock, filling the gap, so an unfinished chapter is not a way
- * on that mysteriously refuses you — it is a coast that does not have a way on
- * yet. Sailing hard at a plainly open mouth and bouncing off nothing is the
- * invisible wall this chart spends several hundred lines avoiding everywhere
- * else, and it would be worse here because the gap is FRAMED: two gate stones
- * standing either side of solid water is a door drawn onto a wall.
+ * Rock, filling it. An unearned chapter is not a road that mysteriously refuses
+ * you — it is a road that has not been opened yet. Sailing hard at a plainly
+ * open mouth and bouncing off nothing is the invisible wall this chart spends
+ * hundreds of lines avoiding, and it would be worse here because the mouth is
+ * FRAMED: two gate stones either side of solid water is a door painted on.
  *
- * Built for every strait at module scope and drawn per captain. The walls
+ * Built for every road at module scope and drawn per captain, because the walls
  * cannot be per-player — they are a module constant and that is most of why the
- * coast is cheap — so the part that varies is this, and it is five small
- * batches rather than five whole coastlines.
- *
- * No new art and no gate: when the chapter falls the rock is simply not drawn,
- * which reads as the sea opening rather than as a barrier being unlocked.
+ * coast is cheap.
  */
-const BASIN_PLUGS: Record<string, { art: string; x: number; y: number; size: number }[]> =
-  Object.fromEntries(BASINS.flatMap(b => basinGaps(b)
-    .filter(g => g.strait !== 'sortie')
-    .map(g => {
-      const out: { art: string; x: number; y: number; size: number }[] = []
-      let seed = 0x2545f491
-      for (let i = 0; i < g.strait.length; i++) seed = (Math.imul(seed ^ g.strait.charCodeAt(i), 0x27d4eb2f) >>> 0)
-      const nx = () => {
-        seed ^= seed << 13; seed >>>= 0
-        seed ^= seed >>> 17
-        seed ^= seed << 5; seed >>>= 0
-        return seed / 0x100000000
+const CHANNEL_PLUGS: Record<string, { art: string; x: number; y: number; size: number }[]> =
+  Object.fromEntries(CHANNELS.map(c => {
+    const out: { art: string; x: number; y: number; size: number }[] = []
+    let seed = 0x2545f491
+    for (let i = 0; i < c.id.length; i++) seed = (Math.imul(seed ^ c.id.charCodeAt(i), 0x27d4eb2f) >>> 0)
+    const nx = () => {
+      seed ^= seed << 13; seed >>>= 0
+      seed ^= seed >>> 17
+      seed ^= seed << 5; seed >>>= 0
+      return seed / 0x100000000
+    }
+    const put = (along: number, across: number, art: string, size: number) => {
+      const p = fromChannel(c, along, across)
+      out.push({ art, x: p.x, y: p.y, size })
+    }
+    for (const row of [0, 1]) {
+      for (let x = -c.half; x <= c.half; x += REEF_STEP) {
+        const k = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
+        put(60 - (row ? 150 : 0) + (nx() - 0.5) * 120,
+          x + (nx() - 0.5) * REEF_STEP * 0.3,
+          k.art, k.min + nx() * (k.max - k.min))
       }
-      const at = (th: number, off: number) => ({
-        x: b.x + Math.cos(th) * (b.r + off),
-        y: b.y + Math.sin(th) * (b.r + off),
-      })
-      const step = REEF_STEP / b.r
-      // Across the mouth and a little past each side, so the plug MEETS the
-      // wall rather than leaving two seams where the eye can see it was added.
-      for (const row of [0, 1]) {
-        for (let d = -g.half - step; d <= g.half + step; d += step) {
-          const k = BOULDERS[Math.min(BOULDERS.length - 1, Math.floor(nx() * BOULDERS.length))]
-          const q = at(g.bearing + d + (nx() - 0.5) * step * 0.22,
-            (row ? 1 : -1) * 110 + (nx() - 0.5) * 150)
-          out.push({ art: k.art, x: q.x, y: q.y, size: k.min + nx() * (k.max - k.min) })
-        }
-      }
-      const pstep = PEBBLE_STEP / b.r
-      for (let d = -g.half; d <= g.half; d += pstep) {
-        const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
-        const r = nx()
-        const q = at(g.bearing + d + (nx() - 0.5) * pstep * 0.8, (nx() - 0.5) * 330)
-        out.push({ art: pa.art, x: q.x, y: q.y, size: pa.min + r * r * (pa.max - pa.min) })
-      }
-      return [g.strait, out.sort((p2, q2) => p2.y - q2.y)] as const
-    })))
+    }
+    for (let x = -c.half; x <= c.half; x += PEBBLE_STEP) {
+      const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
+      const r = nx()
+      put(40 + (nx() - 0.5) * 260, x + (nx() - 0.5) * PEBBLE_STEP * 0.8,
+        pa.art, pa.min + r * r * (pa.max - pa.min))
+    }
+    return [c.id, out.sort((p, q) => p.y - q.y)] as const
+  }))
 
 /**
  * EVERYTHING THAT CAN STAND IN FRONT OF THE BOAT.
@@ -8150,7 +8179,7 @@ const BASIN_PLUGS: Record<string, { art: string; x: number; y: number; size: num
  * and every extra candidate is one more distance test on the proximity tick.
  */
 const OCCLUDERS: { art: string; x: number; y: number; size: number }[] =
-  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL, ...BASIN_WALLS]
+  [...LANDMARKS, ...REEF, ...ANCHORAGE_WALL, ...CHANNEL_WALLS]
     .filter(m => m.size >= 300)
     .map(m => ({ art: m.art, x: m.x, y: m.y, size: m.size }))
 
@@ -8183,16 +8212,16 @@ const AnchorageWall = memo(function AnchorageWall() {
   return <>{ANCHORAGE_WALL.map((m, i) => <SeaMark key={`anch${i}`} m={m} i={i + 1200} />)}</>
 })
 
-/** The campaign's coasts. Same treatment as the reef and the harbour wall, for
- *  the same reason: five more module constants that can never change. */
-const BasinWalls = memo(function BasinWalls() {
+/** The campaign's roads. Same treatment as the reef and the harbour wall, for
+ *  the same reason: four more module constants that can never change. */
+const ChannelWalls = memo(function ChannelWalls() {
   if (GPU_ISLANDS) return null
-  return <>{BASIN_WALLS.map((m, i) => <SeaMark key={`basin${i}`} m={m} i={i + 4000} />)}</>
+  return <>{CHANNEL_WALLS.map((m, i) => <SeaMark key={`chan${i}`} m={m} i={i + 4000} />)}</>
 })
 
-/** The shut straits, on the DOM path. Takes its rocks as a prop because this is
+/** The shut mouths, on the DOM path. Takes its rocks as a prop because this is
  *  the one part of the coast that differs per captain. */
-const BasinPlugs = memo(function BasinPlugs({ rocks }: {
+const ChannelPlugs = memo(function ChannelPlugs({ rocks }: {
   rocks: { art: string; x: number; y: number; size: number }[]
 }) {
   if (GPU_ISLANDS) return null
@@ -9420,20 +9449,25 @@ const AshoreTick = memo(function AshoreTick() {
 /**
  * ── A CAMPAIGN ENCOUNTER, ON THE WATER ──────────────────────────────────────
  *
- * The node's OWN art. Every raid node already carries the picture the map draws
- * it with — Pete's plate, Krust's, the Reef Raider — so an encounter needs no
- * new asset and a boss looks out here exactly as it does on the card. Story
- * beats carry art too, and theirs is a document rather than a face, which is
- * why they read as something to pick up rather than something to fight.
+ * IT IS A SHIP. You sail up to a hull floating in the channel and take it on
+ * from alongside — not to a portrait plate standing on the sea, which is a card
+ * with the card taken away and is exactly what this surface exists to stop
+ * being. `hullFor` picks the boss's own flagship out of the raid it belongs to,
+ * so the ship you close on is the ship whose guns open ten seconds later.
+ *
+ * A STORY BEAT IS NOT A SHIP. It is a marker buoy: something bobbing where the
+ * thing happened, with the node's own art hung on it as a small plate. A beat
+ * must never read as a fight, and a buoy at a third the size of a brigantine
+ * cannot be mistaken for one from any distance.
  *
  * LIT BY WHETHER YOU CAN TAKE IT. Available is full colour; locked is drained
- * and dim, and still drawn — a boss you can SEE and cannot yet reach is the
- * reason to come back, and hiding it would make the water empty until the
- * moment it is not. Cleared keeps its colour but loses its urgency ring: it is
- * still there, still fightable, and no longer the thing you are here for.
+ * and dim, and STILL DRAWN — a ship you can see and cannot yet reach is the
+ * reason to come back, and hiding it would leave the road empty until the moment
+ * it is not. Cleared keeps its colour and loses its urgency: still there, still
+ * fightable, no longer the thing you are here for.
  *
- * Counter-squashed like everything with height, because it is a ship standing
- * on the plane rather than a mark lying on it.
+ * Counter-squashed like everything with height, because a hull stands ON the
+ * plane rather than being painted onto it.
  */
 const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
   enc: Encounter
@@ -9442,17 +9476,26 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
 }) {
   const node = RAID_MAP.find(n => n.id === enc.node)
   const at = encounterAt(enc)
-  if (!node || !at || !node.image) return null
+  const hull = hullFor(enc)
+  if (!node || !at) return null
 
   const locked = status === 'locked'
   const cleared = status === 'cleared'
   const fight = node.type === 'raid' || node.type === 'skirmish'
-  // A BOSS IS BIGGER THAN A COURIER. Sized against the boat's 210, which is the
-  // only object out here whose scale anybody knows.
-  const w = fight ? (node.type === 'raid' ? 300 : 200) : 150
-  const src = node.image.startsWith('/storage')
+
+  // A FLAGSHIP IS BIGGER THAN A ROWBOAT. Sized against the player's own 210,
+  // which is the only object out here whose scale anybody already knows: a boss
+  // out-masses you, a skirmisher is a fair match, a buoy is a thing you look
+  // down at.
+  const w = fight ? (node.type === 'raid' ? 340 : 230) : 120
+
+  const plate = node.image?.startsWith('/storage')
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}${node.image}`
     : node.image
+
+  // The bob. Off the encounter's own position so a line of ships is never in
+  // step — a channel of hulls rising and falling together reads as one object.
+  const phase = ((Math.abs(at.x) + Math.abs(at.y)) % 1000) / 1000
 
   return (
     <div aria-hidden style={{
@@ -9460,27 +9503,51 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
       transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
       transformOrigin: 'bottom center',
     }}>
-      {/* SOMETHING UNDER IT, so it sits IN the water rather than on top of it.
-          Foreshortened with the plane, like the berth pools and the portal. */}
+      {/* THE WATER UNDER IT, so the hull sits IN the sea rather than on top of
+          it. Foreshortened with the plane, like the berth pools and the portal.
+          Red under something hostile, pale under a buoy. */}
       <div aria-hidden style={{
-        position: 'absolute', left: '50%', bottom: -w * 0.06,
-        width: w * 1.15, height: w * 0.34,
+        position: 'absolute', left: '50%', bottom: fight ? w * 0.06 : 0,
+        width: w * (fight ? 0.92 : 1.1), height: w * (fight ? 0.22 : 0.3),
         transform: `translate(-50%, 0) scaleY(${GROUND})`,
         borderRadius: '50%',
         background: locked
-          ? 'radial-gradient(ellipse, rgba(6,12,18,0.5) 0%, transparent 70%)'
-          : `radial-gradient(ellipse, ${fight ? 'rgba(200,80,60,0.30)' : 'rgba(120,200,220,0.26)'} 0%, transparent 72%)`,
+          ? 'radial-gradient(ellipse, rgba(6,12,18,0.55) 0%, transparent 70%)'
+          : `radial-gradient(ellipse, ${fight ? 'rgba(190,70,55,0.32)' : 'rgba(120,200,220,0.26)'} 0%, transparent 72%)`,
       }} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" draggable={false} decoding="async" style={{
-        width: w, height: 'auto', display: 'block', position: 'relative',
-        filter: locked
-          ? 'grayscale(0.85) brightness(0.5) drop-shadow(0 6px 14px rgba(0,0,0,0.6))'
-          : isNear && !cleared
-            ? 'drop-shadow(0 6px 16px rgba(0,0,0,0.6)) drop-shadow(0 0 18px rgba(240,192,64,0.5))'
-            : 'drop-shadow(0 6px 16px rgba(0,0,0,0.6))',
-        opacity: cleared ? 0.82 : 1,
-      }} />
+
+      <div style={{
+        animation: `encBob 5.5s ease-in-out ${(-phase * 5.5).toFixed(2)}s infinite`,
+        transformOrigin: 'bottom center',
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={fight && hull ? hull : '/sea/buoy.png'} alt="" draggable={false} decoding="async"
+          style={{
+            width: w, height: 'auto', display: 'block', position: 'relative',
+            filter: locked
+              ? 'grayscale(0.85) brightness(0.5) drop-shadow(0 8px 16px rgba(0,0,0,0.6))'
+              : isNear && !cleared
+                ? 'drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(240,192,64,0.55))'
+                : 'drop-shadow(0 8px 18px rgba(0,0,0,0.6))',
+            opacity: cleared ? 0.85 : 1,
+          }} />
+
+        {/* WHO IS ABOARD, hung on the buoy. Only story beats carry it: on a
+            fight the ship IS the answer, and a face pinned to a hull would put
+            the card back on the water one plate at a time. */}
+        {!fight && plate && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={plate} alt="" draggable={false} decoding="async" style={{
+            position: 'absolute', left: '50%', bottom: '52%',
+            width: w * 0.78, transform: 'translate(-50%, 0)',
+            borderRadius: 8,
+            filter: locked
+              ? 'grayscale(0.85) brightness(0.5)'
+              : 'drop-shadow(0 4px 10px rgba(0,0,0,0.55))',
+            opacity: locked ? 0.8 : 1,
+          }} />
+        )}
+      </div>
     </div>
   )
 })

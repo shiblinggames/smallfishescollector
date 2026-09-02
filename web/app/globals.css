@@ -3174,3 +3174,16 @@ body.hardcore-gauntlet::after {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.35; }
 }
+
+/* A hull riding the swell. Transform only, so it composites and never costs the
+   chart a frame — there can be a dozen of these on screen at once and the world
+   layer under them is already being repositioned every frame.
+
+   Small on purpose. Six pixels and a degree and a half is a ship at anchor in
+   slack water; any more and a line of them up a channel looks like a storm
+   nobody is reacting to. The delay is derived per encounter so they are never
+   in step. */
+@keyframes encBob {
+  0%, 100% { transform: translateY(0)     rotate(-0.7deg); }
+  50%      { transform: translateY(-6px)  rotate(0.7deg); }
+}

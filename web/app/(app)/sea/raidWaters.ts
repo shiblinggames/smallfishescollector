@@ -1,364 +1,275 @@
 // ── THE CAMPAIGN'S WATER ────────────────────────────────────────────────────
 //
-// Five basins north of the sortie, one per chapter, each walled in rock with a
-// strait at either end. Sail into the first, fight your way to its boss, and the
-// strait north opens.
+// Past the sortie the sea opens out, and four channels run north from it — one
+// per chapter, each walled both sides, each with its fights strung along it in
+// the order the chain gives them. You come back to the open water between them.
 //
-// ── WHY NOT RINGS LIKE THE FISHING GROUNDS ──────────────────────────────────
+// ── WHY A HUB AND SPOKES, AND NOT THE TWO SHAPES BEFORE IT ──────────────────
 //
-// The first draft of this mirrored the fishing bands: concentric rings out from
-// one origin, deeper the further you go. It was wrong, and the reason is worth
-// keeping because it is a rule about shape rather than about this feature.
+// This is the third shape, and both the earlier ones were wrong about the same
+// thing: what the geometry SAYS.
 //
-// Concentric rings from one origin SAY "pick any heading and go as far as you
-// dare". They are direction-agnostic by construction — that is precisely why
-// they are right for fishing, where the whole offer is that the sea is open and
-// you choose how far out to work. Wrapping a LINEAR campaign in that shape says
-// the opposite of what the campaign is, and it would have given every chapter a
-// vast arc of empty water with one boss somewhere in it.
+//   RINGS, like the fishing grounds. Concentric bands out from one origin say
+//   "pick any heading and go as far as you dare" — direction-agnostic by
+//   construction. Exactly right for fishing, exactly wrong for a campaign that
+//   has an order.
 //
-// A basin says something else: this is a place, it has edges, and there is one
-// way on. That is linear at the scale of the campaign and open at the scale of
-// an afternoon, which is the combination the design actually wants.
+//   A CHAIN of walled basins, each opening into the next. Linear, and honestly
+//   so, but it hid the campaign from you: standing in chapter I you could see
+//   chapter II's rock and nothing past it, and re-farming chapter I meant
+//   sailing back through everything that came after.
 //
-// ── THE ANCHORAGE IS THE SAME OBJECT ────────────────────────────────────────
+// A HUB FIXES BOTH. From open water you see all four mouths at once, so the
+// whole campaign is legible as a shape on your first trip out — three of them
+// walled up, and what stands in the way is a thing you can look at. And every
+// chapter is one turn off the same water, so going back for Pete is a short run
+// rather than a tour of everything you have already beaten.
 //
-// None of this is a new idiom. chart.ts on the anchorage rim: "IT IS WALLED, all
-// the way round... That is what makes it a harbour rather than a disc: the
-// boundary was an invisible line you slid along, and now it is a shore with one
-// gap in it, exactly like the reef that let you in."
+// The channels are strictly linear inside themselves, which is where linearity
+// belongs: the ORDER OF A CHAPTER'S FIGHTS. Getting TO a chapter never wanted
+// to be linear, and the first two shapes made it so by accident.
 //
-// So a basin is an anchorage with two gaps instead of one, in the same rock, on
-// the same rules, and the player already knows how to read it: they have sailed
-// through the arch and out of the sortie to get here.
+// ── AND THEY LOOK DIFFERENT ─────────────────────────────────────────────────
 //
-// ── PLACED, NOT DERIVED ─────────────────────────────────────────────────────
-//
-// The table below is hand-authored. A formula would produce five identical
-// circles evenly spaced, which is the sameness the rings were rejected for — and
-// the chapters are not the same as each other. The route bends west and back so
-// no two straits line up, and the radii differ so a basin can be a channel or an
-// open field depending on what is fought in it.
-//
-// Consecutive basins are placed so their rims OVERLAP BY ABOUT 200px. That
-// overlap is the strait: the gap in both walls falls where the two shores meet,
-// so a strait is a real place on the chart rather than a corridor drawn between
-// two distant circles.
-//
-// 200 AND NOT "WHATEVER FALLS OUT". The first pass landed on overlaps of 17 to
-// 119, and 17 is a knife-edge — moving that basin 900px in tuning separated the
-// two rims entirely and left a strait spanning open water. The check catches it,
-// but a table where ordinary tuning breaks the chain is a table nobody can tune.
-// Every pair now has room to be nudged a few hundred pixels in any direction
-// before anything has to be reconsidered.
+// Each channel carries its own water and, later, its own rock and props. Four
+// identical corridors fanned from a point is a menu with a compass drawn on it;
+// the difference between them has to be visible from the hub, before you have
+// committed to sailing one.
 
 import { SORTIE } from './chart'
-import { RAID_CHAPTERS } from '@/lib/raidMap'
+import { RAID_CHAPTERS, RAID_MAP } from '@/lib/raidMap'
+import { getRaidConfigById } from '@/lib/raidRegistry'
 
-export type Basin = {
+/**
+ * WHERE THE OPEN WATER IS.
+ *
+ * A short run north of the sortie, so coming through the mouth puts you IN it
+ * rather than leaving a crossing before the game starts. No wall of its own: it
+ * is open water and should read as open, and the channels' own walls are what
+ * give the junction a shape.
+ */
+export const HUB = { x: 0, y: -9200 }
+
+/** How far the channel mouths sit from the hub's centre. Far enough that all
+ *  four are separate places rather than one crowded junction, near enough that
+ *  you can see the lot from the middle of it. */
+export const MOUTH_AT = 2200
+
+export type Channel = {
   /** Matches a RAID_CHAPTERS id, so the campaign and the water cannot drift. */
   id: string
   chapter: number
   name: string
-  /** Centre and wall radius, world px. */
-  x: number
-  y: number
-  r: number
-  /**
-   * How wide the strait OUT of this basin is, measured along the rim.
-   *
-   * Per basin rather than one constant, because a mouth reads differently
-   * depending on how fast you meet it: the sortie is 620 because you arrive at
-   * it head-on at speed, the reef arch is 430 because you line up for it.
-   */
-  gateHalf: number
-  /** The sea's colour here. Three stops, deep to pale, like every water. */
+  /** Which way it runs out of the hub. atan2 radians, so -PI/2 is due north. */
+  bearing: number
+  /** How far the water runs beyond the mouth. */
+  length: number
+  /** Half the channel's width. The boat is 210 long, so this is the difference
+   *  between a strait you thread and a reach you can turn in. */
+  half: number
+  /** Three stops, deep to pale, like every water on this chart. */
   sea: [string, string, string]
 }
 
+const D = (deg: number) => (deg * Math.PI) / 180
+
 /**
- * NORTH, AND BENDING.
+ * THE FOUR ROADS.
  *
- * A straight line of basins would put every strait on one bearing and turn the
- * campaign into a corridor you hold W through. The route swings east, back west
- * past the middle, and straightens for the coda — so each strait has to be
- * found, and the shape of the run is something you learn rather than something
- * you hold a key for.
+ * Fanned across the north forty degrees apart, which at the mouths leaves about
+ * four hundred pixels of open water between one channel's wall and the next.
+ * Closer and the junction reads as one shape with slots cut in it; wider and
+ * the outer two stop being visible from the middle.
  *
- * The colours darken northward and drift from the anchorage's grey-green toward
- * the near-black of deep water, which is the one thing the fishing rings had
- * exactly right: the sea should tell you how far in you are without a label.
+ * Chapter V is not here. One Last Ride is a single fight and does not want a
+ * road of its own — where Finn waits is a decision for once the four are sailed.
  */
-export const BASINS: Basin[] = [
+export const CHANNELS: Channel[] = [
   {
     id: 'thread', chapter: 1, name: 'The Loose Thread',
-    // Just past the sortie: its southern rim sits 400px north of the mouth, so
-    // the first crossing is a short run rather than an errand.
-    x: 0, y: -8900, r: 1900, gateHalf: 520,
+    // West-north-west and the widest: the first road anybody sails should be
+    // the one that is hardest to get wrong.
+    // LENGTH IS SET BY WHAT STANDS IN IT, not picked first. Seven stops at a
+    // hull's clearance apart, and the last one wanting room to turn round in
+    // front of, is 4300 of water. `npm run check` measures that.
+    bearing: D(210), length: 4300, half: 620,
     sea: ['#12242c', '#26454e', '#5c7f84'],
   },
   {
     id: 'sunken_hand', chapter: 2, name: 'A Bigger Fish',
-    // East, and tighter. The Gullet is fought in here and a cramped basin is
-    // the right room for it.
-    x: 2000, y: -11770, r: 1800, gateHalf: 470,
+    // Tighter and longer. The Gullet is fought up here.
+    bearing: D(250), length: 3800, half: 520,
     sea: ['#0f1f2a', '#20404e', '#4e7480'],
   },
   {
     id: 'the_coffers', chapter: 3, name: 'The Coffers',
-    // Back to the centre line and wider: a fleet action wants open water.
-    x: 0, y: -14640, r: 1900, gateHalf: 500,
+    // Wide again: a fleet action needs room to turn in.
+    bearing: D(290), length: 3600, half: 660,
     sea: ['#0c1a26', '#1b3648', '#456b7c'],
   },
   {
     id: 'the_last_fathom', chapter: 4, name: 'The Last Fathom',
-    // West, and dark. The deepest water there is, per the chapter's own line.
-    x: -2200, y: -17360, r: 1800, gateHalf: 460,
+    // The longest and the darkest. The deepest water there is.
+    bearing: D(330), length: 4200, half: 560,
     sea: ['#08131d', '#152b3c', '#385a6e'],
-  },
-  {
-    id: 'one_last_ride', chapter: 5, name: 'One Last Ride',
-    // Dead centre and smallest. A coda is not a chapter: there is one thing in
-    // here and nowhere to wander to, which is the point of it.
-    x: 0, y: -19820, r: 1700, gateHalf: 440,
-    sea: ['#050d16', '#101f2e', '#2c4a5e'],
   },
 ]
 
-export const BASIN_BY_ID: Record<string, Basin> =
-  Object.fromEntries(BASINS.map(b => [b.id, b]))
+export const CHANNEL_BY_ID: Record<string, Channel> =
+  Object.fromEntries(CHANNELS.map(c => [c.id, c]))
+
+/** The mouth of a channel, in world coordinates. */
+export function mouthOf(c: Channel): { x: number; y: number } {
+  return {
+    x: HUB.x + Math.cos(c.bearing) * MOUTH_AT,
+    y: HUB.y + Math.sin(c.bearing) * MOUTH_AT,
+  }
+}
+
+/** The far end, where the water stops. */
+export function headOf(c: Channel): { x: number; y: number } {
+  return {
+    x: HUB.x + Math.cos(c.bearing) * (MOUTH_AT + c.length),
+    y: HUB.y + Math.sin(c.bearing) * (MOUTH_AT + c.length),
+  }
+}
+
+/**
+ * A POINT IN CHANNEL SPACE: how far ALONG from the mouth, and how far ACROSS
+ * from the centre line.
+ *
+ * Every question about a channel is easier in those two numbers than in world
+ * coordinates — where the walls are, whether the boat is inside, where an
+ * encounter sits — and it means a road can be re-aimed or lengthened without
+ * touching anything standing in it.
+ */
+export function toChannel(c: Channel, x: number, y: number): { along: number; across: number } {
+  const m = mouthOf(c)
+  const dx = x - m.x, dy = y - m.y
+  const ux = Math.cos(c.bearing), uy = Math.sin(c.bearing)
+  return { along: dx * ux + dy * uy, across: dx * -uy + dy * ux }
+}
+
+/** And back again. */
+export function fromChannel(c: Channel, along: number, across: number): { x: number; y: number } {
+  const m = mouthOf(c)
+  const ux = Math.cos(c.bearing), uy = Math.sin(c.bearing)
+  return { x: m.x + ux * along - uy * across, y: m.y + uy * along + ux * across }
+}
+
+/** Is this point in a channel's water? */
+export function inChannel(c: Channel, x: number, y: number): boolean {
+  const p = toChannel(c, x, y)
+  return p.along >= 0 && p.along <= c.length && Math.abs(p.across) <= c.half
+}
+
+/** Which channel this point is in, if any. */
+export function channelAt(x: number, y: number): Channel | null {
+  return CHANNELS.find(c => inChannel(c, x, y)) ?? null
+}
+
+/**
+ * WHAT OPENS A CHANNEL'S MOUTH: the chapter BEFORE it.
+ *
+ * Chapter I's road is open from the first minute; every other one is walled
+ * until the chapter before it is finished — the same fact `/expeditions` reads
+ * to draw a chapter complete. One source, so a captain who finished a chapter on
+ * the node map sails out and finds the road already open.
+ */
+export function opensChannel(c: Channel): string | null {
+  const i = CHANNELS.indexOf(c)
+  if (i <= 0) return null            // the first road is never shut
+  const prev = CHANNELS[i - 1]
+  return RAID_CHAPTERS.find(ch => ch.id === prev.id)?.lastNodeId ?? null
+}
+
+/** Is this channel's mouth open to this captain? */
+export function channelOpen(c: Channel, cleared: Set<string> | string[]): boolean {
+  const gate = opensChannel(c)
+  if (!gate) return true
+  return Array.isArray(cleared) ? cleared.includes(gate) : cleared.has(gate)
+}
 
 /**
  * HOW FAR THE CAMPAIGN'S WATER REACHES, derived rather than declared.
  *
- * `RAID_EDGE` used to be a number picked in advance, and at 13,000 it was too
- * small to hold this — five basins and their straits do not fit in 9,400px of
- * water when the anchorage alone is 3,600 across. Deriving it from the table
- * means the sail limit can never be smaller than the world it is supposed to
- * contain, which is the failure a hand-set constant invites every time the last
- * basin moves.
- *
- * Measured from EXP_ORIGIN, because that is the centre the sail radius is
- * measured from once you are past the sortie.
+ * `RAID_EDGE` is a hand-set constant in chart.ts and this table is hand
+ * authored; nothing else stops a channel being lengthened past the sail limit
+ * and its head becoming unreachable. `npm run check` asserts they agree.
  */
 export function raidReach(originY: number): number {
-  return Math.max(...BASINS.map(b =>
-    Math.hypot(b.x, b.y - originY) + b.r)) + 900
-}
-
-/** Is this point inside a basin's wall? */
-export function inBasin(x: number, y: number, b: Basin): boolean {
-  return Math.hypot(x - b.x, y - b.y) < b.r
-}
-
-/** Which basin is this point in, if any. */
-export function basinAt(x: number, y: number): Basin | null {
-  return BASINS.find(b => inBasin(x, y, b)) ?? null
-}
-
-/**
- * THE STRAIT BETWEEN TWO BASINS, as a point and a bearing.
- *
- * Not stored. Two circles that touch meet in exactly one place, and that place
- * is where the gap in both walls belongs — so it is computed from the pair. A
- * hand-written coordinate here would be a third copy of a fact the two centres
- * already state, and the one most likely to be left behind when a basin moves.
- *
- * Returns null for the last basin, which has no strait out.
- */
-export function straitAfter(b: Basin): { x: number; y: number; bearing: number } | null {
-  const i = BASINS.indexOf(b)
-  const next = BASINS[i + 1]
-  if (!next) return null
-  const dx = next.x - b.x, dy = next.y - b.y
-  const d = Math.hypot(dx, dy) || 1
-  const bearing = Math.atan2(dy, dx)
-  // Midway along the overlap, so the gap is centred on the shared water rather
-  // than on either wall.
-  const at = (d + b.r - next.r) / 2
-  return { x: b.x + (dx / d) * at, y: b.y + (dy / d) * at, bearing }
-}
-
-/** The strait INTO a basin — the previous basin's strait out. The first basin's
- *  way in is the sortie itself, which chart.ts already owns. */
-export function straitBefore(b: Basin): { x: number; y: number; bearing: number } | null {
-  const i = BASINS.indexOf(b)
-  return i <= 0 ? null : straitAfter(BASINS[i - 1])
-}
-
-/**
- * WHAT OPENS THE WAY NORTH.
- *
- * The strait out of a basin is shut until that chapter is cleared, and "cleared"
- * is the chapter's own `lastNodeId` — the same fact `/expeditions` reads. Two
- * surfaces, one source, so a captain who finished a chapter on the node map
- * finds the water already open when they sail out to it.
- */
-export function opensStrait(b: Basin): string | null {
-  return RAID_CHAPTERS.find(c => c.id === b.id)?.lastNodeId ?? null
-}
-
-/**
- * WHERE THE WALL IS OPEN, as bearings from the basin's centre.
- *
- * Two gaps for a basin in the middle of the chain, one for the first and one
- * for the last. The first basin's way in faces the SORTIE rather than another
- * basin, because the sortie is what you arrive through — and the last has no way
- * on, which is what makes it the end of the campaign rather than a room with a
- * door nobody opened yet.
- *
- * Derived from the neighbours, like the straits themselves. A basin does not
- * store which way its gaps face because that is a fact about the chain, and a
- * stored copy is a thing that can disagree with the chain after a nudge.
- */
-export type BasinGap = {
-  bearing: number
-  half: number
-  /**
-   * WHICH STRAIT THIS IS, named for the basin it leads OUT of — so the gap on
-   * Ch I's north rim and the gap on Ch II's south rim are the same strait seen
-   * from either end, and both open on the same fact.
-   *
-   * `'sortie'` is the way into the first basin. It is never shut: the campaign
-   * cannot have a locked front door, and the sortie already asks its own
-   * question about which boat you are on.
-   */
-  strait: string
-}
-
-export function basinGaps(b: Basin): BasinGap[] {
-  const i = BASINS.indexOf(b)
-  const prev = BASINS[i - 1]
-  const next = BASINS[i + 1]
-  const out: BasinGap[] = []
-
-  // THE WAY IN. Toward the previous basin, or toward the sortie for the first.
-  const from = prev ?? { x: SORTIE.x, y: SORTIE.y, gateHalf: b.gateHalf }
-  out.push({
-    bearing: Math.atan2(from.y - b.y, from.x - b.x),
-    // A mouth is one size from both sides: the gap you leave by is the gap you
-    // came in through, so it takes the width of whichever basin owns it.
-    half: (prev?.gateHalf ?? b.gateHalf) / b.r,
-    strait: prev ? prev.id : 'sortie',
-  })
-
-  // THE WAY ON.
-  if (next) {
-    out.push({
-      bearing: Math.atan2(next.y - b.y, next.x - b.x),
-      half: b.gateHalf / b.r,
-      strait: b.id,
-    })
-  }
-  return out
-}
-
-/**
- * IS THIS STRAIT OPEN?
- *
- * A strait opens when the chapter BEHIND it is finished — its own chapter's
- * `lastNodeId`, which is the same fact `/expeditions` reads to draw the chapter
- * as complete. One source, so a captain who finished a chapter on the node map
- * sails out and finds the water already open, and neither surface can be right
- * about a thing the other is wrong about.
- *
- * The way in from the sortie is always open. A campaign whose front door is
- * locked is a campaign nobody starts.
- */
-export function straitOpen(strait: string, clearedNodeIds: Set<string> | string[]): boolean {
-  if (strait === 'sortie') return true
-  const b = BASIN_BY_ID[strait]
-  if (!b) return false
-  const gate = opensStrait(b)
-  if (!gate) return false
-  return Array.isArray(clearedNodeIds)
-    ? clearedNodeIds.includes(gate)
-    : clearedNodeIds.has(gate)
-}
-
-/** The gaps a captain may actually pass through, given what they have cleared. */
-export function openGaps(b: Basin, cleared: Set<string> | string[]): BasinGap[] {
-  return basinGaps(b).filter(g => straitOpen(g.strait, cleared))
+  return Math.max(...CHANNELS.map(c => {
+    const h = headOf(c)
+    return Math.hypot(h.x, h.y - originY) + c.half
+  })) + 900
 }
 
 /**
  * ── WHAT IS IN THE WATER ────────────────────────────────────────────────────
  *
- * A node from the campaign, standing somewhere in a basin. That is all an
- * encounter is: the node already knows its own art, its route, its label, its
- * flavour and — for a fight — its raidId, so nothing about the campaign is
- * re-authored out here. `lib/raidMap.ts` stays the source of truth and this is
- * only a place to meet it.
+ * A node from the campaign, standing in a channel. That is all an encounter is:
+ * the node already knows its own art, its route, its label, its flavour and —
+ * for a fight — its raidId, so nothing about the campaign is re-authored out
+ * here. `lib/raidMap.ts` stays the source of truth and this is a place to meet
+ * it.
  *
- * ── POSITIONS ARE RELATIVE TO THE BASIN ─────────────────────────────────────
+ * PLACED IN CHANNEL SPACE: `along` from the mouth, `across` from the centre
+ * line. Re-aim or lengthen a road and everything in it moves with it, in order.
+ * Absolute coordinates would mean re-placing the lot by hand every time a road
+ * moved — the trap the homestead's furniture fell into before it got a bench.
  *
- * `dx`/`dy` from the basin's centre, not world coordinates. Basins are still
- * being tuned, and absolute positions would mean re-placing every encounter by
- * hand each time one moves — which is exactly the trap the homestead's furniture
- * fell into before it got a bench. Move a basin and its contents go with it.
- *
- * ── CHALLENGE VARIANTS ARE NOT ENCOUNTERS ───────────────────────────────────
- *
- * `pete_challenge` and `krust_challenge` are deliberately absent. raidMap keeps
- * them off the map spine because "the boss's own Normal/Challenge switch is
- * meant to be the single door", and putting a second Pete in the water a few
- * hundred pixels from the first would undo that decision by drawing it. You sail
- * to Pete; Pete asks which way you want him.
+ * CHALLENGE VARIANTS ARE NOT PLACED. raidMap keeps them off the map spine
+ * because "the boss's own Normal/Challenge switch is meant to be the single
+ * door", and standing a second Pete a few hundred pixels from the first would
+ * undo that decision by drawing it.
  */
 export type Encounter = {
   /** A RaidNode id. Everything else about it comes from the node. */
   node: string
-  /** Which basin it stands in. */
-  basin: string
-  /** Offset from that basin's centre, world px. Negative y is north. */
-  dx: number
-  dy: number
+  /** Which channel it stands in. */
+  channel: string
+  /** Distance from the mouth, up the channel. */
+  along: number
+  /** Offset from the centre line. Kept well inside the walls: something pinned
+   *  against rock reads as wreckage rather than as what you came for. */
+  across: number
 }
 
 /**
- * CHAPTER I, laid out as a run.
+ * CHAPTER I, UP ITS OWN ROAD.
  *
- * You come in at the south mouth and leave by the north-east one, and the order
- * of the chain is the order you meet things if you sail the basin the obvious
- * way round. That is the whole reason to put a campaign in water: the sequence
- * stops being a list and becomes a route, and a captain who has done it once
- * knows where Pete is without being told.
- *
- * The story beats sit BETWEEN the fights rather than beside them, so the thing
- * that explains why you are about to fight somebody is on the way to them.
+ * In chain order, so sailing up the channel IS doing the chapter. The story
+ * beats sit between the fights rather than beside them, so the thing that
+ * explains why you are about to fight somebody is on the way to them — and the
+ * closing beat is at the head, where you turn round and come back.
  */
 export const ENCOUNTERS: Encounter[] = [
-  // Inside the south mouth and 900px off it. The first pass put this at 650 so
-  // it would be "just inside", and the check refused it: a thing you meet while
-  // still in the mouth is a thing you collide with on the way in.
-  { node: 'intro', basin: 'thread', dx: 0, dy: 1000 },
-  { node: 'skirmish', basin: 'thread', dx: -800, dy: 400 },
-  { node: 'pete', basin: 'thread', dx: -1150, dy: -350 },
-  { node: 'syndicate', basin: 'thread', dx: -700, dy: -1000 },
-  { node: 'krust_reveal', basin: 'thread', dx: 0, dy: -1350 },
-  { node: 'krust', basin: 'thread', dx: 800, dy: -850 },
-  // NOT on the way out, which is where the chapter's closing beat wants to be
-  // and cannot go: everything near the north-east mouth is also near Krust, and
-  // one of them ends up either in the doorway or on top of the other.
-  //
-  // Mid-basin instead, and it is better there. It is gated behind the whole
-  // chapter, so it sits dark in the middle of the water you are working — a
-  // thing you sail past all afternoon and cannot open until the rest is done.
-  { node: 'chapter_1_close', basin: 'thread', dx: 250, dy: -450 },
+  { node: 'intro', channel: 'thread', along: 520, across: 0 },
+  { node: 'skirmish', channel: 'thread', along: 1150, across: -200 },
+  { node: 'pete', channel: 'thread', along: 1850, across: 150 },
+  { node: 'syndicate', channel: 'thread', along: 2450, across: -160 },
+  { node: 'krust_reveal', channel: 'thread', along: 3000, across: 130 },
+  { node: 'krust', channel: 'thread', along: 3450, across: -110 },
+  { node: 'chapter_1_close', channel: 'thread', along: 3950, across: 0 },
 ]
 
 /** An encounter's place on the chart. */
 export function encounterAt(e: Encounter): { x: number; y: number } | null {
-  const b = BASIN_BY_ID[e.basin]
-  return b ? { x: b.x + e.dx, y: b.y + e.dy } : null
+  const c = CHANNEL_BY_ID[e.channel]
+  return c ? fromChannel(c, e.along, e.across) : null
+}
+
+/** Everything standing in one channel. */
+export function encountersIn(channelId: string): Encounter[] {
+  return ENCOUNTERS.filter(e => e.channel === channelId)
 }
 
 /**
  * HOW CLOSE YOU HAVE TO BE TO TAKE SOMETHING ON.
  *
- * Wider than a trader's hail and narrower than a berth. An encounter is a ship
- * or a wreck rather than an island, so there is no shore to arrive at — you come
- * alongside it, and the range is what "alongside" means for a hull 210 long.
+ * Wider than a trader's hail and narrower than a berth. You come alongside a
+ * ship rather than arriving at a shore, and this is what "alongside" means for
+ * a hull 210 long.
  */
 export const ENCOUNTER_REACH = 420
 
@@ -376,13 +287,51 @@ export function encounterNear(x: number, y: number): Encounter | null {
   return best
 }
 
-/** Everything standing in one basin. */
-export function encountersIn(basinId: string): Encounter[] {
-  return ENCOUNTERS.filter(e => e.basin === basinId)
+/**
+ * ── WHAT AN ENCOUNTER LOOKS LIKE FROM THE HELM: A SHIP ──────────────────────
+ *
+ * You sail up to a BOAT, not to a portrait of somebody. A face on a plate is a
+ * card standing in the water — it belongs to the node map, which is the surface
+ * this one exists to stop being. What is out here is a hull, floating, that you
+ * come alongside and then fight.
+ *
+ * AND IT IS THE HULL YOU ACTUALLY FIGHT. Every enemy in `bossRaids` already
+ * carries a ship — `enemychapter1brigantine_v2.png` and the rest — so the boss's
+ * own flagship is already drawn, already in the right house style, and already
+ * the picture that fills the screen ten seconds later when the guns open. No new
+ * art, and no chance of the water promising a ship the raid does not deliver.
+ *
+ * A SKIRMISH has no raid of its own: it is a chapter's mobs, over and over. So
+ * it flies the FIRST ship in the next raid's sequence up the same road — which
+ * is literally what a skirmish puts in front of you, derived rather than picked.
+ *
+ * A STORY BEAT gets nothing here on purpose. It is not a fight and must not look
+ * like one; the water marks it another way.
+ */
+export function hullFor(e: Encounter): string | null {
+  const node = RAID_MAP.find(n => n.id === e.node)
+  if (!node) return null
+
+  if (node.raidId) {
+    const cfg = getRaidConfigById(node.raidId)
+    return cfg?.enemies[cfg.bossId]?.image ?? null
+  }
+
+  if (node.type === 'skirmish') {
+    const ahead = ENCOUNTERS
+      .filter(x => x.channel === e.channel && x.along > e.along)
+      .sort((a, b) => a.along - b.along)
+    for (const x of ahead) {
+      const n = RAID_MAP.find(m => m.id === x.node)
+      const cfg = n?.raidId ? getRaidConfigById(n.raidId) : null
+      if (cfg) return cfg.enemies[cfg.sequence[0]]?.image ?? null
+    }
+  }
+
+  return null
 }
 
-/** The first basin's mouth is the sortie. Kept as a function so the caller does
- *  not have to know that, and so it can move. */
-export function basinEntry(): { x: number; y: number } {
+/** Kept so callers do not have to know the sortie owns the way in. */
+export function hubEntry(): { x: number; y: number } {
   return { x: SORTIE.x, y: SORTIE.y }
 }
