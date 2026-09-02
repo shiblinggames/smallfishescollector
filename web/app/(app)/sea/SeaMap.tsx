@@ -79,6 +79,7 @@ import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
+import { crewHub } from './crewHubActions'
 import { folkById, type FolkId } from '@/lib/seaFolk'
 import { RODS } from '@/lib/rods'
 import { HOOKS } from '@/lib/hooks'
@@ -218,6 +219,7 @@ const FinnTalk = dynamic(() => import('./FinnTalk'), { ssr: false })
 // THE VOYAGE BOARD, opened by mooring at the Charterhouse. Dynamic for the
 // same reason: it pulls in the whole expeditions voyage panel behind it.
 const VoyageBoard = dynamic(() => import('./VoyageBoard'), { ssr: false })
+const CrewHub = dynamic(() => import('./CrewHub'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
 // of destinations down the left. Dynamic, like everything else the chart does
 // not need in order to draw a sea.
@@ -2869,6 +2871,27 @@ export default function SeaMap({
   }
   /** The who-is-out list, open or shut. */
   const [crewOpen, setCrewOpen] = useState(false)
+  /**
+   * THE CREW HUB: where everybody is, and what to do about it.
+   *
+   *  is the dot. It is read when you first cross into the
+   * expeditions and again whenever the hub closes — both moments the answer can
+   * have changed, and neither of them a poll. A dot that costs a round trip
+   * every few seconds is a dot that is not worth having.
+   */
+  const [crewHubOpen, setCrewHubOpen] = useState(false)
+  const [crewWaiting, setCrewWaiting] = useState(false)
+  const crewPolled = useRef(false)
+  const pollCrew = useCallback(() => {
+    void crewHub().then(
+      r => { if (!('error' in r)) setCrewWaiting(r.recruitsWaiting > 0 || r.voyage?.ready === true) },
+      () => {})
+  }, [])
+  useEffect(() => {
+    if (!inAnchorage || crewPolled.current) return
+    crewPolled.current = true
+    pollCrew()
+  }, [inAnchorage, pollCrew])
   /** The Salt Road: Finn's progress and everyone else worth knowing about. */
   const [folkOpen, setFolkOpen] = useState(false)
   /** Does Finn have a piece of his story waiting? Drives the dot on the
@@ -2977,12 +3000,13 @@ export default function SeaMap({
       if (hailing) { setHailing(null); return }
       if (picking) { setPicking(false); return }
       if (crewOpen) { setCrewOpen(false); return }
+      if (crewHubOpen) { setCrewHubOpen(false); return }
       if (folkOpen) { setFolkOpen(false); return }
       if (mapOpen) { setMapOpen(false); return }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -3464,7 +3488,13 @@ export default function SeaMap({
   }, [finn, inAnchorage, onSortie])
 
   const hudRow = useMemo(() => {
-    const on: string[] = ['clock']
+    const on: string[] = []
+    // THE LIGHT HOLDS THE LEFT ON THE FISHING SIDE and the RIGHT out in the
+    // expeditions, where the left corner belongs to the crew. It was pushed
+    // here unconditionally before and drawn only on the fishing side, so the
+    // expedition row started at slot one with a disc-width hole in front of it.
+    if (!inAnchorage) on.push('clock')
+    if (inAnchorage && (!fishingIn || wide)) on.push('crew')
     if (!fishingIn || wide) on.push('chart')
     if (!inAnchorage && orders && orders.challenges.length > 0 && (!fishingIn || wide)) on.push('orders')
     if (!inAnchorage && (trawlsOut.length > 0 || trawlsReady > 0) && (!fishingIn || wide)) on.push('trawls')
@@ -6692,11 +6722,16 @@ hullRef={hullRefFor(t.key)} />
       {/* THE LIGHT lives on the level bar's row while fishing — see
           FishingHere — and only sits on its own up here when the rod is stowed,
           because there is no bar to share a row with. */}
-      {!inAnchorage && (!fishingIn || wide) && (
+      {(!fishingIn || wide) && (
         // A SYMBOL, NOT A NAME. The words were a label on a map, and the sky
         // already says what time it is in colour — the corner only has to
         // confirm it at a glance. `title` keeps the name for anyone who wants
         // it, and the aria-label keeps it for anyone who cannot see the shape.
+        //
+        // IT SHOWS ON THE EXPEDITION SIDE TOO. It never used to, and the water
+        // up there goes just as dark: the sky changed colour and the one thing
+        // that says what time it is was on the other side of the reef. Out
+        // there it takes the RIGHT corner, because the left is the crew's.
         <div title={PHASE_LABEL[phase]} aria-label={PHASE_LABEL[phase]} role="img" style={{
           // ON THE ZONE TITLE'S ROW.
           //
@@ -6710,7 +6745,8 @@ hullRef={hullRefFor(t.key)} />
           // NOT rendered inside the banner, even though it shares its row: the
           // banner only exists while you are in a named water, and what time it
           // is has to be readable in open sea and off a dock too.
-          position: 'absolute', top: 18, left: hudAt('clock'), zIndex: Z.hud, pointerEvents: 'none',
+          position: 'absolute', top: 18, zIndex: Z.hud, pointerEvents: 'none',
+          ...(inAnchorage ? { right: 12 } : { left: hudAt('clock') }),
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: hudSize, height: hudSize, borderRadius: '50%',
           background: 'rgba(6,12,18,0.7)',
@@ -6725,6 +6761,55 @@ hullRef={hullRefFor(t.key)} />
           the rod out, so hiding it behind the dial would hide it for exactly
           the part that counts. */}
       <FinnBet bet={finn?.challenge ?? null} progress={betProgress} />
+
+      {/* THE CREW, holding the left corner out in the expeditions.
+          A real button, for the same reason the chart is one: the map's
+          `closest('button')` guard then exempts it from steering on both the
+          pointer and the click path with no data-no-steer needed.
+
+          EXPEDITIONS ONLY, on purpose. This is where a crew is the thing you
+          are thinking about — who is aboard, who is still out, who you could
+          still sign. The fishing side already carries a trawls disc, which is
+          the one crew question that side ever asks, and a second crew button
+          beside it would be two answers to one question on the row with the
+          least room. */}
+      {inAnchorage && (!fishingIn || wide) && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(10); setCrewHubOpen(true) }}
+          aria-label="Your crew"
+          title="Your crew"
+          style={{
+            position: 'absolute', top: 18, left: hudAt('crew'), zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
+            background: 'rgba(6,12,18,0.7)',
+            border: '1px solid rgba(180,214,232,0.22)',
+            color: 'rgba(214,232,240,0.85)', cursor: 'pointer',
+          }}>
+          {/* TWO HEADS AND A SHOULDER LINE. Not one figure: one is a person and
+              this is a crew, and the difference has to survive at 26px. */}
+          <svg width={Math.round(hudSize * 0.58)} height={Math.round(hudSize * 0.58)}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3.2 19a5.8 5.8 0 0 1 11.6 0" />
+            <path d="M16.2 5.6a3.2 3.2 0 0 1 0 6.1" />
+            <path d="M17.4 14.2A5.8 5.8 0 0 1 20.8 19" />
+          </svg>
+          {/* SOMEBODY IS WAITING ON YOU: a trawl or a voyage has come in, or
+              there are faces on the board nobody has signed. The same amber dot
+              Finn's button uses, and it means the same thing there. */}
+          {(trawlsReady > 0 || crewWaiting) && (
+            <span aria-hidden style={{
+              position: 'absolute', top: -2, right: -2,
+              width: 11, height: 11, borderRadius: 999,
+              background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
+              boxShadow: '0 0 10px rgba(240,192,64,0.6)',
+            }} />
+          )}
+        </button>
+      )}
 
       {/* THE CHART BUTTON, beside the light and on the same row.
           A real button, so the map's own `closest('button')` guard exempts it
@@ -6848,6 +6933,15 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       <FolkPanel open={folkOpen} onClose={() => setFolkOpen(false)} finn={finn} />
+
+      <CrewHub
+        open={crewHubOpen}
+        onClose={() => { setCrewHubOpen(false); pollCrew() }}
+        // BOTH ROWS OPEN WHAT IS ALREADY ON THIS CHART rather than sailing you
+        // to an island first. The trawl row is null when nobody is out, and the
+        // hub then says so instead of opening an empty list.
+        onTrawls={trawlsOut.length > 0 ? () => setTrawlsPeek(true) : null}
+        onVoyage={() => setVoyageOpen(true)} />
 
       <CrewPanel
         open={crewOpen}
