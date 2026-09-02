@@ -5694,6 +5694,10 @@ hullRef={hullRefFor(t.key)} />
         <div
           ref={boxRef}
           className="sea-helm"
+          // POINTABLE. The tour tells a new captain to hold this to start
+          // fishing, and an instruction naming a control the tour cannot then
+          // flash is an instruction they have to go and find.
+          data-coach="helm"
           onPointerDown={e => {
             e.stopPropagation()
             try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* fine */ }

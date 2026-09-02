@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import MarketClient from './MarketClient'
-import MarketIntroModal from './MarketIntroModal'
 import { isPremiumActive } from '@/lib/premium'
 import { getCachedFishMarketFull } from '@/lib/fishMarket'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -46,7 +45,7 @@ export default async function MarketPage() {
   }
 
   const [{ data: profile }, market, inventoryRes, stateRes, collectionRes] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro, fishing_xp, has_seen_exchange_intro, has_seen_sea_tour, sea_tour_step').eq('id', user.id).single(),
+    supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, fishing_xp, has_seen_exchange_intro, has_seen_sea_tour, sea_tour_step').eq('id', user.id).single(),
     // Shared market snapshot from the cross-request cache (lib/fishMarket).
     getCachedFishMarketFull(),
     admin.from('fish_inventory')
@@ -104,7 +103,12 @@ export default async function MarketPage() {
 
   return (
     <>
-      {!profile?.has_seen_market_intro && <MarketIntroModal />}
+      {/* MarketIntroModal LIVED HERE. The sea's first voyage walks a new
+          captain into this room and Kat talks them through the sale, so this
+          opened ON TOP of that — two tutorials for one counter, one of them
+          a modal covering the other one's pointing finger. The walkthrough
+          teaches it in context and this did not, so this is the one that
+          goes. `has_seen_market_intro` stays a column; nothing reads it. */}
       <MarketClient
         portfolio={portfolio}
         allMarket={discovered}

@@ -1733,7 +1733,12 @@ export default function FishingHere({
           The fishing screen's own component, not a copy of it. Casting on the
           map without it meant the XP went somewhere invisible, and the map's
           fishing stopped reading as the same activity as the fishing screen's. */}
-      <div style={{
+      <div
+        // POINTABLE. The first voyage explains that fish pay XP and that this is
+        // where it goes; a tour naming a bar it cannot flash is asking somebody
+        // to find it themselves while a card sits over the screen.
+        data-coach="level"
+        style={{
         pointerEvents: 'auto', width: '100%', flexShrink: 0,
         // THE FISHING SCREEN'S OWN NUMBERS. It centres a max-w-md column and
         // pads it 1rem, and its XP bar carries 0.6rem beneath. I had 0.5rem of

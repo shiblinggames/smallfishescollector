@@ -146,6 +146,26 @@ export default function SeaFirstVoyage({
    *  next one arrives normally. */
   const [hidden, setHidden] = useState(-1)
 
+  /**
+   * ── A BEAT THAT WAITS FOR THE MOMENT IT IS ABOUT ─────────────────────────
+   *
+   * The catch line fired on the frame the fish registered — which is while the
+   * fish is still in the air on its way to the hold — so "watch it drop into
+   * the hold" was spoken over the top of the drop it was pointing at.
+   *
+   * `afterMs` holds the card back that long. The beat is otherwise live the
+   * whole time: its step is already current and anything waiting on it has
+   * already happened, so this delays the SPEECH and nothing else.
+   */
+  const [held, setHeld] = useState(false)
+  useEffect(() => {
+    const ms = beat?.afterMs ?? 0
+    if (!ms) { setHeld(false); return }
+    setHeld(true)
+    const t = setTimeout(() => setHeld(false), ms)
+    return () => clearTimeout(t)
+  }, [step, beat?.afterMs])
+
   // Written once, when the voyage is actually FINISHED. A guard rather than a
   // check, because the action is a round trip and completion can be reached
   // from more than one beat.
@@ -275,7 +295,9 @@ export default function SeaFirstVoyage({
     if (wantAshore && ashore) next()
   }, [wantAshore, ashore, next])
 
-  if (done || !beat || step === hidden) return null
+  // `held` is the afterMs pause: the beat is live, its card just is not up
+  // yet, so the moment it comments on gets to happen first.
+  if (done || !beat || step === hidden || held) return null
 
   // A `look` beat holds while the camera flies and the captain reads; the two
   // waiting beats have no button at all, because the button IS the thing they

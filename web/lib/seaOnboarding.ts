@@ -94,6 +94,19 @@ export type Beat = {
    *  chart this size a new captain also needs WHICH WAY, and an instruction
    *  they cannot follow is worse than none. */
   path?: string
+  /**
+   * HOLD THIS BEAT BACK, in milliseconds, after the one before it finishes.
+   *
+   * For the beats that comment on something the captain is still WATCHING. The
+   * catch line fired on the frame the fish registered, which is while it is
+   * still in the air on its way to the hold — so "watch it drop into the hold"
+   * appeared over the top of the drop, and the tour talked across the moment it
+   * was pointing at.
+   *
+   * Only ever a pause before a line that is otherwise ready. Nothing waits on
+   * it and skipping ahead is unaffected.
+   */
+  afterMs?: number
 }
 
 const D = GUIDES.doby
@@ -114,8 +127,13 @@ export const FIRST_VOYAGE: Beat[] = [
     ...D,
     // The steering line teaches the input they actually have. A fine pointer
     // means a mouse, and a mouse usually means keys under the other hand.
+    //
+    // BOTH INPUTS ON DESKTOP. Naming only the keys made the mouse look like it
+    // did nothing, and clicking a spot on the water is the first thing a person
+    // with a mouse tries — so the tour was teaching the harder half and staying
+    // quiet about the one they had already guessed.
     text: typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
-      ? 'Welcome aboard, Captain. This is the whole sea. Hold *WASD* to steer her.'
+      ? 'Welcome aboard, Captain. This is the whole sea. Hold *WASD* to steer her, or just click where you want to go.'
       : 'Welcome aboard, Captain. This is the whole sea. Drag anywhere to steer her.',
     until: 'next',
   },
@@ -134,23 +152,66 @@ export const FIRST_VOYAGE: Beat[] = [
   },
 
   // ── THE FIRST CAST ────────────────────────────────────────────────────
+  //
+  // THIS USED TO SKIP A STEP AND DESCRIBE THE WRONG SCREEN. It said the Cast
+  // button comes up once you are over open water, and that fish are wherever
+  // you drop a line — but at that moment there is no Cast button anywhere. The
+  // helm reads "Hold to fish The Shallows", and the rod does not come out until
+  // you do that. So the tour named a control that was not on screen, waited for
+  // a cast that could not happen, and left the captain looking for a button
+  // while the one they needed sat under their thumb saying what to do.
+  //
+  // Two beats now, in the order the game actually happens in: get into fishing
+  // first, THEN cast.
   {
     ...K,
-    text: 'Once you’re over open water the *Cast* button comes up. Fish are wherever you drop a line.',
+    text: 'Hold the *helm* to fish the Shallows. That drops you in and gets the rod out.',
     until: 'cast',
-    target: 'cast',
+    target: 'helm',
     path: 'shallows',
   },
   {
     ...K,
-    // The dial explanation used to live in the retired fishing hub's intro
-    // scene. It belongs here now, at the moment the dial is on screen.
-    text: 'Stop the needle in the *green* to land it. The *gold* is a Perfect, and it pays better.',
+    // ONE BEAT, NOT TWO. Splitting "now cast" from the dial advice put two
+    // beats in a row both waiting on `catch` — and one fish answers both, so
+    // the second would be marked done by the same catch that finished the
+    // first and flash past having never been read. This is up for the whole
+    // cast, which is exactly when the aiming advice is worth anything.
+    //
+    // "LAND IT" IS NOT A WORD ANYBODY USES. You catch a fish. And the old line
+    // sold the gold on price, which is the smaller half of what it is worth:
+    // Perfects chain into a STREAK, the streak pays bonus XP, and it grows the
+    // longer it runs. That is a reason to aim gold on every cast rather than a
+    // footnote about this one paying a bit better.
+    text: 'Now *Cast*, and watch the needle. Stopping it in the *gold* is a Perfect — string those together and the streak pays bonus XP, more of it the longer you keep it going. The *green* still catches.',
     until: 'catch',
+    target: 'cast',
   },
   {
     ...D,
-    text: 'There’s your first. It sits in the *hold* until you sell it.',
+    // ARRIVES AFTER THE FISH DOES. It used to fire the instant the catch
+    // registered, over the top of the fish still flying into the hold — so the
+    // line "it sits in the hold" was spoken while the thing it described had
+    // not visibly got there yet. See `afterMs`.
+    text: 'There’s your first. Watch it drop into the *hold* — that is where your catch sits until you sell it.',
+    until: 'next',
+    afterMs: 900,
+    holdCast: true,
+  },
+  {
+    ...D,
+    // WHY CATCHING IS WORTH DOING BEYOND THE COIN. Nothing in the tour said
+    // that fish pay XP, that XP is the bar along the top, or that the bar is
+    // what opens the tackle shop's better half. A captain who does not know
+    // levelling exists has no reason to prefer a good cast to a lucky one.
+    text: 'Every fish pays *XP* too — that is the bar along the top. Fill it and you level up.',
+    until: 'next',
+    target: 'level',
+    holdCast: true,
+  },
+  {
+    ...D,
+    text: 'Levels open better rods, reels and hooks, and every one of them makes the next fish easier. That is the whole climb.',
     until: 'next',
     holdCast: true,
   },
