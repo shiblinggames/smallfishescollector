@@ -24,7 +24,25 @@ export default function LoginForm() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://seasthebooty.com'}/auth/callback`,
+        /**
+         * BACK TO THE HOST YOU SIGNED IN FROM, whichever that is.
+         *
+         * This was built from NEXT_PUBLIC_SITE_URL, falling back to the APEX
+         * domain — and the site serves on www: `seasthebooty.com` answers every
+         * request with a 307 to `www.seasthebooty.com`. So every magic link
+         * took a cross-host hop before it reached the callback.
+         *
+         * That hop is not free. The sign-in is PKCE, and the code verifier is
+         * stored by the browser client against the ORIGIN that started it. A
+         * link that lands on a different host arrives without the verifier it
+         * needs, and the exchange fails on a link that looks perfectly valid.
+         *
+         * `window.location.origin` cannot be wrong about this: the round trip
+         * ends where it began, on every domain, on previews, and on localhost,
+         * with no environment variable to set correctly and no fallback to be
+         * stale. This is a client component, so it is always available.
+         */
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
     if (error) {
