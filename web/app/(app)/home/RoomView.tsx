@@ -23,11 +23,11 @@
 // eight share one vanishing point and one horizon, so a piece placed at 34% of
 // the way across sits on the same spot of back wall in every one of them.
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import {
-  openRooms, roomArt, roomSpots, openSlots, furnishingIn, houseTier,
+  ROOMS, openRooms, roomArt, roomSpots, openSlots, furnishingIn, houseTier,
   MENAGERIE_SPOTS, MENAGERIE_FALLBACK,
   type Homestead, type RoomDef, type FurnitureSlot,
 } from '@/lib/homestead'
@@ -61,6 +61,9 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
   const room = rooms[Math.min(i, rooms.length - 1)]
   const tier = houseTier(home)
 
+  /** Where a drag on the picture started, or null. */
+  const swipe = useRef<number | null>(null)
+
   const go = (d: number) => {
     vibrate(6)
     setI(prev => (prev + d + rooms.length) % rooms.length)
@@ -68,37 +71,81 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
 
   return (
     <div>
-      {/* ── THE DOOR YOU ARE STANDING IN ──────────────────────────────
-          Name, what it is for, and the arrows. The count is on the arrows
-          rather than as dots: at four rooms dots are a decoration, and "2 of 4"
-          answers the question dots are pretending to. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f2ede2', lineHeight: 1.1 }}>
-            {room.name}
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.76rem', color: `${SEA},0.6)`, marginTop: 2 }}>
-            {room.blurb}
-          </p>
-        </div>
-        {rooms.length > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <Arrow dir="left" onClick={() => go(-1)} />
-            <span className="font-karla font-700" style={{
-              fontSize: '0.7rem', color: `${SEA},0.55)`, fontVariantNumeric: 'tabular-nums',
-              minWidth: 34, textAlign: 'center',
-            }}>{i + 1} / {rooms.length}</span>
-            <Arrow dir="right" onClick={() => go(1)} />
-          </div>
-        )}
+      {/* ── THE DOORS ────────────────────────────────────────────────
+          It was a name, a blurb, and two 30px arrow discs at 6% opacity tucked
+          beside the heading — quiet UI next to a loud picture — and people did
+          not find out the house had four rooms.
+
+          A rail of doors instead, and it shows the ones you CANNOT open yet as
+          well, greyed with the rung they need. That does two jobs at once: the
+          set is visible at rest, which is the whole of the discoverability
+          problem, and the locked entries are the only place in the game that
+          says out loud what a bigger house is FOR. */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {ROOMS.map(r => {
+          const at = rooms.indexOf(r)
+          const open = at >= 0
+          const here = open && at === i
+          return (
+            <button key={r.id} type="button" disabled={!open}
+              onClick={() => { vibrate(6); setI(at) }}
+              className="font-karla font-700"
+              style={{
+                padding: '0.4rem 0.72rem', borderRadius: 999, fontSize: '0.76rem',
+                cursor: open ? 'pointer' : 'default',
+                color: here ? '#0d1520' : open ? 'rgba(214,232,240,0.82)' : `${SEA},0.36)`,
+                background: here ? '#8fd0e8' : open ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                border: '1px solid ' + (here ? '#8fd0e8' : open ? `${SEA},0.24)` : `${SEA},0.12)`),
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+              {!open && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.6" aria-hidden style={{ flexShrink: 0 }}>
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+              )}
+              {r.name.replace(/^The /, '')}
+              {!open && (
+                <span className="font-karla" style={{ fontSize: '0.68rem', opacity: 0.8 }}>
+                  house {r.needsHouse}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      <div style={{
-        position: 'relative', width: '100%', aspectRatio: '1008 / 666',
-        borderRadius: 14, overflow: 'hidden',
-        border: '1px solid rgba(180,214,232,0.18)',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-      }}>
+      <div style={{ marginBottom: 8 }}>
+        <p className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f2ede2', lineHeight: 1.1 }}>
+          {room.name}
+        </p>
+        <p className="font-karla" style={{ fontSize: '0.76rem', color: `${SEA},0.6)`, marginTop: 2 }}>
+          {room.blurb}
+        </p>
+      </div>
+
+      <div
+        // AND THE PICTURE ITSELF ANSWERS. A room you can swipe is a room you
+        // find by accident on a phone, which is exactly where a rail of chips
+        // is least likely to be read. `touch-action: pan-y` keeps the page
+        // scrolling vertically while this claims the horizontal.
+        onPointerDown={e => { swipe.current = e.clientX }}
+        onPointerUp={e => {
+          const from = swipe.current
+          swipe.current = null
+          if (from === null || rooms.length < 2) return
+          const dx = e.clientX - from
+          if (Math.abs(dx) > 46) go(dx < 0 ? 1 : -1)
+        }}
+        onPointerCancel={() => { swipe.current = null }}
+        style={{
+          position: 'relative', width: '100%', aspectRatio: '1008 / 666',
+          borderRadius: 14, overflow: 'hidden',
+          border: '1px solid rgba(180,214,232,0.18)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+          touchAction: 'pan-y',
+        }}>
         <AnimatePresence mode="wait">
           <motion.div key={room.id}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -117,6 +164,23 @@ export default function RoomView({ home, unlocked, pets, species, giants, guest 
             {room.id === 'trophy' && <Box at={room.content}><TrophyWall giants={giants} /></Box>}
           </motion.div>
         </AnimatePresence>
+
+        {/* ON the picture, not beside it. An arrow at the edge of an image is
+            the one control everybody already knows, and putting them here also
+            says that the image is the thing which changes. */}
+        {rooms.length > 1 && (
+          <>
+            <Arrow dir="left" onClick={() => go(-1)} />
+            <Arrow dir="right" onClick={() => go(1)} />
+            <span className="font-karla font-700" style={{
+              position: 'absolute', right: 10, bottom: 8,
+              fontSize: '0.68rem', color: 'rgba(236,244,248,0.75)',
+              fontVariantNumeric: 'tabular-nums', pointerEvents: 'none',
+              padding: '0.14rem 0.44rem', borderRadius: 999,
+              background: 'rgba(8,14,20,0.55)',
+            }}>{i + 1} / {rooms.length}</span>
+          </>
+        )}
       </div>
 
       {guest && (
@@ -142,17 +206,25 @@ function Box({ at, children }: {
   )
 }
 
+/** An edge control ON the room. It was a 30px disc at 6% opacity beside the
+ *  heading, which is a control you find only if you already knew it was there. */
 function Arrow({ dir, onClick }: { dir: 'left' | 'right'; onClick: () => void }) {
   return (
-    <motion.button type="button" onClick={onClick} whileTap={{ scale: 0.9 }}
+    <motion.button type="button" onClick={onClick} whileTap={{ scale: 0.88 }}
       aria-label={dir === 'left' ? 'Previous room' : 'Next room'}
       style={{
-        width: 30, height: 30, borderRadius: '50%', padding: 0, cursor: 'pointer',
+        position: 'absolute', top: '50%', [dir]: 8,
+        transform: 'translateY(-50%)',
+        width: 38, height: 38, borderRadius: '50%', padding: 0, cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(255,255,255,0.06)', border: `1px solid ${SEA},0.24)`,
-        color: `${SEA},0.85)`,
+        // A SOLID BASE. These sit over painted rooms running from chalk-white
+        // plaster to near-black oak, and a translucent control is invisible on
+        // one of those. House rule, and this is the case it exists for.
+        background: 'rgba(8,14,20,0.62)',
+        border: `1px solid ${SEA},0.34)`,
+        color: 'rgba(236,244,248,0.92)',
       }}>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d={dir === 'left' ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'} />
       </svg>
