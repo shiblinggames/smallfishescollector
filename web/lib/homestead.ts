@@ -600,6 +600,29 @@ export function homeBuildings(h: Homestead): { art: string; x: number; y: number
   return [{ art: b.art, x: b.x, y: b.y, scale: b.scale }]
 }
 
+/**
+ * WHAT A HOUSE AT THIS RUNG ACTUALLY GIVES YOU.
+ *
+ * The ladder used to sell itself on a name and a picture, which is fine for a
+ * cottage and useless for a 2.4M one: "The Estate" does not tell anybody that it
+ * opens the trophy room. Every rung buys three separate things — rooms inside,
+ * furniture slots to fill, and buildings on the island — and none of them were
+ * written down anywhere a captain could read before paying.
+ *
+ * Derived rather than stored, so it cannot drift from the tables it describes.
+ * `island` is CUMULATIVE: each rung's `adds` plus every rung below it, because
+ * what a house offers is everything standing there and not only the last thing
+ * built.
+ */
+export function offers(tier: number): { slots: number; rooms: RoomDef[]; island: string[] } {
+  const t = Math.max(0, Math.min(HOUSE.length - 1, tier))
+  return {
+    slots: HOUSE_SLOTS[Math.max(0, Math.min(HOUSE_SLOTS.length - 1, t))],
+    rooms: ROOMS.filter(r => t >= r.needsHouse),
+    island: HOUSE.slice(0, t + 1).map(b => b.adds).filter(Boolean),
+  }
+}
+
 /** Slots the house is currently big enough to hold, in order. */
 export function openSlots(h: Homestead): FurnitureSlot[] {
   const n = HOUSE_SLOTS[Math.max(0, Math.min(HOUSE_SLOTS.length - 1, h.house ?? 0))]

@@ -24,7 +24,7 @@ import { ISLES } from '@/lib/seaIsles'
 import { vibrate } from '@/lib/haptics'
 import {
   HOUSE, FURNITURE, PINNED_MAX,
-  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, houseTier, HOUSE_SLOTS, ROOMS,
+  builtAt, nextBuild, openSlots, furnishingIn, homeBuildings, houseTier, offers,
   type Homestead, type FurnitureSlot,
 } from '@/lib/homestead'
 import { build, furnish } from './actions'
@@ -111,9 +111,22 @@ export default function HomeClient({
   const standing = homeBuildings(home)
 
   return (
-    <div className="min-h-full" style={{
-      background: 'radial-gradient(ellipse 120% 90% at 50% 0%, #1b2436 0%, #101725 55%, #080d16 100%)',
-    }}>
+    <div style={{ position: 'relative' }}>
+      {/* ── THE GROUND THIS PAGE STANDS ON ─────────────────────────────
+          It was `min-h-full` with the gradient on the content, and `min-height:
+          100%` resolves against a parent that has no height of its own — so on
+          a short page the blue stopped where the words did and the app's black
+          showed under it.
+
+          A FIXED layer instead. It is exactly the viewport, always, whatever the
+          content does, and it cannot introduce a scrollbar the way a 100dvh
+          block under a nav bar would. `zIndex: -1` puts it behind the page and
+          behind the nav, and above the body's own background, which is the one
+          slot it needs to be in. */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, zIndex: -1,
+        background: 'radial-gradient(ellipse 120% 90% at 50% 0%, #1b2436 0%, #101725 55%, #080d16 100%)',
+      }} />
       <div className="page-col" style={{ padding: '1rem 0 4rem' }}>
 
         {/* ── THE HEADER ────────────────────────────────────────────── */}
@@ -384,11 +397,7 @@ const HouseCard = memo(function HouseCard({ home, coin, busy, guest, onBuy }: {
   const now = builtAt(home)
   const next = nextBuild(home)
   const afford = !!next && coin >= next.cost
-  const H = 132
-  /** The room this rung would open, if it opens one. "and the menagerie" is a
-   *  far better reason to spend a million doubloons than "a bigger room". */
-  const opensRoom =
-    ROOMS.find(r => r.needsHouse === houseTier(home) + 1)?.name.replace(/^The /, 'the ') ?? null
+  const has = offers(houseTier(home))
 
   return (
     <div style={{
@@ -406,59 +415,45 @@ const HouseCard = memo(function HouseCard({ home, coin, busy, guest, onBuy }: {
         </p>
       </div>
 
-      {/* WHAT IS THERE -> WHAT WOULD BE. The whole offer in one line of
-          pictures, so the upgrade is a thing you can see rather than a name you
-          have to imagine. */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 8,
-      }}>
-        <Stand art={now.art} h={H} label={now.name} />
-        {next && !guest && (
-          <>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(240,196,100,0.7)"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ flexShrink: 0, marginBottom: H / 2 - 9 }} aria-hidden>
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-            <Stand art={next.art} h={H} label={next.name} highlight />
-          </>
-        )}
-      </div>
+      {/* ── WHAT YOU HAVE, BIG ──────────────────────────────────────
+          It used to be two thumbnails side by side with an arrow, at 132px
+          tall, each capped to 92% of half a card. The paintings are 900 wide
+          and 578 tall and they had nowhere to go, so the homestead you own
+          appeared as a stamp with its ground clipped off the bottom.
 
+          One picture, at the plate's own aspect, contained. What you would get
+          instead belongs in the confirm step, where you are actually deciding —
+          not shrunk to a chip beside the thing you already have. */}
+      <Plate art={now.art} />
+
+      <p className="font-cinzel font-700" style={{
+        fontSize: '1.05rem', color: '#f2ead8', margin: '0.6rem 0 0',
+      }}>{now.name}</p>
       <p className="font-karla" style={{
-        fontSize: '0.86rem', lineHeight: 1.45,
-        color: 'rgba(206,222,234,0.72)', margin: '0.6rem 0 0',
-      }}>{next && !guest ? next.blurb : now.blurb}</p>
+        fontSize: '0.85rem', lineHeight: 1.45,
+        color: 'rgba(206,222,234,0.72)', margin: '0.15rem 0 0',
+      }}>{now.blurb}</p>
 
-      {/* AND WHAT ELSE COMES WITH IT. The house is not the only thing in the
-          picture any more. The garden and the lighthouse arriving on their own
-          rungs is what makes the ladder worth climbing past the point where the
-          rooms stop opening, so it is said plainly. It is the offer. */}
-      {!guest && next && next.adds && (
-        <p className="font-karla" style={{
-          fontSize: '0.82rem', lineHeight: 1.45,
-          color: 'rgba(180,214,232,0.62)', margin: '0.3rem 0 0',
-        }}>{next.adds}</p>
-      )}
-
-      {/* WHAT IT ACTUALLY DOES, for the one spot where that is not "look
-          nice". The house is the only thing on this island that changes
-          anything, and it changes two: a furniture slot, and sometimes a whole
-          new room. Both are said here rather than in a note underneath. */}
-      {!guest && next && (
-        <p className="font-karla font-700" style={{
-          fontSize: '0.8rem', margin: '0.4rem 0 0', color: '#f0c464',
-        }}>
-          {`Opens furniture slot ${HOUSE_SLOTS[houseTier(home)] + 1} of ${FURNITURE.length}`}
-          {opensRoom ? `, and ${opensRoom}.` : ', and a bigger room inside.'}
-        </p>
-      )}
+      {/* ── WHAT THIS HOME OFFERS ───────────────────────────────────
+          The ladder used to sell itself on a name and a picture, which is fine
+          for a cottage and useless for a 2.4M one: "The Estate" does not tell
+          anybody that it opens the trophy room. Every rung buys three separate
+          things and none of them were written anywhere before you paid. */}
+      <div style={{
+        display: 'grid', gap: 6, marginTop: '0.8rem', paddingTop: '0.7rem',
+        borderTop: '1px solid rgba(240,196,100,0.18)',
+      }}>
+        <Offer label="Rooms" value={has.rooms.map(r => r.name.replace(/^The /, '')).join(', ')} />
+        <Offer label="Furniture" value={`${has.slots} of ${FURNITURE.length} slots`} />
+        <Offer label="On the island"
+          value={has.island.length ? has.island.join(' ') : 'A fire ring and whatever washed up.'} />
+      </div>
 
       {guest ? null : next ? (
         <button type="button" disabled={busy || !afford} onClick={() => { vibrate(8); onBuy() }}
           className="font-cinzel font-700"
           style={{
-            width: '100%', marginTop: '0.7rem',
+            width: '100%', marginTop: '0.9rem',
             padding: '0.66rem', borderRadius: 12,
             fontSize: '1rem',
             color: afford ? '#0d1520' : 'rgba(210,180,180,0.8)',
@@ -466,47 +461,69 @@ const HouseCard = memo(function HouseCard({ home, coin, busy, guest, onBuy }: {
             border: `1px solid ${afford ? GOLD : 'rgba(255,255,255,0.14)'}`,
             cursor: busy || !afford ? 'default' : 'pointer',
           }}>
-          {afford ? `Build ${next.name} · ⟡ ${next.cost.toLocaleString()}` : `Need ⟡ ${next.cost.toLocaleString()}`}
+          {afford
+            ? `Build ${next.name} · ⟡ ${next.cost.toLocaleString()}`
+            : `Need ⟡ ${next.cost.toLocaleString()}`}
         </button>
       ) : (
         <p className="font-karla font-700" style={{
-          fontSize: '0.8rem', color: 'rgba(150,206,172,0.8)', margin: '0.6rem 0 0',
-        }}>Finished.</p>
+          fontSize: '0.8rem', color: 'rgba(150,206,172,0.8)', margin: '0.7rem 0 0',
+        }}>Finished. There is nothing left to build out here.</p>
       )}
     </div>
   )
 })
 
-/** One thing on its own patch of ground, with its name under it. */
-function Stand({ art, h, label, highlight }: {
-  art: string; h: number; label: string; highlight?: boolean
-}) {
+/**
+ * THE HOMESTEAD, AT THE SIZE IT WAS PAINTED.
+ *
+ * A fixed aspect box with the plate CONTAINED in it, so a painting whose ground
+ * runs to the bottom edge keeps its ground. `cover` would fill the box more
+ * pleasingly and crop exactly the part that matters, which is what the old
+ * fixed-height thumbnails were effectively doing.
+ */
+function Plate({ art, dim }: { art: string; dim?: boolean }) {
   return (
-    <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-      <div style={{
-        height: h, borderRadius: 12,
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        background: highlight
-          ? 'radial-gradient(ellipse at 50% 92%, rgba(240,196,100,0.2) 0%, rgba(240,196,100,0.05) 55%, transparent 78%)'
-          : 'radial-gradient(ellipse at 50% 92%, rgba(110,140,90,0.22) 0%, rgba(80,110,70,0.08) 55%, transparent 78%)',
-      }}>
-        {/* THE "EMPTY" BRANCH IS GONE. It was for the plot and the lighthouse
-            before anything stood on them; every rung of the house is a picture,
-            including the first, because a bare headland with a lean-to on it is
-            a place somebody lives rather than an absence. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={art} alt="" draggable={false} style={{
-          maxHeight: h - 8, maxWidth: '92%', objectFit: 'contain',
-          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
-        }} />
-      </div>
-      <p className="font-karla font-700" style={{
-        fontSize: '0.74rem', margin: '0.3rem 0 0', lineHeight: 1.25,
-        color: highlight ? '#f6e6c6' : 'rgba(206,222,234,0.72)',
-      }}>{label}</p>
+    <div style={{
+      marginTop: 10, borderRadius: 12, overflow: 'hidden',
+      aspectRatio: '900 / 578',
+      // A HINT OF SEA AND LAND BEHIND IT, because these are cut-outs with no
+      // background of their own and a painting of an island floating on a card
+      // reads as an asset rather than a place.
+      background: 'radial-gradient(ellipse 70% 60% at 50% 78%,'
+        + ' rgba(122,152,96,0.22) 0%, rgba(52,96,120,0.18) 55%, rgba(20,40,58,0.1) 100%)',
+      border: '1px solid rgba(180,214,232,0.12)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={art} alt="" draggable={false} style={{
+        width: '100%', height: '100%', objectFit: 'contain', display: 'block',
+        filter: dim
+          ? 'drop-shadow(0 6px 14px rgba(0,0,0,0.5)) grayscale(0.5) brightness(0.7)'
+          : 'drop-shadow(0 6px 14px rgba(0,0,0,0.5))',
+      }} />
     </div>
   )
 }
+
+/** One line of what a house gives you: a quiet label and the thing itself. */
+function Offer({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+      <span className="font-karla font-700 uppercase" style={{
+        fontSize: '0.56rem', letterSpacing: '0.14em', color: 'rgba(180,214,232,0.5)',
+        minWidth: 82, flexShrink: 0,
+      }}>{label}</span>
+      <span className="font-karla" style={{
+        fontSize: '0.82rem', lineHeight: 1.4, color: 'rgba(214,228,238,0.86)',
+      }}>{value}</span>
+    </div>
+  )
+}
+
+// Stand LIVED HERE: a fixed-height thumbnail with a name under it, from when
+// the card showed now and next side by side. Replaced by Plate, which keeps
+// the painting's own aspect instead of squeezing it into 132 pixels.
 
 // TheRoom LIVED HERE. Replaced by RoomView, which draws four rooms instead of
 // one and steps between them.
@@ -514,15 +531,43 @@ function Stand({ art, h, label, highlight }: {
 // PortalRow AND Gallery LIVED HERE. The portal was a duplicate of the one on
 // the water; the gallery is a room inside now. See RoomView.
 
+/**
+ * THE SECOND LOOK.
+ *
+ * Every purchase on this island is permanent and the top of the ladder is 2.4M,
+ * so nothing here is one tap. This is the step where you find out what you are
+ * actually buying, which is why it carries the PICTURE of the next homestead and
+ * a plain list of what changes — not a name, a price and a shrug.
+ *
+ * The furnishing case is deliberately lighter. A rug is a rug and the room
+ * behind it already showed you the difference.
+ */
 function ConfirmBuy({ confirm, home, coin, onCancel, onYes, busy }: {
   confirm: { kind: 'build' } | { kind: 'furnish'; id: string }
   home: Homestead; coin: number; onCancel: () => void; onYes: () => void; busy: boolean
 }) {
+  const build = confirm.kind === 'build' ? nextBuild(home) : null
   const target = confirm.kind === 'build'
-    ? nextBuild(home)
+    ? build
     : FURNITURE.flatMap(f => f.options).find(o => o.id === confirm.id) ?? null
   if (!target) return null
   const cost = target.cost
+
+  // WHAT ACTUALLY CHANGES, as the difference between the two rungs rather than
+  // a sentence somebody remembered to write. A room that opens, a slot that
+  // opens, and whatever gets built on the island.
+  const tier = houseTier(home)
+  const gains = build ? (() => {
+    const before = offers(tier), after = offers(tier + 1)
+    const room = after.rooms.find(r => !before.rooms.includes(r))
+    const out: string[] = []
+    if (room) out.push(`${room.name} opens. ${room.blurb}`)
+    if (after.slots > before.slots) {
+      out.push(`Furniture slot ${after.slots} of ${FURNITURE.length}: ${FURNITURE[after.slots - 1].label.toLowerCase()}.`)
+    }
+    if (build.adds) out.push(build.adds)
+    return out
+  })() : []
 
   return (
     <motion.div
@@ -536,25 +581,57 @@ function ConfirmBuy({ confirm, home, coin, onCancel, onYes, busy }: {
         initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.97 }}
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 380, borderRadius: 18, padding: '1.15rem',
+          width: '100%', maxWidth: 420, borderRadius: 18, padding: '1.15rem',
+          // SCROLLS IF IT HAS TO. The build case carries a picture and three
+          // lines of gains, which on a short phone in landscape is taller than
+          // the viewport, and a confirm button you cannot reach is a trap.
+          maxHeight: 'calc(100dvh - 2rem)', overflowY: 'auto',
           background: 'rgba(10,16,22,0.98)', border: '1px solid rgba(180,214,232,0.28)',
           boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
         }}>
         <p className="font-karla font-700 uppercase" style={{
           fontSize: '0.6rem', letterSpacing: '0.16em', color: 'rgba(255,206,138,0.72)', margin: 0,
-        }}>{confirm.kind === 'build' ? 'Build this' : 'Buy this'}</p>
+        }}>{build ? 'Build this' : 'Buy this'}</p>
         <p className="font-cinzel font-700" style={{
           fontSize: '1.28rem', color: '#f2ead8', margin: '0.15rem 0 0.5rem',
         }}>{target.name}</p>
+
+        {/* THE THING ITSELF. You are about to spend six or seven figures on how
+            somewhere looks, so you get to look at it first. */}
+        {build && <Plate art={build.art} />}
+
         <p className="font-karla" style={{
-          fontSize: '0.88rem', lineHeight: 1.5, color: 'rgba(212,226,236,0.8)', margin: 0,
+          fontSize: '0.88rem', lineHeight: 1.5, color: 'rgba(212,226,236,0.8)',
+          margin: build ? '0.7rem 0 0' : 0,
         }}>
           {'blurb' in target ? target.blurb : 'It goes in the room and stays there.'}
         </p>
+
+        {gains.length > 0 && (
+          <div style={{
+            marginTop: '0.85rem', padding: '0.7rem 0.8rem', borderRadius: 12,
+            background: 'rgba(240,196,100,0.07)', border: '1px solid rgba(240,196,100,0.22)',
+            display: 'grid', gap: 6,
+          }}>
+            <p className="font-karla font-700 uppercase" style={{
+              fontSize: '0.56rem', letterSpacing: '0.14em', color: 'rgba(240,196,100,0.85)', margin: 0,
+            }}>What you get</p>
+            {gains.map(g => (
+              <p key={g} className="font-karla" style={{
+                fontSize: '0.82rem', lineHeight: 1.45, color: 'rgba(214,228,238,0.88)', margin: 0,
+                display: 'flex', gap: 8,
+              }}>
+                <span aria-hidden style={{ color: GOLD, flexShrink: 0 }}>&bull;</span>
+                <span>{g}</span>
+              </p>
+            ))}
+          </div>
+        )}
+
         <p className="font-karla" style={{
           fontSize: '0.84rem', margin: '0.9rem 0 0', color: 'rgba(196,214,228,0.75)',
         }}>
-          <span style={{ color: GOLD }}>⟡ {cost.toLocaleString()}</span>
+          <span style={{ color: GOLD }}>&#10209; {cost.toLocaleString()}</span>
           {' · '}leaves you {(coin - cost).toLocaleString()}
         </p>
         <p className="font-karla" style={{
@@ -570,10 +647,14 @@ function ConfirmBuy({ confirm, home, coin, onCancel, onYes, busy }: {
             }}>Not yet</button>
           <button type="button" onClick={onYes} disabled={busy} className="font-cinzel font-700"
             style={{
-              flex: 1, padding: '0.6rem', borderRadius: 999, fontSize: '0.95rem',
+              flex: 1.4, padding: '0.6rem', borderRadius: 999, fontSize: '0.92rem',
               color: '#0d1520', background: GOLD, border: `1px solid ${GOLD}`,
               cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
-            }}>{busy ? 'Working' : 'Do it'}</button>
+            }}>
+            {/* SAYS WHAT IT DOES. "Do it" is the same button for a 9,000 rug and
+                a 2.4M estate, and the second one deserves to be read. */}
+            {busy ? 'Working' : build ? `Build ${target.name}` : 'Put it in'}
+          </button>
         </div>
       </motion.div>
     </motion.div>
