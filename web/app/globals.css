@@ -2460,11 +2460,12 @@ body.hardcore-gauntlet::after {
    overlays the whole viewport, so its bar has to add those two together itself
    or it lands on the header. Same numbers as .sea-surface below, deliberately:
    if that moves, this moves with it. */
-/* ON A PHONE IT CANNOT SHARE THAT LINE. The bar is a full-width column and the
-   enemy's card and the leave button are already on the HUD line at either end
-   of it, so at 62 all three sit on top of each other. It drops below the card
-   instead; there is no width on a phone where those three fit side by side. */
-.raid-oversea-bar { top: 148px; }
+/* IT HOLDS THE LINE AND GIVES WAY TO THE CONTROLS. A fixed centred column sat
+   under the leave button at every width, so the bar stretches between the left
+   margin and whatever is in the right corner instead — 62 is that button (38)
+   plus its margins. The enemy's card goes UNDER it rather than beside it: the
+   card is tall, and nothing sensible shares a line with both. */
+.raid-oversea-bar { top: 62px; left: 12px; right: 62px; }
 @media (min-width: 640px) { .raid-oversea-bar { top: 78px; } }
 
 /* ── THE FIGHT'S OWN BOX, EXACTLY WHERE THE CHART'S IS ──────────────────────

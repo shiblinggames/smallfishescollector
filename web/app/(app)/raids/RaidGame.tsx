@@ -1658,18 +1658,20 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
           // header it has to sit under.
           // `top` comes from .raid-oversea-bar, which needs a media query to
           // follow the header's two heights and so cannot live inline.
+          // `top`, `left` and `right` all come from .raid-oversea-bar: it needs
+          // a media query to follow the header's two heights, so it cannot live
+          // inline, and the horizontal insets belong with it because they are
+          // what keeps the bar off the leave button.
           ...(overSea ? {
-            position: 'fixed', left: 0, right: 0, zIndex: 6,
+            position: 'fixed', zIndex: 6, width: 'auto',
             pointerEvents: 'none',
           } : null),
         }}>
-          {/* The fishing overlay's own column — 448 centred — but WITHOUT its
-              1rem of top padding: there the padding is what clears the header,
-              and here `top` has already done that. Keeping both put the bar a
-              row below the HUD icons it is meant to line up with. */}
-          <div style={overSea
-            ? { maxWidth: 448, margin: '0 auto', padding: '0 1rem' }
-            : undefined}>
+          {/* NO COLUMN OVER THE SEA. The fishing overlay caps its bar at 448 and
+              centres it, which is right on a page with margins; here the bar is
+              a HUD element spanning the gap the corners leave it, so the cap
+              would only reintroduce the overlap the insets just removed. */}
+          <div style={overSea ? { width: '100%' } : undefined}>
             <NavLevelBar xp={navXP} />
           </div>
           <AnimatePresence>

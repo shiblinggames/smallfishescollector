@@ -2243,9 +2243,13 @@ export default function RaidCombat({
     const dockEnemyPlate = () => {
       const el = enemyPlateRef.current
       if (!el) return
-      const top = (window.innerWidth >= 640 ? 60 : 44) + 18
+      // UNDER THE LEVEL BAR, sharing its left edge. The bar holds the HUD line
+      // (44/60 for the header, plus the chart's own 18) and stands about 34
+      // tall; this sits a gap below it, so the top-left corner reads as one
+      // stack rather than two things fighting for the same spot.
+      const line = (window.innerWidth >= 640 ? 60 : 44) + 18
       el.style.left = `${12 - box.left}px`
-      el.style.top = `${top - box.top}px`
+      el.style.top = `${line + 42 - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
     }
