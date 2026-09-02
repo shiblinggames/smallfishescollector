@@ -353,6 +353,29 @@ export function encounterAt(e: Encounter): { x: number; y: number } | null {
   return b ? { x: b.x + e.dx, y: b.y + e.dy } : null
 }
 
+/**
+ * HOW CLOSE YOU HAVE TO BE TO TAKE SOMETHING ON.
+ *
+ * Wider than a trader's hail and narrower than a berth. An encounter is a ship
+ * or a wreck rather than an island, so there is no shore to arrive at — you come
+ * alongside it, and the range is what "alongside" means for a hull 210 long.
+ */
+export const ENCOUNTER_REACH = 420
+
+/** The encounter within reach, if any. Nearest wins, so two that are close
+ *  together cannot flicker between them as the swell moves the boat. */
+export function encounterNear(x: number, y: number): Encounter | null {
+  let best: Encounter | null = null
+  let bestD = ENCOUNTER_REACH
+  for (const e of ENCOUNTERS) {
+    const p = encounterAt(e)
+    if (!p) continue
+    const d = Math.hypot(x - p.x, y - p.y)
+    if (d < bestD) { bestD = d; best = e }
+  }
+  return best
+}
+
 /** Everything standing in one basin. */
 export function encountersIn(basinId: string): Encounter[] {
   return ENCOUNTERS.filter(e => e.basin === basinId)

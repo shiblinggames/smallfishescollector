@@ -12,6 +12,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { buildClearedSet } from '@/lib/raidProgress'
+import { computeRaidMap } from '@/lib/raidMap'
+import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import { canSail } from '@/lib/seaAccess'
 import { getEffectiveRod } from '@/lib/rods'
 import { getLine } from '@/lib/lines'
@@ -310,6 +312,22 @@ export default async function SeaPage() {
       // cannot disagree about whether a chapter is finished. Handed over as an
       // array because a Set does not survive the server/client boundary.
       clearedNodes={[...clearedNodes]}
+      // AND WHICH ENCOUNTERS ARE ENTERABLE, resolved by `computeRaidMap` — the
+      // one resolver, given the one cleared set. The water could have re-derived
+      // "is this open" from `requiresNode` itself in a line or two, and that
+      // line would have been a second opinion: nav gates, ancient counts,
+      // adminOnly and the off-chain `requiresClearedNode` all live in there, and
+      // a copy that knows about three of the four is wrong in a way nobody
+      // notices until somebody is standing off a boss that will not open.
+      nodeStatus={Object.fromEntries(
+        computeRaidMap(
+          clearedNodes,
+          Number(profile?.doubloons ?? 0),
+          getExpeditionLevel(Number(profile?.expedition_xp ?? 0)),
+          profile?.is_admin === true,
+          ((profile?.ancient_catches as number[] | null) ?? []).length,
+        ).map(v => [v.node.id, v.status]),
+      )}
       log={{
         allFishSpecies: allSpecies ?? [],
         caughtFishIds, mountedFishIds, personalBests,

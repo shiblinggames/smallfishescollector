@@ -43,7 +43,8 @@ import { bottlesAround, bottlePos, bottleWindow, BOTTLE_CELL, BOTTLE_REACH, type
 import { digAt, digHintAt, DIG_SITES, DIG_HINT_RANGE, type DigSite } from '@/lib/seaDigs'
 import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface'
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
-import { BASINS, basinGaps, openGaps, straitOpen, type Basin } from './raidWaters'
+import { BASINS, basinGaps, openGaps, straitOpen, ENCOUNTERS, encounterAt, encounterNear, type Basin, type Encounter } from './raidWaters'
+import { RAID_MAP } from '@/lib/raidMap'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
@@ -1162,7 +1163,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, clearedNodes, dealtToday,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, clearedNodes, nodeStatus, dealtToday,
   auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
@@ -1256,6 +1257,9 @@ export default function SeaMap({
   /** Campaign nodes already cleared, from the same `buildClearedSet` the node
    *  map reads. Drives which straits out in the raid water are open. */
   clearedNodes: string[]
+  /** nodeId -> 'locked' | 'available' | 'cleared', from `computeRaidMap` on the
+   *  server. The water never decides this for itself. */
+  nodeStatus: Record<string, string>
   dealtToday: string[]
   /** The specials the CLIENT has to drive. See FishingHere for why these three
    *  are the only ones that needed carrying out here. */
@@ -2660,6 +2664,8 @@ export default function SeaMap({
   // already claimed changes what the BUTTON says and which chest is painted,
   // both of which are render-time questions, and `isleNear` does not care.
   const [nearIsle, setNearIsle] = useState<Isle | null>(null)
+  /** The campaign encounter alongside, if any. */
+  const [nearEnc, setNearEnc] = useState<Encounter | null>(null)
   // ── WHAT THE SEA IS HANDING YOU ───────────────────────────────────────
   //
   // Bottles are derived, not fetched: the same cell hash the server runs, so
@@ -3418,6 +3424,31 @@ export default function SeaMap({
     }
     if (nearTrader && !hailing) {
       return { act: dealt.includes(nearTrader.key) ? `Speak to ${nearTrader.name}` : `Hail ${nearTrader.name}`, hold: null }
+    }
+    // THE CAMPAIGN OUTRANKS THE SCENERY. An encounter is what you came out here
+    // for; a dig site is something you happened to sail over.
+    if (nearEnc) {
+      const n = RAID_MAP.find(x => x.id === nearEnc.node)
+      if (n) {
+        const st = nodeStatus[n.id] ?? 'locked'
+        // A LOCKED ONE STILL SAYS ITS NAME. The alternative is a boss you can
+        // see, sail up to, and get nothing from — which reads as broken rather
+        // than as not yet. Naming it and refusing is the honest half of that.
+        if (st === 'locked') return { act: null, hold: `${n.label} — not yet` }
+        // NO ROUTE, NO VERB. The story beats have `scene` rather than a screen
+        // to send you to, and their sheets are not wired out here yet — so they
+        // are named and not offered. A button captioned with a boss's name that
+        // does nothing when pressed is worse than no button: it reads as the
+        // game being broken rather than as the feature being unfinished.
+        if (!n.route) return { act: null, hold: n.label }
+        const fight = n.type === 'raid' || n.type === 'skirmish'
+        return {
+          act: fight
+            ? (st === 'cleared' ? `Take on ${n.label} again` : `Take on ${n.label}`)
+            : (st === 'cleared' ? `Read ${n.label} again` : n.label),
+          hold: null,
+        }
+      }
     }
     if (nearDig && !dug.has(nearDig.id)) return { act: 'Dig here', hold: null }
     if (nearBottle) return { act: 'Take the bottle', hold: null }
@@ -5439,6 +5470,12 @@ export default function SeaMap({
         const isl = isleNear(pos.current.x, pos.current.y)
         setNearIsle(prev => (prev?.id === isl?.id ? prev : isl))
 
+        // AND WHAT THE CAMPAIGN HAS STANDING OUT HERE. Same tick and the same
+        // shape as the isles: this changes when you come alongside something,
+        // which is not sixty times a second.
+        const enc = encounterNear(pos.current.x, pos.current.y)
+        setNearEnc(prev => (prev?.node === enc?.node ? prev : enc))
+
         // WHAT IS DRIFTING NEARBY. Against the drifted position, not the
         // anchor — same reason the traders test theirs.
         let bot: Bottle | null = null
@@ -5666,6 +5703,9 @@ export default function SeaMap({
         {ISLES.map(i => (
           <IsleRock key={i.id} isle={i} found={found.has(i.id)} isNear={nearIsle?.id === i.id} />
         ))}
+
+        {/* The campaign, standing in its own water. */}
+        <EncounterField status={nodeStatus} nearId={nearEnc?.node ?? null} />
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -6684,6 +6724,25 @@ hullRef={hullRefFor(t.key)} />
           // say for a man offering a run rather than a price.
           if (nearTrader?.key === KIP.key && !kipOpen) { vibrate(14); setKipOpen(true); return true }
           if (nearTrader && !hailing) { vibrate(14); setHailing(nearTrader); return true }
+          // INTO THE CAMPAIGN. Same order as the prompt above, or the button
+          // and the thumb would disagree about what happens next.
+          if (nearEnc) {
+            const n = RAID_MAP.find(x => x.id === nearEnc.node)
+            if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked' && n.route) {
+              vibrate(14)
+              // THE EXISTING SCREENS, unchanged. A raid is its own route and
+              // must stay one — the FX layer coming later is safe only because
+              // the chart is unmounted while you are fighting, and an encounter
+              // that opened the fight as an overlay would take the sea's WebGL
+              // context down with it. See DialFx.
+              router.push(n.route)
+              return true
+            }
+            // Locked, or a node with nowhere to go. The prompt already said so;
+            // swallowing the tap keeps it from falling through to whatever else
+            // happens to be in reach.
+            return false
+          }
           if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
           if (nearBottle) { take(nearBottle); return true }
           if (nearIsle) { void land(nearIsle); return true }
@@ -9358,6 +9417,88 @@ const AshoreTick = memo(function AshoreTick() {
  * that labels every rock you have never visited has answered the question the
  * isles exist to ask.
  */
+/**
+ * ── A CAMPAIGN ENCOUNTER, ON THE WATER ──────────────────────────────────────
+ *
+ * The node's OWN art. Every raid node already carries the picture the map draws
+ * it with — Pete's plate, Krust's, the Reef Raider — so an encounter needs no
+ * new asset and a boss looks out here exactly as it does on the card. Story
+ * beats carry art too, and theirs is a document rather than a face, which is
+ * why they read as something to pick up rather than something to fight.
+ *
+ * LIT BY WHETHER YOU CAN TAKE IT. Available is full colour; locked is drained
+ * and dim, and still drawn — a boss you can SEE and cannot yet reach is the
+ * reason to come back, and hiding it would make the water empty until the
+ * moment it is not. Cleared keeps its colour but loses its urgency ring: it is
+ * still there, still fightable, and no longer the thing you are here for.
+ *
+ * Counter-squashed like everything with height, because it is a ship standing
+ * on the plane rather than a mark lying on it.
+ */
+const EncounterMark = memo(function EncounterMark({ enc, status, isNear }: {
+  enc: Encounter
+  status: string
+  isNear: boolean
+}) {
+  const node = RAID_MAP.find(n => n.id === enc.node)
+  const at = encounterAt(enc)
+  if (!node || !at || !node.image) return null
+
+  const locked = status === 'locked'
+  const cleared = status === 'cleared'
+  const fight = node.type === 'raid' || node.type === 'skirmish'
+  // A BOSS IS BIGGER THAN A COURIER. Sized against the boat's 210, which is the
+  // only object out here whose scale anybody knows.
+  const w = fight ? (node.type === 'raid' ? 300 : 200) : 150
+  const src = node.image.startsWith('/storage')
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}${node.image}`
+    : node.image
+
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: at.x, top: at.y, pointerEvents: 'none',
+      transform: `translate(-50%, -100%) scaleY(${1 / GROUND})`,
+      transformOrigin: 'bottom center',
+    }}>
+      {/* SOMETHING UNDER IT, so it sits IN the water rather than on top of it.
+          Foreshortened with the plane, like the berth pools and the portal. */}
+      <div aria-hidden style={{
+        position: 'absolute', left: '50%', bottom: -w * 0.06,
+        width: w * 1.15, height: w * 0.34,
+        transform: `translate(-50%, 0) scaleY(${GROUND})`,
+        borderRadius: '50%',
+        background: locked
+          ? 'radial-gradient(ellipse, rgba(6,12,18,0.5) 0%, transparent 70%)'
+          : `radial-gradient(ellipse, ${fight ? 'rgba(200,80,60,0.30)' : 'rgba(120,200,220,0.26)'} 0%, transparent 72%)`,
+      }} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" draggable={false} decoding="async" style={{
+        width: w, height: 'auto', display: 'block', position: 'relative',
+        filter: locked
+          ? 'grayscale(0.85) brightness(0.5) drop-shadow(0 6px 14px rgba(0,0,0,0.6))'
+          : isNear && !cleared
+            ? 'drop-shadow(0 6px 16px rgba(0,0,0,0.6)) drop-shadow(0 0 18px rgba(240,192,64,0.5))'
+            : 'drop-shadow(0 6px 16px rgba(0,0,0,0.6))',
+        opacity: cleared ? 0.82 : 1,
+      }} />
+    </div>
+  )
+})
+
+/** Everything the campaign has standing in the water, drawn back to front so a
+ *  boss further south overlaps one behind it — the chart's rule everywhere. */
+const EncounterField = memo(function EncounterField({ status, nearId }: {
+  status: Record<string, string>
+  nearId: string | null
+}) {
+  return <>{[...ENCOUNTERS]
+    .sort((a, b) => (encounterAt(a)?.y ?? 0) - (encounterAt(b)?.y ?? 0))
+    .map(e => (
+      <EncounterMark key={e.node} enc={e}
+        status={status[e.node] ?? 'locked'} isNear={nearId === e.node} />
+    ))}</>
+})
+
 const IsleRock = memo(function IsleRock({ isle, found, isNear }: {
   isle: Isle
   found: boolean
