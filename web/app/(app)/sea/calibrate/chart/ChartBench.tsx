@@ -49,7 +49,17 @@ type BayPlan = {
   sea: string
 }
 
-type Pin = { id: number; x: number; y: number; label: string }
+/**
+ * A PIN, AND WHAT KIND OF THING IT MARKS.
+ *
+ * A boss is not "a place where something goes". It is the thing a whole bay is
+ * built around — everything else in that water is arranged relative to it, and
+ * it is the one mark whose position decides where the gate goes, where the way
+ * home opens and how long the run in has to be. So it is its own kind, its own
+ * colour and its own shape, and the output lists them separately.
+ */
+type PinKind = 'spot' | 'boss'
+type Pin = { id: number; kind: PinKind; x: number; y: number; label: string }
 type Wall = { id: number; x1: number; y1: number; x2: number; y2: number; label: string }
 
 const DEG = (rad: number) => (rad * 180) / Math.PI
@@ -73,7 +83,7 @@ export default function ChartBench() {
   const [hub, setHub] = useState({ x: HUB.x, y: HUB.y, r: HUB_R })
   const [pins, setPins] = useState<Pin[]>([])
   const [walls, setWalls] = useState<Wall[]>([])
-  const [tool, setTool] = useState<'move' | 'pin' | 'wall'>('move')
+  const [tool, setTool] = useState<'move' | 'pin' | 'boss' | 'wall'>('move')
   /** The first click of a wall, waiting for its second. */
   const [wallFrom, setWallFrom] = useState<{ x: number; y: number } | null>(null)
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
@@ -127,6 +137,34 @@ export default function ChartBench() {
     const spec = { ...b, bearing: RAD(b.bearing), chapter: 0, sea: ['', '', ''] as [string, string, string], rocks: 'reef' as const }
     return { b, c: bayCentre(spec), m: mouthOf(spec), e: entryOf(spec), len: straitLen(spec) }
   }), [bays])
+
+  /**
+   * ── WHICH BAY A POINT FELL IN, AND WHERE IT SITS INSIDE IT ────────────────
+   *
+   * A wall drawn across a bay and a pin dropped on its boss are not world
+   * coordinates, they are facts ABOUT that bay: move the bay and they have to
+   * move with it, exactly as every isle, ship and gate in the real water does.
+   * So anything inside a bay is reported in that bay's own along/across, which
+   * is what the tables out there are actually written in, and only the loose
+   * ones in open sea stay as raw x/y.
+   *
+   * `along` runs from the point the strait enters, up the bay's axis, so a
+   * number here means the same thing it means in raidWaters.
+   */
+  const inBay = useCallback((x: number, y: number) => {
+    for (const l of laid) {
+      if (Math.hypot(x - l.c.x, y - l.c.y) > l.b.r) continue
+      const th = RAD(l.b.bearing)
+      const ux = Math.cos(th), uy = Math.sin(th)
+      const dx = x - l.e.x, dy = y - l.e.y
+      return {
+        bay: l.b,
+        along: Math.round(dx * ux + dy * uy),
+        across: Math.round(dx * -uy + dy * ux),
+      }
+    }
+    return null
+  }, [laid])
 
   /** Everything the layout can be wrong about, measured live. The gate refuses
    *  these at build time; finding out here costs a glance instead of a run. */
@@ -190,11 +228,40 @@ export default function ChartBench() {
     }
   }, [toWorld, hub, laid])
 
+  /**
+   * A NEW BAY, at the cursor.
+   *
+   * The bench started as a way to nudge the four that exist, which is only half
+   * a bench: the thing actually being decided is how many stretches of water
+   * this sea has and where they are, and a tool that cannot add one can only
+   * ever rearrange the answer it was given.
+   *
+   * It drops where you last had the pointer, so a bay lands in the empty water
+   * you were looking at rather than at some default the maths picked.
+   */
+  function addBay() {
+    const w = cursor ?? { x: hub.x + 9000, y: hub.y }
+    const at = Math.max(hub.r + 3800, Math.round(Math.hypot(w.x - hub.x, w.y - hub.y)))
+    const n = bays.length + 1
+    setBays(bs => [...bs, {
+      id: `new_${n}`, name: `New water ${n}`,
+      bearing: Math.round(DEG(Math.atan2(w.y - hub.y, w.x - hub.x))),
+      at, r: 3000, half: 460, sea: '#26454e',
+    }])
+  }
+
   function onCanvas(e: React.PointerEvent) {
     if (tool === 'move') return
     const w = toWorld(e)
-    if (tool === 'pin') {
-      setPins(ps => [...ps, { id: Date.now(), x: w.x, y: w.y, label: `Pin ${ps.length + 1}` }])
+    if (tool === 'pin' || tool === 'boss') {
+      const kind: PinKind = tool === 'boss' ? 'boss' : 'spot'
+      const here = inBay(w.x, w.y)
+      setPins(ps => [...ps, {
+        id: Date.now(), kind, x: w.x, y: w.y,
+        label: kind === 'boss'
+          ? (here ? `${here.bay.name} boss` : `Boss ${ps.filter(q => q.kind === 'boss').length + 1}`)
+          : `Pin ${ps.filter(q => q.kind === 'spot').length + 1}`,
+      }])
       return
     }
     if (!wallFrom) { setWallFrom(w); return }
@@ -214,21 +281,48 @@ export default function ChartBench() {
       lines.push(`  ${l.b.id.padEnd(16)} bearing: D(${l.b.bearing}), at: ${l.b.at}, r: ${l.b.r}, half: ${l.b.half}`
         + `      // centre ${l.c.x.toFixed(0)},${l.c.y.toFixed(0)}  strait ${l.len.toFixed(0)} long`)
     }
-    if (pins.length) {
+    // ANYTHING INSIDE A BAY IS REPORTED IN THAT BAY'S OWN SPACE, because that
+    // is what every table out in the water is written in — a world coordinate
+    // for something standing in a bay is a number that stops being true the
+    // moment the bay moves.
+    const where = (x: number, y: number) => {
+      const h = inBay(x, y)
+      return h ? `${h.bay.id}: along ${h.along}, across ${h.across}` : `open sea: ${x}, ${y}`
+    }
+
+    const bosses = pins.filter(p => p.kind === 'boss')
+    const spots = pins.filter(p => p.kind === 'spot')
+    if (bosses.length) {
       lines.push('')
-      lines.push('PINS (world x,y):')
-      for (const p of pins) lines.push(`  ${p.label.padEnd(20)} ${p.x}, ${p.y}`)
+      lines.push('BOSSES:')
+      for (const p of bosses) lines.push(`  ${p.label.padEnd(22)} ${where(p.x, p.y)}`)
+    }
+    if (spots.length) {
+      lines.push('')
+      lines.push('PINS:')
+      for (const p of spots) lines.push(`  ${p.label.padEnd(22)} ${where(p.x, p.y)}`)
     }
     if (walls.length) {
       lines.push('')
-      lines.push('WALLS (world x1,y1 -> x2,y2):')
+      lines.push('WALLS:')
       for (const wl of walls) {
-        lines.push(`  ${wl.label.padEnd(20)} ${wl.x1}, ${wl.y1}  ->  ${wl.x2}, ${wl.y2}`
-          + `      // ${Math.hypot(wl.x2 - wl.x1, wl.y2 - wl.y1).toFixed(0)} long`)
+        const a = inBay(wl.x1, wl.y1), b = inBay(wl.x2, wl.y2)
+        const len = Math.hypot(wl.x2 - wl.x1, wl.y2 - wl.y1).toFixed(0)
+        // A WALL WITH BOTH ENDS IN ONE BAY IS A GATE. That is the shape the
+        // water already has for "you may not pass here yet" — a line across a
+        // bay at a distance up it — so it is reported as one, which is a thing
+        // that can be typed straight into GATES.
+        if (a && b && a.bay.id === b.bay.id) {
+          const acrossBay = Math.abs(a.across - b.across) > Math.abs(a.along - b.along)
+          lines.push(`  ${wl.label.padEnd(22)} ${a.bay.id}: ${acrossBay ? 'GATE at along ' + Math.round((a.along + b.along) / 2) : 'wall'}`
+            + `  (${a.along},${a.across} -> ${b.along},${b.across})   // ${len} long`)
+        } else {
+          lines.push(`  ${wl.label.padEnd(22)} open sea: ${wl.x1},${wl.y1} -> ${wl.x2},${wl.y2}   // ${len} long`)
+        }
       }
     }
     return lines.join('\n')
-  }, [hub, laid, pins, walls])
+  }, [hub, laid, pins, walls, inBay])
 
   const H = 640
   return (
@@ -249,7 +343,7 @@ export default function ChartBench() {
       </p>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-        {(['move', 'pin', 'wall'] as const).map(t => (
+        {(['move', 'pin', 'boss', 'wall'] as const).map(t => (
           <button key={t} type="button" onClick={() => { setTool(t); setWallFrom(null) }}
             className="font-karla font-700" style={{
               padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.78rem',
@@ -257,9 +351,18 @@ export default function ChartBench() {
               border: `1px solid ${tool === t ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.12)'}`,
               color: tool === t ? '#f6dfa0' : 'rgba(200,216,228,0.7)', cursor: 'pointer',
             }}>
-            {t === 'move' ? 'Move things' : t === 'pin' ? 'Drop pins' : 'Draw walls'}
+            {t === 'move' ? 'Move things'
+              : t === 'pin' ? 'Drop pins'
+              : t === 'boss' ? 'Mark a boss'
+              : 'Draw walls'}
           </button>
         ))}
+        <button type="button" onClick={addBay}
+          className="font-karla font-700" style={{
+            padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.78rem',
+            background: 'rgba(120,200,150,0.14)', border: '1px solid rgba(120,200,150,0.4)',
+            color: '#9fe0b6', cursor: 'pointer',
+          }}>Add a bay here</button>
         <button type="button" onClick={() => { setPins([]); setWalls([]); setWallFrom(null) }}
           className="font-karla" style={{
             padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.78rem',
@@ -393,15 +496,30 @@ export default function ChartBench() {
         )}
 
         {/* PINS YOU HAVE DROPPED. */}
-        {pins.map(p => (
-          <g key={p.id}>
-            <circle cx={p.x} cy={p.y} r={260} fill="rgba(150,232,180,0.9)" style={{ cursor: 'grab' }}
-              onPointerDown={ev => { ev.stopPropagation(); drag.current = { kind: 'pin', id: p.id } }} />
-            <text x={p.x} y={p.y - 420} fill="rgba(190,244,210,0.95)" fontSize={360} textAnchor="middle">
-              {p.label}
-            </text>
-          </g>
-        ))}
+        {pins.map(p => {
+          const boss = p.kind === 'boss'
+          const c = boss ? 'rgba(232,86,74,0.95)' : 'rgba(150,232,180,0.9)'
+          const R = boss ? 420 : 260
+          return (
+            <g key={p.id}>
+              {/* A BOSS IS A DIAMOND AND EVERYTHING ELSE IS A ROUND DOT, on the
+                  chart's own rule: shape carries the meaning and colour only
+                  reinforces it, because at a glance two colours of the same
+                  circle are one circle. */}
+              {boss ? (
+                <polygon
+                  points={`${p.x},${p.y - R} ${p.x + R},${p.y} ${p.x},${p.y + R} ${p.x - R},${p.y}`}
+                  fill={c} style={{ cursor: 'grab' }}
+                  onPointerDown={ev => { ev.stopPropagation(); drag.current = { kind: 'pin', id: p.id } }} />
+              ) : (
+                <circle cx={p.x} cy={p.y} r={R} fill={c} style={{ cursor: 'grab' }}
+                  onPointerDown={ev => { ev.stopPropagation(); drag.current = { kind: 'pin', id: p.id } }} />
+              )}
+              <text x={p.x} y={p.y - R - 180} fill={boss ? 'rgba(250,190,182,0.95)' : 'rgba(190,244,210,0.95)'}
+                fontSize={boss ? 400 : 360} textAnchor="middle">{p.label}</text>
+            </g>
+          )
+        })}
       </svg>
 
       {/* ── WHAT IS WRONG WITH IT RIGHT NOW ──────────────────────────────
@@ -417,16 +535,34 @@ export default function ChartBench() {
         ))}
       </div>
 
+      {/* ── THE BAYS, NAMEABLE AND REMOVABLE ─────────────────────────────
+          A bench that can add a stretch of water and not take one away can only
+          grow the answer. The four that are live keep their ids; a new one gets
+          a placeholder you should rename, because the id is what every table in
+          raidWaters keys off and `new_2` is not a chapter. */}
+      <div style={{ marginTop: '1rem', display: 'grid', gap: '0.4rem', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+        {laid.map(({ b, len }) => (
+          <Row key={b.id} colour={b.sea} value={b.name}
+            onChange={v => setBays(bs => bs.map(q => q.id === b.id ? { ...q, name: v } : q))}
+            onDelete={() => setBays(bs => bs.filter(q => q.id !== b.id))}
+            note={`${b.bearing}° · ${b.at} · r${b.r} · strait ${len.toFixed(0)}`} />
+        ))}
+      </div>
+
       {/* ── THE LIST, editable, because a pin nobody named is a pin nobody can
           act on. */}
       {(pins.length > 0 || walls.length > 0) && (
         <div style={{ marginTop: '1rem', display: 'grid', gap: '0.4rem', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-          {pins.map(p => (
-            <Row key={p.id} colour="rgba(150,232,180,0.9)" value={p.label}
-              onChange={v => setPins(ps => ps.map(q => q.id === p.id ? { ...q, label: v } : q))}
-              onDelete={() => setPins(ps => ps.filter(q => q.id !== p.id))}
-              note={`${p.x}, ${p.y}`} />
-          ))}
+          {pins.map(p => {
+            const h = inBay(p.x, p.y)
+            return (
+              <Row key={p.id} colour={p.kind === 'boss' ? 'rgba(232,86,74,0.95)' : 'rgba(150,232,180,0.9)'}
+                value={p.label}
+                onChange={v => setPins(ps => ps.map(q => q.id === p.id ? { ...q, label: v } : q))}
+                onDelete={() => setPins(ps => ps.filter(q => q.id !== p.id))}
+                note={h ? `${h.bay.id} ${h.along},${h.across}` : `${p.x}, ${p.y}`} />
+            )
+          })}
           {walls.map(wl => (
             <Row key={wl.id} colour="rgba(226,138,120,0.9)" value={wl.label}
               onChange={v => setWalls(ws => ws.map(q => q.id === wl.id ? { ...q, label: v } : q))}
