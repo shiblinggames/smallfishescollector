@@ -1331,6 +1331,11 @@ export default function SeaMap({
 
   const [onSortie, setOnSortie] = useState(startSide === 'open')
   const sortieRef = useRef(startSide === 'open')
+  /** Which side of each basin's coast she was on last frame, and whether that
+   *  has been established yet. Both refs: the frame loop owns them and nothing
+   *  on screen reads them. */
+  const basinIn = useRef<boolean[]>(BASINS.map(() => false))
+  const basinKnown = useRef(false)
   /**
    * WHICH HULL IS UNDER YOU, which is now a separate question from which water
    * you are in.
@@ -4489,6 +4494,58 @@ export default function SeaMap({
         edgeRef.current = false
         setAtEdge(false)
       }
+
+      // ── AND YOU CANNOT SAIL THROUGH A BASIN'S COAST ────────────────
+      //
+      // The rocks are SCENERY. Every wall on this chart is really a piece of
+      // arithmetic — the reef is the north wall, the harbour and the raid water
+      // are radius clamps against a rim — and the boulders are what makes the
+      // maths legible. So drawing five rings of rock bought five rings of rock
+      // and nothing else: you sailed straight through your own coastline.
+      //
+      // A rim is crossable ONLY THROUGH A GAP, in either direction. Not "you
+      // cannot get out", which would let you enter a basin through the back of
+      // its wall and then be sealed in by the way you came.
+      //
+      // It works off which side she was on LAST frame rather than off the sign
+      // of her speed. A boat drifting at half a pixel a frame has a radial
+      // component that flips with the swell, and a wall that reads it would let
+      // her wobble through. Which side of a line you are on does not flicker.
+      const nowOut = sortieRef.current
+      for (let i = 0; i < BASINS.length; i++) {
+        const b = BASINS[i]
+        const bx = pos.current.x - b.x, by = pos.current.y - b.y
+        const bd = Math.hypot(bx, by) || 1
+        const inside = bd < b.r
+
+        // FIRST FRAME, or the first frame out here: adopt where she actually is
+        // rather than assuming she started outside. The sea position persists,
+        // so a captain who quit inside a basin comes back inside it, and a wall
+        // that believed otherwise would push her out through her own coast.
+        if (!basinKnown.current || !nowOut) {
+          basinIn.current[i] = inside
+          continue
+        }
+        if (inside === basinIn.current[i]) continue
+
+        const th = Math.atan2(by, bx)
+        const open = basinGaps(b).some(g =>
+          Math.abs(((th - g.bearing + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < g.half)
+
+        if (open) { basinIn.current[i] = inside; continue }
+
+        // Back to the side she was on, and the radial component goes. What was
+        // carrying her sideways survives, so she scrapes along the coast and
+        // finds the mouth rather than stopping dead — the same courtesy the
+        // island shoreline and the chart's own edge both extend.
+        const keep = basinIn.current[i] ? b.r - 12 : b.r + 12
+        pos.current.x = b.x + (bx / bd) * keep
+        pos.current.y = b.y + (by / bd) * keep
+        const rn = vel.current.x * (bx / bd) + vel.current.y * (by / bd)
+        vel.current.x -= (bx / bd) * rn
+        vel.current.y -= (by / bd) * rn
+      }
+      basinKnown.current = nowOut
 
       // YOU CANNOT SAIL THROUGH AN ISLAND. Clamping the target is not enough on
       // its own: a boat carrying way can cross a shoreline the course never
