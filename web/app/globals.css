@@ -2549,13 +2549,18 @@ body.hardcore-gauntlet::after {
   animation: seaHeaveBreathe calc(6s + var(--heave, 0.5) * 2.5s) ease-in-out infinite;
 }
 
+/* PALE, NOT LUMINOUS. These two bands were doing far more than standing water
+   does: bright breathing haloes either side of the hull, on screen every
+   moment you are aboard the expedition ship, and the eye went to them instead
+   of to the sea. Roughly halved. The dark trough above is untouched — that one
+   is a shadow rather than a glow, and it is what sits her IN the water. */
 .sea-heave-collar {
   width: 112px;
   height: 26px;
   margin: -13px 0 0 -56px;
   background: radial-gradient(ellipse 50% 50% at 50% 50%,
     rgba(226,244,250,0) 56%,
-    rgba(226,244,250,0.3) 74%,
+    rgba(226,244,250,0.13) 74%,
     rgba(226,244,250,0) 92%);
   animation: seaHeaveCollar calc(4.4s + var(--heave, 0.5) * 2s) ease-in-out infinite;
 }
@@ -2568,7 +2573,7 @@ body.hardcore-gauntlet::after {
   margin: -19px 0 0 -66px;
   background: radial-gradient(ellipse 50% 50% at 50% 50%,
     rgba(198,226,238,0) 58%,
-    rgba(198,226,238,0.22) 78%,
+    rgba(198,226,238,0.10) 78%,
     rgba(198,226,238,0) 96%);
   animation: seaHeaveSwell calc(6.2s + var(--heave, 0.5) * 3s) ease-out infinite;
 }
@@ -2578,13 +2583,17 @@ body.hardcore-gauntlet::after {
   50%      { transform: scale(1.055); }
 }
 @keyframes seaHeaveCollar {
-  0%, 100% { opacity: 0.32; transform: scale(1); }
-  50%      { opacity: 0.6;  transform: scale(1.03); }
+  0%, 100% { opacity: 0.16; transform: scale(1); }
+  50%      { opacity: 0.28; transform: scale(1.03); }
 }
+/* AND IT DOES NOT RACE. The old one grew to nearly twice its size on every
+   pass, which is a ring travelling outward — motion in the corner of the eye,
+   repeating forever, right where you are trying to look at a fight. It swells
+   now, which is what standing water beside a hull at anchor actually does. */
 @keyframes seaHeaveSwell {
-  0%   { transform: scale(0.92); opacity: 0; }
-  20%  { opacity: 0.85; }
-  100% { transform: scale(1.85); opacity: 0; }
+  0%   { transform: scale(0.94); opacity: 0; }
+  20%  { opacity: 0.38; }
+  100% { transform: scale(1.42); opacity: 0; }
 }
 
 /* THE PORTAL'S RING, ITS CORE AND ITS TWELVE FLAMES lived here. All three
