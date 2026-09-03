@@ -1693,25 +1693,18 @@ export default function RaidCombat({
    * parent, so this needs the bar's width in px — cached, because reading it is
    * itself a layout, and re-measured only when the window changes.
    */
-  const barWRef = useRef(0)
-  const needleWRef = useRef(4)
-  const zoneSizedRef = useRef(false)
-  useEffect(() => {
-    const clear = () => { barWRef.current = 0; zoneSizedRef.current = false }
-    window.addEventListener('resize', clear)
-    return () => window.removeEventListener('resize', clear)
-  }, [])
+  const needleTrackRef = useRef<HTMLDivElement | null>(null)
+  const zoneTrackRef = useRef<HTMLDivElement | null>(null)
   const paintNeedle = useCallback((el: HTMLDivElement | null, pos: number) => {
-    if (!el) return
-    if (onDial) { el.style.transform = `rotate(${pos * 360}deg)`; return }
-    if (!barWRef.current) {
-      barWRef.current = el.parentElement?.clientWidth ?? 0
-      // The needle is anchored at the left edge now and carried by the
-      // transform. Written once, alongside the measurement that makes it work.
-      el.style.left = '0px'
-    }
-    el.style.transform =
-      `translate3d(${pos * barWRef.current - needleWRef.current / 2}px, 0, 0)`
+    if (onDial) { if (el) el.style.transform = `rotate(${pos * 360}deg)`; return }
+    // The TRACK moves, not the needle. See the note where it is rendered: it is
+    // exactly as wide as the bar, so a percentage translate on it is a
+    // percentage of the bar — no width to measure, nothing to cache, and
+    // nothing that can be measured at the wrong moment and go stale. That was
+    // the bug in the cached-pixels version: a width read before the bar had
+    // been laid out left the needle sweeping a stub near the left edge.
+    const t = needleTrackRef.current
+    if (t) t.style.transform = `translate3d(${pos * 100}%, 0, 0)`
   }, [onDial])
   // Needle COLOUR. The bar tints a block; the dial's needle is an SVG stroke, so
   // it is drawn with currentColor and tinted by setting the CSS color on the same
@@ -1729,22 +1722,10 @@ export default function RaidCombat({
       dialZonesRef.current?.setAttribute('transform', `rotate(${deg}, ${CX}, ${CY})`)
       return
     }
-    if (!el) return
-    // SAME REASON AS THE NEEDLE. The zone drifts every frame on most raids, and
-    // it was rewriting both `left` and `width` to do it — two layout properties
-    // for a band whose WIDTH never changes: it is built out of constants. So the
-    // width is set once and the drift rides a transform.
-    if (!barWRef.current) barWRef.current = el.parentElement?.clientWidth ?? 0
-    // A FLAG, not a look at the element. The zone ships with an inline
-    // `width: 0`, so "has it been sized yet" cannot be asked of the style —
-    // "0px" is a perfectly truthy string and the real width would never land.
-    if (!zoneSizedRef.current) {
-      zoneSizedRef.current = true
-      el.style.width = `${(HIT_W + GRAZE_W) * 2 * 100}%`
-      el.style.left = '0px'
-    }
-    el.style.transform =
-      `translate3d(${(center - HIT_W - GRAZE_W) * barWRef.current}px, 0, 0)`
+    // Same track, same reason. The band's width is a constant now written in
+    // its own style rather than re-applied every frame.
+    const t = zoneTrackRef.current
+    if (t) t.style.transform = `translate3d(${(center - HIT_W - GRAZE_W) * 100}%, 0, 0)`
   }, [onDial])
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
@@ -3893,8 +3874,8 @@ export default function RaidCombat({
       zonePosRef.current = 0.3 + Math.random() * 0.4
       zoneDirRef.current = Math.random() < 0.5 ? -1 : 1
       if (indicatorRef.current && !onDial) {
-        needleWRef.current = 4
         indicatorRef.current.style.width = '4px'
+        indicatorRef.current.style.marginLeft = '-2px'
         indicatorRef.current.style.boxShadow = '0 0 8px rgba(255,255,255,0.6)'
         indicatorRef.current.style.transform = 'scaleY(1)'
       }
@@ -4044,8 +4025,10 @@ export default function RaidCombat({
     if (indicatorRef.current && !onDial && (res === 'hit' || res === 'critical')) {
       const w = res === 'critical' ? 10 : 7
       const glow = res === 'critical' ? '#fbbf24' : '#4ade80'
-      needleWRef.current = w
       indicatorRef.current.style.width = `${w}px`
+      // Half its own width back, so a fattened needle stays centred on the
+      // position instead of growing to the right of it.
+      indicatorRef.current.style.marginLeft = `${-w / 2}px`
       // On the bar the fattened needle has to be nudged left by half its new
       // width to stay centered on `pos`. On the dial it rotates about its own
       // pivot, so the rotation alone still points at the judged bearing.
@@ -8627,6 +8610,7 @@ export default function RaidCombat({
           ) : (
           <AimBarInline
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
+            needleTrackRef={needleTrackRef} zoneTrackRef={zoneTrackRef}
             // Enemy Mist Veil + any Gauntlet fog curse stack into one band.
             // Steady Sights (boon) clears a fraction (all at full clarity).
             aimFogDensity={Math.min(0.95, (enemy.aimFogDensity ?? 0) + tide.aimFog) * (1 - tide.aimClarity)}
@@ -12314,9 +12298,13 @@ function DialAimInline({
 }
 
 
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed, critBandRef }: {
+function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed, critBandRef }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
+  /** The full-width rails the needle and the band ride. These are what actually
+   *  move each frame; see the note where they are rendered. */
+  needleTrackRef: React.RefObject<HTMLDivElement | null>
+  zoneTrackRef:   React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
   /** False Colors curse — N drifting decoy bands the player must NOT lock onto.
    *  The RAF positions each via decoyElRefs. 0 = none this fire. */
@@ -12425,7 +12413,10 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
           // landed.
           pointerEvents: 'none', zIndex: 5,
         }} />
-        <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
+        {/* Same track trick for the target band: it drifts every frame on most
+            raids, and its width is built out of constants and never changes. */}
+        <div ref={zoneTrackRef} aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '100%', pointerEvents: 'none', zIndex: 1, willChange: 'transform' }}>
+        <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${(HIT_W + GRAZE_W) * 2 * 100}%` }}>
           <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
           <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
           {/* Gold crit band at its real width (matches the practice bar),
@@ -12436,6 +12427,7 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
                 Rolling Plate drifts it (and sits dead center otherwise). */}
             <div style={{ position: 'absolute', top: '14%', bottom: '14%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
           </div>
+        </div>
         </div>
         {/* False Colors — drifting DECOY bands (narrower than the real target,
             crimson/danger). The RAF positions each via decoyElRefs; locking on
@@ -12449,7 +12441,17 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
             <div style={{ position: 'absolute', top: '22%', bottom: '22%', left: 'calc(50% - 1px)', width: 2, background: '#fca5a5' }} />
           </div>
         ))}
-        <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
+        {/* THE NEEDLE RIDES A FULL-WIDTH TRACK, and that is the whole trick.
+            A transform is what you want moving something every frame, but a
+            translateX percentage is relative to the ELEMENT, not its parent —
+            so a 4px needle translated 50% moves two pixels. Give it a track as
+            wide as the bar and the two are the same thing: 50% of the track IS
+            half the bar, with no measurement and nothing to cache or go stale.
+            The needle hangs at the track's left edge, pulled back half its own
+            width so it is centred on the position rather than starting at it. */}
+        <div ref={needleTrackRef} aria-hidden style={{ position: 'absolute', top: 2, bottom: 2, left: 0, width: '100%', pointerEvents: 'none', zIndex: 2, willChange: 'transform' }}>
+          <div ref={indicatorRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, marginLeft: -2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)' }} />
+        </div>
         {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
             fog band drifts back-and-forth across the bar, briefly
             covering the gold critical center. Sits above the zone
