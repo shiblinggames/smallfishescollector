@@ -188,6 +188,24 @@ export type AbilityFx = {
    * because the hull moves and a shell that lags behind it is a decal.
    * Clearing it after it was up SHATTERS it — see the note in `advance`.
    */
+  /**
+   * ── A CONDITION ON A HULL, HELD ─────────────────────────────────────────
+   *
+   * Same argument as the ward and the same shape of answer. Burning, frozen and
+   * snared are states that last for turns, and the only place they existed was
+   * as a word in a chip on a nameplate — so a ship that was on fire looked
+   * exactly like a ship that was not, on water that had no opinion either way.
+   *
+   * ONE AT A TIME, deliberately. Three conditions drawn at once on one hull is
+   * soup, and the fight already knows which of them is the one that matters —
+   * it is the one deciding what happens next turn. Priority belongs there,
+   * where the rules are, not here.
+   *
+   * `kind` is a small code rather than a string so it can ride the pose
+   * channel's numeric change-detection with everything else: 0 none, 1 burn,
+   * 2 freeze, 3 snare, 4 marked.
+   */
+  status(side: 'player' | 'enemy', x: number, y: number, beam: number, kind: number): void
   ward(
     side: 'player' | 'enemy', x: number, y: number,
     /**
@@ -300,6 +318,35 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
     }
     return { shellA, shellB, orbit, up: false, x: 0, y: 0, beam: 200, color: 0xffffff, t: 0, fade: 0 }
   })
+
+  // ── THE CONDITIONS ───────────────────────────────────────────────────────
+  //
+  // Dedicated particles for the same reason the wards have them: a status holds
+  // for turns, and a ring buffer would recycle it away the moment anything else
+  // fired.
+  const conds = (['player', 'enemy'] as const).map(() => {
+    const halo: Particle = new PIXI.Particle({ texture: dt2 })
+    halo.anchorX = 0.5; halo.anchorY = 0.5; halo.alpha = 0
+    markLayer.addParticle(halo)
+    const bits: Particle[] = []
+    for (let i = 0; i < 12; i++) {
+      const b: Particle = new PIXI.Particle({ texture: mt })
+      b.anchorX = 0.5; b.anchorY = 0.5; b.alpha = 0
+      moteLayer.addParticle(b)
+      bits.push(b)
+    }
+    return { halo, bits, kind: 0, x: 0, y: 0, beam: 200, t: 0, fade: 0, seed: bits.map(() => Math.random()) }
+  })
+
+  /** What each condition looks like. Colour, and the MANNER — which is the part
+   *  that carries the meaning: fire rises, ice hangs, a snare drags down. */
+  const COND = [
+    null,
+    { color: 0xff8a3c, rise: 1 },      // 1 burn   — embers going up
+    { color: 0xa8e8ff, rise: 0 },      // 2 freeze — crystals hanging still
+    { color: 0xd9b066, rise: -1 },     // 3 snare  — dragged down to the water
+    { color: 0xff4d7d, rise: 0 },      // 4 marked — a sigil turning under them
+  ] as const
 
   let dark = 0
 
@@ -460,6 +507,13 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
   return {
     view,
     night(d) { dark = d },
+
+    status(side, x, y, beam, kind) {
+      const c = conds[side === 'player' ? 0 : 1]
+      c.x = x; c.y = y
+      if (beam > 0) c.beam = beam
+      c.kind = kind
+    },
 
     ward(side, x, y, beam, color, up) {
       const w = wards[side === 'player' ? 0 : 1]
@@ -771,6 +825,62 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       // light source in its own right, and the one time the sea should not be
       // deciding how bright a thing is.
       const lit = 1 - dark * 0.25
+
+      // ── THE CONDITIONS THAT ARE HOLDING ─────────────────────────────────
+      for (const c of conds) {
+        const spec = COND[c.kind] ?? null
+        // Faded rather than switched, so a status ENDING is a thing you can
+        // watch happen. A condition that blinks off has not told you it lapsed;
+        // it has just stopped being there, which is a different sentence.
+        c.fade += ((spec ? 1 : 0) - c.fade) * Math.min(1, dt * 6)
+        if (c.fade < 0.01) {
+          if (c.halo.alpha) c.halo.alpha = 0
+          for (const b of c.bits) if (b.alpha) b.alpha = 0
+          continue
+        }
+        c.t += dt
+        // Held on the LAST spec while fading out, or a lapsing burn would go
+        // out as whatever colour came next.
+        const sp = spec ?? COND[1]!
+        const rx = c.beam * 0.55
+        const ry = c.beam * 0.26
+
+        // The wash on the water under her. Marked turns; everything else
+        // breathes in place.
+        c.halo.x = c.x
+        c.halo.y = c.y
+        c.halo.tint = sp.color
+        c.halo.rotation += (c.kind === 4 ? 0.5 : 0.06) * dt
+        c.halo.scaleX = (rx * 2.1) / 128
+        c.halo.scaleY = ((ry * 2.1) / 128) * GROUND
+        c.halo.alpha = 0.20 * c.fade * lit * (0.8 + 0.2 * Math.sin(c.t * 1.9))
+
+        for (let i = 0; i < c.bits.length; i++) {
+          const b = c.bits[i]
+          const sd = c.seed[i]
+          const a2 = (i / c.bits.length) * Math.PI * 2 + c.t * (c.kind === 4 ? 0.5 : 0.12)
+          // ── THE MANNER IS THE MEANING ─────────────────────────────────
+          //
+          // Fire RISES and flickers out; ice HANGS, barely moving, which is the
+          // only way stillness reads as a state rather than as a bug; a snare
+          // drags DOWN to the waterline and stays low. Same twelve particles,
+          // three completely different readings.
+          const cycle = (c.t * (sp.rise > 0 ? 0.5 : 0.22) + sd) % 1
+          const h = sp.rise > 0
+            ? cycle * 150                      // up and out
+            : sp.rise < 0
+            ? 8 + Math.sin(c.t * 1.4 + sd * 6) * 6   // dragged low
+            : 46 + Math.sin(c.t * 0.8 + sd * 6) * 12 // hanging
+          b.x = c.x + Math.cos(a2) * rx * (0.75 + sd * 0.4)
+          b.y = c.y + Math.sin(a2) * ry * (0.75 + sd * 0.4) * GROUND - h / GROUND
+          b.tint = sp.color
+          const sz = (c.kind === 2 ? 10 : 12) + sd * 7
+          b.scaleX = sz / 24
+          b.scaleY = sz / 24
+          b.alpha = c.fade * lit
+            * (sp.rise > 0 ? (1 - cycle) * 0.85 : 0.5 + 0.3 * Math.sin(c.t * 1.6 + sd * 6))
+        }
+      }
 
       // ── THE WARDS THAT ARE HOLDING ──────────────────────────────────────
       for (const w of wards) {

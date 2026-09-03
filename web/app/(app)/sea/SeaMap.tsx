@@ -3099,6 +3099,13 @@ export default function SeaMap({
         hullRef.current.beamW, 0x5eead4, !!pfx2?.guard)
       gpuRef.current?.ward('enemy', hull.at.x, hull.at.y,
         hull.encW, 0xc084fc, !!shipFxRef.current?.enemy?.guard)
+      // Conditions ride the same frame and the same measurements. Burning,
+      // frozen and snared are states of a SHIP, so they belong on the hull and
+      // follow it, not in a chip on a nameplate.
+      gpuRef.current?.status('player', pos.current.x, pos.current.y,
+        hullRef.current.beamW, pfx2?.status ?? 0)
+      gpuRef.current?.status('enemy', hull.at.x, hull.at.y,
+        hull.encW, shipFxRef.current?.enemy?.status ?? 0)
 
       const efx = shipFxRef.current?.enemy
       const el = enemyHullRef.current
@@ -7849,6 +7856,8 @@ hullRef={hullRefFor(t.key)} />
           // after the ship it belonged to had gone.
           gpuRef.current?.ward('player', 0, 0, 0, 0x5eead4, false)
           gpuRef.current?.ward('enemy', 0, 0, 0, 0xc084fc, false)
+          gpuRef.current?.status('player', 0, 0, 0, 0)
+          gpuRef.current?.status('enemy', 0, 0, 0, 0)
           bossReadRef.current = false
           setBossData(null)
           setRaidData(null)

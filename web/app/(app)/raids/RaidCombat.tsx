@@ -443,6 +443,17 @@ export type ShipFx = {
    * the half that decides whether the next hit lands on hull or on shell.
    */
   guard: number
+  /**
+   * THE ONE CONDITION WORTH DRAWING on this hull: 0 none, 1 burning, 2 frozen,
+   * 3 snared, 4 marked.
+   *
+   * ONE, not a set. Three conditions drawn at once on a single ship is soup —
+   * and choosing between them belongs HERE, where the rules are, because the
+   * one worth showing is the one about to decide what happens next turn. A
+   * frozen ship is skipping its go, which outranks anything else that is true
+   * about it.
+   */
+  status: number
 }
 
 /**
@@ -2370,6 +2381,16 @@ export default function RaidCombat({
   guardRef.current.p = (abyssalShieldHp > 0 || vengeanceWardTurns > 0) ? 1 : 0
   guardRef.current.e = enemyShieldHp > 0 ? 1 : 0
 
+  // And the conditions, in the order they matter. Frozen first: a ship skipping
+  // its turn is the most consequential thing that can be true of it, and it
+  // outranks a burn that is merely ticking.
+  const statusRef = useRef({ p: 0, e: 0 })
+  statusRef.current.p = playerFrozen ? 2 : playerBurning ? 1 : 0
+  statusRef.current.e = enemyFrozen ? 2
+    : enemyBurning ? 1
+    : snareDodgeTurns > 0 ? 3
+    : 0
+
   // ── ONE FRAME, BOTH DIRECTIONS ────────────────────────────────────────────
   //
   // Out: the two anchors are moved onto the chart's hulls, so every effect in
@@ -2494,7 +2515,7 @@ export default function RaidCombat({
     let raf = 0
     // The last pose published and the last anchors written, as plain numbers
     // in fixed arrays. Reused every frame; never reallocated.
-    const was = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    const was = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     const prev = [0, 0, 0, 0, 0, 0]
     let sent = false
     const tick = () => {
@@ -2534,6 +2555,7 @@ export default function RaidCombat({
           rot: p.orot + p.srot,
           sink: 0,
           guard: guardRef.current.p,
+          status: statusRef.current.p,
         },
         enemy: {
           x: e.ox + e.sx,
@@ -2543,6 +2565,7 @@ export default function RaidCombat({
           // to sum: it is a state the chart holds until the wreck is gone.
           sink: sinkingRef.current ? 1 : 0,
           guard: guardRef.current.e,
+          status: statusRef.current.e,
         },
       }
       // Rounded before comparing, or floating-point noise in a settling spring
@@ -2554,6 +2577,7 @@ export default function RaidCombat({
         fx.enemy.x | 0, fx.enemy.y | 0, Math.round(fx.enemy.rot * 10),
         fx.enemy.sink,
         fx.player.guard, fx.enemy.guard,
+        fx.player.status, fx.enemy.status,
       ]
       let changed = !sent
       for (let i = 0; i < n.length; i++) if (n[i] !== was[i]) { changed = true; break }

@@ -170,6 +170,13 @@ export type GpuHandle = {
     beam: number,
     color: number, up: boolean,
   ): void
+  /**
+   * A CONDITION HOLDING ON A HULL — burning, frozen, snared, marked. Called
+   * every frame with where that hull is, like the ward. `kind` is a code; see
+   * seaAbilityFx, and note that WHICH condition is worth drawing is decided in
+   * the fight, where the rules live.
+   */
+  status(side: 'player' | 'enemy', x: number, y: number, beam: number, kind: number): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -1168,6 +1175,7 @@ export default function SeaIslandsGPU({
         gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
         ability(x, y, tx, ty, color, shape, power) { spells.cast(x, y, tx, ty, color, shape, power) },
         ward(side, x, y, beam, color, up) { spells.ward(side, x, y, beam, color, up) },
+        status(side, x, y, beam, kind) { spells.status(side, x, y, beam, kind) },
         gunsink(x, y) {
           guns.sink(x, y)
           // AND THE FISH BOLT. A ship going down is the loudest thing that has
