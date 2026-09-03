@@ -225,7 +225,30 @@ void main(void) {
   // compression arrives where the eye expects it. Linear made the whole sea
   // look like it was being sucked upward.
   float recede = depth * depth;
-  vec2 w = world * (0.0016 * (1.0 + recede * 1.5));
+  // ── COMPRESSED AROUND THE CAMERA, NOT AROUND THE WORLD ORIGIN ─────
+  //
+  // THIS IS WHERE THE WHITE HORIZONTAL LINES CAME FROM, and the fix is the
+  // subtraction. It used to be world * k, with k a function of the screen ROW.
+  // So the sample point moved between one row and the next by world * dk — and
+  // world is an ABSOLUTE chart coordinate, ten or twenty thousand pixels out.
+  //
+  // Run the numbers and the artefact is exactly what was on screen. Across one
+  // row of a thousand-pixel view, dk is about 5e-6; times a world coordinate of
+  // 12,000 that is 0.06 of a noise unit PER ROW, so the field slides a whole
+  // feature every seventeen rows. That is a horizontal stripe every seventeen
+  // pixels, drifting with the map because the sample is in world space, and
+  // getting WORSE the further from the origin you sail. Golden hour is where it
+  // showed because the glint threshold drops then and the field goes from
+  // scattered specks to broad connected blobs — big enough for the striping to
+  // join up into what looks like rays.
+  //
+  // Compressing the OFFSET from the camera instead leaves the same picture —
+  // the near water is untouched, the far water tightens — but the row-to-row
+  // step is now proportional to distance from the camera, which is a screen's
+  // worth rather than a chart's. About 0.007 a row: one feature every hundred
+  // and forty rows, which is no edge at all. And it no longer depends on where
+  // on the chart you are.
+  vec2 w = (world - uCam) * (0.0016 * (1.0 + recede * 1.5)) + uCam * 0.0016;
 
   // Two octaves, the second dragged around by the first. One drifts across the
   // swell and the other along it, so the pattern never repeats visibly.
@@ -399,6 +422,50 @@ void main(void) {
   // untouched on purpose, because the last two notes on this sea have both been
   // that it is too busy when you are sitting still.
   col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush);
+
+  // ── AND THE LAST THING: BREAK THE BANDS ───────────────────────────
+  //
+  // The evening was drawing horizontal lines across the water, and they were
+  // not lines. They are CONTOURS: an eight-bit channel can only hold 256 steps,
+  // and golden hour ramps a very strong colour across most of the screen: the
+  // horizon term falls over 0.72 of the gradient and the mix under it replaces
+  // two thirds of the pixel. Spread that few steps over that many pixels and
+  // the eye finds the boundary between one step and the next and joins it up
+  // into a line. It shows here and nowhere else because nothing else on this
+  // chart ramps that hard over that much sea.
+  //
+  // The fix is not a smoother curve — the curve is already smooth, and the
+  // screen is what cannot say so. Dither: a sub-step of noise per pixel, so
+  // the boundary between two steps is scattered across a band of pixels
+  // instead of falling on one line. TWO hashes rather than one, which makes
+  // the noise triangular rather than flat and is the standard trick: it costs a
+  // second hash and cancels the faint texture a single uniform hash leaves
+  // behind.
+  //
+  // Half a step either way. Enough to destroy a contour, far too little to see.
+  float d0 = hash(gl_FragCoord.xy);
+  float d1 = hash(gl_FragCoord.xy + vec2(17.31, 91.7));
+  col += (d0 + d1 - 1.0) / 255.0;
+
+  // ── AND BREAK THE BANDS ───────────────────────────────────────────
+  //
+  // Separate from the stripes above, and worth having anyway. An eight-bit
+  // channel holds 256 steps, and golden hour ramps a very strong colour across
+  // most of the screen: the horizon term falls over 0.72 of the gradient and
+  // the mix under it replaces two thirds of the pixel. Spread that few steps
+  // over that many pixels and the eye finds the boundary between one step and
+  // the next and joins it into a contour.
+  //
+  // The curve is already smooth; the screen is what cannot say so. So: a
+  // sub-step of noise per pixel, which scatters each boundary across a band of
+  // pixels instead of letting it fall on one line. Two hashes rather than one
+  // makes the noise triangular rather than flat, which is the standard trick —
+  // it costs a second hash and cancels the faint texture a single uniform hash
+  // leaves behind. Half a step either way: enough to destroy a contour, far too
+  // little to see.
+  float d0 = hash(gl_FragCoord.xy);
+  float dd1 = hash(gl_FragCoord.xy + vec2(17.31, 91.7));
+  col += (d0 + dd1 - 1.0) / 255.0;
 
   finalColor = vec4(col, 1.0);
 }
