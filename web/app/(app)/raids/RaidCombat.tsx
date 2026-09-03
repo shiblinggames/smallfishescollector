@@ -7325,15 +7325,20 @@ export default function RaidCombat({
             onClick={riskyFlee ? () => promptFlee(() => onLeave?.()) : onLeave}
             aria-label={riskyFlee ? 'Flee raid' : 'Leave raid'}
             style={{
-              // OVER THE SEA THE STAGE'S CORNER IS THE WINDOW'S CORNER, so a
-              // 10px inset put the only way out of a fight on top of the site
-              // header — visually on the nav, and under it for a thumb. Dropped
-              // to the chart's own HUD line (surface at 44/60, hung 18 in) and
-              // given a bit more size, because "leave" should not be the
+              // ON THE HUD LINE, AND MEASURED THE WAY THE CHART MEASURES IT.
+              //
+              // This is absolute inside the stage, and the stage now carries
+              // the chart's own insets — it already BEGINS at the header. So
+              // the offset here is 18, exactly what the chart hangs its own HUD
+              // discs at, and the level bar's fixed 62/78 lands on the same
+              // line. Adding the header height again (as `calc(44px + 18px)`
+              // did) measured it twice and dropped the button a row.
+              //
+              // Bigger than the route's 32, because leaving should not be the
               // smallest target on the screen.
               position: 'absolute', zIndex: 5,
               ...(overSea
-                ? { top: 'calc(44px + 18px)', right: 12, width: 38, height: 38 }
+                ? { top: 18, right: 12, width: 38, height: 38 }
                 : { top: 10, right: 10, width: 32, height: 32 }),
               borderRadius: '50%',
               background: 'rgba(6,12,20,0.78)',

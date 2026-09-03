@@ -3602,6 +3602,15 @@ export default function SeaMap({
   }, [yoon, residents, socials, traders, finn, friends])
   /** The water we have the rod out in. Null means sailing. */
   const [fishingIn, setFishingIn] = useState<Place | null>(null)
+  /**
+   * THE CHART'S FURNITURE IS PUT AWAY, and a fight is the second reason to do
+   * it. Casting already cleared the helm, the compass, the banner, the settings
+   * and the hints — with the rod out the sea is a scene rather than somewhere
+   * you are steering, and every one of those controls is about steering. A
+   * broadside is the same thing: the guns are out, the helm is dropped, and the
+   * only things that should be on screen are the fight's own.
+   */
+  const hudOff = !!fishingIn || fightOn
   /** For the keyboard handler, which binds once: while the rod is out, the
    *  chart's space/E stand down and FishingHere's own handler works the rod. */
   const fishingInRef = useRef<Place | null>(null)
@@ -6602,7 +6611,7 @@ hullRef={hullRefFor(t.key)} />
           wheel does their job on a tap now, so what they were really for —
           telling you there is something here at all — is one line where the
           control actually is. Never eats a press: the helm is underneath it. */}
-      {!fishingIn && (helmLabel.act || helmLabel.hold) && (() => {
+      {!hudOff && (helmLabel.act || helmLabel.hold) && (() => {
         // ONE LINE, ONE STYLE. The two used to be different sizes and different
         // families — the action in Cinzel at 1.02 and the hold in Karla at 0.78
         // — which read as a heading with a footnote when they are the same kind
@@ -6668,7 +6677,7 @@ hullRef={hullRefFor(t.key)} />
         )
       })()}
 
-      {!fishingIn && (
+      {!hudOff && (
         <div
           ref={boxRef}
           className="sea-helm"
@@ -7275,7 +7284,7 @@ hullRef={hullRefFor(t.key)} />
       <AshorePanel state={landed} onClose={() => setLanded(null)} />
 
       <WaterBanner
-        place={!fishingIn && near && near.kind === 'water' ? near : null}
+        place={!hudOff && near && near.kind === 'water' ? near : null}
         locked={near ? locked(near) : false}
         // BELOW THE DISC ROW ON A PHONE. The banner centres itself and the
         // discs hold the left corner, and both sat on the same top: 18 — fine
@@ -7545,7 +7554,7 @@ hullRef={hullRefFor(t.key)} />
           navigating — you are standing still on purpose. Four arrows with names
           and distances on them are the single largest thing on this screen that
           has nothing to do with what you are doing. Back the moment you stow. */}
-      {!fishingIn && (
+      {!hudOff && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
           finn={finnBearing}
           // The harbour IS a place now, so the compass can raise it again when
@@ -7820,8 +7829,8 @@ hullRef={hullRefFor(t.key)} />
           Laid out from the corner inwards, and the gear keeps the corner
           because it is the one that was already there — a control that moves
           when a badge appears next to it is a control people mis-tap. */}
-      {!fishingIn && <SeaBonus size={hudSize} top={18} right={12 + hudSize + 8} />}
-      {!fishingIn && <SeaSettings size={hudSize} top={18} />}
+      {!hudOff && <SeaBonus size={hudSize} top={18} right={12 + hudSize + 8} />}
+      {!hudOff && <SeaSettings size={hudSize} top={18} />}
 
       {/* THE SOUNDTRACK. Starts on the first press rather than on mount, both
           because no browser will play it before one and because it is a 1.6MB
@@ -8267,7 +8276,7 @@ hullRef={hullRefFor(t.key)} />
         blocked={baitLeft <= 0 ? 'bait' : holdCount >= hold.capacity ? 'hold' : null}
         cam={tourCam} goal={tourGoal} holdCast={tourHoldCast}
         fishOnly={tourFishOnly} stowRod={stowRod} at={pos} />
-      {!fishingIn && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
+      {!hudOff && <SeaLandfallHint nearId={near?.id ?? null} seen={tour.hints} />}
 
       {/* THE LEAVING WARNING IS GONE, along with the rule it explained.
           It asked you to confirm before sailing out of water you had the rod
