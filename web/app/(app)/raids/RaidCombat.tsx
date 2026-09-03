@@ -1723,6 +1723,36 @@ export default function RaidCombat({
    */
   const needleTrackRef = useRef<HTMLDivElement | null>(null)
   const zoneTrackRef = useRef<HTMLDivElement | null>(null)
+  /**
+   * ── THE NEEDLE RUNS ON THE COMPOSITOR ─────────────────────────────────────
+   *
+   * Painting it from the RAF meant its cadence was the main thread's cadence.
+   * Every hitch anywhere — a React commit, a layout, a frame of GC — landed in
+   * the one moving thing the player is tracking with their eye, which is why it
+   * read as running at half rate while a sea full of motion beside it did not.
+   * The sea is on the GPU. This was not.
+   *
+   * The fishing dial solved this already and says so: its needle is spun by a
+   * WAAPI animation on the compositor thread precisely "because that is what
+   * makes main-thread jank unable to make it skip". Same instrument, same
+   * problem, same answer.
+   *
+   * WYSIWYG SURVIVES IT, which is the part that has to be right. The sweep is a
+   * triangle wave with a known start and a known period, so where the needle IS
+   * can be computed from the clock rather than read off the element — and it is
+   * the SAME clock the compositor is animating against. Judgment stays exact;
+   * it just stops being a side effect of having painted.
+   */
+  const needleAnimRef = useRef<Animation | null>(null)
+  const needleT0Ref = useRef(0)
+  const needlePeriodRef = useRef(0)
+  /** Where the sweep is, from the clock. 0 to 1 and back, forever. */
+  const needleAt = useCallback((t: number) => {
+    const period = needlePeriodRef.current
+    if (!period) return firePosRef.current
+    const phase = (((t - needleT0Ref.current) / period) % 1 + 1) % 1
+    return phase < 0.5 ? phase * 2 : 2 - phase * 2
+  }, [])
   const paintNeedle = useCallback((el: HTMLDivElement | null, pos: number) => {
     if (onDial) { if (el) el.style.transform = `rotate(${pos * 360}deg)`; return }
     // The TRACK moves, not the needle. See the note where it is rendered: it is
@@ -2938,6 +2968,45 @@ export default function RaidCombat({
     decoyFumbleRef.current = false
     setActiveDecoys(nDecoys)
 
+    // ── HAND IT TO THE COMPOSITOR, unless something is modulating the speed.
+    //
+    // A squall's gust rides a sine through the sweep, which a fixed-duration
+    // animation cannot express — changing playbackRate every frame would put
+    // the work straight back on the main thread and lose the whole point. So a
+    // gusting bar keeps the RAF paint it has always had. It is one affliction
+    // on one raid, and it is MEANT to be hard to read.
+    const compositor = !onDial && !squallActive
+    if (compositor) {
+      const el = needleTrackRef.current
+      // Frames to cross, and back again: the same NEEDLE_SPEED the maths below
+      // uses, so the picture and the judgment cannot describe different sweeps.
+      needlePeriodRef.current = (2 / NEEDLE_SPEED) * (1000 / 60)
+      if (el && typeof el.animate === 'function') {
+        try {
+          const anim = el.animate(
+            [
+              { transform: 'translate3d(0%, 0, 0)' },
+              { transform: 'translate3d(100%, 0, 0)' },
+              { transform: 'translate3d(0%, 0, 0)' },
+            ],
+            { duration: needlePeriodRef.current, iterations: Infinity, easing: 'linear' },
+          )
+          // PINNED SYNCHRONOUSLY, or it starts "when ready" — up to a frame
+          // later — and the clock this file reads and the needle the player
+          // sees disagree by however long that took. That gap is a miss.
+          const t0 = document.timeline?.currentTime
+          needleT0Ref.current = typeof t0 === 'number' ? t0 : performance.now()
+          if (typeof t0 === 'number') anim.startTime = t0
+          needleAnimRef.current = anim
+        } catch {
+          needleAnimRef.current = null
+          needlePeriodRef.current = 0
+        }
+      } else {
+        needlePeriodRef.current = 0
+      }
+    }
+
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
       last = now
@@ -2946,6 +3015,24 @@ export default function RaidCombat({
       // the freeze takes effect on the next frame (the state closure here is
       // stale once subPhase stays 'aiming').
       if (critFreezeRef.current) { rafRef.current = requestAnimationFrame(tick); return }
+      // ── BACK OFF THE FREEZE ─────────────────────────────────────────────
+      //
+      // The lock pauses the compositor's sweep. Usually the phase moves on and
+      // the effect's cleanup cancels it, but a re-aim can lift the freeze
+      // without ever leaving 'aiming' — and a paused animation nobody restarts
+      // is a needle that stops for good. Resuming re-pins the epoch off the
+      // animation's own clock, so `needleAt` keeps describing the needle that
+      // is actually on the glass rather than the one that would have been there
+      // had it never stopped.
+      {
+        const anim = needleAnimRef.current
+        if (anim && anim.playState === 'paused') {
+          const at = typeof anim.currentTime === 'number' ? anim.currentTime : 0
+          const tl = document.timeline?.currentTime
+          needleT0Ref.current = (typeof tl === 'number' ? tl : now) - at
+          anim.play()
+        }
+      }
       const frames = dt / 16.67
 
       // Squall (raid-8 affliction, Kingmaker's Gale): the needle's sweep speed
@@ -3977,6 +4064,12 @@ export default function RaidCombat({
     // commits after this render, which let the tick run 1–2 more frames and
     // drift the painted needle past the spot being judged.
     critFreezeRef.current = true
+    // AND THE COMPOSITOR STOPS TOO. Freezing the RAF stops the maths, but the
+    // sweep is not being drawn by the RAF any more — pausing the animation is
+    // what actually stops the needle on the glass, and without it the frozen
+    // badge would sit beside a needle that had sailed on past the spot it is
+    // describing. Paused rather than cancelled: the picture has to HOLD.
+    needleAnimRef.current?.pause()
     // The lock ITSELF gets a tick, synchronous with the freeze — the single
     // most important input in combat should be felt the instant it lands,
     // distinct from the bigger result haptics that follow the judgment.
@@ -4015,7 +4108,16 @@ export default function RaidCombat({
     // as painted this frame, no rewind and no projection. The freeze
     // below repaints needle + zone at this same geometry with the result
     // color, so the frozen picture can never disagree with the badge.
-    const pos = firePosRef.current
+    // READ AT THE TAP, from the clock the compositor is drawing against, so the
+    // judgment is where the needle is at the instant of the press rather than
+    // where the last frame left it. Falls back to the painted value on the
+    // gusting bar, which is still integrated by the RAF.
+    const pos = needlePeriodRef.current
+      ? needleAt(typeof document.timeline?.currentTime === 'number'
+        ? document.timeline.currentTime as number
+        : performance.now())
+      : firePosRef.current
+    firePosRef.current = pos
     const zoneCenter = zonePosRef.current
     // Rolling Plate: the crit judges against the SEAM (zone center + drift
     // offset); hit/graze still judge the zone itself. Offset is 0 on every
