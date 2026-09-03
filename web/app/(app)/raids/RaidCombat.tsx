@@ -433,7 +433,17 @@ export type ShipAnchor = { x: number; y: number; w: number }
  * transform or to Pixi's `skipper()` (which already takes heel and an offset)
  * without knowing anything about the fight that produced them.
  */
-export type ShipFx = { x: number; y: number; rot: number; sink: number }
+export type ShipFx = {
+  x: number; y: number; rot: number; sink: number
+  /**
+   * IS A WARD HOLDING ON THIS HULL. 0 or 1, and it lives on the POSE channel
+   * rather than being an event, because that is what it is: a state of a ship
+   * that is true for a while and then is not. Events fire and are over; a
+   * shield has to be visible for as long as it lasts and visibly END, which is
+   * the half that decides whether the next hit lands on hull or on shell.
+   */
+  guard: number
+}
 
 /**
  * SOMETHING HAPPENED, and the sea should know about it.
@@ -2353,6 +2363,13 @@ export default function RaidCombat({
   const sinkingRef = useRef(false)
   useEffect(() => { sinkingRef.current = enemySinking }, [enemySinking])
 
+  // The two shells, mirrored for the frame loop. A ward is up if EITHER a pool
+  // is holding or a turn-counted ward is running: they are different mechanics
+  // and the same fact about the ship.
+  const guardRef = useRef({ p: 0, e: 0 })
+  guardRef.current.p = (abyssalShieldHp > 0 || vengeanceWardTurns > 0) ? 1 : 0
+  guardRef.current.e = enemyShieldHp > 0 ? 1 : 0
+
   // ── ONE FRAME, BOTH DIRECTIONS ────────────────────────────────────────────
   //
   // Out: the two anchors are moved onto the chart's hulls, so every effect in
@@ -2477,7 +2494,7 @@ export default function RaidCombat({
     let raf = 0
     // The last pose published and the last anchors written, as plain numbers
     // in fixed arrays. Reused every frame; never reallocated.
-    const was = [0, 0, 0, 0, 0, 0, 0]
+    const was = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     const prev = [0, 0, 0, 0, 0, 0]
     let sent = false
     const tick = () => {
@@ -2516,6 +2533,7 @@ export default function RaidCombat({
           y: p.sy + p.ry,
           rot: p.orot + p.srot,
           sink: 0,
+          guard: guardRef.current.p,
         },
         enemy: {
           x: e.ox + e.sx,
@@ -2524,6 +2542,7 @@ export default function RaidCombat({
           // A hull going down is the one motion here that is not an animation
           // to sum: it is a state the chart holds until the wreck is gone.
           sink: sinkingRef.current ? 1 : 0,
+          guard: guardRef.current.e,
         },
       }
       // Rounded before comparing, or floating-point noise in a settling spring
@@ -2534,6 +2553,7 @@ export default function RaidCombat({
         fx.player.x | 0, fx.player.y | 0, Math.round(fx.player.rot * 10),
         fx.enemy.x | 0, fx.enemy.y | 0, Math.round(fx.enemy.rot * 10),
         fx.enemy.sink,
+        fx.player.guard, fx.enemy.guard,
       ]
       let changed = !sent
       for (let i = 0; i < n.length; i++) if (n[i] !== was[i]) { changed = true; break }

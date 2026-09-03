@@ -3084,6 +3084,18 @@ export default function SeaMap({
       A.enemy.x = cx + (hull.at.x - camAt.current.x) * z
       A.enemy.y = cy + (hull.at.y - camAt.current.y) * z * GROUND
       A.enemy.w = hull.encW * z
+      // ── THE WARDS, EVERY FRAME ────────────────────────────────────────
+      //
+      // A shield is a state rather than an event (see seaAbilityFx), so it is
+      // told where its hull is on every frame it is holding. Cyan for yours,
+      // violet for theirs — the same two colours their shield segments already
+      // wear on the HP bars, so the shell on the water and the number in the
+      // deck are plainly the same fact.
+      const pfx2 = shipFxRef.current?.player
+      gpuRef.current?.ward('player', pos.current.x, pos.current.y, 0x5eead4, !!pfx2?.guard)
+      gpuRef.current?.ward('enemy', hull.at.x, hull.at.y, 0xc084fc,
+        !!shipFxRef.current?.enemy?.guard)
+
       const efx = shipFxRef.current?.enemy
       const el = enemyHullRef.current
       if (el && efx) {
@@ -7827,6 +7839,12 @@ hullRef={hullRefFor(t.key)} />
           // THE CARD IS STALE NOW. A clear, a drop and a new record all just
           // happened; the next one has to be read again rather than served from
           // before the fight.
+          // THE SHELLS COME DOWN WITH THE FIGHT. A ward is a state the canvas
+          // holds until it is told otherwise, and the canvas outlives the
+          // fight — left set, it would go on breathing over open water long
+          // after the ship it belonged to had gone.
+          gpuRef.current?.ward('player', 0, 0, 0x5eead4, false)
+          gpuRef.current?.ward('enemy', 0, 0, 0xc084fc, false)
           bossReadRef.current = false
           setBossData(null)
           setRaidData(null)

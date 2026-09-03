@@ -159,6 +159,12 @@ export type GpuHandle = {
     /** 1, or more for a legendary chase skin's version of the same ability. */
     power: number,
   ): void
+  /**
+   * A WARD HOLDING ON A HULL. Called every frame while a fight is up, with
+   * where that hull is — a shell that lags the ship is a decal. See
+   * seaAbilityFx for why this is a state and not a cast.
+   */
+  ward(side: 'player' | 'enemy', x: number, y: number, color: number, up: boolean): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -1156,6 +1162,7 @@ export default function SeaIslandsGPU({
         gunshock(x, y) { guns.shock(x, y) },
         gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
         ability(x, y, tx, ty, color, shape, power) { spells.cast(x, y, tx, ty, color, shape, power) },
+        ward(side, x, y, color, up) { spells.ward(side, x, y, color, up) },
         gunsink(x, y) {
           guns.sink(x, y)
           // AND THE FISH BOLT. A ship going down is the loudest thing that has

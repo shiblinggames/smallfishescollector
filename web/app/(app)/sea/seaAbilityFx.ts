@@ -175,6 +175,21 @@ type Mark = {
 export type AbilityFx = {
   view: Container
   /**
+   * ── A SHIELD IS A STATE, WHICH IS WHY IT IS NOT A `cast` ─────────────────
+   *
+   * Everything else in this file is an EVENT: it fires, it plays, it is over.
+   * A ward is the opposite — it is a condition that holds for turns and then
+   * stops, and drawing it as a one-shot ring slamming shut said only that it
+   * had been PUT UP. Nothing on the water said it was still there, and nothing
+   * said when it broke, which is the half that actually matters: a shield you
+   * cannot see the end of is a shield you cannot play around.
+   *
+   * So it is set, held and cleared. Called every frame with where the hull is,
+   * because the hull moves and a shell that lags behind it is a decal.
+   * Clearing it after it was up SHATTERS it — see the note in `advance`.
+   */
+  ward(side: 'player' | 'enemy', x: number, y: number, color: number, up: boolean): void
+  /**
    * AN ABILITY LANDS ON A HULL AT `x,y`, in its class's colour.
    *
    * `shape` is what it does rather than which ability it is — see the note at
@@ -251,6 +266,30 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
   }
   let nk = 0
   const takeMark = () => { const m = marks[nk]; nk = (nk + 1) % MARK_CAP; return m }
+
+  // ── THE WARDS ────────────────────────────────────────────────────────────
+  //
+  // Their own particles, NOT taken from the pools above. A ward can be up for
+  // half a minute, and a ring buffer would recycle it out from under itself the
+  // moment anything else fired — the shell would silently vanish mid-fight,
+  // which is the worst possible failure for a thing whose whole job is to say
+  // "this is still holding".
+  const wards = (['player', 'enemy'] as const).map(() => {
+    const shellA: Particle = new PIXI.Particle({ texture: rt })
+    const shellB: Particle = new PIXI.Particle({ texture: rt })
+    for (const sh of [shellA, shellB]) {
+      sh.anchorX = 0.5; sh.anchorY = 0.5; sh.alpha = 0
+      ringLayer.addParticle(sh)
+    }
+    const orbit: Particle[] = []
+    for (let i = 0; i < 8; i++) {
+      const o: Particle = new PIXI.Particle({ texture: mt })
+      o.anchorX = 0.5; o.anchorY = 0.5; o.alpha = 0
+      moteLayer.addParticle(o)
+      orbit.push(o)
+    }
+    return { shellA, shellB, orbit, up: false, x: 0, y: 0, color: 0xffffff, t: 0, fade: 0 }
+  })
 
   let dark = 0
 
@@ -411,6 +450,49 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
   return {
     view,
     night(d) { dark = d },
+
+    ward(side, x, y, color, up) {
+      const w = wards[side === 'player' ? 0 : 1]
+      w.x = x; w.y = y; w.color = color
+      if (up === w.up) return
+      w.up = up
+      if (up) {
+        // IT COMES UP. A hard ring closing onto the hull, so raising a ward is
+        // an event even though holding one is not.
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = 0; r.life = 0.36
+        r.from = 340; r.to = 90
+        r.alpha = 0.75
+        r.p.tint = color
+      } else {
+        // AND IT BREAKS. Shards thrown outward and a hard flash — the moment
+        // the shell is gone is the one a player has to see, because it is the
+        // moment the next hit starts landing on the hull instead.
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = 0; r.life = 0.34
+        r.from = 100; r.to = 480
+        r.alpha = 0.8
+        r.p.tint = 0xffffff
+        for (let i = 0; i < 20; i++) {
+          const m = takeMote()
+          m.cx = x; m.cy = y
+          m.ang = (i / 20) * Math.PI * 2 + Math.random() * 0.3
+          m.r0 = 110
+          m.r1 = 230 + Math.random() * 220
+          // Thrown UP and out, like something rigid failing rather than
+          // something soft dispersing.
+          m.h0 = 40
+          m.h1 = 90 + Math.random() * 140
+          m.age = 0
+          m.life = 0.5 + Math.random() * 0.35
+          m.size = 12 + Math.random() * 10
+          m.spin = (Math.random() - 0.5) * 0.9
+          m.p.tint = i % 3 === 0 ? 0xffffff : color
+        }
+      }
+    },
 
     cast(x, y, tx, ty, color, shape, power) {
       const P = Math.max(1, power)
@@ -678,6 +760,50 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       // light source in its own right, and the one time the sea should not be
       // deciding how bright a thing is.
       const lit = 1 - dark * 0.25
+
+      // ── THE WARDS THAT ARE HOLDING ──────────────────────────────────────
+      for (const w of wards) {
+        // Faded rather than switched, so a shell that drops still has a frame
+        // of being there while its shatter is going off.
+        w.fade += ((w.up ? 1 : 0) - w.fade) * Math.min(1, dt * 9)
+        if (w.fade < 0.01) {
+          if (w.shellA.alpha) { w.shellA.alpha = 0; w.shellB.alpha = 0 }
+          for (const o of w.orbit) if (o.alpha) o.alpha = 0
+          continue
+        }
+        w.t += dt
+
+        // TWO SHELLS, COUNTER-TURNING AND BREATHING AGAINST EACH OTHER. One
+        // ring is a circle drawn on the sea; two at slightly different radii,
+        // moving out of step, is the closest a flat sprite gets to saying there
+        // is a SURFACE there. The breath is slow — a ward that pulses quickly
+        // reads as an alarm rather than as something holding.
+        const base = 150
+        const bA = base * (1 + 0.05 * Math.sin(w.t * 1.7))
+        const bB = base * (0.86 + 0.05 * Math.sin(w.t * 1.7 + 2.1))
+        for (const [sh, rad, a2] of [[w.shellA, bA, 0.5], [w.shellB, bB, 0.34]] as const) {
+          sh.x = w.x
+          sh.y = w.y
+          sh.tint = w.color
+          sh.scaleX = (rad * 2) / 128
+          sh.scaleY = ((rad * 2) / 128) * GROUND
+          sh.alpha = a2 * w.fade * lit
+        }
+
+        // And a few lights going round it, which is what stops the whole thing
+        // reading as a painted circle: something has to MOVE that is not the
+        // ring's own size.
+        for (let i = 0; i < w.orbit.length; i++) {
+          const o = w.orbit[i]
+          const a2 = (i / w.orbit.length) * Math.PI * 2 + w.t * 0.9
+          o.x = w.x + Math.cos(a2) * base
+          o.y = w.y + Math.sin(a2) * base * GROUND - 26 / GROUND
+          o.tint = w.color
+          o.scaleX = 13 / 24
+          o.scaleY = 13 / 24
+          o.alpha = 0.55 * w.fade * lit * (0.6 + 0.4 * Math.sin(w.t * 2.2 + i))
+        }
+      }
 
       for (const m of motes) {
         if (m.age >= m.life) { if (m.p.alpha) m.p.alpha = 0; continue }
