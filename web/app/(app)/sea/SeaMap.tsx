@@ -3050,14 +3050,19 @@ export default function SeaMap({
     if (hull && box) {
       const cx = box.left + box.width / 2
       const cy = box.top + box.height / 2
-      anchorsRef.current = {
-        player: { x: cx + offX, y: cy + offY, w: hullRef.current.beamW * z },
-        enemy: {
-          x: cx + (hull.at.x - camAt.current.x) * z,
-          y: cy + (hull.at.y - camAt.current.y) * z * GROUND,
-          w: hull.encW * z,
-        },
-      }
+      // WRITTEN IN PLACE. Three fresh objects a frame is three objects a frame
+      // for the collector to sweep up, on a phone, for numbers that mostly do
+      // not change — and the reader on the other side only ever looks at the
+      // fields.
+      const A = anchorsRef.current ?? (anchorsRef.current = {
+        player: { x: 0, y: 0, w: 0 }, enemy: { x: 0, y: 0, w: 0 },
+      })
+      A.player.x = cx + offX
+      A.player.y = cy + offY
+      A.player.w = hullRef.current.beamW * z
+      A.enemy.x = cx + (hull.at.x - camAt.current.x) * z
+      A.enemy.y = cy + (hull.at.y - camAt.current.y) * z * GROUND
+      A.enemy.w = hull.encW * z
       const efx = shipFxRef.current?.enemy
       const el = enemyHullRef.current
       if (el && efx) {

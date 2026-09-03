@@ -1709,8 +1709,15 @@ export default function RaidCombat({
   // Needle COLOUR. The bar tints a block; the dial's needle is an SVG stroke, so
   // it is drawn with currentColor and tinted by setting the CSS color on the same
   // layer. Either way it stays imperative (no re-render per frame).
+  const lastNeedleColor = useRef('')
   const paintNeedleColor = useCallback((el: HTMLDivElement | null, c: string) => {
     if (!el) return
+    // ONLY WHEN IT CHANGES. The needle crosses a band a handful of times a
+    // sweep, but this was setting the colour on every one of sixty frames a
+    // second — and a colour write dirties paint whether or not the value is
+    // new.
+    if (lastNeedleColor.current === c) return
+    lastNeedleColor.current = c
     if (onDial) el.style.color = c
     else el.style.background = c
   }, [onDial])
@@ -2298,8 +2305,11 @@ export default function RaidCombat({
     }
 
     let raf = 0
-    let last = ''
-    let lastAnchors = ''
+    // The last pose published and the last anchors written, as plain numbers
+    // in fixed arrays. Reused every frame; never reallocated.
+    const was = [0, 0, 0, 0, 0, 0, 0]
+    const prev = [0, 0, 0, 0, 0, 0]
+    let sent = false
     const tick = () => {
       raf = requestAnimationFrame(tick)
 
@@ -2307,11 +2317,22 @@ export default function RaidCombat({
       // NOTHING MOVED, NOTHING WRITTEN. The hulls are still between frames far
       // more often than not — she holds station in a duel — and a style write
       // that changes nothing still dirties the element and costs a layout.
-      const asig = at
-        ? `${at.player.x | 0},${at.player.y | 0},${at.player.w | 0},${at.enemy.x | 0},${at.enemy.y | 0},${at.enemy.w | 0}`
-        : ''
-      if (at && asig !== lastAnchors) {
-        lastAnchors = asig
+      //
+      // COMPARED AS NUMBERS, not as a joined string. This runs every frame for
+      // as long as a fight lasts, and building a string to find out that
+      // nothing has changed hands the collector sixty short-lived objects a
+      // second to say "no".
+      let moved = false
+      if (at) {
+        const p = at.player, e = at.enemy
+        moved = (p.x | 0) !== prev[0] || (p.y | 0) !== prev[1] || (p.w | 0) !== prev[2]
+          || (e.x | 0) !== prev[3] || (e.y | 0) !== prev[4] || (e.w | 0) !== prev[5]
+        if (moved) {
+          prev[0] = p.x | 0; prev[1] = p.y | 0; prev[2] = p.w | 0
+          prev[3] = e.x | 0; prev[4] = e.y | 0; prev[5] = e.w | 0
+        }
+      }
+      if (at && moved) {
         place(playerShipRef.current, at.player)
         place(enemyShipRef.current, at.enemy)
         dockEnemyPlate()
@@ -2336,11 +2357,19 @@ export default function RaidCombat({
         },
       }
       // Rounded before comparing, or floating-point noise in a settling spring
-      // counts as movement forever and the loop never goes quiet.
-      const sig = `${fx.player.x | 0}${fx.player.y | 0}${fx.player.rot.toFixed(1)}`
-        + `${fx.enemy.x | 0}${fx.enemy.y | 0}${fx.enemy.rot.toFixed(1)}${fx.enemy.sink}`
-      if (sig === last) return
-      last = sig
+      // counts as movement forever and the loop never goes quiet. Numbers
+      // again, for the same reason as the anchors above — rotation to a tenth
+      // of a degree, which is finer than anything the eye reads off a hull.
+      const n = [
+        fx.player.x | 0, fx.player.y | 0, Math.round(fx.player.rot * 10),
+        fx.enemy.x | 0, fx.enemy.y | 0, Math.round(fx.enemy.rot * 10),
+        fx.enemy.sink,
+      ]
+      let changed = !sent
+      for (let i = 0; i < n.length; i++) if (n[i] !== was[i]) { changed = true; break }
+      if (!changed) return
+      for (let i = 0; i < n.length; i++) was[i] = n[i]
+      sent = true
       onShipFxRef.current?.(fx)
     }
     raf = requestAnimationFrame(tick)
@@ -7707,10 +7736,14 @@ export default function RaidCombat({
                 // to the same beat as the kill log so the ship is gone
                 // by the time the loot / next-enemy beat lands.
                 ? { y: [0, 5, 40, 90], rotate: [0, -3, -9, -13], opacity: [1, 0.9, 0.5, 0] }
-                // Normal idle bob.
-                : { y: [0, -4, 0] }}
+                // NO IDLE BOB OVER THE SEA. This sprite is hidden there and the
+                // chart's own hull is the one bobbing — but framer-motion does
+                // not know that, and an infinite keyframe on an invisible
+                // element is a transform written every frame for nobody.
+                : overSea ? { y: 0 } : { y: [0, -4, 0] }}
               transition={enemySinking
                 ? { duration: 1.3, times: [0, 0.15, 0.55, 1], ease: 'easeIn' }
+                : overSea ? { duration: 0 }
                 : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
               style={{
                 width: '100%', display: 'block', position: 'relative', zIndex: 1,
@@ -7816,8 +7849,11 @@ export default function RaidCombat({
               <motion.img
                 src={shipImageUrl}
                 alt={shipName}
-                animate={{ y: [0, -3, 0] }}
-                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                // Hidden over the sea, where the chart draws her instead — so
+                // the idle bob is a per-frame transform on an invisible
+                // element. See the enemy's.
+                animate={overSea ? { y: 0 } : { y: [0, -3, 0] }}
+                transition={overSea ? { duration: 0 } : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
                   width: '100%', display: 'block',
                   // OVER THE SEA THE CHART IS DRAWING THIS SHIP. Hidden rather
