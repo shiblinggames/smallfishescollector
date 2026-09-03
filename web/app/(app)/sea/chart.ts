@@ -406,7 +406,7 @@ export const PLACES: Place[] = [
     x: 0, y: 2600, r: 1200,
     inner: 1400, outer: 3800,
     art: '/shallows.jpg',
-    sea: ['#123038', '#2b5a5e', '#6f9a95'] as [string, string, string],
+    sea: ['#123139', '#2a6165', '#60b9af'] as [string, string, string],
     kind: 'water', minLevel: 1,
   },
   {
@@ -417,7 +417,7 @@ export const PLACES: Place[] = [
     x: 0, y: 5350, r: 1550,
     inner: 3800, outer: 6900,
     art: '/openwaters.jpg',
-    sea: ['#0e2836', '#234c60', '#5a8298'] as [string, string, string],
+    sea: ['#0e2937', '#244f64', '#4c8fb4'] as [string, string, string],
     kind: 'water', minLevel: 15,
   },
   {
@@ -428,7 +428,7 @@ export const PLACES: Place[] = [
     x: 0, y: 8900, r: 2000,
     inner: 6900, outer: 10900,
     art: '/deep.jpg',
-    sea: ['#0a1d2c', '#173a52', '#3f6480'] as [string, string, string],
+    sea: ['#0a1e2d', '#183c55', '#3a6b91'] as [string, string, string],
     kind: 'water', minLevel: 30,
   },
   {
@@ -439,7 +439,7 @@ export const PLACES: Place[] = [
     x: 0, y: 13450, r: 2550,
     inner: 10900, outer: 16000,
     art: '/abyss.jpg',
-    sea: ['#060f1a', '#0f2438', '#274257'] as [string, string, string],
+    sea: ['#060f1b', '#10263a', '#254660'] as [string, string, string],
     kind: 'water', minLevel: 50,
   },
   {
@@ -450,6 +450,17 @@ export const PLACES: Place[] = [
     x: 0, y: 19300, r: 3300,
     inner: 16000, outer: 22600,
     art: '/ancient.jpg',
+    /**
+     * NOT LIFTED WITH THE OTHERS. Every water on this chart had the colour
+     * pulled back out of its LIT stops — the pale end of each palette had
+     * desaturated to nearly grey, so the brightest water on screen was also the
+     * least coloured, which is most of why the sea read as washed out.
+     *
+     * This one is meant to. The Ancient Deep is the water that is WRONG, and
+     * twelve per cent saturation on its pale stop is the whole statement: light
+     * gets down here and finds nothing to colour. Lifting it with the rest would
+     * have made the deepest water on the chart the prettiest.
+     */
     sea: ['#07101a', '#16202f', '#31363f'] as [string, string, string],
     kind: 'water', minLevel: 75,
   },

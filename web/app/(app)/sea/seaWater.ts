@@ -270,10 +270,12 @@ void main(void) {
   // at a shallow angle a wave presents its top, not its face, so the far water
   // is calmer-looking without being any calmer.
   float shade = 1.0 + swell * 0.20 * uSwell * (1.0 - recede * 0.55);
-  // Gentle: at the far edge the water gives up about a fifth of its light. Any
-  // more and the Ancient Deep goes black on its own, which the palette is
-  // already responsible for saying.
-  shade *= 1.0 - shelf * 0.22;
+  // Gentle: at the far edge the water gives up about a seventh of its light.
+  // Any more and the Ancient Deep goes black on its own, which the palette is
+  // already responsible for saying — and at 0.22 this was taking a fifth out of
+  // the far half of every screen, which is a lot of the reason the sea read as
+  // washed out even after the palettes were richer.
+  shade *= 1.0 - shelf * 0.14;
   float facing = dot(normalize(vec2(swell, swell * 0.6) + vec2(0.0001)), normalize(uLight));
   shade += facing * 0.035 * uSwell;
   col *= shade;
@@ -314,7 +316,11 @@ void main(void) {
     caust = pow(ridged, 3.4)
       * (1.0 - smoothstep(0.10, 0.62, shelf))
       * (1.0 - uDark)
-      * (1.0 - 0.92 * uRush);
+      // 0.85, not 0.92. Caustics are the one fine detail that is worth keeping
+      // some of under way: they are LOW contrast and they say where the shelf
+      // is, so losing nearly all of them at speed took the shallows' whole
+      // character out of the water you were actually crossing.
+      * (1.0 - 0.85 * uRush);
     col += caust * vec3(0.72, 0.92, 0.86) * 0.18 * uSwell;
   }
 
@@ -382,7 +388,17 @@ void main(void) {
   // the same complaint: it was too busy STILL, which is most of what a fishing
   // session is. A sea you are staring at for two minutes waiting on a bite has
   // a much lower budget for glitter than one you are crossing.
-  col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.96 * uRush);
+  //
+  // ── 0.88, AND NOT THE 0.80 THAT WAS ASKED FOR ─────────────────────────────
+  //
+  // The note above is a scar: glints at speed were reported as nauseating, and
+  // 0.96 is where that stopped. Going to 0.80 would leave five times as much of
+  // them at a cruise as today, which is most of the way back to the number that
+  // caused the complaint. 0.88 leaves three times as much — the water under way
+  // stops being dead without going back to strobing — and the at-rest amount is
+  // untouched on purpose, because the last two notes on this sea have both been
+  // that it is too busy when you are sitting still.
+  col += sparkle * glintCol * 0.096 * sunRoad * uSwell * (1.0 - uDark) * (1.0 - 0.88 * uRush);
 
   finalColor = vec4(col, 1.0);
 }

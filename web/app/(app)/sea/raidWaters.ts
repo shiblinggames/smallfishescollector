@@ -125,21 +125,21 @@ export const BAYS: Bay[] = [
     id: 'thread', chapter: 1, name: 'The Loose Thread',
     // DUE WEST, and huge. Nearly ten thousand across.
     bearing: D(169), at: 12158, r: 4941, half: 460,
-    sea: ['#12242c', '#26454e', '#5c7f84'],
+    sea: ['#12252d', '#244a55', '#4899a5'],
     rocks: 'reef',
   },
   {
     id: 'sunken_hand', chapter: 2, name: 'A Bigger Fish',
     // North-west. The Gullet is fought up here, and the coast is bone.
     bearing: D(-139), at: 10361, r: 4445, half: 440,
-    sea: ['#0f1f2a', '#20404e', '#4e7480'],
+    sea: ['#0f202b', '#204353', '#418499'],
     rocks: 'bones',
   },
   {
     id: 'the_coffers', chapter: 3, name: 'The Coffers',
     // North-east, and a fleet action has room to turn in it.
     bearing: D(-50), at: 9922, r: 4391, half: 480,
-    sea: ['#0c1a26', '#1b3648', '#456b7c'],
+    sea: ['#0c1b27', '#1c384b', '#3c7791'],
     rocks: 'coffers',
   },
   {
@@ -147,7 +147,7 @@ export const BAYS: Bay[] = [
     // DUE EAST, and the biggest water on the chart at twelve thousand across.
     // The deepest there is, and the darkest.
     bearing: D(6), at: 12718, r: 5928, half: 440,
-    sea: ['#08131d', '#152b3c', '#385a6e'],
+    sea: ['#08131e', '#162d3f', '#32627d'],
     rocks: 'fathom',
   },
   {
