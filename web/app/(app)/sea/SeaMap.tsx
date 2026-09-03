@@ -6471,10 +6471,33 @@ export default function SeaMap({
         // is. Null out in the junction and on the fishing side, where the
         // campaign has nothing to say.
         {
+          // ── WHICH BAY, ANSWERED PROPERLY ──────────────────────────────
+          //
+          // This was "the first bay within its radius plus four thousand", and
+          // that is two mistakes at once. The slop is wide enough that
+          // neighbouring bays overlap, and FIRST match means the earliest in
+          // the array wins the overlap — so standing on the Cartographer, in A
+          // Bigger Fish, picked The Loose Thread, and his whole bay was culled
+          // away underneath him. One Last Ride never won at all.
+          //
+          // The authoritative question is the one the water already answers:
+          // inChapterWater is a bay AND its strait, and it is what the boundary
+          // rule itself uses. Ask that first and there is no overlap to resolve.
           let inBay: string | null = null
           for (const b of BAYS) {
-            const c = bayCentre(b)
-            if (Math.hypot(pos.current.x - c.x, pos.current.y - c.y) < b.r + 4000) { inBay = b.id; break }
+            if (inChapterWater(b, pos.current.x, pos.current.y)) { inBay = b.id; break }
+          }
+          if (!inBay) {
+            // Outside all of them — in the junction, or crossing between. Take
+            // the NEAREST, so a bay's rocks are baked before you reach its door
+            // rather than appearing once you are through it. Nearest by the gap
+            // to its rim, not to its middle, or the biggest bay always wins.
+            let best = 3000
+            for (const b of BAYS) {
+              const c = bayCentre(b)
+              const gap = Math.hypot(pos.current.x - c.x, pos.current.y - c.y) - b.r
+              if (gap < best) { best = gap; inBay = b.id }
+            }
           }
           if (inBay !== liveBayRef.current) {
             liveBayRef.current = inBay
