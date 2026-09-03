@@ -9635,8 +9635,28 @@ function wallRocks(w: Wall): { art: string; x: number; y: number; size: number }
   const px = -uy, py = ux
   const out: { art: string; x: number; y: number; size: number }[] = []
 
-  for (const side of [-1, 1]) {
-    for (let t = 0; t <= L; t += STEP) {
+  /**
+   * ── HOW MUCH STONE A WALL IS WORTH ────────────────────────────────────────
+   *
+   * A hand-drawn wall gets rock down BOTH sides at full density: it is a thing
+   * with water either side of it, and the shingle at four times the rock's
+   * density is most of what makes a coast look like a coast.
+   *
+   * A laid bay's coast gets ONE side and a coarser scatter, and both halves of
+   * that matter. One side because a channel is two walls with the road between
+   * them, so rock on the inner faces is stone in the lane you are sailing.
+   * Coarser because there is a great deal more of it: three chapters of
+   * serpentine is a hundred and sixteen thousand pixels of coastline against
+   * Bay I's thirty-seven, and at full density that was roughly two thousand
+   * extra sprites on a chart already carrying a couple of thousand — which is
+   * an iPhone running out of memory and reloading into the same wall.
+   */
+  const sides: number[] = w.faces ? [w.faces] : [-1, 1]
+  const rockStepHere = w.faces ? STEP * 1.5 : STEP
+  const pebbleStepHere = w.faces ? PEBBLE_STEP * 3 : PEBBLE_STEP
+
+  for (const side of sides) {
+    for (let t = 0; t <= L; t += rockStepHere) {
       const k = KIND.wall[Math.min(KIND.wall.length - 1, Math.floor(nx() * KIND.wall.length))]
       const off = side * (STEP * 0.32 + nx() * STEP * 0.3)
       const a = t + (nx() - 0.5) * STEP * 0.4
@@ -9645,11 +9665,11 @@ function wallRocks(w: Wall): { art: string; x: number; y: number; size: number }
         size: k.min + nx() * (k.max - k.min),
       })
     }
-    for (let t = 0; t <= L; t += PEBBLE_STEP) {
+    for (let t = 0; t <= L; t += pebbleStepHere) {
       const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
       const r = nx()
       const off = side * (STEP * 0.2 + nx() * STEP * 0.5)
-      const a = t + (nx() - 0.5) * PEBBLE_STEP * 0.8
+      const a = t + (nx() - 0.5) * pebbleStepHere * 0.8
       out.push({
         art: pa.art, x: e.ax + ux * a + px * off, y: e.ay + uy * a + py * off,
         size: pa.min * 0.7 + r * r * (pa.max - pa.min) * 0.7,

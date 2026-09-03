@@ -337,6 +337,21 @@ export type Wall = {
   node?: string
   /** What the helm says while it is up. Short: it is read at speed. */
   shut?: string
+  /**
+   * WHICH SIDE OF THIS WALL GETS ROCK, when only one should.
+   *
+   * A wall is drawn as rock down BOTH its sides by default, which is right for
+   * a wall with water either side of it — Bay I's finger is exactly that. It is
+   * wrong for a CHANNEL, which is two walls with the road between them: rock on
+   * both sides of both gives four lines of stone where the shape has two, and
+   * two of them are inside the lane you are meant to sail.
+   *
+   * The laid bays' coasts set it. Three chapters of serpentine is a hundred and
+   * sixteen thousand pixels of coastline, so on top of reading wrong this was
+   * roughly a thousand sprites nobody needed, on a chart that was already
+   * carrying a couple of thousand.
+   */
+  faces?: -1 | 1
 }
 
 /**
@@ -645,6 +660,8 @@ function coast(bay: string, pts: P[], half: number): Wall[] {
       bay,
       a: [Math.round(off[i][0]), Math.round(off[i][1])] as [number, number],
       b: [Math.round(q[0]), Math.round(q[1])] as [number, number],
+      // Rock on the OUTSIDE of the channel only. See Wall.faces.
+      faces: sign as -1 | 1,
     }))
   }
   return [...side(1), ...side(-1)]
