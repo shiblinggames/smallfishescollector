@@ -267,11 +267,11 @@ export function bakeIsland(id: string, d: number, locked: boolean, pad: number):
     lg.fillStyle = fill
     lg.fill()
   }
-  face(10, grad165(lg, 0.74, [[0, '#b9a077'], [0.55, '#9c8259'], [1, '#7d6743']]))
-  face(0.97, grad165(lg, 0.72, [[0, '#cbb590'], [1, '#b89c72']]))
-  face(0.90, grad165(lg, 0.67, [[0, '#d8c49f'], [1, '#c2a97e']]))
-  face(0.81, grad165(lg, 0.60, [[0, '#9aa269'], [1, '#7d8850']]))
-  face(0.70, grad165(lg, 0.52, [[0, '#6f8a4e'], [0.62, '#55703c'], [1, '#466032']]))
+  face(10, grad165(lg, 0.74, [[0, '#c0a276'], [0.55, '#a78452'], [1, '#85693f']]))
+  face(0.97, grad165(lg, 0.72, [[0, '#d0b792'], [1, '#bf9e71']]))
+  face(0.90, grad165(lg, 0.67, [[0, '#dbc6a4'], [1, '#c7ab7f']]))
+  face(0.81, grad165(lg, 0.60, [[0, '#afb65f'], [1, '#909b45']]))
+  face(0.70, grad165(lg, 0.52, [[0, '#7a9c44'], [0.62, '#5c7d36'], [1, '#4c6b2d']]))
 
   // TURF OVER ALL FIVE BANDS AT ONCE, inside the face clip that is still open,
   // so the beach reads as sand and the middle as grass without either needing
