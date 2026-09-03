@@ -2381,15 +2381,35 @@ export default function RaidCombat({
   guardRef.current.p = (abyssalShieldHp > 0 || vengeanceWardTurns > 0) ? 1 : 0
   guardRef.current.e = enemyShieldHp > 0 ? 1 : 0
 
-  // And the conditions, in the order they matter. Frozen first: a ship skipping
-  // its turn is the most consequential thing that can be true of it, and it
-  // outranks a burn that is merely ticking.
-  const statusRef = useRef({ p: 0, e: 0 })
-  statusRef.current.p = playerFrozen ? 2 : playerBurning ? 1 : 0
-  statusRef.current.e = enemyFrozen ? 2
-    : enemyBurning ? 1
-    : snareDodgeTurns > 0 ? 3
+  /**
+   * THE ONE CONDITION WORTH DRAWING on each hull, in the order they matter.
+   *
+   * Frozen first, always: a ship skipping its turn is the most consequential
+   * thing that can be true of it, and it outranks a burn that is merely
+   * ticking. After that, what CHANGES THE NEXT EXCHANGE beats what is merely
+   * true — a mark that is about to make the next shot land harder outranks a
+   * corrosion that is shaving a little off each turn.
+   *
+   * The five diminishing debuffs collapse to one reading. Weakened, feeble,
+   * corroded, slowed and silenced are all "this ship is diminished", and five
+   * different sags would be five things nobody could tell apart.
+   */
+  const has = (list: ActiveStatus[], id: StatusId) => list.some(x => x.id === id)
+  const DIMINISHED: StatusId[] = ['weaken', 'feeble', 'corrode', 'slowed', 'silence']
+  const codeFor = (
+    frozen: boolean, burning: boolean, snared: boolean, list: ActiveStatus[],
+  ) => frozen ? 2
+    : burning ? 1
+    : has(list, 'marked') ? 4
+    : snared ? 3
+    : has(list, 'enrage') ? 7
+    : DIMINISHED.some(id => has(list, id)) ? 8
+    : has(list, 'fortify') ? 6
+    : has(list, 'regen') ? 5
     : 0
+  const statusRef = useRef({ p: 0, e: 0 })
+  statusRef.current.p = codeFor(playerFrozen, playerBurning, false, playerStatuses)
+  statusRef.current.e = codeFor(enemyFrozen, enemyBurning, snareDodgeTurns > 0, enemyStatuses)
 
   // ── ONE FRAME, BOTH DIRECTIONS ────────────────────────────────────────────
   //

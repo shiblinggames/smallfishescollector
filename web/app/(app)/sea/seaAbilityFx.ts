@@ -202,8 +202,11 @@ export type AbilityFx = {
    * where the rules are, not here.
    *
    * `kind` is a small code rather than a string so it can ride the pose
-   * channel's numeric change-detection with everything else: 0 none, 1 burn,
-   * 2 freeze, 3 snare, 4 marked.
+   * channel's numeric change-detection with everything else. See COND for the
+   * table; the nine tracked statuses collapse onto it, because several of them
+   * are the same PICTURE — a ship that is weakened, feeble, corroded, slowed or
+   * silenced is a ship that is diminished, and drawing five different sags
+   * would be five things nobody can tell apart.
    */
   status(side: 'player' | 'enemy', x: number, y: number, beam: number, kind: number): void
   ward(
@@ -342,10 +345,14 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
    *  that carries the meaning: fire rises, ice hangs, a snare drags down. */
   const COND = [
     null,
-    { color: 0xff8a3c, rise: 1 },      // 1 burn   — embers going up
-    { color: 0xa8e8ff, rise: 0 },      // 2 freeze — crystals hanging still
-    { color: 0xd9b066, rise: -1 },     // 3 snare  — dragged down to the water
-    { color: 0xff4d7d, rise: 0 },      // 4 marked — a sigil turning under them
+    { color: 0xff8a3c, rise: 1 },      // 1 burn     — embers going up
+    { color: 0xa8e8ff, rise: 0 },      // 2 freeze   — crystals hanging still
+    { color: 0xd9b066, rise: -1 },     // 3 snare    — dragged down to the water
+    { color: 0xff4d7d, rise: 0 },      // 4 marked   — a sigil turning under them
+    { color: 0x4ade80, rise: 1 },      // 5 regen    — green coming up into her
+    { color: 0x9eb0cd, rise: 0 },      // 6 fortify  — steel holding, unmoving
+    { color: 0xef4444, rise: 1 },      // 7 enrage   — heat coming off them
+    { color: 0xa78bfa, rise: -1 },     // 8 weakened — sagging to the waterline
   ] as const
 
   let dark = 0
