@@ -351,7 +351,13 @@ export type Wall = {
  * The gap between the finger's tip and the outer wall is the TURN, and it is
  * where the chapter's first boss stops being optional.
  */
-export const WALLS: Wall[] = [
+/**
+ * BAY I's OWN COAST, drawn by hand. The three laid bays add theirs below — see
+ * layBay — and the export is the two put together, which is also why this half
+ * is not the export itself: `LAID` is built further down the file, and a const
+ * cannot be read before it exists.
+ */
+const HAND_WALLS: Wall[] = [
   // ── THE OUTER COAST OF THE ROUTE ──
   { bay: 'thread', a: [160, -925], b: [1676, -3143] },
   { bay: 'thread', a: [1736, -3131], b: [4518, -4514] },
@@ -529,14 +535,337 @@ export type RaidIsle = {
  * door, and standing a second Pete a few hundred pixels from the first would
  * undo that by drawing it.
  */
+/**
+ * == THE ROADS THROUGH BAYS II, III AND IV ==================================
+ *
+ * Bay I was drawn by hand, wall by wall, and it should stay that way: it is the
+ * bay whose shape was argued over, and the one every other is measured against.
+ * These three are LAID rather than drawn, and that is a deliberate difference.
+ *
+ * WHY GENERATE THEM. A chapter is thirteen or fourteen stops and a serpentine
+ * of walls either side of them - call it a hundred and fifty coordinates per
+ * bay. Typed out, every one of those is a chance for a wall to miss its
+ * neighbour by nine pixels and leave a gap a hull slips through, and the
+ * failure is invisible until somebody sails into it. Derived from a road, the
+ * walls cannot have gaps, the stops cannot fall off the road, and moving a
+ * chapter is moving one point rather than twenty numbers.
+ *
+ * WHAT IS STILL AUTHORED, because it is the part that is a decision: the road's
+ * own shape, which stop goes where in the chapter, and what every rock is
+ * called. The generator does the arithmetic and none of the choosing.
+ *
+ * THE SHAPE IS THE ONE BAY I HAS, and it is the shape this whole surface is
+ * for: out along one side of the bay, a boss at the far turn, and back down the
+ * other side to a second boss near the door you came in by. You never sail the
+ * same water twice and you finish where you started, which is what makes the
+ * way home worth having.
+ */
+
+type P = readonly [number, number]
+
+/**
+ * THE ROAD, as fractions of the bay's own radius.
+ *
+ * Fractions, so one road fits a bay of any size - and every bay IS a different
+ * size, deliberately, because a fleet action wants room to turn in and a gullet
+ * does not. Bay space runs 0 at the near shore to 2r at the far one with the
+ * axis at across = 0, so 1.0 here is the middle of the water.
+ */
+const ROAD: P[] = [
+  // The two ends are pulled IN off the shore. A road that runs to the rim has
+  // its outer wall past the rim, because the wall is offset outward from it —
+  // and a wall outside the bay is a wall the coast does not draw.
+  [0.22, -0.14],
+  [0.55, -0.50],
+  [1.05, -0.70],
+  [1.50, -0.54],
+  [1.64, -0.12],   // the far turn, and the first boss stands off it
+  [1.44,  0.33],
+  [1.00,  0.58],
+  [0.56,  0.60],
+  [0.32,  0.32],   // back at the door, where the chapter closes
+]
+
+/** How wide the channel is, as a fraction of the radius. Wide enough that
+ *  sailing it is steering rather than threading a needle: about fifteen hundred
+ *  pixels of water in the smallest of these bays, against a hull of two
+ *  hundred. */
+const ROAD_HALF = 0.17
+
+/**
+ * AND THE CODA'S ROAD, which is a different shape because it is a different
+ * kind of chapter.
+ *
+ * One Last Ride is ONE FIGHT. The serpentine above exists to carry a chapter
+ * out to a boss at the far turn and home past a second, and running it here
+ * would be a long walk around an empty bay to reach the only thing in it. This
+ * is a short run up the middle with a bend in it — enough that arriving is
+ * sailing rather than a straight line, and no more.
+ *
+ * The bay is small on purpose (see BAYS): "a bay you sail into looking for
+ * isles and caches and find nothing in but him is the right shape for this".
+ */
+const ROAD_CODA: P[] = [
+  // Gentle bends: enough that arriving is sailing rather than a straight line,
+  // and no more. A hard turn in a bay this small has the coast cutting close on
+  // the inside of it, because the wall is offset along the average of a
+  // vertex's two directions and that under-cuts a sharp corner.
+  [0.30, 0.00],
+  [0.82, -0.11],
+  [1.26, 0.07],
+  [1.58, 0.00],
+]
+
+type Stop =
+  | { kind: 'ship'; node: string }
+  | { kind: 'cache'; node: string; isle: string; name: string }
+  | { kind: 'beat'; node: string; isle: string; name: string }
+
+/** Distance along a polyline, and the point + left normal at a fraction of it. */
+function walk(pts: P[]): { len: number; at: (f: number) => { p: P; n: P } } {
+  const segs = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]))
+  const len = segs.reduce((a, b) => a + b, 0)
+  return {
+    len,
+    at(f) {
+      let d = Math.max(0, Math.min(1, f)) * len
+      for (let i = 0; i < segs.length; i++) {
+        if (d <= segs[i] || i === segs.length - 1) {
+          const t = segs[i] ? d / segs[i] : 0
+          const a = pts[i], b = pts[i + 1]
+          const dx = b[0] - a[0], dy = b[1] - a[1]
+          const m = Math.hypot(dx, dy) || 1
+          return {
+            p: [a[0] + dx * t, a[1] + dy * t] as P,
+            n: [-dy / m, dx / m] as P,
+          }
+        }
+        d -= segs[i]
+      }
+      return { p: pts[pts.length - 1], n: [0, 1] as P }
+    },
+  }
+}
+
+/**
+ * A COAST EITHER SIDE OF THE ROAD.
+ *
+ * Offset at the VERTICES rather than per segment, so consecutive walls share an
+ * endpoint exactly. Offsetting each segment on its own leaves a wedge of open
+ * water at the outside of every corner - a gap of a few hundred pixels a hull
+ * sails straight through, and the single best reason for this to be arithmetic
+ * rather than typing.
+ */
+function coast(bay: string, pts: P[], half: number): Wall[] {
+  const side = (sign: number): Wall[] => {
+    const off: P[] = pts.map((pt, i) => {
+      const prev = pts[i - 1] ?? pt
+      const next = pts[i + 1] ?? pt
+      const dx = next[0] - prev[0], dy = next[1] - prev[1]
+      const m = Math.hypot(dx, dy) || 1
+      return [pt[0] + (-dy / m) * half * sign, pt[1] + (dx / m) * half * sign] as P
+    })
+    return off.slice(1).map((q, i) => ({
+      bay,
+      a: [Math.round(off[i][0]), Math.round(off[i][1])] as [number, number],
+      b: [Math.round(q[0]), Math.round(q[1])] as [number, number],
+    }))
+  }
+  return [...side(1), ...side(-1)]
+}
+
+type Laid = {
+  walls: Wall[]
+  isles: RaidIsle[]
+  ships: Encounter[]
+  caches: Cache[]
+  beats: Beat[]
+  portal: ReturnPortal
+}
+
+/**
+ * LAY A CHAPTER ALONG A BAY'S ROAD.
+ *
+ * Stops are spread down the road IN CHAIN ORDER, so sailing a bay from its door
+ * is reading the chapter from its first line. Rocks sit off the channel on
+ * alternating sides; ships stand in the middle of it, because a hull you have
+ * to fight IS the road rather than something beside it.
+ */
+function layBay(bay: string, stops: Stop[], road: P[] = ROAD, halfFrac = ROAD_HALF): Laid {
+  const b = BAY_BY_ID[bay]
+  const r = b.r
+  const pts: P[] = road.map(([a, c]) => [a * r, c * r] as P)
+  const w = walk(pts)
+  // WIDER IN A SMALL BAY, and it has to be. A rock wants 430px between its
+  // centre and the channel's edge (its own radius plus clearance), and that is
+  // an ABSOLUTE number — a rock is the same size in every bay. A fraction of
+  // the radius cannot satisfy it in a small water, so the coda carries its own.
+  const half = halfFrac * r
+
+  const isles: RaidIsle[] = []
+  const ships: Encounter[] = []
+  const caches: Cache[] = []
+  const beats: Beat[] = []
+
+  stops.forEach((st, i) => {
+    // Kept off both ends: the first stop clear of the strait mouth, the last
+    // clear of the far shore.
+    const f = 0.06 + (i / Math.max(1, stops.length - 1)) * 0.88
+    const { p, n } = w.at(f)
+    if (st.kind === 'ship') {
+      ships.push({ node: st.node, bay, along: Math.round(p[0]), across: Math.round(p[1]) })
+      return
+    }
+    // ALTERNATING SIDES, far enough out that the road past a rock is still open
+    // water. All down one edge reads as a wall; down the middle it is an
+    // obstacle course.
+    const side = i % 2 === 0 ? 1 : -1
+    // 0.30 OF THE HALF-WIDTH, and the number is set by the coast rather than by
+    // taste: a rock wants 260px of water between it and a wall, it has a radius
+    // of 170, so its centre has to sit at least 430 off the channel's edge. At
+    // 0.52 it did not, in every bay, which is what the checker said thirty-three
+    // times. Well inside the lane, and still far enough off the middle that the
+    // road past it is open water.
+    const off = half * 0.30
+    isles.push({
+      id: st.isle, bay, name: st.name,
+      along: Math.round(p[0] + n[0] * off * side),
+      across: Math.round(p[1] + n[1] * off * side),
+      r: 170,
+    })
+    if (st.kind === 'cache') caches.push({ node: st.node, bay, isle: st.isle })
+    else beats.push({ node: st.node, bay, isle: st.isle })
+  })
+
+  /**
+   * THE GATE, shut until the bay's first boss is down.
+   *
+   * Across the channel just past where he stands, which is the one place the
+   * road has a door in it: everything before is the leg out and him at the end
+   * of it, everything after is the way home past the second. Same single gate
+   * as Bay I's and for the same reason - the chain already refuses things out
+   * of order, so this exists only so the back half of a bay is not water you
+   * can go and look at before you have earned it.
+   */
+  const firstShip = stops.findIndex(st => st.kind === 'ship')
+  // 0.45 OF THE WAY TO THE NEXT STOP, not 0.6, and the coda is what settled it.
+  // A gate spans the whole channel, so it is a wall the stop after it has to
+  // keep its distance from — and with only four stops in a small bay, 0.6 put
+  // it 354px in front of the next rock, which wants 430. Nearer the ship is
+  // also where it reads better: the door shuts behind HIM rather than floating
+  // in open water halfway to the next thing.
+  const gateF = 0.06 + ((firstShip + 0.45) / Math.max(1, stops.length - 1)) * 0.88
+  const g = w.at(gateF)
+  const gate: Wall = {
+    bay,
+    a: [Math.round(g.p[0] + g.n[0] * half), Math.round(g.p[1] + g.n[1] * half)],
+    b: [Math.round(g.p[0] - g.n[0] * half), Math.round(g.p[1] - g.n[1] * half)],
+    node: (stops[firstShip] as { node: string }).node,
+    shut: 'The way on is his, until he is off it',
+  }
+
+  // THE WAY HOME, at the end of the road — where the last boss went down.
+  //
+  // Pushed to the side the last rock is NOT on. They both want the end of the
+  // road, and on a short road they want the same water: the coda's portal came
+  // out sitting on top of its own final isle. One line, and it cannot happen in
+  // any bay rather than being tuned out of this one.
+  const lastSide = (stops.length - 1) % 2 === 0 ? 1 : -1
+  const end = w.at(0.97)
+  return {
+    walls: [...coast(bay, pts, half), gate],
+    isles, ships, caches, beats,
+    portal: {
+      bay,
+      along: Math.round(end.p[0] - end.n[0] * half * 0.45 * lastSide),
+      across: Math.round(end.p[1] - end.n[1] * half * 0.45 * lastSide),
+    },
+  }
+}
+
+/** -- CHAPTER II, up the bone coast -- */
+const LAID_SUNKEN = layBay('sunken_hand', [
+  { kind: 'beat',  node: 'finndicate_notice',   isle: 'hand-knuckle',  name: 'The Knuckle' },
+  { kind: 'beat',  node: 'smugglers_chart',     isle: 'hand-chart',    name: 'Chartwrack' },
+  { kind: 'cache', node: 'last_cache',          isle: 'hand-last',     name: 'The Last Cache' },
+  { kind: 'beat',  node: 'cartographer_reveal', isle: 'hand-sounding', name: 'The Sounding' },
+  { kind: 'ship',  node: 'cartographer' },
+  { kind: 'beat',  node: 'gullet_heading',      isle: 'hand-heading',  name: 'Heading Rock' },
+  { kind: 'beat',  node: 'gullet_cipher',       isle: 'hand-cipher',   name: 'Cipher Bank' },
+  { kind: 'beat',  node: 'gullet_bones',        isle: 'hand-bones',    name: 'Bonecast' },
+  { kind: 'cache', node: 'gullet_cache',        isle: 'hand-scrip',    name: 'Scrip Rock' },
+  { kind: 'beat',  node: 'scout_debt',          isle: 'hand-debt',     name: "The Scout's Debt" },
+  { kind: 'ship',  node: 'gullet_raid' },
+  { kind: 'beat',  node: 'chapter_2_close',     isle: 'hand-closing',  name: 'Closing Bank' },
+  { kind: 'beat',  node: 'chapter_2_class',     isle: 'hand-choice',   name: 'The Second Choice' },
+])
+
+/** -- CHAPTER III, where the fleet counts its money -- */
+const LAID_COFFERS = layBay('the_coffers', [
+  { kind: 'beat',  node: 'coffers_heading',     isle: 'cof-tally',     name: 'Tally Rock' },
+  { kind: 'beat',  node: 'coffers_fork',        isle: 'cof-fork',      name: 'The Fork' },
+  { kind: 'beat',  node: 'coffers_lens',        isle: 'cof-lens',      name: 'Lensrock' },
+  { kind: 'cache', node: 'coffers_cache',       isle: 'cof-counting',  name: 'Counting Rock' },
+  { kind: 'beat',  node: 'coffers_keeper',      isle: 'cof-keeper',    name: "The Keeper's Rest" },
+  { kind: 'ship',  node: 'coffers_fleet' },
+  { kind: 'beat',  node: 'quartermaster_turn',  isle: 'cof-turn',      name: 'The Turn' },
+  { kind: 'beat',  node: 'coffers_strongbox',   isle: 'cof-strongbox', name: 'Strongbox Shoal' },
+  { kind: 'beat',  node: 'coffers_vault_lens',  isle: 'cof-vault',     name: 'Vault Glass' },
+  { kind: 'beat',  node: 'coffers_ledger',      isle: 'cof-ledger',    name: 'The Ledger Bank' },
+  { kind: 'ship',  node: 'the_quartermaster' },
+  { kind: 'beat',  node: 'chapter_3_close',     isle: 'cof-end',       name: "Ledger's End" },
+  { kind: 'beat',  node: 'chapter_3_class',     isle: 'cof-choice',    name: 'The Third Choice' },
+])
+
+/** -- CHAPTER IV, the deepest and the darkest -- */
+const LAID_FATHOM = layBay('the_last_fathom', [
+  { kind: 'beat',  node: 'throne_heading',      isle: 'fath-deepwatch', name: 'Deepwatch' },
+  { kind: 'beat',  node: 'throne_locks',        isle: 'fath-locks',    name: 'The Locks' },
+  { kind: 'beat',  node: 'blockade_muster',     isle: 'fath-muster',   name: 'Muster Bank' },
+  { kind: 'beat',  node: 'thing_on_the_bar',    isle: 'fath-bar',      name: 'The Bar' },
+  { kind: 'ship',  node: 'the_blockade' },
+  { kind: 'beat',  node: 'sixth_berth',         isle: 'fath-berth',    name: 'Sixth Berth' },
+  { kind: 'beat',  node: 'crooked_ledger',      isle: 'fath-crooked',  name: 'The Crooked Ledger' },
+  { kind: 'beat',  node: 'throne_gates',        isle: 'fath-gates',    name: 'The Gates' },
+  { kind: 'beat',  node: 'the_drowned_court',   isle: 'fath-court',    name: 'The Drowned Court' },
+  { kind: 'beat',  node: 'the_last_muster',     isle: 'fath-last',     name: 'The Last Muster' },
+  { kind: 'beat',  node: 'within_hail',         isle: 'fath-hail',     name: 'Within Hail' },
+  { kind: 'ship',  node: 'the_throne' },
+  { kind: 'beat',  node: 'chapter_4_close',     isle: 'fath-quiet',    name: 'The Quiet After' },
+  { kind: 'beat',  node: 'chapter_4_augment',   isle: 'fath-armory',   name: 'The Armory Rock' },
+])
+
+/**
+ * -- CHAPTER V, and there is nothing out here but him --
+ *
+ * Four stops and one of them is the fight. The rocks are the approach, the
+ * quiet after, and what he leaves behind; nothing is offered on the way in,
+ * because the whole point of this water is that there is nothing in it to find.
+ */
+const LAID_RIDE = layBay('one_last_ride', [
+  { kind: 'beat', node: 'the_hand_that_sharpens', isle: 'ride-whetstone', name: 'The Whetstone' },
+  { kind: 'ship', node: 'one_last_ride' },
+  { kind: 'beat', node: 'the_long_quiet',         isle: 'ride-quiet',     name: 'The Long Quiet' },
+  { kind: 'beat', node: 'spoils_of_the_hand',     isle: 'ride-spoils',    name: "The Hand's Spoils" },
+], ROAD_CODA, 0.36)
+
+const LAID: Laid[] = [LAID_SUNKEN, LAID_COFFERS, LAID_FATHOM, LAID_RIDE]
+
+/** Every wall on the campaign's water: Bay I's, drawn, and three bays' worth
+ *  laid either side of a road. */
+export const WALLS: Wall[] = [...HAND_WALLS, ...LAID.flatMap(l => l.walls)]
+
 export const ENCOUNTERS: Encounter[] = [
   { node: 'skirmish', bay: 'thread', along: 4775, across: -3285 },
   { node: 'pete', bay: 'thread', along: 6803, across: -2705 },
   { node: 'krust', bay: 'thread', along: 2801, across: 2721 },
+  // And the three laid bays, in chapter order. See layBay.
+  ...LAID.flatMap(l => l.ships),
 ]
 
 export const CACHES: Cache[] = [
   { node: 'quartermaster', bay: 'thread', isle: 'thread-purse' },
+  ...LAID.flatMap(l => l.caches),
 ]
 
 export const BEATS: Beat[] = [
@@ -546,6 +875,7 @@ export const BEATS: Beat[] = [
   { node: 'krust_reveal', bay: 'thread', isle: 'thread-wax' },
   { node: 'chapter_1_close', bay: 'thread', isle: 'thread-watch' },
   { node: 'chapter_1_class', bay: 'thread', isle: 'thread-choice' },
+  ...LAID.flatMap(l => l.beats),
 ]
 
 /**
@@ -564,6 +894,7 @@ export const RAID_ISLES: RaidIsle[] = [
   { id: 'thread-wax', bay: 'thread', name: 'Wax Shoal', along: 4238, across: 2194, r: 160 },
   { id: 'thread-watch', bay: 'thread', name: 'Between Watches', along: 1750, across: 2500, r: 170 },
   { id: 'thread-choice', bay: 'thread', name: "The Captain's Rest", along: 900, across: 1750, r: 150 },
+  ...LAID.flatMap(l => l.isles),
 ]
 
 export const ISLE_BY_ID: Record<string, RaidIsle> =
@@ -602,6 +933,8 @@ export const RETURN_PORTALS: ReturnPortal[] = [
   // sailed the whole road by the time you reach it, which is the only moment a
   // way home is a reward rather than a shortcut.
   { bay: 'thread', along: 1200, across: 2200 },
+  // The laid bays put theirs at the end of their own road, for the same reason.
+  ...LAID.map(l => l.portal),
 ]
 
 /**
