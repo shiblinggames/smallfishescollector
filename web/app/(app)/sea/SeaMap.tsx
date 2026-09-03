@@ -51,7 +51,7 @@ import {
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
-import { RAID_MAP, type RaidNode } from '@/lib/raidMap'
+import { RAID_MAP, RAID_CHAPTERS, type RaidNode } from '@/lib/raidMap'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
@@ -2181,6 +2181,18 @@ export default function SeaMap({
    */
   const [liveBay, setLiveBay] = useState<string | null>(null)
   const liveBayRef = useRef<string | null>(null)
+  /**
+   * AND WHETHER YOU ARE ACTUALLY IN IT.
+   *
+   * Separate from `liveBay` on purpose, because the two answer different
+   * questions. `liveBay` is "whose rocks should be baked", and it reaches out
+   * past a rim so a bay is built before you arrive rather than popping in at
+   * the door. This is "am I in that chapter's water", which is a THRESHOLD —
+   * and a threshold that fired three thousand pixels early would announce a
+   * chapter you had not entered.
+   */
+  const [insideBay, setInsideBay] = useState<string | null>(null)
+  const insideBayRef = useRef<string | null>(null)
 
   const gpuIslands = useMemo<GpuIsland[]>(() => {
     if (!GPU_ISLANDS) return []
@@ -6487,6 +6499,11 @@ export default function SeaMap({
           for (const b of BAYS) {
             if (inChapterWater(b, pos.current.x, pos.current.y)) { inBay = b.id; break }
           }
+          // THE CROSSING ITSELF, before the margin below widens it.
+          if (inBay !== insideBayRef.current) {
+            insideBayRef.current = inBay
+            setInsideBay(inBay)
+          }
           if (!inBay) {
             // Outside all of them — in the junction, or crossing between. Take
             // the NEAREST, so a bay's rocks are baked before you reach its door
@@ -7650,6 +7667,12 @@ hullRef={hullRefFor(t.key)} />
       )}
 
       <AshorePanel state={landed} onClose={() => setLanded(null)} />
+
+      {/* THE CHAPTER YOU HAVE JUST SAILED INTO. Its own banner rather than the
+          water one's: a bay is not a fishing zone you drift across, it is the
+          door to a chapter, and it should land like one. Suppressed with the
+          rest of the furniture while the rod or the guns are out. */}
+      <BayBanner bay={hudOff ? null : insideBay} />
 
       <WaterBanner
         place={!hudOff && near && near.kind === 'water' ? near : null}
@@ -12461,6 +12484,76 @@ function HotspotBadge({ spot, compact, hudSize, lowered }: {
     </AnimatePresence>
   )
 }
+
+/**
+ * ── YOU HAVE CROSSED INTO A CHAPTER ─────────────────────────────────────────
+ *
+ * A bay is an instance in everything but name: cross its threshold and the
+ * chart drops every other chapter's rocks and bakes this one's, so what is in
+ * the water with you is exactly one chapter's worth. The banner is that fact
+ * said out loud, at the moment it becomes true.
+ *
+ * IT ARRIVES BIG AND THEN GETS OUT OF THE WAY. The crossing is an event and
+ * wants the announcement; ten seconds later you are fishing a boss out of the
+ * far corner and it is only a label answering "which chapter is this". Same
+ * shape as the water banner below, which settles to a dim line for the same
+ * reason — but bigger on arrival, and with the numeral, because a chapter is a
+ * larger thing to have entered than a patch of water.
+ */
+const BayBanner = memo(function BayBanner({ bay }: { bay: string | null }) {
+  const b = bay ? BAY_BY_ID[bay] : null
+  const ch = b ? RAID_CHAPTERS.find(c => c.id === b.id) : null
+  const [fresh, setFresh] = useState(false)
+  useEffect(() => {
+    if (!bay) return
+    setFresh(true)
+    const t = setTimeout(() => setFresh(false), 3200)
+    return () => clearTimeout(t)
+  }, [bay])
+  return (
+    <AnimatePresence>
+      {b && (
+        <motion.div key={b.id}
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12, transition: { duration: 0.35 } }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: 'absolute', left: 0, right: 0, top: 18, zIndex: Z.hud,
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            pointerEvents: 'none',
+          }}>
+          {ch && (
+            <motion.p className="font-karla font-700 uppercase"
+              animate={{ opacity: fresh ? 0.85 : 0.3 }}
+              transition={{ duration: 1.4, ease: 'easeOut' }}
+              style={{
+                fontSize: '0.6rem', letterSpacing: '0.34em',
+                color: 'rgba(240,192,64,0.95)', margin: 0,
+                textShadow: '0 2px 12px rgba(0,0,0,0.95)',
+              }}>
+              Chapter {ch.romanNumeral}
+            </motion.p>
+          )}
+          <motion.p className="font-cinzel font-700"
+            animate={{ opacity: fresh ? 1 : 0.4, letterSpacing: fresh ? '0.26em' : '0.2em' }}
+            transition={{ duration: 1.4, ease: 'easeOut' }}
+            style={{
+              fontSize: '1.5rem', textTransform: 'uppercase',
+              color: '#e8f0f6', margin: '3px 0 0',
+              textShadow: '0 2px 16px rgba(0,0,0,0.95)',
+            }}>
+            {b.name}
+          </motion.p>
+          <motion.div aria-hidden
+            animate={{ opacity: fresh ? 0.55 : 0.12, width: fresh ? 132 : 52 }}
+            transition={{ duration: 1.4, ease: 'easeOut' }}
+            style={{ height: 1, marginTop: 6, background: 'rgba(240,192,64,0.9)' }} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+})
 
 function WaterBanner({ place, locked, lowered }: {
   place: Place | null; locked: boolean
