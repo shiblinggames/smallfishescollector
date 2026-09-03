@@ -34,9 +34,16 @@ const BossFightModal = dynamic(
   { ssr: false },
 )
 
-export default function BossCardSheet({ nodeId, onEnter, onClose }: {
+export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
   /** The campaign node whose hull you are alongside. */
   nodeId: string | null
+  /**
+   * ALREADY READ, USUALLY. The chart fetches this the moment you come within
+   * reach of a hull, so by the time you press there is nothing to wait for and
+   * the card is simply up. The fetch below is the fallback for the case where
+   * you got here faster than the network did.
+   */
+  preloaded?: BossCardState | null
   /**
    * TAKE IT ON. The route is the card's answer to which run you picked — the
    * challenge branch is its own node with its own route — and the chart turns
@@ -45,24 +52,25 @@ export default function BossCardSheet({ nodeId, onEnter, onClose }: {
   onEnter: (route: string) => void
   onClose: () => void
 }) {
-  const [state, setState] = useState<BossCardState | null>(null)
+  const [fetched, setFetched] = useState<BossCardState | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const state = preloaded ?? fetched
 
-  // READ ON EVERY OPEN. Records, owned items and the repair debt all move
-  // between fights, and a stale card would offer a challenge you have since
-  // cleared or hide a drop you have since earned.
+  // ONLY IF THE CHART DID NOT ALREADY HAVE IT. Records, owned items and the
+  // repair debt all move between fights, so this is read fresh — but it is read
+  // on APPROACH, up in the chart, not on the press. Waiting until the press put
+  // a loading line where the card should have been.
   useEffect(() => {
-    if (!nodeId) { setState(null); return }
+    if (!nodeId || preloaded) return
     let live = true
     setErr(null)
-    setState(null)
     bossCardState().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
-      else setState(r)
+      else setFetched(r)
     }, () => { if (live) setErr('The charts would not open. Try again.') })
     return () => { live = false }
-  }, [nodeId])
+  }, [nodeId, preloaded])
 
   if (!nodeId || typeof document === 'undefined') return null
 

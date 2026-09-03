@@ -254,6 +254,7 @@ const BossCardSheet = dynamic(() => import('./BossCardSheet'), { ssr: false })
 // The two channels a fight on the water runs on: where the hulls are, and what
 // is happening to them. Types only, so the fight is not pulled into this bundle.
 import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
+import { bossCardState, type BossCardState } from './bossCardActions'
 /** The portal's chart. Only fetched once somebody actually steps into one. */
 const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
@@ -2988,6 +2989,20 @@ export default function SeaMap({
   const [fightId, setFightId] = useState<string | null>(null)
   /** The boss card standing open in front of it, by node id. */
   const [bossCard, setBossCard] = useState<string | null>(null)
+  /**
+   * ── THE CARD IS READ BEFORE IT IS ASKED FOR ─────────────────────────────
+   *
+   * Fetching on the press meant a beat of "Reading the charts…" standing where
+   * the card should be, and a sea zooming in behind a loading line. Coming
+   * within reach of a hull is the signal: you are almost certainly about to
+   * press it, the read is idempotent, and it costs one query nobody waits for.
+   *
+   * The CHUNK is warmed at the same time and matters as much. The card belongs
+   * to /expeditions and is large; on a cold session the download was the slower
+   * half of that wait.
+   */
+  const [bossData, setBossData] = useState<BossCardState | null>(null)
+  const bossReadRef = useRef(false)
   /** The same fact, for the render: the HUD stands down in a fight. */
   const fightOn = fightId !== null || bossCard !== null
   // ── THE FIGHT IS THESE TWO HULLS ─────────────────────────────────────────
@@ -3795,6 +3810,27 @@ export default function SeaMap({
   // a voyage and starts being a scene, so it arrives the way casting does:
   // the camera leans in, the sea stays exactly where it was, and you never
   // travelled. One channel for both, so they can never ease differently.
+  /**
+   * WITHIN REACH OF A HULL: read the card and warm its chunk, once. `nearEnc`
+   * is the same proximity the action button reads, so this fires exactly when
+   * the prompt appears — which is the moment a captain has decided.
+   */
+  useEffect(() => {
+    if (!nearEnc || bossReadRef.current) return
+    const n = RAID_MAP.find(x => x.id === nearEnc.node)
+    if (!n?.raidId || !getRaidConfigById(n.raidId)) return
+    bossReadRef.current = true
+    // Both halves of the wait, started together: the code and the answer.
+    void import('./BossCardSheet')
+    void import('@/app/(app)/expeditions/RaidsSection')
+    bossCardState().then(
+      r => { if (!('error' in r)) setBossData(r) },
+      // A FAILURE IS NOT WORTH SAYING HERE. Nothing has been asked for yet; the
+      // sheet does its own read when it opens and reports properly then.
+      () => { bossReadRef.current = false },
+    )
+  }, [nearEnc])
+
   const engaging = fightId ?? bossCard
   useEffect(() => {
     fishZoomTarget.current = fishingIn ? 1.42 : engaging ? 1.5 : 1
@@ -7657,6 +7693,7 @@ hullRef={hullRefFor(t.key)} />
           becomes possible at all. */}
       <BossCardSheet
         nodeId={bossCard}
+        preloaded={bossData}
         // WALKING AWAY GIVES THE HELM BACK. She was already easing onto her
         // station behind this card with the chart stood down; closing it
         // without taking the fight has to undo all of that, or a captain who
@@ -7734,6 +7771,11 @@ hullRef={hullRefFor(t.key)} />
           fightEncRef.current = null
           fightOnRef.current = false
           fightFastRef.current = false
+          // THE CARD IS STALE NOW. A clear, a drop and a new record all just
+          // happened; the next one has to be read again rather than served from
+          // before the fight.
+          bossReadRef.current = false
+          setBossData(null)
           shipFxRef.current = null
           anchorsRef.current = null
           // THE HULL GOES BACK TO BEING A HULL. The fight wrote a transform
