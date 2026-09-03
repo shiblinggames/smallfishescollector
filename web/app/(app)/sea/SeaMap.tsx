@@ -250,6 +250,7 @@ const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
  *  whole combat engine hangs off it — so nothing of it is fetched until a
  *  captain actually takes something on. */
 const RaidSheet = dynamic(() => import('./RaidSheet'), { ssr: false })
+const BossCardSheet = dynamic(() => import('./BossCardSheet'), { ssr: false })
 // The two channels a fight on the water runs on: where the hulls are, and what
 // is happening to them. Types only, so the fight is not pulled into this bundle.
 import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
@@ -2985,8 +2986,10 @@ export default function SeaMap({
   const [yardOpen, setYardOpen] = useState(false)
   /** The raid being fought over the chart, by raidId. */
   const [fightId, setFightId] = useState<string | null>(null)
+  /** The boss card standing open in front of it, by node id. */
+  const [bossCard, setBossCard] = useState<string | null>(null)
   /** The same fact, for the render: the HUD stands down in a fight. */
-  const fightOn = fightId !== null
+  const fightOn = fightId !== null || bossCard !== null
   // ── THE FIGHT IS THESE TWO HULLS ─────────────────────────────────────────
   //
   // Not a scene of them. The chart is already drawing your man-o-war and the
@@ -3792,9 +3795,10 @@ export default function SeaMap({
   // a voyage and starts being a scene, so it arrives the way casting does:
   // the camera leans in, the sea stays exactly where it was, and you never
   // travelled. One channel for both, so they can never ease differently.
+  const engaging = fightId ?? bossCard
   useEffect(() => {
-    fishZoomTarget.current = fishingIn ? 1.42 : fightId ? 1.5 : 1
-  }, [fishingIn, fightId])
+    fishZoomTarget.current = fishingIn ? 1.42 : engaging ? 1.5 : 1
+  }, [fishingIn, engaging])
 
   /**
    * WHERE THE ENGAGEMENT HAPPENS, settled the moment the guns come out.
@@ -3805,7 +3809,7 @@ export default function SeaMap({
    * its own transition, and would put the rock search in the hot path.
    */
   useEffect(() => {
-    if (!fightId) {
+    if (!engaging) {
       fightStation.current = null
       fightCam.current = null
       fightHullRef.current = null
@@ -3830,7 +3834,7 @@ export default function SeaMap({
       x: (station.x + at.x) / 2,
       y: (station.y + at.y) / 2 + FIGHT_CAM_LIFT,
     }
-  }, [fightId, pickStation])
+  }, [engaging, pickStation])
 
   const locked = useCallback((p: Place) => level < p.minLevel, [level])
 
@@ -7647,6 +7651,38 @@ hullRef={hullRefFor(t.key)} />
       {/* AND THE FIGHT, over the water it is happening on. `router.refresh()`
           on the way out is what re-reads nodeStatus, so a boss you just sank
           comes back cleared and whatever he was gating opens. */}
+      {/* THE CARD, AND THEN THE GUNS. `onEnter` hands back the route of the
+          run you chose — the challenge branch is its own node with its own
+          raidId — so this is where a challenge run entered from the water
+          becomes possible at all. */}
+      <BossCardSheet
+        nodeId={bossCard}
+        // WALKING AWAY GIVES THE HELM BACK. She was already easing onto her
+        // station behind this card with the chart stood down; closing it
+        // without taking the fight has to undo all of that, or a captain who
+        // changed their mind is left frozen alongside a boss they declined.
+        onClose={() => {
+          setBossCard(null)
+          fightEncRef.current = null
+          fightOnRef.current = false
+          fightFastRef.current = false
+        }}
+        onEnter={route => {
+          const picked = RAID_MAP.find(n => n.route === route)
+          const raidId = picked?.raidId
+          setBossCard(null)
+          if (!raidId || !getRaidConfigById(raidId)) {
+            // Nothing on this chart to fight it with — the practice skirmish is
+            // the live example. Fall back to the page it has always had.
+            router.push(route)
+            return
+          }
+          fightOnRef.current = true
+          fightFastRef.current = false
+          wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
+          setFightId(raidId)
+        }} />
+
       <RaidSheet
         raidId={fightId}
         anchors={anchorsRef}
@@ -7900,12 +7936,22 @@ hullRef={hullRefFor(t.key)} />
               if (n.raidId && getRaidConfigById(n.raidId)) {
                 // WHICH HULL YOU ARE FIGHTING. The fight hangs everything it
                 // draws on this ship's place on the chart, so it is recorded
-                // before the sheet opens rather than looked up from inside it.
+                // before anything opens rather than looked up from inside it.
                 fightEncRef.current = nearEnc
+                // AND SHE STARTS PULLING ALONGSIDE NOW, behind the card. The
+                // approach and the camera lean take about a second; a card
+                // takes longer than that to read. Doing them at the same time
+                // means dismissing it lands on a fight already composed
+                // instead of starting one more piece of movement.
                 fightOnRef.current = true
                 fightFastRef.current = false
                 wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
-                setFightId(n.raidId)
+                // THE CARD FIRST, and the guns after it. Pressing straight into
+                // a broadside was a beat too fast, and it also removed a
+                // decision: which run you are taking on is chosen on that card
+                // and nowhere else, so a fight entered from the water could
+                // only ever have been the normal one.
+                setBossCard(n.id)
                 return true
               }
               router.push(n.route)

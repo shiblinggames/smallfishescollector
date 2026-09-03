@@ -2811,7 +2811,10 @@ function BossTile({ view, isNext, challengeCleared, clearedNodeIds, onOpen }: { 
 
 // The boss fight modal — opens on a tile tap. Shows the big portrait, the drops,
 // and the choice of Fight (normal) vs Challenge. Portaled + backdrop-dismissable.
-function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
+// EXPORTED, because the sea opens this too. You sail up to a hull, and the
+// card that names it, shows what it drops and offers the challenge run is
+// this one — not a second card that has to be kept in step with it.
+export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
   boss: RaidNodeView
   challenge: RaidNodeView | null
   rec: RaidRecords | null
