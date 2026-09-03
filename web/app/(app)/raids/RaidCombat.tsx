@@ -445,7 +445,7 @@ export type ShipFx = { x: number; y: number; rot: number; sink: number }
  * be absent (the DOM chart, `?gpu=0`) without a single branch in here.
  */
 export type FightFx = {
-  kind: 'fire' | 'hit' | 'crit' | 'miss'
+  kind: 'fire' | 'hit' | 'crit' | 'miss' | 'dodge' | 'sink'
   /** Whose hull the event belongs to: who fired, or who was struck. */
   side: 'player' | 'enemy'
 }
@@ -3962,6 +3962,10 @@ export default function RaidCombat({
       // No white kill-flash — the explosion burst + sink animation carry the
       // kill on their own (the flash read as a jarring whiteout on the sink).
       setEnemySinking(true)
+    // AND THE SEA CLOSES OVER HER. The hull's own list and fade is the chart's;
+    // this is the water's answer to it, and it is the loudest thing that has
+    // happened in this bay.
+    bang('sink', 'enemy')
       setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
       let cbDelay = 1000
       if (killReward?.gold) {
@@ -6589,6 +6593,10 @@ export default function RaidCombat({
           // Whoosh + afterimage on the ship that slipped the shot.
           const dk = Date.now() + i + 6
           setDodgeFx({ key: dk, actor: dodger })
+          // THE WATER SHE THROWS COMING OVER. On the hull that actually slipped
+          // it, which is why this reads `splatTarget` rather than assuming the
+          // player: the enemy dodges too, and the wake belongs to whoever moved.
+          bang('dodge', dodger === 'player' ? 'player' : 'enemy')
           setTimeout(() => setDodgeFx(d => (d && d.key === dk ? null : d)), 460)
           // Astrolabe riposte — the dodged shot is turned back into the enemy.
           // Lands a beat after the dodge reads, with its own number + impact.

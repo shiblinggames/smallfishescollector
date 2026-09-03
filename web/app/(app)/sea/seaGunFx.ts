@@ -49,6 +49,11 @@ const SPRAY_CAP = 64
 const RING_CAP = 10
 /** Muzzle flashes. Two hulls, and a flash lasts a tenth of a second. */
 const FLASH_CAP = 6
+/** Wreckage on the surface. A sinking throws a dozen; two wrecks never overlap
+ *  in a turn-based fight, so this is one kill's worth with room to spare. */
+const DEBRIS_CAP = 20
+/** Slicks. One per wreck, and they outlive everything else here. */
+const SLICK_CAP = 3
 
 let puffTex: Texture | null = null
 let ringTex: Texture | null = null
@@ -127,6 +132,19 @@ type Drop = {
   size: number
 }
 
+/** WRECKAGE. Thrown clear, then it FLOATS — the difference between this and a
+ *  droplet is that a droplet ends when it reaches the water and a plank does
+ *  not. */
+type Debris = {
+  p: Particle
+  x: number; y: number
+  vx: number; vy: number
+  h: number; vh: number
+  age: number; life: number
+  size: number
+  spin: number
+}
+
 type Ring = {
   p: Particle
   x: number; y: number
@@ -146,6 +164,23 @@ export type GunFx = {
   fire(x: number, y: number, tx: number, ty: number): void
   /** A SHOT ARRIVES. `kind` sets the weight of it. */
   impact(x: number, y: number, kind: ImpactKind): void
+  /**
+   * A CRITICAL. One hard, fast ring travelling much further than an impact's,
+   * with the spray to match — the difference between a good hit and a blow
+   * the whole bay felt.
+   */
+  shock(x: number, y: number): void
+  /**
+   * SHE SLIPS IT. A hard turn throws water off her quarter: a burst of foam
+   * away from the shot and a short wake behind it. `dx,dy` is the way she
+   * heels, which is away from whatever she is dodging.
+   */
+  wake(x: number, y: number, dx: number, dy: number): void
+  /**
+   * A HULL GOES DOWN HERE. The water boils where she was, wreckage comes up
+   * and floats, and a slick spreads and stays a while.
+   */
+  sink(x: number, y: number): void
   advance(dt: number): void
   /** Darkness 0..1. Smoke and spray are lit by the same sun everything else is. */
   night(dark: number): void
@@ -172,7 +207,21 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   // what is behind it; powder smoke is a solid thing that hides what is behind
   // it, and adding it would make a broadside look like a firework.
   sprayLayer.blendMode = 'add'
+  // OIL AND WRECKAGE, both DARK, so neither can be additive — adding a dark
+  // colour to water does nothing at all. The slick multiplies the sea down the
+  // way a squall's shadow does; the wreckage is drawn straight.
+  const slickLayer: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: false, vertex: true, color: true },
+  })
+  slickLayer.blendMode = 'multiply'
+  const debrisLayer: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
+  })
+  // Under the rings: a slick is IN the water and the foam of the sinking that
+  // made it is on top.
+  view.addChild(slickLayer)
   view.addChild(ringLayer)
+  view.addChild(debrisLayer)
   view.addChild(smokeLayer)
   view.addChild(sprayLayer)
 
@@ -217,6 +266,28 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   }
   let nr = 0
   const takeRing = () => { const r = rings[nr]; nr = (nr + 1) % RING_CAP; return r }
+
+  const debris: Debris[] = []
+  for (let i = 0; i < DEBRIS_CAP; i++) {
+    const p: Particle = new PIXI.Particle({ texture: st })
+    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+    p.tint = 0x4a3a2a
+    debrisLayer.addParticle(p)
+    debris.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, spin: 0 })
+  }
+  let nde = 0
+  const takeDebris = () => { const d = debris[nde]; nde = (nde + 1) % DEBRIS_CAP; return d }
+
+  const slicks: Puff[] = []
+  for (let i = 0; i < SLICK_CAP; i++) {
+    const p: Particle = new PIXI.Particle({ texture: pt })
+    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+    p.tint = 0x5a5f52
+    slickLayer.addParticle(p)
+    slicks.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, grow: 0, alpha: 0 })
+  }
+  let nsl = 0
+  const takeSlick = () => { const s2 = slicks[nsl]; nsl = (nsl + 1) % SLICK_CAP; return s2 }
 
   let dark = 0
 
@@ -331,6 +402,137 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       }
     },
 
+    shock(x, y) {
+      // ONE RING, AND IT TRAVELS. An impact's biggest is 380 over eight tenths
+      // of a second; this is nearly twice that in half the time, which is the
+      // whole difference between a good hit and a blow the bay felt. Thin and
+      // bright rather than heavy: a fast ring reads as pressure, a fat one
+      // reads as more water.
+      const r = takeRing()
+      r.x = x; r.y = y
+      r.age = 0; r.life = 0.42
+      r.from = 40; r.to = 700
+      r.alpha = 0.62
+      r.p.tint = 0xfff0c8
+
+      // Thrown flat and hard, all the way round. Low, because this is pressure
+      // leaving along the surface rather than water being lifted.
+      for (let i = 0; i < 18; i++) {
+        const a2 = (i / 18) * Math.PI * 2 + Math.random() * 0.2
+        const d = takeDrop()
+        const out = 320 + Math.random() * 260
+        d.x = x; d.y = y
+        d.vx = Math.cos(a2) * out
+        d.vy = Math.sin(a2) * out * GROUND
+        d.h = 10
+        d.vh = 60 + Math.random() * 90
+        d.age = 0
+        d.life = 0.42 + Math.random() * 0.3
+        d.size = 10 + Math.random() * 8
+        d.p.tint = 0xffe6b0
+      }
+    },
+
+    wake(x, y, dx, dy) {
+      const len = Math.hypot(dx, dy) || 1
+      const ux = dx / len, uy = dy / len
+
+      // THE WATER SHE THROWS COMING OVER. A fan off the quarter she heels
+      // away from — foam, not spray, so it is wide and low and short-lived.
+      for (let i = 0; i < 14; i++) {
+        const spread = (Math.random() - 0.5) * 1.5
+        const sx = ux * Math.cos(spread) - uy * Math.sin(spread)
+        const sy = ux * Math.sin(spread) + uy * Math.cos(spread)
+        const out = 150 + Math.random() * 190
+        const d = takeDrop()
+        d.x = x + ux * 40; d.y = y + uy * 40
+        d.vx = sx * out
+        d.vy = sy * out * GROUND
+        d.h = 8
+        d.vh = 70 + Math.random() * 110
+        d.age = 0
+        d.life = 0.36 + Math.random() * 0.28
+        d.size = 11 + Math.random() * 9
+        d.p.tint = 0xeaf6ff
+      }
+
+      // And the shove itself, as a low ring pushed out to the side she went.
+      const r = takeRing()
+      r.x = x + ux * 80; r.y = y + uy * 80
+      r.age = 0; r.life = 0.62
+      r.from = 40; r.to = 300
+      r.alpha = 0.3
+      r.p.tint = 0xdfeaf2
+    },
+
+    sink(x, y) {
+      // ── THE WATER BOILS ─────────────────────────────────────────────────
+      //
+      // Not one big splash. A hull going down displaces water for SECONDS, in
+      // bursts, as it fills and rolls — so this is a long, uneven throw of
+      // foam rather than a single event. The staggered ages are what make it
+      // read as a ship sinking rather than a shell landing.
+      for (let i = 0; i < 26; i++) {
+        const d = takeDrop()
+        const a2 = Math.random() * Math.PI * 2
+        const out = 40 + Math.random() * 220
+        d.x = x + Math.cos(a2) * Math.random() * 120
+        d.y = y + Math.sin(a2) * Math.random() * 120 * GROUND
+        d.vx = Math.cos(a2) * out
+        d.vy = Math.sin(a2) * out * GROUND
+        d.h = 4
+        d.vh = 150 + Math.random() * 320
+        // NEGATIVE AGES ARE THE STAGGER. They tick up to zero before anything
+        // is drawn, so one call spreads over more than a second.
+        d.age = -Math.random() * 1.3
+        d.life = 0.6 + Math.random() * 0.6
+        d.size = 12 + Math.random() * 12
+        d.p.tint = 0xeaf6ff
+      }
+
+      // THREE RINGS, WIDENING AND SLOWING. The sea closing over her.
+      for (let i = 0; i < 3; i++) {
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = -i * 0.34
+        r.life = 1.1 + i * 0.3
+        r.from = 60 + i * 40
+        r.to = 340 + i * 190
+        r.alpha = 0.4 - i * 0.09
+        r.p.tint = 0xe8f2f8
+      }
+
+      // WRECKAGE COMES UP. Thrown clear and then it floats — which is the
+      // whole difference between this and spray, and the reason it has its own
+      // pool and its own layer.
+      for (let i = 0; i < 12; i++) {
+        const d = takeDebris()
+        const a2 = Math.random() * Math.PI * 2
+        const out = 60 + Math.random() * 200
+        d.x = x; d.y = y
+        d.vx = Math.cos(a2) * out
+        d.vy = Math.sin(a2) * out * GROUND
+        d.h = 10
+        d.vh = 160 + Math.random() * 240
+        d.age = -Math.random() * 0.5
+        d.life = 5.5 + Math.random() * 2.5
+        d.size = 9 + Math.random() * 12
+        d.spin = (Math.random() - 0.5) * 2.2
+      }
+
+      // AND WHAT SHE LEAVES. A slick that spreads and stays, so a bay you
+      // fought in still says so a while after. It multiplies rather than
+      // adding: oil makes water darker.
+      const sl = takeSlick()
+      sl.x = x; sl.y = y
+      sl.h = 0; sl.vh = 0; sl.vx = 0; sl.vy = 0
+      sl.age = -0.6
+      sl.life = 9
+      sl.size = 150
+      sl.grow = 320
+      sl.alpha = 0.5
+    },
+
     advance(dt) {
       // Lit by the same sun as everything else. Not switched off after dark —
       // a muzzle flash is its OWN light and is the one thing out here that gets
@@ -371,6 +573,9 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       for (const d of drops) {
         if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
         d.age += dt
+        // A NEGATIVE AGE IS A DROPLET WAITING ITS TURN — see sink(), where the
+        // stagger is what turns one call into a hull filling over seconds.
+        if (d.age < 0) { if (d.p.alpha) d.p.alpha = 0; continue }
         const t = d.age / d.life
         d.x += d.vx * dt
         d.y += d.vy * dt
@@ -384,6 +589,53 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
         d.p.scaleX = d.size / 16
         d.p.scaleY = d.size / 16
         d.p.alpha = lit * (1 - t)
+      }
+
+      // ── WRECKAGE ────────────────────────────────────────────────────────
+      for (const d of debris) {
+        if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
+        d.age += dt
+        if (d.age < 0) { if (d.p.alpha) d.p.alpha = 0; continue }
+        const t = d.age / d.life
+        d.x += d.vx * dt
+        d.y += d.vy * dt
+        if (d.h > 0) {
+          d.vh -= G * dt
+          d.h += d.vh * dt
+          // IT LANDS AND STAYS. A droplet ends at the surface; a plank floats,
+          // which is the whole point of it being wreckage.
+          if (d.h <= 0) { d.h = 0; d.vh = 0 }
+        } else {
+          // Adrift: it keeps some way on and loses it slowly to the water.
+          d.vx -= d.vx * Math.min(1, 0.8 * dt)
+          d.vy -= d.vy * Math.min(1, 0.8 * dt)
+        }
+        d.p.x = d.x
+        d.p.y = d.y - d.h / GROUND
+        d.p.rotation += d.spin * dt
+        d.p.scaleX = d.size / 16
+        // Flattened on the water once it is floating, upright while it is in
+        // the air — the same plane-and-air rule everything else here obeys.
+        d.p.scaleY = (d.size / 16) * (d.h > 0 ? 1 : GROUND)
+        // In hard, out over the last fifth, so it drifts a long while and then
+        // is quietly gone rather than blinking out.
+        d.p.alpha = lit * Math.min(1, d.age * 6) * Math.min(1, (1 - t) * 5)
+      }
+
+      // ── THE SLICK ───────────────────────────────────────────────────────
+      for (const sl of slicks) {
+        if (sl.age >= sl.life) { if (sl.p.alpha) sl.p.alpha = 0; continue }
+        sl.age += dt
+        if (sl.age < 0) { if (sl.p.alpha) sl.p.alpha = 0; continue }
+        const t = sl.age / sl.life
+        const size = sl.size + sl.grow * Math.min(1, t * 3)
+        sl.p.x = sl.x
+        sl.p.y = sl.y
+        sl.p.scaleX = size / 64
+        // ON the plane, like every flat thing.
+        sl.p.scaleY = (size / 64) * GROUND
+        // Spreads in over a second, holds, and thins out over the last third.
+        sl.p.alpha = sl.alpha * Math.min(1, t * 4) * Math.min(1, (1 - t) * 3)
       }
 
       for (const r of rings) {

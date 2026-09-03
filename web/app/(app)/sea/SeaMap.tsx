@@ -7771,6 +7771,15 @@ hullRef={hullRefFor(t.key)} />
             return
           }
           const at = e.side === 'enemy' ? them : me
+          if (e.kind === 'sink') { gpu.gunsink(at.x, at.y); return }
+          if (e.kind === 'dodge') {
+            // AWAY FROM WHAT SHE SLIPPED. A dodge is a direction, and the only
+            // direction that means anything here is "not toward the other
+            // ship" — so the water goes off the quarter she heeled onto.
+            const other = e.side === 'enemy' ? me : them
+            gpu.gunwake(at.x, at.y, at.x - other.x, at.y - other.y)
+            return
+          }
           if (e.kind === 'miss') {
             // A MISS GOES IN THE WATER SOMEWHERE, and where matters: short of
             // the hull and off to one side, so it reads as a shot that went
@@ -7786,6 +7795,10 @@ hullRef={hullRefFor(t.key)} />
             return
           }
           gpu.gunimpact(at.x, at.y, e.kind === 'crit' ? 'crit' : 'hit')
+          // A CRIT GETS THE SHOCKWAVE ON TOP of its impact, rather than instead
+          // of it: the spray and rings are what a shot landing looks like, and
+          // this is the extra thing a hard one does to the bay.
+          if (e.kind === 'crit') gpu.gunshock(at.x, at.y)
         }}
         onClose={() => {
           setFightId(null)

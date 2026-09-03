@@ -139,6 +139,13 @@ export type GpuHandle = {
   gunfire(x: number, y: number, tx: number, ty: number): void
   /** And where a shot ends up: a ring on the water and spray off it. */
   gunimpact(x: number, y: number, kind: ImpactKind): void
+  /** A critical: one hard ring travelling twice as far, twice as fast. */
+  gunshock(x: number, y: number): void
+  /** A dodge: the water she throws coming hard over, away from `dx,dy`. */
+  gunwake(x: number, y: number, dx: number, dy: number): void
+  /** A hull goes down: the sea boils, wreckage floats up, a slick spreads —
+   *  and every fish in earshot leaves. */
+  gunsink(x: number, y: number): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -1126,6 +1133,14 @@ export default function SeaIslandsGPU({
         splash(x, y, dir, perfect) { splash.fire(x, y, dir, perfect) },
         gunfire(x, y, tx, ty) { guns.fire(x, y, tx, ty) },
         gunimpact(x, y, kind) { guns.impact(x, y, kind) },
+        gunshock(x, y) { guns.shock(x, y) },
+        gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
+        gunsink(x, y) {
+          guns.sink(x, y)
+          // AND THE FISH BOLT. A ship going down is the loudest thing that has
+          // ever happened in this water; the shoals already know how to leave.
+          shoals.scatter(x, y)
+        },
 
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom
