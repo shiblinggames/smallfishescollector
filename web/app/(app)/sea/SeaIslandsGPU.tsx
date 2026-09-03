@@ -151,7 +151,14 @@ export type GpuHandle = {
    * A CREW ABILITY LANDS on the hull at `x,y`, in its class's colour. `shape`
    * is what it does rather than which one it is — see seaAbilityFx.
    */
-  ability(x: number, y: number, color: number, shape: AbilityShape): void
+  ability(
+    x: number, y: number,
+    /** The other hull, for the motions drawn BETWEEN two ships. */
+    tx: number, ty: number,
+    color: number, shape: AbilityShape,
+    /** 1, or more for a legendary chase skin's version of the same ability. */
+    power: number,
+  ): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -1148,7 +1155,7 @@ export default function SeaIslandsGPU({
         gunimpact(x, y, kind) { guns.impact(x, y, kind) },
         gunshock(x, y) { guns.shock(x, y) },
         gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
-        ability(x, y, color, shape) { spells.cast(x, y, color, shape) },
+        ability(x, y, tx, ty, color, shape, power) { spells.cast(x, y, tx, ty, color, shape, power) },
         gunsink(x, y) {
           guns.sink(x, y)
           // AND THE FISH BOLT. A ship going down is the loudest thing that has

@@ -11,10 +11,10 @@
 // This is the other half: the ability happening in the world, on the hull it
 // belongs to, in the sea both ships are floating on.
 //
-// ── THREE VERBS, NOT ELEVEN EFFECTS ─────────────────────────────────────────
+// ── A VOCABULARY, NOT A PILE OF ONE-OFFS ────────────────────────────────────
 //
-// Deliberately a vocabulary rather than a set of signatures. Abilities sort
-// into three things they DO, and each wants a different motion:
+// Three base motions carry every ability, and five of them have a signature
+// sentence of their own on top. The base motions sort by what an ability DOES:
 //
 //   BUFF rises. Something comes UP out of the water and into your hull —
 //   light off the surface, motes drawn in. It is help arriving.
@@ -26,10 +26,10 @@
 //   STRIKE displaces. The sea is shoved: a hard ring, water thrown, and the
 //   colour of whoever threw it.
 //
-// Signatures can be layered on top per class later. What this stops is eleven
-// abilities sharing one label — and a shared vocabulary is a better base for
-// signatures than eleven one-offs, because the family resemblance is the thing
-// that says "this is a crew ability" before you have read the name.
+// The signatures — mend, brace, aim, salvo, frenzy — are built from the same
+// three pools as the base motions, which is what keeps them a family. A shared
+// vocabulary is a better base than eleven one-offs precisely because the family
+// resemblance says "a crew did something" before the name has been read.
 //
 // Conventions are the sea's, as everywhere: rings and marks lie ON the plane
 // and are squashed by GROUND; motes are in the AIR at a height and are lifted
@@ -46,7 +46,30 @@ const RING_CAP = 12
 /** Marks on the water. They linger, so a few can be down at once. */
 const MARK_CAP = 4
 
-export type AbilityShape = 'buff' | 'debuff' | 'strike'
+/**
+ * ── THE VOCABULARY ──────────────────────────────────────────────────────────
+ *
+ * Three base motions and five signatures, and every one of them is a MOTION —
+ * none is the name of a crew class. That is the seam: the fight knows which
+ * class fired and maps it to a motion; this file knows what a motion looks like
+ * on water. Neither has to learn the other's table.
+ *
+ *   buff    rises into your hull      debuff  settles onto theirs
+ *   strike  shoves the sea
+ *
+ *   mend    the water goes quiet and the light is drawn in slowly
+ *   brace   a ring slams shut and the sea is pressed flat
+ *   aim     a sight-line is drawn across the water to the target
+ *   salvo   something comes up from under them
+ *   frenzy  a walk of impacts down the line between the hulls
+ *
+ * A signature is a different SENTENCE in this vocabulary, not a different
+ * language — every one is built from the same three pools, so they all still
+ * read as crew abilities before you have read the name.
+ */
+export type AbilityShape =
+  | 'buff' | 'debuff' | 'strike'
+  | 'mend' | 'brace' | 'aim' | 'salvo' | 'frenzy'
 
 let moteTex: Texture | null = null
 let ringTex: Texture | null = null
@@ -144,7 +167,17 @@ export type AbilityFx = {
    * the top. The fight sends the class's own colour, so this never has to know
    * anything about crew classes.
    */
-  cast(x: number, y: number, color: number, shape: AbilityShape): void
+  cast(
+    x: number, y: number,
+    /** The OTHER hull. Some motions are about the space BETWEEN two ships — a
+     *  sight-line, a walk of impacts — and cannot be drawn from one point. */
+    tx: number, ty: number,
+    color: number, shape: AbilityShape,
+    /** 1 normally. A legendary chase skin sends more and everything scales with
+     *  it, so the rare version of an ability is visibly the rare version rather
+     *  than the same effect in a different tint. */
+    power: number,
+  ): void
   advance(dt: number): void
   night(dark: number): void
   destroy(): void
@@ -207,11 +240,11 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
 
   let dark = 0
 
-  return {
-    view,
-    night(d) { dark = d },
-
-    cast(x, y, color, shape) {
+  /**
+   * THE THREE BASE MOTIONS. Named and separate so a signature can fall through
+   * to one whole rather than inheriting half of another.
+   */
+  function base(x: number, y: number, color: number, shape: 'buff' | 'debuff' | 'strike', P: number) {
       // A CAST IS ALWAYS A RING FIRST, whatever it is, and that is the family
       // resemblance: before you have read the name you know a crew did
       // something. Which WAY it travels is the sentence.
@@ -291,6 +324,190 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         r2.alpha = 0.3
         r2.p.tint = color
       }
+  }
+
+  return {
+    view,
+    night(d) { dark = d },
+
+    cast(x, y, tx, ty, color, shape, power) {
+      const P = Math.max(1, power)
+      const dx = tx - x, dy = ty - y
+
+      if (shape === 'aim') {
+        // A SIGHT-LINE DRAWN ACROSS THE WATER, lit from your bow outward one
+        // mote at a time and arriving at the hull it is measuring. A glow
+        // around your own ship cannot say WHICH ship is being aimed at; a line
+        // that ends on them says nothing else.
+        const n = 16
+        for (let i = 0; i < n; i++) {
+          const m = takeMote()
+          const f = (i + 0.5) / n
+          m.cx = x + dx * f
+          m.cy = y + dy * f
+          m.ang = 0; m.r0 = 0; m.r1 = 0
+          m.h0 = 26; m.h1 = 34
+          // STAGGERED ALONG THE LINE, and that is the whole read: lit all at
+          // once it is a rope, lit end to end it is a shot being lined up.
+          m.age = -f * 0.3
+          m.life = 0.55 + Math.random() * 0.25
+          m.size = (9 + Math.random() * 6) * P
+          m.spin = 0
+          m.p.tint = color
+        }
+        const r = takeRing()
+        r.x = tx; r.y = ty
+        r.age = -0.3; r.life = 0.6
+        r.from = 300 * P; r.to = 90
+        r.alpha = 0.5
+        r.p.tint = color
+        return
+      }
+
+      if (shape === 'frenzy') {
+        // A WALK OF IMPACTS down the line. The ability is VOLUME, not one blow,
+        // and a row of small rings arriving in sequence is what volume looks
+        // like on water.
+        const n = Math.round(5 * P)
+        for (let i = 0; i < n; i++) {
+          const f = 0.35 + (i / Math.max(1, n - 1)) * 0.6
+          const rx = x + dx * f + (Math.random() - 0.5) * 70
+          const ry = y + dy * f + (Math.random() - 0.5) * 70 * GROUND
+          const r = takeRing()
+          r.x = rx; r.y = ry
+          r.age = -i * 0.1
+          r.life = 0.42
+          r.from = 20; r.to = 190
+          r.alpha = 0.5
+          r.p.tint = color
+          for (let k = 0; k < 4; k++) {
+            const m = takeMote()
+            m.cx = rx; m.cy = ry
+            m.ang = Math.random() * Math.PI * 2
+            m.r0 = 10; m.r1 = 90 + Math.random() * 80
+            m.h0 = 14; m.h1 = 40 + Math.random() * 40
+            m.age = -i * 0.1
+            m.life = 0.4 + Math.random() * 0.25
+            m.size = 9 + Math.random() * 7
+            m.spin = 0
+            m.p.tint = color
+          }
+        }
+        return
+      }
+
+      if (shape === 'salvo') {
+        // SOMETHING COMES UP FROM UNDER THEM. The dark swell gathers FIRST and
+        // the burst follows half a second later — the gather is what makes it
+        // read as risen rather than dropped, and it is the only thing here that
+        // begins below the surface.
+        const k = takeMark()
+        k.x = x; k.y = y
+        k.age = 0
+        k.life = 1.1
+        k.size = 150 * P
+        k.alpha = 0.42
+        k.spin = 0.9
+        k.p.tint = color
+
+        for (let i = 0; i < 3; i++) {
+          const r = takeRing()
+          r.x = x; r.y = y
+          r.age = -0.5 - i * 0.08
+          r.life = 0.65 + i * 0.15
+          r.from = 50
+          r.to = (260 + i * 200) * P
+          r.alpha = 0.55 - i * 0.12
+          r.p.tint = color
+        }
+        for (let i = 0; i < Math.round(24 * P); i++) {
+          const m = takeMote()
+          m.cx = x; m.cy = y
+          m.ang = Math.random() * Math.PI * 2
+          m.r0 = Math.random() * 70
+          m.r1 = 120 + Math.random() * 260
+          // Thrown HIGH: whatever it was came out of the water.
+          m.h0 = 0
+          m.h1 = (170 + Math.random() * 200) * P
+          m.age = -0.5 - Math.random() * 0.2
+          m.life = 0.7 + Math.random() * 0.5
+          m.size = 12 + Math.random() * 12
+          m.spin = (Math.random() - 0.5) * 0.6
+          m.p.tint = color
+        }
+        return
+      }
+
+      if (shape === 'brace') {
+        // A RING SLAMS SHUT AND THE SEA IS PRESSED FLAT. Fast, hard and already
+        // finished — bracing is not a thing that unfolds, it is a thing that has
+        // happened by the time you notice it.
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = 0; r.life = 0.34
+        r.from = 380 * P; r.to = 60
+        r.alpha = 0.8
+        r.p.tint = color
+        const r2 = takeRing()
+        r2.x = x; r2.y = y
+        r2.age = -0.3; r2.life = 0.5
+        r2.from = 60; r2.to = 300 * P
+        r2.alpha = 0.4
+        r2.p.tint = color
+        for (let i = 0; i < 14; i++) {
+          const m = takeMote()
+          m.cx = x; m.cy = y
+          m.ang = (i / 14) * Math.PI * 2
+          m.r0 = 300 * P; m.r1 = 40
+          m.h0 = 70; m.h1 = 0
+          m.age = 0
+          m.life = 0.34
+          m.size = 12 + Math.random() * 8
+          m.spin = 0
+          m.p.tint = color
+        }
+        return
+      }
+
+      if (shape === 'mend') {
+        // THE WATER GOES QUIET. Everything here is SLOW where the others are
+        // quick: a long soft disc under her and light drawn in over a second
+        // and a half rather than thrown. Mending is the one ability that should
+        // not look like an impact.
+        const k = takeMark()
+        k.x = x; k.y = y
+        k.age = 0
+        k.life = 2.4
+        k.size = 240 * P
+        k.alpha = 0.24
+        k.spin = 0.12
+        k.p.tint = color
+
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = 0; r.life = 1.3
+        r.from = 30; r.to = 300 * P
+        r.alpha = 0.4
+        r.p.tint = color
+
+        for (let i = 0; i < Math.round(22 * P); i++) {
+          const m = takeMote()
+          m.cx = x; m.cy = y
+          m.ang = Math.random() * Math.PI * 2
+          m.r0 = 150 + Math.random() * 190
+          m.r1 = 15 + Math.random() * 25
+          m.h0 = 0
+          m.h1 = 70 + Math.random() * 60
+          m.age = -Math.random() * 0.7
+          m.life = 1.1 + Math.random() * 0.6
+          m.size = 10 + Math.random() * 10
+          m.spin = 0.7 + Math.random() * 0.6
+          m.p.tint = color
+        }
+        return
+      }
+
+      base(x, y, color, shape, P)
     },
 
     advance(dt) {

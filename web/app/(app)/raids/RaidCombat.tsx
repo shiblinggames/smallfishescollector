@@ -458,9 +458,11 @@ export type FightFx = {
    * the class's colour. Sending the class id instead would put a table of crew
    * classes inside the chart, which is a place it has no business being.
    */
-  shape?: 'buff' | 'debuff' | 'strike'
+  shape?: 'buff' | 'debuff' | 'strike' | 'mend' | 'brace' | 'aim' | 'salvo' | 'frenzy'
   /** The class's own colour, or the chase skin's when one is equipped. */
   color?: string
+  /** 1, or more when a legendary chase skin is driving it. */
+  power?: number
 }
 
 /**
@@ -471,19 +473,29 @@ export type FightFx = {
  * off the enemy and settles onto them. Anything unlisted rises, because a crew
  * ability with no entry is far more likely to be help than harm.
  */
-const ABILITY_SHAPE: Record<string, 'buff' | 'debuff' | 'strike'> = {
-  mender: 'buff',
-  sharpshot: 'buff',
-  anchor: 'buff',
+const ABILITY_SHAPE: Record<string, NonNullable<FightFx['shape']>> = {
+  // ── SIGNATURES, for the ones whose motion is worth its own sentence ──
+  mender: 'mend',        // the water goes quiet
+  anchor: 'brace',       // a ring slams shut
+  sharpshot: 'aim',      // a sight-line to the target
+  leviathan: 'salvo',    // something rises under them
+  blitz: 'frenzy',       // a walk of impacts down the line
+  // ── AND THE BASE MOTIONS FOR THE REST ──
   navigator: 'buff',
   abyssal_tide: 'buff',
   vengeance: 'buff',
   snare: 'debuff',
   foresight: 'debuff',
   requiem: 'debuff',
-  leviathan: 'strike',
-  blitz: 'strike',
 }
+
+/**
+ * WHICH SIDE A MOTION HAPPENS TO. It falls out of the ability rather than being
+ * a second table to keep in step — but not out of the SHAPE any more, now that
+ * a signature can be aimed either way: `aim` is drawn from your bow onto their
+ * hull, so it belongs to the enemy even though it is your buff.
+ */
+const ABILITY_ON_ENEMY = new Set(['snare', 'foresight', 'requiem', 'leviathan', 'blitz', 'sharpshot'])
 
 export interface RaidCombatProps {
   enemy: BroadsideEnemy
@@ -2295,17 +2307,17 @@ export default function RaidCombat({
   const bang = useCallback((kind: FightFx['kind'], side: FightFx['side']) => {
     onFightFxRef.current?.({ kind, side })
   }, [])
-  /** A crew ability, with the motion and the colour the water needs. */
-  const bangAbility = useCallback((classId: string, color: string) => {
-    const shape = ABILITY_SHAPE[classId] ?? 'buff'
+  /** A crew ability, with the motion, the colour and the weight the water needs. */
+  const bangAbility = useCallback((classId: string, color: string, chase: boolean) => {
     onFightFxRef.current?.({
       kind: 'ability',
-      // A buff happens to YOUR ship and everything else happens to theirs,
-      // which is what the three motions already encode — so the side falls out
-      // of the shape rather than being a fourth thing to keep in step.
-      side: shape === 'buff' ? 'player' : 'enemy',
-      shape,
+      side: ABILITY_ON_ENEMY.has(classId) ? 'enemy' : 'player',
+      shape: ABILITY_SHAPE[classId] ?? 'buff',
       color,
+      // A LEGENDARY'S VERSION IS BIGGER, not merely a different colour. The
+      // chase skins already have their own bespoke overlay FX; this is the same
+      // idea reaching the water, so the rare thing is rare out there too.
+      power: chase ? 1.6 : 1,
     })
   }, [])
 
@@ -3504,7 +3516,7 @@ export default function RaidCombat({
     // the ability landing on a hull that is actually floating out there. It
     // takes the SUMMON colour, so a chase skin themes the water the same way it
     // already themes the numbers and the auras.
-    bangAbility(def.id, summonColor)
+    bangAbility(def.id, summonColor, !!summonSkin?.chase)
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
 
     // Per-ability signature stage FX alongside the banner, so every ability

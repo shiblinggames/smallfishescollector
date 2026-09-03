@@ -7780,7 +7780,14 @@ hullRef={hullRefFor(t.key)} />
             const n = parseInt(hex.length === 3
               ? hex.split('').map(c => c + c).join('')
               : hex, 16)
-            gpu.ability(at.x, at.y, Number.isFinite(n) ? n : 0xffffff, e.shape ?? 'buff')
+            // BOTH HULLS. A sight-line and a walk of impacts are drawn in the
+            // space between the ships, so the other one is not optional.
+            const other = e.side === 'enemy' ? me : them
+            gpu.ability(
+              at.x, at.y, other.x, other.y,
+              Number.isFinite(n) ? n : 0xffffff,
+              e.shape ?? 'buff', e.power ?? 1,
+            )
             return
           }
           if (e.kind === 'sink') { gpu.gunsink(at.x, at.y); return }
