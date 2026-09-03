@@ -11987,27 +11987,75 @@ function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPul
 }) {
   const lit = enabled || highlighted
   const borderColor = highlighted ? color : enabled ? `${color}cc` : '#2a3548'
+  /**
+   * PRESSES ARE COUNTED SO THEY CAN BE ANSWERED. A key that changes on every
+   * press is what lets a ring mount fresh each time — an animation restarted by
+   * a state flag drops the second press of a fast double-tap, which in this
+   * deck is exactly the moment worth acknowledging.
+   */
+  const [pressed, setPressed] = useState(0)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
       <div style={{ position: 'relative' }}>
+        {/* ── THE PRESS LEAVES SOMETHING BEHIND ──────────────────────────
+            A ring off the rim in the action's own colour. The button already
+            scaled on tap, which says "this is a button"; this says "that
+            command went out", which is a different sentence and the one a
+            combat deck owes you. Outside the button so it is not clipped by
+            the rim it is leaving. */}
+        <AnimatePresence>
+          {pressed > 0 && (
+            <motion.span key={pressed} aria-hidden
+              initial={{ opacity: 0.85, scale: 0.72 }}
+              animate={{ opacity: 0, scale: 1.75 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.52, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                position: 'absolute', inset: -2, borderRadius: '50%',
+                border: `2px solid ${color}`,
+                boxShadow: `0 0 16px ${color}88`,
+                pointerEvents: 'none',
+              }} />
+          )}
+        </AnimatePresence>
         <motion.button
-          whileTap={enabled ? { scale: 0.84 } : {}}
-          transition={{ type: 'spring', stiffness: 600, damping: 18 }}
+          whileTap={enabled ? { scale: 0.86 } : {}}
+          // A READY ACTION BREATHES. Not a loop on every button — that is a
+          // deck of four things all demanding attention, which is the same as
+          // none of them doing it. Only the one the fight is pointing at.
+          animate={highlighted ? { scale: [1, 1.045, 1] } : { scale: 1 }}
+          transition={highlighted
+            ? { scale: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } }
+            : { type: 'spring', stiffness: 600, damping: 18 }}
           disabled={!enabled}
           // "Input registered" tick the instant the finger lands — combat is
           // split-second decisions, and the buzz kills tap-uncertainty before
           // the resolution animation takes over.
-          onPointerDown={enabled ? () => vibrate(6) : undefined}
+          onPointerDown={enabled ? () => { vibrate(6); setPressed(p => p + 1) } : undefined}
           onClick={onClick}
           aria-label={label}
           style={{
             width: 58, height: 58, borderRadius: '50%',
-            background: highlighted ? `${color}26` : enabled ? '#1c2540' : '#0c1422',
+            // ── MATERIAL, NOT A FILL ────────────────────────────────────
+            //
+            // It was one flat colour with a ring round it. These sit in the
+            // same deck as the aim bar and want the same read: lit from above,
+            // cut into the panel, with the action's colour rising through the
+            // face rather than painted flat across it.
+            background: highlighted
+              ? `radial-gradient(circle at 50% 118%, ${color}55 0%, ${color}1e 46%, rgba(12,20,34,0.96) 78%)`
+              : enabled
+              ? `radial-gradient(circle at 50% 118%, ${color}2e 0%, rgba(22,32,54,0.98) 55%, rgba(12,19,33,1) 100%)`
+              : 'linear-gradient(180deg, rgba(12,20,34,0.9) 0%, rgba(8,14,24,0.95) 100%)',
             border: `2px solid ${borderColor}`,
             color: lit ? color : '#3f4a5e',
             cursor: enabled ? 'pointer' : 'not-allowed',
-            opacity: enabled ? 1 : highlighted ? 0.9 : 0.5,
-            boxShadow: highlighted ? `0 0 14px ${color}66, inset 0 0 10px ${color}33` : enabled ? `0 2px 8px rgba(0,0,0,0.4)` : 'none',
+            opacity: enabled ? 1 : highlighted ? 0.9 : 0.45,
+            boxShadow: highlighted
+              ? `0 0 18px ${color}77, 0 0 40px ${color}33, inset 0 1px 0 ${color}66, inset 0 -10px 18px rgba(0,0,0,0.55)`
+              : enabled
+              ? `0 3px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -9px 16px rgba(0,0,0,0.5)`
+              : 'inset 0 -6px 12px rgba(0,0,0,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             touchAction: 'manipulation',
           }}
@@ -12331,8 +12379,13 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   }
   return (
     <div style={{
-      background: '#04080e',
-      border: '1px solid #1f2e42',
+      // THE SAME MATERIAL AS THE BAR AND THE BUTTONS. It was a flat black
+      // rectangle with a hairline, which read as a different component that
+      // happened to be nearby; the deck should look like one thing cut from one
+      // panel. Same gradient, same lit top edge, same inset depth.
+      background: 'linear-gradient(180deg, rgba(3,7,13,0.9) 0%, rgba(7,12,20,0.78) 50%, rgba(2,5,10,0.94) 100%)',
+      border: '1px solid rgba(255,255,255,0.10)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -10px 18px rgba(0,0,0,0.45)',
       borderRadius: 12,
       padding: '0.65rem 0.85rem',
       minHeight: 130,

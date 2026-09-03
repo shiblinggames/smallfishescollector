@@ -8,11 +8,12 @@
 // dial got its answer already (see components/DialFx); this is the same answer
 // for the other instrument.
 //
-// Four things live in here:
+// Three things live in here:
 //
-//   THE TRAIL. A needle with no wake is a position readout. Sparks shed along
-//   its path and fall behind, so the bar reads as something travelling rather
-//   than something being redrawn somewhere else each frame.
+//   (A TRAIL was here and is gone. A wake behind the needle sounded right and
+//   read wrong: it draws the eye to where the needle HAS BEEN, and this
+//   instrument is entirely about where it is about to be. It also smeared the
+//   one hard edge a player is timing against.)
 //
 //   THE TARGET BREATHES. The zone was a static block; it now carries a soft
 //   bloom in its own colour with a hotter core at the crit seam, so the thing
@@ -38,7 +39,7 @@
 // The needle itself is NOT drawn here. It runs on the compositor (see
 // RaidCombat's WAAPI sweep), and the entire point of that is that main-thread
 // work cannot make it skip. This canvas is main-thread work. It reads where the
-// needle is and draws around it; if it drops a frame, the trail thins for a
+// needle is and draws around it; if it drops a frame, the glow dims for a
 // sixtieth of a second and the needle does not care. Drawing the needle here
 // would hand back the exact problem the compositor sweep exists to solve.
 
@@ -49,8 +50,6 @@ import { useEffect, useRef } from 'react'
  *  than to be cut off square, which is the failure DialFx documents. */
 const SPILL = 22
 
-/** Trail sparks alive at once. */
-const TRAIL_CAP = 26
 /** Burst sparks. One lock's worth, three times over, so a fast exchange never
  *  cuts the previous burst short. */
 const BURST_CAP = 54
@@ -72,7 +71,7 @@ export type AimBarFxHandle = {
 /** The palette, baked once. Per-particle tinting is not a thing on 2D and
  *  `ctx.filter` is slow, so each colour is its own small sprite. */
 const TINTS = [
-  '255,255,255',   // 0 the needle's own trail
+  '255,255,255',   // 0 the needle's own light
   '251,191,36',    // 1 crit gold
   '74,222,128',    // 2 hit green
   '148,163,184',   // 3 graze steel
@@ -138,9 +137,6 @@ export default function AimBarFx({ active, read, handleRef }: {
     // Pools, allocated once. Same discipline as the sea's effects: a fight is
     // the worst moment in the game to be handing the collector short-lived
     // objects, and this canvas runs beside an instrument being read by eye.
-    const trail: Spark[] = []
-    for (let i = 0; i < TRAIL_CAP; i++) trail.push({ x: 0, y: 0, vx: 0, vy: 0, age: 1, life: 1, size: 0, tint: 0 })
-    let nt = 0
     const burst: Spark[] = []
     for (let i = 0; i < BURST_CAP; i++) burst.push({ x: 0, y: 0, vx: 0, vy: 0, age: 1, life: 1, size: 0, tint: 0 })
     let nb = 0
@@ -173,8 +169,6 @@ export default function AimBarFx({ active, read, handleRef }: {
 
     let raf = 0
     let last = performance.now()
-    let shed = 0
-    let lastPos = -1
 
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick)
@@ -215,39 +209,6 @@ export default function AimBarFx({ active, read, handleRef }: {
         ctx.globalAlpha = 0.5 * near * near
         const r = critPx * (3 + near * 4)
         ctx.drawImage(imgs[1], zx - r, y - r * 0.5, r * 2, r)
-      }
-
-      // ── THE TRAIL ────────────────────────────────────────────────────────
-      //
-      // Shed on DISTANCE, not on time: a needle slowed by a squall should leave
-      // a shorter wake rather than the same wake more densely, which is what a
-      // per-frame emit would give.
-      if (lastPos >= 0) {
-        shed += Math.abs(pos - lastPos)
-        while (shed > 0.006) {
-          shed -= 0.006
-          const s = trail[nt]; nt = (nt + 1) % TRAIL_CAP
-          s.x = SPILL + lastPos * inner
-          s.y = y + (Math.random() - 0.5) * 16
-          s.vx = (Math.random() - 0.5) * 26
-          s.vy = (Math.random() - 0.5) * 22
-          s.age = 0
-          s.life = 0.22 + Math.random() * 0.22
-          s.size = 5 + Math.random() * 7
-          s.tint = near > 0.55 ? 1 : 0
-        }
-      }
-      lastPos = pos
-
-      for (const s of trail) {
-        if (s.age >= s.life) continue
-        s.age += dt
-        const t = s.age / s.life
-        s.x += s.vx * dt
-        s.y += s.vy * dt
-        ctx.globalAlpha = 0.5 * (1 - t)
-        const d = s.size * (1 + t * 0.7)
-        ctx.drawImage(imgs[s.tint], s.x - d / 2, s.y - d / 2, d, d)
       }
 
       for (const s of burst) {
