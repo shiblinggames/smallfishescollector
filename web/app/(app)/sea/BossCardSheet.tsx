@@ -108,14 +108,18 @@ export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
           onClose={onClose}
           clearedNodeIds={new Set(state.clearedNodeIds)}
         />
-      ) : (
+      ) : err ? (
+        // ONLY A FAILURE GETS WORDS. There was a "Reading the charts…" line
+        // here for the waiting case and it was the wrong idea twice over: the
+        // chart reads this on approach so there is almost never a wait, and
+        // when there is, a label announcing it makes a 100ms gap into an event.
+        // Nothing at all is a card that has not opened yet; a line of text is a
+        // card that opened to tell you it was not ready.
         <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
           <p className="font-karla font-600 uppercase tracking-[0.16em]"
-            style={{ fontSize: '0.62rem', color: err ? '#f87171' : '#8fb8cf' }}>
-            {err ?? 'Reading the charts…'}
-          </p>
+            style={{ fontSize: '0.62rem', color: '#f87171' }}>{err}</p>
         </div>
-      )}
+      ) : null}
     </div>,
     document.body,
   )

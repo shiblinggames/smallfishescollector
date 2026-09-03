@@ -255,6 +255,7 @@ const BossCardSheet = dynamic(() => import('./BossCardSheet'), { ssr: false })
 // is happening to them. Types only, so the fight is not pulled into this bundle.
 import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
 import { bossCardState, type BossCardState } from './bossCardActions'
+import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 /** The portal's chart. Only fetched once somebody actually steps into one. */
 const PortalMap = dynamic(() => import('./PortalMap'), { ssr: false })
 // THE KNOBS ON THE OUTSIDE OF THE GAME, top right and away from the HUD's run
@@ -3002,6 +3003,8 @@ export default function SeaMap({
    * half of that wait.
    */
   const [bossData, setBossData] = useState<BossCardState | null>(null)
+  /** The fight's own loadout, read on the same approach for the same reason. */
+  const [raidData, setRaidData] = useState<RaidSheetState | null>(null)
   const bossReadRef = useRef(false)
   /** The same fact, for the render: the HUD stands down in a fight. */
   const fightOn = fightId !== null || bossCard !== null
@@ -3828,6 +3831,19 @@ export default function SeaMap({
       // A FAILURE IS NOT WORTH SAYING HERE. Nothing has been asked for yet; the
       // sheet does its own read when it opens and reports properly then.
       () => { bossReadRef.current = false },
+    )
+    // ── AND THE FIGHT ITSELF, WHILE WE ARE HERE ─────────────────────────
+    //
+    // This is why pressing Enter looked janky. She is easing onto her station
+    // at that moment — the one second of movement the whole transition is built
+    // around — and that was exactly when the fight went off to fetch a loadout
+    // and mount twelve thousand lines. The slide was competing with its own
+    // arrival. Read on approach with the card, so Enter has nothing left to do
+    // but show.
+    void import('./RaidSheet')
+    raidSheetState().then(
+      r => { if (!('error' in r)) setRaidData(r) },
+      () => {},
     )
   }, [nearEnc])
 
@@ -7470,7 +7486,10 @@ hullRef={hullRefFor(t.key)} />
       {/* THE LIGHT lives on the level bar's row while fishing — see
           FishingHere — and only sits on its own up here when the rod is stowed,
           because there is no bar to share a row with. */}
-      {(!fishingIn || wide) && (
+      {/* `|| wide` is why this survived a fight: on a desktop there is room for
+          it beside a cast, so the guard let it through. A broadside is not a
+          question of room — see hudOff. */}
+      {(!fishingIn || wide) && !fightOn && (
         // A SYMBOL, NOT A NAME. The words were a label on a map, and the sky
         // already says what time it is in colour — the corner only has to
         // confirm it at a glance. `title` keeps the name for anyone who wants
@@ -7563,7 +7582,8 @@ hullRef={hullRefFor(t.key)} />
           A real button, so the map's own `closest('button')` guard exempts it
           from steering on both the pointer and the click path without needing
           data-no-steer as well. */}
-      {(!fishingIn || wide) && (
+      {/* Same `|| wide` leak as the clock above, same reason it is closed. */}
+      {(!fishingIn || wide) && !fightOn && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); vibrate(10); setMapOpen(true) }}
@@ -7722,6 +7742,7 @@ hullRef={hullRefFor(t.key)} />
 
       <RaidSheet
         raidId={fightId}
+        preloaded={raidData}
         anchors={anchorsRef}
         // Straight into the ref the loop reads. No setState: this arrives on
         // a frame, and re-rendering the chart to move a hull three pixels is
@@ -7776,6 +7797,7 @@ hullRef={hullRefFor(t.key)} />
           // before the fight.
           bossReadRef.current = false
           setBossData(null)
+          setRaidData(null)
           shipFxRef.current = null
           anchorsRef.current = null
           // THE HULL GOES BACK TO BEING A HULL. The fight wrote a transform

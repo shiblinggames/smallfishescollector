@@ -36,10 +36,17 @@ import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 
-export default function RaidSheet({ raidId, anchors, onShipFx, onFightFx, onClose }: {
+export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFightFx, onClose }: {
   /** Which fight. Resolved to a config through the registry, so this cannot
    *  drift from the raid the node map opens. */
   raidId: string | null
+  /**
+   * THE LOADOUT, ALREADY READ. The chart fetches it when you come within reach
+   * of a hull, because the alternative is fetching it in the one second she is
+   * sliding onto her station — the slide competing with its own arrival, which
+   * is what made entering a fight look janky.
+   */
+  preloaded?: RaidSheetState | null
   /** Live handle to where the chart's two hulls are on screen. The chart owns
    *  it and writes into it every frame; the fight reads it on its own. */
   anchors?: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
@@ -49,24 +56,26 @@ export default function RaidSheet({ raidId, anchors, onShipFx, onFightFx, onClos
   onFightFx?: (e: FightFx) => void
   onClose: () => void
 }) {
-  const [state, setState] = useState<RaidSheetState | null>(null)
+  const [fetched, setFetched] = useState<RaidSheetState | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const state = preloaded ?? fetched
 
-  // READ ON EVERY OPEN. Crew, gear, items and the repair debt all change
-  // between fights, and a payload kept from the last one would arm you with a
-  // loadout you have since taken apart.
+  // READ FRESH, BUT ON APPROACH. Crew, gear, items and the repair debt all
+  // change between fights, and a payload kept from the last one would arm you
+  // with a loadout you have since taken apart — which is why the chart drops
+  // its copy the moment a fight ends. This is the fallback for arriving faster
+  // than the network.
   useEffect(() => {
-    if (!raidId) { setState(null); return }
+    if (!raidId || preloaded) return
     let live = true
     setErr(null)
-    setState(null)
     raidSheetState().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
-      else setState(r)
+      else setFetched(r)
     }, () => { if (live) setErr('The crew did not answer. Try again.') })
     return () => { live = false }
-  }, [raidId])
+  }, [raidId, preloaded])
 
   if (!raidId || typeof document === 'undefined') return null
   const config = getRaidConfigById(raidId)
@@ -133,14 +142,14 @@ export default function RaidSheet({ raidId, anchors, onShipFx, onFightFx, onClos
           manowarAugment={state.manowarAugment}
           onLeave={onClose}
         />
-      ) : (
+      ) : err ? (
+        // Same as the boss card: only a failure gets words. "Beat to quarters…"
+        // was announcing a wait that, read on approach, is not there.
         <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
           <p className="font-karla font-600 uppercase tracking-[0.16em]"
-            style={{ fontSize: '0.62rem', color: err ? '#f87171' : '#8fb8cf' }}>
-            {err ?? 'Beat to quarters…'}
-          </p>
+            style={{ fontSize: '0.62rem', color: '#f87171' }}>{err}</p>
         </div>
-      )}
+      ) : null}
     </div>,
     document.body,
   )
