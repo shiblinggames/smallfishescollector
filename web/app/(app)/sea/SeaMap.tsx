@@ -2215,8 +2215,41 @@ export default function SeaMap({
     // rock that differs from captain to captain, so it is sorted in with the
     // coast rather than appended to it — a gate drawn after the coast would sit
     // on top of whatever coast is south of it.
-    ...WALLS.filter(w => w.node && wallUp(w, clearedNodes)).flatMap(w => GATE_ROCKS[w.node!] ?? []),
   ].sort((p, q) => p.y - q.y), [clearedNodes])
+
+  /**
+   * THE ROUTE BOUNDARIES, as broken water.
+   *
+   * Every standing wall in a bay, handed to the canvas as a line to draw a
+   * shoal along. Gates are in the list only while they are shut, so beating the
+   * boss that opens one takes its water away — the same fact the rock used to
+   * carry, said by the same list.
+   *
+   * Each takes its own bay's PALE STOP, so a shoal belongs to the water it is
+   * in: bone-grey in A Bigger Fish, and almost black out in the Last Fathom.
+   */
+  const surfLines = useMemo(() => WALLS.flatMap(w => {
+    if (!wallUp(w, clearedNodes)) return []
+    const e = wallEnds(w)
+    const bay = BAY_BY_ID[w.bay]
+    if (!e || !bay) return []
+    const hex = bay.sea[2].replace('#', '')
+    return [{ ax: e.ax, ay: e.ay, bx: e.bx, by: e.by, tint: parseInt(hex, 16) }]
+  }), [clearedNodes])
+
+  /**
+   * PUSHED WHEN IT CHANGES, AND WHENEVER THE CANVAS IS READY FOR IT.
+   *
+   * An effect alone would fire once, and on a first load it fires before the
+   * renderer exists — `gpuRef.current` is null and the shoals never arrive. The
+   * portal has the same shape of problem and solves it by re-pushing from the
+   * loop; this does the same, on the proximity tick rather than every frame,
+   * because a reference compare a few times a second is enough to notice both
+   * a gate coming down and a canvas turning up.
+   */
+  const surfRef = useRef(surfLines)
+  surfRef.current = surfLines
+  const surfPushed = useRef<typeof surfLines | null>(null)
 
   const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
     ? [
@@ -6339,6 +6372,11 @@ export default function SeaMap({
         // frame body: it changes when the window does, and measuring it sixty
         // times a second forces a layout for a number that almost never moves.
         if (fightEncRef.current) wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
+        // The bays' shoals, when the list has moved or the canvas has arrived.
+        if (surfPushed.current !== surfRef.current && gpuRef.current) {
+          gpuRef.current.surf(surfRef.current)
+          surfPushed.current = surfRef.current
+        }
         let found: Place | null = null
         // Ports are discs; waters are rings. inBand answers the ring case, and
         // the bands do not overlap, so the first match is the only match.
@@ -9600,74 +9638,24 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
   return out.sort((p, q) => p.y - q.y)
 }
 
+/* `wallRocks` lived here and is gone with the rock it made. A bay's route
+   boundary is broken water now — see seaSurfLine — and the only thing that
+   still reads a wall's geometry is the crossing test, which always did. */
+
 /**
- * ── AND THE ROCK ALONG A ROUTE'S WALLS ──────────────────────────────────────
+ * THE PERMANENT ROCK: every bay's COAST, and nothing else.
  *
- * The same rock the bay's own coast is built from, laid down a line instead of
- * round a circle. Which is the whole reason a route reads: a captain has spent
- * the last hour learning that rock like that is a wall, and this is that rock.
+ * The route walls used to be here too, as rock laid end to end every couple of
+ * hundred pixels — four pieces of art repeating down thirty-seven thousand
+ * pixels of boundary, which reads as exactly that. They are shoals now, drawn
+ * by the water rather than built out of objects: see seaSurfLine, and note that
+ * the wall itself is untouched, because collision has always read the SEGMENT
+ * and never the stone beside it.
  *
- * TWO ROWS AND SHINGLE, offset either side of the line so a wall has a width
- * and a bit of shore rather than being a hairline of boulders. The arithmetic
- * wall is the segment itself — see the crossing test in the frame loop — so
- * these are allowed to wander a little; that is what stops a hand-drawn route
- * looking like a hand-drawn diagram.
+ * The bay's own rim stays rock. That is a coast — the edge of the water, with
+ * land behind it — and a coast is a thing rather than a condition of the sea.
  */
-function wallRocks(w: Wall): { art: string; x: number; y: number; size: number }[] {
-  const e = wallEnds(w)
-  const bay = BAY_BY_ID[w.bay]
-  if (!e || !bay) return []
-  const KIND = CHAPTER_ROCKS[bay.rocks]
-  const STEP = rockStep(KIND)
-
-  let seed = 0x27d4eb2f ^ Math.imul(Math.round(w.a[0]), 0x9e3779b1) ^ Math.round(w.b[1])
-  seed >>>= 0
-  const nx = () => {
-    seed ^= seed << 13; seed >>>= 0
-    seed ^= seed >>> 17
-    seed ^= seed << 5; seed >>>= 0
-    return seed / 0x100000000
-  }
-
-  const dx = e.bx - e.ax, dy = e.by - e.ay
-  const L = Math.hypot(dx, dy) || 1
-  const ux = dx / L, uy = dy / L
-  const px = -uy, py = ux
-  const out: { art: string; x: number; y: number; size: number }[] = []
-
-  for (const side of [-1, 1]) {
-    for (let t = 0; t <= L; t += STEP) {
-      const k = KIND.wall[Math.min(KIND.wall.length - 1, Math.floor(nx() * KIND.wall.length))]
-      const off = side * (STEP * 0.32 + nx() * STEP * 0.3)
-      const a = t + (nx() - 0.5) * STEP * 0.4
-      out.push({
-        art: k.art, x: e.ax + ux * a + px * off, y: e.ay + uy * a + py * off,
-        size: k.min + nx() * (k.max - k.min),
-      })
-    }
-    for (let t = 0; t <= L; t += PEBBLE_STEP) {
-      const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
-      const r = nx()
-      const off = side * (STEP * 0.2 + nx() * STEP * 0.5)
-      const a = t + (nx() - 0.5) * PEBBLE_STEP * 0.8
-      out.push({
-        art: pa.art, x: e.ax + ux * a + px * off, y: e.ay + uy * a + py * off,
-        size: pa.min * 0.7 + r * r * (pa.max - pa.min) * 0.7,
-      })
-    }
-  }
-  return out
-}
-
-/** The permanent rock: every bay's coast, and every wall that is not a gate. */
-const BAY_WALLS = [
-  ...BAYS.flatMap(bayRocks),
-  ...WALLS.filter(w => !w.node).flatMap(wallRocks),
-].sort((p, q) => p.y - q.y)
-
-/** And the gates, per gate, so one can come down without rebuilding the rest. */
-const GATE_ROCKS: Record<string, { art: string; x: number; y: number; size: number }[]> =
-  Object.fromEntries(WALLS.filter(w => w.node).map(w => [w.node!, wallRocks(w).sort((p, q) => p.y - q.y)]))
+const BAY_WALLS = [...BAYS.flatMap(bayRocks)].sort((p, q) => p.y - q.y)
 
 /** How far off a wall a refused hull is set down. A shade under a boat's beam,
  *  so she rides against it rather than bouncing off it. */

@@ -46,6 +46,7 @@ import { makeGulls, type Gulls } from './seaGulls'
 import { makeSplash, type Splash } from './seaSplash'
 import { makeGunFx, type GunFx, type ImpactKind } from './seaGunFx'
 import { makeAbilityFx, type AbilityFx, type AbilityShape } from './seaAbilityFx'
+import { makeSurf, type Surf, type SurfLine } from './seaSurfLine'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
@@ -147,6 +148,12 @@ export type GpuHandle = {
   /** A hull goes down: the sea boils, wreckage floats up, a slick spreads —
    *  and every fish in earshot leaves. */
   gunsink(x: number, y: number): void
+  /**
+   * THE BAYS' ROUTE BOUNDARIES, as shoals rather than as rock. Set when the
+   * list changes — a gate coming down removes a line — and not per frame. See
+   * seaSurfLine, including why this is not collision.
+   */
+  surf(lines: SurfLine[]): void
   /**
    * A CREW ABILITY LANDS on the hull at `x,y`, in its class's colour. `shape`
    * is what it does rather than which one it is — see seaAbilityFx.
@@ -526,6 +533,11 @@ export default function SeaIslandsGPU({
       // than through it.
       const spells: AbilityFx = makeAbilityFx(PIXI)
       world.addChild(spells.view)
+      // THE BAYS' BOUNDARIES, as broken water. In the world with everything
+      // else lying on the plane, and UNDER the boats: a shoal is water, and a
+      // hull crossing in front of one is right.
+      const surf: Surf = makeSurf(PIXI)
+      world.addChildAt(surf.view, 0)
 
       // ── WHAT IS IN THE AIR ────────────────────────────────────────
       //
@@ -905,6 +917,7 @@ export default function SeaIslandsGPU({
         splash.advance(dt)
         guns.advance(dt)
         spells.advance(dt)
+        surf.advance(t)
         // The last two are where the HULL is on the stage — usually the screen
         // centre, because the camera follows her, but not always. A fight frames
         // the engagement rather than the captain, and she sits low and to the
@@ -1054,6 +1067,7 @@ export default function SeaIslandsGPU({
           // because it is the one thing out here making its own light.
           guns.night(d)
           spells.night(d)
+          surf.night(d)
           // NOT a tint. Everything else on this canvas is multiplied toward the
           // hour; these are the things that answer it by emitting, so they take
           // the darkness itself and get BRIGHTER as it deepens.
@@ -1173,6 +1187,7 @@ export default function SeaIslandsGPU({
         gunimpact(x, y, kind) { guns.impact(x, y, kind) },
         gunshock(x, y) { guns.shock(x, y) },
         gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
+        surf(lines) { surf.set(lines) },
         ability(x, y, tx, ty, color, shape, power) { spells.cast(x, y, tx, ty, color, shape, power) },
         ward(side, x, y, beam, color, up) { spells.ward(side, x, y, beam, color, up) },
         status(side, x, y, beam, kind) { spells.status(side, x, y, beam, kind) },
