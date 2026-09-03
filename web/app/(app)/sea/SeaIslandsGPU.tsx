@@ -45,6 +45,7 @@ import { makeShoals, type Shoals } from './seaShoals'
 import { makeGulls, type Gulls } from './seaGulls'
 import { makeSplash, type Splash } from './seaSplash'
 import { makeGunFx, type GunFx, type ImpactKind } from './seaGunFx'
+import { makeAbilityFx, type AbilityFx, type AbilityShape } from './seaAbilityFx'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
@@ -146,6 +147,11 @@ export type GpuHandle = {
   /** A hull goes down: the sea boils, wreckage floats up, a slick spreads —
    *  and every fish in earshot leaves. */
   gunsink(x: number, y: number): void
+  /**
+   * A CREW ABILITY LANDS on the hull at `x,y`, in its class's colour. `shape`
+   * is what it does rather than which one it is — see seaAbilityFx.
+   */
+  ability(x: number, y: number, color: number, shape: AbilityShape): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -490,6 +496,11 @@ export default function SeaIslandsGPU({
       // the splash so a broadside's smoke can hang in front of a fish.
       const guns: GunFx = makeGunFx(PIXI)
       world.addChild(guns.view)
+      // ABOVE THE GUNS. An ability is the one thing in a fight that is
+      // unambiguously magic, and it should read over the powder smoke rather
+      // than through it.
+      const spells: AbilityFx = makeAbilityFx(PIXI)
+      world.addChild(spells.view)
 
       // ── WHAT IS IN THE AIR ────────────────────────────────────────
       //
@@ -868,6 +879,7 @@ export default function SeaIslandsGPU({
         // driven from there animates during a catch; this one is not.
         splash.advance(dt)
         guns.advance(dt)
+        spells.advance(dt)
         // The last two are where the HULL is on the stage — usually the screen
         // centre, because the camera follows her, but not always. A fight frames
         // the engagement rather than the captain, and she sits low and to the
@@ -1016,6 +1028,7 @@ export default function SeaIslandsGPU({
           // Smoke and spray dim with the hour; the muzzle flash does not,
           // because it is the one thing out here making its own light.
           guns.night(d)
+          spells.night(d)
           // NOT a tint. Everything else on this canvas is multiplied toward the
           // hour; these are the things that answer it by emitting, so they take
           // the darkness itself and get BRIGHTER as it deepens.
@@ -1135,6 +1148,7 @@ export default function SeaIslandsGPU({
         gunimpact(x, y, kind) { guns.impact(x, y, kind) },
         gunshock(x, y) { guns.shock(x, y) },
         gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
+        ability(x, y, color, shape) { spells.cast(x, y, color, shape) },
         gunsink(x, y) {
           guns.sink(x, y)
           // AND THE FISH BOLT. A ship going down is the loudest thing that has

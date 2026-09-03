@@ -445,9 +445,44 @@ export type ShipFx = { x: number; y: number; rot: number; sink: number }
  * be absent (the DOM chart, `?gpu=0`) without a single branch in here.
  */
 export type FightFx = {
-  kind: 'fire' | 'hit' | 'crit' | 'miss' | 'dodge' | 'sink'
-  /** Whose hull the event belongs to: who fired, or who was struck. */
+  kind: 'fire' | 'hit' | 'crit' | 'miss' | 'dodge' | 'sink' | 'ability'
+  /** Whose hull the event belongs to: who fired, who was struck, or whose ship
+   *  an ability is happening to. */
   side: 'player' | 'enemy'
+  /**
+   * ── ABILITIES ONLY ────────────────────────────────────────────────────────
+   *
+   * WHAT IT DOES, not which one it is. Eleven classes sort into three motions —
+   * a buff rises out of the water into your hull, a debuff settles onto theirs
+   * and stays, a strike shoves the sea — and the sea only needs the motion and
+   * the class's colour. Sending the class id instead would put a table of crew
+   * classes inside the chart, which is a place it has no business being.
+   */
+  shape?: 'buff' | 'debuff' | 'strike'
+  /** The class's own colour, or the chase skin's when one is equipped. */
+  color?: string
+}
+
+/**
+ * WHICH OF THE THREE MOTIONS EACH CLASS IS.
+ *
+ * Sorted by what the ability DOES to the fight, which is not always what it
+ * sounds like: Vengeance is a ward on your own hull and rises, Oracle is read
+ * off the enemy and settles onto them. Anything unlisted rises, because a crew
+ * ability with no entry is far more likely to be help than harm.
+ */
+const ABILITY_SHAPE: Record<string, 'buff' | 'debuff' | 'strike'> = {
+  mender: 'buff',
+  sharpshot: 'buff',
+  anchor: 'buff',
+  navigator: 'buff',
+  abyssal_tide: 'buff',
+  vengeance: 'buff',
+  snare: 'debuff',
+  foresight: 'debuff',
+  requiem: 'debuff',
+  leviathan: 'strike',
+  blitz: 'strike',
 }
 
 export interface RaidCombatProps {
@@ -2260,6 +2295,19 @@ export default function RaidCombat({
   const bang = useCallback((kind: FightFx['kind'], side: FightFx['side']) => {
     onFightFxRef.current?.({ kind, side })
   }, [])
+  /** A crew ability, with the motion and the colour the water needs. */
+  const bangAbility = useCallback((classId: string, color: string) => {
+    const shape = ABILITY_SHAPE[classId] ?? 'buff'
+    onFightFxRef.current?.({
+      kind: 'ability',
+      // A buff happens to YOUR ship and everything else happens to theirs,
+      // which is what the three motions already encode — so the side falls out
+      // of the shape rather than being a fourth thing to keep in step.
+      side: shape === 'buff' ? 'player' : 'enemy',
+      shape,
+      color,
+    })
+  }, [])
 
   // Sinking is state rather than an animation, so it has to be mirrored for the
   // frame loop below to see it (the loop closes over its first render).
@@ -3452,6 +3500,11 @@ export default function RaidCombat({
     // happens to the enemy), e.g. Mako's Tempest turns Blitz into a lightning storm.
     const chaseSkinId: string | null = summonSkin?.chase ? summonSkin.id : null
     setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: summonColor, image: crew.imageUrl ?? null, chase: !!summonSkin?.chase, skinId: summonSkin?.id ?? null })
+    // AND IT HAPPENS IN THE WATER. The banner above says who and what; this is
+    // the ability landing on a hull that is actually floating out there. It
+    // takes the SUMMON colour, so a chase skin themes the water the same way it
+    // already themes the numbers and the auras.
+    bangAbility(def.id, summonColor)
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
 
     // Per-ability signature stage FX alongside the banner, so every ability

@@ -7771,6 +7771,18 @@ hullRef={hullRefFor(t.key)} />
             return
           }
           const at = e.side === 'enemy' ? them : me
+          if (e.kind === 'ability') {
+            // The colour arrives as the class's own CSS hex, because that is
+            // what the fight has; Pixi wants a number. Parsed here rather than
+            // in the fight, which should not have to know what the renderer
+            // eats.
+            const hex = (e.color ?? '#ffffff').replace('#', '')
+            const n = parseInt(hex.length === 3
+              ? hex.split('').map(c => c + c).join('')
+              : hex, 16)
+            gpu.ability(at.x, at.y, Number.isFinite(n) ? n : 0xffffff, e.shape ?? 'buff')
+            return
+          }
           if (e.kind === 'sink') { gpu.gunsink(at.x, at.y); return }
           if (e.kind === 'dodge') {
             // AWAY FROM WHAT SHE SLIPPED. A dodge is a direction, and the only
