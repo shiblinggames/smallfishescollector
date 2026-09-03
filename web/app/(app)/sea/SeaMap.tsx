@@ -6966,7 +6966,13 @@ hullRef={hullRefFor(t.key)} />
           chest, which is where they were floating above the boat. */}
       {/* NO `transform` HERE EITHER — the loop owns it, because it scales with
           the zoom. Same reason as the sky above. */}
-      <div ref={rippleRef} aria-hidden style={{
+      <div ref={rippleRef} aria-hidden
+        // HER OWN WATER KEEPS WORKING. The chart is frozen in a fight, and a
+        // ship of the line sitting in a dead flat ring is the one place that
+        // reads as the game having stopped rather than the camera having
+        // settled. See .sea-alive.
+        className={fightOn ? 'sea-alive' : undefined}
+        style={{
         position: 'absolute', inset: 0, zIndex: Z.ripples, pointerEvents: 'none',
         // How heavy the hull reads, 0 at the Sloop and 1 at the Man-o-War. The
         // loop owns `transform` on this node and nothing else, so a custom
@@ -10948,7 +10954,12 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
           onto the bobbing node would simply be ignored. This one carries what
           the fight does to her — the shudder of a hit, the list, the long roll
           as she goes down — while the bob underneath goes on being the sea. */}
-      <div ref={hullRef} style={{ transformOrigin: 'bottom center' }}>
+      <div ref={hullRef}
+        // The one hull in a fight is the other thing that must not go still —
+        // see .sea-alive. `hullRef` is handed in for the fought ship and
+        // nothing else, so this marks exactly that one.
+        className={hullRef ? 'sea-alive' : undefined}
+        style={{ transformOrigin: 'bottom center' }}>
       <div style={{
         animation: `encBob 5.5s ease-in-out ${(-phase * 5.5).toFixed(2)}s infinite`,
         transformOrigin: 'bottom center',

@@ -2664,6 +2664,24 @@ body.hardcore-gauntlet::after {
   animation-play-state: paused !important;
 }
 
+/* ── EXCEPT WHAT THE SCENE IS ABOUT ─────────────────────────────────────────
+   The freeze is a blunt instrument on purpose: with the rod out, everything on
+   the chart is background and none of it should cost a frame. A fight is not
+   quite that. The two hulls in it are the SUBJECT, and a subject that stops
+   breathing reads as a paused game rather than as a held camera — the ship you
+   are firing from sitting dead flat in dead water.
+
+   So a fight marks those two, and only those two, alive. Two hulls' worth of
+   animation is nothing next to the whole chart's; what was expensive was
+   everything else, and everything else is still stopped.
+
+   Specificity does the work: two classes beat `.sea-frozen *`, so this wins
+   without needing to be more !important than the rule above. */
+.sea-frozen .sea-alive,
+.sea-frozen .sea-alive * {
+  animation-play-state: running !important;
+}
+
 /* ── LANDMARKS THAT MOVE ─────────────────────────────────────────────────────
    Only the ones that would. A buoy is a float on a chain and never stops; a
    wreck is aground but the swell still works at it. Everything else out there
