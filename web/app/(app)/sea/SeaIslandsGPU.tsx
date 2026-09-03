@@ -44,6 +44,7 @@ import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { makeShoals, type Shoals } from './seaShoals'
 import { makeGulls, type Gulls } from './seaGulls'
 import { makeSplash, type Splash } from './seaSplash'
+import { makeGunFx, type GunFx, type ImpactKind } from './seaGunFx'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
@@ -130,6 +131,14 @@ export type GpuHandle = {
    * seaSplash, and the hold in FishingHere it is built to sit inside.
    */
   splash(x: number, y: number, dir: number, perfect: boolean): void
+  /**
+   * A HULL FIRES, at a world point. Flash, smoke off her side, and the water
+   * she shoves aside. See seaGunFx — including why a raid is allowed a Pixi
+   * effects layer now when it very much was not before.
+   */
+  gunfire(x: number, y: number, tx: number, ty: number): void
+  /** And where a shot ends up: a ring on the water and spray off it. */
+  gunimpact(x: number, y: number, kind: ImpactKind): void
   /** The guiding path: from the hull to wherever the tour has sent her, or
    *  null for neither. See seaPath — naming a place says WHAT, and on a chart
    *  this size a new captain also needs WHICH WAY. */
@@ -469,6 +478,11 @@ export default function SeaIslandsGPU({
       // happens at a place on the sea and stays there.
       const splash: Splash = makeSplash(PIXI)
       world.addChild(splash.view)
+      // THE GUNS. In the world with the splash and for the same reasons: this
+      // is weather on the water at a place, not an effect on the lens. Above
+      // the splash so a broadside's smoke can hang in front of a fish.
+      const guns: GunFx = makeGunFx(PIXI)
+      world.addChild(guns.view)
 
       // ── WHAT IS IN THE AIR ────────────────────────────────────────
       //
@@ -846,6 +860,7 @@ export default function SeaIslandsGPU({
         // The chart's rAF loop returns early while the dial is up, so nothing
         // driven from there animates during a catch; this one is not.
         splash.advance(dt)
+        guns.advance(dt)
         // The last two are where the HULL is on the stage — usually the screen
         // centre, because the camera follows her, but not always. A fight frames
         // the engagement rather than the captain, and she sits low and to the
@@ -991,6 +1006,9 @@ export default function SeaIslandsGPU({
           // the water under it.
           gulls.night(nightTint(d * 0.72, w))
           splash.night(nightTint(d * 0.55, w))
+          // Smoke and spray dim with the hour; the muzzle flash does not,
+          // because it is the one thing out here making its own light.
+          guns.night(d)
           // NOT a tint. Everything else on this canvas is multiplied toward the
           // hour; these are the things that answer it by emitting, so they take
           // the darkness itself and get BRIGHTER as it deepens.
@@ -1106,6 +1124,8 @@ export default function SeaIslandsGPU({
         },
         scatter(x, y) { shoals.scatter(x, y) },
         splash(x, y, dir, perfect) { splash.fire(x, y, dir, perfect) },
+        gunfire(x, y, tx, ty) { guns.fire(x, y, tx, ty) },
+        gunimpact(x, y, kind) { guns.impact(x, y, kind) },
 
         camera(x, y, zoom) {
           camX = x; camY = y; camZoom = zoom

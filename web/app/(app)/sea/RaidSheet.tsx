@@ -15,10 +15,13 @@
 // raid has never had one: RaidCombat is DOM and framer-motion from end to end.
 // Overlaying it costs no context at all.
 //
-// IT STILL HOLDS FOR ANYTHING NEW. If a raid ever gains a Pixi effects layer it
-// must be Canvas2D while this mount exists, or it will take the chart down —
-// which is exactly what happened the last time, and the reason that note is in
-// that file.
+// AND THE RULE IT LEAVES BEHIND IS NARROWER THAN IT LOOKS. The danger was
+// never "Pixi in a raid" — it was a SECOND WebGL context. A fight over the
+// chart can draw all the Pixi it likes THROUGH THE SEA'S OWN RENDERER, because
+// that is one context and it is already open; see seaGunFx, which puts the
+// broadside on the water that way. What must never happen is a raid opening a
+// canvas of its own while this mount exists, which is what took the chart down
+// and what that note in DialFx is actually about.
 //
 // ── ONE FIGHT, TWO DOORS ────────────────────────────────────────────────────
 //
@@ -29,11 +32,11 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import RaidGame from '@/app/(app)/raids/RaidGame'
-import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
+import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 
-export default function RaidSheet({ raidId, anchors, onShipFx, onClose }: {
+export default function RaidSheet({ raidId, anchors, onShipFx, onFightFx, onClose }: {
   /** Which fight. Resolved to a config through the registry, so this cannot
    *  drift from the raid the node map opens. */
   raidId: string | null
@@ -42,6 +45,8 @@ export default function RaidSheet({ raidId, anchors, onShipFx, onClose }: {
   anchors?: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
   /** What the fight is doing to those hulls, for the chart to draw. */
   onShipFx?: (fx: { player: ShipFx; enemy: ShipFx }) => void
+  /** And what it is doing to the water between them. */
+  onFightFx?: (e: FightFx) => void
   onClose: () => void
 }) {
   const [state, setState] = useState<RaidSheetState | null>(null)
@@ -122,6 +127,7 @@ export default function RaidSheet({ raidId, anchors, onShipFx, onClose }: {
           overSea
           anchors={anchors}
           onShipFx={onShipFx}
+          onFightFx={onFightFx}
           raidMods={state.raidMods}
           bonusChargeSlots={state.bonusChargeSlots}
           manowarAugment={state.manowarAugment}

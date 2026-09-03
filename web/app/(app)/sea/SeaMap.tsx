@@ -7655,6 +7655,44 @@ hullRef={hullRefFor(t.key)} />
         // the one thing that would make a fight on the water cost more than a
         // fight on a page.
         onShipFx={fx => { shipFxRef.current = fx }}
+        /**
+         * AND THE WATER ANSWERS. The fight sends what happened; this is where
+         * it becomes a place — the chart is the only side that knows where
+         * either hull actually is, which is why the events carry no
+         * coordinates.
+         *
+         * Everything here is a no-op when the canvas is not the one drawing
+         * (the DOM chart, `?gpu=0`): `gpuRef` is simply null and the fight
+         * plays exactly as it did before, with no branch anywhere in it.
+         */
+        onFightFx={e => {
+          const hull = fightHullRef.current
+          const gpu = gpuRef.current
+          if (!hull || !gpu) return
+          const me = pos.current
+          const them = hull.at
+          if (e.kind === 'fire') {
+            if (e.side === 'player') gpu.gunfire(me.x, me.y, them.x, them.y)
+            else gpu.gunfire(them.x, them.y, me.x, me.y)
+            return
+          }
+          const at = e.side === 'enemy' ? them : me
+          if (e.kind === 'miss') {
+            // A MISS GOES IN THE WATER SOMEWHERE, and where matters: short of
+            // the hull and off to one side, so it reads as a shot that went
+            // wide rather than one that struck and did nothing.
+            const dx = at.x - (e.side === 'enemy' ? me.x : them.x)
+            const dy = at.y - (e.side === 'enemy' ? me.y : them.y)
+            const len = Math.hypot(dx, dy) || 1
+            const wide = (Math.random() - 0.5) * 320
+            gpu.gunimpact(
+              at.x - (dx / len) * 260 - (dy / len) * wide,
+              at.y - (dy / len) * 260 + (dx / len) * wide,
+              'miss')
+            return
+          }
+          gpu.gunimpact(at.x, at.y, e.kind === 'crit' ? 'crit' : 'hit')
+        }}
         onClose={() => {
           setFightId(null)
           fightEncRef.current = null

@@ -434,6 +434,21 @@ export type ShipAnchor = { x: number; y: number; w: number }
  */
 export type ShipFx = { x: number; y: number; rot: number; sink: number }
 
+/**
+ * SOMETHING HAPPENED, and the sea should know about it.
+ *
+ * Deliberately SEMANTIC, not spatial. The fight knows a shot was fired and that
+ * it crit; it does not know where either hull is in the world, and it should
+ * not have to — the chart already does, and it is the chart that decides what
+ * the water does about it. That split is also what lets the whole effects layer
+ * be absent (the DOM chart, `?gpu=0`) without a single branch in here.
+ */
+export type FightFx = {
+  kind: 'fire' | 'hit' | 'crit' | 'miss'
+  /** Whose hull the event belongs to: who fired, or who was struck. */
+  side: 'player' | 'enemy'
+}
+
 export interface RaidCombatProps {
   enemy: BroadsideEnemy
   /** Challenge-mode elite affix for this encounter. When set, the enemy
@@ -656,6 +671,8 @@ export interface RaidCombatProps {
    * actually moving.
    */
   onShipFx?: (fx: { player: ShipFx; enemy: ShipFx }) => void
+  /** Moments the sea answers: a broadside, a shot landing. See FightFx. */
+  onFightFx?: (e: FightFx) => void
   /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
    *  so RaidCombat can derive each crew's class + current milestone via
    *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
@@ -711,7 +728,7 @@ export default function RaidCombat({
   contractsWon = [],
   aimStyle = 'bar',
   dialAim,
-  overSea = false, anchors, onShipFx,
+  overSea = false, anchors, onShipFx, onFightFx,
   onPhaseBg,
   critStreakCfg,
   defeatSequence,
@@ -2177,6 +2194,13 @@ export default function RaidCombat({
   const playerPlateRef = useRef<HTMLButtonElement | null>(null)
   const onShipFxRef = useRef(onShipFx)
   useEffect(() => { onShipFxRef.current = onShipFx }, [onShipFx])
+  const onFightFxRef = useRef(onFightFx)
+  useEffect(() => { onFightFxRef.current = onFightFx }, [onFightFx])
+  /** Tell the sea. Through a ref, because these fire from inside timeouts and
+   *  playback chains that closed over their props a beat ago. */
+  const bang = useCallback((kind: FightFx['kind'], side: FightFx['side']) => {
+    onFightFxRef.current?.({ kind, side })
+  }, [])
 
   // Sinking is state rather than an animation, so it has to be mirrored for the
   // frame loop below to see it (the loop closes over its first render).
@@ -2569,6 +2593,7 @@ export default function RaidCombat({
         }
         playerHpRef.current = next
         setPlayerHp(next)
+        bang('hit', 'player')
         setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
         setPlayerShakeKey(k => k + 1)
         // Clear the splat after the standard hold (matches the in-combat
@@ -3750,6 +3775,10 @@ export default function RaidCombat({
     setEnemyHp(newHp)
     enemyHpRef.current = newHp
     if (!skipSplat) {
+      // THE SEA TAKES IT TOO. One call, at the one place every shot that lands
+      // on her passes through, so no attack can be added later that hits a hull
+      // without the water noticing.
+      bang(hitKind === 'crit' ? 'crit' : 'hit', 'enemy')
       setEHitsplat({ key: Date.now(), text: String(rawDmg), color: splatColor ?? (hitKind === 'crit' ? '#fbbf24' : '#f87171'), big: true })
       setTimeout(() => setEHitsplat(null), 480)
     }
@@ -6534,6 +6563,11 @@ export default function RaidCombat({
           })
         } else {
           setPlayerRecoilKey(k => k + 1)
+          // HER GUNS GO OFF ON THE WATER. Paired with the recoil rather than
+          // with the damage, because the flash belongs to the moment she fires
+          // and the ring belongs to the moment it arrives.
+          if (step.splatTarget === 'enemy') bang('fire', 'player')
+          else if (step.splatTarget === 'player') bang('fire', 'enemy')
           setCannonShot({ key: Date.now() + i, kind: cannonKind })
           setTimeout(() => setCannonShot(null), 700)
         }
@@ -10685,6 +10719,11 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
   const dmgMatch = /^-?(\d+)$/.exec(text)
   const dmg = dmgMatch ? Number(dmgMatch[1]) : null
   const isVolley = !!volley && !big
+  // WHERE THIS ONE IS THROWN, decided once. The component is keyed on the
+  // splat, so it mounts fresh for every hit and a ref is a per-hit constant —
+  // rolling it in render would re-throw the number on every frame it painted.
+  const throwRef = useRef<number | null>(null)
+  if (throwRef.current === null) throwRef.current = (Math.random() - 0.5) * 2
   // A FIVE-FIGURE HIT IS A LANDMARK, so it stops looking like a four-figure one.
   // Median raid damage in the live data is 42 and the best raid hit ever landed
   // is 3,500; five figures happens only deep in a Gauntlet run. Exactly one
@@ -10700,6 +10739,11 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
     : dmg <= 76 ? Math.max(0.9, dmg / 45)
     : Math.min(2.35, 1.7 + Math.log10(dmg / 76) * 0.3)
   const scaleMult = big ? mag * 1.22 : isVolley ? mag * 1.1 : mag
+  // A HAYMAKER IS THROWN FURTHER. The lateral spread is what stops a rapid
+  // exchange stacking into one column; the rise is the arc's peak, and a huge
+  // hit deliberately rises LESS — it should read as heavy, not as lifting.
+  const throwX = throwRef.current * (huge ? 26 : big ? 52 : isVolley ? 44 : 36)
+  const rise = huge ? -24 : big ? -42 : -34
   const baseFontPx = big ? 32 : isVolley ? 27 : 23
   const fontPx     = Math.round(baseFontPx * scaleMult)
   // Outline via a tight 8-way dark shadow ring (smoother on serif glyphs than
@@ -10729,26 +10773,49 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
           expanding ring, and radiating sparks in the number's color. */}
       {big && <CritFlare color={color} />}
       {huge && <HugeHitRing color={color} />}
+      {/* CENTRING LIVES OUT HERE NOW, on a plain wrapper, so the number inside
+          is free to animate `x` in pixels. It used to hold `x: '-50%'` through
+          every keyframe purely to stay centred, which meant the one axis a
+          thrown thing most needs was spoken for. */}
+      <div style={{ position: 'absolute', left: '50%', top: '38%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 10 }}>
       <motion.div
         // Crits + volleys punch IN (start oversized, settle to 1); normal hits
         // grow in. Monotonic scale = no overshoot bounce that reads as flicker.
-        // x:'-50%' is the centering offset (NOT a static `transform`, which FM
-        // would clobber once it animates scale/y). Crits add a quick rotate-punch.
+        // Crits add a quick rotate-punch.
         // A huge hit lands HARDER and then HANGS. It punches in from further
         // out, barely drifts (weight, not lift), and leaves slowly, so the
         // number you waited a whole run for is legible long enough to read.
-        initial={{ opacity: 0, x: '-50%', y: 2, scale: huge ? 2.1 : big ? 1.62 : isVolley ? 1.3 : 0.55, rotate: huge ? -4 : big ? -7 : 0 }}
-        animate={{ opacity: 1, x: '-50%', y: huge ? -22 : big ? -38 : -30, scale: 1, rotate: 0 }}
-        exit={{ opacity: 0, x: '-50%', y: huge ? -40 : big ? -60 : -48, scale: huge ? 1.16 : big ? 1.1 : 0.92 }}
+        //
+        // ── AND IT IS THROWN, NOT RAISED ──────────────────────────────────
+        //
+        // It rose dead vertically, which is why a fast exchange looked like one
+        // number blinking in place: every hit took the identical path off the
+        // same point. Now each is thrown clear of the hull on its own heading
+        // and arcs over — up fast, then easing into a fall — so two hits half a
+        // second apart are visibly two hits. The heading is per-splat and
+        // random, and the arc's peak scales with the blow: a haymaker is thrown
+        // further than a chip.
+        initial={{ opacity: 0, x: 0, y: 2, scale: huge ? 2.1 : big ? 1.62 : isVolley ? 1.3 : 0.55, rotate: huge ? -4 : big ? -7 : 0 }}
+        animate={{
+          opacity: 1,
+          x: throwX,
+          // Up, over, and starting down. The last value is the top of the fall
+          // rather than the bottom: `exit` carries it the rest of the way, so
+          // the number never hangs at the top of its arc looking weightless.
+          y: [2, rise, rise + 7],
+          scale: 1,
+          rotate: 0,
+        }}
+        exit={{ opacity: 0, x: throwX * 1.5, y: rise + 26, scale: huge ? 1.16 : big ? 1.1 : 0.92 }}
         transition={{
           opacity: { duration: huge ? 0.1 : 0.14 },
-          y:       { duration: huge ? 0.62 : 0.34, ease: [0.22, 1, 0.36, 1] },
+          x:       { duration: huge ? 0.7 : 0.5, ease: [0.16, 0.9, 0.3, 1] },
+          y:       { duration: huge ? 0.62 : 0.42, times: [0, 0.62, 1], ease: [0.22, 1, 0.36, 1] },
           scale:   { duration: huge ? 0.3 : big ? 0.2 : isVolley ? 0.22 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
           rotate:  { duration: 0.28, ease: [0.2, 1.15, 0.4, 1] },
         }}
         style={{
-          position: 'absolute', left: '50%', top: '38%',
-          pointerEvents: 'none', zIndex: 10,
+          pointerEvents: 'none',
           color,
           fontFamily: 'var(--font-cinzel)', fontWeight: 800,
           fontStyle: big ? 'italic' : 'normal',
@@ -10768,6 +10835,7 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
             to the digit, and the records screens print it in full. */}
         {text.replace(/\d{4,}/g, n => compact(Number(n)))}
       </motion.div>
+      </div>
     </>
   )
 }

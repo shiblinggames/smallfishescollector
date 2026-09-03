@@ -21,7 +21,7 @@ import {
 import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
 import { isUniqueLoot } from '@/lib/bossRaids'
-import RaidCombat, { type ShipAnchor, type ShipFx } from './RaidCombat'
+import RaidCombat, { type ShipAnchor, type ShipFx, type FightFx } from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
 import TideModal from './TideModal'
@@ -306,7 +306,7 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, config, equippedShipSkin, shipSkins, equippedItems,
+export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, onFightFx, config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
   ownedSpecialItems = [],
   /**
@@ -353,6 +353,8 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
   anchors?: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
   /** What those hulls are doing, sent back for the chart to draw. */
   onShipFx?: (fx: { player: ShipFx; enemy: ShipFx }) => void
+  /** And the moments the water answers. */
+  onFightFx?: (e: FightFx) => void
   config: BossRaidConfig
   /** Fishing gear widening the dial bands. Only the Finn finale passes it. */
   dialAim?: DialAimBonus
@@ -1747,6 +1749,7 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
                 overSea={overSea}
                 anchors={anchors}
                 onShipFx={onShipFx}
+                onFightFx={onFightFx}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}
