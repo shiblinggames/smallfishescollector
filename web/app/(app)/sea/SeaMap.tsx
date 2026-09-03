@@ -3000,6 +3000,77 @@ export default function SeaMap({
   const fightEncRef = useRef<Encounter | null>(null)
   /** Whether the guns are out, for the frame loop (which must not read state). */
   const fightOnRef = useRef(false)
+  /** And whether she has ARRIVED. Until she has, the loop runs in full so she
+   *  can be sailed onto her station; after, it stands down to `fightFrame`. */
+  const fightFastRef = useRef(false)
+
+  /**
+   * THE ONLY THING STILL MOVING ON THIS CHART.
+   *
+   * Everything a frame normally does — proximity, marks, the fleet, traders,
+   * weather, walls, the near pass — is about a boat that is going somewhere,
+   * and in a duel she is not. What is left is the pose of two hulls and what
+   * the fight is doing to them, which is a couple of dozen lines of arithmetic
+   * and three style writes.
+   *
+   * Her bob stays. It is one sine and it is the difference between a ship
+   * holding station and a sprite pasted on the water.
+   */
+  const fightFrame = useCallback((now: number) => {
+    const t = now / 1000
+    const z = zoomRef.current
+    const pfx = shipFxRef.current?.player
+    const fxX = pfx ? pfx.x : 0
+    const fxY = pfx ? pfx.y : 0
+    const fxRot = pfx ? pfx.rot : 0
+    const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
+    const offX = (pos.current.x - camAt.current.x) * z
+    const offY = (pos.current.y - camAt.current.y) * z * GROUND
+
+    const boat = boatRef.current
+    if (boat) {
+      boat.style.transform =
+        `translate(-50%, -50%) translate(${fxX}px, ${fxY}px) scale(${z})`
+        + ` translateY(${bob}px) scaleX(${facing.current}) rotate(${fxRot}deg)`
+      boat.style.marginLeft = `${offX}px`
+      boat.style.marginTop = `${offY}px`
+    }
+    gpuRef.current?.skipper({
+      bob, heel: fxRot, facing: facing.current, zoom: z,
+      frame: frameRef.current, stage: 0,
+      offX: offX + fxX, offY: offY + fxY,
+    })
+
+    // The enemy's hull, and the anchors both sides hang their effects on. Pure
+    // arithmetic off a fixed world point, so it is cheap enough to keep honest
+    // rather than freezing a last-known value and hoping the camera never
+    // shifts under it.
+    const hull = fightHullRef.current
+    const box = wrapBoxRef.current
+    if (hull && box) {
+      const cx = box.left + box.width / 2
+      const cy = box.top + box.height / 2
+      anchorsRef.current = {
+        player: { x: cx + offX, y: cy + offY, w: hullRef.current.beamW * z },
+        enemy: {
+          x: cx + (hull.at.x - camAt.current.x) * z,
+          y: cy + (hull.at.y - camAt.current.y) * z * GROUND,
+          w: hull.encW * z,
+        },
+      }
+      const efx = shipFxRef.current?.enemy
+      const el = enemyHullRef.current
+      if (el && efx) {
+        el.style.transition = efx.sink
+          ? 'opacity 1.3s ease-in, transform 1.3s ease-in'
+          : 'none'
+        el.style.opacity = efx.sink ? '0' : '1'
+        el.style.transform = efx.sink
+          ? `translate(${efx.x}px, ${efx.y + 42}px) rotate(${efx.rot - 13}deg)`
+          : `translate(${efx.x}px, ${efx.y}px) rotate(${efx.rot}deg)`
+      }
+    }
+  }, [])
   /** Where the camera holds while the guns are out. See FIGHT_FRAME. */
   const fightCam = useRef<{ x: number; y: number } | null>(null)
   /** The world point she takes up in a duel. Chosen once, when the guns come
@@ -4746,6 +4817,34 @@ export default function SeaMap({
         raf = requestAnimationFrame(step)
         return
       }
+
+      /**
+       * ── AND THE SAME THING ONCE THE GUNS ARE OUT ──────────────────────────
+       *
+       * The dial above is why fishing is smooth: with the rod out this loop
+       * stops entirely, and `.sea-frozen` pauses every CSS animation under the
+       * chart. The canvas keeps running, so the water is still alive, but the
+       * MAIN THREAD is free — which is the thread the minigame is drawn on.
+       *
+       * A fight wants exactly that and I argued against it: the fight hangs its
+       * effects on where the two hulls are, so I kept the whole loop running to
+       * keep those positions live. That was wrong in a way worth writing down.
+       * Once she is on station NOTHING MOVES — she holds, the camera is pinned
+       * to the engagement, and the enemy is a fixed point in the world. There
+       * are no live positions to keep; there is one pose, and it is already
+       * written.
+       *
+       * So this is the dial's freeze with a hole in it exactly the size of the
+       * fight: the two hulls still answer their own blows, because a recoil and
+       * a shudder are the fight happening rather than the chart running, and
+       * everything else on this chart stands down until she sails again.
+       */
+      if (fightFastRef.current) {
+        fightFrame(now)
+        last = now
+        raf = requestAnimationFrame(step)
+        return
+      }
       // Clamped delta: a backgrounded tab returns with an enormous gap, and an
       // unclamped one would teleport the boat across the chart.
       const dt = Math.min(0.05, (now - last) / 1000)
@@ -4786,6 +4885,16 @@ export default function SeaMap({
           const k = 1 - Math.exp(-2.6 * dt)
           pos.current.x += (station.x - pos.current.x) * k
           pos.current.y += (station.y - pos.current.y) * k
+          // ARRIVED. From here the chart stands down to `fightFrame` — see the
+          // freeze at the top of the loop. Measured against the camera as well
+          // as the hull, because a camera still gliding into the shot is a
+          // camera whose anchors are still moving.
+          if (Math.hypot(station.x - pos.current.x, station.y - pos.current.y) < 8
+            && fightCam.current
+            && Math.hypot(fightCam.current.x - camAt.current.x,
+              fightCam.current.y - camAt.current.y) < 8) {
+            fightFastRef.current = true
+          }
           // GUNS TO STARBOARD. The art faces right unmirrored (the enemy's is
           // flipped to face back at you), and the enemy is up and to the right.
           facing.current = 1
@@ -6360,7 +6469,11 @@ export default function SeaMap({
         // a frame of white before the first paint.
         background: '#0b1a24',
       }}
-      className={`sea-surface${dialUp ? ' sea-frozen' : ''}`}
+      // FROZEN FOR A FIGHT TOO. `.sea-frozen` pauses every CSS animation under
+      // the chart — the heave rings, the hull bobs, the mark wobbles. With the
+      // rod out that is most of why fishing is smooth, and a broadside has the
+      // same claim on the main thread.
+      className={`sea-surface${dialUp || fightOn ? ' sea-frozen' : ''}`}
     >
       {/* THE WATER'S COLOUR, on a layer of its own.
           Under everything and containing nothing, so repainting it repaints one
@@ -7535,6 +7648,7 @@ hullRef={hullRefFor(t.key)} />
           setFightId(null)
           fightEncRef.current = null
           fightOnRef.current = false
+          fightFastRef.current = false
           shipFxRef.current = null
           anchorsRef.current = null
           // THE HULL GOES BACK TO BEING A HULL. The fight wrote a transform
@@ -7740,6 +7854,7 @@ hullRef={hullRefFor(t.key)} />
                 // before the sheet opens rather than looked up from inside it.
                 fightEncRef.current = nearEnc
                 fightOnRef.current = true
+                fightFastRef.current = false
                 wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
                 setFightId(n.raidId)
                 return true
