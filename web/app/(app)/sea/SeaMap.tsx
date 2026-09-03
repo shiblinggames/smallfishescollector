@@ -2965,7 +2965,42 @@ export default function SeaMap({
    * only two moments worth asking are "the target is met" and "the clock ran
    * out", and both are below.
    */
+  /**
+   * ── THE MARK HAS TO TURN ON THE CATCH THAT EARNS IT ───────────────────────
+   *
+   * Every one of his jobs counts CATCHES — a zone, a rarity, a run of perfects,
+   * an ancient — and all of it is counted on the server, so the chart cannot
+   * know a job just finished by watching its own state. It was only re-read on
+   * mount and on hailing him, which meant the gold mark and the gold bearing
+   * appeared on the NEXT PAGE LOAD: you landed the fish that finished the job
+   * and the sea said nothing until you reloaded.
+   *
+   * So a reel asks again — but only when the answer can have changed. No job
+   * open, or one already finished, and there is nothing on this screen that
+   * could move: those cases cost a comparison rather than a query.
+   *
+   * DEBOUNCED, because `finnState` counts catches across several tables and a
+   * good run lands a fish every few seconds. One read a second and a bit,
+   * however many fish arrive in it, and the last catch of a burst is always
+   * inside the window that follows it.
+   */
+  const finnPollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refreshFinnSoon = useCallback(() => {
+    const cur = finnRef.current
+    if (!cur?.quest || cur.questReady) return
+    if (finnPollRef.current) return
+    finnPollRef.current = setTimeout(() => {
+      finnPollRef.current = null
+      void finnState().then(f => { if (f) setFinn(f) })
+    }, 1200)
+  }, [])
+  useEffect(() => () => { if (finnPollRef.current) clearTimeout(finnPollRef.current) }, [])
+
   const onFinnReel = useCallback((r: { perfectStreak: number; caught: number }) => {
+    // FIRST, and outside the bet guard below: a job and a wager are different
+    // things, and a captain with no wager running is exactly the captain most
+    // likely to have a job on.
+    refreshFinnSoon()
     const bet = finnRef.current?.challenge
     if (!bet) return
     if (bet.type === 'perfect_streak') {
@@ -2978,7 +3013,7 @@ export default function SeaMap({
         return next
       })
     }
-  }, [])
+  }, [refreshFinnSoon])
 
   // THE CLOCK RUNNING OUT IS ALSO AN ANSWER. A speed bet nobody finishes would
   // otherwise sit on the profile forever, blocking every future offer, and the
