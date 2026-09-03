@@ -59,6 +59,7 @@ import { installSpaceAction, typingInField, uncoveredCenter } from '@/lib/spaceA
 import { compact } from '@/lib/almanac'
 import { createPortal } from 'react-dom'
 import { DialSVG, CX, CY, OUTER_R, INNER_R } from '@/components/FishingDial'
+import AimBarFx, { type AimBarFxHandle } from './AimBarFx'
 import type { ZoneDef } from '@/app/(app)/fishing/depths'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, RARITY_COLOR, type AimAttackId, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
@@ -1792,6 +1793,23 @@ export default function RaidCombat({
     const t = zoneTrackRef.current
     if (t) t.style.transform = `translate3d(${(center - HIT_W - GRAZE_W) * 100}%, 0, 0)`
   }, [onDial])
+  /**
+   * THE EFFECTS LAYER'S HANDLE AND ITS WINDOW ONTO THE FIGHT.
+   *
+   * A function rather than props, and that is the whole design: the needle, the
+   * target and the seam all move every frame, and a prop that changes every
+   * frame re-renders this entire file to move a spark. The canvas reads what it
+   * needs on its own frame and nothing here re-renders at all.
+   */
+  const aimFxRef = useRef<AimBarFxHandle | null>(null)
+  const aimFxRead = useCallback(() => ({
+    pos: firePosRef.current,
+    zone: zonePosRef.current,
+    // The seam, when Rolling Plate is drifting it inside the band — the glow
+    // should answer the thing that actually crits, not the middle of the zone.
+    critW: liveCritWRef.current,
+    band: aimHitWRef.current + aimGrazeWRef.current,
+  }), [])
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
   // False Colors curse — drifting DECOY bands the player must NOT lock onto.
@@ -4119,6 +4137,10 @@ export default function RaidCombat({
       : firePosRef.current
     firePosRef.current = pos
     const zoneCenter = zonePosRef.current
+    // THE BURST GOES OFF AT THE TAP, not after the judgment resolves. The
+    // colour is decided a few lines down; this is fired there. What matters
+    // here is that the POSITION is the one just read, so the sparks land on the
+    // needle rather than wherever it would have drifted to by then.
     // Rolling Plate: the crit judges against the SEAM (zone center + drift
     // offset); hit/graze still judge the zone itself. Offset is 0 on every
     // enemy without critDrift, so this is the old ladder everywhere else.
@@ -4187,6 +4209,12 @@ export default function RaidCombat({
                            '#6b7280'
     if (!onDial) snapIndicator(indicatorRef.current)
     flashBar(barFlashRef.current, flashColor, res === 'critical' ? 0.7 : res === 'hit' ? 0.55 : 0.35)
+    // AND THE SPARKS, in the result's colour, at the judged spot. Fired here
+    // because this is where `res` exists — a crit should look like a crit
+    // before the number has finished arriving, and a miss should be visibly a
+    // miss rather than an absence of celebration.
+    if (!onDial) aimFxRef.current?.burst(pos, res)
+
     // Indicator glow boost for hit/crit. Re-center the WIDENED needle on the
     // judged pos: it's anchored by `left` for a 4px needle (pos% − 2px), so
     // just growing `width` would balloon it to the RIGHT and shift its visual
@@ -8814,6 +8842,7 @@ export default function RaidCombat({
           <AimBarInline
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
             needleTrackRef={needleTrackRef} zoneTrackRef={zoneTrackRef}
+            aimFxRef={aimFxRef} aimFxRead={aimFxRead}
             // Enemy Mist Veil + any Gauntlet fog curse stack into one band.
             // Steady Sights (boon) clears a fraction (all at full clarity).
             aimFogDensity={Math.min(0.95, (enemy.aimFogDensity ?? 0) + tide.aimFog) * (1 - tide.aimClarity)}
@@ -12535,13 +12564,18 @@ function DialAimInline({
 }
 
 
-function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed, critBandRef }: {
+function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, aimFxRef, aimFxRead, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs, afflictionLabel, hardenedArmed, critBandRef }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   /** The full-width rails the needle and the band ride. These are what actually
    *  move each frame; see the note where they are rendered. */
   needleTrackRef: React.RefObject<HTMLDivElement | null>
   zoneTrackRef:   React.RefObject<HTMLDivElement | null>
+  /** The effects layer's handle, for firing a burst when a shot is judged. */
+  aimFxRef: React.MutableRefObject<AimBarFxHandle | null>
+  /** Where the needle and the target are, read on the FX layer's own frame —
+   *  not passed as props, because all four change every frame. */
+  aimFxRead: () => { pos: number; zone: number; critW: number; band: number }
   flashRef:     React.RefObject<HTMLDivElement | null>
   /** False Colors curse — N drifting decoy bands the player must NOT lock onto.
    *  The RAF positions each via decoyElRefs. 0 = none this fire. */
@@ -12656,7 +12690,19 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, fla
           that DOES need clipping — the fog band, the flash, the decoys, the
           target zone — stays inside. */}
       <div style={{ position: 'relative' }}>
-      <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{
+        position: 'relative', height: 44, borderRadius: 10, overflow: 'hidden',
+        // ── DEPTH, INSTEAD OF A FLAT BOX ────────────────────────────────
+        //
+        // It was one flat fill with a hairline round it, which read as a
+        // placeholder beside the instrument it governs. A gradient base, a lit
+        // top edge and an inset shadow give it the same "cut into the deck"
+        // read the rest of the fight's furniture has — and the FX layer above
+        // it has something to sit IN rather than on.
+        background: 'linear-gradient(180deg, rgba(3,7,13,0.86) 0%, rgba(8,14,22,0.7) 46%, rgba(2,5,10,0.9) 100%)',
+        border: '1px solid rgba(255,255,255,0.16)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -8px 16px rgba(0,0,0,0.5)',
+      }}>
         <div ref={flashRef} style={{
           position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
           // zIndex 5 sits above the Mist Veil fog (zIndex 4) so the
@@ -12730,6 +12776,14 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, fla
           }} />
         )}
       </div>
+      {/* THE JUICE. In the wrapper rather than the bar, so a lock burst falls
+          off the edges instead of being cut off square by the rounded clip —
+          and so it is never an ancestor of, or clipped with, the needle. */}
+      <AimBarFx
+        active
+        handleRef={aimFxRef}
+        read={aimFxRead}
+      />
       {/* THE NEEDLE, over the bar and outside its clip. Same insets as the
           contents it used to sit among, so nothing about where it appears has
           changed — only what has to happen to move it.
