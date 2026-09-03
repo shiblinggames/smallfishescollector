@@ -2454,33 +2454,6 @@ body.hardcore-gauntlet::after {
    header is 44px with a 60px tab bar under it, and the desktop header is 60px
    with no bar at all. Hardcoding the mobile pair left a 60px dead strip along
    the bottom of every desktop view. */
-/* ── A HULL WAITING FOR YOU IS STILL UNDER WAY ──────────────────────────────
-   A campaign ship that only bobs reads as moored. These two put a few pixels of
-   way on her: a slow slide, and a turn that comes round now and then.
-
-   THE TURN IS A STEP, not an ease. Rotated smoothly, a three-quarter-view hull
-   reads as a sheet of paper being turned over — the exact note the menagerie's
-   pets got, and the same fix. A ship changing which way she lies changes it
-   between one frame and the next.
-
-   Long periods and phased per ship (the delay is written inline off the hull's
-   own position), so a bay full of them is never in step. */
-@keyframes encDrift {
-  0%, 100% { transform: translateX(-9px); }
-  50%      { transform: translateX(9px); }
-}
-.enc-drift { animation: encDrift 17s ease-in-out infinite; }
-
-@keyframes encTurn {
-  0%   { transform: scaleX(1); }
-  50%  { transform: scaleX(-1); }
-  100% { transform: scaleX(1); }
-}
-.enc-turn {
-  animation: encTurn 29s step-end infinite;
-  transform-origin: 50% 100%;
-}
-
 /* ── THE FIGHT'S LEVEL BAR SITS ON THE CHART'S OWN HUD LINE ─────────────────
    The sea surface starts below the site header — 44 on a phone, 60 once there
    is room for the wide nav — and hangs its HUD icons 18 into that. A fight

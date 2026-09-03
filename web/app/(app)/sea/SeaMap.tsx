@@ -47,7 +47,7 @@ import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
   WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
-  encounterNear, cacheNear, hullFor, DOCK, dockAt, ENCOUNTER_REACH,
+  encounterNear, cacheNear, hullFor, DOCK,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
@@ -9635,28 +9635,8 @@ function wallRocks(w: Wall): { art: string; x: number; y: number; size: number }
   const px = -uy, py = ux
   const out: { art: string; x: number; y: number; size: number }[] = []
 
-  /**
-   * ── HOW MUCH STONE A WALL IS WORTH ────────────────────────────────────────
-   *
-   * A hand-drawn wall gets rock down BOTH sides at full density: it is a thing
-   * with water either side of it, and the shingle at four times the rock's
-   * density is most of what makes a coast look like a coast.
-   *
-   * A laid bay's coast gets ONE side and a coarser scatter, and both halves of
-   * that matter. One side because a channel is two walls with the road between
-   * them, so rock on the inner faces is stone in the lane you are sailing.
-   * Coarser because there is a great deal more of it: three chapters of
-   * serpentine is a hundred and sixteen thousand pixels of coastline against
-   * Bay I's thirty-seven, and at full density that was roughly two thousand
-   * extra sprites on a chart already carrying a couple of thousand — which is
-   * an iPhone running out of memory and reloading into the same wall.
-   */
-  const sides: number[] = w.faces ? [w.faces] : [-1, 1]
-  const rockStepHere = w.faces ? STEP * 1.5 : STEP
-  const pebbleStepHere = w.faces ? PEBBLE_STEP * 3 : PEBBLE_STEP
-
-  for (const side of sides) {
-    for (let t = 0; t <= L; t += rockStepHere) {
+  for (const side of [-1, 1]) {
+    for (let t = 0; t <= L; t += STEP) {
       const k = KIND.wall[Math.min(KIND.wall.length - 1, Math.floor(nx() * KIND.wall.length))]
       const off = side * (STEP * 0.32 + nx() * STEP * 0.3)
       const a = t + (nx() - 0.5) * STEP * 0.4
@@ -9665,11 +9645,11 @@ function wallRocks(w: Wall): { art: string; x: number; y: number; size: number }
         size: k.min + nx() * (k.max - k.min),
       })
     }
-    for (let t = 0; t <= L; t += pebbleStepHere) {
+    for (let t = 0; t <= L; t += PEBBLE_STEP) {
       const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
       const r = nx()
       const off = side * (STEP * 0.2 + nx() * STEP * 0.5)
-      const a = t + (nx() - 0.5) * pebbleStepHere * 0.8
+      const a = t + (nx() - 0.5) * PEBBLE_STEP * 0.8
       out.push({
         art: pa.art, x: e.ax + ux * a + px * off, y: e.ay + uy * a + py * off,
         size: pa.min * 0.7 + r * r * (pa.max - pa.min) * 0.7,
@@ -11135,50 +11115,6 @@ const AshoreTick = memo(function AshoreTick() {
  * Counter-squashed like everything with height, because a hull stands ON the
  * plane rather than being painted onto it.
  */
-/**
- * ── WHERE YOU HAVE TO BE TO FIGHT HER ───────────────────────────────────────
- *
- * A hull out in the bay said "there is a fight here" and nothing said WHERE.
- * The reach is measured off the mooring rather than off the ship (see DOCK), so
- * sailing at the boss is the one approach that does not arm it — you can be a
- * hundred pixels from her bowsprit and still be told nothing is in range, which
- * reads as broken and is really just an unmarked spot on the water.
- *
- * So the spot is drawn: a patch of water off her port quarter, exactly the size
- * of the reach that opens the card. Sail into the ring, press.
- *
- * LIT WHEN YOU ARE IN IT, which is the whole of the feedback. Outside, it is a
- * faint mark on the sea you can steer for; inside, it takes the gold every
- * actionable thing on this chart wears, and the prompt appears in the same
- * frame. Nothing for a hull you cannot take on yet — a ring inviting you into a
- * fight the chain will refuse is worse than no ring.
- */
-const DockMark = memo(function DockMark({ enc, isNear }: {
-  enc: Encounter
-  isNear: boolean
-}) {
-  const at = dockAt(enc)
-  if (!at) return null
-  const r = ENCOUNTER_REACH
-  return (
-    <div aria-hidden style={{
-      position: 'absolute', left: at.x, top: at.y, pointerEvents: 'none',
-      width: r * 2, height: r * 2, marginLeft: -r, marginTop: -r,
-      // ON THE PLANE, like everything else lying on this water. A circle that
-      // is not squashed is a hoop standing up out of the sea.
-      transform: `scaleY(${GROUND})`,
-      borderRadius: '50%',
-      background: isNear
-        ? 'radial-gradient(circle, rgba(240,192,64,0.20) 0%, rgba(240,192,64,0.10) 58%, transparent 76%)'
-        : 'radial-gradient(circle, rgba(190,214,232,0.09) 0%, rgba(190,214,232,0.05) 58%, transparent 76%)',
-      boxShadow: isNear
-        ? 'inset 0 0 0 2px rgba(240,192,64,0.55)'
-        : 'inset 0 0 0 2px rgba(190,214,232,0.20)',
-      transition: 'background 180ms ease, box-shadow 180ms ease',
-    }} />
-  )
-})
-
 const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef }: {
   enc: Encounter
   status: string
@@ -11219,11 +11155,6 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
       {/* THE WATER UNDER IT, so the hull sits IN the sea rather than on top of
           it. Foreshortened with the plane, like the berth pools and the
           portal. */}
-      {/* A CONTACT SHADOW, and nothing else. This was a red wash under every
-          available hull — a colour on the water that meant "you can fight this"
-          and looked like the ship was standing in something. What you can fight
-          is said by the dock ring out in front of her now; a hull only needs
-          the dark patch that stops her floating a foot above the sea. */}
       <div aria-hidden style={{
         position: 'absolute', left: '50%', bottom: w * 0.06,
         width: w * 0.92, height: w * 0.22,
@@ -11231,7 +11162,7 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
         borderRadius: '50%',
         background: locked
           ? 'radial-gradient(ellipse, rgba(6,12,18,0.55) 0%, transparent 70%)'
-          : 'radial-gradient(ellipse, rgba(6,12,18,0.44) 0%, transparent 72%)',
+          : 'radial-gradient(ellipse, rgba(190,70,55,0.32) 0%, transparent 72%)',
       }} />
 
       {/* THE FIGHT'S OWN LAYER, and the reason it is separate from the bob
@@ -11249,17 +11180,6 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
         animation: `encBob 5.5s ease-in-out ${(-phase * 5.5).toFixed(2)}s infinite`,
         transformOrigin: 'bottom center',
       }}>
-      {/* ── SHE IS UNDER WAY, BARELY ─────────────────────────────────────
-          A hull that only bobs is moored. A few pixels of drift and the
-          occasional turn is a ship holding station — which is what every one of
-          these is doing while it waits for you.
-
-          TWO WRAPPERS, because both write `transform` and one element cannot
-          carry two animations that do. The drift slides; the flip turns her,
-          and it turns her ON A STEP: eased, a ship reads as a piece of paper
-          being rotated, which is exactly the note the menagerie's pets got. */}
-      <div className="enc-drift" style={{ animationDelay: `${(-phase * 17).toFixed(2)}s` }}>
-      <div className="enc-turn" style={{ animationDelay: `${(-phase * 29).toFixed(2)}s` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={hull} alt="" draggable={false} decoding="async" style={{
           width: w, height: 'auto', display: 'block',
@@ -11270,8 +11190,6 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
               : 'drop-shadow(0 8px 18px rgba(0,0,0,0.6))',
           opacity: cleared ? 0.85 : 1,
         }} />
-      </div>
-      </div>
       </div>
       </div>
     </div>
@@ -11531,15 +11449,7 @@ const EncounterField = memo(function EncounterField({ status, nearId, nearCacheI
     ...BEATS.map(b => ({ kind: 'beat' as const, b, y: beatAt(b)?.y ?? 0 })),
   ].sort((a, b) => a.y - b.y), [])
 
-  return <>
-    {/* THE MOORINGS FIRST, all of them, under every hull and rock on the water.
-        They are patches of SEA: a ship or an isle drawn over one is right, and
-        one drawn over a hull would be a light lying on top of a ship. Only for
-        fights you can actually take on — see DockMark. */}
-    {ENCOUNTERS.map(e => (status[e.node] ?? 'locked') === 'locked' ? null : (
-      <DockMark key={`dock-${e.node}`} enc={e} isNear={nearId === e.node} />
-    ))}
-    {all.map(it => it.kind === 'ship'
+  return <>{all.map(it => it.kind === 'ship'
     ? <EncounterMark key={it.e.node} enc={it.e}
         status={status[it.e.node] ?? 'locked'} isNear={nearId === it.e.node}
         hullRef={fightNode === it.e.node ? hullRef : undefined} />
