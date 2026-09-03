@@ -6915,7 +6915,10 @@ export default function SeaMap({
         <EncounterField bay={liveBay} status={nodeStatus} nearId={nearEnc?.node ?? null}
           nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null}
           cleared={clearedNodes} nearHomeId={nearWayHome?.bay ?? null}
-          fightNode={fightId ? fightEncRef.current?.node ?? null : null}
+          // `engaging` rather than `fightId`: the boss card is already the
+          // engagement, and the mooring should go the moment it opens rather
+          // than a beat later when the guns do.
+          fightNode={engaging ? fightEncRef.current?.node ?? null : null}
           hullRef={enemyHullRef} />
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
@@ -11670,7 +11673,12 @@ const EncounterField = memo(function EncounterField({ bay, status, nearId, nearC
         They are patches of SEA: a ship or an isle drawn over one is right, and
         one drawn over a hull would be a light lying on top of a ship. Only for
         fights you can actually take on — see DockMark. */}
-    {ENCOUNTERS.filter(e => e.bay === bay).map(e => (status[e.node] ?? 'locked') === 'locked' ? null : (
+    {/* AND NOT ONCE YOU ARE THERE. A mooring says "stand here to take this on";
+        with the card up or the guns out you have taken it on, and a ring
+        telling you where to start a fight you are already in is the sea talking
+        over itself. `fightNode` is set for both, so this covers the card as
+        well as the broadside. */}
+    {fightNode ? null : ENCOUNTERS.filter(e => e.bay === bay).map(e => (status[e.node] ?? 'locked') === 'locked' ? null : (
       <DockMark key={`dock-${e.node}`} enc={e} isNear={nearId === e.node} />
     ))}
     {all.map(it => it.kind === 'ship'
