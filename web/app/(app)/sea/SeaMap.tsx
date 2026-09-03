@@ -3091,10 +3091,14 @@ export default function SeaMap({
       // violet for theirs — the same two colours their shield segments already
       // wear on the HP bars, so the shell on the water and the number in the
       // deck are plainly the same fact.
+      // Each shell is cut to its OWN hull: your beam is what the loop already
+      // measures her at, theirs is the width the encounter is drawn at. A
+      // skiff's ward and a flagship's should not be the same shape.
       const pfx2 = shipFxRef.current?.player
-      gpuRef.current?.ward('player', pos.current.x, pos.current.y, 0x5eead4, !!pfx2?.guard)
-      gpuRef.current?.ward('enemy', hull.at.x, hull.at.y, 0xc084fc,
-        !!shipFxRef.current?.enemy?.guard)
+      gpuRef.current?.ward('player', pos.current.x, pos.current.y,
+        hullRef.current.beamW, 0x5eead4, !!pfx2?.guard)
+      gpuRef.current?.ward('enemy', hull.at.x, hull.at.y,
+        hull.encW, 0xc084fc, !!shipFxRef.current?.enemy?.guard)
 
       const efx = shipFxRef.current?.enemy
       const el = enemyHullRef.current
@@ -7843,8 +7847,8 @@ hullRef={hullRefFor(t.key)} />
           // holds until it is told otherwise, and the canvas outlives the
           // fight — left set, it would go on breathing over open water long
           // after the ship it belonged to had gone.
-          gpuRef.current?.ward('player', 0, 0, 0x5eead4, false)
-          gpuRef.current?.ward('enemy', 0, 0, 0xc084fc, false)
+          gpuRef.current?.ward('player', 0, 0, 0, 0x5eead4, false)
+          gpuRef.current?.ward('enemy', 0, 0, 0, 0xc084fc, false)
           bossReadRef.current = false
           setBossData(null)
           setRaidData(null)

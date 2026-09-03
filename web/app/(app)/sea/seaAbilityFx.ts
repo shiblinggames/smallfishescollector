@@ -188,7 +188,17 @@ export type AbilityFx = {
    * because the hull moves and a shell that lags behind it is a decal.
    * Clearing it after it was up SHATTERS it — see the note in `advance`.
    */
-  ward(side: 'player' | 'enemy', x: number, y: number, color: number, up: boolean): void
+  ward(
+    side: 'player' | 'enemy', x: number, y: number,
+    /**
+     * HOW MUCH SHIP THERE IS, in world px. A ward drawn as a circle squashed by
+     * GROUND is the same anonymous oval on a rowboat and a man-o-war; a ship is
+     * long and low and its shell should be too. This is what makes the shape
+     * belong to the hull inside it.
+     */
+    beam: number,
+    color: number, up: boolean,
+  ): void
   /**
    * AN ABILITY LANDS ON A HULL AT `x,y`, in its class's colour.
    *
@@ -288,7 +298,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       moteLayer.addParticle(o)
       orbit.push(o)
     }
-    return { shellA, shellB, orbit, up: false, x: 0, y: 0, color: 0xffffff, t: 0, fade: 0 }
+    return { shellA, shellB, orbit, up: false, x: 0, y: 0, beam: 200, color: 0xffffff, t: 0, fade: 0 }
   })
 
   let dark = 0
@@ -451,9 +461,10 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
     view,
     night(d) { dark = d },
 
-    ward(side, x, y, color, up) {
+    ward(side, x, y, beam, color, up) {
       const w = wards[side === 'player' ? 0 : 1]
       w.x = x; w.y = y; w.color = color
+      if (beam > 0) w.beam = beam
       if (up === w.up) return
       w.up = up
       if (up) {
@@ -462,7 +473,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         const r = takeRing()
         r.x = x; r.y = y
         r.age = 0; r.life = 0.36
-        r.from = 340; r.to = 90
+        r.from = w.beam * 1.7; r.to = w.beam * 0.45
         r.alpha = 0.75
         r.p.tint = color
       } else {
@@ -472,15 +483,15 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         const r = takeRing()
         r.x = x; r.y = y
         r.age = 0; r.life = 0.34
-        r.from = 100; r.to = 480
+        r.from = w.beam * 0.5; r.to = w.beam * 2.4
         r.alpha = 0.8
         r.p.tint = 0xffffff
         for (let i = 0; i < 20; i++) {
           const m = takeMote()
           m.cx = x; m.cy = y
           m.ang = (i / 20) * Math.PI * 2 + Math.random() * 0.3
-          m.r0 = 110
-          m.r1 = 230 + Math.random() * 220
+          m.r0 = w.beam * 0.55
+          m.r1 = w.beam * (1.1 + Math.random())
           // Thrown UP and out, like something rigid failing rather than
           // something soft dispersing.
           m.h0 = 40
@@ -773,31 +784,46 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         }
         w.t += dt
 
-        // TWO SHELLS, COUNTER-TURNING AND BREATHING AGAINST EACH OTHER. One
-        // ring is a circle drawn on the sea; two at slightly different radii,
-        // moving out of step, is the closest a flat sprite gets to saying there
-        // is a SURFACE there. The breath is slow — a ward that pulses quickly
-        // reads as an alarm rather than as something holding.
-        const base = 150
-        const bA = base * (1 + 0.05 * Math.sin(w.t * 1.7))
-        const bB = base * (0.86 + 0.05 * Math.sin(w.t * 1.7 + 2.1))
-        for (const [sh, rad, a2] of [[w.shellA, bA, 0.5], [w.shellB, bB, 0.34]] as const) {
+        // ── CUT TO THE HULL, NOT TO A CIRCLE ────────────────────────────
+        //
+        // A ring squashed by GROUND is an oval, but it is the SAME oval on a
+        // rowboat and a man-o-war and it belongs to neither. A ship is long and
+        // low: these two radii are measured off her actual beam, so the shell
+        // is a shape that fits the thing inside it.
+        //
+        // 0.62 of the beam each way along her length, 0.30 across — wider than
+        // a circle would be and much shallower, which is the proportion of a
+        // hull seen on this projection. Then GROUND on top, because the whole
+        // ellipse is lying on the plane like every other flat thing here.
+        const rx = w.beam * 0.62
+        const ry = w.beam * 0.30
+        const breathe = 1 + 0.05 * Math.sin(w.t * 1.7)
+        const breathe2 = 0.86 + 0.05 * Math.sin(w.t * 1.7 + 2.1)
+        // TWO SHELLS, BREATHING OUT OF STEP. One ellipse is a line drawn on the
+        // sea; two at slightly different sizes, moving against each other, is
+        // the closest a flat sprite gets to saying there is a SURFACE there.
+        // Slowly — a ward that pulses quickly reads as an alarm rather than as
+        // something holding.
+        for (const [sh, k, a2] of [[w.shellA, breathe, 0.5], [w.shellB, breathe2, 0.34]] as const) {
           sh.x = w.x
           sh.y = w.y
           sh.tint = w.color
-          sh.scaleX = (rad * 2) / 128
-          sh.scaleY = ((rad * 2) / 128) * GROUND
+          sh.scaleX = (rx * k * 2) / 128
+          sh.scaleY = ((ry * k * 2) / 128) * GROUND
           sh.alpha = a2 * w.fade * lit
         }
 
         // And a few lights going round it, which is what stops the whole thing
-        // reading as a painted circle: something has to MOVE that is not the
-        // ring's own size.
+        // reading as a painted shape: something has to MOVE that is not the
+        // shell's own size. On the SAME ellipse, or they orbit a circle the
+        // shell is not.
         for (let i = 0; i < w.orbit.length; i++) {
           const o = w.orbit[i]
           const a2 = (i / w.orbit.length) * Math.PI * 2 + w.t * 0.9
-          o.x = w.x + Math.cos(a2) * base
-          o.y = w.y + Math.sin(a2) * base * GROUND - 26 / GROUND
+          o.x = w.x + Math.cos(a2) * rx
+          // Lifted a little off the water, so they read as riding the shell
+          // rather than floating in it.
+          o.y = w.y + Math.sin(a2) * ry * GROUND - 24 / GROUND
           o.tint = w.color
           o.scaleX = 13 / 24
           o.scaleY = 13 / 24
