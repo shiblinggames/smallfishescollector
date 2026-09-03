@@ -2793,6 +2793,17 @@ body.hardcore-gauntlet::after {
   0%, 100% { transform: translateY(0) rotate(-3deg); }
   50%      { transform: translateY(-7px) rotate(3deg); }
 }
+/* A FINISHED JOB IS THE LOUDER STATE. An offer can wait; this is your pay
+   sitting in his boat. Faster, further, and it lands with a bounce rather than
+   easing back — the difference between something waving and something calling
+   you over. */
+.finn-quest-ready {
+  animation: finnMarkReady 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+@keyframes finnMarkReady {
+  0%, 100% { transform: translateY(0) rotate(-5deg) scale(1); }
+  50%      { transform: translateY(-14px) rotate(5deg) scale(1.08); }
+}
 
 /* THE SALT ROAD BUTTON, when a job is finished and he is holding your pay. The
    HUD is otherwise still, so this is the only thing up there that moves and it
@@ -2805,7 +2816,7 @@ body.hardcore-gauntlet::after {
   50%      { box-shadow: 0 0 22px rgba(240,192,64,0.85); border-color: rgba(255,214,110,1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .finn-quest-mark, .hud-blink { animation: none; }
+  .finn-quest-mark, .finn-quest-ready, .hud-blink { animation: none; }
 }
 
 /* THE WAKE. One mark, laid in world space by the rAF loop and left behind. No

@@ -10017,9 +10017,12 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
           captain who cannot tell at a glance that he has something is a
           captain who does not get the story.
 
-          A GOLD ? when he has a beat or a job to give, a GOLD ! when a job is
-          finished and he is holding your pay. MMO shorthand, used on purpose,
-          because it is shorthand everybody already reads.
+          A GOLD ! when he has a beat or a job to give, a GOLD ? when one is
+          finished and he is waiting to take it back. MMO shorthand, used on
+          purpose, because it is shorthand everybody already reads — and it was
+          the wrong way round here, which is worse than having no shorthand at
+          all: a captain who reads these anywhere else was being told "nothing
+          to hand in" by the exact glyph that means it is time to.
 
           IT SITS ABOVE THE MAST AND NEVER ON HIM. Anchored well clear of
           HEAD_TOP and counter-squashed upward from its own bottom edge, so it
@@ -10031,19 +10034,29 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
           transform: `translateX(-50%) scaleY(${1 / GROUND})`,
           transformOrigin: 'bottom center', pointerEvents: 'none',
         }}>
-          <div className="finn-quest-mark" style={{
+          {/* READY IS THE LOUDER OF THE TWO. An offer is an invitation and can
+              wait; a finished job is YOUR pay sitting in his boat, so it is
+              bigger, brighter and moves faster. Same glyph family, so it is
+              still one thing with two states rather than two things. */}
+          <div className={ready ? 'finn-quest-mark finn-quest-ready' : 'finn-quest-mark'} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 42, height: 42,
           }}>
             <span className="font-cinzel font-700" style={{
-              fontSize: '2.3rem', lineHeight: 1,
+              fontSize: ready ? '2.8rem' : '2.3rem', lineHeight: 1,
               color: '#ffd24a',
-              textShadow: [
-                '0 0 3px rgba(60,36,0,1)', '0 2px 5px rgba(0,0,0,0.9)',
-                '0 0 18px rgba(255,196,60,0.95)', '0 0 38px rgba(255,168,40,0.7)',
-              ].join(', '),
+              textShadow: ready
+                ? [
+                  '0 0 3px rgba(60,36,0,1)', '0 2px 6px rgba(0,0,0,0.95)',
+                  '0 0 22px rgba(255,206,80,1)', '0 0 48px rgba(255,178,50,0.85)',
+                  '0 0 84px rgba(255,168,40,0.5)',
+                ].join(', ')
+                : [
+                  '0 0 3px rgba(60,36,0,1)', '0 2px 5px rgba(0,0,0,0.9)',
+                  '0 0 18px rgba(255,196,60,0.95)', '0 0 38px rgba(255,168,40,0.7)',
+                ].join(', '),
               WebkitTextStroke: '1.5px rgba(70,42,0,0.85)',
-            }}>{ready ? '!' : '?'}</span>
+            }}>{ready ? '?' : '!'}</span>
           </div>
         </div>
       )}
