@@ -47,7 +47,7 @@ import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
   WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
-  encounterNear, cacheNear, hullFor, DOCK,
+  encounterNear, cacheNear, hullFor, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
@@ -2159,6 +2159,29 @@ export default function SeaMap({
   const gpuRef = useRef<GpuHandle | null>(null)
   /** Every piece of land on the chart, ports and isles alike, in one list.
    *  Static: the ids, radii and positions are all chart data. */
+  /**
+   * ── WHICH BAY'S CONTENT IS ON SCREEN ────────────────────────────────────
+   *
+   * Everything the campaign puts in the water is expensive per item. A story
+   * rock, a cache, a hull and an isle are each a handful of DOM nodes carrying
+   * a CSS `filter`, and a filter gets its own backing surface — an isle is
+   * 340px, an iPhone rasterises at three times that, and that is four megabytes
+   * a rock. An island is worse: it is a baked canvas kept for the session, and
+   * the renderer's own note puts thirty of those at the edge of what a phone
+   * will hold.
+   *
+   * One chapter is fine. Five is a hundred and seven filtered elements and
+   * seventy-odd bakes, and it is why the sea kept dying: not the coastline,
+   * which was reduced twice and made no difference, but the CONTENT.
+   *
+   * Nothing is lost by drawing one bay's worth. They are ten thousand pixels
+   * apart, a viewport is three, and a captain is in one bay or in none. This is
+   * the same cull the canvas already does for its own sprites, applied to the
+   * things that were never culled at all.
+   */
+  const [liveBay, setLiveBay] = useState<string | null>(null)
+  const liveBayRef = useRef<string | null>(null)
+
   const gpuIslands = useMemo<GpuIsland[]>(() => {
     if (!GPU_ISLANDS) return []
     const out: GpuIsland[] = []
@@ -2172,12 +2195,17 @@ export default function SeaMap({
     // between water you sail and a heading you hold, and the machinery for
     // "land, procedurally, at this radius" already exists and is already what
     // every captain has learned to read.
+    // ONLY THE BAY YOU ARE IN. Each of these is a baked canvas kept for as
+    // long as it is in the list; all five chapters at once is seventy-odd of
+    // them, which is where the memory went. See liveBay.
     for (const i of RAID_ISLES) {
+      if (i.bay !== liveBay) continue
       const p = isleAt(i)
       if (p) out.push({ id: i.id, r: i.r, x: p.x, y: p.y, locked: false })
     }
     return out
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveBay])
   /** Every wreck, rig, buoy, bone pile and moored smack, in chart order —
    *  the index is what gives each its own sway phase. */
   /** The tall scenery, for the near pass. The SAME list the depth test walks,
@@ -2268,6 +2296,11 @@ export default function SeaMap({
    * because a reference compare a few times a second is enough to notice both
    * a gate coming down and a canvas turning up.
    */
+  /** The canvas bakes islands from a list it is given; when the bay changes it
+   *  is handed a new one and reconciles — see its `islands` handle. Pushed here
+   *  rather than from the loop because it happens a few times a session. */
+  useEffect(() => { gpuRef.current?.islands(gpuIslands) }, [gpuIslands])
+
   const surfRef = useRef(surfLines)
   surfRef.current = surfLines
   const surfPushed = useRef<typeof surfLines | null>(null)
@@ -6433,6 +6466,21 @@ export default function SeaMap({
           gpuRef.current.surf(surfRef.current)
           surfPushed.current = surfRef.current
         }
+        // AND WHICH BAY IS WORTH DRAWING. Generous: a bay claims you well
+        // before its coast does, so its rocks are already there when its water
+        // is. Null out in the junction and on the fishing side, where the
+        // campaign has nothing to say.
+        {
+          let inBay: string | null = null
+          for (const b of BAYS) {
+            const c = bayCentre(b)
+            if (Math.hypot(pos.current.x - c.x, pos.current.y - c.y) < b.r + 4000) { inBay = b.id; break }
+          }
+          if (inBay !== liveBayRef.current) {
+            liveBayRef.current = inBay
+            setLiveBay(inBay)
+          }
+        }
         let found: Place | null = null
         // Ports are discs; waters are rings. inBand answers the ring case, and
         // the bands do not overlap, so the first match is the only match.
@@ -6824,7 +6872,7 @@ export default function SeaMap({
         })}
 
         {/* The campaign, standing in its own water. */}
-        <EncounterField status={nodeStatus} nearId={nearEnc?.node ?? null}
+        <EncounterField bay={liveBay} status={nodeStatus} nearId={nearEnc?.node ?? null}
           nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null}
           cleared={clearedNodes} nearHomeId={nearWayHome?.bay ?? null}
           fightNode={fightId ? fightEncRef.current?.node ?? null : null}
@@ -11164,6 +11212,50 @@ const AshoreTick = memo(function AshoreTick() {
  * Counter-squashed like everything with height, because a hull stands ON the
  * plane rather than being painted onto it.
  */
+/**
+ * ── WHERE YOU HAVE TO BE TO FIGHT HER ───────────────────────────────────────
+ *
+ * A hull out in the bay said "there is a fight here" and nothing said WHERE.
+ * The reach is measured off the mooring rather than off the ship (see DOCK), so
+ * sailing at the boss is the one approach that does not arm it — you can be a
+ * hundred pixels from her bowsprit and still be told nothing is in range, which
+ * reads as broken and is really just an unmarked spot on the water.
+ *
+ * So the spot is drawn: a patch of water off her port quarter, exactly the size
+ * of the reach that opens the card. Sail into the ring, press.
+ *
+ * LIT WHEN YOU ARE IN IT, which is the whole of the feedback. Outside, it is a
+ * faint mark on the sea you can steer for; inside, it takes the gold every
+ * actionable thing on this chart wears, and the prompt appears in the same
+ * frame. Nothing for a hull you cannot take on yet — a ring inviting you into a
+ * fight the chain will refuse is worse than no ring.
+ */
+const DockMark = memo(function DockMark({ enc, isNear }: {
+  enc: Encounter
+  isNear: boolean
+}) {
+  const at = dockAt(enc)
+  if (!at) return null
+  const r = ENCOUNTER_REACH
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: at.x, top: at.y, pointerEvents: 'none',
+      width: r * 2, height: r * 2, marginLeft: -r, marginTop: -r,
+      // ON THE PLANE, like everything else lying on this water. A circle that
+      // is not squashed is a hoop standing up out of the sea.
+      transform: `scaleY(${GROUND})`,
+      borderRadius: '50%',
+      background: isNear
+        ? 'radial-gradient(circle, rgba(240,192,64,0.20) 0%, rgba(240,192,64,0.10) 58%, transparent 76%)'
+        : 'radial-gradient(circle, rgba(190,214,232,0.09) 0%, rgba(190,214,232,0.05) 58%, transparent 76%)',
+      boxShadow: isNear
+        ? 'inset 0 0 0 2px rgba(240,192,64,0.55)'
+        : 'inset 0 0 0 2px rgba(190,214,232,0.20)',
+      transition: 'background 180ms ease, box-shadow 180ms ease',
+    }} />
+  )
+})
+
 const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef }: {
   enc: Encounter
   status: string
@@ -11204,6 +11296,11 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
       {/* THE WATER UNDER IT, so the hull sits IN the sea rather than on top of
           it. Foreshortened with the plane, like the berth pools and the
           portal. */}
+      {/* A CONTACT SHADOW, and nothing else. This was a red wash under every
+          available hull — a colour on the water that meant "you can fight this"
+          and looked like the ship was standing in something. What you can fight
+          is said by the dock ring out in front of her now; a hull only needs
+          the dark patch that stops her floating a foot above the sea. */}
       <div aria-hidden style={{
         position: 'absolute', left: '50%', bottom: w * 0.06,
         width: w * 0.92, height: w * 0.22,
@@ -11211,7 +11308,7 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
         borderRadius: '50%',
         background: locked
           ? 'radial-gradient(ellipse, rgba(6,12,18,0.55) 0%, transparent 70%)'
-          : 'radial-gradient(ellipse, rgba(190,70,55,0.32) 0%, transparent 72%)',
+          : 'radial-gradient(ellipse, rgba(6,12,18,0.44) 0%, transparent 72%)',
       }} />
 
       {/* THE FIGHT'S OWN LAYER, and the reason it is separate from the bob
@@ -11229,6 +11326,17 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
         animation: `encBob 5.5s ease-in-out ${(-phase * 5.5).toFixed(2)}s infinite`,
         transformOrigin: 'bottom center',
       }}>
+      {/* ── SHE IS UNDER WAY, BARELY ─────────────────────────────────────
+          A hull that only bobs is moored. A few pixels of drift and the
+          occasional turn is a ship holding station — which is what every one of
+          these is doing while it waits for you.
+
+          TWO WRAPPERS, because both write `transform` and one element cannot
+          carry two animations that do. The drift slides; the flip turns her,
+          and it turns her ON A STEP: eased, a ship reads as a piece of paper
+          being rotated, which is exactly the note the menagerie's pets got. */}
+      <div className="enc-drift" style={{ animationDelay: `${(-phase * 17).toFixed(2)}s` }}>
+      <div className="enc-turn" style={{ animationDelay: `${(-phase * 29).toFixed(2)}s` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={hull} alt="" draggable={false} decoding="async" style={{
           width: w, height: 'auto', display: 'block',
@@ -11239,6 +11347,8 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
               : 'drop-shadow(0 8px 18px rgba(0,0,0,0.6))',
           opacity: cleared ? 0.85 : 1,
         }} />
+      </div>
+      </div>
       </div>
       </div>
     </div>
@@ -11479,7 +11589,18 @@ function verbFor(n: RaidNode, status: string): string {
   return 'Read'
 }
 
-const EncounterField = memo(function EncounterField({ status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId, fightNode, hullRef }: {
+const EncounterField = memo(function EncounterField({ bay, status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId, fightNode, hullRef }: {
+  /**
+   * WHICH BAY'S CONTENT TO DRAW, or null for none of it.
+   *
+   * Every mark below is a few DOM nodes carrying a CSS filter, and a filter
+   * gets its own backing surface — about four megabytes a rock at an iPhone's
+   * pixel ratio. One chapter is seventeen of them and fine; five chapters is a
+   * hundred and seven and is not, which is what kept killing the sea. Bays are
+   * ten thousand pixels apart and a viewport is three, so nothing that could be
+   * on screen is lost by drawing one bay's worth.
+   */
+  bay: string | null
   status: Record<string, string>
   nearId: string | null
   nearCacheId: string | null
@@ -11493,12 +11614,20 @@ const EncounterField = memo(function EncounterField({ status, nearId, nearCacheI
   hullRef: React.Ref<HTMLDivElement>
 }) {
   const all = useMemo(() => [
-    ...ENCOUNTERS.map(e => ({ kind: 'ship' as const, e, y: encounterAt(e)?.y ?? 0 })),
-    ...CACHES.map(c => ({ kind: 'cache' as const, c, y: cacheAt(c)?.y ?? 0 })),
-    ...BEATS.map(b => ({ kind: 'beat' as const, b, y: beatAt(b)?.y ?? 0 })),
-  ].sort((a, b) => a.y - b.y), [])
+    ...ENCOUNTERS.filter(x => x.bay === bay).map(e => ({ kind: 'ship' as const, e, y: encounterAt(e)?.y ?? 0 })),
+    ...CACHES.filter(x => x.bay === bay).map(c => ({ kind: 'cache' as const, c, y: cacheAt(c)?.y ?? 0 })),
+    ...BEATS.filter(x => x.bay === bay).map(bt => ({ kind: 'beat' as const, b: bt, y: beatAt(bt)?.y ?? 0 })),
+  ].sort((p, q) => p.y - q.y), [bay])
 
-  return <>{all.map(it => it.kind === 'ship'
+  return <>
+    {/* THE MOORINGS FIRST, all of them, under every hull and rock on the water.
+        They are patches of SEA: a ship or an isle drawn over one is right, and
+        one drawn over a hull would be a light lying on top of a ship. Only for
+        fights you can actually take on — see DockMark. */}
+    {ENCOUNTERS.filter(e => e.bay === bay).map(e => (status[e.node] ?? 'locked') === 'locked' ? null : (
+      <DockMark key={`dock-${e.node}`} enc={e} isNear={nearId === e.node} />
+    ))}
+    {all.map(it => it.kind === 'ship'
     ? <EncounterMark key={it.e.node} enc={it.e}
         status={status[it.e.node] ?? 'locked'} isNear={nearId === it.e.node}
         hullRef={fightNode === it.e.node ? hullRef : undefined} />
@@ -11510,7 +11639,7 @@ const EncounterField = memo(function EncounterField({ status, nearId, nearCacheI
   )}
   {/* UNDER EVERYTHING, because it is a hole in the water rather than a thing
       standing in it, and nothing should ever be hidden behind one. */}
-  {RETURN_PORTALS.filter(pt => wayHomeOpen(pt, cleared)).map(pt => (
+  {RETURN_PORTALS.filter(pt => pt.bay === bay && wayHomeOpen(pt, cleared)).map(pt => (
     <WayHomeMark key={pt.bay} pt={pt} isNear={nearHomeId === pt.bay} />
   ))}</>
 })

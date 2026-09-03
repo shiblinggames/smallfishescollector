@@ -155,6 +155,13 @@ export type GpuHandle = {
    */
   surf(lines: SurfLine[]): void
   /**
+   * A NEW ISLAND LIST. Reconciled rather than rebuilt: what is gone is
+   * destroyed, what is new is baked, what is unchanged is left alone and never
+   * re-baked. The campaign's isles come and go with the bay you are in — see
+   * the note at `reconcile` for why they cannot all be kept for the session.
+   */
+  islands(next: GpuIsland[]): void
+  /**
    * A CREW ABILITY LANDS on the hull at `x,y`, in its class's colour. `shape`
    * is what it does rather than which one it is — see seaAbilityFx.
    */
@@ -734,6 +741,38 @@ export default function SeaIslandsGPU({
       }
       for (const isle of listRef.current) place(isle)
 
+      /**
+       * ── ADD AND DROP ISLANDS AFTER THE FACT ──────────────────────────────
+       *
+       * Islands used to be placed once, here, from a ref — the list could
+       * change and nothing would happen. That was fine while every island on
+       * the chart was worth keeping for the session, and it stopped being fine
+       * when the campaign grew: a bake is one canvas per island at its own
+       * diameter, the note on the renderer's resolution puts thirty of those at
+       * the edge of what a phone will hold, and five chapters of bays is
+       * seventy-odd.
+       *
+       * So the caller can hand over a new list and this reconciles it: what is
+       * gone is destroyed, what is new is placed, what is unchanged is left
+       * alone and never re-baked. The bays are ten thousand pixels apart and
+       * you can only be in one, so the chart carries the fishing sea plus the
+       * bay you are actually in.
+       */
+      const reconcile = (next: GpuIsland[]) => {
+        const want = new Map(next.map(i => [i.id, i]))
+        for (let k = baked.length - 1; k >= 0; k--) {
+          const b = baked[k]
+          if (want.has(b.isle.id)) continue
+          b.sprite.destroy()
+          baked.splice(k, 1)
+          const fi = foams.findIndex(f => f.x === b.isle.x && f.y === b.isle.y)
+          if (fi >= 0) { foams[fi].f.mesh.destroy(); foams.splice(fi, 1) }
+        }
+        const have = new Set(baked.map(b => b.isle.id))
+        for (const isle of next) if (!have.has(isle.id)) place(isle)
+        listRef.current = next
+      }
+
       // The turf and rock land after the first bake. When they do, the chart
       // drops its cache and repaints; here the textures are swapped.
       requestGround(() => {
@@ -1181,6 +1220,7 @@ export default function SeaIslandsGPU({
           c.cap.setFrame(sk.frame)
           c.cap.setStage(sk.stage)
         },
+        islands(next) { reconcile(next) },
         scatter(x, y) { shoals.scatter(x, y) },
         splash(x, y, dir, perfect) { splash.fire(x, y, dir, perfect) },
         gunfire(x, y, tx, ty) { guns.fire(x, y, tx, ty) },
