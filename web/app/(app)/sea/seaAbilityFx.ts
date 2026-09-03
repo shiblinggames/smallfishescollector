@@ -39,10 +39,19 @@
 import type { Container, Particle, ParticleContainer, Texture } from 'pixi.js'
 import { GROUND } from './islandArt'
 
-/** Motes alive at once. A cast throws about twenty. */
-const MOTE_CAP = 72
-/** Rings. Two or three per cast, and casts do not overlap in a turn. */
-const RING_CAP = 12
+/**
+ * ── THE POOLS ARE SIZED ON THE WORST CAST, NOT THE AVERAGE ─────────────────
+ *
+ * A ring buffer that runs out does not drop the NEW particle, it recycles the
+ * oldest — so an undersized pool silently eats the beginning of the very effect
+ * it is too small for. The worst case is a legendary Tempest: `storm` at power
+ * 2 is fourteen strikes of five motes, and the overture adds sixty-odd on top.
+ * Sized for that, with room for a second cast while the first is still in the
+ * air.
+ */
+const MOTE_CAP = 200
+/** Rings. A legendary storm alone throws fourteen, plus its overture. */
+const RING_CAP = 34
 /** Marks on the water. They linger, so a few can be down at once. */
 const MARK_CAP = 4
 
@@ -331,6 +340,74 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       }
   }
 
+  /**
+   * ── WHAT EVERY LEGENDARY DOES, WHATEVER IT IS ────────────────────────────
+   *
+   * A chase skin was reaching the water as "the same motion, bigger", and
+   * bigger is not the same as rarer — a salvo at 2.4 is still a salvo. This is
+   * the part that is only ever seen when a legendary fires, so that the FIRST
+   * frame says so, before the motion underneath has declared itself.
+   *
+   * Three passes, and each is doing a different job:
+   *
+   *   THE FLASH is white, not the skin's colour. Everything else on this water
+   *   is tinted; a hot core that is NOT the tint is the cheapest way to say
+   *   "more than the usual amount of this" without inventing a new colour that
+   *   fights the class's own.
+   *
+   *   THE COLUMN goes straight up. Every other motion in this file is radial
+   *   and flat, on a plane; a vertical throw is the one axis the vocabulary
+   *   never uses, which is exactly why it reads as an event rather than as a
+   *   louder version of one.
+   *
+   *   THE EMBERS stay. They rise and drift for two and a half seconds after
+   *   everything else has finished, so a legendary has an AFTERMATH — and an
+   *   aftermath is most of what separates a big moment from a fast one.
+   */
+  function overture(x: number, y: number, color: number, P: number) {
+    const r = takeRing()
+    r.x = x; r.y = y
+    r.age = 0
+    r.life = 0.3
+    r.from = 20; r.to = 420 * P
+    r.alpha = 0.85
+    r.p.tint = 0xffffff
+
+    for (let i = 0; i < Math.round(18 * P); i++) {
+      const m = takeMote()
+      m.cx = x; m.cy = y
+      m.ang = Math.random() * Math.PI * 2
+      // Tight on the plane and enormous in height: a pillar, not a dome.
+      m.r0 = Math.random() * 60
+      m.r1 = 30 + Math.random() * 90
+      m.h0 = 0
+      m.h1 = (260 + Math.random() * 280) * P
+      m.age = -Math.random() * 0.16
+      m.life = 0.85 + Math.random() * 0.5
+      m.size = 13 + Math.random() * 12
+      m.spin = (Math.random() - 0.5) * 1.4
+      m.p.tint = i % 4 === 0 ? 0xffffff : color
+    }
+
+    for (let i = 0; i < Math.round(14 * P); i++) {
+      const m = takeMote()
+      m.cx = x; m.cy = y
+      m.ang = Math.random() * Math.PI * 2
+      m.r0 = 40 + Math.random() * 120
+      m.r1 = 150 + Math.random() * 260
+      m.h0 = 30 + Math.random() * 90
+      m.h1 = 190 + Math.random() * 220
+      // LATE AND LONG. They start as the motion is finishing and outlive it,
+      // which is what makes the water look like something happened rather than
+      // like something is happening.
+      m.age = -(0.5 + Math.random() * 0.5)
+      m.life = 2.0 + Math.random() * 1.0
+      m.size = 7 + Math.random() * 8
+      m.spin = (Math.random() - 0.5) * 2.4
+      m.p.tint = color
+    }
+  }
+
   return {
     view,
     night(d) { dark = d },
@@ -338,6 +415,11 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
     cast(x, y, tx, ty, color, shape, power) {
       const P = Math.max(1, power)
       const dx = tx - x, dy = ty - y
+
+      // 1.5 IS THE LINE, and it is not arbitrary: an ordinary crew ability
+      // sends 1 and a chase skin sends 1.6 at the least. Anything above this
+      // came from a legendary.
+      if (P >= 1.5) overture(x, y, color, P)
 
       if (shape === 'storm') {
         // THE SEA IS STRUCK, AGAIN AND AGAIN. Tempest's bolts already fall on
