@@ -1678,10 +1678,40 @@ export default function RaidCombat({
   // transform ATTRIBUTE (same as the fishing drift mechanic), and the ship
   // marker orbits on its own layer at the same bearing.
   const dialZonesRef = useRef<SVGGElement | null>(null)
+  /**
+   * ── THE NEEDLE MOVES ON A TRANSFORM, NOT ON `left` ────────────────────────
+   *
+   * It was `left: calc(pos% - 2px)`, written every frame. `left` is a LAYOUT
+   * property: each write invalidates the geometry of the bar and everything in
+   * it, and the browser has to lay it out again before it can paint. Sixty
+   * times a second, on a phone, inside a deck that also holds the log and four
+   * buttons — and the needle is the one thing on screen you are tracking with
+   * your eye, so it is where the cost shows up.
+   *
+   * A transform is composited: no layout, no paint, the layer just moves. The
+   * catch is that translateX percentages are relative to the ELEMENT, not its
+   * parent, so this needs the bar's width in px — cached, because reading it is
+   * itself a layout, and re-measured only when the window changes.
+   */
+  const barWRef = useRef(0)
+  const needleWRef = useRef(4)
+  const zoneSizedRef = useRef(false)
+  useEffect(() => {
+    const clear = () => { barWRef.current = 0; zoneSizedRef.current = false }
+    window.addEventListener('resize', clear)
+    return () => window.removeEventListener('resize', clear)
+  }, [])
   const paintNeedle = useCallback((el: HTMLDivElement | null, pos: number) => {
     if (!el) return
-    if (onDial) el.style.transform = `rotate(${pos * 360}deg)`
-    else el.style.left = `calc(${pos * 100}% - 2px)`
+    if (onDial) { el.style.transform = `rotate(${pos * 360}deg)`; return }
+    if (!barWRef.current) {
+      barWRef.current = el.parentElement?.clientWidth ?? 0
+      // The needle is anchored at the left edge now and carried by the
+      // transform. Written once, alongside the measurement that makes it work.
+      el.style.left = '0px'
+    }
+    el.style.transform =
+      `translate3d(${pos * barWRef.current - needleWRef.current / 2}px, 0, 0)`
   }, [onDial])
   // Needle COLOUR. The bar tints a block; the dial's needle is an SVG stroke, so
   // it is drawn with currentColor and tinted by setting the CSS color on the same
@@ -1700,8 +1730,21 @@ export default function RaidCombat({
       return
     }
     if (!el) return
-    el.style.left = `${(center - HIT_W - GRAZE_W) * 100}%`
-    el.style.width = `${(HIT_W + GRAZE_W) * 2 * 100}%`
+    // SAME REASON AS THE NEEDLE. The zone drifts every frame on most raids, and
+    // it was rewriting both `left` and `width` to do it — two layout properties
+    // for a band whose WIDTH never changes: it is built out of constants. So the
+    // width is set once and the drift rides a transform.
+    if (!barWRef.current) barWRef.current = el.parentElement?.clientWidth ?? 0
+    // A FLAG, not a look at the element. The zone ships with an inline
+    // `width: 0`, so "has it been sized yet" cannot be asked of the style —
+    // "0px" is a perfectly truthy string and the real width would never land.
+    if (!zoneSizedRef.current) {
+      zoneSizedRef.current = true
+      el.style.width = `${(HIT_W + GRAZE_W) * 2 * 100}%`
+      el.style.left = '0px'
+    }
+    el.style.transform =
+      `translate3d(${(center - HIT_W - GRAZE_W) * barWRef.current}px, 0, 0)`
   }, [onDial])
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
@@ -3850,6 +3893,7 @@ export default function RaidCombat({
       zonePosRef.current = 0.3 + Math.random() * 0.4
       zoneDirRef.current = Math.random() < 0.5 ? -1 : 1
       if (indicatorRef.current && !onDial) {
+        needleWRef.current = 4
         indicatorRef.current.style.width = '4px'
         indicatorRef.current.style.boxShadow = '0 0 8px rgba(255,255,255,0.6)'
         indicatorRef.current.style.transform = 'scaleY(1)'
@@ -4000,12 +4044,14 @@ export default function RaidCombat({
     if (indicatorRef.current && !onDial && (res === 'hit' || res === 'critical')) {
       const w = res === 'critical' ? 10 : 7
       const glow = res === 'critical' ? '#fbbf24' : '#4ade80'
+      needleWRef.current = w
       indicatorRef.current.style.width = `${w}px`
       // On the bar the fattened needle has to be nudged left by half its new
       // width to stay centered on `pos`. On the dial it rotates about its own
       // pivot, so the rotation alone still points at the judged bearing.
-      if (onDial) paintNeedle(indicatorRef.current, pos)
-      else indicatorRef.current.style.left = `calc(${pos * 100}% - ${w / 2}px)`
+      // One place decides where a needle sits, on the bar as on the dial:
+      // paintNeedle already centres it on `pos` using the width just set.
+      paintNeedle(indicatorRef.current, pos)
       indicatorRef.current.style.boxShadow = `0 0 18px ${glow}, 0 0 36px ${glow}, 0 0 60px ${glow}66`
     }
 
