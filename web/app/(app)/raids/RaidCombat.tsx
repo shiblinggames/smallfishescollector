@@ -12440,6 +12440,21 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, fla
       {/* The bar itself — same DOM as the old AimPanel so the
           existing indicator/zone/flash animation hooks keep working
           without any ref reshuffling. */}
+      {/* ── WHY THE NEEDLE IS NOT INSIDE THE BAR ──────────────────────────
+          The bar clips its contents with `overflow: hidden` AND has rounded
+          corners, and that combination is poison for a thing that moves every
+          frame. A rounded clip cannot be applied by the compositor, so a
+          promoted layer underneath one gets re-rasterised on every frame
+          instead of simply being moved — which looks exactly like that one
+          element running at half the frame rate while everything around it is
+          fine. Nothing else in the bar moves fast enough to show it.
+
+          So the needle lives OUTSIDE the clip, in a wrapper that draws nothing,
+          laid over the bar at the same size. It never needed clipping anyway:
+          it travels 0 to 100% of the bar's own width and stops there. Everything
+          that DOES need clipping — the fog band, the flash, the decoys, the
+          target zone — stays inside. */}
+      <div style={{ position: 'relative' }}>
       <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
         <div ref={flashRef} style={{
           position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
@@ -12477,17 +12492,6 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, fla
             <div style={{ position: 'absolute', top: '22%', bottom: '22%', left: 'calc(50% - 1px)', width: 2, background: '#fca5a5' }} />
           </div>
         ))}
-        {/* THE NEEDLE RIDES A FULL-WIDTH TRACK, and that is the whole trick.
-            A transform is what you want moving something every frame, but a
-            translateX percentage is relative to the ELEMENT, not its parent —
-            so a 4px needle translated 50% moves two pixels. Give it a track as
-            wide as the bar and the two are the same thing: 50% of the track IS
-            half the bar, with no measurement and nothing to cache or go stale.
-            The needle hangs at the track's left edge, pulled back half its own
-            width so it is centred on the position rather than starting at it. */}
-        <div ref={needleTrackRef} aria-hidden style={{ position: 'absolute', top: 2, bottom: 2, left: 0, width: '100%', pointerEvents: 'none', zIndex: 2, willChange: 'transform' }}>
-          <div ref={indicatorRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, marginLeft: -2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)' }} />
-        </div>
         {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
             fog band drifts back-and-forth across the bar, briefly
             covering the gold critical center. Sits above the zone
@@ -12524,6 +12528,20 @@ function AimBarInline({ indicatorRef, zoneRef, needleTrackRef, zoneTrackRef, fla
             animation: 'rc-inkfall 3.4s ease-in-out infinite',
           }} />
         )}
+      </div>
+      {/* THE NEEDLE, over the bar and outside its clip. Same insets as the
+          contents it used to sit among, so nothing about where it appears has
+          changed — only what has to happen to move it.
+
+          The track is exactly as wide as the bar, which is what lets a
+          PERCENTAGE transform mean a percentage of the bar: 50% of a full-width
+          track is half the bar, so there is no width to measure and nothing to
+          cache or go stale. The needle hangs at its left edge, pulled back half
+          its own width so it is centred on the position rather than starting
+          at it. */}
+      <div ref={needleTrackRef} aria-hidden style={{ position: 'absolute', top: 2, bottom: 2, left: 0, width: '100%', pointerEvents: 'none', zIndex: 6, willChange: 'transform' }}>
+        <div ref={indicatorRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, marginLeft: -2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)' }} />
+      </div>
       </div>
 
       {/* Footer hint — when the fog's up, swap to a fog-specific cue
