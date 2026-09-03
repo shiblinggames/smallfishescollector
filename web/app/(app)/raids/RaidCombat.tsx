@@ -460,6 +460,17 @@ export interface RaidCombatProps {
    *  treatment (elite border + badge); the combat math reads from
    *  `affix` directly so the two never disagree. */
   isElite?: boolean
+  /**
+   * THIS IS THE CHALLENGE RUN, and the fight said so nowhere.
+   *
+   * Every difference a challenge makes is real and felt — scaled enemies,
+   * elite affixes rolled onto ordinary slots, a richer crate — but all of it
+   * arrives as things that are individually explicable as bad luck. A hard
+   * mob reads as a hard mob. Purely a label; the combat math reads
+   * `isChallengeRaidId(config.raidId)` for itself and always has, so the two
+   * cannot disagree about which run you are on.
+   */
+  challenge?: boolean
   isBoss: boolean
   shipImageUrl: string
   /** Optional CSS filter to recolor the ship sprite when a skin is equipped.
@@ -708,7 +719,7 @@ export interface RaidCombatProps {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function RaidCombat({
-  enemy, affix, isElite = false,
+  enemy, affix, isElite = false, challenge = false,
   isBoss, shipImageUrl, shipFilter, enemyArtFilter = '', bonusChargeSlots = 0, shipName, playerLabel,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
@@ -7659,6 +7670,26 @@ export default function RaidCombat({
             {/* Affix label sits under the name when elite — players see at
                 a glance what twist this elite has, and can tap into the
                 stats popup for the full description. */}
+            {/* ── WHICH RUN THIS IS ──────────────────────────────────
+                On the enemy's own card, because that is the one thing on
+                screen for the whole fight and the challenge is a property of
+                the ship you are taking on. In the campaign's own colour for a
+                challenge branch, so a captain meets one hue for the idea
+                wherever they run into it — the elite violet below is a
+                different statement and keeps its own. */}
+            {challenge && (
+              <p className="font-karla font-700 uppercase" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                alignSelf: 'flex-start', marginBottom: 3,
+                padding: '1px 6px', borderRadius: 999,
+                fontSize: '0.46rem', letterSpacing: '0.16em',
+                color: '#f0c3b8', background: 'rgba(224,138,122,0.18)',
+                border: '1px solid rgba(224,138,122,0.55)',
+              }}>
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6-6.3 4.6L7.9 13.8 2 9.4h7.6z" /></svg>
+                Challenge
+              </p>
+            )}
             {affix && (
               <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', color: '#a78bfa', letterSpacing: '0.14em', marginBottom: 3 }}>
                 {affix.name}

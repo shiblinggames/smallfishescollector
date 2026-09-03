@@ -1753,6 +1753,11 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}
+                // WHICH RUN THIS IS, said on screen. Derived from the raidId
+                // rather than passed down from whoever opened the fight, so a
+                // challenge entered from the sea, from the node map or from its
+                // own route all say the same thing.
+                challenge={isChallengeRaidId(config.raidId)}
                 // 'dial' on the Finn finale: the whole fight is aimed on the
                 // fishing dial instead of the bar (see BossRaidConfig.aimStyle).
                 aimStyle={config.aimStyle}
