@@ -2228,14 +2228,35 @@ export default function SeaMap({
    * Each takes its own bay's PALE STOP, so a shoal belongs to the water it is
    * in: bone-grey in A Bigger Fish, and almost black out in the Last Fathom.
    */
-  const surfLines = useMemo(() => WALLS.flatMap(w => {
-    if (!wallUp(w, clearedNodes)) return []
-    const e = wallEnds(w)
-    const bay = BAY_BY_ID[w.bay]
-    if (!e || !bay) return []
-    const hex = bay.sea[2].replace('#', '')
-    return [{ ax: e.ax, ay: e.ay, bx: e.bx, by: e.by, tint: parseInt(hex, 16) }]
-  }), [clearedNodes])
+  const surfLines = useMemo(() => {
+    const paleOf = (b: Bay) => parseInt(b.sea[2].replace('#', ''), 16)
+    const out: { ax: number; ay: number; bx: number; by: number; tint: number }[] = []
+
+    // ── THE ROUTE WALLS INSIDE EACH BAY ──
+    for (const w of WALLS) {
+      if (!wallUp(w, clearedNodes)) continue
+      const e = wallEnds(w)
+      const bay = BAY_BY_ID[w.bay]
+      if (!e || !bay) continue
+      out.push({ ax: e.ax, ay: e.ay, bx: e.bx, by: e.by, tint: paleOf(bay) })
+    }
+
+    // ── AND THE TWO SIDES OF EVERY STRAIT ──
+    //
+    // Built from the same strait space the rock was, so the shoal edges the
+    // passage exactly where the passage has always been. One line a side rather
+    // than two rows of boulders plus shingle: a strait is two thousand pixels
+    // long, which is more than enough to see four rocks repeat down it.
+    for (const b of BAYS) {
+      const L = straitLen(b)
+      for (const side of [-1, 1]) {
+        const a = fromStrait(b, 0, side * b.half)
+        const z = fromStrait(b, L, side * b.half)
+        out.push({ ax: a.x, ay: a.y, bx: z.x, by: z.y, tint: paleOf(b) })
+      }
+    }
+    return out
+  }, [clearedNodes])
 
   /**
    * PUSHED WHEN IT CHANGES, AND WHENEVER THE CANVAS IS READY FOR IT.
@@ -9581,28 +9602,20 @@ function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[]
     })
   }
 
-  // ── THE STRAIT'S TWO SIDES ──
+  // ── THE STRAIT'S TWO SIDES ARE WATER NOW ──
+  //
+  // They were two runs of the same four rocks down a two-thousand-pixel
+  // passage, twice over, and at that length the repeat is the only thing you
+  // see. They are shoals like the route walls inside the bay — see seaSurfLine
+  // and the `surfLines` that feeds it, which builds the strait's two edges from
+  // the same geometry this used.
+  //
+  // `put` stays: the gate stones below still use it, and they are the one thing
+  // out here that should be an object. Two stones either side of a gap is a
+  // DOOR, and a door is a specific thing rather than a length of coast.
   const put = (along: number, across: number, art: string, size: number) => {
     const p = fromStrait(b, along, across)
     out.push({ art, x: p.x, y: p.y, size })
-  }
-  const L = straitLen(b)
-  for (const side of [-1, 1]) {
-    for (const row of [0, 1]) {
-      for (let a = (row * STEP) / 2; a <= L; a += STEP) {
-        const k = pick()
-        put(a + (nx() - 0.5) * STEP * 0.3,
-          side * (b.half + (row ? STEP * 0.5 : 20) + (nx() - 0.5) * STEP * 0.4),
-          k.art, k.min + nx() * (k.max - k.min))
-      }
-    }
-    for (let a = 0; a <= L; a += PEBBLE_STEP) {
-      const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
-      const r = nx()
-      put(a + (nx() - 0.5) * PEBBLE_STEP * 0.8,
-        side * (b.half + 40 + nx() * 240),
-        pa.art, pa.min + r * r * (pa.max - pa.min))
-    }
   }
 
   // ── THE GATE STONES ──
