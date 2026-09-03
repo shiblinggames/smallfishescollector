@@ -459,6 +459,7 @@ export type FightFx = {
    * classes inside the chart, which is a place it has no business being.
    */
   shape?: 'buff' | 'debuff' | 'strike' | 'mend' | 'brace' | 'aim' | 'salvo' | 'frenzy'
+    | 'storm' | 'sweep'
   /** The class's own colour, or the chase skin's when one is equipped. */
   color?: string
   /** 1, or more when a legendary chase skin is driving it. */
@@ -2307,6 +2308,32 @@ export default function RaidCombat({
   const bang = useCallback((kind: FightFx['kind'], side: FightFx['side']) => {
     onFightFxRef.current?.({ kind, side })
   }, [])
+  /**
+   * A LEGENDARY'S OWN EFFECT, reaching the water.
+   *
+   * The six chase strikes already have bespoke overlays, and those sit on the
+   * hull — which, now that the hull floats on the real sea, means they are in
+   * the right PLACE and the water under them still does nothing. This is the
+   * sea's half of each. Two of them needed a sentence nothing else says: a
+   * storm strikes the water repeatedly around a ship, and a sweep goes out and
+   * comes back. The other four are motions the vocabulary already had, sent
+   * with the weight a legendary deserves.
+   */
+  const bangChase = useCallback((
+    kind: 'tempest' | 'leviathan' | 'requiem' | 'oracle' | 'galaxy' | 'ward',
+    color: string,
+  ) => {
+    const M = {
+      tempest:   { shape: 'storm'  as const, side: 'enemy'  as const, power: 2.0 },
+      leviathan: { shape: 'salvo'  as const, side: 'enemy'  as const, power: 2.4 },
+      requiem:   { shape: 'debuff' as const, side: 'enemy'  as const, power: 2.2 },
+      oracle:    { shape: 'sweep'  as const, side: 'player' as const, power: 1.8 },
+      galaxy:    { shape: 'mend'   as const, side: 'player' as const, power: 2.2 },
+      ward:      { shape: 'brace'  as const, side: 'player' as const, power: 2.2 },
+    }[kind]
+    onFightFxRef.current?.({ kind: 'ability', side: M.side, shape: M.shape, color, power: M.power })
+  }, [])
+
   /** A crew ability, with the motion, the colour and the weight the water needs. */
   const bangAbility = useCallback((classId: string, color: string, chase: boolean) => {
     onFightFxRef.current?.({
@@ -3621,6 +3648,7 @@ export default function RaidCombat({
         if (chaseSkinId === 'catfish_galaxy') {
           const gk = Date.now()
           setPlayerStrikeFx({ key: gk, kind: 'galaxy', color: chaseColor ?? '#8b7bf0' })
+          bangChase('galaxy', chaseColor ?? '#8b7bf0')
           playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === gk ? null : s)), 1750))
         }
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
@@ -3658,6 +3686,7 @@ export default function RaidCombat({
         const huntersBane = chaseSkinId === 'doby_huntersbane'
         if (huntersBane) {
           setEnemyStrikeFx({ key: lk, kind: 'leviathan', color: chaseColor ?? '#dc2626' })
+          bangChase('leviathan', chaseColor ?? '#dc2626')
           vibrate([0, 18, 55, 28])   // rising charge rumble as the strike winds up
           playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === lk ? null : s)), 1400))
         } else {
@@ -3731,6 +3760,7 @@ export default function RaidCombat({
         if (tempest) {
           const stormKey = Date.now()
           setEnemyStrikeFx({ key: stormKey, kind: 'tempest', color: chaseColor ?? '#38bdf8', shots: lastIdx + 1, interval: INTERVAL })
+          bangChase('tempest', chaseColor ?? '#38bdf8')
           playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === stormKey ? null : s)), (lastIdx + 1) * INTERVAL + 900))
         }
         for (let k = 0; k <= lastIdx; k++) {
@@ -3776,6 +3806,7 @@ export default function RaidCombat({
         if (chaseSkinId === 'dole_krakenhunter') {
           const ok = Date.now()
           setEnemyStrikeFx({ key: ok, kind: 'oracle', color: chaseColor ?? '#2dd4bf' })
+          bangChase('oracle', chaseColor ?? '#2dd4bf')
           playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === ok ? null : s)), 1500))
         }
         // Dodge refresh — clear the one-turn dodge cooldown so a player who
@@ -3810,6 +3841,7 @@ export default function RaidCombat({
         if (chaseSkinId === 'coelacanth_fossil') {
           const wk = Date.now()
           setPlayerStrikeFx({ key: wk, kind: 'ward', color: chaseColor ?? '#c8a45c' })
+          bangChase('ward', chaseColor ?? '#c8a45c')
           playStepChainRef.current.push(setTimeout(() => setPlayerStrikeFx(s => (s && s.key === wk ? null : s)), 2100))
         }
         setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall within ${VENGEANCE_WARD_TURNS} turns and it strikes back.`])
@@ -3829,6 +3861,7 @@ export default function RaidCombat({
         if (chaseSkinId === 'moorish_idol_idol') {
           const rk = Date.now()
           setEnemyStrikeFx({ key: rk, kind: 'requiem', color: chaseColor ?? '#ff4d7d' })
+          bangChase('requiem', chaseColor ?? '#ff4d7d')
           playStepChainRef.current.push(setTimeout(() => setEnemyStrikeFx(s => (s && s.key === rk ? null : s)), 1400))
         }
         setEHitsplat({ key: ak + 1, text: 'MARKED', color: chaseColor ?? '#f43f5e', big: true })

@@ -63,6 +63,9 @@ const MARK_CAP = 4
  *   salvo   something comes up from under them
  *   frenzy  a walk of impacts down the line between the hulls
  *
+ *   storm   the sea is struck again and again from above
+ *   sweep   a ring goes out, and one comes back
+ *
  * A signature is a different SENTENCE in this vocabulary, not a different
  * language — every one is built from the same three pools, so they all still
  * read as crew abilities before you have read the name.
@@ -70,6 +73,8 @@ const MARK_CAP = 4
 export type AbilityShape =
   | 'buff' | 'debuff' | 'strike'
   | 'mend' | 'brace' | 'aim' | 'salvo' | 'frenzy'
+  // The two a legendary needs that nothing else says:
+  | 'storm' | 'sweep'
 
 let moteTex: Texture | null = null
 let ringTex: Texture | null = null
@@ -254,17 +259,17 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       r.p.tint = color
       if (shape === 'buff') {
         // OUT AND OPENING. Help arriving, spreading from under her.
-        r.life = 0.85; r.from = 30; r.to = 330; r.alpha = 0.55
+        r.life = 0.85; r.from = 30; r.to = 330 * P; r.alpha = 0.55
       } else if (shape === 'debuff') {
         // IN AND CLOSING. Something taking hold of them — a ring that shrinks
         // is the only one of the three that reads as being DONE TO a ship
         // rather than coming FROM one.
-        r.life = 0.7; r.from = 420; r.to = 70; r.alpha = 0.6
+        r.life = 0.7; r.from = 420 * P; r.to = 70; r.alpha = 0.6
       } else {
-        r.life = 0.5; r.from = 40; r.to = 520; r.alpha = 0.7
+        r.life = 0.5; r.from = 40; r.to = 520 * P; r.alpha = 0.7
       }
 
-      const n = shape === 'strike' ? 26 : 20
+      const n = Math.round((shape === 'strike' ? 26 : 20) * P)
       for (let i = 0; i < n; i++) {
         const m = takeMote()
         m.cx = x; m.cy = y
@@ -307,7 +312,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         k.x = x; k.y = y
         k.age = -0.2
         k.life = 3.6
-        k.size = 210
+        k.size = 210 * P
         k.alpha = 0.3
         k.spin = 0.35
         k.p.tint = color
@@ -320,7 +325,7 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         r2.x = x; r2.y = y
         r2.age = -0.1
         r2.life = 0.7
-        r2.from = 60; r2.to = 700
+        r2.from = 60; r2.to = 700 * P
         r2.alpha = 0.3
         r2.p.tint = color
       }
@@ -333,6 +338,82 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
     cast(x, y, tx, ty, color, shape, power) {
       const P = Math.max(1, power)
       const dx = tx - x, dy = ty - y
+
+      if (shape === 'storm') {
+        // THE SEA IS STRUCK, AGAIN AND AGAIN. Tempest's bolts already fall on
+        // the hull; this is the water underneath answering each one. Scattered
+        // around them rather than on them, because a storm is weather over a
+        // PLACE and hitting the same point repeatedly would read as one gun
+        // firing fast.
+        const n = Math.round(7 * P)
+        for (let i = 0; i < n; i++) {
+          const a2 = Math.random() * Math.PI * 2
+          const rad = Math.random() * 210 * P
+          const sx = x + Math.cos(a2) * rad
+          const sy = y + Math.sin(a2) * rad * GROUND
+          const r = takeRing()
+          r.x = sx; r.y = sy
+          // Staggered, and unevenly: a rhythm reads as a machine, and this is
+          // supposed to be weather.
+          r.age = -(i * 0.11 + Math.random() * 0.07)
+          r.life = 0.4
+          r.from = 15; r.to = 190
+          r.alpha = 0.62
+          r.p.tint = color
+          for (let k = 0; k < 5; k++) {
+            const m = takeMote()
+            m.cx = sx; m.cy = sy
+            m.ang = Math.random() * Math.PI * 2
+            m.r0 = 6; m.r1 = 60 + Math.random() * 90
+            // UP, hard. Each strike lifts the water it hits.
+            m.h0 = 0; m.h1 = 110 + Math.random() * 130
+            m.age = -(i * 0.11 + Math.random() * 0.07)
+            m.life = 0.4 + Math.random() * 0.3
+            m.size = 10 + Math.random() * 9
+            m.spin = 0
+            m.p.tint = color
+          }
+        }
+        return
+      }
+
+      if (shape === 'sweep') {
+        // OUT, AND BACK. A ring leaves you, reaches them, and a second returns
+        // — which is what READING a ship looks like, and the only motion here
+        // that ends where it started. Oracle learns something and brings it
+        // home; nothing is done to the sea at all.
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = 0; r.life = 0.75
+        r.from = 40; r.to = 620 * P
+        r.alpha = 0.5
+        r.p.tint = color
+
+        const back = takeRing()
+        back.x = x; back.y = y
+        back.age = -0.7; back.life = 0.7
+        back.from = 620 * P; back.to = 50
+        back.alpha = 0.6
+        back.p.tint = color
+
+        // And what it brings back: motes travelling the line from THEM to you,
+        // which is the direction that says who learned something.
+        const n = 14
+        for (let i = 0; i < n; i++) {
+          const m = takeMote()
+          const f = (i + 0.5) / n
+          m.cx = x + dx * (1 - f)
+          m.cy = y + dy * (1 - f)
+          m.ang = 0; m.r0 = 0; m.r1 = 0
+          m.h0 = 30; m.h1 = 46
+          m.age = -0.75 - f * 0.35
+          m.life = 0.5
+          m.size = 9 + Math.random() * 6
+          m.spin = 0
+          m.p.tint = color
+        }
+        return
+      }
 
       if (shape === 'aim') {
         // A SIGHT-LINE DRAWN ACROSS THE WATER, lit from your bow outward one
