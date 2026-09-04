@@ -50,6 +50,7 @@ import {
   WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
+  WARGATE, WARGATE_REACH,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, type RaidNode } from '@/lib/raidMap'
@@ -252,6 +253,7 @@ const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
  *  captain actually takes something on. */
 const RaidSheet = dynamic(() => import('./RaidSheet'), { ssr: false })
 const BossCardSheet = dynamic(() => import('./BossCardSheet'), { ssr: false })
+const WargateSheet = dynamic(() => import('./WargateSheet'), { ssr: false })
 // The two channels a fight on the water runs on: where the hulls are, and what
 // is happening to them. Types only, so the fight is not pulled into this bundle.
 import type { ShipAnchor, ShipFx } from '@/app/(app)/raids/RaidCombat'
@@ -3187,6 +3189,11 @@ export default function SeaMap({
    * half of that wait.
    */
   const [bossData, setBossData] = useState<BossCardState | null>(null)
+  /** ── THE WARGATE ── standing in its mouth, and the sheet it opens. Its data
+   *  is the boss card's own read, prefetched on approach the same way. */
+  const [nearGate, setNearGate] = useState(false)
+  const [gateOpen, setGateOpen] = useState(false)
+  const [gateData, setGateData] = useState<BossCardState | null>(null)
   /** The fight's own loadout, read on the same approach for the same reason. */
   const [raidData, setRaidData] = useState<RaidSheetState | null>(null)
   const bossReadRef = useRef(false)
@@ -4139,6 +4146,17 @@ export default function SeaMap({
     )
   }, [nearEnc])
 
+  /** The gate's ledger, read as you pull up to it — same courtesy the boss
+   *  card gets, so stepping through opens on a card and not a wait. */
+  useEffect(() => {
+    if (!nearGate) return
+    void import('./WargateSheet')
+    bossCardState().then(
+      r => { if (!('error' in r)) setGateData(r) },
+      () => {},
+    )
+  }, [nearGate])
+
   const engaging = fightId ?? bossCard
   useEffect(() => {
     fishZoomTarget.current = fishingIn ? 1.42 : engaging ? 1.5 : 1
@@ -4424,6 +4442,13 @@ export default function SeaMap({
     // it that was for sale.
     if (inPortalNow && !inAnchorage) {
       return { act: 'Step through the portal', hold: null }
+    }
+
+    // THE WARGATE, when you are standing in its mouth. Same rank as the way
+    // home and for the same reason: a portal you are floating in outranks
+    // everything you merely sailed past.
+    if (nearGate) {
+      return { act: 'Step through the Wargate', hold: null }
     }
 
     // THE WAY HOME, when you are floating in one. Above the campaign: nothing
@@ -6845,6 +6870,9 @@ export default function SeaMap({
         // AND THE WAY HOME, which only exists in a bay whose boss is down.
         const wh = portalNear(pos.current.x, pos.current.y)
         setNearWayHome(prev => (prev?.bay === wh?.bay ? prev : wh))
+        // The Wargate is one fixed place, so its test is one hypot.
+        const ng = Math.hypot(pos.current.x - WARGATE.x, pos.current.y - WARGATE.y) < WARGATE_REACH
+        setNearGate(prev => (prev === ng ? prev : ng))
 
         // WHAT IS DRIFTING NEARBY. Against the drifted position, not the
         // anchor — same reason the traders test theirs.
@@ -7098,6 +7126,10 @@ export default function SeaMap({
         {/* WHY IS THERE NO SHIP THERE. ?probe=1 only — see MarkProbe. */}
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <MarkProbe bay={liveBay} pos={pos as any} />
+
+        {/* THE WARGATE, standing in the junction's mouth. One element, always
+            mounted: it is the campaign's front door and there is exactly one. */}
+        <WargateMark isNear={nearGate} />
 
         {/* The campaign, standing in its own water. */}
         <EncounterField bay={liveBay} status={nodeStatus} nearId={nearEnc?.node ?? null}
@@ -8113,6 +8145,20 @@ hullRef={hullRefFor(t.key)} />
           run you chose — the challenge branch is its own node with its own
           raidId — so this is where a challenge run entered from the water
           becomes possible at all. */}
+      {gateOpen && (
+        <WargateSheet
+          preloaded={gateData}
+          onSail={enc => {
+            const d = dockAt(enc)
+            setGateOpen(false)
+            // THE CROSSING. The gate puts you down at their mooring — the
+            // same spot a sail-up puts you, so what happens next is the same
+            // decision it always is.
+            if (d) warpTo(d.x, d.y)
+          }}
+          onClose={() => setGateOpen(false)} />
+      )}
+
       <BossCardSheet
         nodeId={bossCard}
         preloaded={bossData}
@@ -8507,6 +8553,15 @@ hullRef={hullRefFor(t.key)} />
             vel.current.x = 0; vel.current.y = 0
             target.current = { ...pos.current }
             setPortalOpen(true)
+            return true
+          }
+          if (nearGate) {
+            vibrate([12, 40, 20])
+            // Standing still while the ledger is open; stepping through is a
+            // decision, not a drive-by.
+            vel.current.x = 0; vel.current.y = 0
+            target.current = { ...pos.current }
+            setGateOpen(true)
             return true
           }
           if (nearWayHome && wayHomeOpen(nearWayHome, clearedNodes)) {
@@ -11880,6 +11935,42 @@ const WayHomeMark = memo(function WayHomeMark({ pt, isNear }: {
         boxShadow: isNear
           ? '0 0 26px rgba(150,208,244,0.7), inset 0 0 22px rgba(150,208,244,0.45)'
           : '0 0 16px rgba(150,208,244,0.4), inset 0 0 14px rgba(150,208,244,0.28)',
+      }} />
+    </div>
+  )
+})
+
+/**
+ * ── THE WARGATE, ON THE WATER ───────────────────────────────────────────────
+ *
+ * The way home's well, grown into a standing door. Same grammar — a hole in
+ * the sea with light coming out of it — because it IS the same object seen
+ * from the other side: every bay's way home lands beside this, and this
+ * reaches every boss you have bested. Ember-gold where the ways home are
+ * blue, so the pair read as directions of one road rather than two features.
+ */
+const WargateMark = memo(function WargateMark({ isNear }: { isNear: boolean }) {
+  const d = WARGATE_REACH * 1.9
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: WARGATE.x, top: WARGATE.y, pointerEvents: 'none',
+      width: d, height: d * GROUND, marginLeft: -d / 2, marginTop: -(d * GROUND) / 2,
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(10,6,2,0.85) 0%, rgba(20,12,6,0.5) 46%, transparent 70%)',
+      }} />
+      <div style={{
+        position: 'absolute', inset: '14%', borderRadius: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(255,208,122,0.5) 0%, rgba(240,170,80,0.2) 40%, transparent 72%)',
+        animation: 'wayHome 3.4s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'absolute', inset: '6%', borderRadius: '50%',
+        border: `2px solid ${isNear ? 'rgba(255,224,160,0.9)' : 'rgba(224,178,104,0.55)'}`,
+        boxShadow: isNear
+          ? '0 0 26px rgba(240,192,100,0.7), inset 0 0 22px rgba(240,192,100,0.45)'
+          : '0 0 16px rgba(240,192,100,0.4), inset 0 0 14px rgba(240,192,100,0.28)',
       }} />
     </div>
   )

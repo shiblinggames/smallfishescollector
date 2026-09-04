@@ -975,7 +975,33 @@ export function portalOpen(pt: ReturnPortal, cleared: Set<string> | string[]): b
  * arriving inside a berth ring would open the wharf's own panel the instant you
  * landed, and being handed a screen you did not ask for is not an arrival.
  */
-export const PORTAL_HOME = { x: -500, y: -5150 }
+/**
+ * ── THE WARGATE ─────────────────────────────────────────────────────────────
+ *
+ * A standing portal just north of the sortie: the campaign's own door. Step in
+ * and it shows every boss you have BESTED, with their card — the drops, the
+ * records — and instead of "enter the raid" it opens on their water: the gate
+ * drops you at their mooring, out in whichever bay they hold. A boss you have
+ * not beaten yet is not offered, and a boss you have not MET is not shown at
+ * all — the gate keeps trophies, it does not tell fortunes.
+ *
+ * Verified clear water: the nearest wall is seven thousand pixels off and the
+ * nearest place is fourteen hundred.
+ */
+export const WARGATE = { x: 0, y: -7400 }
+export const WARGATE_REACH = 340
+
+/**
+ * WHERE THE WAY HOME PUTS YOU DOWN: at the Wargate's feet.
+ *
+ * It used to land you off the Gunwharf. Now that the gate exists, "home" from
+ * a bay IS the gate — the two directions of the same door: every bay's way
+ * home lands here, and from here the gate reaches every boss you have bested.
+ * A short pull SOUTH of it, not inside it, because arriving inside a portal
+ * would open its sheet the instant you landed, and being handed a screen you
+ * did not ask for is not an arrival.
+ */
+export const PORTAL_HOME = { x: 0, y: -6950 }
 
 /** How close you have to be to use one. A portal is a place you sail INTO, so
  *  it is wider than a chest and narrower than a ship's hail. */

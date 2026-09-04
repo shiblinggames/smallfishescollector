@@ -2814,7 +2814,7 @@ function BossTile({ view, isNext, challengeCleared, clearedNodeIds, onOpen }: { 
 // EXPORTED, because the sea opens this too. You sail up to a hull, and the
 // card that names it, shows what it drops and offers the challenge run is
 // this one — not a second card that has to be kept in step with it.
-export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds }: {
+export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds, enterLabel, enterSub }: {
   boss: RaidNodeView
   challenge: RaidNodeView | null
   rec: RaidRecords | null
@@ -2830,6 +2830,11 @@ export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidIt
   onClose: () => void
   /** Cleared node ids — decides whether a story-gated boss is unmasked. */
   clearedNodeIds: Set<string>
+  /** The Wargate borrows this sheet with a different verb: same card, same
+   *  drops, same records, but pressing it SAILS you to the boss instead of
+   *  entering the raid. Defaults keep the map's own copy. */
+  enterLabel?: string
+  enterSub?: string
 }) {
   // Tapping a drop opens the same DropDetailModal the map nodes use, so an item
   // reads identically wherever you meet it. Local state: this modal is portaled
@@ -3108,10 +3113,10 @@ export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidIt
                 border: `1px solid ${enterBlocked ? 'rgba(255,255,255,0.1)' : `${accent}b0`}`,
                 background: enterBlocked ? 'rgba(255,255,255,0.04)' : `${accent}2a`, color: enterBlocked ? '#6a6764' : '#f4efe4' }}>
               <span className="font-cinzel font-800 uppercase" style={{ display: 'block', fontSize: '1.05rem', letterSpacing: '0.08em' }}>
-                {isChallenge && !chAvailable ? 'Clear the Raid First' : 'Enter Raid →'}
+                {isChallenge && !chAvailable ? 'Clear the Raid First' : (enterLabel ?? 'Enter Raid →')}
               </span>
               <span className="font-karla font-600" style={{ display: 'block', fontSize: '0.52rem', letterSpacing: '0.05em', opacity: 0.75, marginTop: 2 }}>
-                {isChallenge ? 'Challenge · bonus loot' : 'Normal · standard loot'}
+                {enterSub ?? (isChallenge ? 'Challenge · bonus loot' : 'Normal · standard loot')}
               </span>
             </button>
           )}
