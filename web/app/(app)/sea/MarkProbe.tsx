@@ -54,6 +54,7 @@ export default function MarkProbe({ bay, pos }: {
   const [on, setOn] = useState(false)
   const [rows, setRows] = useState<Row[]>([])
   const [counts, setCounts] = useState('')
+  const [where, setWhere] = useState('')
   const [fetches, setFetches] = useState<Record<string, 'ok' | 'failed'>>({})
 
   useEffect(() => {
@@ -103,11 +104,27 @@ export default function MarkProbe({ bay, pos }: {
         })
       }
       setRows(next)
+      // WHAT IS ACTUALLY IN THE DOCUMENT, counted rather than derived. If the
+      // field is drawing this bay at all, these are not zero.
+      const imgs = document.querySelectorAll('img[src*="/sea/isle-note.png"]').length
+      const chests = document.querySelectorAll('img[src*="/sea/isle-chest"]').length
       setCounts(
         `${ENCOUNTERS.filter(x => x.bay === bay).length} ships, `
         + `${BEATS.filter(x => x.bay === bay).length} beats, `
-        + `${CACHES.filter(x => x.bay === bay).length} caches`,
+        + `${CACHES.filter(x => x.bay === bay).length} caches`
+        + `\nin the page: ${imgs} signs, ${chests} chests`,
       )
+      // WHERE YOU ARE, and the nearest mark ANYWHERE, so a wrong bay or a bay
+      // you never actually entered tells on itself.
+      let bestD = Infinity, bestL = '-'
+      for (const e of ENCOUNTERS) {
+        const at = encounterAt(e)
+        if (!at) continue
+        const d = Math.hypot(at.x - p.x, at.y - p.y)
+        if (d < bestD) { bestD = d; bestL = `${e.node} (${e.bay})` }
+      }
+      setWhere(`you: ${Math.round(p.x)},${Math.round(p.y)}`
+        + `\nnearest ship anywhere: ${bestL} ${Math.round(bestD)}px`)
     }
     tick()
     const id = window.setInterval(tick, 600)
@@ -128,6 +145,7 @@ export default function MarkProbe({ bay, pos }: {
       <div style={{ color: '#f0c040', fontWeight: 700 }}>MARK PROBE</div>
       <div>bay drawn: {bay ?? 'NONE (nothing will be drawn)'}</div>
       <div>in that bay: {counts}</div>
+      <div>{where}</div>
       {rows.length === 0 && <div style={{ color: '#e28a78' }}>no ships listed for this bay</div>}
       {rows.map(r => (
         <div key={r.node} style={{ marginTop: 4 }}>
