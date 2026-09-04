@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SORTIE } from './chart'
 import {
   HUB, HUB_R, BAYS, bayCentre, mouthOf, entryOf, straitLen, bayOpen,
+  ENCOUNTERS, encounterAt,
 } from './raidWaters'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
@@ -387,6 +388,46 @@ export default function Minimap({
         ctx.lineWidth = 1
         ctx.stroke()
 
+        // ── AND WHAT IS IN IT ────────────────────────────────────────────
+        //
+        // THE BAYS WERE DRAWN AND THEIR CONTENTS WERE NOT, and that is the
+        // whole reason a captain reported an empty chapter. The Last Fathom is
+        // 11,856px across, a viewport shows about 2,800 of it, and the chart
+        // draws ONE bay's marks — so there is nothing on screen and nothing on
+        // the map to say which way the fight is. Its first enemy is 6,480px
+        // from the entry against 3,905 in the Loose Thread: four viewports of
+        // open water, in a bay where every other chapter has been culled away.
+        // Sailing a search pattern is not exploration, it is a lost captain.
+        //
+        // ENEMIES ONLY. Fourteen marks in a forty-pixel disc is a smear;
+        // the two or three ships are what you are actually looking for, and
+        // caches and story beats are things you come across while looking.
+        for (const e of ENCOUNTERS) {
+          if (e.bay !== b.id) continue
+          const at = encounterAt(e)
+          if (!at) continue
+          const done = cleared.includes(e.node)
+          const ex = tx(at.x), ey = ty(at.y)
+          // A dark seat under it, so a gold pip never sits straight on bay
+          // blue and vanishes into it.
+          ctx.beginPath()
+          ctx.arc(ex, ey, 3.1, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(8,16,24,0.55)'
+          ctx.fill()
+          ctx.beginPath()
+          ctx.arc(ex, ey, 2.1, 0, Math.PI * 2)
+          if (done) {
+            // TAKEN, AND STILL THERE. A cleared boss stays fightable, so it
+            // stays on the map — hollow, the way a visited port is.
+            ctx.strokeStyle = 'rgba(190,214,232,0.62)'
+            ctx.lineWidth = 1
+            ctx.stroke()
+          } else {
+            ctx.fillStyle = openDoor ? 'rgba(240,192,64,0.95)' : 'rgba(240,192,64,0.34)'
+            ctx.fill()
+          }
+        }
+
         // ITS NAME, and the numeral, because "chapter two" is how a captain
         // thinks about it and "A Bigger Fish" is how the water is signed.
         ctx.textAlign = 'center'
@@ -738,6 +779,8 @@ export default function Minimap({
               {side !== 'fishing' && (
                 <KeyGroup title="The campaign">
                   <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="A chapter's bay" />
+                  <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="A fight waiting" />
+                  <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="One you have taken" />
                   <Key mark={<Bar c="rgba(226,138,120,0.85)" />} label="Rocked shut" />
                   <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="The way home" />
                 </KeyGroup>
@@ -843,11 +886,11 @@ function Cross({ c, thin }: { c: string; thin?: boolean }) {
   )
 }
 
-function Swatch({ c, round = false }: { c: string; round?: boolean }) {
+function Swatch({ c, round = false, ring }: { c: string; round?: boolean; ring?: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
       {round
-        ? <circle cx="8" cy="8" r="6" fill={c} stroke="rgba(196,169,106,0.5)" strokeWidth="1" />
+        ? <circle cx="8" cy="8" r="6" fill={c} stroke={ring ?? 'rgba(196,169,106,0.5)'} strokeWidth="1" />
         : <rect x="2" y="2" width="12" height="12" rx="2" fill={c} stroke="rgba(180,214,232,0.2)" strokeWidth="1" />}
     </svg>
   )
