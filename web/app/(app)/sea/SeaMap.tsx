@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import RenownPanel from '@/components/RenownPanel'
 import Minimap from './Minimap'
+import MarkProbe from './MarkProbe'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
@@ -6910,6 +6911,10 @@ export default function SeaMap({
             </div>
           ) : null
         })}
+
+        {/* WHY IS THERE NO SHIP THERE. ?probe=1 only — see MarkProbe. */}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <MarkProbe bay={liveBay} pos={pos as any} />
 
         {/* The campaign, standing in its own water. */}
         <EncounterField bay={liveBay} status={nodeStatus} nearId={nearEnc?.node ?? null}
