@@ -1521,6 +1521,33 @@ export default function SeaMap({
    */
   const lastPos = useRef({ x: 0, y: 0 })
   const lastKnown = useRef(false)
+  /**
+   * ── ONLY THE ROCK THAT COULD ACTUALLY TOUCH HER ─────────────────────────
+   *
+   * The frame loop used to test the hull against EVERY solid thing on the
+   * chart, every frame: about two hundred obstacle shapes and seventy-five
+   * wall segments, each a closest-point and a hypot — twelve thousand
+   * distance tests a second spent proving that rock ten thousand pixels away
+   * is still ten thousand pixels away. On the fishing side not one bay wall
+   * can ever matter and every one was tested anyway.
+   *
+   * So the loop works from a NEAR LIST: everything within NEAR_R of the hull,
+   * rebuilt whenever she has moved NEAR_STEP from where the list was made.
+   * Distance-triggered rather than clock-triggered on purpose — a teleport
+   * (the warp home, a portal) invalidates the list by the same rule ordinary
+   * sailing does, with no special case and no window where the old list is
+   * trusted at the new position.
+   *
+   * The margin arithmetic: an obstacle can reach the hull only within its own
+   * radius (the biggest on the chart is well under 700), and a wall only at
+   * zero. Built at NEAR_R = 1600 and rebuilt after 400, the list is always
+   * complete out to 1200 from wherever she now is — which clears the largest
+   * influence radius with room to spare. A rebuild is one full scan, a few
+   * times a second while under way, none at all at anchor.
+   */
+  const nearObs = useRef<Obstacle[]>([])
+  const nearWalls = useRef<{ w: Wall; ax: number; ay: number; bx: number; by: number }[]>([])
+  const nearAt = useRef({ x: Infinity, y: Infinity })
   /** Mirrored for the frame loop, which mounts once and would otherwise hold
    *  whatever was cleared when the page loaded — so a chapter finished in this
    *  session would leave its strait shut until a reload. */
@@ -2887,7 +2914,13 @@ export default function SeaMap({
    * length, and rounding here means a slow drift does not re-render the chart
    * dozens of times a second for a needle that would not visibly turn.
    */
-  const [boatAt, setBoatAt] = useState({ x: 0, y: 0 })
+  // boatAt is GONE, and it is worth a line saying why. It was "the compass's
+  // only source", quantised to 40px so the chart would not re-render for a
+  // needle that had not moved — and then the compass was handed the `pos` ref
+  // and stopped reading it, which left a state with no consumer re-rendering
+  // this entire component about twelve times a second the whole time she was
+  // under way. The single most expensive React work on the chart, spent on
+  // nothing at all.
   /** The conversation, while it is open. */
   /** The scene, and the lines the server last handed back for it. */
   const [finnOpen, setFinnOpen] = useState(false)
@@ -5653,8 +5686,45 @@ export default function SeaMap({
       // previous position, "the segment she travelled" is a line from wherever
       // this ref happened to start, and a route full of rock will always find
       // something to refuse.
+      // THE NEAR LIST, refreshed by distance travelled — see nearObs. Ahead of
+      // the wall test because the walls read from it too. Squared distances
+      // throughout: this is the scan the near list exists to make rare, so it
+      // should not pay a sqrt per candidate either.
+      {
+        const mx = pos.current.x - nearAt.current.x
+        const my = pos.current.y - nearAt.current.y
+        if (mx * mx + my * my > 400 * 400) {
+          nearAt.current.x = pos.current.x
+          nearAt.current.y = pos.current.y
+          const R = 1600
+          const obs = nearObs.current
+          obs.length = 0
+          for (const o of allObstacles()) {
+            const c = obstacleNearest(o, pos.current.x, pos.current.y)
+            const dx = pos.current.x - c.x, dy = pos.current.y - c.y
+            const reach = o.r + R
+            if (dx * dx + dy * dy < reach * reach) obs.push(o)
+          }
+          const ws = nearWalls.current
+          ws.length = 0
+          for (const w of WALLS) {
+            const e = wallSeg(w)
+            if (!e) continue
+            // Closest point of the wall's segment to the hull — the same shape
+            // as obstacleNearest, on the cached ends.
+            const vx = e.bx - e.ax, vy = e.by - e.ay
+            const t2 = Math.max(0, Math.min(1,
+              ((pos.current.x - e.ax) * vx + (pos.current.y - e.ay) * vy)
+              / Math.max(1e-6, vx * vx + vy * vy)))
+            const dx = pos.current.x - (e.ax + vx * t2)
+            const dy = pos.current.y - (e.ay + vy * t2)
+            if (dx * dx + dy * dy < R * R) ws.push({ w, ax: e.ax, ay: e.ay, bx: e.bx, by: e.by })
+          }
+        }
+      }
+
       const from = lastPos.current
-      for (const w of WALLS) {
+      for (const nw of nearWalls.current) {
         if (!lastKnown.current) break
         // NOT WHILE THE GUNS ARE OUT. In a fight she is not sailing: the loop
         // is easing her onto her station in the duel, and a crossing test reads
@@ -5662,9 +5732,9 @@ export default function SeaMap({
         // pixels off a hull that is itself in open water, so there is nothing
         // out there for her to end up inside.
         if (fightOnRef.current) break
+        const w = nw.w
         if (!wallUp(w, clearedRef.current)) continue
-        const e = wallSeg(w)
-        if (!e) continue
+        const e = nw
         const hit = segHit(from.x, from.y, pos.current.x, pos.current.y, e.ax, e.ay, e.bx, e.by)
         if (hit == null) continue
 
@@ -5688,7 +5758,10 @@ export default function SeaMap({
         if (w.node) held = w
       }
       basinKnown.current = nowOut
-      lastPos.current = { x: pos.current.x, y: pos.current.y }
+      // Mutated, not replaced: this runs every frame, and a fresh object per
+      // frame is nothing but work for the collector.
+      lastPos.current.x = pos.current.x
+      lastPos.current.y = pos.current.y
       lastKnown.current = true
 
       // Only when it CHANGES. This runs every frame and setState does not.
@@ -5706,7 +5779,7 @@ export default function SeaMap({
       // you scrape along the coast and round it instead of stopping dead
       // against it. A hull that halts the instant it touches land feels like a
       // wall; one that slides feels like a shore.
-      for (const o of allObstacles()) {
+      for (const o of nearObs.current) {
         // Capsule-aware: the normal comes off the segment's closest point, so
         // sliding along a jetty's face is the same slide a coast gives.
         const c = obstacleNearest(o, pos.current.x, pos.current.y)
@@ -6673,14 +6746,9 @@ export default function SeaMap({
         const fn = finnRef.current
         const finnHit = !!fn && Math.hypot(pos.current.x - fn.at.x, pos.current.y - fn.at.y) < FINN_REACH
         setNearFinn(prev => (prev === finnHit ? prev : finnHit))
-        // AND WHERE SHE IS, quantised. See boatAt: this is the compass's only
-        // source, and rounding is what keeps a drifting boat from re-rendering
-        // the chart for a needle that would not move.
-        {
-          const qx = Math.round(pos.current.x / 40) * 40
-          const qy = Math.round(pos.current.y / 40) * 40
-          setBoatAt(prev => (prev.x === qx && prev.y === qy ? prev : { x: qx, y: qy }))
-        }
+        // Where she is used to be mirrored into state here for the compass;
+        // the compass reads the `pos` ref now, and the mirror was re-rendering
+        // the whole chart for nobody. See the note where boatAt was declared.
 
         // WITHIN REACH OF AN ISLE. Compared by id: `isleNear` returns the same
         // object every time, but comparing ids keeps this honest if the table
