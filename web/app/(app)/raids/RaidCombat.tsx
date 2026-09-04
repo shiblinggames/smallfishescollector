@@ -9573,7 +9573,12 @@ function PlayerStatsPopup({
       // fixed scrim escapes the transformed combat region — otherwise it
       // anchored to that box and the bottom got clipped + couldn't scroll.
       style={{
-        position: 'fixed', inset: 0, zIndex: 95,
+        // z 140, NOT 95. Over the sea this fight is a sheet mounted at z 113,
+        // and a body-portaled scrim at 95 rendered UNDER it — the nameplates
+        // and the deck sat on top of the very stats card they had opened.
+        // On the /raids routes nothing else reaches 140, so it is safe there
+        // too, and the two stats popups must match each other.
+        position: 'fixed', inset: 0, zIndex: 140,
         background: 'rgba(0,0,0,0.82)',
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
@@ -9973,7 +9978,12 @@ function EnemyStatsPopup({
       // transformed combat region (otherwise it anchored to that box, the bottom
       // clipped, and it couldn't scroll). Mirrors PlayerStatsPopup.
       style={{
-        position: 'fixed', inset: 0, zIndex: 95,
+        // z 140, NOT 95. Over the sea this fight is a sheet mounted at z 113,
+        // and a body-portaled scrim at 95 rendered UNDER it — the nameplates
+        // and the deck sat on top of the very stats card they had opened.
+        // On the /raids routes nothing else reaches 140, so it is safe there
+        // too, and the two stats popups must match each other.
+        position: 'fixed', inset: 0, zIndex: 140,
         background: 'rgba(0,0,0,0.82)',
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',

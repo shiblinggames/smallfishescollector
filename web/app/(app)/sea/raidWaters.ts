@@ -1175,10 +1175,18 @@ const ENC_ART_INK: [RegExp, number][] = [
   [/chapter3/, 0.64],
   [/chapter1|chapter2/, 0.52],
 ]
+/**
+ * AND SHE IS OVER THERE, NOT HERE. The enemy stands up-screen of you, which on
+ * this chart's plane means farther away — so she draws a shade under her true
+ * class size. Enough to read as distance between the two hulls, not enough to
+ * put her back on the dinghy scale this table exists to fix. Applied to hull
+ * and box together, so a ward still wraps exactly the ship that is painted.
+ */
+const ENC_FAR = 0.87
 export function encArt(art: string): { hull: number; box: number } {
-  const hull = ENC_TYPE_HULL.find(([re]) => re.test(art))?.[1] ?? 245
+  const hull = (ENC_TYPE_HULL.find(([re]) => re.test(art))?.[1] ?? 245) * ENC_FAR
   const ink = ENC_ART_INK.find(([re]) => re.test(art))?.[1] ?? 0.6
-  return { hull, box: Math.round(hull / ink) }
+  return { hull: Math.round(hull), box: Math.round(hull / ink) }
 }
 
 export function hullFor(e: Encounter): string | null {
