@@ -414,8 +414,15 @@ export type SeaLog = {
  * The two hulls are framed on the midpoint between them, then the whole shot is
  * lifted so they sit above centre: the deck owns the foot of the screen, and a
  * duel composed on the middle of the window puts the enemy behind the log.
+ *
+ * 200 WAS TUNED FOR THE DINGHY-SIZED BOSSES. A flagship drawn at its true
+ * size (see encArt) is nearly three times the height of the box the old lift
+ * was framed around, and at 200 her masts ran off the top of the window —
+ * verified with a screenshot of the Blockade duel. 75 sits the pair lower:
+ * the enemy's rig fits under the level bar, and the player still clears the
+ * deck.
  */
-const FIGHT_CAM_LIFT = 200
+const FIGHT_CAM_LIFT = 75
 
 const Z = {
   /** The water's colour, and the two moving surface layers over it. */
