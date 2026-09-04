@@ -11627,7 +11627,10 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
             : isNear && !cleared
               ? 'drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(240,192,64,0.55))'
               : undefined,
-          opacity: cleared ? 0.85 : 1,
+          // A cleared boss sits faded as "already taken" — but not while she
+          // is shooting at you. The fought hull is at full presence for the
+          // duration, whatever the ledger says about her.
+          opacity: cleared && !hullRef ? 0.85 : 1,
         }} />
       </div>
       </div>
