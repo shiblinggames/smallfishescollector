@@ -8197,6 +8197,14 @@ hullRef={hullRefFor(t.key)} />
             return
           }
           const at = e.side === 'enemy' ? them : me
+          if (e.kind === 'summon') {
+            const hex2 = (e.color ?? '#ffffff').replace('#', '')
+            const n2 = parseInt(hex2.length === 3
+              ? hex2.split('').map(c => c + c).join('')
+              : hex2, 16)
+            gpu.summon(at.x, at.y, Number.isFinite(n2) ? n2 : 0xffffff, e.power ?? 1)
+            return
+          }
           if (e.kind === 'ability') {
             // The colour arrives as the class's own CSS hex, because that is
             // what the fight has; Pixi wants a number. Parsed here rather than

@@ -172,6 +172,8 @@ export type GpuHandle = {
    * A CREW ABILITY LANDS on the hull at `x,y`, in its class's colour. `shape`
    * is what it does rather than which one it is — see seaAbilityFx.
    */
+  /** The conjuring on the water under a summoning hull — see AbilityFx.summon. */
+  summon(x: number, y: number, color: number, power: number): void
   ability(
     x: number, y: number,
     /** The other hull, for the motions drawn BETWEEN two ships. */
@@ -1252,6 +1254,7 @@ export default function SeaIslandsGPU({
         gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
         surf(lines) { surf.set(lines) },
         ability(x, y, tx, ty, color, shape, power) { spells.cast(x, y, tx, ty, color, shape, power) },
+        summon(x, y, color, power) { spells.summon(x, y, color, power) },
         ward(side, x, y, beam, color, up) { spells.ward(side, x, y, beam, color, up) },
         status(side, x, y, beam, kind) { spells.status(side, x, y, beam, kind) },
         gunsink(x, y) {

@@ -467,7 +467,7 @@ export type ShipFx = {
  */
 export type FightFx = {
   kind: 'fire' | 'hit' | 'crit' | 'miss' | 'dodge' | 'sink' | 'ability'
-    | 'volley' | 'mega'
+    | 'volley' | 'mega' | 'summon'
   /** Whose hull the event belongs to: who fired, who was struck, or whose ship
    *  an ability is happening to. */
   side: 'player' | 'enemy'
@@ -3609,6 +3609,10 @@ export default function RaidCombat({
     // happens to the enemy), e.g. Mako's Tempest turns Blitz into a lightning storm.
     const chaseSkinId: string | null = summonSkin?.chase ? summonSkin.id : null
     setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: summonColor, image: crew.imageUrl ?? null, chase: !!summonSkin?.chase, skinId: summonSkin?.id ?? null })
+    // THE WATER IS PART OF THE SUMMONING. The splash owns the screen; this is
+    // the sigil, the gathering and the climbing helix at her actual hull, held
+    // for the same beat. A chase skin gets the legendary weight.
+    onFightFxRef.current?.({ kind: 'summon', side: 'player', color: summonColor, power: summonSkin?.chase ? 2 : 1 })
     // AND IT HAPPENS IN THE WATER. The banner above says who and what; this is
     // the ability landing on a hull that is actually floating out there. It
     // takes the SUMMON colour, so a chase skin themes the water the same way it
@@ -6652,6 +6656,8 @@ export default function RaidCombat({
           key: Date.now(), label: step.summon.label, name: step.summon.name,
           color: step.summon.color, image: step.summon.image, chase: false, skinId: null,
         })
+        // Their conjuring happens at their hull, same grammar, their colour.
+        onFightFxRef.current?.({ kind: 'summon', side: 'enemy', color: step.summon.color, power: 1 })
         playStepChainRef.current.push(setTimeout(() => setAbilitySummon(s => (s && s.image === step.summon?.image ? null : s)), SUMMON_TOTAL_MS))
       }
       const isAttack  = step.action === 'fire' || step.action === 'volley' || step.action === 'mega' || step.action === 'ultimate'
@@ -12002,6 +12008,46 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
           style={{ position: 'absolute', top: '43%', width: 320, height: 320, marginTop: -160, borderRadius: '50%', background: `radial-gradient(circle, #fffbe8ee 0%, ${color}77 34%, transparent 68%)`, pointerEvents: 'none' }}
         />
       )}
+
+      {/* THE GROUND ANSWERS A CHASE. Two flat ripples spreading from the
+          arrival's foot — squashed to ellipses so they lie under the figure
+          rather than around it, which is what plants the summon ON something
+          instead of floating it in a void. Transient, so they may drive their
+          own opacity like the arrival flashes above. */}
+      {chase && [0.18, 0.46].map((delay, i) => (
+        <motion.div key={`ripple-${i}`}
+          initial={{ opacity: 0, scale: 0.25 }}
+          animate={{ opacity: [0, 0.65, 0], scale: [0.25, 2.1 + i * 0.5, 2.6 + i * 0.5] }}
+          transition={{ duration: 0.9, delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', top: '43%', width: 300, height: 90, marginTop: 96,
+            borderRadius: '50%', border: `2px solid ${color}`,
+            boxShadow: `0 0 18px ${color}66`, pointerEvents: 'none',
+          }}
+        />
+      ))}
+
+      {/* AND THE AIR FILLS. Sparks climbing around the figure for the whole
+          hold — a legendary does not just land, it keeps happening. Positions
+          are hashed off the index so the memo's one render is deterministic;
+          transient by nature, so their own opacity curve is allowed. */}
+      {chase && [...Array(14)].map((_, i) => {
+        const fx = ((i * 137) % 100) / 100
+        const drift = ((i * 61) % 100) / 100
+        return (
+          <motion.span key={`spark-${i}`}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: [0, 1, 0], y: [40, -150 - drift * 120], x: (drift - 0.5) * 60 }}
+            transition={{ duration: 1.2 + drift * 0.6, delay: 0.2 + fx * 1.1, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', top: '46%', left: `calc(50% + ${(fx - 0.5) * 300}px)`,
+              width: 5 + drift * 4, height: 5 + drift * 4, borderRadius: '50%',
+              background: `radial-gradient(circle, #ffffff 0%, ${color} 55%, transparent 80%)`,
+              boxShadow: `0 0 10px ${color}`, pointerEvents: 'none',
+            }}
+          />
+        )
+      })}
 
       {/* The crew — JUST the art, no card frame. A colored glow (drop-shadow)
           instead of a border/background so it reads as summoning the character,

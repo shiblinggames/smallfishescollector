@@ -53,7 +53,7 @@ const MOTE_CAP = 200
 /** Rings. A legendary storm alone throws fourteen, plus its overture. */
 const RING_CAP = 34
 /** Marks on the water. They linger, so a few can be down at once. */
-const MARK_CAP = 4
+const MARK_CAP = 6
 
 /**
  * ── THE VOCABULARY ──────────────────────────────────────────────────────────
@@ -238,6 +238,19 @@ export type AbilityFx = {
      *  than the same effect in a different tint. */
     power: number,
   ): void
+  /**
+   * ── THE CONJURING ─────────────────────────────────────────────────────────
+   *
+   * The summon splash takes the whole screen; this is the water's half of the
+   * same beat, at the hull the crew was called to. Deliberately NOT the cast
+   * and NOT the overture: a cast is radial and instant, an overture is a
+   * pillar — a summoning is a PROCESS, so its signature is a sigil turning on
+   * the water with the sea being gathered inward and a helix climbing out of
+   * it for as long as the splash holds. P is the usual weight: 1 for a crew,
+   * 2 for a chase skin, which adds the white snap, a counter-helix, and an
+   * ember afterglow that outlasts the banner.
+   */
+  summon(x: number, y: number, color: number, P: number): void
   advance(dt: number): void
   night(dark: number): void
   destroy(): void
@@ -825,6 +838,101 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
       }
 
       base(x, y, color, shape, P)
+    },
+
+    summon(x, y, color, P) {
+      // THE SIGIL. One circle on the water, turning for the whole banner —
+      // the mark pool's discs are exactly this shape, borrowed for a moment
+      // that is conjuring rather than condition.
+      const k = takeMark()
+      k.x = x; k.y = y
+      k.age = 0
+      k.life = 2.0
+      k.size = 320 * P
+      k.alpha = 0.34
+      k.spin = 1.1
+      k.p.tint = color
+
+      // THE GATHERING. Two rings drawn INWARD, staggered — the sea being
+      // collected into the circle. Shrinking is the debuff's grammar, but a
+      // debuff closes on a victim once; twice in rhythm reads as breathing in.
+      for (let i = 0; i < 2; i++) {
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = -i * 0.28
+        r.life = 0.7
+        r.from = (460 + i * 120) * P
+        r.to = 60
+        r.alpha = 0.42
+        r.p.tint = color
+      }
+
+      // THE HELIX. An ordered climb, not a burst: angles laid in sequence
+      // round a double turn, ages staggered by INDEX, all spinning the same
+      // way — so the eye reads one spiral winding up out of the circle for
+      // the length of the splash.
+      const n = Math.round(20 * P)
+      for (let i = 0; i < n; i++) {
+        const m = takeMote()
+        m.cx = x; m.cy = y
+        m.ang = (i / n) * Math.PI * 4
+        m.r0 = 150
+        m.r1 = 40
+        m.h0 = 0
+        m.h1 = (240 + Math.random() * 160) * P
+        m.age = -(i / n) * 0.9
+        m.life = 0.9 + Math.random() * 0.4
+        m.size = 13 + Math.random() * 10
+        m.spin = 2.2
+        m.p.tint = color
+      }
+
+      if (P >= 1.5) {
+        // THE SNAP. White, once, when the circle takes — the same "rarer, not
+        // merely bigger" argument the overture makes.
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = -0.35
+        r.life = 0.32
+        r.from = 30; r.to = 380 * P
+        r.alpha = 0.8
+        r.p.tint = 0xffffff
+
+        // A COUNTER-HELIX, winding the other way. Two spirals crossing is the
+        // one thing a plain summon never draws.
+        for (let i = 0; i < n; i++) {
+          const m = takeMote()
+          m.cx = x; m.cy = y
+          m.ang = -(i / n) * Math.PI * 4
+          m.r0 = 110
+          m.r1 = 30
+          m.h0 = 0
+          m.h1 = (200 + Math.random() * 140) * P
+          m.age = -0.2 - (i / n) * 0.9
+          m.life = 0.8 + Math.random() * 0.4
+          m.size = 11 + Math.random() * 9
+          m.spin = -2.2
+          m.p.tint = 0xffffff
+        }
+
+        // AND THE AFTERGLOW. Embers drifting up around the hull after the
+        // banner has gone — the aftermath that makes it a legendary's moment
+        // rather than a loud one.
+        for (let i = 0; i < 12; i++) {
+          const m = takeMote()
+          m.cx = x; m.cy = y
+          m.ang = Math.random() * Math.PI * 2
+          m.r0 = 60 + Math.random() * 120
+          m.r1 = 80 + Math.random() * 140
+          m.h0 = 10
+          m.h1 = 160 + Math.random() * 180
+          m.age = -1.2 - Math.random() * 0.8
+          m.life = 1.6 + Math.random() * 0.9
+          m.size = 9 + Math.random() * 8
+          m.spin = (Math.random() - 0.5) * 1.2
+          m.p.tint = color
+        }
+      }
     },
 
     advance(dt) {
