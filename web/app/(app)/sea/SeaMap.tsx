@@ -2337,9 +2337,18 @@ export default function SeaMap({
    * a gate coming down and a canvas turning up.
    */
   /** The canvas bakes islands from a list it is given; when the bay changes it
-   *  is handed a new one and reconciles — see its `islands` handle. Pushed here
-   *  rather than from the loop because it happens a few times a session. */
+   *  is handed a new one and reconciles — see its `islands` handle. The effect
+   *  covers the common case; the RE-PUSH FROM THE TICK is the load-into-a-bay
+   *  case, and it is not optional. On a fresh load the bay resolves before the
+   *  canvas has finished waking, this effect fires into a null ref, and the
+   *  whole bay comes up as open water — sign posts and chests standing on sea
+   *  with no rock under them. The shoals hit the identical race and the note
+   *  above `surfPushed` already names the fix; the islands simply never got
+   *  it. Seen live: chapter II's story post floating on nothing. */
   useEffect(() => { gpuRef.current?.islands(gpuIslands) }, [gpuIslands])
+  const gpuIslandsRef = useRef(gpuIslands)
+  gpuIslandsRef.current = gpuIslands
+  const islesPushed = useRef<GpuIsland[] | null>(null)
 
   const surfRef = useRef(surfLines)
   surfRef.current = surfLines
@@ -6639,6 +6648,14 @@ export default function SeaMap({
         // times a second forces a layout for a number that almost never moves.
         if (fightEncRef.current) wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
         // The bays' shoals, when the list has moved or the canvas has arrived.
+        // The islands, exactly like the shoals below: until the canvas exists
+        // there is nowhere to put them, and the effect that normally hands
+        // them over may already have fired into a null ref. Reference compare,
+        // so this costs nothing once delivered.
+        if (islesPushed.current !== gpuIslandsRef.current && gpuRef.current) {
+          gpuRef.current.islands(gpuIslandsRef.current)
+          islesPushed.current = gpuIslandsRef.current
+        }
         if (surfPushed.current !== surfRef.current && gpuRef.current) {
           gpuRef.current.surf(surfRef.current)
           surfPushed.current = surfRef.current
