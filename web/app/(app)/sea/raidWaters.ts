@@ -1140,6 +1140,47 @@ export function cacheNear(x: number, y: number): Cache | null {
  * it flies the FIRST ship in the next raid's sequence up the same water — which
  * is literally what a skirmish puts in front of you, derived rather than picked.
  */
+/**
+ * ── HOW MUCH SHIP IS IN EACH PAINTING ───────────────────────────────────────
+ *
+ * The marks used to draw every boss in a flat 260px box on the note that enemy
+ * art "fills about nine tenths of its own frame". Measured, it does not: the
+ * chapter 1 and 2 paintings are 52% ink by width, chapters 3 and 4 about 65%.
+ * So a chapter 4 flagship drawn at 260 showed 169px of actual hull beside a
+ * player Man-o-War whose hull is 330 — the boss was HALF the player's ship,
+ * and it read exactly that way from the deck.
+ *
+ * Two numbers per art, both derived from the painting rather than guessed:
+ *
+ *   hull — how much SHIP should be visible, on the same ladder the player's
+ *          classes climb (seaBeam × 340): a schooner is 210, a brigantine 245,
+ *          a galleon 295, a man-o-war 330. A boss is the same class of object
+ *          as the ship you sail, so it is measured on the same scale.
+ *   box  — the width to DRAW the art at so that much hull shows: hull / ink.
+ *
+ * The ink fractions are sharp's trim() measurements of the real files.
+ */
+const ENC_TYPE_HULL: [RegExp, number][] = [
+  [/finnship/, 360],
+  [/man-o-war/, 330],
+  [/galleon/, 295],
+  [/brigantine/, 245],
+  [/schooner/, 210],
+  [/sloop/, 180],
+  [/rowboat|dinghy/, 125],
+]
+const ENC_ART_INK: [RegExp, number][] = [
+  [/finnship/, 0.66],
+  [/chapter4/, 0.65],
+  [/chapter3/, 0.64],
+  [/chapter1|chapter2/, 0.52],
+]
+export function encArt(art: string): { hull: number; box: number } {
+  const hull = ENC_TYPE_HULL.find(([re]) => re.test(art))?.[1] ?? 245
+  const ink = ENC_ART_INK.find(([re]) => re.test(art))?.[1] ?? 0.6
+  return { hull, box: Math.round(hull / ink) }
+}
+
 export function hullFor(e: Encounter): string | null {
   const node = RAID_MAP.find(n => n.id === e.node)
   if (!node) return null

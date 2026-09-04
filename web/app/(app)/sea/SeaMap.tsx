@@ -48,7 +48,7 @@ import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
   fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
   WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
-  encounterNear, cacheNear, hullFor, DOCK, dockAt, ENCOUNTER_REACH,
+  encounterNear, cacheNear, hullFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
@@ -3192,6 +3192,8 @@ export default function SeaMap({
   /** The viewport the fight last measured itself against, so `fightFrame` can
    *  tell a real resize from sixty identical reads a second. */
   const fightViewRef = useRef({ w: 0, h: 0 })
+  /** fightFrame's own clock for the zoom ease — it has no `dt` of its own. */
+  const fightZoomAt = useRef(0)
   /** And whether she has ARRIVED. Until she has, the loop runs in full so she
    *  can be sailed onto her station; after, it stands down to `fightFrame`. */
   const fightFastRef = useRef(false)
@@ -3241,6 +3243,34 @@ export default function SeaMap({
       if (frontRef.current) frontRef.current.style.transform = tr
     }
     gpuRef.current?.camera(camAt.current.x, camAt.current.y, z)
+
+    // ── THE PUSH-IN KEEPS EASING HERE TOO ────────────────────────────────
+    //
+    // The cinematic zoom is advanced by the MAIN loop, and this frame is what
+    // the chart stands down to — so the moment the stand-down fired, the zoom
+    // froze at wherever its ease had reached. The framing never settled, and
+    // it settled DIFFERENTLY every fight, which is a good part of why the
+    // whole approach read as janky: the station and the camera were solved
+    // for the zoom the fight is heading for, and the shot stopped short of it.
+    // Same formula, same epsilon, so the two loops cannot disagree.
+    {
+      const dz = Math.min(0.05, (now - (fightZoomAt.current || now)) / 1000)
+      fightZoomAt.current = now
+      if (Math.abs(fishZoom.current - fishZoomTarget.current) > 0.0015) {
+        fishZoom.current += (fishZoomTarget.current - fishZoom.current) * (1 - Math.exp(-4.5 * dz))
+        fitRef.current?.()
+      }
+    }
+
+    // NO WAKE AND NO RING AT ANCHOR IN A BROADSIDE. Both are the sea saying
+    // "she is idling", and nothing about a gun duel is idle — the standing
+    // ripples under a ship taking fire read as a boat waiting at a jetty.
+    // The wake layer takes null as "no hull to draw for"; the ripples are the
+    // DOM element the main loop fades with speed, faded here by the fight.
+    gpuRef.current?.wake(null)
+    if (rippleRef.current && rippleRef.current.style.opacity !== '0') {
+      rippleRef.current.style.opacity = '0'
+    }
 
     // AND THE BOX THE ANCHORS ARE MEASURED FROM. The main loop refreshes this
     // on its proximity tick, which is one of the things that stops running
@@ -3384,11 +3414,19 @@ export default function SeaMap({
       return false
     }
 
-    // Nearest to the intended mooring first. `s` is how far off she stands,
-    // `lift` slides the engagement along the bay without changing its shape.
-    // The chart is authored so the first of these is clear at every boss (see
-    // the dock check in check-islands); the rest are what stops a fight ever
-    // being impossible if a rock is moved and the check is skipped.
+    // CLOSER THAN THE MOORING. The mooring (DOCK) is where you pull up to
+    // START a fight — a hail distance. The duel itself wants the two hulls
+    // near enough to trade iron, so her fighting station is a tighter version
+    // of the same bearing: still low and to the left of the enemy, about
+    // three quarters of the mooring's stand-off. Broadsides, not semaphore.
+    //
+    // `sc` is how far off she stands, `lift` slides the engagement along the
+    // bay without changing its shape. The chart is authored so the first of
+    // these is clear at every boss (see the dock check in check-islands); the
+    // rest are what stops a fight ever being impossible if a rock is moved
+    // and the check is skipped.
+    const STAND_X = DOCK.x * 0.74
+    const STAND_Y = DOCK.y * 0.78
     const tries: [number, number][] = [
       [1, 0], [0.86, 0], [1.16, 0],
       [1, -0.22], [1, 0.22],
@@ -3397,15 +3435,15 @@ export default function SeaMap({
       [0.86, 0.34], [1.16, -0.34],
     ]
     for (const [sc, lift] of tries) {
-      const x = ex + DOCK.x * sc
-      const y = ey + DOCK.y * sc + Math.abs(DOCK.y) * lift
+      const x = ex + STAND_X * sc
+      const y = ey + STAND_Y * sc + Math.abs(STAND_Y) * lift
       if (!fouled(x, y)) return { x, y }
     }
 
     // EVERY SHAPE IS FOULED, which means she is fighting in a pocket. Push the
     // ideal out of whatever it is sitting in and take that: off the mark, but
     // on water.
-    let x = ex + DOCK.x, y = ey + DOCK.y
+    let x = ex + STAND_X, y = ey + STAND_Y
     for (let pass = 0; pass < 6; pass++) {
       let moved = false
       for (const o of allObstacles()) {
@@ -4109,10 +4147,11 @@ export default function SeaMap({
     const at = enc ? encounterAt(enc) : null
     const box = wrapRef.current?.getBoundingClientRect()
     if (!at || !box) return
-    const node = RAID_MAP.find(x => x.id === enc!.node)
-    // The same widths EncounterMark draws at, so an effect hung on the enemy is
-    // the size of the ship it is happening to.
-    fightHullRef.current = { at, encW: node?.type === 'raid' ? 260 : 185 }
+    // The VISIBLE hull, not the art box — encArt again, the same number
+    // EncounterMark derives its box from, so a ward wraps the ship that is
+    // actually painted rather than the transparent frame around her.
+    const encHull = hullFor(enc!)
+    fightHullRef.current = { at, encW: encHull ? encArt(encHull).hull : 245 }
     const station = pickStation(at.x, at.y)
     fightStation.current = station
     // THE CAMERA FRAMES THE PAIR, not the captain. Held on the midpoint between
@@ -5188,10 +5227,15 @@ export default function SeaMap({
           // freeze at the top of the loop. Measured against the camera as well
           // as the hull, because a camera still gliding into the shot is a
           // camera whose anchors are still moving.
+          // AND THE ZOOM. The push-in is part of the shot; standing down while
+          // it was still easing froze the framing partway, differently every
+          // time. fightFrame carries the ease on regardless now, but arriving
+          // with all three settled means the stand-down is invisible.
           if (Math.hypot(station.x - pos.current.x, station.y - pos.current.y) < 8
             && fightCam.current
             && Math.hypot(fightCam.current.x - camAt.current.x,
-              fightCam.current.y - camAt.current.y) < 8) {
+              fightCam.current.y - camAt.current.y) < 8
+            && Math.abs(fishZoom.current - fishZoomTarget.current) < 0.02) {
             fightFastRef.current = true
           }
           // GUNS TO STARBOARD. The art faces right unmirrored (the enemy's is
@@ -11452,16 +11496,13 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
   const locked = status === 'locked'
   const cleared = status === 'cleared'
 
-  // A FLAGSHIP IS BIGGER THAN A ROWBOAT, and neither of them is bigger than the
-  // chart. Measured against the hull you are ACTUALLY sailing, which is
-  // WARSHIP_W * beam — about 205px of ship at the Man-o-War, not the 340px box
-  // it is drawn in. These were 340 and 230 against that box, so a boss came out
-  // half again the length of the biggest ship in the game and a mob matched it.
-  //
-  // The enemy art fills about nine tenths of its own frame, so a boss at 260
-  // puts roughly 235px of hull beside your 205: bigger than you, and plausibly
-  // so. A skirmisher at 185 is smaller than you, which is what a mob is.
-  const w = node.type === 'raid' ? 260 : 185
+  // SIZED FROM THE PAINTING, not from a flat number — see encArt. The flat 260
+  // rested on "the art fills nine tenths of its frame", which measured out at
+  // about two thirds, so a chapter 4 flagship showed 169px of hull beside a
+  // player Man-o-War's 330 and every boss looked like a dinghy from the deck.
+  // encArt puts each enemy on the SAME ladder the player's classes climb, then
+  // divides out its own painting's ink fraction.
+  const w = encArt(hull).box
 
   // The bob, phased off its own position so a bay full of hulls is never in
   // step. Ships rising and falling together read as one object.
@@ -11515,8 +11556,14 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
           carry two animations that do. The drift slides; the flip turns her,
           and it turns her ON A STEP: eased, a ship reads as a piece of paper
           being rotated, which is exactly the note the menagerie's pets got. */}
-      <div className="enc-drift" style={{ animationDelay: `${(-phase * 17).toFixed(2)}s` }}>
-      <div className="enc-turn" style={{ animationDelay: `${(-phase * 29).toFixed(2)}s` }}>
+      {/* NOT WHILE SHE IS BEING FOUGHT. Holding station is what an idle hull
+          does; a ship in a broadside neither wanders nor turns her back on
+          you mid-volley — the enc-turn flip landing during a fight read as a
+          glitch, because as a piece of stagecraft it is one. `hullRef` marks
+          exactly the fought hull, so the rest of the bay keeps living. The
+          art faces the player unmirrored, which is the pose a duel wants. */}
+      <div className={hullRef ? undefined : 'enc-drift'} style={{ animationDelay: `${(-phase * 17).toFixed(2)}s` }}>
+      <div className={hullRef ? undefined : 'enc-turn'} style={{ animationDelay: `${(-phase * 29).toFixed(2)}s` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={hull} alt="" draggable={false} decoding="async" style={{
           // ── maxWidth: 'none' IS THE SHIP BEING VISIBLE AT ALL ───────────
