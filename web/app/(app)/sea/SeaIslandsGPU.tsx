@@ -143,6 +143,13 @@ export type GpuHandle = {
   gunimpact(x: number, y: number, kind: ImpactKind): void
   /** A critical: one hard ring travelling twice as far, twice as fast. */
   gunshock(x: number, y: number): void
+  /** A rolling broadside: `guns` muzzles down her side, and the answering walk
+   *  of splashes across the target. `heavy` is the Barrage. */
+  gunvolley(x: number, y: number, tx: number, ty: number, guns: number, heavy?: boolean): void
+  /** The Railgun's charge, lance, spray-line and punch-through. */
+  gunrail(x: number, y: number, tx: number, ty: number, tint: number): void
+  /** The nuke, in its two moments: the silo thrust and the detonation. */
+  gunnuke(kind: 'launch' | 'blast', x: number, y: number, tint: number): void
   /** A dodge: the water she throws coming hard over, away from `dx,dy`. */
   gunwake(x: number, y: number, dx: number, dy: number): void
   /** A hull goes down: the sea boils, wreckage floats up, a slick spreads —
@@ -1236,6 +1243,12 @@ export default function SeaIslandsGPU({
         gunfire(x, y, tx, ty) { guns.fire(x, y, tx, ty) },
         gunimpact(x, y, kind) { guns.impact(x, y, kind) },
         gunshock(x, y) { guns.shock(x, y) },
+        gunvolley(x, y, tx, ty, n, heavy) { guns.volley(x, y, tx, ty, n, heavy) },
+        gunrail(x, y, tx, ty, tint) { guns.railgun(x, y, tx, ty, tint) },
+        gunnuke(kind, x, y, tint) {
+          if (kind === 'launch') guns.nukeLaunch(x, y)
+          else guns.nukeBlast(x, y, tint)
+        },
         gunwake(x, y, dx, dy) { guns.wake(x, y, dx, dy) },
         surf(lines) { surf.set(lines) },
         ability(x, y, tx, ty, color, shape, power) { spells.cast(x, y, tx, ty, color, shape, power) },

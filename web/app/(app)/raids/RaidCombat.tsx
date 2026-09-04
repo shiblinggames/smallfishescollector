@@ -467,6 +467,7 @@ export type ShipFx = {
  */
 export type FightFx = {
   kind: 'fire' | 'hit' | 'crit' | 'miss' | 'dodge' | 'sink' | 'ability'
+    | 'volley' | 'mega'
   /** Whose hull the event belongs to: who fired, who was struck, or whose ship
    *  an ability is happening to. */
   side: 'player' | 'enemy'
@@ -485,6 +486,11 @@ export type FightFx = {
   color?: string
   /** 1, or more when a legendary chase skin is driving it. */
   power?: number
+  /** volley only: how many guns are in the salvo. */
+  guns?: number
+  /** mega only: which weapon, and which of its moments. The Barrage rides the
+   *  volley path with `heavy` semantics on the sea side. */
+  mega?: 'railgun' | 'nuke_launch' | 'nuke_blast' | 'barrage'
 }
 
 /**
@@ -6827,7 +6833,13 @@ export default function RaidCombat({
           // Slight overshoot so the lance punches into the hull, not short of it.
           const len = Math.max(60, Math.hypot(dx, dy) * 1.06)
           const angle = Math.atan2(dy, dx) * 180 / Math.PI
-          setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
+          // Not over the sea: the boxes measured above belong to the HIDDEN
+          // stage ships, so the beam drew between phantoms. The water's own
+          // railgun (below) is the whole effect there.
+          if (!overSea) setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
+          // AND ON THE WATER. The whole charge-lance-punch sequence is the sea
+          // layer's; it self-times off this one call.
+          onFightFxRef.current?.({ kind: 'mega', side: 'player', mega: 'railgun', color: megaColor })
           playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 920))
         } else if (megaId === 'nuke') {
           // Silo launch — a missile blasts off the deck, arcs up and over, then
@@ -6847,11 +6859,15 @@ export default function RaidCombat({
             mx1 = W * 0.34; my1 = H * 0.55
             mx2 = W * 0.78; my2 = H * 0.50
           }
-          setNukeMissile({ key: Date.now() + i, color: megaColor, x1: mx1, y1: my1, x2: mx2, y2: my2, dur: flightMs })
+          // Same phantom problem as the beam: the missile arc is stage
+          // geometry, and over the sea the stage ships are hidden stand-ins.
+          if (!overSea) setNukeMissile({ key: Date.now() + i, color: megaColor, x1: mx1, y1: my1, x2: mx2, y2: my2, dur: flightMs })
+          onFightFxRef.current?.({ kind: 'mega', side: 'player', mega: 'nuke_launch', color: megaColor })
           playStepChainRef.current.push(setTimeout(() => setNukeMissile(null), flightMs))
           cameraShake('volley')           // lift-off rumble (the boom comes on impact)
           vibrate([0, 45, 60, 25])
         } else if (megaId === 'barrage') {
+          onFightFxRef.current?.({ kind: 'mega', side: 'player', mega: 'barrage', color: megaColor })
           // Barrage — FOUR muzzle pops on a tight cadence (quicker than Mako's
           // 200ms rat-a-tat), one per sub-hit; the impacts land in the same
           // rhythm below so the whole thing reads as four distinct blows.
@@ -6863,6 +6879,9 @@ export default function RaidCombat({
             }, off))
           })
         } else if (isVolleyShot) {
+          // HER WHOLE SIDE GOES OFF ON THE WATER. One call; the ripple of
+          // muzzles and the walk of splashes are the sea layer's own timing.
+          onFightFxRef.current?.({ kind: 'volley', side: 'player', guns: 3 })
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
           // burst, so a volley fires visibly as a salvo, not one shot.
           ;[0, 95, 190].forEach((off, k) => {
@@ -6963,7 +6982,9 @@ export default function RaidCombat({
                 setTimeout(() => setEnemyImpact(null), 700)
                 // Nuke — a big expanding shockwave on top of the impact.
                 if (megaId === 'nuke') {
-                  setNukeBlast({ key: Date.now() + i + 13, color: megaColor })
+                  if (!overSea) setNukeBlast({ key: Date.now() + i + 13, color: megaColor })
+                  // The sea detonates on the same beat the DOM blast would.
+                  onFightFxRef.current?.({ kind: 'mega', side: 'player', mega: 'nuke_blast', color: megaColor })
                   playStepChainRef.current.push(setTimeout(() => setNukeBlast(null), 1150))
                   vibrate([0, 70, 50, 130])
                 }
@@ -7054,6 +7075,9 @@ export default function RaidCombat({
         const eCannonKind: 'normal' | 'volley' | 'crit' =
           step.big || eIsUltimate ? 'crit' : eIsVolley ? 'volley' : 'normal'
         if (eIsVolley) {
+          // Her side answers on the water too — four guns when an ultimate
+          // empties the whole magazine.
+          onFightFxRef.current?.({ kind: 'volley', side: 'enemy', guns: eIsUltimate ? 4 : 3 })
           // Mirror the player's salvo — three muzzle pops off the enemy deck
           // (an ultimate empties the whole 4-ball magazine, quicker cadence).
           ;(eIsUltimate ? [0, 80, 160, 240] : [0, 95, 190]).forEach((off, k) => {

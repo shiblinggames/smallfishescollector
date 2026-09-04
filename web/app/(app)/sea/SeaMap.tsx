@@ -8172,6 +8172,30 @@ hullRef={hullRefFor(t.key)} />
             else gpu.gunfire(them.x, them.y, me.x, me.y)
             return
           }
+          // ── THE SALVOS AND THE MEGAS ────────────────────────────────────
+          //
+          // A volley used to reach the water as nothing at all — the fight
+          // played its rat-a-tat on the DOM ships (which over the sea are
+          // hidden) and the one `fire` bang belonged to the plain shot's
+          // branch. So the biggest attacks in the game were the quietest
+          // thing on the bay. Each arrives as one event now; the ripple of
+          // muzzles, the walk of splashes and the railgun's charge-then-lance
+          // are the gun layer's own timing.
+          if (e.kind === 'volley' || e.kind === 'mega') {
+            const from = e.side === 'player' ? me : them
+            const to = e.side === 'player' ? them : me
+            const hex = (e.color ?? '#ffffff').replace('#', '')
+            const n = parseInt(hex.length === 3
+              ? hex.split('').map(c => c + c).join('')
+              : hex, 16)
+            const tint = Number.isFinite(n) ? n : 0xffffff
+            if (e.kind === 'volley') gpu.gunvolley(from.x, from.y, to.x, to.y, e.guns ?? 3)
+            else if (e.mega === 'railgun') gpu.gunrail(from.x, from.y, to.x, to.y, tint)
+            else if (e.mega === 'nuke_launch') gpu.gunnuke('launch', from.x, from.y, tint)
+            else if (e.mega === 'nuke_blast') gpu.gunnuke('blast', to.x, to.y, tint)
+            else if (e.mega === 'barrage') gpu.gunvolley(from.x, from.y, to.x, to.y, 4, true)
+            return
+          }
           const at = e.side === 'enemy' ? them : me
           if (e.kind === 'ability') {
             // The colour arrives as the class's own CSS hex, because that is

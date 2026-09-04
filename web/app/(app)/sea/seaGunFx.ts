@@ -41,19 +41,19 @@ import { GROUND } from './islandArt'
 
 /** Smoke puffs alive at once. A broadside throws six or seven; this is enough
  *  for three overlapping volleys before the oldest is recycled. */
-const SMOKE_CAP = 28
+const SMOKE_CAP = 64
 /** Spray droplets. Spray is cheap, short-lived and the thing that sells water. */
-const SPRAY_CAP = 64
+const SPRAY_CAP = 128
 /** Rings on the surface. Two per impact at most, and impacts do not overlap
  *  much in a turn-based fight. */
-const RING_CAP = 10
+const RING_CAP = 20
 /** Muzzle flashes. Two hulls, and a flash lasts a tenth of a second. */
-const FLASH_CAP = 6
+const FLASH_CAP = 30
 /** Wreckage on the surface. A sinking throws a dozen; two wrecks never overlap
  *  in a turn-based fight, so this is one kill's worth with room to spare. */
-const DEBRIS_CAP = 20
+const DEBRIS_CAP = 30
 /** Slicks. One per wreck, and they outlive everything else here. */
-const SLICK_CAP = 3
+const SLICK_CAP = 5
 
 let puffTex: Texture | null = null
 let ringTex: Texture | null = null
@@ -181,6 +181,33 @@ export type GunFx = {
    * and floats, and a slick spreads and stays a while.
    */
   sink(x: number, y: number): void
+  /**
+   * ── A TRUE BROADSIDE ──────────────────────────────────────────────────────
+   *
+   * `guns` muzzles arrayed ALONG HER SIDE — perpendicular to the line of fire,
+   * because that is where a broadside's guns actually are — going off in a
+   * ripple rather than at once, each with its own flash and plume, and the
+   * answering walk of shot splashes stitching across the target half a second
+   * later. One call; the stagger is negative ages, this layer's own idiom.
+   * `heavy` is the Barrage: tighter cadence, harder flashes.
+   */
+  volley(x: number, y: number, tx: number, ty: number, guns: number, heavy?: boolean): void
+  /**
+   * THE RAILGUN. A charge swelling at the muzzle, then a lance — a chain of
+   * additive cores down the whole line of fire, spray kicking off the water
+   * underneath it, a shock at the muzzle and a bigger one where it lands, and
+   * spent energy carrying on PAST the target. Nothing arcs; that is the
+   * entire point of a railgun.
+   */
+  railgun(x: number, y: number, tx: number, ty: number, tint: number): void
+  /** The silo opens: a thrust column standing straight up off her deck. */
+  nukeLaunch(x: number, y: number): void
+  /**
+   * AND IT COMES DOWN. White core, stacked shockwaves, a tower of water, a
+   * fallout dome of slow dark smoke, wreckage, and a slick that stays. The
+   * biggest single thing this layer draws, priced accordingly by the caps.
+   */
+  nukeBlast(x: number, y: number, tint: number): void
   advance(dt: number): void
   /** Darkness 0..1. Smoke and spray are lit by the same sun everything else is. */
   night(dark: number): void
@@ -531,6 +558,294 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
       sl.size = 150
       sl.grow = 320
       sl.alpha = 0.5
+    },
+
+    volley(x, y, tx, ty, guns, heavy = false) {
+      const dx = tx - x, dy = ty - y
+      const len = Math.hypot(dx, dy) || 1
+      const ux = dx / len, uy = dy / len
+      // Her side: the axis the guns are mounted down.
+      const px = -uy, py = ux
+      const step = heavy ? 0.07 : 0.09
+
+      for (let k = 0; k < guns; k++) {
+        const lane = (k - (guns - 1) / 2) * 58
+        const gx = x + ux * 90 + px * lane
+        const gy = y + uy * 90 + py * lane * GROUND
+        const st = k * step
+
+        const f = takeFlash()
+        f.x = gx; f.y = gy
+        f.h = 34; f.vh = 0; f.vx = 0; f.vy = 0
+        f.age = -st; f.life = 0.11
+        f.size = heavy ? 150 : 115; f.grow = heavy ? 340 : 260
+        f.alpha = 0.95
+        f.p.tint = heavy ? 0xffd27a : 0xffe3a8
+
+        for (let i = 0; i < 4; i++) {
+          const sm = takeSmoke()
+          const spread = (Math.random() - 0.5) * 0.5
+          const sx2 = ux * Math.cos(spread) - uy * Math.sin(spread)
+          const sy2 = ux * Math.sin(spread) + uy * Math.cos(spread)
+          const out = 120 + Math.random() * 170
+          sm.x = gx + ux * (30 + i * 22)
+          sm.y = gy + uy * (30 + i * 22)
+          sm.vx = sx2 * out
+          sm.vy = sy2 * out * GROUND
+          sm.h = 24 + Math.random() * 28
+          sm.vh = 16 + Math.random() * 24
+          sm.age = -st
+          sm.life = 1.1 + Math.random() * 0.7
+          sm.size = 60 + Math.random() * 55
+          sm.grow = 150 + Math.random() * 110
+          sm.alpha = 0.28 + Math.random() * 0.14
+          sm.p.tint = 0xd9dee6
+        }
+
+        // THE ANSWER, half a second on: shot splashes stitching a line across
+        // the target's own beam, one lane per gun, in the same order the guns
+        // went. The walk is what makes it a volley rather than a loud shot:
+        // the sea reports every ball.
+        const ax2 = tx + px * lane * 0.8
+        const ay2 = ty + py * lane * 0.8 * GROUND
+        const r2 = takeRing()
+        r2.x = ax2; r2.y = ay2
+        r2.age = -(0.5 + k * 0.075)
+        r2.life = 0.6
+        r2.from = 26; r2.to = heavy ? 300 : 230
+        r2.alpha = 0.34
+        r2.p.tint = heavy ? 0xffd88a : 0xe8f2f8
+        for (let j = 0; j < 7; j++) {
+          const d = takeDrop()
+          const a2 = Math.random() * Math.PI * 2
+          const out2 = 90 + Math.random() * 180
+          d.x = ax2; d.y = ay2
+          d.vx = Math.cos(a2) * out2
+          d.vy = Math.sin(a2) * out2 * GROUND
+          d.h = 6
+          d.vh = 160 + Math.random() * 220
+          d.age = -(0.5 + k * 0.075)
+          d.life = 0.45 + Math.random() * 0.4
+          d.size = 9 + Math.random() * 9
+          d.p.tint = heavy ? 0xffe6b0 : 0xeaf6ff
+        }
+      }
+
+      // One shove for the whole battery: a broadside moves a ship.
+      const r = takeRing()
+      r.x = x + ux * 70; r.y = y + uy * 70
+      r.age = 0; r.life = 0.9
+      r.from = 50; r.to = heavy ? 320 : 260
+      r.alpha = 0.26
+      r.p.tint = 0xdfeaf2
+    },
+
+    railgun(x, y, tx, ty, tint) {
+      const dx = tx - x, dy = ty - y
+      const len = Math.hypot(dx, dy) || 1
+      const ux = dx / len, uy = dy / len
+      const mx = x + ux * 100, my = y + uy * 100
+      /** When the lance actually fires; everything before it is the charge. */
+      const T = 0.34
+
+      // THE CHARGE. Three swells at the muzzle, each brighter, white going
+      // over to the weapon's own colour — energy being gathered, which is
+      // what makes the instant afterwards read as release.
+      for (let i = 0; i < 3; i++) {
+        const f = takeFlash()
+        f.x = mx; f.y = my
+        f.h = 36; f.vh = 0; f.vx = 0; f.vy = 0
+        f.age = -i * 0.11; f.life = 0.13
+        f.size = 60 + i * 40; f.grow = 60
+        f.alpha = 0.5 + i * 0.2
+        f.p.tint = i === 2 ? tint : 0xffffff
+      }
+
+      // THE LANCE. A chain of additive cores down the whole line, tapering
+      // toward the target, all appearing on the same frame — a beam is the
+      // one thing here that must NOT stagger along its length.
+      const span = len + 90
+      const N = 14
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1)
+        const f = takeFlash()
+        f.x = mx + ux * span * t
+        f.y = my + uy * span * t
+        f.h = 30; f.vh = 0; f.vx = 0; f.vy = 0
+        f.age = -T; f.life = 0.24
+        f.size = 64 - t * 30; f.grow = -40
+        f.alpha = 0.9
+        f.p.tint = i % 3 === 0 ? 0xffffff : tint
+      }
+      // The water under it kicks: spray lifting off the surface along the
+      // path, which is how a beam over the sea says how hot it is.
+      for (let i = 1; i < 6; i++) {
+        const t = i / 6
+        for (let j = 0; j < 2; j++) {
+          const d = takeDrop()
+          d.x = mx + ux * span * t + (Math.random() - 0.5) * 30
+          d.y = my + uy * span * t + (Math.random() - 0.5) * 30 * GROUND
+          d.vx = (Math.random() - 0.5) * 90
+          d.vy = (Math.random() - 0.5) * 90 * GROUND
+          d.h = 4
+          d.vh = 240 + Math.random() * 200
+          d.age = -T - 0.02
+          d.life = 0.4 + Math.random() * 0.3
+          d.size = 8 + Math.random() * 7
+          d.p.tint = tint
+        }
+      }
+
+      // Muzzle answer and target answer, in that order of size.
+      const rm = takeRing()
+      rm.x = mx; rm.y = my
+      rm.age = -T; rm.life = 0.4
+      rm.from = 30; rm.to = 260
+      rm.alpha = 0.4
+      rm.p.tint = tint
+
+      const rt2 = takeRing()
+      rt2.x = tx; rt2.y = ty
+      rt2.age = -T; rt2.life = 0.45
+      rt2.from = 40; rt2.to = 620
+      rt2.alpha = 0.6
+      rt2.p.tint = 0xfff0c8
+
+      // AND THROUGH. Spent energy carries on past the hull along the same
+      // line — the signature that separates a railgun from a heavy shot.
+      for (let i = 0; i < 8; i++) {
+        const d = takeDrop()
+        d.x = tx + ux * (60 + Math.random() * 40)
+        d.y = ty + uy * (60 + Math.random() * 40) * GROUND
+        d.vx = ux * (300 + Math.random() * 260)
+        d.vy = uy * (300 + Math.random() * 260) * GROUND
+        d.h = 12
+        d.vh = 60 + Math.random() * 120
+        d.age = -T - 0.04
+        d.life = 0.5 + Math.random() * 0.3
+        d.size = 9 + Math.random() * 8
+        d.p.tint = tint
+      }
+    },
+
+    nukeLaunch(x, y) {
+      // The silo opens. A column of thrust smoke standing straight up off the
+      // deck, dense at the base — the missile itself is the fight's to draw.
+      const f = takeFlash()
+      f.x = x; f.y = y
+      f.h = 30; f.vh = 0; f.vx = 0; f.vy = 0
+      f.age = 0; f.life = 0.14
+      f.size = 120; f.grow = 200
+      f.alpha = 0.8
+      f.p.tint = 0xffe3a8
+      for (let i = 0; i < 9; i++) {
+        const sm = takeSmoke()
+        sm.x = x + (Math.random() - 0.5) * 50
+        sm.y = y + (Math.random() - 0.5) * 30
+        sm.vx = (Math.random() - 0.5) * 60
+        sm.vy = (Math.random() - 0.5) * 60 * GROUND
+        sm.h = 20
+        sm.vh = 180 + Math.random() * 160
+        sm.age = -Math.random() * 0.18
+        sm.life = 1.3 + Math.random() * 0.8
+        sm.size = 60 + Math.random() * 50
+        sm.grow = 120 + Math.random() * 90
+        sm.alpha = 0.34 + Math.random() * 0.16
+        sm.p.tint = 0xe6e9ee
+      }
+    },
+
+    nukeBlast(x, y, tint) {
+      // THE CORE. Two flashes: a white one that swallows the point, then the
+      // weapon's own colour blooming out of it a beat later.
+      const f1 = takeFlash()
+      f1.x = x; f1.y = y
+      f1.h = 40; f1.vh = 0; f1.vx = 0; f1.vy = 0
+      f1.age = 0; f1.life = 0.3
+      f1.size = 260; f1.grow = 900
+      f1.alpha = 1
+      f1.p.tint = 0xffffff
+      const f2 = takeFlash()
+      f2.x = x; f2.y = y
+      f2.h = 46; f2.vh = 0; f2.vx = 0; f2.vy = 0
+      f2.age = -0.08; f2.life = 0.5
+      f2.size = 200; f2.grow = 520
+      f2.alpha = 0.8
+      f2.p.tint = tint
+
+      // STACKED SHOCKWAVES. Three, each later, wider and fainter — one ring
+      // is a hit, a train of them is a detonation.
+      for (let i = 0; i < 3; i++) {
+        const r = takeRing()
+        r.x = x; r.y = y
+        r.age = -i * 0.14
+        r.life = 0.5 + i * 0.16
+        r.from = 50 + i * 30
+        r.to = 700 + i * 260
+        r.alpha = 0.6 - i * 0.16
+        r.p.tint = i === 0 ? 0xffffff : 0xfff0c8
+      }
+
+      // THE TOWER. Water stood up on end where the blast went in.
+      for (let i = 0; i < 22; i++) {
+        const d = takeDrop()
+        const a2 = Math.random() * Math.PI * 2
+        const out = 30 + Math.random() * 110
+        d.x = x + Math.cos(a2) * 40 * Math.random()
+        d.y = y + Math.sin(a2) * 40 * Math.random() * GROUND
+        d.vx = Math.cos(a2) * out
+        d.vy = Math.sin(a2) * out * GROUND
+        d.h = 8
+        d.vh = 420 + Math.random() * 380
+        d.age = -Math.random() * 0.22
+        d.life = 0.7 + Math.random() * 0.5
+        d.size = 12 + Math.random() * 11
+        d.p.tint = i % 4 === 0 ? tint : 0xeaf6ff
+      }
+
+      // THE DOME. Slow dark smoke rolling up and out for seconds — the part
+      // of a detonation that stays in the air after the light has gone.
+      for (let i = 0; i < 12; i++) {
+        const sm = takeSmoke()
+        const a2 = (i / 12) * Math.PI * 2
+        sm.x = x + Math.cos(a2) * 40
+        sm.y = y + Math.sin(a2) * 40 * GROUND
+        sm.vx = Math.cos(a2) * (50 + Math.random() * 70)
+        sm.vy = Math.sin(a2) * (50 + Math.random() * 70) * GROUND
+        sm.h = 30 + Math.random() * 40
+        sm.vh = 60 + Math.random() * 70
+        sm.age = -0.2 - Math.random() * 0.7
+        sm.life = 2.2 + Math.random() * 1.1
+        sm.size = 110 + Math.random() * 80
+        sm.grow = 190 + Math.random() * 120
+        sm.alpha = 0.3 + Math.random() * 0.14
+        sm.p.tint = 0x9aa0a8
+      }
+
+      // Wreckage and the slick: a detonation leaves the same evidence a
+      // sinking does, just all at once.
+      for (let i = 0; i < 9; i++) {
+        const d = takeDebris()
+        const a2 = Math.random() * Math.PI * 2
+        const out = 120 + Math.random() * 260
+        d.x = x; d.y = y
+        d.vx = Math.cos(a2) * out
+        d.vy = Math.sin(a2) * out * GROUND
+        d.h = 14
+        d.vh = 220 + Math.random() * 320
+        d.age = -Math.random() * 0.2
+        d.life = 4.5 + Math.random() * 2
+        d.size = 8 + Math.random() * 11
+        d.spin = (Math.random() - 0.5) * 2.6
+      }
+      const sl = takeSlick()
+      sl.x = x; sl.y = y
+      sl.h = 0; sl.vh = 0; sl.vx = 0; sl.vy = 0
+      sl.age = -0.4
+      sl.life = 6.5
+      sl.size = 120
+      sl.grow = 280
+      sl.alpha = 0.42
     },
 
     advance(dt) {
