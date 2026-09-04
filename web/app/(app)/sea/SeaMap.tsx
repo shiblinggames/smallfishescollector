@@ -3156,6 +3156,9 @@ export default function SeaMap({
   const fightEncRef = useRef<Encounter | null>(null)
   /** Whether the guns are out, for the frame loop (which must not read state). */
   const fightOnRef = useRef(false)
+  /** The viewport the fight last measured itself against, so `fightFrame` can
+   *  tell a real resize from sixty identical reads a second. */
+  const fightViewRef = useRef({ w: 0, h: 0 })
   /** And whether she has ARRIVED. Until she has, the loop runs in full so she
    *  can be sailed onto her station; after, it stands down to `fightFrame`. */
   const fightFastRef = useRef(false)
@@ -3175,6 +3178,50 @@ export default function SeaMap({
   const fightFrame = useCallback((now: number) => {
     const t = now / 1000
     const z = zoomRef.current
+
+    // ── THE WORLD IS STILL A WORLD WHILE THE GUNS ARE OUT ────────────────────
+    //
+    // THIS IS WHY THE ENEMY SHIP WAS NOT THERE, and it is the rule the main
+    // loop writes down four hundred lines below: "the same string, the same
+    // frame. These two layers are one world drawn in two passes; a transform
+    // written to one and not the other would put the near scenery a frame
+    // behind the far scenery."
+    //
+    // This frame is what the chart stands down to once she is on station, and
+    // it wrote everything EXCEPT that. The boat, the skipper, the anchors and
+    // the wards all came off a live `camAt` and `zoom`; the DOM world was left
+    // holding whatever transform the main loop had put on it at the moment of
+    // arrival. Every mark on the chart is in that layer — the enemy hull most
+    // of all, because over the sea the fight hides its OWN ship and expects
+    // this one to be the enemy. So the ward drew in exactly the right place
+    // and the ship it was wrapped around was somewhere off the side of the
+    // screen, which reads as "you never gave these enemies a boat".
+    //
+    // The two passes and the canvas are written here from the same three
+    // numbers, in the same frame, exactly as the main loop does it. Cheap: it
+    // is three style writes on a frame that was already touching the boat.
+    const world = worldRef.current
+    if (world) {
+      const tr = `scale(${z}) scaleY(${GROUND})`
+        + ` translate3d(${-camAt.current.x}px, ${-camAt.current.y}px, 0)`
+      world.style.transform = tr
+      if (frontRef.current) frontRef.current.style.transform = tr
+    }
+    gpuRef.current?.camera(camAt.current.x, camAt.current.y, z)
+
+    // AND THE BOX THE ANCHORS ARE MEASURED FROM. The main loop refreshes this
+    // on its proximity tick, which is one of the things that stops running
+    // here — so a phone that turns, or an address bar that slides away, would
+    // hang every hitsplat off a stale rectangle for the rest of the fight.
+    // Re-measured only when the window has actually changed size, because the
+    // read forces layout and the answer almost never moves.
+    if (fightViewRef.current.w !== window.innerWidth
+      || fightViewRef.current.h !== window.innerHeight) {
+      fightViewRef.current = { w: window.innerWidth, h: window.innerHeight }
+      fitRef.current?.()
+      wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
+    }
+
     const pfx = shipFxRef.current?.player
     const fxX = pfx ? pfx.x : 0
     const fxY = pfx ? pfx.y : 0
