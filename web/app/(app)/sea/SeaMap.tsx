@@ -11255,7 +11255,18 @@ const AshoreTick = memo(function AshoreTick() {
  * LIT BY WHETHER YOU CAN TAKE IT. Available is full colour; locked is drained
  * and dim, and STILL DRAWN — a ship you can see and cannot yet reach is the
  * reason to come back, and hiding it would leave the water empty until the
- * moment it is not. Cleared keeps its colour and loses its urgency: still there,
+ * moment it is not.
+ *
+ * DRAINED, NOT ERASED, and the numbers had drifted past that. Locked was
+ * greyscale 0.9 at half brightness, which is legible over the Shallows and is
+ * NOTHING over the Last Fathom — that bay's deep stop is #08131e, and a
+ * half-brightness grey hull on near-black water is an empty sea. A whole
+ * chapter of content read as missing, on the one chart where every mark in it
+ * is locked until three chapters are done.
+ *
+ * So: less grey, most of the brightness back, and a cool rim so the silhouette
+ * has an edge whatever it is standing on. Still plainly not-yet — it is grey
+ * and everything available beside it is not — but it is THERE. Cleared keeps its colour and loses its urgency: still there,
  * still fightable, no longer the thing you are here for.
  *
  * Counter-squashed like everything with height, because a hull stands ON the
@@ -11390,7 +11401,7 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
         <img src={hull} alt="" draggable={false} decoding="async" style={{
           width: w, height: 'auto', display: 'block',
           filter: locked
-            ? 'grayscale(0.85) brightness(0.5) drop-shadow(0 8px 16px rgba(0,0,0,0.6))'
+            ? 'grayscale(0.72) brightness(0.82) drop-shadow(0 8px 16px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(150,186,210,0.35))'
             : isNear && !cleared
               ? 'drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(240,192,64,0.55))'
               : 'drop-shadow(0 8px 18px rgba(0,0,0,0.6))',
@@ -11456,7 +11467,7 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
         alt="" draggable={false} decoding="async" style={{
           width: w, height: 'auto', display: 'block', position: 'relative',
           filter: locked
-            ? 'grayscale(0.9) brightness(0.55) drop-shadow(0 4px 8px rgba(0,0,0,0.6))'
+            ? 'grayscale(0.75) brightness(0.85) drop-shadow(0 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 9px rgba(150,186,210,0.32))'
             : isNear && !cleared
               ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 14px rgba(240,192,64,0.7))'
               : 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))',
@@ -11537,7 +11548,7 @@ const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
       <img src="/sea/isle-note.png" alt="" draggable={false} decoding="async" style={{
         width: w, height: 'auto', display: 'block', position: 'relative',
         filter: locked
-          ? 'grayscale(0.9) brightness(0.5) drop-shadow(0 4px 8px rgba(0,0,0,0.6))'
+          ? 'grayscale(0.75) brightness(0.82) drop-shadow(0 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 9px rgba(150,186,210,0.32))'
           : cleared
             ? 'brightness(0.82) drop-shadow(0 4px 10px rgba(0,0,0,0.6))'
             : isNear
@@ -12169,7 +12180,7 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
                 // brightness(), the declaration is simply dropped and the
                 // building stays lit, which is the old behaviour.
                 filter: locked
-                  ? 'grayscale(0.9) brightness(0.5)'
+                  ? 'grayscale(0.75) brightness(0.82)'
                   // Golden hour warms as night dims, and sepia is the only
                   // filter primitive that shifts hue toward amber without a
                   // colour matrix. Small: it is a whole town going evening, not
