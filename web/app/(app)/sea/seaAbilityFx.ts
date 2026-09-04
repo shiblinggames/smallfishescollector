@@ -1009,46 +1009,49 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         }
         w.t += dt
 
-        // ── CUT TO THE HULL, NOT TO A CIRCLE ────────────────────────────
+        // ── THE SHIELD IS ON THE SHIP, NOT ON THE SEA ───────────────────
         //
-        // A ring squashed by GROUND is an oval, but it is the SAME oval on a
-        // rowboat and a man-o-war and it belongs to neither. A ship is long and
-        // low: these two radii are measured off her actual beam, so the shell
-        // is a shape that fits the thing inside it.
+        // The last cut of this was a flat ellipse lying on the water at the
+        // hull's waterline — a pool of light beside a ship, reported exactly
+        // that way: "the shield is nowhere near the ship". A shield is a
+        // thing a hull WEARS, like her glow: so the main shell is a DOME
+        // standing up out of the water, centred on the ship's visual middle
+        // and sized off her beam, with a faint flat ellipse left at the
+        // waterline as its footprint — the wrap and the place it stands.
         //
-        // 0.62 of the beam each way along her length, 0.30 across — wider than
-        // a circle would be and much shallower, which is the proportion of a
-        // hull seen on this projection. Then GROUND on top, because the whole
-        // ellipse is lying on the plane like every other flat thing here.
-        const rx = w.beam * 0.62
-        const ry = w.beam * 0.30
-        const breathe = 1 + 0.05 * Math.sin(w.t * 1.7)
-        const breathe2 = 0.86 + 0.05 * Math.sin(w.t * 1.7 + 2.1)
-        // TWO SHELLS, BREATHING OUT OF STEP. One ellipse is a line drawn on the
-        // sea; two at slightly different sizes, moving against each other, is
-        // the closest a flat sprite gets to saying there is a SURFACE there.
-        // Slowly — a ward that pulses quickly reads as an alarm rather than as
-        // something holding.
-        for (const [sh, k, a2] of [[w.shellA, breathe, 0.5], [w.shellB, breathe2, 0.34]] as const) {
-          sh.x = w.x
-          sh.y = w.y
-          sh.tint = w.color
-          sh.scaleX = (rx * k * 2) / 128
-          sh.scaleY = ((ry * k * 2) / 128) * GROUND
-          sh.alpha = a2 * w.fade * lit
-        }
+        // The lift divides by GROUND because this layer lives in the squashed
+        // world container: to climb N screen pixels a thing moves N/GROUND in
+        // world y — the same arithmetic the orbit lights always used.
+        const rx = w.beam * 0.58
+        const ryDome = w.beam * 0.46
+        const lift = (w.beam * 0.30) / GROUND
+        const breathe = 1 + 0.04 * Math.sin(w.t * 1.7)
+        const breathe2 = 1 + 0.04 * Math.sin(w.t * 1.7 + 2.1)
 
-        // And a few lights going round it, which is what stops the whole thing
-        // reading as a painted shape: something has to MOVE that is not the
-        // shell's own size. On the SAME ellipse, or they orbit a circle the
-        // shell is not.
+        // THE DOME — standing, unsquashed, wrapped round the art.
+        w.shellA.x = w.x
+        w.shellA.y = w.y - lift
+        w.shellA.tint = w.color
+        w.shellA.scaleX = (rx * breathe * 2) / 128
+        w.shellA.scaleY = (ryDome * breathe * 2) / 128
+        w.shellA.alpha = 0.40 * w.fade * lit
+
+        // THE FOOTPRINT — the old flat ellipse, kept faint, so the dome is
+        // planted on the water rather than floating in front of it.
+        w.shellB.x = w.x
+        w.shellB.y = w.y
+        w.shellB.tint = w.color
+        w.shellB.scaleX = (rx * breathe2 * 2) / 128
+        w.shellB.scaleY = ((w.beam * 0.26 * breathe2 * 2) / 128) * GROUND
+        w.shellB.alpha = 0.20 * w.fade * lit
+
+        // The lights ride the DOME's rim now — the moving part that stops the
+        // whole thing reading as a painted shape.
         for (let i = 0; i < w.orbit.length; i++) {
           const o = w.orbit[i]
           const a2 = (i / w.orbit.length) * Math.PI * 2 + w.t * 0.9
           o.x = w.x + Math.cos(a2) * rx
-          // Lifted a little off the water, so they read as riding the shell
-          // rather than floating in it.
-          o.y = w.y + Math.sin(a2) * ry * GROUND - 24 / GROUND
+          o.y = w.y - lift + Math.sin(a2) * ryDome
           o.tint = w.color
           o.scaleX = 13 / 24
           o.scaleY = 13 / 24

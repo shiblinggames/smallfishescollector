@@ -6825,7 +6825,20 @@ export default function RaidCombat({
           // Muzzle -> enemy hull. Measure the real ship boxes when we can; fall
           // back to stage-relative proportions so the beam ALWAYS fires.
           let x1: number, y1: number, x2: number, y2: number
-          if (stg && ps && es) {
+          const A = overSea ? anchors?.current : null
+          if (A && stg) {
+            // OVER THE SEA, FROM THE ANCHORS. The stage ships are hidden
+            // stand-ins there, so their boxes point at phantoms — but the
+            // anchors are the live screen positions of the two REAL hulls, and
+            // a beam drawn in the stage sits ABOVE the chart's marks, which is
+            // what keeps the lance in FRONT of the enemy ship instead of
+            // vanishing behind her art (the sea's particle beam lives on the
+            // canvas underneath everything and cannot get in front).
+            x1 = A.player.x - stg.left + A.player.w * 0.08
+            y1 = A.player.y - stg.top - A.player.w * 0.30
+            x2 = A.enemy.x - stg.left
+            y2 = A.enemy.y - stg.top - A.enemy.w * 0.26
+          } else if (stg && ps && es) {
             x1 = ps.left  - stg.left + ps.width * 0.56   // back from the bow, closer to the ship
             y1 = ps.top   - stg.top  + ps.height * 0.32  // upper deck
             x2 = es.left  - stg.left + es.width * 0.52   // enemy center
@@ -6839,10 +6852,7 @@ export default function RaidCombat({
           // Slight overshoot so the lance punches into the hull, not short of it.
           const len = Math.max(60, Math.hypot(dx, dy) * 1.06)
           const angle = Math.atan2(dy, dx) * 180 / Math.PI
-          // Not over the sea: the boxes measured above belong to the HIDDEN
-          // stage ships, so the beam drew between phantoms. The water's own
-          // railgun (below) is the whole effect there.
-          if (!overSea) setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
+          setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
           // AND ON THE WATER. The whole charge-lance-punch sequence is the sea
           // layer's; it self-times off this one call.
           onFightFxRef.current?.({ kind: 'mega', side: 'player', mega: 'railgun', color: megaColor })
@@ -6855,7 +6865,15 @@ export default function RaidCombat({
           const ps  = playerShipRef.current?.getBoundingClientRect()
           const es  = enemyShipRef.current?.getBoundingClientRect()
           let mx1: number, my1: number, mx2: number, my2: number
-          if (stg && ps && es) {
+          const AN = overSea ? anchors?.current : null
+          if (AN && stg) {
+            // Anchor geometry over the sea — see the railgun's note. The arc
+            // stays in front of both hulls, which is where a missile is.
+            mx1 = AN.player.x - stg.left
+            my1 = AN.player.y - stg.top - AN.player.w * 0.42
+            mx2 = AN.enemy.x - stg.left
+            my2 = AN.enemy.y - stg.top - AN.enemy.w * 0.22
+          } else if (stg && ps && es) {
             mx1 = ps.left - stg.left + ps.width * 0.50   // launches off the deck center
             my1 = ps.top  - stg.top  + ps.height * 0.20
             mx2 = es.left - stg.left + es.width * 0.50   // comes down on the enemy
@@ -6865,9 +6883,7 @@ export default function RaidCombat({
             mx1 = W * 0.34; my1 = H * 0.55
             mx2 = W * 0.78; my2 = H * 0.50
           }
-          // Same phantom problem as the beam: the missile arc is stage
-          // geometry, and over the sea the stage ships are hidden stand-ins.
-          if (!overSea) setNukeMissile({ key: Date.now() + i, color: megaColor, x1: mx1, y1: my1, x2: mx2, y2: my2, dur: flightMs })
+          setNukeMissile({ key: Date.now() + i, color: megaColor, x1: mx1, y1: my1, x2: mx2, y2: my2, dur: flightMs })
           onFightFxRef.current?.({ kind: 'mega', side: 'player', mega: 'nuke_launch', color: megaColor })
           playStepChainRef.current.push(setTimeout(() => setNukeMissile(null), flightMs))
           cameraShake('volley')           // lift-off rumble (the boom comes on impact)
@@ -12059,9 +12075,18 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
           signature FX (lightning, tentacles, spectrum, reticle) plays right
           over the character. */}
       <motion.div
-        initial={{ scale: 1.34, y: 10 }}
-        animate={{ scale: [1.34, 1, 1, 1], y: [10, 0, 0, 0] }}
-        transition={{ duration: 2.1, times: [0, 0.09, 0.78, 0.9], ease: [0.18, 0.9, 0.3, 1] }}
+        // THE CREW ARRIVES LAST, and that is the summon's grammar: backdrop,
+        // rays, rings, THEN the creature blooming out of the light. The art
+        // was simply present from the wrapper's first visible frame, which
+        // read as "the summon just appears". This is the one held piece that
+        // drives its own opacity, deliberately: its whole job is to arrive.
+        initial={{ scale: 1.7, y: 10, opacity: 0, filter: 'blur(16px) brightness(1.9)' }}
+        animate={{
+          scale: [1.7, 1, 1, 1], y: [10, 0, 0, 0],
+          opacity: [0, 1, 1, 1],
+          filter: ['blur(16px) brightness(1.9)', 'blur(0px) brightness(1)', 'blur(0px) brightness(1)', 'blur(0px) brightness(1)'],
+        }}
+        transition={{ duration: 2.1, times: [0, 0.16, 0.78, 0.9], ease: [0.18, 0.9, 0.3, 1] }}
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
         {image ? (
