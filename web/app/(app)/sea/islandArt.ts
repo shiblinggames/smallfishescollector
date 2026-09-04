@@ -152,6 +152,35 @@ function paintGround(
 }
 
 
+/**
+ * ── FORGET THE BAYS YOU HAVE LEFT ───────────────────────────────────────────
+ *
+ * `islandCache` is keyed by island and never let anything go, which was right
+ * while every island on the chart was worth keeping for the session and became
+ * a leak the moment the campaign started culling to one bay. The renderer drops
+ * an island's SPRITE when you leave its water; the canvas behind it stayed, so
+ * sailing out to the fifth chapter accumulated all forty-four campaign isles on
+ * the way — the exact pile the cull was added to prevent, arrived at by a
+ * different road.
+ *
+ * These are not small. A 340px isle bakes to about a thousand pixels square at
+ * this dpr, which is four megabytes each, and a phone has a budget for perhaps
+ * thirty. Past it the compositor stops being able to hand out backing surfaces,
+ * and the first thing that costs you is every CSS-filtered mark on the chart
+ * quietly failing to paint — a bay full of ships that are mounted, positioned,
+ * and invisible.
+ *
+ * So the renderer says which islands are still on the chart and everything else
+ * is dropped. Coming back re-bakes, which costs a frame and is the correct
+ * trade against carrying four bays you cannot see.
+ */
+export function evictIslandsExcept(keep: Set<string>) {
+  for (const key of [...islandCache.keys()]) {
+    // Keys are `${id}:${d}:${locked}` and ids never contain a colon.
+    if (!keep.has(key.slice(0, key.indexOf(':')))) islandCache.delete(key)
+  }
+}
+
 export function bakeIsland(id: string, d: number, locked: boolean, pad: number): HTMLCanvasElement {
   const key = `${id}:${d}:${locked ? 1 : 0}`
   const hit = islandCache.get(key)

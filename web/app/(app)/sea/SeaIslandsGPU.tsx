@@ -36,7 +36,7 @@
 // (zoom, zoom * GROUND) and positioned at (w/2 - zoom*x, h/2 - zoom*GROUND*y).
 
 import { useEffect, useRef, useState } from 'react'
-import { GROUND, bakeIsland, requestGround } from './islandArt'
+import { GROUND, bakeIsland, requestGround, evictIslandsExcept } from './islandArt'
 import { bakeMark } from './markArt'
 import { nightTint, makeWater } from './seaWater'
 import { makeClouds } from './seaClouds'
@@ -763,13 +763,23 @@ export default function SeaIslandsGPU({
         for (let k = baked.length - 1; k >= 0; k--) {
           const b = baked[k]
           if (want.has(b.isle.id)) continue
-          b.sprite.destroy()
+          // THE TEXTURE GOES WITH THE SPRITE. A bare destroy() left the GPU
+          // copy of a bay you had sailed out of resident for the session, which
+          // is the same leak as the canvas below and lands on the scarcer of
+          // the two memories. Each island bakes its own canvas and therefore
+          // owns its own texture, so nothing else is holding this one.
+          b.sprite.destroy({ texture: true, textureSource: true })
           baked.splice(k, 1)
           const fi = foams.findIndex(f => f.x === b.isle.x && f.y === b.isle.y)
           if (fi >= 0) { foams[fi].f.mesh.destroy(); foams.splice(fi, 1) }
         }
         const have = new Set(baked.map(b => b.isle.id))
         for (const isle of next) if (!have.has(isle.id)) place(isle)
+        // AND THE BAKES BEHIND THEM. Dropping the sprite was only ever half of
+        // letting a bay go — see evictIslandsExcept. Done after placing, so an
+        // island that is merely MOVING between lists is never evicted and
+        // re-baked in the same breath.
+        evictIslandsExcept(new Set(next.map(i => i.id)))
         listRef.current = next
       }
 

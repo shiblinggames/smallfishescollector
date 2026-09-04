@@ -11400,11 +11400,26 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={hull} alt="" draggable={false} decoding="async" style={{
           width: w, height: 'auto', display: 'block',
+          // ── A FILTER ONLY WHEN IT IS SAYING SOMETHING ───────────────────
+          //
+          // THE DEFAULT STATE CARRIES NO FILTER, and that is the fix for a
+          // whole bay of hulls that would not paint. Every mark used to carry
+          // a `drop-shadow` in EVERY state, so a filter — and the compositor
+          // backing surface that comes with it — was the baseline rather than
+          // the exception. The Last Fathom is fourteen marks over twelve baked
+          // islands; that is the worst bay on the chart, it is exactly the bay
+          // the ships went missing from, and the surfaces are the one thing
+          // that scales with it.
+          //
+          // The shadow was never load-bearing anyway: there is a real contact
+          // shadow drawn on the water above, which is what actually stops her
+          // floating. What is left needs a filter and earns it — the drained
+          // look of a locked hull, and the gold on the ONE you are near.
           filter: locked
-            ? 'grayscale(0.72) brightness(0.82) drop-shadow(0 8px 16px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(150,186,210,0.35))'
+            ? 'grayscale(0.72) brightness(0.82) drop-shadow(0 0 10px rgba(150,186,210,0.35))'
             : isNear && !cleared
               ? 'drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(240,192,64,0.55))'
-              : 'drop-shadow(0 8px 18px rgba(0,0,0,0.6))',
+              : undefined,
           opacity: cleared ? 0.85 : 1,
         }} />
       </div>
@@ -11466,11 +11481,13 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
       <img src={cleared ? '/sea/isle-chest-open.png' : '/sea/isle-chest.png'}
         alt="" draggable={false} decoding="async" style={{
           width: w, height: 'auto', display: 'block', position: 'relative',
+          // No filter in the resting state — see EncounterMark. The shade on
+          // the rock above is the real shadow.
           filter: locked
-            ? 'grayscale(0.75) brightness(0.85) drop-shadow(0 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 9px rgba(150,186,210,0.32))'
+            ? 'grayscale(0.75) brightness(0.85) drop-shadow(0 0 9px rgba(150,186,210,0.32))'
             : isNear && !cleared
               ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 14px rgba(240,192,64,0.7))'
-              : 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))',
+              : undefined,
           opacity: cleared ? 0.75 : 1,
         }} />
     </div>
@@ -11547,14 +11564,17 @@ const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/sea/isle-note.png" alt="" draggable={false} decoding="async" style={{
         width: w, height: 'auto', display: 'block', position: 'relative',
+        // No filter in the resting state — see EncounterMark. A read post is
+        // dimmed with opacity rather than brightness, and an UNREAD one is
+        // already called out by the pulsing marker on the rock above, so the
+        // glow it used to carry as well was a backing surface for a light that
+        // was being drawn twice.
         filter: locked
-          ? 'grayscale(0.75) brightness(0.82) drop-shadow(0 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 9px rgba(150,186,210,0.32))'
-          : cleared
-            ? 'brightness(0.82) drop-shadow(0 4px 10px rgba(0,0,0,0.6))'
-            : isNear
-              ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(240,192,64,0.8))'
-              : 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(240,192,64,0.45))',
-        opacity: cleared ? 0.8 : 1,
+          ? 'grayscale(0.75) brightness(0.82) drop-shadow(0 0 9px rgba(150,186,210,0.32))'
+          : isNear && !cleared
+            ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(240,192,64,0.8))'
+            : undefined,
+        opacity: cleared ? 0.66 : 1,
       }} />
     </div>
   )
