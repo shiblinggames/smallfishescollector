@@ -2454,10 +2454,18 @@ export default function RaidCombat({
 
     /** Put one anchor on one hull. Left/top and width only: the transform is
      *  framer-motion's, and every animation in this file rides it. */
-    const place = (el: HTMLElement | null, a: ShipAnchor | undefined) => {
+    const place = (el: HTMLElement | null, a: ShipAnchor | undefined, lift: number) => {
       if (!el || !a) return
       el.style.left = `${a.x - box.left - a.w / 2}px`
-      el.style.top = `${a.y - box.top - a.w / 2}px`
+      // LIFTED BY WHAT THE ANCHOR MEANS, per side. The old halving by WIDTH
+      // pushed the box — and every aura, ring, burst and glow inside it — a
+      // fifth of a ship-length off the hull, which is exactly where Kat's
+      // shield ring was floating. The two anchors are not the same point:
+      // the player's is her sprite's CENTRE (the boat is drawn centred on her
+      // position), the enemy's is her WATERLINE (the mark is anchored at its
+      // foot). The container is the art's box, about 0.56 as tall as wide, so
+      // the player lifts half that and the enemy lifts nearly all of it.
+      el.style.top = `${a.y - box.top - a.w * lift}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
       el.style.width = `${a.w}px`
@@ -2567,8 +2575,8 @@ export default function RaidCombat({
         }
       }
       if (at && moved) {
-        place(playerShipRef.current, at.player)
-        place(enemyShipRef.current, at.enemy)
+        place(playerShipRef.current, at.player, 0.28)
+        place(enemyShipRef.current, at.enemy, 0.52)
         dockEnemyPlate()
         dockPlayerPlate()
       }
@@ -11978,7 +11986,7 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
         // as the scene arriving; the crew picker's exit (0.14s) tucks inside
         // it, so the menu hands off to the summon instead of cutting to it.
         animate={{ opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 2.1, times: [0, 0.09, 0.8, 0.92], ease: 'easeInOut' }}
+        transition={{ duration: 2.1, times: [0, 0.09, 0.72, 0.97], ease: 'easeInOut' }}
         style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
       >
       {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
@@ -12080,13 +12088,23 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
         // was simply present from the wrapper's first visible frame, which
         // read as "the summon just appears". This is the one held piece that
         // drives its own opacity, deliberately: its whole job is to arrive.
-        initial={{ scale: 1.7, y: 10, opacity: 0, filter: 'blur(16px) brightness(1.9)' }}
+        // IN over ~0.45s, OUT over ~0.5s. The first cut arrived in a third of
+        // that and left on the wrapper's short fade, which read as pop-in and
+        // vanish. The creature now blooms out of the light AND dissolves back
+        // into it — slight scale-up and re-blur on the way out, so the exit is
+        // a departure rather than an opacity ramp.
+        initial={{ scale: 1.6, y: 10, opacity: 0, filter: 'blur(16px) brightness(1.9)' }}
         animate={{
-          scale: [1.7, 1, 1, 1], y: [10, 0, 0, 0],
-          opacity: [0, 1, 1, 1],
-          filter: ['blur(16px) brightness(1.9)', 'blur(0px) brightness(1)', 'blur(0px) brightness(1)', 'blur(0px) brightness(1)'],
+          scale: [1.6, 1, 1, 1.07], y: [10, 0, 0, -6],
+          opacity: [0, 1, 1, 0],
+          filter: [
+            'blur(16px) brightness(1.9)',
+            'blur(0px) brightness(1)',
+            'blur(0px) brightness(1)',
+            'blur(10px) brightness(1.5)',
+          ],
         }}
-        transition={{ duration: 2.1, times: [0, 0.16, 0.78, 0.9], ease: [0.18, 0.9, 0.3, 1] }}
+        transition={{ duration: 2.1, times: [0, 0.21, 0.72, 0.97], ease: [0.22, 0.8, 0.32, 1] }}
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
         {image ? (
