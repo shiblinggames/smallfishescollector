@@ -861,7 +861,10 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
         r.x = x; r.y = y
         r.age = -i * 0.28
         r.life = 0.7
-        r.from = (460 + i * 120) * P
+        // 300, not 460: at chase weight the old figure put the outer ring
+        // wider than the viewport, which is a screen effect rather than a
+        // thing happening to a ship. Seen and pulled in.
+        r.from = (300 + i * 90) * P
         r.to = 60
         r.alpha = 0.42
         r.p.tint = color
