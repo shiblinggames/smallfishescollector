@@ -11957,8 +11957,12 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
           FLASHES (impact / chase) animate their own opacity, by design. */}
       <motion.div
         initial={{ opacity: 0 }}
+        // 0.09, not 0.045: the old fade-in was ninety-five milliseconds for a
+        // near-opaque full-screen takeover, which is a slam. Twice that reads
+        // as the scene arriving; the crew picker's exit (0.14s) tucks inside
+        // it, so the menu hands off to the summon instead of cutting to it.
         animate={{ opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 2.1, times: [0, 0.045, 0.8, 0.92], ease: 'easeInOut' }}
+        transition={{ duration: 2.1, times: [0, 0.09, 0.8, 0.92], ease: 'easeInOut' }}
         style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
       >
       {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
@@ -12480,6 +12484,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
 
       {/* Special chooser — vertical stack so it scales as more items
           arrive. Per-entry disabled state surfaces "why not" inline. */}
+      <AnimatePresence>
       {specialMenu && (
         <>
           <div
@@ -12489,6 +12494,10 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
           <motion.div
             initial={{ opacity: 0, y: 8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
+            // The exit mirrors the entrance. Without one the menu unmounted on
+            // a hard cut the same frame the summon splash began — which is
+            // most of what read as jank in the crew-pick sequence.
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.14 }}
             style={{
               position: 'absolute', left: 0, right: 0, bottom: 'calc(100% + 10px)', zIndex: 10,
@@ -12532,9 +12541,11 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
           </motion.div>
         </>
       )}
+      </AnimatePresence>
 
       {/* Fire / Volley chooser — only when you have enough for a volley.
           Anchored over the row so it doesn't shift the layout. */}
+      <AnimatePresence>
       {fireMenu && (
         <>
           <div
@@ -12544,6 +12555,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
           <motion.div
             initial={{ opacity: 0, y: 8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.14 }}
             style={{
               position: 'absolute', left: 0, right: 0, bottom: 'calc(100% + 10px)', zIndex: 10,
@@ -12595,6 +12607,7 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
           </motion.div>
         </>
       )}
+      </AnimatePresence>
     </div>
   )
 }
