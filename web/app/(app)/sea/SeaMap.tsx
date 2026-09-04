@@ -11519,6 +11519,22 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
       <div className="enc-turn" style={{ animationDelay: `${(-phase * 29).toFixed(2)}s` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={hull} alt="" draggable={false} decoding="async" style={{
+          // ── maxWidth: 'none' IS THE SHIP BEING VISIBLE AT ALL ───────────
+          //
+          // The global stylesheet gives every <img> `max-width: 100%`, and this
+          // one stands inside an absolutely positioned wrapper with no width —
+          // a shrink-to-fit box whose width comes from its content. That is a
+          // circle: the img's cap needs the wrapper's width, the wrapper's
+          // width needs the img's. Which way the browser breaks the circle is
+          // not ours to rely on, and in practice it broke BOTH ways on this
+          // very chart — chapter one's hulls resolved at their inline 260px
+          // while chapter four's resolved at zero, an <img> fully mounted,
+          // decoded, positioned on screen and 0x0. Proven in a live browser:
+          // setting maxWidth none snapped the flagship from 0x0 to full size.
+          //
+          // IsleRock already carries this override for exactly this reason.
+          // Every mark img in a width-less wrapper must.
+          maxWidth: 'none',
           width: w, height: 'auto', display: 'block',
           // ── A FILTER ONLY WHEN IT IS SAYING SOMETHING ───────────────────
           //
@@ -11600,6 +11616,9 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={cleared ? '/sea/isle-chest-open.png' : '/sea/isle-chest.png'}
         alt="" draggable={false} decoding="async" style={{
+          // maxWidth none, or the shrink-wrapped wrapper can zero it — see the
+          // note on EncounterMark's hull.
+          maxWidth: 'none',
           width: w, height: 'auto', display: 'block', position: 'relative',
           // No filter in the resting state — see EncounterMark. The shade on
           // the rock above is the real shadow.
@@ -11683,6 +11702,9 @@ const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
       }} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/sea/isle-note.png" alt="" draggable={false} decoding="async" style={{
+        // maxWidth none, or the shrink-wrapped wrapper can zero it — see the
+        // note on EncounterMark's hull.
+        maxWidth: 'none',
         width: w, height: 'auto', display: 'block', position: 'relative',
         // No filter in the resting state — see EncounterMark. A read post is
         // dimmed with opacity rather than brightness, and an UNREAD one is
