@@ -339,7 +339,20 @@ export async function makeShip(
     const shade = bakeSilhouette(PIXI, img, `shadow|${ship.url}`, W, h, 22)
     if (shade) {
       const sp: Sprite = new PIXI.Sprite(shade.texture)
-      sp.position.set(-W / 2 - shade.pad, -h / 2 - shade.pad + 10)
+      // ── THE SHADOW IS MIRRORED WITH THE SHIP ──────────────────────────
+      //
+      // The hull below takes ship.flip as a negative scale; the silhouette
+      // did not, so on the four hulls that flip — Sloop, Schooner,
+      // Brigantine, Galleon — the shadow was the ship pointing the other
+      // way, bow shading her stern. It looked right on exactly one boat:
+      // the Man-o-War, the only hull in the table with no seaFlip.
+      //
+      // Anchored at the centre so the mirror pivots about the same point
+      // the hull's does, rather than around a corner that would slide the
+      // shadow a full ship-length sideways.
+      sp.anchor.set(0.5)
+      sp.scale.set(ship.flip ? -1 : 1, 1)
+      sp.position.set(0, 10)
       sp.tint = 0x000000
       // The same restraint the fishing hull got. A ship of the line is bigger
       // and sits heavier, so it keeps a little more than she does — but it is
