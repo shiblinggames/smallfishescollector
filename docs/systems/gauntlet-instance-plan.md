@@ -230,17 +230,20 @@ SeaMap and the arena compose from one set of numbers. Your hull is anchored at
 its centre and theirs at its waterline, as the chart reports them, because
 RaidCombat lifts each side's overlays by what its anchor means.
 
-**The tide between screens.** `setPhase` in GauntletGame is a wrapper: a
-change between two screens of a live run (`RUN_PHASES`) calls `playTide()`,
-an overlay appended to `document.body` and driven by the Web Animations API
-(a wall of dark water in the run's colour sweeping up and off the top), and
-commits the phase only after `TIDE_COVER_MS`, when the wall covers the
-viewport. It lives outside React on purpose, so it cannot depend on any
-wrapper surviving the switch it is meant to cover. Reduced motion, or no
-`document`, commits at once. Every in-run phase also renders its content in
-one module-level `Screen` (second child, after the arena) whose
-AnimatePresence cross-fades the screens; and the arena surges on every mood
-change so the world under the switch moves with it.
+**The veil between screens.** `setPhase` in GauntletGame is a wrapper: a
+change between two screens of a live run (`RUN_PHASES`) calls `playVeil()`,
+a STILL dark overlay appended to `document.body` (Web Animations API) that
+fades in over ~240ms, holds a beat while the phase commits under it, and
+lifts over ~420ms. Outside React on purpose, so it cannot depend on any
+wrapper surviving the switch. Reduced motion, or no `document`, commits at
+once. Every in-run phase also renders inside one module-level `Screen`
+(second child, after the arena) whose AnimatePresence cross-fades.
+
+**REJECTED, do not re-propose:** a sweeping wall of water up the viewport as
+the transition, and an arena lurch (surge) on phase change. Both shipped
+2026-09-05 and were pulled the same day: "terrible, distracting and
+nauseating". Nothing full-screen may MOVE on a screen change; the light may
+dip.
 
 What is NOT done in phase 3 is the run-flow half: chests rising, shrines
 breaching, the merchant's hulk drawing alongside as things you sail to. The
