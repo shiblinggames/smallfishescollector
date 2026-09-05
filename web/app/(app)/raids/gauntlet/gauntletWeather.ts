@@ -33,13 +33,29 @@ const RAIN_N = 200
 const RISE_N = 90
 const CHOP_N = 26
 
+/**
+ * ── WHY THE CACHES ARE CHECKED, NOT JUST READ ───────────────────────────────
+ *
+ * These little canvas textures are cached at module scope so a remount does not
+ * redraw them. But a gauntlet visit tears a whole Pixi Application down and
+ * builds another (the lobby's, then the arena's, then the lobby's again), and a
+ * texture whose source went down with a previous renderer would come back as an
+ * invisible sprite with no error to show for it. So `live()` is the only way in:
+ * a cached texture is reused ONLY while its source is still alive, and rebuilt
+ * the moment it is not.
+ */
+function live(t: Texture | null): Texture | null {
+  return t && !t.destroyed && !t.source.destroyed ? t : null
+}
+
 let dotTex: Texture | null = null
 let lineTex: Texture | null = null
 let spiralTex: Texture | null = null
 let glowTex: Texture | null = null
 
 function dot(PIXI: typeof import('pixi.js')): Texture {
-  if (dotTex) return dotTex
+  const cached = live(dotTex)
+  if (cached) return cached
   const S = 32
   const c = document.createElement('canvas')
   c.width = S; c.height = S
@@ -55,7 +71,8 @@ function dot(PIXI: typeof import('pixi.js')): Texture {
 
 /** A soft vertical streak, for rain and for chop. Drawn once and stretched. */
 function line(PIXI: typeof import('pixi.js')): Texture {
-  if (lineTex) return lineTex
+  const cached = live(lineTex)
+  if (cached) return cached
   const W = 8, H = 64
   const c = document.createElement('canvas')
   c.width = W; c.height = H
@@ -72,7 +89,8 @@ function line(PIXI: typeof import('pixi.js')): Texture {
 }
 
 function glow(PIXI: typeof import('pixi.js')): Texture {
-  if (glowTex) return glowTex
+  const cached = live(glowTex)
+  if (cached) return cached
   const S = 256
   const c = document.createElement('canvas')
   c.width = S; c.height = S
@@ -88,7 +106,8 @@ function glow(PIXI: typeof import('pixi.js')): Texture {
 
 /** The maw: a broad slow spiral, white, for a boss depth to turn overhead. */
 function spiral(PIXI: typeof import('pixi.js')): Texture {
-  if (spiralTex) return spiralTex
+  const cached = live(spiralTex)
+  if (cached) return cached
   const S = 512
   const c = document.createElement('canvas')
   c.width = S; c.height = S

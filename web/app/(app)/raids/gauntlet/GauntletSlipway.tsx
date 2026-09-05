@@ -54,13 +54,29 @@ export type SlipwayTheme = {
 /** How close, in screen pixels, counts as alongside. */
 const REACH = 96
 
+/**
+ * ── WHY THE CACHES ARE CHECKED, NOT JUST READ ───────────────────────────────
+ *
+ * These little canvas textures are cached at module scope so a remount does not
+ * redraw them. But a gauntlet visit tears a whole Pixi Application down and
+ * builds another (the lobby's, then the arena's, then the lobby's again), and a
+ * texture whose source went down with a previous renderer would come back as an
+ * invisible sprite with no error to show for it. So `live()` is the only way in:
+ * a cached texture is reused ONLY while its source is still alive, and rebuilt
+ * the moment it is not.
+ */
+function live(t: Texture | null): Texture | null {
+  return t && !t.destroyed && !t.source.destroyed ? t : null
+}
+
 let ringTex: Texture | null = null
 let glowTex: Texture | null = null
 let spinTex: Texture | null = null
 type Texture = import('pixi.js').Texture
 
 function ring(PIXI: typeof import('pixi.js')): Texture {
-  if (ringTex) return ringTex
+  const cached = live(ringTex)
+  if (cached) return cached
   const S = 128
   const c = document.createElement('canvas')
   c.width = S; c.height = S
@@ -77,7 +93,8 @@ function ring(PIXI: typeof import('pixi.js')): Texture {
 }
 
 function glow(PIXI: typeof import('pixi.js')): Texture {
-  if (glowTex) return glowTex
+  const cached = live(glowTex)
+  if (cached) return cached
   const S = 256
   const c = document.createElement('canvas')
   c.width = S; c.height = S
@@ -93,7 +110,8 @@ function glow(PIXI: typeof import('pixi.js')): Texture {
 
 /** The portal's spiral, so the way down is visibly a way DOWN. */
 function spin(PIXI: typeof import('pixi.js')): Texture {
-  if (spinTex) return spinTex
+  const cached = live(spinTex)
+  if (cached) return cached
   const S = 512
   const c = document.createElement('canvas')
   c.width = S; c.height = S
