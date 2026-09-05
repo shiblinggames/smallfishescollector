@@ -18,6 +18,7 @@ import {
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
 import RaidCombat from '../RaidCombat'
+import GauntletArena, { type ArenaHandle, type ArenaTheme } from './GauntletArena'
 import { getShipSkin } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
 import { fortuneLootMult } from '@/lib/expeditions'
@@ -97,6 +98,46 @@ function atmosphereForDepth(depth: number): 'fog' | 'overcast' | 'sunset' {
 // desaturated, teal-shifted look. Hardcore skips this (passes undefined) so
 // its red blood-vignette stays clean instead of muddying against teal.
 const GAUNTLET_ABYSS_FILTER = 'brightness(0.7) saturate(1.15) hue-rotate(-18deg) contrast(1.05)'
+
+/**
+ * ── THE WATER A DEPTH IS FOUGHT ON ──────────────────────────────────────────
+ *
+ * The arena's sea, per descent and per depth. Written as three stops deep to
+ * pale, exactly as every water on the chart is, so the same shader draws it.
+ *
+ * IT GETS WORSE AS YOU FALL, and that is the whole point of writing it as a
+ * function of depth rather than as a constant: the top of a run is cold water
+ * with some light left in it, and the bottom is nearly black with the swell
+ * up. Davy's is drowned teal, the Don's the verdigris green of Finleone's
+ * ghost, and hardcore is the blood-dark the Drowned Ledger already wears.
+ */
+function arenaTheme(depth: number, variant: GauntletVariant, hardcore: boolean): ArenaTheme {
+  // 0 at the surface, 1 by the deepest anyone reaches. Eased, so the early
+  // depths still differ from each other and the bottom does not flatten out.
+  const t = Math.min(1, Math.pow(Math.max(0, depth - 1) / 24, 0.85))
+  if (hardcore) {
+    return {
+      sea: ['#12030a', '#2a0710', '#5e1524'],
+      dark: 0.34 + 0.42 * t,
+      swell: 0.55 + 0.4 * t,
+      rush: 0.15 + 0.3 * t,
+    }
+  }
+  if (variant === 'don') {
+    return {
+      sea: ['#04120f', '#0e2b22', '#2c6350'],
+      dark: 0.3 + 0.45 * t,
+      swell: 0.5 + 0.42 * t,
+      rush: 0.12 + 0.3 * t,
+    }
+  }
+  return {
+    sea: ['#04121a', '#0c2e34', '#22707a'],
+    dark: 0.3 + 0.45 * t,
+    swell: 0.5 + 0.42 * t,
+    rush: 0.12 + 0.3 * t,
+  }
+}
 
 export interface GauntletGameProps {
   /** Which gauntlet this run host is driving. Defaults to Davy Jones; the Don's
@@ -599,6 +640,14 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Biggest single blow landed this descent — fed to the Biggest Hit board the
   // moment it's beaten (persists even on death). Reset each run in begin().
   const runMaxHitRef = useRef(0)
+  /**
+   * THE ARENA'S HANDLE. Filled in when the arena mounts; the fight talks to it
+   * through the same three channels the chart's fights use. A ref rather than
+   * state on purpose: these are called from inside the fight's own frame loop
+   * and from timeouts, and neither should re-render this component.
+   */
+  const arenaRef = useRef<ArenaHandle | null>(null)
+
   // Fun run telemetry — folded from RaidCombat's onStat deltas across the dive.
   const runStatsRef = useRef<GauntletRunStats>(emptyRunStats())
   // Lethal-save charges (Quartermaster's Anchor etc.) — a per-RUN pool that
@@ -4541,10 +4590,23 @@ export default function GauntletGame(props: GauntletGameProps) {
           image while sitting BEHIND the in-flow combat and leaving the fixed
           overlays untouched. RaidCombat's container is transparent
           (transparentBackdrop) so this shows through — no boxed second image. */}
+      {/* ── THE ARENA ──────────────────────────────────────────────────────
+          The fight happens on live water now rather than over a photograph:
+          the chart's own shader, guns and ability effects, with the two hulls
+          posed by the fight through the handle. The gradient stays on top of
+          it, because it is what seats the deck against the sea and it was
+          already tuned for both descents. See GauntletArena for why a second
+          Pixi Application is safe on this route and nowhere else. */}
+      <GauntletArena
+        theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun)}
+        // The hero art as the fight itself uses it: RaidCombat draws this
+        // sprite unmirrored, so the arena must not mirror it either or the
+        // two renderers would disagree about which way she is pointing.
+        shipUrl={props.shipImageUrl}
+        enemyUrl={fight.enemy.image}
+        handle={arenaRef}
+      />
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={battleBg} alt=""
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, background: hardcoreRun
           ? 'linear-gradient(to bottom, rgba(28,2,4,0.24) 0%, rgba(22,1,3,0.44) 46%, rgba(8,0,1,0.82) 100%)'
           : 'linear-gradient(to bottom, rgba(3,9,11,0.26) 0%, rgba(3,9,11,0.44) 46%, rgba(2,6,8,0.8) 100%)' }} />
@@ -4568,6 +4630,16 @@ export default function GauntletGame(props: GauntletGameProps) {
             atmosphere={atmosphereForDepth(fight.depth)}
             zoneBg="/abyss.jpg"
             zoneFilter={hardcoreRun ? undefined : GAUNTLET_ABYSS_FILTER}
+            // ── FOUGHT ON THE WATER ──────────────────────────────────────
+            //
+            // The same mode the campaign's fights use over the chart: the
+            // engine stands down its own backdrop and its own two ships and
+            // hangs everything it draws on the arena's anchors instead. It
+            // does not know which renderer is on the other end.
+            overSea
+            anchors={{ get current() { return arenaRef.current?.anchors.current ?? null } }}
+            onShipFx={fx => arenaRef.current?.shipFx(fx)}
+            onFightFx={e => arenaRef.current?.fightFx(e)}
             // The abyss is painted full-screen behind the whole fight (below), so
             // RaidCombat's container stays transparent and that one scene shows
             // through — no boxed abyss on top of the app's /raids page image.
