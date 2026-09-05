@@ -445,6 +445,24 @@ export default function SeaIslandsGPU({
 
       const world = new PIXI.Container()
       a.stage.addChild(world)
+      // ── THE WORLD IS A RENDER GROUP, AND THAT IS THE CAMERA ─────────────
+      //
+      // Profiled sailing: the single largest cost on the main thread was
+      // Pixi's transform update, about a quarter of all non-idle time. The
+      // camera moves THIS container every frame, and a plain container that
+      // moves marks itself dirty and has updateTransformAndChildren walk
+      // every descendant to recompute its world matrix — some five thousand
+      // sprites of islands, rim rock, particles and boats, sixty times a
+      // second, so that the camera could pan.
+      //
+      // A render group stores its children's transforms RELATIVE TO THE
+      // GROUP. Moving the group recomputes one matrix and the recursion stops
+      // at the boundary (see updateTransformAndChildren: it does not descend
+      // into a child that is itself a render group). Children still update
+      // when THEY change — a bobbing wreck, a particle — and only then. This
+      // is precisely the documented use of the feature: a world that a camera
+      // moves.
+      world.isRenderGroup = true
 
       // ── WHAT IS UNDER THE WATER ───────────────────────────────────
       // FIRST into the world, so everything else on this chart is above them:
@@ -720,6 +738,17 @@ export default function SeaIslandsGPU({
         return node
       }
 
+      // ── LAND, THEN MARKS, AS FIXED LAYERS ────────────────────────────
+      //
+      // Islands and the tall scenery both attach asynchronously, as their
+      // bakes finish, and they used to go straight into the world in
+      // completion order — so what painted over what was a race. Two fixed
+      // layers instead: land, and the marks above it (a rock stands ON the
+      // shore it is drawn against). A bay's isles arriving late through
+      // reconcile land in the same layer as the rest, under the rock.
+      const land = new PIXI.Container()
+      world.addChild(land)
+
       const foams: { f: Foam; x: number; y: number; r: number }[] = []
       const baked: { isle: GpuIsland; sprite: import('pixi.js').Sprite; pad: number }[] = []
       const place = (isle: GpuIsland) => {
@@ -733,7 +762,7 @@ export default function SeaIslandsGPU({
         s.anchor.set(0.5, 0.5)
         s.x = isle.x
         s.y = isle.y
-        world.addChild(s)
+        land.addChild(s)
         baked.push({ isle, sprite: s, pad })
 
         // THE SURF, AT THE ISLAND. A child of the world at the island's own
@@ -749,6 +778,44 @@ export default function SeaIslandsGPU({
         foams.push({ f, x: isle.x, y: isle.y, r: isle.r })
       }
       for (const isle of listRef.current) place(isle)
+
+      // ── THE MARKS, IN CELLS THAT ARE EACH A RENDER GROUP ─────────────
+      //
+      // Every visibility flip on a container marks its render group's
+      // STRUCTURE dirty, and a dirty structure rebuilds the group's whole
+      // instruction set — a walk over every renderable in it. The cull loop
+      // below flips marks in and out of view constantly while sailing, which
+      // was rebuilding the instructions for the ENTIRE world, five thousand
+      // nodes, most frames. (Profiled: collectRenderables, a steady couple of
+      // percent that was pure churn.)
+      //
+      // So the tall scenery lives in spatial cells, 6,000px square, and each
+      // cell is its own render group. A flip rebuilds the one cell it happened
+      // in — a few hundred nodes at the most — and the world's own list, with
+      // the islands and boats and every particle system in it, is never
+      // touched by a rock going off the edge of the screen.
+      const marks = new PIXI.Container()
+      world.addChild(marks)
+      type MarkCell = {
+        view: import('pixi.js').Container
+        list: Swayer[]
+        minX: number; maxX: number; minY: number; maxY: number
+        /** Whether the frame loop was iterating this cell last frame. */
+        near: boolean
+      }
+      const markCells = new Map<string, MarkCell>()
+      const cellFor = (x: number, y: number) => {
+        const k = `${Math.floor(x / 6000)}:${Math.floor(y / 6000)}`
+        let c = markCells.get(k)
+        if (!c) {
+          const view = new PIXI.Container()
+          view.isRenderGroup = true
+          marks.addChild(view)
+          c = { view, list: [], minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, near: true }
+          markCells.set(k, c)
+        }
+        return c
+      }
 
       /**
        * ── ADD AND DROP ISLANDS AFTER THE FACT ──────────────────────────────
@@ -873,12 +940,26 @@ export default function SeaIslandsGPU({
           inner.pivot.set(0, -h * 0.08)
           inner.position.set(0, -h * 0.08)
 
-          world.addChild(node)
-          swayers.push({
+          const cell = cellFor(m.x, m.y)
+          cell.view.addChild(node)
+          // A mark whose bake lands after its cell has already gone to sleep
+          // must not sit visible out there until the cell next wakes.
+          if (!cell.near) node.visible = false
+          const sw: Swayer = {
             node, holder: inner, sway: m.sway,
             phase: (m.i * 0.77) % 3,
             x: m.x, y: m.y, half: m.size,
-          })
+          }
+          swayers.push(sw)
+          cell.list.push(sw)
+          // The cell's reach, grown as marks arrive: a mark stands up to three
+          // times its size above its anchor, which is the same margin the cull
+          // test below uses, so a cell is "near" exactly when one of its
+          // marks could be on screen.
+          cell.minX = Math.min(cell.minX, m.x - m.size * 2)
+          cell.maxX = Math.max(cell.maxX, m.x + m.size * 2)
+          cell.minY = Math.min(cell.minY, m.y - m.size * 3)
+          cell.maxY = Math.max(cell.maxY, m.y + m.size * 3)
         }).catch(() => {
           // One painting that will not decode must not cost the other forty.
         })
@@ -1017,7 +1098,29 @@ export default function SeaIslandsGPU({
         portalWell.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
         guide.advance(t)
-        for (const sw of swayers) {
+        // ── BY CELL, NOT BY MARK ──────────────────────────────────────
+        //
+        // A cell whose whole reach is off the screen is skipped without a
+        // single one of its marks being looked at — and, just as important,
+        // without any of their flags being written, because writing a flag is
+        // what dirties a render group's structure. The marks in a far cell
+        // keep the `visible = false` they were given as the cell went out of
+        // reach, and the loop only walks the handful of cells around the
+        // camera. That turns a sixteen-hundred-mark sweep into a couple of
+        // hundred.
+        for (const cell of markCells.values()) {
+          const nearNow = cell.maxX > camX - halfW && cell.minX < camX + halfW
+            && cell.maxY > camY - halfH && cell.minY < camY + halfH
+          if (!nearNow) {
+            if (cell.near) {
+              // Going out of reach: one pass to put the cell to sleep.
+              for (const sw of cell.list) sw.node.visible = false
+              cell.near = false
+            }
+            continue
+          }
+          cell.near = true
+          for (const sw of cell.list) {
           // Generous margins: a landmark is anchored at its base and stands
           // well above it, so culling on the anchor alone pops the tall ones.
           const on = Math.abs(sw.x - camX) < halfW + sw.half * 2
@@ -1033,6 +1136,7 @@ export default function SeaIslandsGPU({
             // A wreck is thousands of tons of waterlogged timber: slower, less.
             const u = Math.sin(((t + sw.phase) / 9) * Math.PI * 2)
             sw.holder.rotation = (1.1 * Math.PI / 180) * u
+          }
           }
         }
       })
