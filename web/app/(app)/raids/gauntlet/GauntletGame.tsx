@@ -2388,16 +2388,20 @@ export default function GauntletGame(props: GauntletGameProps) {
             A lit ring says "moor here" and nothing else, so the name goes
             beside it in type. Painting it into the canvas would mean a font
             atlas and a second text pipeline for four words. */}
-        {!ledgerOpen && slipPlaces.filter(pl => !pl.portal).map(pl => (
+        {!ledgerOpen && slipPlaces.map(pl => (
           <span key={pl.id} aria-hidden
             style={{
               position: 'fixed', left: `${pl.x * 100}%`, top: `${pl.y * 100}%`,
-              transform: 'translate(-50%, 34px)', zIndex: 4, pointerEvents: 'none',
-              color: slipNear === pl.id ? '#f4efe4' : 'rgba(230,238,244,0.66)',
-              textShadow: '0 2px 8px rgba(0,0,0,0.95)',
+              // Below the ring, except low on the screen, where the helm button
+              // is about to occupy exactly that spot. The vortex is wide enough
+              // that its name has to clear the arms entirely.
+              transform: pl.portal ? 'translate(-50%, -108px)' : pl.y > 0.7 ? 'translate(-50%, -46px)' : 'translate(-50%, 34px)',
+              zIndex: 4, pointerEvents: 'none',
+              color: slipNear === pl.id ? '#f7f2e6' : 'rgba(233,241,246,0.78)',
+              textShadow: '0 2px 8px rgba(0,0,0,0.98), 0 0 14px rgba(0,0,0,0.9)',
               transition: 'color 0.25s',
             }}>
-            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.16em', whiteSpace: 'nowrap' }}>{pl.label}</span>
+            <span className="font-karla font-800 uppercase" style={{ fontSize: pl.portal ? '0.62rem' : '0.54rem', letterSpacing: '0.18em', whiteSpace: 'nowrap' }}>{pl.label}</span>
           </span>
         ))}
 

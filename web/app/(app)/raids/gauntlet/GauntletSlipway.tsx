@@ -219,8 +219,9 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
       const boat = new PIXI.Container()
       const shade = new PIXI.Sprite(glowT)
       shade.anchor.set(0.5)
-      shade.tint = 0x000000
-      shade.alpha = 0.42
+      shade.tint = 0xbfe4ee
+      shade.alpha = 0.22
+      shade.blendMode = 'add'
       const hull = new PIXI.Sprite(PIXI.Texture.EMPTY)
       hull.anchor.set(0.5)
       boat.addChild(shade, hull)
