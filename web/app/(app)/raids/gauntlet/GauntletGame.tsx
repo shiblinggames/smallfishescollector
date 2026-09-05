@@ -122,7 +122,13 @@ function arenaTheme(
   // Davy's Terms add their Pressure on top, because a captain who signed for
   // a harder dive should be able to SEE that they did; and a boss depth is
   // worse than the water either side of it by construction.
-  const heavy = Math.min(1, t * 0.82 + pressure * 0.22 + (boss ? 0.24 : 0))
+  //
+  // AND IT STARTS ABOVE ZERO. Depth 1 computed to a flat calm, which is the
+  // wrong first impression for a place called the Davy Jones Gauntlet: the
+  // opening fight should already be weather you would not fish in. The floor
+  // buys light rain and the odd far-off bolt from the first breath, and the
+  // dial still has all its travel above it.
+  const heavy = Math.min(1, 0.2 + t * 0.7 + pressure * 0.22 + (boss ? 0.24 : 0))
   if (hardcore) {
     return {
       key: 0xff6a6a,
