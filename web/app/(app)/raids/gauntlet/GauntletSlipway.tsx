@@ -204,10 +204,18 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
         node.addChild(halo, rg)
         let spiral: import('pixi.js').Sprite | null = null
         if (p.portal) {
+          // A sprite squashed into an ellipse and THEN rotated carries its own
+          // long axis round with it, so the vortex stood up on its end every
+          // half turn and stopped lying on the water. The squash belongs to a
+          // container outside the spin: rotate the round sprite inside it and
+          // the ground plane holds through every turn.
+          const plate = new PIXI.Container()
+          plate.scale.set(1, 0.5)
           spiral = new PIXI.Sprite(spinT)
           spiral.anchor.set(0.5); spiral.tint = p.color; spiral.alpha = 0.42; spiral.blendMode = 'add'
-          spiral.width = 300; spiral.height = 300 * 0.5
-          node.addChildAt(spiral, 0)
+          spiral.width = 300; spiral.height = 300
+          plate.addChild(spiral)
+          node.addChildAt(plate, 0)
         }
         world.addChild(node)
         return { p, node, ring: rg, halo, spiral }
@@ -286,9 +294,11 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
           // The shadow pools under her waterline, not under her centre, and it
           // does NOT take the bob — a shadow that rises with the hull is what
           // makes a sprite look like it is flying.
-          shade.width = w * 0.82
-          shade.height = w * 0.3
-          shade.y = hull.height * 0.34 - bob
+          // Tight and just under her keel. Wide and soft reads as fog she is
+          // sitting on rather than water she is sitting in.
+          shade.width = w * 0.58
+          shade.height = w * 0.17
+          shade.y = hull.height * 0.29 - bob
         }
         hull.scale.x = Math.abs(hull.scale.x) * facing
 

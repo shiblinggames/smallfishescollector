@@ -2281,7 +2281,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // the vortex. The Codex is deliberately NOT one of them — it lives in the
     // HUD, because it is something you consult, not somewhere you sail.
     const slipPlaces: SlipwayPlace[] = [
-      { id: 'portal', label: 'The Descent', x: 0.5, y: 0.3, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
+      { id: 'portal', label: 'The Descent', x: 0.5, y: 0.34, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
       { id: 'run', label: 'Run Upgrades', x: 0.19, y: 0.5, color: 0xc4a0e8 },
       { id: 'shore', label: 'Permanent Upgrades', x: 0.81, y: 0.5, color: 0xf0c040 },
       { id: 'ledger', label: 'The Ledger', x: 0.5, y: 0.82, color: 0xa8b8d0 },
@@ -2395,7 +2395,9 @@ export default function GauntletGame(props: GauntletGameProps) {
               // Below the ring, except low on the screen, where the helm button
               // is about to occupy exactly that spot. The vortex is wide enough
               // that its name has to clear the arms entirely.
-              transform: pl.portal ? 'translate(-50%, -108px)' : pl.y > 0.7 ? 'translate(-50%, -46px)' : 'translate(-50%, 34px)',
+              // Under the vortex, not over it: above the arms is where the
+              // page title lives, and the two collided.
+              transform: pl.portal ? 'translate(-50%, 96px)' : pl.y > 0.7 ? 'translate(-50%, -46px)' : 'translate(-50%, 34px)',
               zIndex: 4, pointerEvents: 'none',
               color: slipNear === pl.id ? '#f7f2e6' : 'rgba(233,241,246,0.78)',
               textShadow: '0 2px 8px rgba(0,0,0,0.98), 0 0 14px rgba(0,0,0,0.9)',
