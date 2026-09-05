@@ -230,15 +230,17 @@ SeaMap and the arena compose from one set of numbers. Your hull is anchored at
 its centre and theirs at its waterline, as the chart reports them, because
 RaidCombat lifts each side's overlays by what its anchor means.
 
-**The tide between screens.** Every in-run phase renders its content inside
-ONE module-level `Screen` at the same position in its fragment (right after
-the arena), so React keeps a single instance and the `AnimatePresence` inside
-it survives the phase change: the outgoing screen fades, a wall of dark water
-in the gauntlet's colour sweeps up the viewport and off the top, the incoming
-screen rises under it, and the arena surges in step (the rise tears past, the
-hulls dip). Opacity only on the wrapper: a transform there would break every
-fixed overlay inside it. Keep `Screen` second (after the arena) in every
-branch, or the exit has nothing to play on.
+**The tide between screens.** `setPhase` in GauntletGame is a wrapper: a
+change between two screens of a live run (`RUN_PHASES`) calls `playTide()`,
+an overlay appended to `document.body` and driven by the Web Animations API
+(a wall of dark water in the run's colour sweeping up and off the top), and
+commits the phase only after `TIDE_COVER_MS`, when the wall covers the
+viewport. It lives outside React on purpose, so it cannot depend on any
+wrapper surviving the switch it is meant to cover. Reduced motion, or no
+`document`, commits at once. Every in-run phase also renders its content in
+one module-level `Screen` (second child, after the arena) whose
+AnimatePresence cross-fades the screens; and the arena surges on every mood
+change so the world under the switch moves with it.
 
 What is NOT done in phase 3 is the run-flow half: chests rising, shrines
 breaching, the merchant's hulk drawing alongside as things you sail to. The
