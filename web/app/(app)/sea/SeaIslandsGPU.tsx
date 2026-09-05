@@ -789,8 +789,12 @@ export default function SeaIslandsGPU({
       // nodes, most frames. (Profiled: collectRenderables, a steady couple of
       // percent that was pure churn.)
       //
-      // So the tall scenery lives in spatial cells, 6,000px square, and each
-      // cell is its own render group. A flip rebuilds the one cell it happened
+      // So the tall scenery lives in spatial cells, 3,500px square, and each
+      // cell is its own render group while it is near (see the loop: a far
+      // cell is demoted to a plain container). Small on purpose: while
+      // sailing, some mark crosses the screen's edge nearly every frame, so
+      // the near cells rebuild nearly every frame, and that rebuild walks the
+      // whole cell. A cell of a few dozen marks is a walk of nothing. A flip rebuilds the one cell it happened
       // in — a few hundred nodes at the most — and the world's own list, with
       // the islands and boats and every particle system in it, is never
       // touched by a rock going off the edge of the screen.
@@ -805,7 +809,7 @@ export default function SeaIslandsGPU({
       }
       const markCells = new Map<string, MarkCell>()
       const cellFor = (x: number, y: number) => {
-        const k = `${Math.floor(x / 6000)}:${Math.floor(y / 6000)}`
+        const k = `${Math.floor(x / 3500)}:${Math.floor(y / 3500)}`
         let c = markCells.get(k)
         if (!c) {
           const view = new PIXI.Container()
