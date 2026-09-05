@@ -1113,13 +1113,27 @@ export default function SeaIslandsGPU({
             && cell.maxY > camY - halfH && cell.minY < camY + halfH
           if (!nearNow) {
             if (cell.near) {
-              // Going out of reach: one pass to put the cell to sleep.
+              // Going out of reach: one pass to put the cell to sleep, and
+              // then it STOPS BEING A RENDER GROUP. Pixi's per-frame group
+              // pass has no renderable check — every group gets its
+              // transform pass, its validate and its batch upload whether or
+              // not anything in it can be seen — so thirty sleeping cells
+              // were thirty uploads a frame for nothing. As a plain invisible
+              // container inside the world's group a far cell costs zero:
+              // nothing in it moves, nothing in it is written, nothing walks
+              // it. The toggle is one structure change on the world, and it
+              // happens a few times a minute at most.
               for (const sw of cell.list) sw.node.visible = false
+              cell.view.isRenderGroup = false
               cell.near = false
             }
             continue
           }
-          cell.near = true
+          if (!cell.near) {
+            // Back in reach: a group again, so the flips below stay local.
+            cell.view.isRenderGroup = true
+            cell.near = true
+          }
           for (const sw of cell.list) {
           // Generous margins: a landmark is anchored at its base and stands
           // well above it, so culling on the anchor alone pops the tall ones.

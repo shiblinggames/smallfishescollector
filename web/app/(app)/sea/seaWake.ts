@@ -359,6 +359,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   /** What each hull was doing last frame. Speed is measured here rather than
    *  asked for, because the only caller that knows its own velocity is the
    *  player and everyone else would have to be given a differentiator. */
+  const alive = new Set<string>()
   const seen = new Map<string, {
     x: number; y: number; speed: number; primed: boolean
     since: number; ringSince: number
@@ -537,7 +538,10 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
       const t = clock
 
       // ── WHAT EVERY HULL IS DOING ──────────────────────────────────
-      const alive = new Set<string>()
+      // One Set for the lifetime of the layer, cleared per frame. This ran
+      // sixty times a second and allocated a fresh Set every time; the
+      // collector was being handed the same empty set to sweep up all day.
+      alive.clear()
       for (const s of pending) {
         alive.add(s.id)
         let st = seen.get(s.id)
@@ -651,7 +655,9 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
         h.trough.destroy(); h.collar.destroy()
         heavy.delete(id)
       }
-      for (const id of [...seen.keys()]) if (!alive.has(id)) seen.delete(id)
+      // Deleting during a Map's own iteration is safe and allocates nothing;
+      // spreading the keys first built a throwaway array a frame.
+      for (const id of seen.keys()) if (!alive.has(id)) seen.delete(id)
 
       // ── THE RINGS ─────────────────────────────────────────────────
       for (const r of rings) {
