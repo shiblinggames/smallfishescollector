@@ -67,52 +67,59 @@ type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
-/** The screens of a live run. A change between two of these gets the tide. */
+/** The screens of a live run. A change between two of these gets the veil. */
 const RUN_PHASES: ReadonlySet<Phase> = new Set<Phase>([
   'descending', 'fighting', 'curse', 'boon', 'shrine', 'merchant', 'contract',
   'contract_result', 'don_fallen', 'mark_choice', 'between', 'reward', 'dead',
 ])
-/** How long after the tide starts the wall covers the viewport, and the phase
- *  may change under it. 40% of the sweep. */
-const TIDE_COVER_MS = 380
-const TIDE_MS = 950
+/** The veil is fully down this long after it starts; the phase changes then. */
+const VEIL_COVER_MS = 240
+const VEIL_HOLD_MS = 60
+const VEIL_LIFT_MS = 420
 
 /**
- * A wall of dark water up the viewport and off the top, in the run's colour:
- * a soft crest with a luminous rim, a near-black body, a thin foam line
- * trailing. Appended to the body and removed when done, so nothing about the
- * React tree can interrupt it. Returns false when it will not play (no
- * document, or the player asked for reduced motion), so the caller commits
- * the phase at once instead.
+ * ── THE VEIL ────────────────────────────────────────────────────────────
+ *
+ * A STILL dip, not a sweep. The first cut of this was a wall of water
+ * sweeping up the viewport, and it was nauseating: a full-screen object in
+ * motion is exactly what a screen change should not add. This is a
+ * motionless dark veil, faintly the run's colour, that fades in over a
+ * quarter second, holds a beat while the phase changes under it, and fades
+ * back out a little more slowly than it came. Nothing moves; the light dips.
+ *
+ * Appended to the body and driven by the Web Animations API so it cannot
+ * depend on any wrapper surviving the phase change it covers. Returns false
+ * when it will not play (no document, reduced motion), and the caller
+ * commits the phase at once instead.
  */
-function playTide(tint: string): boolean {
+function playVeil(tint: string): boolean {
   if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') return false
   if (!('animate' in HTMLElement.prototype)) return false
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false
   const el = document.createElement('div')
   el.setAttribute('aria-hidden', 'true')
   Object.assign(el.style, {
-    position: 'fixed', left: '-6vw', right: '-6vw', top: '-8vh', height: '124vh',
-    zIndex: '1200', pointerEvents: 'none',
-    borderRadius: '50% 50% 0 0 / 9vh 9vh 0 0',
-    background: `linear-gradient(180deg, ${tint}00 0%, ${tint}b0 1.5%, ${tint}55 4%, rgba(3,7,12,0.94) 12%, rgba(2,5,9,0.985) 60%, rgba(2,5,9,0.985) 88%, ${tint}66 96%, ${tint}00 100%)`,
-    boxShadow: `0 -18px 60px ${tint}55`,
-    transform: 'translateY(104%)',
-    willChange: 'transform',
+    position: 'fixed', inset: '0', zIndex: '1200', pointerEvents: 'none',
+    background: `radial-gradient(ellipse 120% 90% at 50% 50%, rgba(3,7,12,0.96) 0%, rgba(2,5,9,0.985) 70%), linear-gradient(${tint}, ${tint})`,
+    backgroundBlendMode: 'normal, normal',
+    opacity: '0',
+    willChange: 'opacity',
   } as Partial<CSSStyleDeclaration>)
   document.body.appendChild(el)
+  const total = VEIL_COVER_MS + VEIL_HOLD_MS + VEIL_LIFT_MS
   const anim = el.animate(
     [
-      { transform: 'translateY(104%)', easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      { transform: 'translateY(0%)', offset: TIDE_COVER_MS / TIDE_MS, easing: 'cubic-bezier(0.55, 0, 0.8, 0.2)' },
-      { transform: 'translateY(-108%)' },
+      { opacity: 0, easing: 'ease-out' },
+      { opacity: 0.94, offset: VEIL_COVER_MS / total, easing: 'linear' },
+      { opacity: 0.94, offset: (VEIL_COVER_MS + VEIL_HOLD_MS) / total, easing: 'ease-in-out' },
+      { opacity: 0 },
     ],
-    { duration: TIDE_MS, fill: 'forwards' },
+    { duration: total, fill: 'forwards' },
   )
   const done = () => el.remove()
   anim.onfinish = done
   anim.oncancel = done
-  window.setTimeout(done, TIDE_MS + 400)
+  window.setTimeout(done, total + 300)
   return true
 }
 
@@ -378,27 +385,22 @@ export default function GauntletGame(props: GauntletGameProps) {
   // player is offered their dive back before anything else.
   const [phase, setPhaseRaw] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
   /**
-   * ── THE TIDE BETWEEN SCREENS ───────────────────────────────────────────
+   * ── THE VEIL BETWEEN SCREENS ───────────────────────────────────────────
    *
-   * This is the endgame, and the cut between its screens should not be a
-   * raid's cut. A phase change between two screens of a live run sends a wall
-   * of dark water up the viewport in the run's own colour, and the phase
-   * itself commits only once the wall has covered the switch: the old screen
-   * goes under it, the new one is there when it recedes.
-   *
-   * Played OUTSIDE React (see playTide): an overlay on document.body driven
-   * by the Web Animations API, so it does not depend on any wrapper staying
-   * mounted across a phase change. Every other phase change — into a run,
-   * out of one, the hold screen — commits at once, exactly as before.
+   * A phase change between two screens of a live run dips the light: a still
+   * dark veil fades in, the phase commits under it, and it lifts. Played
+   * OUTSIDE React (see playVeil), so it does not depend on any wrapper
+   * staying mounted across the change. Every other phase change — into a
+   * run, out of one, the hold screen — commits at once, exactly as before.
    */
   const phaseNowRef = useRef<Phase>(phase)
   phaseNowRef.current = phase
   const tideTintRef = useRef('#6fe4d8')
   const setPhase = useCallback((next: Phase) => {
     const cur = phaseNowRef.current
-    if (cur !== next && RUN_PHASES.has(cur) && RUN_PHASES.has(next) && playTide(tideTintRef.current)) {
+    if (cur !== next && RUN_PHASES.has(cur) && RUN_PHASES.has(next) && playVeil(tideTintRef.current)) {
       phaseNowRef.current = next
-      window.setTimeout(() => setPhaseRaw(next), TIDE_COVER_MS)
+      window.setTimeout(() => setPhaseRaw(next), VEIL_COVER_MS)
       return
     }
     phaseNowRef.current = next
