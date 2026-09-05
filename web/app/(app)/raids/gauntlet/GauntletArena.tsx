@@ -2,10 +2,10 @@
 
 // ── THE ARENA ───────────────────────────────────────────────────────────────
 //
-// The water a gauntlet fight happens on. Phase 0 of the facelift: the fight
-// stops being staged over a photograph and starts being fought on a live sea,
-// the way the campaign's fights are on the chart — the same guns, the same
-// wards, the same crew abilities landing in the same water.
+// The water a gauntlet run happens on. Phase 0 of the facelift put the FIGHT on
+// a live sea, the way the campaign's fights are on the chart; phase 3 keeps
+// that sea under the whole run, so a boon surfaces on the water you were just
+// fighting on rather than on a screen that replaced it.
 //
 // ── IT IS ITS OWN PIXI APPLICATION, AND THAT IS ONLY SAFE HERE ──────────────
 //
@@ -25,14 +25,32 @@
 //      this file takes the chart's context with it. If that day comes, this
 //      has to move onto the chart's renderer the way the raid fight did.
 //
+// ── ONE ARENA PER RUN, NOT ONE PER SCREEN ───────────────────────────────────
+//
+// GauntletGame renders this as the FIRST child, keyed "arena", of every phase
+// of a live run. React reconciles a component's top-level children by position
+// and key, so the same Application survives every phase change: the water you
+// fall through is the water you fight on is the water the boon surfaces on.
+// Keep it first and keyed in every branch, or it reloads — and reloading is a
+// second context for a frame, which is the one thing this file must not do.
+//
 // ── WHAT IT ACTUALLY IS ─────────────────────────────────────────────────────
 //
 // The smallest possible sibling of the chart, not a fork of it. It imports the
 // sea's own LAYERS — the water shader, the gun effects, the ability effects —
-// and owns nothing but a camera that does not move and two hulls that do.
-// `SeaIslandsGPU` is deliberately not reused: it is the chart's renderer, bound
-// to bays, isles, fog, traders and a forty-five-thousand-pixel world, none of
-// which exist here.
+// and adds two of its own: the weather of a descent, and the scenery that
+// makes Davy's water Davy's and the Don's the Don's. It owns nothing but a
+// camera that does not move and two hulls that do. `SeaIslandsGPU` is
+// deliberately not reused: it is the chart's renderer, bound to bays, isles,
+// fog, traders and a forty-five-thousand-pixel world, none of which exist here.
+//
+// ── AND THE SHIPS STAND WHERE THE CHART'S SHIPS STAND ───────────────────────
+//
+// `duelFrame` in raidWaters is the chart's own construction of a broadside —
+// the stand-off, the camera lift, the fitted zoom, the ground squash — and the
+// arena composes its fight from it. Your hull is anchored at its CENTRE and
+// theirs at its WATERLINE, exactly as the chart reports them, because the
+// fight's overlays lift each side by what its anchor means.
 //
 // ── AND IT SPEAKS THE CONTRACT RaidCombat ALREADY KNOWS ─────────────────────
 //
@@ -54,23 +72,12 @@ import { makeGunFx, type GunFx, type ImpactKind } from '@/app/(app)/sea/seaGunFx
 import { makeAbilityFx, type AbilityFx } from '@/app/(app)/sea/seaAbilityFx'
 import { GROUND } from '@/app/(app)/sea/islandArt'
 import { texture } from '@/app/(app)/sea/skiffArt'
+import { duelFrame } from '@/app/(app)/sea/raidWaters'
 import { makeWeather, type Weather } from './gauntletWeather'
+import { makeScenery, type Scenery, type Mood, type BeatKind, type SceneVariant } from './gauntletScenery'
 import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 
-/**
- * THE DUEL'S SHAPE, in arena units.
- *
- * The same framing the chart's fights settled on and for the same reason: your
- * hull low and to the left, theirs high and to the right, so the two read as an
- * engagement rather than as two sprites. These are fractions of the viewport,
- * so the shot composes itself on any window.
- */
-const PLAYER_AT = { x: 0.30, y: 0.62 }
-const ENEMY_AT = { x: 0.70, y: 0.34 }
-/** Hull widths as a fraction of the viewport's width. The enemy reads slightly
- *  smaller because she is further away — the same distance cue the chart uses. */
-const PLAYER_W = 0.42
-const ENEMY_W = 0.34
+export type { Mood, BeatKind } from './gauntletScenery'
 
 export type ArenaTheme = {
   /** Three water stops, deep to pale, as the chart's waters are written. */
@@ -89,6 +96,15 @@ export type ArenaTheme = {
   rush: number
 }
 
+export type ArenaScene = {
+  variant: SceneVariant
+  hardcore: boolean
+  /** The Don himself, at his milestone depths. */
+  apex: boolean
+  /** 0 at the surface, 1 at the deepest anyone reaches. */
+  deep: number
+}
+
 export type ArenaHandle = {
   /** Where the two hulls are, for the fight to hang its effects on. */
   anchors: { current: { player: ShipAnchor; enemy: ShipAnchor } | null }
@@ -96,22 +112,39 @@ export type ArenaHandle = {
   shipFx(fx: { player: ShipFx; enemy: ShipFx }): void
   /** The event channel. */
   fightFx(e: FightFx): void
+  /** A ceremony the run wants played on the water: a card turning, a curse
+   *  taking, a chest opening. Mood changes fire their own; this is for the
+   *  moments inside a screen. */
+  beat(kind: BeatKind, tint?: number): void
 }
 
-export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFlip, enemyHidden, handle }: {
+/** Where the chart's water sits in the viewport: under the nav, over the tab
+ *  bar on a phone. The arena composes to the same box so the shot matches. */
+function waterBox(W: number, H: number) {
+  const top = W < 640 ? 44 : 60
+  const bottom = W < 640 ? 60 : 0
+  return { cx: W / 2, cy: top + (H - top - bottom) / 2 }
+}
+
+export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enemyUrl, shipFlip, seaBeam, enemyHidden, handle }: {
   theme: ArenaTheme
+  scene: ArenaScene
+  /** Which screen of the run this is under. Drives the grade and the beats. */
+  mood: Mood
   /** Which depth this is. A change plays the fall — see fallRef. */
   depth: number
   /** The player's hull art, as the fight already knows it. */
   shipUrl: string
-  /** The enemy's, this depth. */
+  /** The enemy's, this depth. Empty when there is none yet. */
   enemyUrl: string
   /** Whether the player's sprite is drawn mirrored — the ships table's own flag. */
   shipFlip?: boolean
+  /** How much of the warship's box is hull, from the ships table. */
+  seaBeam: number
   /**
    * Hold the enemy off the water. Set while you are still FALLING toward a
-   * depth: you ride the descent alone and she fades in as the fight opens,
-   * which is what makes an arrival read as an arrival.
+   * depth, and between fights: you ride the descent alone and she fades in as
+   * the fight opens, which is what makes an arrival read as an arrival.
    */
   enemyHidden?: boolean
   /** Filled in on mount; the fight reads it and calls into it. */
@@ -121,8 +154,10 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
   // The live theme, so a depth change repaints without rebuilding the world.
   const themeRef = useRef(theme)
   themeRef.current = theme
-  const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip })
-  artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip }
+  const sceneRef = useRef({ ...scene, mood })
+  sceneRef.current = { ...scene, mood }
+  const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam })
+  artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip, seaBeam }
   const hiddenRef = useRef(!!enemyHidden)
   hiddenRef.current = !!enemyHidden
   /** 1 the instant a new depth arrives, decayed by the frame loop. */
@@ -184,42 +219,52 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
       world.isRenderGroup = true
       app.stage.addChild(world)
 
-      // The effect layers, under the hulls: a shot lands IN the water and the
-      // ship floats on it. Same order the chart uses.
+      // The layers, bottom to top. The scenery's far half — the deep, the
+      // silhouettes, the shafts — sits between the water and the effects, so
+      // a shot lands in front of the wreck-field and the wreck-field lies in
+      // the water. Its near half goes over everything, rain included.
       const guns: GunFx = makeGunFx(PIXI)
       const spells: AbilityFx = makeAbilityFx(PIXI)
       const weather: Weather = makeWeather(PIXI)
-      // The chop and the maw are ON the water, under the hulls; the rain, the
-      // rise and the lightning are in the air over everything. Two containers
-      // for one layer, exactly as the chart's squalls are split.
-      world.addChild(weather.water, guns.view, spells.view)
+      const scenery: Scenery = makeScenery(PIXI)
+      world.addChild(weather.water, scenery.far, guns.view, spells.view)
 
       // ── THE TWO HULLS ───────────────────────────────────────────────
       //
       // Plain sprites in the world. The fight poses them through `shipFx`; it
       // never positions them, because where a hull SITS is the arena's business
       // and what is happening TO her is the fight's.
+      //
+      // Your hull is anchored at its CENTRE and theirs at its WATERLINE, the
+      // way the chart draws them: the boat is drawn centred on her position,
+      // and an encounter's mark is planted at its foot. The fight's overlays
+      // lift each side by what its anchor means, so the two must not agree.
+      //
       // TEXTURE.FROM DOES NOT LOAD A URL. In Pixi v8 it reads the cache; hand
       // it a path and you get an empty texture and a sprite that draws
-      // nothing, which is exactly what the first cut of this did. The chart
-      // has its own loader for precisely this reason — a plain Image and
-      // decode(), which resolves when the bitmap is ready to PAINT — and it
-      // caches, so the two renderers share one copy of a hull.
-      const mkHull = (url: string, flip: boolean) => {
+      // nothing. The chart has its own loader for precisely this reason — a
+      // plain Image and decode() — and it caches, so the two renderers share
+      // one copy of a hull.
+      const mkHull = (anchorY: number) => {
         const node = new PIXI.Container()
         const sp = new PIXI.Sprite(PIXI.Texture.EMPTY)
-        sp.anchor.set(0.5)
-        if (flip) sp.scale.x = -1
+        sp.anchor.set(0.5, anchorY)
         node.addChild(sp)
         world.addChild(node)
-        void texture(PIXI, url).then(tex => { if (!dead) sp.texture = tex }).catch(() => {})
-        return { node, sp }
+        return { node, sp, url: '' }
       }
-      const art = artRef.current
-      const player = mkHull(art.shipUrl, art.shipFlip)
-      const enemy = mkHull(art.enemyUrl, false)
-      // Over the hulls: rain falls in front of a ship.
-      world.addChild(weather.air)
+      const load = (h: { sp: import('pixi.js').Sprite; url: string }, url: string) => {
+        h.url = url
+        if (!url) { h.sp.texture = PIXI.Texture.EMPTY; return }
+        void texture(PIXI, url).then(tex => { if (!dead && h.url === url) h.sp.texture = tex }).catch(() => {})
+      }
+      const player = mkHull(0.5)
+      const enemy = mkHull(1)
+      load(player, artRef.current.shipUrl)
+      load(enemy, artRef.current.enemyUrl)
+      // Over the hulls: rain falls in front of a ship, and so do the motes,
+      // the vignette and the ceremonies.
+      world.addChild(weather.air, scenery.near)
 
       // Anchors are read by the fight EVERY FRAME through a ref, so neither
       // side re-renders to keep a hitsplat over a hull.
@@ -228,20 +273,24 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
       }
       const pose = { player: null as ShipFx | null, enemy: null as ShipFx | null }
 
-      /** Where a hull stands, in screen pixels, from the framing above. */
-      const station = (at: { x: number; y: number }) => ({
-        x: app.screen.width * at.x,
-        y: app.screen.height * at.y,
-      })
+      /** Where the two hulls stand, in screen pixels, from the chart's duel. */
+      const frame = () => {
+        const W = app.screen.width, H = app.screen.height
+        const { cx, cy } = waterBox(W, H)
+        return duelFrame(W, H, cx, cy, artRef.current.seaBeam, artRef.current.enemyUrl, GROUND)
+      }
 
-      // ── THE FIGHT'S THREE HANDLES ───────────────────────────────────
+      // ── THE FIGHT'S THREE HANDLES, AND THE RUN'S FOURTH ─────────────
       handle.current = {
         anchors,
         shipFx(fx) { pose.player = fx.player; pose.enemy = fx.enemy },
+        beat(kind, tint) { scenery.beat(kind, tint) },
         fightFx(e) {
-          const P = station(PLAYER_AT), E = station(ENEMY_AT)
-          const me = { x: P.x, y: P.y }
-          const them = { x: E.x, y: E.y }
+          const f = frame()
+          // Effects aim at the hulls' middles: hers is her centre already,
+          // theirs is a little above the waterline they are anchored on.
+          const me = { x: f.player.x, y: f.player.y }
+          const them = { x: f.enemy.x, y: f.enemy.y - f.enemy.hull * 0.22 }
           if (e.kind === 'fire') {
             if (e.side === 'player') guns.fire(me.x, me.y, them.x, them.y)
             else guns.fire(them.x, them.y, me.x, me.y)
@@ -289,12 +338,21 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
 
       // ── THE FRAME ───────────────────────────────────────────────────
       let t = 0
+      let gone = 0 // how far under she is, once she is dead
       app.ticker.add(() => {
         const dt = Math.min(0.05, app.ticker.deltaMS / 1000)
         t += dt
 
         const W = app.screen.width, H = app.screen.height
         const th2 = themeRef.current
+        const sc = sceneRef.current
+        const art = artRef.current
+
+        // A new enemy at a new depth is a new bitmap. The chart swaps marks;
+        // the arena swaps textures, and a stale load can never land because
+        // the loader checks the url it was asked for is still the one wanted.
+        if (art.enemyUrl !== enemy.url) load(enemy, art.enemyUrl)
+        if (art.shipUrl !== player.url) load(player, art.shipUrl)
 
         // ── THE FALL ────────────────────────────────────────────────
         // Pushed to 1 when the depth changes and decayed here. While it is up
@@ -303,20 +361,26 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
         if (fallRef.current > 0) fallRef.current = Math.max(0, fallRef.current - dt * 0.85)
         const fall = fallRef.current
 
+        scenery.set({
+          variant: sc.variant, hardcore: sc.hardcore, boss: th2.boss, apex: sc.apex,
+          deep: sc.deep, mood: sc.mood, key: th2.key,
+          deepColor: parseInt(th2.sea[0].replace('#', ''), 16),
+        })
+
         water?.set({
           uTime: t,
           uRes: new Float32Array([W, H]),
           uShallow: rgb3(th2.sea[2]),
           uMid: rgb3(th2.sea[1]),
           uDeep: rgb3(th2.sea[0]),
-          uDark: th2.dark,
+          // The mood grades the water: a curse is a darker room.
+          uDark: Math.min(0.95, th2.dark + scenery.grade()),
           uSwell: th2.swell,
           uRush: th2.rush,
         })
         water?.size(W, H)
 
-        const P = station(PLAYER_AT), E = station(ENEMY_AT)
-        const pw = W * PLAYER_W, ew = W * ENEMY_W
+        const f = frame()
 
         // THE HULLS, POSED. The bob is the arena's; everything else on these
         // two nodes came from the fight through `shipFx`.
@@ -328,20 +392,25 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
         // Sized only once the real bitmap is in: an empty texture is 1x1 and
         // would fix the aspect at a square before the art arrives.
         if (player.sp.texture.width > 2) {
-          player.sp.width = pw
-          player.sp.height = pw * (player.sp.texture.height / player.sp.texture.width)
+          player.sp.width = f.player.box
+          player.sp.height = f.player.box * (player.sp.texture.height / player.sp.texture.width)
         }
         if (art.shipFlip) player.sp.scale.x = -Math.abs(player.sp.scale.x)
-        player.node.x = P.x + (pf?.x ?? 0)
-        player.node.y = P.y + (pf?.y ?? 0) + bob - drop
-        player.node.rotation = ((pf?.rot ?? 0) * Math.PI) / 180
+        // DEAD IN THE WATER. The run's own ending, the same settle-and-roll a
+        // sunk hull gets, but slower, because it is yours.
+        if (sc.mood === 'dead') gone = Math.min(1, gone + dt * 0.35)
+        else if (gone > 0) gone = Math.max(0, gone - dt * 2)
+        player.node.x = f.player.x + (pf?.x ?? 0)
+        player.node.y = f.player.y + (pf?.y ?? 0) + bob - drop + gone * gone * 90
+        player.node.rotation = ((pf?.rot ?? 0) * Math.PI) / 180 - gone * 0.35
+        player.node.alpha = 1 - gone * 0.85
 
         if (enemy.sp.texture.width > 2) {
-          enemy.sp.width = ew
-          enemy.sp.height = ew * (enemy.sp.texture.height / enemy.sp.texture.width)
+          enemy.sp.width = f.enemy.box
+          enemy.sp.height = f.enemy.box * (enemy.sp.texture.height / enemy.sp.texture.width)
         }
-        enemy.node.x = E.x + (ef?.x ?? 0)
-        enemy.node.y = E.y + (ef?.y ?? 0) - bob * 0.6 - drop * 1.35
+        enemy.node.x = f.enemy.x + (ef?.x ?? 0)
+        enemy.node.y = f.enemy.y + (ef?.y ?? 0) - bob * 0.6 - drop * 1.35
         enemy.node.rotation = ((ef?.rot ?? 0) * Math.PI) / 180
         // GOING DOWN. The fight says when; how it looks is the arena's, the
         // same settle-and-roll the chart gives a hull it has sunk.
@@ -352,30 +421,34 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
         } else {
           // Eased both ways, so she does not blink out at the top of a descent
           // and does not blink in at the bottom of one.
-          const want = hiddenRef.current ? 0 : 1
+          const want = hiddenRef.current || !art.enemyUrl ? 0 : 1
           enemy.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, want - enemy.node.alpha))
         }
 
         // AND WHERE THEY ARE, for the fight to aim at. The box is the canvas's
         // own, so the numbers are in the same screen space the fight's overlays
-        // are laid out in.
+        // are laid out in. Widths are the HULLS, not the boxes, exactly as the
+        // chart reports them.
         const box = el.getBoundingClientRect()
         const A = anchors.current!
         A.player.x = box.left + player.node.x
         A.player.y = box.top + player.node.y
-        A.player.w = pw
+        A.player.w = f.player.hull
         A.enemy.x = box.left + enemy.node.x
         A.enemy.y = box.top + enemy.node.y
-        A.enemy.w = ew
+        A.enemy.w = f.enemy.hull
 
-        // The wards and the conditions ride the same measurements.
-        spells.ward('player', P.x, P.y, pw * 0.6, 0x5eead4, !!pf?.guard)
-        spells.ward('enemy', E.x, E.y, ew * 0.6, 0xc084fc, !!ef?.guard)
-        spells.status('player', P.x, P.y, pw * 0.6, pf?.status ?? 0)
-        spells.status('enemy', E.x, E.y, ew * 0.6, ef?.status ?? 0)
+        // The wards and the conditions ride the same measurements, around the
+        // hulls' middles.
+        const ey = f.enemy.y - f.enemy.hull * 0.22
+        spells.ward('player', f.player.x, f.player.y, f.player.hull * 0.6, 0x5eead4, !!pf?.guard)
+        spells.ward('enemy', f.enemy.x, ey, f.enemy.hull * 0.6, 0xc084fc, !!ef?.guard)
+        spells.status('player', f.player.x, f.player.y, f.player.hull * 0.6, pf?.status ?? 0)
+        spells.status('enemy', f.enemy.x, ey, f.enemy.hull * 0.6, ef?.status ?? 0)
 
         weather.theme({ key: th2.key, pale: 0xcfe6f0 })
         weather.advance(dt, t, W, H, th2.heavy, th2.boss, fall)
+        scenery.advance(dt, t, W, H, th2.heavy, fall)
         guns.advance(dt)
         spells.advance(dt)
       })
@@ -383,6 +456,7 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
       cleanup = () => {
         handle.current = null
         weather.destroy()
+        scenery.destroy()
         guns.destroy()
         spells.destroy()
         // THE CONTEXT GOES WITH THE ROUTE. See the note at the top: this is

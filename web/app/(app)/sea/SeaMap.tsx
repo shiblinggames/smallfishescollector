@@ -52,6 +52,9 @@ import {
   encounterNear, cacheNear, hullFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
+  // The duel's framing lives with the raid water now, so the gauntlet's arena
+  // composes its fights from the same numbers this chart does.
+  WARSHIP_W, FIGHT_CAM_LIFT, zoomFor,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, type RaidNode } from '@/lib/raidMap'
@@ -425,7 +428,6 @@ export type SeaLog = {
  * the enemy's rig fits under the level bar, and the player still clears the
  * deck.
  */
-const FIGHT_CAM_LIFT = 75
 
 const Z = {
   /** The water's colour, and the two moving surface layers over it. */
@@ -486,18 +488,6 @@ const REEF_MARGIN = 40
  * measurements and scale with it, and the wash translates at the scaled rate or
  * the water parallaxes against the islands.
  */
-function zoomFor(width: number): number {
-  // CAPPED AT 0.82, NOT 1.0.
-  //
-  // At 1.0 a desktop saw about 800 world pixels across, which is under two
-  // island widths and just enough of the sea to steer by. Pulling the cap back
-  // shows a bit under a thousand, which is the difference between sailing and
-  // sailing somewhere: you can see the next thing before you have left the last.
-  //
-  // The floor and the divisor are untouched, so phones are exactly where they
-  // were — a 390px screen was already at 0.5 and never reached the cap.
-  return Math.max(0.45, Math.min(0.82, width / 780))
-}
 
 /**
  * WHERE THE LAND STARTS, as a fraction of a port's radius.
@@ -888,7 +878,6 @@ const SKIPPER_W = 210
  *  the 210px Skipper sprite. The denominator of every hull comparison. */
 const FISHING_HULL_W = 210 * 0.55
 /** The box a warship is drawn in. One width for all five — see Warship. */
-const WARSHIP_W = 340
 /** The bow's lift under full power, in degrees, on the FISHING boat. Bigger
  *  hulls divide this down; see hullRef. */
 const HEEL_MAX = 7

@@ -205,7 +205,34 @@ once per depth. **Keep the arena first, and keyed, in both branches or it
 reloads.** The enemy is held off the water while you are still dropping and
 eases in as the fight opens.
 
-**Phase 3 — the beats on the water. NEXT.**
+**Phase 3 — the beats on the water. SHIPPED (presentation half).**
+Every phase of a live run renders the SAME keyed arena as its first child:
+`arena(mood)` in GauntletGame. Boons, curses, shrines, the merchant, contracts,
+the Don falling, the death, the cash-out all happen on the water you were just
+fighting on. The arena takes a `mood`; `gauntletScenery.ts` grades the light
+for it (a curse is a darker room with the light gone, a boon the same room lit
+up) and plays a ceremony on the mood change. In-screen moments call
+`arenaRef.current.beat()` directly: a boon pick in its rarity's colour, a
+synergy as a legendary in violet or ember, a curse from below.
+
+`gauntletScenery.ts` is also what makes the water THAT gauntlet's: tiling
+silhouette bands (wreck masts, kelp and a whale's ribs for Davy; pillars,
+arches and a fallen crown for the Don; spires, bone and a buried skull for
+hardcore), light shafts from above (from BELOW in hardcore, red), motes
+(wisps / gold dust / embers), a vignette that closes with depth, a pulse of
+light in the deep, and at a boss depth an EYE that opens under the water and
+watches the fight.
+
+**The ships stand where the chart's ships stand.** `duelFrame()` in
+`raidWaters.ts` is the chart's own construction of a broadside — DOCK stand-off,
+FIGHT_CAM_LIFT, `zoomFor` × FIGHT_ZOOM, the GROUND squash — moved there so
+SeaMap and the arena compose from one set of numbers. Your hull is anchored at
+its centre and theirs at its waterline, as the chart reports them, because
+RaidCombat lifts each side's overlays by what its anchor means.
+
+What is NOT done in phase 3 is the run-flow half: chests rising, shrines
+breaching, the merchant's hulk drawing alongside as things you sail to. The
+screens are still screens; they just have the world under them now.
 The same `key` trick is how the rest of this gets done: every in-run phase that
 should keep the world alive renders the SAME keyed arena as its first child.
 Boons, shrines, the merchant and contracts then become things that happen on

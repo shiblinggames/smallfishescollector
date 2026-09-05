@@ -18,7 +18,8 @@ import {
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
 import RaidCombat from '../RaidCombat'
-import GauntletArena, { type ArenaHandle, type ArenaTheme } from './GauntletArena'
+import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
+import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
 import { getShipSkin } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
@@ -1658,6 +1659,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // curseEffects() and threaded into the combat pipeline, so nothing is pushed
   // into the tide channel here (mirrors how boons work).
   function applyCurse(offer: CurseOffer) {
+    // Taking it is the moment, not seeing it: the deep answers from below.
+    arenaRef.current?.beat('curse')
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'curse' })
     const next = { ...curseTiersRef.current, [offer.id]: offer.tier }
     curseTiersRef.current = next
@@ -1678,6 +1681,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // channel (where an upgrade would otherwise double-apply the old tier).
   function applyBoon(offer: BoonOffer) {
     hapticCommit() // a run-defining pick locks in — give it weight
+    // THE WATER ANSWERS THE PICK, in the card's own colour. A legendary is the
+    // big one: the whole room lights.
+    arenaRef.current?.beat(offer.rarity === 'legendary' ? 'legendary' : 'boon',
+      parseInt(BOON_RARITY_META[offer.rarity].color.slice(1), 16))
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'boon' })
     // Opportunity-cost model: completing a boon PAIR no longer auto-grants the
     // confluence — it just makes it eligible to be OFFERED as a draft card
@@ -1708,6 +1715,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // halves, and lands as a full "unlocked" beat — codex reveal + banner.
   function applyConfluence(offer: ConfluenceOffer) {
     hapticCommit() // same weight as a boon pick
+    // A synergy coming online is a legendary's worth of light, in its own
+    // colour: violet for a confluence, ember for a convergence.
+    arenaRef.current?.beat('legendary', offer.isConvergence ? 0xff8a3d : 0xb98bff)
     if (offer.isConvergence) {
       const cv = CONVERGENCES.find(x => x.id === offer.id)
       setConvergencesTaken(prev => (prev.includes(offer.id) ? prev : [...prev, offer.id]))
@@ -2158,6 +2168,41 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Intro ──────────────────────────────────────────────────────────────
   // A crashed run offered back to the player — the crash safety net. Resume
   // (spends the run's one resume) or let it go (banks Fathoms + ends the run).
+  // ── THE ARENA, ONCE PER RUN ─────────────────────────────────────────────
+  //
+  // Every phase of a live run renders THIS as its first child. Same key, same
+  // position, so React keeps one Application alive from the top of the fall
+  // to the cash-out: the water you fight on is the water the boon surfaces
+  // on. The mood tells the arena which screen it is under; the arena grades
+  // the light and plays the ceremony, and the screen itself does not have to
+  // know how. See GauntletArena's header for why it must stay first and keyed.
+  //
+  // `fight` is never cleared between depths, so its depth and its enemy are
+  // right for every screen after the first fight; before it, the run's
+  // cleared count says where we are.
+  const arenaDepth = fight?.depth ?? (rollStateRef.current.cleared + 1)
+  const arenaDeep = Math.min(1, Math.pow(Math.max(0, arenaDepth - 1) / 24, 0.85))
+  const arenaBeam = getShip(shipTierByName(props.shipName)).seaBeam ?? 0.6
+  const arena = (mood: Mood, opts?: { enemyHidden?: boolean }) => (
+    <GauntletArena
+      key="arena"
+      theme={arenaTheme(arenaDepth, props.variant ?? 'davy', hardcoreRun, !!fight?.isBoss, hardcoreRun ? pressure : 0)}
+      scene={{ variant: props.variant ?? 'davy', hardcore: hardcoreRun, apex: !!fight?.isApex, deep: arenaDeep }}
+      mood={mood}
+      depth={arenaDepth}
+      // The hero art as the fight itself uses it: RaidCombat draws this
+      // sprite unmirrored, so the arena must not mirror it either or the
+      // two renderers would disagree about which way she is pointing.
+      shipUrl={props.shipImageUrl}
+      enemyUrl={fight?.enemy.image ?? ''}
+      seaBeam={arenaBeam}
+      // She is only on the water during the fight. Everywhere else you are
+      // alone with what you did to her.
+      enemyHidden={opts?.enemyHidden ?? mood !== 'fight'}
+      handle={arenaRef}
+    />
+  )
+
   if (phase === 'resume' && props.resumeState) {
     const rs = props.resumeState
     const depth = rs.cleared + skipOffset
@@ -2873,7 +2918,12 @@ export default function GauntletGame(props: GauntletGameProps) {
         </Shell>
       )
     }
-    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current, contracts: contractsWon }} onBack={backToIntro} don={isDonG} />
+    return (
+      <>
+        {arena('reward')}
+        <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current, contracts: contractsWon }} onBack={backToIntro} don={isDonG} />
+      </>
+    )
   }
 
   // ── Dead ────────────────────────────────────────────────────────────────
@@ -2889,6 +2939,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const CRIMSON = isDonG ? '#2ea86a' : '#ef4444'
     return (
       <>
+        {arena('dead')}
         {/* Death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
@@ -3007,6 +3058,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const canWager = fathomsNow >= 1
     return (
       <>
+        {arena('shrine')}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
         <div style={{
@@ -3171,6 +3223,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const spendable = Math.max(0, runFathoms - fenceSpent)
     return (
       <>
+        {arena('merchant')}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
         <div style={{
@@ -3268,6 +3321,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const MC = '#3fbf82'   // Don's court green
     return (
       <>
+        {arena('contract')}
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           {/* THE DON DOES NOT SIT IN THE MIDDLE OF THE PAGE.
               Every meta screen here was the same centered column: eyebrow, round
@@ -3362,6 +3416,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const MC = won ? '#3fbf82' : '#f8716b'   // paid green / broken-deal red
     return (
       <>
+        {arena('contract')}
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 22, textShadow: `0 0 16px ${MC}55` }}>
@@ -3406,6 +3461,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const AK = isThrone ? '#f0c040' : KRAKEN   // the throne pays out in gold; the rest in his green
     return (
       <>
+        {arena('fallen')}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 56%, ${AK}30 0%, ${AK}10 42%, transparent 72%)` }} />
         <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1.6rem 1.1rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           {/* His face, sinking + dimmed — he's going down. The throne clear glints gold. */}
@@ -3444,7 +3500,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── The Mark choice — a forge-style cinematic: two Marks torn from the Don,
   //    Shark (offense) vs Whale (defense). Pick one; it sears in and rides the run.
   if (phase === 'mark_choice' && markOffer) {
-    return <MarkChoice offer={markOffer} searing={markSearing} taken={markCount} onChoose={chooseMark} />
+    return (
+      <>
+        {arena('mark')}
+        <MarkChoice offer={markOffer} searing={markSearing} taken={markCount} onChoose={chooseMark} />
+      </>
+    )
   }
 
   if (phase === 'between') {
@@ -3506,6 +3567,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
     return (
       <>
+        {arena('between')}
         {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
@@ -4031,6 +4093,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const curseTotalAfter = c.isUpgrade ? curseCount : curseCount + 1
     return (
       <>
+        {arena('curse')}
         {/* Crimson dread, bleeding up from the deep and breathing slowly. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
@@ -4120,6 +4183,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const revealDone = pendingBoons.slice(0, shownBoons).every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
     return (
       <>
+        {arena('boon')}
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={ENTER}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${AC}24 0%, ${AC}08 38%, transparent 64%)` }} />
@@ -4661,25 +4725,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       const rise = donRiseCopy(d)
       return (
         <>
-        {/* ── THE FALL, ON THE SAME WATER YOU WILL FIGHT ON ─────────────
-            First child here AND first child of the fight's fragment, on
-            purpose: React reconciles a component's top-level children by
-            position, so this exact Application survives the phase change.
-            That is what turns a cut into a descent, and it is also why the
-            second WebGL context is created once per run rather than once per
-            depth. Keep it first in both, or it reloads. */}
-        {fight && (
-          <GauntletArena
-            key="arena"
-            theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun, !!fight.isBoss, hardcoreRun ? pressure : 0)}
-            depth={fight.depth}
-            shipUrl={props.shipImageUrl}
-            enemyUrl={fight.enemy.image}
-            // You fall alone. She is on the water by the time you land.
-            enemyHidden
-            handle={arenaRef}
-          />
-        )}
+        {arena('fall')}
           <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 58%, ${KRAKEN_DEEP}3a 0%, ${KRAKEN_DEEP}14 40%, transparent 70%)` }} />
           <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem 1.2rem' }}>
             <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 0.97, scale: 1 }} transition={{ duration: 1.4, ease: 'easeOut' }} style={{ position: 'relative', width: 190, height: 190 }}>
@@ -4707,25 +4753,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     return (
       <>
-        {/* ── THE FALL, ON THE SAME WATER YOU WILL FIGHT ON ─────────────
-            First child here AND first child of the fight's fragment, on
-            purpose: React reconciles a component's top-level children by
-            position, so this exact Application survives the phase change.
-            That is what turns a cut into a descent, and it is also why the
-            second WebGL context is created once per run rather than once per
-            depth. Keep it first in both, or it reloads. */}
-        {fight && (
-          <GauntletArena
-            key="arena"
-            theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun, !!fight.isBoss, hardcoreRun ? pressure : 0)}
-            depth={fight.depth}
-            shipUrl={props.shipImageUrl}
-            enemyUrl={fight.enemy.image}
-            // You fall alone. She is on the water by the time you land.
-            enemyHidden
-            handle={arenaRef}
-          />
-        )}
+        {arena('fall')}
         <div style={{
           position: 'relative', zIndex: 1, minHeight: '60vh',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -4826,24 +4854,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           image while sitting BEHIND the in-flow combat and leaving the fixed
           overlays untouched. RaidCombat's container is transparent
           (transparentBackdrop) so this shows through — no boxed second image. */}
-      {/* ── THE ARENA ──────────────────────────────────────────────────────
-          The fight happens on live water now rather than over a photograph:
-          the chart's own shader, guns and ability effects, with the two hulls
-          posed by the fight through the handle. The gradient stays on top of
-          it, because it is what seats the deck against the sea and it was
-          already tuned for both descents. See GauntletArena for why a second
-          Pixi Application is safe on this route and nowhere else. */}
-      <GauntletArena
-        key="arena"
-        theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun, !!fight.isBoss, hardcoreRun ? pressure : 0)}
-        depth={fight.depth}
-        // The hero art as the fight itself uses it: RaidCombat draws this
-        // sprite unmirrored, so the arena must not mirror it either or the
-        // two renderers would disagree about which way she is pointing.
-        shipUrl={props.shipImageUrl}
-        enemyUrl={fight.enemy.image}
-        handle={arenaRef}
-      />
+      {arena('fight')}
       {/* THE SEAT, MUCH LIGHTER THAN IT WAS. This gradient existed to sit the
           deck against a photograph and ran to eighty per cent black at the
           foot — which, over live water, crushed the whole lower half of the

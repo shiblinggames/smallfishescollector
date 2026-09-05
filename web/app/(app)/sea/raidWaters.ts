@@ -1310,3 +1310,70 @@ export function bayWaterCss(b: Bay): string {
 export function hubEntry(): { x: number; y: number } {
   return { x: SORTIE.x, y: SORTIE.y }
 }
+
+// ── THE DUEL'S FRAMING, SHARED ──────────────────────────────────────────────
+//
+// How two hulls are placed on screen for a broadside, written ONCE. The chart
+// composes a fight from these numbers, and the gauntlet's arena composes its
+// fights from the same numbers, so a ship stands where a ship stands whichever
+// water she is fighting on. Before this lived here the arena guessed its own
+// stations, and the two fights did not match.
+
+/** The sprite box the warship art is drawn in, in world px. The hull inside
+ *  it is `WARSHIP_W * seaBeam`. */
+export const WARSHIP_W = 340
+/** The fight camera sits on the midpoint of the pair, lifted this much so the
+ *  two hulls sit above the deck. World px. */
+export const FIGHT_CAM_LIFT = 75
+/** The cinematic push-in a broadside adds to the fitted zoom. */
+export const FIGHT_ZOOM = 1.5
+
+/** The chart's fitted zoom for a viewport this wide. */
+export function zoomFor(width: number): number {
+  // CAPPED AT 0.82, NOT 1.0.
+  //
+  // At 1.0 a desktop saw about 800 world pixels across, which is under two
+  // island widths and just enough of the sea to steer by. Pulling the cap back
+  // shows a bit under a thousand, which is the difference between sailing and
+  // sailing somewhere: you can see the next thing before you have left the last.
+  //
+  // The floor and the divisor are untouched, so phones are exactly where they
+  // were — a 390px screen was already at 0.5 and never reached the cap.
+  return Math.max(0.45, Math.min(0.82, width / 780))
+}
+
+export type DuelFrame = {
+  /** The zoom the shot is composed at. */
+  z: number
+  /** Your hull: sprite CENTRE, the sprite's box width, and the hull width the
+   *  fight hangs its effects on. */
+  player: { x: number; y: number; box: number; hull: number }
+  /** Theirs: the WATERLINE (the mark's foot), and the same two widths. */
+  enemy: { x: number; y: number; box: number; hull: number }
+}
+
+/**
+ * Where the two hulls stand for a broadside in a viewport of this size.
+ *
+ * Exactly the chart's construction: she stands STAND_X/STAND_Y off the enemy
+ * (three quarters of the mooring's stand-off, low and to the left), the camera
+ * holds the midpoint lifted by FIGHT_CAM_LIFT, and the world is drawn at the
+ * fitted zoom pushed in by FIGHT_ZOOM under the GROUND squash. `cx`/`cy` is the
+ * centre of the water's box, which on the chart is the viewport less the nav
+ * and the tab bar.
+ */
+export function duelFrame(W: number, H: number, cx: number, cy: number, seaBeam: number, enemyArt: string, ground: number): DuelFrame {
+  const z = zoomFor(W) * FIGHT_ZOOM
+  const standX = DOCK.x * 0.74
+  const standY = DOCK.y * 0.78
+  // World offsets from the camera: the enemy is at -STAND/2, she is at +STAND/2,
+  // and both drop by the lift because the camera rose.
+  const ex = -standX / 2, ey = -standY / 2 - FIGHT_CAM_LIFT
+  const px = standX / 2, py = standY / 2 - FIGHT_CAM_LIFT
+  const enc = encArt(enemyArt)
+  return {
+    z,
+    player: { x: cx + px * z, y: cy + py * z * ground, box: WARSHIP_W * z, hull: WARSHIP_W * seaBeam * z },
+    enemy: { x: cx + ex * z, y: cy + ey * z * ground, box: enc.box * z, hull: enc.hull * z },
+  }
+}
