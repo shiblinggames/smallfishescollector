@@ -111,12 +111,23 @@ const GAUNTLET_ABYSS_FILTER = 'brightness(0.7) saturate(1.15) hue-rotate(-18deg)
  * up. Davy's is drowned teal, the Don's the verdigris green of Finleone's
  * ghost, and hardcore is the blood-dark the Drowned Ledger already wears.
  */
-function arenaTheme(depth: number, variant: GauntletVariant, hardcore: boolean): ArenaTheme {
+function arenaTheme(
+  depth: number, variant: GauntletVariant, hardcore: boolean,
+  boss: boolean, pressure: number,
+): ArenaTheme {
   // 0 at the surface, 1 by the deepest anyone reaches. Eased, so the early
   // depths still differ from each other and the bottom does not flatten out.
   const t = Math.min(1, Math.pow(Math.max(0, depth - 1) / 24, 0.85))
+  // HOW BAD IT IS HERE, as one number the weather reads. Depth is most of it;
+  // Davy's Terms add their Pressure on top, because a captain who signed for
+  // a harder dive should be able to SEE that they did; and a boss depth is
+  // worse than the water either side of it by construction.
+  const heavy = Math.min(1, t * 0.82 + pressure * 0.22 + (boss ? 0.24 : 0))
   if (hardcore) {
     return {
+      key: 0xff6a6a,
+      heavy: Math.min(1, heavy + 0.12),
+      boss,
       sea: ['#12030a', '#2a0710', '#5e1524'],
       dark: 0.2 + 0.55 * t,
       swell: 0.55 + 0.4 * t,
@@ -125,6 +136,9 @@ function arenaTheme(depth: number, variant: GauntletVariant, hardcore: boolean):
   }
   if (variant === 'don') {
     return {
+      key: 0xe6c66e,
+      heavy,
+      boss,
       sea: ['#04120f', '#0e2b22', '#2c6350'],
       dark: 0.16 + 0.58 * t,
       swell: 0.5 + 0.42 * t,
@@ -132,6 +146,9 @@ function arenaTheme(depth: number, variant: GauntletVariant, hardcore: boolean):
     }
   }
   return {
+    key: 0x9cf0ff,
+    heavy,
+    boss,
     sea: ['#04121a', '#0c2e34', '#22707a'],
     dark: 0.14 + 0.6 * t,
     swell: 0.5 + 0.42 * t,
@@ -4598,7 +4615,8 @@ export default function GauntletGame(props: GauntletGameProps) {
           already tuned for both descents. See GauntletArena for why a second
           Pixi Application is safe on this route and nowhere else. */}
       <GauntletArena
-        theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun)}
+        theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun, !!fight.isBoss, hardcoreRun ? pressure : 0)}
+        depth={fight.depth}
         // The hero art as the fight itself uses it: RaidCombat draws this
         // sprite unmirrored, so the arena must not mirror it either or the
         // two renderers would disagree about which way she is pointing.

@@ -54,6 +54,7 @@ import { makeGunFx, type GunFx, type ImpactKind } from '@/app/(app)/sea/seaGunFx
 import { makeAbilityFx, type AbilityFx } from '@/app/(app)/sea/seaAbilityFx'
 import { GROUND } from '@/app/(app)/sea/islandArt'
 import { texture } from '@/app/(app)/sea/skiffArt'
+import { makeWeather, type Weather } from './gauntletWeather'
 import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 
 /**
@@ -74,6 +75,13 @@ const ENEMY_W = 0.34
 export type ArenaTheme = {
   /** Three water stops, deep to pale, as the chart's waters are written. */
   sea: [string, string, string]
+  /** The run's own colour, for the bolt, the bubbles and the maw. */
+  key: number
+  /** How bad it is here: depth, plus Pressure, plus whatever a boss adds.
+   *  Everything the weather does reads this one number. */
+  heavy: number
+  /** A boss depth turns the maw on overhead. */
+  boss: boolean
   /** How dark the hour is here. The deep gets heavier as you fall. */
   dark: number
   /** Swell and rush: how much the water is moving, and how hard. */
@@ -90,8 +98,10 @@ export type ArenaHandle = {
   fightFx(e: FightFx): void
 }
 
-export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, handle }: {
+export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFlip, handle }: {
   theme: ArenaTheme
+  /** Which depth this is. A change plays the fall — see fallRef. */
+  depth: number
   /** The player's hull art, as the fight already knows it. */
   shipUrl: string
   /** The enemy's, this depth. */
@@ -107,6 +117,10 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
   themeRef.current = theme
   const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip })
   artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip }
+  /** 1 the instant a new depth arrives, decayed by the frame loop. */
+  const fallRef = useRef(0)
+  const depthSeen = useRef(depth)
+  if (depthSeen.current !== depth) { depthSeen.current = depth; fallRef.current = 1 }
 
   useEffect(() => {
     let dead = false
@@ -166,7 +180,11 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
       // ship floats on it. Same order the chart uses.
       const guns: GunFx = makeGunFx(PIXI)
       const spells: AbilityFx = makeAbilityFx(PIXI)
-      world.addChild(guns.view, spells.view)
+      const weather: Weather = makeWeather(PIXI)
+      // The chop and the maw are ON the water, under the hulls; the rain, the
+      // rise and the lightning are in the air over everything. Two containers
+      // for one layer, exactly as the chart's squalls are split.
+      world.addChild(weather.water, guns.view, spells.view)
 
       // ── THE TWO HULLS ───────────────────────────────────────────────
       //
@@ -192,6 +210,8 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
       const art = artRef.current
       const player = mkHull(art.shipUrl, art.shipFlip)
       const enemy = mkHull(art.enemyUrl, false)
+      // Over the hulls: rain falls in front of a ship.
+      world.addChild(weather.air)
 
       // Anchors are read by the fight EVERY FRAME through a ref, so neither
       // side re-renders to keep a hitsplat over a hull.
@@ -267,6 +287,14 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
 
         const W = app.screen.width, H = app.screen.height
         const th2 = themeRef.current
+
+        // ── THE FALL ────────────────────────────────────────────────
+        // Pushed to 1 when the depth changes and decayed here. While it is up
+        // the rise tears past and the hulls settle back down, which is what
+        // turns a cut between fights into a drop into the next one.
+        if (fallRef.current > 0) fallRef.current = Math.max(0, fallRef.current - dt * 0.85)
+        const fall = fallRef.current
+
         water?.set({
           uTime: t,
           uRes: new Float32Array([W, H]),
@@ -284,6 +312,9 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
 
         // THE HULLS, POSED. The bob is the arena's; everything else on these
         // two nodes came from the fight through `shipFx`.
+        // The hulls ride the fall down and settle: a drop you can feel on the
+        // ships themselves, not only in the water going past them.
+        const drop = fall * fall * 120
         const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
         const pf = pose.player, ef = pose.enemy
         // Sized only once the real bitmap is in: an empty texture is 1x1 and
@@ -294,7 +325,7 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
         }
         if (art.shipFlip) player.sp.scale.x = -Math.abs(player.sp.scale.x)
         player.node.x = P.x + (pf?.x ?? 0)
-        player.node.y = P.y + (pf?.y ?? 0) + bob
+        player.node.y = P.y + (pf?.y ?? 0) + bob - drop
         player.node.rotation = ((pf?.rot ?? 0) * Math.PI) / 180
 
         if (enemy.sp.texture.width > 2) {
@@ -302,7 +333,7 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
           enemy.sp.height = ew * (enemy.sp.texture.height / enemy.sp.texture.width)
         }
         enemy.node.x = E.x + (ef?.x ?? 0)
-        enemy.node.y = E.y + (ef?.y ?? 0) - bob * 0.6
+        enemy.node.y = E.y + (ef?.y ?? 0) - bob * 0.6 - drop * 1.35
         enemy.node.rotation = ((ef?.rot ?? 0) * Math.PI) / 180
         // GOING DOWN. The fight says when; how it looks is the arena's, the
         // same settle-and-roll the chart gives a hull it has sunk.
@@ -332,12 +363,15 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
         spells.status('player', P.x, P.y, pw * 0.6, pf?.status ?? 0)
         spells.status('enemy', E.x, E.y, ew * 0.6, ef?.status ?? 0)
 
+        weather.theme({ key: th2.key, pale: 0xcfe6f0 })
+        weather.advance(dt, t, W, H, th2.heavy, th2.boss, fall)
         guns.advance(dt)
         spells.advance(dt)
       })
 
       cleanup = () => {
         handle.current = null
+        weather.destroy()
         guns.destroy()
         spells.destroy()
         // THE CONTEXT GOES WITH THE ROUTE. See the note at the top: this is
