@@ -195,7 +195,23 @@ Three things the first pass got wrong on real water, all fixed: the HUD was
 pinned to the viewport and landed on the page banner (it flows now), the rings
 were unlabelled hoops, and the hull had no shadow so it read as flying.
 
+**The descent is continuous (part of phase 1, finished after phase 2).**
+The arena mounts at the top of the FALL, not at the first shot, and is the same
+element by `key` in both the `descending` and `fighting` branches. React
+reconciles a component's top-level children by position and key, so the same
+Application survives the phase change: the water you drop through is the water
+you land on, and the second WebGL context is created once per run instead of
+once per depth. **Keep the arena first, and keyed, in both branches or it
+reloads.** The enemy is held off the water while you are still dropping and
+eases in as the fight opens.
+
 **Phase 3 — the beats on the water. NEXT.**
+The same `key` trick is how the rest of this gets done: every in-run phase that
+should keep the world alive renders the SAME keyed arena as its first child.
+Boons, shrines, the merchant and contracts then become things that happen on
+water you are already floating on, rather than screens the water is replaced
+by. That part is presentation. What makes this phase the risky one is only the
+run-flow changes underneath it, so those stay separate.
 Boons, shrines, merchant and contracts surface in the arena.
 *Risk:* highest, because it touches run flow. Last, and on its own.
 
