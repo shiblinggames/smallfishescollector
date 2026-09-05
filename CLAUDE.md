@@ -23,6 +23,7 @@ routes; read the matching doc BEFORE working in a system. Do not inline these as
 - raids, combat, tides, aim bar, damage → docs/systems/raids-campaign.md — RaidCombat/raidMap
 - story, Finn, chapters, finale, naming → docs/systems/story-universe.md — ANY narrative copy
 - gauntlet, hardcore, blood gems, contracts → docs/systems/gauntlets.md — run state/variants
+- gauntlet facelift, dungeon sea, arena → docs/systems/gauntlet-instance-plan.md — PLAN, read gauntlets.md first
 - forge, accelerator, ITEM_GRANTS → docs/systems/forge.md — item crafting or new raid items
 - ship classes, augments, berth, ultimate → docs/systems/ship.md — combat ship (berth ≠ bunk)
 - crew, recruits, hall, bunks, skins, assign → docs/systems/crew.md — before ANY crew change
