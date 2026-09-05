@@ -461,6 +461,17 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         spells.destroy()
         // THE CONTEXT GOES WITH THE ROUTE. See the note at the top: this is
         // what makes a second Application safe at all.
+        // THE FILTER COMES OFF FIRST. The water is a sprite wearing a shader,
+        // and destroying the renderer with that shader still bound to its
+        // textures is what Pixi's "destroyed while still bound" warnings were:
+        // teardown-only noise, but noise that hides a real one. Unbind, then
+        // destroy the filter, then the Application.
+        if (water) {
+          const fs = water.sprite.filters
+          water.sprite.filters = []
+          if (Array.isArray(fs)) for (const f of fs) f.destroy()
+          water.sprite.destroy()
+        }
         app.destroy(true, { children: true, texture: false })
       }
     })().catch(() => {

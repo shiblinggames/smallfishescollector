@@ -364,6 +364,17 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
         el.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         weather.destroy()
+        // THE FILTER COMES OFF FIRST. The water is a sprite wearing a shader,
+        // and destroying the renderer with that shader still bound to its
+        // textures is what Pixi's "destroyed while still bound" warnings were:
+        // teardown-only noise, but noise that hides a real one. Unbind, then
+        // destroy the filter, then the Application.
+        if (water) {
+          const fs = water.sprite.filters
+          water.sprite.filters = []
+          if (Array.isArray(fs)) for (const f of fs) f.destroy()
+          water.sprite.destroy()
+        }
         app.destroy(true, { children: true, texture: false })
       }
     })().catch(() => {})
