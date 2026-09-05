@@ -2183,6 +2183,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   const arenaDepth = fight?.depth ?? (rollStateRef.current.cleared + 1)
   const arenaDeep = Math.min(1, Math.pow(Math.max(0, arenaDepth - 1) / 24, 0.85))
   const arenaBeam = getShip(shipTierByName(props.shipName)).seaBeam ?? 0.6
+  // What the tide between screens is made of: the run's own colour.
+  const screenTint = hardcoreRun ? '#ff6a6a' : isDonG ? '#e6c66e' : '#6fe4d8'
   const arena = (mood: Mood, opts?: { enemyHidden?: boolean }) => (
     <GauntletArena
       key="arena"
@@ -2921,7 +2923,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('reward')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, convergencesTaken, stats: runStatsRef.current, events: runEventsRef.current, contracts: contractsWon }} onBack={backToIntro} don={isDonG} />
         </Screen>
       </>
@@ -2942,7 +2944,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('dead')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         {/* Death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
@@ -3063,7 +3065,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('shrine')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
         <div style={{
@@ -3230,7 +3232,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('merchant')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
         <div style={{
@@ -3330,7 +3332,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('contract')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           {/* THE DON DOES NOT SIT IN THE MIDDLE OF THE PAGE.
               Every meta screen here was the same centered column: eyebrow, round
@@ -3427,7 +3429,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('contract')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 22, textShadow: `0 0 16px ${MC}55` }}>
@@ -3474,7 +3476,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('fallen')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 56%, ${AK}30 0%, ${AK}10 42%, transparent 72%)` }} />
         <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1.6rem 1.1rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           {/* His face, sinking + dimmed — he's going down. The throne clear glints gold. */}
@@ -3517,7 +3519,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('mark')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <MarkChoice offer={markOffer} searing={markSearing} taken={markCount} onChoose={chooseMark} />
         </Screen>
       </>
@@ -3584,7 +3586,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('between')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
@@ -4112,7 +4114,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('curse')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         {/* Crimson dread, bleeding up from the deep and breathing slowly. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
@@ -4204,7 +4206,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('boon')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={ENTER}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${AC}24 0%, ${AC}08 38%, transparent 64%)` }} />
@@ -4748,7 +4750,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       return (
         <>
         {arena('fall')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
           <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 58%, ${KRAKEN_DEEP}3a 0%, ${KRAKEN_DEEP}14 40%, transparent 70%)` }} />
           <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem 1.2rem' }}>
             <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 0.97, scale: 1 }} transition={{ duration: 1.4, ease: 'easeOut' }} style={{ position: 'relative', width: 190, height: 190 }}>
@@ -4778,7 +4780,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         {arena('fall')}
-        <Screen id={phase}>
+        <Screen id={phase} tint={screenTint}>
         <div style={{
           position: 'relative', zIndex: 1, minHeight: '60vh',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -4881,7 +4883,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           overlays untouched. RaidCombat's container is transparent
           (transparentBackdrop) so this shows through — no boxed second image. */}
       {arena('fight')}
-      <Screen id={phase}>
+      <Screen id={phase} tint={screenTint}>
       {/* THE SEAT, MUCH LIGHTER THAN IT WAS. This gradient existed to sit the
           deck against a photograph and ran to eighty per cent black at the
           foot — which, over live water, crushed the whole lower half of the
@@ -7600,15 +7602,54 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
  * a new type every render, and React would remount it — and everything in it
  * — sixty times a second.
  */
-function Screen({ id, children }: { id: string; children: React.ReactNode }) {
+function Screen({ id, tint, children }: { id: string; tint: string; children: React.ReactNode }) {
+  // ── THE TIDE ─────────────────────────────────────────────────────────
+  //
+  // This is the endgame, and the cut between its screens should not be a
+  // raid's cut. Every phase change sends a wall of dark water up the
+  // viewport in the gauntlet's own colour: the outgoing screen sinks under
+  // it, it covers the switch, and it recedes off the top to give up the next
+  // screen. The arena lurches in step (see GauntletArena's surge), so the
+  // water under the screens and the water over them move together.
+  //
+  // A fresh element per change, keyed on a counter, so a fast run of phases
+  // gets a fresh tide each time rather than one that restarts mid-sweep.
+  const [tide, setTide] = useState(0)
+  const seen = useRef(id)
+  useEffect(() => {
+    if (seen.current === id) return
+    seen.current = id
+    setTide(n => n + 1)
+  }, [id])
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div key={id}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        transition={{ duration: 0.22, ease: 'easeOut' }}>
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={id}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.24, ease: 'easeOut' }}>
+          {children}
+        </motion.div>
+      </AnimatePresence>
+      <AnimatePresence>
+        {tide > 0 && (
+          <motion.div key={tide} aria-hidden
+            initial={{ y: '104%' }}
+            animate={{ y: ['104%', '0%', '-108%'] }}
+            transition={{ duration: 0.95, times: [0, 0.4, 1], ease: ['easeOut', 'easeIn'] }}
+            onAnimationComplete={() => setTide(0)}
+            style={{
+              position: 'fixed', left: '-6vw', right: '-6vw', top: '-8vh', height: '124vh',
+              zIndex: 90, pointerEvents: 'none',
+              // The crest: a soft curved top with a luminous rim, then the body
+              // of the water going near-black, then a thin foam line trailing.
+              borderRadius: '50% 50% 0 0 / 9vh 9vh 0 0',
+              background: `linear-gradient(180deg, ${tint}00 0%, ${tint}b0 1.5%, ${tint}55 4%, rgba(3,7,12,0.92) 12%, rgba(2,5,9,0.97) 60%, rgba(2,5,9,0.97) 88%, ${tint}66 96%, ${tint}00 100%)`,
+              boxShadow: `0 -18px 60px ${tint}55`,
+              willChange: 'transform',
+            }} />
+        )}
+      </AnimatePresence>
+    </>
   )
 }
 

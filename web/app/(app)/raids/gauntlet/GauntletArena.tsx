@@ -164,6 +164,15 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
   const fallRef = useRef(0)
   const depthSeen = useRef(depth)
   if (depthSeen.current !== depth) { depthSeen.current = depth; fallRef.current = 1 }
+  /**
+   * THE SURGE. Every phase change lurches the water — the rise tears past,
+   * the hulls dip — in step with the tide GauntletGame sends over the
+   * screens, so the world under the switch moves with the switch. A fall is
+   * a surge that goes all the way; this is the same motion, cut short.
+   */
+  const surgeRef = useRef(0)
+  const moodSeen = useRef(mood)
+  if (moodSeen.current !== mood) { moodSeen.current = mood; surgeRef.current = 1 }
 
   useEffect(() => {
     let dead = false
@@ -359,7 +368,8 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         // the rise tears past and the hulls settle back down, which is what
         // turns a cut between fights into a drop into the next one.
         if (fallRef.current > 0) fallRef.current = Math.max(0, fallRef.current - dt * 0.85)
-        const fall = fallRef.current
+        if (surgeRef.current > 0) surgeRef.current = Math.max(0, surgeRef.current - dt * 1.7)
+        const fall = Math.max(fallRef.current, surgeRef.current * 0.55)
 
         scenery.set({
           variant: sc.variant, hardcore: sc.hardcore, boss: th2.boss, apex: sc.apex,
