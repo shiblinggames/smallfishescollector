@@ -230,6 +230,16 @@ SeaMap and the arena compose from one set of numbers. Your hull is anchored at
 its centre and theirs at its waterline, as the chart reports them, because
 RaidCombat lifts each side's overlays by what its anchor means.
 
+**The tide between screens.** Every in-run phase renders its content inside
+ONE module-level `Screen` at the same position in its fragment (right after
+the arena), so React keeps a single instance and the `AnimatePresence` inside
+it survives the phase change: the outgoing screen fades, a wall of dark water
+in the gauntlet's colour sweeps up the viewport and off the top, the incoming
+screen rises under it, and the arena surges in step (the rise tears past, the
+hulls dip). Opacity only on the wrapper: a transform there would break every
+fixed overlay inside it. Keep `Screen` second (after the arena) in every
+branch, or the exit has nothing to play on.
+
 What is NOT done in phase 3 is the run-flow half: chests rising, shrines
 breaching, the merchant's hulk drawing alongside as things you sail to. The
 screens are still screens; they just have the world under them now.
