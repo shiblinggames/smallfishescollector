@@ -303,13 +303,13 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // and they are not laid on the keystone. A face that swirled with the
     // water would be part of the weather; this is the thing the weather is
     // about, so it holds still while everything else moves.
-    const beam = sprite(discTex!, m.r * 0.9, th.core, 0)
+    const beam = sprite(discTex!, m.r * 0.5, th.core, 0)
     beam.blendMode = 'add'
     // Standing up out of the plane rather than lying on it: the world
     // container squashes by GROUND, so a thing that should look upright is
     // counter-squashed, exactly as every mark and hull on this chart is.
     beam.scale.y *= 1 / GROUND
-    beam.y = -(m.r * 0.34) / GROUND
+    beam.y = -(m.r * 0.16) / GROUND
     node.addChild(beam)
 
     const holo: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
@@ -323,7 +323,11 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     faceImg.decoding = 'async'
     faceImg.onload = () => {
       holo.texture = holoTexture(PIXI, faceImg)
-      const w = m.r * 1.15
+      // SIZED AGAINST THE WHIRLPOOL, and both portraits are square, so this
+      // width is also its height on screen. 1.15r put 736px of hologram over
+      // a 640 door and ran it off the top of the window; a little over half
+      // the radius stands a head in the eye rather than a billboard.
+      const w = m.r * 0.52
       holo.width = w
       holo.height = w * (holo.texture.height / holo.texture.width)
       // Counter-squashed AFTER sizing, so the height above is a true height.
@@ -428,7 +432,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // It breathes on the spot. No turning: see the note where it is
         // mounted. The bob is in screen pixels, so it is divided by GROUND
         // like every other height on this chart.
-        o.holo.y = -((m.r * 0.30) + 14 * Math.sin(t * 0.8)) / GROUND
+        o.holo.y = -((m.r * 0.10) + 10 * Math.sin(t * 0.8)) / GROUND
         o.beam.alpha = (0.12 + 0.3 * gg) * jitter * dropout * lit
 
         // ── THE STRIKE ──────────────────────────────────────────────────
