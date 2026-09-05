@@ -4,7 +4,8 @@ The facelift: each gauntlet stops being a stack of menus over a photograph and
 becomes an instance you sail. Its own Pixi world, its fights fought on the
 water the way the campaign's now are, and a descent that is visibly a descent.
 
-Status: PLAN. Nothing here is built. Read `gauntlets.md` first for the run
+Status: **Phases 0, 1 and 2 are LIVE.** Phase 3 (beats on the water) and phase 4
+(the Don's dressing) are still plan. Read `gauntlets.md` first for the run
 model, which this must not disturb.
 
 ---
@@ -172,13 +173,29 @@ boss-depth arenas.
 *Ships:* the fight zone reads as a final-boss zone and gets worse as you fall.
 *Risk:* low, entirely visual.
 
-**Phase 2 — the Slipway.**
-The hub water, the places, the Codex in the HUD, the portal that starts a run.
-Menus open as sheets from their places rather than from a list.
-*Ships:* the gauntlet becomes somewhere you are.
-*Risk:* medium. Touches entry, so the attempt-consuming rule needs a test.
+**Phase 2 — the Slipway. SHIPPED.**
+`GauntletSlipway.tsx`. The intro phase is water now: your ship on it, the two
+Locker shops and the Ledger as lit rings you moor at, and the descent turning
+overhead as a vortex you sail into. The Codex is a HUD button, as asked.
 
-**Phase 3 — the beats on the water.**
+The old card stack was **not rebuilt** — it moved behind a "Ledger" button and
+still holds the ranks, the records, the rules and the descent cards, unchanged.
+That is why this was cheap: the sea changed how you REACH a panel, never what
+the panel is.
+
+**How entry stayed safe.** The vortex calls `setModeChoiceOpen(true)`, which is
+the same Normal/Hardcore chooser the cards opened, which calls the same
+`begin()`. There is no second start path, so the attempt-consuming rule was
+never in a position to change. Verified against production: sailing into the
+eye opens the chooser, dismissing it returns you to the water, and nothing is
+spent. The chooser fires once on entry and re-arms only after you sail back
+out, because a door that keeps re-opening while you sit in it is not a door.
+
+Three things the first pass got wrong on real water, all fixed: the HUD was
+pinned to the viewport and landed on the page banner (it flows now), the rings
+were unlabelled hoops, and the hull had no shadow so it read as flying.
+
+**Phase 3 — the beats on the water. NEXT.**
 Boons, shrines, merchant and contracts surface in the arena.
 *Risk:* highest, because it touches run flow. Last, and on its own.
 
