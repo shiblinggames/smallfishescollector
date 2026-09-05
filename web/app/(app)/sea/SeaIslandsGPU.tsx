@@ -47,6 +47,7 @@ import { makeSplash, type Splash } from './seaSplash'
 import { makeGunFx, type GunFx, type ImpactKind } from './seaGunFx'
 import { makeAbilityFx, type AbilityFx, type AbilityShape } from './seaAbilityFx'
 import { makeSurf, type Surf, type SurfLine } from './seaSurfLine'
+import { makeMaelstroms, type Maelstroms } from './seaMaelstrom'
 import { makeLights, type Lights } from './seaLights'
 import { makeSqualls, type Squalls } from './seaSqualls'
 import { makeLap, LAP_MIN_SIZE, type Lap } from './markLap'
@@ -482,6 +483,13 @@ export default function SeaIslandsGPU({
       // as travel where a scrolling texture reads as a scrolling texture.
       const drift: Drift = makeDrift(PIXI)
       world.addChild(drift.view)
+
+      // ── THE GAUNTLETS' DOORS ──────────────────────────────────────
+      // Over the drift and under the land: a maelstrom is the water itself
+      // doing something, so it sits with the water and everything that
+      // stands on the water stands over it.
+      const maelstroms: Maelstroms = makeMaelstroms(PIXI)
+      world.addChild(maelstroms.view)
 
       // ── WHERE SHE CAN TIE UP ──────────────────────────────────────
       // Added before the islands, which attach asynchronously as they bake, so
@@ -1101,6 +1109,7 @@ export default function SeaIslandsGPU({
         berthLayer.advance(t, dt, camX, camY, halfW, halfH)
         portalWell.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
+        maelstroms.advance(t, dt, camX, camY, halfW, halfH)
         guide.advance(t)
         // ── BY CELL, NOT BY MARK ──────────────────────────────────────
         //
@@ -1215,6 +1224,7 @@ export default function SeaIslandsGPU({
           // there is no sun to light it and no sun to cast it, and a shadow
           // with nothing making it is a stain on the water.
           clouds.night(d)
+          maelstroms.night(d)
           const tint = nightTint(d, w)
           if (tint === lastTint) return
           lastTint = tint

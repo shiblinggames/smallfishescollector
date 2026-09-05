@@ -25,6 +25,7 @@ import PopupShell from '@/components/PopupShell'
 import RenownPanel from '@/components/RenownPanel'
 import Minimap from './Minimap'
 import MarkProbe from './MarkProbe'
+import { gauntletUnlocked, donsGauntletUnlocked } from '@/lib/gauntlet'
 import { decodeFog, encodeFog, fogHas, fogReveal, fogSet } from '@/lib/seaExplore'
 import type { RenownState } from '@/app/(app)/actions/renown'
 import type { FishSpeciesBasic } from '@/app/(app)/fishing/constants'
@@ -50,7 +51,7 @@ import {
   WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
-  WARGATE, WARGATE_REACH,
+  WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
   type Bay, type Encounter, type Cache, type Beat, type Wall,
 } from './raidWaters'
 import { RAID_MAP, RAID_CHAPTERS, type RaidNode } from '@/lib/raidMap'
@@ -1320,7 +1321,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, clearedNodes, nodeStatus, dealtToday,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, clearedNodes, nodeStatus, dealtToday, isAdmin = false,
   auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
@@ -1355,6 +1356,9 @@ export default function SeaMap({
   }[]
   /** Multiplier on sailing speed. Nothing else. */
   hullSpeed: number
+  /** Admins pass every gate the expedition page passes them through — the
+   *  maelstroms read the same rule. */
+  isAdmin?: boolean
   /** The expedition hull you own. Only ever drawn beyond the sortie — inside
    *  the anchorage and the fishing grounds you are on the fishing boat. */
   shipTier: number
@@ -3192,6 +3196,14 @@ export default function SeaMap({
   /** ── THE WARGATE ── standing in its mouth, and the sheet it opens. Its data
    *  is the boss card's own read, prefetched on approach the same way. */
   const [nearGate, setNearGate] = useState(false)
+  /** ── THE MAELSTROMS ── standing in one's eye, and whether it will take you.
+   *  The gate is lib/gauntlet's own, read off the same cleared list the
+   *  expedition page reads, so the water cannot open a door the page shuts. */
+  const [nearMael, setNearMael] = useState<Maelstrom | null>(null)
+  const maelOpen = useCallback((id: Maelstrom['id']) => id === 'davy'
+    ? gauntletUnlocked({ isAdmin, clearedNodes })
+    : donsGauntletUnlocked({ isAdmin, throneCleared: clearedNodes.includes('the_throne') }),
+  [isAdmin, clearedNodes])
   const [gateOpen, setGateOpen] = useState(false)
   const [gateData, setGateData] = useState<BossCardState | null>(null)
   /** The fight's own loadout, read on the same approach for the same reason. */
@@ -4442,6 +4454,20 @@ export default function SeaMap({
     // it that was for sale.
     if (inPortalNow && !inAnchorage) {
       return { act: 'Step through the portal', hold: null }
+    }
+
+    // A MAELSTROM, when you are in its eye. Named whether or not it will take
+    // you, and the reason it will not is the expedition page's own words.
+    if (nearMael) {
+      if (!maelOpen(nearMael.id)) {
+        return {
+          act: null,
+          hold: nearMael.id === 'davy'
+            ? 'The Davy Jones Gauntlet: clear Chapter 2 first'
+            : "Don's Gauntlet: beat Don Finleone at the Throne to descend",
+        }
+      }
+      return { act: 'Descend into ' + nearMael.name, hold: null }
     }
 
     // THE WARGATE, when you are standing in its mouth. Same rank as the way
@@ -5864,6 +5890,28 @@ export default function SeaMap({
       // you scrape along the coast and round it instead of stopping dead
       // against it. A hull that halts the instant it touches land feels like a
       // wall; one that slides feels like a shore.
+      // ── THE MAELSTROMS PULL ──────────────────────────────────────────
+      //
+      // Inside a whirlpool's grip the hull is drawn toward the eye and
+      // carried round it, harder the nearer she is — the door is felt before
+      // it is offered. Strong enough to notice, never enough to trap: 140px
+      // a second at the eye against a hull that sails at 470, so a captain
+      // who wants out simply sails out. Not while the guns are out; a fight
+      // holds station by its own rule.
+      if (!fightOnRef.current) {
+        for (const m of MAELSTROMS) {
+          const mdx = m.x - pos.current.x, mdy = m.y - pos.current.y
+          const md = Math.hypot(mdx, mdy)
+          const grip = m.r * 1.6
+          if (md > grip || md < 1) continue
+          const k = Math.pow(1 - md / grip, 1.6)
+          const pull = 140 * k * dt
+          const mux = mdx / md, muy = mdy / md
+          pos.current.x += mux * pull - muy * pull * 0.55
+          pos.current.y += muy * pull + mux * pull * 0.55
+        }
+      }
+
       for (const o of nearObs.current) {
         // Capsule-aware: the normal comes off the segment's closest point, so
         // sliding along a jetty's face is the same slide a coast gives.
@@ -6873,6 +6921,11 @@ export default function SeaMap({
         // The Wargate is one fixed place, so its test is one hypot.
         const ng = Math.hypot(pos.current.x - WARGATE.x, pos.current.y - WARGATE.y) < WARGATE_REACH
         setNearGate(prev => (prev === ng ? prev : ng))
+        let mm: Maelstrom | null = null
+        for (const m of MAELSTROMS) {
+          if (Math.hypot(pos.current.x - m.x, pos.current.y - m.y) < MAELSTROM_REACH) { mm = m; break }
+        }
+        setNearMael(prev => (prev?.id === mm?.id ? prev : mm))
 
         // WHAT IS DRIFTING NEARBY. Against the drifted position, not the
         // anchor — same reason the traders test theirs.
@@ -8553,6 +8606,15 @@ hullRef={hullRefFor(t.key)} />
             vel.current.x = 0; vel.current.y = 0
             target.current = { ...pos.current }
             setPortalOpen(true)
+            return true
+          }
+          if (nearMael) {
+            if (!maelOpen(nearMael.id)) return false
+            // Down you go. The gauntlet page owns everything from here — the
+            // daily attempt, the open run, the resume — exactly as it does
+            // from the expedition page.
+            vibrate([20, 40, 30, 60, 40])
+            router.push(nearMael.id === 'davy' ? '/raids/gauntlet' : '/raids/dons-gauntlet')
             return true
           }
           if (nearGate) {

@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SORTIE } from './chart'
 import {
   HUB, HUB_R, BAYS, bayCentre, mouthOf, entryOf, straitLen, bayOpen,
-  ENCOUNTERS, encounterAt,
+  ENCOUNTERS, encounterAt, MAELSTROMS,
 } from './raidWaters'
 import { ISLES } from '@/lib/seaIsles'
 import { DIG_SITES } from '@/lib/seaDigs'
@@ -437,6 +437,19 @@ export default function Minimap({
         ctx.fillStyle = openDoor ? 'rgba(196,169,106,0.8)' : 'rgba(196,169,106,0.36)'
         ctx.font = '700 8px Karla, system-ui, sans-serif'
         ctx.fillText(openDoor ? `CHAPTER ${b.chapter}` : 'SHUT', tx(c.x), ty(c.y) - 8)
+      }
+
+      // THE MAELSTROMS: two swirls in the junction, in their own colours.
+      for (const m of MAELSTROMS) {
+        const mx = tx(m.x), my = ty(m.y)
+        const col = m.id === 'davy' ? 'rgba(80,220,210,' : 'rgba(150,200,175,'
+        ctx.strokeStyle = col + '0.85)'
+        ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(mx, my, Math.max(4, m.r * s), 0, Math.PI * 2); ctx.stroke()
+        ctx.strokeStyle = col + '0.55)'
+        ctx.beginPath(); ctx.arc(mx, my, Math.max(2, m.r * s * 0.5), 0.6, Math.PI * 2 + 0.2); ctx.stroke()
+        ctx.fillStyle = 'rgba(4,8,14,0.9)'
+        ctx.beginPath(); ctx.arc(mx, my, Math.max(1.5, m.r * s * 0.2), 0, Math.PI * 2); ctx.fill()
       }
 
       // THE SORTIE, named. It is the one gap in the harbour wall and therefore

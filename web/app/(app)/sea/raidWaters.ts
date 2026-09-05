@@ -992,6 +992,28 @@ export const WARGATE = { x: 0, y: -7400 }
 export const WARGATE_REACH = 340
 
 /**
+ * ── THE MAELSTROMS ──────────────────────────────────────────────────────────
+ *
+ * The gauntlets' doors, as weather. Two whirlpools in the junction: Davy
+ * Jones' to the north-west of the Wargate, before the mouths of chapters I and
+ * II, and the Don's to the north-east, before III and IV. Sail into the eye
+ * and the helm offers the descent; the gate is the same one the expedition
+ * page keeps (lib/gauntlet: chapter 2 cleared for Davy's, the Throne beaten
+ * for the Don's), read from the same cleared list, so the water cannot open a
+ * door the page keeps shut.
+ *
+ * Verified clear water: the nearest strait mouth is sixteen hundred pixels
+ * from either eye, so a 900 radius leaves the straits untouched.
+ */
+export type Maelstrom = { id: 'davy' | 'don'; x: number; y: number; r: number; name: string }
+export const MAELSTROMS: Maelstrom[] = [
+  { id: 'davy', x: -2400, y: -9600, r: 900, name: 'The Davy Jones Gauntlet' },
+  { id: 'don', x: 2400, y: -9600, r: 900, name: "Don's Gauntlet" },
+]
+/** How close to the eye you have to be to descend. Inside the funnel proper. */
+export const MAELSTROM_REACH = 430
+
+/**
  * WHERE THE WAY HOME PUTS YOU DOWN: at the Wargate's feet.
  *
  * It used to land you off the Gunwharf. Now that the gate exists, "home" from

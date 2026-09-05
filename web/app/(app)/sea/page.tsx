@@ -322,6 +322,7 @@ export default async function SeaPage() {
       // adminOnly and the off-chain `requiresClearedNode` all live in there, and
       // a copy that knows about three of the four is wrong in a way nobody
       // notices until somebody is standing off a boss that will not open.
+      isAdmin={profile?.is_admin === true}
       nodeStatus={Object.fromEntries(
         computeRaidMap(
           clearedNodes,
