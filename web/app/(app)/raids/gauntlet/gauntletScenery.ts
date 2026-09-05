@@ -482,19 +482,25 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
       const hc = scene.hardcore
 
       // ── THE DEEP ─────────────────────────────────────────────────
-      deepGlow.x = W * 0.5; deepGlow.y = H * 0.96
-      const dg = Math.max(W, H) * (1.1 + 0.2 * Math.sin(t * 0.5))
-      deepGlow.width = dg; deepGlow.height = dg * 0.55
+      // IN THE OPEN WATER, not at the foot of the frame. The bottom third of
+      // a fight is the log and the guns, so anything drawn there is drawn for
+      // nobody. The deep pools under the engagement itself, between the hulls.
+      deepGlow.x = W * 0.5; deepGlow.y = H * 0.5
+      const dg = Math.max(W, H) * (1.0 + 0.16 * Math.sin(t * 0.5))
+      deepGlow.width = dg; deepGlow.height = dg * 0.6
       deepGlow.alpha = (hc ? 0.16 : 0.07) + deep * 0.08 + (scene.boss ? 0.06 : 0) + flare * 0.02
 
       // THE EYE opens at a boss depth and shuts when the boss is gone.
       const wantLid = scene.boss ? 1 : 0
       lid += (wantLid - lid) * Math.min(1, dt * 0.7)
-      eye.alpha = lid * (0.55 + 0.1 * Math.sin(t * 1.3))
+      eye.alpha = lid * (0.62 + 0.1 * Math.sin(t * 1.3))
       if (eye.alpha > 0.005) {
-        const R = Math.min(W, H) * 0.42
-        eye.x = W * 0.5 + Math.sin(t * 0.23) * W * 0.06
-        eye.y = H * 0.84
+        // The eye watches from UNDER the fight, between the two hulls, where
+        // the water is open and both ships are in its gaze. Big enough that
+        // its rim reaches past them: the fight happens inside it.
+        const R = Math.min(W, H) * 0.5
+        eye.x = W * 0.5 + Math.sin(t * 0.23) * W * 0.05
+        eye.y = H * 0.47
         iris.width = R * 2.6; iris.height = R * 1.1
         irisRing.width = R * 1.5; irisRing.height = R * 0.62 * lid
         slit.width = R * 0.9; slit.height = R * 0.62 * lid
