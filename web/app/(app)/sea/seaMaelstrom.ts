@@ -55,6 +55,8 @@ type Theme = {
   spirits: 'rise' | 'sink'
   /** The strike's character: a hard flash, or a slow pulse. */
   strikeKind: 'flash' | 'pulse'
+  /** Whose door this is. Hangs over the eye as a hologram. */
+  face: string
 }
 
 const THEMES: Record<Maelstrom['id'], Theme> = {
@@ -63,12 +65,14 @@ const THEMES: Record<Maelstrom['id'], Theme> = {
   davy: {
     arm: 0x156f6c, mid: 0x1f918c, wisp: 0x5fc9c6, core: 0xa6eef0, eye: 0x1a7f7a, foam: 0x8fd6d8,
     spirit: 0x9cf0ff, strike: 0x9af4ff, speed: 0.5, spirits: 'rise', strikeKind: 'flash',
+    face: '/davyjones.png',
   },
   // Finleone's ghost: drowned green gone nearly to black, verdigris in the
   // arms, tarnished gold sinking.
   don: {
     arm: 0x1f4a3a, mid: 0x2f6a52, wisp: 0x7fb098, core: 0xd8e6dc, eye: 0x275c46, foam: 0x93b9a5,
     spirit: 0xd6b25c, strike: 0xd9c47c, speed: 0.4, spirits: 'sink', strikeKind: 'pulse',
+    face: '/raid8_donfinleone.png',
   },
 }
 
@@ -130,6 +134,51 @@ function radial(PIXI: typeof import('pixi.js'), stops: [number, string][], size 
   return PIXI.Texture.from(c)
 }
 
+/**
+ * ── THE FACE IN THE EYE ─────────────────────────────────────────────────────
+ *
+ * The portrait, rebuilt as a projection: scanlines cut through it, the whole
+ * thing flattened toward white so a tint can carry it, and the bottom faded
+ * out so it does not end in a straight edge but dissolves into the light
+ * coming up out of the hole. Additive when drawn, so it reads as light in the
+ * air rather than as a picture hung over the water.
+ */
+function holoTexture(PIXI: typeof import('pixi.js'), img: HTMLImageElement): Texture {
+  const W = 420
+  const H = Math.max(1, Math.round((img.naturalHeight / img.naturalWidth) * W))
+  const c = document.createElement('canvas')
+  c.width = W; c.height = H
+  const g = c.getContext('2d')!
+  g.drawImage(img, 0, 0, W, H)
+
+  // TOWARD WHITE. A hologram is one colour of light; the portrait's own hues
+  // fighting the theme's tint is what makes a tinted photo look like a tinted
+  // photo. Luminance, kept in the alpha the art already has.
+  const d = g.getImageData(0, 0, W, H)
+  const px = d.data
+  for (let i = 0; i < px.length; i += 4) {
+    const l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]
+    // Lifted and compressed: shadows become dim light rather than holes.
+    const v = 90 + l * 0.72
+    px[i] = px[i + 1] = px[i + 2] = v
+  }
+  g.putImageData(d, 0, 0)
+
+  // SCANLINES, cut out rather than drawn on: a projection is made of the
+  // lines that are there, and the gaps are where it is not.
+  g.globalCompositeOperation = 'destination-out'
+  for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1)
+
+  // AND IT DISSOLVES AT THE FOOT, into the light it is standing in.
+  const fade = g.createLinearGradient(0, H * 0.62, 0, H)
+  fade.addColorStop(0, 'rgba(0,0,0,0)')
+  fade.addColorStop(1, 'rgba(0,0,0,1)')
+  g.fillStyle = fade
+  g.fillRect(0, Math.floor(H * 0.62), W, Math.ceil(H * 0.38))
+  g.globalCompositeOperation = 'source-over'
+  return PIXI.Texture.from(c)
+}
+
 export type Maelstroms = {
   view: Container
   advance(t: number, dt: number, camX: number, camY: number, halfW: number, halfH: number): void
@@ -169,6 +218,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     rtDark: RenderTexture; rtLight: RenderTexture
     storm: Sprite; funnel: Sprite; hole: Sprite
     arms: Sprite; mid: Sprite; wisps: Sprite; eye: Sprite; core: Sprite; strike: Sprite
+    beam: Sprite; holo: Sprite
     foam: Foam[]; spirits: Spirit[]
     seen: boolean
     nextStrike: number; strikeLeft: number
@@ -220,10 +270,17 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       foam.push({ p, ang: Math.random() * Math.PI * 2, r: R * (0.3 + Math.random() * 0.75), size: 3 + Math.random() * 6 })
     }
 
-    const eye = sprite(discTex!, R * 0.7, th.eye, 0.35)
-    const core = sprite(discTex!, R * 0.24, th.core, 0.3)
-    const strike = sprite(discTex!, R * 1.8, th.strike, 0)
-    flatLight.addChild(eye, core, strike)
+    // ── THE STILL POINT ─────────────────────────────────────────────
+    //
+    // The eye, its core and the strike are NOT in the flat texture. Anything
+    // in there is turned by the arms' rotation and skewed by the keystone,
+    // and the middle of a whirlpool is the one part that must do neither: it
+    // is the thing everything else is turning around. In the world, dead
+    // centre, unrotated. The world's own squash still lies them on the plane.
+    const eye = sprite(discTex!, m.r * 0.66, th.eye, 0.35)
+    const core = sprite(discTex!, m.r * 0.22, th.core, 0.3)
+    const strike = sprite(discTex!, m.r * 1.7, th.strike, 0)
+    for (const sp of [eye, core, strike]) sp.blendMode = 'add'
 
     const rtDark = PIXI.RenderTexture.create({ width: TEX, height: TEX })
     const rtLight = PIXI.RenderTexture.create({ width: TEX, height: TEX })
@@ -237,7 +294,45 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     const meshDark = new PIXI.PerspectiveMesh({ texture: rtDark, verticesX: 12, verticesY: 12, ...corners })
     const meshLight = new PIXI.PerspectiveMesh({ texture: rtLight, verticesX: 12, verticesY: 12, ...corners })
     meshLight.blendMode = 'add'
-    node.addChild(meshDark, meshLight)
+    node.addChild(meshDark, meshLight, eye, core)
+
+    // ── THE PROJECTION ──────────────────────────────────────────────
+    //
+    // Light coming up out of the hole, and the man standing in it. Both are
+    // in the world and pinned to the centre: they do not turn with the arms
+    // and they are not laid on the keystone. A face that swirled with the
+    // water would be part of the weather; this is the thing the weather is
+    // about, so it holds still while everything else moves.
+    const beam = sprite(discTex!, m.r * 0.9, th.core, 0)
+    beam.blendMode = 'add'
+    // Standing up out of the plane rather than lying on it: the world
+    // container squashes by GROUND, so a thing that should look upright is
+    // counter-squashed, exactly as every mark and hull on this chart is.
+    beam.scale.y *= 1 / GROUND
+    beam.y = -(m.r * 0.34) / GROUND
+    node.addChild(beam)
+
+    const holo: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
+    holo.anchor.set(0.5, 1)
+    holo.blendMode = 'add'
+    holo.tint = th.core
+    holo.alpha = 0
+    node.addChild(holo)
+    // Loaded once per theme and baked into a projection — see holoTexture.
+    const faceImg = new Image()
+    faceImg.decoding = 'async'
+    faceImg.onload = () => {
+      holo.texture = holoTexture(PIXI, faceImg)
+      const w = m.r * 1.15
+      holo.width = w
+      holo.height = w * (holo.texture.height / holo.texture.width)
+      // Counter-squashed AFTER sizing, so the height above is a true height.
+      holo.scale.y *= 1 / GROUND
+    }
+    faceImg.src = th.face
+
+    // The strike sits over the projection: the flash is the loudest thing.
+    node.addChild(strike)
 
     // ── THE SPIRITS live in the world, above the water, in perspective ──
     const spiritLayer: ParticleContainer = new PIXI.ParticleContainer({
@@ -257,7 +352,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     view.addChild(node)
     return {
       m, th, node, flatDark, flatLight, rtDark, rtLight,
-      storm, funnel, hole, arms, mid, wisps, eye, core, strike,
+      storm, funnel, hole, arms, mid, wisps, eye, core, strike, beam, holo,
       foam, spirits, seen: false,
       nextStrike: 2 + Math.random() * 3, strikeLeft: 0,
     }
@@ -313,7 +408,28 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         const beat = Math.sin(t * (1.6 + 2.4 * gg))
         o.eye.alpha = (0.28 + 0.15 * beat + 0.2 * gg) * lit
         o.core.alpha = (0.25 + 0.3 * Math.max(0, beat) + 0.3 * gg) * lit
-        o.core.scale.set((R * 0.24 / 256) * (1 + 0.25 * Math.max(0, beat)))
+        o.core.scale.set((m.r * 0.22 / 256) * (1 + 0.25 * Math.max(0, beat)))
+        o.core.scale.y *= 1 / GROUND
+        o.eye.scale.set(m.r * 0.66 / 256)
+        o.eye.scale.y *= 1 / GROUND
+
+        // ── THE PROJECTION ──────────────────────────────────────────────
+        //
+        // Visible from across the junction, so the endgame's doors read as
+        // landmarks; strong when you are standing in one. A projection is
+        // never quite steady: the flicker is fast, small and slightly
+        // irregular, which is the whole difference between a hologram and a
+        // decal, and it dips hard for an instant now and then as if the
+        // signal caught.
+        const jitter = 0.86 + 0.14 * Math.sin(t * 23.7) * Math.sin(t * 7.3)
+        const dropout = Math.sin(t * 0.7) > 0.985 ? 0.35 : 1
+        const holoLit = (0.2 + 0.55 * gg) * jitter * dropout * lit
+        o.holo.alpha = holoLit
+        // It breathes on the spot. No turning: see the note where it is
+        // mounted. The bob is in screen pixels, so it is divided by GROUND
+        // like every other height on this chart.
+        o.holo.y = -((m.r * 0.30) + 14 * Math.sin(t * 0.8)) / GROUND
+        o.beam.alpha = (0.12 + 0.3 * gg) * jitter * dropout * lit
 
         // ── THE STRIKE ──────────────────────────────────────────────────
         o.nextStrike -= dt * (0.4 + 1.6 * gg)
@@ -329,7 +445,8 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
             ? (u < 0.15 ? u / 0.15 : Math.pow(1 - (u - 0.15) / 0.85, 2.2))
             : Math.sin(u * Math.PI)
           o.strike.alpha = env * (th.strikeKind === 'flash' ? 0.85 : 0.4) * (0.5 + 0.5 * g) * lit
-          o.strike.scale.set((R * (th.strikeKind === 'flash' ? 1.8 : 1.4) / 256) * (1 + 0.3 * u))
+          o.strike.scale.set((m.r * (th.strikeKind === 'flash' ? 1.7 : 1.35) / 256) * (1 + 0.3 * u))
+          o.strike.scale.y *= 1 / GROUND
         } else if (o.strike.alpha) {
           o.strike.alpha = 0
         }
