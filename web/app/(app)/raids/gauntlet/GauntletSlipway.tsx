@@ -217,9 +217,13 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
       // Added BEFORE the air layer, so the rain falls in front of her rather
       // than behind her. Every hull on the chart sits under the weather.
       const boat = new PIXI.Container()
+      const shade = new PIXI.Sprite(glowT)
+      shade.anchor.set(0.5)
+      shade.tint = 0x000000
+      shade.alpha = 0.42
       const hull = new PIXI.Sprite(PIXI.Texture.EMPTY)
       hull.anchor.set(0.5)
-      boat.addChild(hull)
+      boat.addChild(shade, hull)
       world.addChild(boat)
 
       world.addChild(weather.air)
@@ -278,6 +282,12 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
           const w = Math.min(190, W * 0.34)
           hull.width = w
           hull.height = w * (hull.texture.height / hull.texture.width)
+          // The shadow pools under her waterline, not under her centre, and it
+          // does NOT take the bob — a shadow that rises with the hull is what
+          // makes a sprite look like it is flying.
+          shade.width = w * 0.82
+          shade.height = w * 0.3
+          shade.y = hull.height * 0.34 - bob
         }
         hull.scale.x = Math.abs(hull.scale.x) * facing
 

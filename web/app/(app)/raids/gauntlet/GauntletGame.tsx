@@ -2331,15 +2331,20 @@ export default function GauntletGame(props: GauntletGameProps) {
           </motion.button>
         )}
 
-        {/* WHERE YOU ARE, AND WHAT YOU ARE HOLDING. The name of the tower
-            and the purse, top-left, because the water underneath says
-            neither. Kept to two lines: everything else is a place now. */}
+        {/* ── THE HUD ──────────────────────────────────────────────────────
+            Where you are, what you are holding, and the Codex.
+
+            IN THE NORMAL FLOW, not pinned to the viewport. The page above this
+            can carry a banner whose height is not ours to know, and a fixed
+            HUD at a guessed offset lands on top of it. Flowing costs nothing
+            here because the water behind is fixed and full-bleed anyway. */}
         {!ledgerOpen && (
-          <div style={{ position: 'fixed', left: 12, top: 'calc(env(safe-area-inset-top, 0px) + 64px)', zIndex: 6, display: 'grid', gap: 8, justifyItems: 'start', pointerEvents: 'none' }}>
+          <div style={{ position: 'relative', zIndex: 6, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, padding: '10px 12px 0' }}>
+          <div style={{ display: 'grid', gap: 8, justifyItems: 'start', minWidth: 0 }}>
             <h1 className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f3ead2', lineHeight: 1.06, textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>
               {gauntletTitle}
             </h1>
-            <div style={{ display: 'flex', gap: 7, pointerEvents: 'auto' }}>
+            <div style={{ display: 'flex', gap: 7 }}>
               <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?" className="active:scale-95"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.24rem 0.6rem 0.24rem 0.48rem', borderRadius: 999, cursor: 'pointer',
                   background: `linear-gradient(180deg, ${AC}26, rgba(6,10,16,0.82))`, border: `1px solid ${AC}55` }}>
@@ -2356,12 +2361,9 @@ export default function GauntletGame(props: GauntletGameProps) {
               )}
             </div>
           </div>
-        )}
-
-        {/* THE HUD. The Codex always to hand, and the way back into the old
-            lobby for everything the water has no place for. */}
-        {!ledgerOpen && (
-          <div style={{ position: 'fixed', right: 10, top: 'calc(env(safe-area-inset-top, 0px) + 64px)', zIndex: 6, display: 'grid', gap: 8, justifyItems: 'end' }}>
+          {/* The Codex always to hand, and the way back into the old lobby for
+              everything the water has no place for. */}
+          <div style={{ display: 'grid', gap: 8, justifyItems: 'end', flexShrink: 0 }}>
             <button type="button" onClick={() => setSynergiesOpen(true)} className="tap"
               aria-label="Codex"
               style={{ width: 42, height: 42, borderRadius: 13, cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#b98bff',
@@ -2379,7 +2381,26 @@ export default function GauntletGame(props: GauntletGameProps) {
               </svg>
             </button>
           </div>
+          </div>
         )}
+
+        {/* ── THE PLACES, NAMED ────────────────────────────────────────────
+            A lit ring says "moor here" and nothing else, so the name goes
+            beside it in type. Painting it into the canvas would mean a font
+            atlas and a second text pipeline for four words. */}
+        {!ledgerOpen && slipPlaces.filter(pl => !pl.portal).map(pl => (
+          <span key={pl.id} aria-hidden
+            style={{
+              position: 'fixed', left: `${pl.x * 100}%`, top: `${pl.y * 100}%`,
+              transform: 'translate(-50%, 34px)', zIndex: 4, pointerEvents: 'none',
+              color: slipNear === pl.id ? '#f4efe4' : 'rgba(230,238,244,0.66)',
+              textShadow: '0 2px 8px rgba(0,0,0,0.95)',
+              transition: 'color 0.25s',
+            }}>
+            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.16em', whiteSpace: 'nowrap' }}>{pl.label}</span>
+          </span>
+        ))}
+
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
