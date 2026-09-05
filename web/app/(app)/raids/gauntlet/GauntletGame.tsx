@@ -118,7 +118,7 @@ function arenaTheme(depth: number, variant: GauntletVariant, hardcore: boolean):
   if (hardcore) {
     return {
       sea: ['#12030a', '#2a0710', '#5e1524'],
-      dark: 0.34 + 0.42 * t,
+      dark: 0.2 + 0.55 * t,
       swell: 0.55 + 0.4 * t,
       rush: 0.15 + 0.3 * t,
     }
@@ -126,14 +126,14 @@ function arenaTheme(depth: number, variant: GauntletVariant, hardcore: boolean):
   if (variant === 'don') {
     return {
       sea: ['#04120f', '#0e2b22', '#2c6350'],
-      dark: 0.3 + 0.45 * t,
+      dark: 0.16 + 0.58 * t,
       swell: 0.5 + 0.42 * t,
       rush: 0.12 + 0.3 * t,
     }
   }
   return {
     sea: ['#04121a', '#0c2e34', '#22707a'],
-    dark: 0.3 + 0.45 * t,
+    dark: 0.14 + 0.6 * t,
     swell: 0.5 + 0.42 * t,
     rush: 0.12 + 0.3 * t,
   }
@@ -4606,10 +4606,17 @@ export default function GauntletGame(props: GauntletGameProps) {
         enemyUrl={fight.enemy.image}
         handle={arenaRef}
       />
+      {/* THE SEAT, MUCH LIGHTER THAN IT WAS. This gradient existed to sit the
+          deck against a photograph and ran to eighty per cent black at the
+          foot — which, over live water, crushed the whole lower half of the
+          arena and turned the player's own hull into a silhouette. The water
+          carries its own depth now (see arenaTheme, where darkness is a
+          function of how far you have fallen), so this only has to keep the
+          log legible where it overlaps the sea. */}
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', inset: 0, background: hardcoreRun
-          ? 'linear-gradient(to bottom, rgba(28,2,4,0.24) 0%, rgba(22,1,3,0.44) 46%, rgba(8,0,1,0.82) 100%)'
-          : 'linear-gradient(to bottom, rgba(3,9,11,0.26) 0%, rgba(3,9,11,0.44) 46%, rgba(2,6,8,0.8) 100%)' }} />
+          ? 'linear-gradient(to bottom, rgba(28,2,4,0.16) 0%, rgba(22,1,3,0.10) 52%, rgba(8,0,1,0.34) 100%)'
+          : 'linear-gradient(to bottom, rgba(3,9,11,0.16) 0%, rgba(3,9,11,0.08) 52%, rgba(2,6,8,0.32) 100%)' }} />
       </div>
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none"
         style={{ position: 'relative', userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
