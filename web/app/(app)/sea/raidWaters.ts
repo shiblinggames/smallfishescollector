@@ -1003,12 +1003,12 @@ export const WARGATE_REACH = 340
  * door the page keeps shut.
  *
  * Verified clear water: the nearest strait mouth is sixteen hundred pixels
- * from either eye, so a 900 radius leaves the straits untouched.
+ * from either eye, so a 640 radius leaves the straits untouched.
  */
 export type Maelstrom = { id: 'davy' | 'don'; x: number; y: number; r: number; name: string }
 export const MAELSTROMS: Maelstrom[] = [
-  { id: 'davy', x: -2400, y: -9600, r: 900, name: 'The Davy Jones Gauntlet' },
-  { id: 'don', x: 2400, y: -9600, r: 900, name: "Don's Gauntlet" },
+  { id: 'davy', x: -2400, y: -9600, r: 640, name: 'The Davy Jones Gauntlet' },
+  { id: 'don', x: 2400, y: -9600, r: 640, name: "Don's Gauntlet" },
 ]
 /** How close to the eye you have to be to descend. Inside the funnel proper. */
 export const MAELSTROM_REACH = 430

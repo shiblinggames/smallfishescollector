@@ -488,7 +488,7 @@ export default function SeaIslandsGPU({
       // Over the drift and under the land: a maelstrom is the water itself
       // doing something, so it sits with the water and everything that
       // stands on the water stands over it.
-      const maelstroms: Maelstroms = makeMaelstroms(PIXI)
+      const maelstroms: Maelstroms = makeMaelstroms(PIXI, a.renderer)
       world.addChild(maelstroms.view)
 
       // ── WHERE SHE CAN TIE UP ──────────────────────────────────────
