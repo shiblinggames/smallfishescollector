@@ -473,6 +473,18 @@ export async function getGauntletDailyState(variant: GauntletVariant = 'davy'): 
   const runState = (profile?.gauntlet_run_state as GauntletRunState | null) ?? null
   const resumesUsed = (profile?.gauntlet_resumes_used as number | null) ?? 0
   const runPaused = profile?.gauntlet_run_paused === true
+  // ── A RUN OPEN WITH NO CHECKPOINT IS NOT A RUN ────────────────────────────
+  //
+  // startGauntletRun raises the flag with a null state, and the first
+  // checkpoint lands on the first turn. Close the tab in between and the flag
+  // is left up over nothing: the client never reconstructs a run, so nothing
+  // can resume it, and nothing in the UI can end it — yet it still locks the
+  // crew's berths (crew/actions reads the flag alone). By construction that
+  // run is unrecoverable, so the next look at the lobby lowers the flag.
+  // A paused run always has a state, so this can never touch one.
+  if (profile?.gauntlet_run_open === true && !runState) {
+    await admin.from('profiles').update({ gauntlet_run_open: false, gauntlet_run_paused: false }).eq('id', user.id)
+  }
   const canResume = profile?.gauntlet_run_open === true && openVariant === variant && !!runState && (runPaused || resumesUsed < 1)
   const resumeState = canResume ? runState : null
   const resumePaused = canResume && runPaused
