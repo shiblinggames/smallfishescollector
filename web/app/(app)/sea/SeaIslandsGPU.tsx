@@ -1109,8 +1109,16 @@ export default function SeaIslandsGPU({
         // camera. That turns a sixteen-hundred-mark sweep into a couple of
         // hundred.
         for (const cell of markCells.values()) {
-          const nearNow = cell.maxX > camX - halfW && cell.minX < camX + halfW
-            && cell.maxY > camY - halfH && cell.minY < camY + halfH
+          // HYSTERESIS, or a cell on the edge flaps. Waking and sleeping are
+          // each a structure change on the WORLD — a walk over everything in
+          // it — so a cell whose reach sits right at the viewport's edge must
+          // not toggle every few frames as the camera breathes. It wakes the
+          // moment it could be seen and sleeps only once it is a good way
+          // past that: a sailing camera crosses the wake line once per
+          // approach and the sleep line once per departure, never both.
+          const slack = cell.near ? 1400 : 0
+          const nearNow = cell.maxX > camX - halfW - slack && cell.minX < camX + halfW + slack
+            && cell.maxY > camY - halfH - slack && cell.minY < camY + halfH + slack
           if (!nearNow) {
             if (cell.near) {
               // Going out of reach: one pass to put the cell to sleep, and
