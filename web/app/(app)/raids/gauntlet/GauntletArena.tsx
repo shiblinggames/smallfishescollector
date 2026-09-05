@@ -98,7 +98,7 @@ export type ArenaHandle = {
   fightFx(e: FightFx): void
 }
 
-export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFlip, handle }: {
+export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFlip, enemyHidden, handle }: {
   theme: ArenaTheme
   /** Which depth this is. A change plays the fall — see fallRef. */
   depth: number
@@ -108,6 +108,12 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
   enemyUrl: string
   /** Whether the player's sprite is drawn mirrored — the ships table's own flag. */
   shipFlip?: boolean
+  /**
+   * Hold the enemy off the water. Set while you are still FALLING toward a
+   * depth: you ride the descent alone and she fades in as the fight opens,
+   * which is what makes an arrival read as an arrival.
+   */
+  enemyHidden?: boolean
   /** Filled in on mount; the fight reads it and calls into it. */
   handle: React.MutableRefObject<ArenaHandle | null>
 }) {
@@ -117,6 +123,8 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
   themeRef.current = theme
   const artRef = useRef({ shipUrl, enemyUrl, shipFlip: !!shipFlip })
   artRef.current = { shipUrl, enemyUrl, shipFlip: !!shipFlip }
+  const hiddenRef = useRef(!!enemyHidden)
+  hiddenRef.current = !!enemyHidden
   /** 1 the instant a new depth arrives, decayed by the frame loop. */
   const fallRef = useRef(0)
   const depthSeen = useRef(depth)
@@ -341,8 +349,11 @@ export default function GauntletArena({ theme, depth, shipUrl, enemyUrl, shipFli
           enemy.node.alpha = Math.max(0, enemy.node.alpha - dt * 0.8)
           enemy.node.y += dt * 26
           enemy.node.rotation -= dt * 0.22
-        } else if (enemy.node.alpha < 1) {
-          enemy.node.alpha = 1
+        } else {
+          // Eased both ways, so she does not blink out at the top of a descent
+          // and does not blink in at the bottom of one.
+          const want = hiddenRef.current ? 0 : 1
+          enemy.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, want - enemy.node.alpha))
         }
 
         // AND WHERE THEY ARE, for the fight to aim at. The box is the canvas's

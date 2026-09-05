@@ -4661,6 +4661,25 @@ export default function GauntletGame(props: GauntletGameProps) {
       const rise = donRiseCopy(d)
       return (
         <>
+        {/* ── THE FALL, ON THE SAME WATER YOU WILL FIGHT ON ─────────────
+            First child here AND first child of the fight's fragment, on
+            purpose: React reconciles a component's top-level children by
+            position, so this exact Application survives the phase change.
+            That is what turns a cut into a descent, and it is also why the
+            second WebGL context is created once per run rather than once per
+            depth. Keep it first in both, or it reloads. */}
+        {fight && (
+          <GauntletArena
+            key="arena"
+            theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun, !!fight.isBoss, hardcoreRun ? pressure : 0)}
+            depth={fight.depth}
+            shipUrl={props.shipImageUrl}
+            enemyUrl={fight.enemy.image}
+            // You fall alone. She is on the water by the time you land.
+            enemyHidden
+            handle={arenaRef}
+          />
+        )}
           <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 82% at 50% 58%, ${KRAKEN_DEEP}3a 0%, ${KRAKEN_DEEP}14 40%, transparent 70%)` }} />
           <div style={{ position: 'relative', zIndex: 1, minHeight: '62vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem 1.2rem' }}>
             <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 0.97, scale: 1 }} transition={{ duration: 1.4, ease: 'easeOut' }} style={{ position: 'relative', width: 190, height: 190 }}>
@@ -4688,6 +4707,25 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
     return (
       <>
+        {/* ── THE FALL, ON THE SAME WATER YOU WILL FIGHT ON ─────────────
+            First child here AND first child of the fight's fragment, on
+            purpose: React reconciles a component's top-level children by
+            position, so this exact Application survives the phase change.
+            That is what turns a cut into a descent, and it is also why the
+            second WebGL context is created once per run rather than once per
+            depth. Keep it first in both, or it reloads. */}
+        {fight && (
+          <GauntletArena
+            key="arena"
+            theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun, !!fight.isBoss, hardcoreRun ? pressure : 0)}
+            depth={fight.depth}
+            shipUrl={props.shipImageUrl}
+            enemyUrl={fight.enemy.image}
+            // You fall alone. She is on the water by the time you land.
+            enemyHidden
+            handle={arenaRef}
+          />
+        )}
         <div style={{
           position: 'relative', zIndex: 1, minHeight: '60vh',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -4796,6 +4834,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           already tuned for both descents. See GauntletArena for why a second
           Pixi Application is safe on this route and nowhere else. */}
       <GauntletArena
+        key="arena"
         theme={arenaTheme(fight.depth, props.variant ?? 'davy', hardcoreRun, !!fight.isBoss, hardcoreRun ? pressure : 0)}
         depth={fight.depth}
         // The hero art as the fight itself uses it: RaidCombat draws this
