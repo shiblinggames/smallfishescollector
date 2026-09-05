@@ -51,19 +51,19 @@ type Theme = {
   /** Which way the theme's motes go: up out of the eye, or down into it. */
   spirits: 'rise' | 'sink'
   /** The strike's character: a hard flash, or a slow pulse. */
-  strike: 'flash' | 'pulse'
+  strikeKind: 'flash' | 'pulse'
 }
 
 const THEMES: Record<Maelstrom['id'], Theme> = {
   // The art: electric teal over black, cyan-white foam, ghost light coming up.
   davy: {
     arm: 0x2fc9c0, wisp: 0x9af0ff, core: 0xd6fbff, eye: 0x27b3ab, foam: 0xd8fbff, spirit: 0xbdf7ff,
-    strike: 0xa0f4ff, speed: 0.5, spirits: 'rise', strike: 'flash',
+    strike: 0xa0f4ff, speed: 0.5, spirits: 'rise', strikeKind: 'flash',
   },
   // Finleone's ghost: drowned sea-green, pale verdigris, tarnished gold sinking.
   don: {
     arm: 0x62a688, wisp: 0xd6eadf, core: 0xf0ede8, eye: 0x3a7d62, foam: 0xcfe6d8, spirit: 0xe6c66e,
-    strike: 0xe9d08a, speed: 0.4, spirits: 'sink', strike: 'pulse',
+    strike: 0xe9d08a, speed: 0.4, spirits: 'sink', strikeKind: 'pulse',
   },
 }
 
@@ -277,18 +277,18 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js')): Maelstroms {
         // wakes them.
         o.nextStrike -= dt * (0.4 + 1.6 * gg)
         if (o.nextStrike <= 0 && g > 0.05) {
-          o.strikeLeft = th.strike === 'flash' ? 0.28 : 1.4
-          o.nextStrike = th.strike === 'flash' ? 1.6 + Math.random() * 3.4 : 2.4 + Math.random() * 2.6
+          o.strikeLeft = th.strikeKind === 'flash' ? 0.28 : 1.4
+          o.nextStrike = th.strikeKind === 'flash' ? 1.6 + Math.random() * 3.4 : 2.4 + Math.random() * 2.6
         }
         if (o.strikeLeft > 0) {
           o.strikeLeft -= dt
-          const total = th.strike === 'flash' ? 0.28 : 1.4
+          const total = th.strikeKind === 'flash' ? 0.28 : 1.4
           const u = 1 - o.strikeLeft / total
-          const env = th.strike === 'flash'
+          const env = th.strikeKind === 'flash'
             ? (u < 0.15 ? u / 0.15 : Math.pow(1 - (u - 0.15) / 0.85, 2.2))
             : Math.sin(u * Math.PI)
-          o.strike.alpha = env * (th.strike === 'flash' ? 0.8 : 0.42) * (0.5 + 0.5 * g) * lit
-          o.strike.scale.set((m.r * (th.strike === 'flash' ? 1.9 : 1.5) / 256) * (1 + 0.3 * u))
+          o.strike.alpha = env * (th.strikeKind === 'flash' ? 0.8 : 0.42) * (0.5 + 0.5 * g) * lit
+          o.strike.scale.set((m.r * (th.strikeKind === 'flash' ? 1.9 : 1.5) / 256) * (1 + 0.3 * u))
         } else if (o.strike.alpha) {
           o.strike.alpha = 0
         }
