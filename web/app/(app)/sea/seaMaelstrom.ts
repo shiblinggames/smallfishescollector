@@ -192,7 +192,10 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // ── THE FLAT COMPOSITION, in texture space, centred at 256,256 ─────
     const flatDark: Container = new PIXI.Container()
     flatDark.position.set(TEX / 2, TEX / 2)
-    const storm = sprite(holeTex!, R * 2.4, 0x000000, 0)
+    // 2.0R, and it grows to 2.4 at most: the texture is 2.56R across, and a
+    // gradient that reaches the texture's edge before it reaches zero draws
+    // the edge — a straight line across the sea where the storm was clipped.
+    const storm = sprite(holeTex!, R * 2.0, 0x000000, 0)
     const funnel = sprite(holeTex!, R * 2.1, 0x000000, 0.7)
     const hole = sprite(holeTex!, R * 0.5, 0x000000, 0.96)
     flatDark.addChild(storm, funnel, hole)
@@ -291,7 +294,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
 
         // THE SEA GOES DARK AROUND IT as you come.
         o.storm.alpha = 0.75 * gg
-        o.storm.scale.set((R * (2.4 + 0.5 * gg) / 256))
+        o.storm.scale.set((R * (2.0 + 0.4 * gg) / 256))
 
         // THE ARMS TURN, inner faster than outer, and all of them faster the
         // nearer you are.
