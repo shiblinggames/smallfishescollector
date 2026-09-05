@@ -443,11 +443,16 @@ void main(void) {
   // behind.
   //
   // Half a step either way. Enough to destroy a contour, far too little to see.
-  float d0 = hash(gl_FragCoord.xy);
-  float d1 = hash(gl_FragCoord.xy + vec2(17.31, 91.7));
-  col += (d0 + d1 - 1.0) / 255.0;
-
-  // ── AND BREAK THE BANDS ───────────────────────────────────────────
+  //
+  // ONE BLOCK, AND IT USED TO BE TWO. This dither was pasted in twice, and the
+  // second copy had been renamed to dd1 precisely because d1 is already the
+  // swell's first noise octave further up this same function - so the first
+  // copy redefined it and the FRAGMENT SHADER STOPPED COMPILING. The sea
+  // went on looking right because its colour is a CSS gradient and its waves
+  // are DOM tile layers; this shader is the layer on top of those, and a layer
+  // that silently fails to build is a layer nobody misses until something
+  // (the gauntlet arena) tries to use it as the only sea in the room.
+  //
   //
   // Separate from the stripes above, and worth having anyway. An eight-bit
   // channel holds 256 steps, and golden hour ramps a very strong colour across
