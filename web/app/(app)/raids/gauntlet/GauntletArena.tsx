@@ -53,6 +53,7 @@ import { makeWater, rgb3 } from '@/app/(app)/sea/seaWater'
 import { makeGunFx, type GunFx, type ImpactKind } from '@/app/(app)/sea/seaGunFx'
 import { makeAbilityFx, type AbilityFx } from '@/app/(app)/sea/seaAbilityFx'
 import { GROUND } from '@/app/(app)/sea/islandArt'
+import { texture } from '@/app/(app)/sea/skiffArt'
 import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 
 /**
@@ -172,13 +173,20 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
       // Plain sprites in the world. The fight poses them through `shipFx`; it
       // never positions them, because where a hull SITS is the arena's business
       // and what is happening TO her is the fight's.
+      // TEXTURE.FROM DOES NOT LOAD A URL. In Pixi v8 it reads the cache; hand
+      // it a path and you get an empty texture and a sprite that draws
+      // nothing, which is exactly what the first cut of this did. The chart
+      // has its own loader for precisely this reason — a plain Image and
+      // decode(), which resolves when the bitmap is ready to PAINT — and it
+      // caches, so the two renderers share one copy of a hull.
       const mkHull = (url: string, flip: boolean) => {
         const node = new PIXI.Container()
-        const sp = new PIXI.Sprite(PIXI.Texture.from(url))
+        const sp = new PIXI.Sprite(PIXI.Texture.EMPTY)
         sp.anchor.set(0.5)
         if (flip) sp.scale.x = -1
         node.addChild(sp)
         world.addChild(node)
+        void texture(PIXI, url).then(tex => { if (!dead) sp.texture = tex }).catch(() => {})
         return { node, sp }
       }
       const art = artRef.current
@@ -278,15 +286,21 @@ export default function GauntletArena({ theme, shipUrl, enemyUrl, shipFlip, hand
         // two nodes came from the fight through `shipFx`.
         const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
         const pf = pose.player, ef = pose.enemy
-        player.sp.width = pw
-        player.sp.height = pw * (player.sp.texture.height / Math.max(1, player.sp.texture.width))
+        // Sized only once the real bitmap is in: an empty texture is 1x1 and
+        // would fix the aspect at a square before the art arrives.
+        if (player.sp.texture.width > 2) {
+          player.sp.width = pw
+          player.sp.height = pw * (player.sp.texture.height / player.sp.texture.width)
+        }
         if (art.shipFlip) player.sp.scale.x = -Math.abs(player.sp.scale.x)
         player.node.x = P.x + (pf?.x ?? 0)
         player.node.y = P.y + (pf?.y ?? 0) + bob
         player.node.rotation = ((pf?.rot ?? 0) * Math.PI) / 180
 
-        enemy.sp.width = ew
-        enemy.sp.height = ew * (enemy.sp.texture.height / Math.max(1, enemy.sp.texture.width))
+        if (enemy.sp.texture.width > 2) {
+          enemy.sp.width = ew
+          enemy.sp.height = ew * (enemy.sp.texture.height / enemy.sp.texture.width)
+        }
         enemy.node.x = E.x + (ef?.x ?? 0)
         enemy.node.y = E.y + (ef?.y ?? 0) - bob * 0.6
         enemy.node.rotation = ((ef?.rot ?? 0) * Math.PI) / 180
