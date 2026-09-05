@@ -19,6 +19,7 @@ import {
 } from '@/lib/gauntletMotion'
 import RaidCombat from '../RaidCombat'
 import GauntletArena, { type ArenaHandle, type ArenaTheme } from './GauntletArena'
+import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
 import { getShipSkin } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
 import { fortuneLootMult } from '@/lib/expeditions'
@@ -670,6 +671,15 @@ export default function GauntletGame(props: GauntletGameProps) {
    * and from timeouts, and neither should re-render this component.
    */
   const arenaRef = useRef<ArenaHandle | null>(null)
+  /**
+   * ── THE SLIPWAY ──────────────────────────────────────────────────────────
+   *
+   * The lobby is the water now. `slipNear` is whichever place the hull is
+   * alongside, which is the only thing the helm button needs to know, and
+   * `ledgerOpen` holds the old card stack, kept whole, one tap behind the sea.
+   */
+  const [slipNear, setSlipNear] = useState<string | null>(null)
+  const [ledgerOpen, setLedgerOpen] = useState(false)
 
   // Fun run telemetry — folded from RaidCombat's onStat deltas across the dive.
   const runStatsRef = useRef<GauntletRunStats>(emptyRunStats())
@@ -2267,19 +2277,136 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   if (phase === 'intro') {
+    // THE DOORS THIS CAPTAIN HAS. Both shops are real places; the way down is
+    // the vortex. The Codex is deliberately NOT one of them — it lives in the
+    // HUD, because it is something you consult, not somewhere you sail.
+    const slipPlaces: SlipwayPlace[] = [
+      { id: 'portal', label: 'The Descent', x: 0.5, y: 0.3, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
+      { id: 'run', label: 'Run Upgrades', x: 0.19, y: 0.5, color: 0xc4a0e8 },
+      { id: 'shore', label: 'Permanent Upgrades', x: 0.81, y: 0.5, color: 0xf0c040 },
+      { id: 'ledger', label: 'The Ledger', x: 0.5, y: 0.82, color: 0xa8b8d0 },
+    ]
+    const slipLabel = slipPlaces.find(pl => pl.id === slipNear)?.label ?? null
+    const moor = () => {
+      vibrate([0, 12])
+      if (slipNear === 'run') setShopSection('run')
+      else if (slipNear === 'shore') setShopSection('shore')
+      else if (slipNear === 'ledger') setLedgerOpen(true)
+    }
     return (
       <>
+        {/* ── THE HUB IS THE WATER ─────────────────────────────────────────
+            Arriving at a descent is arriving somewhere. Every place on this
+            sea opens a panel that already existed, and sailing into the
+            vortex opens the SAME descent chooser the cards open, so the rule
+            that starting a run consumes the attempt is reached by exactly
+            the path it always was. Nothing about entry moved. */}
+        <GauntletSlipway
+          theme={{
+            sea: isDonG ? ['#04120f', '#0e2b22', '#2c6350'] : ['#04121a', '#0c2e34', '#22707a'],
+            dark: 0.36,
+            key: isDonG ? 0xe6c66e : 0x6fe4d8,
+          }}
+          places={slipPlaces}
+          shipUrl={props.shipImageUrl}
+          onNear={setSlipNear}
+          onEnterPortal={() => setModeChoiceOpen(true)}
+        />
+
+        {/* THE HELM. One button saying the one thing you can do from where
+            you are floating, which is the chart's own idiom and the reason
+            the sea itself needs no labels painted across it. */}
+        {!ledgerOpen && slipLabel && slipNear !== 'portal' && (
+          <motion.button type="button" onClick={moor} className="tap"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            style={{
+              position: 'fixed', left: '50%', translateX: '-50%',
+              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 74px)', zIndex: 6,
+              padding: '0.66rem 1.5rem', borderRadius: 999, cursor: 'pointer',
+              background: 'linear-gradient(180deg, rgba(16,24,38,0.96), rgba(6,11,19,0.96))',
+              border: `1px solid ${AC}66`, color: '#f4efe4',
+              boxShadow: `0 8px 26px rgba(0,0,0,0.6), 0 0 18px ${AC}22`,
+            }}>
+            <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.06em' }}>{slipLabel}</span>
+          </motion.button>
+        )}
+
+        {/* WHERE YOU ARE, AND WHAT YOU ARE HOLDING. The name of the tower
+            and the purse, top-left, because the water underneath says
+            neither. Kept to two lines: everything else is a place now. */}
+        {!ledgerOpen && (
+          <div style={{ position: 'fixed', left: 12, top: 'calc(env(safe-area-inset-top, 0px) + 64px)', zIndex: 6, display: 'grid', gap: 8, justifyItems: 'start', pointerEvents: 'none' }}>
+            <h1 className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f3ead2', lineHeight: 1.06, textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>
+              {gauntletTitle}
+            </h1>
+            <div style={{ display: 'flex', gap: 7, pointerEvents: 'auto' }}>
+              <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?" className="active:scale-95"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.24rem 0.6rem 0.24rem 0.48rem', borderRadius: 999, cursor: 'pointer',
+                  background: `linear-gradient(180deg, ${AC}26, rgba(6,10,16,0.82))`, border: `1px solid ${AC}55` }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.84rem', color: AC, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
+              </button>
+              {(bloodGemsNow > 0 || props.hardcoreUnlocked) && (
+                <button onClick={() => setInfoCurrency('blood')} title="What are Blood Gems?" className="active:scale-95"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.24rem 0.6rem 0.24rem 0.48rem', borderRadius: 999, cursor: 'pointer',
+                    background: 'linear-gradient(180deg, rgba(224,85,90,0.24), rgba(6,10,16,0.82))', border: '1px solid rgba(224,85,90,0.5)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e0555a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3 4 9.5 12 21l8-11.5z" /><path d="M4 9.5h16" /></svg>
+                  <span className="font-cinzel font-800" style={{ fontSize: '0.84rem', color: '#f0a5a8', lineHeight: 1 }}>{fmt(bloodGemsNow)}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* THE HUD. The Codex always to hand, and the way back into the old
+            lobby for everything the water has no place for. */}
+        {!ledgerOpen && (
+          <div style={{ position: 'fixed', right: 10, top: 'calc(env(safe-area-inset-top, 0px) + 64px)', zIndex: 6, display: 'grid', gap: 8, justifyItems: 'end' }}>
+            <button type="button" onClick={() => setSynergiesOpen(true)} className="tap"
+              aria-label="Codex"
+              style={{ width: 42, height: 42, borderRadius: 13, cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#b98bff',
+                background: 'linear-gradient(180deg, rgba(185,139,255,0.16), rgba(8,12,20,0.82))', border: '1px solid rgba(185,139,255,0.5)' }}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" />
+              </svg>
+            </button>
+            <button type="button" onClick={() => setLedgerOpen(true)} className="tap"
+              aria-label="The Ledger"
+              style={{ width: 42, height: 42, borderRadius: 13, cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#c2bcae',
+                background: 'linear-gradient(180deg, rgba(194,188,174,0.14), rgba(8,12,20,0.82))', border: '1px solid rgba(194,188,174,0.4)' }}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M8 8h7" /><path d="M8 12h7" />
+              </svg>
+            </button>
+          </div>
+        )}
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just
             above the bar. No safe-area inset (the bar already sits at bottom:0,
             so the inset was pure excess — the old relic that stacked to ~120px
             on an iPhone PWA). On sm+ the bar is hidden, so drop to a small pad. */}
+        {/* ── THE LEDGER ───────────────────────────────────────────────────
+            Everything the lobby used to be, moved one tap away rather than
+            rebuilt: the ranks, the records, the rules, the descent cards. The
+            sea is the front door and this is still the room behind it, so
+            nothing in here had to change for the water to become primary. */}
+        {ledgerOpen && (
         <div
           className="pb-10 sm:pb-6"
           style={{
-            position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
-            paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
+            position: 'fixed', inset: 0, zIndex: 20, overflowY: 'auto',
+            background: 'linear-gradient(180deg, rgba(4,8,14,0.96), rgba(2,5,9,0.985))',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)',
+            paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
           }}>
+          <div style={{ maxWidth: 460, margin: '0 auto' }}>
+          <button type="button" onClick={() => setLedgerOpen(false)} className="tap"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto',
+              padding: '0.34rem 0.72rem', borderRadius: 999, cursor: 'pointer',
+              background: 'rgba(12,20,32,0.9)', border: '1px solid rgba(194,188,174,0.34)', color: '#c2bcae' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 6l-6 6 6 6" /></svg>
+            <span className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.14em' }}>Back to the water</span>
+          </button>
           {/* Title — a rich picker when the player has BOTH gauntlets unlocked,
               otherwise a plain heading. */}
           {props.otherGauntletUnlocked ? (
@@ -2629,7 +2756,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
 
           <BackLink router={router} label="Not today" />
+          </div>
         </div>
+        )}
         {introOpen && <GauntletIntroModal variant={props.variant} onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {lootMode && <LootModal mode={lootMode} don={isDonG} totalFortune={props.totalFortune} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} don={isDonG} onClose={() => setInfoCurrency(null)} />}
