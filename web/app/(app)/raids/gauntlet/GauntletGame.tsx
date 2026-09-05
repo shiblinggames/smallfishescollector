@@ -2280,13 +2280,30 @@ export default function GauntletGame(props: GauntletGameProps) {
     // THE DOORS THIS CAPTAIN HAS. Both shops are real places; the way down is
     // the vortex. The Codex is deliberately NOT one of them — it lives in the
     // HUD, because it is something you consult, not somewhere you sail.
+    //
+    // The ring colours say what a place DOES and are the same in both towers:
+    // purple is the run shop and gold the permanent one, exactly as the old
+    // tiles were. Only the water and the vortex carry the variant, because
+    // that is the part that is flavour rather than function.
     const slipPlaces: SlipwayPlace[] = [
       { id: 'portal', label: 'The Descent', x: 0.5, y: 0.34, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
-      { id: 'run', label: 'Run Upgrades', x: 0.19, y: 0.5, color: 0xc4a0e8 },
-      { id: 'shore', label: 'Permanent Upgrades', x: 0.81, y: 0.5, color: 0xf0c040 },
-      { id: 'ledger', label: 'The Ledger', x: 0.5, y: 0.82, color: 0xa8b8d0 },
+      { id: 'run', label: 'Run Upgrades', x: 0.16, y: 0.54, color: 0xc4a0e8 },
+      { id: 'shore', label: 'Permanent Upgrades', x: 0.84, y: 0.54, color: 0xf0c040 },
+      { id: 'records', label: 'The Records', x: 0.22, y: 0.76, color: 0x9ab8c8 },
+      { id: 'ledger', label: 'The Ledger', x: 0.78, y: 0.76, color: 0xa8b8d0 },
     ]
     const slipLabel = slipPlaces.find(pl => pl.id === slipNear)?.label ?? null
+    // Defined once because two different components render it: our own moor
+    // button, and the leaderboard's trigger.
+    const helmStyle: React.CSSProperties = {
+      position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+      bottom: 'calc(env(safe-area-inset-bottom, 0px) + 74px)', zIndex: 6,
+      padding: '0.66rem 1.5rem', borderRadius: 999, cursor: 'pointer',
+      background: 'linear-gradient(180deg, rgba(16,24,38,0.96), rgba(6,11,19,0.96))',
+      border: `1px solid ${AC}66`, color: '#f4efe4',
+      boxShadow: `0 8px 26px rgba(0,0,0,0.6), 0 0 18px ${AC}22`,
+      fontSize: '0.78rem', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+    }
     const moor = () => {
       vibrate([0, 12])
       if (slipNear === 'run') setShopSection('run')
@@ -2313,22 +2330,24 @@ export default function GauntletGame(props: GauntletGameProps) {
           onEnterPortal={() => setModeChoiceOpen(true)}
         />
 
-        {/* THE HELM. One button saying the one thing you can do from where
-            you are floating, which is the chart's own idiom and the reason
-            the sea itself needs no labels painted across it. */}
-        {!ledgerOpen && slipLabel && slipNear !== 'portal' && (
-          <motion.button type="button" onClick={moor} className="tap"
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            style={{
-              position: 'fixed', left: '50%', translateX: '-50%',
-              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 74px)', zIndex: 6,
-              padding: '0.66rem 1.5rem', borderRadius: 999, cursor: 'pointer',
-              background: 'linear-gradient(180deg, rgba(16,24,38,0.96), rgba(6,11,19,0.96))',
-              border: `1px solid ${AC}66`, color: '#f4efe4',
-              boxShadow: `0 8px 26px rgba(0,0,0,0.6), 0 0 18px ${AC}22`,
-            }}>
-            <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.06em' }}>{slipLabel}</span>
-          </motion.button>
+        {/* ── THE HELM ─────────────────────────────────────────────────────
+            One button saying the one thing you can do from where you are
+            floating, which is the chart's own idiom and the reason the sea
+            itself needs no labels painted across it.
+
+            The Records fill that button with the leaderboard's OWN trigger
+            rather than a button of ours that opens it. `LeaderboardModal`
+            renders its trigger and owns its open state, so styling that
+            trigger as the helm is the whole integration. */}
+        {!ledgerOpen && slipNear === 'records' && (
+          <LeaderboardModal
+            boards={isDonG ? ['gauntletDonsDepth', 'gauntletDonsHardcore', 'gauntletBigHit'] : ['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']}
+            title={gauntletTitle} label="The Records" triggerStyle={helmStyle} />
+        )}
+        {!ledgerOpen && slipLabel && slipNear !== 'portal' && slipNear !== 'records' && (
+          <button type="button" onClick={moor} className="tap font-cinzel font-800 uppercase" style={helmStyle}>
+            {slipLabel}
+          </button>
         )}
 
         {/* ── THE HUD ──────────────────────────────────────────────────────

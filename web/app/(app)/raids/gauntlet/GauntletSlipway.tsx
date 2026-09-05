@@ -239,7 +239,7 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
       void texture(PIXI, shipUrl).then(t => { if (!dead) hull.texture = t }).catch(() => {})
 
       // Where she is and where she is going, both in screen pixels.
-      const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.72 }
+      const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.64 }
       const target = { x: pos.x, y: pos.y }
       let facing = 1
       let nearNow: string | null = null
