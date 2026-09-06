@@ -379,62 +379,84 @@ export const FOLK: Folk[] = [
     onPlain: "For me? Go on then. I will find a use for it.",
   },
   {
-    id: 'pell', name: 'Bent Pell', short: 'Pell', zoneId: 'open_waters', buys: false,
-    greeting: "What.",
-    face: { characterColor: 'blue', hat: 'gray', bg: '#0c1620', ring: '#7fa8c8', mirrored: true },
-    role: 'Someone to know', accent: '#7fa8c8',
-    blurb: 'Short with everybody, and it is genuinely nothing personal.',
-    // The fastest thing in his water, for the one who cannot stand waiting.
-    favourite: { id: 22, name: 'Wahoo' },
+    // THE ID IS THE STORAGE KEY. He was Bent Pell until 2026-09, and every
+    // captain's standing with him lives in sea_rapport under 'pell'. The name
+    // changed; the friendship did not, so the key stays.
+    id: 'pell', name: 'Matty', short: 'Matty', zoneId: 'open_waters', buys: false,
+    greeting: "Dude. Duuude. Okay. Hey.",
+    face: { characterColor: 'blue', hat: 'black', bg: '#0b1420', ring: '#4fc3f7', mirrored: true },
+    role: 'Someone to know', accent: '#4fc3f7',
+    blurb: 'Cashed out of tech, bought a boat, and has a position in everything, including you.',
+    // The one fish in his water that ever sold for millions at an auction. He
+    // will tell you the number. He will tell you the number more than once.
+    favourite: { id: 60, name: 'Atlantic Bluefin Tuna' },
+    // HE TALKS LIKE HE TALKS.
+    //
+    // Matty is a real person, like Yoon, and this is really how he speaks: a
+    // millennial who worked in tech, invests in stocks, and gambles like it is
+    // a personality. So he is the second voice out here written in a
+    // different register on purpose. Contractions, "like", "okay so", and the
+    // vocabulary of three worlds he never left: standups and reorgs and
+    // pinging, positions and dips and diamond hands, the Den and the Catfish
+    // Jackpot and being up if you count from Tuesday.
+    //
+    // DUDE IS THE LOAD-BEARING ONE. It opens about half his lines and lands
+    // inside most of the rest. It is not slang sprinkled over the house
+    // voice; he says "dude" the way Yoon says "gyattt", as the reaction that
+    // starts a thought. Do not quietly formalise any of this later.
+    //
+    // The gap between how he talks and what he is actually saying IS the
+    // character. Under the jokes he got laid off, told everyone it was a
+    // sabbatical, and is out here deciding whether to go back.
     lines: [
       [
-        "Fish don't keep and neither does my patience. Coin now, or row it home yourself.",
-        "You are drifting. Say what you came to say or let me get on.",
-        "Everybody out here has a story. I am buying fish.",
+        "Dude. You're the first boat I've seen all day that isn't, like, a whole fleet. Hey.",
+        "Dude, I'm not selling anything. I'm just out here. It's a whole thing, don't worry about it.",
+        "Middle of the ocean and my phone still gets one bar. Dude. That's the real miracle out here.",
       ],
       [
-        "You again. Fine. You are quick, I will give you that.",
-        "Most captains waste a minute of my day. You waste about forty seconds. That is nearly respect.",
-        "Do not take the short way past the reef in a swell. That is free, and it is all you are getting.",
-        "A wahoo. That is the one. Fastest thing in this water and I have never once been bored watching one come in. Do not read anything into that.",
+        "Dude, you came back. Nobody comes back to the middle band. The middle band is the index fund of oceans. Boring, but it compounds.",
+        "Okay so I used to work in tech. Now my portfolio is fish. Dude. I'm doing great. I'm doing so great.",
+        "Watch the shipping lanes. Where the freight goes, the fish go, and where the fish go is basically insider information. Dude. Legally.",
+        "A bluefin. Dude. One of those sold for three million at an auction once. Three million. For a fish. If you ever land one, bring it here and let me just look at it.",
       ],
       [
-        "Sit if you are sitting. Do not hover. Hovering is worse than talking.",
-        "I am not short with you because I dislike you. I am short with everyone. It saves an enormous amount of time.",
-        "You have a good eye for weather. I have watched you turn back twice before it got bad, and both times it got bad.",
-        "You have started saying less to me. I have noticed and I approve.",
+        "Dude, don't tell anyone, but I've got a system at the Den. It's not a system. It's a feeling. Feelings are a system.",
+        "I'm up, by the way. Technically. If you count from Tuesday and don't count Wednesday. Dude, that's just how you count.",
+        "You fish like someone who reads the water. I trade like someone who reads the vibe. One of us is going to be fine and dude, I think it's you.",
+        "Dude, I used to do standups every morning. Fifteen minutes of people saying no blockers. Out here my standup is the sunrise and there are, like, zero blockers.",
       ],
       [
-        "I talked slower once. Had a boat, a partner and half this water. Now I have the water.",
-        "Everyone thinks the middle band is the boring one. The middle band is where the shipping went, and where shipping goes, coin follows.",
-        "Ask me a thing. Quick, while I am in the mood, because I will not be in a minute.",
-        "Everyone out here wants to tell me about the one that got away. You have never once done that.",
-        "There is a bank two hours south that nobody works because it is two hours south. Think about that and then go.",
+        "Okay. Real talk. I didn't quit. Dude, I got laid off. The boat was the severance. I told everyone it was a sabbatical because sabbatical sounds like a choice.",
+        "I had this one stock, dude. Everything in it. Diamond hands, right? The hands were diamond. The stock was not.",
+        "The Den's the only place out here that feels like a Slack channel at midnight. Everybody wired, everybody pretending it's fine. Dude, I miss it and I hate that I miss it.",
+        "Dude, when I said the middle band compounds? I meant it. Nobody works it because it's not deep and it's not close. Which means it's yours.",
+        "You never once asked me for a tip. Everyone asks the tech guy for a tip. Dude, that's why you get the real one: there is no tip. There's just showing up.",
       ],
       [
-        "I will say this once and then never again: I look for your sail. Do not make it a whole thing.",
-        "That partner I mentioned. He went out past the shelf and did not come back, and I have bought fish in the same spot every day since in case he does.",
-        "You are the only captain I do not hurry. Work out what that is worth and do not tell anyone.",
-        "I was not always like this. I do not want to talk about it. I am saying it so you know it is not you.",
-        "If you are ever out here and something has gone badly wrong, come to me first. I am quick. That is the whole of what I am good for.",
+        "Dude. I set a stop-loss on myself. One more year out here, then I go back and get a real job. If I blow through it, you're allowed to say something. You're the only one who's allowed.",
+        "I catch myself doing the math on the Catfish Jackpot at, like, three in the morning. Dude. If you ever see my boat by the Den after dark, come get me. I'm serious.",
+        "You're the best position I've got. Dude, I know how that sounds. I'm keeping it.",
+        "My mom thinks I'm a fisherman now. I let her. Dude, out of everything I've told people out here, that's the one that's actually kind of true.",
+        "When I go back, and I will, I'm going to be in some meeting and somebody's going to say circle back and I'm going to think about this exact spot. Dude. Don't let anyone anchor here.",
       ],
     ],
     afterMax: [
-      "Still looking for your sail. Still not making a thing of it.",
-      "I said I was quick. I have never told you what I am slow at. Ask me sometime and I might.",
-      "You did not come yesterday. I noticed at about the hour you usually do. That is all I am saying.",
-      "I have started leaving the good spot on the rail clear. It is not for you. It is for you.",
-      "Nothing has gone badly wrong yet. I keep being ready anyway. Old habit, and a useful one.",
+      "Still under the stop-loss, dude. Barely. Don't check my math.",
+      "I didn't go to the Den last night. Dude, I'm not saying it for a gold star. Okay, I'm a little bit saying it for a gold star.",
+      "Bluefin went for how much this week? Dude. Don't tell me. Actually tell me.",
+      "You're on the water more than I am now. Dude, I think you might actually be the fisherman in this friendship.",
+      "Every time I see your sail I check my one bar to see if the market's open. Then I remember I don't care. Dude, that's growth.",
     ],
     tierUp: [
-      "Right. You are not a stranger. You are a nuisance I recognise. Progress.",
-      "You get the good rate and the short version. Both are compliments.",
-      "Go on then, ask your questions. I have decided you are worth the minute.",
-      "I do not have friends out here. I have you, and that is a thing I will be sorting out in my own time.",
+      "Dude. Okay. You've got a name now. That's, like, a meaningful upgrade to the relationship.",
+      "You're in the group chat. There is no group chat. Dude, you're in it.",
+      "Alright, I'm going to tell you stuff I don't tell the boats that just pass through. Dude, brace.",
+      "Dude. You're the one person out here I'd actually text back. I don't have service. It's the principle.",
     ],
-    onLoved: "Now you are talking. That is a proper fish and you knew it when you brought it.",
-    onLiked: "That will do. That will do nicely, actually. Do not make a fuss.",
-    onPlain: "Right. Yes. Thank you. Now go and catch something.",
+    onLoved: "DUDE. Dude. That's a bluefin. That's a house. That's a HOUSE, and you brought it to me. Sit down. I need a minute.",
+    onLiked: "Dude, nice. That's a solid hold. Clean entry, clean exit.",
+    onPlain: "Dude, thanks. Genuinely. I'm going to eat this and it's going to be a whole thing.",
   },
   {
     id: 'marlow', name: 'Old Marlow', short: 'Marlow', zoneId: 'deep', buys: false,
@@ -931,24 +953,24 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
   ],
   pell: [
     [
-      { you: 'Quick sale?', they: 'Fastest out here. That is not a boast, it is the only thing I sell.' },
-      { you: 'Bad day?', they: 'Every day. Next question.' },
+      { you: 'What are you doing out here?', they: 'Dude, great question. Taking a break. From what is a longer conversation.' },
+      { you: 'Do you fish?', they: 'I own a rod. Dude, I own a lot of things I don\'t use.' },
     ],
     [
-      { you: 'Why so fast?', they: 'Because slow is how you end up holding a hold full of yesterday.' },
-      { you: 'Anyone else about?', they: 'Three boats north, one of them lost. Not my problem, or yours.' },
+      { you: 'What did you do in tech?', they: 'Backend, mostly. Dude, I made the thing that made the other thing load slower.' },
+      { you: 'Why the middle band?', they: 'It\'s the index fund of the ocean. Nobody brags about it and it quietly wins.' },
     ],
     [
-      { you: 'Do you ever stop?', they: 'When the light goes. Then I sit and I talk to nobody. Best hour of the day.' },
-      { you: 'Worst catch you have ever bought?', they: 'A hold of weed and one boot. He was very proud of the boot.' },
+      { you: 'Are you up or down?', they: 'Dude. Up. If we use my numbers. I use my numbers.' },
+      { you: 'Do you actually like it out here?', they: 'I like that nobody\'s pinging me. Dude, the silence still freaks me out a little.' },
     ],
     [
-      { you: 'Who were you before this?', they: 'Somebody with a partner and half this water. Ask me the other half another time.' },
-      { you: 'Do you even like the work?', they: 'I am good at it. Liking it was never part of the arrangement.' },
+      { you: 'What happened with the job?', they: 'Reorg. Dude, that word covers a lot. My whole team, one Tuesday, one calendar invite.' },
+      { you: 'What was the stock?', they: 'Doesn\'t matter. Dude, it does matter. I\'m not saying it out loud on the water.' },
     ],
     [
-      { you: 'Tell me about him.', they: 'Slowest hand I ever sailed with. Never once beat him to a fish.' },
-      { you: 'Do you still wait?', they: 'Same spot, same hour, every day. Draw your own conclusion and do not say it out loud.' },
+      { you: 'Are you going back?', they: 'One more year. Stop-loss. Dude, hold me to it, I mean it.' },
+      { you: 'What would you do differently?', they: 'Buy the boat first. Dude, everything after that was fine.' },
     ],
   ],
   marlow: [

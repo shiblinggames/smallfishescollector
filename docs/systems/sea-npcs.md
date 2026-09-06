@@ -173,6 +173,15 @@ waiting on a round trip. A roster of
 strangers is homework: it says there are eight more people out there and nothing about any
 of them, turning a thing you discover into a thing you are behind on.
 
+**Matty talks like Matty.** He was Bent Pell (Open Waters) until September 2026 and is
+now based on a real friend, the way Yoon is: a millennial who worked in tech, invests in
+stocks and gambles like it is a personality. "Dude" is his load-bearing tic, opening about
+half his lines; under it he got laid off, called it a sabbatical, bought the boat with the
+severance and is deciding whether to go back. His favourite is the Atlantic Bluefin Tuna,
+because one once sold for millions at auction and he will tell you the number. His storage
+id is still `pell`, so every captain's standing with him carried over. Keep the register
+if his lines are ever extended, and keep the id.
+
 **Yoon talks like Yoon.** He is based on a real person and the slang is really his:
 sheeeeesh, locked in, gucci, betty johnson, gyattt. He is deliberately the one voice that
 breaks the sea's register, and the Locked-In Rod is named after the way he says it rather

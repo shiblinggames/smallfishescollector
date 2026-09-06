@@ -648,7 +648,7 @@ export const SOCIALS: {
   { folkId: 'meg', zoneId: 'shallows', name: 'Meg',
     line: "I kept the scale on this water for thirty years. Sit down anyway.",
     x: 1416, y: 2181 },
-  { folkId: 'pell', zoneId: 'open_waters', name: 'Pell',
+  { folkId: 'pell', zoneId: 'open_waters', name: 'Matty',
     line: "Fish don't keep and neither does my patience. Say something.",
     x: 559, y: 5321 },
   { folkId: 'marlow', zoneId: 'deep', name: 'Marlow',

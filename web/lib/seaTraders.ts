@@ -230,8 +230,9 @@ const NAMES_FIRST = [
   'Half', 'Crooked', 'Squint', 'Grey', 'Tallow', 'Hollow',
 ]
 // NO SURNAME HERE MAY BE A REGULAR'S SHORT NAME. The nine you can befriend now
-// go by one name each (see `short` in lib/seaFolk.ts), and six of those - Meg,
-// Corrin, Pell, Marlow, Fitch, Nance - were drawn from this very list, because
+// go by one name each (see `short` in lib/seaFolk.ts), and five of those - Meg,
+// Corrin, Marlow, Fitch, Nance - were drawn from this very list (Pell was too,
+// before he became Matty), because
 // their full names were built out of it. Leaving them in meant a randomly
 // rolled buyer could sail up calling herself Grey Nance while your friend Nance
 // was moored two waters south. Replaced rather than deleted, so the pool keeps
