@@ -50,9 +50,15 @@ export type SlipwayPlace = {
   id: string
   /** What the helm says when you are alongside. */
   label: string
-  /** Fractions of the viewport. */
-  x: number
-  y: number
+  /**
+   * Offsets from the CENTRE of the viewport, in units of its short side.
+   * Desktop-first: a fraction of the viewport spreads a phone's layout across
+   * a wide screen and leaves empty water between everything; an offset in
+   * short-side units keeps the same diorama at every size, with the margins
+   * of a wide screen given to the water rather than to the layout.
+   */
+  ox: number
+  oy: number
   /** The way down: the maelstrom is drawn here and entered rather than moored at. */
   portal?: boolean
   color: number
@@ -64,8 +70,8 @@ export type SlipwayTheme = {
   key: number
 }
 
-/** How close, in screen pixels, counts as alongside. */
-const REACH = 96
+/** How close counts as alongside, in units of the viewport's short side. */
+const REACH_U = 0.22
 
 type Texture = import('pixi.js').Texture
 
@@ -240,7 +246,8 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
 
       world.addChild(weather.air, scenery.near)
 
-      const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.74 }
+      const u0 = Math.min(app.screen.width, app.screen.height)
+      const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.5 + u0 * 0.26 }
       const target = { x: pos.x, y: pos.y }
       let facing = 1
       let nearNow: string | null = null
@@ -268,6 +275,12 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
         t += dt
         const W = app.screen.width, H = app.screen.height
         const th = themeRef.current
+        // THE STAGE. Everything is placed from the centre in units of the
+        // short side, so a phone and a desktop see the same composition.
+        const u = Math.min(W, H)
+        const cx = W / 2, cy = H / 2
+        const at = (p: { ox: number; oy: number }) => ({ x: cx + p.ox * u, y: cy + p.oy * u })
+        const REACH = REACH_U * u
 
         water?.set({
           uTime: t,
@@ -285,10 +298,10 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
 
         // ── THE DOOR, IN THE MIDDLE OF THE ROOM ───────────────────────
         const portal = placesRef.current.find(p => p.portal)
-        const px = W * (portal?.x ?? 0.5), py = H * (portal?.y ?? 0.36)
-        // Scaled so the bowl spans most of a phone and does not swallow a
-        // desktop: the flat texture is 2.4 radii across.
-        const z = Math.max(0.2, Math.min(0.42, (W * 0.96) / (door.r * 2.4)))
+        const { x: px, y: py } = portal ? at(portal) : { x: cx, y: cy - u * 0.16 }
+        // The bowl spans most of the short side: the flat texture is 2.4
+        // radii across. The same fraction on a phone and a desktop.
+        const z = Math.max(0.2, Math.min(0.6, (u * 0.94) / (door.r * 2.4)))
         bowl.scale.set(z, z * GROUND)
         bowl.position.set(px - door.x * z, py - door.y * z * GROUND)
         maelstroms.advance(t, dt, door.x, door.y, W / (2 * z), H / (2 * z * GROUND))
@@ -297,7 +310,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
         const dx = target.x - pos.x, dy = target.y - pos.y
         const d = Math.hypot(dx, dy)
         if (d > 4) {
-          const speed = Math.min(d * 2.4, 260)
+          const speed = Math.min(d * 2.4, u * 0.62)
           pos.x += (dx / d) * speed * dt
           pos.y += (dy / d) * speed * dt
           if (Math.abs(dx) > 12) facing = dx < 0 ? 1 : -1
@@ -306,7 +319,7 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
         boat.x = pos.x
         boat.y = pos.y + bob
         if (hull.texture.width > 2) {
-          const w = Math.min(200, W * 0.36)
+          const w = Math.min(320, u * 0.36)
           hull.width = w
           hull.height = w * (hull.texture.height / hull.texture.width)
           shade.width = w * 0.58
@@ -319,20 +332,20 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
         let found: string | null = null
         let bestD = REACH
         for (const m of marks) {
-          const mx = W * m.p.x, my = H * m.p.y
+          const { x: mx, y: my } = at(m.p)
           m.node.x = mx; m.node.y = my
           const dd = Math.hypot(pos.x - mx, pos.y - my)
           if (dd < bestD) { bestD = dd; found = m.p.id }
           const near = dd < REACH * 1.6
           const pulse = 0.5 + 0.5 * Math.sin(t * 1.4 + m.ph)
-          m.pool.width = 150 + 24 * pulse
+          m.pool.width = u * (0.35 + 0.055 * pulse)
           m.pool.height = m.pool.width * 0.42
           m.pool.alpha = (near ? 0.5 : 0.26) + 0.08 * pulse
           for (let k = 0; k < m.rings.length; k++) {
-            const u = ((t * (near ? 0.55 : 0.36) + m.ph * 0.13 + k * 0.5) % 1)
-            const s = 34 + u * 96
+            const uu = ((t * (near ? 0.55 : 0.36) + m.ph * 0.13 + k * 0.5) % 1)
+            const s = u * (0.08 + uu * 0.22)
             m.rings[k].width = s; m.rings[k].height = s * 0.42
-            m.rings[k].alpha = (1 - u) * (near ? 0.55 : 0.28)
+            m.rings[k].alpha = (1 - uu) * (near ? 0.55 : 0.28)
           }
         }
         // The eye itself is a place the helm can name.

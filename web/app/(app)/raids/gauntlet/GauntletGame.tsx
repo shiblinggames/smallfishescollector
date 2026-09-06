@@ -67,6 +67,29 @@ type Phase = 'intro' | 'usedup' | 'resume' | 'paused' | 'descending' | 'fighting
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
+/**
+ * ── DESKTOP-FIRST ────────────────────────────────────────────────────────
+ *
+ * Full-canvas worlds are the model and phone columns are the legacy. The
+ * arena and the hub already compose to the viewport; the screens between
+ * fights were still a 440px column with a wide screen's worth of water
+ * either side. On a wide viewport they open out: a broader sheet, and the
+ * boon draft laid three across instead of stacked. One breakpoint, read once
+ * and kept current, so every screen answers the same question the same way.
+ */
+const WIDE_QUERY = '(min-width: 900px)'
+function useWide(): boolean {
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_QUERY)
+    const on = () => setWide(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return wide
+}
+
 /** The screens of a live run. A change between two of these gets the veil. */
 const RUN_PHASES: ReadonlySet<Phase> = new Set<Phase>([
   'descending', 'fighting', 'curse', 'boon', 'shrine', 'merchant', 'contract',
@@ -383,6 +406,9 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // A resumable crashed run takes priority over the intro/cooldown screens — the
   // player is offered their dive back before anything else.
+  const wide = useWide()
+  /** The width of a screen between fights: a column on a phone, a sheet on a desktop. */
+  const sheetW = wide ? 640 : 440
   const [phase, setPhaseRaw] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
   /**
    * ── THE VEIL BETWEEN SCREENS ───────────────────────────────────────────
@@ -2413,13 +2439,22 @@ export default function GauntletGame(props: GauntletGameProps) {
     // that is the part that is flavour rather than function.
     // The eye of the maelstrom holds the upper middle of the frame; the
     // moorings sit on the drowned floor below it, and she starts among them.
+    //
+    // DESKTOP-FIRST. Offsets from the centre in units of the viewport's short
+    // side (the Slipway's own stage), so a phone and a wide screen see the
+    // same diorama: the eye above centre, two moorings either side below it,
+    // two more on the floor, her among them. A wide screen gives its margins
+    // to the water, not to the layout.
     const slipPlaces: SlipwayPlace[] = [
-      { id: 'portal', label: 'The Descent', x: 0.5, y: 0.36, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
-      { id: 'run', label: 'Run Upgrades', x: 0.17, y: 0.63, color: 0xc4a0e8 },
-      { id: 'shore', label: 'Permanent Upgrades', x: 0.83, y: 0.63, color: 0xf0c040 },
-      { id: 'records', label: 'The Records', x: 0.24, y: 0.83, color: 0x9ab8c8 },
-      { id: 'ledger', label: 'The Ledger', x: 0.76, y: 0.83, color: 0xa8b8d0 },
+      { id: 'portal', label: 'The Descent', ox: 0, oy: -0.16, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
+      { id: 'run', label: 'Run Upgrades', ox: -0.34, oy: 0.14, color: 0xc4a0e8 },
+      { id: 'shore', label: 'Permanent Upgrades', ox: 0.34, oy: 0.14, color: 0xf0c040 },
+      { id: 'records', label: 'The Records', ox: -0.27, oy: 0.37, color: 0x9ab8c8 },
+      { id: 'ledger', label: 'The Ledger', ox: 0.27, oy: 0.37, color: 0xa8b8d0 },
     ]
+    // The same stage in CSS, for the cards that ride the moorings.
+    const stageLeft = (ox: number) => `calc(50% + ${ox} * min(100vw, 100vh))`
+    const stageTop = (oy: number) => `calc(50% + ${oy} * min(100vw, 100vh))`
     // What each place is, in one line, and its mark. The icons are the same
     // strokes the old tiles carried, so a returning captain recognises them.
     const PLACE_META: Record<string, { sub: string; icon: React.ReactNode }> = {
@@ -2567,7 +2602,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           const meta = PLACE_META[pl.id]
           if (pl.portal) return (
             <div key={pl.id} aria-hidden
-              style={{ position: 'fixed', left: `${pl.x * 100}%`, top: `${pl.y * 100}%`, transform: 'translate(-50%, 0)', marginTop: 'min(24vw, 200px)', zIndex: 4, pointerEvents: 'none', textAlign: 'center', transition: 'opacity 0.3s', opacity: near ? 1 : 0.85 }}>
+              style={{ position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy + 0.27), transform: 'translate(-50%, 0)', zIndex: 4, pointerEvents: 'none', textAlign: 'center', transition: 'opacity 0.3s', opacity: near ? 1 : 0.85 }}>
               <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.16em', color: '#f4efe4', textShadow: `0 2px 10px rgba(0,0,0,0.98), 0 0 18px ${hex}66` }}>{pl.label}</p>
               <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', color: `${hex}dd`, marginTop: 2, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>{meta.sub}</p>
             </div>
@@ -2575,7 +2610,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           return (
             <div key={pl.id} aria-hidden
               style={{
-                position: 'fixed', left: `${pl.x * 100}%`, top: `${pl.y * 100}%`,
+                position: 'fixed', left: stageLeft(pl.ox), top: stageTop(pl.oy),
                 transform: `translate(-50%, ${near ? 24 : 30}px)`, zIndex: 4, pointerEvents: 'none',
                 display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 7px 8px', borderRadius: 13,
                 background: 'linear-gradient(180deg, rgba(14,20,32,0.94), rgba(5,9,16,0.94))',
@@ -2614,7 +2649,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)',
             paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
           }}>
-          <div style={{ maxWidth: 460, margin: '0 auto' }}>
+          <div style={{ maxWidth: wide ? 720 : 460, margin: '0 auto' }}>
           <button type="button" onClick={() => setLedgerOpen(false)} className="tap"
             style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto',
               padding: '0.34rem 0.72rem', borderRadius: 999, cursor: 'pointer',
@@ -3070,7 +3105,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {/* Death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '10px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
@@ -3191,7 +3226,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '12px 0.95rem', textAlign: 'center', overflow: 'hidden',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
@@ -3358,7 +3393,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.35, 0.6, 0.35] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${MC}1c 0%, ${MC}09 44%, transparent 72%)` }} />
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '12px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
@@ -3455,7 +3490,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       <>
         {arena('contract')}
         <Screen id={phase}>
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           {/* THE DON DOES NOT SIT IN THE MIDDLE OF THE PAGE.
               Every meta screen here was the same centered column: eyebrow, round
               portrait, big title, italic quote, body. Same rhythm every time,
@@ -3552,7 +3587,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       <>
         {arena('contract')}
         <Screen id={phase}>
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: wide ? 600 : 420, margin: '0 auto', padding: '12px 0.95rem', textAlign: 'center', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)' }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.28em' }} transition={ENTER}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', color: MC, marginTop: 22, textShadow: `0 0 16px ${MC}55` }}>
             {won ? 'Contract Cleared' : 'Contract Broken'}
@@ -3763,7 +3798,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           )}
         </AnimatePresence>
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '10px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
@@ -4241,7 +4276,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
           padding: '12px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
@@ -4370,7 +4405,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           )}
         </AnimatePresence>
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 470, margin: '0 auto',
+          position: 'relative', zIndex: 1, maxWidth: wide ? 1040 : 470, margin: '0 auto',
           padding: '12px 0.9rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
@@ -4400,7 +4435,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             </motion.div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={wide
+            ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, alignItems: 'stretch' }
+            : { display: 'flex', flexDirection: 'column', gap: 14 }}>
             {pendingBoons.slice(0, boonCardCount).map((b, idx) => {
               const rm = BOON_RARITY_META[b.rarity]
               const legendary = b.rarity === 'legendary'
@@ -5367,6 +5404,8 @@ function MarkChoice({ offer, searing, taken, onChoose }: {
 }
 
 function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; convergencesTaken?: string[]; stats?: GauntletRunStats; events?: RunEvent[]; contracts?: { name: string; reward: string }[] }; onBack: () => void; don?: boolean }) {
+  const wide = useWide()
+  const sheetW = wide ? 640 : 440
   const AC = don ? KRAKEN : TEAL   // Don's cash-out wears the kraken green
   // Three beats: closed -> opening (a wind-up rattle + creak) -> open (burst +
   // reveal). The anticipation phase makes the crack land as a payoff.
@@ -5446,7 +5485,7 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
       {r.hardcore ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={r.hardcore} don={don} />}
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
-        position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+        position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
         padding: '10px 0.95rem', textAlign: 'center',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         // The chest burst/ray FX scale up to ~800px and stay mounted at opacity

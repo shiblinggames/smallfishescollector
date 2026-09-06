@@ -9039,7 +9039,10 @@ export default function RaidCombat({
             log line over bright water; see the house rule on panels standing on
             painted art. */}
         <div style={{
-          width: '100%', maxWidth: 580, marginLeft: 'auto', marginRight: 'auto',
+          // DESKTOP-FIRST: 720 on a wide screen, so the log and the stat cards
+          // sit out where the hulls are rather than in a phone's column with
+          // water either side. A phone is bounded by the 100% before this.
+          width: '100%', maxWidth: 720, marginLeft: 'auto', marginRight: 'auto',
           display: 'flex', flexDirection: 'column', gap: 8,
           pointerEvents: overSea ? 'auto' : undefined,
           ...(overSea ? {
