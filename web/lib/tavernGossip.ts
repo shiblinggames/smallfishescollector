@@ -39,7 +39,7 @@
 //    what makes the other two thirds sound like they were not written for you.
 //
 // 5. THE NINE REGULARS ARE SUBJECTS, NEVER SPEAKERS. Meg, Matty, Marlow, Fitch,
-//    Nance, Yoon, Tam, Cass and Rue keep to the water. Being talked about in
+//    Nance, Yoon, Dennis, Cass and Rue keep to the water. Being talked about in
 //    here while being findable out there is the point; putting them at the bar
 //    would undo the whole reason they are worth sailing to.
 //
@@ -243,7 +243,7 @@ export const GOSSIP: Overheard[] = [
     from: 'the bar',
   },
   {
-    say: ["Tam Brill's two seasons out and thinks the rest of us are legends. Nobody's had the heart to tell him."],
+    say: ["Dennis told me a story about the army that took the whole of last orders. I don't remember how it ended. I don't think it did."],
     from: 'a table of deckhands',
   },
   {

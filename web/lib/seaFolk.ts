@@ -265,7 +265,7 @@ export type Folk = {
   tierUp: [string, string, string, string]
   /**
    * THE ONE FISH. Not a list: a single species, theirs, chosen to say
-   * something about them. Marlow wants a marlin. Tam Brill, two seasons out
+   * something about them. Marlow wants a marlin. Dennis (once Tam Brill), the gamer,
    * and proud of it, wants a bluegill. Nance, who reveres the oldest water,
    * wants the fish that should have been extinct.
    *
@@ -743,62 +743,86 @@ export const FOLK: Folk[] = [
   // Deep only Marlow working his angle.
 
   {
-    id: 'brill', name: 'Tam Brill', short: 'Tam', zoneId: 'shallows', buys: false,
-    greeting: "Oh! Hello. Hi.",
-    face: { characterColor: 'default', hat: 'green', bg: '#0e1810', ring: '#8cc890', mirrored: true },
-    role: 'Someone to know', accent: '#8cc890',
-    blurb: 'Two seasons out and convinced everyone else is a legend.',
-    // The first fish anybody catches, and he is not embarrassed about it.
-    favourite: { id: 1, name: 'Bluegill' },
+    // THE ID IS THE STORAGE KEY. He was Tam Brill until 2026-09, and every
+    // captain's standing with him lives in sea_rapport under 'brill'. The
+    // name changed; the friendship did not, so the key stays.
+    id: 'brill', name: 'Dennis', short: 'Dennis', zoneId: 'shallows', buys: false,
+    greeting: "Oh, hey! Hey. Hi. Sorry, I was mid-thought, I'm always mid-thought. Hi.",
+    face: { characterColor: 'default', hat: 'olive', bg: '#0e140c', ring: '#a3c46a', mirrored: true },
+    role: 'Someone to know', accent: '#a3c46a',
+    blurb: 'Talks for a living, fishes for fun, and owns more than he lets on.',
+    // The fish of ten thousand casts. To a gamer that is a drop rate, and he
+    // is keeping a tally.
+    favourite: { id: 12, name: 'Muskellunge' },
+    // HE TALKS LIKE HE TALKS.
+    //
+    // Dennis is a real person, like Yoon and Matty, and this is really how he
+    // is: awkward, geeky, funny, a big gamer, six years in the army and a
+    // story from every one of them, and quietly very well off in a way he
+    // never leads with. So he is the third voice on this water written in
+    // its own register on purpose, and the register is VERBOSE. His lines
+    // run long, take a tangent, apologise for the tangent, and finish the
+    // tangent anyway. That is the character; do not tighten him.
+    //
+    // NO CATCHPHRASE. Yoon and Matty have tics because the real people do.
+    // Dennis's mannerism is the shape of the sentence, not a word in it:
+    // "long story, the short version doesn't make sense without the long
+    // version", the "anyway", the "sorry, I get into it". Nothing invented.
+    //
+    // The gap between the jokes and what he is saying IS the character. Under
+    // the stories is a guy who talks because quiet is where he goes back to
+    // sitting in the dark waiting for nothing to happen, and who is spending
+    // the money he never mentions on something for people who are where he
+    // was two seasons ago.
     lines: [
       [
-        "You are a real captain. Sorry. That was out loud.",
-        "I have been out here two seasons. Everyone says that is nothing. It does not feel like nothing.",
-        "Do not let me hold you up. Unless you have a minute. Do you have a minute?",
+        "Okay so you're probably wondering why a guy with a boat this ugly is anchored in the nicest spot in the Shallows. Long story. The short version doesn't make sense without the long version. Hi, by the way.",
+        "This is my third rod. The first two are fine. I just, you know, wanted to see the patch notes on this one. That's a joke. Nobody out here gets my jokes. You might. You've got the look.",
+        "Back in the army we'd sit in the dark for six hours waiting for nothing to happen, and I thought, I could do this for fun. Turns out I was right. That's fishing. That's the whole pitch.",
       ],
       [
-        "You stopped! Most do not stop.",
-        "I watched you land one off the point yesterday. I tried the same spot. I caught weed.",
-        "Is it true there is water so deep the fish make their own light? Somebody in the harbour told me and then laughed.",
-        "My favourite is a bluegill. I know. Everyone laughs. It was the first thing I ever caught and I am not going to pretend otherwise.",
+        "You came back! People don't, usually. I talk a lot. I know I talk a lot. I've been told by professionals. Anyway, sit, or don't, I'll talk either way.",
+        "Muskellunge. The fish of ten thousand casts. Ten thousand. That's a drop rate, that's a grind, that's the kind of number I respect. I've done about nine hundred. I'm keeping a tally. Of course I'm keeping a tally.",
+        "Back in the army I had a sergeant who said a plan is just a list of things that won't happen. I think about him every time I cast. Every single time. Sorry, I'm getting into it. I get into it.",
+        "This water's basically the tutorial zone and I'm fine with that. Some of the best games I've played, I never left the first area. That's not sad. Okay, it's a little sad. It's also true.",
       ],
       [
-        "I have a question saved up. I have had it saved up for a week. How do you know when to reel?",
-        "My boat is called Second Try. The first one is on the bottom of the harbour and we do not talk about it.",
-        "Everyone told me the Shallows are for beginners. You are here. You are not a beginner. So that is rubbish, is it not?",
-        "I practised what I was going to say to you. Then you turned up and I said none of it.",
+        "Okay, real question, and I've been building up to this for like a week: do you ever get to the deep water and just feel like you skipped a cutscene? Like the game thinks you know something you don't? Just me? Okay. It's just me.",
+        "Back in the army we did a night march with a map that was, and I want to be precise here, upside down. For four hours. I was the one holding it. I've told that story maybe two hundred times and it has never once made me look good, which is why it's a good story.",
+        "I don't need a bigger boat. I could get one. That's not a brag, that's just true, and I'd rather it not be a thing. Money's the boring stat. Nobody puts money on a character sheet.",
+        "You fish like you're speedrunning. Efficient. No wasted casts. I fish like I'm doing every side quest, and honestly I'm having a great time. Both are valid. That's the nicest thing I'll say today.",
       ],
       [
-        "I am going out past the shelf next month. Do not tell Meg, she will do the face.",
-        "My father fished this water and never went past it. I do not want that. I want to see the dark one.",
-        "When you talk about out there your voice changes. I am not being strange, I have noticed it, that is all.",
-        "Do you ever get scared out there? You can say no. I would like it if you said yes.",
-        "I have started keeping a log. Nothing happens in it yet. But I have got one.",
+        "Okay so the money. I don't hide it, I just don't lead with it, which people say is the same thing and it's not. I bought the harbour's tab once. Nobody knows it was me. Now you know. Please be cool.",
+        "Back in the army the thing nobody tells you is how much of it is waiting. Waiting, and then a very short amount of something, and then waiting about the something. Fishing's the same shape. Life's the same shape. I think about this a lot.",
+        "I keep a spreadsheet of every fish I've caught. Weight, spot, weather, what I was thinking about. The last column's the important one. You're in it more than you'd expect. In a normal way. I'm being normal.",
+        "You can tell me if I'm being a lot. Everybody else just sort of drifts away mid-sentence and I finish the sentence to the water. The water's a great listener. Terrible at follow-up questions.",
+        "Somebody green pulled alongside me and asked how to reel, and I gave them a forty-minute answer, and they stayed for all of it. I've never been so happy in my life. Anyway, that's my week.",
       ],
       [
-        "You are the reason I did not pack it in after the first winter. I have wanted to say that for ages.",
-        "I landed something proper last week. Nobody saw. I sat there grinning like a fool for an hour.",
-        "One day I will pull alongside you out in the deep and you will not recognise me, and that will be the best day of my life.",
-        "I nearly went home last winter. My boat was leaking, I could not fix it, and nobody was coming. Then you sailed past and waved.",
-        "One day somebody green is going to pull alongside me and I will be the one who knows things. I think about that a lot.",
+        "I'm going to say something and then never say it again, because that's the rule with things like this: you're the only person out here who's ever heard the whole story and not looked at their watch. I noticed. I always notice.",
+        "Back in the army I had a friend who'd sit through all my stories and then say and? and it drove me insane and it was the best thing anyone's ever done for me. You do the and? thing. You don't even know you're doing it.",
+        "The money's going somewhere, by the way. It's not going in a bigger boat. It's going into something for people who are where I was two seasons ago. Don't ask me what yet. I'm still writing the design doc.",
+        "Some day I'm going to get the muskellunge and I'm going to be so annoying about it. You'll be the first person I tell. You'll be the first person I tell most things, actually. That's just where we are now.",
+        "I talk a lot because when I stop, it's quiet, and quiet is where I go back to being a guy in the dark waiting for nothing to happen. You make the quiet okay. That's the shortest thing I've ever said and I mean all of it.",
       ],
     ],
     afterMax: [
-      "I fixed the leak myself. Took me four days and it is ugly and it holds.",
-      "Somebody green pulled alongside me last week. I knew the answer. I have never felt taller.",
-      "I do not grin like a fool any more when I land something. I do it on the inside now. Progress.",
-      "You waved at me once when I was about to quit. I have never told you which day it was and I never will.",
-      "I have started going a bit deeper. Not far. Further than last season, and that is the whole point.",
+      "Still talking. Still noticing you don't look at your watch. Still not over it.",
+      "Cast number four thousand and something on the muskellunge. The tally's in the log. It's under your name, for some reason.",
+      "The thing for the new captains is happening. Slowly. Design docs are long. Mine's longer.",
+      "Back in the army I never once got a story to a satisfying ending. Out here I've got you, and endings are easier.",
+      "The boat's still ugly. The engine's new. Nobody's noticed. You will. You notice things.",
     ],
     tierUp: [
-      "Tam! Tam Brill. You asked my name. Nobody asks my name.",
-      "Are we friends? Do not answer that. I am going to assume.",
-      "I tell people I know you. I hope that is all right. I will stop if it is not.",
-      "You are the best thing about this water and I am going to keep saying it until you sail off.",
+      "Dennis! You asked. People usually just let me talk until I say it by accident.",
+      "Okay, so we're friends now, and I want to be upfront that friends of mine get the long versions of things. All of them. You've been warned. This is the warning.",
+      "I'm going to tell you stuff I don't tell the harbour. Not because it's secret. Because the harbour walks off. You don't walk off.",
+      "You're on the short list. It's a short list. Honestly it's you and a sergeant who doesn't know he's on it.",
     ],
-    onLoved: "For me? That is a proper one. I am not eating this, I am keeping it until it is a problem.",
-    onLiked: "You gave me a fish. I am going to be insufferable about this all week.",
-    onPlain: "Thank you! Genuinely. Nobody gives me anything out here.",
+    onLoved: "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
+    onLiked: "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning.",
+    onPlain: "For me? Thank you. Genuinely. Nobody brings me things, I'm usually the one bringing things. This is nice. This is a nice change.",
   },
   {
     id: 'turbot', name: 'Cass Turbot', short: 'Cass', zoneId: 'open_waters', buys: false,
@@ -888,7 +912,7 @@ export const FOLK: Folk[] = [
         "I carried word for a captain once and I carried it too slowly. She was gone by the time it reached her.",
         "That is why I do not charge. Somebody has to be quick about it and mean it.",
         "Nance is the only one out here I cannot read. Twenty years and I have got nothing.",
-        "Tam Brill asks after you every time. Every time. I have started making things up so he has something.",
+        "Dennis asks after you every time, and every time it takes forty minutes. I have started sailing off mid-sentence. He finishes them to the water.",
         "Nobody ever asks me to carry anything to Fitch. I go anyway, about once a month.",
       ],
       [
@@ -1083,24 +1107,24 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
   ],
   brill: [
     [
-      { you: 'How long have you been out?', they: 'Two seasons! Nearly. It is one and a bit if you are going to be strict about it.' },
-      { you: 'Caught much?', they: 'Some! Not loads. Some.' },
+      { you: 'What is with the boat?', they: 'Ugly, right? The engine\'s new. I\'d rather the boat looked like this than the other way round. Long story.' },
+      { you: 'Were you really in the army?', they: 'Six years. I have stories. I have SO many stories. Sit down or don\'t, they\'re coming either way.' },
     ],
     [
-      { you: 'What are you fishing for?', they: 'Whatever bites. I have not earned a favourite yet.' },
-      { you: 'Is that your boat?', they: 'Second Try. The name is a whole thing. I will tell you when I know you better.' },
+      { you: 'What do you play?', they: 'Everything. Too much. I once played a fishing game for three hundred hours and then bought a boat, so, you know. Draw your own conclusions.' },
+      { you: 'Why the Shallows?', they: 'It\'s the starting zone. All the best stories happen in the starting zone. Nobody believes me and they\'re all wrong.' },
     ],
     [
-      { you: 'What happened to the first boat?', they: 'It is on the bottom of the harbour, I was fifteen, and that is all anybody needs.' },
-      { you: 'Do you want to go deeper?', they: 'More than anything. Also I am terrified. Both at once, constantly.' },
+      { you: 'What was the army actually like?', they: 'Waiting. Ninety percent waiting. Then a very short amount of something. Then waiting about the something.' },
+      { you: 'Do you ever stop talking?', they: 'Once. In a dentist\'s chair. It was the worst twenty minutes of my life.' },
     ],
     [
-      { you: 'What does your family make of it?', they: 'My father fished here his whole life and never went past the shelf. He thinks I am mad.' },
-      { you: 'What goes in the log?', they: 'Dates, mostly. And the day you first stopped to talk to me, which is a bit much, I know.' },
+      { you: 'You seem to do all right for yourself.', they: 'Do I? Good. That\'s the plan. Doing all right without it being a thing. I\'ve spent more effort on that than on the fishing.' },
+      { you: 'What is the spreadsheet for?', they: 'Patterns. And, honestly, so I have something to reread when it\'s quiet. The last column\'s the important one.' },
     ],
     [
-      { you: 'You are ready, you know.', they: 'Do not say that. Say it again.' },
-      { you: 'Come out with me some time.', they: 'Yes. Yes. Right now? No. I need a week. But yes.' },
+      { you: 'What is the thing you are building?', they: 'A place for green captains to ask forty-minute questions and get forty-minute answers. It has a name. I\'m not ready to say the name.' },
+      { you: 'Tell me a story.', they: 'Okay. Okay okay okay. Which decade? I\'m kidding. Sort of. Sit down.' },
     ],
   ],
   turbot: [

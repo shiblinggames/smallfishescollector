@@ -629,7 +629,7 @@ export const SOCIALS: {
    *  the side that decides, and its `short` field says why. */
   folkId: string; zoneId: string; name: string; line: string; x: number; y: number
 }[] = [
-  { folkId: 'brill', zoneId: 'shallows', name: 'Tam',
+  { folkId: 'brill', zoneId: 'shallows', name: 'Dennis',
     line: "You are a real captain. Sorry. That was out loud.",
     x: -1900, y: 2400 },
   { folkId: 'turbot', zoneId: 'open_waters', name: 'Cass',

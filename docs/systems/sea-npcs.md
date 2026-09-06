@@ -78,7 +78,7 @@ thing that moves a point. Table: `sea_rapport (user_id, folk_id, points, seen_li
 last_chat_on, last_gift_on, gifts_given)`, SELECT-own RLS, every write service-role.
 
 **Nine regulars, and they are the only people rapport can attach to.** The five zone
-buyers, Yoon, and three added with this system who keep no shop at all (Tam Brill in the
+buyers, Yoon, and three added with this system who keep no shop at all (Dennis, once Tam Brill, in the
 Shallows, Cass Turbot in Open Waters, Rue Bream in the Deep, all in `chart.ts` as
 `SOCIALS`). The wanderers are excluded by the architecture, not by choice: they are hashed
 out of (cell, day), so a friendship with one would be a friendship with a ghost. **Finn is
@@ -106,8 +106,8 @@ no decay and no warning, because the house law is evergreen and player-paced and
 mechanic that in other games exists to punish absence.
 
 **Each regular has ONE favourite species**, not a list, chosen to say something about them:
-Marlow wants a Blue Marlin, Tam Brill wants a Bluegill and is not embarrassed about it, Nance
-wants the Coelacanth, Cass wants Cobia because they school around wreckage. Worth 5 against a
+Marlow wants a Blue Marlin, Dennis wants the Muskellunge because it is the fish of ten thousand
+casts and that is a drop rate, Nance wants the Coelacanth, Cass wants Cobia because they school around wreckage. Worth 5 against a
 chat's 1, so the fastest way to know somebody is to work out what they like and go and catch
 it. It does not break the curve because it cannot be done casually: one species out of thirty
 in a band, one gift per day, and it has to be in the hold when you are in front of them.
@@ -184,6 +184,15 @@ severance and is deciding whether to go back. His favourite is the Atlantic Blue
 because one once sold for millions at auction and he will tell you the number. His storage
 id is still `pell`, so every captain's standing with him carried over. Keep the register
 if his lines are ever extended, and keep the id.
+
+**Dennis talks like Dennis.** He was Tam Brill (Shallows) until September 2026 and is the third
+regular based on a real friend: awkward, geeky, funny, a big gamer, six years in the army and a
+story from every one of them, and quietly very well off in a way he never leads with. His register
+is VERBOSE: long lines, a tangent, an apology for the tangent, the tangent finished anyway. He has
+no catchphrase, on purpose; his mannerism is the shape of the sentence. Favourite: the Muskellunge,
+the fish of ten thousand casts, which to him is a drop rate he keeps a tally for. Storage id stays
+`brill`. Under the stories is a man who talks because quiet is where he goes back to waiting in the
+dark, and who is spending the money on something for green captains.
 
 **Yoon talks like Yoon.** He is based on a real person and the slang is really his:
 sheeeeesh, locked in, gucci, betty johnson, gyattt. He is deliberately the one voice that
