@@ -149,7 +149,7 @@ export type Folk = {
    * you deal with and somebody you know.
    *
    * NOT a `split(' ')[0]`, which is what the hail button used to do. Half of
-   * this cast wear their epithet in front ("Bent Pell", "Old Marlow", "Grey
+   * this cast wear their epithet in front ("Quiet Fitch", "Old Marlow", "Grey
    * Nance"), so the first word is an adjective and splitting on it greets a
    * friend as "Old". Written down per person instead.
    */
@@ -309,7 +309,8 @@ export type Folk = {
 //
 // Every one of these voices is grown from the single line they already had on
 // the chart, which is why they do not sound like each other: Meg was always
-// practical, Pell was always short with you, Marlow was always working an
+// practical, Pell was always short with you (he is Matty now, and something
+// else entirely), Marlow was always working an
 // angle he was happy to admit to, Fitch never used a word he did not need,
 // Nance was the only one who treated the deep with respect, and Yoon only ever
 // cared whether you were any good.
@@ -727,7 +728,8 @@ export const FOLK: Folk[] = [
   // a transaction, so meeting them is never confused with doing business. One
   // apiece in the three waters a captain actually lives in, chosen to fill the
   // gaps in the cast's voice rather than the gaps on the map. The Shallows had
-  // only Meg's flat practicality, Open Waters only Pell's impatience, and the
+  // only Meg's flat practicality, Open Waters only Pell's impatience (Matty's
+// chatter now), and the
   // Deep only Marlow working his angle.
 
   {
@@ -863,7 +865,7 @@ export const FOLK: Folk[] = [
       [
         "Marlow asked after you. He would deny it, so do not bring it up.",
         "I know where everybody is. Not because it is my business. Because nobody else keeps track.",
-        "Pell said something almost warm about you. I have written the date down.",
+        "Matty called you his best position. I do not know what it means. I have written the date down.",
         "A cod. Plain Atlantic cod. Everything else out here is somebody's trophy and a cod is just supper, which is the entire point of it.",
       ],
       [
@@ -1119,7 +1121,7 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
       { you: 'Who is out here?', they: 'More than you would think. Fewer than there were.' },
     ],
     [
-      { you: 'What is the news?', they: 'Meg is well, Pell is furious, Marlow is being Marlow. Nothing has changed in years.' },
+      { you: 'What is the news?', they: 'Meg is well, Matty is up if you use his numbers, Marlow is being Marlow. Nothing has changed in years.' },
       { you: 'Why free?', they: 'Ask me when we know each other better. It is not a happy answer.' },
     ],
     [
