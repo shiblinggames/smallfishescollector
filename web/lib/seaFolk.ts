@@ -412,6 +412,12 @@ export const FOLK: Folk[] = [
     // shown, if at all, is still open; until it is decided the words stay
     // whole.
     //
+    // HE MESSES UP HIS WORDS FROM TIME TO TIME. Sounds swap or a word comes
+    // out wrong ("nails on the stails"), and sometimes he catches it and
+    // sometimes he does not. Rare on purpose: four slips across every pool,
+    // never on the tics themselves, because a slip in every line is a bit
+    // and a slip every so often is a person.
+    //
     // The gap between how he talks and what he is actually saying IS the
     // character. Under the jokes he got laid off, told everyone it was a
     // sabbatical, and is out here deciding whether to go back.
@@ -424,7 +430,7 @@ export const FOLK: Folk[] = [
       [
         "Bruh, you came back. Nobody comes back to the middle band. The middle band is the index fund of oceans. Boring, but it compounds.",
         "Okay so I used to work in tech. Now my portfolio is fish. Dude. I'm doing great. I'm doing so great.",
-        "Watch the shipping lanes. Where the freight goes, the fish go, and where the fish go is basically insider information. Dude. Legally.",
+        "Watch the lipping shanes. Shipping lanes. Dude. Where the freight goes, the fish go, and where the fish go is basically insider information. Legally.",
         "A bluefin. Bruh. One of those sold for three million at an auction once. Three million. For a fish. If you ever land one, bring it here and let me just look at it.",
       ],
       [
@@ -434,9 +440,9 @@ export const FOLK: Folk[] = [
         "Dude, I used to do standups every morning. Fifteen minutes of people saying no blockers. Out here my standup is the sunrise and there are, like, zero blockers.",
       ],
       [
-        "Okay. Real talk. I didn't quit. Bruh, I got laid off. The boat was the severance. I told everyone it was a sabbatical because sabbatical sounds like a choice.",
+        "Okay. Real talk. I didn't quit. Bruh, I got laid off. The boat was the serverance. Severance. The boat was that. I told everyone it was a sabbatical because sabbatical sounds like a choice.",
         "I had this one stock, dude. Everything in it. Diamond hands, right? The hands were diamond. The stock was not.",
-        "The Den's the only place out here that feels like a Slack channel at midnight. Everybody wired, everybody pretending it's fine. Dude, I miss it and I hate that I miss it.",
+        "The Den's the only place out here that feels like a Slack channel at midnight. Everybody wired, everybody pretending it's fine, the slots going like nails on the stails. Dude, I miss it and I hate that I miss it.",
         "Dude, when I said the middle band compounds? I meant it. Nobody works it because it's not deep and it's not close. Which means it's yours.",
         "You never once asked me for a tip. Everyone asks the tech guy for a tip. Bruh, that's why you get the real one: there is no tip. There's just showing up.",
       ],
@@ -449,7 +455,7 @@ export const FOLK: Folk[] = [
       ],
     ],
     afterMax: [
-      "Still under the stop-loss, bruh. Barely. Don't check my math.",
+      "Still under the slop-toss. Stop-loss. Bruh. Barely. Don't check my math.",
       "I didn't go to the Den last night. Dude, I'm not saying it for a gold star. Okay, I'm a little bit saying it for a gold star.",
       "Bluefin went for how much this week? Bruh. Don't tell me. Actually tell me.",
       "You're on the water more than I am now. Dude, I think you might actually be the fisherman in this friendship.",
