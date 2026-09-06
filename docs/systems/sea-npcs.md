@@ -205,6 +205,13 @@ each of the first two pools. The point is the first meetings: a stranger you can
 things to reads as a shopkeeper, and these three are people. The lines are personality, not
 information, and every mannerism in them was given, not invented.
 
+**The compass names the regulars you have met.** The buyer of your water stays an unnamed
+mark, because meeting him is the point. But a regular you have already spoken to (a rapport row
+with points above zero) gets a named arrow with a distance, like a friend at sea, and only in the
+water you are in. Unmet regulars get nothing, not even a mark, or every band would carry three
+exclamation points. `SeaMap` reads `folkState()` on mount and again whenever a talk closes; the
+compass slot cap is five so a name never costs the way home its arrow.
+
 **Tier 4 has an `afterMax` pool and a card of its own.** Five more lines per regular that
 only open once tier four's own five are spent, in a different register: tier four is the
 threshold, the thing they had never said, and `afterMax` is the ordinary days after being

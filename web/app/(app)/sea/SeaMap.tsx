@@ -85,6 +85,7 @@ import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaCloc
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
+import { folkState } from './folkActions'
 import TraderPanel from './TraderPanel'
 import CrewPanel from './CrewPanel'
 import { crewHub } from './crewHubActions'
@@ -3674,6 +3675,21 @@ export default function SeaMap({
   }, [inAnchorage, pollCrew])
   /** The Salt Road: Finn's progress and everyone else worth knowing about. */
   const [folkOpen, setFolkOpen] = useState(false)
+  /**
+   * ── WHO YOU HAVE MET ─────────────────────────────────────────────────
+   *
+   * The regulars you have spoken to, by id. A rapport row only exists once
+   * somebody has been spoken to and the first word is worth a point, so
+   * "met" is simply points above zero. Read once on mount and again every
+   * time a conversation closes, because the one moment this set changes is
+   * the moment you finish talking to somebody new. The compass reads it to
+   * decide whether a regular in your water gets a name or stays a mark.
+   */
+  const [metFolk, setMetFolk] = useState<Set<string>>(() => new Set())
+  const refreshMet = useCallback(() => {
+    void folkState().then(rows => setMetFolk(new Set(rows.filter(r => r.points > 0).map(r => r.folkId)))).catch(() => {})
+  }, [])
+  useEffect(() => { refreshMet() }, [refreshMet])
   /** Does Finn have a piece of his story waiting? Drives the dot on the
    *  button, which is the whole nudge: a beat is handed over at EVERY meeting
    *  (findNextEncounterBeat walks the unseen list, it is not milestone-gated),
@@ -3960,6 +3976,11 @@ export default function SeaMap({
   }, [])
 
   const yoon = useMemo(() => yoonTrader(), [])
+  /** Every regular with a place on the chart, and whether you know them. */
+  const regulars = useMemo<CompassRegular[]>(() => [
+    ...SOCIALS.map(r => ({ id: r.folkId, name: r.name, zoneId: r.zoneId, x: r.x, y: r.y, met: metFolk.has(r.folkId) })),
+    { id: 'yoon', name: yoon.name, zoneId: 'ancient_deep', x: yoon.x, y: yoon.y, met: metFolk.has('yoon') },
+  ], [metFolk, yoon])
   useEffect(() => { allTradersRef.current = [yoon, smuggler, ...residents, ...socials, ...traders] }, [yoon, smuggler, residents, socials, traders])
 
   /**
@@ -8380,7 +8401,7 @@ hullRef={hullRefFor(t.key)} />
           and distances on them are the single largest thing on this screen that
           has nothing to do with what you are doing. Back the moment you stow. */}
       {!hudOff && (
-        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends}
+        <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars}
           finn={finnBearing}
           // The harbour IS a place now, so the compass can raise it again when
           // a crew is in — which is the whole reason the compass sorts by this.
@@ -8461,7 +8482,7 @@ hullRef={hullRefFor(t.key)} />
         </button>
       )}
 
-      <FolkPanel open={folkOpen} onClose={() => setFolkOpen(false)} finn={finn} />
+      <FolkPanel open={folkOpen} onClose={() => { setFolkOpen(false); refreshMet() }} finn={finn} />
 
       {/* A BEAT, PLAYING OVER THE CHART. StoryScene portals itself to the body,
           so the map does not have to know anything about where it lands. */}
@@ -9096,7 +9117,7 @@ hullRef={hullRefFor(t.key)} />
           dealsLeft={DEALS_PER_DAY - dealt.length}
           onDealt={key => setDealt(prev => (prev.includes(key) ? prev : [...prev, key]))}
           onHoldEmptied={() => setHoldCount(0)}
-          onClose={() => setHailing(null)}
+          onClose={() => { setHailing(null); refreshMet() }}
         />
       )}
 
@@ -13084,13 +13105,21 @@ function WaterBanner({ place, locked, lowered }: {
  *   wins, because it is the one you are more likely to be going to. The rest is
  *   discoverable by sailing, which is the point of a chart you sail on.
  */
-const COMPASS_MAX = 4
+// Five, not four: a named regular in your water earned a slot without
+// costing the way home or the band edges theirs.
+const COMPASS_MAX = 5
+
+/** A regular with a place on the chart, and whether this captain knows them. */
+type CompassRegular = { id: string; name: string; zoneId: string; x: number; y: number; met: boolean }
 /** The keep-clear box between two markers: a name plate is ~110 wide and two
  *  lines tall, so side-by-side needs far more room than stacked. A radius (it
  *  was 96) let two centres pass while the words lay on each other. */
 const COMPASS_KEEP = { x: 120, y: 42 }
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars }: {
+  /** The regulars, with whether you have met them. Only the ones in the water
+   *  you are in are considered, and only the ones you know get an arrow. */
+  regulars: CompassRegular[]
   frozen: boolean
   /**
    * THE RIVAL, AND WHAT HE IS HOLDING.
@@ -13296,6 +13325,23 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn 
       id: `buyer:${buyer.zoneId}`, name: '', dim: false, dist: true, mystery: true,
       ...project(buyer.x, buyer.y),
     })
+  }
+
+  // ── THE PEOPLE YOU KNOW ─────────────────────────────────────────────
+  //
+  // The buyer stays a mark, because meeting him is the point. But a regular
+  // you have already spoken to is somebody, not something to be found: once
+  // there is a name between you the compass says it, the way it says a
+  // friend's. Only the regulars of the water you are in, so the Deep does not
+  // point at Dennis, and only the met ones — an unmet regular is still a
+  // discovery and gets nothing, not even a mark, or there would be three
+  // exclamation points in every band.
+  if (inIdx >= 0) {
+    const band = waters[inIdx].id
+    for (const r of regulars) {
+      if (r.zoneId !== band || !r.met) continue
+      marks.push({ id: `folk:${r.id}`, name: r.name, dim: false, dist: true, ...project(r.x, r.y) })
+    }
   }
 
   // The bearing out from the Mainland, which is the only direction a ring has.
