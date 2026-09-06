@@ -175,8 +175,10 @@ of them, turning a thing you discover into a thing you are behind on.
 
 **Matty talks like Matty.** He was Bent Pell (Open Waters) until September 2026 and is
 now based on a real friend, the way Yoon is: a millennial who worked in tech, invests in
-stocks and gambles like it is a personality. "Dude" is his load-bearing tic, opening about
-half his lines; under it he got laid off, called it a sabbatical, bought the boat with the
+stocks and gambles like it is a personality. "Dude" and "bruh" are his tics, opening most
+of his lines, and his voice cracks: written in the spelling, never as a stage direction
+("Du-UDE", "three MIL-lion", "that's a HOU-ouse"), about one line in three, on the word he
+cares most about. Under it he got laid off, called it a sabbatical, bought the boat with the
 severance and is deciding whether to go back. His favourite is the Atlantic Bluefin Tuna,
 because one once sold for millions at auction and he will tell you the number. His storage
 id is still `pell`, so every captain's standing with him carried over. Keep the register

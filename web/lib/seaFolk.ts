@@ -384,7 +384,7 @@ export const FOLK: Folk[] = [
     // captain's standing with him lives in sea_rapport under 'pell'. The name
     // changed; the friendship did not, so the key stays.
     id: 'pell', name: 'Matty', short: 'Matty', zoneId: 'open_waters', buys: false,
-    greeting: "Dude. Duuude. Okay. Hey.",
+    greeting: "Du-UDE. Bruh. Okay. Hey.",
     face: { characterColor: 'blue', hat: 'black', bg: '#0b1420', ring: '#4fc3f7', mirrored: true },
     role: 'Someone to know', accent: '#4fc3f7',
     blurb: 'Cashed out of tech, bought a boat, and has a position in everything, including you.',
@@ -401,10 +401,17 @@ export const FOLK: Folk[] = [
     // pinging, positions and dips and diamond hands, the Den and the Catfish
     // Jackpot and being up if you count from Tuesday.
     //
-    // DUDE IS THE LOAD-BEARING ONE. It opens about half his lines and lands
-    // inside most of the rest. It is not slang sprinkled over the house
-    // voice; he says "dude" the way Yoon says "gyattt", as the reaction that
-    // starts a thought. Do not quietly formalise any of this later.
+    // DUDE IS THE LOAD-BEARING ONE, AND BRUH IS THE OTHER. Between them they
+    // open most of his lines and land inside the rest. Not slang sprinkled
+    // over the house voice; he says "dude" and "bruh" the way Yoon says
+    // "gyattt", as the reaction that starts a thought. "Bruh." on its own is
+    // a whole sentence for him. Do not quietly formalise any of this later.
+    //
+    // HIS VOICE CRACKS, AND IT IS WRITTEN, NEVER DESCRIBED. A stressed word
+    // breaks and jumps register mid-syllable: "Du-UDE", "three MIL-lion",
+    // "that's a HOU-ouse". About one line in three, always on the word he
+    // cares most about, the same way Yoon's stretches are in the spelling
+    // ("sheeeeesh") rather than in a stage direction. Never "(voice cracks)".
     //
     // The gap between how he talks and what he is actually saying IS the
     // character. Under the jokes he got laid off, told everyone it was a
@@ -412,51 +419,51 @@ export const FOLK: Folk[] = [
     lines: [
       [
         "Dude. You're the first boat I've seen all day that isn't, like, a whole fleet. Hey.",
-        "Dude, I'm not selling anything. I'm just out here. It's a whole thing, don't worry about it.",
-        "Middle of the ocean and my phone still gets one bar. Dude. That's the real miracle out here.",
+        "Bruh, I'm not selling anything. I'm just out here. It's a whole thing, don't worry about it.",
+        "Middle of the ocean and my phone still gets one bar. Du-UDE. That's the real miracle out here.",
       ],
       [
-        "Dude, you came back. Nobody comes back to the middle band. The middle band is the index fund of oceans. Boring, but it compounds.",
-        "Okay so I used to work in tech. Now my portfolio is fish. Dude. I'm doing great. I'm doing so great.",
+        "Bruh, you came back. Nobody comes back to the middle band. The middle band is the index fund of oceans. Boring, but it compounds.",
+        "Okay so I used to work in tech. Now my portfolio is fish. Dude. I'm doing great. I'm doing so gre-EAT.",
         "Watch the shipping lanes. Where the freight goes, the fish go, and where the fish go is basically insider information. Dude. Legally.",
-        "A bluefin. Dude. One of those sold for three million at an auction once. Three million. For a fish. If you ever land one, bring it here and let me just look at it.",
+        "A bluefin. Bruh. One of those sold for three MIL-lion at an auction once. Three million. For a fish. If you ever land one, bring it here and let me just look at it.",
       ],
       [
-        "Dude, don't tell anyone, but I've got a system at the Den. It's not a system. It's a feeling. Feelings are a system.",
+        "Dude, don't tell anyone, but I've got a system at the Den. It's not a system. It's a feeling. Bruh, feelings are a system.",
         "I'm up, by the way. Technically. If you count from Tuesday and don't count Wednesday. Dude, that's just how you count.",
-        "You fish like someone who reads the water. I trade like someone who reads the vibe. One of us is going to be fine and dude, I think it's you.",
-        "Dude, I used to do standups every morning. Fifteen minutes of people saying no blockers. Out here my standup is the sunrise and there are, like, zero blockers.",
+        "You fish like someone who reads the water. I trade like someone who reads the vibe. One of us is going to be fine and bruh, I think it's you.",
+        "Dude, I used to do standups every morning. Fifteen minutes of people saying no blockers. Out here my standup is the sunrise and there are, like, ze-ERO blockers.",
       ],
       [
-        "Okay. Real talk. I didn't quit. Dude, I got laid off. The boat was the severance. I told everyone it was a sabbatical because sabbatical sounds like a choice.",
-        "I had this one stock, dude. Everything in it. Diamond hands, right? The hands were diamond. The stock was not.",
+        "Okay. Real talk. I didn't quit. Bruh, I got laid off. The boat was the severance. I told everyone it was a sabbatical because sabbatical sounds like a choice.",
+        "I had this one stock, dude. Everything in it. Diamond hands, right? The hands were diamond. The stock was NO-ot.",
         "The Den's the only place out here that feels like a Slack channel at midnight. Everybody wired, everybody pretending it's fine. Dude, I miss it and I hate that I miss it.",
         "Dude, when I said the middle band compounds? I meant it. Nobody works it because it's not deep and it's not close. Which means it's yours.",
-        "You never once asked me for a tip. Everyone asks the tech guy for a tip. Dude, that's why you get the real one: there is no tip. There's just showing up.",
+        "You never once asked me for a tip. Everyone asks the tech guy for a tip. Bruh, that's why you get the real one: there is no tip. There's just showing up.",
       ],
       [
-        "Dude. I set a stop-loss on myself. One more year out here, then I go back and get a real job. If I blow through it, you're allowed to say something. You're the only one who's allowed.",
-        "I catch myself doing the math on the Catfish Jackpot at, like, three in the morning. Dude. If you ever see my boat by the Den after dark, come get me. I'm serious.",
-        "You're the best position I've got. Dude, I know how that sounds. I'm keeping it.",
+        "Dude. I set a stop-loss on myself. One more year out here, then I go back and get a real job. If I blow through it, you're allowed to say something. Bruh. You're the only one who's allowed.",
+        "I catch myself doing the math on the Catfish Jackpot at, like, three in the morning. Bruh. If you ever see my boat by the Den after dark, come get me. I'm serious.",
+        "You're the best position I've got. Du-UDE, I know how that sounds. I'm keeping it.",
         "My mom thinks I'm a fisherman now. I let her. Dude, out of everything I've told people out here, that's the one that's actually kind of true.",
-        "When I go back, and I will, I'm going to be in some meeting and somebody's going to say circle back and I'm going to think about this exact spot. Dude. Don't let anyone anchor here.",
+        "When I go back, and I will, I'm going to be in some meeting and somebody's going to say circle back and I'm going to think about this exact spot. Bruh. Don't let anyone anchor here.",
       ],
     ],
     afterMax: [
-      "Still under the stop-loss, dude. Barely. Don't check my math.",
+      "Still under the stop-loss, bruh. Barely. Don't check my math.",
       "I didn't go to the Den last night. Dude, I'm not saying it for a gold star. Okay, I'm a little bit saying it for a gold star.",
-      "Bluefin went for how much this week? Dude. Don't tell me. Actually tell me.",
+      "Bluefin went for how much this week? Bruh. Don't tell me. Actually te-ELL me.",
       "You're on the water more than I am now. Dude, I think you might actually be the fisherman in this friendship.",
       "Every time I see your sail I check my one bar to see if the market's open. Then I remember I don't care. Dude, that's growth.",
     ],
     tierUp: [
-      "Dude. Okay. You've got a name now. That's, like, a meaningful upgrade to the relationship.",
-      "You're in the group chat. There is no group chat. Dude, you're in it.",
+      "Du-UDE. Okay. You've got a name now. That's, like, a meaningful upgrade to the relationship.",
+      "You're in the group chat. There is no group chat. Bruh, you're in it.",
       "Alright, I'm going to tell you stuff I don't tell the boats that just pass through. Dude, brace.",
-      "Dude. You're the one person out here I'd actually text back. I don't have service. It's the principle.",
+      "Bruh. You're the one person out here I'd actually text back. I don't have service. It's the principle.",
     ],
-    onLoved: "DUDE. Dude. That's a bluefin. That's a house. That's a HOUSE, and you brought it to me. Sit down. I need a minute.",
-    onLiked: "Dude, nice. That's a solid hold. Clean entry, clean exit.",
+    onLoved: "BRUH. Bruh. Dude. That's a bluefin. That's a house. That's a HOU-ouse, and you brought it to me. Sit down. I need a minute.",
+    onLiked: "Bruh, nice. That's a solid hold. Clean entry, clean exit.",
     onPlain: "Dude, thanks. Genuinely. I'm going to eat this and it's going to be a whole thing.",
   },
   {
@@ -956,22 +963,22 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
   pell: [
     [
       { you: 'What are you doing out here?', they: 'Dude, great question. Taking a break. From what is a longer conversation.' },
-      { you: 'Do you fish?', they: 'I own a rod. Dude, I own a lot of things I don\'t use.' },
+      { you: 'Do you fish?', they: 'I own a rod. Bruh, I own a lot of things I don\'t use.' },
     ],
     [
       { you: 'What did you do in tech?', they: 'Backend, mostly. Dude, I made the thing that made the other thing load slower.' },
       { you: 'Why the middle band?', they: 'It\'s the index fund of the ocean. Nobody brags about it and it quietly wins.' },
     ],
     [
-      { you: 'Are you up or down?', they: 'Dude. Up. If we use my numbers. I use my numbers.' },
+      { you: 'Are you up or down?', they: 'Bruh. Up. If we use my numbers. I use my numbers.' },
       { you: 'Do you actually like it out here?', they: 'I like that nobody\'s pinging me. Dude, the silence still freaks me out a little.' },
     ],
     [
       { you: 'What happened with the job?', they: 'Reorg. Dude, that word covers a lot. My whole team, one Tuesday, one calendar invite.' },
-      { you: 'What was the stock?', they: 'Doesn\'t matter. Dude, it does matter. I\'m not saying it out loud on the water.' },
+      { you: 'What was the stock?', they: 'Doesn\'t matter. Du-UDE, it does matter. I\'m not saying it out loud on the water.' },
     ],
     [
-      { you: 'Are you going back?', they: 'One more year. Stop-loss. Dude, hold me to it, I mean it.' },
+      { you: 'Are you going back?', they: 'One more year. Stop-loss. Bruh, hold me to it, I mean it.' },
       { you: 'What would you do differently?', they: 'Buy the boat first. Dude, everything after that was fine.' },
     ],
   ],
