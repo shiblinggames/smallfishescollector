@@ -2411,24 +2411,36 @@ export default function GauntletGame(props: GauntletGameProps) {
     // purple is the run shop and gold the permanent one, exactly as the old
     // tiles were. Only the water and the vortex carry the variant, because
     // that is the part that is flavour rather than function.
+    // The eye of the maelstrom holds the upper middle of the frame; the
+    // moorings sit on the drowned floor below it, and she starts among them.
     const slipPlaces: SlipwayPlace[] = [
-      { id: 'portal', label: 'The Descent', x: 0.5, y: 0.34, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
-      { id: 'run', label: 'Run Upgrades', x: 0.16, y: 0.54, color: 0xc4a0e8 },
-      { id: 'shore', label: 'Permanent Upgrades', x: 0.84, y: 0.54, color: 0xf0c040 },
-      { id: 'records', label: 'The Records', x: 0.22, y: 0.76, color: 0x9ab8c8 },
-      { id: 'ledger', label: 'The Ledger', x: 0.78, y: 0.76, color: 0xa8b8d0 },
+      { id: 'portal', label: 'The Descent', x: 0.5, y: 0.36, portal: true, color: isDonG ? 0xe6c66e : 0x6fe4d8 },
+      { id: 'run', label: 'Run Upgrades', x: 0.17, y: 0.63, color: 0xc4a0e8 },
+      { id: 'shore', label: 'Permanent Upgrades', x: 0.83, y: 0.63, color: 0xf0c040 },
+      { id: 'records', label: 'The Records', x: 0.24, y: 0.83, color: 0x9ab8c8 },
+      { id: 'ledger', label: 'The Ledger', x: 0.76, y: 0.83, color: 0xa8b8d0 },
     ]
+    // What each place is, in one line, and its mark. The icons are the same
+    // strokes the old tiles carried, so a returning captain recognises them.
+    const PLACE_META: Record<string, { sub: string; icon: React.ReactNode }> = {
+      portal: { sub: 'Sail into the eye to descend', icon: <><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></> },
+      run: { sub: 'For the descent', icon: <><path d="M6 4l6 6 6-6" /><path d="M6 12l6 6 6-6" /></> },
+      shore: { sub: 'Voyages, raids, fishing', icon: <><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></> },
+      records: { sub: 'Ranks and records', icon: <><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0z" /><path d="M7 6H4v2a3 3 0 0 0 3 3" /><path d="M17 6h3v2a3 3 0 0 1-3 3" /></> },
+      ledger: { sub: 'Rules, rewards, the rest', icon: <><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M8 8h7" /><path d="M8 12h7" /></> },
+    }
+    const hexOf = (c: number) => '#' + c.toString(16).padStart(6, '0')
     const slipLabel = slipPlaces.find(pl => pl.id === slipNear)?.label ?? null
     // Defined once because two different components render it: our own moor
     // button, and the leaderboard's trigger.
     const helmStyle: React.CSSProperties = {
       position: 'fixed', left: '50%', transform: 'translateX(-50%)',
       bottom: 'calc(env(safe-area-inset-bottom, 0px) + 74px)', zIndex: 6,
-      padding: '0.66rem 1.5rem', borderRadius: 999, cursor: 'pointer',
-      background: 'linear-gradient(180deg, rgba(16,24,38,0.96), rgba(6,11,19,0.96))',
-      border: `1px solid ${AC}66`, color: '#f4efe4',
-      boxShadow: `0 8px 26px rgba(0,0,0,0.6), 0 0 18px ${AC}22`,
-      fontSize: '0.78rem', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+      minWidth: 220, padding: '0.72rem 1.4rem', borderRadius: 16, cursor: 'pointer',
+      background: 'linear-gradient(180deg, rgba(18,26,40,0.97), rgba(6,11,19,0.97))',
+      border: `1px solid ${AC}77`, color: '#f4efe4',
+      boxShadow: `0 10px 30px rgba(0,0,0,0.65), 0 0 22px ${AC}26, inset 0 1px 0 ${AC}33`,
+      fontSize: '0.84rem', letterSpacing: '0.05em', whiteSpace: 'nowrap',
     }
     const moor = () => {
       vibrate([0, 12])
@@ -2450,6 +2462,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             dark: 0.36,
             key: isDonG ? 0xe6c66e : 0x6fe4d8,
           }}
+          variant={props.variant ?? 'davy'}
           places={slipPlaces}
           shipUrl={props.shipImageUrl}
           onNear={setSlipNear}
@@ -2471,9 +2484,16 @@ export default function GauntletGame(props: GauntletGameProps) {
             title={gauntletTitle} label="The Records" triggerStyle={helmStyle} />
         )}
         {!ledgerOpen && slipLabel && slipNear !== 'portal' && slipNear !== 'records' && (
-          <button type="button" onClick={moor} className="tap font-cinzel font-800 uppercase" style={helmStyle}>
-            {slipLabel}
+          <button type="button" onClick={moor} className="tap" style={{ ...helmStyle, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+            <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.84rem', letterSpacing: '0.05em' }}>{slipLabel}</span>
+            <span className="font-karla font-700 uppercase" style={{ marginLeft: 'auto', fontSize: '0.52rem', letterSpacing: '0.16em', color: `${AC}cc` }}>Moor</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
           </button>
+        )}
+        {!ledgerOpen && slipNear === 'portal' && (
+          <div aria-hidden style={{ ...helmStyle, cursor: 'default', textAlign: 'center', border: `1px solid ${AC}44` }}>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.18em', color: `${AC}dd` }}>Hold course into the eye</span>
+          </div>
         )}
 
         {/* ── THE HUD ──────────────────────────────────────────────────────
@@ -2486,9 +2506,18 @@ export default function GauntletGame(props: GauntletGameProps) {
         {!ledgerOpen && (
           <div style={{ position: 'relative', zIndex: 6, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, padding: '10px 12px 0' }}>
           <div style={{ display: 'grid', gap: 8, justifyItems: 'start', minWidth: 0 }}>
-            <h1 className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f3ead2', lineHeight: 1.06, textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>
-              {gauntletTitle}
-            </h1>
+            <div>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: `${AC}cc`, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                {isDonG ? "The Don's door" : "Davy's door"}
+              </p>
+              <h1 className="font-cinzel font-800" style={{ fontSize: '1.42rem', color: '#f3ead2', lineHeight: 1.04, marginTop: 2, textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 24px rgba(0,0,0,0.6)' }}>
+                {gauntletTitle}
+              </h1>
+              <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#b9c6c9', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                {props.deepest > 0 ? <>Your deepest <span className="font-cinzel font-800" style={{ color: '#f0e6cc' }}>{props.deepest}</span></> : 'Uncharted. Your first dive awaits.'}
+                {props.topDescender && <> · Top {props.topDescender.name} <span className="font-cinzel font-800" style={{ color: '#f0e6cc' }}>{props.topDescender.depth}</span></>}
+              </p>
+            </div>
             <div style={{ display: 'flex', gap: 7 }}>
               <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?" className="active:scale-95"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.24rem 0.6rem 0.24rem 0.48rem', borderRadius: 999, cursor: 'pointer',
@@ -2509,48 +2538,62 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* The Codex always to hand, and the way back into the old lobby for
               everything the water has no place for. */}
           <div style={{ display: 'grid', gap: 8, justifyItems: 'end', flexShrink: 0 }}>
-            <button type="button" onClick={() => setSynergiesOpen(true)} className="tap"
-              aria-label="Codex"
-              style={{ width: 42, height: 42, borderRadius: 13, cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#b98bff',
-                background: 'linear-gradient(180deg, rgba(185,139,255,0.16), rgba(8,12,20,0.82))', border: '1px solid rgba(185,139,255,0.5)' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" />
-              </svg>
-            </button>
-            <button type="button" onClick={() => setLedgerOpen(true)} className="tap"
-              aria-label="The Ledger"
-              style={{ width: 42, height: 42, borderRadius: 13, cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#c2bcae',
-                background: 'linear-gradient(180deg, rgba(194,188,174,0.14), rgba(8,12,20,0.82))', border: '1px solid rgba(194,188,174,0.4)' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M8 8h7" /><path d="M8 12h7" />
-              </svg>
-            </button>
+            {([
+              { id: 'codex', label: 'Codex', color: '#b98bff', onClick: () => setSynergiesOpen(true),
+                icon: <><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></> },
+              { id: 'ledger', label: 'Ledger', color: '#c2bcae', onClick: () => setLedgerOpen(true),
+                icon: <><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M8 8h7" /><path d="M8 12h7" /></> },
+            ] as const).map(b => (
+              <button key={b.id} type="button" onClick={b.onClick} className="tap" aria-label={b.label}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: 54, padding: '7px 0 5px', borderRadius: 13, cursor: 'pointer', color: b.color,
+                  background: `linear-gradient(180deg, ${b.color}24, rgba(8,12,20,0.88))`, border: `1px solid ${b.color}66`, boxShadow: '0 6px 18px rgba(0,0,0,0.5)' }}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{b.icon}</svg>
+                <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color: '#e8e2d6' }}>{b.label}</span>
+              </button>
+            ))}
           </div>
           </div>
         )}
 
-        {/* ── THE PLACES, NAMED ────────────────────────────────────────────
-            A lit ring says "moor here" and nothing else, so the name goes
-            beside it in type. Painting it into the canvas would mean a font
-            atlas and a second text pipeline for four words. */}
-        {!ledgerOpen && slipPlaces.map(pl => (
-          <span key={pl.id} aria-hidden
-            style={{
-              position: 'fixed', left: `${pl.x * 100}%`, top: `${pl.y * 100}%`,
-              // Below the ring, except low on the screen, where the helm button
-              // is about to occupy exactly that spot. The vortex is wide enough
-              // that its name has to clear the arms entirely.
-              // Under the vortex, not over it: above the arms is where the
-              // page title lives, and the two collided.
-              transform: pl.portal ? 'translate(-50%, 96px)' : pl.y > 0.7 ? 'translate(-50%, -46px)' : 'translate(-50%, 34px)',
-              zIndex: 4, pointerEvents: 'none',
-              color: slipNear === pl.id ? '#f7f2e6' : 'rgba(233,241,246,0.78)',
-              textShadow: '0 2px 8px rgba(0,0,0,0.98), 0 0 14px rgba(0,0,0,0.9)',
-              transition: 'color 0.25s',
-            }}>
-            <span className="font-karla font-800 uppercase" style={{ fontSize: pl.portal ? '0.62rem' : '0.54rem', letterSpacing: '0.18em', whiteSpace: 'nowrap' }}>{pl.label}</span>
-          </span>
-        ))}
+        {/* ── THE PLACES, AS CARDS ─────────────────────────────────────────
+            A mooring on the water says "tie up here" and nothing else, so
+            each carries a card: its mark, its name, one line of what it is.
+            The card lifts and lights as she comes alongside. The eye gets a
+            caption under the bowl rather than a card, because it is not a
+            thing you moor at. */}
+        {!ledgerOpen && slipPlaces.map(pl => {
+          const near = slipNear === pl.id
+          const hex = hexOf(pl.color)
+          const meta = PLACE_META[pl.id]
+          if (pl.portal) return (
+            <div key={pl.id} aria-hidden
+              style={{ position: 'fixed', left: `${pl.x * 100}%`, top: `${pl.y * 100}%`, transform: 'translate(-50%, 0)', marginTop: 'min(24vw, 200px)', zIndex: 4, pointerEvents: 'none', textAlign: 'center', transition: 'opacity 0.3s', opacity: near ? 1 : 0.85 }}>
+              <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.16em', color: '#f4efe4', textShadow: `0 2px 10px rgba(0,0,0,0.98), 0 0 18px ${hex}66` }}>{pl.label}</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', color: `${hex}dd`, marginTop: 2, textShadow: '0 1px 8px rgba(0,0,0,0.95)' }}>{meta.sub}</p>
+            </div>
+          )
+          return (
+            <div key={pl.id} aria-hidden
+              style={{
+                position: 'fixed', left: `${pl.x * 100}%`, top: `${pl.y * 100}%`,
+                transform: `translate(-50%, ${near ? 24 : 30}px)`, zIndex: 4, pointerEvents: 'none',
+                display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 7px 8px', borderRadius: 13,
+                background: 'linear-gradient(180deg, rgba(14,20,32,0.94), rgba(5,9,16,0.94))',
+                border: `1px solid ${hex}${near ? 'cc' : '55'}`,
+                boxShadow: near ? `0 10px 28px rgba(0,0,0,0.6), 0 0 22px ${hex}44` : '0 6px 18px rgba(0,0,0,0.55)',
+                transition: 'transform 0.25s, border-color 0.25s, box-shadow 0.25s',
+                whiteSpace: 'nowrap',
+              }}>
+              <span style={{ display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 9, background: `${hex}22`, border: `1px solid ${hex}66`, color: hex, flexShrink: 0 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{meta.icon}</svg>
+              </span>
+              <span style={{ display: 'grid', gap: 1 }}>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.7rem', color: '#f3ead2', lineHeight: 1.05 }}>{pl.label}</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.52rem', color: near ? '#d7d0c2' : '#9a948a', lineHeight: 1.1 }}>{meta.sub}</span>
+              </span>
+            </div>
+          )
+        })}
 
         {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
             this + the global page footer below (~25px) lands "Not today" just

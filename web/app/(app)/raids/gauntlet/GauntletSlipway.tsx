@@ -2,26 +2,35 @@
 
 // ── THE SLIPWAY ─────────────────────────────────────────────────────────────
 //
-// The gauntlet's hub, as water. Phase 2 of the facelift: arriving at a descent
-// stops being a scroll of cards and becomes somewhere you are — a small drowned
-// sea with your ship on it, the places you can moor at lit around her, and the
-// way down turning in the middle of it.
+// The gauntlet's hub, as water. Arriving at a descent stops being a scroll of
+// cards and becomes somewhere you are: the inside of the maelstrom you just
+// sailed into, with the way down still turning in the middle of it, the
+// keeper of this door hanging over the eye, and the places you can moor at
+// lit around you on the drowned floor of the thing.
 //
 // ── EVERY PLACE IS A MENU THAT ALREADY EXISTS ───────────────────────────────
 //
 // Nothing here reimplements a panel. Mooring at the Locker opens the Locker;
-// sailing into the portal opens the descent chooser, which is the SAME chooser
-// the card used, so the run-start path — and the rule that starting a run
+// sailing into the eye opens the descent chooser, which is the SAME chooser
+// the cards used, so the run-start path — and the rule that starting a run
 // consumes the attempt — is untouched by all of this. The sea changes how you
 // reach a thing, never what the thing is.
 //
+// ── IT IS THE SEA'S OWN MAELSTROM, NOT A PICTURE OF ONE ─────────────────────
+//
+// The first cut drew a flat spiral texture for the way down, and it read as
+// exactly that: a diagram. The chart already has the real thing — the
+// keystoned bowl with its arms, funnel, foam, spirits and the hologram of its
+// keeper — built for a world with a camera. It is hosted here by giving it the
+// camera it expects: a container squashed by GROUND and scaled to hub size,
+// with the eye held dead centre of the "view" so it is roused all the way,
+// because you are inside it.
+//
 // ── ONE SCREEN, NO CAMERA ───────────────────────────────────────────────────
 //
-// The whole hub is the viewport. There is no camera, no world larger than the
-// window, and no scrolling: places sit at fractions of the screen so the hub
-// composes itself on any phone, and sailing is the boat moving across a picture
-// you can already see all of. A camera here would buy nothing and cost the
-// clarity of being able to see every door at once.
+// The whole hub is the viewport. Places sit at fractions of the screen so the
+// hub composes itself on any phone, and sailing is the boat moving across a
+// picture you can already see all of.
 //
 // It shares the arena's rule about contexts: this is a second Pixi Application
 // on the gauntlet's own route, alive only while the lobby is, and it must never
@@ -30,8 +39,12 @@
 
 import { useEffect, useRef } from 'react'
 import { makeWater, rgb3 } from '@/app/(app)/sea/seaWater'
-import { makeWeather, type Weather } from './gauntletWeather'
+import { makeMaelstroms, type Maelstroms } from '@/app/(app)/sea/seaMaelstrom'
+import { MAELSTROMS } from '@/app/(app)/sea/raidWaters'
+import { GROUND } from '@/app/(app)/sea/islandArt'
 import { texture } from '@/app/(app)/sea/skiffArt'
+import { makeWeather, type Weather } from './gauntletWeather'
+import { makeScenery, type Scenery } from './gauntletScenery'
 
 export type SlipwayPlace = {
   id: string
@@ -40,7 +53,7 @@ export type SlipwayPlace = {
   /** Fractions of the viewport. */
   x: number
   y: number
-  /** The portal is drawn as a vortex and entered rather than moored at. */
+  /** The way down: the maelstrom is drawn here and entered rather than moored at. */
   portal?: boolean
   color: number
 }
@@ -53,6 +66,8 @@ export type SlipwayTheme = {
 
 /** How close, in screen pixels, counts as alongside. */
 const REACH = 96
+
+type Texture = import('pixi.js').Texture
 
 /**
  * ── WHY THE CACHES ARE CHECKED, NOT JUST READ ───────────────────────────────
@@ -71,23 +86,21 @@ function live(t: Texture | null): Texture | null {
 
 let ringTex: Texture | null = null
 let glowTex: Texture | null = null
-let spinTex: Texture | null = null
-type Texture = import('pixi.js').Texture
 
 function ring(PIXI: typeof import('pixi.js')): Texture {
   const cached = live(ringTex)
   if (cached) return cached
-  const S = 128
+  const S = 256
   const c = document.createElement('canvas')
   c.width = S; c.height = S
   const g = c.getContext('2d')!
   g.strokeStyle = '#fff'
-  g.lineWidth = 5
-  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 8, 0, Math.PI * 2); g.stroke()
+  g.lineWidth = 6
+  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2); g.stroke()
   const out = document.createElement('canvas')
   out.width = S; out.height = S
   const og = out.getContext('2d')!
-  og.filter = 'blur(1.5px)'
+  og.filter = 'blur(2px)'
   og.drawImage(c, 0, 0)
   return (ringTex = PIXI.Texture.from(out))
 }
@@ -108,47 +121,15 @@ function glow(PIXI: typeof import('pixi.js')): Texture {
   return (glowTex = PIXI.Texture.from(c))
 }
 
-/** The portal's spiral, so the way down is visibly a way DOWN. */
-function spin(PIXI: typeof import('pixi.js')): Texture {
-  const cached = live(spinTex)
-  if (cached) return cached
-  const S = 512
-  const c = document.createElement('canvas')
-  c.width = S; c.height = S
-  const g = c.getContext('2d')!
-  const cx = S / 2, cy = S / 2
-  g.lineCap = 'round'
-  for (let a = 0; a < 3; a++) {
-    const off = (a / 3) * Math.PI * 2
-    let px = 0, py = 0
-    for (let i = 0; i <= 150; i++) {
-      const t = i / 150
-      const th = off + t * Math.PI * 2 * 1.4
-      const r = 8 + Math.pow(t, 0.85) * (S / 2 - 12)
-      const x = cx + Math.cos(th) * r, y = cy + Math.sin(th) * r
-      if (i > 0) {
-        g.strokeStyle = 'rgba(255,255,255,' + (0.12 + 0.62 * Math.sin(t * Math.PI)).toFixed(3) + ')'
-        g.lineWidth = 22 * (0.3 + t)
-        g.beginPath(); g.moveTo(px, py); g.lineTo(x, y); g.stroke()
-      }
-      px = x; py = y
-    }
-  }
-  const out = document.createElement('canvas')
-  out.width = S; out.height = S
-  const og = out.getContext('2d')!
-  og.filter = 'blur(4px)'
-  og.drawImage(c, 0, 0)
-  return (spinTex = PIXI.Texture.from(out))
-}
-
-export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnterPortal }: {
+export default function GauntletSlipway({ theme, variant, places, shipUrl, onNear, onEnterPortal }: {
   theme: SlipwayTheme
+  /** Whose door this is: which maelstrom, whose hologram, which wreck-field. */
+  variant: 'davy' | 'don'
   places: SlipwayPlace[]
   shipUrl: string
   /** The place the hull is alongside, or null. Drives the helm button. */
   onNear: (id: string | null) => void
-  /** She sailed into the vortex. */
+  /** She sailed into the eye. */
   onEnterPortal: () => void
 }) {
   const holder = useRef<HTMLDivElement | null>(null)
@@ -156,6 +137,7 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
   const placesRef = useRef(places); placesRef.current = places
   const onNearRef = useRef(onNear); onNearRef.current = onNear
   const onPortalRef = useRef(onEnterPortal); onPortalRef.current = onEnterPortal
+  const variantRef = useRef(variant); variantRef.current = variant
 
   useEffect(() => {
     let dead = false
@@ -189,8 +171,8 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
         uDeep: rgb3(th0.sea[0]),
         uDark: th0.dark,
         uLight: new Float32Array([0.5, -0.2]),
-        uSwell: 0.45,
-        uRush: 0.08,
+        uSwell: 0.5,
+        uRush: 0.1,
         uWarm: 0,
       })
       if (dead) { app.destroy(true, { children: true }); return }
@@ -200,64 +182,65 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
       world.isRenderGroup = true
       app.stage.addChild(world)
 
+      // ── THE FLOOR OF THE THING ──────────────────────────────────────
+      // The arena's own scenery — the wreck-field, the shafts, the motes, the
+      // vignette — so the hub is visibly the same place the fights are.
+      const scenery: Scenery = makeScenery(PIXI)
       const weather: Weather = makeWeather(PIXI)
-      world.addChild(weather.water)
+      world.addChild(weather.water, scenery.far)
 
-      // ── THE PLACES ──────────────────────────────────────────────────
+      // ── THE MAELSTROM, HOSTED ───────────────────────────────────────
       //
-      // A lit ring on the water with a glow under it. No art: a buoy would be
-      // one more thing to draw and the ring already says "moor here", which is
-      // the whole message. The portal gets a spiral instead, because it is not
-      // a place you tie up at.
-      const ringT = ring(PIXI), glowT = glow(PIXI), spinT = spin(PIXI)
-      type Mark = { p: SlipwayPlace; node: import('pixi.js').Container; ring: import('pixi.js').Sprite; halo: import('pixi.js').Sprite; spiral: import('pixi.js').Sprite | null }
-      const marks: Mark[] = placesRef.current.map(p => {
+      // The chart's renderer builds both doors at their world positions and
+      // asks for a camera. The bowl container IS that camera: squashed by
+      // GROUND like the chart's world, scaled to hub size, and positioned so
+      // this door's eye lands on the portal place. The camera it is told
+      // about sits ON the eye, so the door is roused all the way and its
+      // keeper is lit — you are inside it, after all — and the other door is
+      // half a world away and culled.
+      const maelstroms: Maelstroms = makeMaelstroms(PIXI, app.renderer)
+      const bowl = new PIXI.Container()
+      bowl.addChild(maelstroms.view)
+      world.addChild(bowl)
+      const door = MAELSTROMS.find(m => m.id === variantRef.current) ?? MAELSTROMS[0]
+
+      // ── THE MOORINGS ────────────────────────────────────────────────
+      //
+      // A pool of light on the water and two ripples going out from it,
+      // which is the chart's own idiom for "tie up here". No hoop.
+      const ringT = ring(PIXI), glowT = glow(PIXI)
+      type Mark = {
+        p: SlipwayPlace; node: import('pixi.js').Container
+        pool: import('pixi.js').Sprite; rings: import('pixi.js').Sprite[]; ph: number
+      }
+      const marks: Mark[] = placesRef.current.filter(p => !p.portal).map((p, i) => {
         const node = new PIXI.Container()
-        const halo = new PIXI.Sprite(glowT)
-        halo.anchor.set(0.5); halo.tint = p.color; halo.alpha = 0.3; halo.blendMode = 'add'
-        halo.width = 190; halo.height = 190 * 0.6
-        const rg = new PIXI.Sprite(ringT)
-        rg.anchor.set(0.5); rg.tint = p.color; rg.alpha = 0.6; rg.blendMode = 'add'
-        rg.width = 96; rg.height = 96 * 0.55
-        node.addChild(halo, rg)
-        let spiral: import('pixi.js').Sprite | null = null
-        if (p.portal) {
-          // A sprite squashed into an ellipse and THEN rotated carries its own
-          // long axis round with it, so the vortex stood up on its end every
-          // half turn and stopped lying on the water. The squash belongs to a
-          // container outside the spin: rotate the round sprite inside it and
-          // the ground plane holds through every turn.
-          const plate = new PIXI.Container()
-          plate.scale.set(1, 0.5)
-          spiral = new PIXI.Sprite(spinT)
-          spiral.anchor.set(0.5); spiral.tint = p.color; spiral.alpha = 0.42; spiral.blendMode = 'add'
-          spiral.width = 300; spiral.height = 300
-          plate.addChild(spiral)
-          node.addChildAt(plate, 0)
+        const pool = new PIXI.Sprite(glowT)
+        pool.anchor.set(0.5); pool.tint = p.color; pool.alpha = 0.3; pool.blendMode = 'add'
+        node.addChild(pool)
+        const rings: import('pixi.js').Sprite[] = []
+        for (let k = 0; k < 2; k++) {
+          const r = new PIXI.Sprite(ringT)
+          r.anchor.set(0.5); r.tint = p.color; r.alpha = 0; r.blendMode = 'add'
+          node.addChild(r); rings.push(r)
         }
         world.addChild(node)
-        return { p, node, ring: rg, halo, spiral }
+        return { p, node, pool, rings, ph: i * 1.7 }
       })
 
       // ── THE SHIP ────────────────────────────────────────────────────
-      // Added BEFORE the air layer, so the rain falls in front of her rather
-      // than behind her. Every hull on the chart sits under the weather.
       const boat = new PIXI.Container()
       const shade = new PIXI.Sprite(glowT)
-      shade.anchor.set(0.5)
-      shade.tint = 0xbfe4ee
-      shade.alpha = 0.22
-      shade.blendMode = 'add'
+      shade.anchor.set(0.5); shade.tint = 0xbfe4ee; shade.alpha = 0.22; shade.blendMode = 'add'
       const hull = new PIXI.Sprite(PIXI.Texture.EMPTY)
       hull.anchor.set(0.5)
       boat.addChild(shade, hull)
       world.addChild(boat)
-
-      world.addChild(weather.air)
       void texture(PIXI, shipUrl).then(t => { if (!dead) hull.texture = t }).catch(() => {})
 
-      // Where she is and where she is going, both in screen pixels.
-      const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.64 }
+      world.addChild(weather.air, scenery.near)
+
+      const pos = { x: app.screen.width * 0.5, y: app.screen.height * 0.74 }
       const target = { x: pos.x, y: pos.y }
       let facing = 1
       let nearNow: string | null = null
@@ -277,6 +260,7 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
       window.addEventListener('pointerup', onUp)
 
       weather.theme({ key: themeRef.current.key, pale: 0xcfe6f0 })
+      maelstroms.night(0.35)
 
       let t = 0
       app.ticker.add(() => {
@@ -289,9 +273,25 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
           uTime: t,
           uRes: new Float32Array([W, H]),
           uShallow: rgb3(th.sea[2]), uMid: rgb3(th.sea[1]), uDeep: rgb3(th.sea[0]),
-          uDark: th.dark,
+          uDark: th.dark + scenery.grade(),
         })
         water?.size(W, H)
+
+        scenery.set({
+          variant: variantRef.current, hardcore: false, boss: false, apex: false,
+          deep: 0.3, mood: 'between', key: th.key,
+          deepColor: parseInt(th.sea[0].replace('#', ''), 16),
+        })
+
+        // ── THE DOOR, IN THE MIDDLE OF THE ROOM ───────────────────────
+        const portal = placesRef.current.find(p => p.portal)
+        const px = W * (portal?.x ?? 0.5), py = H * (portal?.y ?? 0.36)
+        // Scaled so the bowl spans most of a phone and does not swallow a
+        // desktop: the flat texture is 2.4 radii across.
+        const z = Math.max(0.2, Math.min(0.42, (W * 0.96) / (door.r * 2.4)))
+        bowl.scale.set(z, z * GROUND)
+        bowl.position.set(px - door.x * z, py - door.y * z * GROUND)
+        maelstroms.advance(t, dt, door.x, door.y, W / (2 * z), H / (2 * z * GROUND))
 
         // ── SHE SAILS ─────────────────────────────────────────────────
         const dx = target.x - pos.x, dy = target.y - pos.y
@@ -306,21 +306,16 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
         boat.x = pos.x
         boat.y = pos.y + bob
         if (hull.texture.width > 2) {
-          const w = Math.min(190, W * 0.34)
+          const w = Math.min(200, W * 0.36)
           hull.width = w
           hull.height = w * (hull.texture.height / hull.texture.width)
-          // The shadow pools under her waterline, not under her centre, and it
-          // does NOT take the bob — a shadow that rises with the hull is what
-          // makes a sprite look like it is flying.
-          // Tight and just under her keel. Wide and soft reads as fog she is
-          // sitting on rather than water she is sitting in.
           shade.width = w * 0.58
           shade.height = w * 0.17
           shade.y = hull.height * 0.29 - bob
         }
         hull.scale.x = Math.abs(hull.scale.x) * facing
 
-        // ── THE PLACES BREATHE, AND THE NEAREST ONE ANSWERS ───────────
+        // ── THE MOORINGS BREATHE, AND THE NEAREST ONE ANSWERS ─────────
         let found: string | null = null
         let bestD = REACH
         for (const m of marks) {
@@ -329,46 +324,52 @@ export default function GauntletSlipway({ theme, places, shipUrl, onNear, onEnte
           const dd = Math.hypot(pos.x - mx, pos.y - my)
           if (dd < bestD) { bestD = dd; found = m.p.id }
           const near = dd < REACH * 1.6
-          const pulse = 0.5 + 0.5 * Math.sin(t * 1.5 + m.p.x * 7)
-          m.ring.alpha = (near ? 0.85 : 0.45) + 0.15 * pulse
-          m.halo.alpha = (near ? 0.5 : 0.24) + 0.1 * pulse
-          const s = (near ? 1.12 : 1) + 0.03 * pulse
-          m.ring.width = 96 * s; m.ring.height = 96 * 0.55 * s
-          if (m.spiral) {
-            m.spiral.rotation += dt * (near ? 1.1 : 0.5)
-            m.spiral.alpha = (near ? 0.66 : 0.4) + 0.08 * pulse
+          const pulse = 0.5 + 0.5 * Math.sin(t * 1.4 + m.ph)
+          m.pool.width = 150 + 24 * pulse
+          m.pool.height = m.pool.width * 0.42
+          m.pool.alpha = (near ? 0.5 : 0.26) + 0.08 * pulse
+          for (let k = 0; k < m.rings.length; k++) {
+            const u = ((t * (near ? 0.55 : 0.36) + m.ph * 0.13 + k * 0.5) % 1)
+            const s = 34 + u * 96
+            m.rings[k].width = s; m.rings[k].height = s * 0.42
+            m.rings[k].alpha = (1 - u) * (near ? 0.55 : 0.28)
           }
+        }
+        // The eye itself is a place the helm can name.
+        if (portal) {
+          const pd = Math.hypot(pos.x - px, pos.y - py)
+          if (pd < REACH * 1.2 && pd < bestD + REACH) found = portal.id
         }
         if (found !== nearNow) { nearNow = found; onNearRef.current(found) }
 
         // ── AND THE WAY DOWN TAKES HER ────────────────────────────────
-        // Sailing into the vortex IS the descent chooser opening. Fired once:
+        // Sailing into the eye IS the descent chooser opening. Fired once:
         // the chooser is a decision, and a door that keeps re-opening while
         // you sit in it is not a door.
-        const portal = marks.find(m => m.p.portal)
         if (portal && !entered) {
-          const pd = Math.hypot(pos.x - W * portal.p.x, pos.y - H * portal.p.y)
-          if (pd < REACH * 0.5) { entered = true; onPortalRef.current() }
+          const pd = Math.hypot(pos.x - px, pos.y - py)
+          if (pd < REACH * 0.55) { entered = true; onPortalRef.current() }
         } else if (portal && entered) {
-          const pd = Math.hypot(pos.x - W * portal.p.x, pos.y - H * portal.p.y)
+          const pd = Math.hypot(pos.x - px, pos.y - py)
           if (pd > REACH * 1.4) entered = false
         }
 
         // A hub is weather you can stand in, not weather that is happening to
-        // you: a quarter of the dial, no bolts to speak of, no maw.
-        weather.advance(dt, t, W, H, 0.26, false, 0)
+        // you: a fifth of the dial, no bolts to speak of, no maw.
+        weather.advance(dt, t, W, H, 0.22, false, 0)
+        scenery.advance(dt, t, W, H, 0.22, 0)
       })
 
       cleanup = () => {
         el.removeEventListener('pointerdown', onDown)
         el.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
+        maelstroms.destroy()
+        scenery.destroy()
         weather.destroy()
         // THE FILTER COMES OFF FIRST. The water is a sprite wearing a shader,
         // and destroying the renderer with that shader still bound to its
-        // textures is what Pixi's "destroyed while still bound" warnings were:
-        // teardown-only noise, but noise that hides a real one. Unbind, then
-        // destroy the filter, then the Application.
+        // textures is what Pixi's "destroyed while still bound" warnings were.
         if (water) {
           const fs = water.sprite.filters
           water.sprite.filters = []
