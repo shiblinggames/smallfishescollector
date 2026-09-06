@@ -178,9 +178,8 @@ now based on a real friend, the way Yoon is: a millennial who worked in tech, in
 stocks and gambles like it is a personality. "Dude" and "bruh" are his tics, opening most
 of his lines. His voice cracks too, but broken-syllable spellings ("Du-UDE") were rejected;
 how to show it is undecided, so the words stay whole. He also messes up his words from
-time to time ("nails on the stails"), sometimes catching it and sometimes not: four slips
-across all his pools, never on the tics, because a slip every line is a bit and a slip every
-so often is a person. Under it he got laid off, called it a sabbatical, bought the boat with the
+time to time, and the one slip in his lines is a real one, "nails on the stails"; invented
+slips were tried and cut, so any new ones come from him. Under it he got laid off, called it a sabbatical, bought the boat with the
 severance and is deciding whether to go back. His favourite is the Atlantic Bluefin Tuna,
 because one once sold for millions at auction and he will tell you the number. His storage
 id is still `pell`, so every captain's standing with him carried over. Keep the register
