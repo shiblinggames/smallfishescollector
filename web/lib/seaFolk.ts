@@ -424,12 +424,16 @@ export const FOLK: Folk[] = [
         "Dude. You're the first boat I've seen all day that isn't, like, a whole fleet. Hey.",
         "Bruh, I'm not selling anything. I'm just out here. It's a whole thing, don't worry about it.",
         "Middle of the ocean and my phone still gets one bar. Dude. That's the real miracle out here.",
+        "Dude, do you ever just look at the water and think, this is basically a screensaver? Bruh. It's a screensaver.",
+        "Bruh, I've got snacks. Not good snacks. Boat snacks. You want some? Dude, take some.",
       ],
       [
         "Bruh, you came back. Nobody comes back to the middle band. The middle band is the index fund of oceans. Boring, but it compounds.",
         "Okay so I used to work in tech. Now my portfolio is fish. Dude. I'm doing great. I'm doing so great.",
         "Watch the shipping lanes. Where the freight goes, the fish go, and where the fish go is basically insider information. Dude. Legally.",
         "A bluefin. Bruh. One of those sold for three million at an auction once. Three million. For a fish. If you ever land one, bring it here and let me just look at it.",
+        "Dude, I tried to explain my old job to a guy at the harbour and he asked if it was like being a fisherman for computers. Bruh. Kind of? Kind of.",
+        "Okay so the fish are basically a market. Bruh, hear me out. Supply, demand, a bunch of guys yelling. Dude, it's the same thing.",
       ],
       [
         "Dude, don't tell anyone, but I've got a system at the Den. It's not a system. It's a feeling. Bruh, feelings are a system.",
@@ -686,12 +690,16 @@ export const FOLK: Folk[] = [
         "You've got the streak for it or you don't. Rod won't teach you that. It just stops wasting it.",
         "I'm not out here to sell. I'm out here in case somebody turns up who should have it.",
         "Sheeeeesh. Another one this far out. Gyattt. Aight then.",
+        "Bruhhh, you sailed all the way out here for a chat? Aight. Respect, lowkey.",
+        "Don't touch the rod. Gyattt, I'm kidding. Kinda. Don't touch it.",
       ],
       [
         "Gyattt. You came back and you didn't even bring the coin. That's way more interesting.",
         "The rod's not the hard part. The hard part's the hand.",
         "Gyattt, you want it already? Betty johnson. Come back when the hand's ready.",
         "Oarfish. Twenty feet of ribbon out of the black. Bruhhh. Bring me one of those and I will actually stop working for the afternoon.",
+        "Sheeeeesh, that hull's seen some things. Good. A clean boat is a boat that hasn't fished.",
+        "Lowkey I count how many casts people waste before they settle. You're at, like, two. Gyattt.",
       ],
       [
         "I made it. Not the tier, the rod. The one on my boat. Made it, then I stopped making.",
@@ -779,12 +787,16 @@ export const FOLK: Folk[] = [
         "Okay so you're probably wondering why a guy with a boat this ugly is anchored in the nicest spot in the Shallows. Long story. The short version doesn't make sense without the long version. Hi, by the way.",
         "This is my third rod. The first two are fine. I just, you know, wanted to see the patch notes on this one. That's a joke. Nobody out here gets my jokes. You might. You've got the look.",
         "Back in the army we'd sit in the dark for six hours waiting for nothing to happen, and I thought, I could do this for fun. Turns out I was right. That's fishing. That's the whole pitch.",
+        "I named the boat after a save file. Long story. Actually it's a short story, the boat's called Slot Three, because the first two saves are, you know, gone. Anyway. Hi.",
+        "You know what nobody tells you about fishing? The loading screens are gorgeous. That's a joke about the water. Sorry. I do a lot of those.",
       ],
       [
         "You came back! People don't, usually. I talk a lot. I know I talk a lot. I've been told by professionals. Anyway, sit, or don't, I'll talk either way.",
         "Muskellunge. The fish of ten thousand casts. Ten thousand. That's a drop rate, that's a grind, that's the kind of number I respect. I've done about nine hundred. I'm keeping a tally. Of course I'm keeping a tally.",
         "Back in the army I had a sergeant who said a plan is just a list of things that won't happen. I think about him every time I cast. Every single time. Sorry, I'm getting into it. I get into it.",
         "This water's basically the tutorial zone and I'm fine with that. Some of the best games I've played, I never left the first area. That's not sad. Okay, it's a little sad. It's also true.",
+        "Back in the army I got very good at one thing, which was eating an entire meal in four minutes, and it has never once come up since. Until now. I'm telling you now. That's the thing.",
+        "I have three rods, a spare reel, a spare spare reel and a first-aid kit that could restock a small clinic. People say over-prepared. I say I've read the patch notes on weather.",
       ],
       [
         "Okay, real question, and I've been building up to this for like a week: do you ever get to the deep water and just feel like you skipped a cutscene? Like the game thinks you know something you don't? Just me? Okay. It's just me.",
@@ -991,14 +1003,21 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'What are you doing out here?', they: 'Dude, great question. Taking a break. From what is a longer conversation.' },
       { you: 'Do you fish?', they: 'I own a rod. Bruh, I own a lot of things I don\'t use.' },
+      { you: 'You okay out here?', they: 'Dude, I\'m great. I\'m so great. Bruh, why, do I not look great?' },
+      { you: 'What is with the phone?', they: 'One bar. Dude. I check it like it owes me money. It kind of does.' },
+      { you: 'Do you ever sleep?', they: 'Bruh. I set an alarm to wake up and check nothing. Old habit. Dude, it\'s bad.' },
     ],
     [
       { you: 'What did you do in tech?', they: 'Backend, mostly. Dude, I made the thing that made the other thing load slower.' },
       { you: 'Why the middle band?', they: 'It\'s the index fund of the ocean. Nobody brags about it and it quietly wins.' },
+      { you: 'Any advice?', they: 'Dude, never take financial advice from a guy on a boat. Bruh, including this. Especially this.' },
+      { you: 'What do you miss?', they: 'Free snacks. Dude, the office had a whole wall. Bruh, I miss the wall.' },
+      { you: 'What is the Den like?', they: 'Dude. Bruh. It\'s the best worst place on this water. Don\'t go. Okay go, but bring me.' },
     ],
     [
       { you: 'Are you up or down?', they: 'Bruh. Up. If we use my numbers. I use my numbers.' },
       { you: 'Do you actually like it out here?', they: 'I like that nobody\'s pinging me. Dude, the silence still freaks me out a little.' },
+      { you: 'Ever think about going home?', they: 'Bruh, every night around three. Dude, then it\'s morning and the water does the screensaver thing and I forget.' },
     ],
     [
       { you: 'What happened with the job?', they: 'Reorg. Dude, that word covers a lot. My whole team, one Tuesday, one calendar invite.' },
@@ -1083,15 +1102,22 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'Is the rod for sale?', they: 'Technically. Practically? Nah. Not yet.' },
       { you: 'What tier is it?', they: 'Twenty. Sheeeeesh, right? Doesn\'t matter though.' },
+      { you: 'Why so far out?', they: 'Nobody sails this far for a rod they don\'t need. Gyattt, that\'s the filter.' },
+      { you: 'What are you fishing for?', they: 'Nothing right now. Watching. Sheeeeesh, you can learn a lot watching.' },
+      { you: 'Nice boat.', they: 'Bruhhh. It\'s a workbench with a sail. But thanks. Gucci.' },
     ],
     [
       { you: 'What makes it different?', they: 'It doesn\'t waste a streak. That\'s it. That\'s the whole thing.' },
       { you: 'How much?', they: 'You\'ll know when you stop asking. Gyattt, everybody asks.' },
+      { you: 'Do you ever fish for fun?', they: 'Every day. Making rods is the work part. Gyattt, fishing\'s the reason.' },
+      { you: 'What is the worst rod you have made?', they: 'The first one. Snapped on a bluegill. Betty johnson. I kept the pieces.' },
+      { you: 'Do you get lonely out here?', they: 'Lowkey? Sometimes. Then somebody like you shows up and I remember why I\'m out here. Aight, don\'t make it weird.' },
     ],
     [
       { you: 'How did you learn to make them?', they: 'Badly. For like six years. Then it clicked and I still couldn\'t tell you what changed.' },
       { you: 'What does locked in mean to you?', they: 'When you stop counting and you\'re just doing it. Gyattt, it\'s hard to explain.' },
       { you: 'What do you make of my rig?', they: 'Bruhhh. Too much dip on your chip. Half that setup is doing nothing and you are carrying it anyway.' },
+      { you: 'What do you listen to out here?', they: 'The water. Gyattt, I know how that sounds. Also the water.' },
     ],
     [
       { you: 'Why not sell in the harbour?', they: 'Because then anybody with coin gets it. That\'s not it. That was never it.' },
@@ -1109,14 +1135,21 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'What is with the boat?', they: 'Ugly, right? The engine\'s new. I\'d rather the boat looked like this than the other way round. Long story.' },
       { you: 'Were you really in the army?', they: 'Six years. I have stories. I have SO many stories. Sit down or don\'t, they\'re coming either way.' },
+      { you: 'Do you come here often?', they: 'Every day. Same spot. I like to think of it as my spawn point. Sorry. Games. I\'ll try to keep it under control. I won\'t, but I\'ll try.' },
+      { you: 'What are you reading?', they: 'A manual for a reel I don\'t own. It\'s fascinating. It\'s genuinely fascinating. Nobody agrees with me.' },
+      { you: 'How is the fishing?', they: 'Slow, which is fine, slow is the point, if I wanted fast I\'d have stayed in the army. That\'s a joke. It was mostly slow there too.' },
     ],
     [
       { you: 'What do you play?', they: 'Everything. Too much. I once played a fishing game for three hundred hours and then bought a boat, so, you know. Draw your own conclusions.' },
       { you: 'Why the Shallows?', they: 'It\'s the starting zone. All the best stories happen in the starting zone. Nobody believes me and they\'re all wrong.' },
+      { you: 'Did you like the army?', they: 'Parts. The people, the stories, the being useful. Not the getting up. I still can\'t get up. Fishing lets you sit down. That\'s ninety percent of why.' },
+      { you: 'What was the three hundred hour game?', they: 'A fishing game. I know. I know. I\'m aware of the irony and I\'ve made peace with it and then I bought a boat.' },
+      { you: 'Do you have family out here?', they: 'No. Just the boat and, I guess, whoever stops. So, you, currently. Sorry, that got heavy. It doesn\'t have to be heavy.' },
     ],
     [
       { you: 'What was the army actually like?', they: 'Waiting. Ninety percent waiting. Then a very short amount of something. Then waiting about the something.' },
       { you: 'Do you ever stop talking?', they: 'Once. In a dentist\'s chair. It was the worst twenty minutes of my life.' },
+      { you: 'Any tips for a beginner?', they: 'Oh, I have a forty-minute answer. Sit down. The short version is: cast where the water looks bored. The long version has diagrams.' },
     ],
     [
       { you: 'You seem to do all right for yourself.', they: 'Do I? Good. That\'s the plan. Doing all right without it being a thing. I\'ve spent more effort on that than on the fishing.' },

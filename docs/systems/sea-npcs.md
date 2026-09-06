@@ -199,6 +199,12 @@ sheeeeesh, locked in, gucci, betty johnson, gyattt. He is deliberately the one v
 breaks the sea's register, and the Locked-In Rod is named after the way he says it rather
 than the other way round. Keep the mannerisms if his lines are ever extended.
 
+**The three friends have more to say at the start.** Yoon, Matty and Dennis carry five
+asks at tiers zero and one (the rest have two), one extra at tier two, and two extra lines in
+each of the first two pools. The point is the first meetings: a stranger you can only say two
+things to reads as a shopkeeper, and these three are people. The lines are personality, not
+information, and every mannerism in them was given, not invented.
+
 **Tier 4 has an `afterMax` pool and a card of its own.** Five more lines per regular that
 only open once tier four's own five are spent, in a different register: tier four is the
 threshold, the thing they had never said, and `afterMax` is the ordinary days after being
