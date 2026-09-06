@@ -191,6 +191,18 @@ eye opens the chooser, dismissing it returns you to the water, and nothing is
 spent. The chooser fires once on entry and re-arms only after you sail back
 out, because a door that keeps re-opening while you sit in it is not a door.
 
+**The hub is the inside of the maelstrom (2026-09-05, second pass).** The
+first pass was a flat water plane with hoops and a spiral and read as a
+placeholder. `GauntletSlipway` now HOSTS the sea's own maelstrom renderer
+(`makeMaelstroms` from `sea/seaMaelstrom.ts`): the bowl container is the
+camera it expects (scaled to hub size, squashed by GROUND, the eye held at the
+centre of the view so the door is roused and its keeper's hologram lit), with
+the arena's `gauntletScenery` under it. Moorings are a pool of light with
+ripples; each carries a DOM card (icon, name, one-line blurb) that lifts as
+she comes alongside; the eye gets a caption. Title block = door name, gauntlet
+name, your deepest and the top descender; the rail is labelled; the helm is a
+card.
+
 Three things the first pass got wrong on real water, all fixed: the HUD was
 pinned to the viewport and landed on the page banner (it flows now), the rings
 were unlabelled hoops, and the hull had no shadow so it read as flying.
