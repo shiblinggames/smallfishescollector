@@ -275,6 +275,24 @@ as a monument.
 
 ---
 
+## Desktop-first
+
+Full-canvas worlds are the model; phone columns are legacy. In the gauntlet:
+
+- **The hub** composes from the viewport centre in units of the SHORT side
+  (`SlipwayPlace.ox/oy`, `REACH_U`, the bowl's `z` clamp, hull size, speed,
+  ripples). The DOM cards use the same stage in CSS:
+  `calc(50% + ox * min(100vw, 100vh))`. A phone and a desktop see the same
+  diorama; a wide screen's margins go to the water.
+- **The fights** compose from the chart's `duelFrame()`, whose zoom is the
+  chart's own `zoomFor(width)` (capped 0.82 on wide screens) times the
+  push-in, so the duel is the size the sea's duel is. `RaidCombat`'s root
+  column runs to 720px (was 580); phones are bounded by 100% before that.
+- **The screens between fights** read one breakpoint, `useWide()` (900px):
+  the sheet is 640 wide instead of 440, the boon draft lies three across, the
+  Ledger widens to 720. `GauntletReward` reads the hook itself because it is
+  its own component.
+
 ## Performance, up front
 
 This month's lessons apply from line one, not as a later pass:
