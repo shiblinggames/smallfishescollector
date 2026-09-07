@@ -2507,7 +2507,6 @@ export default function SeaMap({
   const sideRef = useRef(startSide !== 'fishing')
   /** THE BERTH SHEET, and the second half of the Gunwharf's chooser: the
    *  muster, the mounts, and the confirm that actually changes the hull. */
-  const [swapAsk, setSwapAsk] = useState(false)
   /**
    * THE PORTAL SHEET. Opened by sailing THROUGH the ring — that is the
    * activation gesture the portal exists for, so this is deliberately not the
@@ -2836,7 +2835,6 @@ export default function SeaMap({
     target.current = { ...pos.current }
     shipRef.current = toShip
     setOnShip(toShip)
-    setSwapAsk(false)
     vibrate([18, 40, 22])
   }, [])
 
@@ -7707,196 +7705,6 @@ hullRef={hullRefFor(t.key)} />
 
           The gate is no longer a decision at all: it is a rule. The ship may
           pass and the fishing boat may not, and both are told so. */}
-      {swapAsk && (
-        <PopupShell open onClose={() => setSwapAsk(false)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            margin: 'auto', width: '100%', maxWidth: 400,
-            borderRadius: 20, padding: '1.2rem 1.05rem 1.05rem',
-            // An opaque floor: this sits over painted water.
-            background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
-            border: '1px solid rgba(196,169,106,0.34)',
-            boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
-          }}>
-            <p className="font-karla font-700 uppercase" style={{
-              fontSize: '0.62rem', letterSpacing: '0.18em', color: 'rgba(196,169,106,0.8)', margin: 0,
-            }}>The Gunwharf</p>
-            <h2 className="font-pirata" style={{
-              fontSize: '1.6rem', color: '#f0ede8', margin: '4px 0 0', lineHeight: 1.15,
-            }}>{onShip ? 'Back to the fishing boat?' : 'Take out your ship?'}</h2>
-
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12, margin: '0.9rem 0 0',
-              padding: '0.7rem 0.8rem', borderRadius: 14,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={getShip(shipTier).seaImageUrl} alt="" width={640} height={640}
-                decoding="async" style={{ width: 88, height: 'auto', flexShrink: 0 }} />
-              <div style={{ minWidth: 0 }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#ecdcbd', margin: 0 }}>
-                  {getShip(shipTier).name}
-                </p>
-                <p className="font-karla" style={{
-                  fontSize: '0.76rem', color: 'rgba(214,226,236,0.7)', margin: '2px 0 0', lineHeight: 1.4,
-                }}>
-                  {party.length === 0
-                    ? 'No crew in the raid seats. She sails empty.'
-                    : `${party.length} crew aboard, in their raid seats.`}
-                </p>
-              </div>
-            </div>
-
-            {/* ── THE MUSTER ──────────────────────────────────────
-                Seats and mounts drawn as SLOTS, empties included, because a
-                muster that only lists who came cannot say who is missing —
-                and who is missing is the entire question you stop at a dock
-                to answer.
-
-                Crew the Deck fills the empty seats with the best of the bench
-                through the same action the Crew Hall uses, and refreshes from
-                that action's own returned state — confirming the loadout
-                never means leaving the water. The Change links stay for
-                picking by hand; the docks tie the systems together, they do
-                not replace them. */}
-            {!onShip && (
-              <>
-                {raidRepairOwed > 0 && (
-                  <button type="button" data-no-steer
-                    onClick={() => { vibrate(8); router.push('/expeditions/ship') }}
-                    className="tap font-karla font-700" style={{
-                      display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-                      margin: '0.7rem 0 0', padding: '0.5rem 0.7rem', borderRadius: 10,
-                      background: 'rgba(240,120,90,0.1)', border: '1px solid rgba(240,120,90,0.4)',
-                      color: '#f0a890', fontSize: '0.76rem', lineHeight: 1.4,
-                    }}>
-                    She lies on the seabed — {raidRepairOwed.toLocaleString()} ⟡ to raise her. Tap to repair.
-                  </button>
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0.75rem 0 0' }}>
-                  <p className="font-karla font-700 uppercase" style={{
-                    fontSize: '0.6rem', letterSpacing: '0.14em', margin: 0,
-                    color: party.length < raidSeats ? 'rgba(240,192,64,0.9)' : 'rgba(190,212,228,0.55)',
-                  }}>
-                    Crew · {party.length} / {raidSeats}
-                  </p>
-                  {party.length < raidSeats && (
-                    <button type="button" data-no-steer onClick={() => void crewDeck()} disabled={decking}
-                      className="tap font-karla font-700" style={{
-                        padding: '0.2rem 0.55rem', borderRadius: 999, cursor: 'pointer',
-                        background: 'rgba(240,192,64,0.14)', border: '1px solid rgba(240,192,64,0.45)',
-                        color: '#f6dfa0', fontSize: '0.66rem',
-                      }}>
-                      {decking ? 'Mustering…' : 'Crew the deck'}
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.4rem 0 0', flexWrap: 'wrap' }}>
-                  {party.map(c => (
-                    <div key={c.name + c.art} title={c.name} style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '0.22rem 0.5rem 0.22rem 0.24rem', borderRadius: 999,
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                    }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={crewArt(c.art)} alt="" width={22} height={22} decoding="async"
-                        style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
-                      <span className="font-karla font-700" style={{
-                        fontSize: '0.68rem', color: '#dce6ee', maxWidth: 88,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>{c.name}</span>
-                    </div>
-                  ))}
-                  {/* The seats nobody is in. Dashed and dim: absence, drawn. */}
-                  {Array.from({ length: Math.max(0, raidSeats - party.length) }, (_, k) => (
-                    <div key={`empty${k}`} aria-hidden style={{
-                      width: 26, height: 26, borderRadius: '50%',
-                      border: '1px dashed rgba(240,192,64,0.4)',
-                      background: 'rgba(240,192,64,0.04)',
-                    }} />
-                  ))}
-                  <button type="button" data-no-steer
-                    onClick={() => { vibrate(8); router.push('/crew') }}
-                    className="tap font-karla font-700" style={{
-                      padding: '0.24rem 0.55rem', borderRadius: 999, cursor: 'pointer',
-                      background: 'none', border: '1px dashed rgba(196,169,106,0.45)',
-                      color: 'rgba(214,196,150,0.85)', fontSize: '0.68rem',
-                    }}>
-                    Change
-                  </button>
-                </div>
-
-                <p className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.6rem', letterSpacing: '0.14em', margin: '0.75rem 0 0',
-                  color: raidItems.length < itemMounts ? 'rgba(240,192,64,0.9)' : 'rgba(190,212,228,0.55)',
-                }}>
-                  Mounted · {raidItems.length} / {itemMounts}
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0.4rem 0 0', flexWrap: 'wrap' }}>
-                  {raidItems.map(it => (
-                    <div key={it.name} title={it.name} style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '0.22rem 0.5rem 0.22rem 0.28rem', borderRadius: 999,
-                      background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.28)',
-                    }}>
-                      {it.image && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={it.image} alt="" width={20} height={20} decoding="async"
-                          style={{ width: 20, height: 20, objectFit: 'contain' }} />
-                      )}
-                      <span className="font-karla font-700" style={{
-                        fontSize: '0.68rem', color: '#d8ccf0', maxWidth: 96,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>{it.name}</span>
-                    </div>
-                  ))}
-                  {Array.from({ length: Math.max(0, itemMounts - raidItems.length) }, (_, k) => (
-                    <div key={`emptym${k}`} aria-hidden style={{
-                      width: 24, height: 24, borderRadius: 7,
-                      border: '1px dashed rgba(167,139,250,0.35)',
-                      background: 'rgba(167,139,250,0.04)',
-                    }} />
-                  ))}
-                  <button type="button" data-no-steer
-                    onClick={() => { vibrate(8); router.push('/expeditions/items') }}
-                    className="tap font-karla font-700" style={{
-                      padding: '0.24rem 0.55rem', borderRadius: 999, cursor: 'pointer',
-                      background: 'none', border: '1px dashed rgba(167,139,250,0.4)',
-                      color: 'rgba(200,184,240,0.85)', fontSize: '0.68rem',
-                    }}>
-                    Change
-                  </button>
-                </div>
-              </>
-            )}
-
-            <p className="font-karla" style={{
-              fontSize: '0.8rem', color: 'rgba(214,226,236,0.72)', lineHeight: 1.5, margin: '0.85rem 0 0',
-            }}>
-              {onShip
-                ? 'Your fishing boat is moored at the Gunwharf. Take her back and you can sail south through the reef again, but the open sea is closed to her.'
-                : 'She is the only hull that can pass the sortie into the open sea, and she does not go south of the reef. Your fishing boat waits at the Gunwharf until you come back for her.'}
-            </p>
-
-            <div style={{ display: 'flex', gap: 8, marginTop: '1rem' }}>
-              <button type="button" onClick={() => setSwapAsk(false)} className="tap font-karla font-700"
-                style={{
-                  flex: 1, padding: '0.7rem', borderRadius: 12, fontSize: '0.86rem', cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e2ea',
-                }}>
-                Not yet
-              </button>
-              <button type="button" onClick={() => swapHull(!onShip)} className="tap font-cinzel font-700"
-                style={{
-                  flex: 1.3, padding: '0.7rem', borderRadius: 12, fontSize: '0.9rem', cursor: 'pointer',
-                  background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', color: '#f6dfa0',
-                }}>
-                {onShip ? 'Cast off in her' : 'Board her'}
-              </button>
-            </div>
-          </div>
-        </PopupShell>
-      )}
 
       {/* ── THE ACTIVATION ──────────────────────────────────────────────
           The beat between the eye taking the boat and the sheet asking where
@@ -8410,7 +8218,7 @@ hullRef={hullRefFor(t.key)} />
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
       <GunwharfAshore open={wharf} onClose={() => setWharf(false)} onShip={onShip}
-        shipTier={shipTier} onSail={() => { setWharf(false); setSwapAsk(true) }} />
+        shipTier={shipTier} onSail={() => { setWharf(false); swapHull(!onShip) }} />
       <VoyageBoard open={voyageOpen} onClose={() => setVoyageOpen(false)} />
 
       {/* ── THE GOLDEN CHOICE ──────────────────────────────────────────
@@ -13503,9 +13311,13 @@ function GunwharfAshore({ open, onClose, onSail, onShip, shipTier }: {
       key: 'sail',
       art: ship.seaImageUrl,
       flip: !!ship.seaFlip,
-      name: onShip ? 'Tie her up' : 'Sail her',
-      blurb: onShip ? 'Leave her here and take the fishing boat' : 'Muster the crew and take her out',
-      cta: onShip ? 'Moor' : 'Cast off',
+      // ONE TAP. It used to open a second sheet asking "Take out your ship?"
+      // with the crew and the mounts laid out under it, and a question you
+      // have already answered by walking to the dock is not a question. The
+      // name says exactly what happens and tapping it does exactly that.
+      name: onShip ? 'Switch to fishing boat' : 'Switch to expedition ship',
+      blurb: onShip ? 'Tie her up and take the fishing boat' : 'Muster the crew and take her out',
+      cta: 'Switch',
       accent: '#f0c040',
       go: onSail,
     },
