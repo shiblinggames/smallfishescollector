@@ -772,7 +772,7 @@ export const FOLK: Folk[] = [
     // HE TALKS LIKE HE TALKS.
     //
     // Dennis is a real person, like Yoon and Matty, and this is really how he
-    // is: awkward, geeky, funny, a big gamer, six years in the army and a
+    // is: awkward, geeky, funny, a big gamer, six years on the expeditions and a
     // story from every one of them, and quietly very well off in a way he
     // never leads with. So he is the third voice on this water written in
     // its own register on purpose, and the register is VERBOSE. His lines
@@ -797,34 +797,34 @@ export const FOLK: Folk[] = [
       [
         "Okay so you're probably wondering why a guy with a boat like this is anchored in the nicest spot in the Shallows. Long story. The short version doesn't make sense without the long version. Hi, by the way.",
         "This is my third rod. The first two are fine. I just, you know, wanted to see the patch notes on this one. That's a joke. Nobody out here gets my jokes. You might. You've got the look.",
-        "Back in the army we'd sit in the dark for six hours waiting for nothing to happen, and I thought, I could do this for fun. Turns out I was right. That's fishing. That's the whole pitch.",
+        "Back on the expeditions we'd sit in the dark for six hours waiting for nothing to happen, and I thought, I could do this for fun. Turns out I was right. That's fishing. That's the whole pitch.",
         "I named the boat after a save file. Long story. Actually it's a short story, the boat's called Slot Three, because the first two saves are, you know, gone. Anyway. Hi.",
         "You know what nobody tells you about fishing? The loading screens are gorgeous. That's a joke about the water. Sorry. I do a lot of those.",
       ],
       [
         "You came back! People don't, usually. I talk a lot. I know I talk a lot. I've been told by professionals. Anyway, sit, or don't, I'll talk either way.",
         "Muskellunge. The fish of ten thousand casts. Ten thousand. That's a drop rate, that's a grind, that's the kind of number I respect. I've done about nine hundred. I'm keeping a tally. Of course I'm keeping a tally.",
-        "Back in the army I had a sergeant who said a plan is just a list of things that won't happen. I think about him every time I cast. Every single time. Sorry, I'm getting into it. I get into it.",
+        "Back on the expeditions I had a bosun who said a plan is just a list of things that won't happen. I think about him every time I cast. Every single time. Sorry, I'm getting into it. I get into it.",
         "This water's basically the tutorial zone and I'm fine with that. Some of the best games I've played, I never left the first area. That's not sad. Okay, it's a little sad. It's also true though.",
-        "Back in the army I got very good at one thing, which was eating an entire meal in four minutes, and it has never once come up since. Until now. I'm telling you now.",
+        "Back on the expeditions I got very good at one thing, which was eating an entire meal in four minutes, and it has never once come up since. Until now. I'm telling you now.",
         "I have three rods, a spare reel, a spare spare reel and a first-aid kit that could restock a small clinic. People say over-prepared. I say I've read the patch notes on weather.",
       ],
       [
         "Okay, real question, and I've been building up to this for like a week: do you ever get to the deep water and just feel like you skipped a cutscene? Like the game thinks you know something you don't? Just me? Okay. It's just me.",
-        "Back in the army we did a night march with a map that was, and I want to be precise here, upside down. For four hours. I was the one holding it. I've told that story maybe two hundred times and it has never once made me look good, which is why it's a good story.",
+        "Back on the expeditions we did a night crossing with a chart that was, and I want to be precise here, upside down. For four hours. I was the one holding it. I've told that story maybe two hundred times and it has never once made me look good, which is why it's a good story.",
         "I don't need a bigger boat. I could get one. That's not a brag, that's just true, and I'd rather it not be a thing. Money's the boring stat. Nobody puts money on a character sheet.",
         "You fish like you're speedrunning. Efficient. No wasted casts. I fish like I'm doing every side quest, and honestly I'm having a great time. Both are valid. That's the nicest thing I'll say today.",
       ],
       [
         "Okay so the money. I don't hide it, I just don't lead with it, which people say is the same thing and it's not. I bought the harbour's tab once. Nobody knows it was me. Now you know. Please be cool.",
-        "Back in the army the thing nobody tells you is how much of it is waiting. Waiting, and then a very short amount of something, and then waiting about the something. Fishing's the same shape. Life's the same shape. I think about this a lot.",
+        "Back on the expeditions the thing nobody tells you is how much of it is waiting. Waiting, and then a very short amount of something, and then waiting about the something. Fishing's the same shape. Life's the same shape. I think about this a lot.",
         "I keep a spreadsheet of every fish I've caught. Weight, spot, weather, what I was thinking about. The last column's the important one. You're in it more than you'd expect. In a normal way. I'm being normal.",
         "You can tell me if I'm being a lot. Everybody else just sort of drifts away mid-sentence and I finish the sentence to the water. The water's a great listener. Terrible at follow-up questions.",
         "Somebody green pulled alongside me and asked how to reel, and I gave them a forty-minute answer, and they stayed for all of it. I've never been so happy in my life. Anyway, that's my week.",
       ],
       [
         "I'm going to say something and then never say it again, because that's the rule with things like this: you're the only person out here who's ever heard the whole story and not looked at their watch. I noticed. I always notice.",
-        "Back in the army I had a friend who'd sit through all my stories and then say and? and it drove me insane and it was the best thing anyone's ever done for me. You do the and? thing. You don't even know you're doing it.",
+        "Back on the expeditions I had a friend who'd sit through all my stories and then say and? and it drove me insane and it was the best thing anyone's ever done for me. You do the and? thing. You don't even know you're doing it.",
         "The money's going somewhere, by the way. It's not going in a bigger boat. It's going into something for people who are where I was two seasons ago. Don't ask me what yet. I'm still writing the design doc.",
         "Some day I'm going to get the muskellunge and I'm going to be so annoying about it. You'll be the first person I tell. You'll be the first person I tell most things, actually. That's just where we are now.",
         "I talk a lot because when I stop, it's quiet, and quiet is where I go back to being a guy in the dark waiting for nothing to happen. You make the quiet okay. That's the shortest thing I've ever said and I mean all of it.",
@@ -834,14 +834,14 @@ export const FOLK: Folk[] = [
       "Still talking. Still noticing you don't look at your watch. Still not over it.",
       "Cast number four thousand and something on the muskellunge. The tally's in the log. It's under your name, for some reason.",
       "The thing for the new captains is happening. Slowly. Design docs are long. Mine's longer.",
-      "Back in the army I never once got a story to a satisfying ending. Out here I've got you, and endings are easier.",
+      "Back on the expeditions I never once got a story to a satisfying ending. Out here I've got you, and endings are easier.",
       "The boat's still ugly. The engine's new. Nobody's noticed. You will. You notice things.",
     ],
     tierUp: [
       "Dennis! You asked. People usually just let me talk until I say it by accident.",
       "Okay, so we're friends now, and I want to be upfront that friends of mine get the long versions of things. All of them. You've been warned. This is the warning.",
       "I'm going to tell you stuff I don't tell the harbour. Not because it's secret. Because the harbour walks off. You don't walk off.",
-      "You're on the short list. It's a short list. Honestly it's you and a sergeant who doesn't know he's on it.",
+      "You're on the short list. It's a short list. Honestly it's you and a bosun who doesn't know he's on it.",
     ],
     onLoved: "No. No way. You did not. Ten thousand casts and you just, you just brought one over? I need to sit down. I'm going to be talking about this for a year. Longer. You've made a huge mistake and I love you for it.",
     onLiked: "Oh, that's a good one. That's a really good one. I'm going to log it and then I'm going to tell you a story about it, fair warning.",
@@ -1160,20 +1160,20 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
   brill: [
     [
       { you: 'What is with the boat?', they: 'Ugly, right? The engine\'s new. I\'d rather the boat looked like this than the other way round. Long story.' },
-      { you: 'Were you really in the army?', they: 'Six years. I have stories. I have SO many stories. Sit down or don\'t, they\'re coming either way. Oh we can only sit. They must\'ve run out of budget for animating anything else.' },
+      { you: 'Were you really on the expeditions?', they: 'Six years. I have stories. I have SO many stories. Sit down or don\'t, they\'re coming either way. Oh we can only sit. They must\'ve run out of budget for animating anything else.' },
       { you: 'Do you come here often?', they: 'Every day. Same spot. I like to think of it as my spawn point. Sorry. Games. I\'ll try to keep it under control. I\'ll probably forget, but I\'ll try!' },
       { you: 'What are you reading?', they: 'A manual for a reel I don\'t own. It\'s fascinating. It\'s genuinely fascinating. Did you know that reels were invented 300-400 AD? That\'s old. I\'m not old though.' },
-      { you: 'How is the fishing?', they: 'Slow, which is fine, slow is the point, if I wanted fast I\'d have stayed in the army. That\'s a joke. It was mostly slow there too.' },
+      { you: 'How is the fishing?', they: 'Slow, which is fine, slow is the point, if I wanted fast I\'d have stayed on the expeditions. That\'s a joke. It was mostly slow there too.' },
     ],
     [
       { you: 'What do you play?', they: 'Everything. Too much. I once played a fishing game for three hundred hours and then bought a boat, so, you know. Draw your own conclusions.' },
       { you: 'Why the Shallows?', they: 'It\'s the starting zone. All the best stories happen in the starting zone. At least that\'s what I tell myself.' },
-      { you: 'Did you like the army?', they: 'Parts. The people, the stories, the being useful. Not the getting up. I still can\'t get up. Fishing lets you sit down. That\'s ninety percent of why.' },
+      { you: 'Did you like the expeditions?', they: 'Parts. The people, the stories, the being useful. Not the getting up. I still can\'t get up. Fishing lets you sit down. That\'s ninety percent of why.' },
       { you: 'What was the three hundred hour game?', they: 'A fishing game. I know. I know. I\'m aware of the irony and I\'ve made peace with it and then I bought a boat.' },
       { you: 'Do you have family out here?', they: 'No. Just the boat and, I guess, whoever stops. So, you, currently. Sorry, that got heavy. It doesn\'t have to be heavy.' },
     ],
     [
-      { you: 'What was the army actually like?', they: 'Waiting. Ninety percent waiting. Then a very short amount of something. Then waiting about the something.' },
+      { you: 'What were the expeditions actually like?', they: 'Waiting. Ninety percent waiting. Then a very short amount of something. Then waiting about the something.' },
       { you: 'Do you ever stop talking?', they: 'Once. In a dentist\'s chair. It was the worst twenty minutes of my life.' },
       { you: 'Any tips for a beginner?', they: 'Oh, I have a forty-minute answer. Sit down. The short version is: cast where the water looks bored. The long version has diagrams.' },
     ],
