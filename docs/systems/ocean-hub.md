@@ -1224,15 +1224,15 @@ position that leaves under 200px beside the sortie or under 250px to the harbour
 | **The Gunwharf** | Your ship: berthed, armed, taken out from here |
 | **The Charterhouse** | The voyage board, opened over the water |
 
-**The Wargate stands.** It was an ellipse lying on the water and read as a disc laid over the
-boat. `WargateMark` is an upright arch now: anchored at its foot and counter-squashed by
-`1/GROUND` like every encounter hull, two pillars, a gold-lipped arch and a turning void
-inside it, with only the light it throws on the water still lying flat. It is mounted twice
-and one is ever visible: in the world pass while you approach (behind the hull), and in the
-near pass (`frontRef`, above the hull) once `gateCrossed`, which is the hull north of the
-gate's line and between its pillars. That switch is what makes it a thing you sail into:
-the arch swallows her from the bow as she crosses. The swirl is a rotating layer, not an
-animated gradient, so it composites.
+**The Wargate is a well, drawn under the hull.** The first mark was a DOM ellipse lying on the
+water, and it read as a disc laid over the ship because a DOM mark paints over the canvas that
+draws her. A standing arch was tried next and REJECTED on sight ("it should still just be a
+portal on the sea"). It is now the way home's own well (`seaPortalWell`) in gold at the top tier,
+created as a twin beside `portalWell` in `SeaIslandsGPU` at `WARGATE`, advanced and
+night-tinted with it, and roused through `gpu.wargate(inside)` from the chart's proximity tick.
+Under everything that stands on the water, so she sails into it. The DOM `WargateMark` remains
+only as the `?gpu=0` fallback. Rule: a portal on this sea is a well in the canvas, never a DOM
+mark and never a standing structure.
 
 **The Wargate's sheet.** `WargateSheet` has a header row (title left, close right) sat just
 under the nav; it used to open seventy pixels down with nothing in the gap, and on a phone the
