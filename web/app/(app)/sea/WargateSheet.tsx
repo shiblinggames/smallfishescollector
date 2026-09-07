@@ -22,6 +22,7 @@
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
+import { getRaidConfigById } from '@/lib/raidRegistry'
 import { bossCardState, type BossCardState } from './bossCardActions'
 import { ENCOUNTERS, BAY_BY_ID, type Encounter } from './raidWaters'
 import { RAID_MAP, type RaidNodeView } from '@/lib/raidMap'
@@ -81,69 +82,101 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
       <div style={{
         position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: 'calc(env(safe-area-inset-top, 0px) + 72px) 14px 40px',
+        // The nav is 44px on a phone; sit just under it, not seventy pixels
+        // below it. The blank band that left at the top read as a broken
+        // header.
+        padding: 'calc(env(safe-area-inset-top, 0px) + 54px) 14px 40px',
         pointerEvents: 'none',
       }}>
-        <div style={{ width: 'min(560px, 100%)', pointerEvents: 'auto' }}>
-          <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8fa8bf', textAlign: 'center' }}>The standing portal</p>
-          <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f4efe4', textAlign: 'center', marginTop: 2 }}>The Wargate</h2>
-          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a8b4c4', textAlign: 'center', marginTop: 6, marginBottom: 18 }}>
-            Old foes, kept close. Step through to any you have bested and the gate opens on their water.
-          </p>
+        <div style={{ width: 'min(720px, 100%)', pointerEvents: 'auto' }}>
+          {/* THE HEADER ROW. Title on the left, the close on the right. The
+              scrim still closes too, but on a phone the column fills the
+              width and there is no scrim to tap, which is how a sheet ends up
+              with no way out. */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8fa8bf' }}>The standing portal</p>
+              <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f4efe4', marginTop: 2, lineHeight: 1.05 }}>The Wargate</h2>
+              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a8b4c4', marginTop: 6, maxWidth: 520 }}>
+                Old foes, kept close. Step through to any you have bested and the gate opens on their water.
+              </p>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close" className="tap"
+              style={{
+                width: 34, height: 34, borderRadius: '50%', padding: 0, flexShrink: 0,
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
+                color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
 
-          {bosses.map(e => {
-            const v = viewOf(e.node)
-            // NOT REACHED, NOT SHOWN. The list simply ends where the campaign
-            // does, which is the whole of the no-spoilers rule.
-            if (!v || v.status === 'locked') return null
-            const cleared = v.status === 'cleared'
-            const bay = BAY_BY_ID[e.bay]
-            const art = v.node.image ?? null
-            return (
-              <button key={e.node} type="button" className="tap"
-                onClick={() => { if (cleared) setSel(e.node) }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                  textAlign: 'left', marginBottom: 10, padding: '0.65rem 0.75rem',
-                  borderRadius: 14, cursor: cleared ? 'pointer' : 'default',
-                  // Opaque base under the tint — panels on art need one.
-                  background: cleared
-                    ? 'linear-gradient(180deg, rgba(16,26,40,0.97) 0%, rgba(9,15,26,0.97) 100%)'
-                    : 'rgba(10,15,24,0.92)',
-                  border: `1px solid ${cleared ? 'rgba(196,169,106,0.55)' : 'rgba(140,156,176,0.22)'}`,
-                  boxShadow: cleared ? '0 4px 18px rgba(0,0,0,0.5)' : 'none',
-                  opacity: cleared ? 1 : 0.78,
-                }}>
-                {/* The art in a reserved box, contained, never stretched. */}
-                <div style={{
-                  width: 74, height: 52, flexShrink: 0, display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                }}>
-                  {art ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={art} alt="" decoding="async" style={{
-                      maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
-                      filter: cleared ? 'none' : 'grayscale(0.7) brightness(0.75)',
-                    }} />
-                  ) : null}
+          {/* ART FORWARD, like the campaign's Bosses tab: a portrait tile with
+              the name over a bottom scrim and a check when bested, two to a
+              row, grouped by chapter. The old list was a thumbnail in a box
+              beside three lines of type, which is a table row with a picture
+              in it, not a door. */}
+          {(() => {
+            const shown = bosses
+              .map(e => ({ e, v: viewOf(e.node) }))
+              // NOT REACHED, NOT SHOWN. The list ends where the campaign does,
+              // which is the whole of the no-spoilers rule.
+              .filter((x): x is { e: Encounter; v: RaidNodeView } => !!x.v && x.v.status !== 'locked')
+            const chapters: { bay: (typeof BAY_BY_ID)[string]; items: typeof shown }[] = []
+            for (const x of shown) {
+              const bay = BAY_BY_ID[x.e.bay]
+              const last = chapters[chapters.length - 1]
+              if (last && last.bay.id === bay.id) last.items.push(x)
+              else chapters.push({ bay, items: [x] })
+            }
+            return chapters.map(({ bay, items }) => (
+              <div key={bay.id} style={{ marginBottom: 18 }}>
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: 'rgba(196,169,106,0.85)', paddingBottom: 6, marginBottom: 10, borderBottom: '1px solid rgba(196,169,106,0.18)' }}>
+                  Chapter {['I', 'II', 'III', 'IV', 'V'][bay.chapter - 1] ?? bay.chapter} · {bay.name}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: items.length === 1 ? 'minmax(0, 72%)' : '1fr 1fr', justifyContent: 'center', gap: 10 }}>
+                  {items.map(({ e, v }) => {
+                    const cleared = v.status === 'cleared'
+                    const art = v.node.image ?? null
+                    const cfg = v.node.raidId ? getRaidConfigById(v.node.raidId) : undefined
+                    const name = cfg?.enemies[cfg.bossId]?.name ?? v.node.label
+                    const accent = cleared ? '#c4a96a' : '#4f4a42'
+                    return (
+                      <button key={e.node} type="button" className="tap"
+                        onClick={() => { if (cleared) setSel(e.node) }}
+                        aria-label={cleared ? `Sail to ${name}` : `${name}, not yet bested`}
+                        style={{
+                          position: 'relative', aspectRatio: '4 / 4.4', borderRadius: 16, overflow: 'hidden',
+                          cursor: cleared ? 'pointer' : 'default', padding: 0,
+                          border: `1px solid ${accent}${cleared ? '99' : '3a'}`,
+                          background: cleared ? '#0c1119' : 'radial-gradient(circle at 50% 34%, #1a2636 0%, #0a0f16 72%)',
+                          boxShadow: cleared ? '0 6px 18px rgba(0,0,0,0.42), 0 0 0 1px rgba(196,169,106,0.18)' : '0 6px 18px rgba(0,0,0,0.42)',
+                        }}>
+                        {art && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={art} alt="" loading="lazy" decoding="async"
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 16%',
+                              filter: cleared ? 'grayscale(0.28) brightness(0.82)' : 'grayscale(0.85) brightness(0.45)' }} />
+                        )}
+                        <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(6,10,16,0) 42%, rgba(6,10,16,0.92) 100%)' }} />
+                        {cleared && (
+                          <span title="Bested" aria-hidden style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: '#2dd4aa', display: 'grid', placeItems: 'center', boxShadow: '0 0 9px rgba(45,212,170,0.55)' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06110c" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-10" /></svg>
+                          </span>
+                        )}
+                        <div style={{ position: 'absolute', left: 10, right: 10, bottom: 9, textAlign: 'left' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: cleared ? '#f4efe4' : '#b8bec8', lineHeight: 1.15, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{name}</p>
+                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', marginTop: 3, color: cleared ? 'rgba(196,169,106,0.95)' : '#7d8794' }}>
+                            {cleared ? 'Sail there →' : 'Not yet bested'}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#8a94a4' }}>
-                    {bay ? `Chapter ${['I', 'II', 'III', 'IV', 'V'][bay.chapter - 1] ?? bay.chapter} · ${bay.name}` : ''}
-                  </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: cleared ? '#f4efe4' : '#b8bec8', lineHeight: 1.2, marginTop: 1 }}>
-                    {v.node.label}
-                  </p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', marginTop: 2, color: cleared ? 'rgba(196,169,106,0.9)' : '#7d8794' }}>
-                    {cleared ? 'Bested · the gate reaches them' : 'Not yet bested · sail out and take them'}
-                  </p>
-                </div>
-                {cleared && (
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: 'rgba(196,169,106,0.9)', flexShrink: 0 }}>→</span>
-                )}
-              </button>
-            )
-          })}
+              </div>
+            ))
+          })()}
 
           {!state && (
             /* Nothing while it reads — the same rule as the boss card: a line
