@@ -97,8 +97,12 @@ const RUN_PHASES: ReadonlySet<Phase> = new Set<Phase>([
 ])
 /** The veil is fully down this long after it starts; the phase changes then. */
 const VEIL_COVER_MS = 240
-const VEIL_HOLD_MS = 60
-const VEIL_LIFT_MS = 420
+// Held long enough for the incoming screen's own entrances (the springs on
+// its titles, the letter-spacing settles) to play UNDER the veil rather than
+// after it lifts, so what you see when the light comes back is a screen that
+// is already still.
+const VEIL_HOLD_MS = 260
+const VEIL_LIFT_MS = 480
 
 /**
  * ── THE VEIL ────────────────────────────────────────────────────────────
@@ -426,7 +430,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     const cur = phaseNowRef.current
     if (cur !== next && RUN_PHASES.has(cur) && RUN_PHASES.has(next) && playVeil(tideTintRef.current)) {
       phaseNowRef.current = next
-      window.setTimeout(() => setPhaseRaw(next), VEIL_COVER_MS)
+      window.setTimeout(() => {
+        // Land at the top UNDER the veil. The effect that resets scroll on a
+        // phase change runs after the new screen has painted, so a tall
+        // screen opened scrolled and then jumped; here nobody sees it.
+        window.scrollTo(0, 0)
+        setPhaseRaw(next)
+      }, VEIL_COVER_MS)
       return
     }
     phaseNowRef.current = next
@@ -3868,16 +3878,14 @@ export default function GauntletGame(props: GauntletGameProps) {
             // One compact cell per currency — the old hero was a 2.5rem number and
             // a stacked ledger that ate half the screen to say three things.
             const Cell = ({ label, value, color }: { label: string; value: string; color: string }) => (
-              <div style={{ flex: 1, minWidth: 0, padding: '0.5rem 0.3rem', borderRadius: 11, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
-                <p className="font-cinzel font-800" style={{ fontSize: 'clamp(0.9rem, 4.2vw, 1.1rem)', color, lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
+              <div style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.2rem', textAlign: 'center' }}>
+                <p className="font-cinzel font-800" style={{ fontSize: 'clamp(1.05rem, 4.8vw, 1.3rem)', color, lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>{value}</p>
                 <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#8f8a80', marginTop: 4 }}>{label}</p>
               </div>
             )
             return (
-              <div style={{ marginTop: 13, padding: '0.75rem 0.7rem', borderRadius: 16,
-                background: `radial-gradient(ellipse at 50% 0%, ${GOLD}1c 0%, rgba(8,13,22,0.6) 76%)`,
-                border: `1px solid ${GOLD}3a` }}>
-                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: `${GOLD}cc`, marginBottom: 7 }}>Bank now and you take</p>
+              <div style={{ marginTop: 12, padding: '0.3rem 0.2rem' }}>
+                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: `${GOLD}cc`, marginBottom: 4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>Bank now and you take</p>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <Cell label="Doubloons" value={fmt(dealDoubloons)} color={GOLD} />
                   <Cell label="Nav XP" value={`+${fmt(previewXp)}`} color="#7dd3fc" />
@@ -3938,8 +3946,13 @@ export default function GauntletGame(props: GauntletGameProps) {
             )
           })()}
 
+          {/* THE WATER. The arena draws your hull about here, and a breather on
+              the sea should show the sea: this is the part of the screen that
+              is the game rather than the interface. Nothing goes in it. */}
+          <div aria-hidden style={{ height: 'clamp(150px, 26vh, 280px)' }} />
+
           {/* Hull — the other half of the gamble, right under the reward. */}
-          <div style={{ marginTop: 13, textAlign: 'left' }}>
+          <div style={{ marginTop: 0, textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
               <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#9a988e' }}>Hull</span>
               <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hpColor }}>{playerHP} / {hpMax}</span>
@@ -7764,15 +7777,12 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
  * — sixty times a second.
  */
 function Screen({ id, children }: { id: string; children: React.ReactNode }) {
-  return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div key={id}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        transition={{ duration: 0.26, ease: 'easeOut' }}>
-        {children}
-      </motion.div>
-    </AnimatePresence>
-  )
+  // NO CROSS-FADE HERE ANY MORE. The veil (playVeil) is the transition: it
+  // covers the switch entirely, so a second fade underneath it only added a
+  // beat of empty water and a second easing curve to the same moment, which
+  // is what still read as jank. One thing moves. The wrapper stays so every
+  // screen keeps the same position in its fragment.
+  return <div data-screen={id}>{children}</div>
 }
 
 function Shell({ children, wide, hardcore }: { children: React.ReactNode; wide?: boolean; hardcore?: boolean }) {
