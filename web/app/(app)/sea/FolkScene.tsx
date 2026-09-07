@@ -34,6 +34,7 @@ import { vibrate } from '@/lib/haptics'
 import {
   TIER_NAME, TIER_AT, tierFor, folkRoleFor, isMaxRapport, ASKS, GIFT_FAVOURITE_POINTS,
   type Folk, type FolkTier,
+  type Ask,
 } from '@/lib/seaFolk'
 
 export type SceneGain = {
@@ -190,6 +191,8 @@ export default function FolkScene({
    *  that keeps the card from resetting as you talk. */
   const [turns, setTurns] = useState<Turn[]>([])
   const [asked, setAsked] = useState<Set<number>>(new Set())
+  /** The one beat after an ask that has one: offered alone, then gone. */
+  const [followUp, setFollowUp] = useState<Ask['then'] | null>(null)
   const [picking, setPicking] = useState(false)
   const [crest, setCrest] = useState<string | null>(null)
 
@@ -198,6 +201,7 @@ export default function FolkScene({
     if (!open) return
     setTurns([{ who: 'them', text: opener }])
     setAsked(new Set())
+    setFollowUp(null)
     setPicking(false)
     setCrest(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -495,24 +499,39 @@ export default function FolkScene({
                     had already had your word or whether talking was simply not
                     a thing you could do with this person. They stay, greyed,
                     and say which. */}
-                <Choice
+                {!followUp && <Choice
                   label="So how have you been?"
                   hint={canChat
                     ? (busy ? undefined : 'They will have something new to say')
                     : 'Come back tomorrow'}
                   tag={canChat ? '+1 rapport' : 'Had today'}
                   accent={accent} warm={canChat} spent={!canChat} disabled={busy}
-                  onClick={() => { vibrate(10); onChat() }} />
+                  onClick={() => { vibrate(10); onChat() }} />}
 
-                {/* Free, always, whether or not the day's word is spent. */}
-                {openAsks.map(({ a, i }) => (
-                  <Choice key={i} label={a.you} accent={accent} disabled={busy}
+                {/* THE BEAT AFTER. When the last thing they said is not
+                    finished (a voice cracked, there is a silence), the only
+                    thing on offer is your silence back. Everything else waits
+                    behind it and returns the moment they have moved on. */}
+                {followUp ? (
+                  <Choice key="then" label={followUp.you} accent={accent} disabled={busy}
                     onClick={() => {
                       vibrate(6)
-                      setAsked(s => new Set(s).add(i))
-                      say(a.you, a.they)
+                      const f = followUp
+                      setFollowUp(null)
+                      say(f.you, f.they)
                     }} />
-                ))}
+                ) : (
+                  /* Free, always, whether or not the day's word is spent. */
+                  openAsks.map(({ a, i }) => (
+                    <Choice key={i} label={a.you} accent={accent} disabled={busy}
+                      onClick={() => {
+                        vibrate(6)
+                        setAsked(s => new Set(s).add(i))
+                        say(a.you, a.they)
+                        if (a.then) setFollowUp(a.then)
+                      }} />
+                  ))
+                )}
 
                 {/* OFFERED EVEN WITH AN EMPTY HOLD, and that is the point.
                     It used to be hidden unless you were already carrying fish,
@@ -520,7 +539,7 @@ export default function FolkScene({
                     full hold had no way of learning that gifting exists at all.
                     Tapping it with nothing aboard says so, which teaches the
                     mechanic in the one place somebody would want it. */}
-                <Choice label="I brought you something." accent={accent}
+                {!followUp && <Choice label="I brought you something." accent={accent}
                   hint={canGift
                     ? (hold.length === 0 ? 'Your hold is empty' : undefined)
                     : 'Come back tomorrow'}
@@ -529,9 +548,9 @@ export default function FolkScene({
                   // nowhere until after you had given the fish away.
                   tag={canGift ? `+1 to +${GIFT_FAVOURITE_POINTS} rapport` : 'Given today'}
                   spent={!canGift} disabled={busy}
-                  onClick={() => { vibrate(8); setPicking(true) }} />
+                  onClick={() => { vibrate(8); setPicking(true) }} />}
 
-                <Choice label="I should get back to it." accent={accent} onClick={onClose} />
+                {!followUp && <Choice label="I should get back to it." accent={accent} onClick={onClose} />}
 
                 {/* Only once both are spent, and only as a fact. Never a
                     warning about a streak, because there is not one. The two

@@ -976,6 +976,14 @@ export type Ask = {
   you: string
   /** Theirs back. */
   they: string
+  /**
+   * ONE BEAT AFTER. Offered on its own, right after `they`, instead of the
+   * usual options, and only then. For the exchanges that are not finished
+   * when they stop talking: a voice cracks, there is a silence, you say
+   * nothing, and they move on slightly embarrassed. The silence is yours to
+   * pick, which is what makes it a moment rather than a line.
+   */
+  then?: { you: string; they: string }
 }
 
 export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
@@ -1019,6 +1027,8 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'Are you up or down?', they: 'Bruh. Up. If we use my numbers. I use my numbers. I\'m the data God, my numbers are the numbers.' },
       { you: 'Do you actually like it out here?', they: 'I like that nobody\'s pinging me. Dude, the silence still freaks me out a little.' },
+      { you: 'How are you really doing?', they: 'Dude, I\'m fine. I\'m totally *voice crack* ...',
+        then: { you: '...', they: '... Okay. That didn\'t happen. Bruh. Anyway. Yooooo, earnings are next week, are you playing it? LOL. Moving on.' } },
       { you: 'Explain delta properly.', they: 'Okay so delta runs from zero to one on a call, negative one to zero on a put. A fifty delta call moves about fifty cents per dollar the stock moves, and it\'s roughly the market\'s guess at the odds it finishes in the money. Dude, deep in the money it acts like stock, way out of the money it\'s a lottery ticket. Bruh, that\'s delta.' },
       { you: 'What is theta?', they: 'Theta is the rent. Dude, every day you hold an option you pay a little, and it speeds up as expiry gets close, like the last week is brutal. Buyers pay theta, sellers collect it. Bruh, most people out here are buyers and they don\'t know they\'re the rent.' },
     ],
@@ -1030,6 +1040,8 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
     [
       { you: 'Are you going back?', they: 'One more year. Stop-loss. Bruh, hold me to it, I mean it.' },
       { you: 'What would you do differently?', they: 'Buy the boat first. Dude, everything after that was fine. Yooooo, honestly, that\'s the whole answer.' },
+      { you: 'Do you mean that? About me being your best position.', they: 'Yeah, dude. You\'re, like, the best *voice crack* ...',
+        then: { you: '...', they: '... We\'re not talking about that. Bruh. Position. I said position. Ripperoni to my dignity. Anyway. Are you playing earnings.' } },
       { you: 'What is gamma, really?', they: 'Gamma is how much delta moves when the stock moves a dollar, so it\'s the thing that makes a position feel alive. Highest at the money right before expiry, dude, that\'s where an option flips from nothing to everything on a small move. Sellers are short gamma and it\'s the thing that eats them. Bruh, the data God has been eaten. Ripperoni.' },
     ],
   ],

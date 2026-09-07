@@ -179,8 +179,10 @@ it is a personality. Every mannerism is given, not invented, and this is the who
 and "bruh" (the reaction that starts a thought), "Yooooo" (how he arrives), "LOL" said out loud,
 "this is rigged", "wow what a piece of crap", "ripperoni" (never RIP), "the data God" (what he
 calls himself), earnings (he will ask if you are playing the next one), and one real slip, "nails
-on the stails", uncorrected. His voice cracks in life, but broken-syllable spellings were rejected
-and the words stay whole. The stock-market asks are REAL: ask about the Greeks and he gives
+on the stails", uncorrected. His voice cracks, and it is a BEAT, not a spelling: an ask whose reply ends in
+`*voice crack* ...` carries a `then` follow-up, the scene offers your `...` alone (chat, gift and
+leave hidden until it is taken), and he moves on slightly embarrassed. Two of them, at good
+company and thick as thieves. Broken-syllable spellings were rejected; never do those. The stock-market asks are REAL: ask about the Greeks and he gives
 correct, genuinely useful answers in his voice; keep the finance right if they are touched. His
 favourite is the Atlantic Bluefin Tuna, because one sold for millions at auction. Storage id stays
 `pell`. Under the jokes he got laid off, called it a sabbatical, and is deciding whether to go back.
