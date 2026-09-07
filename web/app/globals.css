@@ -3380,6 +3380,12 @@ body.hardcore-gauntlet::after {
   50%      { opacity: 1; }
 }
 
+/* The Wargate's void, turning. A rotating layer, so it composites. */
+@keyframes wargateSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 @keyframes beatCall {
   0%, 100% { opacity: 0.45; }
   50%      { opacity: 1; }

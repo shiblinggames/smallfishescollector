@@ -1224,6 +1224,16 @@ position that leaves under 200px beside the sortie or under 250px to the harbour
 | **The Gunwharf** | Your ship: berthed, armed, taken out from here |
 | **The Charterhouse** | The voyage board, opened over the water |
 
+**The Wargate stands.** It was an ellipse lying on the water and read as a disc laid over the
+boat. `WargateMark` is an upright arch now: anchored at its foot and counter-squashed by
+`1/GROUND` like every encounter hull, two pillars, a gold-lipped arch and a turning void
+inside it, with only the light it throws on the water still lying flat. It is mounted twice
+and one is ever visible: in the world pass while you approach (behind the hull), and in the
+near pass (`frontRef`, above the hull) once `gateCrossed`, which is the hull north of the
+gate's line and between its pillars. That switch is what makes it a thing you sail into:
+the arch swallows her from the bow as she crosses. The swirl is a rotating layer, not an
+animated gradient, so it composites.
+
 **Neither island's `href` is ever followed**, which makes them the only two on the chart
 that are handled by id in `enter()`.
 
