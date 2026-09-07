@@ -5184,24 +5184,31 @@ export default function GauntletGame(props: GauntletGameProps) {
   //
   // Combat is the exception: it paints its own battle plate at zIndex -1, and
   // the abyss at zIndex 0 would cover it.
+  // ── A LIVE RUN IS ONE TREE ─────────────────────────────────────────────
+  //
+  // THIS WAS THE JANK, AND THE EMPTY WATER. Every non-fight phase used to be
+  // wrapped in an AnimatePresence keyed on the phase, so a phase change
+  // unmounted the whole subtree and mounted a new one: the keyed arena went
+  // with it, which destroyed and rebuilt a WebGL Application on every screen
+  // (the "one arena per run" rule was never actually true), and its fade
+  // fought the veil. And the hoisted abyss photo sat at zIndex 0 over the
+  // arena's zIndex -1, so between fights the water was a photograph with no
+  // hull on it.
+  //
+  // During a run the phase view renders DIRECTLY: same fragment, same keyed
+  // arena first, same Screen second, so both persist and the veil is the
+  // only transition. The abyss and its scrim are for the screens that are
+  // not on the water at all: the hold, the used-up notice, the resume.
+  const inRun = phase === 'fighting' || RUN_PHASES.has(phase)
   return (
     <>
-      {phase !== 'fighting' && (
+      {!inRun && phase !== 'intro' && (
         <>
-          {/* Hardcore's death screen looks out over its own painted sea rather
-              than down the abyss. That swap used to live inside the phase; with
-              the abyss hoisted it has to live here or the two would stack. */}
-          {hardcoreRun && phase === 'dead'
-            ? <HcSeaBackdrop />
-            : <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />}
+          <AbyssBackdrop hardcore={hardcoreRun} don={isDonG} />
           <AbyssScrim />
         </>
       )}
-      {/* mode="wait" so the two screens never overlap and stack their scrims.
-          The pair costs EXIT + ENTER, which the tokens keep under 400ms.
-          Combat is excluded outright: it owns rAF loops, fixed overlays and a
-          live aim bar, and is not something to wrap in an opacity animation. */}
-      {phase === 'fighting' ? phaseView : (
+      {inRun ? phaseView : (
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={phase} initial={PHASE_INITIAL} animate={PHASE_ENTER} exit={PHASE_EXIT}>
             {phaseView}
