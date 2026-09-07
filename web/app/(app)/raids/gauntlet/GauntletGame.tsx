@@ -5502,7 +5502,8 @@ function GauntletReward({ r, recap, onBack, don }: { r: RewardOk; recap: { ships
 
   return (
     <>
-      {r.hardcore ? <HcSeaBackdrop /> : <AbyssBackdrop hardcore={r.hardcore} don={don} />}
+      {/* No backdrop of its own: the arena is under this screen, in its
+          reward mood, and the chest opens on the water you came up through. */}
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: sheetW, margin: '0 auto',
