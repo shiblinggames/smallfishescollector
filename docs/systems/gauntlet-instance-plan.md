@@ -265,10 +265,12 @@ its own. If the water ever reads as a picture again, look for a fixed backdrop o
 wrapper ABOVE the phase view before touching the arena.
 
 **The screens between fights are HUD around the sea, not menus.** The breather
-lost its bordered bank card and cells (numbers on the water, text-shadowed) and
-opens a `clamp(150px, 26vh, 280px)` gap where the arena draws the hull, so the
-world shows between what you have and what you do next. Second pass (2026-09-07): the two gradient choice cards were
-replaced by `DockBtn`, the fight's own control (a 62px circle with a mark, the word under
+lost its bordered bank card and cells (numbers on the water, text-shadowed). An
+open-water gap was added between the chest and the hull to show the ship, then
+removed the same day once the hull stopped being drawn on that screen: an empty
+spacer is just distance. The hull is drawn only in the fall, the fight and the
+death. Second pass (2026-09-07): the two gradient choice cards were
+replaced by `DockBtn`, the fight's own control (a 74px circle with a mark, the word under
 it, the number under the word): Claim & leave / Dive deeper / Pause in one row, the dive
 breathing. The chest odds lost their tiles, the hull is a 6px line, the loadout is a line of
 type with a chevron, the sounding line is a caption. User's words: the old buttons "look like
