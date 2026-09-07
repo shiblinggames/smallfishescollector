@@ -1234,6 +1234,13 @@ gate's line and between its pillars. That switch is what makes it a thing you sa
 the arch swallows her from the bow as she crosses. The swirl is a rotating layer, not an
 animated gradient, so it composites.
 
+**The Wargate's sheet.** `WargateSheet` has a header row (title left, close right) sat just
+under the nav; it used to open seventy pixels down with nothing in the gap, and on a phone the
+column covered the scrim so there was no way out. Its bosses are art-forward tiles in the
+campaign Bosses tab's idiom: portrait as cover, the boss's own name (from the raid config) over
+a bottom scrim, a check when bested, two to a row, grouped by chapter, unbested ones dimmed and
+not tappable. Tapping a bested one opens the same `BossFightModal` with the gate's verb.
+
 **Neither island's `href` is ever followed**, which makes them the only two on the chart
 that are handled by id in `enter()`.
 
