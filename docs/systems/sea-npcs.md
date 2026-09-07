@@ -173,17 +173,17 @@ waiting on a round trip. A roster of
 strangers is homework: it says there are eight more people out there and nothing about any
 of them, turning a thing you discover into a thing you are behind on.
 
-**Matty talks like Matty.** He was Bent Pell (Open Waters) until September 2026 and is
-now based on a real friend, the way Yoon is: a millennial who worked in tech, invests in
-stocks and gambles like it is a personality. "Dude" and "bruh" are his tics, opening most
-of his lines. His voice cracks too, but broken-syllable spellings ("Du-UDE") were rejected;
-how to show it is undecided, so the words stay whole. He also messes up his words from
-time to time, and the one slip in his lines is a real one, "nails on the stails"; invented
-slips were tried and cut, so any new ones come from him. Under it he got laid off, called it a sabbatical, bought the boat with the
-severance and is deciding whether to go back. His favourite is the Atlantic Bluefin Tuna,
-because one once sold for millions at auction and he will tell you the number. His storage
-id is still `pell`, so every captain's standing with him carried over. Keep the register
-if his lines are ever extended, and keep the id.
+**Matty talks like Matty.** He was Bent Pell (Open Waters) until September 2026 and is based on a
+real friend, the way Yoon is: a millennial who worked in data, invests in stocks and gambles like
+it is a personality. Every mannerism is given, not invented, and this is the whole list: "dude"
+and "bruh" (the reaction that starts a thought), "Yooooo" (how he arrives), "LOL" said out loud,
+"this is rigged", "wow what a piece of crap", "ripperoni" (never RIP), "the data God" (what he
+calls himself), earnings (he will ask if you are playing the next one), and one real slip, "nails
+on the stails", uncorrected. His voice cracks in life, but broken-syllable spellings were rejected
+and the words stay whole. The stock-market asks are REAL: ask about the Greeks and he gives
+correct, genuinely useful answers in his voice; keep the finance right if they are touched. His
+favourite is the Atlantic Bluefin Tuna, because one sold for millions at auction. Storage id stays
+`pell`. Under the jokes he got laid off, called it a sabbatical, and is deciding whether to go back.
 
 **Dennis talks like Dennis.** He was Tam Brill (Shallows) until September 2026 and is the third
 regular based on a real friend: awkward, geeky, funny, a big gamer, six years in the army and a

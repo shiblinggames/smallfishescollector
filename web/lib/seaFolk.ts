@@ -384,7 +384,7 @@ export const FOLK: Folk[] = [
     // captain's standing with him lives in sea_rapport under 'pell'. The name
     // changed; the friendship did not, so the key stays.
     id: 'pell', name: 'Matty', short: 'Matty', zoneId: 'open_waters', buys: false,
-    greeting: "Dude. Bruh. Okay. Hey.",
+    greeting: "Yooooo. Dude. Okay. Hey.",
     face: { characterColor: 'blue', hat: 'black', bg: '#0b1420', ring: '#4fc3f7', mirrored: true },
     role: 'Someone to know', accent: '#4fc3f7',
     blurb: 'Cashed out of tech, bought a boat, and has a position in everything, including you.',
@@ -393,85 +393,87 @@ export const FOLK: Folk[] = [
     favourite: { id: 60, name: 'Atlantic Bluefin Tuna' },
     // HE TALKS LIKE HE TALKS.
     //
-    // Matty is a real person, like Yoon, and this is really how he speaks: a
-    // millennial who worked in tech, invests in stocks, and gambles like it is
-    // a personality. So he is the second voice out here written in a
-    // different register on purpose. Contractions, "like", "okay so", and the
-    // vocabulary of three worlds he never left: standups and reorgs and
-    // pinging, positions and dips and diamond hands, the Den and the Catfish
-    // Jackpot and being up if you count from Tuesday.
+    // Matty is a real person, like Yoon, and this is really how he speaks. A
+    // millennial who worked in data, invests in stocks, and gambles like it
+    // is a personality. The second voice out here written in a different
+    // register on purpose: contractions, "okay so", and the vocabulary of
+    // three worlds he never left: standups and reorgs, positions and dips and
+    // the Greeks, the Den and the Catfish Jackpot.
     //
-    // DUDE IS THE LOAD-BEARING ONE, AND BRUH IS THE OTHER. Between them they
-    // open most of his lines and land inside the rest. Not slang sprinkled
-    // over the house voice; he says "dude" and "bruh" the way Yoon says
-    // "gyattt", as the reaction that starts a thought. "Bruh." on its own is
-    // a whole sentence for him. Do not quietly formalise any of this later.
+    // EVERY MANNERISM HERE WAS GIVEN, NOT INVENTED. The list, and it is the
+    // whole list:
+    //   "dude" and "bruh"          the reaction that starts a thought
+    //   "Yooooo"                   how he arrives
+    //   "LOL"                      said out loud, as a word
+    //   "this is rigged"           anything that goes against him
+    //   "wow what a piece of crap" anything that breaks
+    //   "ripperoni"                never "RIP"
+    //   "the data God"             what he calls himself, unprompted
+    //   earnings                   he will ask if you are playing the next one
+    //   "nails on the stails"      his one real slip, uncorrected
+    // Do not add to it and do not quietly formalise any of it.
     //
-    // HIS VOICE CRACKS. Not spelled out in the lines: a first pass broke
-    // syllables ("Du-UDE") and it was rejected on sight. How the crack is
-    // shown, if at all, is still open; until it is decided the words stay
-    // whole.
-    //
-    // HE MESSES UP HIS WORDS FROM TIME TO TIME, and the one slip written
-    // here is a real one: "nails on the stails". Invented slips were tried
-    // and cut. If more are ever added they come from him, not from us.
+    // THE STOCK MARKET ASKS ARE REAL. Ask him about the Greeks and he gives
+    // you genuinely good information, in his voice. That is the joke: the
+    // degenerate is also the most careful teacher on the water. Keep the
+    // finance in those answers correct if they are ever touched.
     //
     // The gap between how he talks and what he is actually saying IS the
     // character. Under the jokes he got laid off, told everyone it was a
     // sabbatical, and is out here deciding whether to go back.
     lines: [
       [
-        "Dude. You're the first boat I've seen all day that isn't, like, a whole fleet. Hey.",
-        "Bruh, I'm not selling anything. I'm just out here. It's a whole thing, don't worry about it.",
-        "Middle of the ocean and my phone still gets one bar. Dude. That's the real miracle out here.",
-        "Dude, do you ever just look at the water and think, this is basically a screensaver? Bruh. It's a screensaver.",
-        "Bruh, I've got snacks. Not good snacks. Boat snacks. You want some? Dude, take some.",
+        "Yooooo. Dude. You're the first boat I've seen all day that isn't, like, a whole fleet. Hey.",
+        "Bruh, I'm not selling anything. I'm just out here. It's a whole thing, LOL, don't worry about it.",
+        "Middle of the ocean and my phone still gets one bar. Dude. Wow what a piece of crap. Still, one bar.",
+        "Yooooo, is that a real ship? LOL. Mine's basically a canoe with opinions.",
+        "Bruh, the fish here are rigged. I've been at it two hours. This is rigged. Dude, I'm not even mad. I'm a little mad.",
       ],
       [
-        "Bruh, you came back. Nobody comes back to the middle band. The middle band is the index fund of oceans. Boring, but it compounds.",
-        "Okay so I used to work in tech. Now my portfolio is fish. Dude. I'm doing great. I'm doing so great.",
+        "Yooooo, you came back. Nobody comes back to the middle band. The middle band is the index fund of oceans. Boring, but it compounds.",
+        "Okay so I used to work in data. I was the data God. Dude, I'm not being modest, that was my actual handle. Now my portfolio is fish. LOL. I'm doing great.",
         "Watch the shipping lanes. Where the freight goes, the fish go, and where the fish go is basically insider information. Dude. Legally.",
         "A bluefin. Bruh. One of those sold for three million at an auction once. Three million. For a fish. If you ever land one, bring it here and let me just look at it.",
-        "Dude, I tried to explain my old job to a guy at the harbour and he asked if it was like being a fisherman for computers. Bruh. Kind of? Kind of.",
-        "Okay so the fish are basically a market. Bruh, hear me out. Supply, demand, a bunch of guys yelling. Dude, it's the same thing.",
+        "Yooooo, are you playing the next earnings? Dude, I don't even know which company. Any of them. I just need to know if you're playing it.",
+        "Ripperoni to my reel, by the way. Wow what a piece of crap. Bruh, it lasted a week.",
       ],
       [
-        "Dude, don't tell anyone, but I've got a system at the Den. It's not a system. It's a feeling. Bruh, feelings are a system.",
+        "Dude, don't tell anyone, but I've got a system at the Den. It's not a system. It's a feeling. Bruh, feelings are a system. LOL.",
         "I'm up, by the way. Technically. If you count from Tuesday and don't count Wednesday. Dude, that's just how you count.",
         "You fish like someone who reads the water. I trade like someone who reads the vibe. One of us is going to be fine and bruh, I think it's you.",
-        "Dude, I used to do standups every morning. Fifteen minutes of people saying no blockers. Out here my standup is the sunrise and there are, like, zero blockers.",
+        "Yooooo, I used to do standups every morning. Fifteen minutes of people saying no blockers. Out here my standup is the sunrise and there are, like, zero blockers.",
       ],
       [
-        "Okay. Real talk. I didn't quit. Bruh, I got laid off. The boat was the severance. I told everyone it was a sabbatical because sabbatical sounds like a choice.",
-        "I had this one stock, dude. Everything in it. Diamond hands, right? The hands were diamond. The stock was not.",
+        "Okay. Real talk. I didn't quit. Bruh, I got laid off. The boat was the severance. I told everyone it was a sabbatical because sabbatical sounds like a choice. This is rigged. It's fine.",
+        "I had this one stock, dude. Everything in it. Diamond hands, right? The hands were diamond. The stock was not. Ripperoni.",
         "The Den's the only place out here that feels like a Slack channel at midnight. Everybody wired, everybody pretending it's fine, the slots going like nails on the stails. Dude, I miss it and I hate that I miss it.",
         "Dude, when I said the middle band compounds? I meant it. Nobody works it because it's not deep and it's not close. Which means it's yours.",
-        "You never once asked me for a tip. Everyone asks the tech guy for a tip. Bruh, that's why you get the real one: there is no tip. There's just showing up.",
+        "You never once asked me for a tip. Everyone asks the data God for a tip. Bruh, that's why you get the real one: there is no tip. There's just showing up.",
       ],
       [
         "Dude. I set a stop-loss on myself. One more year out here, then I go back and get a real job. If I blow through it, you're allowed to say something. Bruh. You're the only one who's allowed.",
-        "I catch myself doing the math on the Catfish Jackpot at, like, three in the morning. Bruh. If you ever see my boat by the Den after dark, come get me. I'm serious.",
-        "You're the best position I've got. Dude, I know how that sounds. I'm keeping it.",
+        "I catch myself doing the math on the Catfish Jackpot at, like, three in the morning. Bruh. If you ever see my boat by the Den after dark, come get me. I'm serious. It's rigged and I'll still play it.",
+        "You're the best position I've got. Dude, I know how that sounds. LOL. I'm keeping it.",
         "My mom thinks I'm a fisherman now. I let her. Dude, out of everything I've told people out here, that's the one that's actually kind of true.",
         "When I go back, and I will, I'm going to be in some meeting and somebody's going to say circle back and I'm going to think about this exact spot. Bruh. Don't let anyone anchor here.",
       ],
     ],
     afterMax: [
-      "Still under the stop-loss, bruh. Barely. Don't check my math.",
+      "Still under the stop-loss, bruh. Barely. Don't check my math. I'm the data God, I'll check it.",
       "I didn't go to the Den last night. Dude, I'm not saying it for a gold star. Okay, I'm a little bit saying it for a gold star.",
-      "Bluefin went for how much this week? Bruh. Don't tell me. Actually tell me.",
-      "You're on the water more than I am now. Dude, I think you might actually be the fisherman in this friendship.",
-      "Every time I see your sail I check my one bar to see if the market's open. Then I remember I don't care. Dude, that's growth.",
+      "Bluefin went for how much this week? Bruh. Don't tell me. Actually tell me. Yooooo.",
+      "You're on the water more than I am now. Dude, I think you might actually be the fisherman in this friendship. LOL.",
+      "Every time I see your sail I check my one bar to see if earnings dropped. Then I remember I don't care. Dude, that's growth. Ripperoni to the old me.",
     ],
     tierUp: [
-      "Dude. Okay. You've got a name now. That's, like, a meaningful upgrade to the relationship.",
-      "You're in the group chat. There is no group chat. Bruh, you're in it.",
+      "Yooooo. Okay. You've got a name now. That's, like, a meaningful upgrade to the relationship.",
+      "You're in the group chat. There is no group chat. Bruh, you're in it. LOL.",
       "Alright, I'm going to tell you stuff I don't tell the boats that just pass through. Dude, brace.",
       "Bruh. You're the one person out here I'd actually text back. I don't have service. It's the principle.",
     ],
-    onLoved: "BRUH. Bruh. Dude. That's a bluefin. That's a house. That's a HOUSE, and you brought it to me. Sit down. I need a minute.",
-    onLiked: "Bruh, nice. That's a solid hold. Clean entry, clean exit.",
-    onPlain: "Dude, thanks. Genuinely. I'm going to eat this and it's going to be a whole thing.",
+    onLoved: "YOOOOO. Dude. Bruh. That's a bluefin. That's a house. That's a HOUSE, and you brought it to me. Sit down. I need a minute.",
+    onLiked: "Yooooo, nice. That's a solid hold. Clean entry, clean exit.",
+    onPlain: "Dude, thanks. Genuinely. I'm going to eat this and it's going to be a whole thing. LOL.",
   },
   {
     id: 'marlow', name: 'Old Marlow', short: 'Marlow', zoneId: 'deep', buys: false,
@@ -1001,31 +1003,34 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
   ],
   pell: [
     [
-      { you: 'What are you doing out here?', they: 'Dude, great question. Taking a break. From what is a longer conversation.' },
-      { you: 'Do you fish?', they: 'I own a rod. Bruh, I own a lot of things I don\'t use.' },
+      { you: 'What are you doing out here?', they: 'Dude, great question. Taking a break. From what is a longer conversation. LOL.' },
+      { you: 'Do you fish?', they: 'I own a rod. Bruh, I own a lot of things I don\'t use. The rod is rigged, by the way. This is rigged.' },
       { you: 'You okay out here?', they: 'Dude, I\'m great. I\'m so great. Bruh, why, do I not look great?' },
-      { you: 'What is with the phone?', they: 'One bar. Dude. I check it like it owes me money. It kind of does.' },
-      { you: 'Do you ever sleep?', they: 'Bruh. I set an alarm to wake up and check nothing. Old habit. Dude, it\'s bad.' },
+      { you: 'What is with the phone?', they: 'One bar. Wow what a piece of crap. Dude, I check it like it owes me money. It kind of does.' },
+      { you: 'Do you ever sleep?', they: 'Bruh. I set an alarm to wake up and check nothing. Old habit. Dude, it\'s bad. LOL.' },
     ],
     [
-      { you: 'What did you do in tech?', they: 'Backend, mostly. Dude, I made the thing that made the other thing load slower.' },
+      { you: 'What did you do in tech?', they: 'Data. I was the data God. Dude, that was my handle, people called me that in meetings. I made the dashboards that made everyone nervous.' },
       { you: 'Why the middle band?', they: 'It\'s the index fund of the ocean. Nobody brags about it and it quietly wins.' },
-      { you: 'Any advice?', they: 'Dude, never take financial advice from a guy on a boat. Bruh, including this. Especially this.' },
-      { you: 'What do you miss?', they: 'Free snacks. Dude, the office had a whole wall. Bruh, I miss the wall.' },
-      { you: 'What is the Den like?', they: 'Dude. Bruh. It\'s the best worst place on this water. Don\'t go. Okay go, but bring me.' },
+      { you: 'Tell me about the stock market.', they: 'Okay. Yooooo. Okay. So a stock is a piece of a company, that part\'s boring. The fun part is options, and options are all about the Greeks. Ask me about the Greeks. Please ask me about the Greeks.' },
+      { you: 'What are the Greeks?', they: 'Dude. Okay. Delta, gamma, theta, vega, rho. Delta is how much the option moves when the stock moves a dollar. Gamma is how fast delta changes. Theta is what you lose every day just for holding it. Vega is how much it cares about volatility. Rho is interest rates and nobody cares. Bruh, that\'s the whole religion.' },
+      { you: 'Are you playing the next earnings?', they: 'Yooooo. Always. Dude, I don\'t even know which company yet. Are YOU playing it? That\'s the real question.' },
     ],
     [
-      { you: 'Are you up or down?', they: 'Bruh. Up. If we use my numbers. I use my numbers.' },
+      { you: 'Are you up or down?', they: 'Bruh. Up. If we use my numbers. I use my numbers. I\'m the data God, my numbers are the numbers.' },
       { you: 'Do you actually like it out here?', they: 'I like that nobody\'s pinging me. Dude, the silence still freaks me out a little.' },
-      { you: 'Ever think about going home?', they: 'Bruh, every night around three. Dude, then it\'s morning and the water does the screensaver thing and I forget.' },
+      { you: 'Explain delta properly.', they: 'Okay so delta runs from zero to one on a call, negative one to zero on a put. A fifty delta call moves about fifty cents per dollar the stock moves, and it\'s roughly the market\'s guess at the odds it finishes in the money. Dude, deep in the money it acts like stock, way out of the money it\'s a lottery ticket. Bruh, that\'s delta.' },
+      { you: 'What is theta?', they: 'Theta is the rent. Dude, every day you hold an option you pay a little, and it speeds up as expiry gets close, like the last week is brutal. Buyers pay theta, sellers collect it. Bruh, most people out here are buyers and they don\'t know they\'re the rent.' },
     ],
     [
-      { you: 'What happened with the job?', they: 'Reorg. Dude, that word covers a lot. My whole team, one Tuesday, one calendar invite.' },
+      { you: 'What happened with the job?', they: 'Reorg. Dude, that word covers a lot. My whole team, one Tuesday, one calendar invite. Ripperoni.' },
       { you: 'What was the stock?', they: 'Doesn\'t matter. Dude, it does matter. I\'m not saying it out loud on the water.' },
+      { you: 'What is the deal with earnings?', they: 'Okay so before earnings, implied volatility gets pumped, the options get expensive, everybody\'s pricing the move. Then the number drops and IV crushes, like collapses, and your call can be right on direction and still lose because you paid for the fear. Dude, the price of the straddle divided by the stock price is roughly the move the market expects. If you don\'t think it beats that, you don\'t play it. Bruh, I play it anyway. This is rigged.' },
     ],
     [
       { you: 'Are you going back?', they: 'One more year. Stop-loss. Bruh, hold me to it, I mean it.' },
-      { you: 'What would you do differently?', they: 'Buy the boat first. Dude, everything after that was fine.' },
+      { you: 'What would you do differently?', they: 'Buy the boat first. Dude, everything after that was fine. Yooooo, honestly, that\'s the whole answer.' },
+      { you: 'What is gamma, really?', they: 'Gamma is how much delta moves when the stock moves a dollar, so it\'s the thing that makes a position feel alive. Highest at the money right before expiry, dude, that\'s where an option flips from nothing to everything on a small move. Sellers are short gamma and it\'s the thing that eats them. Bruh, the data God has been eaten. Ripperoni.' },
     ],
   ],
   marlow: [
