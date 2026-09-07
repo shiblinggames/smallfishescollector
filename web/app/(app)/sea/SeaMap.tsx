@@ -35,7 +35,6 @@ import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORT
 import { getShip } from '@/lib/ships'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
-import { crewTheDeck } from '../crew/actions'
 import { SUBMERGE } from './submerge'
 import { ART_COLLIDERS, PORT_COLLIDERS, ISLE_COLLIDERS } from './colliders'
 import SubmergedSprite from './SubmergedSprite'
@@ -2612,31 +2611,8 @@ export default function SeaMap({
   const [portalBusy, setPortalBusy] = useState(false)
   const [portalErr, setPortalErr] = useState<string | null>(null)
 
-  /**
-   * THE MUSTER, live. Server props seed it; Crew the Deck refreshes it from
-   * the action's own returned state, so filling the seats never means leaving
-   * the water. Resynced when the server prop changes (a return from the Crew
-   * Hall remounts the page with a fresh party) — the standard prop-to-state
-   * pairing, or the first server render after an edit would win forever.
-   */
-  const [party, setParty] = useState(raidParty)
-  useEffect(() => { setParty(raidParty) }, [raidParty])
-  const [decking, setDecking] = useState(false)
-  const crewDeck = useCallback(async () => {
-    if (decking) return
-    setDecking(true)
-    vibrate(10)
-    try {
-      const res = await crewTheDeck()
-      if (!('error' in res)) {
-        setParty(res.state.roster
-          .filter(c => c.raidSlot != null)
-          .sort((a, b) => (a.raidSlot ?? 0) - (b.raidSlot ?? 0))
-          .map(c => ({ name: c.name, art: c.filename })))
-      }
-    } catch { /* the muster keeps what it had */ }
-    setDecking(false)
-  }, [decking])
+  // `raidParty` is still passed by the page; the sheet that showed it at the
+  // dock is gone (the switch is one tap now), so nothing reads it here.
 
   /**
    * WHAT IS UNDER YOU, in the three numbers the frame loop needs.
