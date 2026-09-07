@@ -384,7 +384,7 @@ export const FOLK: Folk[] = [
     // captain's standing with him lives in sea_rapport under 'pell'. The name
     // changed; the friendship did not, so the key stays.
     id: 'pell', name: 'Matty', short: 'Matty', zoneId: 'open_waters', buys: false,
-    greeting: "Yooooo. Dude. Okay. Hey.",
+    greeting: "Yoooooo whaddup whaddup. Dude have you checked the fish earnings reports?",
     face: { characterColor: 'blue', hat: 'black', bg: '#0b1420', ring: '#4fc3f7', mirrored: true },
     role: 'Someone to know', accent: '#4fc3f7',
     blurb: 'Cashed out of tech, bought a boat, and has a position in everything, including you.',
@@ -411,6 +411,8 @@ export const FOLK: Folk[] = [
     //   "the data God"             what he calls himself, unprompted
     //   earnings                   he will ask if you are playing the next one
     //   "nails on the stails"      his one real slip, uncorrected
+    //   "bro", "whaddup", "ima"    the register the given lines are in
+    // The greeting and every stranger-tier ask are VERBATIM from the user.
     // Do not add to it and do not quietly formalise any of it.
     //
     // THE STOCK MARKET ASKS ARE REAL. Ask him about the Greeks and he gives
@@ -423,6 +425,7 @@ export const FOLK: Folk[] = [
     // sabbatical, and is out here deciding whether to go back.
     lines: [
       [
+        "Bruh I'm not catching anything today. Ripperoni.",
         "Yooooo. Dude. You're the first boat I've seen all day that isn't, like, a whole fleet. Hey.",
         "Bruh, I'm not selling anything. I'm just out here. It's a whole thing, LOL, don't worry about it.",
         "Middle of the ocean and my phone still gets one bar. Dude. Wow what a piece of crap. Still, one bar.",
@@ -1011,11 +1014,11 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
   ],
   pell: [
     [
-      { you: 'What are you doing out here?', they: 'Dude, great question. Taking a break. From what is a longer conversation. LOL.' },
-      { you: 'Do you fish?', they: 'I own a rod. Bruh, I own a lot of things I don\'t use. The rod is rigged, by the way. This is rigged.' },
-      { you: 'You okay out here?', they: 'Dude, I\'m great. I\'m so great. Bruh, why, do I not look great?' },
-      { you: 'What is with the phone?', they: 'One bar. Wow what a piece of crap. Dude, I check it like it owes me money. It kind of does.' },
-      { you: 'Do you ever sleep?', they: 'Bruh. I set an alarm to wake up and check nothing. Old habit. Dude, it\'s bad. LOL.' },
+      { you: 'What are you doing out here?', they: 'Dude I\'m trying to retire. Once my fish stocks take off ima retire.' },
+      { you: 'Do you fish?', they: 'LOL I own a rod bro. These waters are rigged tho.' },
+      { you: 'You okay out here?', they: 'No wife, no kids. Can\'t complain.' },
+      { you: 'What is with the phone?', they: 'Just checking for new boats bro. My wife made me sell my last one. It was a lot more sporty I swear. Now I have this family boat.' },
+      { you: 'Do you ever sleep?', they: 'I\'m guessing you don\'t have kids.' },
     ],
     [
       { you: 'What did you do in tech?', they: 'Data. I was the data God. Dude, that was my handle, people called me that in meetings. I made the dashboards that made everyone nervous.' },
