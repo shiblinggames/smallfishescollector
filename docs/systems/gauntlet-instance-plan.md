@@ -255,6 +255,16 @@ module-level `Screen` (second child, after the arena), which is a PLAIN
 wrapper: a cross-fade under the veil fought it (a beat of empty water and a
 second easing on the same moment) and was removed. One thing moves.
 
+**Why the arena did not persist, and the water was a photograph (fixed 2026-09-07).**
+GauntletGame's root wrapped every non-fight phase in an `AnimatePresence` keyed on the phase
+and hoisted an `AbyssBackdrop` (fixed, zIndex 0) over it. Every phase change therefore
+unmounted the whole subtree, keyed arena included (a WebGL Application per screen), and the
+abyss covered the arena on every non-fight screen. Run phases now render the phase view
+directly, so the keyed arena and `Screen` genuinely persist, and the abyss and scrim are kept
+only for the hold, the used-up notice and the resume. `GauntletReward` draws no backdrop of
+its own. If the water ever reads as a picture again, look for a fixed backdrop or a keyed
+wrapper ABOVE the phase view before touching the arena.
+
 **The screens between fights are HUD around the sea, not menus.** The breather
 lost its bordered bank card and cells (numbers on the water, text-shadowed) and
 opens a `clamp(150px, 26vh, 280px)` gap where the arena draws the hull, so the
