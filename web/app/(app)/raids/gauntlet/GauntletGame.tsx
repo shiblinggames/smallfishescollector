@@ -3907,9 +3907,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                           : getRaidItem(o.id)?.image
                         return (
                           <div key={o.id} title={o.lockedUntilDepth ? `${o.name} — opens at depth ${o.lockedUntilDepth}` : o.name} style={{
-                            flexShrink: 0, width: 62, padding: '0.4rem 0.2rem 0.35rem', borderRadius: 10,
-                            background: 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${o.lockedUntilDepth ? 'rgba(255,255,255,0.08)' : sweetened ? 'rgba(201,167,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                            flexShrink: 0, width: 64, padding: '0.2rem 0.1rem',
                             textAlign: 'center', opacity: o.lockedUntilDepth ? 0.5 : 1,
                           }}>
                             <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -3957,7 +3955,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#9a988e' }}>Hull</span>
               <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hpColor }}>{playerHP} / {hpMax}</span>
             </div>
-            <div style={{ height: 11, borderRadius: 6, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.55)', overflow: 'hidden' }}>
               <motion.div initial={{ width: `${hpPct}%` }} animate={{ width: `${hpPct}%` }} transition={{ duration: 0.4 }}
                 style={{ height: '100%', background: `linear-gradient(90deg, ${hpColor}aa, ${hpColor})`, boxShadow: `0 0 10px ${hpColor}88` }} />
             </div>
@@ -3970,9 +3968,9 @@ export default function GauntletGame(props: GauntletGameProps) {
               this screen exists to ask. Collapsed, the header still carries the counts
               and the "synergy within reach" nudge, so nothing urgent is hidden. */}
           {(ownedBoons.length > 0 || activeConf.length > 0 || ownedCurses.length > 0) && (
-            <div style={{ marginTop: 13, borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', textAlign: 'left', overflow: 'hidden' }}>
+            <div style={{ marginTop: 10, textAlign: 'left', overflow: 'hidden' }}>
               <button onClick={() => setLoadoutOpen(o => !o)} className="tap"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.7rem 0.9rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.35rem 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                 <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ flexShrink: 0, fontSize: '0.55rem', color: '#9a988e' }}>Loadout</span>
                 <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.62rem', color: eligibleConf.length > 0 ? '#c6b0ff' : '#7a756c' }}>
                   {eligibleConf.length > 0
@@ -4146,7 +4144,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {/* Sounding Line — intel that informs the dive, so it sits above the fork. */}
             {sounding && (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, padding: '0.55rem 0.85rem', borderRadius: 11, background: `${sounding.color}12`, border: `1px solid ${sounding.color}44` }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 6, padding: '0.3rem 0.1rem' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={sounding.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20" /><path d="M5 9l7-7 7 7" /><path d="M8 16h8" /></svg>
                 <div style={{ textAlign: 'left', minWidth: 0 }}>
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.44rem', color: `${sounding.color}cc` }}>Sounding Line · what lies below</p>
@@ -4170,71 +4168,40 @@ export default function GauntletGame(props: GauntletGameProps) {
 
             {(() => {
               const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
-              const diveBtn = (
-                // Dive Deeper is the BECKONING option: it breathes, its chevron
-                // bobs downward, and it carries the accent glow — so the risky
-                // path pulls at you while Claim & Leave sits calm and solid.
-                <motion.button onClick={pushOn} disabled={resolving} className="tap"
-                  animate={resolving ? {} : { boxShadow: [`0 0 10px ${AC}22`, `0 0 26px ${AC}55`, `0 0 10px ${AC}22`] }}
-                  transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ width: '100%', height: '100%', minHeight: 96, padding: '0.8rem 0.6rem', borderRadius: 14,
-                    background: `linear-gradient(180deg, ${AC}3d 0%, rgba(6,10,16,0.9) 74%)`, border: `1.5px solid ${AC}c4`,
-                    cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <motion.span aria-hidden animate={resolving ? {} : { y: [0, 3, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }} style={{ display: 'flex' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14" /><path d="M19 12l-7 7-7-7" /></svg>
-                  </motion.span>
-                  <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '1.02rem', color: '#d7fbf4', lineHeight: 1.1, textShadow: `0 0 12px ${AC}66` }}>Dive Deeper</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#bfe4dc' }}>To depth {nextDepth}</span>
-                  {previewDoubloons > 0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#d3a595', lineHeight: 1.25 }}>
-                      {fmt(previewDoubloons)} ⟡ at risk
-                    </span>
-                  )}
-                </motion.button>
-              )
-              if (bankBarred) return (
-                <>
-                  <div style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: 14, textAlign: 'center', marginBottom: 10, background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.2)' }}>
-                    <p className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.85rem', color: '#8a8578' }}>You Cannot Leave</p>
-                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#6f6a62', marginTop: 4, lineHeight: 1.4 }}>
-                      You signed <strong style={{ color: '#a89898' }}>No Second Thoughts</strong>. Davy only lets you bank once you have put a boss down.
-                    </p>
-                  </div>
-                  {diveBtn}
-                </>
-              )
+              const up = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+              const down = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+              const pause = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M8 5v14M16 5v14" /></svg>
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'stretch' }}>
-                  {/* SURFACE. Gold, and it points UP. */}
-                  <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="tap"
-                    style={{ width: '100%', minHeight: 96, padding: '0.8rem 0.6rem', borderRadius: 14,
-                      background: offer ? 'linear-gradient(180deg, rgba(201,167,255,0.36) 0%, rgba(10,8,18,0.9) 74%)' : `linear-gradient(180deg, ${GOLD}38 0%, rgba(14,11,6,0.9) 74%)`,
-                      border: offer ? '1px solid rgba(201,167,255,0.9)' : `1px solid ${GOLD}a6`,
-                      cursor: resolving ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                      boxShadow: offer ? '0 0 22px rgba(140,90,220,0.28)' : `0 0 20px ${GOLD}22` }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={offer ? '#c9a7ff' : GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
-                    <span className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ fontSize: '1.02rem', color: offer ? '#f2eaff' : '#f7dc8f', lineHeight: 1.1, textShadow: offer ? '0 0 12px rgba(201,167,255,0.5)' : `0 0 12px ${GOLD}55` }}>
-                      {resolving ? '…' : offer ? 'Take the Deal' : 'Claim & Leave'}
-                    </span>
-                    <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: offer ? '#d8c2ff' : '#ffd98a' }}>{fmt(dealDoubloons)} ⟡</span>
-                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#c2bcaa', lineHeight: 1.25 }}>Surface with it</span>
-                  </button>
-                  {diveBtn}
-                </div>
+                <>
+                  {/* THE DOCK. Three controls in the fight's own idiom: surface,
+                      dive, pause. The dive breathes, because it is the one
+                      that beckons. */}
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, marginTop: 16 }}>
+                    <DockBtn
+                      label={resolving ? 'Working' : offer ? 'Take the deal' : 'Claim & leave'}
+                      sub={`${fmt(dealDoubloons)} ⟡`}
+                      accent={offer ? '#c9a7ff' : GOLD} icon={up}
+                      onClick={() => setConfirmClaim(true)} disabled={resolving || bankBarred} dim={bankBarred} />
+                    <DockBtn label="Dive deeper" sub={`Depth ${nextDepth}`} accent={AC} icon={down}
+                      onClick={pushOn} disabled={resolving} breathe />
+                    <DockBtn label={pausing ? 'Saving' : 'Pause'} accent="#9a988e" icon={pause}
+                      onClick={doPause} disabled={pausing || resolving} />
+                  </div>
+                  {/* The one line under the dock: what riding on is worth, or
+                      why the surface is shut. */}
+                  {bankBarred ? (
+                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#a89898', marginTop: 12, lineHeight: 1.4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                      You signed <strong style={{ color: '#d3b0b0' }}>No Second Thoughts</strong>. Davy only lets you bank once you have put a boss down.
+                    </p>
+                  ) : previewDoubloons > 0 ? (
+                    <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#c9a99b', marginTop: 12, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                      Dive and {fmt(previewDoubloons)} ⟡ rides with you.
+                    </p>
+                  ) : null}
+                </>
               )
             })()}
           </div>
-
-          {/* Pause & step away — save the run and take a break. Unlimited, and it
-              never risks the crew: the dive is held server-side and picks up right
-              here. Deliberately quiet so it never competes with the dive/bank fork. */}
-          <button onClick={doPause} disabled={pausing || resolving} className="font-karla font-700 tap"
-            style={{ marginTop: 12, width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem',
-              color: '#c8c2b6', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(200,194,182,0.4)',
-              cursor: (pausing || resolving) ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M8 5v14M16 5v14" /></svg>
-            {pausing ? 'Saving…' : 'Pause & step away'}
-          </button>
         </div>
 
         {detailModal}
@@ -7791,6 +7758,44 @@ function Screen({ id, children }: { id: string; children: React.ReactNode }) {
   // is what still read as jank. One thing moves. The wrapper stays so every
   // screen keeps the same position in its fragment.
   return <div data-screen={id}>{children}</div>
+}
+
+/**
+ * ── A DOCK CONTROL ───────────────────────────────────────────────────────
+ *
+ * The breather's choices used to be two gradient cards with an arrow, a
+ * headline, a number and a strapline stacked inside each, glowing. That is
+ * the shape of a button nobody drew on purpose. The fight's action bar is
+ * the game's own control: a circle with a mark in it and a word beneath, and
+ * the number under the word when there is one. The breather's choices are
+ * built from that, so leaving the water and going deeper look like things
+ * this game does rather than a menu laid over it.
+ */
+function DockBtn({ label, sub, accent, icon, onClick, disabled, breathe, dim }: {
+  label: string; sub?: string; accent: string; icon: React.ReactNode
+  onClick: () => void; disabled?: boolean; breathe?: boolean; dim?: boolean
+}) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className="tap" aria-label={label}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+        background: 'none', border: 'none', padding: 0, minWidth: 92,
+        cursor: disabled ? 'default' : 'pointer', opacity: dim ? 0.42 : 1,
+      }}>
+      <motion.span
+        animate={breathe && !disabled ? { boxShadow: [`0 0 0px ${accent}00`, `0 0 22px ${accent}66`, `0 0 0px ${accent}00`] } : { boxShadow: `0 0 0px ${accent}00` }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          width: 62, height: 62, borderRadius: '50%', display: 'grid', placeItems: 'center', color: accent,
+          background: 'radial-gradient(circle at 50% 35%, rgba(22,30,44,0.98), rgba(6,10,16,0.98))',
+          border: `1.5px solid ${accent}`, boxShadow: `inset 0 0 14px ${accent}22`,
+        }}>
+        {icon}
+      </motion.span>
+      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: accent, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{label}</span>
+      {sub && <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#ece5d6', marginTop: -4, fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{sub}</span>}
+    </button>
+  )
 }
 
 function Shell({ children, wide, hardcore }: { children: React.ReactNode; wide?: boolean; hardcore?: boolean }) {
