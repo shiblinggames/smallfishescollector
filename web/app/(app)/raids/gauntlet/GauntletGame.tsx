@@ -3944,13 +3944,10 @@ export default function GauntletGame(props: GauntletGameProps) {
             )
           })()}
 
-          {/* THE WATER. The arena draws your hull about here, and a breather on
-              the sea should show the sea: this is the part of the screen that
-              is the game rather than the interface. Nothing goes in it. */}
-          <div aria-hidden style={{ height: 'clamp(150px, 26vh, 280px)' }} />
-
-          {/* Hull — the other half of the gamble, right under the reward. */}
-          <div style={{ marginTop: 0, textAlign: 'left' }}>
+          {/* Hull — the other half of the gamble, right under the reward. The
+              open-water gap that stood here went with the hull it was there
+              to show; an empty gap is just distance. */}
+          <div style={{ marginTop: 18, textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
               <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.72rem', color: '#b3ada0', textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>Hull</span>
               <span className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: hpColor, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{playerHP} / {hpMax}</span>
