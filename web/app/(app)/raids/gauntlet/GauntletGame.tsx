@@ -3815,7 +3815,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Depth + a line of voice. The "Catch Your Breath" eyebrow is gone: the
               screen IS the breather, and a label announcing that spent the most
               valuable line on the page saying nothing. */}
-          <p className="font-cinzel font-700" style={{ fontSize: '1.22rem', color: '#f4eee2', marginTop: 14, lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+          <p className="font-cinzel font-700" style={{ fontSize: 'clamp(1.5rem, 5.6vw, 1.95rem)', color: '#f4eee2', marginTop: 14, lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             Depth {combatDepth} · {band.name}
           </p>
           {/* THE GHOST. Your run clock, and how it stands against the fastest you
@@ -3828,7 +3828,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {depthSplit && depthSplit.depth === cleared && (
             <p className="font-karla font-700 uppercase tracking-[0.14em]"
               style={{
-                fontSize: '0.58rem', marginTop: 7, fontVariantNumeric: 'tabular-nums',
+                fontSize: '0.74rem', marginTop: 8, fontVariantNumeric: 'tabular-nums',
                 color: depthSplit.isRecord ? CTA_BG : 'rgba(226,232,240,0.58)',
                 textShadow: '0 1px 6px rgba(0,0,0,0.8)',
               }}>
@@ -3838,7 +3838,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               )}
             </p>
           )}
-          <p className="font-karla" style={{ fontSize: '0.86rem', fontStyle: 'italic', color: 'rgba(184,222,213,0.92)', lineHeight: 1.4, marginTop: 7, maxWidth: 340, marginInline: 'auto', textShadow: '0 1px 8px rgba(0,0,0,0.75)' }}>
+          <p className="font-karla" style={{ fontSize: '1rem', fontStyle: 'italic', color: 'rgba(184,222,213,0.92)', lineHeight: 1.4, marginTop: 8, maxWidth: 340, marginInline: 'auto', textShadow: '0 1px 8px rgba(0,0,0,0.75)' }}>
             &ldquo;{breathLine}&rdquo;
           </p>
 
@@ -3879,13 +3879,13 @@ export default function GauntletGame(props: GauntletGameProps) {
             // a stacked ledger that ate half the screen to say three things.
             const Cell = ({ label, value, color }: { label: string; value: string; color: string }) => (
               <div style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.2rem', textAlign: 'center' }}>
-                <p className="font-cinzel font-800" style={{ fontSize: 'clamp(1.05rem, 4.8vw, 1.3rem)', color, lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>{value}</p>
-                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#8f8a80', marginTop: 4 }}>{label}</p>
+                <p className="font-cinzel font-800" style={{ fontSize: 'clamp(1.45rem, 6.6vw, 1.9rem)', color, lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>{value}</p>
+                <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: '#a9a396', marginTop: 5, textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>{label}</p>
               </div>
             )
             return (
               <div style={{ marginTop: 12, padding: '0.3rem 0.2rem' }}>
-                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: `${GOLD}cc`, marginBottom: 4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>Bank now and you take</p>
+                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.64rem', color: `${GOLD}dd`, marginBottom: 6, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>Bank now and you take</p>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <Cell label="Doubloons" value={fmt(dealDoubloons)} color={GOLD} />
                   <Cell label="Nav XP" value={`+${fmt(previewXp)}`} color="#7dd3fc" />
@@ -3897,7 +3897,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     fishing for reads visually instead of as a text ledger. */}
                 {odds.length > 0 && (
                   <div style={{ marginTop: 10, paddingTop: 9, borderTop: `1px solid ${GOLD}22` }}>
-                    <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.46rem', color: sweetened ? '#c9a7ff' : '#8f8a80', marginBottom: 6, textAlign: 'left' }}>
+                    <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: sweetened ? '#c9a7ff' : '#a9a396', marginBottom: 8, textAlign: 'left', textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>
                       In the Chest{sweetened ? ` · Davy's ${offerChest}x` : ''}{ftnMult > 1 ? ` · Fortune ${ftnMult.toFixed(2)}x` : ''}
                     </p>
                     <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
@@ -3907,13 +3907,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                           : getRaidItem(o.id)?.image
                         return (
                           <div key={o.id} title={o.lockedUntilDepth ? `${o.name} — opens at depth ${o.lockedUntilDepth}` : o.name} style={{
-                            flexShrink: 0, width: 64, padding: '0.2rem 0.1rem',
+                            flexShrink: 0, width: 82, padding: '0.2rem 0.1rem',
                             textAlign: 'center', opacity: o.lockedUntilDepth ? 0.5 : 1,
                           }}>
-                            <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {img
                                 // eslint-disable-next-line @next/next/no-img-element
-                                ? <img src={img} alt="" loading="lazy" decoding="async" style={{ maxWidth: 28, maxHeight: 30, objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.55))' }} />
+                                ? <img src={img} alt="" loading="lazy" decoding="async" style={{ maxWidth: 38, maxHeight: 40, objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.55))' }} />
                                 : <span style={{ fontSize: '1rem', color: GOLD }}>◆</span>}
                             </div>
                             {/* The BOOSTED chance is the headline, because it is
@@ -3923,17 +3923,17 @@ export default function GauntletGame(props: GauntletGameProps) {
                                 together or work out whether a "+5%" meant points
                                 or a proportion. */}
                             <p className="font-cinzel font-800" style={{
-                              fontSize: o.lockedUntilDepth ? '0.6rem' : '0.72rem', lineHeight: 1, marginTop: 3,
+                              fontSize: o.lockedUntilDepth ? '0.72rem' : '0.95rem', lineHeight: 1, marginTop: 4,
                               color: o.lockedUntilDepth ? '#8f8a80' : o.chance > o.chanceBeforeFortune ? GOLD : sweetened ? '#c9a7ff' : '#e8e1d2',
                             }}>
                               {o.lockedUntilDepth ? `Depth ${o.lockedUntilDepth}` : `${(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%`}
                             </p>
                             {!o.lockedUntilDepth && o.chance > o.chanceBeforeFortune && (
-                              <p className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#8f8a80', lineHeight: 1, marginTop: 1, textDecoration: 'line-through', opacity: 0.75 }}>
+                              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8f8a80', lineHeight: 1, marginTop: 2, textDecoration: 'line-through', opacity: 0.75 }}>
                                 {(o.chanceBeforeFortune * 100).toFixed(o.chanceBeforeFortune < 0.1 ? 1 : 0)}%
                               </p>
                             )}
-                            <p className="font-karla font-600 truncate" style={{ fontSize: '0.44rem', color: '#8f8a80', lineHeight: 1.2, marginTop: 2 }}>{o.name}</p>
+                            <p className="font-karla font-600 truncate" style={{ fontSize: '0.58rem', color: '#a9a396', lineHeight: 1.2, marginTop: 3 }}>{o.name}</p>
                           </div>
                         )
                       })}
@@ -3952,10 +3952,10 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Hull — the other half of the gamble, right under the reward. */}
           <div style={{ marginTop: 0, textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-              <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#9a988e' }}>Hull</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hpColor }}>{playerHP} / {hpMax}</span>
+              <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.72rem', color: '#b3ada0', textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>Hull</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: hpColor, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{playerHP} / {hpMax}</span>
             </div>
-            <div style={{ height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.55)', overflow: 'hidden' }}>
+            <div style={{ height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.55)', overflow: 'hidden' }}>
               <motion.div initial={{ width: `${hpPct}%` }} animate={{ width: `${hpPct}%` }} transition={{ duration: 0.4 }}
                 style={{ height: '100%', background: `linear-gradient(90deg, ${hpColor}aa, ${hpColor})`, boxShadow: `0 0 10px ${hpColor}88` }} />
             </div>
@@ -3971,8 +3971,8 @@ export default function GauntletGame(props: GauntletGameProps) {
             <div style={{ marginTop: 10, textAlign: 'left', overflow: 'hidden' }}>
               <button onClick={() => setLoadoutOpen(o => !o)} className="tap"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.35rem 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-                <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ flexShrink: 0, fontSize: '0.55rem', color: '#9a988e' }}>Loadout</span>
-                <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.62rem', color: eligibleConf.length > 0 ? '#c6b0ff' : '#7a756c' }}>
+                <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ flexShrink: 0, fontSize: '0.7rem', color: '#b3ada0', textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>Loadout</span>
+                <span className="font-karla font-600 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: eligibleConf.length > 0 ? '#c6b0ff' : '#9a948a', textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>
                   {eligibleConf.length > 0
                     ? `${eligibleConf.length} synerg${eligibleConf.length === 1 ? 'y' : 'ies'} within reach`
                     : [
@@ -4147,8 +4147,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                 style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 6, padding: '0.3rem 0.1rem' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={sounding.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20" /><path d="M5 9l7-7 7 7" /><path d="M8 16h8" /></svg>
                 <div style={{ textAlign: 'left', minWidth: 0 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.44rem', color: `${sounding.color}cc` }}>Sounding Line · what lies below</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: sounding.color, lineHeight: 1.15 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: `${sounding.color}dd`, textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>Sounding Line · what lies below</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: sounding.color, lineHeight: 1.2, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                     {sounding.label}{sounding.sub ? <span style={{ color: 'rgba(255,255,255,0.58)' }}> · {sounding.sub}</span> : ''}
                   </p>
                 </div>
@@ -4168,15 +4168,15 @@ export default function GauntletGame(props: GauntletGameProps) {
 
             {(() => {
               const bankBarred = termFx.cashOutOnlyAfterBoss && !rollStateRef.current.prevWasBoss
-              const up = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
-              const down = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
-              const pause = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M8 5v14M16 5v14" /></svg>
+              const up = <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+              const down = <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+              const pause = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M8 5v14M16 5v14" /></svg>
               return (
                 <>
                   {/* THE DOCK. Three controls in the fight's own idiom: surface,
                       dive, pause. The dive breathes, because it is the one
                       that beckons. */}
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, marginTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 30, marginTop: 18 }}>
                     <DockBtn
                       label={resolving ? 'Working' : offer ? 'Take the deal' : 'Claim & leave'}
                       sub={`${fmt(dealDoubloons)} ⟡`}
@@ -4190,11 +4190,11 @@ export default function GauntletGame(props: GauntletGameProps) {
                   {/* The one line under the dock: what riding on is worth, or
                       why the surface is shut. */}
                   {bankBarred ? (
-                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#a89898', marginTop: 12, lineHeight: 1.4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                    <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89898', marginTop: 14, lineHeight: 1.4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                       You signed <strong style={{ color: '#d3b0b0' }}>No Second Thoughts</strong>. Davy only lets you bank once you have put a boss down.
                     </p>
                   ) : previewDoubloons > 0 ? (
-                    <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#c9a99b', marginTop: 12, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                    <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: '#c9a99b', marginTop: 14, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                       Dive and {fmt(previewDoubloons)} ⟡ rides with you.
                     </p>
                   ) : null}
@@ -7779,21 +7779,21 @@ function DockBtn({ label, sub, accent, icon, onClick, disabled, breathe, dim }: 
     <button type="button" onClick={onClick} disabled={disabled} className="tap" aria-label={label}
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
-        background: 'none', border: 'none', padding: 0, minWidth: 92,
+        background: 'none', border: 'none', padding: 0, minWidth: 104,
         cursor: disabled ? 'default' : 'pointer', opacity: dim ? 0.42 : 1,
       }}>
       <motion.span
         animate={breathe && !disabled ? { boxShadow: [`0 0 0px ${accent}00`, `0 0 22px ${accent}66`, `0 0 0px ${accent}00`] } : { boxShadow: `0 0 0px ${accent}00` }}
         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
         style={{
-          width: 62, height: 62, borderRadius: '50%', display: 'grid', placeItems: 'center', color: accent,
+          width: 74, height: 74, borderRadius: '50%', display: 'grid', placeItems: 'center', color: accent,
           background: 'radial-gradient(circle at 50% 35%, rgba(22,30,44,0.98), rgba(6,10,16,0.98))',
           border: `1.5px solid ${accent}`, boxShadow: `inset 0 0 14px ${accent}22`,
         }}>
         {icon}
       </motion.span>
-      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: accent, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{label}</span>
-      {sub && <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#ece5d6', marginTop: -4, fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{sub}</span>}
+      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.14em', color: accent, textShadow: '0 1px 6px rgba(0,0,0,0.9)', whiteSpace: 'nowrap' }}>{label}</span>
+      {sub && <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#ece5d6', marginTop: -4, fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>{sub}</span>}
     </button>
   )
 }

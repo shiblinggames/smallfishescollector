@@ -11,11 +11,6 @@
 //   THE DEEP      a slow pulse of light at the foot of the arena — the thing
 //                 under you. At a boss depth it OPENS: an eye, the run's own
 //                 colour, that watches the fight from under the water.
-//   SILHOUETTES   two tiling bands of dark shapes drifting at different
-//                 speeds: masts and kelp and a whale's ribs for Davy, pillars
-//                 and arches and a fallen crown for the Don, spires and bone
-//                 for hardcore. Parallax is the cheapest possible depth cue,
-//                 and a tiling sprite is the cheapest possible parallax.
 //   SHAFTS        light coming down through the water in slow sweeping
 //                 columns — or up, in hardcore, because there the light has
 //                 a source and it is not the sun.
@@ -28,7 +23,7 @@
 //
 // Every pool is fixed and recycled. Nothing allocates after construction.
 
-import type { Container, Particle, ParticleContainer, Sprite, Texture, TilingSprite } from 'pixi.js'
+import type { Container, Particle, ParticleContainer, Sprite, Texture } from 'pixi.js'
 
 export type SceneVariant = 'davy' | 'don'
 
@@ -190,98 +185,6 @@ function pupil(PIXI: typeof import('pixi.js')) {
   }, PIXI)
 }
 
-/**
- * THE SILHOUETTES, one wide transparent band per world. Drawn as flat black
- * and tinted into the sea's deepest stop at draw time, so they read as things
- * in the water rather than things pasted over it.
- */
-function silhouettes(PIXI: typeof import('pixi.js'), world: 'davy' | 'don' | 'hardcore') {
-  return cached('sil:' + world, () => {
-    const W = 2048, H = 512
-    const { c, g } = canvas(W, H)
-    const r = rng(world === 'davy' ? 7 : world === 'don' ? 19 : 41)
-    g.fillStyle = '#000'; g.strokeStyle = '#000'; g.lineCap = 'round'
-    const floor = H * 0.98
-
-    if (world === 'davy') {
-      // Masts of a drowned fleet, leaning, with their yards still on.
-      for (let i = 0; i < 9; i++) {
-        const x = 90 + r() * (W - 180)
-        const h = 200 + r() * 240
-        const lean = (r() - 0.5) * 0.5
-        g.save(); g.translate(x, floor); g.rotate(lean)
-        g.lineWidth = 6 + r() * 6
-        g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -h); g.stroke()
-        for (let y = -h * 0.35; y > -h * 0.95; y -= h * 0.28) {
-          const yw = 40 + r() * 60
-          g.lineWidth = 4
-          g.beginPath(); g.moveTo(-yw, y); g.lineTo(yw, y - 6); g.stroke()
-        }
-        g.restore()
-      }
-      // A whale's ribs, arcing out of the silt.
-      const rx = 300 + r() * (W - 600)
-      for (let i = 0; i < 7; i++) {
-        const rr = 90 + i * 22
-        g.lineWidth = 7
-        g.beginPath(); g.arc(rx + i * 26, floor, rr, Math.PI * 1.05, Math.PI * 1.95); g.stroke()
-      }
-      // Kelp, tall and slack.
-      for (let i = 0; i < 14; i++) {
-        const x = r() * W, h = 160 + r() * 260, w = 6 + r() * 8
-        g.lineWidth = w
-        g.beginPath(); g.moveTo(x, floor)
-        for (let k = 1; k <= 6; k++) g.lineTo(x + Math.sin(k * 1.3 + i) * 22, floor - (h / 6) * k)
-        g.stroke()
-      }
-    } else if (world === 'don') {
-      // A sunken court: pillars with capitals, two broken arches, a crown.
-      for (let i = 0; i < 11; i++) {
-        const x = 60 + r() * (W - 120), h = 180 + r() * 250, w = 22 + r() * 20
-        const lean = (r() - 0.5) * 0.14
-        g.save(); g.translate(x, floor); g.rotate(lean)
-        g.fillRect(-w / 2, -h, w, h)
-        g.fillRect(-w * 0.9, -h - 14, w * 1.8, 14)
-        g.fillRect(-w * 0.8, -12, w * 1.6, 12)
-        g.restore()
-      }
-      for (let i = 0; i < 2; i++) {
-        const x = 400 + r() * (W - 800), rr = 120 + r() * 80
-        g.lineWidth = 26
-        g.beginPath(); g.arc(x, floor - rr * 0.6, rr, Math.PI * 1.1, Math.PI * 1.9); g.stroke()
-      }
-      const cx = 200 + r() * (W - 400)
-      g.lineWidth = 12
-      g.beginPath(); g.ellipse(cx, floor - 60, 70, 24, -0.4, 0, Math.PI * 2); g.stroke()
-      for (let k = 0; k < 5; k++) {
-        const a = -0.4 + (k / 4) * 0.9
-        g.beginPath(); g.moveTo(cx + Math.cos(a) * 60, floor - 60 + Math.sin(a) * 20); g.lineTo(cx + Math.cos(a) * 60 - 8, floor - 60 + Math.sin(a) * 20 - 46 - k * 6); g.stroke()
-      }
-    } else {
-      // Spires and bone: nothing here was built.
-      for (let i = 0; i < 13; i++) {
-        const x = 40 + r() * (W - 80), h = 200 + r() * 300, w = 30 + r() * 60
-        g.beginPath(); g.moveTo(x - w / 2, floor); g.lineTo(x + (r() - 0.5) * 30, floor - h); g.lineTo(x + w / 2, floor); g.closePath(); g.fill()
-      }
-      const rx = 300 + r() * (W - 600)
-      for (let i = 0; i < 9; i++) {
-        g.lineWidth = 9
-        g.beginPath(); g.arc(rx + i * 34, floor + 30, 120 + i * 18, Math.PI * 1.1, Math.PI * 1.9); g.stroke()
-      }
-      // A skull, mostly buried.
-      const sx = 150 + r() * (W - 300)
-      g.beginPath(); g.arc(sx, floor + 40, 150, Math.PI, Math.PI * 2); g.fill()
-      g.globalCompositeOperation = 'destination-out'
-      g.beginPath(); g.ellipse(sx - 55, floor - 40, 34, 44, 0, 0, Math.PI * 2); g.fill()
-      g.beginPath(); g.ellipse(sx + 55, floor - 40, 34, 44, 0, 0, Math.PI * 2); g.fill()
-      g.globalCompositeOperation = 'source-over'
-    }
-    const out = canvas(W, H)
-    out.g.filter = 'blur(2px)'; out.g.drawImage(c, 0, 0)
-    return out.c
-  }, PIXI)
-}
-
 // ── THE GRADE ────────────────────────────────────────────────────────────────
 //
 // What each screen of the run does to the light. One number for the water and
@@ -315,7 +218,6 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
   const dotT = dot(PIXI), glowT = glow(PIXI), shaftT = shaft(PIXI), ringT = ring(PIXI), edgeT = edge(PIXI), pupilT = pupil(PIXI)
 
   let scene: Scene = { variant: 'davy', hardcore: false, boss: false, apex: false, deep: 0, mood: 'fight', key: 0x9cf0ff, deepColor: 0x04121a }
-  let world: 'davy' | 'don' | 'hardcore' = 'davy'
 
   // ── THE DEEP ───────────────────────────────────────────────────────
   const deepGlow: Sprite = new PIXI.Sprite(glowT)
@@ -334,15 +236,10 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
   far.addChild(eye)
   let lid = 0 // 0 shut, 1 open
 
-  // ── THE SILHOUETTES ────────────────────────────────────────────────
-  const mkBand = (alpha: number): TilingSprite => {
-    const s: TilingSprite = new PIXI.TilingSprite({ texture: silhouettes(PIXI, world), width: 10, height: 10 })
-    s.alpha = alpha
-    far.addChild(s)
-    return s
-  }
-  const bandFar = mkBand(0.32)
-  const bandNear = mkBand(0.55)
+  // NO SILHOUETTES. Two tiling bands of dark shapes (masts, kelp, ribs) used
+  // to drift across the water here. They read as black things moving over
+  // the screen and were cut on sight; the light, the motes and the eye say
+  // "where" well enough without them.
 
   // ── THE SHAFTS ─────────────────────────────────────────────────────
   const shafts: { s: Sprite; x: number; w: number; v: number; ph: number }[] = []
@@ -407,8 +304,6 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
   let gradeDark = 0
 
   function retint() {
-    const deepTint = scene.deepColor
-    bandFar.tint = deepTint; bandNear.tint = deepTint
     deepGlow.tint = scene.key
     iris.tint = scene.key; irisRing.tint = scene.key
     for (const sh of shafts) sh.s.tint = scene.hardcore ? 0xff5a4a : scene.key
@@ -425,12 +320,6 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
     set(s) {
       const prev = scene
       scene = s
-      const w: typeof world = s.hardcore ? 'hardcore' : s.variant
-      if (w !== world) {
-        world = w
-        const tex = silhouettes(PIXI, world)
-        bandFar.texture = tex; bandNear.texture = tex
-      }
       if (prev.key !== s.key || prev.deepColor !== s.deepColor || prev.hardcore !== s.hardcore || prev.variant !== s.variant) retint()
 
       // A mood change IS a beat. The screens do not have to know how to ask.
@@ -511,22 +400,8 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
         iris.tint = c; irisRing.tint = c
       }
 
-      // ── THE SILHOUETTES ──────────────────────────────────────────
-      // Two bands, the far one smaller and slower. They sit on the horizon
-      // band of the frame and breathe with the swell so they read as IN the
-      // water. During a fall they tear upward, like everything else.
+      // During a fall everything tears upward, like the weather's rise.
       const rise = fall * fall * 260
-      const hFar = H * 0.30, hNear = H * 0.42
-      bandFar.width = W; bandFar.height = hFar
-      bandFar.y = H * 0.22 + Math.sin(t * 0.6) * 3 - rise * 0.5
-      bandFar.tileScale.set(hFar / 512 * 0.9)
-      bandFar.tilePosition.x -= dt * (6 + 14 * heavy)
-      bandNear.width = W; bandNear.height = hNear
-      bandNear.y = H * 0.16 + Math.sin(t * 0.5 + 1) * 5 - rise
-      bandNear.tileScale.set(hNear / 512)
-      bandNear.tilePosition.x -= dt * (14 + 30 * heavy)
-      bandFar.alpha = 0.26 + deep * 0.12
-      bandNear.alpha = 0.46 + deep * 0.14
 
       // ── THE SHAFTS ───────────────────────────────────────────────
       flare = Math.max(0, flare - dt * 1.4)
