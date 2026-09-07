@@ -58,6 +58,7 @@ import { makeDrift, type Drift } from './seaDrift'
 import { makeWake, type Contact, type Wake, type WakeKind } from './seaWake'
 import { makeBerths, type Berths, type BerthSpec } from './seaBerth'
 import { makePortalWell, type PortalWell, type PortalWellSpec } from './seaPortalWell'
+import { WARGATE, WARGATE_REACH } from './raidWaters'
 import { makeTowns, type Towns, type GpuTown } from './seaTown'
 import { makePath, type SeaPath } from './seaPath'
 import { BOATS } from '@/lib/boats'
@@ -215,6 +216,9 @@ export type GpuHandle = {
   /** The portal's tier can change mid-session (you buy one), and whether
    *  you are standing in it changes every frame you cross the rim. */
   portal(spec: PortalWellSpec, inside: boolean, hold: number): void
+  /** Whether she is standing in the Wargate's mouth. The gate is a well like
+   *  the way home, drawn here under her rather than in the DOM over her. */
+  wargate(inside: boolean): void
   /**
    * EVERYONE ELSE ON THE WATER, every frame.
    *
@@ -505,6 +509,18 @@ export default function SeaIslandsGPU({
       // sitting them next to each other here is the honest arrangement.
       const portalWell: PortalWell = makePortalWell(PIXI, portalRef.current)
       world.addChild(portalWell.view)
+
+      // ── THE WARGATE, THE SAME WAY ─────────────────────────────────
+      // It was a DOM mark, and a DOM mark paints over this canvas, which is
+      // to say over the hull: the gate sat on top of the ship as she reached
+      // it. A standing arch was tried in its place and rejected. It is a
+      // portal lying in the sea now, the way home's own well in gold at the
+      // top tier, drawn here under everything that stands on the water. She
+      // sails into it because it is in the water and she is on it.
+      const wargateWell: PortalWell = makePortalWell(PIXI, {
+        x: WARGATE.x, y: WARGATE.y, r: WARGATE_REACH, accent: 0xf0c040, tier: 5,
+      })
+      world.addChild(wargateWell.view)
 
       // ── AND WHAT SHE LEAVES BEHIND ────────────────────────────────
       // In the world for the same reason the flecks are: a wake that travels
@@ -1108,6 +1124,7 @@ export default function SeaIslandsGPU({
         wake.lay(contacts)
         berthLayer.advance(t, dt, camX, camY, halfW, halfH)
         portalWell.advance(t, dt, camX, camY, halfW, halfH)
+        wargateWell.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
         maelstroms.advance(t, dt, camX, camY, halfW, halfH)
         guide.advance(t)
@@ -1279,6 +1296,7 @@ export default function SeaIslandsGPU({
           // A hole in the water takes the hour like the water does. It is
           // not a lamp and it should not stay bright when nothing else is.
           portalWell.night(tint)
+          wargateWell.night(tint)
           // The buildings take the hour at the same strength the land does —
           // they are standing on it. The second number is the town's own lights
           // coming up, which is the one thing on the chart that gets BRIGHTER
@@ -1304,6 +1322,7 @@ export default function SeaIslandsGPU({
         guide(from, to, radius) { guide.set(from, to, radius) },
         berth(id) { berthLayer.setActive(id) },
         portal(spec, inside, hold) { portalWell.setSpec(spec); portalWell.setActive(inside, hold) },
+        wargate(inside) { wargateWell.setActive(inside, inside ? 1 : 0) },
         front(list) {
           nearWanted.clear()
           for (const i of list) nearWanted.add(i)

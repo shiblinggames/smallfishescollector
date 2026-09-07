@@ -3160,8 +3160,6 @@ export default function SeaMap({
   /** ── THE WARGATE ── standing in its mouth, and the sheet it opens. Its data
    *  is the boss card's own read, prefetched on approach the same way. */
   const [nearGate, setNearGate] = useState(false)
-  /** True once the hull is through the Wargate's line, so the arch draws over her. */
-  const [gateCrossed, setGateCrossed] = useState(false)
   /** ── THE MAELSTROMS ── standing in one's eye, and whether it will take you.
    *  The gate is lib/gauntlet's own, read off the same cleared list the
    *  expedition page reads, so the water cannot open a door the page shuts. */
@@ -6907,13 +6905,9 @@ export default function SeaMap({
         // The Wargate is one fixed place, so its test is one hypot.
         const ng = Math.hypot(pos.current.x - WARGATE.x, pos.current.y - WARGATE.y) < WARGATE_REACH
         setNearGate(prev => (prev === ng ? prev : ng))
-        // WHICH SIDE OF THE GATE SHE IS ON. North of its line and between its
-        // pillars, the gate is between the camera and the hull, and draws in
-        // the near pass; everywhere else it is scenery behind her. This is
-        // what makes it a thing you sail INTO rather than a disc laid over
-        // the boat: the arch swallows her from the bow as she crosses.
-        const gc = pos.current.y < WARGATE.y && Math.abs(pos.current.x - WARGATE.x) < WARGATE_REACH * 1.7
-        setGateCrossed(prev => (prev === gc ? prev : gc))
+        // The canvas draws the gate as a well under her; it only needs to know
+        // whether she is in its mouth, to wind the water up.
+        gpuRef.current?.wargate(ng)
         let mm: Maelstrom | null = null
         for (const m of MAELSTROMS) {
           if (Math.hypot(pos.current.x - m.x, pos.current.y - m.y) < MAELSTROM_REACH) { mm = m; break }
@@ -7173,11 +7167,11 @@ export default function SeaMap({
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <MarkProbe bay={liveBay} pos={pos as any} />
 
-        {/* THE WARGATE, standing in the junction's mouth. Mounted here in the
-            world pass for the approach, and again in the near pass below for
-            the moment she is through it; the two are the same mark and only
-            one is ever visible, so the swirl never restarts on the switch. */}
-        <WargateMark isNear={nearGate} shown={!gateCrossed} />
+        {/* THE WARGATE is drawn by the canvas, as a well under the hull (see
+            SeaIslandsGPU). This DOM mark is only the ?gpu=0 fallback, and it
+            is why the gate used to sit on top of the ship: a DOM mark paints
+            over the canvas that draws her. */}
+        {!GPU_ISLANDS && <WargateMark isNear={nearGate} />}
 
         {/* The campaign, standing in its own water. */}
         <EncounterField bay={liveBay} status={nodeStatus} nearId={nearEnc?.node ?? null}
@@ -7583,8 +7577,6 @@ hullRef={hullRefFor(t.key)} />
         willChange: 'transform', pointerEvents: 'none',
       }}>
         {!GPU_ISLANDS && occluding.map(k => <SeaMark key={k} m={OCCLUDERS[k]} i={k + 4000} />)}
-        {/* The Wargate, over the hull, once she is through its line. */}
-        <WargateMark isNear={nearGate} shown={gateCrossed} />
       </div>
 
       {/* The prompt steps aside while the rod is out — the cast button is the
@@ -11818,101 +11810,30 @@ const WayHomeMark = memo(function WayHomeMark({ pt, isNear }: {
  * reaches every boss you have bested. Ember-gold where the ways home are
  * blue, so the pair read as directions of one road rather than two features.
  */
-const WargateMark = memo(function WargateMark({ isNear, shown }: { isNear: boolean; shown: boolean }) {
-  // ── AN ARCH, NOT A DISC ──────────────────────────────────────────────
-  //
-  // The first mark was an ellipse lying on the water, and lying on the water
-  // is exactly what a portal must not do: it read as a circle laid over the
-  // boat. This one STANDS. It is anchored at its foot and counter-squashed by
-  // 1/GROUND, the way every encounter hull on the chart is, so in the oblique
-  // view it rises out of the sea as an upright gate: two pillars, an arch, and
-  // a void in the arch that turns. The only thing still lying flat is the
-  // light it throws on the water, because light on water lies flat.
-  //
-  // Wide enough that a warship fits between the pillars with room to spare:
-  // the hull box is 340 world px and the opening is about 480.
-  const W = WARGATE_REACH * 1.6           // the gate's outer width, world px
-  const H = W * 1.18                      // its standing height, before counter-squash
-  const P = W * 0.11                      // pillar width
-  const gold = isNear ? 'rgba(255,224,160,0.95)' : 'rgba(224,178,104,0.7)'
-  const glow = isNear ? 'rgba(240,192,100,0.75)' : 'rgba(240,192,100,0.42)'
+const WargateMark = memo(function WargateMark({ isNear }: { isNear: boolean }) {
+  // The ?gpu=0 fallback only. The real gate is the canvas well.
+  const d = WARGATE_REACH * 1.9
   return (
     <div aria-hidden style={{
       position: 'absolute', left: WARGATE.x, top: WARGATE.y, pointerEvents: 'none',
-      width: 0, height: 0, visibility: shown ? 'visible' : 'hidden',
+      width: d, height: d * GROUND, marginLeft: -d / 2, marginTop: -(d * GROUND) / 2,
     }}>
-      {/* THE LIGHT ON THE WATER, flat, under the gate's foot. */}
       <div style={{
-        position: 'absolute', left: 0, top: 0, width: W * 1.7, height: W * 0.62,
-        transform: 'translate(-50%, -50%)', borderRadius: '50%',
-        background: `radial-gradient(ellipse at center, ${glow} 0%, rgba(240,170,80,0.18) 42%, transparent 70%)`,
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(10,6,2,0.85) 0%, rgba(20,12,6,0.5) 46%, transparent 70%)',
+      }} />
+      <div style={{
+        position: 'absolute', inset: '14%', borderRadius: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(255,208,122,0.5) 0%, rgba(240,170,80,0.2) 40%, transparent 72%)',
         animation: 'wayHome 3.4s ease-in-out infinite',
       }} />
-
-      {/* THE GATE, standing. Foot on the water, rising toward the camera's
-          top of screen. Everything inside is in upright pixels. */}
       <div style={{
-        position: 'absolute', left: 0, bottom: 0, width: W, height: H,
-        transform: `translate(-50%, 0) scaleY(${1 / GROUND})`, transformOrigin: 'bottom center',
-      }}>
-        {/* Mist at the foot, so the pillars meet the sea rather than sit on it. */}
-        <div style={{
-          position: 'absolute', left: '-10%', right: '-10%', bottom: -6, height: '22%',
-          background: 'linear-gradient(180deg, transparent 0%, rgba(240,200,140,0.10) 45%, rgba(20,12,6,0.55) 100%)',
-          filter: 'blur(6px)',
-        }} />
-
-        {/* THE PILLARS: dark stone with a gold edge, wider at the foot. */}
-        {[0, 1].map(side => (
-          <div key={side} style={{
-            position: 'absolute', bottom: 0, [side ? 'right' : 'left']: 0, width: P, height: '78%',
-            borderRadius: `${P * 0.4}px ${P * 0.4}px 4px 4px`,
-            background: side
-              ? 'linear-gradient(90deg, rgba(58,42,24,0.98) 0%, rgba(22,14,8,0.98) 60%, rgba(10,6,3,0.98) 100%)'
-              : 'linear-gradient(270deg, rgba(58,42,24,0.98) 0%, rgba(22,14,8,0.98) 60%, rgba(10,6,3,0.98) 100%)',
-            boxShadow: `inset 0 0 0 1px ${gold}, 0 0 18px rgba(0,0,0,0.6)`,
-          }} />
-        ))}
-
-        {/* THE ARCH: a band that closes the top, gold-lipped. */}
-        <div style={{
-          position: 'absolute', left: 0, right: 0, top: 0, height: '62%',
-          borderRadius: '50% 50% 0 0 / 60% 60% 0 0',
-          border: `${P * 0.55}px solid rgba(20,12,6,0.98)`, borderBottom: 'none',
-          boxShadow: `inset 0 0 0 1px ${gold}, 0 0 0 1px ${gold}, 0 0 28px ${glow}`,
-        }} />
-
-        {/* THE VOID, inside the arch. A dark mouth with the swirl turning in
-            it and a lit rim, deeper toward the middle. The swirl is a rotating
-            LAYER, not an animated gradient, so it composites instead of
-            repainting a conic gradient sixty times a second. */}
-        <div style={{
-          position: 'absolute', left: P * 1.1, right: P * 1.1, top: P * 0.9, bottom: 0,
-          borderRadius: '50% 50% 8% 8% / 42% 42% 6% 6%', overflow: 'hidden',
-          background: 'radial-gradient(ellipse at 50% 60%, rgba(6,3,2,1) 0%, rgba(14,8,4,0.98) 46%, rgba(40,24,10,0.9) 100%)',
-          boxShadow: `inset 0 0 40px rgba(0,0,0,0.9), inset 0 0 0 2px ${gold}`,
-        }}>
-          <div style={{
-            position: 'absolute', left: '-30%', top: '-30%', width: '160%', height: '160%',
-            background: 'conic-gradient(from 0deg, transparent 0deg, rgba(255,196,110,0.22) 40deg, transparent 90deg, rgba(240,160,80,0.16) 150deg, transparent 200deg, rgba(255,210,130,0.2) 270deg, transparent 330deg)',
-            animation: `wargateSpin ${isNear ? 5 : 9}s linear infinite`,
-            filter: 'blur(4px)',
-          }} />
-          <div style={{
-            position: 'absolute', left: '10%', right: '10%', top: '18%', bottom: '10%',
-            borderRadius: '50%',
-            background: 'radial-gradient(ellipse at 50% 55%, rgba(0,0,0,1) 0%, rgba(4,2,1,0.9) 40%, transparent 72%)',
-          }} />
-          {/* A pulse of light down the middle when she is close: the way is open. */}
-          <div style={{
-            position: 'absolute', left: '30%', right: '30%', top: '30%', bottom: '20%',
-            borderRadius: '50%', filter: 'blur(14px)',
-            background: 'radial-gradient(ellipse at center, rgba(255,214,140,0.55) 0%, transparent 70%)',
-            opacity: isNear ? 1 : 0.35,
-            animation: 'wayHome 2.2s ease-in-out infinite',
-          }} />
-        </div>
-      </div>
+        position: 'absolute', inset: '6%', borderRadius: '50%',
+        border: `2px solid ${isNear ? 'rgba(255,224,160,0.9)' : 'rgba(224,178,104,0.55)'}`,
+        boxShadow: isNear
+          ? '0 0 26px rgba(240,192,100,0.7), inset 0 0 22px rgba(240,192,100,0.45)'
+          : '0 0 16px rgba(240,192,100,0.4), inset 0 0 14px rgba(240,192,100,0.28)',
+      }} />
     </div>
   )
 })
