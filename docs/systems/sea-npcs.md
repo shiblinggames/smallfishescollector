@@ -188,7 +188,7 @@ favourite is the Atlantic Bluefin Tuna, because one sold for millions at auction
 `pell`. Under the jokes he got laid off, called it a sabbatical, and is deciding whether to go back.
 
 **Dennis talks like Dennis.** He was Tam Brill (Shallows) until September 2026 and is the third
-regular based on a real friend: awkward, geeky, funny, a big gamer, six years in the army and a
+regular based on a real friend: awkward, geeky, funny, a big gamer, six years on the expeditions and a
 story from every one of them, and quietly very well off in a way he never leads with. His register
 is VERBOSE: long lines, a tangent, an apology for the tangent, the tangent finished anyway. He has
 no catchphrase, on purpose; his mannerism is the shape of the sentence. Favourite: the Muskellunge,

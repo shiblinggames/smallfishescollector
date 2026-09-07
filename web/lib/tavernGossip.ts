@@ -243,7 +243,7 @@ export const GOSSIP: Overheard[] = [
     from: 'the bar',
   },
   {
-    say: ["Dennis told me a story about the army that took the whole of last orders. I don't remember how it ended. I don't think it did."],
+    say: ["Dennis told me a story about the expeditions that took the whole of last orders. I don't remember how it ended. I don't think it did."],
     from: 'a table of deckhands',
   },
   {
