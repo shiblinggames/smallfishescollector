@@ -245,11 +245,21 @@ RaidCombat lifts each side's overlays by what its anchor means.
 **The veil between screens.** `setPhase` in GauntletGame is a wrapper: a
 change between two screens of a live run (`RUN_PHASES`) calls `playVeil()`,
 a STILL dark overlay appended to `document.body` (Web Animations API) that
-fades in over ~240ms, holds a beat while the phase commits under it, and
-lifts over ~420ms. Outside React on purpose, so it cannot depend on any
-wrapper surviving the switch. Reduced motion, or no `document`, commits at
-once. Every in-run phase also renders inside one module-level `Screen`
-(second child, after the arena) whose AnimatePresence cross-fades.
+fades in over ~240ms, holds ~260ms while the phase commits under it (and
+`window.scrollTo(0,0)` runs under it, so a tall screen never opens scrolled and
+jumps), and lifts over ~480ms. The hold is long enough for the incoming
+screen's own entrances to play under the veil. Outside React on purpose, so it
+cannot depend on any wrapper surviving the switch. Reduced motion, or no
+`document`, commits at once. Every in-run phase also renders inside one
+module-level `Screen` (second child, after the arena), which is a PLAIN
+wrapper: a cross-fade under the veil fought it (a beat of empty water and a
+second easing on the same moment) and was removed. One thing moves.
+
+**The screens between fights are HUD around the sea, not menus.** The breather
+lost its bordered bank card and cells (numbers on the water, text-shadowed) and
+opens a `clamp(150px, 26vh, 280px)` gap where the arena draws the hull, so the
+world shows between what you have and what you do next. Apply the same to any
+in-run screen that reads as a stack of boxes.
 
 **REJECTED, do not re-propose:** a sweeping wall of water up the viewport as
 the transition, and an arena lurch (surge) on phase change. Both shipped
