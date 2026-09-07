@@ -227,10 +227,9 @@ up) and plays a ceremony on the mood change. In-screen moments call
 `arenaRef.current.beat()` directly: a boon pick in its rarity's colour, a
 synergy as a legendary in violet or ember, a curse from below.
 
-`gauntletScenery.ts` is also what makes the water THAT gauntlet's: tiling
-silhouette bands (wreck masts, kelp and a whale's ribs for Davy; pillars,
-arches and a fallen crown for the Don; spires, bone and a buried skull for
-hardcore), light shafts from above (from BELOW in hardcore, red), motes
+`gauntletScenery.ts` is also what makes the water THAT gauntlet's: light
+shafts from above (the silhouette bands that once drifted here were cut on
+2026-09-07 as "black things moving across the screen"; do not re-add) (from BELOW in hardcore, red), motes
 (wisps / gold dust / embers), a vignette that closes with depth, a pulse of
 light in the deep, and at a boss depth an EYE that opens under the water and
 watches the fight.
