@@ -1228,9 +1228,12 @@ position that leaves under 200px beside the sortie or under 250px to the harbour
 that are handled by id in `enter()`.
 
 The **Gunwharf** opens a two-card chooser (`GunwharfAshore`), because its doors are not the
-same kind of thing: *Manage her* is a page (`/expeditions/ship`), and *Sail her* is not a
-page at all — it opens the berth sheet, which is the muster, the mounts and the confirm that
-changes the hull under you. Both cards reverse their wording when you are already aboard.
+same kind of thing: *Manage her* is a page (`/expeditions/ship`), and *Switch to expedition
+ship* is not a page at all: one tap and `swapHull` changes the hull under you, no confirm.
+It used to open a berth sheet (the muster, the mounts, a "Take out your ship?" button), and a
+question you have already answered by walking to the dock is not a question; the sheet and
+its state were removed in September 2026. The card reads *Switch to fishing boat* when you
+are already aboard, and does the same the other way.
 
 The **Charterhouse** opens `DailyVoyagePanel` itself, in a modal over the chart
 (`sea/VoyageBoard.tsx`). It routed to `/expeditions` first, which is a hub of six cards one
