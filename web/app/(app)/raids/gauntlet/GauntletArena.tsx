@@ -405,7 +405,13 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         player.node.x = f.player.x + (pf?.x ?? 0)
         player.node.y = f.player.y + (pf?.y ?? 0) + bob - drop + gone * gone * 90
         player.node.rotation = ((pf?.rot ?? 0) * Math.PI) / 180 - gone * 0.35
-        player.node.alpha = 1 - gone * 0.85
+        // ON THE WATER ONLY WHEN IT IS HERS TO BE ON: the fall, the fight, and
+        // the going under. Between fights the screen is a log and a dock, and
+        // a hull parked in the middle of it read as a picture of a ship, not
+        // a ship. Eased, so she does not blink out at the end of a fight.
+        const showHull = sc.mood === 'fight' || sc.mood === 'fall' || sc.mood === 'dead'
+        const wantHull = (showHull ? 1 : 0) * (1 - gone * 0.85)
+        player.node.alpha += Math.max(-dt * 2.2, Math.min(dt * 1.6, wantHull - player.node.alpha))
 
         if (enemy.sp.texture.width > 2) {
           enemy.sp.width = f.enemy.box
