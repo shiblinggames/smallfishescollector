@@ -82,10 +82,10 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
       <div style={{
         position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        // The nav is 44px on a phone; sit just under it, not seventy pixels
-        // below it. The blank band that left at the top read as a broken
-        // header.
-        padding: 'calc(env(safe-area-inset-top, 0px) + 54px) 14px 40px',
+        // The sheet sits over the nav, so there is nothing to clear but the
+        // status bar: the title goes just under the safe area. Anything more
+        // is a blank band that reads as a broken header.
+        padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 14px 40px',
         pointerEvents: 'none',
       }}>
         <div style={{ width: 'min(720px, 100%)', pointerEvents: 'auto' }}>
@@ -93,14 +93,10 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
               scrim still closes too, but on a phone the column fills the
               width and there is no scrim to tap, which is how a sheet ends up
               with no way out. */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-            <div style={{ minWidth: 0 }}>
-              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: '#8fa8bf' }}>The standing portal</p>
-              <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f4efe4', marginTop: 2, lineHeight: 1.05 }}>The Wargate</h2>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a8b4c4', marginTop: 6, maxWidth: 520 }}>
-                Old foes, kept close. Step through to any you have bested and the gate opens on their water.
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+            {/* The title and nothing else. The eyebrow and the blurb were
+                chrome between you and the bosses. */}
+            <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f4efe4', lineHeight: 1.05, alignSelf: 'center' }}>The Wargate</h2>
             <button type="button" onClick={onClose} aria-label="Close" className="tap"
               style={{
                 width: 34, height: 34, borderRadius: '50%', padding: 0, flexShrink: 0,
