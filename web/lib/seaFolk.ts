@@ -784,6 +784,10 @@ export const FOLK: Folk[] = [
     // "long story, the short version doesn't make sense without the long
     // version", the "anyway", the "sorry, I get into it". Nothing invented.
     //
+    // EVERY LINE BELOW WAS REVIEWED AND EDITED BY THE USER (2026-09-07) and is
+    // verbatim from that pass. Do not paraphrase, tighten, or "improve" any
+    // of it. New lines come from him.
+    //
     // The gap between the jokes and what he is saying IS the character. Under
     // the stories is a guy who talks because quiet is where he goes back to
     // sitting in the dark waiting for nothing to happen, and who is spending
@@ -791,7 +795,7 @@ export const FOLK: Folk[] = [
     // was two seasons ago.
     lines: [
       [
-        "Okay so you're probably wondering why a guy with a boat this ugly is anchored in the nicest spot in the Shallows. Long story. The short version doesn't make sense without the long version. Hi, by the way.",
+        "Okay so you're probably wondering why a guy with a boat like this is anchored in the nicest spot in the Shallows. Long story. The short version doesn't make sense without the long version. Hi, by the way.",
         "This is my third rod. The first two are fine. I just, you know, wanted to see the patch notes on this one. That's a joke. Nobody out here gets my jokes. You might. You've got the look.",
         "Back in the army we'd sit in the dark for six hours waiting for nothing to happen, and I thought, I could do this for fun. Turns out I was right. That's fishing. That's the whole pitch.",
         "I named the boat after a save file. Long story. Actually it's a short story, the boat's called Slot Three, because the first two saves are, you know, gone. Anyway. Hi.",
@@ -801,8 +805,8 @@ export const FOLK: Folk[] = [
         "You came back! People don't, usually. I talk a lot. I know I talk a lot. I've been told by professionals. Anyway, sit, or don't, I'll talk either way.",
         "Muskellunge. The fish of ten thousand casts. Ten thousand. That's a drop rate, that's a grind, that's the kind of number I respect. I've done about nine hundred. I'm keeping a tally. Of course I'm keeping a tally.",
         "Back in the army I had a sergeant who said a plan is just a list of things that won't happen. I think about him every time I cast. Every single time. Sorry, I'm getting into it. I get into it.",
-        "This water's basically the tutorial zone and I'm fine with that. Some of the best games I've played, I never left the first area. That's not sad. Okay, it's a little sad. It's also true.",
-        "Back in the army I got very good at one thing, which was eating an entire meal in four minutes, and it has never once come up since. Until now. I'm telling you now. That's the thing.",
+        "This water's basically the tutorial zone and I'm fine with that. Some of the best games I've played, I never left the first area. That's not sad. Okay, it's a little sad. It's also true though.",
+        "Back in the army I got very good at one thing, which was eating an entire meal in four minutes, and it has never once come up since. Until now. I'm telling you now.",
         "I have three rods, a spare reel, a spare spare reel and a first-aid kit that could restock a small clinic. People say over-prepared. I say I've read the patch notes on weather.",
       ],
       [
@@ -1156,14 +1160,14 @@ export const ASKS: Record<FolkId, [Ask[], Ask[], Ask[], Ask[], Ask[]]> = {
   brill: [
     [
       { you: 'What is with the boat?', they: 'Ugly, right? The engine\'s new. I\'d rather the boat looked like this than the other way round. Long story.' },
-      { you: 'Were you really in the army?', they: 'Six years. I have stories. I have SO many stories. Sit down or don\'t, they\'re coming either way.' },
-      { you: 'Do you come here often?', they: 'Every day. Same spot. I like to think of it as my spawn point. Sorry. Games. I\'ll try to keep it under control. I won\'t, but I\'ll try.' },
-      { you: 'What are you reading?', they: 'A manual for a reel I don\'t own. It\'s fascinating. It\'s genuinely fascinating. Nobody agrees with me.' },
+      { you: 'Were you really in the army?', they: 'Six years. I have stories. I have SO many stories. Sit down or don\'t, they\'re coming either way. Oh we can only sit. They must\'ve run out of budget for animating anything else.' },
+      { you: 'Do you come here often?', they: 'Every day. Same spot. I like to think of it as my spawn point. Sorry. Games. I\'ll try to keep it under control. I\'ll probably forget, but I\'ll try!' },
+      { you: 'What are you reading?', they: 'A manual for a reel I don\'t own. It\'s fascinating. It\'s genuinely fascinating. Did you know that reels were invented 300-400 AD? That\'s old. I\'m not old though.' },
       { you: 'How is the fishing?', they: 'Slow, which is fine, slow is the point, if I wanted fast I\'d have stayed in the army. That\'s a joke. It was mostly slow there too.' },
     ],
     [
       { you: 'What do you play?', they: 'Everything. Too much. I once played a fishing game for three hundred hours and then bought a boat, so, you know. Draw your own conclusions.' },
-      { you: 'Why the Shallows?', they: 'It\'s the starting zone. All the best stories happen in the starting zone. Nobody believes me and they\'re all wrong.' },
+      { you: 'Why the Shallows?', they: 'It\'s the starting zone. All the best stories happen in the starting zone. At least that\'s what I tell myself.' },
       { you: 'Did you like the army?', they: 'Parts. The people, the stories, the being useful. Not the getting up. I still can\'t get up. Fishing lets you sit down. That\'s ninety percent of why.' },
       { you: 'What was the three hundred hour game?', they: 'A fishing game. I know. I know. I\'m aware of the irony and I\'ve made peace with it and then I bought a boat.' },
       { you: 'Do you have family out here?', they: 'No. Just the boat and, I guess, whoever stops. So, you, currently. Sorry, that got heavy. It doesn\'t have to be heavy.' },
