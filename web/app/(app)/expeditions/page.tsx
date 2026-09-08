@@ -226,7 +226,6 @@ async function ExpeditionHub() {
     nextNodeLocked: next?.status === 'locked',
     nextNodeLockReason: next?.status === 'locked' ? next.lockReason ?? null : null,
     nextNodeKind: next?.node.type ?? null,
-    repairOwed: profile?.raid_repair_owed ?? 0,
     equippedItemsCount: equippedRaidItems.length,
     // Picked HERE, on the server, so the roll is part of the payload rather
     // than something the client decides after hydration and mismatches on.
@@ -327,7 +326,6 @@ async function RaidsMapSection() {
       navLevel={raidMap.navLevel}
       playerShipImage={playerShipImage}
       raidRecords={raidMap.raidRecords}
-      repairOwed={profile?.raid_repair_owed ?? 0}
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
       ownedShipSkins={(profile?.ship_skins as string[] | null) ?? []}
       equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}

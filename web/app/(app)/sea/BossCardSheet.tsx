@@ -99,12 +99,7 @@ export default function BossCardSheet({ nodeId, preloaded, onEnter, onClose }: {
           ownedSpecialItems={state.ownedSpecialItems}
           totalFortune={state.totalFortune}
           isNext={boss.status === 'available'}
-          repairOwed={state.repairOwed}
           onEnter={onEnter}
-          // SHE IS HOLED AND THE CARD SAYS SO. On the page this routes you to
-          // the repair; out here there is nowhere to route to, so the card
-          // shuts and the captain is left where they were floating.
-          onRepairBlocked={onClose}
           onClose={onClose}
           clearedNodeIds={new Set(state.clearedNodeIds)}
         />

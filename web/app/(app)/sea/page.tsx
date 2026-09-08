@@ -286,7 +286,6 @@ export default async function SeaPage({ searchParams }: {
       itemMounts={itemMounts}
       // Sailing a sunk ship is refused at the raid screen; the DOCK is where
       // that should be discovered, not past the sortie.
-      raidRepairOwed={Number(profile?.raid_repair_owed ?? 0)}
       // THE HOMESTEAD PORTAL. Only the tier: which stones this captain holds is
       // derived on the chart from the discoveries it is already handed, so there
       // is nothing here for the two to disagree about.

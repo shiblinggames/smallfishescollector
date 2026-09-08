@@ -31,7 +31,6 @@ export default async function GauntletPage() {
   // Show the switcher only if Don's Gauntlet is ALSO unlocked for this player.
   const donsUnlocked = donsGauntletUnlocked({ isAdmin: profile?.is_admin, throneCleared: !!throneRes.data })
 
-  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
     <main className="min-h-screen pt-6">

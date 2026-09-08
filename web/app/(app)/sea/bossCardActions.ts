@@ -26,7 +26,6 @@ export type BossCardState = {
   ownedShipSkins: string[]
   ownedSpecialItems: string[]
   totalFortune: number
-  repairOwed: number
   clearedNodeIds: string[]
 }
 
@@ -39,7 +38,7 @@ export async function bossCardState(): Promise<BossCardState | { error: string }
     getRaidMapView(),
     getRaidPlayerStats(user.id),
     admin.from('profiles')
-      .select('raid_items, ship_skins, raid_repair_owed, special_items')
+      .select('raid_items, ship_skins, special_items')
       .eq('id', user.id)
       .single(),
   ])
@@ -52,7 +51,6 @@ export async function bossCardState(): Promise<BossCardState | { error: string }
     ownedShipSkins: (profile?.ship_skins as string[] | null) ?? [],
     ownedSpecialItems: ownedSpecialIds(profile),
     totalFortune: stats.totalFortune,
-    repairOwed: (profile?.raid_repair_owed as number | null) ?? 0,
     // The card masks a boss it has no business naming yet, and it decides that
     // from what you have cleared rather than from the node's own status.
     clearedNodeIds: map.views.filter(v => v.status === 'cleared').map(v => v.node.id),

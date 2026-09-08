@@ -36,7 +36,7 @@ import type { ShipAnchor, ShipFx, FightFx } from '@/app/(app)/raids/RaidCombat'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { raidSheetState, type RaidSheetState } from './raidSheetActions'
 
-export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFightFx, onClose }: {
+export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFightFx, onClose, onSunk }: {
   /** Which fight. Resolved to a config through the registry, so this cannot
    *  drift from the raid the node map opens. */
   raidId: string | null
@@ -55,6 +55,8 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
   /** And what it is doing to the water between them. */
   onFightFx?: (e: FightFx) => void
   onClose: () => void
+  /** She went down. The chart puts you back at the Gunwharf — see SeaMap. */
+  onSunk: () => void
 }) {
   const [fetched, setFetched] = useState<RaidSheetState | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -141,6 +143,7 @@ export default function RaidSheet({ raidId, preloaded, anchors, onShipFx, onFigh
           bonusChargeSlots={state.bonusChargeSlots}
           manowarAugment={state.manowarAugment}
           onLeave={onClose}
+          onSunk={onSunk}
         />
       ) : err ? (
         // Same as the boss card: only a failure gets words. "Beat to quarters…"

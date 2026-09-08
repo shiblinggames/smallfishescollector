@@ -15,7 +15,6 @@ export default async function RaidPage() {
   ])
 
   // Ship sunk and unrepaired: no raiding until it's patched up at port.
-  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
     <>

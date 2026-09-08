@@ -12,6 +12,25 @@ Turn-based ship combat along a chaptered node chain. The other half of Expeditio
   `raidLoot.ts`, `raidAffixes.ts`, `raidProgress.ts`, `raidChallenge.ts`
 - Mid-raid roguelike interrupts: `web/lib/tides.ts`. Status effects: `web/lib/statuses.ts`.
 
+## Losing costs the sail back, and nothing else
+
+**There is no repair fee.** Sinking used to owe a tier-scaled doubloon bill (`raidRepairCost`,
+`reportRaidSink`, `repairShip`), and until it was paid every raid route redirected to
+/expeditions, every boss card refused, and the sheet on the water returned an error. All of it
+is gone — the actions, the cost table, the guards on ~22 routes, the ShipHero banner and the
+RepairBlockedModal. The `raid_repair_owed` column still exists and nothing reads it.
+
+That penalty was built for a menu of raids: when the campaign was a page of cards, the only
+thing a loss could take was money. **The world charges the trip instead.** `RaidGame` fires
+`onSunk`, the chart catches it, and when the fight closes you are put at the Gunwharf's
+berth — the ship is kept there, so it is where you come to — with everything between you and
+that boss to sail again.
+
+Two properties that matter: a captain who has just lost is asked to **try again**, not sent
+away to earn the right to; and the cost scales with how far out you were, which a flat fee
+never did. On the legacy `/raids` routes `onSunk` has no host and nothing happens, which is
+correct — there is no sea under those to sail back across.
+
 ## Combat rules that are LAWS (each encodes a shipped bug or a confirmed feel)
 
 - **Damage has ONE source: `raidDamageProfile`.** It was duplicated once and drifted.

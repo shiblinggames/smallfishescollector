@@ -33,7 +33,6 @@ export default async function SunkenHandChallengeRaidPage() {
   const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
   if (ancientsCaught < 6) redirect('/expeditions')
 
-  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
     <>

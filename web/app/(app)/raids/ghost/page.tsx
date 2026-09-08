@@ -23,7 +23,6 @@ export default async function QuartermastersGhostRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   // The ghost's own gate, enforced here and not only in the map: he will not deal
   // until you have put him down ALIVE, in his challenge run. The node carries the

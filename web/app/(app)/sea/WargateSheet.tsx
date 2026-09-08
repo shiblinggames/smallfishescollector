@@ -184,9 +184,7 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
 
       {/* THE CARD, the map's own, with the gate's verb. challenge is withheld
           on purpose: the gate carries you to the WATER, and which run you take
-          is chosen at the mooring like always. repairOwed 0 likewise — a holed
-          ship can still sail, and the mooring will collect the debt before the
-          guns do. */}
+          is chosen at the mooring like always. */}
       {selEnc && selView && state && (
         <BossFightModal
           boss={selView}
@@ -198,11 +196,9 @@ export default function WargateSheet({ preloaded, onSail, onClose }: {
           ownedSpecialItems={state.ownedSpecialItems}
           totalFortune={state.totalFortune}
           isNext={false}
-          repairOwed={0}
           enterLabel="Sail There →"
           enterSub="The gate opens on their water"
           onEnter={() => onSail(selEnc)}
-          onRepairBlocked={() => setSel(null)}
           onClose={() => setSel(null)}
           clearedNodeIds={new Set(state.clearedNodeIds)}
         />

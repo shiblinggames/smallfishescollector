@@ -5,7 +5,7 @@ import CloseButton from '@/components/CloseButton'
 import type { DialAimBonus } from '@/lib/dialAim'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot, reportRaidSink, recordRaidHit, recordRaidClear, startRaidRun, type RaidClearTimes } from './actions'
+import { claimRaidLoot, recordRaidHit, recordRaidClear, startRaidRun, type RaidClearTimes } from './actions'
 import { awardRaidKill } from './raidXPActions'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -306,7 +306,7 @@ interface RaidCrewMember {
   fortune: number
 }
 
-export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, onFightFx, config, equippedShipSkin, shipSkins, equippedItems,
+export default function RaidGame({ onLeave, onSunk, overSea = false, anchors, onShipFx, onFightFx, config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
   ownedSpecialItems = [],
   /**
@@ -335,6 +335,8 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
 }: {
   /** Close instead of navigate. See the note on the destructure above. */
   onLeave?: () => void
+  /** Your ship sank. The host decides what that costs — see the note below. */
+  onSunk?: () => void
   /**
    * THE SEA IS ALREADY BEHIND THIS, so paint nothing over it.
    *
@@ -894,15 +896,28 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
     }
   }, [phase, router])
 
-  // Ship sank in this real raid: owe the tier-scaled repair fee. Fires
-  // once; the player pays it from /expeditions before raiding again.
+  /**
+   * ── SHE WENT DOWN ─────────────────────────────────────────────────────
+   *
+   * This used to write a tier-scaled repair fee onto the profile, which every
+   * raid route then refused to let you past until it was paid. Nothing is owed
+   * any more; the fight just says it happened and lets its host decide what
+   * that costs.
+   *
+   * Over the sea the host is the chart, and the chart's answer is the world:
+   * you come to at the Gunwharf with the whole sail back ahead of you. On the
+   * legacy raid routes there is no host to tell and nothing happens, which is
+   * correct — there is no sea under those to sail back across.
+   *
+   * Fires once per fight.
+   */
   const sinkReportedRef = useRef(false)
   useEffect(() => {
     if (phase === 'dead' && !sinkReportedRef.current) {
       sinkReportedRef.current = true
-      reportRaidSink().catch(() => {})
+      onSunk?.()
     }
-  }, [phase])
+  }, [phase, onSunk])
 
   useEffect(() => {
     // Disabled: the playing phase now runs inside <RaidCombat />, which owns

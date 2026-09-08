@@ -111,25 +111,6 @@ export function raidItemSlotsForTier(tier: number): number {
   return RAID_ITEM_SLOTS[Math.max(MIN_SHIP_TIER, Math.min(tier, MAX_SHIP_TIER))] ?? 1
 }
 
-// ── Raid sink penalty ─────────────────────────────────────────────────────────
-// If your ship sinks in a real raid you owe a repair fee before you can raid
-// again. Scales by ship tier (a bigger boat costs more to patch up). Moderate
-// scale: roughly one good raid's take at mid tiers, recoverable.
-const RAID_REPAIR_COST: Record<number, number> = {
-  2: 150,
-  3: 240,
-  4: 350,
-  5: 500,
-  6: 700,
-}
-
-export function raidRepairCost(shipTier: number): number {
-  // Clamped rather than defaulted. A legacy tier of 0 or 1 is a Sloop now, and
-  // falling through to the cheapest entry would have quietly charged the
-  // hardest-to-reach captains the least.
-  return RAID_REPAIR_COST[Math.max(MIN_SHIP_TIER, Math.min(shipTier, MAX_SHIP_TIER))]
-    ?? RAID_REPAIR_COST[MIN_SHIP_TIER]
-}
 
 // ── Crew variant stat boosts ──────────────────────────────────────────────────
 

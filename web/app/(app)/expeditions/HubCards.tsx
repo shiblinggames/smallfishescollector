@@ -34,7 +34,6 @@ export type CampaignCardData = {
   /** The node's type. A FIGHT needs a crew; a story node does not, and being barred
    *  from reading would be nonsense. */
   nextNodeKind: string | null
-  repairOwed: number
   equippedItemsCount: number
   /** A boss you have already beaten, wearing the backdrop he was beaten in.
    *  Barnacle Pete until you have beaten anyone. */

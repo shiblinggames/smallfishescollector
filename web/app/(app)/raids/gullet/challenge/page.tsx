@@ -17,7 +17,6 @@ export default async function GulletChallengeRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
     <>

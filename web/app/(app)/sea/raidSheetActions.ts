@@ -10,7 +10,6 @@
 // things the pages fetch alongside it (the expedition XP the bar starts at, and
 // the repair debt that refuses the fight) so a caller needs one await.
 
-import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 
@@ -26,17 +25,8 @@ export async function raidSheetState(): Promise<RaidSheetState | { error: string
     getRaidPlayerStats(user.id),
   ])
 
-  // SHIP SUNK AND UNREPAIRED: no raiding until it is patched up at port. The
-  // routes redirect to /expeditions for this; a sheet cannot redirect the page
-  // out from under a captain who is sitting on the water, so it says so and the
-  // helm keeps them where they are.
-  if ((profile?.raid_repair_owed ?? 0) > 0) {
-    return { error: 'She is holed below the line. Get her patched up before you take on anything.' }
-  }
-
+  // NOTHING REFUSES A FIGHT HERE ANY MORE. A sunk ship used to owe a repair
+  // fee and this returned an error until it was paid. Going down costs the sail
+  // back from the Gunwharf now — see the note in raids/actions.
   return { ...stats, expeditionXP: profile?.expedition_xp ?? 0 }
 }
-
-// `redirect` is imported for parity with the routes' guard shape and is
-// deliberately unused: see the note above on why a sheet must not redirect.
-void redirect

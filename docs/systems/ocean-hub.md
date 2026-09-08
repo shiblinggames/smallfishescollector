@@ -1634,6 +1634,15 @@ question exists, in the middle of the screen, where you are already looking.
   itself like everything else standing on this water and then turns by the bearing your eye
   actually sees; turning by the world bearing points the arrows somewhere else.
 
+**Every mark that says "here" is one object** (`QuestMark`): a dark translucent disc with a
+light stroke drawn on it, in gold for a bang (a job to take) and a query (one to hand back),
+in green for the tick. The campaign's was a solid gold coin with a black `?` punched through
+it and Finn's was a 45px Cinzel glyph under five stacked text-shadows — two different objects,
+and neither belonged to a painted chart: a filled disc with knocked-out type is a UI badge and
+reads as a sticker on a painting. `AshoreTick` had the right construction all along, so this
+is that object in three states. Done and to-do are the same lamp in two colours, not two
+languages.
+
 ## A toll is settled where it was demanded
 
 **A scene that leads to a transaction holds until the transaction is made**

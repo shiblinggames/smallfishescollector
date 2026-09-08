@@ -1359,7 +1359,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, portal, startSide,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -1421,7 +1421,6 @@ export default function SeaMap({
   itemMounts: number
   /** Owed repairs. Sailing a sunk ship is refused at the raid screen; the dock
    *  is where that should be discovered, not past the sortie. */
-  raidRepairOwed: number
   /** The Homestead Portal: highest tier owned, and components in hand —
    *  cache chests opened minus components already spent. */
   /** The portal, as this captain has built it: how far the band ladder
@@ -3262,6 +3261,29 @@ export default function SeaMap({
   // touch React: `anchors` goes OUT (where the hulls are on screen, so the
   // fight can hang its effects on them) and `shipFx` comes BACK (what the fight
   // is doing to them, so the loop below can draw it).
+  /**
+   * ── SHE WENT DOWN, AND THAT COSTS THE SAIL BACK ───────────────────────
+   *
+   * Losing a raid used to owe a tier-scaled repair fee, and every fight in the
+   * game refused you until it was paid. That was a penalty built for a menu of
+   * raids: when the campaign was a page of cards, the only thing a loss could
+   * take from you was money.
+   *
+   * It is water now. The boss you just lost to is thousands of pixels out
+   * through a strait, so the world can charge you what the world charges —
+   * the trip. You come to at the Gunwharf, where the ship is kept, and
+   * everything between you and that fight has to be sailed again.
+   *
+   * Nothing is deducted, nothing is locked, and the rematch is not behind a
+   * grind: a captain who has just lost should be asked to try again, not sent
+   * away to earn the right to.
+   *
+   * A REF RATHER THAN STATE, and it is read when the fight CLOSES. She sinks,
+   * the defeat screen holds, and the water is only put back under you once the
+   * captain has finished with it.
+   */
+  const sunkRef = useRef(false)
+
   const fightEncRef = useRef<Encounter | null>(null)
   /** Whether the guns are out, for the frame loop (which must not read state). */
   const fightOnRef = useRef(false)
@@ -8492,6 +8514,7 @@ hullRef={hullRefFor(t.key)} />
           // this is the extra thing a hard one does to the bay.
           if (e.kind === 'crit') gpu.gunshock(at.x, at.y)
         }}
+        onSunk={() => { sunkRef.current = true }}
         onClose={() => {
           setFightId(null)
           fightEncRef.current = null
@@ -8518,6 +8541,17 @@ hullRef={hullRefFor(t.key)} />
           // half-sunk ship on the chart for anyone who sails past next.
           const el = enemyHullRef.current
           if (el) { el.style.transform = ''; el.style.opacity = ''; el.style.transition = '' }
+          // ── AND IF SHE SANK, YOU WAKE UP AT THE WHARF ──────────────
+          //
+          // See sunkRef. The whole penalty is here: the boat is put back where
+          // the ship is kept, and the campaign is however far away it was.
+          // The berth rather than the island's centre, because that is water —
+          // dropping a hull on a beach is the one place she cannot be.
+          if (sunkRef.current) {
+            sunkRef.current = false
+            const b = berthOf(GUNWHARF)
+            warpTo(b.x, b.y)
+          }
           router.refresh()
         }} />
 
@@ -10261,25 +10295,20 @@ const FinnBoat = memo(function FinnBoat({ at, isNear, ready, offering }: {
               wait; a finished job is YOUR pay sitting in his boat, so it is
               bigger, brighter and moves faster. Same glyph family, so it is
               still one thing with two states rather than two things. */}
+          {/* THE SAME MARK THE CAMPAIGN WEARS — see QuestMark. It was a 45px
+              Cinzel glyph under five stacked text-shadows and a text-stroke,
+              which is a different object from the one hanging over every other
+              thing on this sea that wants you. One lamp, and the state is the
+              stroke inside it: a bang to take a job, a query to hand it back.
+
+              READY IS STILL THE LOUDER OF THE TWO, in size and in the beat it
+              floats on. An offer is an invitation and can wait; a finished job
+              is your pay sitting in his boat. */}
           <div className={ready ? 'finn-quest-mark finn-quest-ready' : 'finn-quest-mark'} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 42, height: 42,
+            width: 46, height: 46,
           }}>
-            <span className="font-cinzel font-700" style={{
-              fontSize: ready ? '2.8rem' : '2.3rem', lineHeight: 1,
-              color: '#ffd24a',
-              textShadow: ready
-                ? [
-                  '0 0 3px rgba(60,36,0,1)', '0 2px 6px rgba(0,0,0,0.95)',
-                  '0 0 22px rgba(255,206,80,1)', '0 0 48px rgba(255,178,50,0.85)',
-                  '0 0 84px rgba(255,168,40,0.5)',
-                ].join(', ')
-                : [
-                  '0 0 3px rgba(60,36,0,1)', '0 2px 5px rgba(0,0,0,0.9)',
-                  '0 0 18px rgba(255,196,60,0.95)', '0 0 38px rgba(255,168,40,0.7)',
-                ].join(', '),
-              WebkitTextStroke: '1.5px rgba(70,42,0,0.85)',
-            }}>{ready ? '?' : '!'}</span>
+            <QuestMark kind={ready ? 'turnin' : 'offer'} size={ready ? 44 : 36} />
           </div>
         </div>
       )}
@@ -11416,6 +11445,72 @@ const NextHeading = memo(function NextHeading({ from, to }: {
 })
 
 /**
+ * ── THE MARK OVER SOMETHING THAT WANTS YOU ──────────────────────────────────
+ *
+ * One glyph, three states, and everything on this sea that says "here" uses it:
+ * the campaign's next stop, a job of Finn's, a stop you have finished.
+ *
+ * ── IT IS DRAWN, NOT FILLED ─────────────────────────────────────────────────
+ *
+ * The campaign's was a solid gold coin with a black question mark punched
+ * through it, and Finn's was a 45px typographic "?" in Cinzel wearing five
+ * stacked text-shadows. Two different objects, and neither belonged to this
+ * chart: a filled disc with knocked-out type is a UI badge, the kind of thing
+ * that sits on a button in a settings screen, and it reads as a sticker on a
+ * painting. Nothing else on this water is a solid shape of pure colour.
+ *
+ * What IS on this water: `AshoreTick` — a dark translucent disc with a light
+ * stroke drawn on it, which is the mark a captain has been reading over every
+ * isle since the fishing sea shipped. So this is that object, in gold, with a
+ * different stroke inside it. Done and to-do are the same lamp in two colours
+ * rather than two languages.
+ *
+ * The disc is dark and the glyph is light, which is what survives passing over
+ * pale sand, dark grass and open water — the reason AshoreTick was built that
+ * way, and it has not stopped being true.
+ */
+const QuestMark = memo(function QuestMark({ kind, size = 34 }: {
+  /** `offer` is a job to take, `turnin` is one to hand back, `done` is finished.
+   *  The genre's own shorthand: a bang starts a thing, a query ends it. */
+  kind: 'offer' | 'turnin' | 'done'
+  size?: number
+}) {
+  const done = kind === 'done'
+  const ring = done ? 'rgba(150,206,172,0.78)' : 'rgba(240,192,64,0.85)'
+  const ink = done ? '#9fdcb6' : '#f7dd9a'
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" role="img"
+      aria-label={done ? 'Cleared' : kind === 'turnin' ? 'Waiting on you' : 'Something to take'}
+      style={{
+        display: 'block',
+        // The lamp. Gold light around a gold mark, and nothing around a green
+        // one: a record does not glow.
+        filter: done
+          ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.9))'
+          : 'drop-shadow(0 0 9px rgba(240,192,64,0.5)) drop-shadow(0 2px 6px rgba(0,0,0,0.9))',
+      }}>
+      <circle cx="12" cy="12" r="10.4"
+        fill={done ? 'rgba(10,22,18,0.85)' : 'rgba(26,19,6,0.88)'}
+        stroke={ring} strokeWidth="1.5" />
+      {done ? (
+        <path d="M7 12.4l3.2 3.2L17 8.8" fill="none" stroke={ink} strokeWidth="2.5"
+          strokeLinecap="round" strokeLinejoin="round" />
+      ) : kind === 'turnin' ? (
+        <g fill="none" stroke={ink} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9.3 9.4a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 3.9" />
+          <path d="M12 17.6h.01" />
+        </g>
+      ) : (
+        <g fill="none" stroke={ink} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 6.6v6.7" />
+          <path d="M12 17.6h.01" />
+        </g>
+      )}
+    </svg>
+  )
+})
+
+/**
  * ── THE MARK OVER A CAMPAIGN STOP ───────────────────────────────────────────
  *
  * A gold "?" over the one place the chain wants you next, and a green tick over
@@ -11448,7 +11543,6 @@ const NodeGlyph = memo(function NodeGlyph({ kind, lift }: {
   lift: number
 }) {
   const next = kind === 'next'
-  const d = next ? 34 : 26
   return (
     <div aria-hidden style={{
       position: 'absolute', left: '50%', bottom: '100%',
@@ -11458,26 +11552,7 @@ const NodeGlyph = memo(function NodeGlyph({ kind, lift }: {
       // a record that bobs is asking for attention it does not want.
       animation: next ? 'questFloat 2.4s ease-in-out infinite' : undefined,
     }}>
-      {next ? (
-        <span className="font-cinzel font-800" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: d, height: d, borderRadius: '50%',
-          fontSize: d * 0.62, lineHeight: 1, paddingBottom: 2,
-          color: '#2a1e06',
-          background: 'linear-gradient(180deg, #f6ce5c, #dda42c)',
-          border: '1.5px solid rgba(255,232,164,0.9)',
-          boxShadow: '0 0 18px rgba(240,192,64,0.55), 0 4px 10px rgba(0,0,0,0.55)',
-        }}>?</span>
-      ) : (
-        // The tick is DRAWN, not typed — see AshoreTick, which is this same
-        // mark on the fishing side and explains why a ✓ character is not one.
-        <svg width={d} height={d} viewBox="0 0 24 24" role="img" aria-label="Cleared"
-          style={{ display: 'block', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }}>
-          <circle cx="12" cy="12" r="11" fill="rgba(10,22,18,0.86)" stroke="rgba(150,206,172,0.75)" strokeWidth="1.6" />
-          <path d="M7 12.4l3.2 3.2L17 8.8" fill="none" stroke="#9fdcb6" strokeWidth="2.6"
-            strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
+      <QuestMark kind={next ? 'turnin' : 'done'} size={next ? 34 : 26} />
     </div>
   )
 })

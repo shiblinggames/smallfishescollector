@@ -368,41 +368,78 @@ export default function CrewHub({
                                         color: 'rgba(196,169,106,0.72)',
                                       }}>{g.title} · {list.length}</p>
 
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.34rem' }}>
+                                      {/* ── THREE ABREAST, AND EACH ONE IS A FACE ──
+                                          It was a stack of full-width rows with a
+                                          34px medallion at the left of each: on a
+                                          phone that is the right shape, and in a
+                                          560px panel on a desktop it is a column of
+                                          seventeen letterboxes with a postage stamp
+                                          in the corner and two thirds of the row
+                                          empty. Seventeen hands took four screens to
+                                          scroll past to answer a question — where is
+                                          everybody — that is supposed to be one look.
+
+                                          A grid of portraits answers it in one:
+                                          three across, the art at the size a face
+                                          reads at, the name under it and the clock on
+                                          the picture where a clock belongs. It is the
+                                          same object the four doors are, which is the
+                                          panel's own vocabulary rather than a list
+                                          idiom borrowed from a settings screen. */}
+                                      <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                                        gap: '0.45rem',
+                                      }}>
                                         {list.map(c => (
                                           <div key={c.id} style={{
-                                            display: 'flex', alignItems: 'center', gap: '0.6rem',
-                                            padding: '0.34rem 0.5rem', borderRadius: 10,
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                            gap: 5, padding: '0.5rem 0.3rem 0.45rem', borderRadius: 12,
                                             background: 'rgba(255,255,255,0.035)',
-                                            border: '1px solid rgba(255,255,255,0.06)',
+                                            border: '1px solid rgba(255,255,255,0.07)',
+                                            minWidth: 0,
                                           }}>
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src={artSrc(c.filename)} alt="" aria-hidden decoding="async" style={{
-                                              width: 34, height: 34, borderRadius: '50%', objectFit: 'cover',
-                                              border: `2px solid ${RARITY[Math.min(3, Math.max(0, c.rarity - 1))]}`,
-                                              flexShrink: 0, background: 'rgba(0,0,0,0.4)',
-                                            }} />
-                                            <div style={{ minWidth: 0, flex: 1 }}>
-                                              <p className="font-karla font-600" style={{
-                                                margin: 0, fontSize: '0.86rem', color: '#f0ede8',
-                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                              }}>{c.name}</p>
-                                              <p className="font-karla" style={{
-                                                margin: 0, fontSize: '0.68rem', color: 'rgba(190,212,228,0.55)',
-                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                              }}>
-                                                Lv {c.level}{c.where ? ` · ${c.where}` : ''}
-                                              </p>
+                                            <div style={{ position: 'relative', flexShrink: 0 }}>
+                                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                                              <img src={artSrc(c.filename)} alt="" aria-hidden decoding="async" style={{
+                                                display: 'block', width: 58, height: 58, borderRadius: '50%',
+                                                // TOP OF THE PLATE. These are full card
+                                                // illustrations, so a centred crop of a
+                                                // 58px circle is somebody's chest.
+                                                objectFit: 'cover', objectPosition: 'top center',
+                                                border: `2px solid ${RARITY[Math.min(3, Math.max(0, c.rarity - 1))]}`,
+                                                background: 'rgba(0,0,0,0.4)',
+                                              }} />
+                                              {/* THE CLOCK RIDES THE PORTRAIT. On its own
+                                                  line it would set the card's height for
+                                                  everybody, including the three quarters
+                                                  of a roster that are not on one. */}
+                                              {(c.ready || c.backAt) && (
+                                                <span className="font-karla font-700" style={{
+                                                  position: 'absolute', bottom: -3, left: '50%',
+                                                  transform: 'translateX(-50%)',
+                                                  padding: '0.05rem 0.32rem', borderRadius: 999,
+                                                  fontSize: '0.56rem', whiteSpace: 'nowrap',
+                                                  fontVariantNumeric: 'tabular-nums',
+                                                  background: 'rgba(6,10,16,0.95)',
+                                                  border: `1px solid ${c.ready ? 'rgba(143,220,154,0.7)' : 'rgba(196,169,106,0.5)'}`,
+                                                  color: c.ready ? '#8fdc9a' : 'rgba(240,214,150,0.9)',
+                                                }}>
+                                                  {c.ready ? 'back' : backIn(c.backAt!, now)}
+                                                </span>
+                                              )}
                                             </div>
-                                            {(c.ready || c.backAt) && (
-                                              <p className="font-karla font-700" style={{
-                                                margin: 0, fontSize: '0.7rem', flexShrink: 0,
-                                                fontVariantNumeric: 'tabular-nums',
-                                                color: c.ready ? '#8fdc9a' : 'rgba(196,169,106,0.8)',
-                                              }}>
-                                                {c.ready ? 'back' : backIn(c.backAt!, now)}
-                                              </p>
-                                            )}
+                                            <p className="font-karla font-600" style={{
+                                              margin: 0, maxWidth: '100%', fontSize: '0.76rem', color: '#f0ede8',
+                                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                            }}>{c.name}</p>
+                                            <p className="font-karla" style={{
+                                              margin: 0, maxWidth: '100%', fontSize: '0.6rem',
+                                              color: 'rgba(190,212,228,0.5)', textAlign: 'center',
+                                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                            }}>
+                                              Lv {c.level}{c.where ? ` · ${c.where}` : ''}
+                                            </p>
                                           </div>
                                         ))}
                                       </div>

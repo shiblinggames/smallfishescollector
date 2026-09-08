@@ -14,7 +14,6 @@ export default async function PracticeRaidPage() {
   ])
 
   // A sunk ship can't sail anywhere, not even to practice, until repaired.
-  if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
     <>

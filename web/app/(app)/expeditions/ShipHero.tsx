@@ -13,7 +13,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { vibrate, hapticTap, hapticReward } from '@/lib/haptics'
 import { RARITY_COLOR as ITEM_RARITY_COLOR } from '@/lib/uiTokens'
-import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
@@ -267,7 +266,6 @@ interface Props {
   equippedRaidItems: string[]
   equippedRepairKit: string
   ownedRepairKits: string[]
-  raidRepairOwed: number
   doubloons: number
   /** chapterId -> classId picks from chapter-end Captain's Choice nodes.
    *  Used to render the "Classes" section in the loadout drawer so the
@@ -539,7 +537,7 @@ export default function ShipHero({
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems, borrowedJawXp = 0,
   equippedRepairKit: initialEquippedRepairKit,
   ownedRepairKits: initialOwnedRepairKits,
-  raidRepairOwed, doubloons,
+  doubloons,
   shipClasses,
   gauntletUpgrades = [],
   gauntletFathoms = 0,
@@ -636,22 +634,9 @@ export default function ShipHero({
     } catch {}
   }, [roster])
 
-  const [repairing, startRepair] = useTransition()
-  const [repairErr, setRepairErr] = useState<string | null>(null)
   // Set when a Renown point is actually spent, so closing the panel untouched costs
   // nothing. See the RenownPanel onClose below.
   const renownDirtyRef = useRef(false)
-  const canAffordRepair = doubloons >= raidRepairOwed
-  function doRepair() {
-    setRepairErr(null)
-    startRepair(async () => {
-      const res = await repairShip()
-      if ('error' in res) { setRepairErr(res.error); return }
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-      router.refresh()
-    })
-  }
-
   // Crew state — managed here so scores update live when loadout changes.
   // Initialised from each crew member's assigned ship slot.
   const [slots, setSlots] = useState<(RosterCrew | null)[]>(() => {
@@ -1345,47 +1330,10 @@ export default function ShipHero({
       <div style={{
         marginBottom: '1.5rem',
       }}>
-        {/* ── Sunk: repair banner ── */}
-        {raidRepairOwed > 0 && (
-          <div style={{
-            background: 'linear-gradient(180deg, rgba(120,30,24,0.5) 0%, rgba(70,18,14,0.5) 100%)',
-            borderBottom: '1px solid rgba(240,120,90,0.35)',
-            padding: '0.75rem 0.9rem',
-            display: 'flex', alignItems: 'center', gap: '0.7rem',
-          }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0a890', lineHeight: 1.2 }}>
-                Your ship lies on the seabed
-              </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#c89a90', marginTop: 2, lineHeight: 1.35 }}>
-                {canAffordRepair
-                  ? 'Patch her up before you sail into another fight.'
-                  : `You need ${raidRepairOwed.toLocaleString()} ⟡ to raise her. Go earn it.`}
-              </p>
-              {repairErr && (
-                <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f08a8a', marginTop: 4 }}>{repairErr}</p>
-              )}
-            </div>
-            <button
-              onClick={doRepair}
-              disabled={repairing || !canAffordRepair}
-              className="font-cinzel font-700 uppercase tracking-[0.06em]"
-              style={{
-                flexShrink: 0,
-                padding: '0.55rem 0.9rem',
-                borderRadius: 10,
-                border: 'none',
-                fontSize: '0.78rem',
-                background: canAffordRepair ? '#f0734a' : 'rgba(255,255,255,0.07)',
-                color: canAffordRepair ? '#1a0f02' : '#7a6a64',
-                cursor: repairing ? 'wait' : canAffordRepair ? 'pointer' : 'not-allowed',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {repairing ? '…' : `Repair · ${raidRepairOwed.toLocaleString()} ⟡`}
-            </button>
-          </div>
-        )}
+        {/* NO REPAIR BANNER. She used to come back from a lost raid holed
+            below the line, with a doubloon fee owed here before you could take
+            on anything. Going down costs the sail back from the Gunwharf now
+            and nothing else — see the note in raids/actions. */}
 
         {/* Ship hero — Lv pill on top, then a two-column row: a random
             crew member on the left above Manage Crew, the ship on the

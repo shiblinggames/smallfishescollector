@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { dialAimBonus, type DialAimBonus } from '@/lib/dialAim'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ownedSpecialIds } from '@/lib/specialItems'
-import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, raidDamageProfile, type RaidMods } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
@@ -248,62 +248,20 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   }
 }
 
-// ── Raid sink penalty ─────────────────────────────────────────────────────────
-
-// Called when the player's ship sinks in a real raid (NOT the practice
-// skirmish). Snapshots the tier-scaled repair fee onto the profile. Only
-// sets it if nothing is owed yet, so dying again before repairing can't
-// stack (you can't raid while owing anyway).
-export async function reportRaidSink(): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('ship_tier, raid_repair_owed')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return
-  if ((profile.raid_repair_owed ?? 0) > 0) return
-
-  const fee = raidRepairCost(profile.ship_tier ?? 0)
-  await admin.from('profiles').update({ raid_repair_owed: fee }).eq('id', user.id)
-}
-
-// Pay the outstanding repair fee. Returns the new doubloon total, or an
-// error if the player can't cover it.
-export async function repairShip(): Promise<
-  { newDoubloonTotal: number } | { error: string }
-> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, raid_repair_owed')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-
-  const owed = profile.raid_repair_owed ?? 0
-  if (owed <= 0) return { newDoubloonTotal: profile.doubloons ?? 0 }
-
-  const doubloons = profile.doubloons ?? 0
-  if (doubloons < owed) return { error: 'Not enough doubloons' }
-
-  const newTotal = doubloons - owed
-  await admin
-    .from('profiles')
-    .update({ doubloons: newTotal, raid_repair_owed: 0 })
-    .eq('id', user.id)
-
-  return { newDoubloonTotal: newTotal }
-}
-
+// ── NO REPAIR BILL ──────────────────────────────────────────────────────────
+//
+// Sinking in a raid used to owe a tier-scaled doubloon fee, and until it was
+// paid every raid route redirected you to /expeditions and every boss card
+// refused. `reportRaidSink` and `repairShip` lived here; both are gone, and so
+// is the `raid_repair_owed` column's last reader.
+//
+// THE WORLD IS THE PENALTY NOW. The campaign is not a menu of raids any more,
+// it is water you sail: a boss is eight thousand pixels out through a strait,
+// and going down puts you back at the Gunwharf with all of that to sail again.
+// That costs the one thing a doubloon fee never did — the trip — and it does it
+// without a paywall between a captain and the fight they just lost, which is
+// the exact moment a game should be asking them to try again rather than to
+// go and grind.
 
 /** Clear-time summary returned by recordRaidClear for the victory screen. */
 export interface RaidClearTimes {

@@ -22,7 +22,6 @@ import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermast
 import { LegendaryUnlockOverlay } from './LegendaryUnlockOverlay'
 import type { UnlockedLegendary } from '@/lib/legendaryUnlocks'
 import { musterReport, type MusterCrew } from '@/lib/crewMuster'
-import { repairShip } from '@/app/(app)/raids/actions'
 import { markUltimateUnlockSeen } from './actions'
 import { ULTIMATE_STORY } from '@/lib/shipAugments'
 import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
@@ -2485,147 +2484,11 @@ function UltimateUnlockOverlay({ onBuild, onLater }: { onBuild: () => void; onLa
 
 /* ─────────────────────── Repair-blocked prompt ────────────────── */
 
-// Focused modal that fires when the player taps a combat node while
-// their ship is sunk. Two failure modes were happening before this
-// shipped: the tap was silently ignored, or the player did spot the
-// repair banner in ShipHero but had to scroll back up to act on it.
-// Now they tap the node, the prompt explains, and Pay & Repair lives
-// right there. Closes + refreshes on success so the node unblocks
-// inline.
-function RepairBlockedModal({
-  repairOwed, doubloons, onClose,
-}: {
-  repairOwed: number
-  doubloons: number
-  onClose: () => void
-}) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-  const [err, setErr] = useState<string | null>(null)
-  const canAfford = doubloons >= repairOwed
-
-  function doRepair() {
-    setErr(null)
-    startTransition(async () => {
-      const res = await repairShip()
-      if ('error' in res) { setErr(res.error); return }
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-      onClose()
-      router.refresh()
-    })
-  }
-
-  return createPortal(
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 2000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1.5rem',
-        background: 'rgba(2,4,10,0.78)',
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
-      }}
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 12, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 8, scale: 0.98 }}
-        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: 'var(--modal-w)',
-          padding: '1.3rem 1.2rem 1.15rem',
-          borderRadius: 16,
-          background: 'linear-gradient(180deg, rgba(28,14,8,0.97) 0%, rgba(18,10,8,0.98) 100%)',
-          border: '1px solid rgba(239,68,68,0.45)',
-          borderTop: '2px solid rgba(239,68,68,0.75)',
-          boxShadow: '0 0 48px rgba(239,68,68,0.18), 0 0 120px rgba(239,68,68,0.06)',
-          textAlign: 'center',
-        }}
-      >
-        <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.56rem', color: '#ef4444', marginBottom: '0.4rem' }}>
-          Ship Sunk
-        </p>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f5f2ec', lineHeight: 1.2, marginBottom: '0.55rem' }}>
-          Repair your hull
-        </p>
-        <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(245,242,236,0.7)', lineHeight: 1.5, marginBottom: '1.1rem', fontStyle: 'italic' }}>
-          Your ship can&apos;t sail back into a fight until the hull is patched up at port.
-        </p>
-
-        <div style={{
-          background: 'rgba(0,0,0,0.35)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 12,
-          padding: '0.7rem 0.9rem',
-          marginBottom: '1rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#a8a5a0' }}>Repair cost</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: canAfford ? '#fbbf24' : '#ef4444' }}>
-            {repairOwed.toLocaleString()} ⟡
-          </p>
-        </div>
-
-        {err && (
-          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f08a8a', marginBottom: '0.7rem' }}>
-            {err}
-          </p>
-        )}
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={onClose}
-            className="font-karla font-700 uppercase tracking-[0.12em]"
-            style={{
-              flex: 1, padding: '0.7rem 0',
-              borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#a8a5a0',
-              fontSize: '0.72rem',
-              cursor: 'pointer',
-            }}
-          >
-            Not yet
-          </button>
-          <button
-            onClick={doRepair}
-            disabled={!canAfford || pending}
-            className="font-karla font-700 uppercase tracking-[0.12em]"
-            style={{
-              flex: 1.4, padding: '0.7rem 0',
-              borderRadius: 10,
-              background: canAfford
-                ? 'linear-gradient(180deg, rgba(74,222,128,0.32) 0%, rgba(74,222,128,0.12) 100%)'
-                : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${canAfford ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.12)'}`,
-              borderTop: canAfford ? '1.5px solid rgba(120,232,160,0.8)' : '1px solid rgba(255,255,255,0.12)',
-              color: canAfford ? '#86efac' : '#7a7775',
-              fontSize: '0.72rem',
-              cursor: canAfford && !pending ? 'pointer' : 'default',
-              opacity: pending ? 0.65 : 1,
-              boxShadow: canAfford ? '0 0 18px rgba(74,222,128,0.2)' : 'none',
-            }}
-          >
-            {pending
-              ? 'Repairing…'
-              : canAfford
-                ? <>Pay & Repair · {repairOwed.toLocaleString()} ⟡</>
-                : <>Need {(repairOwed - doubloons).toLocaleString()} more ⟡</>
-            }
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>,
-    document.body,
-  )
-}
+// ── NO REPAIR GATE ──────────────────────────────────────────────────────────
+// A sunk ship used to owe a fee, and a boss card refused to open until it was
+// paid — which is a paywall arriving at the exact moment a player wants to try
+// again. Going down costs the sail back from the Gunwharf now, and nothing
+// else. See the note in raids/actions.
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
@@ -2656,15 +2519,13 @@ function ViewToggle({ view, onChange }: { view: 'journey' | 'bosses'; onChange: 
   )
 }
 
-function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, repairOwed, onRepairBlocked }: {
+function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0 }: {
   views: RaidNodeView[]
   raidRecords: Record<string, RaidRecords>
   ownedRaidItems: string[]
   ownedShipSkins: string[]
   ownedSpecialItems?: string[]
   totalFortune?: number
-  repairOwed: number
-  onRepairBlocked: () => void
 }) {
   const router = useRouter()
   const [modalBoss, setModalBoss] = useState<RaidNodeView | null>(null)
@@ -2743,9 +2604,7 @@ function BossesView({ views, raidRecords, ownedRaidItems, ownedShipSkins, ownedS
           ownedSpecialItems={ownedSpecialItems}
             totalFortune={totalFortune}
           isNext={modalBoss.node.id === nextUpId}
-          repairOwed={repairOwed}
           onEnter={r => router.push(r)}
-          onRepairBlocked={onRepairBlocked}
           onClose={() => setModalBoss(null)}
         />
       )}
@@ -2814,7 +2673,7 @@ function BossTile({ view, isNext, challengeCleared, clearedNodeIds, onOpen }: { 
 // EXPORTED, because the sea opens this too. You sail up to a hull, and the
 // card that names it, shows what it drops and offers the challenge run is
 // this one — not a second card that has to be kept in step with it.
-export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, isNext, repairOwed, onEnter, onRepairBlocked, onClose, clearedNodeIds, enterLabel, enterSub }: {
+export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidItems, ownedShipSkins, ownedSpecialItems = [], totalFortune = 0, isNext, onEnter, onClose, clearedNodeIds, enterLabel, enterSub }: {
   boss: RaidNodeView
   challenge: RaidNodeView | null
   rec: RaidRecords | null
@@ -2824,9 +2683,7 @@ export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidIt
   ownedSpecialItems?: string[]
   totalFortune?: number
   isNext: boolean
-  repairOwed: number
   onEnter: (route: string) => void
-  onRepairBlocked: () => void
   onClose: () => void
   /** Cleared node ids — decides whether a story-gated boss is unmasked. */
   clearedNodeIds: Set<string>
@@ -2849,7 +2706,10 @@ export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidIt
   // But "already introduced" has to MEAN it — see bossIdentityRevealed.
   const shown = cleared || bossIdentityRevealed(boss.node, clearedNodeIds)
   const locked = boss.status === 'locked'
-  const blocked = repairOwed > 0
+  // NOTHING BLOCKS A FIGHT ANY MORE. This was `repairOwed > 0`: a sunk ship
+  // owed a fee and every boss card refused until it was paid. See the note at
+  // the top of raids/actions — the sail back is the penalty now.
+  const blocked = false
   const chAvailable = !!challenge && (challenge.status === 'available' || challenge.status === 'cleared')
   const chCleared = challenge?.status === 'cleared'
 
@@ -2896,7 +2756,6 @@ export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidIt
 
   function doEnter() {
     if (enterBlocked || !enterRoute) return
-    if (blocked) { onRepairBlocked(); return }
     vibrate([0, 16, 30, 24])
     onEnter(enterRoute)
   }
@@ -3258,7 +3117,7 @@ function JourneyChapter({ views, onSelect }: { views: RaidNodeView[]; onSelect: 
   )
 }
 
-export default function RaidsSection({ views, doubloons, totalFortune = 0, spoilFree = null, spoilPaid = null, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, ownedShipSkins = [], ownedSpecialItems = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; /** Crew Fortune, so a boss card quotes the odds that boss actually rolls. */ totalFortune?: number; spoilFree?: string | null; spoilPaid?: string | null; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; ownedShipSkins?: string[]; /** Fishing specials owned (boolean columns, not raid_items) — Finn drops one. */ ownedSpecialItems?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
+export default function RaidsSection({ views, doubloons, totalFortune = 0, spoilFree = null, spoilPaid = null, navLevel, playerShipImage, raidRecords, ownedRaidItems, ownedShipSkins = [], ownedSpecialItems = [], equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress, hasSixthBerth = false, hasArmoryExpansion = false, musterParty = [] }: { views: RaidNodeView[]; doubloons: number; /** Crew Fortune, so a boss card quotes the odds that boss actually rolls. */ totalFortune?: number; spoilFree?: string | null; spoilPaid?: string | null; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; ownedRaidItems: string[]; ownedShipSkins?: string[]; /** Fishing specials owned (boolean columns, not raid_items) — Finn drops one. */ ownedSpecialItems?: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null; hasSixthBerth?: boolean; hasArmoryExpansion?: boolean; musterParty?: MusterCrew[] }) {
   const [open, setOpen] = useState(true)
   const router = useRouter()
   // Journey (the story map) vs Bosses (a farm deck — every boss with Fight +
@@ -3298,11 +3157,6 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
   // (resets on page navigation) — chapters are not something you
   // revisit often enough to bother persisting.
   const [chaptersToggled, setChaptersToggled] = useState<Set<string>>(new Set())
-  // Fires when the player taps a combat node while the ship is sunk.
-  // Opens a focused repair prompt (RepairBlockedModal) — they can pay
-  // and patch the hull right there instead of scrolling back to the
-  // ShipHero banner up the page.
-  const [repairPromptOpen, setRepairPromptOpen] = useState(false)
   // First-time chapter-unlock celebration. Set on mount if the player
   // has just cleared chapter N-1 but never dismissed the chapter N
   // overlay. Cleared by tapping the CTA, which fires the server
@@ -3391,24 +3245,20 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
 
   // The Story Campaign hub modal fires 'expedition:open-node' with a
   // nodeId so the player can jump from the prep modal straight into
-  // the current node's detail sheet — no map detour. Mirrors the
-  // map's own tap gating: combat node + ship sunk routes to the
-  // repair prompt instead of opening the sheet.
+  // the current node's detail sheet — no map detour. There is no longer a
+  // second branch here: a sunk ship used to be routed to the repair prompt
+  // instead of the sheet, and nothing is owed any more.
   useEffect(() => {
     function onOpen(e: Event) {
       const nodeId = (e as CustomEvent<{ nodeId: string }>).detail?.nodeId
       if (!nodeId) return
       const view = views.find(v => v.node.id === nodeId)
       if (!view || view.status === 'locked') return
-      if (repairOwed > 0 && isCombatNode(view.node.type)) {
-        setRepairPromptOpen(true)
-        return
-      }
       setSelected(view)
     }
     window.addEventListener('expedition:open-node', onOpen)
     return () => window.removeEventListener('expedition:open-node', onOpen)
-  }, [views, repairOwed])
+  }, [views])
 
   return (
     <div id="chapter-map" style={{ marginBottom: '1.5rem', scrollMarginTop: 90 }}>
@@ -3420,7 +3270,7 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
           <ViewToggle view={view} onChange={setView} />
           {view === 'bosses' ? (
             <BossesView views={views} raidRecords={raidRecords} ownedRaidItems={ownedRaidItems} ownedShipSkins={ownedShipSkins} ownedSpecialItems={ownedSpecialItems}
-            totalFortune={totalFortune} repairOwed={repairOwed} onRepairBlocked={() => setRepairPromptOpen(true)} />
+            totalFortune={totalFortune} />
           ) : (() => {
             const groups = new Map<string, { chapter: RaidChapter; views: RaidNodeView[] }>()
             for (const v of views) {
@@ -3602,9 +3452,7 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
           ownedSpecialItems={ownedSpecialItems}
             totalFortune={totalFortune}
               isNext={mainBoss.node.id === nextBossId}
-              repairOwed={repairOwed}
               onEnter={r => router.push(r)}
-              onRepairBlocked={() => setRepairPromptOpen(true)}
               onClose={() => setSelected(null)}
               clearedNodeIds={new Set(views.filter(v => v.status === 'cleared').map(v => v.node.id))}
             />
@@ -3671,19 +3519,6 @@ export default function RaidsSection({ views, doubloons, totalFortune = 0, spoil
       <AnimatePresence>
         {celebratingUltimate && (
           <UltimateUnlockOverlay onBuild={() => dismissUltimate(true)} onLater={() => dismissUltimate(false)} />
-        )}
-      </AnimatePresence>
-
-      {/* Repair-blocked prompt. Tapping any combat node while the
-          ship is sunk opens this — direct Pay & Repair action lives
-          here so players don't have to scroll back to ShipHero. */}
-      <AnimatePresence>
-        {repairPromptOpen && (
-          <RepairBlockedModal
-            repairOwed={repairOwed}
-            doubloons={doubloons}
-            onClose={() => setRepairPromptOpen(false)}
-          />
         )}
       </AnimatePresence>
     </div>
