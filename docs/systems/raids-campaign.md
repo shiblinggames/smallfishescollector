@@ -46,6 +46,29 @@ Turn-based ship combat along a chaptered node chain. The other half of Expeditio
   separate `LIFESTEAL_CAP` bounds the summed ratio and is what keeps the
   dedicated sustain build short of unkillable.
 
+## The deck on a desktop
+
+`useRoomy()` (900px) is the "there is screen either side of the fight" signal, distinct from
+the column's own 742. Four things read it or the column:
+
+- **The crew rail.** `CrewRail` puts every deployed crew's face in a row above the action
+  bar, lit with a breathing rim when ready and greyed with a strike when spent, and a click
+  fires the ability directly. It lives in the DECK, not in `ActionMenu`, and that is not
+  tidiness: the menu is swapped for the Lock button while you aim, and the two must match
+  heights exactly or the stage reflows and the player's stat card (docked to the deck's top
+  edge) walks up and down every turn. `specialItems` is hoisted out of the ActionMenu props
+  for the same reason: two things read it now.
+- **The Special drawer re-weights.** With the rail up, the crew already have a door, so in
+  the drawer they shrink to a quiet second way in (thin border, greyed art, smaller type) and
+  the repair kit — the one special with no other door — takes the weight. On a phone the
+  drawer is still everything and every entry is weighted the same.
+- **Signal Flares stay in the column.** The barrage field was `inset: 0` on a stage that over
+  the sea is the whole viewport, so on a desktop the flares went up across the entire window,
+  outside everything else you were reading. The tap shield stays full-bleed (a stray swat
+  anywhere still has to be eaten); only the flares are penned, on the log panel's own width.
+- **The stat sheets** are `clamp(380px, 48vw, 620px)` rather than a flat 380, which was a
+  phone measurement that turned a sheet of stats into a column of two-word rows.
+
 ## Sustain copy
 
 Whatever the numbers become, the cap must be STATED on the card that grants it

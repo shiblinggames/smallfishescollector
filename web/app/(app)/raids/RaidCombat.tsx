@@ -449,6 +449,23 @@ export const RAID_COL_MAX = 720
  *  the panel's edge and not 11px outside it. */
 export const RAID_COL_PAD = 11.2
 
+/**
+ * IS THERE ROOM TO SPREAD OUT. Not the column's own breakpoint (the column is
+ * full at 742) but "this is a desktop and there is screen either side of the
+ * fight", which is what the crew rail and the wider stat sheets are for.
+ */
+function useRoomy(): boolean {
+  const [roomy, setRoomy] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 900px)')
+    const on = () => setRoomy(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return roomy
+}
+
 /** The column's left and right edges in viewport pixels, at this width. */
 function raidColumn(): { left: number; right: number } {
   const w = Math.min(RAID_COL_MAX, window.innerWidth - RAID_COL_PAD * 2)
@@ -7316,6 +7333,108 @@ export default function RaidCombat({
     atmosphere === 'brackwater' ? 'linear-gradient(180deg, #2b2a1e 0%, #454029 26%, #5c5133 40%, #100f08 100%)' :
                                 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)'
 
+  // ── THE SPECIALS, BUILT ONCE ────────────────────────────────────────
+  //
+  // Lifted out of the ActionMenu's props because TWO things read it now: the
+  // menu's drawer, and the crew rail above the deck. The rail has to live
+  // OUTSIDE the aim swap or the deck changes height between taking a turn
+  // and aiming, which walks the player's stat card up and down the screen;
+  // so it cannot be built inside the component that only exists for half of
+  // those beats.
+  const specialItems: SpecialItem[] = (() => {
+            // Special chooser items: repair kit + one card per deployed
+            // crew member's class ability. Per-entry `disabled` keeps an
+            // item visible with its reason so the player understands why
+            // the slot didn't fire ("Used this raid" / "Wait next turn"
+            // / "Unlocks at Lv 10").
+            const items: SpecialItem[] = []
+
+            // Repair kit (existing, turn-consuming).
+            if (repairKit) {
+              const atFull = playerHp >= playerHpMax
+              // Mirror the Seasoned Timbers heal boost in the preview range.
+              const rawRange = repairKitRange(repairKit, totalFortune)
+              const healMult = mods.repairHealMult ?? 1
+              const range = { min: Math.round(rawRange.min * healMult), max: Math.round(rawRange.max * healMult) }
+              items.push({
+                id: 'repair',
+                label: repairKit.name,
+                sub: kitUsed
+                  ? 'Already used this battle.'
+                  : atFull
+                    ? 'Hull already at full HP.'
+                    : `Heals ${range.min}-${range.max} HP. Costs your turn.`,
+                color: '#4ade80',
+                emoji: repairKit.emoji,
+                image: repairKit.image,
+                disabled: kitUsed || atFull,
+                onClick: () => selectAction('repair'),
+              })
+            }
+
+            // Crew abilities — one card per deployed crew with a class.
+            // Cards always render so the player sees their roster even
+            // when abilities are locked (Lv < 10) or used. Doesn't
+            // consume a turn.
+            for (const crew of crewMembers) {
+              const cls = classForSlug(crew.slug)
+              if (!cls) continue
+              const def = CLASSES[cls]
+              const lv = crewLevelFromXP(crew.xp)
+              const m = currentMilestone(def, lv)
+              const usedRaid = usedAbilityIds?.has(crew.id) ?? false
+              const locked = !m
+              // Silenced (Ch4 status): every crew ability is locked while it lasts.
+              const disabled = locked || usedRaid || oneAbilityUsedThisTurn || playerStatusMods.silenced
+              const sub = locked
+                ? `Unlocks at Lv 10.`
+                : playerStatusMods.silenced
+                  ? 'Silenced — abilities locked.'
+                  : usedRaid
+                    ? usedAbilitySub
+                    : oneAbilityUsedThisTurn
+                      ? 'Wait until next turn.'
+                      : m.desc
+              items.push({
+                id: `crew-${crew.id}`,
+                label: `${crew.name} · ${def.name}`,
+                sub,
+                color: def.color,
+                emoji: def.emoji,
+                image: crew.imageUrl,
+                disabled,
+                onClick: () => fireCrewAbility(crew, def, m),
+              })
+            }
+
+            // Activatable item card (War Drum / Thunder Drum). One use per
+            // raid, grays out with a reason when spent or when there's no
+            // spent crew ability to bring back.
+            const activatable = getActivatableItem(equippedRaidItems)
+            if (activatable?.activated) {
+              const itemUsed = usedRaidItemIds?.has(activatable.id) ?? false
+              const spentCount = crewMembers.filter(c => usedAbilityIds?.has(c.id)).length
+              const chancePct = Math.round(activatable.activated.chance * 100)
+              const itemSub = itemUsed
+                ? 'Already used this raid.'
+                : spentCount === 0
+                  ? 'No spent crew ability to restore.'
+                  : activatable.activated.chance >= 1
+                    ? 'Restores a random spent crew ability.'
+                    : `${chancePct}% to restore a random spent crew ability.`
+              items.push({
+                id: `item-${activatable.id}`,
+                label: activatable.name,
+                sub: itemSub,
+                color: '#e0a44a',
+                emoji: activatable.emoji,
+                image: activatable.image,
+                disabled: itemUsed || spentCount === 0,
+                onClick: () => activateRaidItem(activatable),
+              })
+            }
+            return items
+  })()
   return (
     <div className={overSea ? 'raid-oversea-stage' : undefined} style={{
       display: 'flex', flexDirection: 'column',
@@ -9144,6 +9263,11 @@ export default function RaidCombat({
           <LogBox lines={resolveLog} turn={turn} />
         )}
 
+        {/* THE CREW RAIL, above the swap so the deck's height never changes
+            between taking a turn and aiming it. */}
+        <CrewRail items={specialItems.filter(i => i.id.startsWith('crew-'))}
+          disabled={subPhase !== 'await_input'} />
+
         {subPhase === 'aiming' ? (
           <InlineLockButton onLock={lockShot} />
         ) : (
@@ -9159,100 +9283,7 @@ export default function RaidCombat({
             onSelect={selectAction}
             disabled={subPhase !== 'await_input'}
             highlightedAction={subPhase === 'await_input' ? null : playerAction}
-            specialItems={(() => {
-              // Special chooser items: repair kit + one card per deployed
-              // crew member's class ability. Per-entry `disabled` keeps an
-              // item visible with its reason so the player understands why
-              // the slot didn't fire ("Used this raid" / "Wait next turn"
-              // / "Unlocks at Lv 10").
-              const items: SpecialItem[] = []
-
-              // Repair kit (existing, turn-consuming).
-              if (repairKit) {
-                const atFull = playerHp >= playerHpMax
-                // Mirror the Seasoned Timbers heal boost in the preview range.
-                const rawRange = repairKitRange(repairKit, totalFortune)
-                const healMult = mods.repairHealMult ?? 1
-                const range = { min: Math.round(rawRange.min * healMult), max: Math.round(rawRange.max * healMult) }
-                items.push({
-                  id: 'repair',
-                  label: repairKit.name,
-                  sub: kitUsed
-                    ? 'Already used this battle.'
-                    : atFull
-                      ? 'Hull already at full HP.'
-                      : `Heals ${range.min}-${range.max} HP. Costs your turn.`,
-                  color: '#4ade80',
-                  emoji: repairKit.emoji,
-                  image: repairKit.image,
-                  disabled: kitUsed || atFull,
-                  onClick: () => selectAction('repair'),
-                })
-              }
-
-              // Crew abilities — one card per deployed crew with a class.
-              // Cards always render so the player sees their roster even
-              // when abilities are locked (Lv < 10) or used. Doesn't
-              // consume a turn.
-              for (const crew of crewMembers) {
-                const cls = classForSlug(crew.slug)
-                if (!cls) continue
-                const def = CLASSES[cls]
-                const lv = crewLevelFromXP(crew.xp)
-                const m = currentMilestone(def, lv)
-                const usedRaid = usedAbilityIds?.has(crew.id) ?? false
-                const locked = !m
-                // Silenced (Ch4 status): every crew ability is locked while it lasts.
-                const disabled = locked || usedRaid || oneAbilityUsedThisTurn || playerStatusMods.silenced
-                const sub = locked
-                  ? `Unlocks at Lv 10.`
-                  : playerStatusMods.silenced
-                    ? 'Silenced — abilities locked.'
-                    : usedRaid
-                      ? usedAbilitySub
-                      : oneAbilityUsedThisTurn
-                        ? 'Wait until next turn.'
-                        : m.desc
-                items.push({
-                  id: `crew-${crew.id}`,
-                  label: `${crew.name} · ${def.name}`,
-                  sub,
-                  color: def.color,
-                  emoji: def.emoji,
-                  image: crew.imageUrl,
-                  disabled,
-                  onClick: () => fireCrewAbility(crew, def, m),
-                })
-              }
-
-              // Activatable item card (War Drum / Thunder Drum). One use per
-              // raid, grays out with a reason when spent or when there's no
-              // spent crew ability to bring back.
-              const activatable = getActivatableItem(equippedRaidItems)
-              if (activatable?.activated) {
-                const itemUsed = usedRaidItemIds?.has(activatable.id) ?? false
-                const spentCount = crewMembers.filter(c => usedAbilityIds?.has(c.id)).length
-                const chancePct = Math.round(activatable.activated.chance * 100)
-                const itemSub = itemUsed
-                  ? 'Already used this raid.'
-                  : spentCount === 0
-                    ? 'No spent crew ability to restore.'
-                    : activatable.activated.chance >= 1
-                      ? 'Restores a random spent crew ability.'
-                      : `${chancePct}% to restore a random spent crew ability.`
-                items.push({
-                  id: `item-${activatable.id}`,
-                  label: activatable.name,
-                  sub: itemSub,
-                  color: '#e0a44a',
-                  emoji: activatable.emoji,
-                  image: activatable.image,
-                  disabled: itemUsed || spentCount === 0,
-                  onClick: () => activateRaidItem(activatable),
-                })
-              }
-              return items
-            })()}
+            specialItems={specialItems}
           />
         )}
         </div>
@@ -9703,10 +9734,15 @@ function PlayerStatsPopup({
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         style={{
           position: 'relative',
-          width: '100%', maxWidth: 380,
+          // WIDER WHERE THERE IS ROOM. 380 is a phone measurement, and on a
+          // desktop it made a sheet of stats into a column of two-word rows
+          // with a hand's width of empty screen either side of it. clamp so
+          // there is no breakpoint to fall down: a phone is bounded by its
+          // parent's padding, a desktop opens out to 620.
+          width: '100%', maxWidth: 'clamp(380px, 48vw, 620px)',
           // Fixed size across tabs — the modal never jumps when you switch;
           // a taller tab scrolls its own content instead of growing the card.
-          height: 'min(78vh, 560px)',
+          height: 'min(78vh, 620px)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
           border: '1px solid rgba(96,165,250,0.18)',
@@ -10108,7 +10144,8 @@ function EnemyStatsPopup({
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         style={{
           position: 'relative',
-          width: '100%', maxWidth: 380,
+          // Same as the player's Ledger: 380 was measured on a phone.
+          width: '100%', maxWidth: 'clamp(380px, 48vw, 620px)',
           background: 'linear-gradient(180deg, #1a0c0c 0%, #0c0606 100%)',
           border: `1px solid ${isBoss ? 'rgba(251,191,36,0.34)' : 'rgba(239,68,68,0.22)'}`,
           borderRadius: 20,
@@ -10749,6 +10786,18 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
         @keyframes rc-feint-warn { 0%,100% { transform: scale(1);    opacity: 0.9; } 50% { transform: scale(1.32); opacity: 0.25; } }
         @keyframes rc-feint-throb{ 0%,100% { box-shadow: 0 0 16px ${FEINT_COLOR}, 0 0 4px #fff inset; } 50% { box-shadow: 0 0 30px ${FEINT_COLOR}, 0 0 8px #fff inset; } }
       `}</style>
+      {/* ── THE BARRAGE STAYS IN THE FIGHT'S COLUMN ────────────────────
+          The field was `inset: 0` on a stage that, over the sea, is the whole
+          viewport — so on a desktop the flares went up across the entire
+          window, yards outside the fight, while everything else you were
+          reading lived inside 720. The tap shield above stays full-bleed,
+          because a stray swat anywhere still has to be eaten; only the flares
+          themselves are penned in, on exactly the log panel's own width. */}
+      <div style={{
+        position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: `calc(100% - ${RAID_COL_PAD * 2}px)`, maxWidth: RAID_COL_MAX,
+        pointerEvents: 'none',
+      }}>
       {/* Banner + remaining tally */}
       <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', textAlign: 'center' }}>
         <div className="font-cinzel font-700 uppercase" style={{ fontSize: '0.82rem', letterSpacing: '0.12em', color, textShadow: `0 0 16px ${color}aa`, whiteSpace: 'nowrap' }}>
@@ -10816,6 +10865,7 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
           animation: 'rc-flare-pop 0.5s ease-out forwards',
         }} />
       ))}
+      </div>{/* end of the fight's column */}
     </div>
   )
 }
@@ -12497,6 +12547,90 @@ export interface SpecialItem {
   onClick: () => void
 }
 
+/**
+ * ── THE CREW, ON DECK ────────────────────────────────────────────────────
+ *
+ * Desktop only. Firing a crew ability took two taps through a drawer, which is
+ * the right shape for one thumb reaching six things and the wrong shape for a
+ * mouse on a screen with room either side of the fight. Here they stand in a
+ * row above the action bar, faces up, and you click the one you want.
+ *
+ * IT LIVES IN THE DECK, NOT IN THE ACTION MENU, and that is not tidiness: the
+ * menu is swapped out for the Lock button while you aim, and the two have to
+ * match heights exactly or the whole stage reflows (and the player's stat card,
+ * which docks to the deck's top edge, walks up and down the screen every turn).
+ * A rail inside the menu would appear and vanish with it. This sits above the
+ * swap and never moves.
+ */
+function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean }) {
+  // The hook runs before any early return, or the order changes the first time
+  // a crew slot empties.
+  const roomy = useRoomy()
+  if (!roomy || items.length === 0) return null
+  return (
+        <div style={{
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10,
+          marginBottom: 10, flexWrap: 'wrap',
+        }}>
+          {items.map(item => {
+            const ready = !item.disabled && !disabled
+            return (
+              <motion.button
+                key={item.id}
+                type="button"
+                title={`${item.label} — ${item.sub}`}
+                aria-label={`${item.label}. ${item.sub}`}
+                whileTap={ready ? { scale: 0.94 } : undefined}
+                whileHover={ready ? { scale: 1.06, y: -2 } : undefined}
+                transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+                onClick={() => { if (ready) item.onClick() }}
+                disabled={!ready}
+                style={{
+                  position: 'relative', width: 62, padding: 0, border: 'none',
+                  background: 'none', cursor: ready ? 'pointer' : 'not-allowed',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                }}>
+                {/* THE FACE, and whether it is yours to spend. Ready is lit and
+                    in colour with a breathing rim; spent is grey, dimmed and
+                    struck through, because "used" is a state you have to be
+                    able to read at a glance mid-fight without hovering. */}
+                <motion.span
+                  animate={ready
+                    ? { boxShadow: [`0 0 0px ${item.color}00`, `0 0 16px ${item.color}88`, `0 0 0px ${item.color}00`] }
+                    : { boxShadow: 'none' }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    position: 'relative', width: 52, height: 52, borderRadius: '50%', overflow: 'hidden',
+                    border: `2px solid ${ready ? item.color : 'rgba(255,255,255,0.16)'}`,
+                    background: ready ? `${item.color}1c` : 'rgba(255,255,255,0.04)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                  {item.image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={item.image} alt="" style={{
+                        width: '100%', height: '100%', objectFit: 'cover',
+                        filter: ready ? 'none' : 'grayscale(1) brightness(0.55)',
+                      }} />
+                    : <span style={{ color: ready ? item.color : '#6a6460', display: 'flex' }}><IconCrate size={20} /></span>}
+                  {!ready && (
+                    <span aria-hidden style={{
+                      position: 'absolute', left: 6, right: 6, top: '50%', height: 2,
+                      background: 'rgba(255,255,255,0.5)', transform: 'rotate(-24deg)',
+                    }} />
+                  )}
+                </motion.span>
+                <span className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.46rem', letterSpacing: '0.1em', maxWidth: 62,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  color: ready ? item.color : '#6a6460',
+                }}>{item.label}</span>
+              </motion.button>
+            )
+          })}
+        </div>
+  )
+}
+
 function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, volleyCost = VOLLEY_COST, megaCost = MEGA_CHARGE_COST, canDodge, canReload, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
   canFire: boolean
   canVolley: boolean
@@ -12536,6 +12670,11 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
   // crew item counts (covers the player's first turn before anything's
   // been used, or post-rest-stop when usedAbilityIds clears).
   const crewAbilityReady = specialItems.some(i => i.id.startsWith('crew-') && !i.disabled)
+
+  // WHETHER THE CREW HAVE A DOOR OF THEIR OWN on deck (see CrewRail). When
+  // they do, this drawer stops being how you call them and becomes the repair
+  // kit's screen, with the crew as a quiet second way in.
+  const railUp = useRoomy() && specialItems.some(i => i.id.startsWith('crew-'))
 
   function tapFire() {
     if (disabled || !canFire) return
@@ -12646,25 +12785,43 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
               boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
             }}
           >
-            {specialItems.map(item => (
+            {specialItems.map(item => {
+              // ── WHAT THIS DRAWER IS FOR, PER SIZE ──────────────────────
+              // On a phone it is everything, and every entry is weighted the
+              // same. With the rail up, the crew already have a door of their
+              // own on deck, so in here they step back to a quiet second way
+              // in and the repair kit — which has no other door — carries the
+              // weight instead.
+              const isCrew = item.id.startsWith('crew-')
+              const muted = railUp && isCrew
+              const lead = railUp && !isCrew
+              return (
               <motion.button
                 key={item.id}
                 whileTap={item.disabled ? undefined : { scale: 0.97 }}
                 onClick={() => pickSpecial(item)}
                 disabled={item.disabled}
                 style={{
-                  padding: '0.6rem 0.7rem', borderRadius: 10,
-                  background: item.disabled ? 'rgba(255,255,255,0.04)' : `${item.color}14`,
-                  border: `2px solid ${item.disabled ? 'rgba(255,255,255,0.12)' : item.color}`,
+                  padding: muted ? '0.4rem 0.55rem' : lead ? '0.75rem 0.8rem' : '0.6rem 0.7rem',
+                  borderRadius: 10,
+                  background: item.disabled ? 'rgba(255,255,255,0.04)'
+                    : muted ? 'rgba(255,255,255,0.03)' : `${item.color}${lead ? '20' : '14'}`,
+                  border: `${muted ? 1 : 2}px solid ${
+                    item.disabled ? 'rgba(255,255,255,0.12)'
+                    : muted ? 'rgba(255,255,255,0.14)' : item.color}`,
+                  boxShadow: lead && !item.disabled ? `0 0 16px ${item.color}33` : undefined,
                   cursor: item.disabled ? 'not-allowed' : 'pointer',
-                  opacity: item.disabled ? 0.55 : 1,
+                  opacity: item.disabled ? 0.55 : muted ? 0.72 : 1,
                   display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                 }}
               >
                 <div style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                  width: muted ? 24 : lead ? 38 : 32, height: muted ? 24 : lead ? 38 : 32,
+                  borderRadius: 8, flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: `${item.color}22`, fontSize: '1.1rem', lineHeight: 1, overflow: 'hidden',
+                  background: muted ? 'rgba(255,255,255,0.06)' : `${item.color}22`,
+                  fontSize: '1.1rem', lineHeight: 1, overflow: 'hidden',
+                  filter: muted ? 'grayscale(0.7)' : undefined,
                 }}>
                   {item.image
                     // eslint-disable-next-line @next/next/no-img-element
@@ -12672,11 +12829,12 @@ function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, v
                     : <span style={{ color: item.color, display: 'flex' }}><IconCrate size={18} /></span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: item.disabled ? '#7a7674' : '#ffffff', lineHeight: 1.15 }}>{item.label}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: muted ? '0.72rem' : lead ? '0.94rem' : '0.84rem', color: item.disabled ? '#7a7674' : muted ? '#b9b2a6' : '#ffffff', lineHeight: 1.15 }}>{item.label}</p>
                   <p className="font-karla" style={{ fontSize: '0.66rem', color: item.disabled ? '#6a6460' : `${item.color}cc`, marginTop: 2, lineHeight: 1.3 }}>{item.sub}</p>
                 </div>
               </motion.button>
-            ))}
+              )
+            })}
           </motion.div>
         </>
       )}
