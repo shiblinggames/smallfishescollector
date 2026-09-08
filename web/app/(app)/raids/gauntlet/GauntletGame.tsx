@@ -4450,15 +4450,13 @@ export default function GauntletGame(props: GauntletGameProps) {
                 >
                   {/* Rarity edge */}
                   <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(180deg, ${rm.color}, ${rm.color}33)`, boxShadow: `0 0 16px ${rm.color}` }} />
-                  {/* Moving sheen on rare/legendary */}
-                  {(legendary || rare) && (
-                    <motion.span aria-hidden
-                      initial={{ x: '-130%' }}
-                      animate={{ x: '180%' }}
-                      transition={{ duration: legendary ? 2.2 : 3, repeat: Infinity, repeatDelay: legendary ? 0.9 : 2.2, ease: 'easeInOut' }}
-                      style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${rm.color}33, transparent)`, pointerEvents: 'none' }}
-                    />
-                  )}
+                  {/* NO SWEEPING SHEEN. A bar of light crossing the card on a
+                      loop is the shop-window shine every gacha reaches for,
+                      and on a screen where you are reading three descriptions
+                      to make an irreversible choice it is a thing moving over
+                      the words. Rarity is already carried by the tint, the
+                      border weight, the pulsing ring on the medallion, the
+                      tier beside the name and, on a desktop, the word. */}
                   {/* Breathing inner glow — a quiet "tap me" pulse (inset so the
                       card's overflow:hidden doesn't clip it). */}
                   <motion.span aria-hidden
@@ -4742,11 +4740,8 @@ export default function GauntletGame(props: GauntletGameProps) {
                   }}
                 >
                   <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(180deg, ${AC}, ${AC}33)`, boxShadow: `0 0 16px ${AC}` }} />
-                  <motion.span aria-hidden
-                    initial={{ x: '-130%' }} animate={{ x: '180%' }}
-                    transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
-                    style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${AC}3a, transparent)`, pointerEvents: 'none' }}
-                  />
+                  {/* The confluence card sits in the same row as the boons and
+                      loses its sweeping sheen with them: see the note there. */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                     {/* Synergy medallion — matches the boon cards' hero art */}
                     <div style={{
