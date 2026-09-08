@@ -558,7 +558,6 @@ type Laid = {
   ships: Encounter[]
   caches: Cache[]
   beats: Beat[]
-  portal: ReturnPortal
 }
 
 /**
@@ -615,22 +614,11 @@ function layBay(bay: string, stops: Stop[], road: P[] = ROAD, halfFrac = ROAD_HA
     else beats.push({ node: st.node, bay, isle: st.isle })
   })
 
-  // THE WAY HOME, at the end of the road — where the last boss went down.
-  //
-  // Pushed to the side the last rock is NOT on. They both want the end of the
-  // road, and on a short road they want the same water: the coda's portal came
-  // out sitting on top of its own final isle. One line, and it cannot happen in
-  // any bay rather than being tuned out of this one.
-  const lastSide = (stops.length - 1) % 2 === 0 ? 1 : -1
-  const end = w.at(0.97)
-  return {
-    isles, ships, caches, beats,
-    portal: {
-      bay,
-      along: Math.round(end.p[0] - end.n[0] * half * 0.45 * lastSide),
-      across: Math.round(end.p[1] - end.n[1] * half * 0.45 * lastSide),
-    },
-  }
+  // NO PORTAL TO PLACE. A bay used to author one, at the end of its own road,
+  // and there was one per chapter. There is one per BOSS now and it stands
+  // beside his hull — see RETURN_PORTALS, which is derived from the raids
+  // rather than laid out here.
+  return { isles, ships, caches, beats }
 }
 
 /** -- CHAPTER II, up the bone coast -- */
@@ -758,61 +746,72 @@ export const ISLE_BY_ID: Record<string, RaidIsle> =
  * has no decisions in it: you have beaten the thing you came for, and every
  * rock between you and the wharf is scenery you have already read.
  *
- * So beating a bay's boss opens a way back at the far end of its own water. It
- * appears where you beat him, which is the point — the reward for the fight is
- * standing right there, and it is the shortest possible answer to "now what".
+ * ── ONE PER BOSS, AND IT STANDS WHERE HE WENT DOWN ─────────────────────────
  *
- * IT ONLY EVER GOES ONE WAY. Out is still sailed, every time, including on a
- * re-farm: the voyage out is the part with the water in it. This is the road
- * back, and a road back is not a shortcut to anywhere.
+ * Beating a raid opens a way back beside the hull you beat it on. Not one per
+ * BAY, which is what this was: a single mouth on the last stretch of each
+ * chapter's road, opened by that chapter's final raid.
  *
- * WHAT OPENS IT is derived, not declared: the last raid up that bay. Name the
- * boss twice and the two names drift, and the one that is wrong is the one
- * nobody looks at.
+ * That rule read well and played badly. Barnacle Pete is six thousand pixels up
+ * the Loose Thread and the chapter's way home sat at twelve hundred, opened by
+ * Krust — so a captain who had just beaten Pete, and who now had every reason
+ * to fight him again for his crate, had the whole road back and the whole road
+ * out for every single run. The portal was a reward for finishing a chapter
+ * when the thing that actually needs a road home is a boss you are FARMING.
+ *
+ * IT IS STILL EARNED AND IT STILL ONLY GOES ONE WAY. Nothing appears until you
+ * have put that particular hull on the seabed, and out is still sailed every
+ * time, including on a re-farm: the voyage out is the part with the water in
+ * it. This is the road back.
+ *
+ * DERIVED, NOT DECLARED. The list is the raids themselves, so a boss cannot
+ * ship without a way home and a way home cannot outlive its boss. Skirmishes
+ * are left out — the practice fight is not a place you farm — and the challenge
+ * variants are the same hull, so they share his.
  */
 export type ReturnPortal = {
+  /** The raid whose defeat opens it, and whose hull it stands beside. */
+  node: string
   bay: string
-  along: number
-  across: number
 }
-
-export const RETURN_PORTALS: ReturnPortal[] = [
-  // At the END OF THE LOOP, on the last stretch back toward the door. You have
-  // sailed the whole road by the time you reach it, which is the only moment a
-  // way home is a reward rather than a shortcut.
-  { bay: 'thread', along: 1200, across: 2200 },
-  // The laid bays put theirs at the end of their own road, for the same reason.
-  ...LAID.map(l => l.portal),
-]
 
 /**
- * THE FIGHT THAT OPENS A BAY'S WAY HOME: the LAST raid in the chain.
+ * ── WHERE IT SITS: BESIDE HER, IN WHATEVER WATER IS FREE ───────────────────
  *
- * It used to be the furthest one up the bay, which was true only while a bay
- * was a straight run. On a route that folds back, the second boss is NEARER the
- * door than the first — Krust stands at along 2,801 and Pete at 6,803 — so
- * "furthest up" picked the wrong man and would have opened the way home before
- * the chapter was finished.
+ * A single fixed offset was tried twice and cannot work. Off her starboard bow
+ * put the coda's mouth inside one of its own rocks (that bay's road is short
+ * and its isles sit 880px off the hull); due east and level cleared the coda
+ * and put Krust's inside thread-watch instead. The bays are laid differently on
+ * purpose, so one number cannot be right in all nine.
  *
- * Chain order cannot be wrong about this. RAID_MAP is the campaign, in order,
- * and the last of a bay's raids to appear in it is the one that ends the bay.
+ * So the portal LOOKS. It sweeps out from due east — away from the mooring,
+ * which is off her port quarter — taking the first spot that has room: inside
+ * the bay, clear of every rock in it, and far enough from any mooring that the
+ * helm never has to choose between "fight this again" and "go home" from one
+ * place.
+ *
+ * DETERMINISTIC, AND STILL DERIVED. The same nine answers every time, computed
+ * once, from the layout itself. Re-lay a bay and the portals move with it
+ * rather than needing nine numbers re-tuned by hand — which is the failure this
+ * whole file is arranged to avoid.
  */
-export function portalOpensOn(bayId: string): string | null {
-  let best: string | null = null
-  let bestAt = -1
-  for (const e of ENCOUNTERS) {
-    if (e.bay !== bayId) continue
-    const i = RAID_MAP.findIndex(n => n.id === e.node)
-    if (i < 0 || RAID_MAP[i].type !== 'raid') continue
-    if (i > bestAt) { bestAt = i; best = e.node }
-  }
-  return best
-}
+const PORTAL_RINGS = [720, 980, 1240]
+/** Swept out from due east, alternating sides, so the answer is as close to
+ *  "level, beside her" as the water allows. */
+const PORTAL_ARC = [0, -26, 26, -52, 52, -78, 78, -104, 104, -130, 130]
+
+export const RETURN_PORTALS: ReturnPortal[] = ENCOUNTERS
+  .filter(e => {
+    const n = RAID_MAP.find(x => x.id === e.node)
+    return n?.type === 'raid'
+  })
+  .map(e => ({ node: e.node, bay: e.bay }))
+
+const ENC_BY_NODE: Record<string, Encounter> =
+  Object.fromEntries(ENCOUNTERS.map(e => [e.node, e]))
 
 export function portalOpen(pt: ReturnPortal, cleared: Set<string> | string[]): boolean {
-  const gate = portalOpensOn(pt.bay)
-  if (!gate) return false
-  return Array.isArray(cleared) ? cleared.includes(gate) : cleared.has(gate)
+  return Array.isArray(cleared) ? cleared.includes(pt.node) : cleared.has(pt.node)
 }
 
 /**
@@ -877,7 +876,57 @@ export const PORTAL_HOME = { x: 0, y: -6950 }
  *  it is wider than a chest and narrower than a ship's hail. */
 export const PORTAL_REACH = 340
 
-export function portalAt(pt: ReturnPortal) { return placeIn(pt.bay, pt.along, pt.across) }
+/**
+ * COMPUTED ONCE, ON FIRST ASK.
+ *
+ * Not at module load: the search reads DOCK and ENCOUNTER_REACH, which are
+ * declared further down this file, and a `const` read before its initialiser
+ * throws. By the time anything asks for a portal the module is built.
+ */
+let PORTAL_POS: Record<string, { x: number; y: number }> | null = null
+
+function findPortals(): Record<string, { x: number; y: number }> {
+  const out: Record<string, { x: number; y: number }> = {}
+  for (const pt of RETURN_PORTALS) {
+    const e = ENC_BY_NODE[pt.node]
+    const hull = e ? encounterAt(e) : null
+    const b = BAY_BY_ID[pt.bay]
+    if (!hull || !b) continue
+
+    // Every mooring in this bay, so a mouth never lands on the spot you stand
+    // to fight from — anyone's, not only this boss's.
+    const docks = ENCOUNTERS.filter(x => x.bay === pt.bay)
+      .map(x => dockAt(x)).filter((d): d is { x: number; y: number } => !!d)
+    const rocks = RAID_ISLES.filter(i => i.bay === pt.bay)
+      .map(i => ({ at: isleAt(i), r: i.r }))
+      .filter((i): i is { at: { x: number; y: number }; r: number } => !!i.at)
+
+    let best: { x: number; y: number } | null = null
+    for (const r of PORTAL_RINGS) {
+      for (const deg of PORTAL_ARC) {
+        const a = (deg * Math.PI) / 180
+        const q = { x: hull.x + Math.cos(a) * r, y: hull.y + Math.sin(a) * r }
+        const { along, across } = toBay(b, q.x, q.y)
+        if (b.r - Math.hypot(along - b.r, across) <= PORTAL_REACH) continue
+        if (rocks.some(i => Math.hypot(i.at.x - q.x, i.at.y - q.y) - i.r - PORTAL_REACH < 0)) continue
+        if (docks.some(d => Math.hypot(d.x - q.x, d.y - q.y) < PORTAL_REACH + ENCOUNTER_REACH)) continue
+        best = q
+        break
+      }
+      if (best) break
+    }
+    // NEVER NOTHING. A boss with no room anywhere still gets a mouth beside her
+    // rather than a way home that silently does not exist; the checker is what
+    // says the layout has gone wrong, not a missing portal at sea.
+    out[pt.node] = best ?? { x: hull.x + PORTAL_RINGS[0], y: hull.y }
+  }
+  return out
+}
+
+export function portalAt(pt: ReturnPortal): { x: number; y: number } | null {
+  if (!PORTAL_POS) PORTAL_POS = findPortals()
+  return PORTAL_POS[pt.node] ?? null
+}
 
 export function portalNear(x: number, y: number): ReturnPortal | null {
   let best: ReturnPortal | null = null

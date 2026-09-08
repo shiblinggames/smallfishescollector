@@ -1628,6 +1628,36 @@ to a new place mid-read and makes the panel feel like it is arguing with you. Th
 child needs `minHeight: 0` or it grows to its content and pushes the box open anyway, which
 is the exact failure the fixed height exists to prevent.
 
+## The way home is one per BOSS
+
+**Beating a raid opens a way back beside the hull you beat it on.** It used to be one per BAY,
+opened by that chapter's last raid — a rule that read well and played badly. Barnacle Pete is
+6,800px up the Loose Thread and the chapter's portal sat at 1,200, opened by Krust, so a
+captain who had just beaten Pete (and now had every reason to fight him again for his crate)
+sailed the whole road back and the whole road out on every run. A portal is a reward for
+finishing a chapter; the thing that actually needs a road home is a boss you are FARMING.
+
+- **`RETURN_PORTALS` is derived from the raids**, so a boss cannot ship without a way home and
+  a way home cannot outlive its boss. Skirmishes are excluded (the practice fight is not
+  farmed) and challenge variants share their boss's, being the same hull.
+- **Still earned, still one-way.** Nothing appears until you have sunk that particular hull,
+  and out is sailed every time including on a re-farm — the voyage out is the part with the
+  water in it.
+- **The portal LOOKS for its water.** One fixed offset was tried twice and cannot work: off
+  her starboard bow put the coda's mouth inside its own rock, due east put Krust's inside
+  thread-watch. The bays are laid differently on purpose. `findPortals` sweeps out from due
+  east (away from the mooring, which is off her port quarter) over three radii, taking the
+  first spot inside the bay, clear of every rock in it, and `PORTAL_REACH + ENCOUNTER_REACH`
+  from any mooring. Deterministic, computed once, and it moves when a bay is re-laid.
+- **`check-islands` proves all nine**, including the gap to their own moorings.
+
+**And the landing check was testing the old design.** It measured `PORTAL_HOME` against the
+HARBOUR and had been failing for months, correctly reporting a rule that had stopped being the
+rule: the way home lands at the WARGATE'S FEET now, out in the junction, 3,950 from the
+harbour's centre against its 3,600 rim. It checks what has to be true instead — inside the
+hub's disc, outside the gate's own reach (arriving in a portal opens its sheet), clear of every
+berth.
+
 ## The way on, drawn on the sea
 
 **When a clear opens something, a short run of gold chevrons is laid on the water** from

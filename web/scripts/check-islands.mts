@@ -309,7 +309,7 @@ if (bad) process.exitCode = 1
     BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, ISLE_BY_ID,
     encounterAt, ENCOUNTER_REACH, CACHE_REACH, opensBay,
     dockAt, isleAt, bayCentre, inChapterWater,
-    RETURN_PORTALS, PORTAL_REACH, PORTAL_HOME, portalOpensOn,
+    RETURN_PORTALS, PORTAL_REACH, PORTAL_HOME, portalAt, toBay,
   } = await import('../app/(app)/sea/raidWaters')
   const { RAID_MAP } = await import('../lib/raidMap')
 
@@ -524,39 +524,68 @@ if (bad) process.exitCode = 1
   for (const pt of RETURN_PORTALS) {
     const b = BAY_BY_ID[pt.bay]
     if (!b) { console.error(`  ✗ a way home is in bay '${pt.bay}', which does not exist`); bad++; continue }
-    const boss = portalOpensOn(pt.bay)
-    if (!boss) { console.error(`  ✗ ${b.name}'s way home has no raid to open it`); bad++; continue }
+    const p = portalAt(pt)
+    if (!p) { console.error(`  ✗ ${pt.node}'s way home has no hull to stand beside`); bad++; continue }
+    const { along, across } = toBay(b, p.x, p.y)
+
     /**
-     * NO "IS IT BEHIND THE BOSS" TEST ANY MORE, and it was not merely failing,
-     * it was measuring the wrong thing.
+     * WHAT IS WORTH CHECKING NOW THAT THERE IS ONE PER BOSS.
      *
-     * It compared `along`, which was a real ordering while a bay was a straight
-     * run out. On a road that folds back it is not: Krust ends the chapter at
-     * along 2,801 and Pete opens it at 6,803, so the second boss is NEARER the
-     * door than the first and every honest layout would fail.
+     * Not "is it behind the fight" — it never was that test's job. The portal
+     * is only drawn, and only usable, once its own boss is cleared, so
+     * position was never what stopped it being a shortcut, `portalOpen` was.
      *
-     * And the thing it was guarding against cannot happen anyway. The portal is
-     * only drawn, and only usable, once its boss is cleared — position was never
-     * what stopped it being a shortcut, `portalOpen` was. What is left to check
-     * is that it is somewhere a hull can actually float.
+     * What CAN go wrong is placement, and it can go wrong nine times now
+     * instead of five: a hull near the coast puts its portal in the rock, a
+     * hull near an isle puts it on the chest, and a portal too close to that
+     * hull's own mooring makes the helm choose between fighting and leaving
+     * from one spot.
      */
-    const room = b.r - Math.hypot(pt.along - b.r, pt.across)
+    const room = b.r - Math.hypot(along - b.r, across)
     let ok = room > PORTAL_REACH
     for (const t of things) {
       if (t.bay !== pt.bay) continue
-      const d = Math.hypot(t.along - pt.along, t.across - pt.across) - t.r - PORTAL_REACH
-      if (d < 0) { console.error(`  ✗ ${b.name}'s way home overlaps ${t.id}`); ok = false }
+      const d = Math.hypot(t.along - along, t.across - across) - t.r - PORTAL_REACH
+      if (d < 0) { console.error(`  ✗ ${pt.node}'s way home overlaps ${t.id}`); ok = false }
+    }
+    const enc = ENCOUNTERS.find(e => e.node === pt.node)
+    const dock = enc ? dockAt(enc) : null
+    const gap = dock ? Math.hypot(dock.x - p.x, dock.y - p.y) : Infinity
+    if (gap < PORTAL_REACH + ENCOUNTER_REACH) {
+      console.error(`  ✗ ${pt.node}'s way home is ${gap.toFixed(0)}px from its own mooring,`
+        + ` inside the ${PORTAL_REACH + ENCOUNTER_REACH} the two reaches need`)
+      ok = false
     }
     if (!ok) bad++
-    console.log(`    ${ok ? 'ok  ' : 'OFF '} home    ${pt.bay.padEnd(18)} opens on ${boss.padEnd(10)}`
-      + ` ${pt.along}px up, ${room.toFixed(0)}px off the coast`)
+    console.log(`    ${ok ? 'ok  ' : 'OFF '} home    ${pt.node.padEnd(18)} in ${pt.bay.padEnd(14)}`
+      + ` ${room.toFixed(0)}px off the coast, ${gap.toFixed(0)}px off its mooring`)
   }
 
   {
-    const { PLACES, EXP_ORIGIN, EXP_EDGE } = await import('../app/(app)/sea/chart')
-    const fromHarbour = Math.hypot(PORTAL_HOME.x - EXP_ORIGIN.x, PORTAL_HOME.y - EXP_ORIGIN.y)
-    let ok = fromHarbour < EXP_EDGE - 200
-    if (!ok) console.error(`  ✗ the way home lands ${fromHarbour.toFixed(0)}px out, past the harbour's ${EXP_EDGE}`)
+    /**
+     * ── WHERE THE WAY HOME PUTS YOU DOWN ──────────────────────────────────
+     *
+     * This measured the landing against the HARBOUR and had been red for
+     * months, correctly reporting a rule that had stopped being the rule. The
+     * way home used to land you off the Gunwharf, inside the anchorage; it
+     * lands at the WARGATE'S FEET now, which is out in the junction — 3,950
+     * from the harbour's centre against a 3,600 rim, and rightly so.
+     *
+     * What actually has to be true of that spot: it is water you can float in
+     * (inside the hub's disc), it is not INSIDE the gate (arriving in a portal
+     * opens its sheet, and being handed a screen you did not ask for is not an
+     * arrival), and it is clear of every berth for the same reason.
+     */
+    const { PLACES } = await import('../app/(app)/sea/chart')
+    const { WARGATE, WARGATE_REACH, HUB, HUB_R } = await import('../app/(app)/sea/raidWaters')
+    const fromHub = Math.hypot(PORTAL_HOME.x - HUB.x, PORTAL_HOME.y - HUB.y)
+    let ok = fromHub < HUB_R - 200
+    if (!ok) console.error(`  ✗ the way home lands ${fromHub.toFixed(0)}px out, past the junction's ${HUB_R}`)
+    const fromGate = Math.hypot(PORTAL_HOME.x - WARGATE.x, PORTAL_HOME.y - WARGATE.y)
+    if (fromGate <= WARGATE_REACH) {
+      console.error(`  ✗ the way home lands INSIDE the Wargate (${fromGate.toFixed(0)}px, reach ${WARGATE_REACH})`)
+      ok = false
+    }
     let nearest = Infinity, who = ''
     for (const p of PLACES) {
       if (p.kind !== 'port' || p.y > -1500) continue
@@ -566,7 +595,8 @@ if (bad) process.exitCode = 1
     }
     if (!ok) bad++
     console.log(`    ${ok ? 'ok  ' : 'OFF '} landing ${`${PORTAL_HOME.x},${PORTAL_HOME.y}`.padEnd(18)}`
-      + ` ${fromHarbour.toFixed(0)}px into the harbour, ${nearest.toFixed(0)}px off ${who}`)
+      + ` ${fromHub.toFixed(0)}px into the junction, ${fromGate.toFixed(0)}px off the gate,`
+      + ` ${nearest.toFixed(0)}px off ${who}`)
   }
 
   console.log(`\n  In the water: ${bad === 0 ? 'all placed cleanly' : `${bad} problem(s)`}.`)

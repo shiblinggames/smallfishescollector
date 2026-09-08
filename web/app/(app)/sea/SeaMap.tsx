@@ -11675,12 +11675,28 @@ const DockMark = memo(function DockMark({ enc, isNear }: {
       // is not squashed is a hoop standing up out of the sea.
       transform: `scaleY(${GROUND})`,
       borderRadius: '50%',
+      // ── IT IS LIGHT ON THE WATER, NOT A RING DRAWN ON IT ──────────────
+      //
+      // This was a 2px hard-edged ellipse with a flat wash inside it, and it
+      // read exactly as what it was: a shape stroked onto the sea, with the
+      // ship parked on top rather than floating in it. Nothing else on this
+      // chart has an outline — the hulls, the rocks, the hotspots and the
+      // shoals are all edges made of paint running out.
+      //
+      // So the ring goes and the light stays. Three stops rather than two,
+      // brightest just inside the rim (the way a lit patch of water actually
+      // reads, since the middle is under the boat) and gone entirely by the
+      // edge, so there is no line anywhere for the eye to catch on. What told
+      // you the mooring was armed was the gold, not the stroke.
       background: isNear
-        ? 'radial-gradient(circle, rgba(240,192,64,0.20) 0%, rgba(240,192,64,0.10) 58%, transparent 76%)'
-        : 'radial-gradient(circle, rgba(190,214,232,0.09) 0%, rgba(190,214,232,0.05) 58%, transparent 76%)',
+        ? 'radial-gradient(circle, rgba(240,192,64,0.13) 0%, rgba(240,192,64,0.22) 62%, rgba(240,192,64,0.16) 82%, rgba(240,192,64,0) 100%)'
+        : 'radial-gradient(circle, rgba(190,214,232,0.05) 0%, rgba(190,214,232,0.09) 62%, rgba(190,214,232,0.06) 82%, rgba(190,214,232,0) 100%)',
+      // AND THE HULL SITS IN IT. A hair of dark right under the boat, which is
+      // the shadow a hull puts on lit water, so she reads as standing in the
+      // patch rather than on a decal of one.
       boxShadow: isNear
-        ? 'inset 0 0 0 2px rgba(240,192,64,0.55)'
-        : 'inset 0 0 0 2px rgba(190,214,232,0.20)',
+        ? 'inset 0 0 60px 10px rgba(240,192,64,0.10), inset 0 0 26px rgba(6,12,18,0.28)'
+        : 'inset 0 0 26px rgba(6,12,18,0.22)',
       transition: 'background 180ms ease, box-shadow 180ms ease',
     }} />
   )
