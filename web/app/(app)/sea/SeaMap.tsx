@@ -4133,16 +4133,61 @@ export default function SeaMap({
    *  you in it. */
   const gpuBerths = useMemo<BerthSpec[]>(() => {
     if (!GPU_ISLANDS) return []
-    return PLACES.filter(p => p.kind === 'port').map(p => {
-      const b = berthOf(p)
-      return {
-        id: p.id, x: b.x, y: b.y, r: b.r,
-        // Which way the dock is from the berth — the approach lights run toward
-        // it, which is the one thing a symmetric circle cannot tell you.
-        bearing: Math.atan2(p.y - b.y, p.x - b.x),
-      }
-    })
+    return [
+      ...PLACES.filter(p => p.kind === 'port').map(p => {
+        const b = berthOf(p)
+        return {
+          id: p.id, x: b.x, y: b.y, r: b.r,
+          // Which way the dock is from the berth — the approach lights run toward
+          // it, which is the one thing a symmetric circle cannot tell you.
+          bearing: Math.atan2(p.y - b.y, p.x - b.x),
+        }
+      }),
+      // ── AND EVERY MOORING OUT IN THE BAYS ─────────────────────────────
+      //
+      // The place you stand to take a boss on was a DOM ring, and a DOM mark
+      // paints over this canvas — which is to say over the HULL. The ship sat
+      // under her own mooring instead of in it. The Wargate hit exactly this
+      // and was moved into the canvas for exactly this reason; a berth is the
+      // same object with a warmer light, and it is already down here under the
+      // boats.
+      //
+      // All of them, once. They are static, they are culled by the viewport
+      // like every other berth, and the layer lights whichever one you are
+      // actually standing in.
+      ...ENCOUNTERS.map(e => {
+        const d = dockAt(e)
+        const at = encounterAt(e)
+        return d && at
+          ? { id: `dock:${e.node}`, x: d.x, y: d.y, r: ENCOUNTER_REACH,
+              // The lights run toward the hull you are here to fight.
+              bearing: Math.atan2(at.y - d.y, at.x - d.x) }
+          : null
+      }).filter((b): b is BerthSpec => b !== null),
+    ]
   }, [])
+
+  /**
+   * ── EVERY WAY HOME THAT IS OPEN ────────────────────────────────────────
+   *
+   * As wells on the canvas rather than rings in the DOM — see the note on the
+   * prop. Only the ones you have EARNED: a mouth beside a boss you have not
+   * beaten would be a way out of a fight you have not had.
+   *
+   * Keyed on the cleared set, so the beat a boss goes down the well is there.
+   * The blue is the sea's own cold light rather than a band's accent: this one
+   * always goes to the same place.
+   */
+  const gpuHomes = useMemo(() => {
+    if (!GPU_ISLANDS) return []
+    return RETURN_PORTALS
+      .filter(pt => wayHomeOpen(pt, liveCleared))
+      .map(pt => {
+        const at = portalAt(pt)
+        return at ? { x: at.x, y: at.y, r: PORTAL_REACH, accent: 0x96d6ff, tier: 4 } : null
+      })
+      .filter((w): w is { x: number; y: number; r: number; accent: number; tier: number } => w !== null)
+  }, [liveCleared])
 
   const gpuFleet = useMemo(() => {
     if (!GPU_ISLANDS) return []
@@ -7206,6 +7251,12 @@ export default function SeaMap({
         const encRaw = encounterNear(pos.current.x, pos.current.y)
         const enc = encRaw && shownRef.current(encRaw.node) ? encRaw : null
         setNearEnc(prev => (prev?.node === enc?.node ? prev : enc))
+        // AND THE MOORING LIGHTS UP. The berth call above this ran before `enc`
+        // was known and only ever knew about ports; a boss's mooring is a berth
+        // too now (see gpuBerths), so it takes the slot when you are in one.
+        // Same tick, last write wins, and stepping out of it is the port call
+        // above setting null.
+        if (enc) gpuRef.current?.berth(`dock:${enc.node}`)
 
         // AND THE CAMPAIGN'S CHESTS, which sit on the rocks. Tighter reach than
         // a ship and measured off the rock's edge: you pull up beside a chest,
@@ -7334,7 +7385,7 @@ export default function SeaMap({
           position: 'absolute', inset: 0, zIndex: Z.backdrop, pointerEvents: 'none',
         }}>
           <SeaIslandsGPU islands={gpuIslands} marks={gpuMarks} captain={gpuCaptain}
-            ship={gpuShip} fleet={gpuFleet} berths={gpuBerths} portal={gpuPortal} towns={gpuTowns}
+            ship={gpuShip} fleet={gpuFleet} berths={gpuBerths} portal={gpuPortal} homes={gpuHomes} towns={gpuTowns}
             occluders={gpuOccluders} handle={gpuRef} />
         </div>
       )}
@@ -11660,12 +11711,24 @@ const NodeReveal = memo(function NodeReveal({ x, y, children }: {
   )
 })
 
+/**
+ * ── THE MOORING, ON THE FALLBACK CHART ONLY ─────────────────────────────────
+ *
+ * The canvas draws this as a BERTH now (see gpuBerths) — the same object every
+ * island's mooring already is, in the same layer, under the boats. It had to
+ * move: a DOM mark paints over the canvas, which is to say over the hull, so
+ * the ship sat under her own mooring rather than in it. The Wargate was moved
+ * for exactly this reason and this is the same fix.
+ *
+ * What is left here is the `?gpu=0` chart, where the hull is a DOM element too
+ * and the old ordering is honest.
+ */
 const DockMark = memo(function DockMark({ enc, isNear }: {
   enc: Encounter
   isNear: boolean
 }) {
   const at = dockAt(enc)
-  if (!at) return null
+  if (!at || GPU_ISLANDS) return null
   const r = ENCOUNTER_REACH
   return (
     <div aria-hidden style={{
@@ -12030,12 +12093,20 @@ const BeatMark = memo(function BeatMark({ beat, status, isNear, isNext }: {
  * work toward, it is what the fight leaves behind, and a greyed-out one would
  * turn a reward into a chore you can see from the start.
  */
+/**
+ * ── THE WAY HOME, ON THE FALLBACK CHART ONLY ────────────────────────────────
+ *
+ * Same story as DockMark: the canvas has a well for every open one (see
+ * `homes`), down in the world layer under the boats, because a DOM ring painted
+ * over the hull and made the mouth look like it was on top of the ship rather
+ * than in the water she is floating on.
+ */
 const WayHomeMark = memo(function WayHomeMark({ pt, isNear }: {
   pt: ReturnPortal
   isNear: boolean
 }) {
   const at = portalAt(pt)
-  if (!at) return null
+  if (!at || GPU_ISLANDS) return null
   const d = PORTAL_REACH * 1.5
 
   return (

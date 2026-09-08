@@ -269,7 +269,7 @@ export type GpuHandle = {
 }
 
 export default function SeaIslandsGPU({
-  islands, marks, captain, ship, fleet, berths, portal, towns, occluders, handle,
+  islands, marks, captain, ship, fleet, berths, portal, homes, towns, occluders, handle,
 }: {
   islands: GpuIsland[]
   marks: GpuMark[]
@@ -285,6 +285,15 @@ export default function SeaIslandsGPU({
   berths: BerthSpec[]
   /** The homestead portal, as a place on the water. One per chart. */
   portal: PortalWellSpec
+  /**
+   * EVERY WAY HOME THAT IS OPEN, one beside each boss you have beaten.
+   *
+   * Wells, like the portal and the Wargate, and down here for the same reason
+   * both of those are: a DOM ring paints over this canvas, which is to say over
+   * the hull, and the mouth ends up sitting on the ship instead of being water
+   * she is floating on.
+   */
+  homes: PortalWellSpec[]
   /** The tall scenery that can stand between the camera and the hull. Static,
    *  and a subset of `marks` — see the note where the front pass is built. */
   occluders: GpuMark[]
@@ -318,6 +327,14 @@ export default function SeaIslandsGPU({
   lookRef.current = captain
   const shipRef = useRef(ship)
   shipRef.current = ship
+  /** Every way home that is currently open, as wells. See buildHomes. */
+  const homesRef = useRef(homes)
+  homesRef.current = homes
+  const rebuildHomesRef = useRef<(() => void) | null>(null)
+  // A boss going down opens one. The signature rather than the array, so a
+  // re-render that hands over an identical list rebuilds nothing.
+  const homesKey = homes.map((h: PortalWellSpec) => `${h.x},${h.y}`).join('|')
+  useEffect(() => { rebuildHomesRef.current?.() }, [homesKey])
   const fleetRef = useRef(fleet)
   fleetRef.current = fleet
   const crewRef = useRef(new Map<string, {
@@ -529,6 +546,30 @@ export default function SeaIslandsGPU({
         x: WARGATE.x, y: WARGATE.y, r: WARGATE_REACH, accent: 0xf0c040, tier: 5,
       })
       world.addChild(wargateWell.view)
+
+      // ── AND EVERY WAY HOME, WHICH IS THE SAME OBJECT AGAIN ────────
+      //
+      // One beside every boss you have beaten. They were DOM rings and had the
+      // Wargate's exact problem: a DOM mark paints over this canvas, so the
+      // mouth sat on top of the ship instead of being water she floats on. Same
+      // container, same layer, under the boats.
+      //
+      // Rebuilt when the LIST changes, which is when a boss goes down — rare
+      // enough to cost nothing, and simpler than teaching a pool of wells to
+      // move. Culled by the viewport like the other two.
+      const homesLayer: import('pixi.js').Container = new PIXI.Container()
+      world.addChild(homesLayer)
+      let homeWells: PortalWell[] = []
+      const buildHomes = () => {
+        for (const w of homeWells) w.destroy()
+        homeWells = homesRef.current.map((spec: PortalWellSpec) => {
+          const w = makePortalWell(PIXI, spec)
+          homesLayer.addChild(w.view)
+          return w
+        })
+      }
+      buildHomes()
+      rebuildHomesRef.current = buildHomes
 
       // ── AND WHAT SHE LEAVES BEHIND ────────────────────────────────
       // In the world for the same reason the flecks are: a wake that travels
@@ -1134,6 +1175,7 @@ export default function SeaIslandsGPU({
         berthLayer.advance(t, dt, camX, camY, halfW, halfH)
         portalWell.advance(t, dt, camX, camY, halfW, halfH)
         wargateWell.advance(t, dt, camX, camY, halfW, halfH)
+      for (const w of homeWells) w.advance(t, dt, camX, camY, halfW, halfH)
         wake.advance(dt)
         maelstroms.advance(t, dt, camX, camY, halfW, halfH)
         guide.advance(t)
@@ -1311,6 +1353,7 @@ export default function SeaIslandsGPU({
           // not a lamp and it should not stay bright when nothing else is.
           portalWell.night(tint)
           wargateWell.night(tint)
+      for (const w of homeWells) w.night(tint)
           // The buildings take the hour at the same strength the land does —
           // they are standing on it. The second number is the town's own lights
           // coming up, which is the one thing on the chart that gets BRIGHTER
