@@ -246,16 +246,35 @@ RaidCombat lifts each side's overlays by what its anchor means.
 
 **The veil between screens.** `setPhase` in GauntletGame is a wrapper: a
 change between two screens of a live run (`RUN_PHASES`) calls `playVeil()`,
-a STILL dark overlay appended to `document.body` (Web Animations API) that
-fades in over ~240ms, holds ~260ms while the phase commits under it (and
-`window.scrollTo(0,0)` runs under it, so a tall screen never opens scrolled and
-jumps), and lifts over ~480ms. The hold is long enough for the incoming
-screen's own entrances to play under the veil. Outside React on purpose, so it
-cannot depend on any wrapper surviving the switch. Reduced motion, or no
-`document`, commits at once. Every in-run phase also renders inside one
-module-level `Screen` (second child, after the arena), which is a PLAIN
-wrapper: a cross-fade under the veil fought it (a beat of empty water and a
-second easing on the same moment) and was removed. One thing moves.
+a STILL overlay appended to `document.body` (Web Animations API) that dips the
+light and brings it back. It eases down over ~360ms, holds ~110ms while the
+phase commits under it (and `window.scrollTo(0,0)` runs under it, so a tall
+screen never opens scrolled and jumps), and lifts over ~700ms. Outside React on
+purpose, so it cannot depend on any wrapper surviving the switch. Reduced
+motion, or no `document`, commits at once.
+
+Two rules the veil earned the hard way:
+
+- **It does not go to black.** It stops at `VEIL_DEPTH` 0.8, over a gradient
+  that is thinnest above the middle of the water and carries the run's own
+  tint, so the arena stays faintly visible underneath. The arena is the one
+  thing continuous across every screen of a dive; blacking it out twenty times
+  a run threw that away, and read as a fade to black on every menu.
+- **The screen comes up WITH the light, it is not revealed by it.** The hold
+  used to be long enough for the incoming screen to finish all its entrances
+  underneath, so the light came back on a screen that was already still, which
+  is a hard cut with a fade in front of it. The module-level `Screen` wrapper
+  (second child, after the arena) now runs one entrance keyed to the screen,
+  opacity 0 to 1 over `SCREEN_FADE_MS` (the hold plus the lift), starting when
+  the phase commits at the bottom of the dip. No `AnimatePresence` and no exit:
+  an exit left a beat of empty water, which is what read as jank the first
+  time. Opacity only, never a transform, or every fixed overlay inside it
+  breaks.
+
+**The hull is on the water only in a fight or a sinking.** `showHull` in
+GauntletArena is `mood === 'fight' || mood === 'dead'`. The descent screen is
+the sea swallowing a depth number and the breather is a log and a dock; a hull
+parked in the middle of either read as a picture of a ship rather than a ship.
 
 **Why the arena did not persist, and the water was a photograph (fixed 2026-09-07).**
 GauntletGame's root wrapped every non-fight phase in an `AnimatePresence` keyed on the phase

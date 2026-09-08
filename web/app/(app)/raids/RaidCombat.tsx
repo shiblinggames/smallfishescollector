@@ -3599,8 +3599,8 @@ export default function RaidCombat({
     // fires only after that (SUMMON_LEAD_MS) on a clear stage, and a plain
     // tap-guard keeps blocking input across the whole window until it resolves.
     // SUMMON_TOTAL_MS is module-level now (playStep plays enemy summons too).
-    const SUMMON_LEAD_MS  = 2140   // effect begins after the summon is fully gone
-    const GUARD_MS        = 2320   // plain tap-blocker lifetime (covers the effect)
+    const SUMMON_LEAD_MS  = SUMMON_TOTAL_MS + 180   // effect begins after the summon is fully gone
+    const GUARD_MS        = SUMMON_TOTAL_MS + 360   // plain tap-blocker lifetime (covers the effect)
     setSummonGuard(true)
     setTimeout(() => setSummonGuard(false), GUARD_MS)
     const castKey = Date.now()
@@ -11958,15 +11958,21 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
 // nothing should re-render it. Without this, a rapid burst of parent setState
 // during the deferred effect (e.g. Mako's Frenzy chain) re-renders this and
 // restarts its keyframe animations — the crew art visibly fades then pops back.
-// How long a summon splash lives, player-cast or enemy-cast.
-const SUMMON_TOTAL_MS = 1960
+// How long a summon splash lives, player-cast or enemy-cast. The crew art was
+// fully up for barely a second before it started leaving, which is not long
+// enough to look at the thing you summoned. The hold is the point of a summon;
+// everything else is the arrival and the departure around it.
+const SUMMON_TOTAL_MS = 2600
 
 const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: string; name: string; color: string; image: string | null; chase?: boolean; skinId?: string | null }) {
   // One ~1.45s pass: fast fade-in, a long hold, then fade-out (matches
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
   // behind a smaller portrait, a white impact flash lands on arrival, and the
   // ABILITY NAME slams up huge underneath so it reads as an RPG summon.
-  const HOLD: number[] = [0, 0.09, 0.78, 0.9]   // transform-settle timing (opacity is driven by the wrapper below)
+  // One 2.6s pass. Fractions, not seconds, so every piece below shares one
+  // clock: arrival, then a long hold on the crew, then a slow departure.
+  const DUR = SUMMON_TOTAL_MS / 1000
+  const HOLD: number[] = [0, 0.08, 0.84, 0.94]   // transform-settle timing (opacity is driven by the wrapper below)
   return (
     <motion.div
       aria-hidden
@@ -11989,7 +11995,7 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
         // as the scene arriving; the crew picker's exit (0.14s) tucks inside
         // it, so the menu hands off to the summon instead of cutting to it.
         animate={{ opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 2.1, times: [0, 0.09, 0.72, 0.97], ease: 'easeInOut' }}
+        transition={{ duration: DUR, times: [0, 0.07, 0.85, 1], ease: 'easeInOut' }}
         style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
       >
       {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
@@ -11998,8 +12004,8 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
       {/* Rotating light rays fanning out behind the crew (conic gradient). */}
       <motion.div
         initial={{ scale: 0.4, rotate: -30 }}
-        animate={{ scale: [0.4, 1.1, 1.15, 1.2], rotate: [-30, 20, 40, 55] }}
-        transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
+        animate={{ scale: [0.4, 1.1, 1.18, 1.24], rotate: [-30, 20, 46, 64] }}
+        transition={{ duration: DUR, times: HOLD, ease: 'easeOut' }}
         style={{
           position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%', opacity: 0.36,
           background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}3a 9deg, ${color}00 20deg)`,
@@ -12011,8 +12017,8 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
       {[{ d: 300, dir: 1, dash: '14 12', w: 2 }, { d: 240, dir: -1, dash: '4 16', w: 3 }].map((r, i) => (
         <motion.div key={`ring-${i}`}
           initial={{ scale: 0.3, rotate: 0 }}
-          animate={{ scale: [0.3, 1, 1, 1.08], rotate: r.dir * 90 }}
-          transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
+          animate={{ scale: [0.3, 1, 1, 1.08], rotate: r.dir * 108 }}
+          transition={{ duration: DUR, times: HOLD, ease: 'easeOut' }}
           style={{
             position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%', opacity: 0.6,
             border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, willChange: 'transform', pointerEvents: 'none',
@@ -12107,7 +12113,10 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
             'blur(10px) brightness(1.5)',
           ],
         }}
-        transition={{ duration: 2.1, times: [0, 0.21, 0.72, 0.97], ease: [0.22, 0.8, 0.32, 1] }}
+        // IN by ~0.44s, HELD to ~2.16s, gone by 2.6s. The hold nearly doubles:
+        // you get a beat to actually see the crew standing there before the
+        // light takes them back.
+        transition={{ duration: DUR, times: [0, 0.17, 0.83, 1], ease: [0.22, 0.8, 0.32, 1] }}
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
         {image ? (
@@ -12130,7 +12139,7 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
       <motion.div
         initial={{ y: 14 }}
         animate={{ y: [14, 0, 0, 0] }}
-        transition={{ duration: 2.1, times: [0, 0.14, 0.78, 0.9], ease: 'easeOut' }}
+        transition={{ duration: DUR, times: [0, 0.11, 0.84, 0.94], ease: 'easeOut' }}
         style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
       >
         <p className="font-karla font-700 uppercase tracking-[0.32em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{name}</p>
