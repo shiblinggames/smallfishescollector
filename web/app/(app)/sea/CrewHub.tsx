@@ -46,6 +46,7 @@ import { vibrate } from '@/lib/haptics'
 import { crewHub, type CrewHubState, type HubCrew } from './crewHubActions'
 import { getCrewState } from '@/app/(app)/crew/actions'
 import type { CrewState } from '@/app/(app)/crew/actions'
+import { CREW_SKINS } from '@/lib/crewSkins'
 
 /**
  * THE HALL'S WHOLE SELF, FETCHED ONLY WHEN A DOOR IS OPENED.
@@ -64,11 +65,24 @@ const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts
  *  read anywhere in this game has always been read by this ring. */
 const RARITY = ['rgba(150,160,170,0.7)', 'rgba(90,180,220,0.8)', 'rgba(180,120,230,0.85)', 'rgba(240,192,64,0.95)']
 
+/**
+ * ── FOUR THINGS A HAND CAN BE DOING, AND ONE THING THEY CAN NOT ────────────
+ *
+ * "In the hall" used to be the last group and it meant two different things at
+ * once: somebody TRAINING in the Crew Hall, and somebody doing nothing at all.
+ * Those are the two states a captain most needs to tell apart — one is working
+ * and one is a berth going to waste — and there is a real Crew Hall on the
+ * chart, so the phrase read as a place rather than as a state.
+ *
+ * Training is its own group with its own clock now, and the idle are Inactive,
+ * which is a word about them rather than about a building.
+ */
 const GROUPS = [
   { key: 'trawl' as const, title: 'Out on the trawls' },
   { key: 'voyage' as const, title: 'Away on the voyage' },
   { key: 'raid' as const, title: 'Aboard for the raid' },
-  { key: 'hall' as const, title: 'In the hall' },
+  { key: 'bunk' as const, title: 'Training in the Crew Hall' },
+  { key: 'hall' as const, title: 'Inactive' },
 ]
 
 type Section = 'assign' | 'roster' | 'recruits' | 'wardrobe'
@@ -105,7 +119,7 @@ function backIn(iso: string, now: number): string {
 }
 
 export default function CrewHub({
-  open, onClose, onTrawls, onVoyage, openCard = null,
+  open, onClose, openCard = null,
 }: {
   open: boolean
   /** A room to open straight into, when a link named one. The retired /crew
@@ -114,15 +128,24 @@ export default function CrewHub({
    *  following one. */
   openCard?: Section | null
   onClose: () => void
-  /** Show the trawls that are out. Null when none are, and the row then says so
-   *  rather than opening an empty panel. */
-  onTrawls: (() => void) | null
-  onVoyage: () => void
 }) {
   const [state, setState] = useState<CrewHubState | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [rollOpen, setRollOpen] = useState(false)
+  /**
+   * THE BOARD HAS BEEN LOOKED AT.
+   *
+   * The dot means "there is something here you have not dealt with", and once
+   * you have opened Recruit and read the faces, you have dealt with it — you
+   * either signed somebody on or decided not to. Leaving it lit until the board
+   * is EMPTY makes it a badge for "you did not recruit today", which is nagging
+   * rather than telling.
+   *
+   * Session-only on purpose. It is not worth a profile column: the board rolls
+   * daily, and a captain who comes back tomorrow should be told again.
+   */
+  const [boardSeen, setBoardSeen] = useState(false)
   const [section, setSection] = useState<Section | null>(openCard)
   /** The hall's full state, for whichever section is showing. */
   const [hall, setHall] = useState<CrewState | null>(null)
@@ -171,18 +194,21 @@ export default function CrewHub({
 
   const back = useCallback(() => { vibrate(8); setSection(null) }, [])
 
-  /** The roll call in one line: who is out, who is due, who is idle. */
+  /** The roll call in one line: who is out, who is training, who is idle. */
   const summary = (() => {
     if (!state) return null
-    const out = state.crew.filter(c => c.doing !== 'hall')
-    const ready = out.filter(c => c.ready).length
-    const soon = out.filter(c => !c.ready && c.backAt && new Date(c.backAt).getTime() - now < 3_600_000).length
-    const idle = state.crew.length - out.length
+    const out = state.crew.filter(c => c.doing !== 'hall' && c.doing !== 'bunk')
+    const training = state.crew.filter(c => c.doing === 'bunk')
+    const onAClock = [...out, ...training]
+    const ready = onAClock.filter(c => c.ready).length
+    const soon = onAClock.filter(c => !c.ready && c.backAt && new Date(c.backAt).getTime() - now < 3_600_000).length
+    const idle = state.crew.filter(c => c.doing === 'hall').length
     const bits: string[] = []
     if (out.length) bits.push(`${out.length} out`)
+    if (training.length) bits.push(`${training.length} training`)
     if (ready) bits.push(`${ready} back and waiting`)
     else if (soon) bits.push(`${soon} due within the hour`)
-    if (idle) bits.push(`${idle} in the hall`)
+    if (idle) bits.push(`${idle} inactive`)
     return bits.length ? bits.join(' · ') : 'Nobody signed on yet'
   })()
 
@@ -235,12 +261,24 @@ export default function CrewHub({
                 <p className="font-cinzel font-700" style={{ fontSize: '1.26rem', color: '#f4ecd8', margin: 0, flex: 1, minWidth: 0 }}>
                   {section ? TITLES[section] : 'Your Crew'}
                 </p>
-                {!section && (
+                {/* ── THE HEADER CARRIES THE COUNT ─────────────────────
+                    Whatever the room is about, in the row that already names
+                    it: berths on the front page, skins collected in the Trunk.
+                    Both used to be centred lines of their own underneath a
+                    title that was right there — one row saying two things beats
+                    two rows saying one each, and in a panel this narrow the row
+                    it saves is a row of skins you can see. */}
+                {(!section || section === 'wardrobe') && (
                   <p className="font-karla font-600" style={{
                     fontSize: '0.78rem', color: 'rgba(196,169,106,0.85)', margin: 0, flexShrink: 0,
                     fontVariantNumeric: 'tabular-nums',
                   }}>
-                    {state ? `${state.crew.length} of ${state.capacity} berths` : ''}
+                    {section === 'wardrobe'
+                      // Counted against the CATALOGUE, not off the stored
+                      // array: a retired id still sitting in somebody's profile
+                      // would otherwise read as 76 / 75 collected.
+                      ? (hall ? `${CREW_SKINS.filter(k => hall.ownedCrewSkins.includes(k.id)).length} / ${CREW_SKINS.length} collected` : '')
+                      : (state ? `${state.crew.length} of ${state.capacity} berths` : '')}
                   </p>
                 )}
               </div>
@@ -250,7 +288,21 @@ export default function CrewHub({
                 <p className="font-karla" style={{ fontSize: '0.82rem', color: '#e6a0a0', margin: '0.8rem 0 0' }}>{err}</p>
               )}
 
-              <div style={{ overflowY: 'auto', minHeight: 0, marginTop: '0.75rem', flex: 1 }}>
+              {/* ── THE SCROLLER, AND WHY IT CLIPS SIDEWAYS ──────────────
+                  The recruit reveal throws shock rings and a particle burst out
+                  of each card, all `position: absolute` with `overflow:
+                  visible`, which is right — they are meant to spill past the
+                  card. Inside a scroll box they spill past the BOX, so the
+                  browser grew a horizontal scrollbar to reach them; the bar
+                  ate 15px of width, the cards reflowed narrower, the particles
+                  moved with them, and the whole panel juddered for the length
+                  of the animation with two scrollbars flickering on and off.
+                  Clipped sideways it cannot happen: nothing in this panel is
+                  ever meant to be reached by scrolling right. */}
+              <div style={{
+                overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain',
+                minHeight: 0, marginTop: '0.75rem', flex: 1,
+              }}>
                 {/* ── A ROOM ────────────────────────────────────────────── */}
                 {section ? (
                   hall ? (
@@ -376,7 +428,7 @@ export default function CrewHub({
                         // banner: the dot is the same amber the HUD uses and
                         // means the same thing, which is that there is
                         // something here you have not dealt with.
-                        const waiting = card.id === 'recruits' && (state?.recruitsWaiting ?? 0) > 0
+                        const waiting = card.id === 'recruits' && !boardSeen && (state?.recruitsWaiting ?? 0) > 0
                         const note = card.id === 'recruits' && state
                           ? (state.recruitsWaiting > 0 ? `${state.recruitsWaiting} on the board` : 'board taken for today')
                           : card.id === 'roster' && state
@@ -384,7 +436,11 @@ export default function CrewHub({
                             : card.blurb
                         return (
                           <button key={card.id} type="button" className="tap"
-                            onClick={() => { vibrate(10); setSection(card.id) }}
+                            onClick={() => {
+                              vibrate(10)
+                              if (card.id === 'recruits') setBoardSeen(true)
+                              setSection(card.id)
+                            }}
                             style={{
                               position: 'relative', display: 'block', padding: 0, width: '100%',
                               borderRadius: 14, overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
@@ -428,29 +484,13 @@ export default function CrewHub({
                       })}
                     </div>
 
-                    {/* ── AND THE TWO THAT ARE ALREADY PANELS ─────────────
-                        The voyage board and the trawls are their own sheets on
-                        this chart, so they open where you stand rather than
-                        being a fifth and sixth room in here. */}
-                    {state && (
-                      <div style={{
-                        display: 'flex', flexDirection: 'column', gap: '0.4rem',
-                        paddingTop: '0.75rem', marginTop: '0.75rem',
-                        borderTop: '1px solid rgba(196,169,106,0.18)',
-                      }}>
-                        <HubLink
-                          label="The voyage board"
-                          note={state.voyage
-                            ? state.voyage.ready ? `${state.voyage.route} — back, unread` : `out on ${state.voyage.route}`
-                            : 'nobody sailing today'}
-                          dot={state.voyage?.ready === true}
-                          onClick={() => { onClose(); onVoyage() }} />
-                        <HubLink
-                          label="The trawls"
-                          note={onTrawls ? 'see who is out' : 'nobody trawling'}
-                          onClick={onTrawls ? () => { onClose(); onTrawls() } : null} />
-                      </div>
-                    )}
+                    {/* NO VOYAGE BOARD AND NO TRAWLS DOWN HERE. Both are their
+                        own panels on this chart with their own way in — the
+                        Charterhouse you moor at, the trawl disc in the HUD —
+                        and a second door to each at the foot of this panel made
+                        a page of links out of a set of four painted cards. What
+                        the roll call above says about them (who is out, when
+                        they are back) is the part that belonged here. */}
                   </>
                 )}
               </div>
@@ -459,42 +499,5 @@ export default function CrewHub({
         </div>
       )}
     </AnimatePresence>
-  )
-}
-
-/** One row of the hub's foot. A link that cannot go anywhere is drawn as a
- *  statement rather than as a button that does nothing — a dead control reads
- *  as the game being broken, and this one is only ever saying "there is nothing
- *  here right now". */
-function HubLink({ label, note, dot, onClick }: {
-  label: string
-  note: string
-  dot?: boolean
-  onClick: (() => void) | null
-}) {
-  return (
-    <button type="button" disabled={!onClick} onClick={onClick ?? undefined} style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem',
-      width: '100%', textAlign: 'left', padding: '0.5rem 0.65rem', borderRadius: 10,
-      background: onClick ? 'rgba(240,192,64,0.08)' : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${onClick ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.06)'}`,
-      cursor: onClick ? 'pointer' : 'default',
-    }}>
-      <span style={{ minWidth: 0 }}>
-        <span className="font-karla font-700" style={{
-          display: 'block', fontSize: '0.84rem',
-          color: onClick ? '#f6dfa0' : 'rgba(190,212,228,0.5)',
-        }}>{label}</span>
-        <span className="font-karla" style={{
-          display: 'block', fontSize: '0.68rem', color: 'rgba(190,212,228,0.5)',
-        }}>{note}</span>
-      </span>
-      {dot && (
-        <span aria-hidden style={{
-          width: 9, height: 9, borderRadius: 999, flexShrink: 0,
-          background: '#f0c040', boxShadow: '0 0 10px rgba(240,192,64,0.6)',
-        }} />
-      )}
-    </button>
   )
 }

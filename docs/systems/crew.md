@@ -21,6 +21,39 @@ title, its own guided tour — is gone. Everything it did happens on the sea:
 - **The Fallen** is a toggle inside Roster (it always was — it lost its tab long ago). With
   the tab bar gone it needed a way BACK, so the memorial carries one.
 
+**Inside the panel, the rules the revamp settled:**
+
+- **The roll call names five states, and `bunk` is not `hall`.** "In the hall" used to mean
+  both *training in the Crew Hall* and *doing nothing*, which are the two states a captain
+  most needs to tell apart — and there is a real hall on the chart, so it read as a place.
+  Training is its own group with its own clock (off `crew_hall_bunks`, same table the hall's
+  tiles read) and the idle are **Inactive**.
+- **No voyage-board or trawl links at the foot.** Both are their own panels on the chart with
+  their own way in; a second door to each turned four painted cards into a page of links.
+- **The recruit dot clears when you open the board**, not when the board empties. The dot
+  means "something here you have not dealt with"; looking and deciding not to sign anybody is
+  dealing with it. Session-only — the board rolls daily and tomorrow you should be told again.
+- **One accent for both parties.** They were a red card and a blue card; colour-coding is for
+  telling things apart in a crowd, and there are two, stacked, each with its name on it. The
+  red also read as a warning. Both take the crew's parchment gold and the labels do the work
+  (`Raid Party` / `Voyage Party`).
+- **Every filter looks the same** (`FILTER_LABEL` / `FILTER_FIELD`). The roster's sorts took
+  their colour from the sort KEY, so the pair changed hue as you used them; the Trunk's
+  dropdowns were cyan because skins were once cyan. Colour is left for the things that are
+  about colour — a rarity dot, the chase toggle when lit.
+- **The reroll buttons wear what they spend.** The plain reroll was blue, a colour this game
+  uses for nothing purchasable; it takes the gem's purple, blood tiers keep blood.
+- **`DAILY_RECRUITS` is 3 for everybody.** It was 3 for a Captain and 2 for everyone else — a
+  thin perk on a board whose weights make it a common nine times in ten, and it meant the row
+  was a different shape depending on who was looking at it.
+- **The scroller clips sideways** (`overflowX: hidden`). The recruit reveal throws shock rings
+  and particles past each card, which grew a horizontal scrollbar; the bar ate 15px, the cards
+  reflowed narrower, the particles moved with them, and the panel juddered for the length of
+  the animation.
+- **Swipe-to-act is touch-only.** `SwipeAction` gates itself on `(pointer: coarse)` — asking
+  what the primary input IS, not how wide the window is. Every action it wraps has a real
+  button elsewhere, so a mouse loses a shortcut, not an ability.
+
 **`CrewClient` was not rewritten.** It takes `embedded` (drops the 100vh ground, the 980
 column, the title row, the back link, the tab bar and the guide) and `section` (makes the
 tab controlled, with the prop-sync effect a prop-fed `useState` always needs). Every tab

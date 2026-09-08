@@ -263,12 +263,50 @@ const ROUND_DISMISS: React.CSSProperties = { ...ROUND_BTN, background: 'linear-g
 const ROUND_CONFIRM: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'linear-gradient(180deg, rgba(74,200,130,0.46), rgba(46,140,92,0.28))', border: '1px solid rgba(122,226,162,0.72)', color: '#dcf8e7' }
 const ROUND_CANCEL: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.7)' }
 
-// Raid / Voyage accents, handed to AssignBoard. The third (Bench) went with
-// the roster cards' quick-assign toggles, as did AssignToggleBtn and the
-// anchor/swords/bench icons that only that control used - assignment is the
-// Assign tab's job now.
-const ASSIGN_VOYAGE = '#5fa8c9'
-const ASSIGN_RAID   = '#e07c7c'
+// ── ONE ACCENT, NOT TWO ─────────────────────────────────────────────────────
+//
+// The two parties were a red card and a blue card. Colour-coding is for things
+// you have to tell apart at a glance in a crowd, and there are exactly two of
+// these, stacked, each with its name in Cinzel at the top of it — so the colour
+// was not identifying anything the words did not. What it DID do was import a
+// red and a blue into a panel that is otherwise bone, gold and dark water, and
+// a warning red on a party card reads as something being wrong with it.
+//
+// So both take the crew's own parchment gold and the LABELS do the work. Kept
+// as two names rather than collapsed to one, because every call site downstream
+// asks "which track is this" and the answer should stay a question about the
+// track and not about a colour.
+/**
+ * ── EVERY FILTER IN HERE LOOKS THE SAME ────────────────────────────────────
+ *
+ * There were two vocabularies and neither was the panel's. The roster's Sort by
+ * / Then by took their colour from the SORT KEY, so the pair changed hue as you
+ * used them — a green box beside a blue one, over a navy ground, in a panel
+ * that is otherwise bone and gold. The Trunk's two dropdowns were cyan for no
+ * reason but that skins had once been cyan. Between them, four controls doing
+ * one job in three colours.
+ *
+ * So: the panel's own ground, the panel's own bone border, and the words in the
+ * panel's own parchment. Colour is left for the things that are ABOUT colour —
+ * a rarity dot inside an option, the chase toggle's glow when it is lit.
+ */
+const FILTER_LABEL: React.CSSProperties = {
+  display: 'block', fontSize: '0.5rem', letterSpacing: '0.16em',
+  color: 'rgba(196,169,106,0.8)', marginBottom: 4, paddingLeft: 2,
+}
+const FILTER_FIELD: React.CSSProperties = {
+  width: '100%', padding: '0.48rem 0.7rem', borderRadius: 10,
+  fontSize: '0.7rem', color: '#f2ead8',
+  // Opaque enough to be a control over painted ground — the reason the old
+  // ones reached for a solid navy — without importing a second palette.
+  background: 'rgba(10,14,20,0.92)',
+  border: '1px solid rgba(196,169,106,0.3)',
+  cursor: 'pointer', touchAction: 'manipulation',
+}
+
+const ASSIGN_ACCENT = '#c8ab7d'
+const ASSIGN_VOYAGE = ASSIGN_ACCENT
+const ASSIGN_RAID   = ASSIGN_ACCENT
 
 
 
@@ -2107,8 +2145,17 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
               <div style={{ marginBottom: '1.1rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rolls.length}, minmax(0, 1fr))`, gap: 7 }}>
                   {rolls.map(r => {
+                    // ── EACH BUTTON WEARS WHAT IT SPENDS ──────────────
+                    //
+                    // The plain reroll was BLUE, which is a colour this game
+                    // uses for nothing you can spend: it read as a system
+                    // button parked between two crimson ones. It costs gems, so
+                    // it takes the gem's own purple, and the blood tiers keep
+                    // blood. Now the row is legible without reading it — the
+                    // colour IS the price — and neither of them is inventing a
+                    // hue the panel does not already own.
                     const blood = r.key !== 'gem'
-                    const accent = blood ? BLOOD : '#60a5fa'
+                    const accent = blood ? BLOOD : '#a78bfa'
                     return (
                       <button
                         key={r.key}
@@ -2117,21 +2164,25 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                         className="active:scale-95"
                         title={blood ? 'Spend Blood Gems for far better odds' : 'Spend gems for 3 brand-new recruits'}
                         style={{
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                          minWidth: 0, padding: '0.55rem 0.35rem 0.5rem', borderRadius: 12,
-                          // Warm opaque base, matching the hall above and the
-                          // crew cards below (both already #201a10-ish). These
-                          // two were the last navy left in the recruit tab.
-                          background: r.cannot
-                            ? `linear-gradient(180deg, ${accent}14, ${accent}0a), #17120c`
-                            : `linear-gradient(180deg, ${accent}3a, ${accent}1c), #1c1610`,
-                          border: `1px solid ${accent}80`,
-                          opacity: r.cannot ? 0.5 : 1,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                          minWidth: 0, padding: '0.6rem 0.4rem 0.55rem', borderRadius: 12,
+                          // ── QUIET GROUND, ONE LINE OF COLOUR ────────────
+                          //
+                          // It was a heavy two-stop wash of its own accent over
+                          // a warm base, which made a small button look like a
+                          // banner and put two saturated blocks side by side at
+                          // the top of the board. The base is the panel's own
+                          // dark now and the accent is spent on the border and
+                          // the words — the treatment every other control in
+                          // this modal already uses.
+                          background: r.cannot ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
+                          border: `1px solid ${accent}${r.cannot ? '33' : '66'}`,
+                          opacity: r.cannot ? 0.55 : 1,
                           cursor: r.cannot ? 'not-allowed' : 'pointer',
-                          transition: 'transform 0.08s, opacity 0.18s',
+                          transition: 'transform 0.08s, opacity 0.18s, border-color 0.18s',
                         }}
                       >
-                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.8rem', letterSpacing: '0.03em', lineHeight: 1.1, color: blood ? '#f7d0d5' : '#cfe2ff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.04em', lineHeight: 1.1, color: r.cannot ? 'rgba(240,237,232,0.5)' : '#f2ead8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                           {r.busy ? '…' : r.name}
                         </span>
                         {r.boost && (
@@ -2140,7 +2191,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                             {r.boost}
                           </span>
                         )}
-                        <span className="font-karla font-600" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.6rem', color: 'rgba(255,255,255,0.78)', whiteSpace: 'nowrap' }}>
+                        <span className="font-karla font-700" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', color: 'rgba(255,255,255,0.72)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                           {r.cost}
                         </span>
                       </button>
@@ -2256,7 +2307,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             // empty seat and replaces an occupied one.
             label={(() => {
               const track = assignSeat.track
-              const party = track === 'raid' ? 'Campaign Party' : 'Voyage Party'
+              const party = track === 'raid' ? 'Raid Party' : 'Voyage Party'
               const holder = state.roster.find(c => (track === 'raid' ? c.raidSlot : c.voyageSlot) === assignSeat.slot)
               return holder ? `Replace ${holder.name}` : party
             })()}
@@ -2796,7 +2847,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
         {clearAsk && (() => {
           const isRaid = clearAsk === 'raid'
           const accent = isRaid ? ASSIGN_RAID : ASSIGN_VOYAGE
-          const partyName = isRaid ? 'Campaign Party' : 'Voyage Party'
+          const partyName = isRaid ? 'Raid Party' : 'Voyage Party'
           const count = state.roster.filter(c => (isRaid ? c.raidSlot : c.voyageSlot) != null).length
           const busy = clearingTrack === clearAsk
           return (
@@ -2883,7 +2934,6 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
           const canGamble = !skinPoolEmpty && !pending && !skinGamble && state.bloodGems >= BLOOD_SKIN_GAMBLE_COST
           const owned = new Set(state.ownedCrewSkins)
           const ownedSlugs = new Set(state.roster.map(m => (m.slug ?? '').toLowerCase()).filter(Boolean))
-          const ownedCount = CREW_SKINS.filter(s => owned.has(s.id)).length
           const slugs = [...new Set(CREW_SKINS.map(s => s.slug))]
           const matchOwned = (id: string) =>
             trunkOwned === 'all' ? true : trunkOwned === 'owned' ? owned.has(id) : !owned.has(id)
@@ -2907,32 +2957,30 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             const sel = opts.find(o => o.key === current) ?? opts[0]
             return (
               <div style={{ position: 'relative', flex: 1, maxWidth: 172 }}>
-                {/* Near-opaque base and a border you can actually find. A 5%
-                    white wash over a dark timber panel is invisible until you
-                    already know the control is there. */}
+                {/* Same field as the roster's sorts — see FILTER_FIELD. */}
                 <button type="button" onClick={() => setTrunkMenu(open ? null : id)} className="tap"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7, width: '100%', padding: '0.5rem 0.72rem', borderRadius: 10,
-                    background: open ? 'rgba(20,38,50,0.96)' : 'rgba(13,22,30,0.94)', border: `1px solid ${open ? 'rgba(94,200,232,0.75)' : 'rgba(143,215,234,0.34)'}`, cursor: 'pointer' }}>
+                  style={{ ...FILTER_FIELD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7,
+                    border: `1px solid rgba(196,169,106,${open ? 0.6 : 0.3})` }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     {sel.color && <span style={{ width: 8, height: 8, borderRadius: '50%', background: sel.color, flexShrink: 0 }} />}
-                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#dbeef4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sel.label}</span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#f2ead8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sel.label}</span>
                   </span>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8fd7ea" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><path d="M6 9l6 6 6-6" /></svg>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(214,232,240,0.5)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><path d="M6 9l6 6 6-6" /></svg>
                 </button>
                 {open && (
                   <>
                     <div onClick={() => setTrunkMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
-                    <div style={{ position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 20, borderRadius: 10, overflow: 'hidden', background: 'rgba(9,15,21,0.98)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 12px 28px rgba(0,0,0,0.6)' }}>
+                    <div style={{ position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 20, borderRadius: 10, overflow: 'hidden', background: 'rgba(10,14,20,0.98)', border: '1px solid rgba(196,169,106,0.3)', boxShadow: '0 12px 28px rgba(0,0,0,0.6)' }}>
                       {opts.map(o => {
                         const active = o.key === current
                         return (
                           <button key={o.key} type="button" onClick={() => { onPick(o.key); setTrunkMenu(null) }} className="tap"
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.5rem 0.7rem', background: active ? 'rgba(94,200,232,0.15)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.5rem 0.7rem', background: active ? 'rgba(196,169,106,0.16)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                             {o.color
                               ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: o.color, flexShrink: 0 }} />
                               : <span style={{ width: 8, flexShrink: 0 }} />}
-                            <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: active ? '#eaf6fa' : 'rgba(255,255,255,0.62)' }}>{o.label}</span>
-                            {active && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5ec8e8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ marginLeft: 'auto' }}><path d="M20 6L9 17l-5-5" /></svg>}
+                            <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: active ? '#f2ead8' : 'rgba(240,237,232,0.6)' }}>{o.label}</span>
+                            {active && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c8ab7d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ marginLeft: 'auto' }}><path d="M20 6L9 17l-5-5" /></svg>}
                           </button>
                         )
                       })}
@@ -2944,13 +2992,13 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
           }
           return (
             <div>
-              {/* No "The Trunk" title. The tab is already called Skins, so the
-                  name was a second label for the same room. The count stays,
-                  because a collection screen's first job is to say how far
-                  along the collection is. */}
-              <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: '#8fd7ea' }}>{ownedCount} / {CREW_SKINS.length} collected</p>
-              </div>
+              {/* NO COUNT ROW. A collection screen's first job is to say how
+                  far along the collection is, and it used to say it in a
+                  centred line of its own under a header that was already there.
+                  The panel puts it on the SKINS title instead — see CrewHub —
+                  which is one row saying two things instead of two rows saying
+                  one each. On the page it rode over, this row was the only
+                  place it could go; there is no page now. */}
               {/* Skin gamble. One row rather than the panel it used to be: the
                   gallery is the point of this tab, so the gamble sits beside it
                   instead of pushing it below the fold.
@@ -3279,10 +3327,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                               { label: 'Sort by', value: rosterSort,  set: setRosterSort,  omit: null as RosterSort | null },
                               { label: 'Then by', value: rosterSort2, set: setRosterSort2, omit: rosterSort },
                             ]).map(sel => {
-                              const color = ROSTER_SORTS.find(o => o.k === sel.value)?.color ?? '#bcb29a'
                               return (
                                 <label key={sel.label} style={{ display: 'block', position: 'relative' }}>
-                                  <span className="font-karla font-700 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.66)', textShadow: '0 1px 3px rgba(0,0,0,0.8)', marginBottom: 3, paddingLeft: 2 }}>
+                                  <span className="font-karla font-700 uppercase" style={FILTER_LABEL}>
                                     {sel.label}
                                   </span>
                                   <select
@@ -3290,20 +3337,9 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                                     onChange={e => sel.set(e.target.value as RosterSort)}
                                     className="font-karla font-700"
                                     style={{
-                                      width: '100%', appearance: 'none', WebkitAppearance: 'none',
-                                      padding: '0.42rem 1.5rem 0.42rem 0.6rem', borderRadius: 10,
-                                      fontSize: '0.72rem', color,
-                                      // SOLID BASE. The crew page is drawn over
-                                      // art, so a 5% white wash read as loose
-                                      // text floating on the backdrop rather
-                                      // than a control. Same near-opaque ground
-                                      // the tab strip above it stands on, with
-                                      // the accent as a tint on top so the two
-                                      // selects still carry their key's colour.
-                                      background: `linear-gradient(${color}1c, ${color}1c), rgba(14,19,28,0.97)`,
-                                      border: `1px solid ${color}99`,
-                                      boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
-                                      cursor: 'pointer', touchAction: 'manipulation',
+                                      ...FILTER_FIELD,
+                                      appearance: 'none', WebkitAppearance: 'none',
+                                      paddingRight: '1.5rem',
                                     }}>
                                     {ROSTER_SORTS.filter(o => o.k !== sel.omit).map(o => (
                                       // Options are painted by the OS, so the dark
@@ -3312,7 +3348,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                                       <option key={o.k} value={o.k} style={{ background: '#0e131c', color: '#f0ede8' }}>{o.label}</option>
                                     ))}
                                   </select>
-                                  <span aria-hidden style={{ position: 'absolute', right: 8, bottom: 10, pointerEvents: 'none', color, opacity: 0.7, display: 'flex' }}>
+                                  <span aria-hidden style={{ position: 'absolute', right: 8, bottom: 10, pointerEvents: 'none', color: 'rgba(214,232,240,0.5)', display: 'flex' }}>
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
                                   </span>
                                 </label>
@@ -3955,7 +3991,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   const track: 'raid' | 'voyage' | null =
                     m.raidSlot !== null ? 'raid' : m.voyageSlot !== null ? 'voyage' : null
                   const seat = track === 'raid' ? m.raidSlot : m.voyageSlot
-                  const party = track === 'raid' ? 'Campaign Party' : 'Voyage Party'
+                  const party = track === 'raid' ? 'Raid Party' : 'Voyage Party'
                   const accent = track === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
                   // At sea, trawling, or mid-stint in a bunk: assertCanReassign
                   // refuses every one of these, so offer none of them. The bunk

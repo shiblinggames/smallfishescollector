@@ -174,8 +174,8 @@ export default function AssignBoard({
   const tracks = [
     {
       key: 'raid' as const,
-      label: 'Campaign Party',
-      sub: 'crew for raids and gauntlets',
+      label: 'Raid Party',
+      sub: 'Fights every raid and gauntlet',
       accent: raidAccent,
       party: roster.filter(c => c.raidSlot != null).sort((a, b) => a.raidSlot! - b.raidSlot!),
       slotOf: (c: CrewMember) => c.raidSlot ?? 0,
@@ -183,7 +183,7 @@ export default function AssignBoard({
     {
       key: 'voyage' as const,
       label: 'Voyage Party',
-      sub: 'crew for passive exploration',
+      sub: 'Sails the daily voyage without you',
       accent: voyageAccent,
       party: roster.filter(c => c.voyageSlot != null).sort((a, b) => a.voyageSlot! - b.voyageSlot!),
       slotOf: (c: CrewMember) => c.voyageSlot ?? 0,

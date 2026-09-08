@@ -47,6 +47,18 @@ export function crewDisplayName(slug: string, fallbackName: string): string {
 // Board rarity weights [Common, Rare, Epic, Legendary]. The free daily board
 // is a slow trickle (never Legendary, very rare Epic); the 100-gem reroll is
 // the real pull (boosted Epic, the only path to a Legendary).
+/**
+ * HOW MANY FACES THE FREE BOARD ROLLS, and it is the same number for everybody.
+ *
+ * It was three for a Captain and two for anyone else. That is a thin perk —
+ * a third face on a board whose weights make it a common nine times in ten —
+ * and it cost more than it gave: the board is a row of cards, so the row was a
+ * different shape depending on who was looking at it, and every layout around
+ * it had to hold for both. Membership has real perks elsewhere; this one was
+ * paying for itself in inconsistency.
+ */
+export const DAILY_RECRUITS = 3
+
 export const FREE_WEIGHTS: [number, number, number, number] = [76, 22, 2, 0]
 // Gem rerolls are the real pull. Tuned so that per 3-candidate reroll an Epic
 // shows up ~1 in 10 and a Legendary ~1 in 50 (only 2 legendary fish exist);

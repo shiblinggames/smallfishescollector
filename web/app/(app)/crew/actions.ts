@@ -10,7 +10,7 @@ import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { classSlotBonuses } from '@/lib/shipClasses'
 import {
   groupForSlug, rollRarity, rollCrew, crewDisplayName,
-  FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
+  FREE_WEIGHTS, GEM_WEIGHTS, DAILY_RECRUITS, type CrewRarity,
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, hallUpgradeBlocker, type CrewHallTierNum } from '@/lib/crewHall'
 import { bunkContext, loadBunks } from '@/lib/crewBunkSettle'
@@ -337,7 +337,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     const pinnedSlug = ((prof as any).crew_next_roll_legendary_slug as string | null) ?? null
     const owedLegendary = (prof as any).crew_next_roll_legendary === true && !pinnedSlug
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, null)
+    const rows = generateBoardRows(user.id, DAILY_RECRUITS, 'free', FREE_WEIGHTS, byGroup, meta, 0, legendaryUnlocks, owedLegendary, null)
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles')
       .update({ last_free_recruit_date: today, ...(owedLegendary ? { crew_next_roll_legendary: false, crew_next_roll_legendary_slug: null } : {}) })

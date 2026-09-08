@@ -17,9 +17,42 @@
 // `hintPeek` (once per mount, parent-flagged): the card slides itself open a
 // beat then springs back — demonstrates the gesture with no text.
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { motion, useMotionValue, useTransform, animate, useAnimationControls } from 'framer-motion'
 import { vibrate, hapticReward } from '@/lib/haptics'
+
+/**
+ * ── IT IS A THUMB GESTURE, SO IT IS ONLY ON THUMBS ─────────────────────────
+ *
+ * A swipe is a good shortcut on a phone and a bad one on a desktop. With a
+ * mouse there is nothing to discover it by — no thumb resting on the card, no
+ * reason to try dragging a row sideways — and a card that slides under the
+ * cursor when somebody meant to click it reads as the page being broken. Worse,
+ * on a trackpad the drag competes with the scroll it is sitting in.
+ *
+ * Every action this wraps has a real button elsewhere (Recruit on the card
+ * itself, Dismiss in the crew's own sheet), so switching it off with a fine
+ * pointer takes away a shortcut rather than an ability.
+ *
+ * `(pointer: coarse)` is the honest test: it asks what the primary input IS,
+ * not how wide the window is, so a touchscreen laptop keeps its swipe and a
+ * narrow desktop window does not gain one.
+ */
+function useCoarsePointer(): boolean {
+  // Read the real answer on the first client render rather than defaulting and
+  // correcting: `false` here would let a phone mount every row swipeless and
+  // then rebuild them all a tick later.
+  const [coarse, setCoarse] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)')
+    const on = () => setCoarse(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return coarse
+}
 
 const SWIPE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 46, restDelta: 0.4 }
 const CIRCLE_SHADOW = '0 4px 12px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.24)'
@@ -29,6 +62,7 @@ export default function SwipeAction({ enabled, side, label, icon, gradient, text
   gradient: string; textColor: string; glow: string
   hintPeek?: boolean; onPeeked?: () => void; onAction: () => void; children: ReactNode
 }) {
+  const coarse = useCoarsePointer()
   const x = useMotionValue(0)
   const REVEAL = 84
   const right = side === 'right'
@@ -54,7 +88,7 @@ export default function SwipeAction({ enabled, side, label, icon, gradient, text
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  if (!enabled) return <>{children}</>
+  if (!enabled || !coarse) return <>{children}</>
   const snapTo = (target: number) => { openRef.current = target !== 0; animate(x, target, SWIPE_SPRING) }
   const pressDown = () => { vibrate(13); press.start({ scale: 0.82, transition: { type: 'spring', stiffness: 800, damping: 26 } }) }
   const pressUp = () => { press.start({ scale: 1, transition: { type: 'spring', stiffness: 480, damping: 12 } }) }

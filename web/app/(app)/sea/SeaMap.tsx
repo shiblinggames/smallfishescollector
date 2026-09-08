@@ -8702,12 +8702,7 @@ hullRef={hullRefFor(t.key)} />
       <CrewHub
         openCard={openCard ?? null}
         open={crewHubOpen}
-        onClose={() => { setCrewHubOpen(false); pollCrew() }}
-        // BOTH ROWS OPEN WHAT IS ALREADY ON THIS CHART rather than sailing you
-        // to an island first. The trawl row is null when nobody is out, and the
-        // hub then says so instead of opening an empty list.
-        onTrawls={trawlsOut.length > 0 ? () => setTrawlsPeek(true) : null}
-        onVoyage={() => setVoyageOpen(true)} />
+        onClose={() => { setCrewHubOpen(false); pollCrew() }} />
 
       <CrewPanel
         open={crewOpen}

@@ -22,7 +22,6 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { isPremiumActive } from '@/lib/premium'
 import { crewCapacity } from '@/lib/crewCapacity'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -30,6 +29,8 @@ import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getTrawlState } from '@/app/(app)/fishing/trawls/actions'
 import { getDailyVoyageState } from '@/app/(app)/expeditions/voyageActions'
+import { stintDone } from '@/lib/crewBunks'
+import { DAILY_RECRUITS } from '@/lib/crewGen'
 
 /** One crew, as the deck needs to see them: who, what they look like, and what
  *  they are busy with. Nothing about stats — this is a roll call, and the hall
@@ -41,7 +42,13 @@ export type HubCrew = {
   rarity: number
   level: number
   /** What they are doing right now — the four groups the panel reads as. */
-  doing: 'trawl' | 'voyage' | 'raid' | 'hall'
+  /**
+   * WHAT THEY ARE DOING. `bunk` is training in the Crew Hall and `hall` is
+   * nothing at all — they used to be the same word, which made "In the hall"
+   * mean both "at work in the building" and "idle", the two states a captain
+   * most needs to tell apart.
+   */
+  doing: 'trawl' | 'voyage' | 'raid' | 'bunk' | 'hall'
   /** Where, for the ones who are out. */
   where: string | null
   /** When they are back, ISO. Null for anyone not on a clock. */
@@ -66,14 +73,19 @@ export async function crewHub(): Promise<CrewHubState | { error: string }> {
   if (!user) return { error: 'Not signed in.' }
   const admin = createAdminClient()
 
-  const [{ data: prof }, roster, trawls, voyage, { data: boardRows }] = await Promise.all([
+  const [{ data: prof }, roster, trawls, voyage, { data: boardRows }, { data: bunkRows }] = await Promise.all([
     admin.from('profiles')
-      .select('expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, is_premium, premium_expires_at, last_free_recruit_date')
+      .select('expedition_xp, crew_hall_tier, crew_drill_level, crew_stores_level, last_free_recruit_date')
       .eq('id', user.id).single(),
     getCrewRoster(),
     getTrawlState(),
     getDailyVoyageState(),
     admin.from('daily_recruits').select('recruited').eq('user_id', user.id),
+    // WHO IS TRAINING. The same table the hall's own tiles read, and the same
+    // two columns: when the stint began and how long it runs. A roll call that
+    // filed a hand in a bunk under "in the hall" was technically true and
+    // useless — the hall is where they sleep AND where they work.
+    admin.from('crew_hall_bunks').select('crew_id, since, cap_hours').eq('user_id', user.id),
   ])
   if (!prof) return { error: 'No profile.' }
 
@@ -101,14 +113,29 @@ export async function crewHub(): Promise<CrewHubState | { error: string }> {
   const atSea = new Set<number>(live?.crew_variant_ids ?? [])
   const routeName = live ? (ROUTE_CONFIGS[live.route]?.name ?? 'open water') : null
 
+  // Bunked, with the stint's own terms so the row can carry a clock like a
+  // trawl does. Keyed by crew id, same as the trawls.
+  const onBunk = new Map<number, { endsAt: string; ready: boolean }>()
+  for (const b of (bunkRows ?? []) as { crew_id: number; since: string; cap_hours: number }[]) {
+    const cap = Number(b.cap_hours ?? 0)
+    const endsAt = new Date(new Date(b.since).getTime() + cap * 3_600_000).toISOString()
+    onBunk.set(Number(b.crew_id), { endsAt, ready: stintDone(b.since, Date.now(), cap) })
+  }
+
   const crew: HubCrew[] = roster.map(c => {
     const t = onTrawl.get(c.id)
+    const bunk = onBunk.get(c.id)
     // ORDER MATTERS AND IT IS NOT ARBITRARY. A trawl is where somebody
     // physically IS; a voyage slot and a raid slot are where they are BOOKED.
     // Somebody seated in the raid party and currently three hours out on a
     // trawl is, truthfully, out on the trawl, and that is what the deck needs
     // to be told.
+    //
+    // A BUNK RANKS WITH A TRAWL for the same reason: it is where they ARE, and
+    // it holds them for the whole stint. It sits under the trawl only because
+    // the two cannot both be true.
     const doing: HubCrew['doing'] = t ? 'trawl'
+      : bunk ? 'bunk'
       : atSea.has(c.id) ? 'voyage'
       : c.raidSlot !== null ? 'raid'
       : c.voyageSlot !== null ? 'voyage'
@@ -121,8 +148,8 @@ export async function crewHub(): Promise<CrewHubState | { error: string }> {
       level: crewLevelFromXP(c.xp ?? 0),
       doing,
       where: t ? t.zone : doing === 'voyage' && atSea.has(c.id) ? routeName : null,
-      backAt: t ? t.endsAt : null,
-      ready: t ? t.ready : doing === 'voyage' && atSea.has(c.id) ? voyageReady : false,
+      backAt: t ? t.endsAt : bunk ? bunk.endsAt : null,
+      ready: t ? t.ready : bunk ? bunk.ready : doing === 'voyage' && atSea.has(c.id) ? voyageReady : false,
     }
   })
 
@@ -132,9 +159,11 @@ export async function crewHub(): Promise<CrewHubState | { error: string }> {
   // them is true.
   const today = new Date().toISOString().slice(0, 10)
   const rolledToday = String(p.last_free_recruit_date ?? '') === today
+  // THREE, WHOEVER YOU ARE. It was three for a Captain and two for everybody
+  // else — see the note on DAILY_RECRUITS in crew/actions.
   const recruitsWaiting = rolledToday
     ? ((boardRows ?? []) as { recruited: boolean }[]).filter(r => !r.recruited).length
-    : isPremiumActive(p as never) ? 3 : 2
+    : DAILY_RECRUITS
 
   return {
     crew,
