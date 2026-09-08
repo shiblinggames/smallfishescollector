@@ -35,7 +35,7 @@ import {
   convergenceEffects, activeConvergences, drawConvergenceOffer, convergenceLevel, convergenceDescAt, CONVERGENCES,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   // Davy's Terms — the chosen, structural difficulty layer (hardcore only).
-  DROWNED_FILTER, GHOST_FILTER, bandForDepth, gauntletTaunt, donRiseCopy, donFallCopy, donRiseIndex, DON_RISE_DEPTHS,
+  DROWNED_FILTER, GHOST_FILTER, gauntletTaunt, donRiseCopy, donFallCopy, donRiseIndex, DON_RISE_DEPTHS,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH, GAUNTLET_REWARD_DEPTH_CAP, fathomsForDepth,
   emptyRunStats, addRunStats, coerceRunStats,
   dropOddsInfo, type DropOddsInfo,
@@ -3144,10 +3144,6 @@ export default function GauntletGame(props: GauntletGameProps) {
           <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 6 }}>
             Dragged under at depth {diedAt} · {cleared} {cleared === 1 ? 'round' : 'rounds'} deep
           </p>
-          {/* Band epitaph — WHERE you fell, in the sea's own words. */}
-          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: `${CRIMSON}bb`, marginTop: 4, letterSpacing: '0.03em' }}>
-            {bandForDepth(diedAt, props.variant).name} keeps what it takes.
-          </p>
 
           {/* The pot lost — the cost of pushing too far. */}
           <motion.div
@@ -3714,7 +3710,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     const previewXp = Math.round(gauntletXpForDepth(payDepth, props.variant) * chest.potMult)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
-    const band = bandForDepth(combatDepth, props.variant)
     const ownedBoons = GAUNTLET_BOONS
       .map(fam => ({ fam, tier: boonTiers[fam.id] ?? 0 }))
       .filter(x => x.tier >= 1)
@@ -3816,7 +3811,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               screen IS the breather, and a label announcing that spent the most
               valuable line on the page saying nothing. */}
           <p className="font-cinzel font-700" style={{ fontSize: 'clamp(1.5rem, 5.6vw, 1.95rem)', color: '#f4eee2', marginTop: 14, lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
-            Depth {combatDepth} · {band.name}
+            Depth {combatDepth}
           </p>
           {/* No clock, no line of voice. The screen asks one question, leave
               or dive, and every line that is not the stake, the risk or the
@@ -4835,10 +4830,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Descent transition ─────────────────────────────────────────────────────
   if (phase === 'descending') {
     const d = fight?.depth ?? 1
-    const band = bandForDepth(d, props.variant)
     const taunt = gauntletTaunt(d, props.variant)
-    // First depth OF a band = a real arrival — the name gets the loud cut.
-    const bandEntry = band.minDepth === d && d > 1
 
     // Don Finleone's rise (Don's Gauntlet, placed at milestone depths): his OWN
     // telegraph so you feel him coming, not just meet a big boss mid-descent. Copy
@@ -4891,16 +4883,12 @@ export default function GauntletGame(props: GauntletGameProps) {
               style={{ width: 104, height: 104, objectFit: 'contain', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,0.7))' }} />
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12, duration: 0.4 }}
-            className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: bandEntry ? band.accent : AC, marginTop: 16 }}>
-            {d === 1 ? (isDonG ? 'Into the Green' : 'Into the Locker') : bandEntry ? 'You Sink Into' : 'Deeper Still'}
+            className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: AC, marginTop: 16 }}>
+            {d === 1 ? (isDonG ? 'Into the Green' : 'Into the Locker') : 'Deeper Still'}
           </motion.p>
           <motion.p initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 230, damping: 18 }}
             className="font-cinzel font-800" style={{ fontSize: '2.4rem', color: GOLD, lineHeight: 1, marginTop: 8, textShadow: '0 0 28px rgba(240,192,64,0.4)' }}>
             Depth {d}
-          </motion.p>
-          <motion.p initial={{ opacity: 0, scale: bandEntry ? 0.82 : 1 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.45 }}
-            className="font-cinzel font-700" style={{ fontSize: bandEntry ? '1.2rem' : '0.92rem', color: bandEntry ? band.accent : '#cfc9bf', marginTop: 7, letterSpacing: '0.02em', textShadow: bandEntry ? `0 0 20px ${band.accent}66` : undefined }}>
-            {band.name}
           </motion.p>
           {/* Blood Oath (a Locker upgrade) opens the run already holding one
               boon. Announce it on the first descent so a boon you never drafted

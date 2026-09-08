@@ -114,7 +114,10 @@ The run is a fall through depth bands, and the arena is one Pixi world that
 re-themes as you go rather than a series of screens.
 
 - **Each depth band restops the water and the sky**, exactly as the chart
-  recolours under the boat. Deeper is darker, colder, heavier.
+  recolours under the boat. Deeper is darker, colder, heavier. The bands are
+  felt, not announced: their names ("The Shallows of the Dead" and so on) are
+  never printed on a screen. Every title is the depth number. The name tables
+  stay in `lib/gauntlet.ts` for the accents only.
 - **Weather carries the pressure**: squall, lightning, chop. Davy's Terms'
   Pressure dial already exists as a number; this gives it a face.
 - **The `descending` phase becomes a real descent** — currently it is a
