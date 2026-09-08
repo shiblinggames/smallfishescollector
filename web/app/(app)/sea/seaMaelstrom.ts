@@ -358,7 +358,7 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
       m, th, node, flatDark, flatLight, rtDark, rtLight,
       storm, funnel, hole, arms, mid, wisps, eye, core, strike, beam, holo,
       foam, spirits, seen: false,
-      nextStrike: 2 + Math.random() * 3, strikeLeft: 0,
+      nextStrike: 4 + Math.random() * 8, strikeLeft: 0,
     }
   })
 
@@ -436,19 +436,30 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         o.beam.alpha = (0.12 + 0.3 * gg) * jitter * dropout * lit
 
         // ── THE STRIKE ──────────────────────────────────────────────────
-        o.nextStrike -= dt * (0.4 + 1.6 * gg)
+        //
+        // WEATHER, NOT A BEACON. It struck about once a second at a full bowl
+        // and hit 0.85 alpha ADDITIVELY across a disc nearly twice the
+        // maelstrom's radius, which is a strobe on a thing you sail past, moor
+        // beside and then stand in the lobby of. The same fault the gauntlet's
+        // own bolt had: an effect that owns the whole eye, on a loop short
+        // enough that you never stop re-adapting to it.
+        //
+        // It is roughly one every ten seconds now, at a third of the strength,
+        // and the flash is stretched so it rolls instead of snapping. The eye
+        // still lights; it no longer flickers.
+        o.nextStrike -= dt * (0.15 + 0.5 * gg)
         if (o.nextStrike <= 0 && g > 0.05) {
-          o.strikeLeft = th.strikeKind === 'flash' ? 0.28 : 1.4
-          o.nextStrike = th.strikeKind === 'flash' ? 1.6 + Math.random() * 3.4 : 2.4 + Math.random() * 2.6
+          o.strikeLeft = th.strikeKind === 'flash' ? 0.42 : 1.6
+          o.nextStrike = th.strikeKind === 'flash' ? 5 + Math.random() * 7 : 6 + Math.random() * 6
         }
         if (o.strikeLeft > 0) {
           o.strikeLeft -= dt
-          const total = th.strikeKind === 'flash' ? 0.28 : 1.4
+          const total = th.strikeKind === 'flash' ? 0.42 : 1.6
           const u = 1 - o.strikeLeft / total
           const env = th.strikeKind === 'flash'
-            ? (u < 0.15 ? u / 0.15 : Math.pow(1 - (u - 0.15) / 0.85, 2.2))
+            ? (u < 0.3 ? u / 0.3 : Math.pow(1 - (u - 0.3) / 0.7, 1.8))
             : Math.sin(u * Math.PI)
-          o.strike.alpha = env * (th.strikeKind === 'flash' ? 0.85 : 0.4) * (0.5 + 0.5 * g) * lit
+          o.strike.alpha = env * (th.strikeKind === 'flash' ? 0.3 : 0.16) * (0.5 + 0.5 * g) * lit
           o.strike.scale.set((m.r * (th.strikeKind === 'flash' ? 1.7 : 1.35) / 256) * (1 + 0.3 * u))
           o.strike.scale.y *= 1 / GROUND
         } else if (o.strike.alpha) {
