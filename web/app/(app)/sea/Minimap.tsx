@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PLACES, YOON, RESIDENTS, SOCIALS, NORTH_WALL, OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE, SORTIE } from './chart'
 import {
-  HUB, HUB_R, BAYS, bayCentre, mouthOf, entryOf, straitLen, bayOpen,
+  HUB, HUB_R, BAYS, bayCentre, bayOpen,
   ENCOUNTERS, encounterAt, MAELSTROMS,
 } from './raidWaters'
 import { ISLES } from '@/lib/seaIsles'
@@ -171,8 +171,12 @@ function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number)
 
 export default function Minimap({
   open, onClose, fog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
-  cleared = [],
+  cleared = [], next = null,
 }: {
+  /** THE NEXT THING THE CAMPAIGN WANTS, pinned. The same resolution the
+   *  corner card reads (see SeaMap's nextStop), so the two never disagree.
+   *  Only on the expedition halves; null when nothing is waiting. */
+  next?: { x: number; y: number; label: string } | null
   /** The rival, if he is on this half of the world. `ready` doubles his mark:
    *  a job of his is finished and he is holding your pay. */
   finn?: { x: number; y: number; ready: boolean } | null
@@ -307,10 +311,13 @@ export default function Minimap({
     // of the four roads she had come up, or which way home was, and those are
     // the only three questions a map is ever asked.
     //
-    // So it is drawn as the SHAPE it actually is: a junction with four straits
-    // off it, each opening into a bay, and the way back to the harbour marked.
-    // Not fogged. The bays are the campaign, and a campaign you cannot find is
-    // not a campaign — the same reason the ports are never fogged either.
+    // So it is drawn as the SHAPE it actually is: a junction with the four
+    // chapters' waters lying off it as discs of their own colour, and the way
+    // back to the harbour marked. NO STRAITS AND NO ROCK across anything: the
+    // water is open sea now, and a shut chapter is a dim disc with SHUT on
+    // it rather than a bar. Not fogged. The bays are the campaign, and a
+    // campaign you cannot find is not a campaign, which is the same reason
+    // the ports are never fogged either.
     if (side !== 'fishing') {
       // THE WAY HOME, first and underneath everything. A dashed run from the
       // junction down to the sortie and on to the harbour: the one line on this
@@ -349,34 +356,6 @@ export default function Minimap({
       for (const b of BAYS) {
         const openDoor = bayOpen(b, cleared)
         const c = bayCentre(b)
-        const m = mouthOf(b), e = entryOf(b)
-
-        // THE STRAIT, as the passage it is: a line of its real width, so a road
-        // reads as something you sail THROUGH rather than as an arrow.
-        ctx.strokeStyle = openDoor ? 'rgba(180,214,232,0.34)' : 'rgba(180,214,232,0.14)'
-        ctx.lineWidth = Math.max(1.5, b.half * 2 * s)
-        ctx.lineCap = 'round'
-        ctx.beginPath()
-        ctx.moveTo(tx(m.x), ty(m.y))
-        ctx.lineTo(tx(e.x), ty(e.y))
-        ctx.stroke()
-        ctx.lineCap = 'butt'
-
-        // AND THE ROCK ACROSS IT, when the chapter behind it has not fallen. A
-        // bar at the mouth, which is where the boulders actually are — a shut
-        // road you can see the length of, with the reason it is shut drawn at
-        // the one end that is shut.
-        if (!openDoor) {
-          const ux = Math.cos(b.bearing), uy = Math.sin(b.bearing)
-          const px = -uy, py = ux
-          ctx.strokeStyle = 'rgba(226,138,120,0.75)'
-          ctx.lineWidth = 2
-          ctx.beginPath()
-          ctx.moveTo(tx(m.x + px * b.half), ty(m.y + py * b.half))
-          ctx.lineTo(tx(m.x - px * b.half), ty(m.y - py * b.half))
-          ctx.stroke()
-        }
-
         // THE BAY. Its own water colour, which is the colour it actually is out
         // there — the four are painted apart on purpose and the map should not
         // undo that by making them all one blue.
@@ -437,6 +416,35 @@ export default function Minimap({
         ctx.fillStyle = openDoor ? 'rgba(196,169,106,0.8)' : 'rgba(196,169,106,0.36)'
         ctx.font = '700 8px Karla, system-ui, sans-serif'
         ctx.fillText(openDoor ? `CHAPTER ${b.chapter}` : 'SHUT', tx(c.x), ty(c.y) - 8)
+      }
+
+      // ── AND WHAT TO DO NEXT ───────────────────────────────────────
+      //
+      // The one lit node on the hub's spine, pinned here so the chart answers
+      // the fourth question a map is asked out here: not only where am I and
+      // which way is home, but where am I GOING. Drawn last, over every bay
+      // and every ship, because it is the one mark that must never be under
+      // anything. A ring rather than a filled pip, so it reads as a target
+      // and not as another fight.
+      if (next) {
+        const x = tx(next.x), y = ty(next.y)
+        ctx.strokeStyle = 'rgba(240,192,64,0.95)'
+        ctx.lineWidth = 1.6
+        ctx.beginPath(); ctx.arc(x, y, 7.5, 0, Math.PI * 2); ctx.stroke()
+        ctx.strokeStyle = 'rgba(240,192,64,0.45)'
+        ctx.lineWidth = 1
+        ctx.beginPath(); ctx.arc(x, y, 11.5, 0, Math.PI * 2); ctx.stroke()
+        ctx.fillStyle = 'rgba(240,192,64,0.95)'
+        ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill()
+        ctx.textAlign = 'center'
+        ctx.font = '700 9px Karla, system-ui, sans-serif'
+        // A dark plate under the label so it survives a bay's pale stop.
+        const label = `NEXT · ${next.label.toUpperCase()}`
+        const tw = ctx.measureText(label).width
+        ctx.fillStyle = 'rgba(6,12,18,0.82)'
+        ctx.fillRect(x - tw / 2 - 5, y - 26, tw + 10, 13)
+        ctx.fillStyle = 'rgba(244,236,216,0.96)'
+        ctx.fillText(label, x, y - 16)
       }
 
       // THE MAELSTROMS: two swirls in the junction, in their own colours.
@@ -609,7 +617,7 @@ export default function Minimap({
       ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn, side, cleared])
+  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn, side, cleared, next])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 
@@ -794,7 +802,8 @@ export default function Minimap({
                   <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="A chapter's bay" />
                   <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="A fight waiting" />
                   <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="One you have taken" />
-                  <Key mark={<Bar c="rgba(226,138,120,0.85)" />} label="Rocked shut" />
+                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}99`} round />} label="Shut until earned" />
+                  <Key mark={<Dot c="transparent" r={3} ring="rgba(240,192,64,0.95)" ringR={7} />} label="What to do next" />
                   <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="The way home" />
                 </KeyGroup>
               )}

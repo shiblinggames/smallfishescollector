@@ -46,17 +46,17 @@ import { SURFACES, surfaceAt, inkStrength, type Surface } from '@/lib/seaSurface
 import { homeBuildings, builtAt, homesteadName, type Homestead } from '@/lib/homestead'
 import {
   BAYS, BAY_BY_ID, HUB, HUB_R, bayCentre, mouthOf, entryOf, straitLen,
-  fromStrait, toStrait, fromBay, toBay, inStrait, inBay, inChapterWater, bayOpen,
-  WALLS, wallEnds, wallUp, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
+  fromStrait, toStrait, fromBay, toBay, inBay, inChapterWater, bayOpen,
+  bayShutLine, ENCOUNTERS, CACHES, RAID_ISLES, encounterAt, cacheAt, cacheIsle, isleAt, beatAt, beatIsle, beatNear, BEATS,
   encounterNear, cacheNear, hullFor, encArt, DOCK, dockAt, ENCOUNTER_REACH,
   RETURN_PORTALS, portalAt, portalNear, portalOpen as wayHomeOpen, PORTAL_HOME, PORTAL_REACH, type ReturnPortal,
   WARGATE, WARGATE_REACH, MAELSTROMS, MAELSTROM_REACH, type Maelstrom,
   // The duel's framing lives with the raid water now, so the gauntlet's arena
   // composes its fights from the same numbers this chart does.
   WARSHIP_W, FIGHT_CAM_LIFT, zoomFor,
-  type Bay, type Encounter, type Cache, type Beat, type Wall,
+  type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
-import { RAID_MAP, RAID_CHAPTERS, type RaidNode } from '@/lib/raidMap'
+import { RAID_MAP, RAID_CHAPTERS, chapterForNode, type RaidNode } from '@/lib/raidMap'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
@@ -686,7 +686,7 @@ function artShapes(art: string, x: number, y: number, size: number, fallbackR: n
 let obstaclesAll: Obstacle[] | null = null
 function allObstacles(): Obstacle[] {
   if (obstaclesAll) return obstaclesAll
-  const stacks = [...REEF, ...ANCHORAGE_WALL, ...BAY_WALLS]
+  const stacks = [...REEF, ...ANCHORAGE_WALL]
     .filter(m => m.art.includes('rock-gate'))
     .flatMap(m => {
       const c = ART_COLLIDERS[markKind(m.art)]
@@ -1498,39 +1498,10 @@ export default function SeaMap({
 
   const [onSortie, setOnSortie] = useState(startSide === 'open')
   const sortieRef = useRef(startSide === 'open')
-  /** Which side of each bay's coast she was on last frame, and whether that has
-   *  been established yet. Both refs: the frame loop owns them and nothing on
-   *  screen reads them. */
-  const basinIn = useRef<boolean[]>(BAYS.map(() => false))
-  const basinKnown = useRef(false)
-  /** Which gate is holding her, if any. A ref beside the state so the loop can
-   *  tell a change from a repeat without reading state it does not own. */
+  /** Which shut water is refusing her, if any (a bay id). A ref beside the
+   *  state so the loop can tell a change from a repeat without reading state
+   *  it does not own. */
   const gateRef = useRef<string | null>(null)
-  /** WHERE SHE WAS LAST FRAME. The wall test is a crossing test — see the note
-   *  in the loop — so it needs the segment she travelled, not just where she
-   *  ended up. */
-  /**
-   * WHERE SHE WAS LAST FRAME, and whether that is yet a real answer.
-   *
-   * The wall test is a CROSSING test — it asks whether the segment she
-   * travelled this frame cut across a wall — so on the very first frame it has
-   * no honest previous position to use. It started at 0,0, which is the
-   * Mainland, so a captain resuming inside a bay was tested as having travelled
-   * in a straight line from the middle of the fishing sea to wherever they
-   * were: a line that crosses half the route's rock, and the rule then put them
-   * back at whichever wall it hit first.
-   *
-   * That is the whole of "it always spawns me in a new place". The position was
-   * saved correctly, restored correctly, and then shoved by a rule reading a
-   * journey the boat never made — and WHICH wall it hit depended on where you
-   * were, which is why it was somewhere new every time.
-   *
-   * `known` is the same guard `basinKnown` uses for the bay coasts, for exactly
-   * the same reason, and it is cleared on a warp too: a teleport is not travel
-   * and must never be tested as though it were.
-   */
-  const lastPos = useRef({ x: 0, y: 0 })
-  const lastKnown = useRef(false)
   /**
    * ── ONLY THE ROCK THAT COULD ACTUALLY TOUCH HER ─────────────────────────
    *
@@ -1556,7 +1527,6 @@ export default function SeaMap({
    * times a second while under way, none at all at anchor.
    */
   const nearObs = useRef<Obstacle[]>([])
-  const nearWalls = useRef<{ w: Wall; ax: number; ay: number; bx: number; by: number }[]>([])
   const nearAt = useRef({ x: Infinity, y: Infinity })
   /** Mirrored for the frame loop, which mounts once and would otherwise hold
    *  whatever was cleared when the page loaded — so a chapter finished in this
@@ -2279,73 +2249,6 @@ export default function SeaMap({
    * sway phase, so keeping them means the reef breathes in exactly the pattern
    * it always did rather than being reshuffled by the move.
    */
-  /**
-   * THE ROCK ACROSS EVERY ROAD THIS CAPTAIN HAS NOT EARNED.
-   *
-   * Sorted with the coast rather than appended to it, or a plug in a channel
-   * behind would draw over the wall of the one in front where the fan closes at
-   * the hub — the same painter's problem the walls themselves solve, and it does
-   * not stop being a problem because the rocks arrived from somewhere else.
-   */
-  const shutPlugs = useMemo(() => [
-    ...BAYS.filter(b => !bayOpen(b, clearedNodes)).flatMap(b => MOUTH_PLUGS[b.id] ?? []),
-    // AND EVERY GATE STILL STANDING. Same list and the same reason: this is the
-    // rock that differs from captain to captain, so it is sorted in with the
-    // coast rather than appended to it — a gate drawn after the coast would sit
-    // on top of whatever coast is south of it.
-  ].sort((p, q) => p.y - q.y), [clearedNodes])
-
-  /**
-   * THE ROUTE BOUNDARIES, as broken water.
-   *
-   * Every standing wall in a bay, handed to the canvas as a line to draw a
-   * shoal along. Gates are in the list only while they are shut, so beating the
-   * boss that opens one takes its water away — the same fact the rock used to
-   * carry, said by the same list.
-   *
-   * Each takes its own bay's PALE STOP, so a shoal belongs to the water it is
-   * in: bone-grey in A Bigger Fish, and almost black out in the Last Fathom.
-   */
-  const surfLines = useMemo(() => {
-    const paleOf = (b: Bay) => parseInt(b.sea[2].replace('#', ''), 16)
-    const out: { ax: number; ay: number; bx: number; by: number; tint: number }[] = []
-
-    // ── THE ROUTE WALLS INSIDE EACH BAY ──
-    for (const w of WALLS) {
-      if (!wallUp(w, clearedNodes)) continue
-      const e = wallEnds(w)
-      const bay = BAY_BY_ID[w.bay]
-      if (!e || !bay) continue
-      out.push({ ax: e.ax, ay: e.ay, bx: e.bx, by: e.by, tint: paleOf(bay) })
-    }
-
-    // ── AND THE TWO SIDES OF EVERY STRAIT ──
-    //
-    // Built from the same strait space the rock was, so the shoal edges the
-    // passage exactly where the passage has always been. One line a side rather
-    // than two rows of boulders plus shingle: a strait is two thousand pixels
-    // long, which is more than enough to see four rocks repeat down it.
-    for (const b of BAYS) {
-      const L = straitLen(b)
-      for (const side of [-1, 1]) {
-        const a = fromStrait(b, 0, side * b.half)
-        const z = fromStrait(b, L, side * b.half)
-        out.push({ ax: a.x, ay: a.y, bx: z.x, by: z.y, tint: paleOf(b) })
-      }
-    }
-    return out
-  }, [clearedNodes])
-
-  /**
-   * PUSHED WHEN IT CHANGES, AND WHENEVER THE CANVAS IS READY FOR IT.
-   *
-   * An effect alone would fire once, and on a first load it fires before the
-   * renderer exists — `gpuRef.current` is null and the shoals never arrive. The
-   * portal has the same shape of problem and solves it by re-pushing from the
-   * loop; this does the same, on the proximity tick rather than every frame,
-   * because a reference compare a few times a second is enough to notice both
-   * a gate coming down and a canvas turning up.
-   */
   /** The canvas bakes islands from a list it is given; when the bay changes it
    *  is handed a new one and reconciles — see its `islands` handle. The effect
    *  covers the common case; the RE-PUSH FROM THE TICK is the load-into-a-bay
@@ -2360,23 +2263,16 @@ export default function SeaMap({
   gpuIslandsRef.current = gpuIslands
   const islesPushed = useRef<GpuIsland[] | null>(null)
 
-  const surfRef = useRef(surfLines)
-  surfRef.current = surfLines
-  const surfPushed = useRef<typeof surfLines | null>(null)
 
   const gpuMarks = useMemo<GpuMark[]>(() => GPU_ISLANDS
     ? [
       ...LANDMARKS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, sway: m.sway, i })),
       ...REEF.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 500 })),
       ...ANCHORAGE_WALL.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 1200 })),
-      ...BAY_WALLS.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 4000 })),
-      // The straits this captain has not opened, filled in. Keyed off the
-      // cleared list so a chapter finished this session drops its plug on the
-      // next render rather than on the next reload.
-      ...shutPlugs.map((m, i) => ({ art: m.art, x: m.x, y: m.y, size: m.size, i: i + 9000 })),
+      // NO BAY COAST, NO STRAIT SHOAL, NO PLUG. The campaign's water is open
+      // sea; what stops you is a rule, not a rock. See raidWaters.
     ]
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    : [], [shutPlugs])
+    : [], [])
 
   /**
    * GO ASHORE AT AN ISLE.
@@ -2720,18 +2616,6 @@ export default function SeaMap({
     pos.current = { x, y }
     target.current = { x, y }
     vel.current = { x: 0, y: 0 }
-    // ── AND SHE FORGETS WHICH SIDE OF EVERY COAST SHE WAS ON ──────────
-    //
-    // The bay walls work off which side of the shape she was on LAST FRAME, so
-    // a boat lifted out of a bay reads as having crossed its coast without
-    // passing the mouth — and the wall would do exactly what it is for and shove
-    // her straight back in. Clearing this makes the next frame ADOPT wherever
-    // she now is, which is the same thing it does when the chart first loads.
-    basinKnown.current = false
-    // AND THE WALLS FORGET THE JOURNEY. A teleport is not travel: tested as a
-    // crossing it is a line from the old place to the new one, straight through
-    // everything in between, and the route's own rock would refuse the arrival.
-    lastKnown.current = false
     portalIn.current = false
     setPortalOpen(false)
     vibrate([16, 40, 24])
@@ -3138,7 +3022,8 @@ export default function SeaMap({
   /** The chest within arm's reach, and the gate refusing her, if any. Both set
    *  from the frame loop and read by the helm. */
   const [nearCache, setNearCache] = useState<Cache | null>(null)
-  const [heldBy, setHeldBy] = useState<Wall | null>(null)
+  /** The shut water refusing her, for the helm. See the loop. */
+  const [heldBy, setHeldBy] = useState<{ bay: string; shut: string } | null>(null)
   /** The story post within arm's reach, and the scene currently playing over
    *  the water. */
   const [nearBeat, setNearBeat] = useState<Beat | null>(null)
@@ -4383,6 +4268,33 @@ export default function SeaMap({
     }
   }, [finn, inAnchorage, onSortie])
 
+  /**
+   * ── WHAT THE CAMPAIGN WANTS FROM YOU NEXT ────────────────────────────
+   *
+   * The same rule the Expeditions hub uses to light its spine: the first node
+   * in chain order that is available and not a side branch. Resolved against
+   * the water, so it also knows WHERE: a ship at its mooring, a post or a
+   * chest on its rock. Null when there is nothing waiting (the campaign is
+   * done, or nothing is open yet), and the corner shows nothing.
+   */
+  const nextStop = useMemo(() => {
+    const n = RAID_MAP.find(x => !x.sideBranch && (nodeStatus[x.id] ?? 'locked') === 'available')
+    if (!n) return null
+    const enc = ENCOUNTERS.find(e => e.node === n.id)
+    const beat = BEATS.find(b => b.node === n.id)
+    const cache = CACHES.find(c => c.node === n.id)
+    const at = enc ? encounterAt(enc) : beat ? beatAt(beat) : cache ? cacheAt(cache) : null
+    const bayId = enc?.bay ?? beat?.bay ?? cache?.bay ?? null
+    const fight = n.type === 'raid' || n.type === 'skirmish'
+    return {
+      node: n,
+      chapter: chapterForNode(n.id),
+      bay: bayId ? BAY_BY_ID[bayId] ?? null : null,
+      at,
+      verb: fight ? 'Take on' : cache ? 'Open' : verbFor(n, 'available'),
+    }
+  }, [nodeStatus])
+
   const hudRow = useMemo(() => {
     const on: string[] = []
     // ── NOT WHILE THE GUNS ARE OUT ────────────────────────────────────────
@@ -4442,9 +4354,9 @@ export default function SeaMap({
     if (nearTrader && !hailing) {
       return { act: dealt.includes(nearTrader.key) ? `Speak to ${nearTrader.name}` : `Hail ${nearTrader.name}`, hold: null }
     }
-    // A GATE OUTRANKS EVERYTHING. She is stopped against it; nothing else she
-    // could be offered matters while the water is refusing to let her past.
-    if (heldBy) return { act: null, hold: heldBy.shut ?? 'The way is shut' }
+    // A SHUT WATER OUTRANKS EVERYTHING. She is stopped against it, and there
+    // is nothing drawn to say so: this line is the whole of the refusal.
+    if (heldBy) return { act: null, hold: heldBy.shut }
 
     // THE PORTAL, when you are floating in it. Above the campaign for the same
     // reason the way home is: nothing else is inside that ring, and a captain
@@ -4746,10 +4658,6 @@ export default function SeaMap({
     }
     target.current = { ...pos.current }
     vel.current = { x: 0, y: 0 }
-    // AND THE WALLS START FROM HERE, not from wherever the ref was born. This
-    // is a restore, not a voyage.
-    lastPos.current = { ...pos.current }
-    lastKnown.current = false
     // The refs and the chrome, seeded together with the position they belong
     // to. A position restored without its state is the bug this effect had.
     sideRef.current = north
@@ -5723,34 +5631,28 @@ export default function SeaMap({
         setAtEdge(false)
       }
 
-      // ── AND YOU CANNOT SAIL THROUGH A BAY'S COAST ──────────────────
+      // ── YOU CANNOT ENTER A WATER YOU HAVE NOT EARNED ─────────────────
       //
-      // The rocks are SCENERY. Every wall on this chart is really a piece of
-      // arithmetic — the reef is the north wall, the harbour and the raid water
-      // are radius clamps — and the boulders are what make the maths legible.
-      // Drawing walls buys walls you can see and sail straight through.
+      // AND THAT IS THE WHOLE OF IT. This used to be a coast of rock round
+      // every bay, a shoal down every strait, a plug across every door not yet
+      // opened and a route of walls through every bay that was, with a
+      // crossing test per wall per frame to hold it all up. The campaign was
+      // correct and the sea was furniture. All of it drew the same one fact
+      // this block states in six lines: a chapter's water is not yours until
+      // the chapter before it is done.
       //
-      // A chapter's water is a DISC AND A BOX taken together: the bay, and the
-      // strait that leads to it. Together they have exactly one opening — the
-      // strait's mouth, back at the junction — so the whole rule is: you may
-      // only change which side of this shape you are on while you are in that
-      // mouth, and only if the chapter behind it has fallen.
+      // Nothing is drawn. A shut bay is open sea to look at and a wall to sail
+      // into: she is set back on the rim with only the speed that was carrying
+      // her INTO it removed, so she slides along the line rather than stopping
+      // dead, and the helm says which water and what finishes it. An OPEN bay
+      // has no rule at all, in or out, from any heading.
       //
-      // Taking them together is also what makes the join free. A boat running
-      // out of the strait into the bay never leaves the region, so no rule fires
-      // there at all and there is no seam to catch on — which a strait and a bay
-      // kept as two separate walls would have had, exactly where every captain
-      // crosses.
-      //
-      // Which side she was on LAST FRAME, not the sign of her speed: a boat
-      // drifting at half a pixel a frame has a component that flips with the
-      // swell, and a wall reading that would let her wobble through.
-      const nowOut = sortieRef.current
-
-      /** Move her to a point and take away only the speed that was carrying her
-       *  INTO it, so what was carrying her sideways survives and she scrapes
-       *  along and finds the way through — the same courtesy the island
-       *  shorelines and the chart's own edge both extend. */
+      // Not while the guns are out: in a fight she is being eased onto her
+      // station, and a station is never inside a shut bay to begin with.
+      /** Move her to a point and take away only the speed that was carrying
+       *  her INTO it, so what was carrying her sideways survives and she
+       *  scrapes along the line and finds the way round, the same courtesy the
+       *  island shorelines and the chart's own edge both extend. */
       const shove = (tx: number, ty: number) => {
         const ux = tx - pos.current.x, uy = ty - pos.current.y
         const ul = Math.hypot(ux, uy) || 1
@@ -5762,57 +5664,27 @@ export default function SeaMap({
           vel.current.y -= (uy / ul) * into
         }
       }
-
-      let held: Wall | null = null
-      for (let i = 0; i < BAYS.length; i++) {
-        const b = BAYS[i]
-        const px = pos.current.x, py = pos.current.y
-        const inside = inChapterWater(b, px, py)
-
-        // FIRST FRAME OUT HERE: adopt where she actually is. Sea position
-        // persists, so a captain who quit inside a bay comes back inside it, and
-        // a wall that assumed otherwise would shove her out through her own
-        // coast before she had touched the helm.
-        if (!basinKnown.current || !nowOut) { basinIn.current[i] = inside; continue }
-
-        if (inside !== basinIn.current[i]) {
-          const q = toStrait(b, px, py)
-          // THROUGH THE MOUTH, which is the only opening: at the junction end of
-          // the strait, and BETWEEN the two gate stones rather than round the
-          // outside of one.
-          const atMouth = q.along < 200 && Math.abs(q.across) < b.half
-          if (atMouth && bayOpen(b, clearedRef.current)) {
-            basinIn.current[i] = inside
-            continue
-          }
-          const back = basinIn.current[i] ? intoWater(b, px, py) : outOfWater(b, px, py)
+      let held: { bay: string; shut: string } | null = null
+      if (!fightOnRef.current) {
+        for (const b of BAYS) {
+          if (bayOpen(b, clearedRef.current)) continue
+          if (!inBay(b, pos.current.x, pos.current.y)) continue
+          const back = outOfWater(b, pos.current.x, pos.current.y)
           shove(back.x, back.y)
-          continue
+          target.current = { ...pos.current }
+          held = { bay: b.id, shut: bayShutLine(b) }
+          break
         }
-
+      }
+      // Only when it CHANGES. This runs every frame and setState does not.
+      if ((held?.bay ?? null) !== gateRef.current) {
+        gateRef.current = held?.bay ?? null
+        setHeldBy(held)
       }
 
-      // ── AND YOU CANNOT CROSS A WALL ────────────────────────────────
-      //
-      // The rock inside a bay is a ROUTE — two chains carving a lane out and a
-      // lane back — so this is the rule that makes the route a route rather
-      // than a drawing of one.
-      //
-      // TESTED AS A CROSSING, not as a distance. A boat under way covers
-      // eighty pixels in a frame and a wall is a line with no thickness: ask
-      // "how close am I" and she tunnels straight through anything she is
-      // moving fast enough to clear in one step, which is exactly the speed
-      // she is doing when it matters. Ask instead whether the segment she
-      // travelled this frame crossed the segment the wall is, and there is no
-      // speed that beats it.
-      // NOTHING TO TEST UNTIL SHE HAS ACTUALLY MOVED. See lastKnown: with no
-      // previous position, "the segment she travelled" is a line from wherever
-      // this ref happened to start, and a route full of rock will always find
-      // something to refuse.
-      // THE NEAR LIST, refreshed by distance travelled — see nearObs. Ahead of
-      // the wall test because the walls read from it too. Squared distances
-      // throughout: this is the scan the near list exists to make rare, so it
-      // should not pay a sqrt per candidate either.
+      // THE NEAR LIST, refreshed by distance travelled — see nearObs. Squared
+      // distances throughout: this is the scan the near list exists to make
+      // rare, so it should not pay a sqrt per candidate either.
       {
         const mx = pos.current.x - nearAt.current.x
         const my = pos.current.y - nearAt.current.y
@@ -5828,69 +5700,7 @@ export default function SeaMap({
             const reach = o.r + R
             if (dx * dx + dy * dy < reach * reach) obs.push(o)
           }
-          const ws = nearWalls.current
-          ws.length = 0
-          for (const w of WALLS) {
-            const e = wallSeg(w)
-            if (!e) continue
-            // Closest point of the wall's segment to the hull — the same shape
-            // as obstacleNearest, on the cached ends.
-            const vx = e.bx - e.ax, vy = e.by - e.ay
-            const t2 = Math.max(0, Math.min(1,
-              ((pos.current.x - e.ax) * vx + (pos.current.y - e.ay) * vy)
-              / Math.max(1e-6, vx * vx + vy * vy)))
-            const dx = pos.current.x - (e.ax + vx * t2)
-            const dy = pos.current.y - (e.ay + vy * t2)
-            if (dx * dx + dy * dy < R * R) ws.push({ w, ax: e.ax, ay: e.ay, bx: e.bx, by: e.by })
-          }
         }
-      }
-
-      const from = lastPos.current
-      for (const nw of nearWalls.current) {
-        if (!lastKnown.current) break
-        // NOT WHILE THE GUNS ARE OUT. In a fight she is not sailing: the loop
-        // is easing her onto her station in the duel, and a crossing test reads
-        // that as a captain trying to run a gate. She holds a few hundred
-        // pixels off a hull that is itself in open water, so there is nothing
-        // out there for her to end up inside.
-        if (fightOnRef.current) break
-        const w = nw.w
-        if (!wallUp(w, clearedRef.current)) continue
-        const e = nw
-        const hit = segHit(from.x, from.y, pos.current.x, pos.current.y, e.ax, e.ay, e.bx, e.by)
-        if (hit == null) continue
-
-        // Put her back a hair on the side she came from, and take away only the
-        // speed that was carrying her INTO the wall — so she slides along it and
-        // follows the lane rather than stopping dead against it, which is what
-        // makes a walled route feel like a road instead of a maze.
-        const wx = e.bx - e.ax, wy = e.by - e.ay
-        const wl = Math.hypot(wx, wy) || 1
-        let nx3 = -wy / wl, ny3 = wx / wl
-        // The normal that points back the way she came.
-        if ((from.x - pos.current.x) * nx3 + (from.y - pos.current.y) * ny3 < 0) { nx3 = -nx3; ny3 = -ny3 }
-        pos.current.x = hit.x + nx3 * WALL_SKIN
-        pos.current.y = hit.y + ny3 * WALL_SKIN
-        const into = vel.current.x * nx3 + vel.current.y * ny3
-        if (into < 0) {
-          vel.current.x -= nx3 * into
-          vel.current.y -= ny3 * into
-        }
-        target.current = { ...pos.current }
-        if (w.node) held = w
-      }
-      basinKnown.current = nowOut
-      // Mutated, not replaced: this runs every frame, and a fresh object per
-      // frame is nothing but work for the collector.
-      lastPos.current.x = pos.current.x
-      lastPos.current.y = pos.current.y
-      lastKnown.current = true
-
-      // Only when it CHANGES. This runs every frame and setState does not.
-      if ((held?.node ?? null) !== gateRef.current) {
-        gateRef.current = held?.node ?? null
-        setHeldBy(held)
       }
 
       // YOU CANNOT SAIL THROUGH AN ISLAND. Clamping the target is not enough on
@@ -6748,10 +6558,6 @@ export default function SeaMap({
           gpuRef.current.islands(gpuIslandsRef.current)
           islesPushed.current = gpuIslandsRef.current
         }
-        if (surfPushed.current !== surfRef.current && gpuRef.current) {
-          gpuRef.current.surf(surfRef.current)
-          surfPushed.current = surfRef.current
-        }
         // AND WHICH BAY IS WORTH DRAWING. Generous: a bay claims you well
         // before its coast does, so its rocks are already there when its water
         // is. Null out in the junction and on the fishing side, where the
@@ -7117,8 +6923,6 @@ export default function SeaMap({
         {/* The harbour's own shore, north of the reef. Always drawn: from the
             fishing grounds it is the far wall you can see beyond the arch. */}
         <AnchorageWall />
-        <BayWalls />
-        <MouthPlugs rocks={shutPlugs} />
 
         {/* WHAT THE GAP IS FOR. There is no Harbour island any more — sailing
             through the opening is what takes you to expeditions, so the opening
@@ -7890,6 +7694,14 @@ hullRef={hullRefFor(t.key)} />
             }} />
           )}
         </button>
+      )}
+
+      {/* THE CAMPAIGN, under the disc row in the corner. What to do next and
+          which way it is, always, for as long as you are on the expedition
+          side and the rod and the guns are stowed. See CampaignHud. */}
+      {inAnchorage && !hudOff && nextStop && (
+        <CampaignHud stop={nextStop} pos={pos} top={18 + hudSize + 10}
+          onOpen={() => { vibrate(10); setMapOpen(true) }} />
       )}
 
       {/* THE CHART BUTTON, beside the light and on the same row.
@@ -8829,6 +8641,9 @@ hullRef={hullRefFor(t.key)} />
         bearings={bearings}
         dug={dug}
         friends={friends}
+        // THE NEXT THING THE CAMPAIGN WANTS, pinned. Same resolution the
+        // corner card reads, so the two can never point at different things.
+        next={nextStop?.at ? { x: nextStop.at.x, y: nextStop.at.y, label: nextStop.node.label } : null}
       />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
@@ -9765,344 +9580,20 @@ const ANCHORAGE_WALL = anchorageRocks()
  */
 type RockArt = { art: string; min: number; max: number }
 
-/** The coast, and the loose things floating about in the bay. Split because
- *  they are not the same job: a wall is built of the first and the second is
- *  scenery you come across. A wall made of rowboats is not a wall. */
-type RockSet = { wall: readonly RockArt[]; props: readonly RockArt[] }
-
-const CHAPTER_ROCKS: Record<Bay['rocks'], RockSet> = {
-  // The Loose Thread. A working pirate coast: wave-cut stone, rotting mooring
-  // posts, a jetty somebody stopped maintaining, and the boats that lost.
-  reef: {
-    wall: [
-      { art: '/sea/rock-reef-1.png', min: 240, max: 330 },   // layered shelf
-      { art: '/sea/rock-reef-3.png', min: 175, max: 245 },   // mossy rocks, posts
-      { art: '/sea/rock-reef-5.png', min: 175, max: 245 },   // rocks and rope
-      { art: '/sea/rock-reef-6.png', min: 195, max: 275 },   // pilings and chain
-    ],
-    props: [
-      { art: '/sea/rock-reef-2.png', min: 88, max: 118 },    // a swamped rowboat
-      { art: '/sea/rock-reef-4.png', min: 88, max: 118 },    // and another
-    ],
-  },
-  // A Bigger Fish. Everything out here has been eaten by something.
-  bones: {
-    wall: [
-      { art: '/sea/rock-bones-1.png', min: 360, max: 470 },  // the ribcage
-      { art: '/sea/rock-bones-2.png', min: 250, max: 340 },  // a jaw in the sand
-      { art: '/sea/rock-bones-3.png', min: 165, max: 235 },  // kelp over black rock
-      { art: '/sea/rock-bones-4.png', min: 200, max: 285 },  // a run of vertebrae
-    ],
-    props: [{ art: '/sea/rock-bones-3.png', min: 95, max: 130 }],
-  },
-  // The Coffers. A counting house at the bottom of the sea.
-  coffers: {
-    wall: [
-      { art: '/sea/rock-coffers-1.png', min: 230, max: 320 }, // vault wall
-      { art: '/sea/rock-coffers-2.png', min: 230, max: 320 }, // toppled columns
-      { art: '/sea/rock-coffers-3.png', min: 195, max: 270 }, // reef over a strongbox
-      { art: '/sea/rock-coffers-4.png', min: 150, max: 205 }, // bollards and chain
-    ],
-    props: [{ art: '/sea/rock-coffers-4.png', min: 90, max: 120 }],
-  },
-  // The Last Fathom. No warmth in any of it.
-  fathom: {
-    wall: [
-      { art: '/sea/rock-fathom-1.png', min: 230, max: 320 },  // basalt columns
-      { art: '/sea/rock-fathom-2.png', min: 250, max: 340 },  // a drowned arch
-      { art: '/sea/rock-fathom-3.png', min: 175, max: 250 },  // obsidian shards
-      { art: '/sea/rock-fathom-4.png', min: 250, max: 340 },  // a lava shelf
-    ],
-    props: [{ art: '/sea/rock-fathom-3.png', min: 90, max: 125 }],
-  },
-}
-
-/**
- * HOW CLOSE TOGETHER A SET'S ROCKS HAVE TO STAND.
- *
- * DERIVED FROM THE ART, not a constant. The reef's own REEF_STEP of 700 was set
- * against boulders 400-800 wide; drop the same step onto rock half that size and
- * the coast becomes a dotted line with a boat-width of open water between every
- * piece — which is not a coast, it is a hint of one, and the arithmetic wall
- * behind it then reads as invisible.
- *
- * A shade over the mean width, so with the jitter each piece just meets its
- * neighbour. Halve the art and the step halves itself.
- */
-function rockStep(set: RockSet): number {
-  const mean = set.wall.reduce((a, k) => a + (k.min + k.max) / 2, 0) / set.wall.length
-  return Math.round(mean * 1.05)
-}
-
-/**
- * ── A BAY'S COAST, AND THE STRAIT INTO IT ───────────────────────────────────
- *
- * A ring of that chapter's rock all the way round the bay with ONE gap in it,
- * and two runs down the sides of the strait that leads to the gap. Exactly the
- * shape the anchorage already is — chart.ts on its rim: "that is what makes it a
- * harbour rather than a disc: the boundary was an invisible line you slid along,
- * and now it is a shore with one gap in it."
- *
- * The rock is SCENERY. Every wall on this chart is really a piece of arithmetic
- * and the boulders are what make it legible; see the boundary rule in the frame
- * loop, which is where a bay actually stops you.
- *
- * Built in bay and strait space and converted at the end, so a bay can be
- * re-aimed, resized or moved and its whole coast follows without a number in
- * here changing.
- *
- * The mouth is left open. Whether you may pass it is a question about the
- * chapter behind it, answered per captain in `shutMouths`.
- */
-function bayRocks(b: Bay): { art: string; x: number; y: number; size: number }[] {
-  const out: { art: string; x: number; y: number; size: number }[] = []
-  const KIND = CHAPTER_ROCKS[b.rocks]
-  const STEP = rockStep(KIND)
-  let seed = 0x9e3779b9
-  for (let i = 0; i < b.id.length; i++) seed = (Math.imul(seed ^ b.id.charCodeAt(i), 0x85ebca6b) >>> 0)
-  const nx = () => {
-    seed ^= seed << 13; seed >>>= 0
-    seed ^= seed >>> 17
-    seed ^= seed << 5; seed >>>= 0
-    return seed / 0x100000000
-  }
-  const pick = () => KIND.wall[Math.min(KIND.wall.length - 1, Math.floor(nx() * KIND.wall.length))]
-
-  // ── THE RIM ──
-  // Two rows round the whole circle, minus the doorway. The angle a given
-  // distance subtends shrinks as the bay grows, so everything is stepped in
-  // arc length and converted — a big bay gets more rocks, not bigger gaps.
-  const c = bayCentre(b)
-  const ang = (px: number) => px / b.r
-  // Which way the door lies, seen from the middle of the bay.
-  const door = b.bearing + Math.PI
-  // Wide enough for the strait plus the stones that frame it.
-  const doorHalf = ang(b.half + 420)
-
-  for (const row of [0, 1]) {
-    const R = b.r + (row ? STEP * 0.5 : 20)
-    for (let t = row * ang(STEP) * 0.5; t < Math.PI * 2; t += ang(STEP)) {
-      const off = ((t - door + Math.PI * 3) % (Math.PI * 2)) - Math.PI
-      if (Math.abs(off) < doorHalf) continue
-      const k = pick()
-      const th = t + (nx() - 0.5) * ang(STEP) * 0.35
-      const rr = R + (nx() - 0.5) * STEP * 0.4
-      out.push({
-        art: k.art, x: c.x + Math.cos(th) * rr, y: c.y + Math.sin(th) * rr,
-        size: k.min + nx() * (k.max - k.min),
-      })
-    }
-  }
-
-  // ── THE SHINGLE ON THE RIM ──
-  // Small rock at four times the density, exactly as on the reef: boulders on
-  // their own leave bare patches the eye reads as a way through, and rock with
-  // nothing small in it has no size to it.
-  for (let t = 0; t < Math.PI * 2; t += ang(PEBBLE_STEP * 2)) {
-    const off = ((t - door + Math.PI * 3) % (Math.PI * 2)) - Math.PI
-    if (Math.abs(off) < doorHalf) continue
-    const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
-    const r = nx()
-    const th = t + (nx() - 0.5) * ang(PEBBLE_STEP * 2) * 0.8
-    const rr = b.r + 20 + (nx() - 0.5) * 220
-    out.push({
-      art: pa.art, x: c.x + Math.cos(th) * rr, y: c.y + Math.sin(th) * rr,
-      size: pa.min * 0.7 + r * r * (pa.max - pa.min) * 0.7,
-    })
-  }
-
-  // ── THE STRAIT'S TWO SIDES ARE WATER NOW ──
-  //
-  // They were two runs of the same four rocks down a two-thousand-pixel
-  // passage, twice over, and at that length the repeat is the only thing you
-  // see. They are shoals like the route walls inside the bay — see seaSurfLine
-  // and the `surfLines` that feeds it, which builds the strait's two edges from
-  // the same geometry this used.
-  //
-  // `put` stays: the gate stones below still use it, and they are the one thing
-  // out here that should be an object. Two stones either side of a gap is a
-  // DOOR, and a door is a specific thing rather than a length of coast.
-  const put = (along: number, across: number, art: string, size: number) => {
-    const p = fromStrait(b, along, across)
-    out.push({ art, x: p.x, y: p.y, size })
-  }
-
-  // ── THE GATE STONES ──
-  // Either side of the mouth, framing it. A gap in a run of rock is a gap you
-  // might have imagined; two stones standing either side of it is a door — and
-  // out here it is the door to a whole chapter.
-  put(-40, -(b.half + 200), '/sea/rock-gate-w.png', 420)
-  put(-40, b.half + 200, '/sea/rock-gate-e.png', 420)
-
-  // ── THE FLOTSAM ──
-  // The loose things: a wrecked boat, a fallen bollard, a knot of kelp, out in
-  // the water rather than on the coast. They are what makes a bay feel like a
-  // place somebody has been rather than a walled pond, and they are small — a
-  // wreck is half a hull, which is what a wreck is.
-  //
-  // SCATTERED IN BAY SPACE and kept off the axis, so nothing lands in the
-  // doorway or in the middle of the run to the boss.
-  for (let i = 0; i < 14 && KIND.props.length > 0; i++) {
-    const k = KIND.props[Math.min(KIND.props.length - 1, Math.floor(nx() * KIND.props.length))]
-    // A ring between a third and nine-tenths of the way out, so the middle of
-    // the bay stays open water and the edge stays sailable.
-    const rr = b.r * (0.34 + nx() * 0.56)
-    const th = nx() * Math.PI * 2
-    out.push({
-      art: k.art, x: c.x + Math.cos(th) * rr, y: c.y + Math.sin(th) * rr,
-      size: k.min + nx() * (k.max - k.min),
-    })
-  }
-
-  // Painter's order: further south is nearer, so it draws last and overlaps
-  // what is behind it. Without this a big rock at the back sits on top of a
-  // small one in front and the whole coast goes flat.
-  return out.sort((p, q) => p.y - q.y)
-}
-
-/* `wallRocks` lived here and is gone with the rock it made. A bay's route
-   boundary is broken water now — see seaSurfLine — and the only thing that
-   still reads a wall's geometry is the crossing test, which always did. */
-
-/**
- * THE PERMANENT ROCK: every bay's COAST, and nothing else.
- *
- * The route walls used to be here too, as rock laid end to end every couple of
- * hundred pixels — four pieces of art repeating down thirty-seven thousand
- * pixels of boundary, which reads as exactly that. They are shoals now, drawn
- * by the water rather than built out of objects: see seaSurfLine, and note that
- * the wall itself is untouched, because collision has always read the SEGMENT
- * and never the stone beside it.
- *
- * The bay's own rim stays rock. That is a coast — the edge of the water, with
- * land behind it — and a coast is a thing rather than a condition of the sea.
- */
-const BAY_WALLS = [...BAYS.flatMap(bayRocks)].sort((p, q) => p.y - q.y)
-
-/** How far off a wall a refused hull is set down. A shade under a boat's beam,
- *  so she rides against it rather than bouncing off it. */
-const WALL_SKIN = 26
-
-/**
- * EVERY WALL'S TWO ENDS, IN WORLD SPACE, WORKED OUT ONCE.
- *
- * The walls are written in bay space and never move, so converting them on
- * every frame for every wall would be a few hundred trig calls a frame to
- * arrive at the same numbers as last time.
- */
-const WALL_SEGS = new Map(WALLS.map(w => [w, wallEnds(w)]))
-const wallSeg = (w: Wall) => WALL_SEGS.get(w) ?? null
-
-/**
- * DID THIS FRAME'S TRAVEL CROSS THIS WALL, AND WHERE?
- *
- * Two segments, the standard cross-product test, returning the point of
- * intersection or null. Nothing clever, and that is the point: a boat under way
- * covers eighty pixels in a frame, and any test that asks "how near the wall am
- * I" lets her tunnel through anything she can clear in one step — which is
- * exactly the speed she is doing when it matters most.
- */
-function segHit(
-  px: number, py: number, qx: number, qy: number,
-  ax: number, ay: number, bx: number, by: number,
-): { x: number; y: number } | null {
-  const rx = qx - px, ry = qy - py
-  const sx = bx - ax, sy = by - ay
-  const d = rx * sy - ry * sx
-  if (Math.abs(d) < 1e-9) return null          // parallel, or she did not move
-  const t = ((ax - px) * sy - (ay - py) * sx) / d
-  const u = ((ax - px) * ry - (ay - py) * rx) / d
-  if (t < 0 || t > 1 || u < 0 || u > 1) return null
-  return { x: px + rx * t, y: py + ry * t }
-}
-
-/** How far short of a gate the water gives out. Enough that the boat is plainly
- *  stopped by something rather than nosing into an invisible line. */
-const GATE_SKIN = 70
-
-/** How far off a coast a refused hull is put back. */
+/** How far outside a shut water's rim a refused hull is put back. */
 const SKIN = 14
 
 /**
- * THE NEAREST POINT INSIDE A CHAPTER'S WATER — and the nearest OUTSIDE it.
- *
- * The shape is a disc and a box that overlap, so each answer is worked out for
- * both pieces and the nearer one wins. Which is the whole reason to keep the
- * region as a union rather than as one clever formula: two easy clamps and a
- * comparison cannot be wrong at the join, and the join is the one place on this
- * coast every captain passes through.
+ * THE NEAREST POINT OUTSIDE A SHUT WATER. A bay is a disc, so this is the rim
+ * along the line from its centre through her, a skin out. There is no strait
+ * case any more: the strait is a coordinate frame, not a shape with a wall.
  */
-function intoWater(b: Bay, x: number, y: number): { x: number; y: number } {
+function outOfWater(b: Bay, x: number, y: number): { x: number; y: number } {
   const c = bayCentre(b)
   const dx = x - c.x, dy = y - c.y
   const d = Math.hypot(dx, dy) || 1
-  const k = Math.min(d, b.r - SKIN)
-  const disc = { x: c.x + (dx / d) * k, y: c.y + (dy / d) * k }
-
-  const L = straitLen(b)
-  const q = toStrait(b, x, y)
-  const box = fromStrait(b,
-    Math.min(Math.max(q.along, SKIN), L - SKIN),
-    Math.max(-b.half + SKIN, Math.min(b.half - SKIN, q.across)))
-
-  return Math.hypot(disc.x - x, disc.y - y) <= Math.hypot(box.x - x, box.y - y) ? disc : box
+  return { x: c.x + (dx / d) * (b.r + SKIN), y: c.y + (dy / d) * (b.r + SKIN) }
 }
-
-function outOfWater(b: Bay, x: number, y: number): { x: number; y: number } {
-  if (inBay(b, x, y)) {
-    const c = bayCentre(b)
-    const dx = x - c.x, dy = y - c.y
-    const d = Math.hypot(dx, dy) || 1
-    return { x: c.x + (dx / d) * (b.r + SKIN), y: c.y + (dy / d) * (b.r + SKIN) }
-  }
-  // In the strait, then. Out the nearer side, unless she is at the junction end,
-  // where out means back into the junction.
-  const q = toStrait(b, x, y)
-  if (q.along < b.half - Math.abs(q.across)) return fromStrait(b, -SKIN, q.across)
-  return fromStrait(b, q.along, q.across >= 0 ? b.half + SKIN : -b.half - SKIN)
-}
-
-/**
- * THE ROCK ACROSS A MOUTH NOBODY HAS EARNED YET.
- *
- * Built per bay and kept apart from the coast, because this is the one part of
- * it that differs from captain to captain. Same rock as the rest of that bay's
- * shore, so a shut door reads as the coast having simply closed over rather than
- * as a barrier somebody dropped in.
- */
-const MOUTH_PLUGS: Record<string, { art: string; x: number; y: number; size: number }[]> =
-  Object.fromEntries(BAYS.map(b => {
-    const out: { art: string; x: number; y: number; size: number }[] = []
-    const KIND = CHAPTER_ROCKS[b.rocks].wall
-    const STEP = rockStep(CHAPTER_ROCKS[b.rocks])
-    let seed = 0x2545f491
-    for (let i = 0; i < b.id.length; i++) seed = (Math.imul(seed ^ b.id.charCodeAt(i), 0xc2b2ae35) >>> 0)
-    const nx = () => {
-      seed ^= seed << 13; seed >>>= 0
-      seed ^= seed >>> 17
-      seed ^= seed << 5; seed >>>= 0
-      return seed / 0x100000000
-    }
-    const put = (along: number, across: number, art: string, size: number) => {
-      const p = fromStrait(b, along, across)
-      out.push({ art, x: p.x, y: p.y, size })
-    }
-    for (const row of [0, 1]) {
-      for (let x = -b.half; x <= b.half; x += STEP) {
-        const k = KIND[Math.min(KIND.length - 1, Math.floor(nx() * KIND.length))]
-        put(60 - (row ? STEP * 0.5 : 0) + (nx() - 0.5) * 120,
-          x + (nx() - 0.5) * STEP * 0.3,
-          k.art, k.min + nx() * (k.max - k.min))
-      }
-    }
-    for (let x = -b.half; x <= b.half; x += PEBBLE_STEP) {
-      const pa = SHINGLE_ART[Math.min(SHINGLE_ART.length - 1, Math.floor(nx() * SHINGLE_ART.length))]
-      const r = nx()
-      put(40 + (nx() - 0.5) * 260, x + (nx() - 0.5) * PEBBLE_STEP * 0.8,
-        pa.art, pa.min + r * r * (pa.max - pa.min))
-    }
-    return [b.id, out.sort((p, q) => p.y - q.y)] as const
-  }))
 
 /**
  * EVERYTHING THAT CAN STAND IN FRONT OF THE BOAT.
@@ -10171,22 +9662,6 @@ const ReefLine = memo(function ReefLine() {
 const AnchorageWall = memo(function AnchorageWall() {
   if (GPU_ISLANDS) return null
   return <>{ANCHORAGE_WALL.map((m, i) => <SeaMark key={`anch${i}`} m={m} i={i + 1200} />)}</>
-})
-
-/** The campaign's roads. Same treatment as the reef and the harbour wall, for
- *  the same reason: four more module constants that can never change. */
-const BayWalls = memo(function BayWalls() {
-  if (GPU_ISLANDS) return null
-  return <>{BAY_WALLS.map((m, i) => <SeaMark key={`bay${i}`} m={m} i={i + 4000} />)}</>
-})
-
-/** The shut mouths, on the DOM path. Takes its rocks as a prop because this is
- *  the one part of the coast that differs per captain. */
-const MouthPlugs = memo(function MouthPlugs({ rocks }: {
-  rocks: { art: string; x: number; y: number; size: number }[]
-}) {
-  if (GPU_ISLANDS) return null
-  return <>{rocks.map((m, i) => <SeaMark key={`plug${i}`} m={m} i={i + 9000} />)}</>
 })
 
 /** Crew card art lives in Supabase storage, same bucket the crew hall reads. */
@@ -12976,6 +12451,86 @@ type CompassRegular = { id: string; name: string; zoneId: string; x: number; y: 
  *  lines tall, so side-by-side needs far more room than stacked. A radius (it
  *  was 96) let two centres pass while the words lay on each other. */
 const COMPASS_KEEP = { x: 120, y: 42 }
+
+/**
+ * ── THE CAMPAIGN CARD ────────────────────────────────────────────────────
+ *
+ * The Expeditions hub lights the next node on its spine; out here the water
+ * did not say what to do next at all, and with the rock gone there is no road
+ * to follow either. This is that spine's one lit node, brought to the corner:
+ * the chapter, the thing, the verb, and a bearing with the distance on it.
+ * Tap it and the chart opens with the same thing pinned.
+ *
+ * Refreshed on a timer like the compass, because the bearing turns with the
+ * boat and nothing else here re-renders per frame.
+ */
+function CampaignHud({ stop, pos, top, onOpen }: {
+  stop: { node: RaidNode; chapter: { romanNumeral: string; title: string; coda?: boolean }; bay: Bay | null; at: { x: number; y: number } | null; verb: string }
+  pos: React.RefObject<Vec>
+  top: number
+  onOpen: () => void
+}) {
+  const [, force] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => force(v => v + 1), 200)
+    return () => clearInterval(id)
+  }, [])
+  const here = pos.current ?? HOME
+  const dx = stop.at ? stop.at.x - here.x : 0
+  const dy = stop.at ? stop.at.y - here.y : 0
+  const dist = stop.at ? Math.hypot(dx, dy) : 0
+  const deg = stop.at ? (Math.atan2(dy, dx) * 180) / Math.PI : 0
+  const close = stop.at ? dist < 700 : false
+  const gold = '#f0c040'
+  return (
+    <button type="button" onClick={e => { e.stopPropagation(); onOpen() }}
+      aria-label={`Next: ${stop.verb} ${stop.node.label}. Open the chart.`}
+      style={{
+        position: 'absolute', top, left: 12, zIndex: Z.hud,
+        display: 'flex', alignItems: 'center', gap: 10, maxWidth: 300,
+        padding: '6px 12px 6px 8px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+        background: 'rgba(6,12,18,0.78)',
+        border: `1px solid ${gold}55`,
+        boxShadow: `0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 ${gold}22`,
+        color: '#f4efe4',
+      }}>
+      {/* THE BEARING. An arrow turned toward the thing, and the distance
+          under it, so the card is a heading and not only a to-do. When you
+          are on top of it the arrow becomes a ring: you are here. */}
+      <span aria-hidden style={{
+        flexShrink: 0, width: 34, height: 34, borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `${gold}1a`, border: `1px solid ${gold}66`,
+      }}>
+        {!stop.at ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+        ) : close ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.4"><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="1.6" fill={gold} /></svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={gold} style={{ transform: `rotate(${deg}deg)`, transition: 'transform 0.2s linear' }} aria-hidden>
+            <path d="M22 12 3 4l4 8-4 8z" />
+          </svg>
+        )}
+      </span>
+      <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: `${gold}cc`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {stop.chapter.coda ? stop.chapter.title : `Chapter ${stop.chapter.romanNumeral}`}{stop.bay ? ` · ${stop.bay.name.replace(/^The /, '')}` : ''}
+        </span>
+        <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {stop.verb} {stop.node.label}
+        </span>
+        <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(214,232,240,0.7)', whiteSpace: 'nowrap' }}>
+          {!stop.at ? 'Somewhere ashore' : close ? 'Right here' : `${fmtDist(dist)} away`}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+/** A distance in the chart's own units, said the way the compass says it. */
+function fmtDist(d: number): string {
+  return d >= 1000 ? `${(d / 1000).toFixed(1)}k` : `${Math.round(d / 10) * 10}`
+}
 
 function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars }: {
   /** The regulars, with whether you have met them. Only the ones in the water

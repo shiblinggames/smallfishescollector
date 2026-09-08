@@ -1,48 +1,45 @@
 // ── THE CAMPAIGN'S WATER ────────────────────────────────────────────────────
 //
-// Past the sortie the sea opens into a wide junction with no walls on it at all,
-// and four short straits lead off it. Each strait opens into a BAY: a big
-// stretch of open water with its own coast, its own isles, its own rock, and one
-// chapter's worth of the campaign scattered through it.
+// Past the sortie the sea is OPEN. All of it. Four named waters lie off the
+// junction, each a chapter's worth of the campaign scattered through it, and
+// the coda's small water due north past everything; between them and around
+// them there is nothing but sea, and you can sail any of it from any heading.
 //
-// ── WHY BAYS, AND NOT THE THREE SHAPES BEFORE THEM ──────────────────────────
+// ── WHAT USED TO BE HERE, AND WHY IT IS GONE ────────────────────────────────
 //
-// This is the fourth shape. Each earlier one was wrong about something the
-// geometry SAYS before anybody reads a word of it.
+// This water has worn five shapes. Rings, like the fishing grounds, said "pick
+// any heading" to a campaign with an order. A chain of walled basins hid the
+// campaign and made re-farming chapter one a sail back through everything
+// after it. A fan of long channels was a queue. Then bays behind straits, with
+// a road of rock folded up inside each one and a gate across it: legible,
+// ordered, and by the end a coastline of several hundred boulders, a shoal down
+// every strait, a plug of rock across every door you had not earned, and a
+// wall through every bay you had. The campaign was correct and the sea was
+// furniture.
 //
-//   RINGS, like the fishing grounds. Concentric bands out from one origin say
-//   "pick any heading and go as far as you dare" — direction-agnostic by
-//   construction. Right for fishing, wrong for a campaign that has an order.
+// The rock came out. Every rim, every strait shoal, every plug, every route
+// wall and every gate. What is left is the one thing all of that machinery was
+// actually for, and it is a rule rather than an object:
 //
-//   A CHAIN of walled basins, each opening into the next. Honestly linear, but
-//   it hid the campaign from you, and re-farming chapter one meant sailing back
-//   through everything that came after it.
+//   YOU CANNOT ENTER A WATER YOU HAVE NOT EARNED, AND NOTHING SHOWS YOU THAT.
 //
-//   A FAN OF LONG CHANNELS. The order was right and the junction was legible,
-//   and it was claustrophobic: four two-hundred-metre corridors with the content
-//   strung down the middle of each. A corridor is a queue. Nothing in it can be
-//   FOUND, because there is only one place anything can be, and no reason to
-//   steer except round the next thing in the line.
+// A bay whose chapter is still shut is open sea to look at and a wall to sail
+// into: the hull is set back on the line and the helm says why, in one plain
+// sentence. Nothing is drawn. The order of the campaign is carried by that rule
+// and by the chain itself (a node refuses to open out of order regardless of
+// where you float), and by the water's own colour, which is per bay. That is
+// enough. It was always enough; the rock was saying it a second time.
 //
-// A STRAIT INTO A BAY FIXES THAT. The strait is the gate — short, narrow,
-// unmistakably a door, and shut with rock until the chapter before it falls. The
-// bay behind it is somewhere to sail: wide enough to lose your bearings in, with
-// isles you come across rather than pass, caches on them, and the boss's water
-// at the far end. The campaign stays strictly ordered and stops being a queue.
+// ── THE GEOMETRY THAT STAYS ─────────────────────────────────────────────────
 //
-// ── AND A BAY IS A ROUTE, NOT AN ARENA ──────────────────────────────────────
-//
-// Rock runs THROUGH a bay, not just around it: two long chains carve a lane out
-// along one side, round the far end, and back down the other. Sailing a bay is
-// following that lane past everything on it to the boss at the tip, rounding
-// him, and coming home past the second.
-//
-// That is what makes a bay linear without making it a corridor. A corridor is
-// linear because there is nowhere else to be; this is linear because somebody
-// drew a road through open water, and the water either side of the road is
-// still there and still sailable at the ends. See WALLS.
-//
-// A GATE IS A WALL WITH A NAME ON IT — one mechanism, not two. See Wall.
+// A bay is still a disc with a bearing and a distance from the junction, and
+// everything in it is still written in BAY SPACE: `[along, across]` from the
+// point where its old strait met its rim. That frame outlived the strait
+// because every ship, rock, chest and post out here is authored in it, and the
+// strait helpers (`entryOf`, `fromBay`, `toBay`) are how those coordinates
+// become a place on the chart. They are coordinate systems now, not doors. The
+// strait's width and length are still on the bay for the same reason; nothing
+// draws them and nothing collides with them.
 
 import { SORTIE } from './chart'
 import { RAID_CHAPTERS, RAID_MAP } from '@/lib/raidMap'
@@ -95,11 +92,10 @@ export type Bay = {
   /** Half the strait's width. The boat is 210 long, so 460 is a passage two
    *  ships could pass in and no more. */
   half: number
-  /** Three stops, deep to pale, like every water on this chart. */
+  /** Three stops, deep to pale, like every water on this chart. Now that the
+   *  rock is gone this is most of what tells one chapter's water from the
+   *  next, and the sea blends toward it as you cross in. */
   sea: [string, string, string]
-  /** Which set of rock its coast is built from. The sets live with the rest of
-   *  the chart's art in SeaMap; this only names one. */
-  rocks: 'reef' | 'bones' | 'coffers' | 'fathom'
 }
 
 const D = (deg: number) => (deg * Math.PI) / 180
@@ -126,21 +122,18 @@ export const BAYS: Bay[] = [
     // DUE WEST, and huge. Nearly ten thousand across.
     bearing: D(169), at: 12158, r: 4941, half: 460,
     sea: ['#12252d', '#244a55', '#4899a5'],
-    rocks: 'reef',
   },
   {
     id: 'sunken_hand', chapter: 2, name: 'A Bigger Fish',
     // North-west. The Gullet is fought up here, and the coast is bone.
     bearing: D(-139), at: 10361, r: 4445, half: 440,
     sea: ['#0f202b', '#204353', '#418499'],
-    rocks: 'bones',
   },
   {
     id: 'the_coffers', chapter: 3, name: 'The Coffers',
     // North-east, and a fleet action has room to turn in it.
     bearing: D(-50), at: 9922, r: 4391, half: 480,
     sea: ['#0c1b27', '#1c384b', '#3c7791'],
-    rocks: 'coffers',
   },
   {
     id: 'the_last_fathom', chapter: 4, name: 'The Last Fathom',
@@ -148,7 +141,6 @@ export const BAYS: Bay[] = [
     // The deepest there is, and the darkest.
     bearing: D(6), at: 12718, r: 5928, half: 440,
     sea: ['#08131e', '#162d3f', '#32627d'],
-    rocks: 'fathom',
   },
   {
     id: 'one_last_ride', chapter: 5, name: 'One Last Ride',
@@ -168,9 +160,6 @@ export const BAYS: Bay[] = [
     // there is no chapter after this and the water should not look like there
     // is.
     sea: ['#120e18', '#241c2e', '#4a3f58'],
-    // The Fathom's black glass, for now. This water wants its own rock and it
-    // is the one thing here still borrowed.
-    rocks: 'fathom',
   },
 ]
 
@@ -298,119 +287,20 @@ export function bayOpen(b: Bay, cleared: Set<string> | string[]): boolean {
 }
 
 /**
- * ── THE WALLS INSIDE A BAY ──────────────────────────────────────────────────
+ * WHAT THE HELM SAYS WHEN THE WATER REFUSES YOU.
  *
- * A bay is not an arena with the campaign scattered in it. It is a ROAD folded
- * up inside a circle: rock runs through the water in two long chains that carve
- * a lane out and a lane back, and sailing the bay is following that lane past
- * everything on it until you reach the boss at the far end, round the tip, and
- * come back down the other side to the second.
- *
- * That is what makes a bay linear WITHOUT being a corridor, which the fan of
- * channels never managed. A corridor is linear because there is nowhere else to
- * be. This is linear because somebody drew a route through open water — and the
- * water either side of the route is still there, still sailable at the ends,
- * still a place rather than a queue.
- *
- * ── A GATE IS A WALL WITH A NAME ON IT ──────────────────────────────────────
- *
- * There were two mechanisms here: walls, which are rock, and gates, which were
- * a line clean across the bay at a distance up it. The second was too crude the
- * moment the water had a shape — "across the bay at along 4400" means nothing
- * in a lane that doubles back, and it would have cut the return leg as well as
- * the outbound one.
- *
- * So there is one thing. A wall is a segment you cannot cross; a wall carrying
- * a `node` is a wall that is only there until that node is done. Same list,
- * same collision, same drawing, and the difference is one field.
- *
- * ── IN BAY SPACE, BOTH ENDS ─────────────────────────────────────────────────
- *
- * `[along, across]` from the bay's entry, like everything else out here, so the
- * whole route moves and turns with the bay it belongs to.
+ * The whole of the campaign's gating is now this sentence and the shove that
+ * comes with it, so it has to be plain: which water, and what finishes it.
+ * The chapter before is named rather than its last node, because "Finish A
+ * Bigger Fish" is a thing a captain can go and do and "Clear chapter_2_class"
+ * is not.
  */
-export type Wall = {
-  bay: string
-  a: [number, number]
-  b: [number, number]
-  /** Set on a gate: the node that takes it down. */
-  node?: string
-  /** What the helm says while it is up. Short: it is read at speed. */
-  shut?: string
-}
-
-/**
- * ── THE LOOSE THREAD'S ROUTE ────────────────────────────────────────────────
- *
- * Two chains. The OUTER one is the coast of the whole route, running from the
- * entry out along the western side, round the far end and back along the
- * eastern. The INNER one is a finger that reaches out from beside the entry to
- * the far end and folds back on itself, which is what splits the route into a
- * leg out and a leg home.
- *
- * The gap between the finger's tip and the outer wall is the TURN, and it is
- * where the chapter's first boss stops being optional.
- */
-/**
- * BAY I's OWN COAST, drawn by hand. The three laid bays add theirs below — see
- * layBay — and the export is the two put together, which is also why this half
- * is not the export itself: `LAID` is built further down the file, and a const
- * cannot be read before it exists.
- */
-const HAND_WALLS: Wall[] = [
-  // ── THE OUTER COAST OF THE ROUTE ──
-  { bay: 'thread', a: [160, -925], b: [1676, -3143] },
-  { bay: 'thread', a: [1736, -3131], b: [4518, -4514] },
-  { bay: 'thread', a: [4702, -4664], b: [7598, -3760] },
-  { bay: 'thread', a: [7735, -3671], b: [9192, -1589] },
-  { bay: 'thread', a: [9139, -1475], b: [9137, 448] },
-  { bay: 'thread', a: [9144, 573], b: [8241, 2507] },
-  { bay: 'thread', a: [8026, 2496], b: [6057, 4005] },
-  { bay: 'thread', a: [6081, 4042], b: [2922, 4016] },
-
-  // ── THE FINGER, out ──
-  { bay: 'thread', a: [526, 386], b: [2701, -276] },
-  { bay: 'thread', a: [2737, -300], b: [3867, -1011] },
-  { bay: 'thread', a: [3933, -1029], b: [4854, -1936] },
-  { bay: 'thread', a: [4955, -1979], b: [6397, -1574] },
-  { bay: 'thread', a: [6481, -1526], b: [7222, -390] },
-  // ── and back ──
-  { bay: 'thread', a: [7084, -323], b: [5703, -561] },
-  { bay: 'thread', a: [5728, -526], b: [3248, 265] },
-  { bay: 'thread', a: [3271, 300], b: [1186, 1135] },
-
-  /**
-   * THE TURN, SHUT UNTIL PETE IS DOWN.
-   *
-   * Across the gap between the finger's tip and the outer wall, which is the
-   * one place the route narrows to a door. Everything before it is the leg out
-   * and Pete at the end of it; everything after is the way home past Krust.
-   *
-   * One gate, not four. The chain already refuses to let you READ or FIGHT
-   * anything out of order — this is only here so the second half of the bay is
-   * not water you can go and look at before you have earned it.
-   */
-  {
-    bay: 'thread', a: [7222, -390], b: [9138, -300],
-    node: 'pete',
-    shut: 'Pete is still afloat, and this is still his water',
-  },
-]
-
-/** Both ends of a wall, in world coordinates. */
-export function wallEnds(w: Wall): { ax: number; ay: number; bx: number; by: number } | null {
-  const b = BAY_BY_ID[w.bay]
-  if (!b) return null
-  const p = fromBay(b, w.a[0], w.a[1])
-  const q = fromBay(b, w.b[0], w.b[1])
-  return { ax: p.x, ay: p.y, bx: q.x, by: q.y }
-}
-
-/** Is this wall standing, for this captain? A plain wall always is; a gate is
- *  only there until the thing that opens it is done. */
-export function wallUp(w: Wall, cleared: Set<string> | string[]): boolean {
-  if (!w.node) return true
-  return !(Array.isArray(cleared) ? cleared.includes(w.node) : cleared.has(w.node))
+export function bayShutLine(b: Bay): string {
+  const i = BAYS.indexOf(b)
+  const prev = i > 0 ? BAYS[i - 1] : null
+  return prev
+    ? `${b.name} is shut. Finish ${prev.name} first.`
+    : `${b.name} is shut.`
 }
 
 /**
@@ -647,35 +537,7 @@ function walk(pts: P[]): { len: number; at: (f: number) => { p: P; n: P } } {
   }
 }
 
-/**
- * A COAST EITHER SIDE OF THE ROAD.
- *
- * Offset at the VERTICES rather than per segment, so consecutive walls share an
- * endpoint exactly. Offsetting each segment on its own leaves a wedge of open
- * water at the outside of every corner - a gap of a few hundred pixels a hull
- * sails straight through, and the single best reason for this to be arithmetic
- * rather than typing.
- */
-function coast(bay: string, pts: P[], half: number): Wall[] {
-  const side = (sign: number): Wall[] => {
-    const off: P[] = pts.map((pt, i) => {
-      const prev = pts[i - 1] ?? pt
-      const next = pts[i + 1] ?? pt
-      const dx = next[0] - prev[0], dy = next[1] - prev[1]
-      const m = Math.hypot(dx, dy) || 1
-      return [pt[0] + (-dy / m) * half * sign, pt[1] + (dx / m) * half * sign] as P
-    })
-    return off.slice(1).map((q, i) => ({
-      bay,
-      a: [Math.round(off[i][0]), Math.round(off[i][1])] as [number, number],
-      b: [Math.round(q[0]), Math.round(q[1])] as [number, number],
-    }))
-  }
-  return [...side(1), ...side(-1)]
-}
-
 type Laid = {
-  walls: Wall[]
   isles: RaidIsle[]
   ships: Encounter[]
   caches: Cache[]
@@ -737,33 +599,6 @@ function layBay(bay: string, stops: Stop[], road: P[] = ROAD, halfFrac = ROAD_HA
     else beats.push({ node: st.node, bay, isle: st.isle })
   })
 
-  /**
-   * THE GATE, shut until the bay's first boss is down.
-   *
-   * Across the channel just past where he stands, which is the one place the
-   * road has a door in it: everything before is the leg out and him at the end
-   * of it, everything after is the way home past the second. Same single gate
-   * as Bay I's and for the same reason - the chain already refuses things out
-   * of order, so this exists only so the back half of a bay is not water you
-   * can go and look at before you have earned it.
-   */
-  const firstShip = stops.findIndex(st => st.kind === 'ship')
-  // 0.45 OF THE WAY TO THE NEXT STOP, not 0.6, and the coda is what settled it.
-  // A gate spans the whole channel, so it is a wall the stop after it has to
-  // keep its distance from — and with only four stops in a small bay, 0.6 put
-  // it 354px in front of the next rock, which wants 430. Nearer the ship is
-  // also where it reads better: the door shuts behind HIM rather than floating
-  // in open water halfway to the next thing.
-  const gateF = 0.06 + ((firstShip + 0.45) / Math.max(1, stops.length - 1)) * 0.88
-  const g = w.at(gateF)
-  const gate: Wall = {
-    bay,
-    a: [Math.round(g.p[0] + g.n[0] * half), Math.round(g.p[1] + g.n[1] * half)],
-    b: [Math.round(g.p[0] - g.n[0] * half), Math.round(g.p[1] - g.n[1] * half)],
-    node: (stops[firstShip] as { node: string }).node,
-    shut: 'The way on is his, until he is off it',
-  }
-
   // THE WAY HOME, at the end of the road — where the last boss went down.
   //
   // Pushed to the side the last rock is NOT on. They both want the end of the
@@ -773,7 +608,6 @@ function layBay(bay: string, stops: Stop[], road: P[] = ROAD, halfFrac = ROAD_HA
   const lastSide = (stops.length - 1) % 2 === 0 ? 1 : -1
   const end = w.at(0.97)
   return {
-    walls: [...coast(bay, pts, half), gate],
     isles, ships, caches, beats,
     portal: {
       bay,
@@ -853,8 +687,6 @@ const LAID: Laid[] = [LAID_SUNKEN, LAID_COFFERS, LAID_FATHOM, LAID_RIDE]
 
 /** Every wall on the campaign's water: Bay I's, drawn, and three bays' worth
  *  laid either side of a road. */
-export const WALLS: Wall[] = [...HAND_WALLS, ...LAID.flatMap(l => l.walls)]
-
 export const ENCOUNTERS: Encounter[] = [
   { node: 'skirmish', bay: 'thread', along: 4775, across: -3285 },
   { node: 'pete', bay: 'thread', along: 6803, across: -2705 },

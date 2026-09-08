@@ -292,19 +292,21 @@ if (bad) process.exitCode = 1
 
 // ── WHAT STANDS IN THE CAMPAIGN'S WATER ──────────────────────────────────
 //
-// Ships, chests, bottles, isles and gates, all placed in bay space. What can be
+// Ships, chests, bottles and isles, all placed in bay space. What can be
 // quietly wrong about one:
 //
 //   1. It names a node that does not exist — a rename in raidMap and the water
 //      points at nothing, silently, because a missing node just does not draw.
-//   2. It is in the coast, or past the back of the bay, so it is behind rock.
-//   3. It sits IN THE DOORWAY, so arriving means colliding with content.
+//   2. It is past the back of the bay, outside the water it belongs to.
+//   3. It sits ON THE RIM you arrive across, so arriving means colliding.
 //   4. It sits on top of something else, or on an isle, so one hides the other.
-//   5. A GATE has content sitting on the line, which would leave a chest you can
-//      see, cannot reach, and cannot tell why.
+//
+// THERE ARE NO WALLS AND NO GATES ANY MORE. The campaign's water is open sea
+// and a shut chapter refuses you invisibly (see raidWaters), so the checks
+// this file used to run against a route of rock have nothing to measure.
 {
   const {
-    BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, WALLS, ISLE_BY_ID,
+    BAYS, BAY_BY_ID, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, ISLE_BY_ID,
     encounterAt, ENCOUNTER_REACH, CACHE_REACH, opensBay,
     dockAt, isleAt, bayCentre, inChapterWater,
     RETURN_PORTALS, PORTAL_REACH, PORTAL_HOME, portalOpensOn,
@@ -323,10 +325,8 @@ if (bad) process.exitCode = 1
   const APART = ENCOUNTER_REACH
   /** Nor closer than this to the doorway you come in through. */
   const OFF_DOOR = 500
-  /** Nor to the coast. A boat is 210 long and comes alongside. */
+  /** Nor to the rim. A boat is 210 long and comes alongside. */
   const OFF_COAST = 300
-  /** Nor to a gate, either side of it. */
-  const OFF_GATE = 380
 
   type Thing = { id: string; kind: string; bay: string; along: number; across: number; r: number }
   const things: Thing[] = [
@@ -493,126 +493,6 @@ if (bad) process.exitCode = 1
     }
   }
 
-  /**
-   * ── THE WALLS, AND WHETHER THE ROUTE IS SAILABLE ────────────────────────
-   *
-   * A bay's rock is a ROAD now, and a road has failure modes a scattering of
-   * content never had. Three of them, all silent:
-   *
-   *   1. A stop sitting ON a wall. The hull cannot reach it, and nothing on
-   *      screen says why — the rock is just there and the thing is behind it.
-   *   2. A gate opening on a node that is BEHIND it, which walls the chapter in
-   *      permanently: the only thing that can take the gate down is on the far
-   *      side of the gate.
-   *   3. A wall running outside its own bay, which is rock in open water with
-   *      nothing on either side of it.
-   */
-  const CLEAR_OF_WALL = 260
-  const segDist = (
-    px: number, py: number,
-    ax: number, ay: number, bx: number, by: number,
-  ) => {
-    const dx = bx - ax, dy = by - ay
-    const l2 = dx * dx + dy * dy
-    const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2))
-    return Math.hypot(px - (ax + dx * t), py - (ay + dy * t))
-  }
-
-  console.log(`
-  Walls  (${WALLS.length}, ${WALLS.filter(w => w.node).length} of them gates)`)
-  for (const w of WALLS) {
-    const b = BAY_BY_ID[w.bay]
-    if (!b) { console.error(`  ✗ a wall is in bay '${w.bay}', which does not exist`); bad++; continue }
-    let ok = true
-    // Both ends inside the bay, or the rock stands in open sea.
-    for (const [al, ac] of [w.a, w.b]) {
-      if (Math.hypot(al - b.r, ac) > b.r) {
-        console.error(`  ✗ a wall in ${b.name} has an end outside the bay (${al},${ac})`)
-        ok = false
-      }
-    }
-    if (w.node && !RAID_MAP.some(n => n.id === w.node)) {
-      console.error(`  ✗ a gate opens on '${w.node}', which is not a node`); ok = false
-    }
-    // Nothing standing on it.
-    for (const t of things) {
-      if (t.bay !== w.bay) continue
-      const d = segDist(t.along, t.across, w.a[0], w.a[1], w.b[0], w.b[1]) - t.r
-      if (d < CLEAR_OF_WALL) {
-        console.error(`  ✗ ${t.id} is ${d.toFixed(0)}px from a wall in ${b.name} (wants ${CLEAR_OF_WALL})`)
-        ok = false
-      }
-    }
-    if (!ok) bad++
-    if (w.node) {
-      console.log(`    ${ok ? 'ok  ' : 'OFF '} gate    ${String(w.node).padEnd(18)}`
-        + ` ${w.a[0]},${w.a[1]} -> ${w.b[0]},${w.b[1]}`)
-    }
-  }
-
-  /**
-   * ── AND THE ROAD HAS TO BE WALKABLE IN THE CHAIN'S OWN ORDER ────────────
-   *
-   * Every step of the chapter, in the order raidMap gives it, and the straight
-   * line from each stop to the next must not cross a wall that is still up at
-   * that point in the run.
-   *
-   * This is the check the whole shape needs. Anything else can be eyeballed —
-   * a route that looks like a road usually is one — but "can you actually get
-   * from the wax to Krust without crossing the finger" is a question about a
-   * sixteen-segment polyline and a fold, and eyes are bad at it.
-   *
-   * Straight lines, not pathfinding: if the direct run is clear the route is
-   * certainly sailable, and if it is not, this says which leg to look at. A
-   * false alarm costs a glance; a road you cannot sail costs a chapter.
-   */
-  {
-    // EVERY STOP, INCLUDING THE ONES THAT STAND ON A ROCK. `things` keys an
-    // isle by the isle's id, but the chain is written in NODE ids — so without
-    // this the walk found only the three ships and cheerfully reported that
-    // Pete and Krust are not connected, which is true of the straight line
-    // between them and irrelevant, because six stops sit on the road between.
-    const at = new Map<string, { bay: string; along: number; across: number; r: number }>()
-    for (const t of things) if (t.kind !== 'isle') at.set(t.id, t)
-    for (const c of CACHES) {
-      const i = ISLE_BY_ID[c.isle]
-      if (i) at.set(c.node, { bay: c.bay, along: i.along, across: i.across, r: i.r })
-    }
-    for (const t of BEATS) {
-      const i = ISLE_BY_ID[t.isle]
-      if (i) at.set(t.node, { bay: t.bay, along: i.along, across: i.across, r: i.r })
-    }
-    const chapterOne = RAID_MAP.filter(n => at.has(n.id))
-    let broke = 0
-    const done = new Set<string>()
-    console.log(`
-  The road  (${chapterOne.length} stops, in the chain's order)`)
-    for (let i = 0; i + 1 < chapterOne.length; i++) {
-      const from = at.get(chapterOne[i].id)!
-      const to = at.get(chapterOne[i + 1].id)!
-      done.add(chapterOne[i].id)
-      if (from.bay !== to.bay) continue
-      const blocking = WALLS.filter(w => w.bay === from.bay && (!w.node || !done.has(w.node)))
-      const hit = blocking.find(w => {
-        const cross = (ax: number, ay: number, bx: number, by: number,
-                       cx: number, cy: number, dxx: number, dyy: number) => {
-          const s1 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
-          const s2 = (bx - ax) * (dyy - ay) - (by - ay) * (dxx - ax)
-          const s3 = (dxx - cx) * (ay - cy) - (dyy - cy) * (ax - cx)
-          const s4 = (dxx - cx) * (by - cy) - (dyy - cy) * (bx - cx)
-          return s1 * s2 < 0 && s3 * s4 < 0
-        }
-        return cross(from.along, from.across, to.along, to.across, w.a[0], w.a[1], w.b[0], w.b[1])
-      })
-      const ok = !hit
-      if (!ok) { broke++; bad++ }
-      console.log(`    ${ok ? 'ok  ' : 'OFF '} ${chapterOne[i].id.padEnd(18)} -> ${chapterOne[i + 1].id.padEnd(18)}`
-        + ` ${Math.hypot(to.along - from.along, to.across - from.across).toFixed(0).padStart(5)}px`
-        + (ok ? '' : `   blocked by a ${hit!.node ? `gate (${hit!.node})` : 'wall'}`))
-    }
-    if (broke === 0) console.log('    the whole chapter is sailable in order')
-  }
-
   // Every bay with content needs a way to finish it: the chapter's own boss.
   // A bay of story and no fight cannot be cleared from the water.
   for (const b of BAYS) {
@@ -662,11 +542,6 @@ if (bad) process.exitCode = 1
      */
     const room = b.r - Math.hypot(pt.along - b.r, pt.across)
     let ok = room > PORTAL_REACH
-    for (const w of WALLS.filter(x => x.bay === pt.bay)) {
-      if (segDist(pt.along, pt.across, w.a[0], w.a[1], w.b[0], w.b[1]) < PORTAL_REACH) {
-        console.error(`  ✗ ${b.name}'s way home is up against a wall`); ok = false
-      }
-    }
     for (const t of things) {
       if (t.bay !== pt.bay) continue
       const d = Math.hypot(t.along - pt.along, t.across - pt.across) - t.r - PORTAL_REACH
@@ -692,21 +567,6 @@ if (bad) process.exitCode = 1
     if (!ok) bad++
     console.log(`    ${ok ? 'ok  ' : 'OFF '} landing ${`${PORTAL_HOME.x},${PORTAL_HOME.y}`.padEnd(18)}`
       + ` ${fromHarbour.toFixed(0)}px into the harbour, ${nearest.toFixed(0)}px off ${who}`)
-  }
-
-  // AND THE ART EACH COAST IS BUILT FROM HAS TO BE ON DISK. A missing sprite is
-  // not an error anywhere — it simply does not draw — and a coast with holes in
-  // it looks exactly like a coast with ways through it.
-  const { readdir } = await import('node:fs/promises')
-  const files = new Set(await readdir('public/sea'))
-  for (const b of BAYS) {
-    const n = [...files].filter(f => f.startsWith(`rock-${b.rocks}-`) && f.endsWith('.png')).length
-    if (n < 3) {
-      console.error(`  ✗ ${b.name} is built from 'rock-${b.rocks}-*' and only ${n} exist`)
-      bad++
-    } else {
-      console.log(`    ok   ${b.name.padEnd(18)} ${n} rock(s) of its own`)
-    }
   }
 
   console.log(`\n  In the water: ${bad === 0 ? 'all placed cleanly' : `${bad} problem(s)`}.`)

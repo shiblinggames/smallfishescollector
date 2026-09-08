@@ -1341,6 +1341,43 @@ arch-to-sortie sail is 5,100, which is a leg rather than a voyage.
 so moving it moves them together. `RAID_EDGE` (13,000) does not — that is the open water
 beyond, and it is deliberately its own number.
 
+## The campaign's water is open sea
+
+North of the sortie there is nothing drawn that stops a hull. No bay coast, no strait
+shoal, no plug of rock across a door, no route of walls through a chapter and no gate: all
+of that came out in 2026-09, after four earlier shapes (rings, a chain of basins, a fan of
+channels, bays behind straits) each drew the campaign's order a second time in rock. The
+water's header comment in `sea/raidWaters.ts` tells that history; read it before adding
+anything back.
+
+**The one rule that replaced it: you cannot enter a water you have not earned, and nothing
+shows you that.** A bay whose chapter is still shut (`bayOpen` false, i.e. the chapter
+before it is not finished) is open sea to look at and a wall to sail into. The frame loop
+in SeaMap sets the hull back on the bay's rim with only the inward speed removed, so she
+slides along the line, and the helm's hold line says which water and what finishes it
+(`bayShutLine`: "The Coffers is shut. Finish A Bigger Fish first."). An open bay has no
+rule at all, in or out, from any heading. Not while the guns are out.
+
+What still carries the campaign's shape: the chain itself (a node refuses to open out of
+order wherever you float), each bay's own sea colour, and the minimap, which draws the bays
+as discs (dim and marked SHUT when unearned) with no straits or bars.
+
+**The geometry stays.** Bays are still discs with a bearing and distance, and every ship,
+rock, chest and post is still authored in BAY SPACE from `entryOf`; the strait helpers are
+coordinate frames now, not doors. `check-islands` still measures placement against the rim
+and the isles; its wall and road-walk tests are gone because there is nothing to measure.
+
+## The campaign in the corner
+
+Out on the expedition side the HUD carries a card under the disc row (`CampaignHud`, in
+SeaMap): the chapter, the next thing to do, a verb, and a bearing arrow with the distance.
+"Next" is the same rule the Expeditions hub lights its spine with, the first node in chain
+order that is `available` and not a side branch, resolved against the water through
+`ENCOUNTERS`, `BEATS` and `CACHES` for a position (`nextStop`). Tapping the card opens the
+chart, where the same node is pinned as a gold ring labelled NEXT (Minimap's `next` prop),
+so the corner and the chart can never point at different things. The card hides while the
+rod or the guns are out, and when nothing is waiting.
+
 ## The shoals
 
 **There are fish in the water now** (`sea/seaShoals.ts`). Dark shapes under the surface,
