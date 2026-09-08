@@ -266,6 +266,9 @@ export default async function SeaPage() {
       // boat: past the sortie the hull under you is the one the expedition
       // ladder sells, which is the whole point of the crossing.
       shipTier={Number(profile?.ship_tier ?? MIN_SHIP_TIER)}
+      // AND WHAT SHE IS PAINTED AS. Man-o-War only, enforced in shipSkins —
+      // the chart just hands the id over and asks.
+      equippedShipSkin={(profile?.equipped_ship_skin as string | null) ?? null}
       // The party and the mounts, for the dock's confirm. Names and art only:
       // the chart shows the muster, the raid screens do the maths.
       raidParty={raidPartyRows.map(c => ({ name: c.name, art: c.filename }))}

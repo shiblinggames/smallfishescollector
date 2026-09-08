@@ -124,6 +124,14 @@ something and seeing nothing change: a line under the title that changes wording
 not in a Man-o-War, and *"Man-o-War only"* on every tile that cannot be worn. Tiles always
 show the Man-o-War paint, because that is what you would be wearing.
 
-**Known gap:** the sea's own top-down hull (`ships.ts` `seaImageUrl`) cannot wear a swapped
-sprite, because skins only carry side-on hero art. Showing one out there needs a top-down
-sprite per skin.
+**The chart wears it too.** `shipSkinSeaImage` is the same rule with a different fallback —
+the sea's hull is `seaImageUrl` rather than `image`. It works because the chart's hull art
+(`/ship-hero/*`) is the same three-quarter, bow-left view the skins are painted in, so a
+skin reads on the water exactly as it does in a fight. All four sea sites take it: the canvas
+hull, the DOM `Warship`, `ShipAtBerth` in the Gunwharf, and the Gunwharf's own take-her-out
+door, which is a picture of the ship you are about to sail.
+
+Width is what matches, not height: the chart draws a hull to a fixed width and lets the
+sprite set its own height, and the skin plates are cropped tighter than the ship art
+(600x335 against 640x640). Scaling by width keeps the dimension that reads as a ship's
+length; a skin simply carries less empty sky above its masts.

@@ -34,6 +34,7 @@ import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip } from '@/lib/ships'
+import { shipSkinSeaImage } from '@/lib/shipSkins'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { SUBMERGE } from './submerge'
@@ -1345,7 +1346,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -1385,6 +1386,9 @@ export default function SeaMap({
   /** The expedition hull you own. Only ever drawn beyond the sortie — inside
    *  the anchorage and the fishing grounds you are on the fishing boat. */
   shipTier: number
+  /** The skin she is painted in, if any. Only ever shows on a Man-o-War; the
+   *  gate lives in shipSkins so the chart and the fight cannot disagree. */
+  equippedShipSkin: string | null
   /** How many crew are in raid seats. The sortie's confirm says who is coming,
    *  and "nobody" is a thing it has to be able to say. */
   /** The raid party as it would actually board: names and card art, from the
@@ -3848,6 +3852,37 @@ export default function SeaMap({
   /** THE RESIDENT BUYERS. Not hashed and not daily — they live here. Built into
    *  the same shape a wandering trader has so everything downstream (the hail
    *  mark, the name plate, the panel) works on them without a second path. */
+  /**
+   * ── HOW FAR SOMEBODY MAY WANDER WITHOUT LEAVING THEIR WATER ────────────
+   *
+   * The regulars and the buyers barely moved: a 30px circle on a 45,000px sea,
+   * which at chart zoom is a boat rocking on its mooring. That was fine while
+   * the only way to find one was to sail over them; it is wrong now that the
+   * compass names them and points at them, because an arrow pointing at a
+   * thing that never moves is a waypoint, and a sea of waypoints is a menu.
+   *
+   * THE BAND IS THE LEASH, and it has to be. Every one of these people belongs
+   * to a fishing zone — it is where their dialogue is set, it is how the
+   * compass decides who is worth an arrow, and a buyer who drifted into the
+   * next band would be the wrong buyer for the water he is floating in. So the
+   * radius is not a taste number: it is however much room this person actually
+   * has between their mooring and the nearer edge of their own ring, less a
+   * margin, and capped so nobody crosses a whole zone.
+   *
+   * The drift circle is in world x/y and a band is radial, so the worst case is
+   * travelling straight out or straight in — which is exactly what this
+   * measures against.
+   */
+  const roamR = useCallback((x: number, y: number, zoneId: string): number => {
+    const z = PLACES.find(p => p.id === zoneId)
+    const R = Math.hypot(x, y)
+    if (!z || z.inner == null || z.outer == null) return 240
+    const slack = Math.min(R - z.inner, z.outer - R)
+    // 180 of margin so nobody ever touches the line, and 520 so the widest
+    // bands do not turn their regular into a thing you have to chase.
+    return Math.max(140, Math.min(520, slack - 180))
+  }, [])
+
   const residents = useMemo<Trader[]>(() => RESIDENTS.map(r => {
     // A stable, deterministic look, so a zone's buyer is the same person every
     // time you sail out to them.
@@ -3858,9 +3893,12 @@ export default function SeaMap({
       name: r.name,
       x: r.x, y: r.y,
       line: r.line,
-      // A moored buyer swings on his anchor rather than patrolling: he is
-      // waiting for trade, not looking for it.
-      driftR: 34, driftRate: (Math.PI * 2) / 74, driftPhase: (seed % 100) / 16,
+      // A BUYER IS STILL MOORED, just not nailed down. He works a shorter
+      // beat than the regulars — he is waiting for trade rather than looking
+      // for it — but 34px was a boat that had never moved in its life.
+      driftR: roamR(r.x, r.y, r.zoneId) * 0.6,
+      driftRate: (Math.PI * 2) / (64 + (seed % 40)),
+      driftPhase: (seed % 100) / 16,
       look: {
         characterColor: ['default', 'gray', 'blue', 'pink'][seed % 4],
         boatId: ['oak', 'mahogany', 'taupe', 'desert', 'charcoal'][seed % 5],
@@ -3893,7 +3931,16 @@ export default function SeaMap({
       name: r.name,
       x: r.x, y: r.y,
       line: r.line,
-      driftR: 30, driftRate: (Math.PI * 2) / 88, driftPhase: (seed % 100) / 15,
+      // THEY WORK THEIR WATER. The furthest of these has three thousand
+      // pixels of band to themselves and was using thirty of it. `driftR`
+      // takes as much of their own ring as they can have without leaving it,
+      // and the period varies by seed so two in one band never swing together.
+      // `traderPos` turns a POSITIVE rate into legs with a long dwell between
+      // them, so this is somebody moving from spot to spot and sitting a
+      // while, not a boat going round in circles.
+      driftR: roamR(r.x, r.y, r.zoneId),
+      driftRate: (Math.PI * 2) / (58 + (seed % 46)),
+      driftPhase: (seed % 100) / 15,
       look: {
         characterColor: ['blue', 'pink', 'gray', 'default'][seed % 4],
         boatId: ['taupe', 'oak', 'desert', 'mahogany', 'charcoal'][seed % 5],
@@ -4005,9 +4052,22 @@ export default function SeaMap({
   const yoon = useMemo(() => yoonTrader(), [])
   /** Every regular with a place on the chart, and whether you know them. */
   const regulars = useMemo<CompassRegular[]>(() => [
-    ...SOCIALS.map(r => ({ id: r.folkId, name: r.name, zoneId: r.zoneId, x: r.x, y: r.y, met: metFolk.has(r.folkId) })),
-    { id: 'yoon', name: yoon.name, zoneId: 'ancient_deep', x: yoon.x, y: yoon.y, met: metFolk.has('yoon') },
-  ], [metFolk, yoon])
+    ...SOCIALS.map(r => {
+      // The live boat, off the same `socials` list the chart draws from, so the
+      // arrow and the sprite can never be in two places.
+      const t = socials.find(q => q.folkId === r.folkId)
+      return {
+        id: r.folkId, name: r.name, zoneId: r.zoneId, x: r.x, y: r.y,
+        met: metFolk.has(r.folkId),
+        at: t ? () => traderPos(t, Date.now() / 1000) : undefined,
+      }
+    }),
+    {
+      id: 'yoon', name: yoon.name, zoneId: 'ancient_deep', x: yoon.x, y: yoon.y,
+      met: metFolk.has('yoon'),
+      at: () => traderPos(yoon, Date.now() / 1000),
+    },
+  ], [metFolk, yoon, socials])
   useEffect(() => { allTradersRef.current = [yoon, smuggler, ...residents, ...socials, ...traders] }, [yoon, smuggler, residents, socials, traders])
 
   /**
@@ -4094,8 +4154,12 @@ export default function SeaMap({
     // A hull with no sea sprite is a hull that cannot be drawn out here, and
     // that is a data problem rather than something to paper over with a
     // placeholder — the DOM would render a broken image in the same case.
-    return h.seaImageUrl ? { url: h.seaImageUrl, flip: !!h.seaFlip } : null
-  }, [onShip, shipTier])
+    // HER PAINT, ON THE WATER. Same three-quarter view the skins are drawn
+    // in, so this is the swap the fight already does — see shipSkinSeaImage.
+    return h.seaImageUrl
+      ? { url: shipSkinSeaImage(equippedShipSkin, shipTier, h.seaImageUrl), flip: !!h.seaFlip }
+      : null
+  }, [onShip, shipTier, equippedShipSkin])
 
   const gpuCaptain = useMemo<CaptainLook | null>(() => {
     if (!GPU_ISLANDS || onShip) return null
@@ -7125,7 +7189,7 @@ export default function SeaMap({
         </AnimatePresence>
         {/* Your ship, lying in the Gunwharf's berth until you come for her.
             Only from inside the harbour she is in, like the sign. */}
-        {inAnchorage && !onShip && <ShipAtBerth shipTier={shipTier} />}
+        {inAnchorage && !onShip && <ShipAtBerth shipTier={shipTier} skin={equippedShipSkin} />}
 
         {/* WHERE SOMETHING IS BURIED. Only ever the patch you are already
             standing near, and never on the minimap — see lib/seaDigs. */}
@@ -7557,7 +7621,7 @@ hullRef={hullRefFor(t.key)} />
             still carrying the Warship, which has not moved yet. */}
         {GPU_ISLANDS ? null
           : onShip
-          ? <Warship tier={shipTier} />
+          ? <Warship tier={shipTier} skin={equippedShipSkin} />
           : <Skipper characterColor={characterColor} boatId={boatId} hatId={hatId}
               gear={{
                 ...gear,
@@ -8232,7 +8296,7 @@ hullRef={hullRefFor(t.key)} />
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
       <GunwharfAshore open={wharf} onClose={() => setWharf(false)} onShip={onShip}
-        shipTier={shipTier} onSail={() => { setWharf(false); swapHull(!onShip) }}
+        shipTier={shipTier} skin={equippedShipSkin} onSail={() => { setWharf(false); swapHull(!onShip) }}
         onManage={() => { setWharf(false); setShipSheet('ship') }} />
       <VoyageBoard open={voyageOpen} onClose={() => setVoyageOpen(false)} />
 
@@ -9174,8 +9238,9 @@ function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
  * No counter-squash. The wrapper that carries it is the screen-layer boat node,
  * which was never on the tilted ground plane in the first place.
  */
-const Warship = memo(function Warship({ tier }: { tier: number }) {
+const Warship = memo(function Warship({ tier, skin }: { tier: number; skin: string | null }) {
   const hull = getShip(tier)
+  const hullArt = shipSkinSeaImage(skin, tier, hull.seaImageUrl ?? '')
   return (
     <div style={{
       position: 'relative', width: 340,
@@ -9188,7 +9253,7 @@ const Warship = memo(function Warship({ tier }: { tier: number }) {
       filter: 'drop-shadow(0 14px 22px rgba(0,0,0,0.6))',
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={hull.seaImageUrl} alt="" draggable={false}
+      <img src={hullArt} alt="" draggable={false}
         width={640} height={640} decoding="async"
         style={{
           width: '100%', display: 'block',
@@ -10441,7 +10506,7 @@ const EdgeOfChart = memo(function EdgeOfChart({ at }: { at: boolean }) {
  */
 const SHIP_BERTH_OFF = { dx: 300, dy: -320 }
 
-const ShipAtBerth = memo(function ShipAtBerth({ shipTier }: { shipTier: number }) {
+const ShipAtBerth = memo(function ShipAtBerth({ shipTier, skin }: { shipTier: number; skin: string | null }) {
   const b = { x: GUNWHARF.x + SHIP_BERTH_OFF.dx, y: GUNWHARF.y + SHIP_BERTH_OFF.dy }
   return (
     <div style={{
@@ -10450,7 +10515,7 @@ const ShipAtBerth = memo(function ShipAtBerth({ shipTier }: { shipTier: number }
       pointerEvents: 'none', opacity: 0.95,
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={getShip(shipTier).seaImageUrl} alt="" draggable={false} decoding="async"
+      <img src={shipSkinSeaImage(skin, shipTier, getShip(shipTier).seaImageUrl ?? '')} alt="" draggable={false} decoding="async"
         width={640} height={640} style={{
           width: WARSHIP_W, height: 'auto', display: 'block',
           filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
@@ -12750,7 +12815,18 @@ function WaterBanner({ place, locked, lowered }: {
 const COMPASS_MAX = 5
 
 /** A regular with a place on the chart, and whether this captain knows them. */
-type CompassRegular = { id: string; name: string; zoneId: string; x: number; y: number; met: boolean }
+type CompassRegular = {
+  id: string; name: string; zoneId: string; x: number; y: number; met: boolean
+  /**
+   * WHERE THEY ACTUALLY ARE, asked at draw time.
+   *
+   * The arrow used to be built from the MOORING, which was honest while a
+   * regular drifted thirty pixels and is a lie now that they work five hundred
+   * of their own band. The compass re-renders five times a second anyway, so
+   * it asks rather than remembers, and the mark lands on the boat.
+   */
+  at?: () => { x: number; y: number }
+}
 /** The keep-clear box between two markers: a name plate is ~110 wide and two
  *  lines tall, so side-by-side needs far more room than stacked. A radius (it
  *  was 96) let two centres pass while the words lay on each other. */
@@ -13008,7 +13084,11 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     const band = waters[inIdx].id
     for (const r of regulars) {
       if (r.zoneId !== band || !r.met) continue
-      marks.push({ id: `folk:${r.id}`, name: r.name, dim: false, dist: true, ...project(r.x, r.y) })
+      // ASKED, NOT REMEMBERED. See CompassRegular.at — they work their band
+      // now, and an arrow aimed at where somebody moored is an arrow aimed at
+      // empty water.
+      const at = r.at?.() ?? { x: r.x, y: r.y }
+      marks.push({ id: `folk:${r.id}`, name: r.name, dim: false, dist: true, ...project(at.x, at.y) })
     }
   }
 
@@ -13160,15 +13240,16 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
  * to take the ship out, and standing here in the ship you are asking to leave
  * her and go back to fishing.
  */
-function GunwharfAshore({ open, onClose, onSail, onManage, onShip, shipTier }: {
+function GunwharfAshore({ open, onClose, onSail, onManage, onShip, shipTier, skin }: {
   open: boolean; onClose: () => void; onSail: () => void; onManage: () => void
-  onShip: boolean; shipTier: number
+  onShip: boolean; shipTier: number; skin: string | null
 }) {
   const ship = getShip(shipTier)
   const doors = [
     {
       key: 'sail',
-      art: ship.seaImageUrl,
+      // THE DOOR SHOWS THE SHIP YOU ARE ABOUT TO TAKE OUT, paint and all.
+      art: shipSkinSeaImage(skin, shipTier, ship.seaImageUrl ?? ''),
       flip: !!ship.seaFlip,
       // ONE TAP. It used to open a second sheet asking "Take out your ship?"
       // with the crew and the mounts laid out under it, and a question you

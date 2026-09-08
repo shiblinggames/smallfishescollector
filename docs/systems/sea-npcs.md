@@ -622,3 +622,33 @@ person matter. **Yoon is written down** (`YOON` in `chart.ts`, built by `yoonTra
 
 `yoonTrader()` is one function called by both the map (to draw him) and the server (to price
 him), so the two cannot disagree about what he is selling or what he wants for it.
+
+## They work their water
+
+The regulars and the buyers barely moved: a 30px circle on a 45,000px sea, which at chart
+zoom is a boat rocking on its mooring. That was fine while the only way to find one was to
+sail over them. It is wrong now the compass names them and points at them, because an arrow
+aimed at something that never moves is a waypoint, and a sea of waypoints is a menu.
+
+**The band is the leash.** `roamR(x, y, zoneId)` in SeaMap gives each person however much
+room they actually have between their mooring and the nearer edge of their own ring, less
+180 of margin, capped at 520. It is not a taste number: every one of these people belongs to
+a fishing zone — it is where their dialogue is set, it is how the compass decides who is
+worth an arrow, and a buyer who drifted into the next band would be the wrong buyer for the
+water he is floating in. The drift circle is in world x/y and a band is radial, so the worst
+case is travelling straight in or straight out, which is what the margin measures against.
+
+Regulars get the full radius; buyers get 60% of it, because a buyer is waiting for trade
+rather than looking for it. Periods vary by seed so two in one band never swing together.
+A POSITIVE `driftRate` is what makes `traderPos` walk legs with a long dwell between them,
+so this reads as somebody moving from spot to spot and sitting a while rather than a boat
+going round in circles.
+
+**The compass asks rather than remembers.** `CompassRegular.at()` returns the live
+`traderPos`, resolved at draw time (the compass re-renders five times a second anyway). Built
+from the mooring it was honest at 30px of drift and a lie at 520.
+
+Verified by simulation, not by eye: with the drift ellipse walked all the way round, nobody
+leaves their band and nobody crowds Finn's hail — the tightest are Dennis (219px of band to
+spare) and Meg (526px of Finn slack). `check-finn` only knows the static moorings, so re-run
+that simulation if these numbers move.

@@ -61,6 +61,24 @@ export function shipSkinImage(skinId: string | null | undefined, shipTier: numbe
   return shipSkinAt(skinId, shipTier)?.imageByTier?.[shipTier] ?? fallback
 }
 
+/**
+ * THE SPRITE FOR THE HULL ON THE CHART.
+ *
+ * Same rule and the same art. The sea's own hull sits in `/ship-hero` and is
+ * the same three-quarter, bow-left view the skins are painted in, so a skin
+ * wears on the water exactly as it does in a fight — it just needs a different
+ * fallback, because the chart's default hull is `seaImageUrl` and not `image`.
+ *
+ * WIDTH IS WHAT MATCHES, not height. The chart draws a hull to a fixed WIDTH
+ * and lets the sprite set its own height, and the skin plates are cropped
+ * tighter than the ship art is (600x335 against 640x640). Scaling by width
+ * keeps the one dimension that reads as a ship's LENGTH on the water; a skin
+ * simply carries less empty sky above its masts.
+ */
+export function shipSkinSeaImage(skinId: string | null | undefined, shipTier: number, fallback: string): string {
+  return shipSkinAt(skinId, shipTier)?.imageByTier?.[shipTier] ?? fallback
+}
+
 /** And the CSS filter, for the skins that tint rather than swap. */
 export function shipSkinFilter(skinId: string | null | undefined, shipTier: number): string {
   return shipSkinAt(skinId, shipTier)?.filter ?? 'none'
