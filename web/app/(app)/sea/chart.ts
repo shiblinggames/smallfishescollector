@@ -297,13 +297,15 @@ export const PLACES: Place[] = [
      * management should be somewhere you go, not a tab you open, and the
      * bounty board is the last piece of it that was still a tab.
      *
-     * Its door carries a query, not a route of its own: the board is a modal on
-     * the hub because it wants the hub's own state, so `?open=bounties` opens
-     * it on arrival (see HubCards). A second route rendering the same modal
-     * would be a door in front of a door.
+     * ITS `href` IS NEVER FOLLOWED. The chart intercepts this island by id and
+     * pins the board up where you are floating, the same way the Tally House
+     * settles trawl orders and the Shipyard opens its rack. Sailing here should
+     * not cost you the sea: a route would unload the whole chart to show one
+     * panel and reload it on the way back. `/expeditions` is the honest answer
+     * to "where does this go" if anything ever falls through to it.
      */
-    id: 'posting_house', name: 'The Posting House', blurb: 'The day\u2019s hunts, and what they pay',
-    href: '/expeditions?open=bounties', x: -2150, y: -4400, r: 280,
+    id: 'posting_house', name: 'The Posting House', blurb: 'The day’s hunts, and what they pay',
+    href: '/expeditions', x: -2150, y: -4400, r: 280,
     art: '/page-bounties.jpg',
     kind: 'port', minLevel: 0,
     buildings: [

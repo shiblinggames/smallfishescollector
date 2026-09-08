@@ -1185,10 +1185,12 @@ what you make of it on the other.
   institution on the other half of the game, one settling trawl orders and one settling
   hunts. Its plate answers the Tally House's building deliberately, same cream plaster and
   dark shingle and warm windows, with a wanted board of curling notices where the harbour
-  has its crane and its ledger sheet. Bounties were the last piece of expeditions management that was still a tab. Its
-  `href` carries a query rather than owning a route, `/expeditions?open=bounties`, because
-  the board is a modal that wants the hub's own state; `HubCards` opens it once on arrival
-  and leaves the URL alone, so closing it does not reopen it.
+  has its crane and its ledger sheet. Bounties were the last piece of expeditions
+  management that was still a tab. Its `href` is NEVER FOLLOWED: mooring pins the board up
+  where you float, like the Tally House's orders and the Shipyard's rack, because a route
+  would unload the whole chart to show one panel and rebuild it on the way back. The board
+  is one component, `BountyBoardModal`, shared by the chart and the hub card, so the plate
+  cannot drift between the two surfaces.
 - **The Forge** (`forge_isle`) shows the rung you hold. `forgeIsleFor` in SeaMap swaps its
   plate, name and blurb across cold / the Forge / the Abyssal Forge / the Accelerator, off a
   `forgeTier` the sea page reads through the same three `gauntletUpgrades` helpers

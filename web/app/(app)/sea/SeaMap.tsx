@@ -72,6 +72,7 @@ import { vibrate } from '@/lib/haptics'
 import FishingHere, { type FishingMods } from './FishingHere'
 import TrawlIndicator from '../fishing/TrawlIndicator'
 import DailyOrders from '../trawl-docks/DailyOrders'
+import BountyBoardModal from '../expeditions/BountyBoardModal'
 import { getDailyChallenge } from '../fishing/dailyChallengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
 import LevelRewardsGrant, { type Granted } from './LevelRewardsGrant'
@@ -3695,6 +3696,10 @@ export default function SeaMap({
    */
   const [orders, setOrders] = useState<DailyChallengeState | null>(null)
   const [ordersOpen, setOrdersOpen] = useState(false)
+  /** The bounty board, pinned up at the Posting House. Same rule as the Tally
+   *  House's orders and the Shipyard's rack: you sailed here, so the panel
+   *  comes to the water rather than the water unloading for a page. */
+  const [bountiesOpen, setBountiesOpen] = useState(false)
   /** Opened by mooring at the Tally House rather than from the HUD disc, which
    *  is the whole difference between reading the day's orders and being paid
    *  for them. See DailyOrders' note on canClaim. */
@@ -3766,6 +3771,7 @@ export default function SeaMap({
       if (voyageOpen) { setVoyageOpen(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); setOrdersAshore(false); return }
+      if (bountiesOpen) { setBountiesOpen(false); return }
       if (trawlsPeek) { setTrawlsPeek(false); return }
       if (finnOpen) { setFinnOpen(false); setFinnLines(null); return }
       if (finnTalk) { setFinnTalk(null); return }
@@ -3784,7 +3790,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -5016,6 +5022,12 @@ export default function SeaMap({
     // ashore. You still have to sail here. What changed is that arriving hands
     // you the panel instead of a URL.
     if (p.id === 'trawl_docks') { setOrdersAshore(true); setOrdersOpen(true); return }
+    // AND THE POSTING HOUSE PINS ITS BOARD UP WHERE YOU FLOAT. Bounties were a
+    // card on the Expeditions hub, and routing there would have made mooring at
+    // the island a redirect off the chart: the sea unloaded, the hub rendered,
+    // one modal opened over it, and the whole chart rebuilt on the way back.
+    // Same component the hub uses (BountyBoardModal), opened here.
+    if (p.id === 'posting_house') { setBountiesOpen(true); return }
     // WHOSE DOOR. The Homestead is one island showing one of several
     // homesteads, so the route has to carry whose you are standing on.
     if (p.id === 'home' && visiting) {
@@ -8748,6 +8760,17 @@ hullRef={hullRefFor(t.key)} />
               <DailyOrders initial={orders} canClaim={ordersAshore} onChange={setOrders} />
             </div>
           </PopupShell>
+        </div>
+      )}
+
+      {/* THE BOUNTY BOARD, over the water you sailed to read it on.
+
+          The wrapper is the same one every sheet over this map needs: the chart
+          STEERS on click and starts a heading on pointerdown, so without it a
+          tap on the backdrop to dismiss would also put the helm over. */}
+      {bountiesOpen && (
+        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+          <BountyBoardModal open onClose={() => setBountiesOpen(false)} />
         </div>
       )}
 

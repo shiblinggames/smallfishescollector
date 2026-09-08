@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { vibrate } from '@/lib/haptics'
 import ResetCountdown from '@/components/ResetCountdown'
 import PopupShell from '@/components/PopupShell'
@@ -16,7 +16,7 @@ import HubTile, { HUB_GRID } from '@/components/HubTile'
 import CaptainsOrders, { type OrderAction } from './CaptainsOrders'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import DailyVoyagePanel from './DailyVoyagePanel'
-import BountiesPanel from './BountiesPanel'
+import BountyBoardModal from './BountyBoardModal'
 import { getBountyBoard } from './bountyActions'
 import BountyRungUnlock from './BountyRungUnlock'
 import { BOUNTY_RUNGS } from '@/lib/bounties'
@@ -136,23 +136,6 @@ export default function HubCards({
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'bounties' | 'gauntlets'>(null)
 
-  // ARRIVING WITH A DOOR ALREADY CHOSEN. The Posting House out in the
-  // anchorage (see chart.ts) is the bounty board's place on the water, and the
-  // board is a modal on this hub rather than a route of its own because it
-  // wants the hub's own state. So mooring there pushes `?open=bounties` and
-  // this opens it, instead of landing the captain on the hub to hunt for the
-  // card they already sailed to.
-  //
-  // Once only: the query is not the modal's state, it is how you arrived, so
-  // closing the modal must not reopen it and the URL is left alone.
-  const params = useSearchParams()
-  const opening = params.get('open')
-  const [openedFromUrl, setOpenedFromUrl] = useState(false)
-  useEffect(() => {
-    if (openedFromUrl || opening !== 'bounties' || !bountiesOpen) return
-    setOpenedFromUrl(true)
-    setModal('bounties')
-  }, [opening, bountiesOpen, openedFromUrl])
 
   // ORDERS FINISHED BUT NOT PAID. A bounty you have already done sits on the
   // board waiting to be collected, and the hub had no way of saying so: the
@@ -452,43 +435,10 @@ export default function HubCards({
         />
       )}
 
-      {/* ── Bounties ── the daily orders board. ─────────────────────────── */}
-      {/* Closing the board re-asks, so claiming everything inside clears the
-          marker on the way out rather than leaving it lit until a reload. */}
-      <PopupShell open={modal === 'bounties'} onClose={() => { setModal(null); checkBounties() }}>
-        <motion.div role="dialog" aria-modal onClick={e => e.stopPropagation()}
-          initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 6 }}
-          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-          style={{
-            margin: 'auto', width: '100%', maxWidth: 440,
-            // THE ACTUAL BOARD. A painted plate in the same gouache idiom as
-            // the voyage routes: salt-stained oak, an empty frame lit by one
-            // lantern, old nails and the torn corners of notices long gone.
-            // The middle is deliberately bare, because that is where ours go.
-            //
-            // A scrim over it, weighted to the FOOT. The lamp is at the top of
-            // the plate and the wood falls to near-black at the bottom, so the
-            // header reads against the lit half and the footnote against the
-            // dark, without flattening the painting in between.
-            //
-            // Solid colour under it so the panel is never translucent while the
-            // plate loads.
-            backgroundColor: '#150e09',
-            backgroundImage: 'linear-gradient(180deg, rgba(12,8,5,0.30) 0%, rgba(12,8,5,0.16) 34%, rgba(10,7,4,0.62) 100%), url(/bounty-board.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-            backgroundRepeat: 'no-repeat',
-            border: '1px solid rgba(120,88,52,0.55)',
-            borderTop: '1px solid rgba(190,146,92,0.55)',
-            borderRadius: 20, padding: '0.4rem 0.4rem 0.6rem',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.75)',
-          }}
-        >
-          {/* BountiesPanel owns its own title row, so the gem count can sit
-              beside the title instead of taking a bar of its own. */}
-          {modal === 'bounties' && <BountiesPanel onClose={() => { setModal(null); checkBounties() }} />}
-        </motion.div>
-      </PopupShell>
+      {/* THE BOARD, shared with the chart. Closing it re-asks, so claiming
+          everything inside clears the marker on the way out rather than
+          leaving it lit until a reload. */}
+      <BountyBoardModal open={modal === 'bounties'} onClose={() => { setModal(null); checkBounties() }} />
 
       {/* ── Gauntlets modal — entry hub for the push-your-luck gauntlets.
           Davy Jones is the first; more slot in later. Admin-only for now. ── */}
