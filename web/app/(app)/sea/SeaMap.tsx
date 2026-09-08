@@ -245,6 +245,9 @@ const CrewHub = dynamic(() => import('./CrewHub'), { ssr: false })
  *  see SeaStory. A captain who never leaves the fishing grounds never fetches
  *  a byte of it. */
 const SeaStory = dynamic(() => import('./SeaStory'), { ssr: false })
+/** Ashore at the Crew Hall. Holds the whole crew page behind it, so it is only
+ *  fetched by somebody who actually ties up there. */
+const HallSheet = dynamic(() => import('./HallSheet'), { ssr: false })
 /** The toll, the cache and the Captain's Choice — the three campaign nodes
  *  whose interaction is more than reading. Same treatment: nothing is fetched
  *  until one is actually opened. */
@@ -1356,7 +1359,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 
 export default function SeaMap({
   fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
-  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
+  auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
   /** Your own id. The one thing presence needs that the chart did not already
@@ -1399,6 +1402,12 @@ export default function SeaMap({
   /** The skin she is painted in, if any. Only ever shows on a Man-o-War; the
    *  gate lives in shipSkins so the chart and the fight cannot disagree. */
   equippedShipSkin: string | null
+  /** A panel to open the moment the chart is up, named in the URL. The retired
+   *  /crew route lands here; nothing else uses it yet. */
+  openDoor?: 'crew' | null
+  /** And which room inside it — `/crew?tab=recruits` was an errand, not an
+   *  address, so the errand is carried across. */
+  openCard?: 'assign' | 'recruits' | 'roster' | 'wardrobe' | null
   /** How many crew are in raid seats. The sortie's confirm says who is coming,
    *  and "nobody" is a thing it has to be able to say. */
   /** The raid party as it would actually board: names and card art, from the
@@ -3206,6 +3215,8 @@ export default function SeaMap({
   /** The ship screen, opened over the water. 'ship' from the Gunwharf's
    *  "Manage her", 'forge' from mooring at the Forge island. Null is shut. */
   const [shipSheet, setShipSheet] = useState<null | 'ship' | 'forge'>(null)
+  /** Ashore at the Crew Hall — the building, the ladder and the bunks. */
+  const [hallSheet, setHallSheet] = useState(false)
   /** The raid being fought over the chart, by raidId. */
   const [fightId, setFightId] = useState<string | null>(null)
   /** The boss card standing open in front of it, by node id. */
@@ -3700,7 +3711,7 @@ export default function SeaMap({
    * have changed, and neither of them a poll. A dot that costs a round trip
    * every few seconds is a dot that is not worth having.
    */
-  const [crewHubOpen, setCrewHubOpen] = useState(false)
+  const [crewHubOpen, setCrewHubOpen] = useState(openDoor === 'crew')
   const [crewWaiting, setCrewWaiting] = useState(false)
   const crewPolled = useRef(false)
   const pollCrew = useCallback(() => {
@@ -5369,6 +5380,11 @@ export default function SeaMap({
     // the bench is one screen you dip into, and a route spends the whole chart
     // to show it. See ShipSheet.
     if (p.id === 'forge_isle') { setShipSheet('forge'); return }
+    // AND THE HALL OPENS ON ITS OWN SHORE. Everything else the crew page did is
+    // in the panel on the HUD now (see CrewHub); the building, its ladder and
+    // its bunks stayed here, because a hall you can upgrade from the middle of
+    // the ocean is a painting you sail past.
+    if (p.id === 'crew_hall') { setHallSheet(true); return }
     // WHOSE DOOR. The Homestead is one island showing one of several
     // homesteads, so the route has to carry whose you are standing on.
     if (p.id === 'home' && visiting) {
@@ -8293,6 +8309,7 @@ hullRef={hullRefFor(t.key)} />
       {/* THE LOCKER, over the water you are moored in. */}
       <ShipyardSheet open={yardOpen} onClose={() => setYardOpen(false)} />
       <ShipSheet open={shipSheet !== null} focus={shipSheet ?? 'ship'} onClose={() => setShipSheet(null)} />
+      <HallSheet open={hallSheet} onClose={() => setHallSheet(false)} />
 
       {/* AND THE FIGHT, over the water it is happening on. `router.refresh()`
           on the way out is what re-reads nodeStatus, so a boss you just sank
@@ -8683,6 +8700,7 @@ hullRef={hullRefFor(t.key)} />
       </div>
 
       <CrewHub
+        openCard={openCard ?? null}
         open={crewHubOpen}
         onClose={() => { setCrewHubOpen(false); pollCrew() }}
         // BOTH ROWS OPEN WHAT IS ALREADY ON THIS CHART rather than sailing you

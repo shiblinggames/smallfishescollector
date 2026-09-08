@@ -45,7 +45,13 @@ import { getRenownState } from '../actions/renown'
 
 export const metadata = { title: 'The Sea' }
 
-export default async function SeaPage() {
+export default async function SeaPage({ searchParams }: {
+  /** `?open=crew&card=…` — the retired /crew route's landing, so a link that
+   *  used to be a page still opens the room it named. See
+   *  app/(app)/crew/page.tsx. */
+  searchParams: Promise<{ open?: string; card?: string }>
+}) {
+  const { open: openDoor, card: openCard } = await searchParams
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const profile = await getCurrentProfile()
@@ -381,6 +387,10 @@ export default async function SeaPage() {
       // Which sea that position is in. Without it a saved northern position is
       // ambiguous, which is why one was never saved at all.
       startSide={((profile?.sea_side as string | null) ?? 'fishing') as 'fishing' | 'anchorage' | 'moored' | 'open'}
+      // A door named in the URL, opened on arrival, and which of its rooms.
+      openDoor={openDoor === 'crew' ? 'crew' : null}
+      openCard={openCard === 'assign' || openCard === 'recruits' || openCard === 'roster' || openCard === 'wardrobe'
+        ? openCard : null}
       baitBag={((baitRows ?? []) as { bait_type: string; quantity: number }[])
         .filter(b => b.quantity > 0)
         .map(b => ({ type: b.bait_type, quantity: b.quantity }))

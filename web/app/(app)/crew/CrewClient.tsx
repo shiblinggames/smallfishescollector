@@ -900,7 +900,32 @@ function statLine(t: TraitStats): string {
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
-export default function CrewClient({ initial, hasSeenGuide = true }: { initial: CrewState; hasSeenGuide?: boolean }) {
+/**
+ * ── IT IS A SECTION NOW, NOT A PAGE ─────────────────────────────────────────
+ *
+ * This was /crew: a full page with its own column, its own title and its own
+ * tab bar. The crew modal on the sea replaced all three — four painted cards
+ * choose the section, and the section is drawn inside the panel over the water.
+ *
+ * `embedded` drops the page furniture (the 100vh ground, the 980 column, the
+ * title row, the back-to-expeditions link and the tab bar) and nothing else.
+ * Every tab body below is untouched and every action still runs exactly as it
+ * did: the trait offers, the compare sheet, the blood market, the crate
+ * reveals, the bunk stints. Rebuilding those in a new file would have been a
+ * rewrite of four and a half thousand lines whose only visible result would be
+ * the bugs it introduced.
+ *
+ * `section` makes the tab CONTROLLED, so the host's cards and this component's
+ * idea of what is showing cannot drift apart.
+ */
+export default function CrewClient({ initial, hasSeenGuide = true, embedded = false, section }: {
+  initial: CrewState
+  hasSeenGuide?: boolean
+  /** Drawn inside a panel rather than as a page. See the note above. */
+  embedded?: boolean
+  /** Which section to show, when the host is choosing. */
+  section?: 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'
+}) {
   const [state, setState] = useState<CrewState>(initial)
   // Blood Gem skin gamble: null = closed, 'rolling' = suspense build-up,
   // 'revealed' = the won skin slams in. skinId set once the server returns it.
@@ -1363,7 +1388,11 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     if (t === 'blood') return 'recruits'
     return t === 'assign' || t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'wardrobe' || t === 'hall' ? t : 'roster'
   })() as 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'
-  const [activeTab, setActiveTab] = useState<'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'>(initialTab)
+  const [activeTab, setActiveTab] = useState<'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'>(section ?? initialTab)
+  // A PROP FEEDING STATE NEEDS A RESYNC. The host swaps sections while this
+  // component stays mounted, and a useState initialiser only ever runs once —
+  // without this, picking a second card would leave the first section drawn.
+  useEffect(() => { if (section) setActiveTab(section) }, [section])
 
   /**
    * VIEWING THE ROSTER IS THE ACKNOWLEDGEMENT.
@@ -1643,11 +1672,16 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
     // above the fixed z0 backdrop via DOM order WITHOUT creating a stacking
     // context — so the inline fixed modals below (e.g. the hall-upgrade sheet)
     // still stack over the Nav exactly as before.
-    <div style={{ minHeight: '100vh', background: 'transparent', position: 'relative', color: '#f0ede8', padding: '1.25rem 0 4rem' }}>
+    <div style={embedded
+      ? { background: 'transparent', position: 'relative', color: '#f0ede8' }
+      : { minHeight: '100vh', background: 'transparent', position: 'relative', color: '#f0ede8', padding: '1.25rem 0 4rem' }}>
       {/* This page's 980 is where the app-wide `.page-col` came from. It is
           the shared class now rather than a number here, so the standard has
-          one home instead of being a measurement other pages copy. */}
-      <div className="page-col">
+          one home instead of being a measurement other pages copy.
+
+          EMBEDDED IT IS THE PANEL'S WIDTH. A 980 column inside a 560 modal is
+          a 980 column with 420 of it off the side. */}
+      <div className={embedded ? undefined : 'page-col'}>
 
         {/* Header — title + roster count chip. Gems + Nav level live in
             the Nav bar already, so the roster fill is the one fact worth
@@ -1655,8 +1689,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             keeps butting up against (Recruit gates, Roster Full pills).
             Goes red when full so the player notices the wall before they
             try to claim another recruit and get bounced. */}
-        <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-          <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Management</h1>
+        <div style={{ marginBottom: embedded ? '0.85rem' : '1.1rem', display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+          {/* THE PANEL HAS ITS OWN NAME AND ITS OWN WAY BACK, so the page's
+              title and its return link would both be a second one. The
+              capacity pill stays either way: it is the wall every section
+              butts against, and nothing else says it. */}
+          {!embedded && <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Management</h1>}
           {(() => {
             const filled = state.roster.length
             const cap = state.capacity
@@ -1698,10 +1736,10 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             )
           })()}
           {/* Back to the hub — matches the Ship / Items / Forge routes. */}
-          <Link href="/expeditions" aria-label="Back to expeditions"
+          {!embedded && <Link href="/expeditions" aria-label="Back to expeditions"
             style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', color: '#e0ddd8', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', textDecoration: 'none' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
-          </Link>
+          </Link>}
         </div>
 
         {err && (
@@ -1710,8 +1748,12 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
           </div>
         )}
 
-        {/* First-time Crew Hall guide (Doby + Kat) — flashes each core tab. */}
-        {crewGuideStep != null && CREW_GUIDE[crewGuideStep] && (
+        {/* First-time Crew Hall guide (Doby + Kat) — flashes each core tab.
+            NOT WHEN EMBEDDED: it works by switching tabs from under you and
+            flashing a bar that is not on screen, and the four painted cards
+            the panel opens on say the same thing without being walked through
+            it. */}
+        {!embedded && crewGuideStep != null && CREW_GUIDE[crewGuideStep] && (
           <GuideCoach
             show
             portrait={CREW_GUIDE[crewGuideStep].portrait}
@@ -1733,7 +1775,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             tombstone icon button on the right (a memorial doesn't need a
             full-width slot in the main nav). Counts stay as dim "· N"
             suffixes on the two text tabs. */}
-        {(() => {
+        {embedded ? null : (() => {
           // Seats filled across BOTH parties — the number the Assign tab is about.
           const assignedCount = state.roster.filter(c => c.raidSlot != null || c.voyageSlot != null).length
           const boardCount = state.board.filter(c => !c.recruited).length
@@ -3304,6 +3346,21 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
             </>
           ) : (
             <>
+              {/* THE WAY BACK. The Fallen used to be reachable from the tab bar,
+                  which was also the way out of it. With the bar gone (the panel
+                  chooses the section now) this is the only door, so it has to be
+                  here rather than assumed. */}
+              <button type="button" onClick={() => setActiveTab('roster')}
+                className="font-karla font-700 uppercase tracking-[0.14em] tap"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: '0.6rem',
+                  padding: '0.35rem 0.6rem', borderRadius: 8, cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
+                  color: 'rgba(226,232,236,0.7)', fontSize: '0.58rem',
+                }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+                The manifest
+              </button>
               <p className="font-karla italic" style={{ fontSize: '0.74rem', color: 'rgba(214,196,163,0.6)', marginBottom: '0.7rem' }}>
                 In memory of those who sailed and never returned.
               </p>

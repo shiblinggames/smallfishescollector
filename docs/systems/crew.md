@@ -3,6 +3,41 @@
 Recruit, level, assign, train, and (rarely) bury sea-creature crew. The connective tissue
 between fishing (trawls), voyages, raids, and gauntlets.
 
+## Where it lives now: the panel, not the page
+
+**`/crew` is a redirect.** The Crew Management page — five tabs, its own column, its own
+title, its own guided tour — is gone. Everything it did happens on the sea:
+
+- **`sea/CrewHub`** is the crew panel, opened from the HUD disc. It shows a one-line roll
+  call you can expand (who is out, who is due, who is idle — the panel's original job) and
+  then **four painted cards**: Assign, Recruit, Roster, Skins. Pressing one draws that
+  section inside the same panel with a back arrow in the header. Not a tab bar: five words
+  in a row made five equal things out of four rooms that feel nothing alike, and the page
+  needed a guided tour to explain itself.
+- **`sea/HallSheet`** is the fifth room, and it is **ashore at the Crew Hall island**. The
+  hall's tier, the Drills/Stores ladder and the bunks are the *building*; upgrading it from
+  the middle of the ocean would make the island scenery. It wears `/crew-bg.jpg`, the
+  painting the page had.
+- **The Fallen** is a toggle inside Roster (it always was — it lost its tab long ago). With
+  the tab bar gone it needed a way BACK, so the memorial carries one.
+
+**`CrewClient` was not rewritten.** It takes `embedded` (drops the 100vh ground, the 980
+column, the title row, the back link, the tab bar and the guide) and `section` (makes the
+tab controlled, with the prop-sync effect a prop-fed `useState` always needs). Every tab
+body, every action, the trait offers, the compare sheet, the blood market, the crate reveals
+and the bunk stints are untouched — rebuilding four and a half thousand lines in a new file
+would have produced nothing visible except the bugs.
+
+Both doors mount it lazily (`next/dynamic`, `ssr: false`): the chart holds the panel for the
+whole session, and a static import would put the recruit board and the crate reveal in the
+sea's bundle for every captain who never opens it.
+
+**Links survive.** About thirty point at `/crew` (every crew badge, the captain's orders,
+the gauntlet). The route maps the old `?tab=` to `/sea?open=crew&card=…`, because those
+links are errands — *go and sign somebody on* — not addresses, and landing them on the four
+cards would lose the point of following one. `tab=hall` has no card: a URL cannot sail you
+to an island.
+
 ## Files
 
 `web/lib/crew*.ts` is the family: `crewData` (definitions), `crewGen` (rolls),
@@ -10,7 +45,8 @@ between fishing (trawls), voyages, raids, and gauntlets.
 `crewResolve`/`crewMuster` (combat contribution), `crewHall`/`crewBunks`/`crewBunkSettle`
 (training), `crewAssignment`, `crewCapacity`, `crewXPGrant`. UI:
 `web/app/(app)/crew/` (CrewClient, AssignBoard, AssignPicker, HallBunks, actions,
-bunkActions).
+bunkActions) plus its two hosts on the water, `web/app/(app)/sea/CrewHub.tsx` and
+`web/app/(app)/sea/HallSheet.tsx`.
 
 ## Structural rules
 

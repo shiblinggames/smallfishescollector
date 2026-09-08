@@ -1,36 +1,61 @@
 'use client'
 
-// ── THE CREW HUB ────────────────────────────────────────────────────────────
+// ── THE CREW, WHOLE, OVER THE WATER ─────────────────────────────────────────
 //
-// One panel that answers "where is everybody" and then lets you do something
-// about it. Before this the answer was spread across four screens — the hall
-// knows who is assigned, the docks know who is trawling, the voyage board knows
-// who sailed, the sortie knows who is boarding — and none of them knew about
-// the others, so the only way to hold the whole crew in view was to visit all
-// four and remember.
+// This panel is the crew hall now. There was a page — /crew, five tabs, a
+// column, a title — and everything it did happens in here instead: seating a
+// party, signing hands on, reading the manifest, dressing a legend. The page is
+// a redirect.
 //
-// ── GROUPED BY WHAT THEY ARE DOING, NOT BY WHO THEY ARE ─────────────────────
+// ── WHY IT MOVED ────────────────────────────────────────────────────────────
 //
-// A roster sorted by rarity is the hall's job and the hall does it well. From
-// the deck the question is never "who is my best crew", it is "who is free" and
-// "when is anybody back", so the grouping IS the answer: out on the trawls, out
-// on the voyage, aboard for the raid, resting in the hall.
+// The rest of the game came out onto the sea. The forge, the shipyard, the
+// bounties, the campaign: every one of them used to be a route you left the
+// water for, and every one of them is a panel now, because sailing somewhere
+// and then being taken off the sea to press buttons about it is two games
+// stitched together. The crew was the last big room still ashore.
 //
-// The ones on a clock come first and the clock is on the row, because that is
-// the only thing in here that changes while you are looking at it.
+// ── FOUR DOORS, PAINTED ─────────────────────────────────────────────────────
 //
-// ── AND IT IS A HUB, SO EVERYTHING IS ONE PRESS ─────────────────────────────
+// Not a tab bar. A tab bar is five words in a row and it makes five equal
+// things out of four rooms that feel nothing alike — and it was already
+// carrying so much that the page needed a guided tour to explain itself. Four
+// paintings of four places aboard one ship say what each is without a word:
+// the muster deck with its empty benches, the gangplank and the signing table,
+// the hammocks and the ledger, the open chest of coats.
 //
-// Trawls and the voyage board are already panels on this chart, so those rows
-// open them where you stand rather than sailing you to an island first. The
-// hall and the recruit board are real screens and cannot be, so those two are
-// links. Nothing in here is a dead end.
+// ── AND THE ROLL CALL STAYS ON TOP ──────────────────────────────────────────
+//
+// This panel's first job was answering "where is everybody", because the answer
+// used to live across four screens. That has not stopped being useful, so it is
+// a line at the top you can open, rather than a fifth card or a lost feature.
+//
+// ── THE HALL ITSELF IS NOT IN HERE ──────────────────────────────────────────
+//
+// The building, its tiers, the Drills and Stores ladder and the bunks are the
+// Crew Hall ISLAND's business. There is a hall on the chart with a shore you
+// tie up at; putting its upgrades in a panel you can open from the middle of
+// the ocean would make the island scenery.
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
+import CloseButton from '@/components/CloseButton'
+import { vibrate } from '@/lib/haptics'
 import { crewHub, type CrewHubState, type HubCrew } from './crewHubActions'
+import { getCrewState } from '@/app/(app)/crew/actions'
+import type { CrewState } from '@/app/(app)/crew/actions'
+
+/**
+ * THE HALL'S WHOLE SELF, FETCHED ONLY WHEN A DOOR IS OPENED.
+ *
+ * `CrewClient` is four and a half thousand lines and drags the recruit board,
+ * the compare sheet, the blood market and the crate reveal in behind it. The
+ * chart holds this component for the entire session, so a static import would
+ * put all of that in the sea's bundle for every captain who never opens it.
+ */
+const CrewClient = dynamic(() => import('@/app/(app)/crew/CrewClient'), { ssr: false })
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
@@ -46,6 +71,26 @@ const GROUPS = [
   { key: 'hall' as const, title: 'In the hall' },
 ]
 
+type Section = 'assign' | 'roster' | 'recruits' | 'wardrobe'
+
+/**
+ * THE FOUR DOORS.
+ *
+ * One painted plate each, all four of the same ship at the same hour by the
+ * same lamp, so they read as a set rather than as four illustrations that
+ * happen to be next to each other. `/public/crew/cards`.
+ */
+const CARDS: { id: Section; title: string; blurb: string; art: string }[] = [
+  { id: 'assign', title: 'Assign', blurb: 'Seat your raid and voyage parties', art: '/crew/cards/assign.jpg' },
+  { id: 'recruits', title: 'Recruit', blurb: 'Sign new hands on', art: '/crew/cards/recruit.jpg' },
+  { id: 'roster', title: 'Roster', blurb: 'Every hand you have, and the fallen', art: '/crew/cards/roster.jpg' },
+  { id: 'wardrobe', title: 'Skins', blurb: 'Coats and colours for your legends', art: '/crew/cards/skins.jpg' },
+]
+
+const TITLES: Record<Section, string> = {
+  assign: 'Assign', recruits: 'Recruit', roster: 'Roster', wardrobe: 'Skins',
+}
+
 /** How long until they are back, in the shortest true form. Under a minute is
  *  "any moment": a countdown of seconds on a three-hour trawl is precision
  *  nobody asked for and it makes the row twitch. */
@@ -60,35 +105,60 @@ function backIn(iso: string, now: number): string {
 }
 
 export default function CrewHub({
-  open, onClose, onTrawls, onVoyage,
+  open, onClose, onTrawls, onVoyage, openCard = null,
 }: {
   open: boolean
+  /** A room to open straight into, when a link named one. The retired /crew
+   *  route's `?tab=` lands here: those links are errands ("go sign somebody
+   *  on"), not addresses, so arriving on the four cards would lose the point of
+   *  following one. */
+  openCard?: Section | null
   onClose: () => void
   /** Show the trawls that are out. Null when none are, and the row then says so
    *  rather than opening an empty panel. */
   onTrawls: (() => void) | null
   onVoyage: () => void
 }) {
-  const router = useRouter()
   const [state, setState] = useState<CrewHubState | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [rollOpen, setRollOpen] = useState(false)
+  const [section, setSection] = useState<Section | null>(openCard)
+  /** The hall's full state, for whichever section is showing. */
+  const [hall, setHall] = useState<CrewState | null>(null)
+  const [hallErr, setHallErr] = useState<string | null>(null)
 
   // FETCHED ON OPEN, not on mount. The chart holds this component for the whole
   // session and the crew changes while you sail — somebody comes back off a
   // trawl, a voyage lands — so the read has to be tied to the look, not to the
   // page load.
+  //
+  // BOTH READS GO AT ONCE. The roll call is what the panel opens on and the
+  // hall's state is what every card behind it needs; starting them together
+  // means the first card you press is already drawn rather than saying
+  // "mustering" for a second. Neither blocks the other.
   useEffect(() => {
     if (!open) return
     let live = true
-    setErr(null)
+    setErr(null); setHallErr(null)
     crewHub().then(r => {
       if (!live) return
       if ('error' in r) setErr(r.error)
       else setState(r)
     }, () => { if (live) setErr('Could not reach the hall.') })
+    getCrewState().then(r => {
+      if (!live) return
+      if (!r) setHallErr('Could not reach the hall.')
+      else setHall(r)
+    }, () => { if (live) setHallErr('Could not reach the hall.') })
     return () => { live = false }
   }, [open])
+
+  // Back to the four doors every time the panel is shut, so re-opening it is
+  // never a room you have forgotten you were standing in. A link that named a
+  // room still gets it: `openCard` only survives the first open, which is the
+  // one the link paid for.
+  useEffect(() => { if (!open) { setSection(null); setRollOpen(false) } }, [open])
 
   // The clocks, once a minute. Nothing in here is measured finer than that.
   useEffect(() => {
@@ -99,16 +169,42 @@ export default function CrewHub({
 
   const rows = (g: HubCrew['doing']) => (state?.crew ?? []).filter(c => c.doing === g)
 
+  const back = useCallback(() => { vibrate(8); setSection(null) }, [])
+
+  /** The roll call in one line: who is out, who is due, who is idle. */
+  const summary = (() => {
+    if (!state) return null
+    const out = state.crew.filter(c => c.doing !== 'hall')
+    const ready = out.filter(c => c.ready).length
+    const soon = out.filter(c => !c.ready && c.backAt && new Date(c.backAt).getTime() - now < 3_600_000).length
+    const idle = state.crew.length - out.length
+    const bits: string[] = []
+    if (out.length) bits.push(`${out.length} out`)
+    if (ready) bits.push(`${ready} back and waiting`)
+    else if (soon) bits.push(`${soon} due within the hour`)
+    if (idle) bits.push(`${idle} in the hall`)
+    return bits.length ? bits.join(' · ') : 'Nobody signed on yet'
+  })()
+
   return (
     <AnimatePresence>
       {open && (
         <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
           <PopupShell open onClose={onClose}>
             <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              // ── OPACITY ONLY, AND IT MATTERS ──────────────────────────
+              //
+              // Everything this panel opens — the assign sheet, the crew
+              // detail, the blood confirms — is `position: fixed` and NOT
+              // portalled, and a transform on an ancestor makes fixed resolve
+              // against that ancestor instead of the viewport. A `y` or a
+              // `scale` here would leave a transform on the box and drop every
+              // one of those sheets into a 560px column.
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.16 }}
               onClick={e => e.stopPropagation()}
               style={{
+                position: 'relative',
                 margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
                 borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
                 // AN OPAQUE BASE. This sits over painted water, and a panel with
@@ -117,123 +213,247 @@ export default function CrewHub({
                 background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
                 border: '1px solid rgba(196,169,106,0.34)',
                 boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
-                maxHeight: '82vh', display: 'flex', flexDirection: 'column',
+                maxHeight: '84vh', display: 'flex', flexDirection: 'column',
               }}>
 
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.6rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.26rem', color: '#f4ecd8', margin: 0 }}>
-                  Your Crew
+              {/* ── THE HEADER, WHICH KNOWS WHERE YOU ARE ─────────────────
+                  On the four doors it names the panel. Inside a room it names
+                  the room and carries the way out of it, so a section is never
+                  a place you have to guess your way back from. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', paddingRight: 34 }}>
+                {section && (
+                  <button type="button" onClick={back} aria-label="Back to the crew"
+                    className="tap" style={{
+                      flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 28, height: 28, borderRadius: '50%', padding: 0, cursor: 'pointer',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
+                      color: 'rgba(230,240,246,0.8)',
+                    }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+                )}
+                <p className="font-cinzel font-700" style={{ fontSize: '1.26rem', color: '#f4ecd8', margin: 0, flex: 1, minWidth: 0 }}>
+                  {section ? TITLES[section] : 'Your Crew'}
                 </p>
-                <p className="font-karla font-600" style={{
-                  fontSize: '0.78rem', color: 'rgba(196,169,106,0.85)', margin: 0,
-                  fontVariantNumeric: 'tabular-nums',
-                }}>
-                  {state ? `${state.crew.length} of ${state.capacity} berths` : ''}
-                </p>
+                {!section && (
+                  <p className="font-karla font-600" style={{
+                    fontSize: '0.78rem', color: 'rgba(196,169,106,0.85)', margin: 0, flexShrink: 0,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {state ? `${state.crew.length} of ${state.capacity} berths` : ''}
+                  </p>
+                )}
               </div>
+              <CloseButton onClick={onClose} style={{ position: 'absolute', top: 12, right: 12 }} />
 
-              {err && (
+              {err && !section && (
                 <p className="font-karla" style={{ fontSize: '0.82rem', color: '#e6a0a0', margin: '0.8rem 0 0' }}>{err}</p>
               )}
-              {!state && !err && (
-                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(190,212,228,0.6)', margin: '0.9rem 0 0' }}>
-                  Counting heads…
-                </p>
-              )}
 
-              {state && (
-                <div style={{ overflowY: 'auto', minHeight: 0, marginTop: '0.75rem', flex: 1 }}>
-                  {state.crew.length === 0 && (
-                    <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(190,212,228,0.6)', lineHeight: 1.5, margin: 0 }}>
-                      Nobody signed on yet. The board below is where you start.
+              <div style={{ overflowY: 'auto', minHeight: 0, marginTop: '0.75rem', flex: 1 }}>
+                {/* ── A ROOM ────────────────────────────────────────────── */}
+                {section ? (
+                  hall ? (
+                    <CrewClient initial={hall} embedded section={section} />
+                  ) : (
+                    <p className="font-karla" style={{ fontSize: '0.82rem', color: hallErr ? '#e6a0a0' : 'rgba(190,212,228,0.6)', margin: 0 }}>
+                      {hallErr ?? 'Mustering the hall…'}
                     </p>
-                  )}
+                  )
+                ) : (
+                  <>
+                    {/* ── THE ROLL CALL, AS ONE LINE ──────────────────────
+                        It was the whole panel and it is a strip now. Four
+                        painted doors are what this is for; a full list of every
+                        hand and every clock above them would bury them. Open it
+                        and the old panel is still there, unchanged. */}
+                    {state && (
+                      <>
+                        <button type="button" onClick={() => { vibrate(6); setRollOpen(o => !o) }}
+                          aria-expanded={rollOpen} className="tap"
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                            padding: '0.5rem 0.65rem', borderRadius: 11, cursor: 'pointer', textAlign: 'left',
+                            background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)',
+                          }}>
+                          <span className="font-karla font-600" style={{
+                            flex: 1, minWidth: 0, fontSize: '0.76rem', color: 'rgba(214,232,240,0.72)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{summary}</span>
+                          {state.crew.some(c => c.ready) && (
+                            <span aria-hidden style={{
+                              flexShrink: 0, width: 8, height: 8, borderRadius: 999,
+                              background: '#8fdc9a', boxShadow: '0 0 9px rgba(143,220,154,0.7)',
+                            }} />
+                          )}
+                          <span aria-hidden style={{
+                            flexShrink: 0, color: 'rgba(190,212,228,0.55)',
+                            transform: rollOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s',
+                          }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                          </span>
+                        </button>
 
-                  {GROUPS.map(g => {
-                    const list = rows(g.key)
-                    if (list.length === 0) return null
-                    return (
-                      <div key={g.key} style={{ marginBottom: '0.9rem' }}>
-                        <p className="font-karla font-700 uppercase" style={{
-                          margin: '0 0 0.4rem', fontSize: '0.54rem', letterSpacing: '0.18em',
-                          color: 'rgba(196,169,106,0.72)',
-                        }}>{g.title} · {list.length}</p>
+                        <AnimatePresence initial={false}>
+                          {rollOpen && (
+                            <motion.div key="roll"
+                              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2, ease: 'easeOut' }}
+                              style={{ overflow: 'hidden' }}>
+                              <div style={{ paddingTop: '0.7rem' }}>
+                                {state.crew.length === 0 && (
+                                  <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(190,212,228,0.6)', lineHeight: 1.5, margin: 0 }}>
+                                    Nobody signed on yet. Recruit is where you start.
+                                  </p>
+                                )}
+                                {GROUPS.map(g => {
+                                  const list = rows(g.key)
+                                  if (list.length === 0) return null
+                                  return (
+                                    <div key={g.key} style={{ marginBottom: '0.9rem' }}>
+                                      <p className="font-karla font-700 uppercase" style={{
+                                        margin: '0 0 0.4rem', fontSize: '0.54rem', letterSpacing: '0.18em',
+                                        color: 'rgba(196,169,106,0.72)',
+                                      }}>{g.title} · {list.length}</p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.34rem' }}>
-                          {list.map(c => (
-                            <div key={c.id} style={{
-                              display: 'flex', alignItems: 'center', gap: '0.6rem',
-                              padding: '0.34rem 0.5rem', borderRadius: 10,
-                              background: 'rgba(255,255,255,0.035)',
-                              border: '1px solid rgba(255,255,255,0.06)',
-                            }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={artSrc(c.filename)} alt="" aria-hidden decoding="async" style={{
-                                width: 34, height: 34, borderRadius: '50%', objectFit: 'cover',
-                                border: `2px solid ${RARITY[Math.min(3, Math.max(0, c.rarity - 1))]}`,
-                                flexShrink: 0, background: 'rgba(0,0,0,0.4)',
-                              }} />
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <p className="font-karla font-600" style={{
-                                  margin: 0, fontSize: '0.86rem', color: '#f0ede8',
-                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>{c.name}</p>
-                                <p className="font-karla" style={{
-                                  margin: 0, fontSize: '0.68rem', color: 'rgba(190,212,228,0.55)',
-                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>
-                                  Lv {c.level}{c.where ? ` · ${c.where}` : ''}
-                                </p>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.34rem' }}>
+                                        {list.map(c => (
+                                          <div key={c.id} style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                            padding: '0.34rem 0.5rem', borderRadius: 10,
+                                            background: 'rgba(255,255,255,0.035)',
+                                            border: '1px solid rgba(255,255,255,0.06)',
+                                          }}>
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={artSrc(c.filename)} alt="" aria-hidden decoding="async" style={{
+                                              width: 34, height: 34, borderRadius: '50%', objectFit: 'cover',
+                                              border: `2px solid ${RARITY[Math.min(3, Math.max(0, c.rarity - 1))]}`,
+                                              flexShrink: 0, background: 'rgba(0,0,0,0.4)',
+                                            }} />
+                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                              <p className="font-karla font-600" style={{
+                                                margin: 0, fontSize: '0.86rem', color: '#f0ede8',
+                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                              }}>{c.name}</p>
+                                              <p className="font-karla" style={{
+                                                margin: 0, fontSize: '0.68rem', color: 'rgba(190,212,228,0.55)',
+                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                              }}>
+                                                Lv {c.level}{c.where ? ` · ${c.where}` : ''}
+                                              </p>
+                                            </div>
+                                            {(c.ready || c.backAt) && (
+                                              <p className="font-karla font-700" style={{
+                                                margin: 0, fontSize: '0.7rem', flexShrink: 0,
+                                                fontVariantNumeric: 'tabular-nums',
+                                                color: c.ready ? '#8fdc9a' : 'rgba(196,169,106,0.8)',
+                                              }}>
+                                                {c.ready ? 'back' : backIn(c.backAt!, now)}
+                                              </p>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
                               </div>
-                              {(c.ready || c.backAt) && (
-                                <p className="font-karla font-700" style={{
-                                  margin: 0, fontSize: '0.7rem', flexShrink: 0,
-                                  fontVariantNumeric: 'tabular-nums',
-                                  color: c.ready ? '#8fdc9a' : 'rgba(196,169,106,0.8)',
-                                }}>
-                                  {c.ready ? 'back' : backIn(c.backAt!, now)}
-                                </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    )}
+
+                    {/* ── THE FOUR DOORS ──────────────────────────────────
+                        Two by two, painted, with the words at the foot where
+                        every plate is already dark. */}
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem',
+                      marginTop: '0.85rem',
+                    }}>
+                      {CARDS.map(card => {
+                        // WHAT IS WAITING BEHIND EACH DOOR. A count, not a
+                        // banner: the dot is the same amber the HUD uses and
+                        // means the same thing, which is that there is
+                        // something here you have not dealt with.
+                        const waiting = card.id === 'recruits' && (state?.recruitsWaiting ?? 0) > 0
+                        const note = card.id === 'recruits' && state
+                          ? (state.recruitsWaiting > 0 ? `${state.recruitsWaiting} on the board` : 'board taken for today')
+                          : card.id === 'roster' && state
+                            ? `${state.crew.length} aboard`
+                            : card.blurb
+                        return (
+                          <button key={card.id} type="button" className="tap"
+                            onClick={() => { vibrate(10); setSection(card.id) }}
+                            style={{
+                              position: 'relative', display: 'block', padding: 0, width: '100%',
+                              borderRadius: 14, overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
+                              background: '#070c14',
+                              border: `1px solid ${waiting ? 'rgba(240,192,64,0.55)' : 'rgba(255,255,255,0.1)'}`,
+                              boxShadow: waiting ? '0 0 18px rgba(240,192,64,0.18)' : 'none',
+                            }}>
+                            <div style={{ position: 'relative', aspectRatio: '4 / 3' }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={card.art} alt="" aria-hidden loading="lazy" decoding="async"
+                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                              {/* The scrim, weighted to the foot. The plates are
+                                  painted with a dark lower third for exactly
+                                  this, so it has very little work to do. */}
+                              <div aria-hidden style={{
+                                position: 'absolute', inset: 0,
+                                background: 'linear-gradient(180deg, rgba(4,8,14,0.05) 0%, rgba(4,8,14,0.5) 58%, rgba(4,8,14,0.94) 100%)',
+                              }} />
+                              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0.4rem 0.55rem 0.5rem' }}>
+                                <span className="font-cinzel font-700" style={{
+                                  display: 'block', fontSize: '0.98rem', lineHeight: 1.1, color: '#f6f1e6',
+                                  textShadow: '0 2px 12px rgba(0,0,0,0.95)',
+                                }}>{card.title}</span>
+                                <span className="font-karla" style={{
+                                  display: 'block', fontSize: '0.6rem', lineHeight: 1.3, marginTop: 2,
+                                  color: waiting ? '#f0c040' : 'rgba(214,232,240,0.6)',
+                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}>{note}</span>
+                              </div>
+                              {waiting && (
+                                <span aria-hidden style={{
+                                  position: 'absolute', top: 7, right: 7,
+                                  width: 10, height: 10, borderRadius: 999,
+                                  background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
+                                  boxShadow: '0 0 10px rgba(240,192,64,0.6)',
+                                }} />
                               )}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
+                          </button>
+                        )
+                      })}
+                    </div>
 
-                  {/* ── WHERE TO GO NEXT ──────────────────────────────────
-                      The four things you can do about any of the above, in the
-                      order they are most often wanted from the water. */}
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', gap: '0.4rem',
-                    paddingTop: '0.75rem', marginTop: '0.2rem',
-                    borderTop: '1px solid rgba(196,169,106,0.18)',
-                  }}>
-                    <HubLink
-                      label="Recruit new crew"
-                      note={state.recruitsWaiting > 0
-                        ? `${state.recruitsWaiting} on the board`
-                        : 'board taken for today'}
-                      dot={state.recruitsWaiting > 0}
-                      onClick={() => router.push('/crew?tab=recruits')} />
-                    <HubLink
-                      label="The Crew Hall"
-                      note={`Hall ${state.hall.tier} · Drills ${state.hall.drill} · Stores ${state.hall.stores}`}
-                      onClick={() => router.push('/crew?tab=hall')} />
-                    <HubLink
-                      label="The voyage board"
-                      note={state.voyage
-                        ? state.voyage.ready ? `${state.voyage.route} — back, unread` : `out on ${state.voyage.route}`
-                        : 'nobody sailing today'}
-                      dot={state.voyage?.ready === true}
-                      onClick={() => { onClose(); onVoyage() }} />
-                    <HubLink
-                      label="The trawls"
-                      note={onTrawls ? 'see who is out' : 'nobody trawling'}
-                      onClick={onTrawls ? () => { onClose(); onTrawls() } : null} />
-                  </div>
-                </div>
-              )}
+                    {/* ── AND THE TWO THAT ARE ALREADY PANELS ─────────────
+                        The voyage board and the trawls are their own sheets on
+                        this chart, so they open where you stand rather than
+                        being a fifth and sixth room in here. */}
+                    {state && (
+                      <div style={{
+                        display: 'flex', flexDirection: 'column', gap: '0.4rem',
+                        paddingTop: '0.75rem', marginTop: '0.75rem',
+                        borderTop: '1px solid rgba(196,169,106,0.18)',
+                      }}>
+                        <HubLink
+                          label="The voyage board"
+                          note={state.voyage
+                            ? state.voyage.ready ? `${state.voyage.route} — back, unread` : `out on ${state.voyage.route}`
+                            : 'nobody sailing today'}
+                          dot={state.voyage?.ready === true}
+                          onClick={() => { onClose(); onVoyage() }} />
+                        <HubLink
+                          label="The trawls"
+                          note={onTrawls ? 'see who is out' : 'nobody trawling'}
+                          onClick={onTrawls ? () => { onClose(); onTrawls() } : null} />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </motion.div>
           </PopupShell>
         </div>
