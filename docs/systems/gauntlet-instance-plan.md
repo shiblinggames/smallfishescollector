@@ -271,6 +271,23 @@ Two rules the veil earned the hard way:
   time. Opacity only, never a transform, or every fixed overlay inside it
   breaks.
 
+**What belongs to the fight ends with the fight.** Three things leaked out of
+combat into the screens after it, all for the same reason: `fight` is
+deliberately never cleared between depths (every screen after the first fight
+reads its depth and its enemy off it), so anything derived from it stayed true.
+
+- `bossHere` in GauntletGame's `arena()` is `fight.isBoss && (mood 'fight' or
+  'dead')`. The maw overhead, the eye under the hulls and the boss's extra
+  `heavy` used to persist through the reward, the breather and the whole next
+  descent, which made the boss's own water the ordinary water.
+- The arena clears `pose` (the fight's `shipFx` channel) whenever the mood is
+  not `fight`. It holds the last combat frame's list, ward and condition, so a
+  hull that ended a fight burning or frozen kept its ring on screens the ships
+  are not even meant to be on.
+- The bolt is far-off weather, not a strobe: roughly one every ten seconds at
+  depth, a flash under 0.12 alpha, nothing at all above `heavy` 0.3. The first
+  cut struck every second or two and washed the viewport at a quarter opacity.
+
 **The hull is on the water only in a fight or a sinking.** `showHull` in
 GauntletArena is `mood === 'fight' || mood === 'dead'`. The descent screen is
 the sea swallowing a depth number and the breather is a log and a dock; a hull

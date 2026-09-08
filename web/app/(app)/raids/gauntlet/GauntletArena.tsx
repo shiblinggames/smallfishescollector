@@ -390,6 +390,13 @@ export default function GauntletArena({ theme, scene, mood, depth, shipUrl, enem
         // ships themselves, not only in the water going past them.
         const drop = fall * fall * 120
         const bob = Math.sin(t * 1.7) * 3.4 + Math.sin(t * 2.6 + 1.1) * 2.1
+        // THE FIGHT'S POSE DIES WITH THE FIGHT. `pose` is whatever the last
+        // frame of combat pushed through `shipFx`, and nothing was clearing
+        // it: a hull that ended the fight burning, frozen, listing or behind a
+        // ward kept its condition ring and its list through the reward, the
+        // breather and the next descent, on a screen where the ships are not
+        // even meant to be. The pose belongs to the fight only.
+        if (sc.mood !== 'fight') { pose.player = null; pose.enemy = null }
         const pf = pose.player, ef = pose.enemy
         // Sized only once the real bitmap is in: an empty texture is 1x1 and
         // would fix the aspect at a square before the art arrives.

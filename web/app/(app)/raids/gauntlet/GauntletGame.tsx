@@ -2316,11 +2316,20 @@ export default function GauntletGame(props: GauntletGameProps) {
   // What the tide between screens is made of: the run's own colour.
   const screenTint = hardcoreRun ? '#ff6a6a' : isDonG ? '#e6c66e' : '#6fe4d8'
   tideTintRef.current = screenTint
-  const arena = (mood: Mood, opts?: { enemyHidden?: boolean }) => (
+  // A BOSS IS ONLY A BOSS WHILE HE IS IN THE WATER. `fight` is deliberately
+  // never cleared between depths (every screen after the first fight reads its
+  // depth and its enemy off it), which meant `fight.isBoss` stayed true after
+  // the kill: the maw kept turning overhead and the eye kept watching through
+  // the reward, the breather and the whole next descent, so the boss's own
+  // water became the ordinary water. It is his only while you are in front of
+  // him, or going down in front of him.
+  const arena = (mood: Mood, opts?: { enemyHidden?: boolean }) => {
+    const bossHere = !!fight?.isBoss && (mood === 'fight' || mood === 'dead')
+    return (
     <GauntletArena
       key="arena"
-      theme={arenaTheme(arenaDepth, props.variant ?? 'davy', hardcoreRun, !!fight?.isBoss, hardcoreRun ? pressure : 0)}
-      scene={{ variant: props.variant ?? 'davy', hardcore: hardcoreRun, apex: !!fight?.isApex, deep: arenaDeep }}
+      theme={arenaTheme(arenaDepth, props.variant ?? 'davy', hardcoreRun, bossHere, hardcoreRun ? pressure : 0)}
+      scene={{ variant: props.variant ?? 'davy', hardcore: hardcoreRun, apex: bossHere && !!fight?.isApex, deep: arenaDeep }}
       mood={mood}
       depth={arenaDepth}
       // The hero art as the fight itself uses it: RaidCombat draws this
@@ -2334,7 +2343,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       enemyHidden={opts?.enemyHidden ?? mood !== 'fight'}
       handle={arenaRef}
     />
-  )
+    )
+  }
 
   if (phase === 'resume' && props.resumeState) {
     const rs = props.resumeState

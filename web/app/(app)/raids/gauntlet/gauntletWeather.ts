@@ -341,12 +341,17 @@ export function makeWeather(PIXI: typeof import('pixi.js')): Weather {
       }
 
       // ── THE BOLT ─────────────────────────────────────────────────
-      // Rare and soft at the top of a dive; at the bottom, and over a boss,
-      // it is most of the light in the room.
-      nextBolt -= dt * (0.25 + heavy * 1.5 + (boss ? 0.8 : 0))
-      if (nextBolt <= 0 && heavy > 0.12) {
-        boltLeft = 0.34
-        nextBolt = 2.2 + Math.random() * 5 * (1 - heavy * 0.6)
+      // FAR OFF, AND SELDOM. The first cut struck every second or two at the
+      // bottom of a dive and washed the whole viewport at a quarter opacity,
+      // which is not weather, it is a strobe over the fight you are trying to
+      // read. It is distant now: something happening on the surface, a long
+      // way above a place you should not be, that lights the water every ten
+      // seconds or so and is worse over a boss without ever being the thing
+      // you are looking at.
+      nextBolt -= dt * (0.12 + heavy * 0.5 + (boss ? 0.35 : 0))
+      if (nextBolt <= 0 && heavy > 0.3) {
+        boltLeft = 0.5
+        nextBolt = 5 + Math.random() * 6 * (1 - heavy * 0.4)
         for (const f of forks) {
           f.x = W * (0.12 + Math.random() * 0.76)
           f.y = -20
@@ -356,15 +361,18 @@ export function makeWeather(PIXI: typeof import('pixi.js')): Weather {
       }
       if (boltLeft > 0) {
         boltLeft -= dt
-        const u = 1 - boltLeft / 0.34
+        const u = 1 - boltLeft / 0.5
         // Two beats: the strike, then the answer. A single ramp reads as a
-        // fade; a stutter reads as lightning.
-        const env = u < 0.1 ? u / 0.1
-          : u < 0.3 ? 0.25 + 0.75 * Math.max(0, 1 - (u - 0.1) / 0.2)
-          : Math.max(0, 1 - (u - 0.3) / 0.7) * 0.5
+        // fade; a stutter reads as lightning. Both beats are gentler than they
+        // were, and the tail is longer, so it rolls rather than snaps.
+        const env = u < 0.18 ? u / 0.18
+          : u < 0.4 ? 0.45 + 0.55 * Math.max(0, 1 - (u - 0.18) / 0.22)
+          : Math.max(0, 1 - (u - 0.4) / 0.6) * 0.45
         flash.width = W; flash.height = H
-        flash.alpha = env * (0.12 + 0.16 * heavy)
-        for (let i = 0; i < forks.length; i++) forks[i].alpha = env * (0.5 - i * 0.14)
+        // Less than half what it was. The room should change temperature for a
+        // moment, not white out.
+        flash.alpha = env * (0.045 + 0.075 * heavy)
+        for (let i = 0; i < forks.length; i++) forks[i].alpha = env * (0.24 - i * 0.07)
       } else if (flash.alpha) {
         flash.alpha = 0
         for (const f of forks) f.alpha = 0
