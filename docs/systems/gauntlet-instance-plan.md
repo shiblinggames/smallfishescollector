@@ -244,6 +244,16 @@ SeaMap and the arena compose from one set of numbers. Your hull is anchored at
 its centre and theirs at its waterline, as the chart reports them, because
 RaidCombat lifts each side's overlays by what its anchor means.
 
+**The fight's furniture all hangs off ONE column.** `RAID_COL_MAX` (720) and `RAID_COL_PAD`
+(11.2) are exported from RaidCombat, and `raidColumn()` turns them into the column's left and
+right edges at the current width. Four things share it: the deck panel, the enemy's card
+(docked to the LEFT edge, not 12px off the window), your own card (docked to the RIGHT edge,
+which was still using the deck's old 580 cap and so sat seventy pixels inside the panel it
+stands on), and the gauntlet's DepthBar, which spanned the whole display. On a desktop those
+were four things that nearly lined up. The deck's bottom padding is `clamp(0.7rem, 5vh,
+3.5rem)` too, because 0.7rem was measured on a phone and glued the log to the foot of a tall
+window with the fight floating a long way above it.
+
 **The boon draft is two layouts, not one scaled.** On a phone each card is a ROW (medallion,
 name, payoff) because three tall cards would not fit on one screen and a draft you have to
 scroll is a draft you cannot compare. On a desktop (`wide`) it is a real CARD: art at 128,

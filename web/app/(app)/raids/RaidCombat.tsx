@@ -433,6 +433,28 @@ export type ShipAnchor = { x: number; y: number; w: number }
  * transform or to Pixi's `skipper()` (which already takes heel and an offset)
  * without knowing anything about the fight that produced them.
  */
+/**
+ * ── THE FIGHT'S COLUMN ───────────────────────────────────────────────────
+ *
+ * Over the sea the deck, the two stat cards and (in a gauntlet) the depth bar
+ * are all furniture on one column, and they have to share its edges or the
+ * screen reads as four things that nearly line up. They did not: the deck was
+ * capped at 720, your own card docked to a 580 that no longer existed, the
+ * enemy's card sat 12px off the WINDOW, and the gauntlet's depth bar spanned
+ * the whole display. Exported so the gauntlet host lays its bar on the same
+ * column rather than guessing at the number.
+ */
+export const RAID_COL_MAX = 720
+/** The deck's own side padding, so a card docked to the column's edge lands on
+ *  the panel's edge and not 11px outside it. */
+export const RAID_COL_PAD = 11.2
+
+/** The column's left and right edges in viewport pixels, at this width. */
+function raidColumn(): { left: number; right: number } {
+  const w = Math.min(RAID_COL_MAX, window.innerWidth - RAID_COL_PAD * 2)
+  return { left: window.innerWidth / 2 - w / 2, right: window.innerWidth / 2 + w / 2 }
+}
+
 export type ShipFx = {
   x: number; y: number; rot: number; sink: number
   /**
@@ -2520,8 +2542,14 @@ export default function RaidCombat({
       // (44/60 for the header, plus the chart's own 18) and stands about 34
       // tall; this sits a gap below it, so the top-left corner reads as one
       // stack rather than two things fighting for the same spot.
+      //
+      // ON THE COLUMN'S LEFT EDGE, not the window's. Pinned 12px off the glass
+      // it was a corner card on a phone and a card stranded out in open water
+      // on a desktop, a third of a screen from everything else the fight draws.
+      // It lines up with the deck under it and, in a gauntlet, with the depth
+      // bar directly above it.
       const line = (window.innerWidth >= 640 ? 60 : 44) + 18
-      el.style.left = `${12 - box.left}px`
+      el.style.left = `${raidColumn().left - box.left}px`
       el.style.top = `${line + 42 - box.top}px`
       el.style.right = 'auto'
       el.style.bottom = 'auto'
@@ -2538,8 +2566,10 @@ export default function RaidCombat({
       if (!el) return
       // Right edge of the deck's capped column, so the card lines up with the
       // panel under it rather than with the window.
-      const colW = Math.min(580, window.innerWidth - 22)
-      const right = window.innerWidth / 2 + colW / 2
+      // The 580 here was the cap the deck used to have; it went to 720 for
+      // desktop and this did not follow, so your card sat seventy pixels inside
+      // the panel it is meant to be standing on.
+      const right = raidColumn().right
       el.style.left = `${right - dim.pw - box.left}px`
       el.style.top = `${dim.deckTop - dim.ph - 10 - box.top}px`
       el.style.right = 'auto'
@@ -9022,7 +9052,13 @@ export default function RaidCombat({
         // on a desktop there is plenty of sea to spare.
         // The box already stops above the tab bar, so this is breathing room
         // rather than clearance for something underneath.
-        padding: overSea ? '0 0.7rem 0.7rem' : '0.7rem 0.85rem 0.95rem',
+        // OFF THE FOOT BY MORE THAN A HAIR ON A TALL SCREEN. 0.7rem was
+        // measured on a phone, where the deck is most of the lower third
+        // anyway; on a desktop it glued the log to the bottom edge of the
+        // window with the fight floating a long way above it. Scales with the
+        // viewport, so a phone keeps its edge and a desktop gets the log back
+        // up near the water it belongs to.
+        padding: overSea ? '0 0.7rem clamp(0.7rem, 5vh, 3.5rem)' : '0.7rem 0.85rem 0.95rem',
         pointerEvents: overSea ? 'none' : undefined,
       }}>
         {/* THE CONTROLS, IN A COLUMN. The wash above spans the whole width
@@ -9042,7 +9078,7 @@ export default function RaidCombat({
           // DESKTOP-FIRST: 720 on a wide screen, so the log and the stat cards
           // sit out where the hulls are rather than in a phone's column with
           // water either side. A phone is bounded by the 100% before this.
-          width: '100%', maxWidth: 720, marginLeft: 'auto', marginRight: 'auto',
+          width: '100%', maxWidth: RAID_COL_MAX, marginLeft: 'auto', marginRight: 'auto',
           display: 'flex', flexDirection: 'column', gap: 8,
           pointerEvents: overSea ? 'auto' : undefined,
           ...(overSea ? {

@@ -17,7 +17,7 @@ import {
   PHASE_INITIAL, PHASE_ENTER, PHASE_EXIT,
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
 } from '@/lib/gauntletMotion'
-import RaidCombat from '../RaidCombat'
+import RaidCombat, { RAID_COL_MAX, RAID_COL_PAD } from '../RaidCombat'
 import GauntletArena, { type ArenaHandle, type ArenaTheme, type Mood } from './GauntletArena'
 import { getShip, shipTierByName } from '@/lib/ships'
 import GauntletSlipway, { type SlipwayPlace } from './GauntletSlipway'
@@ -5065,7 +5065,17 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none',
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(${gloomHue},${gloom}) 100%)` }} />
         )}
-        <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
+        {/* ON THE FIGHT'S OWN COLUMN. It spanned the whole display, so on a
+            desktop the run's header was a banner across the window while the
+            deck under it, the enemy's card and yours all lived inside 720. The
+            padding matches the deck's, so the bar's left edge is exactly where
+            the enemy's card and the log panel's edge are. */}
+        <div className="gauntlet-depthbar" style={{
+          width: '100%', maxWidth: RAID_COL_MAX + RAID_COL_PAD * 2,
+          paddingLeft: RAID_COL_PAD, paddingRight: RAID_COL_PAD, boxSizing: 'border-box',
+          marginLeft: 'auto', marginRight: 'auto',
+          flexShrink: 0, marginBottom: 2,
+        }}>
           <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} potGain={potGain} uncharted={uncharted} pressure={hardcoreRun ? pressure : 0} signedTerms={hardcoreRun ? signedTerms : {}} contract={contractChip} marks={marks} />
         </div>
         {/* Everything the run carries (job, Don's Marks, terms, curses) now lives
