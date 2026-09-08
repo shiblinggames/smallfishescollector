@@ -253,6 +253,10 @@ const Almanac = dynamic(() => import('../fishing/Almanac'), { ssr: false })
  *  drags GearScreen and the whole forge bench behind it, and a captain who
  *  never moors there never fetches a byte of it. */
 const ShipyardSheet = dynamic(() => import('./ShipyardSheet'), { ssr: false })
+// THE SHIP SCREEN, over the water. Lazy for the same reason the yard is: it
+// pulls in the whole loadout / forge / armoury tree, and most sails never open
+// it. See sea/ShipSheet.
+const ShipSheet = dynamic(() => import('./ShipSheet'), { ssr: false })
 /** THE FIGHT, over the water it is happening on. Dynamic and enormous — the
  *  whole combat engine hangs off it — so nothing of it is fetched until a
  *  captain actually takes something on. */
@@ -3144,6 +3148,9 @@ export default function SeaMap({
   const [almanacOpen, setAlmanacOpen] = useState(false)
   /** The locker, open or shut. */
   const [yardOpen, setYardOpen] = useState(false)
+  /** The ship screen, opened over the water. 'ship' from the Gunwharf's
+   *  "Manage her", 'forge' from mooring at the Forge island. Null is shut. */
+  const [shipSheet, setShipSheet] = useState<null | 'ship' | 'forge'>(null)
   /** The raid being fought over the chart, by raidId. */
   const [fightId, setFightId] = useState<string | null>(null)
   /** The boss card standing open in front of it, by node id. */
@@ -3782,6 +3789,7 @@ export default function SeaMap({
       if (crewHubOpen) { setCrewHubOpen(false); return }
       if (almanacOpen) { setAlmanacOpen(false); return }
       if (yardOpen) { setYardOpen(false); return }
+      if (shipSheet) { setShipSheet(null); return }
       if (reading) { setReading(null); return }
       if (sheetNode) { setSheetNode(null); return }
       if (introNode) { setIntroNode(null); return }
@@ -3790,7 +3798,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, shipSheet, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -5028,6 +5036,10 @@ export default function SeaMap({
     // one modal opened over it, and the whole chart rebuilt on the way back.
     // Same component the hub uses (BountyBoardModal), opened here.
     if (p.id === 'posting_house') { setBountiesOpen(true); return }
+    // AND THE FORGE LIGHTS WHERE YOU MOOR. Same trade as the Posting House:
+    // the bench is one screen you dip into, and a route spends the whole chart
+    // to show it. See ShipSheet.
+    if (p.id === 'forge_isle') { setShipSheet('forge'); return }
     // WHOSE DOOR. The Homestead is one island showing one of several
     // homesteads, so the route has to carry whose you are standing on.
     if (p.id === 'home' && visiting) {
@@ -8005,6 +8017,7 @@ hullRef={hullRefFor(t.key)} />
 
       {/* THE LOCKER, over the water you are moored in. */}
       <ShipyardSheet open={yardOpen} onClose={() => setYardOpen(false)} />
+      <ShipSheet open={shipSheet !== null} focus={shipSheet ?? 'ship'} onClose={() => setShipSheet(null)} />
 
       {/* AND THE FIGHT, over the water it is happening on. `router.refresh()`
           on the way out is what re-reads nodeStatus, so a boss you just sank
@@ -8215,7 +8228,8 @@ hullRef={hullRefFor(t.key)} />
 
       <MainlandAshore open={ashore} onClose={() => setAshore(false)} />
       <GunwharfAshore open={wharf} onClose={() => setWharf(false)} onShip={onShip}
-        shipTier={shipTier} onSail={() => { setWharf(false); swapHull(!onShip) }} />
+        shipTier={shipTier} onSail={() => { setWharf(false); swapHull(!onShip) }}
+        onManage={() => { setWharf(false); setShipSheet('ship') }} />
       <VoyageBoard open={voyageOpen} onClose={() => setVoyageOpen(false)} />
 
       {/* ── THE GOLDEN CHOICE ──────────────────────────────────────────
@@ -13339,11 +13353,10 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
  * to take the ship out, and standing here in the ship you are asking to leave
  * her and go back to fishing.
  */
-function GunwharfAshore({ open, onClose, onSail, onShip, shipTier }: {
-  open: boolean; onClose: () => void; onSail: () => void
+function GunwharfAshore({ open, onClose, onSail, onManage, onShip, shipTier }: {
+  open: boolean; onClose: () => void; onSail: () => void; onManage: () => void
   onShip: boolean; shipTier: number
 }) {
-  const router = useRouter()
   const ship = getShip(shipTier)
   const doors = [
     {
@@ -13368,7 +13381,11 @@ function GunwharfAshore({ open, onClose, onSail, onShip, shipTier }: {
       blurb: 'Hull, refits, armament and repairs',
       cta: 'Open',
       accent: '#8fb4d8',
-      go: () => { onClose(); router.push('/expeditions/ship') },
+      // NOT A ROUTE ANY MORE. Managing her happened at /expeditions/ship,
+      // which unloaded the sea to show a screen about the ship moored twenty
+      // pixels away and rebuilt the whole chart when you closed it. It opens
+      // over the water now, like the yard and the board.
+      go: onManage,
     },
   ]
   return (

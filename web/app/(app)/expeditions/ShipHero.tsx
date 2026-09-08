@@ -316,6 +316,11 @@ interface Props {
   /** Render ONE screen as a whole page instead of the hub: the Ship, Items or
    *  Forge routes. Undefined on the hub itself, where this is a section. */
   focus?: 'ship' | 'items' | 'forge'
+  /** WHERE THE BACK ARROW GOES, when this screen is not on a route. The chart
+   *  opens the ship and the forge over the water now (see sea/ShipSheet), and
+   *  there a link to /expeditions would sail you off the sea to get out of a
+   *  sheet. Given one, the arrow closes instead of navigating. */
+  onBack?: () => void
   isAdmin?: boolean
   /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
    *  derives live from expeditionXP. */
@@ -554,6 +559,7 @@ export default function ShipHero({
   hasArmoryExpansion = false,
   hasSixthMount = false,
   focus,
+  onBack,
   isAdmin = false,
   navRenownAlloc = null,
   seenNavRenownIntro = true,
@@ -1725,11 +1731,13 @@ export default function ShipHero({
                 ) : (
                   <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.72rem', color: '#a8a39c' }}>{loadoutMode !== null ? 'Loadout' : loadoutTab === 'forge' ? 'Forge' : loadoutTab === 'ship' ? 'Ship' : 'Items'}</p>
                 )}
-                {focus ? (
-                  <Link href="/expeditions" aria-label="Back to expeditions" style={{ color: '#e0ddd8', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '50%', width: 32, height: 32, textDecoration: 'none' }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
-                  </Link>
-                ) : (
+                {focus ? (() => {
+                  const chev = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+                  const style = { color: '#e0ddd8', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '50%', width: 32, height: 32, textDecoration: 'none' } as CSSProperties
+                  return onBack
+                    ? <button type="button" onClick={onBack} aria-label="Close" style={{ ...style, cursor: 'pointer' }}>{chev}</button>
+                    : <Link href="/expeditions" aria-label="Back to expeditions" style={style}>{chev}</Link>
+                })() : (
                 <button
                   onClick={closeLoadout}
                   aria-label="Close loadout"

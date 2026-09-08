@@ -335,6 +335,10 @@ export const PLACES: Place[] = [
      * ITS BERTH IS ON THE WEST SHORE, like the Charterhouse's and for the same
      * reason: the channel anybody is actually sailing runs between it and the
      * hall, and a berth on the far side would be round the back.
+     *
+     * `href` IS NEVER FOLLOWED, like the Posting House's. Mooring lights the
+     * bench where you float (sea/ShipSheet); the route is the honest answer to
+     * "where does this go" and what a captain gets from the hub.
      */
     id: 'forge_isle', name: 'The Forge', blurb: 'Two relics in, one out',
     href: '/expeditions/forge', x: 620, y: -4400, r: 280,

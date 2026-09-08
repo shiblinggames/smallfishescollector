@@ -1197,7 +1197,21 @@ what you make of it on the other.
   /expeditions reads, so the island and the bench cannot disagree. Same shape as
   `crewHallFor` and `homeFor`, and like both of them the COORDINATES stay in chart.ts because
   that is what `check-islands` measures. Its berth is on the west shore, like the
-  Charterhouse's: the channel runs between it and the hall.
+  Charterhouse's: the channel runs between it and the hall. Its `href` is not followed
+  either: mooring lights the bench where you float, through `sea/ShipSheet`.
+
+**The ship screen opens over the water too.** The Gunwharf's second door ("Manage her") and
+the Forge island both mount `ShipHero` in the same focus mode `/expeditions/ship` and
+`/expeditions/forge` use, inside `sea/ShipSheet` — the shape `ShipyardSheet` set. Both used
+to be `router.push`, which unloads the whole chart to show a screen about the ship moored
+twenty pixels away and rebuilds it on the way back.
+
+Making that work meant lifting the fetch out of `ShipHeroSection`: a client component cannot
+render an async server component, so the query lives in `expeditions/shipHeroData.ts` as one
+action. The section awaits it for the routes and the hub; the sheet calls it on every open,
+because doubloons, fathoms and repairs owed all move while you sail. `ShipHero` takes an
+optional `onBack` for this: on a route the back arrow links to /expeditions, and on the water
+that would sail you off the sea to get out of a sheet, so given one it closes instead.
 
 **It is 3,600 across and walled all the way round.** It was 5,200 with an invisible rim, and
 both halves of that were wrong: the extra water made it a sea to cross rather than a harbour
