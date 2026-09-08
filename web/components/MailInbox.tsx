@@ -78,7 +78,17 @@ function renderMailBody(body: string, onNavigate: () => void): ReactNode[] {
   return nodes
 }
 
-export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: number }) {
+export default function MailInbox({ initialUnreadCount, size = 36 }: {
+  initialUnreadCount: number
+  /**
+   * THE BUTTON'S DIAMETER, because it is what sets the height of the bar it
+   * sits in. The desktop nav was compacted to 48px and this stayed 36: with
+   * 8px of padding above and below, one unchanged button held the whole row
+   * at 53 and the change did not show. Anything that lives in a bar has to be
+   * sizeable by the bar.
+   */
+  size?: number
+}) {
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(initialUnreadCount)
   const [inbox, setInbox] = useState<MailMessage[] | null>(null)
@@ -179,7 +189,7 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
         aria-expanded={open}
         className="relative flex items-center justify-center rounded-full transition-colors"
         style={{
-          width: 36, height: 36, padding: 0,
+          width: size, height: size, padding: 0,
           background: 'transparent',
           border: 'none', cursor: 'pointer',
           color: unread > 0 ? ACCENT : '#a0a09a',
@@ -212,7 +222,7 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
           }}
         />
         <motion.svg
-          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
+          width={Math.round(size * 0.56)} height={Math.round(size * 0.56)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
           // Bell-shake keyframe burst at 0–14% of the cycle, then idle for
           // the remaining 86% so the rest of the loop is a calm breathe.
           // 3.6s total period keeps it noticeable without crossing into

@@ -477,7 +477,9 @@ export default function Nav({ doubloons, gems, canSail = false }: {
               <TickingNumber value={displayDoubloons} /> ⟡
             </span>
           )}
-          {isSignedIn && <MailInbox initialUnreadCount={mailUnread} />}
+          {/* Sized to match the avatar beside it. Left at 36 it was the tallest
+              thing in the row and quietly held the bar at its old height. */}
+          {isSignedIn && <MailInbox initialUnreadCount={mailUnread} size={30} />}
           <Link
             href="/profile"
             className="flex items-center justify-center rounded-full transition-all duration-200"
