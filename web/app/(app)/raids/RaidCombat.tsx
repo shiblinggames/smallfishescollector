@@ -9191,6 +9191,14 @@ export default function RaidCombat({
         padding: overSea ? '0 0.7rem clamp(0.7rem, 5vh, 3.5rem)' : '0.7rem 0.85rem 0.95rem',
         pointerEvents: overSea ? 'none' : undefined,
       }}>
+        {/* THE CREW RAIL, on the line above the log and opposite your own
+            card: yours docks to the column's right edge just above this deck,
+            so the crew take the left of the same line. Absolutely positioned
+            OUT of the deck's flow on purpose — the deck's top edge is what the
+            player's card measures against, so a rail in the flow would push
+            that card up by its own height. */}
+        <CrewRail items={specialItems.filter(i => i.id.startsWith('crew-'))}
+          disabled={subPhase !== 'await_input'} />
         {/* THE CONTROLS, IN A COLUMN. The wash above spans the whole width
             because the deck is a BAND across the foot of the scene, and a
             floating panel with sky either side of it would put back the frame
@@ -9262,11 +9270,6 @@ export default function RaidCombat({
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
         )}
-
-        {/* THE CREW RAIL, above the swap so the deck's height never changes
-            between taking a turn and aiming it. */}
-        <CrewRail items={specialItems.filter(i => i.id.startsWith('crew-'))}
-          disabled={subPhase !== 'await_input'} />
 
         {subPhase === 'aiming' ? (
           <InlineLockButton onLock={lockShot} />
@@ -12568,9 +12571,19 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
   const roomy = useRoomy()
   if (!roomy || items.length === 0) return null
   return (
+    // A strip sitting on the deck's top edge, capped to the fight's column and
+    // pushed to its LEFT — the mirror of where the player's card docks. The
+    // deck is pointer-transparent over the sea, so the buttons take their own
+    // events back.
+    <div style={{
+      position: 'absolute', left: 0, right: 0, bottom: '100%',
+      paddingLeft: RAID_COL_PAD, paddingRight: RAID_COL_PAD, paddingBottom: 10,
+      display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+    }}>
+      <div style={{ width: '100%', maxWidth: RAID_COL_MAX, display: 'flex', justifyContent: 'flex-start' }}>
         <div style={{
-          display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10,
-          marginBottom: 10, flexWrap: 'wrap',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', gap: 10,
+          flexWrap: 'wrap', pointerEvents: 'auto',
         }}>
           {items.map(item => {
             const ready = !item.disabled && !disabled
@@ -12586,7 +12599,7 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
                 onClick={() => { if (ready) item.onClick() }}
                 disabled={!ready}
                 style={{
-                  position: 'relative', width: 62, padding: 0, border: 'none',
+                  position: 'relative', width: 76, padding: 0, border: 'none',
                   background: 'none', cursor: ready ? 'pointer' : 'not-allowed',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 }}>
@@ -12600,15 +12613,24 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
                     : { boxShadow: 'none' }}
                   transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                   style={{
-                    position: 'relative', width: 52, height: 52, borderRadius: '50%', overflow: 'hidden',
+                    position: 'relative', width: 68, height: 68, borderRadius: '50%', overflow: 'hidden',
                     border: `2px solid ${ready ? item.color : 'rgba(255,255,255,0.16)'}`,
                     background: ready ? `${item.color}1c` : 'rgba(255,255,255,0.04)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
+                  {/* CARD ART, NOT A PORTRAIT. `crew.imageUrl` is the full
+                      Supabase card illustration, several hundred pixels tall,
+                      and it was being crammed into a 52px circle centred on the
+                      middle of the card: a hard one-step downscale of a large
+                      image, which is exactly the case browsers resample badly,
+                      cropped to somebody's chest. Bigger circle so the
+                      downscale is gentler, and `top center` so what you get is
+                      the face — the same framing the raid loadout already uses
+                      for these same images. */}
                   {item.image
                     // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={item.image} alt="" style={{
-                        width: '100%', height: '100%', objectFit: 'cover',
+                    ? <img src={item.image} alt="" width={68} height={68} decoding="async" style={{
+                        width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center',
                         filter: ready ? 'none' : 'grayscale(1) brightness(0.55)',
                       }} />
                     : <span style={{ color: ready ? item.color : '#6a6460', display: 'flex' }}><IconCrate size={20} /></span>}
@@ -12620,7 +12642,7 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
                   )}
                 </motion.span>
                 <span className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.46rem', letterSpacing: '0.1em', maxWidth: 62,
+                  fontSize: '0.48rem', letterSpacing: '0.1em', maxWidth: 76,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   color: ready ? item.color : '#6a6460',
                 }}>{item.label}</span>
@@ -12628,6 +12650,8 @@ function CrewRail({ items, disabled }: { items: SpecialItem[]; disabled: boolean
             )
           })}
         </div>
+      </div>
+    </div>
   )
 }
 

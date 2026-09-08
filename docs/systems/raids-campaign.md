@@ -51,13 +51,20 @@ Turn-based ship combat along a chaptered node chain. The other half of Expeditio
 `useRoomy()` (900px) is the "there is screen either side of the fight" signal, distinct from
 the column's own 742. Four things read it or the column:
 
-- **The crew rail.** `CrewRail` puts every deployed crew's face in a row above the action
-  bar, lit with a breathing rim when ready and greyed with a strike when spent, and a click
-  fires the ability directly. It lives in the DECK, not in `ActionMenu`, and that is not
-  tidiness: the menu is swapped for the Lock button while you aim, and the two must match
-  heights exactly or the stage reflows and the player's stat card (docked to the deck's top
-  edge) walks up and down every turn. `specialItems` is hoisted out of the ActionMenu props
-  for the same reason: two things read it now.
+- **The crew rail.** `CrewRail` puts every deployed crew's face in a row on the line ABOVE
+  the log panel, at the column's left edge — the mirror of where the player's card docks, on
+  the right of the same line. Lit with a breathing rim when ready, greyed and struck through
+  when spent, and a click fires the ability directly. Two rules it has to obey:
+  it is `position: absolute` at `bottom: 100%` of the deck container, OUT of the flow,
+  because the deck's top edge is what the player's card measures against and a rail in the
+  flow would push that card up by its own height; and it is mounted in the deck rather than
+  in `ActionMenu`, because the menu is swapped for the Lock button while you aim and a rail
+  inside it would vanish every time you took a shot. `specialItems` is hoisted out of the
+  ActionMenu props for the same reason: two things read it now.
+  The faces are `objectPosition: top center` in a 68px circle. `crew.imageUrl` is the full
+  Supabase card illustration, so a 52px centred crop was both a hard one-step downscale of a
+  large image (which browsers resample badly, and it read as grain) and a crop of somebody's
+  chest.
 - **The Special drawer re-weights.** With the rail up, the crew already have a door, so in
   the drawer they shrink to a quiet second way in (thin border, greyed art, smaller type) and
   the repair kit — the one special with no other door — takes the weight. On a phone the
