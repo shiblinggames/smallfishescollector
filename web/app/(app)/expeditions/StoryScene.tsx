@@ -64,7 +64,7 @@ function stageAt(lines: SceneLine[], idx: number): { left: StageChar | null; rig
   return { left, right }
 }
 
-export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, renderInsert, onComplete, onSkip, allowSkip = true }: {
+export default function StoryScene({ title, lines, ctaLabel, pending, accent, background, renderInsert, ctaSlot, onComplete, onSkip, allowSkip = true }: {
   title: string
   lines: SceneLine[]
   ctaLabel: string
@@ -77,6 +77,26 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
    *  visual (e.g. a live dial demo) without teaching the shared kit about it.
    *  Return null to fall back to the built-in InsertShot for that kind. */
   renderInsert?: (insert: SceneInsert) => ReactNode
+  /**
+   * ── THE SCENE'S LAST BEAT CAN BE A DECISION ────────────────────────────
+   *
+   * Handed in, this REPLACES the closing CTA and `onComplete` is never called:
+   * the last line types out and the terms appear in the plate the speaker was
+   * just talking from.
+   *
+   * WHY IT IS NOT A MODAL AFTER THE SCENE. The Bilge Eels name their price in
+   * the scene, the scene ends, and a panel then opened over the sea asking for
+   * the same thousand doubloons — the deal was struck twice, once in the film
+   * and once in a form. A scene that leads to a transaction should HOLD until
+   * the transaction is made; the stage, the backdrop, the letterbox and the
+   * two thugs standing there are exactly the context that makes the price mean
+   * something, and dropping all of it to ask the question in a box throws that
+   * away at the moment it was about to pay off.
+   *
+   * The slot owns its own buttons, including the way out. Nothing here closes
+   * a scene that has one.
+   */
+  ctaSlot?: ReactNode
   onComplete: () => void
   onSkip: () => void
   /** Show the Skip button. FALSE on a first watch: the beat is the payoff for
@@ -286,7 +306,9 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
               />
             </motion.div>
             <div style={{ marginTop: 26, minHeight: 52, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              {last && !typing ? (
+              {last && !typing && ctaSlot ? (
+                <div style={{ width: '100%', maxWidth: 340 }}>{ctaSlot}</div>
+              ) : last && !typing ? (
                 <button onClick={e => { e.stopPropagation(); onComplete() }} disabled={pending}
                   className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
                   style={{ width: '100%', maxWidth: 340, padding: '0.85rem', borderRadius: 12, fontSize: '0.98rem',
@@ -362,7 +384,9 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
 
             {/* Advance affordance / final CTA, in the plate where the eye already is. */}
             <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', minHeight: 34, alignItems: 'center' }}>
-              {last && !typing ? (
+              {last && !typing && ctaSlot ? (
+                <div style={{ width: '100%' }}>{ctaSlot}</div>
+              ) : last && !typing ? (
                 <button onClick={e => { e.stopPropagation(); onComplete() }} disabled={pending}
                   className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
                   style={{ width: '100%', padding: '0.8rem', borderRadius: 11, fontSize: '0.95rem',

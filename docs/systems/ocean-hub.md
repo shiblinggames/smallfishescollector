@@ -1603,6 +1603,32 @@ to a new place mid-read and makes the panel feel like it is arguing with you. Th
 child needs `minHeight: 0` or it grows to its content and pushes the box open anyway, which
 is the exact failure the fixed height exists to prevent.
 
+## A toll is settled where it was demanded
+
+**A scene that leads to a transaction holds until the transaction is made**
+(`StoryScene`'s `ctaSlot`, used by `SeaStory`). The Bilge Eels name their thousand doubloons
+in the cutscene, the cutscene ended, and a panel then opened over the sea asking for the same
+thousand: the deal struck twice, once in the film and once in a form. The stage, the backdrop,
+the letterbox and the two thugs standing there are exactly the context that makes a price mean
+something, and dropping all of it to ask the question in a box throws that away at the moment
+it was about to pay off. So the terms appear in the plate the speaker was just talking from,
+in place of the closing CTA.
+
+Details that matter if this is reused:
+
+- **Keyed off `intro`, never `cleared`.** A milestone's scene is always an intro, and the
+  caller passes `cleared` alongside it purely to suppress the read-write — the payment clears
+  the node, not the watching. The chart only opens an intro for a node that is not settled
+  (`openNode`), so an intro on a milestone is a toll still owed.
+- **`SeaMap` opens no sheet afterwards** for a milestone. Everything else still hands over to
+  `SeaNodeSheet`, which keeps its own `Toll` for the second visit — `seenIntros` sends a
+  captain who has already watched the film straight to the plain sheet.
+- **The slot owns its own way out.** A first watch has no Skip, so without a *Keep your purse
+  shut* button a captain short of the toll would be standing in a cutscene with one dead
+  button. Walking away writes nothing.
+- **Gold, not the scene accent.** Everything else in the scene takes `sceneAccent`; money is
+  gold on every other surface in the game.
+
 ## The settings disc
 
 **Top right, alone, away from the run of discs down the left.** Those are places you are going;

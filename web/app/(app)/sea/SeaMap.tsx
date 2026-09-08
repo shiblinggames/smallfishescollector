@@ -8580,9 +8580,15 @@ hullRef={hullRefFor(t.key)} />
         const n = introNode ? RAID_MAP.find(x => x.id === introNode) : null
         return n ? (
           <SeaStory node={n} cleared intro
+            onCleared={markCleared}
             onDone={() => {
               seenIntros.current.add(n.id)
               setIntroNode(null)
+              // A TOLL IS SETTLED INSIDE THE SCENE — see SeaStory's SceneToll.
+              // Opening the sheet after it would ask for the same thousand
+              // doubloons a second time, in a box, which is exactly what the
+              // scene now does instead. Everything else still hands over.
+              if (n.type === 'milestone' && n.milestone) return
               setSheetNode(n.id)
             }} />
         ) : null
