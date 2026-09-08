@@ -213,7 +213,17 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
           {activeBg.id === 'ancient_deep' && <AncientBgEffect />}
         </div>
       )}
-    <div className="page-col flex flex-col" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
+    // ── ONE COLUMN, INCLUDING THE HERO ──────────────────────────────────
+    //
+    // This was `.page-col` at 980 while everything under it — the tab strip,
+    // the showcase, the stats — was capped at 540 and centred, so the card at
+    // the top ran nearly twice the width of the page it introduced. The seam
+    // was right under the captain's name.
+    //
+    // The column is the modal's width now (see page-col-modal), and the caps
+    // below it are gone rather than being re-set to match: two numbers that
+    // have to agree will stop agreeing, and the column is already the answer.
+    <div className="page-col page-col-modal flex flex-col" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
 
       {/* ── Header — identity banner ── */}
       <div className="flex flex-col items-center" style={{ marginTop: 6, marginBottom: 20, padding: '1.7rem 1.2rem 1.5rem', borderRadius: 24, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(180deg, rgba(16,22,34,0.72), rgba(8,12,20,0.42))' }}>
@@ -282,7 +292,7 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
       </div>
 
       {/* ── Fishing / Navigation tabs — pill segmented control ── */}
-      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(196,169,106,0.2)', borderRadius: 999 }}>
+      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(196,169,106,0.2)', borderRadius: 999 }}>
         {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
           const on = profileTab === id
           return (
@@ -309,7 +319,7 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
 
       {/* ── Fishing tab ── */}
       {profileTab === 'fishing' && (
-        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24 }}>
 
           {/* Headline career stats */}
           <div>
@@ -515,7 +525,7 @@ export default function ProfileClient({ username, ancientsCaught, ancientVigil, 
 
       {/* ── Navigation tab ── */}
       {profileTab === 'navigation' && (
-        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24 }}>
 
           {/* Headline career stats */}
           <div>

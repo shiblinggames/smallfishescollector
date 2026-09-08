@@ -536,7 +536,7 @@ export default function ProfileClient({
       </div>
 
       {/* ── Fishing / Navigation tabs (shared) — pill segmented control ── */}
-      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999 }}>
+      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999 }}>
         {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
           const on = profileTab === id
           return (
@@ -563,7 +563,7 @@ export default function ProfileClient({
 
       {/* ── Fishing tab ── */}
       {profileTab === 'fishing' && (
-        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24 }}>
 
           {/* Headline career stats */}
           <div>
@@ -883,7 +883,7 @@ export default function ProfileClient({
 
       {/* ── Navigation tab ── */}
       {profileTab === 'navigation' && (
-        <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
+        <div className="flex flex-col mx-auto w-full" style={{ gap: 24 }}>
 
           {/* Headline career stats */}
           <div>
