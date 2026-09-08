@@ -419,7 +419,7 @@ export default function ShipyardClient(p: {
     // column to match — the phone layout was being served to a desktop monitor
     // at phone sizes, which is a column of six-point type down the middle of a
     // 27-inch screen.
-    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0 overflow-y-auto sea-shipyard"
+    <div className="fixed left-0 right-0 top-[var(--nav-h)] bottom-[60px] sm:bottom-0 overflow-y-auto sea-shipyard"
       style={{
         background: '#08121c',
         // ── IT HAS TO OUTRANK THE CHART IT IS OPENED OVER ─────────────

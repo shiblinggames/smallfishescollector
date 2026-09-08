@@ -2481,19 +2481,33 @@ body.hardcore-gauntlet::after {
   transform-origin: 50% 100%;
 }
 
+/* ── HOW TALL THE SITE HEADER IS ────────────────────────────────────────────
+   ONE NUMBER, and everything that has to start underneath the header reads it.
+
+   It was written out by hand in five places — the nav's own spacer, the sea,
+   the fight's stage, the fight's bar — and the desktop copies said 60 while the
+   nav said 64, which nobody noticed while the nav was the taller of the two.
+   Compacting the nav to 48 turned that four-pixel disagreement into a
+   thirteen-pixel BAND: a black strip under the header's own border line, above
+   the water, on the game's main screen. The nav got shorter and the chrome did
+   not.
+
+   The nav is now given this height explicitly rather than being left to add up
+   from its padding, so the bar and everything measuring off it cannot drift
+   apart again. Change it here and the whole shell moves together. */
+:root { --nav-h: 44px; }
+@media (min-width: 640px) { :root { --nav-h: 48px; } }
+
 /* ── THE FIGHT'S LEVEL BAR SITS ON THE CHART'S OWN HUD LINE ─────────────────
-   The sea surface starts below the site header — 44 on a phone, 60 once there
-   is room for the wide nav — and hangs its HUD icons 18 into that. A fight
-   overlays the whole viewport, so its bar has to add those two together itself
-   or it lands on the header. Same numbers as .sea-surface below, deliberately:
-   if that moves, this moves with it. */
+   The sea surface starts below the site header and hangs its HUD icons 18 into
+   that. A fight overlays the whole viewport, so its bar has to add those two
+   together itself or it lands on the header. */
 /* IT HOLDS THE LINE AND GIVES WAY TO THE CONTROLS. A fixed centred column sat
    under the leave button at every width, so the bar stretches between the left
    margin and whatever is in the right corner instead — 62 is that button (38)
    plus its margins. The enemy's card goes UNDER it rather than beside it: the
    card is tall, and nothing sensible shares a line with both. */
-.raid-oversea-bar { top: 62px; left: 12px; right: 62px; }
-@media (min-width: 640px) { .raid-oversea-bar { top: 78px; } }
+.raid-oversea-bar { top: calc(var(--nav-h) + 18px); left: 12px; right: 62px; }
 
 /* ── THE FIGHT'S OWN BOX, EXACTLY WHERE THE CHART'S IS ──────────────────────
    Same insets as .sea-surface below, and for the same reason: on a phone the
@@ -2502,25 +2516,25 @@ body.hardcore-gauntlet::after {
    note in RaidCombat. Keep these two rules in step. */
 .raid-oversea-stage {
   position: fixed;
-  top: 44px;
+  top: var(--nav-h);
   right: 0;
   bottom: 60px;
   left: 0;
 }
 @media (min-width: 640px) {
-  .raid-oversea-stage { top: 60px; bottom: 0; }
+  .raid-oversea-stage { bottom: 0; }
 }
 
 .sea-surface {
   position: fixed;
-  top: 44px;
+  top: var(--nav-h);
   right: 0;
   bottom: 60px;
   left: 0;
   overflow: hidden;
 }
 @media (min-width: 640px) {
-  .sea-surface { top: 60px; bottom: 0; }
+  .sea-surface { bottom: 0; }
 }
 
 /* ── THE SEA: light and water ────────────────────────────────────────────────

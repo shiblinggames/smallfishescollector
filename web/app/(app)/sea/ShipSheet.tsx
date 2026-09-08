@@ -52,7 +52,7 @@ export default function ShipSheet({ open, focus, onClose }: {
     // The map STEERS on click and starts a heading on pointerdown, so every
     // sheet over it needs this or dismissing also puts the helm over.
     <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-      <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
+      <div className="fixed left-0 right-0 top-[var(--nav-h)] bottom-[60px] sm:bottom-0"
         style={{ background: '#08121c', zIndex: 112, overflowY: 'auto', overscrollBehavior: 'contain' }}>
         {state ? (
           <ShipHero {...state} focus={focus} onBack={onClose} />

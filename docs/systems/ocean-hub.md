@@ -1629,6 +1629,22 @@ Details that matter if this is reused:
 - **Gold, not the scene accent.** Everything else in the scene takes `sceneAccent`; money is
   gold on every other surface in the game.
 
+## The header's height is one number
+
+`--nav-h` (44px, 48px from 640px up) in `globals.css`, and everything that starts underneath
+the header reads it: the nav's own spacer, the nav itself, `.sea-surface`,
+`.raid-oversea-stage`, `.raid-oversea-bar` (`+18`, the HUD line) and the four full-screen
+sheets that sit in the chart's box (`top-[var(--nav-h)]`).
+
+It was written out by hand in every one of those, and the desktop copies said **60** while the
+nav said **64** — invisible while the nav was the taller of the two. Compacting the nav to 48
+turned that four-pixel disagreement into a thirteen-pixel BAND: a black strip below the
+header's own border line and above the water, on the game's main screen, which read as the
+header still being tall. The nav is also given the height explicitly now rather than being
+left to add up from its padding and whatever the tallest thing in the row happens to be (a
+36px mail bell held it at 53 once already). Change the number here and the shell moves
+together.
+
 ## The settings disc
 
 **Top right, alone, away from the run of discs down the left.** Those are places you are going;

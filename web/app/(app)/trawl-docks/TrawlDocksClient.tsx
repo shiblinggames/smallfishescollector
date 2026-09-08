@@ -51,7 +51,7 @@ export default function TrawlDocksClient({ daily }: { daily: DailyChallengeState
   }, [router])
 
   return (
-    <div className="fixed left-0 right-0 top-[44px] bottom-[60px] sm:top-[60px] sm:bottom-0"
+    <div className="fixed left-0 right-0 top-[var(--nav-h)] bottom-[60px] sm:bottom-0"
       style={{
         // THE PAGE SCROLLS NOW. The panel used to be a sheet with its own
         // maxHeight and overflow; laid onto the island as a page, the scrolling
