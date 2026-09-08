@@ -111,8 +111,21 @@ const MIN_Y = 700
  * is the water itself, and `p.inner !== undefined` is the same test
  * `scripts/place-isles.mts` uses to tell one from the other.
  */
-const AVOID: { x: number; y: number; keep: number }[] = (() => {
-  const out: { x: number; y: number; keep: number }[] = []
+/**
+ * `keep` is what his PLACEMENT had to clear. `roam` is what his DRIFT has to
+ * clear, and the two differ for exactly one class of thing.
+ *
+ * A prompt owner is the same number twice: `keep` already includes his own hail
+ * circle plus theirs, so any positive room means the two buttons never overlap
+ * and there is nothing further to buy.
+ *
+ * A LANDMARK IS NOT A PROMPT. Its `keep` carries 300px of padding on top of the
+ * art, because placing him a boat's length off a monolith looks careless — but
+ * that is taste, and drift is allowed to spend it. All that is actually
+ * forbidden is his hull being drawn inside the rock.
+ */
+const AVOID: { x: number; y: number; keep: number; roam: number }[] = (() => {
+  const out: { x: number; y: number; keep: number; roam: number }[] = []
   // ANYTHING WITH ITS OWN BUTTON keeps a full hail circle clear, because the
   // action bar shows one thing at a time and two overlapping prompts means one
   // of them is unreachable. That is ports (MOOR is 420), isles (ashoreRange)
@@ -123,21 +136,27 @@ const AVOID: { x: number; y: number; keep: number }[] = (() => {
   // "35 landmarks sealed the Shallows off completely" below was really about.
   for (const p of PLACES) {
     if (p.inner !== undefined) continue
-    out.push({ x: p.x, y: p.y, keep: p.r + 420 + FINN_REACH })
+    const keep = p.r + 420 + FINN_REACH
+    out.push({ x: p.x, y: p.y, keep, roam: keep })
   }
-  for (const i of ISLES) out.push({ x: i.x, y: i.y, keep: ashoreRange(i) + FINN_REACH })
-  for (const r of RESIDENTS) out.push({ x: r.x, y: r.y, keep: HAIL_RANGE + FINN_REACH })
+  for (const i of ISLES) {
+    const keep = ashoreRange(i) + FINN_REACH
+    out.push({ x: i.x, y: i.y, keep, roam: keep })
+  }
+  for (const r of RESIDENTS) out.push({ x: r.x, y: r.y, keep: HAIL_RANGE + FINN_REACH, roam: HAIL_RANGE + FINN_REACH })
   // The three who keep no shop hail exactly like the buyers do, so they own
   // exactly the same circle of water and Finn must not stand in it.
-  for (const r of SOCIALS) out.push({ x: r.x, y: r.y, keep: HAIL_RANGE + FINN_REACH })
-  out.push({ x: YOON.x, y: YOON.y, keep: HAIL_RANGE + FINN_REACH })
+  for (const r of SOCIALS) out.push({ x: r.x, y: r.y, keep: HAIL_RANGE + FINN_REACH, roam: HAIL_RANGE + FINN_REACH })
+  out.push({ x: YOON.x, y: YOON.y, keep: HAIL_RANGE + FINN_REACH, roam: HAIL_RANGE + FINN_REACH })
   // LANDMARKS ARE SCENERY. A monolith has no prompt to compete with, so all
   // that matters is that Finn's boat is not drawn inside it — visual clearance,
   // not a hail circle. The first cut gave these `size + 600 + FINN_REACH` and
   // 35 of them at that radius sealed the Shallows off completely: measured, the
   // band came out 0.0% clear and every haunt in it fell through to the
   // overlap-anyway fallback. Hence the checker.
-  for (const l of LANDMARKS) out.push({ x: l.x, y: l.y, keep: l.size + 300 })
+  // See the note on `roam` above: the 300 is taste on placement and spendable
+  // on drift; the rock itself is not.
+  for (const l of LANDMARKS) out.push({ x: l.x, y: l.y, keep: l.size + 300, roam: l.size + 120 })
   return out
 })()
 
@@ -290,18 +309,73 @@ let memo: { n: number; lvl: number; h: FinnHaunt } | null = null
  */
 export const FINN_MOORING = { x: -150, y: 1600 } as const
 
-export function finnHaunt(encounters: number, _fishingLevel: number): FinnHaunt {
+/**
+ * ── HOW FAR HE WORKS FROM HIS MOORING ───────────────────────────────────────
+ *
+ * He is a person on this water like the rest of them, and he was the only one
+ * who never moved at all: `finnHaunt` handed back a constant, so his boat sat
+ * on one pixel forever while every regular at least swung on an anchor.
+ *
+ * THE RADIUS IS MEASURED, NOT PICKED, and it has to be. His mooring was chosen
+ * as the spot with the most clearance from everything on this sea that owns a
+ * button, and the margin is not large — drift him carelessly and he ends up
+ * inside a buyer's hail, where the action bar can only offer one of the two and
+ * the other silently stops existing. So this asks AVOID (the same list that
+ * placed him) how much room he actually has, takes the tightest answer, and
+ * keeps a boat's length of it back.
+ *
+ * If his mooring ever moves, this re-derives. Nothing to remember.
+ */
+export const FINN_ROAM: number = (() => {
+  let room = Infinity
+  for (const a of AVOID) {
+    room = Math.min(room, Math.hypot(a.x - FINN_MOORING.x, a.y - FINN_MOORING.y) - a.roam)
+  }
+  // A prompt circle is already sized to include both hails, so any positive
+  // room is enough and the margin here is only against rounding.
+  room -= 40
+  // And he stays in the Shallows, which is where his whole campaign is set.
+  const band = PLACES.find(b => b.id === 'shallows')
+  if (band?.inner != null && band.outer != null) {
+    const R = Math.hypot(FINN_MOORING.x, FINN_MOORING.y)
+    // The band edge is a colour boundary rather than a wall, so it wants less
+    // back than a hard object does — but he must not wander inward out of the
+    // water his whole campaign is set in.
+    room = Math.min(room, R - band.inner - 60, band.outer - R - 60)
+  }
+  return Math.max(0, Math.min(420, room))
+})()
+
+/** One lap of his beat, in seconds. Slow: he is waiting for you, not patrolling. */
+const FINN_LAP = 96
+
+/**
+ * WHERE HE IS NOW.
+ *
+ * `_fishingLevel` and the encounter count no longer place him — he used to
+ * WANDER, and every conversation moved him to a fresh spot somewhere in your
+ * band. Each of those spots was a "haunt", which is where this function's name
+ * and the machinery above it come from. He is one mooring now, and he works a
+ * small beat around it like everybody else out here.
+ *
+ * The count still rides in the key: that is an agreement check between client
+ * and server about WHICH meeting this is, and it is still a moving number.
+ */
+export function finnHaunt(encounters: number, _fishingLevel: number, nowSec = Date.now() / 1000): FinnHaunt {
   const n = Math.max(0, Math.min(100_000, Math.floor(encounters)))
-  const { x, y } = FINN_MOORING
+  // The same ellipse the regulars swing on: round in x, flattened in y,
+  // because this chart is seen at an angle and a true circle would read as a
+  // boat rising and falling rather than one moving about.
+  const a = (nowSec / FINN_LAP) * Math.PI * 2
+  const x = FINN_MOORING.x + Math.cos(a) * FINN_ROAM
+  const y = FINN_MOORING.y + Math.sin(a) * FINN_ROAM * 0.6
   // He sits in the Shallows and always will; no need to solve for it.
   const band = PLACES.find(b => b.id === 'shallows')
   return {
     x, y,
     bandId: 'shallows',
     bandName: band?.name ?? 'The Shallows',
-    // The count still rides in the key. It is an agreement check between the
-    // client and the server about WHICH meeting this is, and that is still a
-    // moving number even though he is not.
+    // The count still rides in the key — see above.
     key: `finn:${n}`,
   }
 }

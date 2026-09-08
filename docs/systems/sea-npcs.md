@@ -652,3 +652,38 @@ Verified by simulation, not by eye: with the drift ellipse walked all the way ro
 leaves their band and nobody crowds Finn's hail — the tightest are Dennis (219px of band to
 spare) and Meg (526px of Finn slack). `check-finn` only knows the static moorings, so re-run
 that simulation if these numbers move.
+
+## Finn is just another person out here
+
+He used to WANDER: every conversation moved him to a fresh spot somewhere in your band, and
+each spot was called a **haunt** — which is where `FinnHaunt`, `finnHaunt()` and the
+generator above them get their names. There was real machinery for it: strides that filled an
+arc evenly, a check that no spot landed on anything owning a button, and a minimum hop so
+finishing a chat never left you already standing in the next one.
+
+Then he was moored, and `finnHaunt` became a function that returned a constant. He was the
+only person on this sea who did not move **at all** — every regular at least swung on an
+anchor. He works a small beat now, like they do.
+
+**`FINN_ROAM` is measured, not chosen.** His mooring was picked as the spot with the most
+clearance from everything that owns a button, and the margin is thin, so the radius asks
+`AVOID` — the same list that placed him — how much room he actually has and takes the
+tightest answer. If the mooring moves it re-derives; there is nothing to remember.
+
+That required splitting `AVOID` into `keep` and `roam`. A **prompt owner** is the same number
+twice: `keep` already includes his hail circle plus theirs, so any positive room means the
+two buttons never overlap. A **landmark is not a prompt** — its `keep` carries 300px of
+padding over the art because mooring him a boat's length off a monolith looks careless, but
+that is taste and drift may spend it; all that is truly forbidden is his hull being drawn
+inside the rock. Reading `keep` for both was what pinned him at zero.
+
+It comes out at **147px** — a beat 294 across, against a 210px boat. Modest, and it is the
+most he can have without crossing inward out of the Shallows, which is where his whole
+campaign is set. Walked all the way round: 208px clear of the nearest prompt, 64px clear of
+the nearest rock, 118px of band to spare.
+
+**The chart derives his position; it does not read it.** The server still sends `at` with his
+state and that is now a snapshot — exact when he sat on a pixel, stale the moment he moves —
+so SeaMap calls `finnHaunt` itself (`finnNow()`) for the boat, the proximity test, the
+compass and the minimap. Safe because nothing about the hail is verified against a
+coordinate: the agreement check between client and server is the encounter count.

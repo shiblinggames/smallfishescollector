@@ -219,6 +219,16 @@ if (typeof window !== 'undefined') {
 }
 import { openSeaPresence, BEAT_MS, type SeaPresence } from '@/lib/seaPresence'
 import { finnHaunt, FINN_REACH, FINN_LOOK } from '@/lib/seaFinn'
+/**
+ * WHERE FINN IS, RIGHT NOW.
+ *
+ * The server sends his position with his state, which was exact while he sat on
+ * one pixel and is a snapshot now that he works a beat — it would freeze him
+ * between fetches and he would teleport when one landed. He is derived, not
+ * stored, so the chart asks the same function the server does and gets the same
+ * answer, live. Nothing about the hail is verified against this: the agreement
+ * check is the encounter count, not a coordinate. */
+const finnNow = () => finnHaunt(0, 0)
 import { KIP } from '@/lib/seaSmuggler'
 import { finnState, speakToFinn, acceptFinnChallenge, declineFinnChallenge, claimFinnChallenge, turnInFinnQuest, type FinnSeaState, type FinnOffer, type FinnChallenge } from './finnActions'
 import { FINN_NAME, findNextEncounterBeat, type FinnSceneLine } from '@/lib/finn'
@@ -4483,7 +4493,7 @@ export default function SeaMap({
     // moment you get near is the one thing that would make it untrustworthy.
     if (!finn || inAnchorage || onSortie) return null
     return {
-      x: finn.at.x, y: finn.at.y,
+      ...(() => { const a = finnNow(); return { x: a.x, y: a.y } })(),
       state: finn.questReady ? 'ready' as const
         : finn.quest ? 'working' as const
         : 'offering' as const,
@@ -6937,11 +6947,13 @@ export default function SeaMap({
         }
         setNearTrader(prev => (prev?.key === hit?.key ? prev : hit))
 
-        // FINN. He does not drift and he does not patrol — he is waiting — so
-        // this is a flat distance to a fixed point rather than a pass over a
-        // list. Nothing to do at all until the server has told us where he is.
+        // FINN. He works a small beat off his mooring like everybody else out
+        // here, so this is a flat distance to a moving point rather than a pass
+        // over a list. Nothing to do at all until the server has told us he
+        // exists; WHERE he is comes from finnNow, not from that payload.
         const fn = finnRef.current
-        const finnHit = !!fn && Math.hypot(pos.current.x - fn.at.x, pos.current.y - fn.at.y) < FINN_REACH
+        const fa = finnNow()
+        const finnHit = !!fn && Math.hypot(pos.current.x - fa.x, pos.current.y - fa.y) < FINN_REACH
         setNearFinn(prev => (prev === finnHit ? prev : finnHit))
         // Where she is used to be mirrored into state here for the compass;
         // the compass reads the `pos` ref now, and the mirror was re-rendering
@@ -7289,7 +7301,7 @@ hullRef={hullRefFor(t.key)} />
             his own component rather than a TraderBoat because the plate under
             him has to say what he is, and what he is is not a kind of trade. */}
         {finn && !fishingIn && (
-          <FinnBoat at={finn.at} isNear={nearFinn}
+          <FinnBoat at={finnNow()} isNear={nearFinn}
             ready={finn.questReady}
             // He has something TO GIVE, which is exactly "no job outstanding":
             // with one open he hands out nothing until it comes back, so a ?
@@ -8935,7 +8947,7 @@ hullRef={hullRefFor(t.key)} />
         // fishing half: he is moored in the Shallows and drawing him on the
         // expeditions chart would be a pin pointing through a reef.
         finn={finn && !inAnchorage && !onSortie
-          ? { x: finn.at.x, y: finn.at.y, ready: finn.questReady }
+          ? { ...(() => { const a = finnNow(); return { x: a.x, y: a.y } })(), ready: finn.questReady }
           : null}
         found={found}
         bearings={bearings}
