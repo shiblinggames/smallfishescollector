@@ -278,6 +278,14 @@ AI-generated buttons". Rule: no gradient cards with an icon, headline, number an
 stacked inside; controls are circles-and-words, information is type on the water. Apply the
 same to any in-run screen that reads as a stack of boxes.
 
+Third pass (2026-09-07), the hierarchy: the run clock, the line of voice, the ledger eyebrow
+and its labelled cells, the chest eyebrow/names/struck-through odds, the sounding eyebrow and
+tail, and the "rides with you" line were all cut. The screen now reads top to bottom: the depth;
+ONE big pot number with XP, fathoms and gems in a quiet line under it; the chest as icons and
+odds; the hull; the loadout line; the sounding line as one line; the dock. Rule: a gauntlet
+screen shows the stake, the risk and the choice, and everything else is one quiet line or
+nothing.
+
 **REJECTED, do not re-propose:** a sweeping wall of water up the viewport as
 the transition, and an arena lurch (surge) on phase change. Both shipped
 2026-09-05 and were pulled the same day: "terrible, distracting and
