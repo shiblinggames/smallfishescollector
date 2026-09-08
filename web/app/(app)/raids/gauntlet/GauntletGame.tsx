@@ -3818,29 +3818,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           <p className="font-cinzel font-700" style={{ fontSize: 'clamp(1.5rem, 5.6vw, 1.95rem)', color: '#f4eee2', marginTop: 14, lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             Depth {combatDepth} · {band.name}
           </p>
-          {/* THE GHOST. Your run clock, and how it stands against the fastest you
-              have ever taken to get this deep. Guarded on the depth so a split
-              still in state from the last breather cannot be drawn on this one.
-
-              A first visit shows the clock ALONE, no "first time this deep" note:
-              on an early run every depth would say it, which turns the one line
-              meant to mean something into wallpaper. */}
-          {depthSplit && depthSplit.depth === cleared && (
-            <p className="font-karla font-700 uppercase tracking-[0.14em]"
-              style={{
-                fontSize: '0.74rem', marginTop: 8, fontVariantNumeric: 'tabular-nums',
-                color: depthSplit.isRecord ? CTA_BG : 'rgba(226,232,240,0.58)',
-                textShadow: '0 1px 6px rgba(0,0,0,0.8)',
-              }}>
-              {fmtRunTime(depthSplit.ms)}
-              {depthSplit.prevMs != null && (
-                <> · {fmtSplitDelta(depthSplit.ms, depthSplit.prevMs)} {depthSplit.isRecord ? 'new best' : 'off your best'}</>
-              )}
-            </p>
-          )}
-          <p className="font-karla" style={{ fontSize: '1rem', fontStyle: 'italic', color: 'rgba(184,222,213,0.92)', lineHeight: 1.4, marginTop: 8, maxWidth: 340, marginInline: 'auto', textShadow: '0 1px 8px rgba(0,0,0,0.75)' }}>
-            &ldquo;{breathLine}&rdquo;
-          </p>
+          {/* No clock, no line of voice. The screen asks one question, leave
+              or dive, and every line that is not the stake, the risk or the
+              answer is in the way of it. The split lives at the cash-out. */}
 
           {/* ── THE HAUL ─────────────────────────────────────────────────────────
               Everything banking pays you, in ONE card. The chest odds used to sit in
@@ -3877,30 +3857,23 @@ export default function GauntletGame(props: GauntletGameProps) {
             const previewFathoms = Math.max(0, Math.round(fathomsForDepth(cleared, props.variant ?? 'davy') * gauntletFathomsMult(activeUpgrades)) - fenceSpent)
             // One compact cell per currency — the old hero was a 2.5rem number and
             // a stacked ledger that ate half the screen to say three things.
-            const Cell = ({ label, value, color }: { label: string; value: string; color: string }) => (
-              <div style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.2rem', textAlign: 'center' }}>
-                <p className="font-cinzel font-800" style={{ fontSize: 'clamp(1.45rem, 6.6vw, 1.9rem)', color, lineHeight: 1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>{value}</p>
-                <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: '#a9a396', marginTop: 5, textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>{label}</p>
-              </div>
-            )
             return (
               <div style={{ marginTop: 12, padding: '0.3rem 0.2rem' }}>
-                <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.64rem', color: `${GOLD}dd`, marginBottom: 6, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>Bank now and you take</p>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <Cell label="Doubloons" value={fmt(dealDoubloons)} color={GOLD} />
-                  <Cell label="Nav XP" value={`+${fmt(previewXp)}`} color="#7dd3fc" />
-                  <Cell label="Fathoms" value={`+${fmt(previewFathoms)}`} color={AC} />
-                  {chest.gems > 0 && <Cell label="Gems" value={`+${chest.gems}`} color="#c9a7ff" />}
-                </div>
+                {/* THE POT, and nothing competing with it. Doubloons are what
+                    the whole push-your-luck loop is about; the XP, the fathoms
+                    and the gems ride along in one quiet line. */}
+                <p className="font-cinzel font-800" style={{ fontSize: 'clamp(2.2rem, 10vw, 3rem)', color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 2px 14px rgba(0,0,0,0.9), 0 0 24px ${GOLD}33` }}>
+                  {fmt(dealDoubloons)} <span style={{ fontSize: '0.6em' }}>⟡</span>
+                </p>
+                <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#b9b2a6', marginTop: 6, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                  +{fmt(previewXp)} Nav XP · +{fmt(previewFathoms)} Fathoms{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''}
+                </p>
 
                 {/* The chase — icons + odds in one scrollable row, so what you're
                     fishing for reads visually instead of as a text ledger. */}
                 {odds.length > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 9, borderTop: `1px solid ${GOLD}22` }}>
-                    <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: sweetened ? '#c9a7ff' : '#a9a396', marginBottom: 8, textAlign: 'left', textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>
-                      In the Chest{sweetened ? ` · Davy's ${offerChest}x` : ''}{ftnMult > 1 ? ` · Fortune ${ftnMult.toFixed(2)}x` : ''}
-                    </p>
-                    <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                  <div style={{ marginTop: 12 }}>
+                    <div className="scrollbar-hide" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, justifyContent: 'center' }}>
                       {odds.map(o => {
                         const img = o.kind === 'skin'
                           ? getShipSkin(o.id)?.imageByTier?.[6]
@@ -3928,12 +3901,6 @@ export default function GauntletGame(props: GauntletGameProps) {
                             }}>
                               {o.lockedUntilDepth ? `Depth ${o.lockedUntilDepth}` : `${(o.chance * 100).toFixed(o.chance < 0.1 ? 1 : 0)}%`}
                             </p>
-                            {!o.lockedUntilDepth && o.chance > o.chanceBeforeFortune && (
-                              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8f8a80', lineHeight: 1, marginTop: 2, textDecoration: 'line-through', opacity: 0.75 }}>
-                                {(o.chanceBeforeFortune * 100).toFixed(o.chanceBeforeFortune < 0.1 ? 1 : 0)}%
-                              </p>
-                            )}
-                            <p className="font-karla font-600 truncate" style={{ fontSize: '0.58rem', color: '#a9a396', lineHeight: 1.2, marginTop: 3 }}>{o.name}</p>
                           </div>
                         )
                       })}
@@ -4146,7 +4113,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <div style={{ textAlign: 'left', minWidth: 0 }}>
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: `${sounding.color}dd`, textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>Sounding Line · what lies below</p>
                   <p className="font-cinzel font-700" style={{ fontSize: '1.02rem', color: sounding.color, lineHeight: 1.2, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
-                    {sounding.label}{sounding.sub ? <span style={{ color: 'rgba(255,255,255,0.58)' }}> · {sounding.sub}</span> : ''}
+                    {sounding.label}
                   </p>
                 </div>
               </motion.div>
@@ -4189,10 +4156,6 @@ export default function GauntletGame(props: GauntletGameProps) {
                   {bankBarred ? (
                     <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89898', marginTop: 14, lineHeight: 1.4, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                       You signed <strong style={{ color: '#d3b0b0' }}>No Second Thoughts</strong>. Davy only lets you bank once you have put a boss down.
-                    </p>
-                  ) : previewDoubloons > 0 ? (
-                    <p className="font-karla font-600" style={{ fontSize: '0.84rem', color: '#c9a99b', marginTop: 14, textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
-                      Dive and {fmt(previewDoubloons)} ⟡ rides with you.
                     </p>
                   ) : null}
                 </>
