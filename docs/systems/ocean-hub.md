@@ -1434,15 +1434,20 @@ number.
 
 ## The campaign in the corner
 
-Out on the expedition side the HUD carries a card under the disc row (`CampaignHud`, in
-SeaMap): the chapter, the next thing to do, a verb, and a bearing arrow with the distance.
-It is the expedition half's **Salt Road** — a permanent fixture, not a prompt. It showed
-only when a node was available at first, which hid it both for a finished campaign and for
-every moment you were standing in the middle of a chain, so the one thing that answers "what
-now" was missing exactly when somebody went looking for it. With nothing waiting it reads
-"The Campaign / Nothing waiting", shows a compass rose instead of an arrow, and still opens
-the chart. It follows the disc row's own showing rule (hidden with the rod out on a phone,
-and while the guns are out).
+Out on the expedition side the HUD row carries a **campaign disc** — a pennant on a staff,
+beside the crew and the chart. It is the expedition half's Salt Road: one glyph, always
+there, on the same showing rule as the discs either side of it.
+
+It was a card at first, carrying the chapter, the next stop, a verb and a bearing. That is
+more than this row's job — the row is DOORS, one glyph each, and a panel three times the
+height of its neighbours reads as an alert rather than as a fixture. What it knows is in its
+**dot** (the same amber one the crew disc and Finn's both use, lit whenever the chain has
+something available) and its **tooltip**, which names the chapter and the errand.
+
+**It opens the chart, not the next node's sheet**, and that is a rule rather than a shortcut
+not taken: a node's sheet is where you ACT on it, and acting on a boss from the far side of
+the sea would hand you the fight without the voyage, which is the whole reason the campaign
+is out on the water instead of on a page of cards. The disc says where; you still sail it.
 "Next" is the same rule the Expeditions hub lights its spine with, the first node in chain
 order that is `available` and not a side branch, resolved against the water through
 `ENCOUNTERS`, `BEATS` and `CACHES` for a position (`nextStop`). Tapping the card opens the

@@ -4328,6 +4328,13 @@ export default function SeaMap({
     // expedition row started at slot one with a disc-width hole in front of it.
     if (!inAnchorage) on.push('clock')
     if (inAnchorage && (!fishingIn || wide)) on.push('crew')
+    // THE CAMPAIGN, and it is a disc like every other door up here rather than
+    // a card of its own. It was a card carrying the next stop and a bearing,
+    // which is more than this row's job: the row is DOORS, one glyph each, and
+    // a panel three times the height of the discs beside it reads as an alert
+    // rather than as a fixture. What it knows goes into its dot and its
+    // tooltip, and the chart it opens is where the answer is drawn.
+    if (inAnchorage && (!fishingIn || wide)) on.push('campaign')
     if (!fishingIn || wide) on.push('chart')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
     // past the reef there are none — a door to it standing in the campaign's
@@ -7713,16 +7720,58 @@ hullRef={hullRefFor(t.key)} />
         </button>
       )}
 
-      {/* THE CAMPAIGN, under the disc row in the corner. The expedition side's
-          Salt Road: a permanent door, not a prompt that comes and goes. It
-          hid itself whenever there was no available node — which is both the
-          finished campaign AND every moment mid-fight-chain — so the one
-          fixture that is supposed to answer "what now" was missing exactly
-          when a captain went looking for it. Same showing rule as the row
-          above it. See CampaignHud. */}
+      {/* THE CAMPAIGN. The expedition side's Salt Road: a permanent door in
+          the row, never hidden, whether or not there is anything waiting.
+
+          IT OPENS THE CHART rather than the next node's own sheet, and that is
+          a rule about the campaign rather than a shortcut not taken. A node's
+          sheet is where you ACT on it, and acting on a boss from the far side
+          of the sea would hand you the fight without the voyage — the whole
+          reason the campaign is out here on the water instead of on a page of
+          cards. So this says where, and you still have to sail it. */}
       {inAnchorage && (!fishingIn || wide) && !fightOn && (
-        <CampaignHud stop={nextStop} pos={pos} top={18 + hudSize + 10}
-          onOpen={() => { vibrate(10); setMapOpen(true) }} />
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); vibrate(10); setMapOpen(true) }}
+          aria-label={nextStop
+            ? `The campaign. Next: ${nextStop.verb} ${nextStop.node.label}. Opens the chart.`
+            : 'The campaign. Opens the chart.'}
+          // THE WHOLE ANSWER, ON HOVER. A disc cannot carry a sentence, and on
+          // a desktop it does not have to: the row's other discs name
+          // themselves here and this one names the errand.
+          title={nextStop
+            ? `${nextStop.chapter.coda ? nextStop.chapter.title : `Chapter ${nextStop.chapter.romanNumeral}`}`
+              + ` — ${nextStop.verb} ${nextStop.node.label}`
+            : 'The campaign'}
+          style={{
+            position: 'absolute', top: 18, left: hudAt('campaign'), zIndex: Z.hud,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: hudSize, height: hudSize, borderRadius: '50%', padding: 0,
+            background: nextStop ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
+            border: `1px solid ${nextStop ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+            cursor: 'pointer',
+          }}>
+          {/* A PENNANT ON A STAFF. Not a map (the chart beside it is the map),
+              not a compass (the compass is the thing round the edge of the
+              screen): a standard, which is what a campaign is followed under. */}
+          <svg width={Math.round(hudSize * 0.54)} height={Math.round(hudSize * 0.54)}
+            viewBox="0 0 24 24" fill="none"
+            stroke={nextStop ? '#f0c040' : 'rgba(214,232,240,0.8)'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M6 21V3" />
+            <path d="M6 4h11l-2.6 3.6L17 11H6z" />
+          </svg>
+          {/* SOMETHING IS WAITING ON YOU. The same amber dot the crew disc and
+              Finn's both use, and it means the same thing on all three. */}
+          {nextStop && (
+            <span aria-hidden style={{
+              position: 'absolute', top: -2, right: -2,
+              width: 11, height: 11, borderRadius: 999,
+              background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
+              boxShadow: '0 0 10px rgba(240,192,64,0.6)',
+            }} />
+          )}
+        </button>
       )}
 
       {/* THE CHART BUTTON, beside the light and on the same row.
@@ -12472,96 +12521,6 @@ type CompassRegular = { id: string; name: string; zoneId: string; x: number; y: 
  *  lines tall, so side-by-side needs far more room than stacked. A radius (it
  *  was 96) let two centres pass while the words lay on each other. */
 const COMPASS_KEEP = { x: 120, y: 42 }
-
-/**
- * ── THE CAMPAIGN CARD ────────────────────────────────────────────────────
- *
- * The Expeditions hub lights the next node on its spine; out here the water
- * did not say what to do next at all, and with the rock gone there is no road
- * to follow either. This is that spine's one lit node, brought to the corner:
- * the chapter, the thing, the verb, and a bearing with the distance on it.
- * Tap it and the chart opens with the same thing pinned.
- *
- * IT IS ALWAYS THERE, and that is the difference between a fixture and a
- * prompt. `stop` is null when the chain has nothing available — a finished
- * campaign, and also every moment you are standing in the middle of one — and
- * the card stays, says so, and still opens the chart. A door that vanishes
- * when you have no errand is a door you never learn is there.
- *
- * Refreshed on a timer like the compass, because the bearing turns with the
- * boat and nothing else here re-renders per frame.
- */
-function CampaignHud({ stop, pos, top, onOpen }: {
-  stop: { node: RaidNode; chapter: { romanNumeral: string; title: string; coda?: boolean }; bay: Bay | null; at: { x: number; y: number } | null; verb: string } | null
-  pos: React.RefObject<Vec>
-  top: number
-  onOpen: () => void
-}) {
-  const [, force] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => force(v => v + 1), 200)
-    return () => clearInterval(id)
-  }, [])
-  const here = pos.current ?? HOME
-  const at = stop?.at ?? null
-  const dx = at ? at.x - here.x : 0
-  const dy = at ? at.y - here.y : 0
-  const dist = at ? Math.hypot(dx, dy) : 0
-  const deg = at ? (Math.atan2(dy, dx) * 180) / Math.PI : 0
-  const close = at ? dist < 700 : false
-  const gold = '#f0c040'
-  return (
-    <button type="button" onClick={e => { e.stopPropagation(); onOpen() }}
-      aria-label={stop ? `Next: ${stop.verb} ${stop.node.label}. Open the chart.` : 'The campaign. Open the chart.'}
-      style={{
-        position: 'absolute', top, left: 12, zIndex: Z.hud,
-        display: 'flex', alignItems: 'center', gap: 10, maxWidth: 300,
-        padding: '6px 12px 6px 8px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-        background: 'rgba(6,12,18,0.78)',
-        border: `1px solid ${gold}55`,
-        boxShadow: `0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 ${gold}22`,
-        color: '#f4efe4',
-      }}>
-      {/* THE BEARING. An arrow turned toward the thing, and the distance
-          under it, so the card is a heading and not only a to-do. When you
-          are on top of it the arrow becomes a ring: you are here. */}
-      <span aria-hidden style={{
-        flexShrink: 0, width: 34, height: 34, borderRadius: '50%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: `${gold}1a`, border: `1px solid ${gold}66`,
-      }}>
-        {!at ? (
-          // NO HEADING TO GIVE. A compass rose rather than an arrow: the card
-          // is still the campaign's door, it just has nowhere to point today.
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="m15 9-2.2 5.8L7 17l2.2-5.8z" /></svg>
-        ) : close ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.4"><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="1.6" fill={gold} /></svg>
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={gold} style={{ transform: `rotate(${deg}deg)`, transition: 'transform 0.2s linear' }} aria-hidden>
-            <path d="M22 12 3 4l4 8-4 8z" />
-          </svg>
-        )}
-      </span>
-      <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: `${gold}cc`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {!stop ? 'The Campaign'
-            : (stop.chapter.coda ? stop.chapter.title : `Chapter ${stop.chapter.romanNumeral}`) + (stop.bay ? ` · ${stop.bay.name.replace(/^The /, '')}` : '')}
-        </span>
-        <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {!stop ? 'Nothing waiting' : `${stop.verb} ${stop.node.label}`}
-        </span>
-        <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(214,232,240,0.7)', whiteSpace: 'nowrap' }}>
-          {!stop ? 'Open the chart' : !at ? 'Somewhere ashore' : close ? 'Right here' : `${fmtDist(dist)} away`}
-        </span>
-      </span>
-    </button>
-  )
-}
-
-/** A distance in the chart's own units, said the way the compass says it. */
-function fmtDist(d: number): string {
-  return d >= 1000 ? `${(d / 1000).toFixed(1)}k` : `${Math.round(d / 10) * 10}`
-}
 
 function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars }: {
   /** The regulars, with whether you have met them. Only the ones in the water
