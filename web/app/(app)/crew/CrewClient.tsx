@@ -956,13 +956,23 @@ function statLine(t: TraitStats): string {
  * `section` makes the tab CONTROLLED, so the host's cards and this component's
  * idea of what is showing cannot drift apart.
  */
-export default function CrewClient({ initial, hasSeenGuide = true, embedded = false, section }: {
+export default function CrewClient({ initial, hasSeenGuide = true, embedded = false, section, openCapacity = 0 }: {
   initial: CrewState
   hasSeenGuide?: boolean
   /** Drawn inside a panel rather than as a page. See the note above. */
   embedded?: boolean
   /** Which section to show, when the host is choosing. */
   section?: 'assign' | 'roster' | 'recruits' | 'graveyard' | 'wardrobe' | 'hall'
+  /**
+   * OPEN THE CAPACITY SHEET, ON A BUMP.
+   *
+   * The berth pill moved to the panel's header (see CrewHub) and it is still a
+   * button — "26 / 40" raises the question of where 40 came from, and the answer
+   * is two ladders deep. The sheet that answers it lives in here with the
+   * numbers it reads, so the header asks for it rather than owning a second
+   * copy. A counter rather than a boolean, so asking twice works.
+   */
+  openCapacity?: number
 }) {
   const [state, setState] = useState<CrewState>(initial)
   // Blood Gem skin gamble: null = closed, 'rolling' = suspense build-up,
@@ -1431,6 +1441,8 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
   // component stays mounted, and a useState initialiser only ever runs once —
   // without this, picking a second card would leave the first section drawn.
   useEffect(() => { if (section) setActiveTab(section) }, [section])
+  // And the header's pill, asking for the sheet that explains the cap.
+  useEffect(() => { if (openCapacity) setCapacityOpen(true) }, [openCapacity])
 
   /**
    * VIEWING THE ROSTER IS THE ACKNOWLEDGEMENT.
@@ -1727,6 +1739,12 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             keeps butting up against (Recruit gates, Roster Full pills).
             Goes red when full so the player notices the wall before they
             try to claim another recruit and get bounced. */}
+        {/* ── THE HEADER, AND WHAT IS LEFT OF IT WHEN EMBEDDED ──────────
+            Nothing. The panel has its own title row, its own way back and its
+            own berth count — the capacity pill used to repeat at the top of all
+            four sections, which is the same fact four times in a panel that is
+            560 wide. It lives in the panel's header now; see CrewHub. */}
+        {!embedded && (
         <div style={{ marginBottom: embedded ? '0.85rem' : '1.1rem', display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
           {/* THE PANEL HAS ITS OWN NAME AND ITS OWN WAY BACK, so the page's
               title and its return link would both be a second one. The
@@ -1779,6 +1797,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
           </Link>}
         </div>
+        )}
 
         {err && (
           <div className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#f2b0b0', background: 'rgba(200,70,70,0.12)', border: '1px solid rgba(220,90,90,0.3)', borderRadius: 8, padding: '0.5rem 0.75rem', marginBottom: '1rem' }}>
@@ -2956,7 +2975,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
             const open = trunkMenu === id
             const sel = opts.find(o => o.key === current) ?? opts[0]
             return (
-              <div style={{ position: 'relative', flex: 1, maxWidth: 172 }}>
+              <div style={{ position: 'relative', minWidth: 0 }}>
                 {/* Same field as the roster's sorts — see FILTER_FIELD. */}
                 <button type="button" onClick={() => setTrunkMenu(open ? null : id)} className="tap"
                   style={{ ...FILTER_FIELD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7,
@@ -3023,8 +3042,18 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                   </button>
                 </div>
               )}
-              {/* Filters — two dropdowns and the chase toggle, one row. */}
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'stretch', marginBottom: 16 }}>
+              {/* ── THE SAME ROW THE ROSTER HAS ──────────────────────────
+                  Two fields and a toggle, filling the panel. They were capped
+                  at 172 apiece and centred, which left a third of the row empty
+                  on either side and made the Trunk's filters a different object
+                  from the manifest's — the two rows a captain switches between
+                  most often. A grid rather than a flex row so the two fields are
+                  exactly equal, as the sorts are, and the toggle takes only what
+                  it needs. */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto',
+                gap: 6, alignItems: 'stretch', marginBottom: 16,
+              }}>
                 {renderDropdown('rarity', String(trunkRarity), [
                   { key: 'all', label: 'All rarities' },
                   { key: '2', label: RARITY_NAMES[2], color: RARITY_COLORS[2] },
@@ -3041,7 +3070,7 @@ export default function CrewClient({ initial, hasSeenGuide = true, embedded = fa
                     options are "on" and "off" is a switch wearing a costume.
                     Wears the chase glow when lit so it says what it filters. */}
                 <button type="button" onClick={() => setTrunkChase(v => !v)} aria-pressed={trunkChase} className="tap"
-                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.7rem', borderRadius: 10, cursor: 'pointer',
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.48rem 0.7rem', borderRadius: 10, cursor: 'pointer',
                     background: trunkChase ? 'rgba(88,52,120,0.9)' : 'rgba(13,22,30,0.94)',
                     border: `1px solid ${trunkChase ? 'rgba(201,167,255,0.85)' : 'rgba(201,167,255,0.34)'}` }}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill={trunkChase ? '#e6d4ff' : 'none'} stroke={trunkChase ? '#e6d4ff' : '#c9a7ff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

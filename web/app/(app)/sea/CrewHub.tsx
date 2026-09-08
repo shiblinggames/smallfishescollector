@@ -149,6 +149,8 @@ export default function CrewHub({
   const [section, setSection] = useState<Section | null>(openCard)
   /** The hall's full state, for whichever section is showing. */
   const [hall, setHall] = useState<CrewState | null>(null)
+  /** Bumped when the berth pill is pressed — see CrewClient's openCapacity. */
+  const [capacityAsk, setCapacityAsk] = useState(0)
   const [hallErr, setHallErr] = useState<string | null>(null)
 
   // FETCHED ON OPEN, not on mount. The chart holds this component for the whole
@@ -268,18 +270,48 @@ export default function CrewHub({
                     title that was right there — one row saying two things beats
                     two rows saying one each, and in a panel this narrow the row
                     it saves is a row of skins you can see. */}
-                {(!section || section === 'wardrobe') && (
+                {section === 'wardrobe' && hall && (
                   <p className="font-karla font-600" style={{
                     fontSize: '0.78rem', color: 'rgba(196,169,106,0.85)', margin: 0, flexShrink: 0,
                     fontVariantNumeric: 'tabular-nums',
                   }}>
-                    {section === 'wardrobe'
-                      // Counted against the CATALOGUE, not off the stored
-                      // array: a retired id still sitting in somebody's profile
-                      // would otherwise read as 76 / 75 collected.
-                      ? (hall ? `${CREW_SKINS.filter(k => hall.ownedCrewSkins.includes(k.id)).length} / ${CREW_SKINS.length} collected` : '')
-                      : (state ? `${state.crew.length} of ${state.capacity} berths` : '')}
+                    {/* Counted against the CATALOGUE, not off the stored array:
+                        a retired id still sitting in somebody's profile would
+                        otherwise read as 76 / 75 collected. */}
+                    {CREW_SKINS.filter(k => hall.ownedCrewSkins.includes(k.id)).length} / {CREW_SKINS.length} collected
                   </p>
+                )}
+                {/* ── THE BERTH PILL, AND IT IS THE HALL'S OWN ──────────────
+                    "17 of 17 berths" was a line of text here and the crew page's
+                    pill was a control that said the same thing at the top of all
+                    four sections. One of them had to go, and the one worth
+                    keeping is the one that answers the question it raises: 40
+                    comes from two ladders, and pressing this opens the sheet
+                    that shows them. It goes red when full, which is the wall
+                    every section butts against. */}
+                {!section && state && (
+                  <button type="button" className="font-karla font-700 tap"
+                    onClick={() => { vibrate(8); setCapacityAsk(n => n + 1); setSection('roster') }}
+                    aria-label={`${state.crew.length} of ${state.capacity} crew. See how the limit is worked out and how to raise it.`}
+                    style={{
+                      flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '0.22rem 0.4rem 0.22rem 0.55rem', borderRadius: 7, cursor: 'pointer',
+                      fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase',
+                      lineHeight: 1.2, whiteSpace: 'nowrap',
+                      fontVariantNumeric: 'tabular-nums',
+                      color: state.crew.length >= state.capacity ? '#f4c4c4' : '#e0cfa4',
+                      background: state.crew.length >= state.capacity
+                        ? 'rgba(220,90,90,0.16)' : 'rgba(200,170,100,0.14)',
+                      border: `1px solid ${state.crew.length >= state.capacity ? 'rgba(240,150,150,0.72)' : 'rgba(210,182,116,0.6)'}`,
+                    }}>
+                    {state.crew.length} / {state.capacity} Crew
+                    <span aria-hidden style={{
+                      display: 'grid', placeItems: 'center', flexShrink: 0,
+                      width: 13, height: 13, borderRadius: '50%',
+                      border: '1px solid currentColor', opacity: 0.85,
+                      fontSize: '0.5rem', fontStyle: 'italic', lineHeight: 1,
+                    }}>i</span>
+                  </button>
                 )}
               </div>
               <CloseButton onClick={onClose} style={{ position: 'absolute', top: 12, right: 12 }} />
@@ -306,7 +338,7 @@ export default function CrewHub({
                 {/* ── A ROOM ────────────────────────────────────────────── */}
                 {section ? (
                   hall ? (
-                    <CrewClient initial={hall} embedded section={section} />
+                    <CrewClient initial={hall} embedded section={section} openCapacity={capacityAsk} />
                   ) : (
                     <p className="font-karla" style={{ fontSize: '0.82rem', color: hallErr ? '#e6a0a0' : 'rgba(190,212,228,0.6)', margin: 0 }}>
                       {hallErr ?? 'Mustering the hall…'}

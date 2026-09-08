@@ -2955,6 +2955,18 @@ body.hardcore-gauntlet::after {
   .page-col { padding-inline: 1.5rem; }
 }
 
+/* ── A PAGE AT THE MODAL'S WIDTH ────────────────────────────────────────────
+   The leaderboard, the badges wall and the profile are READS: a ranked list, a
+   grid of medals, one captain's record. Nothing on them is a workspace, and at
+   980 they were three different measurements from the panels the rest of the
+   game is now made of — you would close a 560 modal on the sea and land on a
+   page nearly twice as wide saying the same kind of thing.
+
+   Same token the modals use, so the two can never drift. Add the class
+   ALONGSIDE .page-col: the padding and the centring are still that one's job,
+   and this only moves the ceiling. */
+.page-col.page-col-modal { max-width: var(--modal-w); }
+
 /* The ship screen's refit tiles. Two across on a phone, three once there is
    room — at the standard 980 column, two tiles are 485px wide and 98px tall,
    which is a banner, not a tile.

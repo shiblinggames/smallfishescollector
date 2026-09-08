@@ -573,7 +573,7 @@ export default async function BadgesPage() {
   return (
     <>
       <main className="min-h-screen pt-8" style={{ position: 'relative', zIndex: 1 }}>
-        <div className="page-col pb-16">
+        <div className="page-col page-col-modal pb-16">
           <div className="mb-4">
             {/* The Captain's Log link lived here. It is not offered anywhere in
                 the app now — the page still renders for anyone who has the URL. */}

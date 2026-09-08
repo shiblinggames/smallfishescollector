@@ -72,6 +72,13 @@ out on its own and standardised its own four panels at 560.
 `ModalSheet` defaults to the token, so a sheet built on the kit needs nothing. `.page-col`
 (980) is the PAGE column and a different measurement; do not reach for it on a modal.
 
+**Some pages take the modal's width too**: `.page-col.page-col-modal` caps a page column at
+`--modal-w`. The leaderboard, the badges wall and the profile are READS — a ranked list, a
+grid of medals, one captain's record — and at 980 they were a third measurement in a game
+otherwise made of 560px panels: you would close a modal on the sea and land on a page nearly
+twice as wide saying the same kind of thing. The class only moves the ceiling; `.page-col`
+keeps the padding and the centring.
+
 **Two things do not take it:**
 
 - **Art moments.** A crate opening, a legendary skin, an ancient's rank-up, a rescued boat:
