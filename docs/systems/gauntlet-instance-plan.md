@@ -244,32 +244,38 @@ SeaMap and the arena compose from one set of numbers. Your hull is anchored at
 its centre and theirs at its waterline, as the chart reports them, because
 RaidCombat lifts each side's overlays by what its anchor means.
 
-**The veil between screens.** `setPhase` in GauntletGame is a wrapper: a
-change between two screens of a live run (`RUN_PHASES`) calls `playVeil()`,
-a STILL overlay appended to `document.body` (Web Animations API) that dips the
-light and brings it back. It eases down over ~360ms, holds ~110ms while the
-phase commits under it (and `window.scrollTo(0,0)` runs under it, so a tall
-screen never opens scrolled and jumps), and lifts over ~700ms. Outside React on
-purpose, so it cannot depend on any wrapper surviving the switch. Reduced
-motion, or no `document`, commits at once.
+**The swap between screens, and the two effects it replaced.** Read this
+before touching it, because the obvious ideas here have all been tried and all
+failed the same way.
 
-Two rules the veil earned the hard way:
+1. A tide sweeping up the viewport. Nauseating.
+2. A still veil dipping the whole screen to near-black. A fade to black on
+   every menu, twenty times a dive.
+3. The same veil, shallower, tinted, keeping the water faintly visible under
+   it. Still tiring to watch over and over.
 
-- **It does not go to black.** It stops at `VEIL_DEPTH` 0.8, over a gradient
-  that is thinnest above the middle of the water and carries the run's own
-  tint, so the arena stays faintly visible underneath. The arena is the one
-  thing continuous across every screen of a dive; blacking it out twenty times
-  a run threw that away, and read as a fade to black on every menu.
-- **The screen comes up WITH the light, it is not revealed by it.** The hold
-  used to be long enough for the incoming screen to finish all its entrances
-  underneath, so the light came back on a screen that was already still, which
-  is a hard cut with a fade in front of it. The module-level `Screen` wrapper
-  (second child, after the arena) now runs one entrance keyed to the screen,
-  opacity 0 to 1 over `SCREEN_FADE_MS` (the hold plus the lift), starting when
-  the phase commits at the bottom of the dip. No `AnimatePresence` and no exit:
-  an exit left a beat of empty water, which is what read as jank the first
-  time. Opacity only, never a transform, or every fixed overlay inside it
-  breaks.
+The fault in all three is that they are FULL-VIEWPORT. Repeated thirty times a
+run, an effect that changes the brightness of the whole screen makes the eye
+re-adapt every time, however pretty the effect is.
+
+So nothing full-screen happens now. The sea does not dip, flash or move: it is
+the one continuous thing in a run and it is genuinely continuous. What changes
+is the panel of words in front of it. `setPhase` calls `playSwap(commit)`,
+which ramps the `Screen` layer's opacity to 0 over 200ms, commits the phase
+(and `window.scrollTo(0, 0)`) while it cannot be seen, and ramps it back over
+300ms. Rules:
+
+- **Opacity only, never a transform or a filter.** That element is an ancestor
+  of every modal and dock in a screen, and a transform on it breaks their fixed
+  positioning.
+- **The layer is never keyed and never wrapped in `AnimatePresence`.** It stays
+  mounted for the whole run and only its children swap; a remount mid-ramp is
+  the stutter this replaces.
+- **One ramp at a time.** `fill: 'forwards'` animations pile up otherwise, one
+  per screen; `ramp()` cancels the previous only after starting the next, so
+  the held opacity is never released for a frame.
+- The incoming ramp waits two frames after the commit, so the new screen has
+  laid out and painted at zero before it starts coming up.
 
 **What belongs to the fight ends with the fight.** Three things leaked out of
 combat into the screens after it, all for the same reason: `fight` is

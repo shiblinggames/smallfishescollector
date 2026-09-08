@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   PHASE_INITIAL, PHASE_ENTER, PHASE_EXIT,
   ENTER, EXIT, POP, CEREMONY, STAGGER, STAGGER_SLOW, stagger,
@@ -95,74 +95,70 @@ const RUN_PHASES: ReadonlySet<Phase> = new Set<Phase>([
   'descending', 'fighting', 'curse', 'boon', 'shrine', 'merchant', 'contract',
   'contract_result', 'don_fallen', 'mark_choice', 'between', 'reward', 'dead',
 ])
-/** The veil is at its deepest this long after it starts; the phase changes then. */
-const VEIL_COVER_MS = 360
-/** Held only long enough to cover the swap itself. The incoming screen used to
- *  finish all its entrances under the veil, which meant the light came back on
- *  a screen that was already still: a reveal, and a reveal reads as a pop. The
- *  hold is short now and the screen comes UP WITH the light instead. */
-const VEIL_HOLD_MS = 110
-/** The long half. Light returns more slowly than it left, which is what makes
- *  the whole thing read as a breath rather than a cut. */
-const VEIL_LIFT_MS = 700
-/** How far down the light goes. NOT to black: the arena is the one thing that
- *  is continuous across every screen of a run, and blacking it out threw that
- *  away twenty times a dive. At this depth the water is still faintly there
- *  underneath, so the screens change ON the sea rather than after it. */
-const VEIL_DEPTH = 0.8
-/** The incoming screen's own fade, started when the phase commits and ending
- *  with the veil. It rises out of the dip instead of being uncovered by it. */
-const SCREEN_FADE_MS = VEIL_HOLD_MS + VEIL_LIFT_MS
-
 /**
- * ── THE VEIL ────────────────────────────────────────────────────────────
+ * ── THE SWAP BETWEEN SCREENS ────────────────────────────────────────────
  *
- * A STILL dip, not a sweep. The first cut of this was a wall of water
- * sweeping up the viewport, and it was nauseating: a full-screen object in
- * motion is exactly what a screen change should not add. This is a
- * motionless dark veil, faintly the run's colour, that fades in over a
- * quarter second, holds a beat while the phase changes under it, and fades
- * back out a little more slowly than it came. Nothing moves; the light dips.
+ * THE THIRD ATTEMPT, AND THE ONE THAT IS RIGHT, SO READ THIS BEFORE TOUCHING
+ * IT. A tide sweeping up the viewport was nauseating. A veil that dipped the
+ * whole screen to near-black was a fade to black on every menu. A shallower
+ * veil that kept the water faintly visible was still tiring, and the reason is
+ * the same in all three: a full-viewport effect, repeated twenty or thirty
+ * times a dive, makes the eye re-adapt every time. It does not matter how
+ * pretty the effect is. The eye is doing work it should not have to do.
  *
- * Appended to the body and driven by the Web Animations API so it cannot
- * depend on any wrapper surviving the phase change it covers. Returns false
- * when it will not play (no document, reduced motion), and the caller
- * commits the phase at once instead.
+ * So NOTHING full-screen happens any more. The sea does not dip, does not
+ * flash, does not move: it is the one continuous thing in a run and it is now
+ * genuinely continuous. What changes is the panel of words in front of it,
+ * and it changes the quietest way anything can: it fades out, the phase
+ * commits while it is invisible, it fades back in. Opacity on one element,
+ * over content that is a fraction of the screen.
+ *
+ * OPACITY ONLY, never a transform or a filter: this element is an ancestor of
+ * every modal and dock in a screen, and a transform on it would break their
+ * fixed positioning.
  */
-function playVeil(tint: string): boolean {
+const SWAP_OUT_MS = 200
+const SWAP_IN_MS = 300
+/** The screen layer, so the swap can drive it without a re-render. */
+const screenLayer: { current: HTMLElement | null } = { current: null }
+/** The one live ramp. Held so the next one can cancel it: `fill: 'forwards'`
+ *  animations otherwise pile up on the element, one per screen, all run. */
+let swapAnim: Animation | null = null
+
+function ramp(el: HTMLElement, from: number, to: number, duration: number, easing: string) {
+  const next = el.animate([{ opacity: from }, { opacity: to }], { duration, easing, fill: 'forwards' })
+  // The old one is cancelled AFTER the new one exists, so the held value is
+  // never released for a frame onto the element's base opacity.
+  swapAnim?.cancel()
+  swapAnim = next
+}
+
+function canAnimate(): boolean {
   if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') return false
   if (!('animate' in HTMLElement.prototype)) return false
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false
-  const el = document.createElement('div')
-  el.setAttribute('aria-hidden', 'true')
-  Object.assign(el.style, {
-    position: 'fixed', inset: '0', zIndex: '1200', pointerEvents: 'none',
-    // Deepest at the rim, thinnest over the middle of the water, and carrying
-    // the run's own colour rather than a flat black. What dips is the light on
-    // this sea, not the screen.
-    background: `radial-gradient(ellipse 118% 92% at 50% 48%, rgba(4,10,17,0.82) 0%, rgba(2,5,10,0.97) 62%, rgba(1,3,6,1) 100%), linear-gradient(${tint}, ${tint})`,
-    backgroundBlendMode: 'multiply, normal',
-    opacity: '0',
-    willChange: 'opacity',
-  } as Partial<CSSStyleDeclaration>)
-  document.body.appendChild(el)
-  const total = VEIL_COVER_MS + VEIL_HOLD_MS + VEIL_LIFT_MS
-  const anim = el.animate(
-    [
-      // Both halves eased at BOTH ends. The old curve left instantly and
-      // arrived instantly; a dip you can feel starting and stopping is the
-      // difference between a breath and a blink.
-      { opacity: 0, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-      { opacity: VEIL_DEPTH, offset: VEIL_COVER_MS / total, easing: 'linear' },
-      { opacity: VEIL_DEPTH, offset: (VEIL_COVER_MS + VEIL_HOLD_MS) / total, easing: 'cubic-bezier(0.33, 0, 0.15, 1)' },
-      { opacity: 0 },
-    ],
-    { duration: total, fill: 'forwards' },
-  )
-  const done = () => el.remove()
-  anim.onfinish = done
-  anim.oncancel = done
-  window.setTimeout(done, total + 300)
+  return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+
+/**
+ * Fades the screen layer out, calls `commit` while it cannot be seen, and
+ * fades it back in. Returns false when it will not play, and the caller
+ * commits at once instead.
+ */
+function playSwap(commit: () => void): boolean {
+  const el = screenLayer.current
+  if (!el || !canAnimate()) return false
+  ramp(el, 1, 0, SWAP_OUT_MS, 'cubic-bezier(0.4, 0, 1, 1)')
+  window.setTimeout(() => {
+    commit()
+    const now = screenLayer.current
+    if (!now) return
+    // Two frames, so the incoming screen has laid out and painted at zero
+    // before it starts coming up. Without this the ramp can begin on the
+    // outgoing screen's last frame and you see the swap itself.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      ramp(now, 0, 1, SWAP_IN_MS, 'cubic-bezier(0, 0, 0.2, 1)')
+    }))
+  }, SWAP_OUT_MS)
   return true
 }
 
@@ -431,32 +427,30 @@ export default function GauntletGame(props: GauntletGameProps) {
   const sheetW = wide ? 640 : 440
   const [phase, setPhaseRaw] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
   /**
-   * ── THE VEIL BETWEEN SCREENS ───────────────────────────────────────────
-   *
-   * A phase change between two screens of a live run dips the light: a still
-   * dark veil fades in, the phase commits under it, and it lifts. Played
-   * OUTSIDE React (see playVeil), so it does not depend on any wrapper
-   * staying mounted across the change. Every other phase change — into a
-   * run, out of one, the hold screen — commits at once, exactly as before.
+   * A phase change between two screens of a live run fades the WORDS out,
+   * commits while they cannot be seen, and fades them back in. The sea behind
+   * them never changes (see playSwap). Played outside React, so it does not
+   * depend on any wrapper staying mounted across the change. Every other phase
+   * change — into a run, out of one, the hold screen — commits at once.
    */
   const phaseNowRef = useRef<Phase>(phase)
   phaseNowRef.current = phase
-  const tideTintRef = useRef('#6fe4d8')
   const setPhase = useCallback((next: Phase) => {
     const cur = phaseNowRef.current
-    if (cur !== next && RUN_PHASES.has(cur) && RUN_PHASES.has(next) && playVeil(tideTintRef.current)) {
+    if (cur === next) return
+    const commit = () => {
+      // Land at the top while the screen is invisible. The effect that resets
+      // scroll on a phase change runs after the new screen has painted, so a
+      // tall screen opened scrolled and then jumped.
+      window.scrollTo(0, 0)
+      setPhaseRaw(next)
+    }
+    if (RUN_PHASES.has(cur) && RUN_PHASES.has(next)) {
       phaseNowRef.current = next
-      window.setTimeout(() => {
-        // Land at the top UNDER the veil. The effect that resets scroll on a
-        // phase change runs after the new screen has painted, so a tall
-        // screen opened scrolled and then jumped; here nobody sees it.
-        window.scrollTo(0, 0)
-        setPhaseRaw(next)
-      }, VEIL_COVER_MS)
-      return
+      if (playSwap(commit)) return
     }
     phaseNowRef.current = next
-    setPhaseRaw(next)
+    commit()
   }, [])
   const [starting, setStarting] = useState(false)
   // Hardcore: is the current run a hardcore run? Drives the death / cash-out
@@ -2313,9 +2307,6 @@ export default function GauntletGame(props: GauntletGameProps) {
   const arenaDepth = fight?.depth ?? (rollStateRef.current.cleared + 1)
   const arenaDeep = Math.min(1, Math.pow(Math.max(0, arenaDepth - 1) / 24, 0.85))
   const arenaBeam = getShip(shipTierByName(props.shipName)).seaBeam ?? 0.6
-  // What the tide between screens is made of: the run's own colour.
-  const screenTint = hardcoreRun ? '#ff6a6a' : isDonG ? '#e6c66e' : '#6fe4d8'
-  tideTintRef.current = screenTint
   // A BOSS IS ONLY A BOSS WHILE HE IS IN THE WATER. `fight` is deliberately
   // never cleared between depths (every screen after the first fight reads its
   // depth and its enemy off it), which meant `fight.isBoss` stayed true after
@@ -7726,28 +7717,15 @@ function AbyssBackdrop({ hardcore, don }: { hardcore?: boolean; don?: boolean })
  * — sixty times a second.
  */
 function Screen({ id, children }: { id: string; children: React.ReactNode }) {
-  // NO CROSS-FADE, and no AnimatePresence: an exit animation here left a beat
-  // of empty water between the screens, which is what read as jank the first
-  // time. What is here instead is one entrance, keyed to the screen, running
-  // on the SAME clock as the veil lifting off it. The phase commits at the
-  // bottom of the dip, so this starts at zero while the veil is deepest and
-  // arrives as the light finishes coming back: the screen rises out of the
-  // dark rather than being uncovered fully-formed behind it.
-  //
-  // OPACITY ONLY. A transform on this wrapper would break every fixed overlay
-  // inside it (modals, the dock, the aim bar), so the rise belongs to the
-  // screens' own elements.
-  // Always the same element, never a branch between a div and a motion.div:
-  // useReducedMotion reads null before hydration, and swapping element types on
-  // it would remount the whole screen one frame in. Stillness zeroes the
-  // duration instead.
-  const still = useReducedMotion()
+  // The layer the swap fades. No key, no AnimatePresence, no entrance of its
+  // own: this ELEMENT stays mounted across every phase change of a run (its
+  // children swap out under it), so the ramp playSwap drives from outside
+  // React is never interrupted by a remount halfway through. Key it and the
+  // ramp restarts mid-fade, which is exactly the stutter this replaces.
   return (
-    <motion.div key={id} data-screen={id}
-      initial={{ opacity: still ? 1 : 0 }} animate={{ opacity: 1 }}
-      transition={{ duration: still ? 0 : SCREEN_FADE_MS / 1000, ease: [0.33, 0, 0.15, 1] }}>
+    <div data-screen={id} ref={el => { screenLayer.current = el }}>
       {children}
-    </motion.div>
+    </div>
   )
 }
 
