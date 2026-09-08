@@ -1736,6 +1736,21 @@ export default function RaidCombat({
   const stageRef      = useRef<HTMLDivElement>(null)
   const playerShipRef = useRef<HTMLDivElement>(null)
   const enemyShipRef  = useRef<HTMLDivElement>(null)
+  /**
+   * ── THE TWO HULLS SPREAD OUT WHEN THERE IS ROOM ────────────────────────
+   *
+   * Everything else in a fight is furniture on one 720px column, and the ships
+   * were pinned inside it too — so on a desktop two ships fought each other
+   * across the middle third of the window with a field of empty water either
+   * side, which reads as a phone screen someone forgot to finish.
+   *
+   * They are not furniture. A broadside is a distance between two hulls, and
+   * the one thing on this screen that should use a wide window is the gap the
+   * shot crosses. So past `useRoomy` they step out past the column's edges,
+   * which they can only do over the sea — on the /raids route the stage clips
+   * (`overflow: hidden`) and a hull hanging off it would be cut in half.
+   */
+  const wide = useRoomy() && overSea
   const [nukeBlast, setNukeBlast] = useState<{ key: number; color: string } | null>(null)
   // Nuke "silo launch" — a missile that arcs from the player's deck to the
   // enemy before the detonation. Geometry measured from the real ship boxes.
@@ -8283,7 +8298,7 @@ export default function RaidCombat({
             e.orot = Number(l.rotate) || 0
           } : undefined}
           style={{
-            position: 'absolute', right: '7%', top: '42%', zIndex: 2,
+            position: 'absolute', right: wide ? '-9%' : '7%', top: '42%', zIndex: 2,
             width: '38%', maxWidth: 185, transformOrigin: 'bottom center',
           }}
         >
@@ -8402,7 +8417,7 @@ export default function RaidCombat({
             p.orot = Number(l.rotate) || 0
           } : undefined}
           style={{
-            position: 'absolute', left: '0%', bottom: '4%', zIndex: 3,
+            position: 'absolute', left: wide ? '-13%' : '0%', bottom: '4%', zIndex: 3,
             width: '68%', maxWidth: 340, transformOrigin: 'bottom center',
           }}
         >
