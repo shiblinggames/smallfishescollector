@@ -171,8 +171,24 @@ export default function StoryScene({ title, lines, ctaLabel, pending, accent, ba
           default: { type: 'spring', stiffness: 220, damping: 26 },
         }}
         style={{
-          position: 'absolute', bottom: 0, [side]: '2%',
-          width: 'min(44vw, 200px)', aspectRatio: '1 / 1',
+          // ── THE BUSTS STAND IN A ROOM, NOT IN THE CORNERS ───────────────
+          //
+          // The same fix BossDialogueModal took, and it belongs here more:
+          // capped at 200px and pinned 2% from each edge, a desktop put two
+          // small figures at opposite ends of a 1,900px window with a field of
+          // empty scene between them, which is a conversation held across a car
+          // park. The clamp grows them with the window instead of stopping
+          // dead, and the offset pulls them into a centred band once the window
+          // is wider than that band, so two speakers stay in one room however
+          // wide the monitor is.
+          //
+          // Both fall back to the old numbers on a phone, where 2% and 44vw
+          // were right all along: `max` picks the 2%, the clamp picks its
+          // floor. The boss scene and the story beat are meant to read as one
+          // film, and they cannot while they are framed differently.
+          position: 'absolute', bottom: 0,
+          [side]: 'max(2%, calc(50% - 540px))',
+          width: 'clamp(170px, 27vw, 360px)', aspectRatio: '1 / 1',
           zIndex: lit ? 2 : 1, pointerEvents: 'none',
           transformOrigin: side === 'left' ? 'bottom left' : 'bottom right',
         }}

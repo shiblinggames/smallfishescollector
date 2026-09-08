@@ -3384,3 +3384,14 @@ body.hardcore-gauntlet::after {
   0%, 100% { opacity: 0.45; }
   50%      { opacity: 1; }
 }
+
+/* THE THING YOU ARE MEANT TO SAIL TO.
+   A quest mark hanging over a hull or a post. It floats rather than pulses:
+   the beat's own light already pulses on the rock underneath it, and two
+   things throbbing at one spot is a fairground. Transform only, so it
+   composites — the marks it rides on are the most expensive things on the
+   chart. */
+@keyframes questFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}

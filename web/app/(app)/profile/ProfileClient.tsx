@@ -3,9 +3,7 @@
 import VaultOfAncients from '@/components/VaultOfAncients'
 import type { VigilState } from '@/lib/ancientVigil'
 import { useEffect, useState, useTransition, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { CrewPortrait } from '@/components/CrewShowcase'
 import { RarestCatchesByZone, FeaturedCrew, RaidArsenal, GoldenMounts, SpecialTackle, type GoldenMount } from '@/components/ProfileShowcase'
 import type { CrewMember } from '@/app/(app)/crew/actions'
@@ -187,7 +185,6 @@ export default function ProfileClient({
   unlockedAvatarSpecials: initialUnlockedSpecials,
   initialProfileBg,
 }: Props) {
-  const router = useRouter()
   const [pending, startTransition] = useTransition()
 
   const [username, setUsername] = useState(initialUsername)
@@ -379,13 +376,6 @@ export default function ProfileClient({
       await equipBadge(badgeId, slot)
     }
     setBadgeSaving(false)
-  }
-
-  async function signOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
   }
 
   return (
@@ -971,33 +961,12 @@ export default function ProfileClient({
         </div>
       )}
 
-      {/* ── Settings ── */}
-      <div style={{ maxWidth: 540, margin: '32px auto 0' }}>
-        <SectionLabel>Settings</SectionLabel>
-        <LetOtherAudioPlayToggle />
-      </div>
-
-      {/* ── Sign out — compact, centered pill (was a full-width bar) ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
-        <button
-          onClick={signOut}
-          className="font-karla font-600 uppercase tracking-[0.14em]"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 7,
-            padding: '0.55rem 1.3rem',
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 999, cursor: 'pointer',
-            fontSize: '0.7rem', color: '#bbb5ad',
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-          Sign Out
-        </button>
-      </div>
+      {/* ── NO SETTINGS AND NO SIGN OUT ON THIS PAGE ──────────────────────
+          Both moved to the settings disc on the sea, top right. This page is
+          who you ARE — the look, the showcase, the record — and the audio
+          session and the way out are things you do to the game rather than to
+          a captain. A heading called Settings two routes away from the button
+          called Settings was the whole problem. */}
 
       {/* ── Showcase picker modal ── */}
 
@@ -1629,78 +1598,5 @@ function LockBadge() {
       <rect x="4" y="11" width="16" height="10" rx="2"/>
       <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
     </svg>
-  )
-}
-
-// Audio session preference — lets the player keep Spotify / Apple Music
-// playing while Small Fishes is open, at the cost of all in-game audio
-// (the `<audio>`-element session keepers in fishingMusic + tideRunAudio
-// are what hold iOS's playback session and steal it from other apps).
-// Read-on-mount so the toggle reflects the persisted choice; the setter
-// releases any active session immediately on flip so the player doesn't
-// have to leave the page to hear their other music start.
-function LetOtherAudioPlayToggle() {
-  const [allow, setAllow] = useState(false)
-
-  useEffect(() => {
-    // Lazy-load the audio-session module client-side so this component
-    // (rendered inside a server-rendered tree) doesn't pull lib code at
-    // build time. The module reads from localStorage on first call.
-    import('@/lib/audioSession').then(m => setAllow(m.getLetOtherAudioPlay()))
-  }, [])
-
-  function toggle() {
-    const next = !allow
-    setAllow(next)
-    import('@/lib/audioSession').then(m => m.setLetOtherAudioPlay(next))
-    if (next) {
-      // Active release — stop any in-flight session keepers so Spotify
-      // can take over the audio focus without the player leaving the page.
-      import('@/lib/fishingMusic').then(m => m.fadeOutFishingMusic(0)).catch(() => {})
-      import('@/lib/tideRunAudio').then(m => m.teardownTideRunAudio()).catch(() => {})
-    }
-  }
-
-  return (
-    <div style={{
-      maxWidth: 540, margin: '0 auto',
-      padding: '0.95rem 1.1rem',
-      background: 'rgba(8,13,22,0.5)',
-      border: '1px solid rgba(255,255,255,0.09)',
-      borderRadius: 18,
-    }}>
-      <button
-        type="button" onClick={toggle}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-          textAlign: 'left', color: 'inherit',
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e8e3d8' }}>
-            Let other apps play music
-          </p>
-          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8680', lineHeight: 1.4, marginTop: 3 }}>
-            Silences in-game music and sound effects so Spotify, Apple Music, or podcasts can keep playing.
-          </p>
-        </div>
-        <span aria-hidden style={{
-          flexShrink: 0,
-          width: 38, height: 22, borderRadius: 999,
-          background: allow ? 'rgba(96,165,250,0.7)' : 'rgba(255,255,255,0.12)',
-          border: `1px solid ${allow ? 'rgba(96,165,250,0.9)' : 'rgba(255,255,255,0.2)'}`,
-          position: 'relative',
-          transition: 'background 0.15s, border-color 0.15s',
-        }}>
-          <span style={{
-            position: 'absolute', top: 2, left: allow ? 18 : 2,
-            width: 16, height: 16, borderRadius: '50%',
-            background: '#f0ede8',
-            transition: 'left 0.15s',
-          }} />
-        </span>
-      </button>
-    </div>
   )
 }

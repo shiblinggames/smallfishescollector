@@ -44,6 +44,15 @@ he is somewhere else afterwards. `FINN_ENCOUNTER_RATE` is 0 and the old roll sit
   expeditions). Chapter unlocks get a one-time parchment celebration overlay.
 - Legendary crew recruitment is campaign-gated: specific story nodes unlock specific
   recruits (`web/lib/legendaryUnlocks.ts`).
+- **The busts stand in a room, not in the corners.** `StoryScene` and `BossDialogueModal`
+  must frame their cast identically or a story beat and a boss scene stop reading as one
+  film. The numbers are `[side]: 'max(2%, calc(50% - 540px))'` and
+  `width: clamp(170px, 27vw, 360px)`: pinned at 2% and capped at 200px, a desktop put two
+  small figures at opposite ends of a 1,900px window with a field of empty scene between
+  them, which is a conversation held across a car park. The clamp grows them with the
+  window; the offset pulls them into a centred band once the window is wider than the
+  plate (540px), so two speakers stay in one room however wide the monitor is. Both fall
+  back to the old numbers on a phone, where 2% and 44vw were right all along.
 
 ## Voice and naming rules (hard rules, from repeated review)
 

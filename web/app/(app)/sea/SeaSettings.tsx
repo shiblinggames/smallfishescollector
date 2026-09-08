@@ -2,9 +2,14 @@
 
 // ── THE SETTINGS DISC, TOP RIGHT ────────────────────────────────────────────
 //
-// Three switches, and every one of them turns something OFF that is on by
-// default. That is the whole shape of this panel and it is why there is no
-// "restore defaults": the defaults are what you get by not touching it.
+// Switches, and every one of them turns something OFF that is on by default.
+// That is the whole shape of this panel and it is why there is no "restore
+// defaults": the defaults are what you get by not touching it.
+//
+// EVERYTHING THAT IS NOT THE GAME LIVES HERE, which now includes the audio
+// session and the way out. Both were on the profile page under a heading that
+// said Settings, which is a reasonable place for them and a bad place to look:
+// the disc up here is the one thing in the whole app labelled Settings.
 //
 // ── ON THE RIGHT, ALONE ─────────────────────────────────────────────────────
 //
@@ -26,8 +31,10 @@
 // question people actually have, which is "make it stop".
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
+import { createClient } from '@/lib/supabase/client'
 import { allSettings, setSetting, type SeaSetting } from '@/lib/seaSettings'
 
 const SEA = 'rgba(180,214,232'
@@ -71,14 +78,56 @@ function Switch({ on, onToggle, label, note }: {
   )
 }
 
+/**
+ * ── THE AUDIO SESSION, WHICH IS NOT ONE OF THE THREE ───────────────────────
+ *
+ * The switches above are `seaSettings` keys: three flags in one module with one
+ * shape. This is a FOURTH thing that happens to be a switch, and it lives in
+ * `audioSession` because two audio modules read it directly at their entry
+ * points and neither of them knows this panel exists.
+ *
+ * It is also the only one here that is inverted. The others are "is this
+ * happening"; this one is "is the game keeping its hands off", so ON means the
+ * game goes quiet. Rather than teach `seaSettings` a key that means the
+ * opposite of every other key in it, the panel holds this one itself.
+ *
+ * WHY IT MOVED. It was on the profile page, under a heading called Settings,
+ * two taps and a route away from the disc labelled Settings. A player looking
+ * for the sound controls opens the sound controls.
+ */
+function useOtherAudio(): [boolean, () => void] {
+  const [allow, setAllow] = useState(false)
+  // Lazy, so a panel that never opens never pulls the audio modules.
+  useEffect(() => { void import('@/lib/audioSession').then(m => setAllow(m.getLetOtherAudioPlay())) }, [])
+  const flip = useCallback(() => {
+    setAllow(prev => {
+      const next = !prev
+      void import('@/lib/audioSession').then(m => m.setLetOtherAudioPlay(next))
+      if (next) {
+        // AN ACTIVE RELEASE. The session keepers are already holding iOS's
+        // playback session, and a flag alone would not let go of it until the
+        // player left the page. Whoever they were listening to comes back now.
+        void import('@/lib/fishingMusic').then(m => m.fadeOutFishingMusic(0)).catch(() => {})
+        void import('@/lib/tideRunAudio').then(m => m.teardownTideRunAudio()).catch(() => {})
+      }
+      return next
+    })
+    vibrate(8)
+  }, [])
+  return [allow, flip]
+}
+
 export default function SeaSettings({ size, top }: {
   /** The HUD's disc size, so this matches the run on the other side. */
   size: number
   /** Same vertical as that run. */
   top: number
 }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [s, setS] = useState(() => allSettings())
+  const [otherAudio, flipOtherAudio] = useOtherAudio()
+  const [leaving, setLeaving] = useState(false)
   const wrap = useRef<HTMLDivElement | null>(null)
 
   // Read again on open. Nothing else writes these today, but the panel is the
@@ -164,6 +213,47 @@ export default function SeaSettings({ size, top }: {
               on={s.sfx} onToggle={() => flip('sfx')} />
             <Switch label="Bite timer" note="The running count while you wait on a bite."
               on={s.biteTimer} onToggle={() => flip('biteTimer')} />
+            <Switch label="Let other apps play music"
+              note="Silences the game so Spotify, a podcast or anything else can keep playing."
+              on={otherAudio} onToggle={flipOtherAudio} />
+
+            {/* ── THE WAY OUT ──────────────────────────────────────────────
+                Last, alone, and deliberately not a switch. It was at the foot
+                of the profile page, which is a reasonable place for it and a
+                terrible place to LOOK for it: signing out is not something you
+                do about your profile, it is something you do about the game,
+                and the game's knobs are here. Nothing else in this panel is
+                destructive, so it gets a rule above it and none of the panel's
+                colour. */}
+            <button type="button" data-no-steer
+              onClick={() => {
+                if (leaving) return
+                setLeaving(true)
+                vibrate(10)
+                void (async () => {
+                  await createClient().auth.signOut()
+                  router.push('/login')
+                  router.refresh()
+                })()
+              }}
+              className="font-karla font-700 uppercase"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                width: '100%', margin: '0.55rem 0 0.35rem', padding: '0.55rem',
+                borderRadius: 10, cursor: leaving ? 'wait' : 'pointer',
+                fontSize: '0.62rem', letterSpacing: '0.14em',
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${SEA},0.18)`,
+                color: `${SEA},0.62)`,
+              }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              {leaving ? 'Casting off' : 'Sign out'}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

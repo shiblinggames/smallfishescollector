@@ -689,6 +689,33 @@ never shown.
 Anything already on screen is dropped — an arrow to something you can see is noise. Only the
 two marks you ACT on (the port and the buyer) carry a distance readout.
 
+**It answers for the side you are sailing, and only that side** (`side: 'fishing' |
+'anchorage' | 'bays'`). The compass was written when there was one sea and kept answering with
+the whole chart after there were two: out in a bay it was still naming Open Waters, the
+Ancient Deep, the Trawl Harbour and the zone's buyer — five arrows at fishing, none of them
+reachable without a full crossing, on the one surface where the arrows ARE the navigation.
+The split is the reef (`p.y < NORTH_WALL`) and it cuts both ways, so the Crew Hall and the
+Forge stopped appearing over the horizon from the Shallows in the same change. Three values
+rather than two because the expedition half has an inside and an outside: in the anchorage the
+reef's gap is the way back and is named **Fishing**; out in a bay the sortie is between you
+and that gap, so the harbour ports are dropped entirely (they are one heading printed three
+times) and a single **The Anchorage** mark points at the sortie. Friends are filtered to your
+own side for the same reason. On the fishing side nothing changed.
+
+## What the campaign marks on the water
+
+**A gold `?` over the next stop, a green tick over every cleared one** (`NodeGlyph`, worn by
+`EncounterMark`, `CacheMark` and `BeatMark`). A bay is ten thousand pixels of open water with
+a handful of things standing in it, and until this every one of them looked equally like the
+thing to do — the compass says which way, this says which ONE. The `?` floats; the tick does
+not, because a record that bobs is asking for attention it does not want. The tick is
+`AshoreTick`'s disc and green exactly, which is what "you have been here" already means on
+every isle south of the reef; a second green would be two lessons for one idea. Available but
+not next gets **nothing** — marking every open stop would put a `?` on half the bay and answer
+the question it was added to answer. Locked gets nothing either: the drained hull already says
+not yet. `nextId` is the chart's own `nextStop`, the same answer the compass and the HUD use,
+so the three can never point at different things.
+
 ## Controls
 
 - **A tap is a short hop** toward where you touched, distance capped (`TAP_HOP`).
@@ -1045,6 +1072,18 @@ notice, because it looks tappable and past Fishing 100 genuinely is.
 
 **A control is a control on every path that can reach it.** When adding a new steer path,
 copy the guard.
+
+**And a press that did not land on the chart is not the chart's.** Both paths now bail on
+`!wrapRef.current.contains(e.target)`. A React **portal bubbles along the React tree, not the
+DOM one**, so every overlay this file opens over `<body>` — the fight, a story beat, a sheet —
+delivers its presses to the map as though they had happened on the water. `fightOnRef` covered
+one of them by name; this covers all of them, including the ones nobody has written yet.
+
+It is not cosmetic. The last line of `onDown` **captures the pointer** to the chart, and once
+it has, the click that follows is retargeted to the capture element — so the overlay's own
+`onClick` never runs at all. That is why tapping through a story beat did nothing while the
+boat quietly took a heading behind it: not a z-index problem and not a pointer-events problem,
+a pointer-capture problem. A press that landed elsewhere has to leave before the capture.
 
 The bar itself was also mounted without `renownAvailable` or `onOpenRenown` — `XPBarDisplay`
 only makes its MAX chip tappable when both are set — so a captain at 100 had a Renown readout
@@ -1563,6 +1602,27 @@ content it grew and shrank on every tap, which drags the close button and half t
 to a new place mid-read and makes the panel feel like it is arguing with you. The scrolling
 child needs `minHeight: 0` or it grows to its content and pushes the box open anyway, which
 is the exact failure the fixed height exists to prevent.
+
+## The settings disc
+
+**Top right, alone, away from the run of discs down the left.** Those are places you are going;
+this is the knobs on the outside of the game, and putting it at the end of that run would say
+it was another destination. Switches, not sliders: every one turns something OFF that is on by
+default, which is why there is no "restore defaults".
+
+`music`, `sfx` and `biteTimer` are `lib/seaSettings` keys — **localStorage, deliberately**, and
+the one exception to the house rule that anything one-time lives in a profile column. Those
+flags are true of a DEVICE, not a player: turning the music off on a train must not silence the
+speakers at home.
+
+**Two things moved here off the profile page: the audio session and signing out.** Both sat
+under a heading called Settings, two taps and a route away from the disc labelled Settings — a
+player looking for the sound controls opens the sound controls. *Let other apps play music* is
+held by the panel itself rather than added to `seaSettings`, because it lives in
+`lib/audioSession` (two audio modules read it at their own entry points) and it is the only
+inverted one here: ON means the game goes quiet. Flipping it on also actively releases the
+session keepers, or the player's podcast would not come back until they left the page. Signing
+out is last, ruled off, and wears none of the panel's colour.
 
 **There is no clock in the corner.** There was a disc up there reading out the phase, and it
 was the only glyph in the row that answered a question nobody asks: the sky already says what

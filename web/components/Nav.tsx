@@ -421,12 +421,23 @@ export default function Nav({ doubloons, gems, canSail = false }: {
 
   return (
     <>
-      {/* Desktop top bar */}
-      <div className="hidden sm:block" style={{ height: 64 }} />
-      <nav className="hidden sm:flex border-b border-[rgba(255,255,255,0.15)] px-6 py-4 items-center justify-between" style={{ background: navBg(tint), position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
-        <Link href="/" className="flex items-center gap-2 font-cinzel font-700 text-[#f0ede8] tracking-wide text-sm uppercase">
+      {/* ── Desktop top bar ──────────────────────────────────────────────
+          COMPACT. It was 64px tall: 16px of padding above and below a 36px
+          avatar, with the tabs at 12px and the logo at 14. On a laptop that is
+          a fifth of the vertical run of a page spent on a row you read once,
+          and on the sea — which is a full-bleed world and the game's main
+          screen — it is 64px of chrome laid over the water.
+
+          Nothing left the row. It is the same eight tabs, the same chips, the
+          same avatar, at the size a persistent bar should have been: 48px, and
+          the spacer below matches it exactly or the first screenful of every
+          page starts under the nav. Overlays that clear the header measure it
+          at 72-80px, so shrinking it only ever gives them more room. */}
+      <div className="hidden sm:block" style={{ height: 48 }} />
+      <nav className="hidden sm:flex border-b border-[rgba(255,255,255,0.15)] px-5 py-2 items-center justify-between" style={{ background: navBg(tint), position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
+        <Link href="/" className="flex items-center gap-1.5 font-cinzel font-700 text-[#f0ede8] tracking-wide text-[0.8rem] uppercase whitespace-nowrap">
           Small Fishes
-          <span style={{ fontSize: '0.48rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.4rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
+          <span style={{ fontSize: '0.44rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.25)', color: '#f0c040', borderRadius: 4, padding: '0.15rem 0.4rem', letterSpacing: '0.12em', lineHeight: 1.4, fontFamily: 'inherit' }}>
             BETA
           </span>
         </Link>
@@ -440,10 +451,10 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             hidden scrollbar, and the chips — the thing a captain checks most —
             always stay on screen. whitespace-nowrap keeps any two-word tab
             from folding into two lines mid-scroll. */}
-        <div className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-hide whitespace-nowrap ml-8 gap-2 text-xs font-karla font-600 uppercase tracking-[0.12em]">
+        <div className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-hide whitespace-nowrap ml-6 gap-1 text-[0.66rem] font-karla font-600 uppercase tracking-[0.1em]">
           {[...links, ...desktopOnlyLinks, ...(isAdmin ? [{ href: '/dev/stats', label: 'Admin', badge: null }] : [])].map(({ href, label, badge }) => (
             <Link key={href} href={href}
-              className={`py-2 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
+              className={`py-1.5 px-2 transition-colors duration-200 ${pathname === href || pathname.startsWith(href + '/') ? 'text-[#f0ede8]' : 'text-[#a0a09a] hover:text-[#f0ede8]'}`}>
               {label}
               {typeof badge === 'number' && badge > 0 && <span className="ml-1.5 text-[#f0c040]">· {badge}</span>}
               {badge === true && <span className="inline-block ml-1.5 w-1.5 h-1.5 rounded-full bg-[#f0c040] translate-y-[-1px]" />}
@@ -451,9 +462,9 @@ export default function Nav({ doubloons, gems, canSail = false }: {
           ))}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {displayGems !== undefined && (
-            <span className="font-cinzel font-700" style={{ fontSize: '0.875rem', color: '#a78bfa' }}>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#a78bfa' }}>
               <TickingNumber value={displayGems} /> ◆
             </span>
           )}
@@ -461,7 +472,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             <span
               data-doubloon-pill
               className="font-cinzel font-700 text-[#f0c040]"
-              style={{ fontSize: '0.875rem' }}
+              style={{ fontSize: '0.78rem' }}
             >
               <TickingNumber value={displayDoubloons} /> ⟡
             </span>
@@ -471,18 +482,20 @@ export default function Nav({ doubloons, gems, canSail = false }: {
             href="/profile"
             className="flex items-center justify-center rounded-full transition-all duration-200"
             style={{
-              width: 36, height: 36,
+              // The tallest thing in the row, so it is what sets the bar's
+              // height. 36 + 16 of padding was the 64; 30 + 8 is the 48.
+              width: 30, height: 30,
               padding: 0,
               borderRadius: '50%',
               border: pathname === '/profile' ? '1.5px solid rgba(240,192,64,0.65)' : '1.5px solid rgba(255,255,255,0.18)',
               boxShadow: pathname === '/profile' ? '0 0 12px rgba(240,192,64,0.3)' : 'none',
-              overflow: 'hidden',
+              overflow: 'hidden', flexShrink: 0,
             }}
           >
             <CharacterAvatar
               characterColor={characterColor}
               equippedHat={equippedHat}
-              size={32}
+              size={26}
               bgColor={avatarBg ?? undefined}
               ringColor={avatarBorder ?? undefined}
               borderStyle="none"

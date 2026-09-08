@@ -5326,6 +5326,9 @@ export default function SeaMap({
 
   const onTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (swallowTap.current) return
+    // OFF-CHART PRESSES ARE NOT COURSES — see the note in onDown. Both paths
+    // fire from the same press and a guard on one path is not a guard.
+    if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) return
     // THE SAME GUARD onDown HAS. It was on the pointer path and not this one,
     // so anything marked `data-no-steer` still put the helm over on the click
     // that followed — the level bar being the one you actually notice, because
@@ -5393,6 +5396,21 @@ export default function SeaMap({
   }, [toWorld, near, locked, enter])
 
   const onDown = useCallback((e: React.PointerEvent) => {
+    // ── IF THE PRESS DID NOT LAND ON THE CHART, IT IS NOT THE CHART'S ────
+    //
+    // A React PORTAL bubbles along the REACT tree, not the DOM one, so every
+    // overlay this file opens over the body — the fight, a cutscene, a sheet —
+    // still delivers its presses here as though they had happened on the
+    // water. `fightOnRef` covers one of those by name; this covers all of
+    // them, including the ones nobody has written yet.
+    //
+    // AND IT IS NOT COSMETIC. The last line of this handler CAPTURES the
+    // pointer to the chart. Once it has, the click that follows is retargeted
+    // to the capture element, so the overlay's own onClick never runs at all:
+    // that is why tapping through a story beat did nothing while the boat
+    // quietly took a heading behind it. A press that landed somewhere else has
+    // to leave before that capture happens.
+    if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) return
     // Anything with a button in it is a control, not the sea. Cast, Reel In,
     // the prompt and the trader panel all live inside this element.
     if ((e.target as HTMLElement).closest('button, [data-no-steer]')) return
@@ -7379,6 +7397,7 @@ export default function SeaMap({
 
         {/* The campaign, standing in its own water. */}
         <EncounterField bay={liveBay} status={liveStatus} shown={shown} revealed={revealed}
+          nextId={nextStop?.node.id ?? null}
           nearId={nearEnc?.node ?? null}
           nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null}
           cleared={liveCleared} nearHomeId={nearWayHome?.bay ?? null}
@@ -8430,6 +8449,9 @@ hullRef={hullRefFor(t.key)} />
       {!hudOff && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars}
           finn={finnBearing}
+          // WHICH SEA'S HEADINGS TO GIVE — see the note on the prop. Past the
+          // rim the harbour is behind you and the bays are the whole world.
+          side={onSortie ? 'bays' : inAnchorage ? 'anchorage' : 'fishing'}
           // ONLY OUT PAST THE REEF, and only while there is something waiting.
           // On the fishing side the campaign is somewhere else entirely and an
           // arrow pointing over the horizon at it would be noise.
@@ -11227,6 +11249,73 @@ const AshoreTick = memo(function AshoreTick() {
  * isles exist to ask.
  */
 /**
+ * ── THE MARK OVER A CAMPAIGN STOP ───────────────────────────────────────────
+ *
+ * A gold "?" over the one place the chain wants you next, and a green tick over
+ * everything you have finished. The oldest signage in the genre, and it is here
+ * for the oldest reason: a bay is ten thousand pixels of open water with a
+ * handful of things standing in it, and until now every one of those things
+ * looked equally like the thing to do. The compass says which way; this says
+ * which ONE.
+ *
+ * ── IT IS THE FISHING SEA'S TICK, DELIBERATELY ──────────────────────────────
+ *
+ * The same dark disc and the same muted green as `AshoreTick`, which is what
+ * says "you have been here" over every isle south of the reef. A captain has
+ * already learned that mark. A second green for done on the other half of the
+ * game would be two lessons for one idea.
+ *
+ * ── AND NOTHING FOR EVERYTHING ELSE ─────────────────────────────────────────
+ *
+ * Available-but-not-next gets no glyph at all. Marking every open stop would
+ * put a "?" on half the bay and answer nothing, which is exactly the state this
+ * fixes. Locked gets nothing either: the drained hull already says not yet.
+ *
+ * ONE PER STOP, hanging above the mark rather than on it, so it reads over a
+ * hull, a chest and a post alike without any of them making room for it.
+ */
+const NodeGlyph = memo(function NodeGlyph({ kind, lift }: {
+  kind: 'next' | 'done'
+  /** How far above the mark's own top it hangs, in world pixels. A hull wants
+   *  more clearance than a chest — see the call sites. */
+  lift: number
+}) {
+  const next = kind === 'next'
+  const d = next ? 34 : 26
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: '50%', bottom: '100%',
+      transform: 'translate(-50%, 0)', marginBottom: lift,
+      pointerEvents: 'none', zIndex: 2,
+      // The float, and only on the one that is asking. A tick is a record, and
+      // a record that bobs is asking for attention it does not want.
+      animation: next ? 'questFloat 2.4s ease-in-out infinite' : undefined,
+    }}>
+      {next ? (
+        <span className="font-cinzel font-800" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: d, height: d, borderRadius: '50%',
+          fontSize: d * 0.62, lineHeight: 1, paddingBottom: 2,
+          color: '#2a1e06',
+          background: 'linear-gradient(180deg, #f6ce5c, #dda42c)',
+          border: '1.5px solid rgba(255,232,164,0.9)',
+          boxShadow: '0 0 18px rgba(240,192,64,0.55), 0 4px 10px rgba(0,0,0,0.55)',
+        }}>?</span>
+      ) : (
+        // The tick is DRAWN, not typed — see AshoreTick, which is this same
+        // mark on the fishing side and explains why a ✓ character is not one.
+        <svg width={d} height={d} viewBox="0 0 24 24" role="img" aria-label="Cleared"
+          style={{ display: 'block', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }}>
+          <circle cx="12" cy="12" r="11" fill="rgba(10,22,18,0.86)" stroke="rgba(150,206,172,0.75)" strokeWidth="1.6" />
+          <path d="M7 12.4l3.2 3.2L17 8.8" fill="none" stroke="#9fdcb6" strokeWidth="2.6"
+            strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </div>
+  )
+})
+
+/**
  * ── A CAMPAIGN ENCOUNTER, ON THE WATER ──────────────────────────────────────
  *
  * IT IS A SHIP. You sail up to a hull floating in the bay and take it on from
@@ -11355,10 +11444,12 @@ const DockMark = memo(function DockMark({ enc, isNear }: {
   )
 })
 
-const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef }: {
+const EncounterMark = memo(function EncounterMark({ enc, status, isNear, isNext, hullRef }: {
   enc: Encounter
   status: string
   isNear: boolean
+  /** The campaign's next stop. Wears the "?" — see NodeGlyph. */
+  isNext: boolean
   /** Handed in only for the hull currently being fought, so the fight over the
    *  chart can shake, list and sink the ship you actually sailed up to. */
   hullRef?: React.Ref<HTMLDivElement>
@@ -11406,6 +11497,12 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
           ? 'radial-gradient(ellipse, rgba(6,12,18,0.55) 0%, transparent 70%)'
           : 'radial-gradient(ellipse, rgba(6,12,18,0.44) 0%, transparent 72%)',
       }} />
+
+      {/* WHICH ONE OF THESE IS THE CAMPAIGN. Outside the fight layer below, so
+          the shudder and the long roll of a sinking ship never carry it. The
+          lift clears a hull, which is the tallest mark on the water. */}
+      {!hullRef && (cleared ? <NodeGlyph kind="done" lift={w * 0.1} />
+        : isNext ? <NodeGlyph kind="next" lift={w * 0.1} /> : null)}
 
       {/* THE FIGHT'S OWN LAYER, and the reason it is separate from the bob
           below: a CSS animation beats an inline transform, so a shake written
@@ -11508,10 +11605,11 @@ const EncounterMark = memo(function EncounterMark({ enc, status, isNear, hullRef
  * one of those means and a second visual language for "there is something in
  * this" would be two lessons for one idea.
  */
-const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
+const CacheMark = memo(function CacheMark({ cache, status, isNear, isNext }: {
   cache: Cache
   status: string
   isNear: boolean
+  isNext: boolean
 }) {
   const at = cacheAt(cache)
   const isle = cacheIsle(cache)
@@ -11538,6 +11636,8 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
           ? 'radial-gradient(ellipse, rgba(6,12,18,0.45) 0%, transparent 70%)'
           : 'radial-gradient(ellipse, rgba(240,192,64,0.22) 0%, transparent 72%)',
       }} />
+      {cleared ? <NodeGlyph kind="done" lift={w * 0.3} />
+        : isNext ? <NodeGlyph kind="next" lift={w * 0.3} /> : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={cleared ? '/sea/isle-chest-open.png' : '/sea/isle-chest.png'}
         alt="" draggable={false} decoding="async" style={{
@@ -11583,10 +11683,11 @@ const CacheMark = memo(function CacheMark({ cache, status, isNear }: {
  * and a post you can SEE and cannot yet read is the reason to come back. The
  * helm names it and refuses; silence would read as broken.
  */
-const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
+const BeatMark = memo(function BeatMark({ beat, status, isNear, isNext }: {
   beat: Beat
   status: string
   isNear: boolean
+  isNext: boolean
 }) {
   const at = beatAt(beat)
   const isle = beatIsle(beat)
@@ -11625,6 +11726,10 @@ const BeatMark = memo(function BeatMark({ beat, status, isNear }: {
         borderRadius: '50%',
         background: 'radial-gradient(ellipse, rgba(6,12,18,0.45) 0%, transparent 70%)',
       }} />
+      {/* The post art is tall and narrow, so the glyph hangs off its own top
+          rather than off the rock: half a post's width of clearance. */}
+      {cleared ? <NodeGlyph kind="done" lift={w * 0.5} />
+        : isNext ? <NodeGlyph kind="next" lift={w * 0.5} /> : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/sea/isle-note.png" alt="" draggable={false} decoding="async" style={{
         // maxWidth none, or the shrink-wrapped wrapper can zero it — see the
@@ -11773,7 +11878,11 @@ function verbFor(n: RaidNode, status: string): string {
   return 'Read'
 }
 
-const EncounterField = memo(function EncounterField({ bay, status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId, fightNode, hullRef, shown, revealed }: {
+const EncounterField = memo(function EncounterField({ bay, status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId, fightNode, hullRef, shown, revealed, nextId }: {
+  /** The campaign's next stop, which wears the "?" — see NodeGlyph. The chart
+   *  already resolves it for the compass and the HUD, so this is the same
+   *  answer rather than a second one that could disagree with them. */
+  nextId: string | null
   /** Whether a node is on the water at all for this captain. */
   shown: (id: string) => boolean
   /** Nodes that appeared THIS SESSION, so their marks can arrive rather than
@@ -11831,11 +11940,11 @@ const EncounterField = memo(function EncounterField({ bay, status, nearId, nearC
       const id = it.kind === 'ship' ? it.e.node : it.kind === 'cache' ? it.c.node : it.b.node
       const mark = it.kind === 'ship'
         ? <EncounterMark enc={it.e}
-            status={status[id] ?? 'locked'} isNear={nearId === id}
+            status={status[id] ?? 'locked'} isNear={nearId === id} isNext={nextId === id}
             hullRef={fightNode === id ? hullRef : undefined} />
         : it.kind === 'cache'
-          ? <CacheMark cache={it.c} status={status[id] ?? 'locked'} isNear={nearCacheId === id} />
-          : <BeatMark beat={it.b} status={status[id] ?? 'locked'} isNear={nearBeatId === id} />
+          ? <CacheMark cache={it.c} status={status[id] ?? 'locked'} isNear={nearCacheId === id} isNext={nextId === id} />
+          : <BeatMark beat={it.b} status={status[id] ?? 'locked'} isNear={nearBeatId === id} isNext={nextId === id} />
       // ARRIVING, not simply being there. Only for something that opened while
       // you were looking: on a fresh load every mark you own would otherwise
       // rise out of the sea at once, which is a cutscene nobody asked for.
@@ -12825,7 +12934,30 @@ type CompassRegular = {
  *  was 96) let two centres pass while the words lay on each other. */
 const COMPASS_KEEP = { x: 120, y: 42 }
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next, side }: {
+  /**
+   * ── WHICH HALF OF THE GAME YOU ARE SAILING ──────────────────────────────
+   *
+   * The compass was written when there was one sea, and it kept answering with
+   * the whole chart after there were two. Out past the reef it was still
+   * naming Open Waters, the Ancient Deep, the Trawl Harbour and the zone's
+   * buyer: five arrows pointing at fishing, none of which is reachable from a
+   * bay without a full crossing, on the one surface where the arrows are the
+   * only navigation there is.
+   *
+   * So every mark below asks which side it belongs to, and the answer is the
+   * one number that separates them: the reef. Places north of NORTH_WALL are
+   * the expedition side, everything south is the fishing grounds, and the
+   * compass shows the side you are on. It cuts BOTH ways — the Crew Hall and
+   * the Forge stopped appearing over the horizon from the Shallows in the same
+   * change.
+   *
+   * THREE VALUES AND NOT TWO, because the expedition half has an inside and an
+   * outside. In the anchorage the reef's gap is the way back to fishing; out in
+   * a bay the sortie is between you and that gap, and what you actually want
+   * pointing at is the harbour itself.
+   */
+  side: 'fishing' | 'anchorage' | 'bays'
   /**
    * THE CAMPAIGN'S NEXT STOP, out on the expedition side.
    *
@@ -12866,6 +12998,9 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
    *  mark that does not help you meet. */
   friends: FriendAtSea[]
 }) {
+  const north = side !== 'fishing'
+  const inExpHub = side === 'anchorage'
+
   const [, force] = useState(0)
   useEffect(() => {
     // 200ms. An arrow that updates five times a second is indistinguishable
@@ -12984,7 +13119,17 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     })
   }
 
-  const ports = PLACES.filter(p => p.kind === 'port')
+  // ── ONLY THIS SIDE'S DOORS ───────────────────────────────────────────
+  //
+  // See the `side` note: the anchorage's three and the fishing grounds' eight
+  // are two different lists of places, and an arrow at one from inside the
+  // other is a heading you cannot take.
+  //
+  // AND NONE AT ALL FROM A BAY. The hall, the forge and the posting house are
+  // all inside the harbour, so from out here every one of them is really the
+  // same heading — the sortie — printed three times under three names. The
+  // sortie itself is pushed below, once.
+  const ports = (side === 'bays' ? [] : PLACES.filter(p => p.kind === 'port' && (p.y < NORTH_WALL) === north))
     .map(p => ({ p, ...project(p.x, p.y) }))
     // CREW WAITING OUTRANKS PROXIMITY. The nearest port is the one you need to
     // find your way home by; a dock with somebody standing on it is the one you
@@ -13009,6 +13154,9 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   // minutes and it simply stops moving. An arrow that vanished the instant a
   // flush was missed would blink every time somebody hit a tunnel.
   for (const f of friends) {
+    // Same side only. A mate in the Abyss is not somewhere you can meet from a
+    // bay, and the arrow would sit on the horizon for the whole voyage.
+    if ((f.y < NORTH_WALL) !== north) continue
     const at = project(f.x, f.y)
     marks.push({
       id: `friend:${f.username}`, name: f.username, dim: false, dist: true,
@@ -13037,15 +13185,40 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
   //
   // Never dimmed and never hidden. Expeditions is not gated on anything the
   // chart knows about, and a door you cannot find is a door that is shut.
-  {
+  //
+  // AND IT IS THE WAY BACK TOO. From the anchorage the same gap is the only
+  // road to the fishing grounds and is just as unfindable by sweeping, so the
+  // mark stays and only its name changes. Not offered from a BAY: out there the
+  // sortie is between you and it, and an arrow pointing through a wall at
+  // something four crossings away is a lie about how far you have to go.
+  if (!north || inExpHub) {
     const g = project(GATE_X, NORTH_WALL)
     marks.push({
-      id: 'gate', name: 'Expeditions', dim: false, dist: true,
+      id: 'gate', name: north ? 'Fishing' : 'Expeditions', dim: false, dist: true,
       sx: g.sx, sy: g.sy, world: g.world,
     })
   }
 
-  const waters = PLACES.filter(p => p.kind === 'water' && p.inner != null && p.outer != null)
+  // ── AND THE SORTIE, FROM OUT IN THE BAYS ─────────────────────────────
+  //
+  // The mouth of the anchorage, which is where everything you do between
+  // voyages is: the hall, the forge, the posting house, the berth. Out in a bay
+  // it is the way in to all of them and there is nothing on the water pointing
+  // at it.
+  if (north && !inExpHub) {
+    const g = project(SORTIE.x, SORTIE.y)
+    marks.push({
+      id: 'sortie', name: 'The Anchorage', dim: false, dist: true,
+      sx: g.sx, sy: g.sy, world: g.world,
+    })
+  }
+
+  // EVERYTHING FROM HERE DOWN IS THE FISHING SEA — the bands, the buyer of the
+  // water you are in, and the regulars who work it. All three are concentric
+  // rings around the Mainland and none of them exists north of the reef, so out
+  // there they are not merely unhelpful, they are arrows aimed at a coastline
+  // on the other side of a wall.
+  const waters = north ? [] : PLACES.filter(p => p.kind === 'water' && p.inner != null && p.outer != null)
   const R = Math.hypot(here.x, here.y)
   const inIdx = waters.findIndex(w => inBand(here, w))
 
