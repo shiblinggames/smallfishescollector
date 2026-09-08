@@ -1658,6 +1658,12 @@ finishing a chapter; the thing that actually needs a road home is a boss you are
   simply appeared somewhere else, which is the one moment on this chart where a captain does
   not believe they have travelled. The well itself winds up while you float in it
   (`gpu.home(i)`), indexed off the same filtered list `gpuHomes` builds from.
+- **And she comes UP.** The going was a whole event and the arriving was a boat that was simply
+  there when the light cleared — half a passage. Three beats at the destination, all borrowed
+  from what this sea already draws: `summon` (light rising under the hull), then `splash` at
+  +110ms (the water giving), then `gunshock` at +190ms (the swell running out from where she
+  broke it). The timers are ref'd and cleared, so a passage cut short never fires them into
+  water the captain has left.
 
 **And the landing check was testing the old design.** It measured `PORTAL_HOME` against the
 HARBOUR and had been failing for months, correctly reporting a rule that had stopped being the

@@ -54,6 +54,19 @@ the renown allocator. A bar says how far along you are and nothing about what be
 worth. The panel answers four questions — what it takes to reach the next level, what this one
 pays you now, what the next one changes, and what is waiting further up.
 
+**A stat is one fact with a trajectory, not two facts.** The first cut had a block for what
+your level gives you and a second for what the next one gives, and the second was mostly the
+first with different numbers — Catch band, Crew stats and Berths each appeared twice, three
+lines apart, to be diffed by eye. Worse, four levels in five the honest answer was `+0`, so the
+block existed to say nothing. A stat gets ONE row carrying the arrow: `+8° → +9° at 45`. What
+is left over — a water opening, a hull, a milestone payout, a campaign gate — is not a stat at
+all; those are EVENTS at a level, and they get a list of the next three, whatever kind they
+are. Anything already on a stat row is deliberately absent from it.
+
+**The explanations are behind a tap.** Every stat has a sentence and those sentences were most
+of the text on the screen: ten rows, two lines each, before you reached anything. One at a
+time, on the row itself.
+
 **Every number in it is DERIVED**, from the same functions the game plays by: `levelCatchBonus`,
 `navLevelBonuses`, `crewCapacity`, `rewardForLevel`, the zone table's `minLevel`, and the gear
 and hull gates in `gearGating`. Nothing is a hand-typed copy of a rule that lives elsewhere —

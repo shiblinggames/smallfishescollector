@@ -2830,6 +2830,11 @@ export default function SeaMap({
    * The move happens at the SEAM, not on the press, which is the whole trick:
    * `warpTo` snaps the camera, and a snap under a white screen is not a snap.
    */
+  /** The two beats of the arrival, so a passage cut short does not fire them
+   *  into water the captain has already left. */
+  const arriveT1 = useRef<number | null>(null)
+  const arriveT2 = useRef<number | null>(null)
+
   const jumpTo = useCallback((x: number, y: number, accent: string) => {
     setPortalOpen(false)
     vibrate([14, 60, 22, 60, 30])
@@ -2842,9 +2847,35 @@ export default function SeaMap({
     // Half a second under, half a second out. Long enough to be a passage,
     // short enough that a captain hopping between two waters is not waiting on
     // a cutscene every time.
-    const go = setTimeout(() => warpTo(warping.x, warping.y), WARP_MS)
+    const go = setTimeout(() => {
+      warpTo(warping.x, warping.y)
+      // ── AND SHE COMES UP ────────────────────────────────────────────
+      //
+      // The going was a whole event and the arriving was a boat that was
+      // simply there when the light cleared. Half a passage: the water she
+      // left made way for her and the water she landed in did not notice.
+      //
+      // Three things, all on the canvas at the destination and all borrowed
+      // from things this sea already does — light coming up under a hull,
+      // water breaking, and the ring a heavy thing pushes out. The gap is the
+      // surfacing: light first, then the water gives, then the swell runs out
+      // from where she broke it.
+      const tint = parseInt(warping.accent.replace('#', ''), 16)
+      const at = { x: warping.x, y: warping.y }
+      gpuRef.current?.summon(at.x, at.y, Number.isFinite(tint) ? tint : 0x96d6ff, 1)
+      arriveT1.current = window.setTimeout(() => {
+        gpuRef.current?.splash(at.x, at.y, 0, false)
+      }, 110)
+      arriveT2.current = window.setTimeout(() => {
+        gpuRef.current?.gunshock(at.x, at.y)
+      }, 190)
+    }, WARP_MS)
     const done = setTimeout(() => setWarping(null), WARP_MS * 2)
-    return () => { clearTimeout(go); clearTimeout(done) }
+    return () => {
+      clearTimeout(go); clearTimeout(done)
+      if (arriveT1.current) clearTimeout(arriveT1.current)
+      if (arriveT2.current) clearTimeout(arriveT2.current)
+    }
   }, [warping, warpTo])
 
   const buyTier = useCallback(async () => {
