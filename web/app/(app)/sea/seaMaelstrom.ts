@@ -272,8 +272,11 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     // gradient that reaches the texture's edge before it reaches zero draws
     // the edge — a straight line across the sea where the storm was clipped.
     const storm = sprite(holeTex!, R * 2.0, 0x000000, 0)
-    const funnel = sprite(holeTex!, R * 2.1, 0x000000, 0.7)
-    const hole = sprite(holeTex!, R * 0.5, 0x000000, 0.96)
+    // Eased off both of these. Under multiply they bite harder than they did
+    // painted, and the funnel's job is to be the shoulder of the throat, not a
+    // second black disc: the falloff is what sits it in the water.
+    const funnel = sprite(holeTex!, R * 2.1, 0x000000, 0.56)
+    const hole = sprite(holeTex!, R * 0.5, 0x000000, 0.9)
     flatDark.addChild(storm, funnel, hole)
 
     const flatLight: Container = new PIXI.Container()
@@ -319,6 +322,16 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
     }
     const meshDark = new PIXI.PerspectiveMesh({ texture: rtDark, verticesX: 12, verticesY: 12, ...corners })
     const meshLight = new PIXI.PerspectiveMesh({ texture: rtLight, verticesX: 12, verticesY: 12, ...corners })
+    // ── THE DARK HALF MULTIPLIES, IT DOES NOT PAINT ───────────────────
+    //
+    // This was drawn NORMALLY: black pixels laid over the sea, which replaces
+    // the water instead of darkening it. Every wave, glint and caustic under
+    // the storm was simply gone, so a maelstrom read as a picture of a hole
+    // stuck onto the chart rather than a hole in this water. Multiply is what
+    // the portal wells already use and for exactly this reason (see the note
+    // in seaPortalWell): the sea's own surface keeps moving all the way into
+    // the funnel, and only the deepest part of the throat goes to black.
+    meshDark.blendMode = 'multiply'
     meshLight.blendMode = 'add'
     node.addChild(meshDark, meshLight, eye, core)
 
@@ -419,9 +432,13 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         const g = Math.max(0, Math.min(1, 1 - (d - m.r) / (m.r * 1.5)))
         const gg = g * g
 
-        // THE SEA GOES DARK AROUND IT as you come.
-        o.storm.alpha = 0.75 * gg
-        o.storm.scale.set((R * (2.0 + 0.4 * gg) / 256))
+        // THE SEA GOES DARK AROUND IT as you come — but never from nothing.
+        // The skirt used to be worth 0 at distance, so a maelstrom on the
+        // horizon was a hard-edged disc with clean water right up against it.
+        // A floor means there is always a wide patch of troubled sea around
+        // one, and coming closer deepens it rather than switching it on.
+        o.storm.alpha = 0.26 + 0.5 * gg
+        o.storm.scale.set((R * (2.15 + 0.35 * gg) / 256))
 
         // THE ARMS TURN, inner faster than outer, and all of them faster the
         // nearer you are.

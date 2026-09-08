@@ -1171,6 +1171,28 @@ in. It clears when you sail off, since leaving is an answer.
 chart gains somewhere to land, and a column per port is how a profiles table ends up with
 forty of them.
 
+## Nothing on this sea is painted onto it
+
+Anything the chart draws ON the water darkens it by MULTIPLYING, never by painting. Black
+pixels laid over the sea replace it, so every wave, glint and caustic under the thing is
+simply gone and it reads as a picture stuck onto the chart. Multiply darkens the same pixels
+while the surface keeps running through them. `seaPortalWell` has carried this rule from the
+start; the maelstroms' dark half was drawn normally until 2026-09, which is most of why they
+looked laid on.
+
+The second half of the rule is that the effect must not END anywhere. A gradient that reaches
+zero inside its own radius leaves a clean circle of untouched water around it, which is an
+edge, and an edge is what the eye reads as a decal:
+
+- The wells carry a **shoulder** (`hazeS`), the same gradient at 3.3r and a fifth of the
+  weight, so the sea starts going quiet a long way out and only deepens near the mouth.
+- The maelstrom's **storm skirt** has a floor (0.26) rather than scaling from nothing with
+  proximity, so a maelstrom on the horizon still sits in a wide patch of troubled sea instead
+  of being a hard disc against clean water.
+- Neither goes to flat black in the middle either: the well throat is 0.88 and the maelstrom's
+  funnel and hole were eased when they moved to multiply, because under multiply they bite
+  harder than they did painted.
+
 ## The anchorage, and the way out of it
 
 The water north of the reef. Reached through the arch on the fishing boat, and it holds the

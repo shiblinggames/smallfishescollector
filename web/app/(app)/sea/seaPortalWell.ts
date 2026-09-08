@@ -220,6 +220,19 @@ export function makePortalWell(
   light.blendMode = 'add'
   view.addChild(light)
 
+  // ── THE SHOULDER ─────────────────────────────────────────────────────
+  //
+  // The well's own gradient dies inside 1.86r, so the darkening stopped at a
+  // measurable circle and the sea outside it was untouched: a clean edge is
+  // what makes a thing look laid ON the water rather than being part of it.
+  // This is the same gradient at nearly twice the width and a fraction of the
+  // weight, so the sea starts going quiet a long way out and only deepens as
+  // it nears the mouth. Multiply, like the well, so the swell still runs
+  // through it.
+  const hazeS: Sprite = new PIXI.Sprite(well(PIXI))
+  hazeS.anchor.set(0.5)
+  dark.addChild(hazeS)
+
   const wellS: Sprite = new PIXI.Sprite(well(PIXI))
   wellS.anchor.set(0.5)
   dark.addChild(wellS)
@@ -381,7 +394,17 @@ export function makePortalWell(
       wellS.tint = wellTint()
       // Asleep it is a stain on the water rather than a depth in it. Not
       // hidden: half-there is what makes it a question.
-      wellS.alpha = dead ? 0.45 : 1
+      // A shade off full: at 1 the throat went to flat black and took the
+      // water's surface with it, which is the same decal the haze is here to
+      // prevent, only in the middle instead of at the edge.
+      wellS.alpha = dead ? 0.4 : 0.88
+
+      // The shoulder breathes with the well and reaches much further out.
+      const hazeSize = spec.r * (3.3 + on * 0.25) * (0.99 + breath * 0.01)
+      hazeS.width = hazeSize
+      hazeS.height = hazeSize
+      hazeS.tint = wellTint()
+      hazeS.alpha = (dead ? 0.1 : 0.2 + on * 0.08)
 
       // ── THE RIM ──
       // The band's own colour, and it TIGHTENS as you enter, exactly as a berth
