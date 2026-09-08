@@ -143,7 +143,7 @@ function radial(PIXI: typeof import('pixi.js'), stops: [number, string][], size 
  * coming up out of the hole. Additive when drawn, so it reads as light in the
  * air rather than as a picture hung over the water.
  */
-function holoTexture(PIXI: typeof import('pixi.js'), img: HTMLImageElement): Texture {
+function holoTexture(PIXI: typeof import('pixi.js'), img: HTMLImageElement, solid: boolean): Texture {
   const W = 420
   const H = Math.max(1, Math.round((img.naturalHeight / img.naturalWidth) * W))
   const c = document.createElement('canvas')
@@ -151,6 +151,16 @@ function holoTexture(PIXI: typeof import('pixi.js'), img: HTMLImageElement): Tex
   const g = c.getContext('2d')!
   g.drawImage(img, 0, 0, W, H)
 
+  // ── STANDING IN HIS OWN DOOR, HE IS NOT A PROJECTION ──────────────────
+  //
+  // From the chart the keeper is a hologram over a distant maelstrom, which
+  // is what a landmark on the horizon should be: a signal, not a person.
+  // Inside his own gauntlet you are in the room with him, and a scanlined
+  // wash of light is the wrong thing for the one figure the whole place
+  // belongs to. Solid keeps his own colour and his own paint; all it borrows
+  // from the projection is the foot fade, so he still stands IN the light
+  // coming out of the hole rather than ending on a cut line.
+  if (!solid) {
   // TOWARD WHITE. A hologram is one colour of light; the portrait's own hues
   // fighting the theme's tint is what makes a tinted photo look like a tinted
   // photo. Luminance, kept in the alpha the art already has.
@@ -168,8 +178,11 @@ function holoTexture(PIXI: typeof import('pixi.js'), img: HTMLImageElement): Tex
   // lines that are there, and the gaps are where it is not.
   g.globalCompositeOperation = 'destination-out'
   for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1)
+  g.globalCompositeOperation = 'source-over'
+  }
 
   // AND IT DISSOLVES AT THE FOOT, into the light it is standing in.
+  g.globalCompositeOperation = 'destination-out'
   const fade = g.createLinearGradient(0, H * 0.62, 0, H)
   fade.addColorStop(0, 'rgba(0,0,0,0)')
   fade.addColorStop(1, 'rgba(0,0,0,1)')
@@ -198,7 +211,12 @@ const SPIRIT_N = 40
 const FAR_W = 0.72, FAR_H = 0.80
 const NEAR_W = 1.0, NEAR_H = 1.05
 
-export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Renderer): Maelstroms {
+export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Renderer, opts?: {
+  /** Draw the keeper as himself rather than as a projection. True inside his
+   *  own gauntlet, where you are standing in the room with him. */
+  solidKeeper?: boolean
+}): Maelstroms {
+  const solidKeeper = !!opts?.solidKeeper
   const view: Container = new PIXI.Container()
   view.eventMode = 'none'
 
@@ -314,15 +332,17 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
 
     const holo: Sprite = new PIXI.Sprite(PIXI.Texture.EMPTY)
     holo.anchor.set(0.5, 1)
-    holo.blendMode = 'add'
-    holo.tint = th.core
+    // Additive light, tinted to the door's own colour, for a projection; his
+    // own paint, drawn normally, when he is standing here himself.
+    holo.blendMode = solidKeeper ? 'normal' : 'add'
+    holo.tint = solidKeeper ? 0xffffff : th.core
     holo.alpha = 0
     node.addChild(holo)
     // Loaded once per theme and baked into a projection — see holoTexture.
     const faceImg = new Image()
     faceImg.decoding = 'async'
     faceImg.onload = () => {
-      holo.texture = holoTexture(PIXI, faceImg)
+      holo.texture = holoTexture(PIXI, faceImg, solidKeeper)
       // SIZED AGAINST THE WHIRLPOOL, and both portraits are square, so this
       // width is also its height on screen. 1.15r put 736px of hologram over
       // a 640 door and ran it off the top of the window; a little over half
@@ -425,10 +445,12 @@ export function makeMaelstroms(PIXI: typeof import('pixi.js'), renderer: Rendere
         // irregular, which is the whole difference between a hologram and a
         // decal, and it dips hard for an instant now and then as if the
         // signal caught.
-        const jitter = 0.86 + 0.14 * Math.sin(t * 23.7) * Math.sin(t * 7.3)
-        const dropout = Math.sin(t * 0.7) > 0.985 ? 0.35 : 1
-        const holoLit = (0.2 + 0.55 * gg) * jitter * dropout * lit
-        o.holo.alpha = holoLit
+        // A projection is never quite steady; a man is. The flicker and the
+        // signal dropout are the projection's, so they go when he is solid,
+        // and he holds a flat opacity instead of climbing with proximity.
+        const jitter = solidKeeper ? 1 : 0.86 + 0.14 * Math.sin(t * 23.7) * Math.sin(t * 7.3)
+        const dropout = solidKeeper ? 1 : (Math.sin(t * 0.7) > 0.985 ? 0.35 : 1)
+        o.holo.alpha = solidKeeper ? lit : (0.2 + 0.55 * gg) * jitter * dropout * lit
         // It breathes on the spot. No turning: see the note where it is
         // mounted. The bob is in screen pixels, so it is divided by GROUND
         // like every other height on this chart.

@@ -301,7 +301,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
     // sea/chart. A link here would be a second door into a place whose whole
     // point is that reaching it is a trip, which is the same argument that
     // retired quick-sell and moved the Daily Haul onto the water.
-    { href: '/sea', label: 'Fishing', badge: null,
+    { href: '/sea', label: 'Seas', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>
@@ -385,7 +385,7 @@ export default function Nav({ doubloons, gems, canSail = false }: {
   // desktopOnlyLinks. Profile is the avatar button on the far right,
   // so it doesn't appear here.
   const links = [
-    { href: '/sea', label: 'Fishing', badge: null,
+    { href: '/sea', label: 'Seas', badge: null,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 4l4 4"/>

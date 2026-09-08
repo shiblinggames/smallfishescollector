@@ -2477,7 +2477,12 @@ export default function GauntletGame(props: GauntletGameProps) {
       { id: 'run', label: 'Run Upgrades', ox: -0.34, oy: 0.14, color: 0xc4a0e8 },
       { id: 'shore', label: 'Permanent Upgrades', ox: 0.34, oy: 0.14, color: 0xf0c040 },
       { id: 'records', label: 'The Records', ox: -0.27, oy: 0.37, color: 0x9ab8c8 },
-      { id: 'ledger', label: 'The Ledger', ox: 0.27, oy: 0.37, color: 0xa8b8d0 },
+      // THE WAY OUT, AS A PLACE. There was no exit from this water at all:
+      // you arrived by sailing into a maelstrom and the only way back was the
+      // browser's own back button, which is not a thing this game asks you to
+      // use anywhere else. It takes the mooring the Ledger had, because that
+      // page is on its way out and the water is the lobby now.
+      { id: 'leave', label: 'The Way Home', ox: 0.27, oy: 0.37, color: 0x7fd8c8 },
     ]
     // The same stage in CSS, for the cards that ride the moorings.
     const stageLeft = (ox: number) => `calc(50% + ${ox} * min(100vw, 100vh))`
@@ -2489,7 +2494,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       run: { sub: 'For the descent', icon: <><path d="M6 4l6 6 6-6" /><path d="M6 12l6 6 6-6" /></> },
       shore: { sub: 'Voyages, raids, fishing', icon: <><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></> },
       records: { sub: 'Ranks and records', icon: <><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0z" /><path d="M7 6H4v2a3 3 0 0 0 3 3" /><path d="M17 6h3v2a3 3 0 0 1-3 3" /></> },
-      ledger: { sub: 'Rules, rewards, the rest', icon: <><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M8 8h7" /><path d="M8 12h7" /></> },
+      leave: { sub: 'Back up to the open sea', icon: <><path d="M12 3v12" /><path d="M8 7l4-4 4 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M4 19c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /></> },
     }
     const hexOf = (c: number) => '#' + c.toString(16).padStart(6, '0')
     const slipLabel = slipPlaces.find(pl => pl.id === slipNear)?.label ?? null
@@ -2508,7 +2513,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       vibrate([0, 12])
       if (slipNear === 'run') setShopSection('run')
       else if (slipNear === 'shore') setShopSection('shore')
-      else if (slipNear === 'ledger') setLedgerOpen(true)
+      else if (slipNear === 'leave') router.push('/sea')
     }
     return (
       <>
@@ -2548,7 +2553,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {!ledgerOpen && slipLabel && slipNear !== 'portal' && slipNear !== 'records' && (
           <button type="button" onClick={moor} className="tap" style={{ ...helmStyle, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
             <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.84rem', letterSpacing: '0.05em' }}>{slipLabel}</span>
-            <span className="font-karla font-700 uppercase" style={{ marginLeft: 'auto', fontSize: '0.52rem', letterSpacing: '0.16em', color: `${AC}cc` }}>Moor</span>
+            <span className="font-karla font-700 uppercase" style={{ marginLeft: 'auto', fontSize: '0.52rem', letterSpacing: '0.16em', color: `${AC}cc` }}>{slipNear === 'leave' ? 'Sail' : 'Moor'}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={AC} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
           </button>
         )}

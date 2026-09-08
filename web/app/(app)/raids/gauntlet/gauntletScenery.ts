@@ -337,22 +337,29 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
     beat(kind, tint) {
       beatKind = kind
       beatTint = tint ?? (kind === 'legendary' ? 0xffe9a8 : kind === 'victory' ? scene.key : MOOD_TINT[kind === 'chest' ? 'reward' : kind === 'death' ? 'dead' : kind] ?? scene.key)
-      beatLen = kind === 'death' ? 2.6 : kind === 'legendary' ? 1.8 : kind === 'curse' ? 1.4 : 1.1
+      beatLen = kind === 'death' ? 2.6 : kind === 'legendary' ? 1.8 : kind === 'curse' ? 1.2 : 0.9
       beatLeft = beatLen
-      flare = kind === 'curse' || kind === 'death' ? 0 : kind === 'legendary' ? 3 : 1.6
+      flare = kind === 'curse' || kind === 'death' ? 0 : kind === 'legendary' ? 1.8 : 0.5
       pulse.tint = beatTint; wash.tint = beatTint; washBelow.tint = beatTint
       for (const sp of sparks) { sp.p.tint = beatTint; sp.age = 9 }
       // Sparks: up from the deep for a curse or a death, out of the middle for
       // anything good.
       const below = kind === 'curse' || kind === 'death'
-      const n = kind === 'legendary' ? BURST_N : kind === 'mark' || kind === 'contract' ? 24 : 40
+      // A ROUTINE BEAT IS A GLIMMER, NOT A BURST. Forty sparks and a ring
+      // across the whole arena fired on every single screen of a dive: boon,
+      // curse, shrine, merchant, contract, mark, chest, the win. Something that
+      // happens twenty times a run cannot be an event. The count, the ring and
+      // the wash below all step down for the ordinary ones and stay for the two
+      // that are genuinely rare: a legendary pull and your own death.
+      const loudKind = kind === 'legendary' || kind === 'death'
+      const n = kind === 'legendary' ? BURST_N : loudKind ? 26 : 12
       for (let i = 0; i < n; i++) {
         const sp = sparks[i]
         sp.age = 0
         sp.life = 0.9 + Math.random() * 0.9
         sp.s = 3 + Math.random() * 6
         const a = below ? -Math.PI / 2 + (Math.random() - 0.5) * 1.2 : Math.random() * Math.PI * 2
-        const v = below ? 160 + Math.random() * 260 : 90 + Math.random() * 220
+        const v = (below ? 160 + Math.random() * 260 : 90 + Math.random() * 220) * (loudKind ? 1 : 0.6)
         sp.vx = Math.cos(a) * v; sp.vy = Math.sin(a) * v - (below ? 0 : 60)
         sp.x = NaN // placed on the first advance, where W and H are known
       }
@@ -456,20 +463,24 @@ export function makeScenery(PIXI: typeof import('pixi.js')): Scenery {
         const u = 1 - beatLeft / beatLen
         const env = u < 0.12 ? u / 0.12 : Math.max(0, 1 - (u - 0.12) / 0.88)
         const below = beatKind === 'curse' || beatKind === 'death'
+        const loud = beatKind === 'legendary' || beatKind === 'death'
         if (below) {
           washBelow.x = 0; washBelow.y = H; washBelow.width = W; washBelow.height = H * 0.9
-          washBelow.alpha = env * (beatKind === 'death' ? 0.5 : 0.36)
+          washBelow.alpha = env * (beatKind === 'death' ? 0.26 : 0.14)
           wash.alpha = 0
         } else {
           wash.width = W; wash.height = H
-          wash.alpha = env * (beatKind === 'legendary' ? 0.34 : 0.14)
+          wash.alpha = env * (beatKind === 'legendary' ? 0.16 : 0.05)
           washBelow.alpha = 0
         }
         const cx = W * 0.5, cy = below ? H * 0.9 : H * 0.5
-        const pr = Math.min(W, H) * (0.2 + u * 2.2)
+        // AND IT NO LONGER LEAVES THE SCREEN. The ring grew to 2.4x the short
+        // side, so what you saw was a wall of light sweeping past you rather
+        // than a halo opening on the water. It stays inside the arena now.
+        const pr = Math.min(W, H) * (0.25 + u * (loud ? 1.4 : 0.85))
         pulse.x = cx; pulse.y = cy
         pulse.width = pr; pulse.height = pr * (below ? 0.5 : 0.7)
-        pulse.alpha = (1 - u) * (beatKind === 'legendary' ? 0.8 : 0.5)
+        pulse.alpha = (1 - u) * (beatKind === 'legendary' ? 0.28 : loud ? 0.2 : 0.12)
         for (const sp of sparks) {
           if (sp.age >= sp.life) { if (sp.p.alpha) sp.p.alpha = 0; continue }
           if (Number.isNaN(sp.x)) { sp.x = cx + (Math.random() - 0.5) * W * 0.3; sp.y = cy }

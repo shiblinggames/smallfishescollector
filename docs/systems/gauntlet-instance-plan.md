@@ -244,6 +244,28 @@ SeaMap and the arena compose from one set of numbers. Your hull is anchored at
 its centre and theirs at its waterline, as the chart reports them, because
 RaidCombat lifts each side's overlays by what its anchor means.
 
+**The keeper is solid inside his own door.** `makeMaelstroms` takes `{ solidKeeper }`, and
+the Slipway passes it. On the chart Davy and the Don hang over their maelstroms as
+projections, which is what a landmark across a junction should be: a signal, not a person.
+Inside the gauntlet you are in the room with him, so `holoTexture` skips the luminance
+flatten and the scanlines, the sprite drops to normal blend at full tint, and the flicker and
+signal dropout go. Only the foot fade is kept either way, so he still stands IN the light
+coming out of the hole rather than ending on a cut line.
+
+**The way out is a place on the water.** There was no exit from the Slipway at all: you
+arrived by sailing into a maelstrom and the only way back was the browser's own back button.
+The Way Home takes the mooring the Ledger had (that page is on its way out), and sailing up
+to it pushes `/sea`. The helm reads "Sail" there rather than "Moor". NOTE: the Ledger panel
+is still reachable from the HUD rail, and it is the ONLY door to the gauntlet switcher
+(`otherGauntletUnlocked`), so that has to move before the page can actually be deleted.
+
+**A transition beat is a glimmer, not a burst.** `gauntletScenery.beat()` fires on every mood
+change — boon, curse, shrine, merchant, contract, mark, chest, the win — which is twenty
+times a dive, and it was throwing forty sparks and a ring that grew to 2.4x the short side at
+0.5 alpha. Something that happens twenty times a run cannot be an event. The routine kinds
+drop to twelve slower sparks, a ring that stays inside the arena, and a wash at 0.05; a
+legendary pull and your own death keep theirs.
+
 **The fight's furniture all hangs off ONE column.** `RAID_COL_MAX` (720) and `RAID_COL_PAD`
 (11.2) are exported from RaidCombat, and `raidColumn()` turns them into the column's left and
 right edges at the current width. Four things share it: the deck panel, the enemy's card

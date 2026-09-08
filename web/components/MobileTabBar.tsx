@@ -24,7 +24,7 @@ const LINKS = [
   // only way in is to sail there and go ashore. Four tabs rather than five, and
   // Fishing is the first one — which is also the honest order: the sea is where
   // the game is, and the tavern is one of the places it leads to.
-  { href: '/sea', label: 'Fishing',
+  { href: '/sea', label: 'Seas',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l4 4"/><path d="M8 8c2-2 5-3 8-1s4 5 2 8-5 3-8 1"/><path d="M8 8L4 20"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/></svg>,
   },
   { href: '/expeditions', label: 'Expeditions',

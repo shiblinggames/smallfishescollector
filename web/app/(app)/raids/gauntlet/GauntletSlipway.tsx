@@ -204,7 +204,10 @@ export default function GauntletSlipway({ theme, variant, places, shipUrl, onNea
       // about sits ON the eye, so the door is roused all the way and its
       // keeper is lit — you are inside it, after all — and the other door is
       // half a world away and culled.
-      const maelstroms: Maelstroms = makeMaelstroms(PIXI, app.renderer)
+      // SOLID, not a hologram: this is his own door and you are standing in
+      // it. The chart keeps the projection, which is what a landmark across a
+      // junction should be.
+      const maelstroms: Maelstroms = makeMaelstroms(PIXI, app.renderer, { solidKeeper: true })
       const bowl = new PIXI.Container()
       bowl.addChild(maelstroms.view)
       world.addChild(bowl)
