@@ -1650,6 +1650,14 @@ finishing a chapter; the thing that actually needs a road home is a boss you are
   first spot inside the bay, clear of every rock in it, and `PORTAL_REACH + ENCOUNTER_REACH`
   from any mooring. Deterministic, computed once, and it moves when a bay is re-laid.
 - **`check-islands` proves all nine**, including the gap to their own moorings.
+- **Taking one is a PASSAGE, not a teleport.** All three doors — the homestead portal, the
+  ways home and the Wargate — go through `jumpTo`: the light swallows her, the move happens at
+  the SEAM under it (`warpTo` at `WARP_MS`, half a second under and half a second out), and the
+  sixteen motes run their path backwards on the far side so whatever took her is visibly what
+  puts her down. The ways home and the gate used to call `warpTo` on its own and the boat
+  simply appeared somewhere else, which is the one moment on this chart where a captain does
+  not believe they have travelled. The well itself winds up while you float in it
+  (`gpu.home(i)`), indexed off the same filtered list `gpuHomes` builds from.
 
 **And the landing check was testing the old design.** It measured `PORTAL_HOME` against the
 HARBOUR and had been failing for months, correctly reporting a rule that had stopped being the

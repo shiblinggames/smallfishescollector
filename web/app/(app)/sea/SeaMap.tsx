@@ -4866,7 +4866,18 @@ export default function SeaMap({
         reach.push({
           id: 'wayhome',
           label: 'Take the way home',
-          run: () => { vibrate([12, 50, 18, 50, 26]); warpTo(PORTAL_HOME.x, PORTAL_HOME.y) },
+          // ── SAIL INTO ONE, COME UP OUT OF THE OTHER ──────────────
+          //
+          // Through `jumpTo`, the same passage the homestead portal takes: the
+          // light swallows her, the move happens at the SEAM under it, and the
+          // sixteen motes run their path backwards on the far side so what
+          // took her is visibly what puts her down. It used to be `warpTo` on
+          // its own — the boat simply teleported, which is the one moment on
+          // this chart where a captain does not believe they have travelled.
+          //
+          // The well's own blue rather than a band's accent, because every one
+          // of these goes to the same place.
+          run: () => jumpTo(PORTAL_HOME.x, PORTAL_HOME.y, '#96d6ff'),
         })
       }
       // THE CAMPAIGN OUTRANKS THE SCENERY. An encounter is what you came out
@@ -7300,6 +7311,14 @@ export default function SeaMap({
         // AND THE WAY HOME, which only exists in a bay whose boss is down.
         const wh = portalNear(pos.current.x, pos.current.y)
         setNearWayHome(prev => (prev?.bay === wh?.bay ? prev : wh))
+        // AND THE MOUTH WINDS UP UNDER HER. Same index the canvas built its
+        // wells from — see gpuHomes, which filters this same list the same way,
+        // so the two cannot get out of step. A hole in the sea that does
+        // nothing while you drift over it is a decal.
+        gpuRef.current?.home(
+          wh && wayHomeOpen(wh, clearedRef.current)
+            ? RETURN_PORTALS.filter(p => wayHomeOpen(p, clearedRef.current)).indexOf(wh)
+            : null)
         // The Wargate is one fixed place, so its test is one hypot.
         const ng = Math.hypot(pos.current.x - WARGATE.x, pos.current.y - WARGATE.y) < WARGATE_REACH
         setNearGate(prev => (prev === ng ? prev : ng))
@@ -8425,7 +8444,11 @@ hullRef={hullRefFor(t.key)} />
             // THE CROSSING. The gate puts you down at their mooring — the
             // same spot a sail-up puts you, so what happens next is the same
             // decision it always is.
-            if (d) warpTo(d.x, d.y)
+            //
+            // AND IT IS A PASSAGE, not a teleport. Same `jumpTo` the homestead
+            // portal and the ways home take, in the gate's own gold: a captain
+            // who sails into a hole in the sea should watch it close over her.
+            if (d) jumpTo(d.x, d.y, '#f0c040')
           }}
           onClose={() => setGateOpen(false)} />
       )}

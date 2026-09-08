@@ -220,6 +220,8 @@ export type GpuHandle = {
   /** Whether she is standing in the Wargate's mouth. The gate is a well like
    *  the way home, drawn here under her rather than in the DOM over her. */
   wargate(inside: boolean): void
+  /** Which way home she is floating in, by index into `homes`, or null. */
+  home(i: number | null): void
   /**
    * EVERYONE ELSE ON THE WATER, every frame.
    *
@@ -1380,6 +1382,14 @@ export default function SeaIslandsGPU({
         berth(id) { berthLayer.setActive(id) },
         portal(spec, inside, hold) { portalWell.setSpec(spec); portalWell.setActive(inside, hold) },
         wargate(inside) { wargateWell.setActive(inside, inside ? 1 : 0) },
+        // WHICH WAY HOME SHE IS FLOATING IN, by its place in `homes`. The mouth
+        // winds up while you sit in it, the same as the homestead portal does —
+        // a hole in the sea that does nothing as you drift over it is a decal.
+        home(i) {
+          for (let k = 0; k < homeWells.length; k++) {
+            homeWells[k].setActive(k === i, k === i ? 1 : 0)
+          }
+        },
         front(list) {
           nearWanted.clear()
           for (const i of list) nearWanted.add(i)
