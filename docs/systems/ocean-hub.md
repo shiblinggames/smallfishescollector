@@ -1362,6 +1362,22 @@ What still carries the campaign's shape: the chain itself (a node refuses to ope
 order wherever you float), each bay's own sea colour, and the minimap, which draws the bays
 as discs (dim and marked SHUT when unearned) with no straits or bars.
 
+**Five chapters, five seas.** With the rock gone, `Bay.sea` (three stops, deep to pale) is
+THE signal that you have crossed into a different chapter, so the palettes are pulled as far
+apart as five seas honestly can be: a warm living green for the Loose Thread, a sick jade
+murk for the Gullet's water, silted gold for the Coffers, an abyssal near-black for the Last
+Fathom, and blood-dark for the coda. They were five blues before, differing only in
+brightness, which is a difference you can measure and cannot see. The hue does the work now.
+
+Two things make it land. The shader builds the far-water **haze** from the PALE stop (see
+`palette` in SeaIslandsGPU), so a gold chapter gets gold air and a black one black air. And
+`BAY_VOTE` (4, against the open ocean's 0.18) lets a bay actually reach its own colour —
+the vote was 1, so a sixth of the water was ordinary blue even in the middle of a chapter,
+the same mistake the fishing zones carry a note about. The falloff is a sixth power over
+900px, so a chapter's colour reaches far enough to see from the junction and then arrives,
+rather than washing up over the first third of the bay. `BayBanner` names the water on the
+way in; the colour is what you feel before you read it.
+
 **The geometry stays.** Bays are still discs with a bearing and distance, and every ship,
 rock, chest and post is still authored in BAY SPACE from `entryOf`; the strait helpers are
 coordinate frames now, not doors. `check-islands` still measures placement against the rim
@@ -1371,6 +1387,13 @@ and the isles; its wall and road-walk tests are gone because there is nothing to
 
 Out on the expedition side the HUD carries a card under the disc row (`CampaignHud`, in
 SeaMap): the chapter, the next thing to do, a verb, and a bearing arrow with the distance.
+It is the expedition half's **Salt Road** — a permanent fixture, not a prompt. It showed
+only when a node was available at first, which hid it both for a finished campaign and for
+every moment you were standing in the middle of a chain, so the one thing that answers "what
+now" was missing exactly when somebody went looking for it. With nothing waiting it reads
+"The Campaign / Nothing waiting", shows a compass rose instead of an arrow, and still opens
+the chart. It follows the disc row's own showing rule (hidden with the rod out on a phone,
+and while the guns are out).
 "Next" is the same rule the Expeditions hub lights its spine with, the first node in chain
 order that is `available` and not a side branch, resolved against the water through
 `ENCOUNTERS`, `BEATS` and `CACHES` for a position (`nextStop`). Tapping the card opens the

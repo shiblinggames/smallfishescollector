@@ -923,6 +923,10 @@ const WATER_RGB: { mid: number; half: number; c: [number, number, number][] }[] 
  * to see that the second road is colder than the first and the fourth is nearly
  * black, before you have committed to sailing any of them.
  */
+/** How loudly a chapter's water speaks against the open ocean's 0.18. At 4 a
+ *  bay is 96% its own colour in the middle of it. */
+const BAY_VOTE = 4
+
 const BAY_RGB = BAYS.map(b => ({
   b,
   rgb: b.sea.map(rgb) as [number, number, number][],
@@ -1127,9 +1131,22 @@ function seaAt(p: Vec, darkness = 0): SeaLook {
   // showing at its edges, which is what tells you they are four different
   // places before you have committed to sailing into one.
   for (const { b, rgb: cc } of BAY_RGB) {
-    const d = bayGap(b, p.x, p.y) / 1000
+    // ── A CHAPTER OWNS ITS OWN WATER ────────────────────────────────────
+    //
+    // The vote was 1 against the open ocean's 0.18, so even dead in the middle
+    // of a bay a sixth of the colour was ordinary blue — which is fine when
+    // every bay IS ordinary blue and fatal now that they are five different
+    // seas. This is the same mistake, and the same fix, the fishing zones
+    // already carry a note about a few lines up.
+    //
+    // AND THE KNEE IS SHARPER. A fourth power over a thousand pixels was a
+    // long, soft wash; at a sixth over nine hundred a chapter's colour still
+    // reaches out far enough to see from the junction (which is the point of
+    // it being visible at all) and then arrives, rather than fading up over
+    // the first third of the bay.
+    const d = bayGap(b, p.x, p.y) / 900
     const d2 = d * d
-    const weight = 1 / (1 + d2 * d2)
+    const weight = BAY_VOTE / (1 + d2 * d2 * d2)
     if (weight < 0.004) continue
     wSum += weight
     for (let k = 0; k < 3; k++) {
@@ -7696,10 +7713,14 @@ hullRef={hullRefFor(t.key)} />
         </button>
       )}
 
-      {/* THE CAMPAIGN, under the disc row in the corner. What to do next and
-          which way it is, always, for as long as you are on the expedition
-          side and the rod and the guns are stowed. See CampaignHud. */}
-      {inAnchorage && !hudOff && nextStop && (
+      {/* THE CAMPAIGN, under the disc row in the corner. The expedition side's
+          Salt Road: a permanent door, not a prompt that comes and goes. It
+          hid itself whenever there was no available node — which is both the
+          finished campaign AND every moment mid-fight-chain — so the one
+          fixture that is supposed to answer "what now" was missing exactly
+          when a captain went looking for it. Same showing rule as the row
+          above it. See CampaignHud. */}
+      {inAnchorage && (!fishingIn || wide) && !fightOn && (
         <CampaignHud stop={nextStop} pos={pos} top={18 + hudSize + 10}
           onOpen={() => { vibrate(10); setMapOpen(true) }} />
       )}
@@ -12461,11 +12482,17 @@ const COMPASS_KEEP = { x: 120, y: 42 }
  * the chapter, the thing, the verb, and a bearing with the distance on it.
  * Tap it and the chart opens with the same thing pinned.
  *
+ * IT IS ALWAYS THERE, and that is the difference between a fixture and a
+ * prompt. `stop` is null when the chain has nothing available — a finished
+ * campaign, and also every moment you are standing in the middle of one — and
+ * the card stays, says so, and still opens the chart. A door that vanishes
+ * when you have no errand is a door you never learn is there.
+ *
  * Refreshed on a timer like the compass, because the bearing turns with the
  * boat and nothing else here re-renders per frame.
  */
 function CampaignHud({ stop, pos, top, onOpen }: {
-  stop: { node: RaidNode; chapter: { romanNumeral: string; title: string; coda?: boolean }; bay: Bay | null; at: { x: number; y: number } | null; verb: string }
+  stop: { node: RaidNode; chapter: { romanNumeral: string; title: string; coda?: boolean }; bay: Bay | null; at: { x: number; y: number } | null; verb: string } | null
   pos: React.RefObject<Vec>
   top: number
   onOpen: () => void
@@ -12476,15 +12503,16 @@ function CampaignHud({ stop, pos, top, onOpen }: {
     return () => clearInterval(id)
   }, [])
   const here = pos.current ?? HOME
-  const dx = stop.at ? stop.at.x - here.x : 0
-  const dy = stop.at ? stop.at.y - here.y : 0
-  const dist = stop.at ? Math.hypot(dx, dy) : 0
-  const deg = stop.at ? (Math.atan2(dy, dx) * 180) / Math.PI : 0
-  const close = stop.at ? dist < 700 : false
+  const at = stop?.at ?? null
+  const dx = at ? at.x - here.x : 0
+  const dy = at ? at.y - here.y : 0
+  const dist = at ? Math.hypot(dx, dy) : 0
+  const deg = at ? (Math.atan2(dy, dx) * 180) / Math.PI : 0
+  const close = at ? dist < 700 : false
   const gold = '#f0c040'
   return (
     <button type="button" onClick={e => { e.stopPropagation(); onOpen() }}
-      aria-label={`Next: ${stop.verb} ${stop.node.label}. Open the chart.`}
+      aria-label={stop ? `Next: ${stop.verb} ${stop.node.label}. Open the chart.` : 'The campaign. Open the chart.'}
       style={{
         position: 'absolute', top, left: 12, zIndex: Z.hud,
         display: 'flex', alignItems: 'center', gap: 10, maxWidth: 300,
@@ -12502,8 +12530,10 @@ function CampaignHud({ stop, pos, top, onOpen }: {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: `${gold}1a`, border: `1px solid ${gold}66`,
       }}>
-        {!stop.at ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+        {!at ? (
+          // NO HEADING TO GIVE. A compass rose rather than an arrow: the card
+          // is still the campaign's door, it just has nowhere to point today.
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="m15 9-2.2 5.8L7 17l2.2-5.8z" /></svg>
         ) : close ? (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.4"><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="1.6" fill={gold} /></svg>
         ) : (
@@ -12514,13 +12544,14 @@ function CampaignHud({ stop, pos, top, onOpen }: {
       </span>
       <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: `${gold}cc`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {stop.chapter.coda ? stop.chapter.title : `Chapter ${stop.chapter.romanNumeral}`}{stop.bay ? ` · ${stop.bay.name.replace(/^The /, '')}` : ''}
+          {!stop ? 'The Campaign'
+            : (stop.chapter.coda ? stop.chapter.title : `Chapter ${stop.chapter.romanNumeral}`) + (stop.bay ? ` · ${stop.bay.name.replace(/^The /, '')}` : '')}
         </span>
         <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {stop.verb} {stop.node.label}
+          {!stop ? 'Nothing waiting' : `${stop.verb} ${stop.node.label}`}
         </span>
         <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(214,232,240,0.7)', whiteSpace: 'nowrap' }}>
-          {!stop.at ? 'Somewhere ashore' : close ? 'Right here' : `${fmtDist(dist)} away`}
+          {!stop ? 'Open the chart' : !at ? 'Somewhere ashore' : close ? 'Right here' : `${fmtDist(dist)} away`}
         </span>
       </span>
     </button>

@@ -92,9 +92,25 @@ export type Bay = {
   /** Half the strait's width. The boat is 210 long, so 460 is a passage two
    *  ships could pass in and no more. */
   half: number
-  /** Three stops, deep to pale, like every water on this chart. Now that the
-   *  rock is gone this is most of what tells one chapter's water from the
-   *  next, and the sea blends toward it as you cross in. */
+  /**
+   * ── THE CHAPTER'S OWN SEA ──────────────────────────────────────────────
+   *
+   * Three stops, deep to pale, like every water on this chart. With the rock
+   * gone this is THE signal that you have crossed into a different chapter,
+   * so the five of them are pulled as far apart as five seas can honestly be.
+   *
+   * They were five blues. Slightly darker blues as the chapters went on, which
+   * is a difference you can measure and cannot see: you could sail from the
+   * Loose Thread to the Coffers and the only thing that changed was the label
+   * on the map. Now they are five different WATERS — a warm green shallow, a
+   * sick jade murk, a silted gold, an abyssal black and a blood dark — and the
+   * hue does the work rather than the brightness.
+   *
+   * IT CARRIES THE AIR WITH IT. The shader takes these three stops and the
+   * haze over the far water is built from the PALE one (see SeaIslandsGPU's
+   * `palette`), so a gold chapter gets gold air and a black one gets black
+   * air. That is most of why these read as places rather than as tints.
+   */
   sea: [string, string, string]
 }
 
@@ -121,26 +137,26 @@ export const BAYS: Bay[] = [
     id: 'thread', chapter: 1, name: 'The Loose Thread',
     // DUE WEST, and huge. Nearly ten thousand across.
     bearing: D(169), at: 12158, r: 4941, half: 460,
-    sea: ['#12252d', '#244a55', '#4899a5'],
+    sea: ['#0d2b25', '#1d5c4d', '#5cbfa0'],
   },
   {
     id: 'sunken_hand', chapter: 2, name: 'A Bigger Fish',
     // North-west. The Gullet is fought up here, and the coast is bone.
     bearing: D(-139), at: 10361, r: 4445, half: 440,
-    sea: ['#0f202b', '#204353', '#418499'],
+    sea: ['#141d15', '#31492a', '#7fa557'],
   },
   {
     id: 'the_coffers', chapter: 3, name: 'The Coffers',
     // North-east, and a fleet action has room to turn in it.
     bearing: D(-50), at: 9922, r: 4391, half: 480,
-    sea: ['#0c1b27', '#1c384b', '#3c7791'],
+    sea: ['#1c1408', '#4d3714', '#bb8f42'],
   },
   {
     id: 'the_last_fathom', chapter: 4, name: 'The Last Fathom',
     // DUE EAST, and the biggest water on the chart at twelve thousand across.
     // The deepest there is, and the darkest.
     bearing: D(6), at: 12718, r: 5928, half: 440,
-    sea: ['#08131e', '#162d3f', '#32627d'],
+    sea: ['#03060d', '#0a1526', '#2b5286'],
   },
   {
     id: 'one_last_ride', chapter: 5, name: 'One Last Ride',
@@ -159,7 +175,7 @@ export const BAYS: Bay[] = [
     // Violet-black. Not one of the four, because it is not one of the four —
     // there is no chapter after this and the water should not look like there
     // is.
-    sea: ['#120e18', '#241c2e', '#4a3f58'],
+    sea: ['#170510', '#3d0e26', '#8f3055'],
   },
 ]
 
