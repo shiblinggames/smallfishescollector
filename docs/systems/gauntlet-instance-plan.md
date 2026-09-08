@@ -244,6 +244,16 @@ SeaMap and the arena compose from one set of numbers. Your hull is anchored at
 its centre and theirs at its waterline, as the chart reports them, because
 RaidCombat lifts each side's overlays by what its anchor means.
 
+**The boon draft is two layouts, not one scaled.** On a phone each card is a ROW (medallion,
+name, payoff) because three tall cards would not fit on one screen and a draft you have to
+scroll is a draft you cannot compare. On a desktop (`wide`) it is a real CARD: art at 128,
+the rarity NAMED, the tier, the payoff, `b.detail`, and `b.flavor`. Three squat pills across
+the top of a 1400px display with everything below it empty, asking you to commit off one
+line while the explanation sat behind an info button, was the shape being fixed. The button
+stays on both, because the rung ladder is the one thing the sheet still holds that the wide
+card does not. Cards are `height: 100%` in the grid and the synergy chips take `marginTop:
+auto`, so three descriptions of different lengths still square off as a row.
+
 **The swap between screens, and the two effects it replaced.** Read this
 before touching it, because the obvious ideas here have all been tried and all
 failed the same way.

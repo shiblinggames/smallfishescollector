@@ -4357,7 +4357,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           )}
         </AnimatePresence>
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: wide ? 1040 : 470, margin: '0 auto',
+          position: 'relative', zIndex: 1, maxWidth: wide ? 1120 : 470, margin: '0 auto',
           padding: '12px 0.9rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
@@ -4388,7 +4388,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           )}
 
           <div style={wide
-            ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, alignItems: 'stretch' }
+            ? { display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, boonCardCount)}, minmax(0, 1fr))`, gap: 20, alignItems: 'stretch' }
             : { display: 'flex', flexDirection: 'column', gap: 14 }}>
             {pendingBoons.slice(0, boonCardCount).map((b, idx) => {
               const rm = BOON_RARITY_META[b.rarity]
@@ -4402,14 +4402,14 @@ export default function GauntletGame(props: GauntletGameProps) {
               const charging = ph === 'charging'
               const rank = legendary ? 3 : rare ? 2 : 1
               return (
-                <div key={b.id} style={{ position: 'relative', perspective: 1100 }}>
+                <div key={b.id} style={{ position: 'relative', perspective: 1100, height: wide ? '100%' : undefined }}>
                 {/* The real card — edge-on (hidden) until it flips up to face you */}
                 <motion.div
                   initial={false}
                   animate={{ rotateY: flipped ? 0 : -90 }}
                   transition={{ duration: 0.26, ease: 'easeOut' }}
                   className={flipped ? (rank === 3 ? 'reveal-glow-legendary' : rank === 2 ? 'reveal-glow-rare' : '') : ''}
-                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', height: wide ? '100%' : undefined }}
                 >
                 <motion.button
                   initial={false}
@@ -4430,7 +4430,11 @@ export default function GauntletGame(props: GauntletGameProps) {
                   className="tap"
                   style={{
                     position: 'relative', textAlign: 'left', overflow: 'hidden', width: '100%',
-                    padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
+                    // Full height in the grid, so three cards of different
+                    // description lengths still square off as a row.
+                    ...(wide ? { height: '100%', display: 'flex', flexDirection: 'column' as const } : null),
+                    padding: wide ? '1.25rem 1.15rem 1.15rem 1.3rem' : '0.9rem 1rem 0.9rem 1.2rem',
+                    borderRadius: 16,
                     // Firm dark base so the card reads over the detailed backdrop;
                     // the rarity tint stays as an accent up top.
                     background: banArmed
@@ -4462,81 +4466,81 @@ export default function GauntletGame(props: GauntletGameProps) {
                     transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.3 }}
                     style={{ position: 'absolute', inset: 0, borderRadius: 16, boxShadow: `inset 0 0 20px ${rm.color}66`, pointerEvents: 'none' }}
                   />
-                  {/* Hero row — a big framed art medallion carries the card; the
-                      name + payoff sit beside it. Flavor moves to the info sheet
-                      and the synergy chips run full-width below, so the card stays
-                      tight and art-forward. */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {/* Art medallion — the star of the card */}
-                    <div style={{
-                      position: 'relative', flexShrink: 0, width: 76, height: 76, borderRadius: 16,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `radial-gradient(circle at 42% 34%, ${rm.color}33 0%, rgba(4,9,14,0.55) 74%)`,
-                      border: `1.5px solid ${rm.color}${legendary ? 'cc' : rare ? '88' : '5a'}`,
-                      boxShadow: `inset 0 0 16px ${rm.color}22, 0 4px 12px rgba(0,0,0,0.4)`,
-                    }}>
-                      {boonImg
-                        ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={boonImg} alt="" loading="lazy" decoding="async"
-                            style={{ width: 60, height: 60, objectFit: 'contain', filter: `drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 7px ${rm.color}66)` }} />
-                        )
-                        : <span aria-hidden style={{ fontSize: '1.7rem', color: rm.color, lineHeight: 1 }}>✦</span>}
-                      {(legendary || rare) && (
-                        <motion.span aria-hidden animate={{ opacity: [0.3, 0.75, 0.3], scale: [1, 1.045, 1] }}
-                          transition={{ duration: legendary ? 1.8 : 2.6, repeat: Infinity, ease: 'easeInOut' }}
-                          style={{ position: 'absolute', inset: -2, borderRadius: 18, border: `1.5px solid ${rm.color}`, boxShadow: `0 0 14px ${rm.color}77`, pointerEvents: 'none' }} />
-                      )}
-                    </div>
+                  {/* ── THE CARD'S PARTS, LAID OUT TWO WAYS ──────────────
+                      On a phone the card is a ROW: a medallion with the name
+                      and the payoff beside it, because a column of three tall
+                      cards would not fit on one screen and a draft you have to
+                      scroll is a draft you cannot compare.
 
-                    {/* Name + payoff */}
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-                        <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.04rem', color: '#f4fbf9', lineHeight: 1.14 }}>
-                          {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
-                        </p>
-                        {/* The rarity PILL is gone from the card. It restated
-                            what the card already says four other ways — the
-                            medallion's tint, the border weight, the tier label
-                            beside the name, and the ring that only rare and
-                            legendary pulse — and it was doing that while
-                            occupying the one piece of space worth giving to a
-                            touch target on a card that drafts irreversibly.
-                            The WORD now lives in the popup, one tap away. */}
-                        <span
-                          role="button" tabIndex={0} aria-label={`What ${b.name} does`}
-                          onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg,
-                            rungs: fam?.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= b.tier, current: i + 1 === b.tier })),
-                            rarityLabel: rm.label, rarityColor: rm.color }) }}
-                          className="tap"
-                          // The card itself DRAFTS on tap, and a draft cannot be
-                          // taken back — so the read-only affordance sitting on
-                          // top of it was the worst possible thing to make a
-                          // 24px target. It stopped propagation correctly; the
-                          // misses were fingers landing outside 24px and hitting
-                          // the card underneath, which committed a boon.
-                          //
-                          // Padding buys a ~46px touch target and the equal
-                          // negative margin cancels it for layout, so the circle
-                          // sits exactly where it did. pointerdown is stopped
-                          // too: the card fires its haptic on pointerdown, so
-                          // without this the tap that opens the popup still
-                          // buzzed as though something had been chosen.
-                          onPointerDown={e => e.stopPropagation()}
-                          style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, margin: -8, cursor: 'pointer', touchAction: 'manipulation' }}>
-                          <span aria-hidden className="font-cinzel font-700"
-                            style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.92)', fontSize: '1.05rem', fontStyle: 'italic', lineHeight: 1 }}>
-                            i
-                          </span>
-                        </span>
+                      On a desktop it is a CARD. Three of them sat as squat
+                      pills across the top of a 1400px screen with the entire
+                      rest of it empty, saying one line each while the sheet
+                      that explains them was a tap away. There is room here for
+                      the whole thing: the art big, the rarity named, the
+                      payoff, what it actually does, and the line of voice. You
+                      should be able to choose without opening anything. */}
+                  {(() => {
+                    const art = (size: number) => (
+                      <div style={{
+                        position: 'relative', flexShrink: 0, width: size, height: size, borderRadius: size * 0.21,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: `radial-gradient(circle at 42% 34%, ${rm.color}33 0%, rgba(4,9,14,0.55) 74%)`,
+                        border: `1.5px solid ${rm.color}${legendary ? 'cc' : rare ? '88' : '5a'}`,
+                        boxShadow: `inset 0 0 16px ${rm.color}22, 0 4px 12px rgba(0,0,0,0.4)`,
+                      }}>
+                        {boonImg
+                          ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={boonImg} alt="" loading="lazy" decoding="async"
+                              style={{ width: size * 0.79, height: size * 0.79, objectFit: 'contain', filter: `drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 7px ${rm.color}66)` }} />
+                          )
+                          : <span aria-hidden style={{ fontSize: size * 0.36, color: rm.color, lineHeight: 1 }}>✦</span>}
+                        {(legendary || rare) && (
+                          <motion.span aria-hidden animate={{ opacity: [0.3, 0.75, 0.3], scale: [1, 1.045, 1] }}
+                            transition={{ duration: legendary ? 1.8 : 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                            style={{ position: 'absolute', inset: -2, borderRadius: size * 0.24, border: `1.5px solid ${rm.color}`, boxShadow: `0 0 14px ${rm.color}77`, pointerEvents: 'none' }} />
+                        )}
                       </div>
-                      {/* The power gained — the payoff, green + clear. Set in
-                          Karla, not Cinzel: Cinzel is a Roman-CAPITALS face, so
-                          the effect line read as shouty all-caps at a size that
-                          out-weighed the boon's own name. Sentence case, a notch
-                          smaller than the title, still the green payoff. */}
+                    )
+
+                    // The rungs ladder is the only thing the sheet still holds
+                    // that the wide card does not, so the button stays on both.
+                    const info = (
+                      <span
+                        role="button" tabIndex={0} aria-label={`What ${b.name} does`}
+                        onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier, image: boonImg,
+                          rungs: fam?.tiers.map((tt, i) => ({ label: boonTierLabel(i + 1), desc: tt.desc, held: i + 1 <= b.tier, current: i + 1 === b.tier })),
+                          rarityLabel: rm.label, rarityColor: rm.color }) }}
+                        className="tap"
+                        // The card itself DRAFTS on tap, and a draft cannot be
+                        // taken back — so the read-only affordance sitting on
+                        // top of it was the worst possible thing to make a
+                        // 24px target. It stopped propagation correctly; the
+                        // misses were fingers landing outside 24px and hitting
+                        // the card underneath, which committed a boon.
+                        //
+                        // Padding buys a ~46px touch target and the equal
+                        // negative margin cancels it for layout, so the circle
+                        // sits exactly where it did. pointerdown is stopped
+                        // too: the card fires its haptic on pointerdown, so
+                        // without this the tap that opens the popup still
+                        // buzzed as though something had been chosen.
+                        onPointerDown={e => e.stopPropagation()}
+                        style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, margin: -8, cursor: 'pointer', touchAction: 'manipulation' }}>
+                        <span aria-hidden className="font-cinzel font-700"
+                          style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.92)', fontSize: '1.05rem', fontStyle: 'italic', lineHeight: 1 }}>
+                          i
+                        </span>
+                      </span>
+                    )
+
+                    // The payoff — green + clear. Set in Karla, not Cinzel:
+                    // Cinzel is a Roman-CAPITALS face, so the effect line read
+                    // as shouty all-caps at a size that out-weighed the boon's
+                    // own name. Sentence case, a notch smaller than the title.
+                    const payoff = (size: string) => (
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                        <span className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#aef5c4', lineHeight: 1.3, textShadow: '0 0 10px rgba(74,222,128,0.25)' }}>
+                        <span className="font-karla font-700" style={{ fontSize: size, color: '#aef5c4', lineHeight: 1.3, textShadow: '0 0 10px rgba(74,222,128,0.25)' }}>
                           {b.desc}
                         </span>
                         {b.upgrade && (
@@ -4545,8 +4549,63 @@ export default function GauntletGame(props: GauntletGameProps) {
                           </span>
                         )}
                       </div>
-                    </div>
-                  </div>
+                    )
+
+                    if (!wide) {
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          {art(76)}
+                          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                              <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.04rem', color: '#f4fbf9', lineHeight: 1.14 }}>
+                                {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
+                              </p>
+                              {info}
+                            </div>
+                            {payoff('0.92rem')}
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                        {/* The art gets the top of the card to itself. */}
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>{art(128)}</div>
+
+                        {/* THE RARITY, SAID OUT LOUD. On the phone card it is
+                            carried by the tint, the border weight and the ring,
+                            because there is no room for the word. Here there
+                            is, and a word beats four hints. */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.22em', color: rm.color, marginBottom: 4 }}>
+                              {rm.label}
+                            </p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '1.22rem', color: '#f4fbf9', lineHeight: 1.12 }}>
+                              {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
+                            </p>
+                          </div>
+                          {info}
+                        </div>
+
+                        {payoff('1rem')}
+
+                        {/* WHAT IT ACTUALLY DOES. This was behind the info
+                            button on every screen size, which meant the desktop
+                            draft asked you to commit off one line while three
+                            quarters of the display sat empty. */}
+                        <p className="font-karla" style={{ fontSize: '0.84rem', color: '#b4c6c2', lineHeight: 1.5 }}>
+                          {b.detail}
+                        </p>
+
+                        {/* And the line of voice, quietest thing on the card. */}
+                        <p className="font-karla" style={{ fontSize: '0.78rem', color: '#8b9b98', lineHeight: 1.45, fontStyle: 'italic' }}>
+                          {b.flavor}
+                        </p>
+                      </div>
+                    )
+                  })()}
                   {/* Row 2.5 — SYNERGY STEER. What this pick does to your
                       confluences, shown BEFORE you commit: 'unlocks' one you
                       hold the other half of, or 'deepens' an online one by
@@ -4582,7 +4641,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     )
 
                     return (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: wide ? 'auto' : 7, paddingTop: wide ? 14 : 0 }}>
                         {named.map(h => chip(h.c.id, h.kind === 'deepens'
                           ? `Deepens ${h.c.name} ${boonTierLabel(h.level)}`
                           : `Unlocks ${h.c.name}`))}
@@ -4592,7 +4651,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                       </div>
                     )
                   })()}
-                  {/* Flavor lives on the info sheet now — keeps the card tight. */}
+                  {/* On a phone the flavour stays on the info sheet, which is what keeps the row card tight. */}
                 </motion.button>
                 </motion.div>
 
