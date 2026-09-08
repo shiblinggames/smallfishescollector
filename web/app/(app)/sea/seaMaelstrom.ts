@@ -69,10 +69,18 @@ const THEMES: Record<Maelstrom['id'], Theme> = {
   },
   // Finleone's ghost: drowned green gone nearly to black, verdigris in the
   // arms, tarnished gold sinking.
+  //
+  // THE FACE IS THE GHOST, NOT THE BOSS. `raid8_donfinleone.png` is Don
+  // Finleone himself, the thing that RISES at the milestone depths inside the
+  // run; the door belongs to Don's Ghost, the host who presides over the whole
+  // gauntlet, and he is `donsgauntlet.png`. Standing the boss over the
+  // entrance made the door and the set-piece the same character, which is the
+  // one distinction the Don's Gauntlet is built on (see lib/gauntlet.ts, on
+  // DON_RISE_DEPTHS). The descent card keeps Finleone's face for the rise.
   don: {
     arm: 0x1f4a3a, mid: 0x2f6a52, wisp: 0x7fb098, core: 0xd8e6dc, eye: 0x275c46, foam: 0x93b9a5,
     spirit: 0xd6b25c, strike: 0xd9c47c, speed: 0.4, spirits: 'sink', strikeKind: 'pulse',
-    face: '/raid8_donfinleone.png',
+    face: '/donsgauntlet.png',
   },
 }
 
