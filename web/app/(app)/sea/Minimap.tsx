@@ -360,16 +360,28 @@ export default function Minimap({
       for (const b of BAYS) {
         const openDoor = bayOpen(b, cleared)
         const c = bayCentre(b)
-        // THE BAY. Its own water colour, which is the colour it actually is out
-        // there — the four are painted apart on purpose and the map should not
-        // undo that by making them all one blue.
-        ctx.fillStyle = openDoor ? `${b.sea[1]}cc` : `${b.sea[0]}99`
+        // ── THE BAY, AS WATER ────────────────────────────────────────
+        //
+        // Its own colour, which is the colour it actually is out there — the
+        // five are painted apart on purpose and the map should not undo that by
+        // making them one blue.
+        //
+        // AND NO OUTLINE. Each was a hard gold ring, which is what you draw
+        // around a region on a diagram: five circles ruled onto the water, all
+        // exactly circular, all exactly the same weight, in a panel that is
+        // otherwise a painting of a sea. Out there a bay has no edge you can
+        // see — it is where the water changes colour — so the map says the same
+        // thing by fading out at the rim and letting the deep behind it take
+        // over. A radial stop does the whole job the ring was doing badly.
+        const bx = tx(c.x), by = ty(c.y), br = b.r * s
+        const wash = ctx.createRadialGradient(bx, by, br * 0.2, bx, by, br)
+        wash.addColorStop(0, openDoor ? `${b.sea[1]}dd` : `${b.sea[0]}aa`)
+        wash.addColorStop(0.72, openDoor ? `${b.sea[1]}bb` : `${b.sea[0]}88`)
+        wash.addColorStop(1, openDoor ? `${b.sea[1]}00` : `${b.sea[0]}00`)
+        ctx.fillStyle = wash
         ctx.beginPath()
-        ctx.arc(tx(c.x), ty(c.y), b.r * s, 0, Math.PI * 2)
+        ctx.arc(bx, by, br, 0, Math.PI * 2)
         ctx.fill()
-        ctx.strokeStyle = openDoor ? 'rgba(196,169,106,0.5)' : 'rgba(196,169,106,0.2)'
-        ctx.lineWidth = 1
-        ctx.stroke()
 
         // ── AND WHAT IS IN IT ────────────────────────────────────────────
         //
@@ -412,15 +424,31 @@ export default function Minimap({
           }
         }
 
-        // ITS NAME, and the numeral, because "chapter two" is how a captain
-        // thinks about it and "A Bigger Fish" is how the water is signed.
+        // ── ITS NAME, AND ONLY ONCE IT IS YOURS ──────────────────────
+        //
+        // A shut bay used to print "The Last Fathom" in grey with SHUT over it,
+        // which hands a captain in chapter one the name of every chapter left —
+        // the same spoiler the campaign panel was giving away in its rows, on
+        // the one surface that is meant to show you what you have found. The
+        // titles ARE the story.
+        //
+        // So a bay you have not opened is a patch of dark water with a numeral
+        // on it: there IS a chapter three, and that is all. The numeral stays
+        // because "chapter two" is how a captain thinks about where they are,
+        // and knowing one is ahead is a reason to sail rather than a reveal.
         ctx.textAlign = 'center'
-        ctx.fillStyle = openDoor ? 'rgba(244,236,216,0.94)' : 'rgba(244,236,216,0.42)'
-        ctx.font = '600 10px Karla, system-ui, sans-serif'
-        ctx.fillText(b.name.replace(/^The /, ''), tx(c.x), ty(c.y) + 3)
-        ctx.fillStyle = openDoor ? 'rgba(196,169,106,0.8)' : 'rgba(196,169,106,0.36)'
-        ctx.font = '700 8px Karla, system-ui, sans-serif'
-        ctx.fillText(openDoor ? `CHAPTER ${b.chapter}` : 'SHUT', tx(c.x), ty(c.y) - 8)
+        if (openDoor) {
+          ctx.fillStyle = 'rgba(244,236,216,0.94)'
+          ctx.font = '600 10px Karla, system-ui, sans-serif'
+          ctx.fillText(b.name.replace(/^The /, ''), bx, by + 3)
+          ctx.fillStyle = 'rgba(196,169,106,0.8)'
+          ctx.font = '700 8px Karla, system-ui, sans-serif'
+          ctx.fillText(`CHAPTER ${b.chapter}`, bx, by - 8)
+        } else {
+          ctx.fillStyle = 'rgba(196,169,106,0.34)'
+          ctx.font = '700 8px Karla, system-ui, sans-serif'
+          ctx.fillText(`CHAPTER ${b.chapter}`, bx, by + 3)
+        }
       }
 
       // ── AND WHAT TO DO NEXT ───────────────────────────────────────
@@ -782,22 +810,39 @@ export default function Minimap({
               // Underneath it there is nothing to run past, so it simply ends.
               ...(wide ? { maxHeight: h, overflowY: 'auto' as const } : null),
             }}>
-              <KeyGroup title="Places">
-                <Key mark={<Square c={INK.port} />} label="Harbour" />
-                <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, not landed" />
-                <Key mark={<Tri c={INK.isleDone} />} label="Been ashore" />
-                <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
-                <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
-              </KeyGroup>
+              {/* ── ONLY WHAT IS ACTUALLY ON THIS CHART ──────────────────
+                  Both of these are the fishing sea's. The isles you land on,
+                  the dig sites, the buyers, the regulars and Finn are all south
+                  of the reef — none of them is drawn out past it — so on the
+                  expedition chart they were nine rows explaining marks that
+                  were not there, above the six rows that mattered. A key to
+                  things you cannot see is worse than no key: it sends you
+                  looking.
+
+                  The one face that CAN be out there is another captain, and
+                  that mark is the only one on this chart that labels itself —
+                  it prints the username beside the dot — so it is the one row
+                  that never needed a key. */}
+              {side === 'fishing' && (
+                <KeyGroup title="Places">
+                  <Key mark={<Square c={INK.port} />} label="Harbour" />
+                  <Key mark={<Tri c={INK.isle} ring="rgba(255,206,138,0.55)" />} label="Isle, not landed" />
+                  <Key mark={<Tri c={INK.isleDone} />} label="Been ashore" />
+                  <Key mark={<Cross c={INK.dig} />} label="Buried, marked" />
+                  <Key mark={<Cross c={INK.digDone} thin />} label="Already dug" />
+                </KeyGroup>
+              )}
 
               {/* NOT "People". Nothing on this sea is one, and the key is no
                   place to be loose about it. */}
-              <KeyGroup title="Faces">
-                <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn" />
-                <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
-                <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
-                <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
-              </KeyGroup>
+              {side === 'fishing' && (
+                <KeyGroup title="Faces">
+                  <Key mark={<Diamond c={INK.finn} ring={INK.finn} />} label="Finn" />
+                  <Key mark={<Dot c={INK.regular} r={2.2} ring={INK.regular} ringR={4.4} />} label="Someone you know" />
+                  <Key mark={<Dot c={INK.trader} r={2.8} />} label="Buyer" />
+                  <Key mark={<Dot c={INK.friend} r={3.6} ring="rgba(6,12,18,0.9)" />} label="Another captain" />
+                </KeyGroup>
+              )}
 
               {/* ONLY OUT PAST THE REEF. On the fishing chart none of this is
                   drawn, and a key to marks that are not on the map is three
@@ -807,7 +852,7 @@ export default function Minimap({
                   <Key mark={<Swatch c={BAYS[0].sea[1]} round />} label="A chapter's bay" />
                   <Key mark={<Swatch c="rgba(240,192,64,0.95)" round />} label="A fight waiting" />
                   <Key mark={<Swatch c="transparent" round ring="rgba(190,214,232,0.62)" />} label="One you have taken" />
-                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}99`} round />} label="Shut until earned" />
+                  <Key mark={<Swatch c={`${BAYS[0].sea[0]}88`} round />} label="Shut until earned" />
                   <Key mark={<Dot c="transparent" r={3} ring="rgba(240,192,64,0.95)" ringR={7} />} label="What to do next" />
                   <Key mark={<Dash c="rgba(240,192,64,0.6)" />} label="The way home" />
                 </KeyGroup>

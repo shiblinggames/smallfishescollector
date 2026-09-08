@@ -948,6 +948,25 @@ canvas and it needs a row in the key.
 The tally shows isles ashore and holes dug, where **dug counts bearings you hold, not sites
 that exist** — how many there are is not something the chart will tell you.
 
+**The key only explains what THIS half draws.** Places and Faces are the fishing sea's — the
+isles, the dig sites, the buyers, the regulars and Finn are all south of the reef and none of
+them is drawn out past it — so on the expedition chart those nine rows explained marks that
+were not there, above the six that mattered. A key to things you cannot see is worse than no
+key: it sends you looking. The one face that can be out there is another captain, and that
+mark labels itself (it prints the username beside the dot), so it is the one row that never
+needed the key.
+
+**A bay is water, not a region on a diagram.** Each was filled and then given a hard gold
+ring: five exact circles ruled onto a painting. Out there a bay has no edge you can see, it is
+where the water changes colour, so the map says that with a radial stop that fades to nothing
+at the rim and lets the deep behind it take over.
+
+**And a bay you have not opened does not say its name.** It printed the title in grey with
+SHUT over it, which hands a captain in chapter one the name of every chapter left — the same
+spoiler the campaign panel was giving away in its rows, on the one surface that exists to show
+what you have FOUND. A shut bay is dark water with a numeral on it: there is a chapter three,
+and that is all.
+
 ## Bottles, bearings and buried treasure
 
 The renewable half of discovery. The isles are finite — 27, one payout each — so after a
