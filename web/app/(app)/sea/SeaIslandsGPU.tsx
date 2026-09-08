@@ -42,6 +42,7 @@ import { nightTint, makeWater } from './seaWater'
 import { makeClouds } from './seaClouds'
 import { makeFoamTexture, makeShoreFoam, type Foam } from './shoreFoam'
 import { makeShoals, type Shoals } from './seaShoals'
+import { makeLeviathans, type Leviathans } from './seaLeviathans'
 import { makeGulls, type Gulls } from './seaGulls'
 import { makeSplash, type Splash } from './seaSplash'
 import { makeGunFx, type GunFx, type ImpactKind } from './seaGunFx'
@@ -475,6 +476,13 @@ export default function SeaIslandsGPU({
       // water is under it, and the whole read depends on that ordering.
       const shoals: Shoals = makeShoals(PIXI)
       world.addChild(shoals.view)
+
+      // AND THE THINGS THAT ARE NOT FISH. Under the shoals, because they are
+      // far deeper than anything with a bite in it, and because a shoal
+      // crossing in front of a leviathan's back is the right way round: the
+      // small bright thing is between you and the big dark one.
+      const leviathans: Leviathans = makeLeviathans(PIXI)
+      world.addChildAt(leviathans.view, 0)
 
       // ── WHERE THE CAPTAINS GO ─────────────────────────────────────
       // Above the world, because a boat is on the water rather than under it,
@@ -1077,6 +1085,7 @@ export default function SeaIslandsGPU({
         water?.frame(t, camX, camY, camZoom, dark, warm, rush)
         drift.advance(camX, camY, halfW, halfH, t, dt)
         shoals.advance(camX, camY, halfW, halfH, t, dt)
+        leviathans.advance(camX, camY, halfW, halfH)
         gulls.advance(camX, camY, halfW, halfH, t, dt)
         // ADVANCED ON PIXI'S OWN TICKER, which is the whole reason this works.
         // The chart's rAF loop returns early while the dial is up, so nothing
@@ -1273,6 +1282,11 @@ export default function SeaIslandsGPU({
           // Underwater, so it takes the hour HARDER than the surface does: the
           // last thing to still be visible after dark is not the thing below it.
           shoals.night(nightTint(Math.min(1, d * 1.25), w))
+          // A SHADOW TAKES LIGHT AWAY, so it wants the hour as a NUMBER rather
+          // than as a tint: after dark there is barely any light left in the
+          // water for a shape to be blocking, and one drawn at noon strength
+          // on a black sea is a grey smear on it.
+          leviathans.night(d)
           // A gull is a pale thing against a dark sea and it is the LAST thing
           // still catching light at dusk, so it gives up less to the hour than
           // the water under it.

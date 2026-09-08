@@ -29,8 +29,10 @@ import type { Container, Particle, ParticleContainer, Sprite, Texture } from 'pi
 import { GROUND } from './islandArt'
 import { squallsAt, squallPos, type Squall } from '@/lib/seaWeather'
 
-/** Drops in the air at once, shared across every squall on screen. */
-const DROPS = 260
+/** Drops in the air at once, shared across every squall on screen. A tempest
+ *  is nearly twice a squall's radius and has to fill it, so the pool went up
+ *  with the weather that draws from it. */
+const DROPS = 420
 /** Rings on the water at once. Fewer than drops: not every drop needs its
  *  landing drawn for the surface to read as being rained on. */
 const DIMPLES = 90
@@ -131,7 +133,10 @@ export function makeSqualls(PIXI: typeof import('pixi.js')): Squalls {
 
   const st = shadowTexture(PIXI), dt2 = dropTexture(PIXI), rt = ringTexture(PIXI)
 
-  const SLOTS = 3
+  // Squalls plus tempests. One shadow sprite per slot, made once; the set
+  // itself is derived and can be shorter, which is what the `if (!s)` below is
+  // for. See seaWeather: SQUALL_COUNT + TEMPEST_COUNT, with room to spare.
+  const SLOTS = 6
   const shadows: Sprite[] = []
   for (let i = 0; i < SLOTS; i++) {
     const s: Sprite = new PIXI.Sprite(st)
@@ -164,6 +169,9 @@ export function makeSqualls(PIXI: typeof import('pixi.js')): Squalls {
   let tint = 0xffffff
   let cache: Squall[] = []
   let cachedAt = 0
+  /** Per-slot lightning clocks, for the big ones. Lazily made: a chart with no
+   *  tempest on it never allocates one. */
+  const bolts: Record<number, { next: number; left: number }> = {}
 
   return {
     water, air,
@@ -192,10 +200,43 @@ export function makeSqualls(PIXI: typeof import('pixi.js')): Squalls {
         sh.width = s.r * 2.1
         // Flat on the plane, like every shadow and every ring on this chart.
         sh.height = s.r * 2.1 * GROUND
-        sh.alpha = 0.34 + s.power * 0.3
+        // ── AND THE SKY LIGHTS UP INSIDE THE BIG ONES ──────────────────
+        //
+        // Only a tempest, and rarely: about one every eight to eighteen
+        // seconds, and it lifts THIS SHADOW rather than washing the viewport.
+        // A storm you are inside should light the storm — a full-screen flash
+        // is a thing done to the player, and it is the exact effect that had
+        // to be pulled out of the gauntlet and the maelstroms for being a
+        // strobe on something you look at for a long time.
+        let flash = 0
+        if (s.big && near) {
+          const f = bolts[i] ?? (bolts[i] = { next: 3 + Math.random() * 12, left: 0 })
+          f.next -= d
+          if (f.next <= 0) { f.left = 0.42; f.next = 8 + Math.random() * 10 }
+          if (f.left > 0) {
+            f.left -= d
+            const u = 1 - f.left / 0.42
+            // Two beats, the strike and the answer, and both gentle: the
+            // shadow lightens for a moment as if lit from inside.
+            flash = (u < 0.16 ? u / 0.16 : Math.max(0, 1 - (u - 0.16) / 0.84)) * 0.55
+            if (u > 0.28 && u < 0.4) flash *= 0.45
+          }
+        }
+        sh.alpha = Math.min(0.82, 0.34 + s.power * 0.3) * (1 - flash * 0.6)
+        // Lit from within: the shadow warms toward the storm's own light
+        // rather than going white, so it never reads as a lamp.
+        sh.tint = flash > 0.02
+          ? ((0xff << 16) | (0xff << 8) | 0xff)
+          : tint
       }
 
       const onScreen = live.filter(l => l.near)
+      // WEIGHTED BY HOW HARD IT IS BLOWING, and by how much sea it has to
+      // cover. The pool is shared, so an even pick put the same number of
+      // drops into a tempest as into a squall a third its area — which drew
+      // the biggest weather on the chart as the thinnest rain on it.
+      const weights = onScreen.map(l => l.s.power * l.s.r)
+      const wTotal = weights.reduce((a, b) => a + b, 0)
 
       // ── THE RAIN ──
       // Drops are only ever spawned inside a squall that is on screen, and
@@ -204,7 +245,10 @@ export function makeSqualls(PIXI: typeof import('pixi.js')): Squalls {
       for (const drop of drops) {
         if (drop.h < 0) {
           if (!onScreen.length) { drop.p.alpha = 0; continue }
-          const pick = onScreen[(Math.random() * onScreen.length) | 0]
+          let roll = Math.random() * wTotal
+          let pi = 0
+          while (pi < weights.length - 1 && roll > weights[pi]) { roll -= weights[pi]; pi++ }
+          const pick = onScreen[pi]
           // Anywhere in the disc, distributed by area rather than by radius —
           // sqrt, or the rain crowds the middle and leaves the rim dry.
           const a = Math.random() * Math.PI * 2
@@ -212,8 +256,11 @@ export function makeSqualls(PIXI: typeof import('pixi.js')): Squalls {
           drop.x = pick.at.x + Math.cos(a) * rr
           drop.y = pick.at.y + Math.sin(a) * rr * 0.85
           drop.h = FALL * (0.7 + Math.random() * 0.5)
-          drop.vh = 620 + Math.random() * 420
-          drop.len = 0.5 + Math.random() * 0.75
+          // HARDER RAIN FALLS FASTER AND LONGER. One number, the storm's own
+          // power, and the drop carries it for its whole life.
+          drop.vh = (620 + Math.random() * 420) * (0.8 + pick.s.power * 0.35)
+          drop.len = (0.5 + Math.random() * 0.75) * (0.75 + pick.s.power * 0.5)
+          drop.p.alpha = Math.min(0.5, 0.24 + pick.s.power * 0.18)
           continue
         }
         drop.h -= drop.vh * d
@@ -235,7 +282,7 @@ export function makeSqualls(PIXI: typeof import('pixi.js')): Squalls {
         drop.p.scaleX = 0.7
         drop.p.scaleY = drop.len
         drop.p.tint = tint
-        drop.p.alpha = 0.34
+        // Alpha is set once, at the spawn, off the storm that spawned it.
       }
 
       for (const dp of dimples) {

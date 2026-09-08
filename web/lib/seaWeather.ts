@@ -39,7 +39,7 @@
 // own numbers, and it belongs next to hotspotEffect where the rest of that
 // argument already lives.
 
-import { OUTER_EDGE } from '@/app/(app)/sea/chart'
+import { OUTER_EDGE, EXP_ORIGIN, EXP_EDGE, RAID_EDGE } from '@/app/(app)/sea/chart'
 
 /** How long a set of squalls stands before the weather turns. */
 export const SQUALL_WINDOW_MS = 14 * 60_000
@@ -58,9 +58,20 @@ export type Squall = {
   /** World-pixel radius. Big enough that being inside one is a stretch of
    *  sailing rather than a spot you cross in a second. */
   r: number
-  /** How hard it is blowing, 0.55 to 1. Drives the rain, the dark and the
-   *  heel, so one number is the whole severity of it. */
+  /** How hard it is blowing. 0.55 to 1 for a squall; a TEMPEST goes past 1,
+   *  which is what makes the expedition side worse weather than the fishing
+   *  side rather than the same weather in a different place. Drives the rain,
+   *  the dark and the heel, so one number is the whole severity of it. */
   power: number
+  /**
+   * A TEMPEST: the big weather, out past the sortie.
+   *
+   * Only these get lightning. It is a flag rather than a power threshold
+   * because "is this the kind of storm that has lightning in it" is a fact
+   * about the storm, and reading it off a number means the day somebody tunes
+   * `power` they silently change the weather's behaviour too.
+   */
+  big?: boolean
   /** World px per second it travels, as a vector. Weather moves. */
   vx: number
   vy: number
@@ -107,6 +118,10 @@ export function squallWindow(now: number = Date.now()): number {
  * chart big enough for a storm to be somewhere you go.
  */
 export function squallsAt(now: number = Date.now()): Squall[] {
+  return [...fishingSqualls(now), ...tempestsAt(now)]
+}
+
+function fishingSqualls(now: number): Squall[] {
   const win = squallWindow(now)
   const out: Squall[] = []
   for (let i = 0; i < SQUALL_COUNT; i++) {
@@ -157,6 +172,78 @@ export function squallsAt(now: number = Date.now()): Squall[] {
 }
 
 /**
+ * ── AND THE BIG WEATHER, NORTH OF THE SORTIE ────────────────────────────────
+ *
+ * The expedition side is where you take a warship out to fight somebody, and
+ * it should not have the same weather as the water people learn to fish in. A
+ * tempest is nearly twice the radius of a squall, blows past full power, moves
+ * more slowly because a thing that size does not dart about, and is the only
+ * weather on this chart with lightning in it.
+ *
+ * Derived exactly as the squalls are — a hash of (window, slot), no rows, no
+ * cron, same set for everybody, and it re-derives identically on a server that
+ * ever needs to know. It shares their window on purpose: they are one system
+ * and one weather, and the whole sea turning at once is only a problem when
+ * two DIFFERENT systems do it.
+ *
+ * IT PAYS NOTHING, exactly as a squall pays nothing. See the note at the top:
+ * weather is somewhere to sail, not a multiplier to chase. That rule matters
+ * more out here, not less, because the expedition side already has bosses with
+ * loot tables and a captain should never feel they have to wait for a storm.
+ */
+export const TEMPEST_COUNT = 2
+
+function tempestsAt(now: number): Squall[] {
+  const win = squallWindow(now)
+  const out: Squall[] = []
+  for (let i = 0; i < TEMPEST_COUNT; i++) {
+    const h = hash(win, i * 0x7f4a + 0x2c9e)
+    // Rarer than a squall. Big weather that is always there is just a climate,
+    // and the point of it is the crossing where you see it coming.
+    if (unit(h) > 0.5) continue
+    const h2 = hash(h, 0x51b7)
+    const h3 = hash(h2, 0x1d3f)
+    const h4 = hash(h3, 0x6ab1)
+    const h5 = hash(h4, 0x3e07)
+
+    // Anywhere in the raid water, which is a disc round the harbour's origin.
+    // Kept off the anchorage: that is an enclosed harbour full of moorings and
+    // rain over it is weather in a car park, the same reason the squalls stay
+    // south of the coast.
+    // NORTH HALF BY CONSTRUCTION. The disc reaches south past the reef into
+    // the fishing sea, and a tempest there would be the big weather in the
+    // wrong ocean — but rejecting those threw away half of every window's
+    // roll, so two slots at even odds were really producing one storm every
+    // other window. Sines below the axis are the northern half.
+    const ang = Math.PI + unit(h2) * Math.PI
+    const rad = EXP_EDGE + 1800 + unit(h3) * (RAID_EDGE - EXP_EDGE - 4200)
+    const x = EXP_ORIGIN.x + Math.cos(ang) * rad
+    const y = EXP_ORIGIN.y + Math.sin(ang) * rad
+
+    // PAST FULL. A squall tops out at 1; this starts near there and goes half
+    // again beyond it, and every consumer scales off the same number.
+    const power = 0.95 + unit(h4) * 0.55
+    // Slower than a squall, and it has further to go. Something eight thousand
+    // pixels across does not scud.
+    const speed = 1.2 + unit(h5) * 2
+    const dir = unit(hash(h5, 0x44bd)) * Math.PI * 2
+    out.push({
+      key: `T${win}:${i}`,
+      x, y,
+      // Four to seven thousand across the middle, against a squall's two to
+      // four. Sailing through one is a passage, not a patch of rain.
+      r: 4200 + unit(hash(h5, 0x18f3)) * 2800,
+      power,
+      vx: Math.cos(dir) * speed,
+      vy: Math.sin(dir) * speed,
+      endsAt: (win + 1) * SQUALL_WINDOW_MS,
+      big: true,
+    })
+  }
+  return out
+}
+
+/**
  * Where a squall actually is at this instant. It has been drifting since the
  * window opened, so its position is a function of how far through we are.
  *
@@ -176,6 +263,22 @@ export function squallPos(s: Squall, now: number = Date.now()): { x: number; y: 
   const into = (now - (s.endsAt - SQUALL_WINDOW_MS)) / 1000
   let x = s.x + s.vx * into
   let y = s.y + s.vy * into
+  // A TEMPEST IS PENNED IN ITS OWN OCEAN, and it is a different shape of pen:
+  // the raid water is a disc round the harbour rather than a half-disc round
+  // the Mainland, and the wall it must not drift through is the reef at the
+  // bottom rather than the coast at the top. Same two clamps, same order, and
+  // the same reason for the order — see below.
+  if (s.big) {
+    const keep = RAID_EDGE - s.r * 0.5
+    const dx = x - EXP_ORIGIN.x, dy = y - EXP_ORIGIN.y
+    const rr = Math.hypot(dx, dy)
+    if (rr > keep) {
+      x = EXP_ORIGIN.x + (dx / rr) * keep
+      y = EXP_ORIGIN.y + (dy / rr) * keep
+    }
+    y = Math.min(EXP_ORIGIN.y - 900, y)
+    return { x, y }
+  }
   // ── THE RADIUS FIRST, THEN THE COAST, AND THE ORDER IS THE WHOLE FIX ──
   //
   // Flooring y and THEN scaling the vector toward the origin pulls y back down

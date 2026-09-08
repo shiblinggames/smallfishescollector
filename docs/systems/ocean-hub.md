@@ -1383,6 +1383,55 @@ rock, chest and post is still authored in BAY SPACE from `entryOf`; the strait h
 coordinate frames now, not doors. `check-islands` still measures placement against the rim
 and the isles; its wall and road-walk tests are gone because there is nothing to measure.
 
+## What lives on the expedition side
+
+The fishing half is busy — shoals, gulls, hotspots, bottles, traders, squalls. The
+expedition half was empty water with a campaign parked in it. Two populations fill it, both
+built the way everything else on this chart is: **derived from a hash of (window, slot), no
+rows, no cron, same set for everybody, identical after a reload**, and both pay absolutely
+nothing.
+
+**Tempests** (`lib/seaWeather.ts`) are the big weather, north of the sortie only. Four to
+seven thousand pixels of radius against a squall's two to four, `power` past 1 where a
+squall tops out at it, slower because a thing that size does not scud, and the only weather
+on the chart with lightning in it. They share the squalls' 14-minute window on purpose (one
+system, one weather) and reuse the `Squall` type, so `seaSqualls.ts` draws them with no new
+plumbing. Roughly one per window.
+
+Three things in the renderer scale off `power` rather than being tempest-specific: the
+shadow's depth, the rain's fall speed and streak length, and — the one that matters — the
+**weighted pick** for the shared drop pool. An even pick put the same number of drops into a
+tempest as into a squall a third its area, drawing the biggest weather on the chart as the
+thinnest rain on it. The lightning lifts THAT STORM'S SHADOW, never the viewport: a
+full-screen flash is a thing done to the player, and it is the exact effect that had to come
+out of the gauntlet and the maelstroms for being a strobe.
+
+**Leviathans** (`lib/seaLeviathans.ts` + `sea/seaLeviathans.ts`) are large shapes moving
+under the raid water — a whale, a serpent, a ray — four to nine warship-lengths long, seen
+only as shadows. They rise, hold, and sound on their own cycles, so most of the time there
+is nothing there. Two rules:
+
+- **The layer MULTIPLIES.** The clearest case of the house rule on this chart: a dark sprite
+  laid over the sea replaces it, so the surface would stop dead inside the silhouette.
+  Multiplied, the water goes on running across its back, and that is the whole illusion.
+  It multiplies by a cold blue-grey rather than black, because black is a hole.
+- **No hard edge anywhere.** Heavy blur, never full alpha, and it swells slightly as it
+  rises. A shape you can trace is a thing at the surface.
+
+**They are scenery and they stay scenery.** No drop, no bonus, no server involvement. The
+moment a shadow is worth something the water becomes a spawn timer and a captain crossing to
+a raid starts steering by a number instead of looking at the sea; the fishing half already
+owns "this patch pays differently" (hotspots), sized against a server that takes position on
+trust, and a second one out here would double that exposure to buy an effect that works
+better for free.
+
+**The counts are arithmetic, not taste.** Simulating the real run from the sortie out to
+each bay, three shapes over the full disc put a shadow on one crossing in six — which is not
+rare, it is never, especially as a crossing is only about half a minute at speed. Eight, in
+the ring people actually sail (the outer third is the back of the furthest bay and nobody
+crosses it), lands at **37% of crossings**. Re-run that simulation before changing either
+number.
+
 ## The campaign in the corner
 
 Out on the expedition side the HUD carries a card under the disc row (`CampaignHud`, in
