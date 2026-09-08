@@ -151,17 +151,24 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
               <div key={ch.id} style={{ marginBottom: 10 }}>
                 {/* ── THE CHAPTER, AS ITS OWN WATER ────────────────────────
                     A banner of the place the chapter ends, with the title over
-                    it. A chapter you have not reached is drawn dark and
-                    unlit — the art is a spoiler with a lamp on it, exactly as
-                    the subtitle is, and the sea itself does not show you the
-                    water you have not earned either. */}
-                <button type="button" className="tap"
-                  onClick={() => setOpenCh(isOpen ? '' : ch.id)}
-                  aria-expanded={isOpen}
+                    it. A chapter you have not reached is drawn dark and unlit
+                    and DOES NOT SAY ITS NAME — see the note on `started` below.
+
+                    It is not a button either, once there is nothing behind it:
+                    a row that opens to say how much of itself is hidden has
+                    still told you how big it is, and a chevron on a locked row
+                    invites a tap that answers nothing. */}
+                {(() => {
+                  const Row = started ? 'button' : 'div'
+                  return (
+                <Row {...(started ? { type: 'button' as const, className: 'tap',
+                    onClick: () => setOpenCh(isOpen ? '' : ch.id),
+                    'aria-expanded': isOpen } : {})}
                   style={{
                     position: 'relative', display: 'block', width: '100%', padding: 0,
                     border: `1px solid ${isLive ? `${GOLD}66` : 'rgba(255,255,255,0.09)'}`,
-                    borderRadius: 14, overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
+                    borderRadius: 14, overflow: 'hidden',
+                    cursor: started ? 'pointer' : 'default', textAlign: 'left',
                     background: '#070c14',
                     boxShadow: isLive ? `0 0 20px ${GOLD}22` : 'none',
                   }}>
@@ -187,24 +194,48 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
                       padding: '0.5rem 0.75rem 0.6rem', display: 'flex', alignItems: 'flex-end', gap: 8,
                     }}>
                       <span style={{ flex: 1, minWidth: 0 }}>
+                        {/* ── A CHAPTER YOU HAVE NOT REACHED HAS NO NAME ──
+                            The art was already withheld and the subtitle with
+                            it, and then the row printed "A Bigger Fish" in
+                            grey underneath, which gives away as much as either
+                            of them: the titles ARE the story. Four rows saying
+                            what is coming is a contents page for a book whose
+                            whole shape is that you do not know how long it is.
+
+                            The numeral stays. Knowing there is a Chapter II is
+                            not a spoiler, it is the reason to keep sailing —
+                            and the coda has no numeral by design, so the last
+                            row simply does not exist until it does. */}
                         <span className="font-karla font-800 uppercase" style={{ display: 'block', fontSize: '0.5rem', letterSpacing: '0.2em', color: '#a49c8e' }}>
-                          {ch.coda ? 'The Coda' : `Chapter ${ch.romanNumeral}`}
+                          {ch.coda ? (started ? 'The Coda' : 'And after that') : `Chapter ${ch.romanNumeral}`}
                           {done ? <span style={{ color: '#8ff0c0' }}> · Cleared</span>
                             : started ? <span style={{ color: GOLD }}> · {cleared}/{nodes.length}</span>
-                              : <span style={{ color: '#6a6460' }}> · Not yet</span>}
+                              : null}
                         </span>
                         <span className="font-cinzel font-700" style={{
-                          display: 'block', fontSize: '1.06rem', lineHeight: 1.15, marginTop: 1,
-                          color: started ? '#f6f1e6' : '#7a7674',
+                          display: 'block', fontSize: started ? '1.06rem' : '0.92rem',
+                          lineHeight: 1.15, marginTop: 1,
+                          color: started ? '#f6f1e6' : '#5f5b57',
+                          fontStyle: started ? 'normal' : 'italic',
                           textShadow: started ? '0 2px 12px rgba(0,0,0,0.95)' : 'none',
-                        }}>{ch.title}</span>
+                        }}>{started ? ch.title : 'Still dark'}</span>
                       </span>
-                      <span aria-hidden style={{
-                        flexShrink: 0, color: started ? '#cfc9bf' : '#5f5b57', marginBottom: 3,
-                        transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s',
-                      }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-                      </span>
+                      {started ? (
+                        <span aria-hidden style={{
+                          flexShrink: 0, color: '#cfc9bf', marginBottom: 3,
+                          transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s',
+                        }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                        </span>
+                      ) : (
+                        // A closed padlock, not a chevron. The row is not
+                        // refusing to open, there is nothing in it yet.
+                        <span aria-hidden style={{ flexShrink: 0, color: '#4a4744', marginBottom: 4 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                          </svg>
+                        </span>
+                      )}
                     </div>
                   </div>
                   {/* The blurb sits UNDER the art rather than on it: a line of
@@ -216,7 +247,9 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
                   }}>
                     {started ? ch.subtitle : 'Nothing has been said of this water yet.'}
                   </span>
-                </button>
+                </Row>
+                  )
+                })()}
 
                 <AnimatePresence initial={false}>
                   {isOpen && (

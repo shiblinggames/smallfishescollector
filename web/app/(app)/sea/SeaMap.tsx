@@ -1597,6 +1597,10 @@ export default function SeaMap({
    * lands underneath it and changes nothing.
    */
   const [justCleared, setJustCleared] = useState<string[]>([])
+  /** The run of chevrons pointing at whatever a clear just opened — see
+   *  NextHeading. Keyed so a second clear replays it rather than leaving a
+   *  half-faded line on the water. */
+  const [heading, setHeading] = useState<{ from: Vec; to: Vec; key: number } | null>(null)
   const markCleared = useCallback((id: string) => {
     setJustCleared(prev => (prev.includes(id) ? prev : [...prev, id]))
   }, [])
@@ -4530,6 +4534,62 @@ export default function SeaMap({
     }
   }, [liveStatus])
 
+  /**
+   * ── AND WHEN SOMETHING OPENS, THE WATER SAYS WHICH WAY ────────────────
+   *
+   * Fires on the beat a clear changes what the campaign wants next, which is
+   * the one moment a captain genuinely does not know where to go: the sea has
+   * just changed and there is nothing on it yet that says so.
+   *
+   * NOT ON EVERY REVEAL and not on load. `cleared.current` only advances when
+   * this session clears something, so arriving in a bay with three things
+   * already open draws nothing — you have had the chance to look.
+   *
+   * NOTHING FOR SOMETHING YOU CAN ALREADY SEE. Inside a screen's width the
+   * mark is on the glass in front of you and a row of arrows pointing at it is
+   * the game explaining a thing you are looking at.
+   */
+  const clearedCount = useRef(0)
+  /** Worked out at the moment of the clear, drawn when there is a sea to draw
+   *  it on — see the fight note below. */
+  const pendingHeading = useRef<{ from: Vec; to: Vec } | null>(null)
+  const nextAtId = nextStop?.node.id ?? null
+  useEffect(() => {
+    if (justCleared.length <= clearedCount.current) { clearedCount.current = justCleared.length; return }
+    clearedCount.current = justCleared.length
+    const to = nextStop?.at
+    if (!to || !inAnchorage) return
+    const from = { ...pos.current }
+    if (Math.hypot(to.x - from.x, to.y - from.y) < 1600) return
+    pendingHeading.current = { from, to }
+    // `nextAtId` rather than the object: the memo rebuilds on every status
+    // change and only a different STOP is a different heading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justCleared.length, nextAtId, inAnchorage])
+
+  /**
+   * ── AND IT WAITS FOR THE GUNS TO STOP ─────────────────────────────────
+   *
+   * The best moment for this is the worst one to draw it in. A raid clears at
+   * the KILL, which is several seconds of sinking, loot and a summary before
+   * the chart is a chart again — a line laid at that instant would spend its
+   * whole life behind a card and be gone by the time anybody could see the sea.
+   * So the clear works out the heading and this puts it on the water the moment
+   * the fight lets go.
+   */
+  useEffect(() => {
+    // A fight takes the sea back. Anything already drawn goes with it rather
+    // than being left mounted at zero opacity waiting for a key that will not
+    // change.
+    if (fightOn) { setHeading(null); return }
+    if (!pendingHeading.current) return
+    const h = pendingHeading.current
+    pendingHeading.current = null
+    setHeading({ ...h, key: Date.now() })
+    const t = setTimeout(() => setHeading(null), HEADING_MS)
+    return () => clearTimeout(t)
+  }, [fightOn, justCleared.length])
+
   const hudRow = useMemo(() => {
     const on: string[] = []
     // ── NOT WHILE THE GUNS ARE OUT ────────────────────────────────────────
@@ -7406,6 +7466,13 @@ export default function SeaMap({
           // than a beat later when the guns do.
           fightNode={engaging ? fightEncRef.current?.node ?? null : null}
           hullRef={enemyHullRef} />
+
+        {/* THE WAY ON. In the world layer, so it lies on the water and moves
+            with it rather than floating over the glass — and under the marks,
+            because it is a line pointing AT something, not a thing itself. */}
+        {heading && !fightOn && (
+          <NextHeading key={heading.key} from={heading.from} to={heading.to} />
+        )}
 
         {/* HOTSPOTS. Under the landmarks and over the water, because they ARE
             water — a patch of it that is worth being in. */}
@@ -11254,6 +11321,87 @@ const AshoreTick = memo(function AshoreTick() {
  * that labels every rock you have never visited has answered the question the
  * isles exist to ask.
  */
+/**
+ * ── THE WAY ON, DRAWN ON THE SEA ────────────────────────────────────────────
+ *
+ * A short run of chevrons lying on the water, from where you just finished
+ * something toward whatever it opened. It appears at the moment of the clear,
+ * runs outward for a few seconds and goes.
+ *
+ * ── WHY THE COMPASS WAS NOT ENOUGH ──────────────────────────────────────────
+ *
+ * The compass answers "which way" and it answers it forever, quietly, in a
+ * corner, at the edge of a screen full of moving water. That is right for
+ * finding a buyer you were already looking for and wrong for the one beat where
+ * the sea has just CHANGED and you do not yet know it: you clear a post, a hull
+ * you have never seen appears eight thousand pixels away, and nothing on the
+ * water tells you which way to put the helm over. This is the answer at the
+ * moment the question exists, in the middle of the screen, where you are
+ * looking anyway.
+ *
+ * ── AND THEN IT LEAVES ──────────────────────────────────────────────────────
+ *
+ * Deliberately temporary. A permanent line from the boat to the objective is a
+ * quest arrow, and a sea with one is a corridor: you stop reading the water and
+ * follow a rail. This gives you a bearing and then hands the sea back.
+ *
+ * IT IS LAID FROM WHERE YOU STAND, not from the node you cleared, because after
+ * a fight you may have drifted, and a line starting a few hundred pixels off
+ * your bow reads as somebody else's.
+ */
+const HEADING_MARKS = 7
+const HEADING_GAP = 320
+const HEADING_MS = 7600
+
+const NextHeading = memo(function NextHeading({ from, to }: {
+  from: Vec
+  to: Vec
+}) {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const len = Math.hypot(dx, dy)
+  if (len < 1) return null
+  const ux = dx / len
+  const uy = dy / len
+  // THE ANGLE IS A SCREEN ANGLE. The chart's plane is squashed by GROUND, so a
+  // bearing of 45 degrees in the world does not point at 45 degrees on the
+  // glass. Each mark counter-squashes itself (like every other thing that
+  // stands on this water) and then turns by the angle you actually see.
+  const a = Math.atan2(uy * GROUND, ux)
+  // Never run the line past the thing it is pointing at: on a short hop that
+  // would be arrows sailing off beyond the hull you are being sent to.
+  const marks = Math.max(2, Math.min(HEADING_MARKS, Math.floor(len / HEADING_GAP) - 1))
+
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', left: 0, top: 0, pointerEvents: 'none', zIndex: Z.ripples,
+      animation: `guideFade ${HEADING_MS}ms ease-out forwards`,
+    }}>
+      {Array.from({ length: marks }, (_, i) => {
+        const d = 420 + i * HEADING_GAP
+        return (
+          <div key={i} style={{
+            position: 'absolute',
+            left: from.x + ux * d, top: from.y + uy * d,
+            transform: `translate(-50%, -50%) scaleY(${1 / GROUND})`,
+          }}>
+            <div style={{
+              transform: `rotate(${a}rad)`,
+              animation: `guideRun 1.9s ease-in-out ${(i * 0.13).toFixed(2)}s infinite`,
+            }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                stroke="#f0c040" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"
+                style={{ display: 'block', filter: 'drop-shadow(0 0 10px rgba(240,192,64,0.55))' }}>
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+})
+
 /**
  * ── THE MARK OVER A CAMPAIGN STOP ───────────────────────────────────────────
  *

@@ -3419,6 +3419,26 @@ body.hardcore-gauntlet::after {
   50%      { opacity: 1; }
 }
 
+/* ── THE WAY ON, WRITTEN ON THE WATER ───────────────────────────────────────
+   A run of chevrons laid on the sea from the thing you just finished, pointing
+   at the thing you have opened. `guideRun` travels along them — each mark lit
+   in turn, outward — so the line READS as a direction rather than sitting there
+   as a row of arrows. `guideFade` is the whole thing's life: up fast, held
+   while you get your bearings, gone on its own.
+
+   Opacity only, on both. These lie over painted, moving water and the marks are
+   the last thing on this chart that should cost a frame. */
+@keyframes guideRun {
+  0%, 62%, 100% { opacity: 0.16; }
+  22%           { opacity: 0.92; }
+}
+@keyframes guideFade {
+  0%   { opacity: 0; }
+  6%   { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* THE THING YOU ARE MEANT TO SAIL TO.
    A quest mark hanging over a hull or a post. It floats rather than pulses:
    the beat's own light already pulses on the rock underneath it, and two

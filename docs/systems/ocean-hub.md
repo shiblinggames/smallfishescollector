@@ -1582,8 +1582,14 @@ the one you are on lit and carrying its art and its line of voice. Two rules:
 
 - **It keeps the water's secrets.** The sea hides every node the chain has not reached, and
   a list that spelled the chapter out would hand all of that back in one tap. It names what
-  you have done and what you are on, then says *"N more, still dark"*. A chapter you have not
-  started does not even show its subtitle.
+  you have done and what you are on, then says *"N more, still dark"*. **A chapter you have
+  not reached has no name**: not its art, not its subtitle, and not its title either — the
+  titles ARE the story, and four rows reading *A Bigger Fish*, *The Coffers*, *The Last
+  Fathom* are a contents page for a book whose whole shape is that you do not know how long
+  it is. The row shows its numeral, *Still dark*, and a padlock. It is not a button either:
+  a locked row that opens to tell you how many stops it is hiding has still told you how big
+  it is. The numeral stays because knowing there is a Chapter II is the reason to keep
+  sailing, and the coda has no numeral by design, so the last row gives nothing away at all.
 - **It never lets you act.** /expeditions has the interactive version; entering a raid from a
   list here would put the page of cards back on top of the ocean that replaced it. Every stop
   is somewhere on the water, and the panel says so at the foot: *sail to it*.
@@ -1602,6 +1608,31 @@ content it grew and shrank on every tap, which drags the close button and half t
 to a new place mid-read and makes the panel feel like it is arguing with you. The scrolling
 child needs `minHeight: 0` or it grows to its content and pushes the box open anyway, which
 is the exact failure the fixed height exists to prevent.
+
+## The way on, drawn on the sea
+
+**When a clear opens something, a short run of gold chevrons is laid on the water** from
+where you stand toward the new stop (`NextHeading`), runs outward for seven seconds and goes.
+
+The compass answers *which way* and answers it forever, quietly, in a corner, at the edge of
+a screen full of moving water. That is right for finding a buyer you were already looking
+for and wrong for the one beat where the sea has just CHANGED and you do not know it yet:
+you clear a post, a hull you have never seen appears eight thousand pixels away, and nothing
+on the water says which way to put the helm over. This is the answer at the moment the
+question exists, in the middle of the screen, where you are already looking.
+
+- **It leaves.** A permanent line from the boat to the objective is a quest arrow, and a sea
+  with one is a corridor — you stop reading the water and follow a rail.
+- **It waits for the guns.** A raid clears at the KILL, which is several seconds of sinking,
+  loot and a summary before the chart is a chart again. The clear works the heading out and
+  stashes it; a second effect lays it down the moment `fightOn` drops, or the line would
+  spend its whole life behind a card.
+- **Nothing for something you can already see** (under 1,600px), and nothing on load — only a
+  clear this session moves the counter, so arriving in a bay with three things open draws
+  nothing.
+- **The angle is a SCREEN angle**, `atan2(uy * GROUND, ux)`. Every mark counter-squashes
+  itself like everything else standing on this water and then turns by the bearing your eye
+  actually sees; turning by the world bearing points the arrows somewhere else.
 
 ## A toll is settled where it was demanded
 
