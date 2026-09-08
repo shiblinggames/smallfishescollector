@@ -43,7 +43,7 @@ import {
 import { rewardForLevel, rewardLabel, LEVEL_REWARD_MAX } from '@/lib/levelRewards'
 import { crewCapacity } from '@/lib/crewCapacity'
 import { PLACES } from './chart'
-import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { SHIPS } from '@/lib/ships'
 import { navLevelReqForShip } from '@/lib/gearGating'
 import { RAID_MAP } from '@/lib/raidMap'
 import type { RenownState } from '@/app/(app)/actions/renown'
@@ -124,10 +124,7 @@ function navRows(level: number, hallTier: number): { now: Line[]; next: Line[]; 
     { label: 'Crew stats', value: `+${b.power} power · +${b.navigation} nav · +${b.fortune} fortune`, note: 'One of each every fifth level.' },
     { label: 'Berths', value: `${cap} crew`, note: 'Navigation and your Crew Hall together.' },
   ]
-  const hulls = Object.entries(EXPEDITION_SHIP_STATS)
-    .map(([tier, st]) => ({ tier: Number(tier), name: (st as { name?: string }).name ?? `Tier ${tier}`, cost: (st as { cost?: number }).cost ?? 0 }))
-    .filter(h => h.cost > 0)
-    .sort((x, y) => x.cost - y.cost)
+  const hulls = SHIPS.filter(h => h.cost > 0).sort((x, y) => x.cost - y.cost)
   const buyable = hulls.filter(h => level >= navLevelReqForShip(h.cost))
   if (buyable.length) now.push({ label: 'Hulls open', value: buyable[buyable.length - 1].name, note: `${buyable.length} of ${hulls.length} at the Shipyard.` })
   if (level >= NAV_MAX) now.push({ label: 'Renown', value: 'Open', note: 'Every level past the cap banks a point.' })

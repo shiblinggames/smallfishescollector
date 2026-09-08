@@ -245,6 +245,9 @@ const CrewHub = dynamic(() => import('./CrewHub'), { ssr: false })
  *  see SeaStory. A captain who never leaves the fishing grounds never fetches
  *  a byte of it. */
 const SeaStory = dynamic(() => import('./SeaStory'), { ssr: false })
+/** What a level is worth, either spine. Held behind a dynamic import like every
+ *  other panel the chart opens rather than draws. */
+const SkillPanel = dynamic(() => import('./SkillPanel'), { ssr: false })
 /** Ashore at the Crew Hall. Holds the whole crew page behind it, so it is only
  *  fetched by somebody who actually ties up there. */
 const HallSheet = dynamic(() => import('./HallSheet'), { ssr: false })
@@ -1358,7 +1361,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, navXP, renownNav, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
   auto, tideTurner, userId, tour, shipTier, equippedShipSkin, openDoor, openCard, raidParty, raidItems, raidSeats, itemMounts, portal, startSide,
 }: {
   fishingXP: number
@@ -1475,6 +1478,10 @@ export default function SeaMap({
    *  chart can re-run the SAME resolver the moment something is cleared rather
    *  than waiting on a refetch. See liveStatus. */
   navLevel: number
+  /** Raw Navigation XP, for the bar in the Navigation panel. */
+  navXP: number
+  /** The expedition side's renown, read beside the fishing side's. */
+  renownNav: RenownState | null
   doubloonsNow: number
   ancientsCaught: number
   dealtToday: string[]
@@ -2902,6 +2909,18 @@ export default function SeaMap({
   /** The renown panel, opened from the level bar's chip while the rod is out. */
   const [renownOpen, setRenownOpen] = useState(false)
   const [renownState, setRenownState] = useState(renown)
+  const [renownNavState, setRenownNavState] = useState(renownNav)
+  /**
+   * ── THE SPINE PANEL ────────────────────────────────────────────────────
+   *
+   * One slot in the HUD, and which spine it is about is decided by the water
+   * you are floating in: Fishing south of the reef, Navigation north of it.
+   * Never both — a captain in the Shallows has no use for a hull's HP curve,
+   * and one in a bay cannot fish.
+   */
+  const [skillOpen, setSkillOpen] = useState(false)
+  /** Which allocator the renown door opens. Set when the panel asks. */
+  const [renownSkill, setRenownSkill] = useState<'fishing' | 'nav'>('fishing')
   // Straight off the state — `available` is computed server-side when it is
   // read and again on every commit, so recomputing it here would be a second
   // source of truth for a number the panel already owns.
@@ -4695,6 +4714,12 @@ export default function SeaMap({
     // told about the two halves of the game, so a captain learns one mark and
     // it means the same thing wherever they are sailing.
     if (!fishingIn || wide) on.push('journey')
+    // ── AND WHAT YOUR LEVEL IS WORTH ──────────────────────────────────
+    //
+    // Second, right after the journey: the two questions a captain asks most
+    // often are "where am I going" and "what am I getting for this". One slot,
+    // because the two spines are never both live — see skillOpen.
+    if (!fishingIn || wide) on.push('skill')
     if (inAnchorage && (!fishingIn || wide)) on.push('crew')
     if (!fishingIn || wide) on.push('chart')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
@@ -8731,6 +8756,67 @@ hullRef={hullRefFor(t.key)} />
         )
       })()}
 
+      {/* ── THE SPINE DISC ────────────────────────────────────────────
+          A rod on the fishing side and a ship's wheel out past the reef: two
+          marks, one slot, and only ever the one that belongs to the water you
+          are in. It carries a dot when there are renown points banked, which is
+          the only state either spine ever has that is worth interrupting for. */}
+      {(!fishingIn || wide) && !fightOn && (() => {
+        const nav = inAnchorage
+        const pts = (nav ? renownNavState : renownState)?.available ?? 0
+        const label = nav ? 'Your Navigation' : 'Your Fishing'
+        return (
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); vibrate(8); setSkillOpen(true) }}
+            aria-label={label}
+            title={pts > 0 ? `${label} — ${pts} renown to spend` : label}
+            data-no-steer
+            style={{
+              position: 'absolute', top: 18, left: hudAt('skill'), zIndex: Z.hud,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: hudSize, height: hudSize, padding: 0,
+              borderRadius: 999, cursor: 'pointer',
+              background: pts > 0 ? 'rgba(26,22,8,0.86)' : 'rgba(6,12,18,0.7)',
+              border: `1px solid ${pts > 0 ? 'rgba(240,192,64,0.55)' : 'rgba(180,214,232,0.22)'}`,
+            }}>
+            <svg width={Math.round(hudSize * 0.54)} height={Math.round(hudSize * 0.54)}
+              viewBox="0 0 24 24" fill="none"
+              stroke={pts > 0 ? '#f0c040' : 'rgba(214,232,240,0.8)'}
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {nav
+                // A ship's wheel: the spine that is about sailing.
+                ? <><circle cx="12" cy="12" r="8.4" /><circle cx="12" cy="12" r="2.6" />
+                  <path d="M12 3.6v5.8M12 14.6v5.8M3.6 12h5.8M14.6 12h5.8" /></>
+                // A rod and line: the spine that is about fishing.
+                : <><path d="M4 20.2 15.4 6.4" /><path d="M14 4.6 18.6 8.4" />
+                  <path d="M16.4 7.6c1.3 2.6 1 5-1.6 6.6" /><path d="M14.8 14.2v3.2" /></>}
+            </svg>
+            {pts > 0 && (
+              <span aria-hidden style={{
+                position: 'absolute', top: -2, right: -2,
+                width: 11, height: 11, borderRadius: 999,
+                background: '#f0c040', border: '1px solid rgba(20,14,4,0.8)',
+                boxShadow: '0 0 10px rgba(240,192,64,0.6)',
+              }} />
+            )}
+          </button>
+        )
+      })()}
+
+      <SkillPanel
+        open={skillOpen}
+        onClose={() => setSkillOpen(false)}
+        skill={inAnchorage ? 'nav' : 'fishing'}
+        xp={inAnchorage ? navXP : fishingXP}
+        renown={inAnchorage ? renownNavState : renownState}
+        hallTier={crewTiers?.hall ?? 1}
+        onOpenRenown={() => {
+          setRenownSkill(inAnchorage ? 'nav' : 'fishing')
+          setSkillOpen(false)
+          setRenownOpen(true)
+        }} />
+
       <FolkPanel open={folkOpen} onClose={() => { setFolkOpen(false); refreshMet() }} finn={finn} />
 
       {/* A BEAT, PLAYING OVER THE CHART. StoryScene portals itself to the body,
@@ -9168,14 +9254,18 @@ hullRef={hullRefFor(t.key)} />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
           map's own stacking and the fishing UI both. */}
-      {renownState && (
+      {/* ONE ALLOCATOR, EITHER SPINE. It already took a `skill`; what it did
+          not have was a way in from the expedition side, where the points are
+          earned by voyages and raids and were unspendable without sailing home
+          to a fishing bar. The skill panel is that door. */}
+      {(renownSkill === 'nav' ? renownNavState : renownState) && (
         <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
           <RenownPanel
             open={renownOpen}
             onClose={() => setRenownOpen(false)}
-            skill="fishing"
-            initial={renownState}
-            onChange={st => setRenownState(st)}
+            skill={renownSkill}
+            initial={(renownSkill === 'nav' ? renownNavState : renownState)!}
+            onChange={st => (renownSkill === 'nav' ? setRenownNavState(st) : setRenownState(st))}
           />
         </div>
       )}

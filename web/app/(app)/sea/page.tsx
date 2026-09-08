@@ -102,7 +102,7 @@ export default async function SeaPage({ searchParams }: {
   // after the batch lands.
   const [
     allSpecies, { data: collectionRows }, { data: pbRows }, raidPartyRows,
-    { data: baitRows }, dealt, discovered, digs, homestead, renown, trawlState,
+    { data: baitRows }, dealt, discovered, digs, homestead, renown, renownNav, trawlState,
     { data: finaleRow }, { data: holdRows },
   ] = await Promise.all([
     getCachedFishSpecies(),
@@ -118,6 +118,10 @@ export default async function SeaPage({ searchParams }: {
     getDigState(),
     getHomestead(),
     getRenownState('fishing'),
+    // AND THE OTHER SPINE'S. The expedition side has its own panel and its own
+    // points, and a captain out there should not have to sail home to spend
+    // them. Read together, one round trip.
+    getRenownState('nav'),
     getTrawlState(),
     // THE LONG VIGIL's gate, for the collection log's Ancient Deep block.
     admin.from('raid_completions').select('id').eq('user_id', user.id).eq('raid_id', 'the_sunken_hand').limit(1).maybeSingle(),
@@ -348,6 +352,9 @@ export default async function SeaPage({ searchParams }: {
       // the water and the node map would be two opinions about what is open —
       // which is the exact thing the note below is about.
       navLevel={getExpeditionLevel(Number(profile?.expedition_xp ?? 0))}
+      // The RAW number, because the panel draws the bar as well as the level.
+      navXP={Number(profile?.expedition_xp ?? 0)}
+      renownNav={renownNav}
       doubloonsNow={Number(profile?.doubloons ?? 0)}
       ancientsCaught={((profile?.ancient_catches as number[] | null) ?? []).length}
       nodeStatus={Object.fromEntries(
