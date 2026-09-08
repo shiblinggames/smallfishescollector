@@ -2527,7 +2527,23 @@ body.hardcore-gauntlet::after {
    margin and whatever is in the right corner instead — 62 is that button (38)
    plus its margins. The enemy's card goes UNDER it rather than beside it: the
    card is tall, and nothing sensible shares a line with both. */
-.raid-oversea-bar { top: calc(var(--nav-h) + 18px); left: 12px; right: 62px; }
+.raid-oversea-bar {
+  top: calc(var(--nav-h) + 18px);
+  /* ── THE SAME COLUMN THE FIGHT IS ON ──────────────────────────────────
+     It ran the whole width of the window, which on a desktop is a Navigation
+     bar two thousand pixels long over a fight that is 720 wide. Everything
+     else in a raid — the deck, the log, both stat cards — shares one centred
+     column (RAID_COL_MAX in RaidCombat), and this was the last thing that did
+     not, so it read as the browser's rather than the game's.
+
+     `max()` keeps the old behaviour where the column would not fit: below
+     844px the right inset holds at 62 (the leave button plus its margins,
+     which the bar must never slide under) and the left at 12, exactly as
+     before. Above it, both resolve to the column's own edges and the bar lines
+     up with the log to the pixel. 360 is RAID_COL_MAX / 2. */
+  left: max(12px, calc(50% - 360px));
+  right: max(62px, calc(50% - 360px));
+}
 
 /* ── THE FIGHT'S OWN BOX, EXACTLY WHERE THE CHART'S IS ──────────────────────
    Same insets as .sea-surface below, and for the same reason: on a phone the

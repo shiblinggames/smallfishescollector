@@ -75,6 +75,14 @@ the column's own 742. Four things read it or the column:
   anywhere still has to be eaten); only the flares are penned, on the log panel's own width.
 - **The stat sheets** are `clamp(380px, 48vw, 620px)` rather than a flat 380, which was a
   phone measurement that turned a sheet of stats into a column of two-word rows.
+- **The Navigation bar is on the column too**, and it was the last thing that was not. It ran
+  the whole width of the window, which on a desktop is a level bar two thousand pixels long
+  over a fight that is 720 wide, and it read as the browser's chrome rather than the game's.
+  Over the sea the edges come from `.raid-oversea-bar`
+  (`left: max(12px, calc(50% - 360px))`, `right: max(62px, …)`, where 360 is
+  `RAID_COL_MAX / 2`); on its own route they come from `maxWidth: RAID_COL_MAX` in
+  `RaidGame`. The `max()` is what keeps the old behaviour where the column will not fit:
+  under 844px the right inset holds at 62 so the bar never slides under the leave button.
 
 ## Sustain copy
 

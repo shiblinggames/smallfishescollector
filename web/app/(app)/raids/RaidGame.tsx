@@ -21,7 +21,7 @@ import {
 import { isChallengeRaidId, baseRaidIdOf } from '@/lib/raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, rollEliteSlots, type AffixDef, type AffixId } from '@/lib/raidAffixes'
 import { isUniqueLoot } from '@/lib/bossRaids'
-import RaidCombat, { type ShipAnchor, type ShipFx, type FightFx } from './RaidCombat'
+import RaidCombat, { RAID_COL_MAX, type ShipAnchor, type ShipFx, type FightFx } from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
 import TideModal from './TideModal'
@@ -1669,11 +1669,15 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
             pointerEvents: 'none',
           } : null),
         }}>
-          {/* NO COLUMN OVER THE SEA. The fishing overlay caps its bar at 448 and
-              centres it, which is right on a page with margins; here the bar is
-              a HUD element spanning the gap the corners leave it, so the cap
-              would only reintroduce the overlap the insets just removed. */}
-          <div style={overSea ? { width: '100%' } : undefined}>
+          {/* ONE COLUMN, BOTH WAYS IN. Over the sea the edges come from
+              .raid-oversea-bar (it needs a media query for the header); on its
+              own route they come from here. Either way the bar is the width of
+              the log and the deck under it — RAID_COL_MAX — because a
+              Navigation bar running the whole window over a 720px fight reads
+              as browser chrome rather than as part of the fight. */}
+          <div style={overSea
+            ? { width: '100%' }
+            : { width: '100%', maxWidth: RAID_COL_MAX, marginLeft: 'auto', marginRight: 'auto' }}>
             <NavLevelBar xp={navXP} />
           </div>
           <AnimatePresence>

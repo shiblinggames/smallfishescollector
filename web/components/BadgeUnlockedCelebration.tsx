@@ -1,8 +1,28 @@
 'use client'
 
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BADGE_MAP } from '@/lib/badges'
+
+/**
+ * ── IT GOES OVER EVERYTHING, BECAUSE IT CAN ARRIVE DURING ANYTHING ──────────
+ *
+ * A badge is not granted by a screen, it is granted by a THING YOU DID, and the
+ * doing happens inside whatever is on top at the time: a raid, a gauntlet, a
+ * cutscene, a crate opening, a sheet over the sea. It sat at z-index 70 —
+ * above the nav and below literally every one of those — so the moment worth
+ * celebrating was the moment it was covered up.
+ *
+ * TWO FIXES, and the number is the smaller one. It was also rendered inside the
+ * app tree, and `position: fixed` is resolved against the nearest TRANSFORMED
+ * ancestor rather than the viewport, so a single animating parent anywhere
+ * above it could put the toast inside a card. Portalled to the body it has no
+ * ancestor to be trapped by, and the z-index is then read against the top-level
+ * stacking context, where 100000 (the app's highest, held by the assign picker
+ * and the tackle shop) is the number to beat.
+ */
+const Z = 100010
 
 export default function BadgeUnlockedCelebration({
   badgeId,
@@ -19,16 +39,18 @@ export default function BadgeUnlockedCelebration({
 
   const badge = badgeId ? BADGE_MAP[badgeId] : null
 
-  if (!badge) return null
+  if (!badge || typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
-        top: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+        // Just under the header, wherever the header is — see --nav-h. In a
+        // full-screen fight there is no header and it simply sits near the top.
+        top: 'calc(env(safe-area-inset-top, 0px) + var(--nav-h) + 10px)',
         left: 0, right: 0,
         display: 'flex', justifyContent: 'center',
-        zIndex: 70,
+        zIndex: Z,
         pointerEvents: 'none',
         padding: '0 1rem',
       }}
@@ -122,6 +144,7 @@ export default function BadgeUnlockedCelebration({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </div>,
+    document.body,
   )
 }

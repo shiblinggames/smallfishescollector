@@ -25,6 +25,14 @@ the rationale and the traps around it.
   from the stale `unlocked_badges` snapshot. Don't "optimize" it back to the snapshot.
 - The check script `web/scripts/check-badge-goals.mts` enforces that every registered
   badge is listed on /badges — run `npm run check` after badge work.
+- **The unlock toast goes over everything, and both halves of that matter.** A badge is
+  granted by a thing you DID, and the doing happens inside whatever is on top at the time:
+  a raid, a gauntlet, a cutscene, a crate opening, a sheet over the sea. It sat at
+  `zIndex: 70` — above the nav and below every one of those — so the moment worth
+  celebrating was the moment it was covered. It is `createPortal` to `document.body` now
+  (rendered in the app tree, `position: fixed` resolves against the nearest TRANSFORMED
+  ancestor, so one animating parent could trap it inside a card) at z 100010, above the
+  app's previous ceiling of 100000.
 
 ## Art
 
