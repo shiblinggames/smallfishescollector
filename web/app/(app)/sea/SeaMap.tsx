@@ -2943,6 +2943,8 @@ export default function SeaMap({
   const finnRef = useRef<FinnSeaState | null>(null)
   finnRef.current = finn
   const [nearFinn, setNearFinn] = useState(false)
+  /** The helm is asking which of several things in reach you meant. */
+  const [choosing, setChoosing] = useState(false)
   /**
    * THE BOAT'S POSITION, AT THE PROXIMITY TICK'S PACE.
    *
@@ -3827,6 +3829,7 @@ export default function SeaMap({
       if (voyageOpen) { setVoyageOpen(false); return }
       if (trawlOpen) { setTrawlOpen(false); return }
       if (ordersOpen) { setOrdersOpen(false); setOrdersAshore(false); return }
+      if (choosing) { setChoosing(false); return }
       if (bountiesOpen) { setBountiesOpen(false); return }
       if (campaignOpen) { setCampaignOpen(false); return }
       if (trawlsPeek) { setTrawlsPeek(false); return }
@@ -3848,7 +3851,7 @@ export default function SeaMap({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, shipSheet, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
+  }, [find, ashore, wharf, voyageOpen, trawlOpen, ordersOpen, bountiesOpen, campaignOpen, choosing, shipSheet, trawlsPeek, finnTalk, finnOpen, hailing, kipOpen, picking, crewOpen, crewHubOpen, reading, sheetNode, introNode, almanacOpen, yardOpen, folkOpen, mapOpen])
   /** Keys dealt with today, so a trader you have already traded with stops
    *  offering. Seeded from the server on mount and appended to on a deal. */
   const [dealt, setDealt] = useState<string[]>(dealtToday)
@@ -4586,147 +4589,261 @@ export default function SeaMap({
     return () => mq.removeEventListener?.('change', sync)
   }, [])
 
-  const helmLabel: { act: string | null; hold: string | null } = (() => {
-    if (fishingIn) return { act: null, hold: null }
+  /**
+   * ── EVERYTHING WITHIN REACH, IN ONE LIST ────────────────────────────────
+   *
+   * There used to be TWO priority chains: one that built the pill's label and
+   * one, three thousand lines away, that performed the tap. Each carried a
+   * comment saying the two had to stay in the same order or the button would
+   * be lying about what the thumb was about to do.
+   *
+   * THEY HAD ALREADY DRIFTED. An encounter sat eighth in the label and fourth
+   * in the action, so a captain floating in a portal beside a boss read "Step
+   * through the portal" and got a broadside. That is not a bug you fix by
+   * re-sorting one of them; it is a bug you fix by there only being one.
+   *
+   * So this is the list, in priority order, and everything downstream reads it:
+   * the pill names `reach[0]`, the tap runs it, and when there is more than one
+   * thing here the helm ASKS instead of guessing (see `choosing`). A refusal is
+   * not in this list — a hold is something you cannot do, and a chooser full of
+   * things you cannot do is worse than silence.
+   */
+  type Reach = { id: string; label: string; run: () => void }
+  const reach: Reach[] = []
+  /** The one thing worth SAYING when there is nothing to do. First wins. */
+  let holdLabel: string | null = null
+  /** True when a refusal outranks everything, actions included. */
+  let holdHard = false
+
+  if (!fishingIn) {
     // THE TUTORIAL'S ONE INSTRUCTION WINS. See tourFishOnly: everything below
     // this outranks the water, and for this one beat none of it may.
-    if (tourFishOnly.current && near?.kind === 'water' && !locked(near)) {
-      return { act: null, hold: `Hold to fish ${near.name}` }
-    }
-    if (nearFinn && !finnOpen) {
-      return { act: finn?.questReady ? `${FINN_NAME} is waiting on you` : `Hail ${FINN_NAME}`, hold: null }
-    }
-    if (nearTrader && !hailing) {
-      return { act: dealt.includes(nearTrader.key) ? `Speak to ${nearTrader.name}` : `Hail ${nearTrader.name}`, hold: null }
-    }
-    // A SHUT WATER OUTRANKS EVERYTHING. She is stopped against it, and there
-    // is nothing drawn to say so: this line is the whole of the refusal.
-    if (heldBy) return { act: null, hold: heldBy.shut }
-
-    // THE PORTAL, when you are floating in it. Above the campaign for the same
-    // reason the way home is: nothing else is inside that ring, and a captain
-    // sitting in the middle of one has already decided.
-    // NO STONE GATE ON THE DOOR ANY MORE. It used to refuse to open at all
-    // without one, which was right while the only thing inside was the band
-    // ladder. The berths need no stone — see PORTAL_PORTS — so a stoneless
-    // captain standing in their own portal was being locked out of the half of
-    // it that was for sale.
-    if (inPortalNow && !inAnchorage) {
-      return { act: 'Step through the portal', hold: null }
-    }
-
-    // A MAELSTROM, when you are in its eye. Named whether or not it will take
-    // you, and the reason it will not is the expedition page's own words.
-    if (nearMael) {
-      if (!maelOpen(nearMael.id)) {
-        return {
-          act: null,
-          hold: nearMael.id === 'davy'
+    if (tourFishOnly.current) {
+      if (near?.kind === 'water' && !locked(near)) holdLabel = `Hold to fish ${near.name}`
+      holdHard = true
+    } else if (heldBy) {
+      // A SHUT WATER OUTRANKS EVERYTHING. She is stopped against it, and there
+      // is nothing drawn to say so: this line is the whole of the refusal.
+      holdLabel = heldBy.shut
+      holdHard = true
+    } else {
+      if (nearFinn && !finnOpen) {
+        reach.push({
+          id: 'finn',
+          label: finn?.questReady ? `${FINN_NAME} is waiting on you` : `Hail ${FINN_NAME}`,
+          run: () => { if (!finnTalk) { vibrate(14); void hailFinn() } },
+        })
+      }
+      if (nearTrader && !hailing) {
+        const t = nearTrader
+        reach.push({
+          id: `trader:${t.key}`,
+          label: dealt.includes(t.key) ? `Speak to ${t.name}` : `Hail ${t.name}`,
+          // KIP BY KEY. He rides the talker plumbing so he is drawn and hailed
+          // like everybody else, but the trader panel has nothing to say for a
+          // man offering a run rather than a price.
+          run: () => {
+            vibrate(14)
+            if (t.key === KIP.key) { if (!kipOpen) setKipOpen(true) } else setHailing(t)
+          },
+        })
+      }
+      // THE PORTAL, when you are floating in it. Nothing else is inside that
+      // ring, and a captain sitting in the middle of one has already decided.
+      if (inPortalNow && !inAnchorage) {
+        reach.push({
+          id: 'portal',
+          label: 'Step through the portal',
+          run: () => {
+            vibrate([12, 50, 18])
+            // Course and way both die here, which is what separates stepping
+            // into something from tapping a button beside it.
+            vel.current.x = 0; vel.current.y = 0
+            target.current = { ...pos.current }
+            setPortalOpen(true)
+          },
+        })
+      }
+      // A MAELSTROM, when you are in its eye. Named whether or not it will take
+      // you, and the reason it will not is the expedition page's own words.
+      if (nearMael) {
+        const m = nearMael
+        if (!maelOpen(m.id)) {
+          holdLabel ??= m.id === 'davy'
             ? 'The Davy Jones Gauntlet: clear Chapter 2 first'
-            : "Don's Gauntlet: beat Don Finleone at the Throne to descend",
+            : "Don's Gauntlet: beat Don Finleone at the Throne to descend"
+        } else {
+          reach.push({
+            id: 'mael',
+            label: 'Descend into ' + m.name,
+            run: () => {
+              // The gauntlet page owns everything from here — the daily
+              // attempt, the open run, the resume — exactly as it does from
+              // the expedition page.
+              vibrate([20, 40, 30, 60, 40])
+              router.push(m.id === 'davy' ? '/raids/gauntlet' : '/raids/dons-gauntlet')
+            },
+          })
         }
       }
-      return { act: 'Descend into ' + nearMael.name, hold: null }
-    }
-
-    // THE WARGATE, when you are standing in its mouth. Same rank as the way
-    // home and for the same reason: a portal you are floating in outranks
-    // everything you merely sailed past.
-    if (nearGate) {
-      return { act: 'Sail through the Wargate', hold: null }
-    }
-
-    // THE WAY HOME, when you are floating in one. Above the campaign: nothing
-    // else in this water is within three hundred pixels of it, and a captain
-    // sitting in the mouth of a portal has already decided.
-    if (nearWayHome && wayHomeOpen(nearWayHome, liveCleared)) {
-      return { act: 'Take the way home', hold: null }
-    }
-
-    // THE CAMPAIGN OUTRANKS THE SCENERY. An encounter is what you came out here
-    // for; a dig site is something you happened to sail over.
-    if (nearEnc) {
-      const n = RAID_MAP.find(x => x.id === nearEnc.node)
-      if (n) {
-        const st = liveStatus[n.id] ?? 'locked'
-        // A LOCKED ONE STILL SAYS ITS NAME. The alternative is a boss you can
-        // see, sail up to, and get nothing from — which reads as broken rather
-        // than as not yet. Naming it and refusing is the honest half of that.
-        if (st === 'locked') return { act: null, hold: `${n.label} — not yet` }
-        // NO ROUTE, NO VERB. The story beats have `scene` rather than a screen
-        // to send you to, and their sheets are not wired out here yet — so they
-        // are named and not offered. A button captioned with a boss's name that
-        // does nothing when pressed is worse than no button: it reads as the
-        // game being broken rather than as the feature being unfinished.
-        if (!n.route) return { act: null, hold: n.label }
-        const fight = n.type === 'raid' || n.type === 'skirmish'
-        return {
-          act: fight
-            ? (st === 'cleared' ? `Take on ${n.label} again` : `Take on ${n.label}`)
-            : (st === 'cleared' ? `Read ${n.label} again` : n.label),
-          hold: null,
+      if (nearGate) {
+        reach.push({
+          id: 'wargate',
+          label: 'Sail through the Wargate',
+          run: () => {
+            vibrate([12, 40, 20])
+            // Standing still while the ledger is open; stepping through is a
+            // decision, not a drive-by.
+            vel.current.x = 0; vel.current.y = 0
+            target.current = { ...pos.current }
+            setGateOpen(true)
+          },
+        })
+      }
+      if (nearWayHome && wayHomeOpen(nearWayHome, liveCleared)) {
+        reach.push({
+          id: 'wayhome',
+          label: 'Take the way home',
+          run: () => { vibrate([12, 50, 18, 50, 26]); warpTo(PORTAL_HOME.x, PORTAL_HOME.y) },
+        })
+      }
+      // THE CAMPAIGN OUTRANKS THE SCENERY. An encounter is what you came out
+      // here for; a dig site is something you happened to sail over.
+      if (nearEnc) {
+        const e = nearEnc
+        const n = RAID_MAP.find(x => x.id === e.node)
+        const st = n ? liveStatus[n.id] ?? 'locked' : 'locked'
+        // A LOCKED ONE STILL SAYS ITS NAME. A boss you can see, sail up to and
+        // get nothing from reads as broken rather than as not yet.
+        if (n && st === 'locked') holdLabel ??= `${n.label} — not yet`
+        // NO ROUTE, NO VERB. A button captioned with a boss's name that does
+        // nothing when pressed is worse than no button.
+        else if (n && !n.route) holdLabel ??= n.label
+        else if (n) {
+          const fight = n.type === 'raid' || n.type === 'skirmish'
+          reach.push({
+            id: `enc:${n.id}`,
+            label: fight
+              ? (st === 'cleared' ? `Take on ${n.label} again` : `Take on ${n.label}`)
+              : (st === 'cleared' ? `Read ${n.label} again` : n.label),
+            run: () => {
+              vibrate(14)
+              // ── THE FIGHT HAPPENS HERE ─────────────────────────────
+              //
+              // A raid with a config opens as a SHEET over the chart: you
+              // sailed up to that hull and the guns open where you are, the
+              // same shape fishing has always had. See RaidSheet. Anything
+              // WITHOUT a config — the practice skirmish — keeps its route,
+              // because there is no config for the sheet to fight.
+              if (n.raidId && getRaidConfigById(n.raidId)) {
+                // WHICH HULL YOU ARE FIGHTING. The fight hangs everything it
+                // draws on this ship's place on the chart, so it is recorded
+                // before anything opens rather than looked up from inside it.
+                fightEncRef.current = e
+                // AND SHE STARTS PULLING ALONGSIDE NOW, behind the card. The
+                // approach takes about a second; a card takes longer than that
+                // to read, so doing both at once means dismissing it lands on
+                // a fight already composed.
+                fightOnRef.current = true
+                fightFastRef.current = false
+                wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
+                // THE CARD FIRST, and the guns after it. Which run you are
+                // taking on is chosen on that card and nowhere else.
+                setBossCard(n.id)
+                return
+              }
+              router.push(n.route!)
+            },
+          })
         }
       }
-    }
-    // AND WHAT THE CAMPAIGN LEFT LYING ABOUT. Under the ships, over the
-    // scenery: a chest with a chapter's story in it is worth more than a dig
-    // site and less than the man you came to sink.
-    // A STORY POST. Above a chest for the same reason a ship is: the chain is
-    // what you are actually here to advance, and the cache is a thing you
-    // happen to be beside.
-    if (nearBeat) {
-      const n = RAID_MAP.find(x => x.id === nearBeat.node)
-      if (n) {
+      // A STORY POST, then a chest. The chain is what you are here to advance;
+      // a cache is a thing you happen to be beside.
+      for (const [what, hit] of [['beat', nearBeat], ['cache', nearCache]] as const) {
+        if (!hit) continue
+        const n = RAID_MAP.find(x => x.id === hit.node)
+        if (!n) continue
         const st = liveStatus[n.id] ?? 'locked'
-        // LOCKED STILL SAYS ITS NAME. The campaign's order is the point — you
-        // cannot read the wax that names Krust before you have been up the line
-        // to learn there is a name — and naming the thing you cannot do yet is
-        // the honest half of refusing it. Silence would read as broken.
-        if (st === 'locked') return { act: null, hold: `${n.label} — not yet` }
-        // A BEAT IS READ, A TOLL IS SETTLED, A CHOICE IS MADE. See verbFor: the
-        // helm is the last thing read before the thumb moves, and only one of
-        // those three can be undone.
-        return { act: `${verbFor(n, st)} ${n.label}`, hold: null }
+        if (st === 'locked') {
+          // LOCKED STILL SAYS ITS NAME, for a post: the campaign's order is the
+          // point, and naming what you cannot do yet is the honest half of
+          // refusing it. A sealed chest has no name to give.
+          holdLabel ??= what === 'beat' ? `${n.label} — not yet` : 'A cache, sealed'
+          continue
+        }
+        // A BEAT IS READ, A TOLL IS SETTLED, A CHOICE IS MADE. See verbFor.
+        reach.push({
+          id: `${what}:${n.id}`,
+          label: `${verbFor(n, st)} ${n.label}`,
+          run: () => { vibrate(14); openNode(n, st === 'cleared') },
+        })
+      }
+      if (nearDig && !dug.has(nearDig.id)) {
+        const site = nearDig
+        reach.push({ id: `dig:${site.id}`, label: 'Dig here', run: () => { void dig(site) } })
+      }
+      if (nearBottle) {
+        const b = nearBottle
+        reach.push({ id: 'bottle', label: 'Take the bottle', run: () => { void take(b) } })
+      }
+      if (nearIsle) {
+        const isle = nearIsle
+        reach.push({
+          id: `isle:${isle.id}`,
+          label: found.has(isle.id) ? `Look again at ${isle.name}` : `Go ashore at ${isle.name}`,
+          run: () => { void land(isle) },
+        })
+      }
+      if (near && near.kind === 'port' && !locked(near)) {
+        const p = near
+        // THE GUNWHARF SAYS WHAT IT DOES. "Go ashore at the Gunwharf" is true
+        // and useless; what you want to know standing off it is which hull you
+        // will be sailing when you leave. The Trawl Harbour gets its own verb
+        // for the same reason: it is a thing you DO from the deck.
+        const label = p.id === 'gunwharf' ? (onShip ? 'Tie her up at the Gunwharf' : 'Take out your ship')
+          : p.id === 'charterhouse' ? (voyageOpen ? null : 'Read the voyage board')
+            : p.id === 'trawl_fleet' ? (trawlOpen ? null : 'Send a trawl out')
+              : `Go ashore at ${p.name}`
+        if (label) reach.push({ id: `port:${p.id}`, label, run: () => enter(p) })
+      }
+      // Open water. Nothing to tap, so the only thing worth saying is the hold
+      // — and if the band is above your level, why it will not work.
+      if (near && near.kind === 'water') {
+        holdLabel ??= locked(near)
+          ? `Fishing ${near.minLevel} to work this water`
+          : `Hold to fish ${near.name}`
       }
     }
-    if (nearCache) {
-      const n = RAID_MAP.find(x => x.id === nearCache.node)
-      if (n) {
-        const st = liveStatus[n.id] ?? 'locked'
-        if (st === 'locked') return { act: null, hold: 'A cache, sealed' }
-        return { act: `${verbFor(n, st)} ${n.label}`, hold: null }
-      }
-    }
-    if (nearDig && !dug.has(nearDig.id)) return { act: 'Dig here', hold: null }
-    if (nearBottle) return { act: 'Take the bottle', hold: null }
-    if (nearIsle) {
-      return { act: found.has(nearIsle.id) ? `Look again at ${nearIsle.name}` : `Go ashore at ${nearIsle.name}`, hold: null }
-    }
-    if (near && near.kind === 'port') {
-      // THE GUNWHARF SAYS WHAT IT DOES. "Go ashore at the Gunwharf" is true and
-      // useless; what you actually want to know standing off it is which hull
-      // you will be sailing when you leave.
-      if (near.id === 'gunwharf') {
-        return { act: onShip ? 'Tie her up at the Gunwharf' : 'Take out your ship', hold: null }
-      }
-      if (near.id === 'charterhouse') {
-        return { act: voyageOpen ? null : 'Read the voyage board', hold: null }
-      }
-      // ITS OWN VERB. Every other port is somewhere you go ashore; this one is
-      // a thing you DO from the deck, and "Go ashore at The Trawl Harbour"
-      // would promise a page that does not exist.
-      if (near.id === 'trawl_fleet') return { act: trawlOpen ? null : 'Send a trawl out', hold: null }
-      return { act: locked(near) ? null : `Go ashore at ${near.name}`, hold: null }
-    }
-    // Open water. Nothing to tap, so the only thing worth saying is the hold —
-    // and if the band is above your level, why it will not work.
-    if (near && near.kind === 'water') {
-      return locked(near)
-        ? { act: null, hold: `Fishing ${near.minLevel} to work this water` }
-        : { act: null, hold: `Hold to fish ${near.name}` }
-    }
-    return { act: null, hold: null }
-  })()
+  }
+
+  /**
+   * ── AND WHEN SEVERAL THINGS ARE IN REACH, THE HELM ASKS ─────────────────
+   *
+   * Moored between two people, or alongside a rock with somebody anchored off
+   * it, the old chain simply picked — and whichever it picked, the other thing
+   * was unreachable without sailing away and coming back at a different angle.
+   *
+   * The pill says how many rather than naming the first, because a button
+   * captioned "Hail Meg" that opens a menu is the same lie the two chains used
+   * to tell. It asks only when it is genuinely ambiguous: one thing in reach
+   * still acts on one tap, which is every ordinary moment on this sea.
+   */
+  const helmLabel: { act: string | null; hold: string | null } = {
+    act: reach.length > 1 ? `${reach.length} things in reach` : reach[0]?.label ?? null,
+    hold: reach.length > 0 && !holdHard ? null : holdLabel,
+  }
+
+  /**
+   * IT SHUTS ITSELF WHEN THERE IS NOTHING LEFT TO CHOOSE.
+   *
+   * The chooser is a question about a moment, and the moment ends when you
+   * drift: sail off a rock while it is open and the list behind it is one
+   * thing, or nothing. Leaving it up would be a menu of options that are no
+   * longer there.
+   */
+  useEffect(() => {
+    if (choosing && reach.length < 2) setChoosing(false)
+  }, [choosing, reach.length])
 
   /**
    * THE TAP YOU FEEL when something comes into reach.
@@ -7344,7 +7461,47 @@ hullRef={hullRefFor(t.key)} />
           wheel does their job on a tap now, so what they were really for —
           telling you there is something here at all — is one line where the
           control actually is. Never eats a press: the helm is underneath it. */}
-      {!hudOff && (helmLabel.act || helmLabel.hold) && (() => {
+      {/* ── WHICH ONE DID YOU MEAN ──────────────────────────────────────
+          Only ever up when two or more things are in reach at once. Sits above
+          the helm where the pill is, because it is the pill's own question
+          asked in full, and the wrapper is the one every sheet over this map
+          needs: the chart steers on click and starts a heading on pointerdown,
+          so without it a tap on the backdrop also puts the helm over. */}
+      {!hudOff && choosing && reach.length > 1 && (
+        <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+          {/* A backdrop that only dismisses. No scrim: the whole point is that
+              you can still see the water you are choosing on. */}
+          <div onClick={() => setChoosing(false)}
+            style={{ position: 'absolute', inset: 0, zIndex: Z.action }} />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+              bottom: HELM_BOTTOM + HELM_D + 10, zIndex: Z.action + 1,
+              width: 'min(84vw, 320px)', display: 'flex', flexDirection: 'column', gap: 6,
+            }}>
+            <p className="font-karla font-800 uppercase" style={{
+              fontSize: '0.5rem', letterSpacing: '0.22em', color: 'rgba(226,242,250,0.55)',
+              textAlign: 'center', marginBottom: 2, textShadow: '0 2px 10px rgba(0,0,0,0.9)',
+            }}>Which one</p>
+            {reach.map(r => (
+              <button key={r.id} type="button" className="tap"
+                onClick={e => { e.stopPropagation(); setChoosing(false); r.run() }}
+                style={{
+                  width: '100%', padding: '0.6rem 0.9rem', borderRadius: 14, cursor: 'pointer',
+                  background: 'linear-gradient(180deg, rgba(18,26,40,0.97), rgba(6,11,19,0.97))',
+                  border: '1px solid rgba(246,224,160,0.45)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                  color: '#f2ead8', textAlign: 'center',
+                  fontSize: '0.94rem', letterSpacing: '0.02em',
+                }}>{r.label}</button>
+            ))}
+          </motion.div>
+        </div>
+      )}
+
+      {!hudOff && !choosing && (helmLabel.act || helmLabel.hold) && (() => {
         // ONE LINE, ONE STYLE. The two used to be different sizes and different
         // families — the action in Cinzel at 1.02 and the hold in Karla at 0.78
         // — which read as a heading with a footnote when they are the same kind
@@ -8492,127 +8649,13 @@ hullRef={hullRefFor(t.key)} />
           be lying about what the thumb is about to do. */}
       {(() => {
         helmActRef.current = () => {
-          if (fishingIn) return false
-          // The same skip the pill makes, and it has to be the same or the
-          // button would be lying about what the thumb is about to do.
-          if (tourFishOnly.current) return false
-          if (nearFinn && !finnTalk) { vibrate(14); void hailFinn(); return true }
-          // KIP FIRST, and by key. He rides the talker plumbing so he is drawn
-          // and hailed like everybody else, but the trader panel has nothing to
-          // say for a man offering a run rather than a price.
-          if (nearTrader?.key === KIP.key && !kipOpen) { vibrate(14); setKipOpen(true); return true }
-          if (nearTrader && !hailing) { vibrate(14); setHailing(nearTrader); return true }
-          // INTO THE CAMPAIGN. Same order as the prompt above, or the button
-          // and the thumb would disagree about what happens next.
-          if (nearEnc) {
-            const n = RAID_MAP.find(x => x.id === nearEnc.node)
-            if (n && (liveStatus[n.id] ?? 'locked') !== 'locked' && n.route) {
-              vibrate(14)
-              // ── THE FIGHT HAPPENS HERE ─────────────────────────────
-              //
-              // A raid with a config opens as a SHEET over the chart: you sailed
-              // up to that hull and the guns open where you are, the same shape
-              // fishing has always had. See RaidSheet.
-              //
-              // The note that used to live here said a raid must stay its own
-              // route because the FX layer would take the sea's WebGL context
-              // down. That is still true OF A PIXI FX LAYER, and it has never
-              // been built — RaidCombat is DOM and framer-motion end to end, so
-              // this mount costs no context at all. The rule moved to RaidSheet,
-              // where anybody adding that layer will actually be standing.
-              //
-              // Anything WITHOUT a config — the practice skirmish — keeps its
-              // route, because there is no config for the sheet to fight.
-              if (n.raidId && getRaidConfigById(n.raidId)) {
-                // WHICH HULL YOU ARE FIGHTING. The fight hangs everything it
-                // draws on this ship's place on the chart, so it is recorded
-                // before anything opens rather than looked up from inside it.
-                fightEncRef.current = nearEnc
-                // AND SHE STARTS PULLING ALONGSIDE NOW, behind the card. The
-                // approach and the camera lean take about a second; a card
-                // takes longer than that to read. Doing them at the same time
-                // means dismissing it lands on a fight already composed
-                // instead of starting one more piece of movement.
-                fightOnRef.current = true
-                fightFastRef.current = false
-                wrapBoxRef.current = wrapRef.current?.getBoundingClientRect() ?? null
-                // THE CARD FIRST, and the guns after it. Pressing straight into
-                // a broadside was a beat too fast, and it also removed a
-                // decision: which run you are taking on is chosen on that card
-                // and nowhere else, so a fight entered from the water could
-                // only ever have been the normal one.
-                setBossCard(n.id)
-                return true
-              }
-              router.push(n.route)
-              return true
-            }
-            // Locked, or a node with nowhere to go. The prompt already said so;
-            // swallowing the tap keeps it from falling through to whatever else
-            // happens to be in reach.
-            return false
-          }
-          if (inPortalNow && !inAnchorage) {
-            vibrate([12, 50, 18])
-            // Course and way both die here, which is what separates stepping
-            // into something from tapping a button beside it.
-            vel.current.x = 0; vel.current.y = 0
-            target.current = { ...pos.current }
-            setPortalOpen(true)
-            return true
-          }
-          if (nearMael) {
-            if (!maelOpen(nearMael.id)) return false
-            // Down you go. The gauntlet page owns everything from here — the
-            // daily attempt, the open run, the resume — exactly as it does
-            // from the expedition page.
-            vibrate([20, 40, 30, 60, 40])
-            router.push(nearMael.id === 'davy' ? '/raids/gauntlet' : '/raids/dons-gauntlet')
-            return true
-          }
-          if (nearGate) {
-            vibrate([12, 40, 20])
-            // Standing still while the ledger is open; stepping through is a
-            // decision, not a drive-by.
-            vel.current.x = 0; vel.current.y = 0
-            target.current = { ...pos.current }
-            setGateOpen(true)
-            return true
-          }
-          if (nearWayHome && wayHomeOpen(nearWayHome, liveCleared)) {
-            vibrate([12, 50, 18, 50, 26])
-            warpTo(PORTAL_HOME.x, PORTAL_HOME.y)
-            return true
-          }
-          if (nearBeat) {
-            const n = RAID_MAP.find(x => x.id === nearBeat.node)
-            if (n && (liveStatus[n.id] ?? 'locked') !== 'locked') {
-              vibrate(14)
-              // THE SCENE, THE TOLL OR THE CHOICE, whichever this node is, over
-              // the water — see openNode. Nothing on a rock out here sends you to
-              // another screen any more.
-              openNode(n, (liveStatus[n.id] ?? 'locked') === 'cleared')
-              return true
-            }
-            return false
-          }
-          if (nearCache) {
-            const n = RAID_MAP.find(x => x.id === nearCache.node)
-            if (n && (liveStatus[n.id] ?? 'locked') !== 'locked') {
-              vibrate(14)
-              openNode(n, (liveStatus[n.id] ?? 'locked') === 'cleared')
-              return true
-            }
-            return false
-          }
-          if (nearDig && !dug.has(nearDig.id)) { dig(nearDig); return true }
-          if (nearBottle) { take(nearBottle); return true }
-          if (nearIsle) { void land(nearIsle); return true }
-          const here = nearRef.current
-          if (here && here.kind === 'port' && !locked(here)) { enter(here); return true }
-          // A water is not a tap target: it is what a HOLD is for, and casting
-          // on a tap would fire every time somebody meant to steer and missed.
-          return false
+          // ONE LIST, so the button cannot disagree with its own caption. See
+          // `reach`: the pill is built from exactly this and nothing else.
+          if (fishingIn || tourFishOnly.current) return false
+          if (reach.length === 0) return false
+          if (reach.length > 1) { vibrate(10); setChoosing(true); return true }
+          reach[0].run()
+          return true
         }
         return null
       })()}

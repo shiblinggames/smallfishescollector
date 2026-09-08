@@ -635,6 +635,37 @@ payload is another browser's claim.
   friend — not off the poll payload, which is stale enough to rule you "not near" somebody
   filling your screen.
 
+## The helm asks when it cannot tell
+
+Everything you can act on from the deck is ONE list, `reach`, built in priority order in
+SeaMap. The pill names it, the tap runs it, and when it holds more than one thing the helm
+asks instead of guessing.
+
+**There used to be two chains** — one building the pill's label, one performing the tap,
+three thousand lines apart, each carrying a comment saying they had to stay in the same order
+"or the button would be lying about what the thumb is about to do". They had already drifted:
+an encounter sat 8th in the label and 4th in the action, so a captain floating in a portal
+beside a boss read *Step through the portal* and got a broadside. That is not fixed by
+re-sorting one of them. It is fixed by there only being one.
+
+**The chooser fires only on genuine ambiguity** — moored between two people, or alongside a
+rock with somebody anchored off it. One thing in reach still acts on a single tap, which is
+every ordinary moment out here. The pill reads *"N things in reach"* rather than naming the
+first, because a button captioned *Hail Meg* that opens a menu is the same lie the two chains
+used to tell. It closes itself when you drift out of the ambiguity, because it is a question
+about a moment and the moment ends.
+
+**A refusal is not an option.** Holds (a locked node, a shut water, a band above your level)
+never enter the list — a chooser full of things you cannot do is worse than silence. They
+surface as the pill's hold line when nothing is actionable. Two of them still outrank
+everything: the tutorial's one instruction, and a shut water she is physically stopped
+against.
+
+One behaviour deliberately changed: a locked encounter used to SWALLOW the tap so it could
+not fall through to whatever else was in reach. Now it contributes a name to the hold and
+nothing to the list, so the isle you are also alongside is offered — which is the whole point
+of asking.
+
 ## The compass
 
 **Its mount was deleted in an over-broad slice edit** and the component sat unreferenced for
