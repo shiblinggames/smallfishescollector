@@ -1432,6 +1432,52 @@ the ring people actually sail (the outer third is the back of the furthest bay a
 crosses it), lands at **37% of crossings**. Re-run that simulation before changing either
 number.
 
+## A node is not on the water until the chain reaches it
+
+The campaign reveals itself one stop at a time. A fresh bay is open sea with a single thing
+in it; a finished one is scattered with everything you did. That progression IS the chapter,
+and it does the job the rock used to do before the water was opened up.
+
+`shown(id)` in SeaMap is the one answer, and **five things read it or the change is broken**:
+
+1. **The marks** — ships, chests and posts (`EncounterField`).
+2. **The isles under them** — a chest sits on a rock, and leaving the rock behind would draw
+   a map of the chapter in stone, which is the thing hiding the marks is for. `isleShown`
+   maps rock to node; a rock carrying nothing is scenery and stays.
+3. **Collision.** `RAID_ISLES` are in `OBSTACLES`, built once at module load. Hide the rock
+   without touching that and you leave an **invisible wall in open sea**. Campaign isles
+   carry an `isle` id on their Obstacle and the `nearObs` rebuild drops the ones not drawn.
+4. **Proximity.** `encounterNear` / `cacheNear` / `beatNear` are pure geometry and know
+   nothing about the chain, so without a filter the helm offers you a boss that isn't drawn.
+5. **The minimap**, or the chart hands back the layout the water is withholding.
+
+`previewWhenLocked` is honoured — that flag exists for nodes whose whole job is to be a
+visible goal. In practice the three that carry it are all in the coda's bay, which is shut,
+so **a brand-new captain sees exactly one thing on reachable water**: the Loose Thread's
+intro. Verified by simulation, along with: every one of the 54 placed nodes does become
+visible, and the chain never stalls.
+
+**It opens on the same frame, not after a refetch.** `router.refresh()` is still the truth,
+but it is a round trip against a page that fetches half the ocean, so the chart runs the
+resolver itself: `computeRaidMap`, the same function the server calls, with the same inputs
+(hence `navLevel` / `doubloonsNow` / `ancientsCaught` as props) plus whatever this session
+has cleared. Identical by construction rather than by agreement. Three paths feed it —
+`SeaNodeSheet` and `SeaStory` report through `onCleared`, and a fight reports on the
+enemy's `sink` event, which RaidCombat bangs once on the victory beat *after* the
+multi-phase branch returns, so it can never claim a kill that did not happen.
+
+**The arrival** (`NodeReveal`) is driven off the STATUS CHANGING rather than off whatever
+changed it, so it fires however a node came open and no clear path has to remember to
+announce itself. The first pass is seeded and never played, or everything you already own
+would rise out of the sea at once on load. It happens where the thing IS rather than as a
+banner: a chapter is twenty small openings, and twenty full-screen announcements is not a
+chapter, it is an interruption.
+
+**Finding it** is the compass, which takes the next stop as its highest-priority mark —
+ahead of even a finished job of Finn's. That is not a flourish: the water deliberately hides
+what you have not reached, so in a fresh bay there is no rock, no road and no coast to read,
+and without the arrow the answer to "where do I go" is a search pattern.
+
 ## The campaign in the corner
 
 Out on the expedition side the HUD row carries a **campaign disc** — a pennant on a staff,

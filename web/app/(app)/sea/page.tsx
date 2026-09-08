@@ -332,6 +332,16 @@ export default async function SeaPage() {
       // a copy that knows about three of the four is wrong in a way nobody
       // notices until somebody is standing off a boss that will not open.
       isAdmin={profile?.is_admin === true}
+      // ── AND THE THREE NUMBERS THE RESOLVER RUNS ON ────────────────
+      //
+      // The chart re-runs `computeRaidMap` itself the moment something is
+      // cleared, so the next stop appears without waiting for this page to be
+      // fetched again. It has to be the SAME function with the SAME inputs or
+      // the water and the node map would be two opinions about what is open —
+      // which is the exact thing the note below is about.
+      navLevel={getExpeditionLevel(Number(profile?.expedition_xp ?? 0))}
+      doubloonsNow={Number(profile?.doubloons ?? 0)}
+      ancientsCaught={((profile?.ancient_catches as number[] | null) ?? []).length}
       nodeStatus={Object.fromEntries(
         computeRaidMap(
           clearedNodes,

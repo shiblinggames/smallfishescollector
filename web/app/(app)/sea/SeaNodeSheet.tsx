@@ -49,10 +49,21 @@ const PANEL: React.CSSProperties = {
   maxHeight: '84vh', display: 'flex', flexDirection: 'column',
 }
 
-export default function SeaNodeSheet({ node, cleared, onClose }: {
+export default function SeaNodeSheet({ node, cleared, onClose, onCleared }: {
   node: RaidNode
   cleared: boolean
   onClose: () => void
+  /**
+   * THIS NODE IS DONE, SAID THE INSTANT IT IS DONE.
+   *
+   * `router.refresh()` below is the truth and stays, but it is a round trip
+   * against a page that fetches half the ocean, and the chart hides every node
+   * that is not yet reachable — so between the tap and the answer there is a
+   * stretch where the thing you just unlocked is still not on the water. The
+   * chart takes this and opens the next stop optimistically, on the same
+   * frame; the refresh lands underneath it and agrees.
+   */
+  onCleared?: (id: string) => void
 }) {
   const router = useRouter()
   const [state, setState] = useState<NodeSheetState | null>(null)
@@ -74,6 +85,7 @@ export default function SeaNodeSheet({ node, cleared, onClose }: {
    *  way. `router.refresh()` is what re-reads nodeStatus, so without it the post
    *  stays lit and whatever this just unlocked stays locked until a reload. */
   function done() {
+    onCleared?.(node.id)
     router.refresh()
     onClose()
   }

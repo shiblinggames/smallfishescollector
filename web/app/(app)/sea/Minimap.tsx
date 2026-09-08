@@ -171,8 +171,12 @@ function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number)
 
 export default function Minimap({
   open, onClose, fog, at, seaAt, found, bearings, dug, friends, finn, side = 'fishing',
-  cleared = [], next = null,
+  cleared = [], next = null, shown,
 }: {
+  /** Whether a campaign node is on the water for this captain. The chart must
+   *  not draw what the sea is hiding: a pip for every fight in a chapter you
+   *  have not started would hand back the whole layout the water withholds. */
+  shown?: (id: string) => boolean
   /** THE NEXT THING THE CAMPAIGN WANTS, pinned. The same resolution the
    *  corner card reads (see SeaMap's nextStop), so the two never disagree.
    *  Only on the expedition halves; null when nothing is waiting. */
@@ -383,6 +387,7 @@ export default function Minimap({
         // caches and story beats are things you come across while looking.
         for (const e of ENCOUNTERS) {
           if (e.bay !== b.id) continue
+          if (shown && !shown(e.node)) continue
           const at = encounterAt(e)
           if (!at) continue
           const done = cleared.includes(e.node)
@@ -617,7 +622,7 @@ export default function Minimap({
       ctx.fillStyle = INK.you
       ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn, side, cleared, next])
+  }, [fog, w, at, seaAt, found, bearings, dug, friends, finn, side, cleared, next, shown])
 
   useEffect(() => { if (open) draw() }, [open, draw])
 

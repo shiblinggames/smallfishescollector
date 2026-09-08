@@ -24,7 +24,7 @@ import StoryScene from '@/app/(app)/expeditions/StoryScene'
 import { markStoryNodeRead } from '@/app/(app)/expeditions/raidMapActions'
 import { SCENE_BACKDROPS, type RaidNode } from '@/lib/raidMap'
 
-export default function SeaStory({ node, cleared, intro = false, onDone }: {
+export default function SeaStory({ node, cleared, intro = false, onDone, onCleared }: {
   node: RaidNode
   /** Already read. A replay: the closing button just shuts it, and Skip is
    *  allowed, because the beat has already been earned once. */
@@ -40,6 +40,8 @@ export default function SeaStory({ node, cleared, intro = false, onDone }: {
    */
   intro?: boolean
   onDone: () => void
+  /** Read, and said at once — see the note on SeaNodeSheet's own. */
+  onCleared?: (id: string) => void
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -56,6 +58,7 @@ export default function SeaStory({ node, cleared, intro = false, onDone }: {
       // THE CHART HAS TO HEAR ABOUT IT. `nodeStatus` is a server prop, so
       // without this the post stays lit, the next post stays locked, and a gate
       // that this beat just opened stays shut until a reload.
+      onCleared?.(node.id)
       router.refresh()
       onDone()
     })

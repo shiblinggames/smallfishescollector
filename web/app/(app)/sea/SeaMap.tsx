@@ -56,7 +56,7 @@ import {
   WARSHIP_W, FIGHT_CAM_LIFT, zoomFor,
   type Bay, type Encounter, type Cache, type Beat,
 } from './raidWaters'
-import { RAID_MAP, RAID_CHAPTERS, chapterForNode, type RaidNode } from '@/lib/raidMap'
+import { RAID_MAP, RAID_CHAPTERS, chapterForNode, computeRaidMap, type RaidNode } from '@/lib/raidMap'
 import { getRaidConfigById } from '@/lib/raidRegistry'
 import { friendsAtSea, visitableHomesteads, homesteadOf, type FriendAtSea, type Visitable } from '../home/visitActions'
 import { openBottle, digHere, type BottleResult, type DigResult, type DigState } from './digActions'
@@ -657,7 +657,13 @@ const HULL = 55
 /** An obstacle is a circle, or a capsule when x2/y2 are present. The loop
  *  tests against the closest point of the segment; a circle is the degenerate
  *  capsule whose segment is a point. */
-type Obstacle = { x: number; y: number; r: number; x2?: number; y2?: number }
+type Obstacle = {
+  x: number; y: number; r: number; x2?: number; y2?: number
+  /** Set on a campaign isle. Those come and go with the chapter's progress, and
+   *  an obstacle whose rock is not drawn must not stop a hull — see the near
+   *  list. Everything else on this chart is permanent and leaves it unset. */
+  isle?: string
+}
 
 function artShapes(art: string, x: number, y: number, size: number, fallbackR: number): Obstacle[] {
   const c = ART_COLLIDERS[markKind(art)]
@@ -730,9 +736,14 @@ const OBSTACLES: Obstacle[] = [
   // AND THE CAMPAIGN'S OWN ISLES. Same treatment, same reason: these are the
   // rocks a bay is scattered with so that sailing one is steering rather than
   // holding a heading, and a rock you can sail through does not make you steer.
+  // TAGGED WITH THE ROCK THEY ARE. A campaign isle is only on the water once
+  // the chain has reached what stands on it, and an obstacle left behind by a
+  // hidden rock is an invisible wall in open sea — the single worst thing this
+  // change could ship. The near-list rebuild drops the ones that are not
+  // drawn; see `isle` on Obstacle and the filter in nearObs.
   ...RAID_ISLES.flatMap((i): Obstacle[] => {
     const p = isleAt(i)
-    return p ? [{ x: p.x, y: p.y, r: i.r + HULL }] : []
+    return p ? [{ x: p.x, y: p.y, r: i.r + HULL, isle: i.id }] : []
   }),
   // The Gunwharf and the Charterhouse need no entry of their own: they are
   // ports now, and the port sweep at the top of this list already gives every
@@ -1332,7 +1343,7 @@ function seaTiles(): { deep: string; pale: string } | null {
 }
 
 export default function SeaMap({
-  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, dealtToday, isAdmin = false,
+  fishingXP, characterColor: characterColor0, boatId: boatId0, hatId: hatId0, mods, gear, bait, baitQty, baitBag, hold, rack, hullSpeed, handlingTier, accelTier, lanternTier, start, log, trawlsOut, renown, exploredRaw, discovered, digs, homestead, crewTiers, forgeTier, clearedNodes, nodeStatus, navLevel, doubloonsNow, ancientsCaught, dealtToday, isAdmin = false,
   auto, tideTurner, userId, tour, shipTier, raidParty, raidItems, raidSeats, itemMounts, raidRepairOwed, portal, startSide,
 }: {
   fishingXP: number
@@ -1437,6 +1448,12 @@ export default function SeaMap({
   /** nodeId -> 'locked' | 'available' | 'cleared', from `computeRaidMap` on the
    *  server. The water never decides this for itself. */
   nodeStatus: Record<string, string>
+  /** The three numbers `computeRaidMap` needs besides the cleared set, so the
+   *  chart can re-run the SAME resolver the moment something is cleared rather
+   *  than waiting on a refetch. See liveStatus. */
+  navLevel: number
+  doubloonsNow: number
+  ancientsCaught: number
   dealtToday: string[]
   /** The specials the CLIENT has to drive. See FishingHere for why these three
    *  are the only ones that needed carrying out here. */
@@ -1548,8 +1565,115 @@ export default function SeaMap({
   /** Mirrored for the frame loop, which mounts once and would otherwise hold
    *  whatever was cleared when the page loaded — so a chapter finished in this
    *  session would leave its strait shut until a reload. */
+  /**
+   * ── WHAT THIS SESSION HAS CLEARED, BEFORE THE SERVER SAYS SO ───────────
+   *
+   * Every clear ends in `router.refresh()` and that is still the truth. But a
+   * refresh is a round trip against a page that fetches half the ocean, and
+   * this chart now HIDES everything the chain has not opened — so between
+   * sinking a boss and the answer coming back there is a stretch where the
+   * thing you just unlocked is simply not on the water. That reads as nothing
+   * having happened, and it is what makes people reload a page to see whether
+   * it worked.
+   *
+   * So the chart runs the resolver itself. Same `computeRaidMap` the server
+   * calls, same inputs, plus whatever this session has cleared — so the answer
+   * is identical by construction rather than by agreement, and the refresh
+   * lands underneath it and changes nothing.
+   */
+  const [justCleared, setJustCleared] = useState<string[]>([])
+  const markCleared = useCallback((id: string) => {
+    setJustCleared(prev => (prev.includes(id) ? prev : [...prev, id]))
+  }, [])
+  /** The cleared set as it stands RIGHT NOW: the server's plus this session's.
+   *  Everything that gates on progress reads this rather than the prop. */
+  const liveCleared = useMemo(() => (justCleared.length === 0
+    ? clearedNodes
+    : [...new Set([...clearedNodes, ...justCleared])]), [clearedNodes, justCleared])
+  /** And what that makes open. Falls straight through to the server's answer
+   *  until this session has actually cleared something, so the common case
+   *  costs nothing. */
+  const liveStatus = useMemo(() => (justCleared.length === 0
+    ? nodeStatus
+    : Object.fromEntries(
+      computeRaidMap(new Set(liveCleared), doubloonsNow, navLevel, isAdmin, ancientsCaught)
+        .map(v => [v.node.id, v.status]))),
+  [justCleared, nodeStatus, liveCleared, doubloonsNow, navLevel, isAdmin, ancientsCaught])
+
+  /**
+   * ── AND WHAT IS ACTUALLY DRAWN ON THE WATER ────────────────────────────
+   *
+   * A node appears when the chain reaches it and not before. The bay you have
+   * not started is open sea with one thing in it; the one you have finished is
+   * scattered with everything you did. That progression IS the chapter, and it
+   * is what the rock used to say before the water was opened up.
+   *
+   * `previewWhenLocked` is honoured, because that flag exists for nodes whose
+   * whole job is to be a goal you can see and go and earn — hiding one would
+   * quietly stop the flag meaning anything.
+   */
+  const shown = useCallback((id: string): boolean => {
+    const st = liveStatus[id] ?? 'locked'
+    if (st !== 'locked') return true
+    return RAID_MAP.find(n => n.id === id)?.previewWhenLocked === true
+  }, [liveStatus])
+  const shownRef = useRef(shown)
+  shownRef.current = shown
+
+  /**
+   * WHICH NODE A ROCK CARRIES, if any. Built once: the chest and post tables
+   * name their isle, and this is that read backwards.
+   */
+  const ISLE_NODE = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const c of CACHES) m[c.isle] = c.node
+    for (const b of BEATS) m[b.isle] = b.node
+    return m
+  }, [])
+  /** A rock is on the water if it carries nothing, or if what it carries is. */
+  const isleShown = useCallback((isleId: string): boolean => {
+    const node = ISLE_NODE[isleId]
+    return !node || shown(node)
+  }, [ISLE_NODE, shown])
+  const isleShownRef = useRef(isleShown)
+  isleShownRef.current = isleShown
+
+  /**
+   * ── WHAT APPEARED WHILE YOU WERE WATCHING ──────────────────────────────
+   *
+   * Driven off the STATUS CHANGING rather than off the thing that changed it,
+   * so it fires however a node came open — a boss sunk, a post read, a chest
+   * opened, a refresh landing from another tab — and no clear path has to
+   * remember to announce itself.
+   *
+   * The first pass is seeded, never played: on a fresh load everything you
+   * already own would rise out of the sea at once.
+   */
+  const [revealed, setRevealed] = useState<Set<string>>(() => new Set())
+  const seenShown = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    const now = new Set(RAID_MAP.filter(n => shown(n.id)).map(n => n.id))
+    const was = seenShown.current
+    seenShown.current = now
+    if (!was) return
+    const fresh = [...now].filter(id => !was.has(id))
+    if (fresh.length === 0) return
+    setRevealed(prev => new Set([...prev, ...fresh]))
+    vibrate([0, 18, 40, 26])
+    // The mark keeps its arrival for as long as the animation runs and then
+    // becomes ordinary scenery, so nothing on the chart is permanently lit.
+    const t = window.setTimeout(() => {
+      setRevealed(prev => {
+        const next = new Set(prev)
+        for (const id of fresh) next.delete(id)
+        return next
+      })
+    }, 2600)
+    return () => window.clearTimeout(t)
+  }, [shown])
+
   const clearedRef = useRef<string[]>(clearedNodes)
-  useEffect(() => { clearedRef.current = clearedNodes }, [clearedNodes])
+  useEffect(() => { clearedRef.current = liveCleared }, [liveCleared])
   /**
    * WHICH HULL IS UNDER YOU, which is now a separate question from which water
    * you are in.
@@ -2237,12 +2361,18 @@ export default function SeaMap({
     // them, which is where the memory went. See liveBay.
     for (const i of RAID_ISLES) {
       if (i.bay !== liveBay) continue
+      // AND THE ROCK GOES WITH THE THING ON IT. A chest you have not reached
+      // sits on an isle, and leaving the isle behind would put a bare rock in
+      // the water for every stop the chapter has not opened — which is a map
+      // of the chapter drawn in stone, and exactly what hiding the marks is
+      // meant to stop. A rock with nothing on it is scenery and stays.
+      if (!isleShown(i.id)) continue
       const p = isleAt(i)
       if (p) out.push({ id: i.id, r: i.r, x: p.x, y: p.y, locked: false })
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveBay])
+  }, [liveBay, isleShown])
   /** Every wreck, rig, buoy, bone pile and moored smack, in chart order —
    *  the index is what gives each its own sway phase. */
   /** The tall scenery, for the near pass. The SAME list the depth test walks,
@@ -3078,9 +3208,9 @@ export default function SeaMap({
    *  expedition page reads, so the water cannot open a door the page shuts. */
   const [nearMael, setNearMael] = useState<Maelstrom | null>(null)
   const maelOpen = useCallback((id: Maelstrom['id']) => id === 'davy'
-    ? gauntletUnlocked({ isAdmin, clearedNodes })
-    : donsGauntletUnlocked({ isAdmin, throneCleared: clearedNodes.includes('the_throne') }),
-  [isAdmin, clearedNodes])
+    ? gauntletUnlocked({ isAdmin, clearedNodes: liveCleared })
+    : donsGauntletUnlocked({ isAdmin, throneCleared: liveCleared.includes('the_throne') }),
+  [isAdmin, liveCleared])
   const [gateOpen, setGateOpen] = useState(false)
   const [gateData, setGateData] = useState<BossCardState | null>(null)
   /** The fight's own loadout, read on the same approach for the same reason. */
@@ -4295,7 +4425,7 @@ export default function SeaMap({
    * done, or nothing is open yet), and the corner shows nothing.
    */
   const nextStop = useMemo(() => {
-    const n = RAID_MAP.find(x => !x.sideBranch && (nodeStatus[x.id] ?? 'locked') === 'available')
+    const n = RAID_MAP.find(x => !x.sideBranch && (liveStatus[x.id] ?? 'locked') === 'available')
     if (!n) return null
     const enc = ENCOUNTERS.find(e => e.node === n.id)
     const beat = BEATS.find(b => b.node === n.id)
@@ -4310,7 +4440,7 @@ export default function SeaMap({
       at,
       verb: fight ? 'Take on' : cache ? 'Open' : verbFor(n, 'available'),
     }
-  }, [nodeStatus])
+  }, [liveStatus])
 
   const hudRow = useMemo(() => {
     const on: string[] = []
@@ -4418,7 +4548,7 @@ export default function SeaMap({
     // THE WAY HOME, when you are floating in one. Above the campaign: nothing
     // else in this water is within three hundred pixels of it, and a captain
     // sitting in the mouth of a portal has already decided.
-    if (nearWayHome && wayHomeOpen(nearWayHome, clearedNodes)) {
+    if (nearWayHome && wayHomeOpen(nearWayHome, liveCleared)) {
       return { act: 'Take the way home', hold: null }
     }
 
@@ -4427,7 +4557,7 @@ export default function SeaMap({
     if (nearEnc) {
       const n = RAID_MAP.find(x => x.id === nearEnc.node)
       if (n) {
-        const st = nodeStatus[n.id] ?? 'locked'
+        const st = liveStatus[n.id] ?? 'locked'
         // A LOCKED ONE STILL SAYS ITS NAME. The alternative is a boss you can
         // see, sail up to, and get nothing from — which reads as broken rather
         // than as not yet. Naming it and refusing is the honest half of that.
@@ -4456,7 +4586,7 @@ export default function SeaMap({
     if (nearBeat) {
       const n = RAID_MAP.find(x => x.id === nearBeat.node)
       if (n) {
-        const st = nodeStatus[n.id] ?? 'locked'
+        const st = liveStatus[n.id] ?? 'locked'
         // LOCKED STILL SAYS ITS NAME. The campaign's order is the point — you
         // cannot read the wax that names Krust before you have been up the line
         // to learn there is a name — and naming the thing you cannot do yet is
@@ -4471,7 +4601,7 @@ export default function SeaMap({
     if (nearCache) {
       const n = RAID_MAP.find(x => x.id === nearCache.node)
       if (n) {
-        const st = nodeStatus[n.id] ?? 'locked'
+        const st = liveStatus[n.id] ?? 'locked'
         if (st === 'locked') return { act: null, hold: 'A cache, sealed' }
         return { act: `${verbFor(n, st)} ${n.label}`, hold: null }
       }
@@ -5719,6 +5849,9 @@ export default function SeaMap({
           const obs = nearObs.current
           obs.length = 0
           for (const o of allObstacles()) {
+            // A ROCK THAT IS NOT DRAWN CANNOT STOP YOU. See the note on the
+            // campaign isles in OBSTACLES.
+            if (o.isle && !isleShownRef.current(o.isle)) continue
             const c = obstacleNearest(o, pos.current.x, pos.current.y)
             const dx = pos.current.x - c.x, dy = pos.current.y - c.y
             const reach = o.r + R
@@ -6742,19 +6875,25 @@ export default function SeaMap({
         // AND WHAT THE CAMPAIGN HAS STANDING OUT HERE. Same tick and the same
         // shape as the isles: this changes when you come alongside something,
         // which is not sixty times a second.
-        const enc = encounterNear(pos.current.x, pos.current.y)
+        // NOTHING YOU CANNOT SEE IS WITHIN REACH. These are pure geometry and
+        // know nothing about the chain, so without this the helm offers you a
+        // boss that is not drawn.
+        const encRaw = encounterNear(pos.current.x, pos.current.y)
+        const enc = encRaw && shownRef.current(encRaw.node) ? encRaw : null
         setNearEnc(prev => (prev?.node === enc?.node ? prev : enc))
 
         // AND THE CAMPAIGN'S CHESTS, which sit on the rocks. Tighter reach than
         // a ship and measured off the rock's edge: you pull up beside a chest,
         // you do not hail it.
-        const cch = cacheNear(pos.current.x, pos.current.y)
+        const cchRaw = cacheNear(pos.current.x, pos.current.y)
+        const cch = cchRaw && shownRef.current(cchRaw.node) ? cchRaw : null
         setNearCache(prev => (prev?.node === cch?.node ? prev : cch))
 
         // AND THE STORY POSTS, which are read the same way a chest is opened:
         // you pull alongside and press. See BEATS for why they are not triggers
         // that fire as you sail into them.
-        const bt = beatNear(pos.current.x, pos.current.y)
+        const btRaw = beatNear(pos.current.x, pos.current.y)
+        const bt = btRaw && shownRef.current(btRaw.node) ? btRaw : null
         setNearBeat(prev => (prev?.node === bt?.node ? prev : bt))
 
         // AND THE WAY HOME, which only exists in a bay whose boss is down.
@@ -7006,7 +7145,7 @@ export default function SeaMap({
             path their land is already in `gpuIslands` above — the same split
             IsleRock makes, and the same split that has twice been got wrong by
             applying something to one path and not the other. */}
-        {!GPU_ISLANDS && RAID_ISLES.map(i => {
+        {!GPU_ISLANDS && RAID_ISLES.filter(i => isleShown(i.id)).map(i => {
           const p = isleAt(i)
           return p ? (
             <div key={i.id} aria-hidden style={{
@@ -7030,9 +7169,10 @@ export default function SeaMap({
         {!GPU_ISLANDS && <WargateMark isNear={nearGate} />}
 
         {/* The campaign, standing in its own water. */}
-        <EncounterField bay={liveBay} status={nodeStatus} nearId={nearEnc?.node ?? null}
+        <EncounterField bay={liveBay} status={liveStatus} shown={shown} revealed={revealed}
+          nearId={nearEnc?.node ?? null}
           nearCacheId={nearCache?.node ?? null} nearBeatId={nearBeat?.node ?? null}
-          cleared={clearedNodes} nearHomeId={nearWayHome?.bay ?? null}
+          cleared={liveCleared} nearHomeId={nearWayHome?.bay ?? null}
           // `engaging` rather than `fightId`: the boss card is already the
           // engagement, and the mooring should go the moment it opens rather
           // than a beat later when the guns do.
@@ -8033,7 +8173,27 @@ hullRef={hullRefFor(t.key)} />
             )
             return
           }
-          if (e.kind === 'sink') { gpu.gunsink(at.x, at.y); return }
+          if (e.kind === 'sink') {
+            gpu.gunsink(at.x, at.y)
+            // ── AND THE NEXT STOP OPENS, NOW ──────────────────────────
+            //
+            // The enemy going down IS the clear. `router.refresh()` on the way
+            // out is still the truth, but it is a round trip against a page
+            // that fetches half the ocean, and the water hides everything the
+            // chain has not reached — so without this you sink a boss, close
+            // the loot, and the sea has nothing new on it until the refetch
+            // lands. That reads as nothing having happened.
+            //
+            // SAFE BECAUSE OF WHERE IT IS EMITTED. RaidCombat bangs this once,
+            // on the victory beat, AFTER the multi-phase branch has returned —
+            // a boss going down between phases never reaches it. So this
+            // cannot claim a kill that did not happen.
+            if (e.side === 'enemy') {
+              const node = fightEncRef.current?.node
+              if (node) markCleared(node)
+            }
+            return
+          }
           if (e.kind === 'dodge') {
             // AWAY FROM WHAT SHE SLIPPED. A dodge is a direction, and the only
             // direction that means anything here is "not toward the other
@@ -8103,6 +8263,12 @@ hullRef={hullRefFor(t.key)} />
       {!hudOff && (
         <Compass pos={pos} zoom={zoomRef} wrapRef={wrapRef} locked={locked} frozen={dialUp} friends={friends} regulars={regulars}
           finn={finnBearing}
+          // ONLY OUT PAST THE REEF, and only while there is something waiting.
+          // On the fishing side the campaign is somewhere else entirely and an
+          // arrow pointing over the horizon at it would be noise.
+          next={inAnchorage && nextStop?.at
+            ? { x: nextStop.at.x, y: nextStop.at.y, name: nextStop.node.label }
+            : null}
           // The harbour IS a place now, so the compass can raise it again when
           // a crew is in — which is the whole reason the compass sorts by this.
           waitingAt={id => (id === 'trawl_fleet' ? trawlsReady : 0)} />
@@ -8190,7 +8356,8 @@ hullRef={hullRefFor(t.key)} />
       {(() => {
         const n = reading ? RAID_MAP.find(x => x.id === reading) : null
         return n ? (
-          <SeaStory node={n} cleared={(nodeStatus[n.id] ?? 'locked') === 'cleared'}
+          <SeaStory node={n} cleared={(liveStatus[n.id] ?? 'locked') === 'cleared'}
+            onCleared={markCleared}
             onDone={() => setReading(null)} />
         ) : null
       })()}
@@ -8212,7 +8379,8 @@ hullRef={hullRefFor(t.key)} />
       {(() => {
         const n = sheetNode ? RAID_MAP.find(x => x.id === sheetNode) : null
         return n ? (
-          <SeaNodeSheet node={n} cleared={(nodeStatus[n.id] ?? 'locked') === 'cleared'}
+          <SeaNodeSheet node={n} cleared={(liveStatus[n.id] ?? 'locked') === 'cleared'}
+            onCleared={markCleared}
             onClose={() => setSheetNode(null)} />
         ) : null
       })()}
@@ -8264,7 +8432,7 @@ hullRef={hullRefFor(t.key)} />
           // and the thumb would disagree about what happens next.
           if (nearEnc) {
             const n = RAID_MAP.find(x => x.id === nearEnc.node)
-            if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked' && n.route) {
+            if (n && (liveStatus[n.id] ?? 'locked') !== 'locked' && n.route) {
               vibrate(14)
               // ── THE FIGHT HAPPENS HERE ─────────────────────────────
               //
@@ -8337,28 +8505,28 @@ hullRef={hullRefFor(t.key)} />
             setGateOpen(true)
             return true
           }
-          if (nearWayHome && wayHomeOpen(nearWayHome, clearedNodes)) {
+          if (nearWayHome && wayHomeOpen(nearWayHome, liveCleared)) {
             vibrate([12, 50, 18, 50, 26])
             warpTo(PORTAL_HOME.x, PORTAL_HOME.y)
             return true
           }
           if (nearBeat) {
             const n = RAID_MAP.find(x => x.id === nearBeat.node)
-            if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked') {
+            if (n && (liveStatus[n.id] ?? 'locked') !== 'locked') {
               vibrate(14)
               // THE SCENE, THE TOLL OR THE CHOICE, whichever this node is, over
               // the water — see openNode. Nothing on a rock out here sends you to
               // another screen any more.
-              openNode(n, (nodeStatus[n.id] ?? 'locked') === 'cleared')
+              openNode(n, (liveStatus[n.id] ?? 'locked') === 'cleared')
               return true
             }
             return false
           }
           if (nearCache) {
             const n = RAID_MAP.find(x => x.id === nearCache.node)
-            if (n && (nodeStatus[n.id] ?? 'locked') !== 'locked') {
+            if (n && (liveStatus[n.id] ?? 'locked') !== 'locked') {
               vibrate(14)
-              openNode(n, (nodeStatus[n.id] ?? 'locked') === 'cleared')
+              openNode(n, (liveStatus[n.id] ?? 'locked') === 'cleared')
               return true
             }
             return false
@@ -8695,7 +8863,7 @@ hullRef={hullRefFor(t.key)} />
         // WHICH DOORS ARE OPEN TO THIS CAPTAIN. The same list the water itself
         // reads, so the chart cannot draw a strait open that the coast has
         // rocked shut.
-        cleared={clearedNodes}
+        cleared={liveCleared}
         onClose={() => setMapOpen(false)}
         fog={fogRef.current}
         at={pos}
@@ -8711,9 +8879,10 @@ hullRef={hullRefFor(t.key)} />
         bearings={bearings}
         dug={dug}
         friends={friends}
-        // THE NEXT THING THE CAMPAIGN WANTS, pinned. Same resolution the
-        // corner card reads, so the two can never point at different things.
+        // THE NEXT THING THE CAMPAIGN WANTS, pinned. Same resolution the HUD
+        // disc reads, so the two can never point at different things.
         next={nextStop?.at ? { x: nextStop.at.x, y: nextStop.at.y, label: nextStop.node.label } : null}
+        shown={shown}
       />
 
       {/* THE RENOWN PANEL. Portals to <body> via PopupShell, so it clears the
@@ -11012,6 +11181,62 @@ const AshoreTick = memo(function AshoreTick() {
  * frame. Nothing for a hull you cannot take on yet — a ring inviting you into a
  * fight the chain will refuse is worse than no ring.
  */
+/**
+ * ── SOMETHING HAS OPENED, AND IT ARRIVES ────────────────────────────────
+ *
+ * Wrapped round a mark the moment its node comes open, and only then. The mark
+ * itself is untouched: this rises it out of the water, throws two rings off
+ * the spot and holds a glow for a beat, then hands over and the thing is
+ * ordinary scenery from that moment on.
+ *
+ * WHY IT IS NOT A BANNER. The chapter is a chain of small openings — a post, a
+ * chest, the next hull — and a full-screen announcement on each would be
+ * twenty interruptions a chapter. This happens where the thing IS, so the
+ * answer to "what just changed" is a place on the sea rather than a card in
+ * front of it. If you are looking elsewhere the compass and the HUD dot are
+ * what tell you, and the mark is simply there when you arrive.
+ */
+const NodeReveal = memo(function NodeReveal({ x, y, children }: {
+  x: number; y: number; children: React.ReactNode
+}) {
+  const GOLD = '#f0c040'
+  return (
+    <>
+      <div aria-hidden style={{ position: 'absolute', left: x, top: y, pointerEvents: 'none', zIndex: Z.ripples }}>
+        {[0, 0.34].map((delay, i) => (
+          <motion.span key={i}
+            initial={{ opacity: 0.6, scale: 0.2 }}
+            animate={{ opacity: 0, scale: 3.4 }}
+            transition={{ duration: 1.5, delay, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', left: -130, top: -130 * GROUND,
+              width: 260, height: 260 * GROUND, borderRadius: '50%',
+              border: `2px solid ${GOLD}`, boxShadow: `0 0 26px ${GOLD}77`,
+            }} />
+        ))}
+        <motion.span
+          initial={{ opacity: 0.85, scale: 0.5 }}
+          animate={{ opacity: 0, scale: 2 }}
+          transition={{ duration: 1.9, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: -150, top: -150 * GROUND,
+            width: 300, height: 300 * GROUND, borderRadius: '50%',
+            background: `radial-gradient(circle, ${GOLD}55 0%, ${GOLD}18 42%, transparent 72%)`,
+          }} />
+      </div>
+      {/* OPACITY AND A LIFT, nothing else. A scale on the mark itself would
+          fight the perspective every other thing on this plane is drawn with. */}
+      <motion.div
+        initial={{ opacity: 0, y: 26 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+        style={{ position: 'absolute', left: 0, top: 0 }}>
+        {children}
+      </motion.div>
+    </>
+  )
+})
+
 const DockMark = memo(function DockMark({ enc, isNear }: {
   enc: Encounter
   isNear: boolean
@@ -11456,7 +11681,12 @@ function verbFor(n: RaidNode, status: string): string {
   return 'Read'
 }
 
-const EncounterField = memo(function EncounterField({ bay, status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId, fightNode, hullRef }: {
+const EncounterField = memo(function EncounterField({ bay, status, nearId, nearCacheId, nearBeatId, cleared, nearHomeId, fightNode, hullRef, shown, revealed }: {
+  /** Whether a node is on the water at all for this captain. */
+  shown: (id: string) => boolean
+  /** Nodes that appeared THIS SESSION, so their marks can arrive rather than
+   *  simply be there. See the reveal note in SeaMap. */
+  revealed: Set<string>
   /**
    * WHICH BAY'S CONTENT TO DRAW, or null for none of it.
    *
@@ -11480,11 +11710,17 @@ const EncounterField = memo(function EncounterField({ bay, status, nearId, nearC
   fightNode: string | null
   hullRef: React.Ref<HTMLDivElement>
 }) {
+  // ── ONLY WHAT THE CHAIN HAS REACHED ──────────────────────────────────
+  //
+  // A node is not on the water until the one before it is done. A fresh bay is
+  // open sea with a single thing in it and the one you finished is scattered
+  // with everything you did, so the chapter's shape is drawn by the chapter
+  // rather than by a rock. `shown` honours previewWhenLocked — see its note.
   const all = useMemo(() => [
-    ...ENCOUNTERS.filter(x => x.bay === bay).map(e => ({ kind: 'ship' as const, e, y: encounterAt(e)?.y ?? 0 })),
-    ...CACHES.filter(x => x.bay === bay).map(c => ({ kind: 'cache' as const, c, y: cacheAt(c)?.y ?? 0 })),
-    ...BEATS.filter(x => x.bay === bay).map(bt => ({ kind: 'beat' as const, b: bt, y: beatAt(bt)?.y ?? 0 })),
-  ].sort((p, q) => p.y - q.y), [bay])
+    ...ENCOUNTERS.filter(x => x.bay === bay && shown(x.node)).map(e => ({ kind: 'ship' as const, e, y: encounterAt(e)?.y ?? 0 })),
+    ...CACHES.filter(x => x.bay === bay && shown(x.node)).map(c => ({ kind: 'cache' as const, c, y: cacheAt(c)?.y ?? 0 })),
+    ...BEATS.filter(x => x.bay === bay && shown(x.node)).map(bt => ({ kind: 'beat' as const, b: bt, y: beatAt(bt)?.y ?? 0 })),
+  ].sort((p, q) => p.y - q.y), [bay, shown])
 
   return <>
     {/* THE MOORINGS FIRST, all of them, under every hull and rock on the water.
@@ -11496,19 +11732,26 @@ const EncounterField = memo(function EncounterField({ bay, status, nearId, nearC
         telling you where to start a fight you are already in is the sea talking
         over itself. `fightNode` is set for both, so this covers the card as
         well as the broadside. */}
-    {fightNode ? null : ENCOUNTERS.filter(e => e.bay === bay).map(e => (status[e.node] ?? 'locked') === 'locked' ? null : (
+    {fightNode ? null : ENCOUNTERS.filter(e => e.bay === bay && shown(e.node)).map(e => (status[e.node] ?? 'locked') === 'locked' ? null : (
       <DockMark key={`dock-${e.node}`} enc={e} isNear={nearId === e.node} />
     ))}
-    {all.map(it => it.kind === 'ship'
-    ? <EncounterMark key={it.e.node} enc={it.e}
-        status={status[it.e.node] ?? 'locked'} isNear={nearId === it.e.node}
-        hullRef={fightNode === it.e.node ? hullRef : undefined} />
-    : it.kind === 'cache'
-      ? <CacheMark key={it.c.node} cache={it.c}
-          status={status[it.c.node] ?? 'locked'} isNear={nearCacheId === it.c.node} />
-      : <BeatMark key={it.b.node} beat={it.b}
-          status={status[it.b.node] ?? 'locked'} isNear={nearBeatId === it.b.node} />
-  )}
+    {all.map(it => {
+      const id = it.kind === 'ship' ? it.e.node : it.kind === 'cache' ? it.c.node : it.b.node
+      const mark = it.kind === 'ship'
+        ? <EncounterMark enc={it.e}
+            status={status[id] ?? 'locked'} isNear={nearId === id}
+            hullRef={fightNode === id ? hullRef : undefined} />
+        : it.kind === 'cache'
+          ? <CacheMark cache={it.c} status={status[id] ?? 'locked'} isNear={nearCacheId === id} />
+          : <BeatMark beat={it.b} status={status[id] ?? 'locked'} isNear={nearBeatId === id} />
+      // ARRIVING, not simply being there. Only for something that opened while
+      // you were looking: on a fresh load every mark you own would otherwise
+      // rise out of the sea at once, which is a cutscene nobody asked for.
+      const at = it.kind === 'ship' ? encounterAt(it.e) : it.kind === 'cache' ? cacheAt(it.c) : beatAt(it.b)
+      return revealed.has(id) && at
+        ? <NodeReveal key={id} x={at.x} y={at.y}>{mark}</NodeReveal>
+        : <Fragment key={id}>{mark}</Fragment>
+    })}
   {/* UNDER EVERYTHING, because it is a hole in the water rather than a thing
       standing in it, and nothing should ever be hidden behind one. */}
   {RETURN_PORTALS.filter(pt => pt.bay === bay && wayHomeOpen(pt, cleared)).map(pt => (
@@ -12522,7 +12765,17 @@ type CompassRegular = { id: string; name: string; zoneId: string; x: number; y: 
  *  was 96) let two centres pass while the words lay on each other. */
 const COMPASS_KEEP = { x: 120, y: 42 }
 
-function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars }: {
+function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn, regulars, next }: {
+  /**
+   * THE CAMPAIGN'S NEXT STOP, out on the expedition side.
+   *
+   * The strongest role on this compass, ahead of even a finished job of Finn's,
+   * and it has to be: the campaign's water HIDES everything the chain has not
+   * reached, so a captain in a fresh bay is looking at ten thousand pixels of
+   * open sea with one thing in it and no rock, no road and no coast to read.
+   * Without this arrow the answer to "where do I go" is a search pattern.
+   */
+  next: { x: number; y: number; name: string } | null
   /** The regulars, with whether you have met them. Only the ones in the water
    *  you are in are considered, and only the ones you know get an arrow. */
   regulars: CompassRegular[]
@@ -12627,6 +12880,24 @@ function Compass({ pos, zoom, wrapRef, locked, frozen, waitingAt, friends, finn,
     sx: number; sy: number; world: number
   }
   const marks: Mark[] = []
+
+  // ── WHERE THE CAMPAIGN GOES NEXT, AHEAD OF EVERYTHING ────────────────
+  //
+  // See the note on the prop. This is the one heading on the expedition side
+  // that cannot be worked out by looking at the sea, because the sea is
+  // deliberately not showing it yet.
+  if (next) {
+    const n = project(next.x, next.y)
+    marks.push({
+      id: 'campaign-next',
+      name: next.name,
+      dim: false,
+      dist: true,
+      accent: '#f0c040',
+      urgent: true,
+      sx: n.sx, sy: n.sy, world: n.world,
+    })
+  }
 
   // ── THE RIVAL, AHEAD OF EVERYTHING WHEN HE IS HOLDING SOMETHING ──────
   //
