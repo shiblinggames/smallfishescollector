@@ -117,6 +117,9 @@ const RUN_PHASES: ReadonlySet<Phase> = new Set<Phase>([
  * every modal and dock in a screen, and a transform on it would break their
  * fixed positioning.
  */
+/** How long the card you took holds lit before the screen moves on. */
+const BOON_CLAIM_MS = 820
+
 const SWAP_OUT_MS = 200
 const SWAP_IN_MS = 300
 /** The screen layer, so the swap can drive it without a re-render. */
@@ -636,6 +639,16 @@ export default function GauntletGame(props: GauntletGameProps) {
   // worst -> best so the rarest is the climax. Per-card phase keyed by index.
   const [boonPhases, setBoonPhases] = useState<Record<number, 'sealed' | 'charging' | 'flipped'>>({})
   const [boonFlash, setBoonFlash] = useState(0)               // key — retriggers the legendary flash
+  /**
+   * WHICH CARD YOU JUST TOOK, while the claim plays.
+   *
+   * A draft is the most consequential tap in a dive and it used to be the
+   * quietest: the screen changed on the same frame as the click, so there was
+   * no moment where the thing you chose was the thing on screen. This holds the
+   * pick for BOON_CLAIM_MS — the card lifts and lights, the two you passed on
+   * dim and settle back, the controls go — and only then does the phase move.
+   */
+  const [boonTaken, setBoonTaken] = useState<{ idx: number; id: string } | null>(null)
   const [boonBanner, setBoonBanner] = useState<{ name: string; key: number } | null>(null)
   // Confluence just completed by the boon you claimed — highlighted on the next
   // breather as a "synergy unlocked" beat. Cleared when you descend.
@@ -1803,12 +1816,25 @@ export default function GauntletGame(props: GauntletGameProps) {
   // tier replaces the lower). Effects are derived from boonTiers and fed to
   // RaidCombat each fight, so they persist for free without piling into the tide
   // channel (where an upgrade would otherwise double-apply the old tier).
-  function applyBoon(offer: BoonOffer) {
+  /**
+   * TAKE ONE. The feedback fires NOW — the haptic, the water answering in the
+   * card's own colour — and the card holds lit while the two beside it fade,
+   * because that beat is the whole reward for the choice. The state change
+   * waits for it.
+   */
+  function claimBoon(offer: BoonOffer, idx: number) {
+    if (boonTaken) return
     hapticCommit() // a run-defining pick locks in — give it weight
     // THE WATER ANSWERS THE PICK, in the card's own colour. A legendary is the
     // big one: the whole room lights.
     arenaRef.current?.beat(offer.rarity === 'legendary' ? 'legendary' : 'boon',
       parseInt(BOON_RARITY_META[offer.rarity].color.slice(1), 16))
+    setBoonTaken({ idx, id: offer.id })
+    window.setTimeout(() => applyBoon(offer), BOON_CLAIM_MS)
+  }
+
+  function applyBoon(offer: BoonOffer) {
+    setBoonTaken(null)
     runEventsRef.current.push({ depth: rollStateRef.current.cleared + skipOffset, kind: 'boon' })
     // Opportunity-cost model: completing a boon PAIR no longer auto-grants the
     // confluence — it just makes it eligible to be OFFERED as a draft card
@@ -4419,19 +4445,27 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <motion.button
                   initial={false}
                   // Press-and-hold weight: the card sinks under the finger with a
-                  // tick on contact, then applyBoon's commit buzz fires on release
+                  // tick on contact, then claimBoon's commit buzz fires on release
                   // — the pick should feel heavier than a menu tap.
-                  whileTap={flipped ? { scale: 0.93 } : undefined}
-                  whileHover={flipped ? { scale: 1.015 } : undefined}
+                  whileTap={flipped && !boonTaken ? { scale: 0.93 } : undefined}
+                  whileHover={flipped && !boonTaken ? { scale: 1.015 } : undefined}
                   transition={POP}
                   onPointerDown={flipped ? () => hapticTap() : undefined}
                   // Armed to banish: the whole card becomes the "bin this one"
                   // target (and opens a confirm) instead of drafting it.
                   onClick={() => {
-                    if (!flipped) return
+                    if (!flipped || boonTaken) return
                     if (banArmed) { hapticTap(); setBanConfirm({ idx, name: b.name }); return }
-                    applyBoon(b)
+                    claimBoon(b, idx)
                   }}
+                  // THE CLAIM, HELD. The one you took lifts and brightens; the
+                  // ones you passed on step back and dim, which is what makes
+                  // the moment a CHOICE rather than a screen change.
+                  animate={boonTaken
+                    ? (boonTaken.idx === idx
+                        ? { scale: 1.045, opacity: 1, filter: 'brightness(1.22)' }
+                        : { scale: 0.965, opacity: 0.26, filter: 'brightness(0.7)' })
+                    : { scale: 1, opacity: 1, filter: 'brightness(1)' }}
                   className="tap"
                   style={{
                     position: 'relative', textAlign: 'left', overflow: 'hidden', width: '100%',
@@ -4658,6 +4692,23 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </motion.button>
                 </motion.div>
 
+                {/* TAKEN. One word, stamped over the card you chose, for as long
+                    as the claim holds. Nothing else on the screen has to say
+                    what happened. */}
+                <AnimatePresence>
+                  {boonTaken?.idx === idx && (
+                    <motion.div key="taken" aria-hidden
+                      initial={{ opacity: 0, scale: 1.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                      transition={{ duration: 0.28, ease: [0.16, 1.2, 0.3, 1] }}
+                      style={{ position: 'absolute', inset: 0, zIndex: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                      <span className="font-cinzel font-800 uppercase" style={{
+                        fontSize: wide ? '1.5rem' : '1.15rem', letterSpacing: '0.22em', color: '#fff',
+                        textShadow: `0 0 18px ${rm.color}, 0 0 44px ${rm.color}aa, 0 2px 8px rgba(0,0,0,0.9)`,
+                      }}>Taken</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Landing payoff — legendary gets gold shock rings + a spark
                     burst; rare/common settle with a soft rarity-tinted ring. */}
                 {flipped && rank === 3 && <BoonShockRings />}
@@ -4714,7 +4765,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {/* Confluence — a synergy you QUALIFY for, offered in place of a boon
                 slot (the Hades-duo opportunity cost). Distinct violet lane so the
                 "forge the synergy instead" trade reads at a glance. */}
-            {pendingConfluence && revealDone && (() => {
+            {pendingConfluence && revealDone && !boonTaken && (() => {
               // Convergences (Don's meta-tier) take a hotter crimson-gold lane so
               // "forge a convergence" reads as a bigger moment than a synergy.
               const cvg = !!pendingConfluence.isConvergence
@@ -4789,7 +4840,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {/* Reprieve — an optional one-time relief, taken INSTEAD of a boon.
                 Surfaces in later rounds; the warm amber + "you forgo the draft"
                 cue keep the trade clear. */}
-            {pendingReprieve && revealDone && (
+            {pendingReprieve && revealDone && !boonTaken && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
@@ -4828,7 +4879,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
 
           {/* Second Cast — reroll the offered boons (limited per draft). */}
-          {rerollsLeft > 0 && revealDone && (
+          {rerollsLeft > 0 && revealDone && !boonTaken && (
             <button onClick={rerollBoons} className="font-karla font-700 uppercase tracking-[0.1em] tap"
               style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: AC, background: `${AC}14`, border: `1px solid ${AC}55`, cursor: 'pointer' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
@@ -4838,7 +4889,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Banish — arm the mode, then tap the boon you want gone (and confirm).
               A proper button beats the old 24px ✕ that sat on top of a full-card
               draft target. Only while a ban is still available. */}
-          {filtersLeft > 0 && revealDone && (
+          {filtersLeft > 0 && revealDone && !boonTaken && (
             <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16 }}>
               <button onClick={() => { hapticTap(); setBanArmed(a => !a) }} className="font-karla font-700 uppercase tracking-[0.08em] tap"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.05rem', borderRadius: 999, fontSize: '0.64rem', cursor: 'pointer',
@@ -4859,7 +4910,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Codex access — review what a synergy does / what you're building
               toward right when you're deciding. Lights violet when one is on
               offer. */}
-          {revealDone && (
+          {revealDone && !boonTaken && (
             <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16 }}>
               <button onClick={() => setSynergiesOpen(true)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.5rem 1rem', borderRadius: 999, fontSize: '0.6rem',

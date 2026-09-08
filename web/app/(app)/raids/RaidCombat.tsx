@@ -4462,11 +4462,19 @@ export default function RaidCombat({
     //   - center-screen aim-result badge ("CRITICAL!", "HIT!", etc.)
     //   - on crit: full-screen gold flash + haptic burst
     //   - on hit: short haptic
+    // ── HOLD IT LONG ENOUGH TO BE READ ────────────────────────────────
+    //
+    // The lock is the one input in this whole fight, and the beat that told
+    // you how it went was over in under half a second for everything but a
+    // crit: the badge, the frozen needle and the sparks all arrived and left
+    // before you had finished looking down at them. Half again as long on
+    // every result, and a miss gets a real hold too, because being told you
+    // missed is information and not a punishment to be hurried past.
     const dur =
-      res === 'critical' ? 720 :
-      res === 'hit'      ? 460 :
-      res === 'graze'    ? 320 :
-                           220
+      res === 'critical' ? 1050 :
+      res === 'hit'      ? 760 :
+      res === 'graze'    ? 560 :
+                           480
 
     if (res === 'critical') {
       setCritFlash(true)
@@ -8866,8 +8874,11 @@ export default function RaidCombat({
             // moment (centered text-only flash with a single expanding ring)
             // but toned down: smaller text, lower-glow color, one ring
             // instead of two, no full-screen radial gradient, no sparks.
-            const accent = aimResult === 'hit' ? '#4ade80' : '#94a3b8'
-            const label  = aimResult === 'hit' ? 'Hit!' : 'Graze'
+            // A MISS SAID "GRAZE". The label fell through to the graze copy
+            // for want of a third branch, so the one result that most needs
+            // saying plainly was lying about itself.
+            const accent = aimResult === 'hit' ? '#4ade80' : aimResult === 'miss' ? '#f87171' : '#94a3b8'
+            const label  = aimResult === 'hit' ? 'Hit!' : aimResult === 'miss' ? 'Miss' : 'Graze'
             const isHit  = aimResult === 'hit'
             return (
               <motion.div
