@@ -259,6 +259,20 @@ export type Folk = {
    * confession, the thing they had never said. These are what comes after
    * being told it. Quieter, more ordinary, sometimes funnier, often circling
    * back to what they let slip. A friendship is mostly the days afterwards.
+   *
+   * AND IT IS THE DEEPEST POOL ANYBODY HAS, by a long way. Five was written
+   * when this was a coda; it is not a coda, it is the REST OF THE GAME. Tier
+   * four arrives somewhere in the middle of a captain's time out here and then
+   * never ends, so five after-max lines on top of the tier's own five meant a
+   * friend of two years had ten sentences and you had heard all of them. The
+   * six who are written in this file carry twelve, which puts seventeen behind
+   * a maxed regular and means the loop is long enough that a repeat reads as
+   * somebody with a favourite thing to say rather than as a script.
+   *
+   * THE THREE WHO ARE REAL PEOPLE ARE NOT WRITTEN HERE. Matty, Dennis and Yoon
+   * take their words from the one person entitled to give them, which is the
+   * standing rule for those three everywhere in this file. Their pools grow
+   * when he writes them and not before.
    */
   afterMax: string[]
   /** The moment the bond deepens. One per tier crossed into, so four. */
@@ -368,6 +382,13 @@ export const FOLK: Folk[] = [
       "Sit a minute. The scale is not going anywhere and neither, apparently, are you.",
       "I have started weighing yours last. It is the only part of the day I am in no hurry for.",
       "We are past the part where I explain myself to you. That is restful. You have no idea.",
+      "A hand came out last week and told me the Shallows were a waste of a morning. I weighed his catch and I did not correct him. You would have.",
+      "I have a bad knee now. I am telling you because you would notice by the end of the season and I would rather say it first.",
+      "Somebody new is working the east side. Green as anything. Go and be rude to them so they carry on.",
+      "There is a mug on this boat that is yours. I did not decide that. It simply happened and now it is a rule.",
+      "Thirty years and the water still comes over the rail in the same place. There is a great deal to be said for that.",
+      "Do not bring me the big one. Bring me the ordinary one and tell me about the day. I get the big ones from everybody.",
+      "I told my mother about you, which took some doing, as she has been dead eleven years. She would have weighed you and said you were small. She said that about everything.",
     ],
     tierUp: [
       "You keep turning up. All right. Meg. That is what I go by, and now you know it.",
@@ -527,6 +548,13 @@ export const FOLK: Folk[] = [
       "Some days I do not weigh anything at all. Those are not the bad days. I used to think they were.",
       "You have started sounding like somebody who lives out here. I am not sure that is a kindness.",
       "Forty years of this and the sea still does something new every month. Stay long enough and it will show you.",
+      "I have started leaving the lamp lit past dark. Not for anybody in particular. It simply seems to be the thing to do now.",
+      "Your name is on my list twice. Nobody is on it twice. I have not decided whether to fix it.",
+      "A captain came out yesterday and haggled me down eight percent. I let her. She reminded me of you, years back.",
+      "The joke about my name. Go on. Once. I will decide afterwards whether we are still friends.",
+      "There is nothing new to tell you today, and I notice neither of us has left.",
+      "I used to think sitting still was a trade. It was a decision. Thirty years to see the difference.",
+      "If I am short with you one day it will be the weather in my hands and nothing you have done. I want that on the record before it happens.",
     ],
     tierUp: [
       "Marlow. Old Marlow if you like, everyone else does, and I stopped minding it a long time ago.",
@@ -589,6 +617,13 @@ export const FOLK: Folk[] = [
       "Nothing down there has changed. That is the most alarming thing I can tell you about it.",
       "I talked to somebody else last week. Briefly. I did not care for it.",
       "Go up. I know you know. I will say it every time regardless.",
+      "Mm. Yes. That was the whole thought and I stand by it.",
+      "The light was closer last month. It is further now. I am telling you, not asking you.",
+      "I said one question a visit. That was years ago. The rule has quietly ended and I am not announcing it.",
+      "You brought a lamp. You did not need a lamp. I noticed and I liked it.",
+      "There is a word for what this is. I have never used it out loud and I am not starting now.",
+      "Do not come down in the dark of the year. I will still be here in the spring. Probably.",
+      "Sit. Yes. Like that.",
     ],
     tierUp: [
       "Fitch.",
@@ -650,6 +685,13 @@ export const FOLK: Folk[] = [
       "Bring me nothing today. Sit there. That is a thing you are allowed to do.",
       "I told you the deep takes whoever it likes. It has not taken you. I am not calling that luck out loud.",
       "You will be the old one out here one day. Start noticing what you would want to pass on.",
+      "The count is at four hundred and nine. Yours is still the number I check first.",
+      "I dreamt of the oldest water again. In the dream it was warm. I do not know what to do with that.",
+      "There is a page in my book with your name at the top and nothing under it yet. Fill it slowly.",
+      "You have started saying come up to other captains. It came back to me last week from somebody who has never met me.",
+      "My hands are worse this year. The scale does not mind. I do.",
+      "I have stopped asking the sea for anything. It seems to be going better.",
+      "When they find my boat empty, the count goes to you. It is a book and a pencil and forty years. Do not lose the pencil.",
     ],
     tierUp: [
       "Nance. Grey Nance to the harbour, just Nance to whoever comes back twice.",
@@ -894,6 +936,13 @@ export const FOLK: Folk[] = [
       "My line is tied off the same way every time now. If you ever see it different, that is the signal.",
       "I went down with somebody last month. First time since my sister. It was fine. It was strange and it was fine.",
       "You are on the short list of people who would come looking. I have never had a short list before.",
+      "I rang the bell. Once, in daylight, with the line tied off and a hand on it. Nothing happened and I have been better since.",
+      "My sister's mooring was full on Tuesday. I sailed past it twice and did not stop. Ask me again in a year.",
+      "I have a length of rope aboard off the middle wreck. It is the best rope I have ever handled. That is the whole story.",
+      "You anchored properly again. I have not had to say it in a year and I still nearly say it.",
+      "Everything down there belonged to somebody. I remember that more than twice a year now. I blame you.",
+      "There is a fourth wreck. I found it in the spring. I have not been in and I am not ready to say why.",
+      "If you do come down with me, wear the old gloves and not the good ones. It is the only advice I have that is worth anything.",
     ],
     tierUp: [
       "Cass. Turbot if you are being formal, and nobody out here is being formal.",
@@ -952,6 +1001,13 @@ export const FOLK: Folk[] = [
       "I have started telling people what you are like out here. I hope that is all right. It is all good.",
       "Forty years and I have finally worked out who I would send word to. Took a while.",
       "Yoon changed his mind again about that message. I have stopped waiting. You should too, probably.",
+      "Meg has a mug on her boat with your name on it. She will deny it. She showed it to me.",
+      "Nothing to carry today. I sailed out here anyway. Work that one out, because I have not.",
+      "I am teaching a young one the run. She is quicker than me and worse at the listening. That is the hard half.",
+      "Fitch spoke twice last month. Twice. I have written the dates down and I will not be taking questions.",
+      "Marlow says he has no regulars. He has six and he can name them in order. I have heard him do it.",
+      "You are the first in forty years to ask what the news costs me. A sail and a bad back, since you keep asking.",
+      "I said somebody should keep the account when I am done. I have stopped saying should.",
     ],
     tierUp: [
       "Rue. Rue Bream. Now you are on my list, which is a real list and it is quite short.",

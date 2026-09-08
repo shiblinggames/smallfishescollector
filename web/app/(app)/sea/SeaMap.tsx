@@ -83,7 +83,7 @@ import { claimFishingLevelRewards } from '../fishing/actions'
 // other role and needs these numbers — and FishingHere importing back from here
 // is a cycle that killed the page on load. See app/(app)/sea/helm.ts.
 import { HELM_R, HELM_D, HELM_BOTTOM, HELM_DEADZONE, HELM_HOLD_MS } from './helm'
-import { seaClock, PHASE_LABEL, PHASE_GLYPH, type SeaPhase } from '@/lib/seaClock'
+import { seaClock } from '@/lib/seaClock'
 import { hotspotsAt, HOTSPOT_DEFS, TIER_GLOW, type Hotspot } from '@/lib/seaHotspots'
 import { squallAt } from '@/lib/seaWeather'
 import { tradersAround, traderPos, yoonTrader, seaDay, plainRodFor, plainHookFor, KIND_LABEL, DEALS_PER_DAY, CELL, type Trader, type TraderLook } from '@/lib/seaTraders'
@@ -4557,7 +4557,6 @@ export default function SeaMap({
     // told about the two halves of the game, so a captain learns one mark and
     // it means the same thing wherever they are sailing.
     if (!fishingIn || wide) on.push('journey')
-    if (!inAnchorage) on.push('clock')
     if (inAnchorage && (!fishingIn || wide)) on.push('crew')
     if (!fishingIn || wide) on.push('chart')
     // THE BOOK, on the fishing side only. It is a reference about FISH, and out
@@ -8021,39 +8020,11 @@ hullRef={hullRefFor(t.key)} />
       {/* `|| wide` is why this survived a fight: on a desktop there is room for
           it beside a cast, so the guard let it through. A broadside is not a
           question of room — see hudOff. */}
-      {(!fishingIn || wide) && !fightOn && (
-        // A SYMBOL, NOT A NAME. The words were a label on a map, and the sky
-        // already says what time it is in colour — the corner only has to
-        // confirm it at a glance. `title` keeps the name for anyone who wants
-        // it, and the aria-label keeps it for anyone who cannot see the shape.
-        //
-        // IT SHOWS ON THE EXPEDITION SIDE TOO. It never used to, and the water
-        // up there goes just as dark: the sky changed colour and the one thing
-        // that says what time it is was on the other side of the reef. Out
-        // there it takes the RIGHT corner, because the left is the crew's.
-        <div title={PHASE_LABEL[phase]} aria-label={PHASE_LABEL[phase]} role="img" style={{
-          // ON THE ZONE TITLE'S ROW.
-          //
-          // Same `top: 18` the WaterBanner uses, and a 26px disc against a
-          // 1.35rem line that boxes at about 26px — so the two sit on one line
-          // across the top of the chart rather than stacking into two bands of
-          // furniture. Left edge, because the name is centred and a symbol
-          // beside it would drag the name off centre every time the phase
-          // changed width.
-          //
-          // NOT rendered inside the banner, even though it shares its row: the
-          // banner only exists while you are in a named water, and what time it
-          // is has to be readable in open sea and off a dock too.
-          position: 'absolute', top: 18, zIndex: Z.hud, pointerEvents: 'none',
-          ...(inAnchorage ? { right: 12 } : { left: hudAt('clock') }),
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: hudSize, height: hudSize, borderRadius: '50%',
-          background: 'rgba(6,12,18,0.7)',
-          border: '1px solid rgba(180,214,232,0.22)',
-        }}>
-          <PhaseGlyph phase={phase} size={Math.round(hudSize * 0.62)} />
-        </div>
-      )}
+      {/* NO CLOCK IN THE CORNER. There was a disc up here showing the hour as
+          a glyph, and the sky already says what time it is — in colour, across
+          the whole screen, which is the medium that fact actually belongs in.
+          A 26px symbol repeating it was a readout for something nobody was
+          asking, on the row where every other disc is a door. */}
 
       {/* FINN'S BET, WHILE YOU ARE CARRYING ONE.
           Kept up during fishing as well as on the water — the bet is WON with
@@ -12487,49 +12458,6 @@ const PlaceIsland = memo(function PlaceIsland({ place, locked, waiting = 0 }: {
  * entered somewhere new" and "what am I in".
  */
 
-/**
- * THE SKY, AS ONE SHAPE.
- *
- * Four glyphs, warm for light and cold for dark, so the corner reads without
- * being read. Dusk and dawn are the same half-disc on a horizon line mirrored
- * about the vertical — one sinking, one climbing — which is the only pair that
- * genuinely needs telling apart and the only pair a colour alone could not.
- */
-function PhaseGlyph({ phase, size = 16 }: { phase: SeaPhase; size?: number }) {
-  const g = PHASE_GLYPH[phase]
-  const warm = g === 'sun' || g === 'setting' || g === 'rising'
-  const c = warm ? '#ffd986' : '#9fb6ff'
-  const glow = warm ? 'rgba(255,217,134,0.55)' : 'rgba(159,182,255,0.55)'
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden
-      style={{ filter: `drop-shadow(0 0 5px ${glow})` }}>
-      {g === 'sun' && (
-        <>
-          <circle cx="12" cy="12" r="4.4" fill={c} />
-          {[0, 45, 90, 135, 180, 225, 270, 315].map(a => (
-            <line key={a} x1="12" y1="3.4" x2="12" y2="5.6"
-              stroke={c} strokeWidth="1.9" strokeLinecap="round"
-              transform={`rotate(${a} 12 12)`} />
-          ))}
-        </>
-      )}
-      {g === 'moon' && (
-        // A crescent cut from one disc by another, so it needs no mask and
-        // stays a crescent at 16px where a thin arc would grey out.
-        <path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z" fill={c} />
-      )}
-      {(g === 'setting' || g === 'rising') && (
-        <g transform={g === 'rising' ? 'scale(-1 1) translate(-24 0)' : undefined}>
-          {/* Half a disc above the waterline, with the arrow of its travel. */}
-          <path d="M6.5 15a5.5 5.5 0 0 1 11 0z" fill={c} />
-          <line x1="3.5" y1="18.4" x2="20.5" y2="18.4" stroke={c} strokeWidth="1.9" strokeLinecap="round" />
-          <path d={g === 'setting' ? 'M12 4.2v4.2M10.1 6.6 12 8.6l1.9-2' : 'M12 8.4V4.2M10.1 6 12 4l1.9 2'}
-            stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-        </g>
-      )}
-    </svg>
-  )
-}
 
 /**
  * A HOTSPOT ON THE WATER.

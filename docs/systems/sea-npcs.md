@@ -214,10 +214,14 @@ water you are in. Unmet regulars get nothing, not even a mark, or every band wou
 exclamation points. `SeaMap` reads `folkState()` on mount and again whenever a talk closes; the
 compass slot cap is five so a name never costs the way home its arrow.
 
-**Tier 4 has an `afterMax` pool and a card of its own.** Five more lines per regular that
+**Tier 4 has an `afterMax` pool and a card of its own.** Extra lines per regular that
 only open once tier four's own five are spent, in a different register: tier four is the
 threshold, the thing they had never said, and `afterMax` is the ordinary days after being
-told it. Still story only. In the Salt Road roster a maxed card drops the progress bar (a
+told it. Still story only. **The pool is TWELVE, not five** for the six written regulars,
+so a maxed friend has seventeen things to say. Five was written when tier four read as a
+coda; it is not a coda, it is the rest of the game, and ten sentences to cover a captain's
+second year meant the loop was audible. Matty, Dennis and Yoon keep five, because their
+words come from one person and nobody else writes them. In the Salt Road roster a maxed card drops the progress bar (a
 full bar reads as a completed errand, and this is the one system whose whole reward is that
 somebody talks to you differently), takes their accent properly, and breathes in THEIR
 colour rather than gold, because gold is currency and would say prize. The final tier-up

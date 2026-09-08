@@ -1548,6 +1548,26 @@ the one you are on lit and carrying its art and its line of voice. Two rules:
 - **It never lets you act.** /expeditions has the interactive version; entering a raid from a
   list here would put the page of cards back on top of the ocean that replaced it. Every stop
   is somewhere on the water, and the panel says so at the foot: *sail to it*.
+
+**It is art-forward, and it is ONE SIZE.** A chapter row is a banner of the place that
+chapter ends, taken from `RAID_BOSS_BG[raidId] ?? RAID_LOCATION_BG[raidId]` on its last
+non-side-branch raid, with a scrim weighted to the foot; the blurb sits UNDER the art rather
+than on it, because a line of italic over a painting is the one thing that always reads
+badly. A chapter you have not started is drawn dark and unlit, which is the same rule as its
+hidden subtitle. Inside a spine, every combat stop carries its enemy's portrait off
+`getRaidConfigById(raidId)` at a size you can read a face at, so the bosses are the spine and
+the story beats between them stay type.
+
+The panel's height is FIXED (`min(80vh, 680px)`) and the list scrolls inside it. Sized to its
+content it grew and shrank on every tap, which drags the close button and half the chapters
+to a new place mid-read and makes the panel feel like it is arguing with you. The scrolling
+child needs `minHeight: 0` or it grows to its content and pushes the box open anyway, which
+is the exact failure the fixed height exists to prevent.
+
+**There is no clock in the corner.** There was a disc up there reading out the phase, and it
+was the only glyph in the row that answered a question nobody asks: the sky already says what
+time it is, in colour, across the whole screen. `seaClock` still runs everything it ran
+before (the tint, the runners, the hotspots); it simply is not narrated.
 "Next" is the same rule the Expeditions hub lights its spine with, the first node in chain
 order that is `available` and not a side branch, resolved against the water through
 `ENCOUNTERS`, `BEATS` and `CACHES` for a position (`nextStop`). Tapping the card opens the
