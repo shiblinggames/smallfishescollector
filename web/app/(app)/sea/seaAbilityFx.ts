@@ -358,14 +358,18 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
    *  that carries the meaning: fire rises, ice hangs, a snare drags down. */
   const COND = [
     null,
-    { color: 0xff8a3c, rise: 1 },      // 1 burn     — embers going up
-    { color: 0xa8e8ff, rise: 0 },      // 2 freeze   — crystals hanging still
-    { color: 0xd9b066, rise: -1 },     // 3 snare    — dragged down to the water
-    { color: 0xff4d7d, rise: 0 },      // 4 marked   — a sigil turning under them
-    { color: 0x4ade80, rise: 1 },      // 5 regen    — green coming up into her
-    { color: 0x9eb0cd, rise: 0 },      // 6 fortify  — steel holding, unmoving
-    { color: 0xef4444, rise: 1 },      // 7 enrage   — heat coming off them
-    { color: 0xa78bfa, rise: -1 },     // 8 weakened — sagging to the waterline
+    { color: 0xff8a3c, rise: 1, fall: false },   // 1 burn     — embers going up
+    // FREEZE FALLS. It hung: twelve soft round lights holding station around
+    // the hull, which is the one shape ice must never take. Frost does not
+    // levitate; it forms and it comes off. Small, dim, dropping, and matching
+    // the frost dust the DOM aura sheds off her facets.
+    { color: 0xbfeaff, rise: 0, fall: true },    // 2 freeze   — frost coming off, falling
+    { color: 0xd9b066, rise: -1, fall: false },  // 3 snare    — dragged down to the water
+    { color: 0xff4d7d, rise: 0, fall: false },   // 4 marked   — a sigil turning under them
+    { color: 0x4ade80, rise: 1, fall: false },   // 5 regen    — green coming up into her
+    { color: 0x9eb0cd, rise: 0, fall: false },   // 6 fortify  — steel holding, unmoving
+    { color: 0xef4444, rise: 1, fall: false },   // 7 enrage   — heat coming off them
+    { color: 0xa78bfa, rise: -1, fall: false },  // 8 weakened — sagging to the waterline
   ] as const
 
   let dark = 0
@@ -983,20 +987,27 @@ export function makeAbilityFx(PIXI: typeof import('pixi.js')): AbilityFx {
           // only way stillness reads as a state rather than as a bug; a snare
           // drags DOWN to the waterline and stays low. Same twelve particles,
           // three completely different readings.
-          const cycle = (c.t * (sp.rise > 0 ? 0.5 : 0.22) + sd) % 1
+          const cycle = (c.t * (sp.rise > 0 ? 0.5 : sp.fall ? 0.42 : 0.22) + sd) % 1
           const h = sp.rise > 0
             ? cycle * 150                      // up and out
+            : sp.fall
+            ? 96 - cycle * 96                  // formed high, coming off, falling
             : sp.rise < 0
             ? 8 + Math.sin(c.t * 1.4 + sd * 6) * 6   // dragged low
             : 46 + Math.sin(c.t * 0.8 + sd * 6) * 12 // hanging
           b.x = c.x + Math.cos(a2) * rx * (0.75 + sd * 0.4)
           b.y = c.y + Math.sin(a2) * ry * (0.75 + sd * 0.4) * GROUND - h / GROUND
           b.tint = sp.color
-          const sz = (c.kind === 2 ? 10 : 12) + sd * 7
+          // Frost dust is DUST. At the size the other conditions use it was a
+          // row of little moons around the hull.
+          const sz = (sp.fall ? 5 + sd * 3 : 12 + sd * 7)
           b.scaleX = sz / 24
           b.scaleY = sz / 24
           b.alpha = c.fade * lit
-            * (sp.rise > 0 ? (1 - cycle) * 0.85 : 0.5 + 0.3 * Math.sin(c.t * 1.6 + sd * 6))
+            * (sp.rise > 0 ? (1 - cycle) * 0.85
+              // In as it breaks off, out as it reaches the water.
+              : sp.fall ? Math.min(1, cycle * 6) * Math.min(1, (1 - cycle) * 2.4) * 0.7
+              : 0.5 + 0.3 * Math.sin(c.t * 1.6 + sd * 6))
         }
       }
 

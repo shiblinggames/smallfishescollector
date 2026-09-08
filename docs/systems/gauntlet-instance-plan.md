@@ -266,6 +266,31 @@ times a dive, and it was throwing forty sparks and a ring that grew to 2.4x the 
 drop to twelve slower sparks, a ring that stays inside the arena, and a wash at 0.05; a
 legendary pull and your own death keep theirs.
 
+**A hit is wreckage; a miss is water.** `seaGunFx.impact()` threw the same soft round SPRAY
+particle for both, in every direction, which is why a hull hit read as orbs floating off a
+ship. A miss still throws its column, which is what a shot into the sea does. A hit gets a
+short hot flash at the wound, a fan of SPLINTERS (their own texture, their own pool and
+layer, since they fire on every hit and would otherwise recycle away the wreckage floating
+off a ship that actually sank) thrown out and down with spin, and two puffs of powder smoke
+a beat behind. Round is water, angular is wreckage: at that size the silhouette is the only
+thing carrying the difference, so the two must never share a texture.
+
+**Ice is built like the fire is.** The fire works because it is three layers doing three
+different things: a heat pool at the waterline, tongues on their own prime-ish rhythms,
+embers leaving. The ice was one layer of static shards with a diagonal band of light sweeping
+over them on a loop, which is a shop-window shine rather than a material, plus twelve soft
+round Pixi motes hanging around the hull. It is three layers now, all obeying the rule that
+ice is STILL: rime creeping at the waterline, facets that GROW in on staggered delays and
+then stop (growth is the one motion ice is allowed, because it is what ice does), and frost
+dust falling off them. The Pixi condition motes for freeze fall too, at a third the size:
+frost does not levitate.
+
+**The two taps that decide a run hold long enough to be read.** `lockShot`'s judgment beat
+runs 1050/760/560/480ms by result, up from 720/460/320/220. `claimBoon` splits the draft in
+two: the haptic and the arena's answering beat fire on the click, the card holds lit and
+stamped TAKEN for `BOON_CLAIM_MS` while the others dim, and `applyBoon` moves the phase after
+that.
+
 **The fight's furniture all hangs off ONE column.** `RAID_COL_MAX` (720) and `RAID_COL_PAD`
 (11.2) are exported from RaidCombat, and `raidColumn()` turns them into the column's left and
 right edges at the current width. Four things share it: the deck panel, the enemy's card

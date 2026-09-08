@@ -11567,13 +11567,27 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
         @keyframes rc-flame-c { 0%,100% { transform: scaleY(0.94) scaleX(1.0); opacity: 0.62; } 29% { transform: scaleY(1.3) scaleX(0.88); opacity: 0.95; } 66% { transform: scaleY(0.86) scaleX(1.06); opacity: 0.5; } }
         /* Heat shimmer over the hull — the ship should look LIT, not just backed. */
         @keyframes rc-heat     { 0%,100% { opacity: 0.16; } 50% { opacity: 0.34; } }
-        /* Ice: a single slow glint sliding across the frozen shell. The shell
-           itself does NOT pulse — stillness is the whole point. */
+        /* ── ICE, BUILT LIKE THE FIRE IS ──────────────────────────────
+           The fire works because it is three layers doing three different
+           things: a heat pool at the waterline, tongues on their own rhythms,
+           embers leaving. The ice had one layer of static shards and a
+           diagonal band of light sweeping over them on a loop, which is a
+           shop-window shine, not a material. It is three layers now too, and
+           every one of them obeys the rule that ice is STILL: rime creeping
+           at the waterline, facets that grow rather than move, and frost dust
+           falling off them. Nothing slides, nothing pulses in place. */
+        /* The rime breathes so slowly it reads as spreading, not throbbing. */
+        @keyframes rc-rime  { 0%,100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.05); opacity: 0.72; } }
+        /* A facet GROWS in and holds. Staggered, so the ice takes the hull
+           rather than appearing on it. */
+        @keyframes rc-facet { 0% { transform: rotate(var(--rot)) scale(0.2); opacity: 0; } 34% { transform: rotate(var(--rot)) scale(1.06); opacity: 1; } 100% { transform: rotate(var(--rot)) scale(1); opacity: 0.94; } }
+        /* Frost coming off the ice and falling. The ice equivalent of an
+           ember, and it goes DOWN, which is the whole difference. */
+        @keyframes rc-frostfall { 0% { transform: translateY(0) scale(1); opacity: 0; } 14% { opacity: 0.9; } 100% { transform: translateY(30px) scale(0.5); opacity: 0; } }
         /* Phase backdrop swap: the new sea fades up over the old one. Slow
            enough to feel like weather turning, not a cut. */
         @keyframes rc-bg-in { from { opacity: 0 } to { opacity: 1 } }
         .rc-bg-fade { animation: rc-bg-in 1.1s ease-out both; }
-        @keyframes rc-ice-glint{ 0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; } 18% { opacity: 0.75; } 52% { opacity: 0.75; } 100% { transform: translateX(190%) skewX(-18deg); opacity: 0; } }
       `}</style>
 
       {burning && (
@@ -11605,35 +11619,58 @@ function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen:
 
       {frozen && (
         <div style={{ position: 'absolute', inset: '-6%', zIndex: 3, pointerEvents: 'none', overflow: 'hidden' }}>
+          {/* THE RIME, at the waterline. The fire's answering layer is its heat
+              pool, and ice needs the same: something at the foot of the hull
+              that says the cold is coming FROM the water she is sitting in
+              rather than having been sprayed onto her. */}
+          <span aria-hidden style={{
+            position: 'absolute', inset: '-4% -6% -2%', borderRadius: '46%',
+            background: 'radial-gradient(ellipse at 50% 86%, rgba(186,230,253,0.5) 0%, rgba(56,189,248,0.22) 46%, transparent 72%)',
+            animation: paused ? 'none' : 'rc-rime 4.6s ease-in-out infinite',
+            opacity: paused ? 0.55 : undefined,
+          }} />
+
           {/* NO encasing shell. Ice reads better as the CRYSTALS alone: a
               filled bubble over the hull hid the ship and looked like a
               coloured blob, which is the thing the fire/ice pass set out to
-              get away from. The shards do the work. */}
-          {/* Crystal facets — angular shards over the hull. Angular geometry is
-              the read; a blob has no crystal in it. */}
+              get away from. The shards do the work.
+
+              They GROW, each on its own delay, and then stop. Growth is the
+              one motion ice is allowed, because it is what ice actually does;
+              anything that slides or pulses turns it back into a light. */}
           {[
-            { left: '18%', top: '30%', w: 15, h: 34, rot: -22 },
-            { left: '38%', top: '16%', w: 11, h: 26, rot: 14 },
-            { left: '58%', top: '34%', w: 17, h: 40, rot: -9 },
-            { left: '74%', top: '20%', w: 10, h: 24, rot: 26 },
-            { left: '48%', top: '56%', w: 13, h: 28, rot: -33 },
+            { left: '14%', top: '34%', w: 13, h: 30, rot: -26, d: '0.00s' },
+            { left: '27%', top: '20%', w: 10, h: 23, rot: 11,  d: '0.22s' },
+            { left: '40%', top: '38%', w: 16, h: 37, rot: -12, d: '0.09s' },
+            { left: '54%', top: '15%', w: 12, h: 27, rot: 22,  d: '0.34s' },
+            { left: '64%', top: '40%', w: 18, h: 42, rot: -7,  d: '0.16s' },
+            { left: '78%', top: '24%', w: 11, h: 25, rot: 29,  d: '0.28s' },
+            { left: '47%', top: '60%', w: 14, h: 30, rot: -35, d: '0.41s' },
+            { left: '86%', top: '48%', w: 9,  h: 21, rot: 17,  d: '0.48s' },
           ].map((s, n) => (
             <span key={n} aria-hidden style={{
               position: 'absolute', left: s.left, top: s.top, width: s.w, height: s.h,
+              ['--rot' as string]: `${s.rot}deg`,
               transform: `rotate(${s.rot}deg)`,
+              transformOrigin: '50% 100%',
               clipPath: 'polygon(50% 0%, 100% 34%, 78% 100%, 22% 100%, 0% 34%)',
-              background: 'linear-gradient(150deg, rgba(233,250,255,0.8) 0%, rgba(147,220,255,0.45) 48%, rgba(56,189,248,0.24) 100%)',
-              boxShadow: '0 0 8px rgba(186,230,253,0.55)',
+              background: 'linear-gradient(150deg, rgba(240,252,255,0.92) 0%, rgba(165,226,255,0.6) 44%, rgba(56,189,248,0.3) 100%)',
+              boxShadow: '0 0 9px rgba(186,230,253,0.6), inset 0 0 6px rgba(255,255,255,0.7)',
+              animation: paused ? 'none' : `rc-facet 0.62s cubic-bezier(0.2, 1.1, 0.3, 1) ${s.d} both`,
             }} />
           ))}
-          {/* One slow glint sliding across the ice — the only movement. */}
-          {!paused && (
-            <span aria-hidden style={{
-              position: 'absolute', top: 0, bottom: 0, left: 0, width: '38%',
-              background: 'linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent)',
-              animation: 'rc-ice-glint 3.4s ease-in-out infinite',
+
+          {/* FROST DUST, coming off the ice and falling. The ember's opposite
+              number, and the only thing on this hull that moves. */}
+          {!paused && [0, 1, 2, 3, 4, 5].map(n => (
+            <span key={`f${n}`} aria-hidden style={{
+              position: 'absolute', left: `${16 + n * 13}%`, top: `${26 + (n % 3) * 16}%`,
+              width: 3, height: 3, borderRadius: '50%',
+              background: 'rgba(233,250,255,0.95)',
+              boxShadow: '0 0 5px rgba(186,230,253,0.9)',
+              animation: `rc-frostfall ${2.2 + (n % 4) * 0.5}s linear ${n * 0.47}s infinite`,
             }} />
-          )}
+          ))}
         </div>
       )}
     </>

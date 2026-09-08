@@ -52,6 +52,7 @@ const FLASH_CAP = 30
 /** Wreckage on the surface. A sinking throws a dozen; two wrecks never overlap
  *  in a turn-based fight, so this is one kill's worth with room to spare. */
 const DEBRIS_CAP = 30
+const SHARD_CAP = 64
 /** Slicks. One per wreck, and they outlive everything else here. */
 const SLICK_CAP = 5
 
@@ -111,6 +112,44 @@ function sparkTexture(PIXI: typeof import('pixi.js')): Texture {
   g.fillRect(0, 0, S, S)
   sparkTex = PIXI.Texture.from(c)
   return sparkTex
+}
+
+/**
+ * A SPLINTER. Drawn white so a tint can carry it, and drawn as an actual
+ * shape rather than a blur: a tapered sliver, wide at the broken end and
+ * coming to a point, with the grain of the timber down it.
+ *
+ * The reason this exists at all: a hit on a hull used to throw the same soft
+ * round particle the SPRAY uses, in every direction, which is water. Water
+ * coming off a wooden ship you have just put a cannonball through is the wrong
+ * sentence. Round is water; angular is wreckage; the two must not share a
+ * texture, because at this size the silhouette is the only thing carrying the
+ * difference.
+ */
+let shardTex: Texture | null = null
+function shardTexture(PIXI: typeof import('pixi.js')): Texture {
+  if (shardTex) return shardTex
+  const W = 8, H = 32
+  const c = document.createElement('canvas')
+  c.width = W; c.height = H
+  const g = c.getContext('2d')!
+  g.fillStyle = '#ffffff'
+  g.beginPath()
+  g.moveTo(W * 0.5, 0)          // the point
+  g.lineTo(W, H * 0.72)
+  g.lineTo(W * 0.62, H)         // the broken end, ragged
+  g.lineTo(W * 0.24, H * 0.93)
+  g.lineTo(0, H * 0.66)
+  g.closePath()
+  g.fill()
+  // The grain: one darker line down it, so a splinter spinning end over end
+  // shows a face rather than reading as a flat lozenge.
+  g.globalCompositeOperation = 'destination-out'
+  g.fillStyle = 'rgba(0,0,0,0.34)'
+  g.fillRect(W * 0.42, H * 0.12, 1, H * 0.78)
+  g.globalCompositeOperation = 'source-over'
+  shardTex = PIXI.Texture.from(c)
+  return shardTex
 }
 
 type Puff = {
@@ -244,15 +283,24 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   const debrisLayer: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
   })
+  // SPLINTERS GET THEIR OWN, and not only because a ParticleContainer batches
+  // one texture: they fire on every single hit, and sharing the wreckage pool
+  // would have a busy exchange of fire recycling away the planks floating off
+  // a ship that actually sank.
+  const shardLayer: ParticleContainer = new PIXI.ParticleContainer({
+    dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
+  })
   // Under the rings: a slick is IN the water and the foam of the sinking that
   // made it is on top.
   view.addChild(slickLayer)
   view.addChild(ringLayer)
   view.addChild(debrisLayer)
+  view.addChild(shardLayer)
   view.addChild(smokeLayer)
   view.addChild(sprayLayer)
 
   const pt = puffTexture(PIXI), rt = ringTexture(PIXI), st = sparkTexture(PIXI)
+  const sht = shardTexture(PIXI)
 
   const smoke: Puff[] = []
   for (let i = 0; i < SMOKE_CAP; i++) {
@@ -304,6 +352,18 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
   }
   let nde = 0
   const takeDebris = () => { const d = debris[nde]; nde = (nde + 1) % DEBRIS_CAP; return d }
+
+  // Splinters: same fields as wreckage, but they never float — a sliver hits
+  // the water and is gone.
+  const shards: Debris[] = []
+  for (let i = 0; i < SHARD_CAP; i++) {
+    const p: Particle = new PIXI.Particle({ texture: sht })
+    p.anchorX = 0.5; p.anchorY = 0.5; p.alpha = 0
+    shardLayer.addParticle(p)
+    shards.push({ p, x: 0, y: 0, vx: 0, vy: 0, h: 0, vh: 0, age: 1, life: 1, size: 0, spin: 0 })
+  }
+  let nsh = 0
+  const takeShard = () => { const d = shards[nsh]; nsh = (nsh + 1) % SHARD_CAP; return d }
 
   const slicks: Puff[] = []
   for (let i = 0; i < SLICK_CAP; i++) {
@@ -405,27 +465,86 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
         r2.p.tint = 0xffd88a
       }
 
-      // THE SPRAY. A miss throws a column — mostly up, barely outward, which is
-      // what a shot going into water looks like. A hit sprays sideways off the
-      // hull it struck.
-      const n = wet ? 22 : heavy ? 20 : 12
-      for (let i = 0; i < n; i++) {
-        const d = takeDrop()
-        const a = Math.random() * Math.PI * 2
-        const out = wet
-          ? 30 + Math.random() * 90
-          : 120 + Math.random() * 230
+      // ── A MISS IS WATER. A HIT IS NOT. ────────────────────────────────
+      //
+      // Both used to be the same thing: soft round spray particles thrown in
+      // every direction. That is right for a shot going into the sea and
+      // exactly wrong for one going into a ship, and it is why a hit read as
+      // orbs floating off a hull rather than as a hull being broken. A miss
+      // still throws its column. A hit throws the ship.
+      if (wet) {
+        for (let i = 0; i < 22; i++) {
+          const d = takeDrop()
+          const a = Math.random() * Math.PI * 2
+          const out = 30 + Math.random() * 90
+          d.x = x; d.y = y
+          d.vx = Math.cos(a) * out
+          d.vy = Math.sin(a) * out * GROUND
+          d.h = 6
+          d.vh = 300 + Math.random() * 260
+          d.age = 0
+          d.life = 0.5 + Math.random() * 0.5
+          d.size = 12 + Math.random() * 9
+          d.p.tint = 0xeaf6ff
+        }
+        return
+      }
+
+      // THE STRIKE ITSELF. One short hot flash where the shot went in, before
+      // anything comes back out of the hole — the light of the blow, not a
+      // particle.
+      const f = takeFlash()
+      f.x = x; f.y = y
+      f.vx = 0; f.vy = 0
+      f.h = 10; f.vh = 0
+      f.age = 0
+      f.life = heavy ? 0.2 : 0.14
+      f.size = heavy ? 92 : 58
+      f.grow = heavy ? 60 : 30
+      f.alpha = heavy ? 0.85 : 0.6
+      f.p.tint = heavy ? 0xffe0a0 : 0xffd28a
+
+      // SPLINTERS. Thrown out of the wound and DOWN, tumbling, in the colours
+      // of broken timber with a few still hot from the strike. Sprayed into a
+      // fan rather than a full circle: wreckage comes off the face that was
+      // hit, and a ring of it in every direction reads as an explosion in mid
+      // air rather than a hull opening up.
+      const nSh = heavy ? 16 : 9
+      for (let i = 0; i < nSh; i++) {
+        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4
+        const out = (heavy ? 150 : 100) + Math.random() * (heavy ? 260 : 180)
+        const d = takeShard()
         d.x = x; d.y = y
         d.vx = Math.cos(a) * out
-        d.vy = Math.sin(a) * out * GROUND
-        d.h = 6
-        d.vh = wet
-          ? 300 + Math.random() * 260
-          : 130 + Math.random() * 210
+        d.vy = Math.sin(a) * out * GROUND * 0.5
+        d.h = 8
+        d.vh = (heavy ? 150 : 105) + Math.random() * 170
         d.age = 0
-        d.life = 0.5 + Math.random() * 0.5
-        d.size = (wet ? 12 : 9) + Math.random() * 9
-        d.p.tint = heavy ? 0xffe6b0 : 0xeaf6ff
+        d.life = 0.5 + Math.random() * 0.45
+        d.size = (heavy ? 15 : 12) + Math.random() * 10
+        d.spin = (Math.random() - 0.5) * 22
+        // Mostly timber; one in four still glowing off the strike.
+        d.p.tint = Math.random() < 0.26
+          ? (heavy ? 0xffc46a : 0xe0a05a)
+          : (Math.random() < 0.5 ? 0x6b4a2f : 0x8a6440)
+      }
+
+      // AND THE POWDER SMOKE off the hole, a beat behind the splinters, so the
+      // wound goes on saying something after the noise has stopped.
+      for (let i = 0; i < (heavy ? 3 : 2); i++) {
+        const p = takeSmoke()
+        p.x = x + (Math.random() - 0.5) * 26
+        p.y = y + (Math.random() - 0.5) * 12
+        p.vx = (Math.random() - 0.5) * 40
+        p.vy = (Math.random() - 0.5) * 18
+        p.h = 14 + Math.random() * 18
+        p.vh = 26 + Math.random() * 30
+        p.age = -0.04 * i
+        p.life = 0.7 + Math.random() * 0.5
+        p.size = (heavy ? 44 : 32) + Math.random() * 22
+        p.grow = 60
+        p.alpha = heavy ? 0.4 : 0.3
+        p.p.tint = 0x3b3f45
       }
     },
 
@@ -935,6 +1054,27 @@ export function makeGunFx(PIXI: typeof import('pixi.js')): GunFx {
         // In hard, out over the last fifth, so it drifts a long while and then
         // is quietly gone rather than blinking out.
         d.p.alpha = lit * Math.min(1, d.age * 6) * Math.min(1, (1 - t) * 5)
+      }
+
+      // ── THE SPLINTERS ────────────────────────────────────────────────
+      // Wreckage floats; a sliver does not. Same arc as everything else in the
+      // air, and the moment it reaches the water it is finished.
+      for (const d of shards) {
+        if (d.age >= d.life) { if (d.p.alpha) d.p.alpha = 0; continue }
+        d.age += dt
+        const t = d.age / d.life
+        d.x += d.vx * dt
+        d.y += d.vy * dt
+        d.vh -= G * dt
+        d.h += d.vh * dt
+        if (d.h < 0) d.h = 0
+        d.p.x = d.x
+        d.p.y = d.y - d.h / GROUND
+        d.p.rotation += d.spin * dt
+        d.p.scaleX = d.size / 32
+        d.p.scaleY = d.size / 32
+        // Out fast at the end, and out FASTER once it is in the water.
+        d.p.alpha = lit * Math.min(1, d.age * 14) * Math.min(1, (1 - t) * 3.2) * (d.h > 0 ? 1 : 0.35)
       }
 
       // ── THE SLICK ───────────────────────────────────────────────────────
