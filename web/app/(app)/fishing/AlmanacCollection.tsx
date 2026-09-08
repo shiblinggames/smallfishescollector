@@ -416,7 +416,7 @@ function SpeciesSheet({ entry, onClose, goldens }: {
           // centring by alignment does. It also stops the card stretching to
           // fill the flex row and growing a tail of empty panel.
           margin: 'auto',
-          width: '100%', maxWidth: 460, borderRadius: 18, overflow: 'hidden',
+          width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, overflow: 'hidden',
           // Solid base: this sits over the overlay's art.
           background: 'linear-gradient(180deg, #16141b 0%, #0c0b10 100%)',
           border: `1px solid ${color}55`,

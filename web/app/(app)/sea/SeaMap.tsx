@@ -8763,7 +8763,7 @@ hullRef={hullRefFor(t.key)} />
           <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
             <PopupShell open onClose={() => setTrawlsPeek(false)}>
               <div onClick={e => e.stopPropagation()} style={{
-                margin: 'auto', width: '100%', maxWidth: 380,
+                margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
                 borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
                 background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
                 border: '1px solid rgba(196,169,106,0.34)',
@@ -8913,7 +8913,7 @@ hullRef={hullRefFor(t.key)} />
         <div onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
           <PopupShell open onClose={() => { setOrdersOpen(false); setOrdersAshore(false) }}>
             <div onClick={e => e.stopPropagation()} style={{
-              margin: 'auto', width: '100%', maxWidth: 440,
+              margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
               borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
               // An opaque floor: this sits over painted water.
               background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
@@ -10932,7 +10932,7 @@ const VisitPicker = memo(function VisitPicker({ open, guests, visiting, onClose,
       }}>
       <div onClick={e => e.stopPropagation()} data-no-steer
         style={{
-          width: '100%', maxWidth: 380, borderRadius: 18, padding: '1.15rem',
+          width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.15rem',
           background: 'rgba(10,16,22,0.98)',
           border: '1px solid rgba(180,214,232,0.28)',
           boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
@@ -11102,7 +11102,7 @@ const FindPanel = memo(function FindPanel({ state, onClose }: {
       }}>
       <div onClick={e => e.stopPropagation()} data-no-steer
         style={{
-          position: 'relative', width: '100%', maxWidth: 420,
+          position: 'relative', width: '100%', maxWidth: 'var(--modal-w)',
           borderRadius: 18, padding: '1.15rem',
           background: 'rgba(10,16,22,0.98)',
           border: '1px solid rgba(180,214,232,0.28)',
@@ -12098,7 +12098,7 @@ const AshorePanel = memo(function AshorePanel({ state, onClose }: {
         onClick={e => e.stopPropagation()}
         data-no-steer
         style={{
-          position: 'relative', width: '100%', maxWidth: 420,
+          position: 'relative', width: '100%', maxWidth: 'var(--modal-w)',
           borderRadius: 18, padding: '1.15rem',
           // OPAQUE. This sits over painted water, and a translucent panel on
           // art is unreadable however much you blur what is behind it.
@@ -13459,7 +13459,7 @@ function GunwharfAshore({ open, onClose, onSail, onManage, onShip, shipTier, ski
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 6 }}
         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-        style={{ margin: 'auto', width: '100%', maxWidth: 400 }}>
+        style={{ margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
@@ -13590,7 +13590,7 @@ function MainlandAshore({ open, onClose }: { open: boolean; onClose: () => void 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 6 }}
         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-        style={{ margin: 'auto', width: '100%', maxWidth: 440 }}>
+        style={{ margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>

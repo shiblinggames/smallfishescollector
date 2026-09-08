@@ -778,7 +778,7 @@ export default function TackleShopClient({
             {/* Completionist Rod modal */}
             {showCompModal && (
               <div onClick={() => setShowCompModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}>
-                <div onClick={e => e.stopPropagation()} style={{ background: '#0f0f0e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px 18px 0 0', width: '100%', maxWidth: 480, padding: '1.5rem' }}>
+                <div onClick={e => e.stopPropagation()} style={{ background: '#0f0f0e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px 18px 0 0', width: '100%', maxWidth: 'var(--modal-w)', padding: '1.5rem' }}>
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{compRod.name}</p>

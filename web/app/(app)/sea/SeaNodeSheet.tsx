@@ -41,7 +41,7 @@ const GOLD = '#f0c040'
 /** The chart's panel, wherever one opens over water. Trawls, orders and the
  *  crew hub are all this box; a fourth shape would read as a different game. */
 const PANEL: React.CSSProperties = {
-  margin: 'auto', width: '100%', maxWidth: 400,
+  margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
   borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
   background: 'linear-gradient(180deg, rgba(28,24,17,0.72) 0%, rgba(10,12,16,0.8) 100%), rgba(8,12,18,0.98)',
   border: '1px solid rgba(196,169,106,0.34)',

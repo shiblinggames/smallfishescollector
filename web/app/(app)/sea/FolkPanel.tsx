@@ -526,7 +526,7 @@ export default function FolkPanel({ open, onClose, finn: finnProp }: {
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 480,
+              width: '100%', maxWidth: 'var(--modal-w)',
               // See the backdrop: this centres the panel without ever putting
               // part of it out of reach. No max-height and no scroller of its
               // own — one scroll container, on the parent, so there is no inner

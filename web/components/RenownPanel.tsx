@@ -146,7 +146,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
         transition={{ duration: 0.2 }}
         style={{
           position: 'relative',
-          margin: 'auto', width: '100%', maxWidth: 440,
+          margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
           background: 'linear-gradient(180deg, rgba(10,16,28,0.99) 0%, rgba(6,10,18,0.99) 100%)',
           border: `1px solid ${meta.accent}44`,
           borderRadius: 20,

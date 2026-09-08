@@ -106,7 +106,9 @@ export default function SeaCampaignPanel({ open, onClose, status, nextId }: {
         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
         style={{
           position: 'relative', margin: 'auto', width: '100%',
-          maxWidth: 'clamp(360px, 46vw, 560px)',
+          // The app's one modal width — see --modal-w in globals.css. This panel
+          // is where that number came from; it now reads it like everything else.
+          maxWidth: 'var(--modal-w)',
           // ── ONE SIZE, WHATEVER IS OPEN ──────────────────────────────────
           //
           // A FIXED height, not a max: the chapters expand and collapse inside

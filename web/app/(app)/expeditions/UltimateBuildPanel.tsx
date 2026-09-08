@@ -364,7 +364,7 @@ export default function UltimateBuildPanel({
               return (
                 <motion.div initial={{ opacity: 0, scale: 0.94, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.22, ease: 'easeOut' }}
                   onClick={e => e.stopPropagation()}
-                  style={{ width: '100%', maxWidth: 330, borderRadius: 16, padding: '1.1rem 1rem 1rem', background: 'linear-gradient(180deg, #101826 0%, #0a111d 100%)', border: `1px solid ${m.color}55`, boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+                  style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 16, padding: '1.1rem 1rem 1rem', background: 'linear-gradient(180deg, #101826 0%, #0a111d 100%)', border: `1px solid ${m.color}55`, boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: m.color, marginBottom: 10 }}>Switch to the {m.name}?</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>

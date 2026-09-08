@@ -417,7 +417,7 @@ function TradeSheet({ entry, fee, selling, onSell, onClose }: {
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
         style={{
           position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 61,
-          maxWidth: 512, margin: '0 auto',
+          maxWidth: 'var(--modal-w)', margin: '0 auto',
           background: 'linear-gradient(180deg, #14161d 0%, #0b0c11 100%)',
           borderTop: `1px solid ${hColor}55`,
           borderRadius: '20px 20px 0 0',

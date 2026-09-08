@@ -629,7 +629,7 @@ export default function DailyVoyagePanel({
                       background: 'linear-gradient(135deg, rgba(22,16,8,0.98) 0%, rgba(14,10,4,0.99) 100%)',
                       border: '1px solid rgba(200,170,100,0.22)',
                       borderRadius: 16, padding: '1.4rem 1.3rem',
-                      maxWidth: 360, width: '100%',
+                      maxWidth: 'var(--modal-w)', width: '100%',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -1127,7 +1127,7 @@ export default function DailyVoyagePanel({
                 initial={{ scale: 0.8, y: 14 }} animate={{ scale: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 onClick={e => e.stopPropagation()}
-                style={{ position: 'relative', width: '100%', maxWidth: 340, textAlign: 'center' }}
+                style={{ position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', textAlign: 'center' }}
               >
                 <p className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.26em', color: '#f0c040', marginBottom: 12 }}>
                   Massive booty

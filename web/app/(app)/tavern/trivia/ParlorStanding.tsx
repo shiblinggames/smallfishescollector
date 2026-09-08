@@ -129,7 +129,7 @@ function ParlorLadderModal({ points, claimedGems, onClose }: { points: number; c
         transition={{ type: 'spring', stiffness: 240, damping: 22 }}
         onClick={e => e.stopPropagation()}
         style={{
-          position: 'relative', width: '100%', maxWidth: 380, maxHeight: '82vh', display: 'flex', flexDirection: 'column',
+          position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '82vh', display: 'flex', flexDirection: 'column',
           borderRadius: 20, background: 'linear-gradient(180deg, #241a12 0%, #130d08 100%)',
           border: '1px solid rgba(201,162,74,0.4)', boxShadow: '0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
         }}

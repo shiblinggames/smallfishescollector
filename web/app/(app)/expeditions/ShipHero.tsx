@@ -2875,7 +2875,7 @@ export default function ShipHero({
           exit={{ opacity: 0, scale: 0.96, y: 4 }}
           transition={{ duration: 0.18 }}
           style={{
-            margin: 'auto', width: '100%', maxWidth: 380,
+            margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             background: 'rgba(8,14,24,0.98)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: 18,
@@ -2903,7 +2903,7 @@ export default function ShipHero({
           exit={{ opacity: 0, scale: 0.96, y: 4 }}
           transition={{ duration: 0.18 }}
           style={{
-            margin: 'auto', width: '100%', maxWidth: 380,
+            margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             background: 'rgba(8,14,24,0.98)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: 18,
@@ -2963,7 +2963,7 @@ export default function ShipHero({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 4 }}
           transition={{ duration: 0.18 }}
-          style={{ margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 18, padding: '1.1rem 1rem 1.25rem' }}
+          style={{ margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 18, padding: '1.1rem 1rem 1.25rem' }}
         >
           {kitWon ? (
             <KitCelebration
@@ -2991,7 +2991,7 @@ export default function ShipHero({
           schematics controls AND the looping preview animation, moved off the
           Ship tab so the tab is just a status row. */}
       <ModalSheet open={ultimateOpen && showUltimate} onClose={() => setUltimateOpen(false)}
-        maxWidth={440} padding="0.85rem 0.8rem 1rem"
+        padding="0.85rem 0.8rem 1rem"
         boxShadow="0 24px 60px rgba(0,0,0,0.62), 0 0 34px rgba(240,192,64,0.14)">
             <UltimateBuildPanel
               shipTier={shipTierForSlots}
@@ -3018,7 +3018,7 @@ export default function ShipHero({
           return (
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '1.3rem 1rem 1rem', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}
+              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '1.3rem 1rem 1rem', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}
             >
               <CloseButton onClick={() => setPickerOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
               <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: '#f0ede8', marginBottom: 3 }}>Equip an item</p>
@@ -3090,7 +3090,7 @@ export default function ShipHero({
           return (
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 1.1rem 1.1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: forged ? (abyssal ? '0 0 30px rgba(255,90,60,0.22)' : '0 0 30px rgba(150,140,180,0.2)') : `0 0 30px ${color}22` }}
+              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 1.1rem 1.1rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: forged ? (abyssal ? '0 0 30px rgba(255,90,60,0.22)' : '0 0 30px rgba(150,140,180,0.2)') : `0 0 30px ${color}22` }}
             >
               <CloseButton onClick={() => setItemDetail(null)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6 }}>
@@ -3162,7 +3162,7 @@ export default function ShipHero({
           return (
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 420, background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 1.15rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', boxShadow: '0 0 30px rgba(120,140,170,0.16)' }}
+              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', borderRadius: 18, padding: '1.5rem 1.15rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', boxShadow: '0 0 30px rgba(120,140,170,0.16)' }}
             >
               <CloseButton onClick={() => setEffectsOpen(false)} style={{ position: 'absolute', top: 6, right: 8, zIndex: 6 }} />
               <div style={{ textAlign: 'center', marginBottom: '1.1rem' }}>
@@ -3204,7 +3204,7 @@ export default function ShipHero({
 
       {/* Sixth Berth — Manage modal (the buy / installed panel). */}
       <ModalSheet open={sixthBerthOpen} onClose={() => setSixthBerthOpen(false)}
-        maxWidth={400} padding="1.5rem 0.95rem 1rem"
+        padding="1.5rem 0.95rem 1rem"
         boxShadow="0 24px 60px rgba(0,0,0,0.62), 0 0 30px rgba(255,213,107,0.16)">
         <SixthBerthPanel
           blockadeCleared={blockadeCleared}
@@ -3217,7 +3217,7 @@ export default function ShipHero({
       {/* What a ship stat means, and where every point of its delta came from.
           The breakdown is the important half: a captain whose hull reads -25
           can see it was Master Gunner I, II and III that took it. */}
-      <ModalSheet open={!!shipStatDetail} onClose={() => setShipStatDetail(null)} maxWidth={360}>
+      <ModalSheet open={!!shipStatDetail} onClose={() => setShipStatDetail(null)}>
         {(() => {
           const about = shipStatDetail ? SHIP_STAT_ABOUT[shipStatDetail] : null
           if (!about || !shipStatDetail) return null
@@ -3284,7 +3284,7 @@ export default function ShipHero({
 
       {/* Expanded Armory — the raid-item mount refit. Same shell as the berth. */}
       <ModalSheet open={armoryOpen} onClose={() => setArmoryOpen(false)}
-        maxWidth={400} padding="1.5rem 0.95rem 1rem"
+        padding="1.5rem 0.95rem 1rem"
         boxShadow="0 24px 60px rgba(0,0,0,0.62), 0 0 30px rgba(167,139,250,0.16)">
         <ArmoryExpansionPanel
           throneCleared={throneCleared}
@@ -3298,7 +3298,7 @@ export default function ShipHero({
       <PopupShell open={classesOpen} onClose={() => setClassesOpen(false)}>
         {classesOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 400, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
             <CloseButton onClick={() => setClassesOpen(false)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c084fc', marginBottom: 4 }}>Captain&rsquo;s Class</p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', marginBottom: 14, lineHeight: 1.45 }}>Permanent buffs you pick at the end of each chapter. They stack. Tap one for its full breakdown.</p>
@@ -3353,7 +3353,7 @@ export default function ShipHero({
       <PopupShell open={refitOpen} onClose={() => setRefitOpen(false)}>
         {refitOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-            style={{ position: 'relative', width: '100%', maxWidth: 400, marginTop: 'auto', marginBottom: 'auto', flexShrink: 0, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
+            style={{ position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', marginTop: 'auto', marginBottom: 'auto', flexShrink: 0, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(192,132,252,0.4)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: '0 0 30px rgba(192,132,252,0.18)' }}>
             <ShipRefitPanel picks={shipClasses} refitsUsed={shipRefitsUsed} doubloons={doubloons} onClose={() => setRefitOpen(false)} />
           </motion.div>
         )}
@@ -3363,7 +3363,7 @@ export default function ShipHero({
       <PopupShell open={skinsOpen} onClose={() => setSkinsOpen(false)}>
         {skinsOpen && (
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 4 }} transition={{ duration: 0.18 }}
-            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 420, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(156,196,255,0.35)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(156,196,255,0.16)' }}>
+            style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(156,196,255,0.35)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 0 30px rgba(156,196,255,0.16)' }}>
             <CloseButton onClick={() => setSkinsOpen(false)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#9cc4ff', marginBottom: 4 }}>Ship Skins</p>
             {/* THE RULE, SAID BEFORE THE GRID RATHER THAN DISCOVERED IN IT.
@@ -3442,7 +3442,7 @@ export default function ShipHero({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 4 }}
               transition={{ duration: 0.18 }}
-              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: `1px solid ${top.color}55`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: `0 0 30px ${top.color}22` }}
+              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', background: 'rgba(8,14,24,0.98)', border: `1px solid ${top.color}55`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: `0 0 30px ${top.color}22` }}
             >
               <CloseButton onClick={() => setClassDetail(null)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 3 }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 4 }}>

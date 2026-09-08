@@ -24,7 +24,7 @@ export default function BountyBoardModal({ open, onClose }: { open: boolean; onC
         initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 6 }}
         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
         style={{
-          margin: 'auto', width: '100%', maxWidth: 440,
+          margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
           // THE ACTUAL BOARD. A painted plate in the same gouache idiom as
           // the voyage routes: salt-stained oak, an empty frame lit by one
           // lantern, old nails and the torn corners of notices long gone.

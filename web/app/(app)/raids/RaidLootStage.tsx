@@ -282,7 +282,7 @@ export default function RaidLootStage(props: Props) {
       position: 'relative',
       display: 'flex', flexDirection: 'column',
       background: '#04080e', border: '2px solid #1f2e42', borderRadius: 18,
-      overflow: 'hidden', maxWidth: 460, width: '100%',
+      overflow: 'hidden', maxWidth: 'var(--modal-w)', width: '100%',
       // Tall enough for a full crew's XP list, never taller than the window.
       maxHeight: 'min(88vh, 760px)',
       boxShadow: `0 24px 70px rgba(0,0,0,0.7), 0 0 40px ${accent}1f`,
@@ -296,7 +296,7 @@ export default function RaidLootStage(props: Props) {
         position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch',
         background: `radial-gradient(ellipse 130% 80% at 50% 22%, ${accent}14 0%, #0a1626 42%, #04080e 100%)`,
       }}>
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '1.3rem 1rem 1.5rem', textAlign: 'center' }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 'var(--modal-w)', margin: '0 auto', padding: '1.3rem 1rem 1.5rem', textAlign: 'center' }}>
           {!opened ? (
             <>
               <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: GOLD }}>

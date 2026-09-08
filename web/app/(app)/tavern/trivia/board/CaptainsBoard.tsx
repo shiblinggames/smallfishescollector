@@ -310,7 +310,7 @@ export default function CaptainsBoard({ initial, parlorPoints }: { initial: Capt
             <motion.div initial={{ rotateY: -82, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: 34, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 240, damping: 26 }}
               onClick={e => e.stopPropagation()}
-              style={{ position: 'relative', transformOrigin: '50% 50%', width: '100%', maxWidth: 420, maxHeight: '82vh', overflowY: 'auto', background: `radial-gradient(ellipse 92% 46% at 50% 0%, rgba(240,200,106,0.08), transparent 60%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`, border: `1px solid ${categoryMeta(openTile.category).color}66`, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', boxShadow: '0 18px 50px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)' }}
+              style={{ position: 'relative', transformOrigin: '50% 50%', width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '82vh', overflowY: 'auto', background: `radial-gradient(ellipse 92% 46% at 50% 0%, rgba(240,200,106,0.08), transparent 60%), linear-gradient(180deg, ${PARLOR.wood} 0%, ${PARLOR.woodDeep} 100%)`, border: `1px solid ${categoryMeta(openTile.category).color}66`, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', boxShadow: '0 18px 50px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)' }}
             >
               {/* Close — X top-right once resolved (replaces the old full-width
                   "Back to the Board" bottom button; scrim-tap also dismisses). */}

@@ -61,7 +61,7 @@ export default function LeaderboardModal({
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 480,
+          width: '100%', maxWidth: 'var(--modal-w)',
           maxHeight: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain',
           background: 'linear-gradient(180deg, #0b1420 0%, #060c14 100%)',

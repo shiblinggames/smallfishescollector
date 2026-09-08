@@ -292,7 +292,7 @@ export default function ShipRefitPanel({ picks, refitsUsed, doubloons, onClose }
                this card sizes to its content and lets the scrim carry it. A
                maxHeight + overflowY here scrolled the page instead of the card
                and put its foot under the mobile nav. */
-            style={{ position: 'relative', width: '100%', maxWidth: 400, marginTop: 'auto', marginBottom: 'auto', flexShrink: 0, background: 'rgba(8,14,24,0.98)', border: `1px solid ${ACCENT}66`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem' }}>
+            style={{ position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', marginTop: 'auto', marginBottom: 'auto', flexShrink: 0, background: 'rgba(8,14,24,0.98)', border: `1px solid ${ACCENT}66`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem' }}>
             <CloseButton onClick={() => setEditing(null)} style={{ position: 'absolute', top: 8, right: 10, zIndex: 6 }} />
             <p className="font-karla font-800 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.16em', color: '#8a96a8' }}>
               {CHAPTER_NAME[chapters[editing]] ?? chapters[editing]}

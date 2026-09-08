@@ -1881,7 +1881,7 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
                 exit={{ opacity: 0, scale: 0.97, y: 6 }}
                 transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  width: '100%', maxWidth: 360,
+                  width: '100%', maxWidth: 'var(--modal-w)',
                   background: 'linear-gradient(180deg, #1a1612 0%, #0b0807 100%)',
                   border: '1px solid rgba(240,192,64,0.32)',
                   borderRadius: 16,
@@ -2342,7 +2342,7 @@ export default function RaidGame({ onLeave, overSea = false, anchors, onShipFx, 
               background: 'linear-gradient(135deg, rgba(8,10,18,0.99) 0%, rgba(6,8,14,0.99) 100%)',
               border: '1px solid rgba(96,165,250,0.2)',
               borderRadius: 16, padding: '1.1rem',
-              width: '100%', maxWidth: 280,
+              width: '100%', maxWidth: 'var(--modal-w)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>

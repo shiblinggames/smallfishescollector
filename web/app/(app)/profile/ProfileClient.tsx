@@ -979,7 +979,7 @@ export default function ProfileClient({
               background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
               border: '1px solid rgba(96,165,250,0.2)',
               borderRadius: CARD_RADIUS,
-              width: '100%', maxWidth: 360,
+              width: '100%', maxWidth: 'var(--modal-w)',
               // Fixed height (capped to the available space) so the modal does
               // NOT resize when switching tabs — only the scrollable body's
               // content changes. Flex column: body takes the overflow + scrolls,
@@ -1412,7 +1412,7 @@ export default function ProfileClient({
             <div
               onClick={e => e.stopPropagation()}
               style={{
-                margin: 'auto', width: '100%', maxWidth: 300, textAlign: 'center',
+                margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', textAlign: 'center',
                 padding: '1.5rem 1.4rem', borderRadius: 20,
                 background: 'linear-gradient(160deg, rgba(12,18,28,0.99) 0%, rgba(6,10,16,0.99) 100%)',
                 border: `1px solid ${ACCENT}55`, borderTop: `3px solid ${ACCENT}`,
@@ -1449,7 +1449,7 @@ export default function ProfileClient({
               border: '1px solid rgba(240,192,64,0.35)',
               borderRadius: CARD_RADIUS,
               padding: '1.25rem 1.1rem 1rem',
-              width: '100%', maxWidth: 320,
+              width: '100%', maxWidth: 'var(--modal-w)',
               boxShadow: '0 18px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(240,192,64,0.08)',
             }}
           >

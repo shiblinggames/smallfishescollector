@@ -289,7 +289,7 @@ function Sheet({ title, blurb, onClose, children }: {
           // under your cursor changed size depending on which of four adjacent
           // buttons you pressed. On a phone the 1.25rem padding caps all four
           // at the viewport, so this only ever differed where it was visible.
-          position: 'relative', width: '100%', maxWidth: 560,
+          position: 'relative', width: '100%', maxWidth: 'var(--modal-w)',
           maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
           borderRadius: 18, padding: '1rem',
           background: 'rgba(10,16,22,0.98)',

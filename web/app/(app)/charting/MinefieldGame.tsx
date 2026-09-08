@@ -334,7 +334,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setHelp(false)}
               style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(4,8,14,0.84)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
               <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }} onClick={e => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: 470, background: 'linear-gradient(180deg, #16242e 0%, #0a151d 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.3rem 1.2rem calc(1.6rem + env(safe-area-inset-bottom))' }}>
+                style={{ width: '100%', maxWidth: 'var(--modal-w)', background: 'linear-gradient(180deg, #16242e 0%, #0a151d 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.3rem 1.2rem calc(1.6rem + env(safe-area-inset-bottom))' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8', textAlign: 'center' }}>Sweeping the Minefield</p>
                 <p className="font-karla" style={{ fontSize: '0.76rem', color: '#bcb29a', lineHeight: 1.5, textAlign: 'center', marginTop: 4 }}>
                   A harbor full of hidden sea mines. Chart a safe path through.
@@ -376,7 +376,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setWin(null)}
               style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(4,8,14,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
               <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
-                style={{ maxWidth: 340, width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 28%, rgba(196,169,106,0.16) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(20,40,55,0.97) 0%, rgba(8,18,26,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}6e`, boxShadow: `0 0 38px ${GOLD}26, inset 0 0 28px rgba(0,0,0,0.5)` }}>
+                style={{ maxWidth: 'var(--modal-w)', width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 28%, rgba(196,169,106,0.16) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(20,40,55,0.97) 0%, rgba(8,18,26,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}6e`, boxShadow: `0 0 38px ${GOLD}26, inset 0 0 28px rgba(0,0,0,0.5)` }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: GOLD }}>The channel is clear.</p>
                 <p className="font-karla" style={{ fontSize: '0.78rem', color: '#dccba6', lineHeight: 1.5, marginTop: 8 }}>
                   Every mine charted, every safe tile swept. Fine navigating, captain.

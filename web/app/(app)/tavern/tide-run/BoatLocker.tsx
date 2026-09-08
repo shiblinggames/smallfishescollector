@@ -96,7 +96,7 @@ export default function BoatLocker({
           // already inset past the nav bar and the tab bar — so the panel simply
           // cannot reach either of them whatever it contains. minHeight:0 is
           // required for a flex child to be allowed to shrink and scroll at all.
-          width: '100%', maxWidth: 520, margin: '0 auto',
+          width: '100%', maxWidth: 'var(--modal-w)', margin: '0 auto',
           alignSelf: 'flex-start', maxHeight: '100%', minHeight: 0,
           overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
           padding: '1.1rem 0.85rem 1.2rem',

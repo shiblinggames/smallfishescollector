@@ -1084,7 +1084,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             initial={{ opacity: 0, y: 14, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 24 }}
             onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 400, borderRadius: 22, padding: '1.25rem 1.1rem 1.15rem', background: 'linear-gradient(180deg, rgba(15,23,36,0.99), rgba(7,12,20,0.99))', border: `1px solid ${GOLD}33`, boxShadow: '0 24px 70px rgba(0,0,0,0.65)' }}>
+            style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 22, padding: '1.25rem 1.1rem 1.15rem', background: 'linear-gradient(180deg, rgba(15,23,36,0.99), rgba(7,12,20,0.99))', border: `1px solid ${GOLD}33`, boxShadow: '0 24px 70px rgba(0,0,0,0.65)' }}>
             <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#f3ead2', textAlign: 'center', lineHeight: 1.05 }}>Choose Your Descent</p>
             <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8f98', textAlign: 'center', marginTop: 4, marginBottom: 14 }}>Two ways down. One puts your crew on the line.</p>
             {(() => {
@@ -1175,7 +1175,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
       {hcConfirmOpen && (
         <div onClick={() => setHcConfirmOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1310, background: 'rgba(10,2,4,0.88)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(30,10,12,0.99), rgba(14,6,8,0.99))', border: `1px solid ${DANGER}66`, boxShadow: `0 0 44px ${DANGER}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(30,10,12,0.99), rgba(14,6,8,0.99))', border: `1px solid ${DANGER}66`, boxShadow: `0 0 44px ${DANGER}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
             <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: `${DANGER}cc` }}>No Turning Back</p>
             <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3d7d7', lineHeight: 1.08, marginTop: 8 }}>Send Them Down?</p>
             <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(240,220,220,0.82)', lineHeight: 1.5, marginTop: 10, maxWidth: 320, marginInline: 'auto' }}>
@@ -1277,7 +1277,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         <div onClick={() => setHcBlockedMsg(null)} style={{ position: 'fixed', inset: 0, zIndex: 1320, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
           <motion.div onClick={e => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-          style={{ width: '100%', maxWidth: 340, borderRadius: 16, padding: '1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${HC_ACCENT}55` }}>
+          style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 16, padding: '1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${HC_ACCENT}55` }}>
             <p className="font-karla" style={{ fontSize: '0.86rem', color: '#e0dccc', lineHeight: 1.5 }}>{hcBlockedMsg}</p>
             <button onClick={() => setHcBlockedMsg(null)} className="font-karla font-700 tap" style={{ marginTop: 14, padding: '0.6rem 1.4rem', borderRadius: 10, background: `${HC_ACCENT}1e`, border: `1px solid ${HC_ACCENT}66`, color: '#cfc4ff', fontSize: '0.8rem', cursor: 'pointer' }}>Got it</button>
           </motion.div>
@@ -2229,7 +2229,7 @@ export default function GauntletGame(props: GauntletGameProps) {
            <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', paddingTop: 'calc(1.5rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
             <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
               onClick={e => e.stopPropagation()}
-              style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+              style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
               {detailEffect.image && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={detailEffect.image} alt="" decoding="async"
@@ -3717,7 +3717,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
             whileTap={{ scale: 0.97 }} type="button" onClick={() => { vibrate([0, 18]); donFallenClaim() }}
             className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-            style={{ width: '100%', maxWidth: 360, marginTop: 10, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#0c1512', background: `linear-gradient(180deg, ${AK}, ${AK}bb)`, border: `1px solid ${AK}`, cursor: 'pointer', boxShadow: `0 0 22px ${AK}44` }}>
+            style={{ width: '100%', maxWidth: 'var(--modal-w)', marginTop: 10, padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#0c1512', background: `linear-gradient(180deg, ${AK}, ${AK}bb)`, border: `1px solid ${AK}`, cursor: 'pointer', boxShadow: `0 0 22px ${AK}44` }}>
             Take his Mark
           </motion.button>
         </div>
@@ -4216,7 +4216,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             on a misfire. Shows exactly what walks away with you. */}
         {confirmClaim && (
           <div onClick={() => setConfirmClaim(false)} style={{ position: 'fixed', inset: 0, zIndex: 1310, background: 'rgba(6,8,14,0.86)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
-            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(24,20,10,0.99), rgba(12,10,6,0.99))', border: `1px solid ${GOLD}66`, boxShadow: `0 0 44px ${GOLD}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(24,20,10,0.99), rgba(12,10,6,0.99))', border: `1px solid ${GOLD}66`, boxShadow: `0 0 44px ${GOLD}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
               <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: offer ? '#c9a7ff' : `${GOLD}cc` }}>{offer ? "Davy's Offer" : 'Bank the Haul'}</p>
               <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f6ead0', lineHeight: 1.08, marginTop: 8 }}>{offer ? 'Shake on it?' : 'Claim & leave?'}</p>
               <p className="font-cinzel font-800" style={{ fontSize: '2rem', color: GOLD, lineHeight: 1, marginTop: 12, textShadow: `0 0 26px ${GOLD}55` }}>
@@ -5412,7 +5412,7 @@ function MarkChoice({ offer, searing, taken, onChoose }: {
   return (
     <>
       <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'radial-gradient(ellipse 90% 60% at 24% 42%, rgba(255,106,61,0.13), transparent 60%), radial-gradient(ellipse 90% 60% at 76% 42%, rgba(77,157,224,0.13), transparent 60%), #05070b' }} />
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 520, margin: '0 auto', minHeight: '72vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '1.4rem 0.9rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 20px)' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 'var(--modal-w)', margin: '0 auto', minHeight: '72vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '1.4rem 0.9rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 20px)' }}>
         <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.3em' }} transition={{ duration: 0.7 }}
           className="font-karla font-800 uppercase" style={{ textAlign: 'center', fontSize: '0.6rem', color: '#c9b48a', textShadow: '0 0 16px rgba(240,192,64,0.4)' }}>
           {searing ? 'The Mark Sears In' : taken > 0 ? `His Mark · ${taken} already yours` : 'His Mark'}
@@ -5812,7 +5812,7 @@ function AbandonRunModal({ pot, hardcore = false, don, onStay, onAbandon }: { po
     <ModalScrim zIndex={1400} onClose={onStay}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 380, borderRadius: 18, background: 'linear-gradient(180deg, rgba(22,12,14,0.99), rgba(10,7,9,0.99))', border: `1px solid ${CRIMSON}44`, boxShadow: `0 0 44px ${CRIMSON}22, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.2rem 1.15rem', textAlign: 'center' }}>
+        style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, background: 'linear-gradient(180deg, rgba(22,12,14,0.99), rgba(10,7,9,0.99))', border: `1px solid ${CRIMSON}44`, boxShadow: `0 0 44px ${CRIMSON}22, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.2rem 1.15rem', textAlign: 'center' }}>
         <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${CRIMSON}cc` }}>Abandon the Dive?</p>
         <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f3d6d6', lineHeight: 1.12, marginTop: 6 }}>
           {hardcore ? 'Abandon and Drown Them' : 'Leave Now and You Sink'}
@@ -6632,7 +6632,7 @@ function SynergiesModal({ owned, seen = [], taken = [], takenConv = [], variant 
             <motion.div onClick={close} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(2,6,12,0.74)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
               <motion.div onClick={e => e.stopPropagation()} initial={{ y: 44 }} animate={{ y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-                style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg, #141a24 0%, #0b0f16 100%)', borderRadius: '20px 20px 0 0', border: `1px solid ${accent}66`, borderBottom: 'none', boxShadow: `0 -12px 44px rgba(0,0,0,0.55)`, padding: '1rem 1.1rem calc(env(safe-area-inset-bottom, 0px) + 1.3rem)' }}>
+                style={{ width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg, #141a24 0%, #0b0f16 100%)', borderRadius: '20px 20px 0 0', border: `1px solid ${accent}66`, borderBottom: 'none', boxShadow: `0 -12px 44px rgba(0,0,0,0.55)`, padding: '1rem 1.1rem calc(env(safe-area-inset-bottom, 0px) + 1.3rem)' }}>
                 <div aria-hidden style={{ width: 38, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)', margin: '0 auto 14px' }} />
 
                 {/* The recipe, spelled out: components fuse into the synergy. */}

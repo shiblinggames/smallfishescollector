@@ -1963,7 +1963,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               exit={{ opacity: 0, scale: 0.95, y: -8 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26 }}
               style={{
-                width: '100%', maxWidth: 340,
+                width: '100%', maxWidth: 'var(--modal-w)',
                 padding: '1.25rem 1.1rem 1.1rem',
                 borderRadius: 14,
                 // Warm tavern palette — was a cool blue card that read as

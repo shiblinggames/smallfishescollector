@@ -35,7 +35,10 @@ import CloseButton from '@/components/CloseButton'
  */
 export default function ModalSheet({
   open, onClose, children,
-  maxWidth = 440,
+  // ONE WIDTH, and it is the app's — see --modal-w in globals.css. Callers
+  // used to pass 360, 400 and 440 to this same component, which is how a
+  // player got three different panel widths out of one kit.
+  maxWidth = 'var(--modal-w)',
   header, footer,
   flush = false,
   padding = '0.95rem 0.9rem 1.1rem',
@@ -52,7 +55,7 @@ export default function ModalSheet({
   open: boolean
   onClose: () => void
   children: ReactNode
-  maxWidth?: number
+  maxWidth?: number | string
   /** Pinned above the scroll region. Implies the flush layout. */
   header?: ReactNode
   /** Pinned below it. Action rows belong here so they never scroll away. */

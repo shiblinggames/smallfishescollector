@@ -204,7 +204,7 @@ export default function CrewCompare({ a, b, open, onClose }: {
         initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
         style={{
-          position: 'relative', margin: 'auto', width: '100%', maxWidth: 430,
+          position: 'relative', margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
           background: 'linear-gradient(180deg, rgba(13,21,34,0.99) 0%, rgba(6,10,17,0.99) 100%)',
           border: '1px solid rgba(196,169,106,0.4)', borderRadius: 20,
           padding: '1.1rem 1rem 1.2rem', boxShadow: '0 24px 60px rgba(0,0,0,0.6)',

@@ -345,7 +345,7 @@ export default function HubCards({
             // below). Bottom safe-area + tab-bar clearance is already
             // baked into PopupShell's paddingBottom, so the bottom of
             // the modal always lands above the tab bar.
-            margin: 'auto', width: '100%', maxWidth: 480,
+            margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             // Custom voyage backdrop — a ship crossing the dusk sea. `cover`
             // stretches the plate over the WHOLE modal however tall it grows,
             // so the art reaches the header and the past-voyages footer too.
@@ -449,7 +449,7 @@ export default function HubCards({
           style={{
             // No modal container — the two gauntlet cards (each with its own
             // abyss art) float directly on the PopupShell backdrop.
-            margin: 'auto', width: '100%', maxWidth: 420,
+            margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

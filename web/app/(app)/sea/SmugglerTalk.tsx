@@ -138,7 +138,7 @@ export default function SmugglerTalk({ open, onClose }: {
         transition={{ duration: 0.18 }}
         onClick={e => e.stopPropagation()}
         style={{
-          margin: 'auto', width: '100%', maxWidth: 420,
+          margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
           // OPAQUE. It floats over painted, moving water like every other panel
           // out here, and a translucent card over the sea reads as a smear.
           background: 'rgba(7,11,16,0.98)',

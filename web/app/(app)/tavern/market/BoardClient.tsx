@@ -674,7 +674,7 @@ function Ticket({ index, moodBias, doubloons, onClose, onDone }: {
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         onClick={e => e.stopPropagation()}
         style={{
-          margin: 'auto', width: '100%', maxWidth: 440, maxHeight: '100%',
+          margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '100%',
           display: 'flex', flexDirection: 'column', borderRadius: 18, overflow: 'hidden',
           background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)',
           border: `1px solid ${index.accent}55`,
@@ -985,7 +985,7 @@ function BetSheet({ bet, index, onClose, onSold }: {
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         onClick={e => e.stopPropagation()}
         style={{
-          margin: 'auto', width: '100%', maxWidth: 440, maxHeight: '100%',
+          margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '100%',
           display: 'flex', flexDirection: 'column', borderRadius: 18, overflow: 'hidden',
           background: 'linear-gradient(180deg, #0e131b 0%, #080b11 100%)',
           border: `1px solid ${bet.accent}55`,

@@ -2372,7 +2372,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   transition={{ type: 'spring', stiffness: 360, damping: 24 }}
                   onClick={e => e.stopPropagation()}
                   style={{
-                    maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18,
+                    maxWidth: 'var(--modal-w)', width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18,
                     // Centres a short card in the scrolling scrim; a tall one
                     // simply starts at the top and scrolls.
                     marginTop: 'auto', marginBottom: 'auto', flexShrink: 0,
@@ -2551,7 +2551,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               }}
             >
               <div onClick={e => e.stopPropagation()} style={{
-                width: '100%', maxWidth: 380,
+                width: '100%', maxWidth: 'var(--modal-w)',
                 background: 'linear-gradient(180deg, #1c1610 0%, #120d08 100%)',
                 border: `1px solid ${accent}55`, borderRadius: 14,
                 padding: '1.2rem 1.1rem 1.05rem',
@@ -2640,7 +2640,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               <div
                 onClick={e => e.stopPropagation()}
                 style={{
-                  width: '100%', maxWidth: 380,
+                  width: '100%', maxWidth: 'var(--modal-w)',
                   background: 'linear-gradient(180deg, #1c1610 0%, #120d08 100%)',
                   border: `1px solid ${next.accent}55`,
                   borderRadius: 14, padding: '1.2rem 1.1rem 1.05rem',
@@ -2769,7 +2769,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               <div
                 onClick={e => e.stopPropagation()}
                 style={{
-                  width: '100%', maxWidth: 380,
+                  width: '100%', maxWidth: 'var(--modal-w)',
                   background: 'linear-gradient(180deg, #1c1610 0%, #120d08 100%)',
                   border: `1px solid ${accent}55`,
                   borderRadius: 14, padding: '1.2rem 1.1rem 1.05rem',
@@ -3396,7 +3396,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                   // the body around 194. The trait is visible without scrolling
                   // and the Skins grid gets a usable window. Taller tabs still
                   // scroll, which is what the scroll region is for.
-                  width: '100%', maxWidth: 360, height: 'min(82vh, 500px)',
+                  width: '100%', maxWidth: 'var(--modal-w)', height: 'min(82vh, 500px)',
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', overflow: 'hidden',
                   borderRadius: 14,
@@ -4397,7 +4397,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
               style={{ position: 'fixed', inset: 0, zIndex: 270, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.4rem', background: 'rgba(4,2,4,0.84)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
               <motion.div onClick={e => e.stopPropagation()}
                 initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
-                style={{ position: 'relative', width: '100%', maxWidth: 340, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', background: 'linear-gradient(180deg, rgba(22,9,12,0.99), rgba(10,5,7,0.99))', border: `1px solid ${BLOOD}55`, boxShadow: `0 0 40px ${BLOOD}26, 0 20px 50px rgba(0,0,0,0.6)` }}>
+                style={{ position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', background: 'linear-gradient(180deg, rgba(22,9,12,0.99), rgba(10,5,7,0.99))', border: `1px solid ${BLOOD}55`, boxShadow: `0 0 40px ${BLOOD}26, 0 20px 50px rgba(0,0,0,0.6)` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
                   <BloodDrop size={22} />
                   <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#f3c0c6' }}>The Blood Market</p>
@@ -4448,7 +4448,7 @@ export default function CrewClient({ initial, hasSeenGuide = true }: { initial: 
                 style={{ position: 'fixed', inset: 0, zIndex: 270, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.4rem', background: 'rgba(4,3,2,0.84)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
                 <motion.div onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
-                  style={{ position: 'relative', width: '100%', maxWidth: 340, borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', background: 'linear-gradient(180deg, rgba(20,17,12,0.99), rgba(9,8,6,0.99))', border: `1px solid ${GOLD}55`, boxShadow: `0 0 40px ${GOLD}22, 0 20px 50px rgba(0,0,0,0.6)` }}>
+                  style={{ position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.2rem 1.1rem 1.1rem', background: 'linear-gradient(180deg, rgba(20,17,12,0.99), rgba(9,8,6,0.99))', border: `1px solid ${GOLD}55`, boxShadow: `0 0 40px ${GOLD}22, 0 20px 50px rgba(0,0,0,0.6)` }}>
                   <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#f4ecd8', textAlign: 'center' }}>Your Crew Limit</p>
                   <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: GOLD, textAlign: 'center', lineHeight: 1.1, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                     {b.total}

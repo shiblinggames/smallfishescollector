@@ -56,7 +56,7 @@ export default function CrewSummarySheet({
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 380, margin: '0 auto', borderRadius: 20, overflow: 'hidden',
+          width: '100%', maxWidth: 'var(--modal-w)', margin: '0 auto', borderRadius: 20, overflow: 'hidden',
           background: 'linear-gradient(180deg, #121a26 0%, #080e16 100%)',
           border: `1px solid ${accent}44`,
           boxShadow: `0 0 44px ${accent}1c, 0 20px 60px rgba(0,0,0,0.62)`,

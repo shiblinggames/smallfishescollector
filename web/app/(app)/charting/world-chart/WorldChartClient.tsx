@@ -199,7 +199,7 @@ export default function WorldChartClient({ points, claimed: claimed0 }: { points
               onClick={() => setInfo(null)}
               style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(4,7,11,0.72)', padding: '0 0.9rem calc(env(safe-area-inset-bottom) + 1rem)' }}>
               <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: 460, borderRadius: 20, overflow: 'hidden', border: `1px solid ${GOLD}55`, background: 'linear-gradient(180deg, rgba(24,30,40,0.98), rgba(12,16,22,0.98))', boxShadow: `0 -10px 40px rgba(0,0,0,0.6)` }}>
+                style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 20, overflow: 'hidden', border: `1px solid ${GOLD}55`, background: 'linear-gradient(180deg, rgba(24,30,40,0.98), rgba(12,16,22,0.98))', boxShadow: `0 -10px 40px rgba(0,0,0,0.6)` }}>
                 <Porthole lm={info} />
                 <div style={{ padding: '1rem 1.2rem 1.35rem', textAlign: 'center' }}>
                   <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: GOLD }}>Charted</p>
@@ -240,7 +240,7 @@ function DiscoveryCinematic({ lm, claiming, paid, onClaim }: { lm: LandmarkView;
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'radial-gradient(ellipse at 50% 40%, rgba(12,18,26,0.94), rgba(4,6,10,0.98))' }}>
-      <div style={{ width: '100%', maxWidth: 440, textAlign: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 'var(--modal-w)', textAlign: 'center' }}>
         <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.32em' }} transition={{ duration: 0.7 }}
           className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: GOLD, textShadow: `0 0 16px ${GOLD}66`, marginBottom: 14 }}>
           Landmark Charted

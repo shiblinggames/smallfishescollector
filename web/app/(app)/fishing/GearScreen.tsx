@@ -3552,7 +3552,7 @@ export default function GearScreen({
                 transition={{ type: 'spring', stiffness: 380, damping: 26 }}
                 onClick={e => e.stopPropagation()}
                 style={{
-                  width: '100%', maxWidth: 300, textAlign: 'center', padding: '1.5rem 1.4rem', borderRadius: 20,
+                  width: '100%', maxWidth: 'var(--modal-w)', textAlign: 'center', padding: '1.5rem 1.4rem', borderRadius: 20,
                   background: 'linear-gradient(160deg, rgba(12,18,28,0.99) 0%, rgba(6,10,16,0.99) 100%)',
                   border: `1px solid ${i.accent}55`, borderTop: `3px solid ${i.accent}`,
                   boxShadow: `0 20px 70px rgba(0,0,0,0.6), 0 0 40px ${i.accent}18`,
@@ -3692,7 +3692,7 @@ export default function GearScreen({
               transition={{ type: 'spring', stiffness: 460, damping: 34 }}
               onClick={e => e.stopPropagation()}
               style={{
-                width: '100%', maxWidth: 360,
+                width: '100%', maxWidth: 'var(--modal-w)',
                 maxHeight: '88vh', overflowY: 'auto', overscrollBehavior: 'contain',
                 background: 'linear-gradient(180deg, #0e1626 0%, #070b14 100%)',
                 border: `1px solid ${pendingPurchase.color}55`,

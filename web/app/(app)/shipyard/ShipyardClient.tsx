@@ -834,7 +834,7 @@ export default function ShipyardClient(p: {
               exit={{ opacity: 0, scale: 0.97, y: 6 }}
               transition={{ type: 'spring', stiffness: 400, damping: 32 }}
               style={{
-                margin: 'auto', width: '100%', maxWidth: 420,
+                margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
                 background: 'rgba(8,14,24,0.98)', border: `1px solid ${d.accent}44`,
                 borderRadius: 18, padding: '1.1rem 1rem 1.15rem',
               }}>

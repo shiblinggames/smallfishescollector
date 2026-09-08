@@ -144,7 +144,7 @@ export default function MembershipModal() {
       <motion.div onClick={e => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         style={{
-        width: '100%', maxWidth: 440, maxHeight: '92vh', overflowY: 'auto',
+        width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '92vh', overflowY: 'auto',
         background: 'linear-gradient(180deg, #14110b 0%, #0a0807 100%)',
         border: `1px solid ${GOLD}40`, borderTop: `2px solid ${GOLD}`,
         borderRadius: 18, padding: '1.15rem 1.1rem 1.25rem',

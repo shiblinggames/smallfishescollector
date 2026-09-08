@@ -164,7 +164,7 @@ export default function FinnScene({ beat, onComplete }: {
         {/* Dialogue plate. */}
         <div style={{ position: 'relative', zIndex: 3, flexShrink: 0, padding: '0 1rem 1.15rem' }}>
           <div style={{
-            position: 'relative', width: '100%', maxWidth: 540, margin: '0 auto',
+            position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', margin: '0 auto',
             padding: '1.05rem 1.15rem 1.15rem', borderRadius: 16,
             background: 'linear-gradient(180deg, rgba(10,14,22,0.94), rgba(5,7,12,0.97))',
             border: `1px solid ${ACCENT}55`,

@@ -182,7 +182,7 @@ function Sheet({ label, onClose, children }: { label: string; onClose: () => voi
         transition={{ type: 'spring', stiffness: 300, damping: 26 }}
         onClick={e => e.stopPropagation()}
         style={{
-          margin: 'auto', width: '100%', maxWidth: 380,
+          margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
           background: 'linear-gradient(180deg, rgba(26,23,18,0.99) 0%, rgba(12,11,8,0.99) 100%)',
           border: '1px solid rgba(190,146,92,0.45)', borderRadius: 16,
           padding: '1rem 1.05rem 1.05rem',

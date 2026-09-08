@@ -1034,7 +1034,7 @@ export default function PracticeRaidGame({
               </p>
             </motion.div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 280 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 'var(--modal-w)' }}>
               <motion.button
                 onPointerDown={retryGame}
                 whileTap={{ scale: 0.97 }}

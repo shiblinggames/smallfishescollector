@@ -750,7 +750,7 @@ function NodeDetailSheet({
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 480,
+          width: '100%', maxWidth: 'var(--modal-w)',
           maxHeight: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain',
           background: backdrop
@@ -1942,7 +1942,7 @@ function DropDetailModal({ drop, owned, chance, onClose }: {
         exit={{ opacity: 0, scale: 0.97, y: 4 }}
         transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
         style={{
-          width: '100%', maxWidth: 340,
+          width: '100%', maxWidth: 'var(--modal-w)',
           background: 'linear-gradient(180deg, #0e1726 0%, #07101c 100%)',
           border: `1px solid ${rarityColor}55`,
           borderTop: `3px solid ${rarityColor}`,
@@ -2165,7 +2165,7 @@ data-any-key
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'relative',
-          width: '100%', maxWidth: 440,
+          width: '100%', maxWidth: 'var(--modal-w)',
           padding: '1.6rem 1.4rem 1.5rem',
           borderRadius: 18,
           background: [
@@ -2381,7 +2381,7 @@ function UltimateUnlockOverlay({ onBuild, onLater }: { onBuild: () => void; onLa
         transition={{ delay: 0.15, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'relative', width: '100%', maxWidth: 450,
+          position: 'relative', width: '100%', maxWidth: 'var(--modal-w)',
           padding: '1.6rem 1.4rem 1.5rem', borderRadius: 18,
           background: [
             'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255,150,70,0.2) 0%, transparent 70%)',
@@ -2538,7 +2538,7 @@ function RepairBlockedModal({
         transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 360,
+          width: '100%', maxWidth: 'var(--modal-w)',
           padding: '1.3rem 1.2rem 1.15rem',
           borderRadius: 16,
           background: 'linear-gradient(180deg, rgba(28,14,8,0.97) 0%, rgba(18,10,8,0.98) 100%)',
@@ -2905,7 +2905,7 @@ export function BossFightModal({ boss, challenge, rec, challengeRec, ownedRaidIt
     <motion.div onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(4,7,12,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
       <motion.div onClick={e => e.stopPropagation()} initial={{ y: 60 }} animate={{ y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        style={{ width: '100%', maxWidth: 440, background: '#0a1119', borderRadius: '22px 22px 0 0', overflow: 'hidden', border: `1px solid ${accent}55`, borderBottom: 'none', boxShadow: '0 -12px 50px rgba(0,0,0,0.6)' }}>
+        style={{ width: '100%', maxWidth: 'var(--modal-w)', background: '#0a1119', borderRadius: '22px 22px 0 0', overflow: 'hidden', border: `1px solid ${accent}55`, borderBottom: 'none', boxShadow: '0 -12px 50px rgba(0,0,0,0.6)' }}>
         {/* Mode toggle — sits ABOVE the art. Switching it re-skins the whole
             sheet (drops, odds, records) to that mode; the bottom stays one
             Enter Raid button that launches whichever mode is selected. */}

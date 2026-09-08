@@ -232,7 +232,7 @@ export default function TraderPanel({
         transition={{ type: 'spring', stiffness: 320, damping: 28 }}
         style={{
           position: 'relative',
-          width: '100%', maxWidth: 380, borderRadius: 18, padding: '1.15rem',
+          width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.15rem',
           // Opaque base. This sits on painted water and a translucent panel over
           // art is unreadable at the exact moment it has something to say.
           background: 'rgba(10,16,22,0.98)',

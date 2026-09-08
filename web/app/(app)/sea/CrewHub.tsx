@@ -109,7 +109,7 @@ export default function CrewHub({
               transition={{ duration: 0.16 }}
               onClick={e => e.stopPropagation()}
               style={{
-                margin: 'auto', width: '100%', maxWidth: 420,
+                margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
                 borderRadius: 20, padding: '1.1rem 1.05rem 1rem',
                 // AN OPAQUE BASE. This sits over painted water, and a panel with
                 // any transparency in its base reads as a smear rather than as a

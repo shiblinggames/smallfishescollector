@@ -333,7 +333,7 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
                 transition={{ type: 'spring', stiffness: 360, damping: 24 }}
                 onClick={e => e.stopPropagation()}
                 style={{
-                  maxWidth: 340, width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18,
+                  maxWidth: 'var(--modal-w)', width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18,
                   background: ['radial-gradient(ellipse 80% 60% at 50% 28%, rgba(196,169,106,0.14) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.96) 0%, rgba(20,14,7,0.98) 100%)'].join(', '),
                   border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)',
                 }}

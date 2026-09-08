@@ -118,7 +118,7 @@ export default function GoldenChoice({ held, onDone }: {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 330, damping: 22 }}
         style={{
-          margin: 'auto', width: '100%', maxWidth: 380,
+          margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
           borderRadius: 20, overflow: 'hidden',
           // A SOLID FLOOR. This sits over painted, moving water and the old
           // version was a translucent gold wash on top of it, which is

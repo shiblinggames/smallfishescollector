@@ -7987,7 +7987,7 @@ export default function RaidCombat({
             every frame. The scrim is 82% opaque and does the job alone. */}
         {fleeOpen && typeof document !== 'undefined' && createPortal(
           <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(3,7,12,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
-            <div style={{ width: '100%', maxWidth: 320, background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+            <div style={{ width: '100%', maxWidth: 'var(--modal-w)', background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
               {fleeResult ? (
                 <>
                   {/* Settled die — pops in on the rolled face. The only
@@ -8748,7 +8748,7 @@ export default function RaidCombat({
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26 }}
-              style={{ width: '100%', maxWidth: 360, textAlign: 'center', borderRadius: 18, padding: '1.4rem 1.25rem 1.25rem', background: 'linear-gradient(180deg, #2a0e0e 0%, #140708 100%)', border: '1px solid rgba(248,113,113,0.55)', boxShadow: '0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(248,113,113,0.14)' }}
+              style={{ width: '100%', maxWidth: 'var(--modal-w)', textAlign: 'center', borderRadius: 18, padding: '1.4rem 1.25rem 1.25rem', background: 'linear-gradient(180deg, #2a0e0e 0%, #140708 100%)', border: '1px solid rgba(248,113,113,0.55)', boxShadow: '0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(248,113,113,0.14)' }}
             >
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', textAlign: 'left', marginBottom: 12 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}

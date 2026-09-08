@@ -125,7 +125,7 @@ export default function SeaBonus({ size, top, right }: {
           transition={{ duration: 0.18 }}
           onClick={e => e.stopPropagation()}
           style={{
-            margin: 'auto', width: '100%', maxWidth: 420,
+            margin: 'auto', width: '100%', maxWidth: 'var(--modal-w)',
             // OPAQUE. It floats over painted, moving water like everything else
             // out here, and a translucent panel over the sea reads as a smear.
             background: 'rgba(8,12,18,0.98)',

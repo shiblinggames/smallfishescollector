@@ -104,7 +104,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
             exit={{ opacity: 0, y: -12, scale: 0.97 }}
             transition={{ duration: 0.2 }}
             style={{
-              width: '100%', maxWidth: 400,
+              width: '100%', maxWidth: 'var(--modal-w)',
               background: '#060e1a',
               border: '1px solid rgba(255,255,255,0.1)',
               borderTop: '3px solid #60a5fa',

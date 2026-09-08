@@ -169,7 +169,7 @@ export default function ExchangeIntro({
             exit={{ opacity: 0, scale: 0.97, y: -8 }}
             transition={{ type: 'spring', stiffness: 240, damping: 24 }}
             style={{
-              position: 'relative', width: '100%', maxWidth: 400, margin: 'auto',
+              position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', margin: 'auto',
               borderRadius: 18, overflow: 'hidden',
               background: 'linear-gradient(180deg, rgba(16,24,38,0.99) 0%, rgba(7,10,16,0.99) 100%)',
               border: `1px solid ${SKY}55`,

@@ -352,7 +352,7 @@ export default function GauntletTermsPanel({
           <motion.div onClick={e => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.94, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            style={{ width: '100%', maxWidth: 350, borderRadius: 18, padding: '1.25rem 1.1rem', background: 'linear-gradient(180deg, #220d11, #140609)', border: `1px solid ${DANGER}66`, boxShadow: '0 18px 50px rgba(0,0,0,0.6)' }}>
+            style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.25rem 1.1rem', background: 'linear-gradient(180deg, #220d11, #140609)', border: `1px solid ${DANGER}66`, boxShadow: '0 18px 50px rgba(0,0,0,0.6)' }}>
             <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#f3d7d7' }}>
               {detail.name} <span style={{ color: DANGER }}>{ROMAN[detail.tier]}</span>
             </p>

@@ -554,7 +554,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           {result && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.84)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
               <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }}
-                style={{ maxWidth: 360, width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 24%, rgba(196,169,106,0.14) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.96) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
+                style={{ maxWidth: 'var(--modal-w)', width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 24%, rgba(196,169,106,0.14) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.96) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: result.maxed ? GREEN : GOLD }}>
                   {result.maxed ? 'Perfect haul — 5/5!' : result.pointsWon > 0 ? 'Tier up!' : 'Run complete'}
                 </p>

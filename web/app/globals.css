@@ -2498,6 +2498,26 @@ body.hardcore-gauntlet::after {
 :root { --nav-h: 44px; }
 @media (min-width: 640px) { :root { --nav-h: 48px; } }
 
+/* ── HOW WIDE A MODAL IS ────────────────────────────────────────────────────
+   ONE WIDTH for every panel that opens over a page, and it is a clamp rather
+   than a number: 46vw so a modal grows with the window, floored at 360 so it
+   never gets silly on a small laptop, capped at 560 so a line of text in one
+   stays readable on a wide monitor.
+
+   IT WAS A HUNDRED DIFFERENT NUMBERS. Every dialog in the game had its own,
+   hand-picked somewhere between 280 and 520, so opening two panels in a row on
+   a desktop resized the thing under your cursor every time — and all of them
+   were phone columns stranded in the middle of a monitor. FishingHere had
+   already found this out on its own and standardised its four panels at 560;
+   this is that fix, applied to the whole app.
+
+   Cards keep `width: 100%` alongside it, so on a phone the shell's padding
+   still decides and the clamp never binds. Art moments are the exception and
+   keep their tuned widths: a crate opening or a legendary reveal is a
+   composition around a picture, and widening it scales the moment rather than
+   giving it more room. */
+:root { --modal-w: clamp(360px, 46vw, 560px); }
+
 /* ── THE FIGHT'S LEVEL BAR SITS ON THE CHART'S OWN HUD LINE ─────────────────
    The sea surface starts below the site header and hangs its HUD icons 18 into
    that. A fight overlays the whole viewport, so its bar has to add those two

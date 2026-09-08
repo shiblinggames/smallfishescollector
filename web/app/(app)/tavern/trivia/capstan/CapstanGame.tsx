@@ -529,7 +529,7 @@ function PickerSheet({ title, children, onClose }: { title: string; children: Re
         initial={{ scale: 0.9, y: 14, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 26 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 420, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', background: 'linear-gradient(180deg, #241a12, #130d08)', border: `1px solid ${PARLOR.brass}55`, boxShadow: '0 24px 60px rgba(0,0,0,0.55)' }}
+        style={{ width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.1rem 1rem 1.2rem', background: 'linear-gradient(180deg, #241a12, #130d08)', border: `1px solid ${PARLOR.brass}55`, boxShadow: '0 24px 60px rgba(0,0,0,0.55)' }}
       >
         <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0e8d0', textAlign: 'center', marginBottom: 12 }}>{title}</p>
         {children}
@@ -576,7 +576,7 @@ function WinOverlay({ puzzle, win, onClose }: { puzzle: CapstanPuzzleClient; win
       <motion.div
         initial={{ scale: 0.85, y: 14, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 20 }}
         onClick={e => e.stopPropagation()}
-        style={{ position: 'relative', width: '100%', maxWidth: 340, textAlign: 'center', borderRadius: 22, padding: '1.6rem 1.3rem', background: 'linear-gradient(180deg, #241a12, #130d08)', border: `1px solid ${GOLD}66`, boxShadow: `0 24px 60px rgba(0,0,0,0.6), 0 0 40px ${GOLD}22` }}
+        style={{ position: 'relative', width: '100%', maxWidth: 'var(--modal-w)', textAlign: 'center', borderRadius: 22, padding: '1.6rem 1.3rem', background: 'linear-gradient(180deg, #241a12, #130d08)', border: `1px solid ${GOLD}66`, boxShadow: `0 24px 60px rgba(0,0,0,0.6), 0 0 40px ${GOLD}22` }}
       >
         {Array.from({ length: 12 }).map((_, i) => (
           <motion.span key={i} aria-hidden

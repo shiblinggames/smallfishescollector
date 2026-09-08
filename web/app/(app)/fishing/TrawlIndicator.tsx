@@ -689,7 +689,7 @@ export default function TrawlIndicator({
               // RELATIVE, so the close button can pin itself to the panel.
               position: 'relative',
               margin: 'auto',
-              width: '100%', maxWidth: 470,
+              width: '100%', maxWidth: 'var(--modal-w)',
               maxHeight: 'calc(86vh - var(--tabbar-safe))',
               overflowY: 'auto', overscrollBehavior: 'contain',
               background: 'rgba(9,13,19,0.98)',
@@ -943,7 +943,7 @@ export default function TrawlIndicator({
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPicking(null)}
           style={{ position: 'fixed', inset: 0, zIndex: 9200, background: 'rgba(4,8,14,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }} onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 470, maxHeight: '84vh', overflowY: 'auto', background: 'linear-gradient(180deg, #16130f 0%, #0c0906 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
+            style={{ width: '100%', maxWidth: 'var(--modal-w)', maxHeight: '84vh', overflowY: 'auto', background: 'linear-gradient(180deg, #16130f 0%, #0c0906 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8' }}>Send a crew to the {pickZone?.label}</p>
               <CloseBtn onClick={() => setPicking(null)} label="Back" />
@@ -1266,7 +1266,7 @@ export default function TrawlIndicator({
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSlotInfo(false)}
           style={{ position: 'fixed', inset: 0, zIndex: 9300, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }} onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 470, background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
+            style={{ width: '100%', maxWidth: 'var(--modal-w)', background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8' }}>Trawl slots</p>
               <CloseBtn onClick={() => setSlotInfo(false)} />

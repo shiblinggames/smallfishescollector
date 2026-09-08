@@ -302,7 +302,7 @@ export default function FolkScene({
               // `maxHeight: 100%` of the padded parent rather than a dvh sum,
               // because two independent height calculations are two things that
               // can disagree.
-              maxWidth: 480, width: '100%',
+              maxWidth: 'var(--modal-w)', width: '100%',
               height: 524, maxHeight: '100%',
               display: 'flex', flexDirection: 'column',
               // THE SAME SLAB AS THE PANEL THIS OPENED FROM. TraderPanel's

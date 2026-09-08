@@ -607,7 +607,7 @@ function NameSheet({ current, busy, onCancel, onSave }: {
         onClick={e => e.stopPropagation()}
         onSubmit={e => { e.preventDefault(); if (!busy) onSave(text) }}
         style={{
-          width: '100%', maxWidth: 380, borderRadius: 18, padding: '1.15rem',
+          width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.15rem',
           background: 'rgba(10,16,22,0.98)', border: '1px solid rgba(180,214,232,0.28)',
           boxShadow: '0 18px 50px rgba(0,0,0,0.6)',
         }}>
@@ -708,7 +708,7 @@ function ConfirmBuy({ confirm, home, coin, onCancel, onYes, busy }: {
         initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.97 }}
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 420, borderRadius: 18, padding: '1.15rem',
+          width: '100%', maxWidth: 'var(--modal-w)', borderRadius: 18, padding: '1.15rem',
           // SCROLLS IF IT HAS TO. The build case carries a picture and three
           // lines of gains, which on a short phone in landscape is taller than
           // the viewport, and a confirm button you cannot reach is a trap.

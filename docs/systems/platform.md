@@ -51,11 +51,33 @@ The non-game knowledge: how the app is built, shipped, and kept safe.
 - Mechanics explanations must be verified against the code that consumes the value.
 - `web/scripts/check-copy.mts` enforces some of this on data catalogs (not yet JSX).
 
-## The modal width is 480
+## The modal width is `--modal-w`
 
-`maxWidth: 480` is the house width for anything that opens over the page: the leaderboards,
-the crew assign picker, the bunks, the raid sheets, the tackle shop sheet, the Salt Road and
-its conversation card. Twenty-plus surfaces sit on it. It was never written down, which is
-how the Salt Road shipped at 420 and read as a narrower thing than everything else the game
-opens. `.page-col` (980) is the PAGE column and is a different measurement; do not reach for
-it on a modal.
+```css
+:root { --modal-w: clamp(360px, 46vw, 560px); }
+```
+
+**One width for every panel that opens over a page**, and a clamp rather than a number: 46vw
+so a modal grows with the window, floored at 360 so it never gets silly on a small laptop,
+capped at 560 so a line of text stays readable on a wide monitor. Use it as
+`maxWidth: 'var(--modal-w)'` **alongside `width: '100%'`** — on a phone the shell's own
+padding decides and the clamp never binds.
+
+This section used to say the house width was 480, and it was never true. Every dialog in the
+game had picked its own somewhere between 280 and 520 — a hundred of them — so opening two
+panels in a row on a desktop resized the thing under your cursor every time, and all of them
+were phone columns stranded in the middle of a monitor. `FishingHere` had already found this
+out on its own and standardised its own four panels at 560.
+
+`ModalSheet` defaults to the token, so a sheet built on the kit needs nothing. `.page-col`
+(980) is the PAGE column and a different measurement; do not reach for it on a modal.
+
+**Two things do not take it:**
+
+- **Art moments.** A crate opening, a legendary skin, an ancient's rank-up, a rescued boat:
+  those are compositions built around a picture at a chosen size, and widening one scales the
+  moment rather than giving it room. They keep their tuned widths.
+- **`VoyageBoard`, which is wider (680) on purpose** — it is a board of routes, each with a
+  crew muster and a reward line, and the note in the file explains why. A panel may exceed the
+  default when its content is genuinely a table; it may not sit below it just because nobody
+  chose.
