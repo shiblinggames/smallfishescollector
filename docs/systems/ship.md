@@ -131,7 +131,23 @@ skin reads on the water exactly as it does in a fight. All four sea sites take i
 hull, the DOM `Warship`, `ShipAtBerth` in the Gunwharf, and the Gunwharf's own take-her-out
 door, which is a picture of the ship you are about to sail.
 
-Width is what matches, not height: the chart draws a hull to a fixed width and lets the
-sprite set its own height, and the skin plates are cropped tighter than the ship art
-(600x335 against 640x640). Scaling by width keeps the dimension that reads as a ship's
-length; a skin simply carries less empty sky above its masts.
+**And it has to be scaled, because the plates are padded differently.** The chart sizes a
+hull by the width of its PLATE, which is fine while every plate crops its ship the same way.
+Measured (opaque-pixel bounding box against plate width):
+
+| plate | ink / plate |
+|---|---|
+| `/ship-hero/man-o-war_v3.png` (the chart's own hull) | **0.969** |
+| every skin plate | **0.651** |
+
+So drawn to the same width a skin put its ship on the water at 67% of the size — visibly
+smaller, and nothing to do with the ships. `SKIN_SEA_SCALE` is the reciprocal (1.488) and
+`shipSkinSeaScale` returns it only when a skin is actually in effect. All three chart paths
+apply it: `makeShip` takes a `scale` (and it is in the captain cache key), and the DOM
+`Warship` and `ShipAtBerth` multiply their widths.
+
+**Only the chart.** The FIGHT sizes off `/models/*`, which measures 0.652 — the same crop the
+skins use — so combat was always consistent and must not be touched. The `/ship-hero` set is
+the odd one out. Every skin plate in the table today measures 0.650–0.652, which is one
+export pipeline; if a future skin is cropped differently, measure it rather than nudging the
+constant.

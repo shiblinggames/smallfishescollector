@@ -280,7 +280,7 @@ export default function SeaIslandsGPU({
   /** The expedition hull, past the sortie. Mutually exclusive with `captain`:
    *  the crossing REPLACES what is at the centre of the screen rather than
    *  dressing it up, so there is one slot and two things that can fill it. */
-  ship: { url: string; flip: boolean } | null
+  ship: { url: string; flip: boolean; scale?: number } | null
   /** Where a boat can be tied up. Static, so read once. */
   berths: BerthSpec[]
   /** The homestead portal, as a place on the water. One per chart. */
@@ -1487,7 +1487,7 @@ export default function SeaIslandsGPU({
   // sixty times a second — the same trap that made the skiff bench flicker
   // between poses. Assembling a captain loads a dozen images and bakes a glow;
   // steering one is arithmetic.
-  const key = `${lookKey(captain)}#${ship ? `${ship.url}${ship.flip ? '~f' : ''}` : ''}`
+  const key = `${lookKey(captain)}#${ship ? `${ship.url}${ship.flip ? '~f' : ''}@${ship.scale ?? 1}` : ''}`
   useEffect(() => {
     let dead = false
     ;(async () => {

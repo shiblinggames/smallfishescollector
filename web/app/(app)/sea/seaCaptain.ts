@@ -321,12 +321,16 @@ export async function makeCaptain(
  */
 export async function makeShip(
   PIXI: typeof import('pixi.js'),
-  ship: { url: string; flip: boolean },
+  ship: { url: string; flip: boolean; scale?: number },
 ): Promise<Captain> {
   const tex = await texture(PIXI, ship.url)
   const view: Container = new PIXI.Container()
 
-  const W = 340
+  // SIZED BY THE PLATE, CORRECTED FOR THE PAINT. Every hull here is drawn to
+  // one width, which is right while every plate crops its ship the same way —
+  // and the skin plates do not. `scale` is the measured correction and it is 1
+  // for a hull in her own colours. See SKIN_SEA_SCALE in lib/shipSkins.
+  const W = 340 * (ship.scale ?? 1)
   const k = W / tex.width
   const h = tex.height * k
 

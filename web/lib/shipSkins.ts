@@ -79,6 +79,38 @@ export function shipSkinSeaImage(skinId: string | null | undefined, shipTier: nu
   return shipSkinAt(skinId, shipTier)?.imageByTier?.[shipTier] ?? fallback
 }
 
+/**
+ * ── AND HOW MUCH BIGGER TO DRAW IT ──────────────────────────────────────────
+ *
+ * A skin on the chart came out a third smaller than the hull it replaced, and
+ * the cause is padding rather than anything about the ships.
+ *
+ * The chart sizes a hull by the WIDTH OF ITS PLATE. Measured (opaque-pixel
+ * bounding box against plate width):
+ *
+ *   /ship-hero/man-o-war_v3.png   0.969 — the ship nearly fills its plate
+ *   every skin plate              0.651 — a third of the plate is empty margin
+ *
+ * So drawn to the same width, a skin renders its actual ship at 0.651/0.969 =
+ * 67% of the size. This is the reciprocal, and it is a measurement rather than
+ * a taste number.
+ *
+ * IT IS ONLY THE CHART. The FIGHT sizes off `/models/*`, which measures 0.652 —
+ * the same crop the skins use — so combat was always consistent and must not be
+ * touched. The chart's `/ship-hero` set is the odd one out.
+ *
+ * Every skin plate in the table today measures 0.650 to 0.652, which is one
+ * export pipeline; if a future skin is cropped differently this is where it
+ * would show, and the fix is to measure it rather than to nudge this number.
+ */
+export const SKIN_SEA_SCALE = 0.969 / 0.651
+
+/** What to multiply a hull's drawn width by on the CHART, given the skin (if
+ *  any) actually in effect. 1 when she is in her own paint. */
+export function shipSkinSeaScale(skinId: string | null | undefined, shipTier: number): number {
+  return shipSkinAt(skinId, shipTier)?.imageByTier?.[shipTier] ? SKIN_SEA_SCALE : 1
+}
+
 /** And the CSS filter, for the skins that tint rather than swap. */
 export function shipSkinFilter(skinId: string | null | undefined, shipTier: number): string {
   return shipSkinAt(skinId, shipTier)?.filter ?? 'none'

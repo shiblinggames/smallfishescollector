@@ -1341,6 +1341,17 @@ arch-to-sortie sail is 5,100, which is a leg rather than a voyage.
 so moving it moves them together. `RAID_EDGE` (13,000) does not — that is the open water
 beyond, and it is deliberately its own number.
 
+## No ring of light under the hull
+
+A heavy hull sits in a `trough` — a dark dish that multiplies the sea down where she
+displaces it — and it used to carry a bright additive `collar` at the waterline as well, on
+the reasoning that a hull parts the surface where it sits. It read as a ring of light UNDER
+the boat, which made her look like she was hovering over a lamp rather than sitting in
+water. The collar is gone; the trough does the job and does it the right way round. **Light
+added at the waterline says the water is glowing. Light taken away says the water is deep
+there.** The travelling wake rings still use the ring texture — it is only the static rim
+that went.
+
 ## The campaign's water is open sea
 
 North of the sortie there is nothing drawn that stops a hull. No bay coast, no strait

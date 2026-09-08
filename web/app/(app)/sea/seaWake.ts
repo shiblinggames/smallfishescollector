@@ -336,7 +336,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   //
   // Under everything else, because it is the water beneath the ship rather than
   // anything happening on top of it. Sprites and not particles: the trough and
-  // the collar are ALWAYS THERE while she is at rest, breathing, where a ring
+  // the trough is ALWAYS THERE while she is at rest, breathing, where a ring
   // is a thing that gets born and dies.
   //
   // Only ever built for a hull with weight. Every trader on the chart is in the
@@ -345,7 +345,19 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
   // be a rewrite instead of a row.
   const heavyLayer: Container = new PIXI.Container()
   view.addChild(heavyLayer)
-  const heavy = new Map<string, { trough: Sprite; collar: Sprite }>()
+  // ── NO COLLAR ────────────────────────────────────────────────────────
+  //
+  // There was a bright additive rim drawn tight against the waterline here, on
+  // the reasoning that a hull parts the surface where it sits. It read as a
+  // ring of light UNDER the boat, which is the one thing this whole layer
+  // exists to avoid: a lit ellipse at the waterline makes a hull look like it
+  // is hovering over a lamp rather than displacing water.
+  //
+  // The trough does the job on its own and does it the right way round. It is
+  // DARK and it MULTIPLIES the sea down into a dish, so she is standing in a
+  // hollow she made — light added at the waterline says the water is glowing;
+  // light taken away says the water is deep there.
+  const heavy = new Map<string, { trough: Sprite }>()
 
   const add: ParticleContainer = new PIXI.ParticleContainer({
     dynamicProperties: { position: true, rotation: true, vertex: true, color: true },
@@ -613,12 +625,8 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
             const trough: Sprite = new PIXI.Sprite(dishTexture(PIXI))
             trough.anchor.set(0.5)
             trough.tint = 0x040c14
-            const collar: Sprite = new PIXI.Sprite(ringTexture(PIXI))
-            collar.anchor.set(0.5)
-            collar.tint = 0xe2f4fa
-            collar.blendMode = 'add'
-            heavyLayer.addChild(trough, collar)
-            h = { trough, collar }
+            heavyLayer.addChild(trough)
+            h = { trough }
             heavy.set(s.id, h)
           }
           const cx = s.cx ?? s.x
@@ -636,14 +644,6 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
           h.trough.height = (46 / GROUND) * s.scale * bt
           h.trough.alpha = (0.62 + heave * 0.38) * settled
 
-          // THE COLLAR — a bright rim tight against the waterline, where the
-          // hull actually parts the surface.
-          const bc = 0.5 + 0.5 * Math.sin(t / (4.4 + heave * 2) * Math.PI * 2)
-          h.collar.position.set(cx, cy)
-          const ck = 1 + 0.03 * bc
-          h.collar.width = 112 * s.scale * ck
-          h.collar.height = (26 / GROUND) * s.scale * ck
-          h.collar.alpha = (0.32 + bc * 0.28) * settled
         }
       }
       // Anyone who has left. Their marks and rings are already on the water and
@@ -652,7 +652,7 @@ export function makeWake(PIXI: typeof import('pixi.js')): Wake {
       // dish a hull is sitting in, and there is no hull.
       for (const [id, h] of heavy) {
         if (alive.has(id)) continue
-        h.trough.destroy(); h.collar.destroy()
+        h.trough.destroy()
         heavy.delete(id)
       }
       // Deleting during a Map's own iteration is safe and allocates nothing;

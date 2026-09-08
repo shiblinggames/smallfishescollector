@@ -34,7 +34,7 @@ import type { VigilState } from '@/lib/ancientVigil'
 import { saveSeaPosition as persistSeaPosition } from './traderActions'
 import { PLACES, LANDMARKS, RESIDENTS, SOCIALS, HAIL_RANGE, HOME, OPEN_SEA, NORTH_WALL, OUTER_EDGE, GATE_X, GATE_HALF, GATE_DEPTH, inGate, EXP_ORIGIN, EXP_EDGE, SORTIE, SORTIE_HALF, inSortie, anchorageArc, RAID_EDGE, GUNWHARF, berthOf, inBerth, type Place } from './chart'
 import { getShip } from '@/lib/ships'
-import { shipSkinSeaImage } from '@/lib/shipSkins'
+import { shipSkinSeaImage, shipSkinSeaScale } from '@/lib/shipSkins'
 import { ISLES, isleNear, chestArt, bandName, ashoreRange, type Isle } from '@/lib/seaIsles'
 import { goAshore, type AshoreResult } from './isleActions'
 import { SUBMERGE } from './submerge'
@@ -4157,7 +4157,14 @@ export default function SeaMap({
     // HER PAINT, ON THE WATER. Same three-quarter view the skins are drawn
     // in, so this is the swap the fight already does — see shipSkinSeaImage.
     return h.seaImageUrl
-      ? { url: shipSkinSeaImage(equippedShipSkin, shipTier, h.seaImageUrl), flip: !!h.seaFlip }
+      ? {
+        url: shipSkinSeaImage(equippedShipSkin, shipTier, h.seaImageUrl),
+        flip: !!h.seaFlip,
+        // A skin plate carries a third of its width in empty margin where the
+        // chart's own hull art carries almost none, so drawn to the same width
+        // she came out two thirds the size. See SKIN_SEA_SCALE.
+        scale: shipSkinSeaScale(equippedShipSkin, shipTier),
+      }
       : null
   }, [onShip, shipTier, equippedShipSkin])
 
@@ -9241,9 +9248,12 @@ function Layer({ frame, src, at, hiddenOn, origin, className, style }: {
 const Warship = memo(function Warship({ tier, skin }: { tier: number; skin: string | null }) {
   const hull = getShip(tier)
   const hullArt = shipSkinSeaImage(skin, tier, hull.seaImageUrl ?? '')
+  // See SKIN_SEA_SCALE: a skin's plate is padded where the chart's hull art is
+  // not, so it has to be drawn wider to put the same ship on the water.
+  const hullW = 340 * shipSkinSeaScale(skin, tier)
   return (
     <div style={{
-      position: 'relative', width: 340,
+      position: 'relative', width: hullW,
       // NO OFFSET, and that is measured rather than assumed. The Skipper needs
       // one because its sheet reserves empty space up and left for the rod, so
       // the hull sits low-right of the bounding box. These are drawn centred:
@@ -10517,7 +10527,7 @@ const ShipAtBerth = memo(function ShipAtBerth({ shipTier, skin }: { shipTier: nu
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={shipSkinSeaImage(skin, shipTier, getShip(shipTier).seaImageUrl ?? '')} alt="" draggable={false} decoding="async"
         width={640} height={640} style={{
-          width: WARSHIP_W, height: 'auto', display: 'block',
+          width: WARSHIP_W * shipSkinSeaScale(skin, shipTier), height: 'auto', display: 'block',
           filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.5))',
           // The berth shows her exactly as the helm will.
           ...(getShip(shipTier).seaFlip ? { transform: 'scaleX(-1)' } : null),
